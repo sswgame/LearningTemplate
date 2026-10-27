@@ -63,7 +63,8 @@ namespace sw
         , _mapFolderEntry{}
         , _stringPoolBytes{}
     {
-        ScopedLock<mutex> lock{ other._fileMutex };
+        // 새 객체의 잠금도 잡는다 — 아직 아무도 보지 않지만, 그래야 넘겨받는 칸이 `_fileMutex` 아래라는 선언과 맞는다.
+        ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
         takeFromLocked( other );
     }
 
@@ -72,7 +73,7 @@ namespace sw
         if ( this != &other )
         {
             ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
-            close();
+            closeLocked();
             takeFromLocked( other );
         }
         return *this;
@@ -93,7 +94,7 @@ namespace sw
     {
         // 잠금은 잎이다 — 오류 · 안내 로그는 잠금을 놓은 뒤에 쓴다(실패 경로는 먼저 닫고 놓는다).
         UniqueLock<mutex> lock{ _fileMutex };
-        close();
+        closeLocked();
 
         if ( packFilePath.empty() )
             return false;
@@ -113,7 +114,7 @@ namespace sw
         // 1. 헤더(64B)를 읽는다
         if ( _file.readAt( 0, &_header, sizeof( PackHeader ) ) == false )
         {
-            close();
+            closeLocked();
             lock.unlock();
             SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
             return false;
@@ -121,18 +122,20 @@ namespace sw
 
         if ( _header._magic != kPackMagic )
         {
-            close();
+            const auto badMagic = _header._magic; // 잠금을 놓기 전에 복사한다 — 놓은 뒤 헤더를 읽지 않는다
+            closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( _header._magic, Format( 8, Format::Padding::Zero ).hex() ),
+            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( badMagic, Format( 8, Format::Padding::Zero ).hex() ),
                           Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
             return false;
         }
 
         if ( _header._formatVersion != kPackFormatVersion )
         {
-            close();
+            const auto badVersion = _header._formatVersion;
+            closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Unsupported pack format version %#: %#", _header._formatVersion, packFilePath );
+            SW_LOG_ERROR( "Unsupported pack format version %#: %#", badVersion, packFilePath );
             return false;
         }
 
@@ -140,33 +143,37 @@ namespace sw
         if ( ( _header._flags & static_cast<uint16>( PackFlag::Encrypted ) ) != 0 ||
              static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
         {
-            close();
+            const auto encryptionType = static_cast<uint32>( _header._encryptionType );
+            closeLocked();
             lock.unlock();
-            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", static_cast<uint32>( _header._encryptionType ), packFilePath );
+            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", encryptionType, packFilePath );
             return false;
         }
 
         // 2. FAT 인덱스와 스트링 풀을 읽는다
         if ( loadIndexTable() == false )
         {
-            close();
+            closeLocked();
             lock.unlock();
             SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
             return false;
         }
 
+#if defined( SW_DEBUG )
+        const auto compression = static_cast<PackCompressionType>( _header._compressionType ); // 헤더는 잠금 안에서 복사한다
+        const auto encryption  = static_cast<PackEncryptionType>( _header._encryptionType );
+        const auto fileCount   = static_cast<uint32>( _header._fileCount );
+#endif
         lock.unlock(); // 잠금은 잎이다 — 안내 로그는 놓은 뒤에 쓴다
 #if defined( SW_DEBUG )
         if ( engine::areEngineServicesBound() )
         {
-            const auto  compression      = static_cast<PackCompressionType>( _header._compressionType );
-            const auto  encryption       = static_cast<PackEncryptionType>( _header._encryptionType );
             const utf8* pCompressionName = engine::getSubsystem<TypeRegistry>().enumToString( compression );
             const utf8* pEncryptionName  = engine::getSubsystem<TypeRegistry>().enumToString( encryption );
 
             SW_LOG_INFO( "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
                          packFilePath,
-                         static_cast<uint32>( _header._fileCount ),
+                         fileCount,
                          pCompressionName != nullptr ? pCompressionName : "Raw",
                          pEncryptionName != nullptr ? pEncryptionName : "None" );
         }
@@ -176,6 +183,13 @@ namespace sw
     }
 
     void ResourcePakReader::close()
+    {
+        // 읽기 함수들은 `_fileMutex` 를 쥐고 상태를 읽는다 — 닫기도 같은 잠금 아래에서 지운다(관리자의 내리기는 다른 스레드의 읽기와 겹친다).
+        ScopedLock<mutex> lock{ _fileMutex };
+        closeLocked();
+    }
+
+    void ResourcePakReader::closeLocked()
     {
         _file.close();
         _packFilePath.clear();
@@ -377,7 +391,7 @@ namespace sw
         } ) );
     }
 
-    const PackHeader& ResourcePakReader::getHeader() const
+    PackHeader ResourcePakReader::getHeader() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         return _header;
@@ -395,7 +409,7 @@ namespace sw
         return _header._fileCount;
     }
 
-    const string& ResourcePakReader::getPackPath() const
+    string ResourcePakReader::getPackPath() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         return _packFilePath;

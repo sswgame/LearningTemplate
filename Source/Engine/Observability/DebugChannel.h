@@ -80,12 +80,12 @@ namespace sw
 
         void sendReply( uint64 packedHandle, bool bOk, string_view body ) const;
 
-        vector<Connection>           _listConnection;
-        vector<Request> _listRequest SW_GUARDED_BY( _mutex );
-        DebugChannelConfig           _settings;
-        DebugChannelExecuteDelegate  _execute;
-        mutex                        _mutex;
-        IStreamTransport*            _pTransport;
+        vector<Connection> _listConnection SW_GUARDED_BY( _mutex );
+        vector<Request> _listRequest       SW_GUARDED_BY( _mutex );
+        DebugChannelConfig                 _settings;
+        DebugChannelExecuteDelegate        _execute;
+        mutex                              _mutex;
+        IStreamTransport*                  _pTransport;
     };
 } // namespace sw
 
@@ -124,8 +124,8 @@ namespace sw
         string _received             SW_GUARDED_BY( _mutex );
         mutable mutex                _mutex;
         StreamConnectionHandle       _handle;
-        uint8                        _bOpen    : 1;
-        uint8                        _bClosed  : 1;
+        uint8                        _bOpen    : 1 SW_GUARDED_BY( _mutex );
+        uint8                        _bClosed  : 1 SW_GUARDED_BY( _mutex );
         [[maybe_unused]] uint8       _reserved : 6;
     };
 } // namespace sw

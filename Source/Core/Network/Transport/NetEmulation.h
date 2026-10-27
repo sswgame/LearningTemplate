@@ -186,22 +186,22 @@ namespace sw
         };
 
         LinkState& findOrAddLink( const NetAddress& to );
-        float32    nextRandom();
+        float32    nextRandom() SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 안쪽 전송에서 받은 것을 받는 쪽 조건으로 큐에 넣습니다. */
-        void pullIncomingLocked();
+        void pullIncomingLocked() SW_REQUIRES_LOCK( _mutex );
 
-        mutable mutex          _mutex;
-        INetTransport*         _pInner;
-        vector<Pending>        _listPending;
-        vector<Incoming>       _listIncoming; ///< 받는 쪽 조건으로 늦춘 패킷(도착 순서)
-        vector<uint8>          _receivedBytes;
-        vector<LinkState>      _listLink;
-        NetEmulationConditions _defaultConditions;
-        NetEmulationConditions _incomingConditions;
-        NetEmulationStats      _stats;
-        float64                _time;
-        float64                _outageUntil; ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
-        uint64                 _order;
-        DeterministicRandom32  _random; ///< 손실 · 지연 흔들림 난수(씨앗이 같으면 같은 수열 — 테스트 · 재현)
+        mutable mutex                              _mutex;
+        INetTransport* const                       _pInner; ///< 생성 때 정하고 바뀌지 않는다(const — 잠금 없이 읽는다)
+        vector<Pending> _listPending               SW_GUARDED_BY( _mutex );
+        vector<Incoming> _listIncoming             SW_GUARDED_BY( _mutex ); ///< 받는 쪽 조건으로 늦춘 패킷(도착 순서)
+        vector<uint8>                              _receivedBytes;
+        vector<LinkState>                          _listLink;
+        NetEmulationConditions                     _defaultConditions;
+        NetEmulationConditions _incomingConditions SW_GUARDED_BY( _mutex );
+        NetEmulationStats _stats                   SW_GUARDED_BY( _mutex );
+        float64 _time                              SW_GUARDED_BY( _mutex );
+        float64 _outageUntil                       SW_GUARDED_BY( _mutex ); ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
+        uint64 _order                              SW_GUARDED_BY( _mutex );
+        DeterministicRandom32 _random              SW_GUARDED_BY( _mutex ); ///< 손실 · 지연 흔들림 난수(씨앗이 같으면 같은 수열 — 테스트 · 재현)
     };
 } // namespace sw

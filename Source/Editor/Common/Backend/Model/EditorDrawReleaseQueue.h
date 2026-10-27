@@ -72,8 +72,8 @@ namespace sw::editor
         uint32 getPendingCount() const;
 
     private:
-        KeyedPendingList<RHIResourceReleaseDelegate> _listEntry; ///< 키 = 이 번호 이상의 스냅샷은 해제된 리소스를 그리지 않는다
-        mutable mutex                                _mutex;
-        uint64 _lastPublishedSequence                SW_GUARDED_BY( _mutex );
+        KeyedPendingList<RHIResourceReleaseDelegate> _listEntry SW_GUARDED_BY( _mutex ); ///< 키 = 이 번호 이상의 스냅샷은 해제된 리소스를 그리지 않는다
+        mutable mutex                                           _mutex;
+        uint64 _lastPublishedSequence                           SW_GUARDED_BY( _mutex );
     };
 } // namespace sw::editor

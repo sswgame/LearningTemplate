@@ -88,8 +88,8 @@ namespace sw
          */
         AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
 
-        /** @brief 팩 헤더를 반환합니다. */
-        const PackHeader& getHeader() const;
+        /** @brief 팩 헤더의 사본입니다(잠금 아래에서 복사한다 — 참조는 `close` 와 겹친다). */
+        PackHeader getHeader() const;
 
         /** @brief DLC 식별자를 반환합니다(0 = 본편, >0 = DLC AppID). */
         uint32 getDlcAppID() const;
@@ -97,8 +97,8 @@ namespace sw
         /** @brief 팩에 든 파일 총 개수를 반환합니다. */
         uint32 getFileCount() const;
 
-        /** @brief 연 .pack 파일의 실제 경로를 반환합니다. */
-        const string& getPackPath() const;
+        /** @brief 연 .pack 파일의 실제 경로의 사본입니다(잠금 아래에서 복사한다). */
+        string getPackPath() const;
 
     private:
         /** @brief 항목 하나를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. */
@@ -130,15 +130,15 @@ namespace sw
          *          두 번 말하는 것도 여기서 맞춰 봅니다.
          * @param outFileSize 실제 파일 크기입니다. 항목 검사(`validateFileEntry`)가 같은 값을 씁니다.
          */
-        bool validateHeaderGeometry( uint64& outFileSize ) const;
+        bool validateHeaderGeometry( uint64& outFileSize ) const SW_REQUIRES_LOCK( _fileMutex );
         /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
-        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
-        [[nodiscard]] bool loadIndexTable();
+        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
+        [[nodiscard]] bool loadIndexTable() SW_REQUIRES_LOCK( _fileMutex );
         /**
          * @brief `_mapEntry` 의 항목을 폴더별로 모아 `_mapFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
          * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다. 폴더 안의 순서는 `_mapEntry` 의 순서입니다.
          */
-        void populateFolderIndex();
+        void populateFolderIndex() SW_REQUIRES_LOCK( _fileMutex );
         /**
          * @brief 압축 항목을 풀어 @p outBytes 를 @p uncompressedSize 로 채웁니다. **할당도 여기서 합니다.**
          * @details 엔트리의 원본 크기는 파일에서 온 값입니다. 코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 비교한 뒤에만
@@ -149,17 +149,19 @@ namespace sw
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
          */
-        void takeFromLocked( ResourcePakReader& other );
+        void takeFromLocked( ResourcePakReader& other ) SW_REQUIRES_LOCK( _fileMutex, other._fileMutex );
+        /** @brief 파일을 닫고 인덱스를 비웁니다(`close` · `open` · 이동 대입의 잠금 안 부분). */
+        void closeLocked() SW_REQUIRES_LOCK( _fileMutex );
 
     private:
-        mutable mutex                        _fileMutex;
-        AsyncFileHandle                      _file; ///< 위치 지정 읽기 핸들(사본을 든 읽기는 닫힌 뒤에도 끝까지 읽는다)
-        string                               _packFilePath;
-        PackHeader                           _header;
-        unordered_map<uint64, PackFileEntry> _mapEntry;
+        mutable mutex                                  _fileMutex;
+        AsyncFileHandle _file                          SW_GUARDED_BY( _fileMutex ); ///< 위치 지정 읽기 핸들(사본을 든 읽기는 닫힌 뒤에도 끝까지 읽는다)
+        string _packFilePath                           SW_GUARDED_BY( _fileMutex );
+        PackHeader _header                             SW_GUARDED_BY( _fileMutex );
+        unordered_map<uint64, PackFileEntry> _mapEntry SW_GUARDED_BY( _fileMutex );
         /// 폴더(아스키 소문자, 끝 '/' 없음, 팩 맨 위는 빈 문자열) → 그 폴더 바로 아래 항목의 경로 해시. `populateFolderIndex` 가 짓고 읽기만 한다
-        unordered_map<string, vector<uint64>> _mapFolderEntry;
-        vector<utf8>                          _stringPoolBytes;
+        unordered_map<string, vector<uint64>> _mapFolderEntry SW_GUARDED_BY( _fileMutex );
+        vector<utf8>                                          _stringPoolBytes;
     };
 
 } // namespace sw

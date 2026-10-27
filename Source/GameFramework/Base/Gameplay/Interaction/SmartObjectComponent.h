@@ -103,7 +103,7 @@ namespace sw
     private:
         void resolveDefinition();
         /** @brief 사라진 쪽이 차지한 슬롯을 비우고 핸들 목록을 맞춥니다. 잠금 안에서 부릅니다. */
-        void syncClaimants();
+        void syncClaimants() SW_REQUIRES_LOCK( _mutex );
 
     private:
         PROPERTY( Category = "Smart Object", DisplayName = "Smart Object", Tooltip = "Smart object id in the interaction catalog" )
@@ -111,7 +111,7 @@ namespace sw
         PROPERTY( Category = "Smart Object", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table (required)" )
         string _catalogPath;
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
-        vector<GameObjectHandle> _listClaimant;
+        vector<GameObjectHandle> _listClaimant SW_GUARDED_BY( _mutex );
 
         SmartObjectSlots _slots;
         mutable mutex    _mutex;

@@ -89,6 +89,8 @@ namespace sw
 
     void NetRequestClient::initialize( StreamMessageEndpoint* pEndpoint, int32 maxPendingRequests )
     {
+        // 시작 전 설정도 잠금 아래에 둔다 — 그래야 이 칸들이 `_mutex` 아래라는 선언(SW_GUARDED_BY)이 예외 없이 맞다.
+        ScopedLock<mutex> lock{ _mutex };
         _pEndpoint          = pEndpoint;
         _maxPendingRequests = maxPendingRequests;
     }
@@ -312,6 +314,8 @@ namespace sw
 
     void NetRequestServer::initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerConfig& settings )
     {
+        // 시작 전 설정도 잠금 아래에 둔다(NetRequestClient::initialize 와 같다).
+        ScopedLock<mutex> lock{ _mutex };
         _pEndpoint = pEndpoint;
         _settings  = settings;
     }

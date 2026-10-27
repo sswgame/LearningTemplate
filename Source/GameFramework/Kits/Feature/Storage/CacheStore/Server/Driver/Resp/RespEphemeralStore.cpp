@@ -169,12 +169,16 @@ namespace sw
         const bool bCannotSubscribe = _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false;
         if ( bCannotSubscribe )
             return;
-        if ( VectorUtil::contains( _listChannel, channel ) )
-            return;
-        _listChannel.emplace_back( channel );
         uint64 targetAckCount = 0;
         {
+            // 채널 목록은 다시 연결할 때 잠금 아래에서 다시 구독하며 읽는다(`ensureSubscribeConnection`) — 고치는 것도 잠금 아래에서 한다.
             ScopedLock<mutex> lock{ _mutex };
+            // 이미 구독한 채널이면 정렬 · 중복 제거 뒤 개수가 그대로다(채널은 수십 이하, 다시 구독하는 순서는 상관없다).
+            const size_t channelCount = _listChannel.size();
+            _listChannel.emplace_back( channel );
+            VectorUtil::sortUnique( _listChannel );
+            if ( _listChannel.size() == channelCount )
+                return;
             if ( _subscribeConnection.getState() == RespConnectionState::Closed )
             {
                 (void)ensureSubscribeConnection(); // 열리면 모든 채널을 다시 구독한다. 이 채널도 포함한다
@@ -193,11 +197,11 @@ namespace sw
 
     void RespEphemeralStore::unsubscribe( string_view channel )
     {
-        if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
-            return;
         uint64 targetAckCount = 0;
         {
             ScopedLock<mutex> lock{ _mutex };
+            if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
+                return;
             if ( _subscribeConnection.getState() == RespConnectionState::Closed )
                 return;
             RespCommand command{ "UNSUBSCRIBE" };
@@ -251,7 +255,10 @@ namespace sw
                 failOperation( operation );
         }
         _transport->shutdown(); // 콜백이 우리 락을 잡으므로 락 밖에서 호출한다
-        _listChannel.clear();
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listChannel.clear();
+        }
         _listMessage.clear();
         _blockingRequestID = 0;
     }

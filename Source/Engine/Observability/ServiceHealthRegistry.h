@@ -58,14 +58,14 @@ namespace sw
             uint8       _bRequiredForReady{ SW_TRUE };
         };
 
-        bool isLiveLocked( int64 monotonicMs ) const;
-        bool isReadyLocked( int64 monotonicMs ) const;
+        bool isLiveLocked( int64 monotonicMs ) const SW_REQUIRES_LOCK( _mutex );
+        bool isReadyLocked( int64 monotonicMs ) const SW_REQUIRES_LOCK( _mutex );
 
-        vector<Check> _listCheck;
-        mutable mutex _mutex;
-        int64         _lastTickMs;
-        int64         _livenessTimeoutMs;
-        uint8         _bTicked;
-        uint8         _bDraining;
+        vector<Check> _listCheck SW_GUARDED_BY( _mutex );
+        mutable mutex            _mutex;
+        int64 _lastTickMs        SW_GUARDED_BY( _mutex );
+        int64 _livenessTimeoutMs SW_GUARDED_BY( _mutex );
+        uint8 _bTicked           SW_GUARDED_BY( _mutex );
+        uint8 _bDraining         SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

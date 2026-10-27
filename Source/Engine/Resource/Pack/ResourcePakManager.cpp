@@ -247,9 +247,9 @@ namespace sw
     ResourcePakManager::ResourcePakManager( ResourcePakManager&& other ) noexcept
     {
         ScopedLock<mutex> lock{ other._vfsMutex };
-        _listMountedPack  = std::move( other._listMountedPack );
-        _dlcValidator     = std::move( other._dlcValidator );
-        _bAllowLooseFiles = other._bAllowLooseFiles;
+        _listMountedPack = std::move( other._listMountedPack );
+        _dlcValidator    = std::move( other._dlcValidator );
+        _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
     }
 
     ResourcePakManager& ResourcePakManager::operator=( ResourcePakManager&& other ) noexcept
@@ -257,9 +257,9 @@ namespace sw
         if ( this != &other )
         {
             ScopedLockPair<mutex> lock{ _vfsMutex, other._vfsMutex };
-            _listMountedPack  = std::move( other._listMountedPack );
-            _dlcValidator     = std::move( other._dlcValidator );
-            _bAllowLooseFiles = other._bAllowLooseFiles;
+            _listMountedPack = std::move( other._listMountedPack );
+            _dlcValidator    = std::move( other._dlcValidator );
+            _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
         }
         return *this;
     }
@@ -496,12 +496,12 @@ namespace sw
 
     void ResourcePakManager::setAllowLooseFiles( bool bAllow )
     {
-        _bAllowLooseFiles = bAllow;
+        _bAllowLooseFiles.store( bAllow, std::memory_order_relaxed );
     }
 
     bool ResourcePakManager::isAllowLooseFiles() const
     {
-        return _bAllowLooseFiles;
+        return _bAllowLooseFiles.load( std::memory_order_relaxed );
     }
 
     size_t ResourcePakManager::getMountedPackCount() const

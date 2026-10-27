@@ -71,13 +71,13 @@ namespace sw
             uint8  _bAnswered{ SW_FALSE };
         };
 
-        Connection* findConnection( uint64 packedHandle );
+        Connection* findConnection( uint64 packedHandle ) SW_REQUIRES_LOCK( _mutex );
 
-        vector<Connection>           _listConnection;
-        OpsHTTPEndpointConfig        _settings;
-        mutex                        _mutex;
-        IStreamTransport*            _pTransport;
-        const MetricRegistry*        _pMetricRegistry;
-        const ServiceHealthRegistry* _pHealthRegistry;
+        vector<Connection> _listConnection SW_GUARDED_BY( _mutex );
+        OpsHTTPEndpointConfig              _settings;
+        mutex                              _mutex;
+        IStreamTransport*                  _pTransport;
+        const MetricRegistry*              _pMetricRegistry;
+        const ServiceHealthRegistry*       _pHealthRegistry;
     };
 } // namespace sw

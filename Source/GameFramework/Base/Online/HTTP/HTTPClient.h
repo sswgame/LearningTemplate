@@ -98,26 +98,26 @@ namespace sw
         };
 
         /** @brief 잠금 안에서 부릅니다. 요청을 끝내고 응답을 쌓습니다(연결은 부르는 쪽이 닫는다). */
-        void finishLocked( Call& call, const utf8* pFailure );
-        void failImmediately( uint64 requestID, const utf8* pFailure );
+        void finishLocked( Call& call, const utf8* pFailure ) SW_REQUIRES_LOCK( _mutex );
+        void failImmediately( uint64 requestID, const utf8* pFailure ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. @p call 의 주소로 연결하고 연결 테이블에 넣습니다. 연결하지 못하면 응답을 쌓습니다. */
-        void connectLocked( unique_ptr<Call> call );
+        void connectLocked( unique_ptr<Call> call ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 해석이 끝났거나 시한이 지난 요청을 연결하거나 끝냅니다(`update`). */
-        void advanceResolvingLocked( MonotonicMilliseconds now );
+        void advanceResolvingLocked( MonotonicMilliseconds now ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 해석 스레드입니다. 맡긴 이름을 하나씩 해석해 요청에 적습니다. 종료할 때까지 돕니다. */
         void resolveRequest( uint64& requestID, bool bStopping );
 
-        const IClock&                           _clock;
-        mutable mutex                           _mutex;
-        unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
-        unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
-        vector<unique_ptr<Call>>                _listResolvingCall; ///< 이름 해석을 기다리는 요청
-        vector<HTTPClientResponse>              _listDone;
-        unique_ptr<IStreamTransport>            _transport;
-        HTTPClientConfig                        _settings;
-        DedicatedWorker<uint64>                 _resolver; ///< 이름 해석 스레드(요청 id 를 받는다). 처음 이름을 받을 때 띄운다
-        IDAllocator<uint64>                     _requestIDAllocator;
-        int32                                   _ioThreadCount;
-        uint8                                   _bInitialized;
+        const IClock&                                            _clock;
+        mutable mutex                                            _mutex;
+        unordered_map<uint64, unique_ptr<Call>> _mapCall         SW_GUARDED_BY( _mutex ); ///< 연결(packed) → 요청
+        unordered_map<string, ITLSContext*> _mapHostToTLSContext SW_GUARDED_BY( _mutex );
+        vector<unique_ptr<Call>> _listResolvingCall              SW_GUARDED_BY( _mutex ); ///< 이름 해석을 기다리는 요청
+        vector<HTTPClientResponse> _listDone                     SW_GUARDED_BY( _mutex );
+        unique_ptr<IStreamTransport>                             _transport;
+        HTTPClientConfig                                         _settings;
+        DedicatedWorker<uint64>                                  _resolver; ///< 이름 해석 스레드(요청 id 를 받는다). 처음 이름을 받을 때 띄운다
+        IDAllocator<uint64> _requestIDAllocator                  SW_GUARDED_BY( _mutex );
+        int32                                                    _ioThreadCount;
+        uint8                                                    _bInitialized;
     };
 } // namespace sw

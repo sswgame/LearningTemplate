@@ -62,11 +62,11 @@ namespace sw
 
     private:
         /** @brief @p pName 과 같은 이름의 그림자 노드가 있으면 가장 나중 것을 목록으로 복원합니다. 잠금을 쥔 채 부릅니다. */
-        void restoreShadowOf( const utf8* pName );
+        void restoreShadowOf( const utf8* pName ) SW_REQUIRES_LOCK( _mutex );
 
         mutable mutex                    _mutex;
-        ServiceFactoryNode*              _pHead;
-        int32                            _count;
+        ServiceFactoryNode* _pHead       SW_GUARDED_BY( _mutex );
+        int32 _count                     SW_GUARDED_BY( _mutex );
         ServiceFactoryNode* _pShadowHead SW_GUARDED_BY( _mutex ); ///< 리로드로 대체된 옛 노드의 사슬(가장 나중에 대체된 것이 앞)
     };
 } // namespace sw

@@ -7,18 +7,20 @@
 namespace sw
 {
     PoolAllocator::PoolAllocator( size_t blockSize, uint32 blocksPerChunk, bool bThreadSafe )
-        : _blockSize{ blockSize }
+        : _blockSize{ roundBlockSize( blockSize ) }
         , _pChunkList{ nullptr }
         , _pFreeList{ nullptr }
         , _mutex{}
         , _blocksPerChunk{ blocksPerChunk }
         , _bThreadSafe{ bThreadSafe }
     {
-        if ( _blockSize < sizeof( FreeNode ) )
-            _blockSize = sizeof( FreeNode );
+    }
 
+    size_t PoolAllocator::roundBlockSize( size_t blockSize )
+    {
+        const size_t atLeastNode = blockSize < sizeof( FreeNode ) ? sizeof( FreeNode ) : blockSize;
         // 16바이트 배수로 올림한다
-        _blockSize = ( _blockSize + 15u ) & ~size_t{ 15 };
+        return ( atLeastNode + 15u ) & ~size_t{ 15 };
     }
 
     PoolAllocator::~PoolAllocator()

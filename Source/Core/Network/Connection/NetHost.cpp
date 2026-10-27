@@ -93,6 +93,7 @@ namespace sw
         , _packetWriter{}
         , _connectPromise{}
         , _listFinished{}
+        , _updateThread{}
         , _listReceived{}
         , _flushBatch{}
         , _listDeliver{}
@@ -617,6 +618,7 @@ namespace sw
         const uint32 depth = _updateDepth.fetch_add( 1, std::memory_order_acq_rel );
         SW_ASSERT( depth == 0 && "NetHost::update called from two threads at once" );
         (void)depth;
+        _updateThread.assumeHeld(); // 한 번에 한 스레드만 update 를 돈다(위 단언) — 그 스레드가 update 스레드 역할이다
         INetTransport* pTransport = nullptr;
         {
             ScopedLock<mutex> lock{ _mutex };

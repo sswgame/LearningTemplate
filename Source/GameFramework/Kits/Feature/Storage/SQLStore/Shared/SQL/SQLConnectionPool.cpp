@@ -200,7 +200,7 @@ namespace sw
             bool                bStopping = false;
             {
                 UniqueLock<mutex> lock{ _mutex };
-                _jobReady.wait( lock, [this]()
+                _jobReady.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
                 { return _bStopping == SW_TRUE || _listQueuedJob.empty() == false; } );
                 if ( _listQueuedJob.empty() )
                     return; // 종료 중이고 남은 작업이 없다

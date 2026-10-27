@@ -204,7 +204,7 @@ namespace sw
         /** @brief 펜스가 지난 묶음의 블록을 프리리스트로 돌려보냅니다. 펜스 완료 값을 읽는 지점에서 부릅니다. */
         void recycleCompletedOnlineBlocks( uint64 completedFence );
         /** @brief `recycleCompletedOnlineBlocks` 의 본문입니다. `_onlineBlockMutex` 를 잡은 쪽이 부릅니다(`acquireOnlineBlock` 이 바닥났을 때). */
-        void recycleCompletedOnlineBlocksLocked( uint64 completedFence );
+        void recycleCompletedOnlineBlocksLocked( uint64 completedFence ) SW_REQUIRES_LOCK( _onlineBlockMutex );
         /** @brief 오프라인(CPU 전용) 뷰 힙의 index 번째 핸들을 반환합니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE offlineDescriptorAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들을 반환합니다(복사 목적지). */
@@ -669,17 +669,17 @@ namespace sw
         mutex                        _liveCmdListMutex;
         vector<D3D12RHICommandList*> _listLiveCmd;
         /// @brief 온라인 힙 블록 프리리스트입니다. 컨텍스트가 빌려 슬롯 테이블을 확정하고, 리스트가 닫히면 펜스 뒤에 돌아옵니다.
-        mutex          _onlineBlockMutex;
-        vector<uint32> _listFreeOnlineBlock;
+        mutex                               _onlineBlockMutex;
+        vector<uint32> _listFreeOnlineBlock SW_GUARDED_BY( _onlineBlockMutex );
         /** @brief 펜스를 기다리는 온라인 블록 묶음입니다. 리스트가 닫힐 때 상태의 블록 벡터를 통째로 옮겨 옵니다. */
         struct OnlineBlockRecycleBatch
         {
             uint64         _fence{ 0 };
             vector<uint32> _listBlock;
         };
-        vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle;
-        vector<vector<uint32>>          _listOnlineRecyclePool; ///< 돌아온 빈 벡터이며 용량을 남겨 둔다.
-        FrameResourceRing               _frameRing;
+        vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle SW_GUARDED_BY( _onlineBlockMutex );
+        vector<vector<uint32>> _listOnlineRecyclePool             SW_GUARDED_BY( _onlineBlockMutex ); ///< 돌아온 빈 벡터이며 용량을 남겨 둔다.
+        FrameResourceRing                                         _frameRing;
 
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
@@ -712,7 +712,7 @@ namespace sw
         vector<uint32>                                          _listFreeOffscreenDsvIndex;
         unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
-        RHIConstantBufferMirror                                 _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        RHIConstantBufferMirror _constantBufferMirror           SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

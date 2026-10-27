@@ -398,7 +398,7 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _time = MathUtil::max( _time, time );
             // 때가 된 것을 전할 때 · 보낸 순서로 넘긴다.
-            const auto dueEnd = std::partition( _listPending.begin(), _listPending.end(), [this]( const Pending& pending )
+            const auto dueEnd = std::partition( _listPending.begin(), _listPending.end(), [this]( const Pending& pending ) SW_REQUIRES_LOCK( _mutex )
             { return pending._deliverTime <= _time; } );
             listDue.assign( std::make_move_iterator( _listPending.begin() ), std::make_move_iterator( dueEnd ) );
             _listPending.erase( _listPending.begin(), dueEnd );

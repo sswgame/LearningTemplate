@@ -110,7 +110,7 @@ namespace sw
          * @details `requestAsset` 과 `requestAssetData` 가 함께 쓴다. 폴백을 따로 두면 완료를 절반씩만 하게 된다(존재 콜백만,
          *          데이터 콜백만 비우기).
          */
-        void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority );
+        void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority ) SW_REQUIRES_LOCK( _mutex );
         /**
          * @brief 결과를 기록하고 진행 테이블을 지운 뒤 두 콜백 목록을 완료 큐로 옮깁니다. 태스크 완료, IO 완료, 동기 폴백이 같은 경로를 씁니다. `_mutex` 를 쥔 채 부릅니다.
          * @param bytes 데이터 콜백에 넘길 바이트. 마지막 콜백이 가져가고 나머지는 사본을 받습니다.
@@ -123,7 +123,7 @@ namespace sw
         /** @brief 완료 항목을 `update` 가 꺼내 갈 큐에 넣습니다. `_mutex` 를 쥔 채 불러도 됩니다(다른 잠금입니다). */
         void pushCompleted( CompletedItem&& item );
         /** @brief 진행 테이블에서 뺀 읽기 핸들을 `shutdown` 이 기다리도록 보관합니다. 끝난 핸들은 이때 버립니다. `_mutex` 를 쥔 채 부릅니다. */
-        void retainDetachedIOLocked( const AsyncReadHandle& handle );
+        void retainDetachedIOLocked( const AsyncReadHandle& handle ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         mutable mutex _mutex;
@@ -158,7 +158,7 @@ namespace sw
          * @brief 진행 테이블에서 빠졌지만 아직 끝나지 않았을 수 있는 읽기입니다(취소한 것, 늦게 제출해 테이블에 기록하지 못한 것).
          * @details 그 완료 콜백도 이 큐를 부르므로 `shutdown` 이 이것까지 기다린다. 빠뜨리면 큐가 사라진 뒤 완료가 도착한다.
          */
-        vector<AsyncReadHandle> _listDetachedIO;
+        vector<AsyncReadHandle> _listDetachedIO SW_GUARDED_BY( _mutex );
         /** @brief 이 큐가 낸 태스크(찾기 · 존재 확인)만 든다. `shutdown` 은 엔진 전체(`TaskManager::waitAll`)가 아니라 이것만 기다린다 — 영구 태스크가 종료를 막지 않게. */
         TaskHandleTracker _taskTracker;
         /**
@@ -167,6 +167,6 @@ namespace sw
          */
         mutable mutex        _completedMutex;
         deque<CompletedItem> _listCompleted;
-        bool                 _bInitialized;
+        bool _bInitialized   SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

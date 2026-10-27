@@ -169,8 +169,8 @@ namespace sw
         TaskManager*                                                                _pTaskManager;
         uint32 _maxInFlightCount                                                    SW_GUARDED_BY( _mutex );
         uint32 _inFlightCount                                                       SW_GUARDED_BY( _mutex );
-        uint32                                                                      _outstandingCount;
-        bool                                                                        _bStopping;
+        uint32 _outstandingCount                                                    SW_GUARDED_BY( _mutex );
+        bool _bStopping                                                             SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

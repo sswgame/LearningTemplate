@@ -90,10 +90,10 @@ namespace sw
         /** @brief 슬롯 번호의 비트를 반환합니다. */
         static uint32 slotBitOf( uint32 slot ) { return 1u << ( slot % constant::kMaxFrameCountInFlight ); }
         /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 락 안에서 부릅니다. */
-        void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
+        void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
 
-        unordered_map<RHIBufferHandle, PendingWrite> _mapPendingWrite;
-        vector<RHIBufferHandle> _listFilledScratch   SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 버퍼를 모으는 임시 목록(프레임마다 다시 쓴다)
-        mutable mutex                                _mutex;
+        unordered_map<RHIBufferHandle, PendingWrite> _mapPendingWrite SW_GUARDED_BY( _mutex );
+        vector<RHIBufferHandle> _listFilledScratch                    SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 버퍼를 모으는 임시 목록(프레임마다 다시 쓴다)
+        mutable mutex                                                 _mutex;
     };
 } // namespace sw

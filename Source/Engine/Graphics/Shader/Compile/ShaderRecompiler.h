@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Delegate/DelegateSlot.h"
 
@@ -61,10 +62,10 @@ namespace sw
         void triggerReloadAll();
 
     private:
-        mutable shared_mutex                   _mutex;
-        vector<ShaderCompileDesc>              _listPendingReload;
-        DelegateSlot<ShaderRecompiledDelegate> _onAnyRecompiled;
-        string                                 _label;
-        bool                                   _bInitialized{ false };
+        mutable shared_mutex                         _mutex;
+        vector<ShaderCompileDesc> _listPendingReload SW_GUARDED_BY( _mutex );
+        DelegateSlot<ShaderRecompiledDelegate>       _onAnyRecompiled;
+        string                                       _label;
+        atomic<bool>                                 _bInitialized{ false }; ///< 시작 · 종료가 쓰고 update 가 잠금 없이 읽는다 — 원자값
     };
 } // namespace sw

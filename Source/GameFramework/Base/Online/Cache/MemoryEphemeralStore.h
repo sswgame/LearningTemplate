@@ -71,21 +71,21 @@ namespace sw
         /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
         void releaseSubscription( uint64 id ) override;
         /** @brief 만료됐으면 지우고, 살아 있는 값이면 그것입니다. */
-        ValueEntry*    findValue( const string& key, int64 nowMs );
-        ScoreSetEntry* findScoreSet( const string& key, int64 nowMs );
+        ValueEntry*    findValue( const string& key, int64 nowMs ) SW_REQUIRES_LOCK( _mutex );
+        ScoreSetEntry* findScoreSet( const string& key, int64 nowMs ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 정렬 집합을 점수 내림차순 · 같은 점수는 멤버 바이트 내림차순으로 펼칩니다. */
         static vector<EphemeralScoredMember> makeRanking( const ScoreSetEntry& entry );
 
-        void executeValue( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply );
-        void executeScore( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply );
-        void executePublish( const EphemeralRequest& request, EphemeralReply& outReply );
+        void executeValue( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply ) SW_REQUIRES_LOCK( _mutex );
+        void executeScore( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply ) SW_REQUIRES_LOCK( _mutex );
+        void executePublish( const EphemeralRequest& request, EphemeralReply& outReply ) SW_REQUIRES_LOCK( _mutex );
 
-        const IClock&                        _clock;
-        mutable mutex                        _mutex;
-        unordered_map<string, ValueEntry>    _mapValue;
-        unordered_map<string, ScoreSetEntry> _mapScoreSet;
-        unordered_map<uint64, Inbox>         _mapInbox;
-        IDAllocator<uint64>                  _inboxIDAllocator;
+        const IClock&                                     _clock;
+        mutable mutex                                     _mutex;
+        unordered_map<string, ValueEntry> _mapValue       SW_GUARDED_BY( _mutex );
+        unordered_map<string, ScoreSetEntry> _mapScoreSet SW_GUARDED_BY( _mutex );
+        unordered_map<uint64, Inbox> _mapInbox            SW_GUARDED_BY( _mutex );
+        IDAllocator<uint64> _inboxIDAllocator             SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

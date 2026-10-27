@@ -119,12 +119,12 @@ namespace sw
         /** @brief 기록 하나를 지금 프레임 번호로 넣습니다(켜져 있을 때만). */
         void append( VisualLogEntry entry );
         /** @brief 용량을 넘은 오래된 기록을 버립니다. 잠근 채 부릅니다. */
-        void trimLocked();
+        void trimLocked() SW_REQUIRES_LOCK( _mutex );
 
-        mutable mutex         _mutex;
-        deque<VisualLogEntry> _listEntry;
-        uint64 _frame         SW_GUARDED_BY( _mutex );
-        uint32                _capacity;
-        uint8                 _bEnabled;
+        mutable mutex                    _mutex;
+        deque<VisualLogEntry> _listEntry SW_GUARDED_BY( _mutex );
+        uint64 _frame                    SW_GUARDED_BY( _mutex );
+        uint32 _capacity                 SW_GUARDED_BY( _mutex );
+        uint8                            _bEnabled;
     };
 } // namespace sw

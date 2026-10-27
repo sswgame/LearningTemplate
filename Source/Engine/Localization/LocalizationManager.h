@@ -232,9 +232,9 @@ namespace sw
         /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readProject( string_view projectPath, MountedProject& outProject );
         /** @brief 읽은 문서들로 실행 테이블을 다시 채웁니다(`_mutex` 를 잡은 상태에서 부릅니다). */
-        void rebuildTablesLocked();
+        void rebuildTablesLocked() SW_REQUIRES_LOCK( _mutex );
         /** @brief 조회 순서를 다시 계산합니다(`_mutex` 를 잡은 상태에서 부릅니다). */
-        void rebuildLookupChainLocked();
+        void rebuildLookupChainLocked() SW_REQUIRES_LOCK( _mutex );
         /** @brief 그 코드의 실행 테이블입니다. 없으면 만듭니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         StringTable& getOrCreateTableLocked( const string& code );
         /** @brief 미리 구한 해시로 조회 사슬을 한 번 훑습니다. */
@@ -245,18 +245,18 @@ namespace sw
         void releaseSubscription( uint64 id ) override;
 
     private:
-        mutable shared_mutex                           _mutex;
-        string                                         _currentLanguage;
-        string                                         _fallbackLanguage;
-        CultureTable                                   _cultureTable;
-        CultureInfo                                    _currentCulture; ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
-        vector<MountedProject>                         _listProject;
-        map<string, TranslationTable>                  _mapLooseTable;
-        map<string, LocalizationBinaryTable>           _mapBinaryTable; ///< 문화권 코드 → 쿠킹된 이진 표
-        unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
-        map<string, LocalizationCultureStatistics>     _mapCultureStatistic;
-        vector<string>                                 _listLookupCulture;
-        unordered_map<uint64, LanguageChangedCallback> _mapCallback; ///< 구독 번호 → 콜백
+        mutable shared_mutex                                            _mutex;
+        string _currentLanguage                                         SW_GUARDED_BY( _mutex );
+        string _fallbackLanguage                                        SW_GUARDED_BY( _mutex );
+        CultureTable _cultureTable                                      SW_GUARDED_BY( _mutex );
+        CultureInfo _currentCulture                                     SW_GUARDED_BY( _mutex ); ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
+        vector<MountedProject> _listProject                             SW_GUARDED_BY( _mutex );
+        map<string, TranslationTable> _mapLooseTable                    SW_GUARDED_BY( _mutex );
+        map<string, LocalizationBinaryTable> _mapBinaryTable            SW_GUARDED_BY( _mutex ); ///< 문화권 코드 → 쿠킹된 이진 표
+        unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
+        map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
+        vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
+        unordered_map<uint64, LanguageChangedCallback> _mapCallback     SW_GUARDED_BY( _mutex ); ///< 구독 번호 → 콜백
 
         mutable mutex                         _missingMutex;
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );

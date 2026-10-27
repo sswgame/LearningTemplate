@@ -104,21 +104,21 @@ namespace sw
 
     private:
         /** @brief 바이트 크기를 장부의 칸 수로 올림합니다. */
-        [[nodiscard]] uint32 toSlotCount( uint64 sizeBytes ) const;
+        [[nodiscard]] uint32 toSlotCount( uint64 sizeBytes ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief `_mutex` 를 쥔 채 부릅니다. */
-        void freeCompletedLocked( uint64 completedSerial );
+        void freeCompletedLocked( uint64 completedSerial ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 단독 구간을 돌려받습니다. `_mutex` 를 쥔 채 부릅니다. */
-        void releaseSoloLocked();
+        void releaseSoloLocked() SW_REQUIRES_LOCK( _mutex );
 
         mutable mutex                        _mutex;
-        SpanAllocator                        _slots; ///< 한 칸 = `_alignmentBytes`. 시리얼을 붙인 구간은 시리얼을 번호로 미뤄 돌려받는다
+        SpanAllocator _slots                 SW_GUARDED_BY( _mutex ); ///< 한 칸 = `_alignmentBytes`. 시리얼을 붙인 구간은 시리얼을 번호로 미뤄 돌려받는다
         uint64 _capacityBytes                SW_GUARDED_BY( _mutex );
-        uint64                               _alignmentBytes;
+        uint64 _alignmentBytes               SW_GUARDED_BY( _mutex );
         uint64 _soloMaxBytes                 SW_GUARDED_BY( _mutex ); ///< 단독 구간 한 장의 상한. 0 이면 단독 구간을 받지 않는다
-        uint64                               _soloSizeBytes;          ///< 살아 있는 단독 구간의 크기. 0 이면 없다
-        uint64                               _soloSerial;             ///< 단독 구간에 붙인 시리얼. 0 이면 아직 붙이지 않았다
+        uint64 _soloSizeBytes                SW_GUARDED_BY( _mutex ); ///< 살아 있는 단독 구간의 크기. 0 이면 없다
+        uint64 _soloSerial                   SW_GUARDED_BY( _mutex ); ///< 단독 구간에 붙인 시리얼. 0 이면 아직 붙이지 않았다
         int64 _soloReservationMicroseconds   SW_GUARDED_BY( _mutex ); ///< `Full` 을 받은 단독 요청이 링 요청을 막는 시간
         int64 _soloReservedUntilMicroseconds SW_GUARDED_BY( _mutex ); ///< 이 시각(`MonotonicClock`) 전까지 링 요청은 `Full` 이다. 0 이면 예약이 없다
-        uint32                               _liveCount;
+        uint32 _liveCount                    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

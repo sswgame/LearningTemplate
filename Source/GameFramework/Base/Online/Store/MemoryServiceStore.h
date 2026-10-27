@@ -60,7 +60,7 @@ namespace sw
         using Table = map<string, Entry>;
 
         /** @brief 잠금 안에서 부릅니다. 설정해 둔 실패가 @p fault 이고 차례가 됐으면 해제하고 true 입니다. */
-        bool               consumeFault( ServiceStoreFault fault );
+        bool               consumeFault( ServiceStoreFault fault ) SW_REQUIRES_LOCK( _mutex );
         const Entry*       findEntry( const hashed_string& table, string_view key ) const;
         ServiceStoreResult validate( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo ) const;
 
@@ -68,8 +68,8 @@ namespace sw
         unordered_map<hashed_string, Table> _mapTable;
         uint64 _commitVersion               SW_GUARDED_BY( _mutex );
         uint64 _commitCount                 SW_GUARDED_BY( _mutex );
-        int32                               _faultSkipCount;
-        ServiceStoreFault                   _armedFault;
+        int32 _faultSkipCount               SW_GUARDED_BY( _mutex );
+        ServiceStoreFault _armedFault       SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

@@ -51,7 +51,7 @@ namespace sw
                     return;
 
                 UniqueLock<mutex> lock{ _mutex };
-                _cv.wait( lock, [this]()
+                _cv.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
                 {
                     return _bReady.load( std::memory_order_acquire );
                 } );
@@ -64,7 +64,7 @@ namespace sw
                     return true;
 
                 UniqueLock<mutex> lock{ _mutex };
-                return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
+                return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]() SW_REQUIRES_LOCK( _mutex )
                 {
                     return _bReady.load( std::memory_order_acquire );
                 } );

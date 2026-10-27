@@ -465,14 +465,14 @@ namespace sw
     void AsyncFileIOQueue::waitIdle() const
     {
         UniqueLock<mutex> lock{ _mutex };
-        _cv.wait( lock, [this]()
+        _cv.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
         { return _outstandingCount == 0; } );
     }
 
     bool AsyncFileIOQueue::waitIdleFor( uint32 timeoutMs ) const
     {
         UniqueLock<mutex> lock{ _mutex };
-        return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
+        return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]() SW_REQUIRES_LOCK( _mutex )
         { return _outstandingCount == 0; } );
     }
 

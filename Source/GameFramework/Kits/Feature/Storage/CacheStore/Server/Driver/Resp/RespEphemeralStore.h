@@ -112,37 +112,37 @@ namespace sw
         void finishOperation( Operation& operation, EphemeralResult result );
         void failOperation( Operation& operation );
         /** @brief 명령 연결이 열려 있거나 연결 중이면 true 입니다. 아니면 백오프가 지났을 때 다시 연결합니다. */
-        [[nodiscard]] bool ensureCommandConnection();
-        [[nodiscard]] bool ensureSubscribeConnection();
+        [[nodiscard]] bool ensureCommandConnection() SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] bool ensureSubscribeConnection() SW_REQUIRES_LOCK( _mutex );
         void               abortTimedOutRequests();
         void               handlePushValue( const RespValue& value );
         /** @brief 구독 연결이 @p channel 확인을 낼 때까지 기다립니다. 전송이 별도 스레드 없이 돌면 직접 돌립니다. */
         void        waitForSubscriptionAck( uint64 targetAckCount );
         string      makeKey( string_view key ) const;
-        RespCommand makeAuthCommand() const;
+        RespCommand makeAuthCommand() const SW_REQUIRES_LOCK( _mutex );
 
-        const IClock&                _clock;
-        RespStoreConfig              _settings;
-        StreamTransportConfig        _transportSettings;
-        mutable mutex                _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
-        RespConnection               _commandConnection;
-        RespConnection               _subscribeConnection;
-        vector<EphemeralMessage>     _listMessage;
-        vector<RespReplyRecord>      _listRecordScratch;
-        vector<RespValue>            _listPushScratch;
-        vector<string>               _listChannel; ///< 구독 중인 채널이다. 접두어가 없는 이름이며 다시 연결하면 다시 구독한다
-        deque<Operation>             _listOperation;
-        unique_ptr<IStreamTransport> _transport;
-        unique_ptr<ITLSContext>      _tlsContext;
-        int64                        _nextCommandConnectNanoseconds;
-        int64                        _nextSubscribeConnectNanoseconds;
-        int64                        _commandBackoffMs;
-        int64                        _subscribeBackoffMs;
-        IDAllocator<uint64>          _requestIDAllocator;
-        uint64                       _subscriptionAckCount; ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
-        uint64                       _subscriptionSentCount;
-        uint64                       _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
-        uint8                        _bInitialized;
-        uint8                        _bShutdown;
+        const IClock&                          _clock;
+        RespStoreConfig                        _settings;
+        StreamTransportConfig                  _transportSettings;
+        mutable mutex                          _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
+        RespConnection _commandConnection      SW_GUARDED_BY( _mutex );
+        RespConnection _subscribeConnection    SW_GUARDED_BY( _mutex );
+        vector<EphemeralMessage>               _listMessage;
+        vector<RespReplyRecord>                _listRecordScratch;
+        vector<RespValue>                      _listPushScratch;
+        vector<string> _listChannel            SW_GUARDED_BY( _mutex ); ///< 구독 중인 채널이다. 접두어가 없는 이름이며 다시 연결하면 다시 구독한다
+        deque<Operation>                       _listOperation;
+        unique_ptr<IStreamTransport>           _transport;
+        unique_ptr<ITLSContext>                _tlsContext;
+        int64 _nextCommandConnectNanoseconds   SW_GUARDED_BY( _mutex );
+        int64 _nextSubscribeConnectNanoseconds SW_GUARDED_BY( _mutex );
+        int64 _commandBackoffMs                SW_GUARDED_BY( _mutex );
+        int64 _subscribeBackoffMs              SW_GUARDED_BY( _mutex );
+        IDAllocator<uint64>                    _requestIDAllocator;
+        uint64                                 _subscriptionAckCount; ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
+        uint64 _subscriptionSentCount          SW_GUARDED_BY( _mutex );
+        uint64                                 _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
+        uint8                                  _bInitialized;
+        uint8                                  _bShutdown;
     };
 } // namespace sw

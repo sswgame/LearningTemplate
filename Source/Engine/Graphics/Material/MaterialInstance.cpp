@@ -587,7 +587,16 @@ namespace sw
         return string{};
     }
 
-    const vector<string>& MaterialInstance::getCachedShaderDefines() const
+    vector<string> MaterialInstance::getCachedShaderDefines() const
+    {
+        // 게임 스레드(셰이더 쿠킹 요청)와 렌더 스레드(GPU 머티리얼 표)가 함께 부른다 — 캐시와 더티 비트(`_bGPUDirty` 와 같은 바이트)는 잠금 아래에서만 고친다.
+        // 사본을 돌려준다 — 참조를 내주면 잠금을 놓은 뒤 다른 스레드의 갱신과 겹친다.
+        ScopedLock<mutex> lock{ _overrideMutex };
+        refreshCachedDefinesLocked();
+        return _listCachedDefine;
+    }
+
+    void MaterialInstance::refreshCachedDefinesLocked() const
     {
         uint64 currentParentHash = _pParentMaterial != nullptr ? _pParentMaterial->getPermutationHash() : 0;
         if ( _parentPermutationHash != currentParentHash )
@@ -641,20 +650,23 @@ namespace sw
             _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
             _bDefinesDirty         = SW_FALSE;
         }
-        return _listCachedDefine;
     }
 
     uint64 MaterialInstance::getPermutationHash() const
     {
-        if ( _bDefinesDirty == SW_TRUE )
-            getCachedShaderDefines();
+        ScopedLock<mutex> lock{ _overrideMutex };
+        refreshCachedDefinesLocked();
         return _cachedPermutationHash;
     }
 
     RHIDescriptorIndex MaterialInstance::getDescriptorIndex() const
     {
-        if ( _descriptorIndex != kInvalidDescriptorIndex )
-            return _descriptorIndex;
+        // 인덱스는 렌더 스레드의 `updateRHI` 가 잠금 아래에서 쓰고 게임 스레드(GPU 장면 빌더)가 읽는다 — 읽기도 잠금 아래에서 한다.
+        {
+            ScopedLock<mutex> lock{ _overrideMutex };
+            if ( _descriptorIndex != kInvalidDescriptorIndex )
+                return _descriptorIndex;
+        }
         if ( _pParentMaterial != nullptr )
             return _pParentMaterial->getDescriptorIndex();
         return kInvalidDescriptorIndex;

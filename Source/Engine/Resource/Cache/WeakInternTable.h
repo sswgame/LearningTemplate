@@ -109,7 +109,7 @@ namespace sw
         }
 
     private:
-        mutable mutex                                        _mutex;
-        unordered_map<KeyType, weak_ptr<ValueType>, KeyHash> _mapValue;
+        mutable mutex                                                  _mutex;
+        unordered_map<KeyType, weak_ptr<ValueType>, KeyHash> _mapValue SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

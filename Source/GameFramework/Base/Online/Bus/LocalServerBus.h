@@ -47,9 +47,9 @@ namespace sw
         /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
         void releaseSubscription( uint64 id ) override;
 
-        mutable mutex                _mutex;
-        unordered_map<uint64, Inbox> _mapInbox;
-        IDAllocator<uint64>          _inboxIDAllocator;
+        mutable mutex                          _mutex;
+        unordered_map<uint64, Inbox> _mapInbox SW_GUARDED_BY( _mutex );
+        IDAllocator<uint64> _inboxIDAllocator  SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 
