@@ -19,6 +19,7 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -319,14 +320,14 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 바가 세로로 쌓였으면(높이가 폭보다 크면) 1 입니다. */
+        /** @brief 바가 항목을 세로로 쌓으면(왼쪽 · 오른쪽에 붙음) 1 입니다. 그린 크기가 아니라 배치 상태를 읽는다 — 항목이 적은 바는 세로로 쌓아도 폭이 높이보다 크다. */
         [[nodiscard]] bool readOverlayVertical( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
             if ( findProbedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
                 return false;
-            outValue = pRuntime->_lastSize._y > pRuntime->_lastSize._x ? 1.0 : 0.0;
+            outValue = EditorViewportOverlayLayout::isVertical( *pState ) ? 1.0 : 0.0;
             return true;
         }
 
@@ -420,7 +421,7 @@ namespace sw::editor
                          &readOverlayDock );
     SW_AUTOMATION_PROBE( editorOverlayX, "Editor.OverlayX", "Left of the overlay bar gv_editorProbeOverlay, pixels from the scene view's left", &readOverlayX );
     SW_AUTOMATION_PROBE( editorOverlayY, "Editor.OverlayY", "Top of the overlay bar gv_editorProbeOverlay, pixels from the scene view's top", &readOverlayY );
-    SW_AUTOMATION_PROBE( editorOverlayVertical, "Editor.OverlayVertical", "1 when the overlay bar gv_editorProbeOverlay is taller than wide (stacked vertically)",
+    SW_AUTOMATION_PROBE( editorOverlayVertical, "Editor.OverlayVertical", "1 when the overlay bar gv_editorProbeOverlay stacks its items vertically (docked left or right)",
                          &readOverlayVertical );
     SW_AUTOMATION_PROBE( editorOverlayFlags, "Editor.OverlayFlags", "Overlay bar gv_editorProbeOverlay: 1 when visible, plus 10 when collapsed",
                          &readOverlayFlags );

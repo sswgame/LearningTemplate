@@ -14,6 +14,10 @@
 <Scenario name="game.empty.useroptions" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Launch variable="gv_deferred" value="1"/>
+	<!-- 설정 파일이 비어 있으면 App 이 이 PC 에 맞춰 그래픽 프리셋을 고른다(약한 GPU 는 low) — 잰 값의 기준 상태(높음)로 못 박는다 -->
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<At frame="40"><Screenshot file="base.ppm"/></At>
 
 	<!-- 렌더 스케일 0.5 -->

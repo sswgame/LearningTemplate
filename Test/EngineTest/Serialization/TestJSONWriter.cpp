@@ -232,9 +232,9 @@ SW_TEST_CASE( JSONWriterTest, FinishHandsOutOnlyCompleteText )
     open.beginArray();
     SW_EXPECT_FALSE( open.finish().has_value() );
 
-    test::ScopedAssertCapture assertCapture;
-    sw::string                json;
-    sw::JSONWriter            borrowed{ json };
+    [[maybe_unused]] test::ScopedAssertCapture assertCapture; // 범위가 단언을 가로챈다 — 쓰지 않는 구성에서도 선언 자체가 뜻이다
+    sw::string                                 json;
+    sw::JSONWriter                             borrowed{ json };
     borrowed.valueNull();
     SW_EXPECT_FALSE( borrowed.finish().has_value() ); // 버퍼를 받은 쓰기기는 꺼낼 글이 없다
 }

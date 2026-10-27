@@ -52,7 +52,7 @@ namespace sw
         [[nodiscard]] bool claim( DrainLease& outLease ) { return _gate.claim( outLease ); }
 
         /** @brief 표를 쥔 쪽이 꺼냅니다. @p lease 가 이 큐의 표가 아니면 어서션입니다. 나머지는 표 없는 `drainTo` 와 같습니다. */
-        void drainTo( const DrainLease& lease, vector<T>& outList )
+        void drainTo( [[maybe_unused]] const DrainLease& lease, vector<T>& outList )
         {
             SW_ASSERT( _gate.isHeldBy( lease ) && "Claim the drain queue before draining it" );
             moveTo( outList );

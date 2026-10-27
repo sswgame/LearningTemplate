@@ -146,7 +146,7 @@ namespace sw
         ScopedThreadRoleBorrow& operator=( const ScopedThreadRoleBorrow& ) = delete;
 
     private:
-        ThreadRole& _role;
+        [[maybe_unused]] ThreadRole& _role; // Debug 만 읽는다
 #if defined( SW_DEBUG )
         std::thread::id _previous{};
 #endif
