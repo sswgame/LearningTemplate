@@ -66,8 +66,8 @@ namespace sw
      * @details 역할 아래 멤버는 `SW_GUARDED_BY( _role )`, 그 역할에서만 부르는 함수는 `SW_REQUIRES_LOCK( _role )` 이고, 역할이 시작되는 진입점이
      *          `assumeHeld()` 를 부른다 — 역할 밖 스레드에서 만지는 코드가 컴파일 경고가 된다. 크로미움 `SequenceChecker`(`GUARDED_BY_CONTEXT` + DCHECK)와 같은 자리다.
      *          **Debug 는 실제 스레드를 확인한다.** 소유 스레드는 시작 지점이 `bindToCurrentThread` 로 정하고(스레드를 다시 세우면 다시 정한다),
-     *          정하지 않았으면 처음 `assumeHeld` 를 부른 스레드가 소유자가 된다. 그 뒤 다른 스레드의 `assumeHeld` 는 단언이다. 소유 스레드가 끝나면
-     *          `unbind` 로 놓아 다음 소유자(종료를 마무리하는 스레드)가 받게 한다. Debug 가 아니면 멤버도 비용도 없다.
+     *          정하지 않은 역할은 확인하지 않는다(처음 부른 스레드를 소유자로 삼으면 합법적인 넘김이 거짓 단언이 된다). 정한 뒤 다른 스레드의 `assumeHeld` 는 단언이다.
+     *          소유 스레드가 끝나면 `unbind` 로 놓는다. Debug 가 아니면 멤버도 비용도 없다.
      *          소유 스레드가 합류를 기다리는 동안 대신 도는 작업(병렬 기록 태스크)은 `assumeHeldByJoinedTask` 로 적는다 — 스레드 id 가 달라 확인하지 않는다.
      */
     class SW_CAPABILITY( "thread role" ) ThreadRole
@@ -94,15 +94,18 @@ namespace sw
 #endif
         }
 
-        /** @brief 이 스레드가 역할을 맡은 진입점임을 분석에 알립니다. Debug 는 소유 스레드인지 확인합니다(소유자가 없으면 이 스레드가 맡는다). */
+        /**
+         * @brief 이 스레드가 역할을 맡은 진입점임을 분석에 알립니다. Debug 는 소유자가 **정해진** 역할만 스레드를 확인합니다.
+         * @details 소유자를 정하지 않은 역할(`bindToThread` 를 거치지 않은)은 확인하지 않는다 — 처음 부른 스레드를 소유자로 삼으면 비동기 로드 · 장치 스레드 시작처럼
+         *          합법적으로 일을 넘기는 경로가 거짓 단언을 낸다. 소유 스레드를 아는 자리가 정할 때만 확인한다.
+         */
         void assumeHeld() const SW_ASSERT_CAPABILITY_LOCK( this )
         {
 #if defined( SW_DEBUG )
-            const std::thread::id current = std::this_thread::get_id();
-            std::thread::id       expected{};
-            if ( _owner.compare_exchange_strong( expected, current, std::memory_order_acq_rel ) )
+            const std::thread::id owner = _owner.load( std::memory_order_acquire );
+            if ( owner == std::thread::id{} )
                 return;
-            SW_LOW_LEVEL_ASSERT( expected == current, "ThreadRole: entered from a thread that does not own the role - bind the owner where the role starts" );
+            SW_LOW_LEVEL_ASSERT( owner == std::this_thread::get_id(), "ThreadRole: entered from a thread that does not own the role - bind the owner where the role starts" );
 #endif
         }
 
