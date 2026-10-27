@@ -106,6 +106,8 @@ SW_TEST_CASE( AppearanceTest, UnknownNamesAreLoadErrors )
         {                               R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="SocketPrefab" prefab="p" socket="s" skeleton="k" rig="r.rig.xml"/></ItemVisual></ItemVisualCatalog>)",
          "Appearance.PartRigNeedsSkeleton"                                                                                                                                                                                                    },
     };
+    // 아래 자료는 일부러 깨져 있다 — 보고(`getReport`)가 로그로도 나가므로 이 반복 안의 Warning · Error 는 의도된 것이다. 위 정상 읽기는 이 범위 밖이라 로그가 없어야 한다.
+    SW_TEST_DEFENSIVE_SCOPE( "appearance data with an unknown name is a load error" );
     for ( const Case& testCase : arrCase )
     {
         Fixture fixture;

@@ -1680,16 +1680,33 @@ SW_TEST_CASE( ModuleAPITest, ExportGameAPI_ShippingStatic )
 #else
 
 /**
- * @brief [ModuleAPITest] SWGame DLL exportGameAPI
+ * @brief [ModuleAPITest] SWGame DLL exportGameAPI (자식 프로세스에서 돈다)
+ * @details 원시로 올린 모듈을 `unloadModuleImage` 로 내리면 그 의존 이미지(GameFramework)가 프로세스 끝까지 고정된다. 이 케이스를 부모에서 돌리면 고정된 GameFramework 와 그 정적 등록이
+ *          부모에 남아 뒤따르는 `LiveReloadManager` 케이스(GameFramework 를 섀도 복사본으로 등록)와 순서 의존이 된다. 그래서 부모는 GameFramework 를 원시로 올리지 않는다.
  */
 SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
 {
-    // SWGame 은 GameFramework 를 지연 로드한다(exportGameAPI 가 그 코드를 부르는 순간 올라온다). 그 정적 등록기가 전역 머리에 남은 채
-    // 아래 SWGame 등록이 돌면 GameFramework 타입이 SWGame 이름으로 들어가고, 해제가 그 타입(GameSettings 등)을 묘비로 만든다 — 뒤 테스트가
-    // 그 타입을 찾지 못한다. 공용 모듈을 먼저 명시적으로 올려 제 이름으로 걷는다(`registerModuleTypes` 의 경고와 같은 규칙). 내리지 않는다.
-    void* hGameFramework = sw::loadModule( "GameFramework" );
-    SW_ASSERT_TRUE( hGameFramework != nullptr );
-    sw::engine::registerModuleTypes( "GameFramework" );
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_EXPORT_GAME_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.ExportGameAPIChild", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "SWGame 의 exportGameAPI 확인이 자식에서 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/** @brief [ModuleAPITest] 자식 프로세스 역할: SWGame 이 exportGameAPI 로 게임 API 표를 채우는지 본다. 그냥 실행하면 건너뛴다. */
+SW_TEST_CASE( ModuleAPITest, ExportGameAPIChild )
+{
+    if ( sw::ProcessEnvironment::isSet( "SW_EXPORT_GAME_CHILD" ) == false )
+        SW_TEST_SKIP( "child only — ExportGameAPI launches it" );
+
+    // `ModuleHost` 의 순서: 공용 모듈을 먼저 올려 제 이름으로 등록한다. SWGame 이 import 한 GameFramework 는 같은 이미지다.
+    sw::LiveReloadManager gameFrameworkHost;
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.loadSharedModule( "GameFramework" ), "GameFramework did not load - see the log above" );
     void* handle = sw::loadModule( "SWGame" );
     SW_EXPECT_TRUE( handle != nullptr );
     if ( handle == nullptr )
@@ -1721,8 +1738,8 @@ SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
 
 /**
  * @brief [ModuleAPITest] Full Game Scene, Component Lifecycle & Tick Verification (자식 프로세스에서 돈다)
- * @details 이 케이스는 GameFramework 의 정적 등록(데이터 종류 · 탐침 · 단계 · 개발 명령 · 서비스 팩토리)이 프로세스에 한 벌뿐이라는 전제가 필요하다. 앞 케이스(`ExportGameAPI`)가
- *          원본 이미지를 일부러 내리지 않아 이 프로세스에는 이미 한 벌이 있으므로, 깨끗한 자식에서 `ModuleHost` 와 같은 순서(공용 모듈 → 키트 → SWGame)로 돈다.
+ * @details 이 케이스는 GameFramework 의 정적 등록(데이터 종류 · 탐침 · 단계 · 개발 명령 · 서비스 팩토리)이 프로세스에 한 벌뿐이라는 전제가 필요하다. 부모에는 앞 케이스가 원시로 올렸다
+ *          내린 모듈이 고정한 GameFramework 가 있을 수 있으므로, 깨끗한 자식에서 `ModuleHost` 와 같은 순서(공용 모듈 → 키트 → SWGame)로 돈다.
  */
 SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
 {
@@ -1871,10 +1888,32 @@ SW_TEST_CASE( ModuleAPITest, ExportEditorAPI )
 }
 
 /**
- * @brief [ModuleAPITest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증
+ * @brief [ModuleAPITest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증 (자식 프로세스에서 돈다)
+ * @details 키트는 GameFramework 를 import 해서 원시로 올리면 GameFramework 가 함께 올라오고, 내릴 때 `unloadModuleImage` 가 그것을 고정한다. 부모에 고정된 GameFramework 를 남기지 않으려고 자식에서 돈다.
  */
 SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistration )
 {
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false )
+        SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_KITS_REGISTRATION_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.GameFrameworkKitsModuleTypeRegistrationChild", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "키트 모듈 타입 등록 확인이 자식에서 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/** @brief [ModuleAPITest] 자식 프로세스 역할: 키트 모듈을 하나씩 올려 타입을 등록했다 걷고 내린다. 그냥 실행하면 건너뛴다. */
+SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistrationChild )
+{
+    if ( sw::ProcessEnvironment::isSet( "SW_KITS_REGISTRATION_CHILD" ) == false )
+        SW_TEST_SKIP( "child only — GameFrameworkKitsModuleTypeRegistration launches it" );
+
+    // 공용 모듈을 먼저 올려 제 이름으로 등록한다 — 안 그러면 첫 키트가 끌어온 GameFramework 의 타입이 그 키트 이름으로 들어가 키트를 걷을 때 함께 사라진다.
+    sw::LiveReloadManager gameFrameworkHost;
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.loadSharedModule( "GameFramework" ), "GameFramework did not load - see the log above" );
     for ( const utf8* kitName : { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" } )
     {
         void* handle = sw::loadModule( kitName );
