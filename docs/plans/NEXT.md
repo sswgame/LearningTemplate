@@ -63,7 +63,7 @@ Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에�
 | `wt/verifyopt`(1) | 검증 시간 최적화(`shards` · `requires` · `functional` · 야간 `--measure`)를 `Scripts/common/VerifyManifest.py` · `RunVerifyBatch.py` · `RunTests.py` · `VerifyBatch.json` · 문서에 담았다. 빌드 · 실행 안 해 봤다. **충돌**: `VerifyBatch.json` 의 `app-scenarios-release`(이 브랜치는 `shards`, 통합 S 는 `ctest -L hostgpu`) — 통합 S 쪽을 기준으로 정하고, `scenario-timeline-measure` · `scenario-thresholds-promote` 에 `requires` · 인자를 `AppRuns` 로, `shooter3d-keyrebind-restart` 에 `functional: true`, 야간은 `--measure`. 병합 뒤 겹침 실행이 실제로 줄이는지 시간을 잰다 |
 | `wt/lockfmt` 끝 4 커밋 | f7ae810d7 · 0fca6afe8 · 015883359 · 119664da2 (동결 뒤 커밋이라 통합 S 에 안 들어갔다) |
 
-**작업 구조 변경(사용자 결정 2026-10-27)**: 앞으로는 병렬 작업자 + 통합 대기를 쓰지 않고, 한 에이전트가 일을 몰아서 단계별로 나눠 진행한다(단계마다 코드 → 린트 → 문법 검사 → 커밋, 빌드 · 검증은 새 일마다 하지 않고 맡은 묶음이 다 끝난 뒤 같은 에이전트가 한 번에 하고 병합 · push 까지 한다). 다음 세션 첫 일: CLAUDE.md 원칙 2 · `WorkerRules.md` · `11_Workflow.md` · `12_Agents.md` 를 이 구조로 고친다(긴 검증은 `run_in_background`, 에이전트가 5 분 안에 답이 없으면 직접 한다는 규칙은 유지).
+작업 구조(한 에이전트 단계별 진행)는 [11 작업 방식](../11_Workflow.md) 머리에 반영했다. 남은 것: 같은 구조로 `/integrate` · `/worker-brief` 스킬과 11 의 "작업자" 절을 맞춘다.
 
 사용자 결정(2026-10-27): 장르 키트 21 개(232 파일)는 유지. 말 모델은 BlendSwap "Horse Rigged All Gaits"(CC0 표기)를 사용자가 받아 `models_raw/` 에 넣는다. 평문 UDP 정책(`wt/netsec`)은 병합 승인됨 — 이번 통합에 들어갔다.
 
