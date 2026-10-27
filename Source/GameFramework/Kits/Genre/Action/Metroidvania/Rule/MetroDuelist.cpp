@@ -87,7 +87,9 @@ namespace sw
     MetroDefenseOutcome MetroDuelist::receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID )
     {
         MetroDefenseOutcome outcome;
-        if ( _pCatalog == nullptr || _vitality.isAlive() == false )
+        // 죽었거나 무적(시간 · 면역)이면 맞은 것이 아니다 — 가드 스태미나를 쓰거나 패리 창을 열거나 맞음 연출을 낼 결과를 주지 않는다.
+        const bool bNothingHappens = _pCatalog == nullptr || _vitality.isAlive() == false || _vitality.ignoresDamage();
+        if ( bNothingHappens )
         {
             outcome._result = MetroDefenseResult::Ignored;
             return outcome;
