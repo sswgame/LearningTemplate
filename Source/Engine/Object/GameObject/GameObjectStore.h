@@ -327,12 +327,12 @@ namespace sw
          */
         hashed_string makeUniqueNameUnlocked( hashed_string requested, NameEntry& outEntry );
         /** @brief 잠금 없이, 지울 이름 테이블 항목이 번호를 붙여 만든 이름이면 그 번호를 밑 이름의 빈 번호로 반납합니다. 항목은 부르는 쪽이 지웁니다. */
-        void releaseNameSuffixUnlocked( const NameEntry& nameEntry );
+        void releaseNameSuffixUnlocked( const NameEntry& nameEntry ) SW_REQUIRES_LOCK( _mutex );
         /**
          * @brief 잠금 없이 id 로 등록된 오브젝트(삭제 대기 포함)를 찾습니다. 슬롯 테이블을 보고, 범위 밖이면 맵을 봅니다.
          * @details `findGameObjectByID` 와 달리 삭제 대기 오브젝트도 반환하고 잠그지 않는다. 이미 `_mutex` 를 쥔 곳에서 쓴다.
          */
-        GameObject* findRegisteredUnlocked( uint64 objectID ) const;
+        GameObject* findRegisteredUnlocked( uint64 objectID ) const SW_REQUIRES_LOCK( _mutex );
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 확인합니다.
          * @details 지연 파괴 대기(pending destroy) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없다. 그 이름은 비어 있는

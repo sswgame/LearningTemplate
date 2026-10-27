@@ -134,20 +134,20 @@ namespace sw
 
     private:
         /** @brief 빈 카테고리를 기본 이름으로 바꾸고 목록에 등록합니다. 잠근 채 부릅니다. */
-        hashed_string registerCategoryLocked( const hashed_string& category );
+        hashed_string registerCategoryLocked( const hashed_string& category ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 선 하나를 잠근 채 넣습니다. 길이가 0 인 선은 넣지 않습니다. */
-        void pushLineLocked( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category );
+        void pushLineLocked( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠근 채 카테고리 켜짐을 읽습니다. */
-        bool isCategoryEnabledLocked( const hashed_string& category ) const;
+        bool isCategoryEnabledLocked( const hashed_string& category ) const SW_REQUIRES_LOCK( _mutex );
 
     private:
-        mutable mutex                       _mutex;
-        vector<DebugLine>                   _listLine;
-        vector<DebugSphere> _listSphere     SW_GUARDED_BY( _mutex );
-        vector<DebugText> _listText         SW_GUARDED_BY( _mutex );
-        vector<DebugLine>                   _listVisibleLine;
-        vector<DebugSphere>                 _listVisibleSphere;
-        vector<DebugText>                   _listVisibleText;
-        unordered_map<hashed_string, uint8> _mapCategoryEnabled; ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
+        mutable mutex                                           _mutex;
+        vector<DebugLine> _listLine                             SW_GUARDED_BY( _mutex );
+        vector<DebugSphere> _listSphere                         SW_GUARDED_BY( _mutex );
+        vector<DebugText> _listText                             SW_GUARDED_BY( _mutex );
+        vector<DebugLine>                                       _listVisibleLine;
+        vector<DebugSphere>                                     _listVisibleSphere;
+        vector<DebugText>                                       _listVisibleText;
+        unordered_map<hashed_string, uint8> _mapCategoryEnabled SW_GUARDED_BY( _mutex ); ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
     };
 } // namespace sw

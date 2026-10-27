@@ -63,7 +63,8 @@ namespace sw
         , _mapFolderEntry{}
         , _stringPoolBytes{}
     {
-        ScopedLock<mutex> lock{ other._fileMutex };
+        // 새 객체의 잠금도 잡는다 — 아직 아무도 보지 않지만, 그래야 넘겨받는 칸이 `_fileMutex` 아래라는 선언과 맞는다.
+        ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
         takeFromLocked( other );
     }
 
@@ -72,7 +73,7 @@ namespace sw
         if ( this != &other )
         {
             ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
-            close();
+            closeLocked();
             takeFromLocked( other );
         }
         return *this;
@@ -92,7 +93,7 @@ namespace sw
     bool ResourcePakReader::open( string_view packFilePath )
     {
         ScopedLock<mutex> lock{ _fileMutex };
-        close();
+        closeLocked();
 
         if ( packFilePath.empty() )
             return false;
@@ -112,7 +113,7 @@ namespace sw
         if ( _file.readAt( 0, &_header, sizeof( PackHeader ) ) == false )
         {
             SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
-            close();
+            closeLocked();
             return false;
         }
 
@@ -120,14 +121,14 @@ namespace sw
         {
             SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#",
                           Fmt( _header._magic, Format( 8, Format::Padding::Zero ).hex() ), Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
-            close();
+            closeLocked();
             return false;
         }
 
         if ( _header._formatVersion != kPackFormatVersion )
         {
             SW_LOG_ERROR( "Unsupported pack format version %#: %#", _header._formatVersion, packFilePath );
-            close();
+            closeLocked();
             return false;
         }
 
@@ -136,7 +137,7 @@ namespace sw
              static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
         {
             SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", static_cast<uint32>( _header._encryptionType ), packFilePath );
-            close();
+            closeLocked();
             return false;
         }
 
@@ -144,7 +145,7 @@ namespace sw
         if ( loadIndexTable() == false )
         {
             SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
-            close();
+            closeLocked();
             return false;
         }
 
@@ -168,6 +169,13 @@ namespace sw
     }
 
     void ResourcePakReader::close()
+    {
+        // 읽기 함수들은 `_fileMutex` 를 쥐고 상태를 읽는다 — 닫기도 같은 잠금 아래에서 지운다(관리자의 내리기는 다른 스레드의 읽기와 겹친다).
+        ScopedLock<mutex> lock{ _fileMutex };
+        closeLocked();
+    }
+
+    void ResourcePakReader::closeLocked()
     {
         _file.close();
         _packFilePath.clear();
@@ -369,7 +377,7 @@ namespace sw
         } ) );
     }
 
-    const PackHeader& ResourcePakReader::getHeader() const
+    PackHeader ResourcePakReader::getHeader() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         return _header;
@@ -387,7 +395,7 @@ namespace sw
         return _header._fileCount;
     }
 
-    const string& ResourcePakReader::getPackPath() const
+    string ResourcePakReader::getPackPath() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         return _packFilePath;

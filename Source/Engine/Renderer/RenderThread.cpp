@@ -258,7 +258,7 @@ namespace sw
 
         {
             UniqueLock<mutex> lock{ _mutex };
-            _cvProduce.wait( lock, [this, nextHead]()
+            _cvProduce.wait( lock, [this, nextHead]() SW_REQUIRES_LOCK( _mutex )
             { return _bStop.load( std::memory_order_relaxed ) || nextHead != _tail.load( std::memory_order_acquire ); } );
 
             if ( _bStop.load( std::memory_order_relaxed ) )
@@ -287,7 +287,7 @@ namespace sw
         if ( _bRunning.load( std::memory_order_acquire ) == false || std::this_thread::get_id() == _thread.get_id() )
             return;
         UniqueLock<mutex> lock{ _mutex };
-        _cvIdle.wait( lock, [this]()
+        _cvIdle.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
         { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
 
@@ -299,7 +299,7 @@ namespace sw
         if ( std::this_thread::get_id() != _thread.get_id() )
         {
             UniqueLock<mutex> lock{ _mutex };
-            _cvIdle.wait( lock, [this]()
+            _cvIdle.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
             { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
         }
 
@@ -328,7 +328,7 @@ namespace sw
 
             {
                 UniqueLock<mutex> lock{ _mutex };
-                _cvConsume.wait( lock, [this, currentTail]()
+                _cvConsume.wait( lock, [this, currentTail]() SW_REQUIRES_LOCK( _mutex )
                 { return _bStop.load( std::memory_order_relaxed ) || currentTail != _head.load( std::memory_order_acquire ); } );
             }
 

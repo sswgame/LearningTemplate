@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -163,7 +164,7 @@ namespace sw
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
         DlcEntitlementDelegate               _dlcValidator;
-        bool                                 _bAllowLooseFiles;
+        atomic<bool>                         _bAllowLooseFiles; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
     };
 
 } // namespace sw

@@ -182,9 +182,9 @@ namespace sw
             Probe  _probe;
         };
 
-        RHITransferSerials& _serials;
-        mutable mutex       _mutex;
-        deque<Entry>        _listEntry;
+        RHITransferSerials&     _serials;
+        mutable mutex           _mutex;
+        deque<Entry> _listEntry SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

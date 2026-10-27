@@ -42,6 +42,6 @@ namespace sw
     private:
         mutable shared_mutex _mutex;
         /// @brief 키 해시 → 번역 문자열 테이블입니다. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 테이블이 바뀌어도 엔진 종료까지 사라지지 않습니다.
-        unordered_map<uint64, const utf8*> _mapTable;
+        unordered_map<uint64, const utf8*> _mapTable SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

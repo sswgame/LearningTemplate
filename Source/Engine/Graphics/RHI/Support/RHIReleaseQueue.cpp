@@ -44,15 +44,15 @@ namespace sw
             ScopedLock<SpinLock> lock{ _spinLock };
             currentFrame = ++_currentFrame;
         }
-        releaseReady( _listFrameEntry, currentFrame );
+        releaseReady( ReleaseList::Frame, currentFrame );
     }
 
     void RHIReleaseQueue::tickCompleted( uint64 completedFence )
     {
-        releaseReady( _listGPUEntry, completedFence );
+        releaseReady( ReleaseList::GPU, completedFence );
     }
 
-    void RHIReleaseQueue::releaseReady( KeyedPendingList<RHIResourceReleaseDelegate>& list, uint64 threshold )
+    void RHIReleaseQueue::releaseReady( ReleaseList which, uint64 threshold )
     {
         // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다. DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
@@ -62,6 +62,7 @@ namespace sw
         {
             UniqueLock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
+            KeyedPendingList<RHIResourceReleaseDelegate>& list = which == ReleaseList::Frame ? _listFrameEntry : _listGPUEntry;
             list.extractReadyReserving( lock, threshold, listReady );
         }
 

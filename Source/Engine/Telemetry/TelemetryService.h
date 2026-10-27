@@ -192,46 +192,46 @@ namespace sw
         const string&           getSpoolFolder() const { return _spoolFolder; }
 
     private:
-        TelemetryRecordResult recordLocked( const TelemetryEvent& event );
-        bool                  isEventSampledLocked( const TelemetryEventDef& def, uint32 occurrence ) const;
-        string                makeEventLineLocked( const TelemetryEvent& event, const TelemetryEventDef& def ) const;
-        string                makeContextLineLocked() const;
-        string                makeSpoolFilePathLocked( uint32 fileIndex ) const;
-        void                  pushBreadcrumbLocked( const TelemetryEvent& event );
-        void                  flushLocked();
-        void                  closeCurrentFileLocked();
-        void                  enforceCapsLocked();
-        void                  uploadClosedLocked();
-        void                  purgeLocked();
-        void                  emitSceneSummaryLocked();
+        TelemetryRecordResult recordLocked( const TelemetryEvent& event ) SW_REQUIRES_LOCK( _mutex );
+        bool                  isEventSampledLocked( const TelemetryEventDef& def, uint32 occurrence ) const SW_REQUIRES_LOCK( _mutex );
+        string                makeEventLineLocked( const TelemetryEvent& event, const TelemetryEventDef& def ) const SW_REQUIRES_LOCK( _mutex );
+        string                makeContextLineLocked() const SW_REQUIRES_LOCK( _mutex );
+        string                makeSpoolFilePathLocked( uint32 fileIndex ) const SW_REQUIRES_LOCK( _mutex );
+        void                  pushBreadcrumbLocked( const TelemetryEvent& event ) SW_REQUIRES_LOCK( _mutex );
+        void                  flushLocked() SW_REQUIRES_LOCK( _mutex );
+        void                  closeCurrentFileLocked() SW_REQUIRES_LOCK( _mutex );
+        void                  enforceCapsLocked() SW_REQUIRES_LOCK( _mutex );
+        void                  uploadClosedLocked() SW_REQUIRES_LOCK( _mutex );
+        void                  purgeLocked() SW_REQUIRES_LOCK( _mutex );
+        void                  emitSceneSummaryLocked() SW_REQUIRES_LOCK( _mutex );
         void                  onSettingEvent( const UserSettingEvent& event );
         void                  refreshConsentFromSetting();
 
-        mutable mutex           _mutex;
-        TelemetrySchema         _schema;
-        TelemetryContext        _context;
-        TelemetryStats          _stats;
-        TelemetryFrameHistogram _frames;
-        DelegateHandle          _settingHandle;
-        vector<string>          _listPendingLine;
-        vector<string>          _listBreadcrumb;      ///< 고리 — `_breadcrumbHead` 가 가장 오래된 자리
-        vector<string>          _listClosedFile;      ///< 올릴 파일(오래된 것부터)
-        vector<uint32>          _listEventOccurrence; ///< 스키마 사건마다 기록을 시도한 수(사건 표본의 열쇠)
-        string                  _spoolFolder;
-        string                  _currentFile;
-        string                  _currentScene;
-        UserSettingsManager*    _pSettings;
-        NullTelemetryUploader   _nullUploader; ///< 기본 업로더(값) — 아무 데도 보내지 않는다
-        ITelemetryUploader*     _pUploader;    ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
-        float64                 _sessionSeconds;
-        float32 _flushTimer     SW_GUARDED_BY( _mutex );
-        uint64                  _currentFileBytes;
-        uint32                  _sequence;
-        uint32                  _fileIndex;
-        uint32                  _currentFileEvents;
-        uint32                  _breadcrumbHead;
-        uint8                   _bInitialized    : 1;
-        uint8                   _bConsent        : 1;
-        uint8                   _bSessionSampled : 1;
+        mutable mutex                       _mutex;
+        TelemetrySchema                     _schema;
+        TelemetryContext                    _context;
+        TelemetryStats _stats               SW_GUARDED_BY( _mutex );
+        TelemetryFrameHistogram _frames     SW_GUARDED_BY( _mutex );
+        DelegateHandle                      _settingHandle;
+        vector<string> _listPendingLine     SW_GUARDED_BY( _mutex );
+        vector<string> _listBreadcrumb      SW_GUARDED_BY( _mutex ); ///< 고리 — `_breadcrumbHead` 가 가장 오래된 자리
+        vector<string> _listClosedFile      SW_GUARDED_BY( _mutex ); ///< 올릴 파일(오래된 것부터)
+        vector<uint32> _listEventOccurrence SW_GUARDED_BY( _mutex ); ///< 스키마 사건마다 기록을 시도한 수(사건 표본의 열쇠)
+        string                              _spoolFolder;
+        string _currentFile                 SW_GUARDED_BY( _mutex );
+        string _currentScene                SW_GUARDED_BY( _mutex );
+        UserSettingsManager*                _pSettings;
+        NullTelemetryUploader               _nullUploader;           ///< 기본 업로더(값) — 아무 데도 보내지 않는다
+        ITelemetryUploader* _pUploader      SW_GUARDED_BY( _mutex ); ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
+        float64 _sessionSeconds             SW_GUARDED_BY( _mutex );
+        float32 _flushTimer                 SW_GUARDED_BY( _mutex );
+        uint64 _currentFileBytes            SW_GUARDED_BY( _mutex );
+        uint32 _sequence                    SW_GUARDED_BY( _mutex );
+        uint32 _fileIndex                   SW_GUARDED_BY( _mutex );
+        uint32 _currentFileEvents           SW_GUARDED_BY( _mutex );
+        uint32 _breadcrumbHead              SW_GUARDED_BY( _mutex );
+        uint8                               _bInitialized    : 1 SW_GUARDED_BY( _mutex );
+        uint8                               _bConsent        : 1 SW_GUARDED_BY( _mutex );
+        uint8                               _bSessionSampled : 1 SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

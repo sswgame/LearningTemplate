@@ -115,8 +115,8 @@ namespace sw
          *          인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).
          */
         void collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
-        /** @brief 캐시된 셰이더 define 을 반환합니다. */
-        const vector<string>& getCachedShaderDefines() const;
+        /** @brief 캐시된 셰이더 define 의 사본입니다 — 캐시는 `_overrideMutex` 아래이고 렌더 · 게임 스레드가 함께 고치므로 참조를 잠금 밖으로 내주지 않습니다. */
+        vector<string> getCachedShaderDefines() const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. */
         uint64 getPermutationHash() const;
         /** @brief bindless 디스크립터 인덱스를 반환합니다. */
@@ -162,6 +162,8 @@ namespace sw
         uint32 findTextureSlot( hashed_string name ) const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
         [[nodiscard]] bool loadFromXML( string_view xmlText );
+        /** @brief 정의 캐시가 더러우면 다시 만듭니다(`getCachedShaderDefines` · `getPermutationHash` 의 잠금 안 부분). */
+        void refreshCachedDefinesLocked() const SW_REQUIRES_LOCK( _overrideMutex );
 
         Material*            _pParentMaterial;
         MaterialInstanceDesc _desc;
@@ -182,8 +184,8 @@ namespace sw
 
         vector<uint8> _bytes;
         /** @brief 상수 버퍼입니다. 어느 디바이스의 것인지를 세대로 압니다(RHIResidentBuffer). 인덱스는 이 버퍼의 것입니다. */
-        RHIResidentBuffer  _constant;
-        RHIDescriptorIndex _descriptorIndex;
+        RHIResidentBuffer                   _constant;
+        RHIDescriptorIndex _descriptorIndex SW_GUARDED_BY( _overrideMutex );
         /**
          * @brief `_constant` 를 **만들 때 준 바이트 수**입니다.
          * @details `updateConstantBuffer( 버퍼, 데이터, 크기 )` 에는 적혀 있지 않은 전제가 있다. 그
@@ -200,11 +202,11 @@ namespace sw
         /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */
         uint32 _textureReloadGeneration;
 
-        mutable vector<string> _listCachedDefine;
-        mutable uint64         _cachedPermutationHash;
-        mutable uint64         _parentPermutationHash;
-        mutable uint8          _bDefinesDirty : 1;
-        uint8                  _bGPUDirty     : 1;
-        [[maybe_unused]] uint8 _instReserved  : 6;
+        mutable vector<string> _listCachedDefine SW_GUARDED_BY( _overrideMutex );
+        mutable uint64 _cachedPermutationHash    SW_GUARDED_BY( _overrideMutex );
+        mutable uint64 _parentPermutationHash    SW_GUARDED_BY( _overrideMutex );
+        mutable uint8                            _bDefinesDirty : 1 SW_GUARDED_BY( _overrideMutex );
+        uint8                                    _bGPUDirty     : 1;
+        [[maybe_unused]] uint8                   _instReserved  : 6;
     };
 } // namespace sw

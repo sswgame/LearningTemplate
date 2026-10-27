@@ -247,9 +247,9 @@ namespace sw
     ResourcePakManager::ResourcePakManager( ResourcePakManager&& other ) noexcept
     {
         ScopedLock<mutex> lock{ other._vfsMutex };
-        _listMountedPack  = std::move( other._listMountedPack );
-        _dlcValidator     = std::move( other._dlcValidator );
-        _bAllowLooseFiles = other._bAllowLooseFiles;
+        _listMountedPack = std::move( other._listMountedPack );
+        _dlcValidator    = std::move( other._dlcValidator );
+        _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
     }
 
     ResourcePakManager& ResourcePakManager::operator=( ResourcePakManager&& other ) noexcept
@@ -257,9 +257,9 @@ namespace sw
         if ( this != &other )
         {
             ScopedLockPair<mutex> lock{ _vfsMutex, other._vfsMutex };
-            _listMountedPack  = std::move( other._listMountedPack );
-            _dlcValidator     = std::move( other._dlcValidator );
-            _bAllowLooseFiles = other._bAllowLooseFiles;
+            _listMountedPack = std::move( other._listMountedPack );
+            _dlcValidator    = std::move( other._dlcValidator );
+            _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
         }
         return *this;
     }
@@ -349,18 +349,24 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        ScopedLock<mutex> lock{ _vfsMutex };
-        for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
+        bool bUnmounted = false;
         {
-            if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
+            ScopedLock<mutex> lock{ _vfsMutex };
+            for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
-                it->_pReader->close();
-                _listMountedPack.erase( it );
-                SW_LOG_INFO( "Unmounted resource pack: %#", packFilePath );
-                return true;
+                if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
+                {
+                    it->_pReader->close();
+                    _listMountedPack.erase( it );
+                    bUnmounted = true;
+                    break;
+                }
             }
         }
-        return false;
+        // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
+        if ( bUnmounted )
+            SW_LOG_INFO( "Unmounted resource pack: %#", packFilePath );
+        return bUnmounted;
     }
 
     void ResourcePakManager::unmountAll()
@@ -491,12 +497,12 @@ namespace sw
 
     void ResourcePakManager::setAllowLooseFiles( bool bAllow )
     {
-        _bAllowLooseFiles = bAllow;
+        _bAllowLooseFiles.store( bAllow, std::memory_order_relaxed );
     }
 
     bool ResourcePakManager::isAllowLooseFiles() const
     {
-        return _bAllowLooseFiles;
+        return _bAllowLooseFiles.load( std::memory_order_relaxed );
     }
 
     size_t ResourcePakManager::getMountedPackCount() const

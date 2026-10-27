@@ -219,11 +219,11 @@ namespace sw
         };
 
         /** @brief 장부에서 항목 하나를 뺍니다. `_mutex` 를 잡고 부릅니다. */
-        void subtractLocked( const LiveEntry& entry );
+        void subtractLocked( const LiveEntry& entry ) SW_REQUIRES_LOCK( _mutex );
 
         mutable mutex                    _mutex;
         unordered_map<uint64, LiveEntry> _arrMapIDToEntry[kRHIMemoryKeySpaceCount] SW_GUARDED_BY( _mutex );
-        RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount];
+        RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount] SW_GUARDED_BY( _mutex );
         RHIMemoryBudget _driverBudget    SW_GUARDED_BY( _mutex );
         RHIMemorySizeBasis               _sizeBasis;
     };

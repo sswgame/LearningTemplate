@@ -240,9 +240,7 @@ namespace sw
     bool DebugChannelClient::connect( const NetAddress& remote, string_view token, int32 timeoutMilli )
     {
         disconnect();
-        _token     = string( token );
-        _bOpen     = SW_FALSE;
-        _bClosed   = SW_FALSE;
+        _token     = string( token ); // 상태 깃발은 위 disconnect 가 잠금 아래에서 내렸다
         _transport = StreamTransportFactory::createPlatformTransport();
         StreamTransportConfig settings;
         settings._idleTimeoutSeconds = 0.0;

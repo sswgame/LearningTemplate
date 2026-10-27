@@ -178,7 +178,7 @@ namespace sw
         vector<AudioInstanceStatus> _listInstanceStatus SW_GUARDED_BY( _mutex ){};    /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
         vector<AudioSubtitleCue> _listSubtitleCue       SW_GUARDED_BY( _mutex ){};    /**< 게임 스레드가 아직 가져가지 않은 자막 신호입니다(시작한 순서). */
         uint64 _droppedSubtitleCueCount                 SW_GUARDED_BY( _mutex ){ 0 }; /**< 상한을 넘겨 버린 자막 신호 수입니다. `getStats` 가 붙입니다. */
-        AudioEngineStats                                _stats{};                     /**< 마지막 블록의 상태입니다. */
+        AudioEngineStats _stats                         SW_GUARDED_BY( _mutex ){};    /**< 마지막 블록의 상태입니다. */
         AudioMusicStatus _music                         SW_GUARDED_BY( _mutex ){};    /**< 마지막 블록의 음악 위치입니다. */
         atomic<uint64>                                  _appliedPlayingID{ 0 };       /**< 게시 시점에 적용된 재생 id 입니다. */
         mutable mutex                                   _mutex{};                     /**< 위 사본을 지킵니다. */

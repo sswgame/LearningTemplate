@@ -22,14 +22,14 @@ namespace sw
 
     bool ShaderRecompiler::initialize( string_view label )
     {
-        _label        = label;
-        _bInitialized = true;
+        _label = label;
+        _bInitialized.store( true, std::memory_order_release );
         return true;
     }
 
     void ShaderRecompiler::triggerReloadAll()
     {
-        if ( _bInitialized == false || engine::areEngineServicesBound() == false )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false || engine::areEngineServicesBound() == false )
             return;
 
         // 파일 내용 해시 캐시와 스탬프 읽기 결과를 한 번 버린다("전부 다시 본다" 는 약속). 컴파일 캐시는 항목마다 연 헤더의 내용을 직접 보고 낡음을 아니 이것이 없어도 편집은 반영되지만,
@@ -48,7 +48,7 @@ namespace sw
 
     void ShaderRecompiler::update()
     {
-        if ( _bInitialized == false )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
 
         vector<ShaderCompileDesc> listToCompile;
@@ -112,6 +112,6 @@ namespace sw
     {
         UniqueLock<shared_mutex> lock{ _mutex };
         _listPendingReload.clear();
-        _bInitialized = false;
+        _bInitialized.store( false, std::memory_order_release );
     }
 } // namespace sw
