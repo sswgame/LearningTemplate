@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/array.h"
@@ -116,7 +117,7 @@ namespace sw
         explicit AsyncFileIOQueue( const AsyncFileIOConfig& settings );
 
         /** @brief 새 요청이 들어올 때 백엔드를 깨우는 콜백을 겁니다. */
-        void setWakeDelegate( const Delegate<void()>& wakeDelegate ) { _wakeDelegate = wakeDelegate; }
+        void setWakeDelegate( const Delegate<void()>& wakeDelegate ) { _wakeDelegate.set( wakeDelegate ); }
 
         /** @brief 요청을 넣습니다. 멈추는 중이면 false 이고 요청은 그대로입니다(부르는 쪽이 `ShutDown` 으로 끝낸다). */
         [[nodiscard]] bool push( const shared_ptr<AsyncReadRequest>& pRequest );
@@ -165,9 +166,9 @@ namespace sw
         mutable mutex                                                               _mutex;
         mutable std::condition_variable_any                                         _cv;
         array<deque<shared_ptr<AsyncReadRequest>>, kAsyncIOPriorityCount> _arrQueue SW_GUARDED_BY( _mutex );
-        Delegate<void()>                                                            _wakeDelegate;
-        TaskManager*                                                                _pTaskManager;
-        uint32 _maxInFlightCount                                                    SW_GUARDED_BY( _mutex );
+        OnceInit<Delegate<void()>>                                                  _wakeDelegate;     ///< 백엔드가 I/O 스레드를 띄우기 전에 한 번 정한다
+        TaskManager* const                                                          _pTaskManager;     ///< 생성자에서 받는다(설정의 태스크 매니저)
+        const uint32                                                                _maxInFlightCount; ///< 생성자에서 정한다
         uint32 _inFlightCount                                                       SW_GUARDED_BY( _mutex );
         uint32 _outstandingCount                                                    SW_GUARDED_BY( _mutex );
         bool _bStopping                                                             SW_GUARDED_BY( _mutex );

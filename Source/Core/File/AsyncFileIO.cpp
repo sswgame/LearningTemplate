@@ -218,8 +218,8 @@ namespace sw
             ++_outstandingCount;
         }
         _cv.notify_all();
-        if ( _wakeDelegate.isBound() )
-            _wakeDelegate();
+        if ( _wakeDelegate->isBound() )
+            _wakeDelegate.get()();
         return true;
     }
 
@@ -440,8 +440,8 @@ namespace sw
             pRequest->_result._status = AsyncIOStatus::Canceled;
             deliver( pRequest, false );
         }
-        if ( _wakeDelegate.isBound() )
-            _wakeDelegate();
+        if ( _wakeDelegate->isBound() )
+            _wakeDelegate.get()();
     }
 
     bool AsyncFileIOQueue::isStopping() const
