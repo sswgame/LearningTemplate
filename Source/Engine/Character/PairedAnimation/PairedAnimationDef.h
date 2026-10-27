@@ -25,6 +25,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -134,7 +135,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /**
          * @brief 내용을 파일 형식(`*.pairedanim.xml`)으로 씁니다. 적지 않아도 되는 값(앵커가 아닌 역할의 `anchor`, 0 인 `start` · `yaw`, 빈 `skeleton`)은 쓰지 않습니다.
          * @details 쓰기는 검사하지 않는다 — 결과를 `loadFromXMLText` 로 다시 읽어야 규칙(앵커 하나, 정렬 속성 등)을 본다. 정렬하지 않는 역할의 오프셋 · 워프 값은 쓰지 않는다.

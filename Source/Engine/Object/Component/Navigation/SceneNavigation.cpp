@@ -106,7 +106,7 @@ namespace sw
         if ( _bSettingsLoaded == false )
         {
             _bSettingsLoaded = true;
-            if ( ResourceIO::hasResource( NavMeshSettings::kResourcePath ) == false || _settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
+            if ( ResourceIO::hasResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false || _settings.loadFromResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false )
                 _settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표는 굽기 전에 validate 가 거절한다(DataDriven)
         }
         return _settings;
@@ -327,10 +327,10 @@ namespace sw
         shared_ptr<const NavMeshAsset> pAsset     = _pCookedAsset;
         if ( pAsset == nullptr )
         {
-            if ( cookedPath.empty() || ResourceIO::hasResource( cookedPath ) == false )
+            if ( cookedPath.empty() || ResourceIO::hasResource( ResourceID{ cookedPath } ) == false )
                 return false;
             shared_ptr<NavMeshAsset> pLoaded = make_shared<NavMeshAsset>();
-            if ( pLoaded->loadFromResource( cookedPath ) == false )
+            if ( pLoaded->loadFromResource( ResourceID{ cookedPath } ) == false )
                 return false;
             pAsset = std::move( pLoaded );
         }

@@ -378,7 +378,7 @@ SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
     {
         const string resourceID = ResourcePaths::toResourceID( filePath );
         PrefabAsset  prefab;
-        SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( resourceID ), resourceID.c_str() );
+        SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( sw::ResourceID{ resourceID } ), resourceID.c_str() );
         GameObject* pObject = manager.createGameObject( hashed_string( "Gimmick" ) );
         SW_EXPECT_TRUE_MSG( prefab.applyStateTo( pObject ), resourceID.c_str() );
         ++prefabCount;
@@ -415,8 +415,8 @@ SW_TEST_CASE( GimmickGenreTest, Gimmick3DVariantsMirrorTheir2DPrefabs )
 
         PrefabAsset variant;
         PrefabAsset base;
-        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( variantID ), variantID.c_str() );
-        SW_ASSERT_TRUE_MSG( base.loadFromXMLFile( baseID ), baseID.c_str() );
+        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( sw::ResourceID{ variantID } ), variantID.c_str() );
+        SW_ASSERT_TRUE_MSG( base.loadFromXMLFile( sw::ResourceID{ baseID } ), baseID.c_str() );
         GameObject* pVariant = manager.createGameObject( hashed_string( "Variant" ) );
         GameObject* pBase    = manager.createGameObject( hashed_string( "Base" ) );
         SW_ASSERT_TRUE_MSG( variant.applyStateTo( pVariant ), variantID.c_str() );
@@ -466,7 +466,7 @@ SW_TEST_CASE( GimmickGenreTest, Gimmick3DTriggerVariantsReceiveOverlapsInA3DScen
             continue;
         const string variantID = ResourcePaths::toResourceID( filePath );
         PrefabAsset  variant;
-        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( variantID ), variantID.c_str() );
+        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( sw::ResourceID{ variantID } ), variantID.c_str() );
         GameObject* pObject = manager.createGameObject( hashed_string( "Variant" ) );
         SW_ASSERT_TRUE_MSG( variant.applyStateTo( pObject ), variantID.c_str() );
         RigidBodyComponent* pBody = pObject->getComponent<RigidBodyComponent>();

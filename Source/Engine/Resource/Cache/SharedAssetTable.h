@@ -16,6 +16,7 @@
 
 #include "Engine/Resource/Cache/SharedAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternTable.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -28,8 +29,8 @@ namespace sw
     class SharedAssetTable
     {
     public:
-        /** @brief 경로의 파일을 @p outAsset 에 읽습니다. 읽지 못하면 false 입니다. */
-        using LoadFunction = bool ( * )( string_view path, AssetType& outAsset );
+        /** @brief 리소스 id 의 파일을 @p outAsset 에 읽습니다. 읽지 못하면 false 입니다. */
+        using LoadFunction = bool ( * )( const ResourceID& resourceID, AssetType& outAsset );
 
         SharedAssetTable()
             : _table{}
@@ -87,7 +88,7 @@ namespace sw
         {
             const string          key     = makeKey( path );
             shared_ptr<AssetType> loaded  = sw::make_shared<AssetType>();
-            const bool            bLoaded = load != nullptr && load( path, *loaded );
+            const bool            bLoaded = load != nullptr && load( toResourceID( path ), *loaded );
             if ( bLoaded )
                 outAsset = _table.insertOrGetLive( key, std::move( loaded ) );
             // 결과가 표에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 표 둘 중 하나를 반드시 본다.
@@ -106,7 +107,7 @@ namespace sw
             if ( live == nullptr || load == nullptr )
                 return false;
             AssetType fresh;
-            if ( load( path, fresh ) == false )
+            if ( load( toResourceID( path ), fresh ) == false )
                 return false;
             *live = std::move( fresh );
             _reloadCount.fetch_add( 1, std::memory_order_release );
@@ -123,7 +124,7 @@ namespace sw
             if ( findLive( path ) == nullptr || load == nullptr )
                 return false;
             AssetType fresh;
-            if ( load( path, fresh ) == false )
+            if ( load( toResourceID( path ), fresh ) == false )
                 return false;
             _table.erase( makeKey( path ) );
             _reloadCount.fetch_add( 1, std::memory_order_release );
@@ -142,6 +143,8 @@ namespace sw
     private:
         /** @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
+        /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 공유 캐시의 키는 리소스 id 만 담는다. */
+        static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
 
         WeakInternTable<string, AssetType>                                                _table;
         mutex                                                                             _loadingMutex;

@@ -18,6 +18,7 @@
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw::editor
 {
@@ -215,7 +216,7 @@ namespace sw::editor
         /** @brief @p name 벌을 읽고 해석합니다. 실패하면 false 와 이유이고 @p outConfig 는 그대로입니다. */
         [[nodiscard]] static bool loadTheme( string_view name, EditorThemeConfig& outConfig, string& outError );
         /** @brief 리소스 id(`editor/theme/dark.tokens.json`)의 벌을 읽고 해석합니다(리소스 데이터 종류 `editortheme` 의 로더). */
-        [[nodiscard]] static bool loadThemeResource( const string& resourceID );
+        [[nodiscard]] static bool loadThemeResource( const ResourceID& id );
         /** @brief 파일 하나를 읽어 해석합니다(테스트 · 핫 리로드). */
         [[nodiscard]] static bool loadThemeFile( string_view absolutePath, EditorThemeConfig& outConfig, string& outError );
         /** @brief 읽은 토큰을 실행 값으로 해석합니다. 색 글자가 형식에 맞지 않거나 비었으면 false 와 그 키입니다. */

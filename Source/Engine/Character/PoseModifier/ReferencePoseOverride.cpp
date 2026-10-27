@@ -41,14 +41,15 @@ namespace sw
         return reader.finish();
     }
 
-    bool ReferencePoseOverride::loadFromResource( string_view path, const CharacterBoneArray* pBones )
+    bool ReferencePoseOverride::loadFromResource( const ResourceID& resourceID, const CharacterBoneArray* pBones )
     {
+        const string_view path = resourceID.view();
         _listOverride.clear();
         _listMirrorPair.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "ReferencePose", root ) )
+        if ( reader.loadRoot( document, resourceID, "ReferencePose", root ) )
             readRoot( root, reader );
         CharacterIssueList boneIssues;
         if ( pBones != nullptr && validateBones( *pBones, &boneIssues ) == false )

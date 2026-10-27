@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -101,7 +102,7 @@ namespace sw
          * @brief 음성을 말합니다 — 비즘 트랙이 있으면 그것, 없으면 PCM 진폭으로 입을 엽니다. 오디오가 있으면 소리도 냅니다.
          * @return 트랙도 PCM 도 읽지 못하면 false 입니다.
          */
-        bool speak( string_view audioPath );
+        bool speak( const ResourceID& resourceID );
         /** @brief 비즘 트랙을 직접 말합니다(테스트 · 절차 생성 — 소리는 내지 않는다). */
         void speakTrack( const VisemeTrack& track );
         /** @brief 진폭 표본(모노 float)을 직접 말합니다(테스트 — 소리는 내지 않는다). */

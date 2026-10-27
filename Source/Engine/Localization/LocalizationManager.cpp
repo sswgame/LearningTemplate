@@ -29,10 +29,10 @@ namespace sw
              * @details 프로젝트 · 테이블 · 번역 경로는 모두 리소스 id 다. 루트 밖 폴더(테스트 임시 폴더, 도구 작업 폴더)는 `ResourcePaths::mountDiskDomain`
              *          으로 붙여 id 로 부른다 — 예전에는 디스크를 먼저 보고 없으면 리소스로 다시 찾아 두 종류의 경로가 한 입구로 들어왔다.
              */
-            [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText ) { return ResourceIO::readTextResource( path, outText ); }
+            [[nodiscard]] static bool readLocalizationFile( const ResourceID& resourceID, string& outText ) { return ResourceIO::readTextResource( resourceID, outText ); }
 
             /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
-            static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( path ); }
+            static bool hasLocalizationFile( const ResourceID& resourceID ) { return ResourceIO::hasResource( resourceID ); }
 
             /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )
@@ -116,10 +116,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 데이터
     // ------------------------------------------------------------------------------
-    bool LocalizationManager::loadCultureTable( string_view resourcePath )
+    bool LocalizationManager::loadCultureTable( const ResourceID& resourceID )
     {
-        string text;
-        if ( LocalizationManagerInternal::readLocalizationFile( resourcePath, text ) == false )
+        const string_view resourcePath = resourceID.view();
+        string            text;
+        if ( LocalizationManagerInternal::readLocalizationFile( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;
@@ -155,11 +156,12 @@ namespace sw
         return pCulture != nullptr ? *pCulture : CultureInfo{};
     }
 
-    bool LocalizationManager::readProject( string_view projectPath, MountedProject& outProject )
+    bool LocalizationManager::readProject( const ResourceID& resourceID, MountedProject& outProject )
     {
-        string text;
-        string error;
-        if ( LocalizationManagerInternal::readLocalizationFile( projectPath, text ) == false )
+        const string_view projectPath = resourceID.view();
+        string            text;
+        string            error;
+        if ( LocalizationManagerInternal::readLocalizationFile( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Localization project '%#' cannot be read", projectPath );
             return false;
@@ -181,7 +183,7 @@ namespace sw
             const string tablePath = LocalizationProject::makeSiblingPath( projectPath, tableName );
             outProject._listFilePath.push_back( tablePath );
             SourceStringTable table;
-            const bool        bRead = LocalizationManagerInternal::readLocalizationFile( tablePath, text ) && table.loadFromXMLText( text, tablePath, &error );
+            const bool        bRead = LocalizationManagerInternal::readLocalizationFile( ResourceID{ tablePath }, text ) && table.loadFromXMLText( text, tablePath, &error );
             if ( bRead == false )
             {
                 SW_LOG_ERROR( "String table '%#' is not loaded: %#", tablePath.c_str(), error.c_str() );
@@ -204,9 +206,9 @@ namespace sw
         {
             const string translationPath = LocalizationProject::makeTranslationPath( projectPath, culture );
             outProject._listFilePath.push_back( translationPath );
-            if ( LocalizationManagerInternal::hasLocalizationFile( translationPath ) == false )
+            if ( LocalizationManagerInternal::hasLocalizationFile( ResourceID{ translationPath } ) == false )
                 continue; // 아직 번역이 없는 문화권이다. 수집과 가져오기가 만든다
-            if ( LocalizationManagerInternal::readLocalizationFile( translationPath, text ) == false )
+            if ( LocalizationManagerInternal::readLocalizationFile( ResourceID{ translationPath }, text ) == false )
             {
                 SW_LOG_ERROR( "Translation table '%#' cannot be read", translationPath.c_str() );
                 bAllRead = false;
@@ -231,11 +233,12 @@ namespace sw
         return bAllRead;
     }
 
-    bool LocalizationManager::mountProject( string_view projectPath, LocalizationScope scope )
+    bool LocalizationManager::mountProject( const ResourceID& resourceID, LocalizationScope scope )
     {
-        MountedProject mounted;
+        const string_view projectPath = resourceID.view();
+        MountedProject    mounted;
         mounted._scope       = scope;
-        const bool bComplete = readProject( projectPath, mounted );
+        const bool bComplete = readProject( resourceID, mounted );
         if ( mounted._project._name.empty() )
             return false;
 
@@ -354,7 +357,7 @@ namespace sw
         // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
         MountedProject reloaded;
         reloaded._scope = scope;
-        if ( readProject( projectPath, reloaded ) == false )
+        if ( readProject( ResourceID{ projectPath }, reloaded ) == false )
         {
             SW_LOG_ERROR( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
             return ReloadOutcome::Failed;
@@ -485,10 +488,11 @@ namespace sw
         return true;
     }
 
-    bool LocalizationManager::loadBinaryTableResource( string_view resourcePath )
+    bool LocalizationManager::loadBinaryTableResource( const ResourceID& resourceID )
     {
-        vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourcePath, bytes ) == false )
+        const string_view resourcePath = resourceID.view();
+        vector<uint8>     bytes;
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
         {
             SW_LOG_WARNING( "Binary localization table '%#' cannot be read", resourcePath );
             return false;
@@ -530,13 +534,14 @@ namespace sw
         return true;
     }
 
-    bool LocalizationManager::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
+    bool LocalizationManager::initialize( const ResourceID& resourceID, string_view defaultLanguage, string_view fallbackLanguage )
     {
+        const string_view projectPath = resourceID.view();
         if ( projectPath.empty() )
             return false;
         unmountProjects( LocalizationScope::Game );
         setFallbackLanguage( fallbackLanguage.empty() ? string_view( constant::kDefaultLanguage ) : fallbackLanguage );
-        if ( mountProject( projectPath, LocalizationScope::Game ) == false )
+        if ( mountProject( resourceID, LocalizationScope::Game ) == false )
         {
             SW_LOG_WARNING( "Localization project '%#' is not (fully) loaded.", projectPath );
             if ( getMountedProjectNames().empty() )

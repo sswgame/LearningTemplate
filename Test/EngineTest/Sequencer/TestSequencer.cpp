@@ -253,7 +253,7 @@ SW_TEST_CASE( SequencerTest, XMLRoundTripThroughFileKeepsValues )
     SW_ASSERT_TRUE( source.saveToFile( path ) );
 
     sw::SequenceAsset loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( loaded.loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
 
     SW_EXPECT_EQUAL( source._frameMin, loaded._frameMin );
     SW_EXPECT_EQUAL( source._frameMax, loaded._frameMax );
@@ -549,11 +549,11 @@ SW_TEST_CASE( SequencerTest, RepositorySequenceResavesByteForByte )
 {
     constexpr const utf8* kSequencePath = "engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml";
     sw::string            fileText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kSequencePath, fileText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ kSequencePath }, fileText ) );
     // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
     fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
     sw::SequenceAsset asset;
-    SW_ASSERT_TRUE( asset.loadFromFile( kSequencePath ) );
+    SW_ASSERT_TRUE( asset.loadFromFile( sw::ResourceID{ kSequencePath } ) );
     SW_ASSERT_EQUAL( size_t( 1 ), asset._listTrack.size() );
     SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Transform );
     SW_EXPECT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), asset._listTrack[0]._listChannel.size() );

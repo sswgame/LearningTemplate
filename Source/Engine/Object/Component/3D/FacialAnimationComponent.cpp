@@ -212,7 +212,7 @@ namespace sw
     void FacialAnimationComponent::loadRig()
     {
         FacialRig rig;
-        if ( _facialRigPath.empty() == false && rig.loadFromResource( _facialRigPath ) == false )
+        if ( _facialRigPath.empty() == false && rig.loadFromResource( ResourceID{ _facialRigPath } ) == false )
             SW_LOG_ERROR( "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
         setFacialRig( rig );
     }
@@ -289,11 +289,12 @@ namespace sw
         _listTrackToRigViseme.clear();
     }
 
-    bool FacialAnimationComponent::speak( string_view audioPath )
+    bool FacialAnimationComponent::speak( const ResourceID& resourceID )
     {
+        const string_view audioPath = resourceID.view();
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
-            if ( _lipSync.loadFromResource( LipSyncSettings::kResourcePath ) == false )
+            if ( _lipSync.loadFromResource( ResourceID{ LipSyncSettings::kResourcePath } ) == false )
                 SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", LipSyncSettings::kResourcePath );
             _bLipSyncSettingsReady = SW_TRUE;
         }
@@ -302,7 +303,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( ResourceIO::readTextResource( trackPath, trackText ) && track.parseXML( trackText, trackPath ) )
+        if ( ResourceIO::readTextResource( ResourceID{ trackPath }, trackText ) && track.parseXML( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;
@@ -312,7 +313,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bAudioDecoded = ResourceIO::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+            const bool    bAudioDecoded = ResourceIO::readBinaryResource( resourceID, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
                                        AudioClipData::convertPcm( pcm, clip );
             if ( bAudioDecoded )
             {
@@ -331,7 +332,7 @@ namespace sw
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
         IAudioService*           pAudio   = pManager != nullptr ? pManager->getSceneEngineServices()._pAudioService : nullptr;
         if ( pAudio != nullptr && pAudio->isInitialized() )
-            (void)pAudio->play( audioPath );
+            (void)pAudio->play( resourceID );
         return true;
     }
 

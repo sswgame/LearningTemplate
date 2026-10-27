@@ -118,7 +118,7 @@ SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Render2DSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromResource( sw::Render2DSettings::getEngineSettingsPath() ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ sw::Render2DSettings::getEngineSettingsPath() } ) );
     const int32 worldUI = settings.findSortingLayer( sw::hashed_string( "WorldUI" ) );
     SW_ASSERT_TRUE( worldUI >= 0 );
     SW_EXPECT_TRUE( static_cast<uint32>( worldUI ) > settings.getDefaultSortingLayer() );

@@ -19,6 +19,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     class CharacterDataReader;
@@ -54,7 +56,7 @@ namespace sw
         /** @brief 텍스트에서 읽습니다. 오류는 모아 로그로 남기고 false 를 반환하며, 이때 값은 기본값입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 경로를 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
 
     private:
         void readRoot( const XMLNode& root, CharacterDataReader& reader );

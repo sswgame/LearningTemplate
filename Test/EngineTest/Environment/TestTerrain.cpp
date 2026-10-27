@@ -515,7 +515,7 @@ SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
     const string savedPath = test::makeTempPath( "edit_saved.heightfield" );
     SW_ASSERT_TRUE( pTerrain->saveHeightfield( savedPath ) );
     HeightfieldData loaded;
-    SW_ASSERT_TRUE( loaded.loadFromResource( ::test::makeTempResourceID( savedPath ) ) );
+    SW_ASSERT_TRUE( loaded.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( savedPath ) } ) );
     SW_EXPECT_EQUAL( 65u, loaded._resolution );
     const float32 expectedRaw = ( 7.0f - TerrainTestUtil::kHeightMin ) / ( TerrainTestUtil::kHeightMax - TerrainTestUtil::kHeightMin ) * 65535.0f;
     SW_EXPECT_NEAR_EQUAL( expectedRaw, static_cast<float32>( loaded.getSample( 17, 16 ) ), 1.0f );

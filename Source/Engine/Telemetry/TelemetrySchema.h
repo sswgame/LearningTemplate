@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     class XMLNode;
@@ -89,7 +91,7 @@ namespace sw
     public:
         TelemetrySchema();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 

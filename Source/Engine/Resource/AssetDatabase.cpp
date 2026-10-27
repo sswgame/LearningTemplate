@@ -267,12 +267,12 @@ namespace sw
         return count;
     }
 
-    uint32 AssetDatabase::loadRegistry( string_view registryRelativePath )
+    uint32 AssetDatabase::loadRegistry( const ResourceID& resourceID )
     {
-        if ( ResourceIO::hasResource( registryRelativePath ) == false )
+        if ( ResourceIO::hasResource( resourceID ) == false )
             return 0;
         string text;
-        if ( ResourceIO::readTextResource( registryRelativePath, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
             return 0;
         return loadRegistryText( text );
     }
@@ -434,12 +434,12 @@ namespace sw
     AssetMetaReadResult AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        if ( ResourceIO::hasResource( metaRel ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ metaRel } ) == false )
             return AssetMetaReadResult::Missing;
 
         string    metaText;
         AssetMeta meta;
-        if ( ResourceIO::readTextResource( metaRel, metaText ) == false || meta.parseXML( metaText, metaRel.c_str() ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ metaRel }, metaText ) == false || meta.parseXML( metaText, metaRel.c_str() ) == false )
             return AssetMetaReadResult::Invalid;
 
         const bool bInvalidGuid = UUID::tryParse( meta._guid.c_str(), outGuid ) == false || outGuid.isNull();

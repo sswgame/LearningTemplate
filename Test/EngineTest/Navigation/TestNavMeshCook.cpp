@@ -23,7 +23,7 @@ namespace
         [[nodiscard]] static bool instantiate( sw::Scene& scene )
         {
             sw::SceneDocument document;
-            return document.loadXML( kScenePath ) && scene.instantiate( document );
+            return document.loadXML( sw::ResourceID{ kScenePath } ) && scene.instantiate( document );
         }
     };
 } // namespace
@@ -36,7 +36,7 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     using Internal = NavMeshCookTestInternal;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::NavMeshAsset cooked;
-    SW_ASSERT_TRUE( sw::SceneNavigationCooker::cookScene( sw::SceneEngineServices::makeFromBoundEngine(), Internal::kScenePath, cooked ) );
+    SW_ASSERT_TRUE( sw::SceneNavigationCooker::cookScene( sw::SceneEngineServices::makeFromBoundEngine(), sw::ResourceID{ Internal::kScenePath }, cooked ) );
     SW_ASSERT_EQUAL( size_t{ 1 }, cooked.getEntries().size() );
     const sw::NavMeshAssetEntry& entry = cooked.getEntries().front();
     SW_EXPECT_FALSE( entry._listTile.empty() );

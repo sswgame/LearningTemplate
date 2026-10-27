@@ -1605,7 +1605,7 @@ namespace sw::editor
         }
         // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
         // 쓰기는 디스크 경로, 읽기는 리소스 id 다(리소스 입구는 OS 경로를 받지 않는다).
-        if ( _database.loadPresetFile( resourceID ) == false )
+        if ( _database.loadPresetFile( ResourceID{ resourceID } ) == false )
         {
             _status = "Exported preset has errors - " + _database.getReport().joined();
             return;
@@ -1613,7 +1613,7 @@ namespace sw::editor
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
         if ( pGameData == nullptr )
             SW_LOG_WARNING( "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
-        else if ( pGameData->loadPresetFile( resourceID ) == false )
+        else if ( pGameData->loadPresetFile( ResourceID{ resourceID } ) == false )
         {
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
             return;
@@ -1625,7 +1625,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::loadSkeleton()
     {
-        if ( _pose.loadSkeleton( string_view( _skeletonPath.c_str() ) ) == false )
+        if ( _pose.loadSkeleton( ResourceID{ string_view( _skeletonPath.c_str() ) } ) == false )
         {
             _status = "Skeleton could not be loaded (see log)";
             return;
@@ -1643,7 +1643,7 @@ namespace sw::editor
         _bPreviewValid   = false;
         _database.clear();
         _pItems = make_unique<ItemCatalog>();
-        if ( _pItems->loadFromResource( string_view( _itemsPath.c_str() ) ) == false )
+        if ( _pItems->loadFromResource( ResourceID{ string_view( _itemsPath.c_str() ) } ) == false )
         {
             _status = "Items file could not be loaded (see log)";
             return;
@@ -1671,13 +1671,13 @@ namespace sw::editor
             _packDataMessage = "Character editor data has no path: " + error;
             return;
         }
-        if ( ResourceIO::hasResource( _packDataPath ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ _packDataPath } ) == false )
         {
             _packDataState = PackDataState::Missing;
             return;
         }
         CharacterEditorPackData data;
-        if ( data.loadFromResource( _packDataPath ) == false )
+        if ( data.loadFromResource( ResourceID{ _packDataPath } ) == false )
         {
             _packDataState   = PackDataState::Invalid;
             _packDataMessage = _packDataPath + " could not be read (see log)";
@@ -1707,13 +1707,13 @@ namespace sw::editor
         _bKindTableReady = true;
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
-        if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false )
+        if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) == false )
             SW_LOG_WARNING( "Default socket kind table could not be loaded - kinds are not validated" );
         else
             _sockets.setKindTable( kinds );
 
         MirrorNameRules rules;
-        if ( rules.loadFromResource( MirrorNameRules::kDefaultPath ) == false )
+        if ( rules.loadFromResource( ResourceID{ MirrorNameRules::kDefaultPath } ) == false )
             SW_LOG_WARNING( "Default mirror name table could not be loaded - left/right pairs are not found" );
         else
             _sockets.setMirrorRules( rules );

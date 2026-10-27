@@ -527,8 +527,9 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool JSONDocument::loadResource( string_view relativePath, string* pOutAbsPath )
+    bool JSONDocument::loadResource( const ResourceID& resourceID, string* pOutAbsPath )
     {
+        const string_view relativePath = resourceID.view();
         if ( relativePath.empty() )
         {
             _lastError = "empty path";
@@ -536,7 +537,7 @@ namespace sw
         }
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text, &absPath ) == false )
         {
             _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;

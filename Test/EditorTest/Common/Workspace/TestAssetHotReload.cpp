@@ -31,7 +31,7 @@ namespace
 
         const utf8* getAssetKindName() const override { return "HeldPathProbe"; }
         bool        isCached( sw::string_view relativePath ) const override { return relativePath == "data/held.interactions.xml"; }
-        void        reload( sw::string_view, sw::IRHIDevice* ) override { ++_reloadCount; }
+        void        reload( const sw::ResourceID&, sw::IRHIDevice* ) override { ++_reloadCount; }
         size_t      getCachedCount() const override { return 1u; }
         void        clear() override {}
 
@@ -52,8 +52,8 @@ SW_TEST_CASE( AssetHotReloadTest, ModuleDataTableReloadsInTheCacheHoldingItsPath
     sw::AssetManager       resources;
     HeldPathProbeCache     probe;
     const sw::Subscription registration = resources.registerAssetCache( &probe );
-    SW_EXPECT_EQUAL( 1u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/held.interactions.xml", nullptr ) );
-    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/other.interactions.xml", nullptr ) );
+    SW_EXPECT_EQUAL( 1u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, sw::ResourceID{ "data/held.interactions.xml" }, nullptr ) );
+    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, sw::ResourceID{ "data/other.interactions.xml" }, nullptr ) );
     SW_EXPECT_EQUAL( 1u, probe._reloadCount );
 }
 
@@ -86,7 +86,7 @@ SW_TEST_CASE( AssetHotReloadTest, AudioDataReloadsThroughTheEngineAudioCache )
 
     sw::AssetManager resources;
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "AudioData" ) );
-    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "game/none/audio/none.audioevents.xml", nullptr ) );
+    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, sw::ResourceID{ "game/none/audio/none.audioevents.xml" }, nullptr ) );
 }
 
 /**
@@ -117,7 +117,7 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
     sw::AssetManager resources;
     sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
     SW_ASSERT_NOT_NULL( pCache );
-    pCache->reload( ::test::makeTempResourceID( clipPath ), nullptr );
+    pCache->reload( sw::ResourceID{ ::test::makeTempResourceID( clipPath ) }, nullptr );
 
     // 다른 경로는 아무에게도 알리지 않는다.
     SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::notifyAssetUsers( manager, "other/unrelated.sprite.xml" ) );

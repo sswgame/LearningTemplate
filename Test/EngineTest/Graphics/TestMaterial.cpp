@@ -30,9 +30,9 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    bool                         loadOk   = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() );
+    bool                         loadOk   = material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } );
     if ( loadOk == false )
-        loadOk = material->loadFromFile( "materials/defaultmaterial.material" );
+        loadOk = material->loadFromFile( sw::ResourceID{ "materials/defaultmaterial.material" } );
     SW_EXPECT_TRUE( loadOk );
 
     SW_EXPECT_EQUAL( sw::string( "DefaultMaterial" ), material->getName() );
@@ -55,7 +55,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_TRUE( sw::FileUtil::exists( tempPath ) );
 
     sw::shared_ptr<sw::Material> reloadedMaterial = sw::Material::create();
-    bool                         reloadOk         = reloadedMaterial->loadFromFile( ::test::makeTempResourceID( tempPath ) );
+    bool                         reloadOk         = reloadedMaterial->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } );
     SW_EXPECT_TRUE( reloadOk );
     SW_EXPECT_EQUAL( material->getName(), reloadedMaterial->getName() );
 }
@@ -81,7 +81,7 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::vector<sw::string> listDef = material->getCachedShaderDefines();
     auto                   has     = [&]( const utf8* pDefine )
@@ -134,7 +134,7 @@ SW_TEST_CASE( MaterialTest, StaticSwitchOffKeywordWhenDisabled )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
 
     auto has = [&material]( const utf8* pDefine )
     {
@@ -178,7 +178,7 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( xml ), static_cast<uint64>( sw::StringUtil::strlen( xml ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
 
     const uint32* shade = reinterpret_cast<const uint32*>( material->getParameterData( "shadeMode" ) );
     const uint32* flags = reinterpret_cast<const uint32*>( material->getParameterData( "flags" ) );
@@ -198,7 +198,7 @@ SW_TEST_CASE( MaterialTest, MaterialColorModification )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "_color" ), "0.25 0.50 0.75 1.0" ) );
     const float32* color = reinterpret_cast<const float32*>( material->getParameterData( "_color" ) );
@@ -235,7 +235,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     const sw::MaterialProperty* colorProp = material->findProperty( sw::hashed_string( "_color" ) );
     SW_EXPECT_TRUE( colorProp != nullptr );
@@ -266,7 +266,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
     instance->setName( "TestMic" );
     SW_EXPECT_TRUE( instance->saveToFile( tempPath ) );
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( material.get() );
-    SW_EXPECT_TRUE( reloaded->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_TRUE( reloaded->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
     SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "_color" ) ) );
 }
 
@@ -276,7 +276,7 @@ SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -341,7 +341,7 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     sw::float4                           overrideColor{ 0.1f, 0.2f, 0.3f, 0.4f };
@@ -362,7 +362,7 @@ SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 SW_TEST_CASE( MaterialTest, MaterialShaderReflectionValidation )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     cb{};
@@ -393,7 +393,7 @@ SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     // 아래 전부가 이 둘에 달려 있다 — 약한 기대로 넘기면 빈 버퍼를 reinterpret_cast 해서 읽는다.
     // (리소스 루트를 못 찾는 작업 폴더에서 돌리면 그렇게 세그폴트한다.)
-    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::vector<uint8> buffer = material->getBuffer();
     SW_ASSERT_TRUE( buffer.size() >= 16 );
@@ -516,7 +516,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionDynamicLayoutReorderAndOffsetSync )
 SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     // 1) 리플렉션에 슬롯 변경(t0 -> t2)이 발생했을 때의 리소스 바인딩 정보 구성
     sw::ShaderReflectionData reflection{};
@@ -1181,7 +1181,7 @@ SW_TEST_CASE( MaterialTest, MissingMaterialFileFailsLoad )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_TEST_DEFENSIVE_SCOPE( "missing material file" );
-    SW_EXPECT_FALSE( material->loadFromFile( "engine/materials/does_not_exist.material" ) );
+    SW_EXPECT_FALSE( material->loadFromFile( sw::ResourceID{ "engine/materials/does_not_exist.material" } ) );
     SW_EXPECT_FALSE( material->isRHIValid() );
 }
 
@@ -1247,7 +1247,7 @@ SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::shared_ptr<sw::Material> parent = sw::Material::create();
-    SW_ASSERT_TRUE( parent->loadFromFile( "engine/materials/benchtextured.material" ) );
+    SW_ASSERT_TRUE( parent->loadFromFile( sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
 
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
     // 덮어쓰지 않았으면 부모 프로퍼티의 경로다.
@@ -1262,7 +1262,7 @@ SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
     SW_EXPECT_TRUE_MSG( text.find( "assetPath=\"engine/textures/perlin.dds\"" ) != sw::string::npos, text.c_str() );
 
     sw::shared_ptr<sw::MaterialInstance> reloaded = sw::MaterialInstance::create( parent.get() );
-    SW_ASSERT_TRUE( reloaded->loadFromFile( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( reloaded->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
     SW_EXPECT_TRUE_MSG( reloaded->getTextureParameter( sw::hashed_string( "_albedoMap" ) ) == "engine/textures/perlin.dds", text.c_str() );
     SW_EXPECT_TRUE( reloaded->isParameterOverridden( sw::hashed_string( "_albedoMap" ) ) );
 
@@ -1371,9 +1371,9 @@ SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
 
         test::ScopedDefensiveTestLog expected( "material files newer than this build" );
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_EXPECT_FALSE( material->loadFromFile( ::test::makeTempResourceID( futureMaterialPath ) ) );
+        SW_EXPECT_FALSE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( futureMaterialPath ) } ) );
         sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
-        SW_EXPECT_FALSE( instance->loadFromFile( ::test::makeTempResourceID( futureInstancePath ) ) );
+        SW_EXPECT_FALSE( instance->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( futureInstancePath ) } ) );
     }
     SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
 }

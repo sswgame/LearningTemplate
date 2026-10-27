@@ -155,7 +155,7 @@ namespace sw
         bool bInitialized{ false };
         {
             const Impl::DeviceInitScope initScope{ *_impl };
-            bInitialized = material->initialize( pDevice, key );
+            bInitialized = material->initialize( pDevice, ResourceID{ key } );
         }
         if ( bInitialized )
             return material.get();
@@ -254,7 +254,7 @@ namespace sw
             }
             if ( material->isRHIValid() )
                 continue;
-            if ( material->initialize( pDevice, key ) == false )
+            if ( material->initialize( pDevice, ResourceID{ key } ) == false )
                 SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
         }
     }
@@ -274,8 +274,9 @@ namespace sw
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
-    void MaterialCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    void MaterialCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
     {
+        const string_view relativePath = resourceID.view();
         SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
             return;
@@ -306,7 +307,7 @@ namespace sw
             material->releaseRHI( pDevice );
         }
 
-        if ( material->initialize( pDevice, key ) == false )
+        if ( material->initialize( pDevice, ResourceID{ key } ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
     }
 

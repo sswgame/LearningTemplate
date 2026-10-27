@@ -160,7 +160,7 @@ namespace sw
         if ( _catalogPath.empty() == false )
         {
             _catalog.clear();
-            if ( _catalog.loadFromResource( _catalogPath ) == false )
+            if ( _catalog.loadFromResource( ResourceID{ _catalogPath } ) == false )
                 SW_LOG_WARNING( "Camera presets '%#' did not load", _catalogPath );
         }
         if ( _catalog.getAll().empty() )
@@ -221,7 +221,7 @@ namespace sw
         }
         const string_view    mapPath       = pDefaultAssets->_photoModeInputMap.get();
         unique_ptr<InputMap> photoInputMap = make_unique<InputMap>();
-        if ( photoInputMap->loadFromResource( mapPath ) == false || CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
+        if ( photoInputMap->loadFromResource( ResourceID{ mapPath } ) == false || CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
         {
             SW_LOG_ERROR( "Photo mode input map '%#' did not load - not entered", mapPath );
             return false;

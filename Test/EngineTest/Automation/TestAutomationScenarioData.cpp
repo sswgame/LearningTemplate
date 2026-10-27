@@ -151,11 +151,12 @@ namespace
          * @brief 시나리오 한 편의 단계를 검사합니다. 틀린 단계마다 테스트 실패를 남깁니다.
          * @return 모든 단계의 검사 함수를 불러 봤으면 true, 못 본 단계가 하나라도 있으면 false 입니다.
          */
-        static bool validateScenario( const sw::string& resourceID, StandIns& inoutStandIn, Tally& inoutTally )
+        static bool validateScenario( const sw::ResourceID& id, StandIns& inoutStandIn, Tally& inoutTally )
         {
+            const sw::string&      resourceID = id.str();
             sw::AutomationScenario scenario;
             sw::string             loadError;
-            const bool             bLoaded = scenario.loadFromPath( resourceID, loadError );
+            const bool             bLoaded = scenario.loadFromPath( id, loadError );
             if ( bLoaded == false )
             {
                 SW_EXPECT_TRUE_MSG( bLoaded, ( "시나리오를 읽지 못해 단계를 하나도 보지 못했습니다: " + resourceID + " - " + loadError ).c_str() );
@@ -251,7 +252,7 @@ SW_TEST_CASE( AutomationScenarioDataTest, EveryScenarioStepPassesItsValidation )
             if ( AutomationScenarioDataInternal::isScenarioFile( resourceID ) == false )
                 continue;
             ++tally._scenarioCount;
-            if ( AutomationScenarioDataInternal::validateScenario( resourceID, standIn, tally ) )
+            if ( AutomationScenarioDataInternal::validateScenario( sw::ResourceID{ resourceID }, standIn, tally ) )
                 ++tally._fullySeenScenarioCount;
         }
     }

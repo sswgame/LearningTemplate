@@ -589,9 +589,9 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, hashed_string( "Wave" ) );
     SW_EXPECT_TRUE( StringUtil::endsWith( cookedPath, "cube.wave.vat" ) );
     vector<uint8> cookedBytes;
-    SW_ASSERT_TRUE( ResourceIO::readBinaryResource( cookedPath, cookedBytes ) );
+    SW_ASSERT_TRUE( ResourceIO::readBinaryResource( sw::ResourceID{ cookedPath }, cookedBytes ) );
     AnimationClip clip;
-    SW_ASSERT_TRUE( clip.loadFromResource( ::test::makeTempResourceID( FileUtil::joinPath( folder, "wave.animclip" ) ) ) );
+    SW_ASSERT_TRUE( clip.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( FileUtil::joinPath( folder, "wave.animclip" ) ) } ) );
     MeshVertexAnimation runtime;
     SW_ASSERT_TRUE( MeshVertexAnimationBaker::bake( *mesh, *skeleton, clip, 15.0f, false, runtime ) );
     vector<uint8> runtimeBytes;

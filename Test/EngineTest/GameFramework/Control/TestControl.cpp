@@ -1189,7 +1189,7 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
     SW_ASSERT_TRUE( script.addSlot( 7, InputSlot::fromKey( Key::W ), true ) );
     {
         UISystem ui;
-        SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
         auto                 root    = sw::make_unique<uitest::TestPanelWidget>( "menuRoot" );
         auto*                pButton = static_cast<uitest::TestBoxWidget*>( root->addChild( sw::make_unique<uitest::TestBoxWidget>( "play", true ) ) );
         const UIScreenHandle menu    = ui.pushScreen( sw::make_unique<UIScreen>( UIScreenDesc{}, std::move( root ) ) );

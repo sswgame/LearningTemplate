@@ -941,10 +941,11 @@ namespace sw
         return true;
     }
 
-    bool CultureTable::loadFromResource( string_view resourcePath )
+    bool CultureTable::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
+        const string_view resourcePath = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;

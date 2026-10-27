@@ -751,9 +751,9 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
-    SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" ) );
+    SW_ASSERT_TRUE( knight.loadFromResource( sw::ResourceID{ "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" } ) );
     shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-    SW_ASSERT_TRUE( asset->loadFromResource( "game/shooter3d/rigs/knight.rig.xml" ) );
+    SW_ASSERT_TRUE( asset->loadFromResource( sw::ResourceID{ "game/shooter3d/rigs/knight.rig.xml" } ) );
     RigInstance instance;
     SW_ASSERT_TRUE( instance.initialize( asset, knight, nullptr, "knight" ) );
     instance.setExternalTarget( static_cast<uint32>( instance.findTargetIndex( "LookTarget" ) ), TestRigAssetInternal::makeTargetAt( float3{ 0.5f, 1.4f, 1.2f } ) );
@@ -790,9 +790,9 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 
     // 망토 리그(루트 고정 + 스프링 사슬 4 본 · 캡슐 하나) — 프레임 시간 1/60 이라 스텝 하나씩.
     Skeleton cape;
-    SW_ASSERT_TRUE( cape.loadFromResource( "game/shooter3d/rigs/knight_cape.skeleton.xml" ) );
+    SW_ASSERT_TRUE( cape.loadFromResource( sw::ResourceID{ "game/shooter3d/rigs/knight_cape.skeleton.xml" } ) );
     shared_ptr<RigAsset> capeAsset = make_shared<RigAsset>();
-    SW_ASSERT_TRUE( capeAsset->loadFromResource( "game/shooter3d/rigs/knight_cape.rig.xml" ) );
+    SW_ASSERT_TRUE( capeAsset->loadFromResource( sw::ResourceID{ "game/shooter3d/rigs/knight_cape.rig.xml" } ) );
     RigInstance capeInstance;
     SW_ASSERT_TRUE( capeInstance.initialize( capeAsset, cape, nullptr, "cape" ) );
     Pose capeReference;

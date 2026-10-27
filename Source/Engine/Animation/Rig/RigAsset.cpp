@@ -195,10 +195,11 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::loadFromResource( string_view path )
+    bool RigAsset::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Rig '%#' could not be read", path );
             clear();

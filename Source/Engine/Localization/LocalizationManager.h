@@ -21,6 +21,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/ReloadOutcome.h"
 
 namespace sw
@@ -87,7 +88,7 @@ namespace sw
         // 2) 데이터: 문화권 테이블, 프로젝트, 낱개 테이블
         // ------------------------------------------------------------------------------
         /** @brief 문화권 테이블(`*.cultures.xml`)을 읽습니다. 의사 문화권의 테이블도 다시 만듭니다. */
-        [[nodiscard]] bool loadCultureTable( string_view resourcePath );
+        [[nodiscard]] bool loadCultureTable( const ResourceID& resourceID );
         /** @brief 문화권 테이블을 XML 텍스트에서 읽습니다(테스트와 도구). */
         [[nodiscard]] bool loadCultureTableXML( string_view xmlText );
         /** @brief @p culture 의 형식 데이터를 값으로 반환합니다(없으면 부모, 끝까지 없으면 기본값). */
@@ -97,7 +98,7 @@ namespace sw
          * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
          * @details 같은 이름의 프로젝트가 이미 있으면 바꾼다. 원문 테이블 두 개에 같은 키가 있으면 오류이고 앞의 것을 쓴다.
          */
-        [[nodiscard]] bool mountProject( string_view projectPath, LocalizationScope scope );
+        [[nodiscard]] bool mountProject( const ResourceID& resourceID, LocalizationScope scope );
         /** @brief 그 범위의 프로젝트를 내립니다. */
         void unmountProjects( LocalizationScope scope );
         /** @brief 로드한 프로젝트 이름입니다(로드한 순서). */
@@ -130,7 +131,7 @@ namespace sw
          */
         [[nodiscard]] bool loadBinaryTable( const uint8* pData, size_t size );
         /** @brief 리소스 경로(또는 절대 경로)의 이진 번역 표를 읽습니다. */
-        [[nodiscard]] bool loadBinaryTableResource( string_view resourcePath );
+        [[nodiscard]] bool loadBinaryTableResource( const ResourceID& resourceID );
         /**
          * @brief 로드한 프로젝트에서 그 문화권의 화면에 나오는 글(낡은 번역 · 검토 번역 제외)을 이진 번역 표 바이트로 베이크합니다(쿠킹 단계가 부른다).
          * @return 그 문화권의 글이 하나도 없으면 false 입니다.
@@ -142,7 +143,7 @@ namespace sw
          * @return 프로젝트를 로드했으면 true 입니다.
          * @details 언어 기본값은 코드에 두지 않는다 — 게임은 `GameSettings` 의 기본 · 폴백 언어를 넘긴다.
          */
-        [[nodiscard]] bool initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage );
+        [[nodiscard]] bool initialize( const ResourceID& resourceID, string_view defaultLanguage, string_view fallbackLanguage );
 
         // ------------------------------------------------------------------------------
         // 3) 언어 설정 및 조회
@@ -230,7 +231,7 @@ namespace sw
         };
 
         /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
-        [[nodiscard]] static bool readProject( string_view projectPath, MountedProject& outProject );
+        [[nodiscard]] static bool readProject( const ResourceID& resourceID, MountedProject& outProject );
         /** @brief 읽은 문서들로 실행 테이블을 다시 채웁니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         void rebuildTablesLocked() SW_REQUIRES_LOCK( _mutex );
         /** @brief 조회 순서를 다시 계산합니다(`_mutex` 를 잡은 상태에서 부릅니다). */

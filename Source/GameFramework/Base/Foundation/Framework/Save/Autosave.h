@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -53,7 +54,7 @@ namespace sw
         uint8   _bOnBeforeBoss{ SW_TRUE }; ///< 보스 앞에 저장한다
         uint8   _bOnQuit{ SW_TRUE };       ///< 종료에 저장한다
 
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 슬롯 번호의 저장 파일 경로입니다. */
         string makeSlotPath( int32 slot ) const;

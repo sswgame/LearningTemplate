@@ -713,7 +713,7 @@ namespace sw::editor
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
-        if ( ResourceIO::readTextResource( Internal::kToonMaterialTemplate, templateText ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ Internal::kToonMaterialTemplate }, templateText ) == false )
             return {};
         XMLDocument document;
         if ( document.parse( templateText ) == false )

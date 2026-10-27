@@ -137,11 +137,11 @@ SW_TEST_CASE( AudioServiceTest, PlaybackHandling )
 
     // 빈 경로 또는 존재하지 않는 파일 재생 실패 처리 검증
     SW_TEST_DEFENSIVE_SCOPE( "playing an empty path or a file that does not exist fails with a reason" ); // 실패 이유를 알리는 로그가 이 확인이 보려는 것이다
-    SW_EXPECT_FALSE( pAudioService->play( "" ) );
-    SW_EXPECT_FALSE( pAudioService->play( "NonExistentSoundFile.wav" ) );
+    SW_EXPECT_FALSE( pAudioService->play( sw::ResourceID{ "" } ) );
+    SW_EXPECT_FALSE( pAudioService->play( sw::ResourceID{ "NonExistentSoundFile.wav" } ) );
 
-    SW_EXPECT_FALSE( pAudioService->playMusic( "" ) );
-    SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
+    SW_EXPECT_FALSE( pAudioService->playMusic( sw::ResourceID{ "" } ) );
+    SW_EXPECT_FALSE( pAudioService->playMusic( sw::ResourceID{ "NonExistentMusicFile.mp3" } ) );
 
     // stopMusic 호출 안전성
     pAudioService->stopMusic();
@@ -179,9 +179,9 @@ SW_TEST_CASE( AudioServiceTest, WavParsingAndMalformedData )
     }
 
     // 로드 검증 (비동기로 제출되므로 파일이 존재하면 true 반환)
-    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( validWavPath ) ) );
-    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( malformedPath ) ) );
-    SW_EXPECT_TRUE( pAudioService->play( test::makeTempResourceID( truncatedPath ) ) );
+    SW_EXPECT_TRUE( pAudioService->play( sw::ResourceID{ test::makeTempResourceID( validWavPath ) } ) );
+    SW_EXPECT_TRUE( pAudioService->play( sw::ResourceID{ test::makeTempResourceID( malformedPath ) } ) );
+    SW_EXPECT_TRUE( pAudioService->play( sw::ResourceID{ test::makeTempResourceID( truncatedPath ) } ) );
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getSubsystem<sw::TaskManager>().waitAll();
@@ -279,14 +279,14 @@ SW_TEST_CASE( AudioServiceTest, MusicPathTracksRequests )
     SW_EXPECT_TRUE( writeTestWav( musicDiskPath, 64 ) );
     const sw::string musicPath = test::makeTempResourceID( musicDiskPath );
 
-    SW_EXPECT_TRUE( pAudioService->playMusic( musicPath ) );
+    SW_EXPECT_TRUE( pAudioService->playMusic( sw::ResourceID{ musicPath } ) );
     // playMusic 이 돌아온 시점에는 이미 이 곡이 요청되어 있어야 한다.
     SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
     // 실패한 요청은 이미 걸린 곡을 건드리지 않는다.
     {
         SW_TEST_DEFENSIVE_SCOPE( "playing a music file that does not exist is refused with a reason" ); // 없는 파일을 알리는 로그가 이 확인이 보려는 것이다
-        SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
+        SW_EXPECT_FALSE( pAudioService->playMusic( sw::ResourceID{ "NonExistentMusicFile.mp3" } ) );
     }
     SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
@@ -331,7 +331,7 @@ SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
         {
             for ( int32 iter = 0; iter < 10; ++iter )
             {
-                pAudioService->play( ( workerIndex % 2 == 0 ) ? wavAID : wavBID );
+                pAudioService->play( sw::ResourceID{ ( workerIndex % 2 == 0 ) ? wavAID : wavBID } );
             }
         } );
     }
@@ -396,7 +396,7 @@ SW_TEST_CASE( AudioServiceTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
         for ( int32 playIndex = 0; playIndex < kPlayCount; ++playIndex )
         {
-            pAudioService->play( listWavPath[static_cast<size_t>( playIndex )] );
+            pAudioService->play( sw::ResourceID{ listWavPath[static_cast<size_t>( playIndex )] } );
         }
 
         // **일부러 기다리지 않는다.** 디코드 태스크가 도는 채로 내리는 것이 이 케이스의 전부다.
@@ -485,7 +485,7 @@ SW_TEST_CASE( AudioServiceTest, OggVorbisDecodesToPcm )
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "game/empty/sounds/click.ogg" ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::vector<uint8> listBytes;
-    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ "game/empty/sounds/click.ogg" }, listBytes ) );
 
     sw::AudioPcm pcm;
     SW_ASSERT_TRUE( sw::AudioClipDecoder::decode( "game/empty/sounds/click.ogg", listBytes.data(), listBytes.size(), pcm ) );

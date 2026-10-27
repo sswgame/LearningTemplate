@@ -96,8 +96,9 @@ namespace sw
         }
     }
 
-    bool Material::initialize( IRHIDevice* pRHI, string_view assetRelativePath )
+    bool Material::initialize( IRHIDevice* pRHI, const ResourceID& resourceID )
     {
+        const string_view assetRelativePath = resourceID.view();
         if ( pRHI == nullptr )
             return false;
 
@@ -106,7 +107,7 @@ namespace sw
 
         // 못 읽은 머티리얼은 빈 값으로 올리지 않고 실패한다. 대신 그릴 것(마젠타 `missingmaterial`)은 부르는 쪽 한 곳이 정한다(`MeshComponent::resolveMaterialAsset`).
         AssetLoadScope loadScope( "Material", assetRelativePath );
-        if ( loadFromFile( assetRelativePath ) == false )
+        if ( loadFromFile( resourceID ) == false )
         {
             SW_LOG_ERROR( "Material file '%#' could not be loaded", assetRelativePath );
             return false;
@@ -335,7 +336,7 @@ namespace sw
         // 한 번도 initialize 되지 않은 머티리얼이다. 복원할 내용 자체가 없다.
         if ( pDevice == nullptr || _assetPath.empty() )
             return true;
-        return initialize( pDevice, _assetPath );
+        return initialize( pDevice, ResourceID{ _assetPath } );
     }
 
     void Material::forgetRHI( IRHIDevice* pDevice )

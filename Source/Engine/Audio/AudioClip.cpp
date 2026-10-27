@@ -277,6 +277,7 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
+        const ResourceID  resourceID{ pathView }; // 캐시 키(클립 리소스 id)를 로더 id 로 바꾸는 한 곳
         if ( ResourcePaths::isExcludedForHost( pathView ) )
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
         if ( StringUtil::endsWith( pathView, AudioGraphDef::kExtension, true ) )
@@ -286,7 +287,7 @@ namespace sw
         if ( AudioClipDecoder::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;
-            const bool    bRead = ResourceIO::readBinaryResource( pathView, bytes ); // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
+            const bool    bRead = ResourceIO::readBinaryResource( resourceID, bytes ); // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
             if ( bRead )
             {
                 // 긴 소리는 풀지 않고 압축 바이트로 스트리밍한다(음수 기준이면 끈다). 짧거나 스트리밍할 수 없는 형식이면 바이트가 그대로 남아 아래에서 통째로 푼다.
@@ -309,7 +310,7 @@ namespace sw
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).
         const bool bUseFallbackDecoder = bDecoded == false && _pFallbackDecoder != nullptr && FileUtil::hasExtension( pathView, ".ogg" ) == false;
         if ( bUseFallbackDecoder )
-            bDecoded = _pFallbackDecoder( pathView, pcm );
+            bDecoded = _pFallbackDecoder( resourceID, pcm );
         if ( bDecoded == false )
         {
             SW_LOG_WARNING( "Failed to decode: %#", pathView );
@@ -328,8 +329,9 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::decodeGraph( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
+        const ResourceID  resourceID{ pathView }; // 캐시 키(그래프 리소스 id)를 로더 id 로 바꾸는 한 곳
         AudioGraphDef     def;
-        if ( def.loadFromResource( pathView ) == false )
+        if ( def.loadFromResource( resourceID ) == false )
             return nullptr; // 읽기 · 검사가 오류를 남겼다
         // 그래뉼러 소스는 같은 캐시 규칙으로 푼다(이 작업 안에서 바로). 그래프 안의 그래프와 스트리밍 클립은 AudioGraph::create 가 오류로 멈춘다.
         vector<shared_ptr<const AudioClipData>> listNodeClip( def._listNode.size() );

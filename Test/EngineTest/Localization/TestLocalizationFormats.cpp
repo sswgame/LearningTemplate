@@ -24,7 +24,7 @@ namespace
         {
             static sw::CultureTable s_table;
             if ( s_table.getCultureCount() == 0 )
-                (void)s_table.loadFromResource( LocalizationTestUtil::kCultureTable ); // 실패는 로더가 오류로 남기고, 빈 표는 문화권을 찾는 단언이 드러낸다
+                (void)s_table.loadFromResource( sw::ResourceID{ LocalizationTestUtil::kCultureTable } ); // 실패는 로더가 오류로 남기고, 빈 표는 문화권을 찾는 단언이 드러낸다
             return s_table;
         }
 
@@ -383,7 +383,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
 
     sw::LocalizationManager cooker;
-    SW_ASSERT_TRUE( cooker.mountProject( ::test::makeTempResourceID( project ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( cooker.mountProject( sw::ResourceID{ ::test::makeTempResourceID( project ) }, sw::LocalizationScope::Game ) );
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( cooker.cookBinaryTable( "ko", bytes ) );
     sw::vector<uint8> none;

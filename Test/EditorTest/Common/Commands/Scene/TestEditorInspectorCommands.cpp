@@ -71,7 +71,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, PrefabCommandsRefuseWithAReasonWhileS
     SW_ASSERT_FALSE( EditorPlaySession::areSceneEditsAllowed() );
 
     test::ScopedLogCollector logs;
-    SW_EXPECT_FALSE( EditorInspectorCommands::applyToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
+    SW_EXPECT_FALSE( EditorInspectorCommands::applyToPrefab( fixture._pLamp, sw::ResourceID{ "game/prefabs/lamp.prefab.xml" } ) );
     SW_EXPECT_FALSE( EditorInspectorCommands::revertToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
     SW_EXPECT_FALSE( EditorInspectorCommands::unlinkPrefab( fixture._pLamp ) );
     SW_EXPECT_EQUAL( uint32( 3 ), logs.countWithID( "Editor.SceneEditRefused" ) );

@@ -704,11 +704,12 @@ namespace sw
         _version = 1;
     }
 
-    bool UserSettingsSchema::loadFromResource( string_view resourcePath )
+    bool UserSettingsSchema::loadFromResource( const ResourceID& resourceID )
     {
-        XMLDocument doc;
-        string      absPath;
-        if ( doc.loadResource( resourcePath, &absPath ) == false )
+        const string_view resourcePath = resourceID.view();
+        XMLDocument       doc;
+        string            absPath;
+        if ( doc.loadResource( resourceID, &absPath ) == false )
         {
             SW_LOG_ERROR( "Failed to read the user settings schema '%#'", resourcePath );
             return false;

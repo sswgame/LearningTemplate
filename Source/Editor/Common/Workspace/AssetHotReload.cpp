@@ -42,6 +42,9 @@ namespace sw::editor
     {
         struct AssetHotReloadInternal
         {
+            /** @brief 파일 감시가 리소스 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
+            [[nodiscard]] static ResourceID toResourceID( string_view relativePath ) { return ResourceID{ relativePath }; }
+
             /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Resource/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
             static constexpr const utf8* kFenceFileStem = "contentfence";
             /** @brief 표지 사건을 기다리는 시한(밀리초)입니다. 감시는 보통 몇 ms 안에 알린다. */
@@ -377,7 +380,7 @@ namespace sw::editor
             pContext->getSubsystem<EditorAssetValidation>().requestValidation( relativePath );
 
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
-        if ( reloadChangedAsset( relativePath ) == ReloadOutcome::Failed )
+        if ( reloadChangedAsset( AssetHotReloadInternal::toResourceID( relativePath ) ) == ReloadOutcome::Failed )
             SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
     }
 
@@ -459,7 +462,7 @@ namespace sw::editor
             {
                 // 임포터가 원본으로 보지 않은 파일 — 옛 길처럼 캐시가 다시 읽는다. 표가 임포터를 달아 둔 파일에서만 일어난다.
                 const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( itemResult._relativePath );
-                if ( reloadCaches( route, itemResult._relativePath ) == ReloadOutcome::Failed )
+                if ( reloadCaches( route, AssetHotReloadInternal::toResourceID( itemResult._relativePath ) ) == ReloadOutcome::Failed )
                     SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", itemResult._relativePath.c_str() );
             }
         }
@@ -481,9 +484,10 @@ namespace sw::editor
         }
     }
 
-    ReloadOutcome AssetHotReload::reloadChangedAsset( string_view relativePath )
+    ReloadOutcome AssetHotReload::reloadChangedAsset( const ResourceID& resourceID )
     {
-        const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relativePath );
+        const string_view      relativePath = resourceID.view();
+        const AssetReloadRoute route        = EditorAssetTypeRegistry::findReloadRoute( relativePath );
         if ( route._pfnImportSource != nullptr )
         {
             // 워커 임포터의 원본은 임포트 잡이 임포트한다(`onResourceFileChanged`). 에디터 스레드에서 동기로 돌리지 않는다.
@@ -493,11 +497,12 @@ namespace sw::editor
             if ( route._pfnImportSource( relativePath ) )
                 return ReloadOutcome::Reloaded;
         }
-        return reloadCaches( route, relativePath );
+        return reloadCaches( route, resourceID );
     }
 
-    ReloadOutcome AssetHotReload::reloadCaches( const AssetReloadRoute& route, string_view relativePath )
+    ReloadOutcome AssetHotReload::reloadCaches( const AssetReloadRoute& route, const ResourceID& resourceID )
     {
+        const string_view relativePath = resourceID.view();
         if ( route._pCacheKindName == nullptr )
             return ReloadOutcome::NotTracked;
 
@@ -511,7 +516,7 @@ namespace sw::editor
         if ( route._pCacheKindName[0] == '\0' )
         {
             // 모듈이 로드한 캐시 — 이름 대신 그 경로를 가진 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
-            if ( reloadInCachesHolding( *pResources, relativePath, pDevice ) == 0 )
+            if ( reloadInCachesHolding( *pResources, resourceID, pDevice ) == 0 )
                 return ReloadOutcome::NotTracked;
         }
         else
@@ -523,7 +528,7 @@ namespace sw::editor
                 return ReloadOutcome::Failed;
             }
             SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
-            pCache->reload( relativePath, pDevice );
+            pCache->reload( resourceID, pDevice );
         }
 
         Scene*             pScene   = getActiveScene();
@@ -533,15 +538,16 @@ namespace sw::editor
         return ReloadOutcome::Reloaded;
     }
 
-    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, string_view relativePath, IRHIDevice* pDevice )
+    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const ResourceID& resourceID, IRHIDevice* pDevice )
     {
-        uint32 reloadedCount{ 0 };
+        const string_view relativePath = resourceID.view();
+        uint32            reloadedCount{ 0 };
         for ( IAssetCache* pCache : resources.getAllAssetCache() )
         {
             if ( pCache->isCached( relativePath ) == false )
                 continue;
             SW_LOG_INFO( "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
-            pCache->reload( relativePath, pDevice );
+            pCache->reload( resourceID, pDevice );
             ++reloadedCount;
         }
         return reloadedCount;

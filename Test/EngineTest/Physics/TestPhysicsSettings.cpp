@@ -64,7 +64,7 @@ SW_TEST_CASE( PhysicsSettingsTest, EmptyLayerOrMaterialTableIsLoadError )
 SW_TEST_CASE( PhysicsSettingsTest, EngineSettingsFileLoads )
 {
     sw::PhysicsSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromResource( "engine/physics/physicssettings.xml" ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ "engine/physics/physicssettings.xml" } ) );
     uint8 layer = 0;
     SW_EXPECT_TRUE( settings.findLayerIndex( sw::hashed_string( "Ragdoll" ), layer ) );
     SW_EXPECT_TRUE( settings.findLayerIndex( sw::hashed_string( "Debris" ), layer ) );

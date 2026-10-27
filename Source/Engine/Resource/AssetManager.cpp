@@ -128,7 +128,7 @@ namespace sw
         for ( const string& domain : arrDomain )
         {
             if ( domain.empty() == false )
-                registered += _assetDatabase.loadRegistry( domain + "/assetregistry.txt" );
+                registered += _assetDatabase.loadRegistry( ResourceID{ domain + "/assetregistry.txt" } );
         }
         // 어느 경로로 채웠는지 같이 적는다. 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
         if ( registered > 0 )

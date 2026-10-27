@@ -23,7 +23,7 @@ SW_TEST_CASE( DestructionShowcaseTest, FuseBarrelChainBreaksWallAndCrates )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/destructionshowcase.scene.xml" } ) );
     sw::Scene scene{ "DestructionShowcase" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObjectManager& manager = *scene.getObjectManager();
@@ -65,7 +65,7 @@ SW_TEST_CASE( DestructionShowcaseTest, NetworkSceneAddsTheSessionComponentToTheS
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionnet.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/destructionnet.scene.xml" } ) );
     sw::Scene scene{ "DestructionNet" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObjectManager& manager  = *scene.getObjectManager();

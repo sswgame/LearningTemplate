@@ -97,7 +97,7 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
 
     sw::LocalizationManager loc;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( LocalizationTestUtil::writeProject( folder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.mountProject( sw::ResourceID{ ::test::makeTempResourceID( LocalizationTestUtil::writeProject( folder, "en", "[]" ) ) }, sw::LocalizationScope::Game ) );
 
 #if !defined( SW_SHIPPING )
     bool bListed{ false };

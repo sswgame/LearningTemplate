@@ -102,11 +102,12 @@ namespace sw
     {
     }
 
-    bool TelemetrySchema::loadFromResource( string_view path )
+    bool TelemetrySchema::loadFromResource( const ResourceID& resourceID )
     {
-        XMLDocument doc;
-        string      sourceName( path );
-        if ( doc.loadResource( path, &sourceName ) == false )
+        const string_view path = resourceID.view();
+        XMLDocument       doc;
+        string            sourceName( path );
+        if ( doc.loadResource( resourceID, &sourceName ) == false )
         {
             SW_LOG_WARNING( "Failed to read telemetry schema %#", path );
             return false;

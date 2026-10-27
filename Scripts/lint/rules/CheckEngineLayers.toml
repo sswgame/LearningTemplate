@@ -160,7 +160,8 @@ Bootstrap = "정적 저장소 정리가 씬 컴포넌트 · RHI 자원 · 자동
 [exemption]
 "prelude:Engine/EngineMinimal.h" = "타입 별칭과 전방 선언만 모은 우산 헤더 — 어느 티어에서 include 해도 된다"
 "prelude:Engine/Resource/ResourcePaths.h" = "리소스 경로 해석 static 헬퍼(Core 만 include) — loadFromResource 진입점이 쓴다"
-"prelude:Engine/Resource/ResourceIO.h" = "리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
+"prelude:Engine/Resource/ResourceID.h" = "리소스 id 값 형식(Core 만 include) — 모든 티어의 loadFromResource · 문서 loadResource 진입점 인자다"
+"prelude:Engine/Resource/ResourceIO.h" ="리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
 "prelude:Engine/Resource/ResourceDataKind.h" = "데이터 종류 등록 줄 헤더(Core 만 include) — 티어가 Resource 보다 낮은 타입(Physics · Navigation)의 .cpp 도 자기 데이터 종류를 `SW_RESOURCE_DATA_KIND` 로 올린다"
 "wiring:Source/Engine/Reflection/ReflectGenerated.h" = ".gen.cpp 전용 preamble — 생성 코드가 쓰는 모든 형식을 모은다"
 "contract:Source/RuntimeAPI/Export/EditorModuleExports.h|Editor/Common/Workspace/EditorService.h" = "모듈 쪽 접착제 헤더(에디터 모듈 구현 .cpp 만 include)가 모듈 자신의 서비스 로케이터(Editor/)를 끌어온다 — 경계 계약(ABI/)이 아니다"

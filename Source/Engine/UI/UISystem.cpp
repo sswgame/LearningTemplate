@@ -142,7 +142,7 @@ namespace sw
         shutdown();
     }
 
-    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath )
+    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, const ResourceID& resourceID )
     {
         _pFontService                   = pFontService;
         _actionGlyphs._pInput           = &inputManager;
@@ -150,7 +150,7 @@ namespace sw
         _documentReloadedSubscription   = _documentCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = _styleSheetCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
-        if ( _input.initialize( inputManager, uiInputMapPath ) == false )
+        if ( _input.initialize( inputManager, resourceID ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
         _input.syncInputLayers( getActiveScreen(), _pauseMenuDocument.empty() == false );
@@ -202,11 +202,11 @@ namespace sw
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const PackEngineSettings&  packSettings  = engine::getSubsystem<PackEngineSettings>();
         UIScaleSettings            scaleSettings{};
-        if ( scaleSettings.loadFromResource( PackEngineSettings::resolve( packSettings._uiScaleSettings, defaultAssets._uiScaleSettings ) ) == false )
+        if ( scaleSettings.loadFromResource( ResourceID{ PackEngineSettings::resolve( packSettings._uiScaleSettings, defaultAssets._uiScaleSettings ) } ) == false )
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), defaultAssets._uiInputMap.get() ) == false )
+        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), ResourceID{ defaultAssets._uiInputMap.get() } ) == false )
             return SubsystemInitResult::Failed;
         // 문화권 · 설정 출처는 기동 때 한 번 받아 든다(언리얼 `InitializeDependency`) — 프레임마다 전역 표로 물러나 찾지 않는다.
         UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
@@ -221,7 +221,7 @@ namespace sw
         _styleSheetCacheRegistration = assetManager.registerAssetCache( &_styleSheetCache );
         // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
         UIThemeCatalog themes{};
-        if ( themes.loadFromResource( PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) ) == false )
+        if ( themes.loadFromResource( ResourceID{ PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) } ) == false )
             return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
         // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 기준이다.

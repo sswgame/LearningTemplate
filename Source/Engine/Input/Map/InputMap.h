@@ -21,6 +21,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputActionBuffer.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -371,7 +372,7 @@ namespace sw
         /** @brief 액션, 레이어, 바인딩을 모두 비웁니다. */
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
-        [[nodiscard]] bool loadFromResource( string_view relativePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /**
          * @brief 이미 읽은 맵에 다른 InputMap XML 의 레이어와 액션을 더합니다(확장 모듈 · 게임 모드가 기본 맵에 액션을 보탠다).
          * @details 더하는 파일은 맵 전체 값(`defaultLayer` · 시간 · 거리 · `virtualCursor`)을 적지 않는다 — 그것은 기본 맵의 것이다.
@@ -379,7 +380,7 @@ namespace sw
          *          다른 액션이 이미 쓰는 바인딩은 오류다. 실패하면 맵이 일부만 더해진 채이므로 부른 쪽은 오류로 멈춘다.
          * @return 모두 더했으면 true 입니다.
          */
-        [[nodiscard]] bool appendFromResource( string_view relativePath );
+        [[nodiscard]] bool appendFromResource( const ResourceID& resourceID );
         /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
          * @param relativePath 리소스 id 또는 절대 경로입니다. 쓸 위치는 `ResourcePaths::getWritePath` 가 정하며, 작업 폴더 기준이 아닙니다.
@@ -777,7 +778,7 @@ namespace sw
          * @brief `loadFromResource` 와 `appendFromResource` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
          * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
          */
-        [[nodiscard]] bool loadDefinition( string_view relativePath, bool bAppend );
+        [[nodiscard]] bool loadDefinition( const ResourceID& resourceID, bool bAppend );
         /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromResource`). */
         [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
 

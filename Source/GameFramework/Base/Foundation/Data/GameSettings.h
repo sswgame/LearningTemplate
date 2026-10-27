@@ -9,6 +9,7 @@
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -68,7 +69,7 @@ namespace sw
         DataPath _audioEvents; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
 
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
-        [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID = {} );
         /** @brief `loadFromResource` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 

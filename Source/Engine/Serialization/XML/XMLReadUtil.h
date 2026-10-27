@@ -15,6 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     class XMLDocument;
@@ -45,7 +47,7 @@ namespace sw
          * @param pRootName 루트 원소 이름입니다(철자 그대로).
          * @param pOutAbsPath 있으면 실제로 읽은 경로를 받습니다(`XMLDocument::loadResource`).
          */
-        [[nodiscard]] static XMLRootStatus loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot,
+        [[nodiscard]] static XMLRootStatus loadRoot( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot,
                                                      string* pOutAbsPath = nullptr );
         /** @brief 텍스트를 파싱하고 루트 원소를 찾습니다. @p sourceName 은 구문 오류에 적는 이름입니다. */
         [[nodiscard]] static XMLRootStatus parseRoot( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName,
@@ -74,7 +76,7 @@ namespace sw
         // ------------------------------------------------------------------------------
 
         /** @brief `loadRoot` 를 하고 실패하면 경고합니다. @p outSourceName 은 실제로 읽은 경로가 되어 이후 경고가 어느 파일인지 가리킨다. */
-        [[nodiscard]] static bool loadRootOrWarn( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
+        [[nodiscard]] static bool loadRootOrWarn( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
         /** @brief `parseRoot` 를 하고 실패하면 경고합니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool parseRootOrWarn( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot );
 

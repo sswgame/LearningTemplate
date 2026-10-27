@@ -30,15 +30,16 @@ namespace sw
         return kArrDependency;
     }
 
-    bool PhysicsSystem::initialize( string_view settingsPath )
+    bool PhysicsSystem::initialize( const ResourceID& resourceID )
     {
+        const string_view settingsPath = resourceID.view();
         if ( _bInitialized )
             return true;
         SW_MEMORY_SCOPE( Physics );
 
         // 설정 표는 엔진 필수 데이터다. 없거나 틀리면 코드 기본 표로 대신하지 않고 기동이 실패한다.
         PhysicsSettings settings;
-        if ( settings.loadFromResource( settingsPath ) == false )
+        if ( settings.loadFromResource( resourceID ) == false )
         {
             SW_LOG_ERROR( "Physics settings '%#' could not be loaded", settingsPath );
             return false;

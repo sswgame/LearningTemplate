@@ -240,7 +240,7 @@ namespace sw::editor
         const MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
-        if ( MeshAssetFormat::loadFromResource( pMesh->getMeshID(), _sourceData ) == false )
+        if ( MeshAssetFormat::loadFromResource( ResourceID{ pMesh->getMeshID() }, _sourceData ) == false )
         {
             SW_LOG_WARNING( "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
             return false;
@@ -676,7 +676,7 @@ namespace sw::editor
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
         vector<RHIVertex> listVertex;
-        if ( MeshAssetFormat::loadFromResource( pMesh->getMeshID(), listVertex ) == false )
+        if ( MeshAssetFormat::loadFromResource( ResourceID{ pMesh->getMeshID() }, listVertex ) == false )
             return false;
         const float4x4 world = pMesh->getWorldMatrix();
         outListPosition.reserve( listVertex.size() );

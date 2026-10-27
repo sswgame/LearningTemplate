@@ -223,7 +223,7 @@ SW_TEST_CASE( PhysicsRagdollTest, UnknownBoneIsAnError )
 SW_TEST_CASE( PhysicsRagdollTest, SampleAssetLoadsAndBuilds )
 {
     sw::PhysicsAsset asset;
-    SW_ASSERT_TRUE( asset.loadFromResource( "engine/physics/samples/chain.physics.xml" ) );
+    SW_ASSERT_TRUE( asset.loadFromResource( sw::ResourceID{ "engine/physics/samples/chain.physics.xml" } ) );
     SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), asset._listBody.size() );
     SW_EXPECT_TRUE( asset._listBody[2]._hitZone._name == sw::hashed_string( "Head" ) );
     SW_EXPECT_EQUAL( 0, asset.findBodyIndex( sw::hashed_string( "pelvis" ) ) );

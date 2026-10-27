@@ -44,7 +44,7 @@ namespace sw
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 절대 · 리소스 경로에서 JSON 을 읽어 역직렬화합니다. */
-        [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
+        [[nodiscard]] static bool loadFile( const ResourceID& resourceID, void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief JSONValue 객체에 리플렉션 필드를 씁니다. dst 는 객체여야 합니다. */

@@ -484,10 +484,10 @@ namespace sw
         return doc.saveFile( absPath, indent );
     }
 
-    bool JSONSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    bool JSONSerializer::loadFile( const ResourceID& resourceID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;
-        if ( doc.loadResource( path ) == false )
+        if ( doc.loadResource( resourceID ) == false )
             return false;
         return readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
     }

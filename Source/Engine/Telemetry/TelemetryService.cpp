@@ -315,11 +315,11 @@ namespace sw
                                                           : string( gv_telemetryFolder );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
-        if ( loadSchema( engineSchema ) == false )
+        if ( loadSchema( ResourceID{ engineSchema } ) == false )
             SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engineSchema.c_str() );
         if ( packSettings._telemetrySchema.isSet() )
         {
-            if ( loadSchema( packSettings._telemetrySchema.get() ) == false )
+            if ( loadSchema( ResourceID{ packSettings._telemetrySchema.get() } ) == false )
                 SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", packSettings._telemetrySchema.c_str() );
         }
         initialize( folder, context );
@@ -348,10 +348,10 @@ namespace sw
         shutdown();
     }
 
-    bool TelemetryService::loadSchema( string_view path )
+    bool TelemetryService::loadSchema( const ResourceID& resourceID )
     {
         ScopedLock<mutex> lock{ _mutex };
-        const bool        bLoaded = _schema.loadFromResource( path );
+        const bool        bLoaded = _schema.loadFromResource( resourceID );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }

@@ -73,7 +73,7 @@ namespace
         {
             const utf8* _pLabel;
             bool ( *_pIsKind )( sw::string_view resourceID );
-            bool ( *_pLoad )( const sw::string& resourceID );
+            bool ( *_pLoad )( const sw::ResourceID& resourceID );
         };
 
         static bool endsWith( sw::string_view resourceID, sw::string_view suffix ) { return sw::StringUtil::endsWith( resourceID, suffix, true ); }
@@ -112,17 +112,17 @@ namespace
         static bool isSkeleton( sw::string_view resourceID ) { return endsWith( resourceID, sw::Skeleton::kExtension ); }
         static bool isAnimationGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.xml" ); }
         /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
-        [[nodiscard]] static bool loadAnimationGraph( const sw::string& resourceID )
+        [[nodiscard]] static bool loadAnimationGraph( const sw::ResourceID& id )
         {
             sw::AnimationGraphAsset graph;
-            return graph.loadFromFile( resourceID ) && graph._listNode.empty() == false;
+            return graph.loadFromFile( id ) && graph._listNode.empty() == false;
         }
         /** @brief 본 마스크 프리셋(그래프 레이어가 "file" 로 가리킨다) — 항목이 없거나 가중치가 범위 밖이면 로드 오류다. */
         static bool               isBoneMask( sw::string_view resourceID ) { return endsWith( resourceID, sw::AnimationBoneMaskDef::kExtension ); }
-        [[nodiscard]] static bool loadBoneMask( const sw::string& resourceID )
+        [[nodiscard]] static bool loadBoneMask( const sw::ResourceID& id )
         {
             sw::AnimationBoneMaskDef mask;
-            return mask.loadFromFile( resourceID );
+            return mask.loadFromFile( id );
         }
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
@@ -130,8 +130,9 @@ namespace
         static bool isUIStyleSheet( sw::string_view resourceID ) { return endsWith( resourceID, sw::UIStyleSheetAsset::kExtension ); }
 
         /** @brief 스타일 시트를 읽습니다(모르는 칸 · 변수 · 선택자 문법 · 읽지 못한 값). */
-        [[nodiscard]] static bool loadUIStyleSheet( const sw::string& resourceID )
+        [[nodiscard]] static bool loadUIStyleSheet( const sw::ResourceID& id )
         {
+            const sw::string&     resourceID = id.str();
             sw::UIStyleSheetCache cache;
             sw::string            error;
             if ( cache.findOrLoad( resourceID, error ) == nullptr )
@@ -143,8 +144,9 @@ namespace
         }
 
         /** @brief UI 문서를 읽고 위젯 트리까지 짓습니다(모르는 타입 · 속성 · 열거자 · 조각). */
-        [[nodiscard]] static bool loadUIDocument( const sw::string& resourceID )
+        [[nodiscard]] static bool loadUIDocument( const sw::ResourceID& id )
         {
+            const sw::string&                               resourceID = id.str();
             sw::UIDocumentCache                             cache;
             sw::string                                      error;
             const sw::shared_ptr<const sw::UIDocumentAsset> document = cache.findOrLoad( resourceID, error );
@@ -162,19 +164,21 @@ namespace
         static bool isTranslationTable( sw::string_view resourceID ) { return endsWith( resourceID, sw::TranslationTable::kExtension ); }
         static bool isTranslationMemory( sw::string_view resourceID ) { return endsWith( resourceID, sw::TranslationMemory::kExtension ); }
 
-        [[nodiscard]] static bool loadScene( const sw::string& resourceID )
+        [[nodiscard]] static bool loadScene( const sw::ResourceID& id )
         {
+            const sw::string& resourceID = id.str();
             sw::SceneDocument doc;
-            if ( doc.loadXML( resourceID ) == false )
+            if ( doc.loadXML( sw::ResourceID{ resourceID } ) == false )
                 return false;
             sw::Scene scene{ "ResourceDataSchemaScene" };
             return scene.instantiate( doc );
         }
 
-        [[nodiscard]] static bool loadPrefab( const sw::string& resourceID )
+        [[nodiscard]] static bool loadPrefab( const sw::ResourceID& id )
         {
-            sw::PrefabAsset prefab;
-            const bool      bLoaded = endsWith( resourceID, ".json" ) ? prefab.loadFromJSONFile( resourceID ) : prefab.loadFromXMLFile( resourceID );
+            const sw::string& resourceID = id.str();
+            sw::PrefabAsset   prefab;
+            const bool        bLoaded = endsWith( resourceID, ".json" ) ? prefab.loadFromJSONFile( id ) : prefab.loadFromXMLFile( id );
             if ( bLoaded == false )
                 return false;
             sw::GameObjectManager manager;
@@ -182,37 +186,39 @@ namespace
             return pObject != nullptr && prefab.applyStateTo( pObject );
         }
 
-        [[nodiscard]] static bool loadPipeline( const sw::string& resourceID )
+        [[nodiscard]] static bool loadPipeline( const sw::ResourceID& id )
         {
             sw::RenderPipelineAsset pipeline;
-            return pipeline.loadFromXMLFile( resourceID );
+            return pipeline.loadFromXMLFile( id );
         }
 
-        [[nodiscard]] static bool loadRenderPass( const sw::string& resourceID )
+        [[nodiscard]] static bool loadRenderPass( const sw::ResourceID& id )
         {
             sw::RenderPassAsset pass;
-            return pass.loadFromXMLFile( resourceID );
+            return pass.loadFromXMLFile( id );
         }
 
-        [[nodiscard]] static bool loadEngineDefaultAssets( const sw::string& resourceID )
+        [[nodiscard]] static bool loadEngineDefaultAssets( const sw::ResourceID& id )
         {
-            return sw::EngineDefaultAssets::load( resourceID ) != nullptr;
+            return sw::EngineDefaultAssets::load( id ) != nullptr;
         }
 
         /** @brief 시나리오는 형식(루트 · 루트 속성 · <At>)만 읽는다 — 단계 종류 · 탐침은 그 게임 모듈이 올라온 실기동(AppScenarioTest)이 본다. */
-        [[nodiscard]] static bool loadAutomationScenario( const sw::string& resourceID )
+        [[nodiscard]] static bool loadAutomationScenario( const sw::ResourceID& id )
         {
+            const sw::string&      resourceID = id.str();
             sw::AutomationScenario scenario;
             sw::string             error;
-            const bool             bLoaded = scenario.loadFromPath( resourceID, error );
+            const bool             bLoaded = scenario.loadFromPath( sw::ResourceID{ resourceID }, error );
             if ( bLoaded == false )
                 SW_LOG_WARNING( "%#", error.c_str() );
             return bLoaded;
         }
 
         /** @brief 자동화 로그 게이트의 허용 목록 — 항목마다 이유가 있어야 읽힌다. */
-        [[nodiscard]] static bool loadAutomationAllowList( const sw::string& resourceID )
+        [[nodiscard]] static bool loadAutomationAllowList( const sw::ResourceID& id )
         {
+            const sw::string& resourceID = id.str();
             (void)resourceID; // 경로는 하나(`kAllowListPath`)뿐이다
             sw::AutomationLogPolicy policy;
             sw::string              error;
@@ -223,70 +229,72 @@ namespace
         }
 
         /** @brief 행동 트리 - 모르는 노드 · 속성 · 비교 · 중단 이름과 등록되지 않은 작업 이름은 로드 오류다. 전용 편집기가 있어 레지스트리에 올리지 않고 이 표에 둔다. */
-        [[nodiscard]] static bool loadBehaviorTree( const sw::string& resourceID )
+        [[nodiscard]] static bool loadBehaviorTree( const sw::ResourceID& id )
         {
             sw::BehaviorTreeAsset asset;
-            return asset.loadFromResource( resourceID );
+            return asset.loadFromResource( id );
         }
 
-        [[nodiscard]] static bool loadInputMap( const sw::string& resourceID )
+        [[nodiscard]] static bool loadInputMap( const sw::ResourceID& id )
         {
             sw::InputMap map;
-            return map.loadFromResource( resourceID );
+            return map.loadFromResource( id );
         }
 
-        [[nodiscard]] static bool loadMaterial( const sw::string& resourceID )
+        [[nodiscard]] static bool loadMaterial( const sw::ResourceID& id )
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
-            return material != nullptr && material->loadFromFile( resourceID );
+            return material != nullptr && material->loadFromFile( id );
         }
 
         /**
          * @brief 사용자 설정 스키마 — 엔진 핸들러 이름 · 전역 변수 대상까지 검사한다. 게임 스키마는 엔진 스키마 위에 덧붙인다(기동과 같은 순서).
          */
-        [[nodiscard]] static bool loadUserSettingsSchema( const sw::string& resourceID )
+        [[nodiscard]] static bool loadUserSettingsSchema( const sw::ResourceID& id )
         {
+            const sw::string&       resourceID = id.str();
             sw::UserSettingsManager settings;
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             settings.initialize( targets );
             const sw::string& engineSchema = test::getEngineDefaultAssets()._userSettingsSchema.get();
-            if ( resourceID != engineSchema && settings.loadSchema( engineSchema ) == false )
+            if ( resourceID != engineSchema && settings.loadSchema( sw::ResourceID{ engineSchema } ) == false )
                 return false;
-            return settings.loadSchema( resourceID );
+            return settings.loadSchema( id );
         }
 
-        [[nodiscard]] static bool loadPhysicsAsset( const sw::string& resourceID )
+        [[nodiscard]] static bool loadPhysicsAsset( const sw::ResourceID& id )
         {
             sw::PhysicsAsset asset;
-            return asset.loadFromResource( resourceID );
+            return asset.loadFromResource( id );
         }
 
         /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
-        [[nodiscard]] static bool loadTileMap( const sw::string& resourceID )
+        [[nodiscard]] static bool loadTileMap( const sw::ResourceID& id )
         {
             sw::TileMapXMLData map;
-            if ( map.load( resourceID ) == false )
+            if ( map.load( id ) == false )
                 return false;
             if ( map._tileSetPath.empty() )
                 return true;
             sw::TileSetAsset   tileSet;
             sw::vector<uint16> listBrushIndex;
-            return tileSet.loadFromResource( map._tileSetPath ) && map.mapTileCells( tileSet, listBrushIndex );
+            return tileSet.loadFromResource( sw::ResourceID{ map._tileSetPath } ) && map.mapTileCells( tileSet, listBrushIndex );
         }
 
-        [[nodiscard]] static bool loadTileSet( const sw::string& resourceID )
+        [[nodiscard]] static bool loadTileSet( const sw::ResourceID& id )
         {
             sw::TileSetAsset tileSet;
-            return tileSet.loadFromResource( resourceID );
+            return tileSet.loadFromResource( id );
         }
 
         /** @brief 로컬라이제이션 XML 문서(`loadFromXMLText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
         template <typename TDocument>
-        [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceID )
+        [[nodiscard]] static bool loadLocalizationDocument( const sw::ResourceID& id )
         {
-            sw::string text;
-            if ( sw::ResourceIO::readTextResource( resourceID, text ) == false )
+            const sw::string& resourceID = id.str();
+            sw::string        text;
+            if ( sw::ResourceIO::readTextResource( id, text ) == false )
                 return false;
             TDocument  document;
             sw::string error;
@@ -298,10 +306,10 @@ namespace
 
         static bool isSequence( sw::string_view resourceID ) { return endsWith( resourceID, ".seq.xml" ); }
         /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류 이름 · 채널 수가 틀린 트랙은 읽기 오류다). */
-        [[nodiscard]] static bool loadSequence( const sw::string& resourceID )
+        [[nodiscard]] static bool loadSequence( const sw::ResourceID& id )
         {
             sw::SequenceAsset sequence;
-            if ( sequence.loadFromFile( resourceID ) == false )
+            if ( sequence.loadFromFile( id ) == false )
                 return false;
             for ( const sw::SequenceKeyTrack& track : sequence._listTrack )
             {
@@ -311,16 +319,16 @@ namespace
             return true;
         }
 
-        [[nodiscard]] static bool loadSpriteClip( const sw::string& resourceID )
+        [[nodiscard]] static bool loadSpriteClip( const sw::ResourceID& id )
         {
             sw::SpriteClipAsset clip;
-            return clip.loadFromFile( resourceID );
+            return clip.loadFromFile( id );
         }
 
-        [[nodiscard]] static bool loadDialogueGraph( const sw::string& resourceID )
+        [[nodiscard]] static bool loadDialogueGraph( const sw::ResourceID& id )
         {
             sw::DialogueGraphAsset graph;
-            return graph.loadFromFile( resourceID );
+            return graph.loadFromFile( id );
         }
 
         // 캐릭터 데이터 — 소켓은 엔진 기본 종류 표에, 부품 피팅은 엔진 기본 피팅 표에 대조한다(모르는 이름은 로드 오류).
@@ -333,15 +341,16 @@ namespace
         static bool                  isClipData( sw::string_view resourceID ) { return endsWith( resourceID, ".clips.json" ); }
         /** @brief 페어드 애니메이션(역할 · 정렬 · 공유 알림) — 모르는 속성 · 유한하지 않은 수 · 앵커 규칙 위반은 읽기 오류다. 클립은 세션 시작에서 본다. */
         static bool               isPairedAnimation( sw::string_view resourceID ) { return endsWith( resourceID, sw::PairedAnimationDef::kExtension ); }
-        [[nodiscard]] static bool loadPairedAnimation( const sw::string& resourceID )
+        [[nodiscard]] static bool loadPairedAnimation( const sw::ResourceID& id )
         {
             sw::PairedAnimationDef def;
-            return def.loadFromResource( resourceID );
+            return def.loadFromResource( id );
         }
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
-        [[nodiscard]] static bool loadClipData( const sw::string& resourceID )
+        [[nodiscard]] static bool loadClipData( const sw::ResourceID& id )
         {
-            sw::JSONDocument document;
+            const sw::string& resourceID = id.str();
+            sw::JSONDocument  document;
             // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
@@ -372,9 +381,10 @@ namespace
          * @brief 리소스 출처 목록(`common/audio.sources.json` · `engine/textures.sources.json`) — 도구(`Scripts/dev/MakeCommonAudio.py` · `MakeCc0Import.py`)가 읽고 쓰는 키 규칙(모르는 키는 오류)으로 본다.
          * @details 팩에 실리지 않는다(`PackConfig.json` 의 `*.sources.json`) — 원본 트리에서 파일로 읽는다.
          */
-        [[nodiscard]] static bool loadSourceManifest( const sw::string& resourceID )
+        [[nodiscard]] static bool loadSourceManifest( const sw::ResourceID& id )
         {
-            sw::JSONDocument document;
+            const sw::string& resourceID = id.str();
+            sw::JSONDocument  document;
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
             const sw::JSONValue root = document.getRoot();
@@ -406,30 +416,31 @@ namespace
             return true;
         }
         /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 레지스트리에 대조한다. */
-        [[nodiscard]] static bool loadNotifyTable( const sw::string& resourceID )
+        [[nodiscard]] static bool loadNotifyTable( const sw::ResourceID& id )
         {
             sw::AnimationNotifyTable table;
-            return table.loadFromResource( resourceID, sw::AnimationNotifyHandlerRegistry::getDefault() );
+            return table.loadFromResource( id, sw::AnimationNotifyHandlerRegistry::getDefault() );
         }
-        [[nodiscard]] static bool loadSockets( const sw::string& resourceID )
+        [[nodiscard]] static bool loadSockets( const sw::ResourceID& id )
         {
             sw::SocketKindTable kinds;
             sw::SocketSet       sockets;
-            return kinds.loadFromResource( kDefaultSocketKinds ) && sockets.loadFromResource( resourceID, kinds );
+            return kinds.loadFromResource( sw::ResourceID{ kDefaultSocketKinds } ) && sockets.loadFromResource( id, kinds );
         }
-        [[nodiscard]] static bool loadFitTables( const sw::string& resourceID )
+        [[nodiscard]] static bool loadFitTables( const sw::ResourceID& id )
         {
             const sw::FitSolver solver;
             sw::FitTables       tables;
-            return tables.loadFromResource( resourceID, solver.getOperatorRegistry() );
+            return tables.loadFromResource( id, solver.getOperatorRegistry() );
         }
-        [[nodiscard]] static bool loadPartFit( const sw::string& resourceID )
+        [[nodiscard]] static bool loadPartFit( const sw::ResourceID& id )
         {
+            const sw::string&   resourceID = id.str();
             const sw::FitSolver solver;
             sw::FitTables       tables;
             sw::FitPartData     data;
             sw::string          nameError;
-            const bool          bLoaded = tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceID );
+            const bool          bLoaded = tables.loadFromResource( sw::ResourceID{ kDefaultFitTables }, solver.getOperatorRegistry() ) && data.loadFromResource( id );
             if ( bLoaded && data.validateNames( tables, &nameError ) == false )
                 SW_LOG_WARNING( "'%#' %#", resourceID.c_str(), nameError.c_str() );
             return bLoaded && nameError.empty();
@@ -437,68 +448,70 @@ namespace
 
         /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */
         static bool               isRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::RigAsset::kExtension ); }
-        [[nodiscard]] static bool loadRig( const sw::string& resourceID )
+        [[nodiscard]] static bool loadRig( const sw::ResourceID& id )
         {
             sw::RigAsset rig;
-            return rig.loadFromResource( resourceID );
+            return rig.loadFromResource( id );
         }
 
         /** @brief 리타깃 프로필 — 모르는 키 · 이동 방법 · 겹친 사슬은 로드 오류이고, 적힌 두 스켈레톤에 프로필의 본이 모두 있어야 한다. */
         static bool               isRetargetProfile( sw::string_view resourceID ) { return endsWith( resourceID, sw::RetargetProfile::kExtension ); }
-        [[nodiscard]] static bool loadRetargetProfile( const sw::string& resourceID )
+        [[nodiscard]] static bool loadRetargetProfile( const sw::ResourceID& id )
         {
             sw::RetargetProfile profile;
-            if ( profile.loadFromResource( resourceID ) == false )
+            if ( profile.loadFromResource( id ) == false )
                 return false;
             sw::Skeleton source;
             sw::Skeleton target;
-            if ( source.loadFromResource( profile.getSourceSkeletonPath() ) == false || target.loadFromResource( profile.getTargetSkeletonPath() ) == false )
+            if ( source.loadFromResource( sw::ResourceID{ profile.getSourceSkeletonPath() } ) == false || target.loadFromResource( sw::ResourceID{ profile.getTargetSkeletonPath() } ) == false )
                 return false;
             sw::PoseRetargeter retargeter;
             return retargeter.initialize( profile, source, target, nullptr );
         }
 
         /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
-        [[nodiscard]] static bool loadSkeleton( const sw::string& resourceID )
+        [[nodiscard]] static bool loadSkeleton( const sw::ResourceID& id )
         {
             sw::Skeleton skeleton;
-            return skeleton.loadFromResource( resourceID );
+            return skeleton.loadFromResource( id );
         }
 
         /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
         static bool               isBoneLOD( sw::string_view resourceID ) { return endsWith( resourceID, sw::SkeletonBoneLOD::kExtension ); }
-        [[nodiscard]] static bool loadBoneLOD( const sw::string& resourceID )
+        [[nodiscard]] static bool loadBoneLOD( const sw::ResourceID& id )
         {
-            sw::string importedPath;
-            sw::string siblingPath;
+            const sw::string& resourceID = id.str();
+            sw::string        importedPath;
+            sw::string        siblingPath;
             sw::SkeletonBoneLOD::makeSkeletonCandidatePaths( resourceID, importedPath, siblingPath );
-            const sw::string&             skeletonPath = sw::ResourceIO::hasResource( importedPath ) ? importedPath : siblingPath;
+            const sw::string&             skeletonPath = sw::ResourceIO::hasResource( sw::ResourceID{ importedPath } ) ? importedPath : siblingPath;
             sw::SkeletonBoneLOD           boneLOD;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
-            return boneLOD.loadFromResource( resourceID ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.computeMasks( skeleton, listMask, resourceID );
+            return boneLOD.loadFromResource( id ) && skeleton.loadFromResource( sw::ResourceID{ skeletonPath } ) && boneLOD.computeMasks( skeleton, listMask, resourceID );
         }
 
         static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.xml" ); }
         /** @brief Live Link Face 패킷 배치 표(`livelinkface.xml`)와 머리마다의 연결 표(`<머리>.livelinkface.xml`) — 연결 표는 가리키는 배치 표까지 읽어야 성공한다. */
         static bool               isLiveLinkFaceLayout( sw::string_view resourceID ) { return resourceID == "livelinkface.xml" || endsWith( resourceID, "/livelinkface.xml" ); }
         static bool               isLiveLinkFaceMapping( sw::string_view resourceID ) { return endsWith( resourceID, ".livelinkface.xml" ); }
-        [[nodiscard]] static bool loadLiveLinkFaceLayout( const sw::string& resourceID )
+        [[nodiscard]] static bool loadLiveLinkFaceLayout( const sw::ResourceID& id )
         {
             sw::LiveLinkFaceLayout layout;
-            return layout.loadFromResource( resourceID );
+            return layout.loadFromResource( id );
         }
-        [[nodiscard]] static bool loadLiveLinkFaceMapping( const sw::string& resourceID )
+        [[nodiscard]] static bool loadLiveLinkFaceMapping( const sw::ResourceID& id )
         {
             sw::LiveLinkFaceMapping mapping;
             sw::LiveLinkFaceLayout  layout;
-            return mapping.loadFromResource( resourceID, layout );
+            return mapping.loadFromResource( id, layout );
         }
 
         /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.xml`) — 런타임은 이 파일 대신 임포트가 옮긴 얼굴 리그 · 후처리 리그를 읽는다(VrmRuntimeAssets) — 여기는 humanoid · 1인칭 기록이다. 루트 `VrmAvatar` 에 `_version` 속성과 `_mapHumanBone` 요소가 있는지만 본다. */
-        [[nodiscard]] static bool loadVrmAvatar( const sw::string& resourceID )
+        [[nodiscard]] static bool loadVrmAvatar( const sw::ResourceID& id )
         {
-            sw::XMLDocument document;
+            const sw::string& resourceID = id.str();
+            sw::XMLDocument   document;
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
             const sw::XMLNode root = document.getRoot( "VrmAvatar" );
@@ -617,12 +630,13 @@ namespace
         }
 
         /** @brief XML 데이터의 루트 원소 이름이 게임 모듈 타입이면 true 입니다. */
-        static bool hasGameModuleRoot( const sw::string& resourceID, const sw::vector<sw::string>& listGameTypeName )
+        static bool hasGameModuleRoot( const sw::ResourceID& id, const sw::vector<sw::string>& listGameTypeName )
         {
+            const sw::string& resourceID = id.str();
             if ( endsWith( resourceID, ".xml" ) == false )
                 return false;
             sw::XMLDocument document;
-            if ( document.loadResource( resourceID ) == false )
+            if ( document.loadResource( id ) == false )
                 return false;
             const sw::XMLNode root = document.getRoot( nullptr );
             if ( root.isValid() == false || root.getName() == nullptr )
@@ -708,7 +722,7 @@ namespace
         struct ResolvedKind
         {
             const utf8* _pLabel{ nullptr };
-            bool ( *_pLoad )( const sw::string& resourceID ){ nullptr };
+            bool ( *_pLoad )( const sw::ResourceID& resourceID ){ nullptr };
         };
 
         /**
@@ -790,7 +804,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         // 배포본은 마운트된 팩만 읽는다(낱개 파일 꺼짐) — 이 구성의 입력은 쿠킹이 팩에 넣은 파일이다. 디스크 목록을 폴더 이름(`editor/` · `rigs_raw/`)으로
         // 거르지 않고 팩에 있는가로 가른다. 이름 목록은 쿠킹 제외 목록(`Config/Engine/PackConfig.json`)의 사본이 되어, 데이터 확장자를 가진 원본 폴더가
         // 늘면 어긋난다. 팩에 없는 파일은 Dev 빌드의 이 테스트가 낱개로 읽는다.
-        if ( sw::ResourceIO::hasResource( resourceID ) == false )
+        if ( sw::ResourceIO::hasResource( id ) == false )
             continue;
 #endif
 
@@ -800,7 +814,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         SW_EXPECT_TRUE_MSG( bUnambiguous, ( "한 파일이 두 종류에 맞습니다: " + resourceID + " - " + conflict ).c_str() );
         // 루트가 게임 모듈 타입인 리플렉션 데이터(`benchscene.xml` 의 `BenchSceneSettings`)는 그 게임 모듈이 데이터 종류로 등록한다 — 이 실행 파일은 게임 모듈을 올리지 않는다.
         // 루트가 리플렉션 타입이 아닌 게임 데이터(`autoplan.xml` 의 원소 목록)도 그 게임 모듈이 종류로 등록했으면 같다.
-        const bool bGameModuleData = kind._pLoad == nullptr && ( ResourceDataSchemaInternal::hasGameModuleRoot( resourceID, listGameTypeName ) ||
+        const bool bGameModuleData = kind._pLoad == nullptr && ( ResourceDataSchemaInternal::hasGameModuleRoot( sw::ResourceID{ resourceID }, listGameTypeName ) ||
                                                                  ResourceDataSchemaInternal::hasGameModuleDataKind( resourceID, listGameDataKindSuffix ) );
         if ( bGameModuleData )
             continue;
@@ -809,7 +823,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
             continue;
 
         test::ScopedLogCollector logs;
-        const bool               bLoaded = kind._pLoad( resourceID );
+        const bool               bLoaded = kind._pLoad( sw::ResourceID{ resourceID } );
         SW_EXPECT_TRUE_MSG( bLoaded, ( sw::string( kind._pLabel ) + " 를 읽지 못했습니다: " + resourceID + logs.joined() ).c_str() );
         sw::string warnings = ResourceDataSchemaInternal::removeGameModuleTypeWarnings( logs.joined(), listGameTypeName );
         if ( ResourceDataSchemaInternal::isValidationFixture( resourceID ) )

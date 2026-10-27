@@ -208,7 +208,7 @@ namespace sw::editor
 
         const string_view pfbPath = ws.findPrefabPath( pObj );
         if ( pfbPath.empty() == false )
-            drawPrefabLinkSection( pObj, pfbPath );
+            drawPrefabLinkSection( pObj, ResourceID{ pfbPath } );
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         ImGui::Spacing();
@@ -395,15 +395,16 @@ namespace sw::editor
         }
     }
 
-    void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, string_view prefabPath )
+    void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const ResourceID& resourceID )
     {
+        const string_view prefabPath = resourceID.view();
         EditorWidgets::drawChip( "Prefab", EditorThemeUtil::getAccentColor() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
 
         if ( ImGui::Button( "Apply to Prefab" ) )
-            (void)EditorInspectorCommands::applyToPrefab( pObj, prefabPath ); // 실패는 프리팹 저장이 알린다
+            (void)EditorInspectorCommands::applyToPrefab( pObj, resourceID ); // 실패는 프리팹 저장이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
 
         ImGui::SameLine();

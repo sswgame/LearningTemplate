@@ -241,7 +241,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
     SW_ASSERT_NOT_NULL( pCache );
     SW_EXPECT_TRUE( pCache->isCached( ::test::makeTempResourceID( clipPath ) ) );
-    pCache->reload( ::test::makeTempResourceID( clipPath ), nullptr );
+    pCache->reload( sw::ResourceID{ ::test::makeTempResourceID( clipPath ) }, nullptr );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getClip()->findFrame( 1 )->_uvRect._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f ); // 알림 전에는 컴포넌트 상태가 그대로다
 

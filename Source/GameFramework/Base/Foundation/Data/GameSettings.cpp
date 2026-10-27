@@ -20,21 +20,21 @@ namespace sw
 {
     SW_LOG_CALLER( "GameSettings" );
 
-    bool GameSettings::loadFromResource( string_view assetRelativePath )
+    bool GameSettings::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view assetRelativePath = resourceID.view();
         // 게임별 기본 경로를 엔진이 알 필요는 없다. 경로가 없으면 로드할 것도 없다.
         if ( assetRelativePath.empty() )
             return false;
 
-        const string path = string( assetRelativePath );
-        if ( ResourceIO::hasResource( path ) == false )
+        if ( ResourceIO::hasResource( resourceID ) == false )
             return false;
 
         // **먼저 비운다.**
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameSettings{};
-        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
+        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, resourceID, "GameSettings" );
     }
 
     bool GameSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -122,6 +122,6 @@ namespace sw
 
     bool BootstrapConfig::load( string_view gameSettingsFileName )
     {
-        return _data.loadFromResource( resolve( gameSettingsFileName ) );
+        return _data.loadFromResource( ResourceID{ resolve( gameSettingsFileName ) } );
     }
 } // namespace sw

@@ -16,6 +16,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     class GameObjectManager;
@@ -40,6 +42,6 @@ namespace sw
          * @brief 리소스 id @p listResourceID 의 목록을 읽습니다(팩 · 낱개 파일). 파일이 없거나 형식이 틀리면 오류를 남기고 false 입니다.
          * @details 파일이 **없는** 씬(쿠킹 전 Dev 실행)은 부르는 쪽이 `ResourceIO::hasResource` 로 먼저 묻는다 — 없는 파일을 오류로 세지 않는다.
          */
-        [[nodiscard]] static bool read( string_view listResourceID, vector<string>& outListPath );
+        [[nodiscard]] static bool read( const ResourceID& resourceID, vector<string>& outListPath );
     };
 } // namespace sw

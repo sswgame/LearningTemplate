@@ -13,6 +13,7 @@
 
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -33,7 +34,7 @@ namespace sw
          * @brief 설정 테이블을 읽고 백엔드를 초기화합니다. 테이블이 없거나 틀리면(모르는 이름, 빈 레이어 · 재질 표 등) 오류를 남기고 false 를 반환하며,
          *        백엔드를 초기화하지 못해도 false 를 반환합니다. 코드의 기본 표로 대신하지 않습니다.
          */
-        [[nodiscard]] bool initialize( string_view settingsPath = kSettingsPath );
+        [[nodiscard]] bool initialize( const ResourceID& resourceID = ResourceID{ kSettingsPath } );
         /** @brief 백엔드를 내립니다. 이 서비스로 만든 씬은 먼저 모두 사라져 있어야 합니다. */
         void shutdown();
 

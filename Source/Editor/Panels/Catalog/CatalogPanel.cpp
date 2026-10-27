@@ -16,6 +16,7 @@
 
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
@@ -405,7 +406,7 @@ namespace sw::editor
         bool bLoaded = false;
         {
             CatalogWarningCollector collector;
-            bLoaded      = pKind->_pLoad( _selectedID );
+            bLoaded      = pKind->_pLoad( ResourceID{ _selectedID } );
             _listWarning = collector.take();
         }
         const bool bPassed = bLoaded && _listWarning.empty();

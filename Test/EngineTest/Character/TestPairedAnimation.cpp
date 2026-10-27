@@ -559,7 +559,7 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
     SharedAssetCache<PairedAnimationDef> cache;
     SW_EXPECT_TRUE( cache.isCached( test::makeTempResourceID( path ) ) );
     const uint32 reloadCount = SharedAssetCache<PairedAnimationDef>::getReloadCount();
-    cache.reload( test::makeTempResourceID( path ), nullptr );
+    cache.reload( sw::ResourceID{ test::makeTempResourceID( path ) }, nullptr );
     SW_EXPECT_EQUAL( reloadCount + 1, SharedAssetCache<PairedAnimationDef>::getReloadCount() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), pFirst->getDef().getRoles().size() ); // 돌던 세션은 옛 에셋
 

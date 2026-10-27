@@ -239,7 +239,7 @@ SW_TEST_CASE( TileMapXMLTest, MalformedDocumentFailsAndLeavesAnEmptyMap )
     SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
 
     // 빈 경로는 파일을 뒤지지 않고 거절한다.
-    SW_EXPECT_FALSE( loaded.load( "" ) );
+    SW_EXPECT_FALSE( loaded.load( sw::ResourceID{ "" } ) );
 }
 
 /**

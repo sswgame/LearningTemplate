@@ -49,13 +49,13 @@ namespace
         LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "제목" })" );
         sw::LocalizationManager localization;
         SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
-        SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
+        SW_ASSERT_TRUE( localization.mountProject( sw::ResourceID{ ::test::makeTempResourceID( projectPath ) }, sw::LocalizationScope::Game ) );
         SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
 
         sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );
         SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
         sw::FontCatalogDesc catalog;
-        SW_ASSERT_TRUE( catalog.loadFromResource( test::getEngineDefaultAssets()._fontCatalog.get() ) );
+        SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ test::getEngineDefaultAssets()._fontCatalog.get() } ) );
         catalog._glyphField = kind;
         SW_ASSERT_TRUE( fontService.initializeFromCatalog( std::move( catalog ) ) );
         const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );

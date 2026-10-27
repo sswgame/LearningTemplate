@@ -57,10 +57,11 @@ namespace sw
         return false;
     }
 
-    bool VertexAnimationCookList::loadFromResource( string_view path )
+    bool VertexAnimationCookList::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#' could not be read", path );
             *this = VertexAnimationCookList{};
@@ -94,14 +95,14 @@ namespace sw
             _listClip.push_back( hashed_string( string_view{ clip.getText() } ) );
         }
         // 가리키는 파일이 모두 있어야 한다 — 이름이 틀린 목록이 쿠킹 때 조용히 빠지지 않게.
-        if ( ResourceIO::hasResource( _meshPath ) == false || ResourceIO::hasResource( _skeletonPath ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ _meshPath } ) == false || ResourceIO::hasResource( ResourceID{ _skeletonPath } ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
         for ( const hashed_string& clipName : _listClip )
         {
-            if ( ResourceIO::hasResource( makeClipPath( clipName ) ) == false )
+            if ( ResourceIO::hasResource( ResourceID{ makeClipPath( clipName ) } ) == false )
             {
                 SW_LOG_ERROR( "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
                 return false;
@@ -120,7 +121,7 @@ namespace sw
     {
         MeshAssetData meshData;
         Skeleton      skeleton;
-        if ( MeshAssetFormat::loadFromResource( list._meshPath, meshData ) == false || skeleton.loadFromResource( list._skeletonPath ) == false )
+        if ( MeshAssetFormat::loadFromResource( ResourceID{ list._meshPath }, meshData ) == false || skeleton.loadFromResource( ResourceID{ list._skeletonPath } ) == false )
         {
             SW_LOG_ERROR( "Vertex animation cook: could not read mesh '%#' or skeleton '%#'", list._meshPath.c_str(), list._skeletonPath.c_str() );
             return false;
@@ -132,7 +133,7 @@ namespace sw
         AnimationClip       clip;
         MeshVertexAnimation animation;
         const bool          bBaked =
-            clip.loadFromResource( list.makeClipPath( clipName ) ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
+            clip.loadFromResource( ResourceID{ list.makeClipPath( clipName ) } ) && MeshVertexAnimationBaker::bake( *mesh, skeleton, clip, framesPerSecond, false, animation );
         if ( bBaked == false || animation.saveToFile( outputPath ) == false )
         {
             SW_LOG_ERROR( "Vertex animation cook failed for '%#' clip '%#'", list._meshPath.c_str(), clipName.c_str() );
@@ -203,7 +204,7 @@ namespace sw
             bool                    bListLoaded = false;
             {
                 const CookJob discovery( desc );
-                bListLoaded = list.loadFromResource( relativePath );
+                bListLoaded = list.loadFromResource( ResourceID{ relativePath } );
             }
             if ( bListLoaded == false )
             {
@@ -217,7 +218,7 @@ namespace sw
                  {
                     VertexAnimationCookList jobList;
                     const bool              bCooked =
-                        jobList.loadFromResource( relativePath ) && cookClip( jobList, clipName, FileUtil::joinPath( cookedDir, outputID ), framesPerSecond );
+                        jobList.loadFromResource( ResourceID{ relativePath } ) && cookClip( jobList, clipName, FileUtil::joinPath( cookedDir, outputID ), framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;

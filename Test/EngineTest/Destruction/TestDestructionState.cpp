@@ -246,6 +246,6 @@ SW_TEST_CASE( DestructionStateTest, ProfileRejectsUnknownNamesAndReadsTheDefault
         SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Strain thresholds="10 -3"/></DestructionProfile>)", "negative" ) );
         SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Links strength="1"/><Links strength="2"/></DestructionProfile>)", "twice" ) );
     }
-    SW_EXPECT_TRUE( profile.loadFromResource( sw::DestructionProfile::kDefaultPath ) );
+    SW_EXPECT_TRUE( profile.loadFromResource( sw::ResourceID{ sw::DestructionProfile::kDefaultPath } ) );
     SW_EXPECT_TRUE( profile._listStrainThreshold.size() >= 2 );
 }

@@ -34,7 +34,7 @@ namespace
 
         const utf8* getAssetKindName() const override { return "ProbeKind"; }
         bool        isCached( sw::string_view ) const override { return _bCleared == false; }
-        void        reload( sw::string_view, sw::IRHIDevice* pDevice ) override
+        void        reload( const sw::ResourceID&, sw::IRHIDevice* pDevice ) override
         {
             ++_reloadCount;
             _pLastDevice = pDevice;
@@ -58,7 +58,7 @@ namespace
 
         const utf8* getAssetKindName() const override { return "Material"; }
         bool        isCached( sw::string_view ) const override { return false; }
-        void        reload( sw::string_view, sw::IRHIDevice* ) override {}
+        void        reload( const sw::ResourceID&, sw::IRHIDevice* ) override {}
         size_t      getCachedCount() const override { return 0u; }
         void        clear() override {}
     };

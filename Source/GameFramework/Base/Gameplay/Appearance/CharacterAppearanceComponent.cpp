@@ -980,7 +980,7 @@ namespace sw
         if ( bSameData && bFits )
             return;
         SurfaceChannelTable channels;
-        if ( channels.loadFromResource( _surfaceChannelsPath ) == false )
+        if ( channels.loadFromResource( ResourceID{ _surfaceChannelsPath } ) == false )
         {
             SW_LOG_ERROR( "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
             _surfaceBinding.releaseTextures();

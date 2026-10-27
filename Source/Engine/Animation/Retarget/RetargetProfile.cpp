@@ -99,10 +99,11 @@ namespace sw
         return false;
     }
 
-    bool RetargetProfile::loadFromResource( string_view path )
+    bool RetargetProfile::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Retarget profile '%#' could not be read", path );
             clear();

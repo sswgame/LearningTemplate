@@ -8,6 +8,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Resource/AssetMeta.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include <shared_mutex>
 
@@ -95,7 +96,7 @@ namespace sw
          * @brief 쿠커가 만든 레지스트리(`<domain>/assetregistry.txt`)를 리소스 경로로 읽어 등록합니다. 없으면 0 입니다.
          * @details 배포 빌드는 `.meta` 를 싣지 않으므로(PackConfig `*.meta` 제외) 이 파일이 GUID 의 유일한 출처입니다.
          */
-        uint32 loadRegistry( string_view registryRelativePath );
+        uint32 loadRegistry( const ResourceID& resourceID );
 
         /**
          * @brief 레지스트리 본문을 등록합니다. 한 줄에 `<guid> <sourcePath>` 이고 `#` 으로 시작하면 주석입니다. 반환값은 등록 수입니다.

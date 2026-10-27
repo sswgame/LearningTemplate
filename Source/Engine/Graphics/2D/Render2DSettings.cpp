@@ -54,10 +54,11 @@ namespace sw
     {
     }
 
-    bool Render2DSettings::loadFromResource( string_view path )
+    bool Render2DSettings::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "2D render settings '%#' not found", path );
             return false;

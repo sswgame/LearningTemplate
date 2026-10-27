@@ -87,7 +87,7 @@ namespace sw
             if ( FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) == false )
                 return false;
             SceneDocument cooked{};
-            return cooked.loadXML( ::test::makeTempResourceID( xmlPath ) ) && cooked.saveBinary( binPath );
+            return cooked.loadXML( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) && cooked.saveBinary( binPath );
         }
     } // namespace
 
@@ -241,7 +241,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGPU )
     SW_ASSERT_TRUE( docSetup.saveBinary( binPath ) );
 
     sw::SceneDocument doc{};
-    SW_ASSERT_TRUE( doc.load( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( doc.load( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     SW_EXPECT_TRUE( doc._bValid );
     SW_EXPECT_STREQ( "DescOnly", doc._name );
     SW_EXPECT_EQUAL( size_t( 1 ), doc._listSceneObjectNode.size() );
@@ -272,7 +272,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     SW_ASSERT_TRUE( originalDoc.saveBinary( binPath ) );
 
     sw::SceneDocument loadedDoc{};
-    SW_ASSERT_TRUE( loadedDoc.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( loadedDoc.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     SW_EXPECT_TRUE( loadedDoc._bValid );
     SW_EXPECT_STREQ( "BinaryTestScene", loadedDoc._name );
     SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listSceneObjectNode.size() );
@@ -687,7 +687,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.scene.bin" );
     sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXML( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( cooked.loadXML( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
     const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.scene.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( savePath ) );
@@ -726,7 +726,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_name.scene.bin" );
     sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXML( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( cooked.loadXML( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
 
     sw::SceneManager manager;

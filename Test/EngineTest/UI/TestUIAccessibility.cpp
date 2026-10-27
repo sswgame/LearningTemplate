@@ -155,7 +155,7 @@ namespace
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _settings.initialize( sw::UserSettingsTargets{} );
             _bReady = _settings.loadSchemaFromXMLText( kOptionsSchemaXML, "test.settings.xml" ) && _input.initialize() && _fonts.initialize( catalog ) &&
-                      _ui.initialize( _input, _fonts._fontService.get(), ::test::getEngineDefaultAssets()._uiInputMap.c_str() );
+                      _ui.initialize( _input, _fonts._fontService.get(), sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } );
             _ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );

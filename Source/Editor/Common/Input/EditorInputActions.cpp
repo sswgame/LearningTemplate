@@ -93,7 +93,7 @@ namespace sw::editor
         _focusedPanelLayer   = {};
 
         const string& basePath = getEditorToolDefaults()._editorInputMap.get();
-        if ( _map.loadFromResource( basePath ) == false )
+        if ( _map.loadFromResource( ResourceID{ basePath } ) == false )
         {
             SW_LOG_ERROR( "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", basePath.c_str() );
             return false;

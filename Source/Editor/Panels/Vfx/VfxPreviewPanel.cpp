@@ -173,7 +173,7 @@ namespace sw::editor
         _listEmitterRow.clear();
         _previewEffectPath.clear();
         VfxEffectDef effect;
-        if ( effect.loadFromResource( path ) == false )
+        if ( effect.loadFromResource( ResourceID{ path } ) == false )
         {
             _status = "The effect could not be read - see the log";
             return ToolAssetLoadResult::Malformed;

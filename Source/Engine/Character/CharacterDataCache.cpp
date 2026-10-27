@@ -26,7 +26,7 @@ namespace sw
 
             [[nodiscard]] static bool loadDefaultKinds( SocketKindTable& outKinds )
             {
-                if ( outKinds.loadFromResource( kDefaultSocketKindPath ) )
+                if ( outKinds.loadFromResource( ResourceID{ kDefaultSocketKindPath } ) )
                     return true;
                 SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - no socket asset is handed out", kDefaultSocketKindPath );
                 return false;
@@ -52,10 +52,10 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, SocketSet& outSocketSet )
+        [[nodiscard]] static bool load( const ResourceID& resourceID, SocketSet& outSocketSet )
         {
             const SocketKindTable* pKinds = CharacterDataCacheInternal::findDefaultKinds();
-            return pKinds != nullptr && outSocketSet.loadFromResource( path, *pKinds );
+            return pKinds != nullptr && outSocketSet.loadFromResource( resourceID, *pKinds );
         }
     };
 } // namespace sw
@@ -69,7 +69,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( resourceID, AnimationNotifyHandlerRegistry::getDefault() ); }
     };
 } // namespace sw
 
@@ -83,7 +83,7 @@ namespace sw
         /** @brief 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. */
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
 
-        [[nodiscard]] static bool load( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, PairedAnimationDef& outDef ) { return outDef.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -96,7 +96,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Physics;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -110,10 +110,10 @@ namespace sw
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
         /** @brief 엔진 기본 연산(`FitSolver` 가 등록하는 넷)으로 연산 이름 · 인자를 대조합니다. 사용자 연산을 쓰는 표는 자기 풀이기로 직접 읽습니다. */
-        [[nodiscard]] static bool load( string_view path, FitTables& outTables )
+        [[nodiscard]] static bool load( const ResourceID& resourceID, FitTables& outTables )
         {
             const FitSolver solver;
-            return outTables.loadFromResource( path, solver.getOperatorRegistry() );
+            return outTables.loadFromResource( resourceID, solver.getOperatorRegistry() );
         }
     };
 } // namespace sw
@@ -127,7 +127,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, FitPartData& outData ) { return outData.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, FitPartData& outData ) { return outData.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -140,7 +140,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, BodyShapeSet& outShapes ) { return outShapes.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, BodyShapeSet& outShapes ) { return outShapes.loadFromResource( resourceID ); }
     };
 } // namespace sw
 

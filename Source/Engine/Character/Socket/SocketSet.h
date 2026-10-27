@@ -26,6 +26,7 @@
 
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -47,7 +48,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽어 현재 테이블에 추가합니다. 모르는 속성이나 원소, 겹친 이름은 오류이며 false 를 반환합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 종류 하나를 더합니다(이미 있으면 그대로). */
         void addKind( const hashed_string& name );
         /** @brief 그 종류가 테이블에 있으면 true 를 반환합니다. */
@@ -139,7 +140,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
         /** @brief XML 텍스트로 씁니다(적은 필드만 씁니다). */
         string saveToXMLText() const;
 

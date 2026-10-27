@@ -213,7 +213,7 @@ namespace sw
             // 군중 표는 엔진 필수 데이터다. 못 읽으면 단언하고 이 시스템은 군중을 묶지 않는다(코드 기본 표로 묶지 않는다).
             _bCrowdSettingsReady = SW_TRUE;
             AnimationCrowdSettings settings;
-            _bCrowdSettingsFailed = settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) ? SW_FALSE : SW_TRUE;
+            _bCrowdSettingsFailed = settings.loadFromResource( ResourceID{ AnimationCrowdSettings::kResourcePath } ) ? SW_FALSE : SW_TRUE;
             SW_LOG_ASSERT( _bCrowdSettingsFailed == SW_FALSE, "Animation crowd settings '%#' could not be loaded", AnimationCrowdSettings::kResourcePath );
             if ( _bCrowdSettingsFailed == SW_FALSE )
                 _crowd.setSettings( settings );
@@ -305,7 +305,7 @@ namespace sw
         {
             // LOD 표는 엔진 필수 데이터다. 못 읽으면 단언하고 이 시스템은 LOD 를 판정하지 않는다(모든 유닛이 매 프레임 — 코드 기본 표로 판정하지 않는다).
             _bLODSettingsReady  = SW_TRUE;
-            _bLODSettingsFailed = _lodSettings.loadFromResource( AnimationLODSettings::kResourcePath ) ? SW_FALSE : SW_TRUE;
+            _bLODSettingsFailed = _lodSettings.loadFromResource( ResourceID{ AnimationLODSettings::kResourcePath } ) ? SW_FALSE : SW_TRUE;
             SW_LOG_ASSERT( _bLODSettingsFailed == SW_FALSE, "Animation LOD settings '%#' could not be loaded", AnimationLODSettings::kResourcePath );
         }
         if ( _bLODSettingsFailed == SW_TRUE )

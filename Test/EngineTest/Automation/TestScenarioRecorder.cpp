@@ -204,7 +204,7 @@ SW_TEST_CASE( ScenarioRecorderTest, RecordingIsReadBackThroughTheSavedDomain )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( kOutputPath, R"(<Scenario name="UnitReplay"><At frame="1"><Pass/></At></Scenario>)" ) );
     sw::AutomationScenario scenario;
     sw::string             error;
-    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( sw::ScenarioRecorder::makeReplayID( kOutputPath ), error ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( sw::ResourceID{ sw::ScenarioRecorder::makeReplayID( kOutputPath ) }, error ), error.c_str() );
     SW_EXPECT_TRUE( scenario.getName() == "UnitReplay" );
     (void)sw::FileUtil::tryRemoveFile( kOutputPath ); // 다음 실행이 새로 쓴다
 }

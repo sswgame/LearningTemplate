@@ -195,28 +195,30 @@ namespace sw
 
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
 
-    bool SceneDocument::loadXML( string_view path )
+    bool SceneDocument::loadXML( const ResourceID& resourceID )
     {
-        return loadXMLSource( path, ReadSource::Resource );
+        *this       = {};
+        _sourcePath = resourceID.str();
+        AssetLoadScope loadScope( "Scene", resourceID.view() );
+        XMLDocument    doc;
+        string         absPath;
+        const bool     bRead = doc.loadResource( resourceID, &absPath );
+        return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
     {
-        return loadXMLSource( diskPath, ReadSource::DiskFile );
+        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        *this       = {};
+        _sourcePath = diskPath;
+        AssetLoadScope loadScope( "Scene", diskPath );
+        XMLDocument    doc;
+        const bool     bRead = doc.loadFile( diskPath );
+        return readXMLSource( doc, bRead, string( diskPath ), loadScope );
     }
 
-    bool SceneDocument::loadXMLSource( string_view path, ReadSource source )
+    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope )
     {
-        *this       = {};
-        _sourcePath = path;
-
-        AssetLoadScope loadScope( "Scene", path );
-        XMLDocument    doc;
-        string         absPath;
-        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
-        if ( source == ReadSource::DiskFile )
-            absPath = string( path );
         if ( bRead == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
@@ -368,16 +370,17 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::loadBinary( string_view path )
+    bool SceneDocument::loadBinary( const ResourceID& resourceID )
     {
-        *this       = {};
-        _sourcePath = path;
+        const string_view path = resourceID.view();
+        *this                  = {};
+        _sourcePath            = path;
 
         // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
         vector<uint8> bytes;
         const string  absPath{ path };
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( path, bytes ) )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -509,25 +512,26 @@ namespace sw
         return count;
     }
 
-    bool SceneDocument::load( string_view path )
+    bool SceneDocument::load( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 쿠킹하지 않는다.
         const string binPath = AssetCookPath::toCookedPath( path );
 
 #if defined( SW_SHIPPING )
-        if ( binPath.empty() == false && loadBinary( binPath ) )
+        if ( binPath.empty() == false && loadBinary( ResourceID{ binPath } ) )
             return true;
         SW_LOG_ERROR( "Shipping requires cooked binary scene: %# (cooked name '%#')", path, binPath );
         return false;
 #else
         if ( FileUtil::hasExtension( path, ".bin" ) )
-            return loadBinary( path );
+            return loadBinary( resourceID );
 
-        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( binPath ) && loadBinary( binPath );
+        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( ResourceID{ binPath } );
         if ( bBinaryLoaded )
             return true;
 
-        return loadXML( path );
+        return loadXML( ResourceID{ path } );
 #endif
     }
 

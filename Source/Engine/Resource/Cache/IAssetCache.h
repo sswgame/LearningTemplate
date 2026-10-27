@@ -21,6 +21,8 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -100,7 +102,7 @@ namespace sw
          * @details **디바이스를 인자로 받습니다.** 캐시가 마지막으로 본 디바이스를 들고 있으면
          *          백엔드를 바꾼 뒤 그 포인터가 사라진 디바이스를 가리킵니다.
          */
-        virtual void reload( string_view relativePath, IRHIDevice* pDevice ) = 0;
+        virtual void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) = 0;
 
         /** @brief 지금 들고 있는 항목 수입니다. */
         virtual size_t getCachedCount() const = 0;

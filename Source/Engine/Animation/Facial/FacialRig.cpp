@@ -55,10 +55,11 @@ namespace sw
         return false;
     }
 
-    bool FacialRig::loadFromResource( string_view path )
+    bool FacialRig::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Facial rig '%#' could not be read", path );
             *this = FacialRig{};

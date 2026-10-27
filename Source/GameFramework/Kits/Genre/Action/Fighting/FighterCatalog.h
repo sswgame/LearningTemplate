@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
@@ -138,7 +139,7 @@ namespace sw
     public:
         FighterCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path, const MoveCatalog& moveCatalog );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const MoveCatalog& moveCatalog );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName = {} );
         void               addFighter( const FighterDef& fighter );
 

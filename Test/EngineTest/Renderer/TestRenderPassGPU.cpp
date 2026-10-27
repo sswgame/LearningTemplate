@@ -244,7 +244,7 @@ namespace
                     pLight->setIntensity( 2.0f );
             }
             _material = sw::Material::create();
-            if ( _material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( _material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  _material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.5 0.25 1.0" ) == false )
                 return false;
             _mesh = sw::MeshUtil::createUnitCube();
@@ -355,7 +355,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeMaterial( const utf8* pColor )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -497,7 +497,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeLitMaterial()
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), "0.9 0.5 0.25 1.0" ) == false )
                 material.reset();
             return material;
@@ -510,7 +510,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeToonMaterial( bool bOutline )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
+            const bool                   bLoaded  = material->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } );
             const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "0.9 0.5 0.25 1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "_shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "_shadingToony" ), "1.0" ) &&
@@ -708,7 +708,7 @@ namespace
     void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent, float32 shadowViewDistance = 0.0f, uint32 cascadeCount = 1 )
     {
         sw::string pipelineText;
-        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() }, pipelineText ) );
         constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
         constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
         const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
@@ -1149,7 +1149,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialLifetimeFollowsPacket, te
 
     // GT 소유: 머티리얼 하나 + 그 인스턴스 하나. 아래에서 둘 다 놓는다.
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     mesh->setMaterial( material.get() );
     mesh->setMaterialInstance( instance );
@@ -1368,7 +1368,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO
         // 실제 에셋을 쓴다 — 손으로 지은 XML 은 _permutations 가 빠져 검증하려던 것과 다른 걸 재게 된다.
         sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
         if ( bOk )
-            bOk = materialGlass->loadFromFile( "engine/materials/glassmaterial.material" );
+            bOk = materialGlass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } );
 
         sw::Scene scene( "MaterialPermutationPSOScene" );
         if ( bOk )
@@ -1732,7 +1732,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
             glassMaterial = sw::Material::create();
             // 반투명 전용 에셋 — blendMode 와 퍼뮤테이션이 불투명과 다르다. 불투명 에셋에
             // 알파만 낮춰 쓰면 "머티리얼은 불투명인데 블렌딩으로 그린다"는 어긋난 상태를 검증하게 된다.
-            bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" );
+            bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } );
         }
 
         if ( bOk )
@@ -1960,7 +1960,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PerBatchMaterialColorsReachShader
         {
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -2566,7 +2566,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RendererSurvivesDeviceRecreate, t
     SW_ASSERT_NOT_NULL( mesh );
     mesh->setMesh( cube );
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( kGlassMaterial ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ kGlassMaterial } ) );
     mesh->setMaterial( material.get() );
 
     sw::GPUSceneBuilder gtGPUScene;
@@ -2583,7 +2583,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RendererSurvivesDeviceRecreate, t
     device.shutdownDevice();
 
     SW_ASSERT_TRUE( device.recreateDevice() );
-    SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
+    SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ kGlassMaterial } ) );
 
     // 같은 렌더러 객체를 새 디바이스로 다시 세운다 — 앱이 하는 그대로.
     SW_ASSERT_TRUE( renderer.initialize( device.get() ) );
@@ -3909,7 +3909,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMateri
         {
             // 텍스처가 붙은 실제 에셋이어야 한다 — 손으로 지은 XML 은 퍼뮤테이션을 빠뜨리기 쉽다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
 
             const size_t firstCount = material->getMaterialTextureSrvs().size();
             SW_ASSERT_TRUE( firstCount > 0 );
@@ -3987,7 +3987,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
     {
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
             SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
             const sw::RHIDescriptorIndex before = material->getMaterialTextureSrvs()[0];
 
@@ -4006,7 +4006,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
             SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
 
             sw::TextureCache& textures = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
-            textures.reload( kTexturePath, device.get() );
+            textures.reload( sw::ResourceID{ kTexturePath }, device.get() );
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
             const sw::RHIDescriptorIndex after = pTexture->getSrv();
@@ -4062,7 +4062,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceConstantBufferIsRecreated
     {
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
@@ -4138,7 +4138,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheSha
 
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
             SW_ASSERT_TRUE( parent->ensureShaderLayout( device.get() ) );
             SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
@@ -4373,7 +4373,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
         // 다르게 무너진다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
+            bOk = material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) &&
                   material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
@@ -4490,7 +4490,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() }, pipelineText ) );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
     // 그림자 맵도 이름을 바꾸고 역할을 적는다 — ForwardOpaque 는 그림자 맵을 이름이 아니라 ShadowMap 역할의 입력으로 찾는다.
@@ -4564,7 +4564,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedAttachmentsRenderTheSameIm
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() }, pipelineText ) );
     struct AttachmentRename
     {
         const utf8* _pOldName;
@@ -4659,7 +4659,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEve
         {
             // 부모는 albedoMap 에 checker.dds 를 빌린다(슬롯 0). 인스턴스는 roughness 와 albedoMap 을 덮어쓴다.
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.125f );
             instance->setTextureParameter( sw::hashed_string( "_albedoMap" ), kOverrideTexture );
@@ -4716,7 +4716,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEve
             expectTextureReachesShader( pOverride->getSrv(), "처음" );
 
             // 텍스처를 다시 올리면 같은 객체에 새 SRV 가 붙는다 — 다음 업로드가 새 것을 넣는다.
-            textures.reload( kOverrideTexture, device.get() );
+            textures.reload( sw::ResourceID{ kOverrideTexture }, device.get() );
             SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
             expectTextureReachesShader( pOverride->getSrv(), "다시 올린 뒤" );
 
@@ -4745,7 +4745,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, 
     constexpr const utf8* kPresentTexture = "engine/textures/test/checker.dds";
     constexpr const utf8* kAbsentTexture  = "engine/textures/test/doesnotexist.dds";
     sw::string            xml;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/materials/benchtextured.material", xml ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/materials/benchtextured.material" }, xml ) );
     SW_ASSERT_TRUE( xml.find( kPresentTexture ) != sw::string::npos );
     xml                             = sw::StringUtil::replace( xml, kPresentTexture, kAbsentTexture );
     const sw::string missingTexture = test::getEngineDefaultAssets()._missingTexture.get();
@@ -4758,7 +4758,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, 
         sw::TextureCache&            textures    = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
-        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
         SW_ASSERT_TRUE( material->loadFromXML( xml ) ); // albedoMap 만 없는 파일을 가리킨다
         material->releaseTextureAssets( device.get() );
         {
@@ -4951,7 +4951,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAs
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthPrepassRendersTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string prepassText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardprepasspipeline.xml" }, prepassText ) );
     SW_ASSERT_TRUE( prepassText.find( "_type=\"DepthPrepass\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renamedprepasspipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, sw::StringUtil::replace( prepassText, "SceneDepth", "MainDepth" ) ) );
@@ -5089,7 +5089,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth, t
             SW_ASSERT_TRUE( pLightObject != nullptr && pLightObject->addComponent<sw::DirectionalLightComponent>() != nullptr );
 
             const sw::shared_ptr<sw::Material> material       = sw::Material::create();
-            const bool                         bMaterialReady = material->loadFromFile( "engine/materials/toon.material" ) &&
+            const bool                         bMaterialReady = material->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } ) &&
                                         material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "1.0 1.0 1.0 0.2" ) &&
                                         material->setParameter( nullptr, sw::hashed_string( "_alphaCutoff" ), "0.5" );
             SW_ASSERT_TRUE( bMaterialReady );
@@ -5502,7 +5502,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, NormalsStayPerpendicularUnderNonU
         const sw::string backendName( device->getBackendName() );
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+        SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
         sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
         SW_ASSERT_NOT_NULL( quad.get() );
 
@@ -5785,7 +5785,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
         SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
         sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
         SW_ASSERT_NOT_NULL( quad.get() );
@@ -5925,7 +5925,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         }
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
+            bOk = material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) &&
                   material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         // 큐브 셋(화면 안) + 왼쪽 가장자리를 넘어가는 긴 막대 하나(오른쪽 가장자리는 배경이다).
@@ -6314,7 +6314,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, R8MaskTextureSamplesAsRedOnEveryB
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardpipelinestaged.xml" }, pipelineText ) );
     // 장면 색 · 깊이와 후처리 사슬을 모두 나눈다 — 꺼지면 원본을 가리키는 패스(블룸 · 외곽선)는 출력과 원본의 형식 · 나눗수가 같아야 해서(검증 3-6)
     // BloomColor 만 나눌 수 없다. 원본 크기 SceneColor 는 나누지 않은 파이프라인으로 따로 그려 견준다.
     for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
@@ -6447,7 +6447,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversIts
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardpipelinestaged.xml" }, pipelineText ) );
     // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 모션 블러의 출력(카메라가 서 있으면 피사계 심도 출력
     // 그대로, 조리개 0 이면 장면 색 그대로)이다. 외곽선 출력도 나눈다 — 꺼지면 원본(블룸 출력)을 가리키는 패스는 출력과 원본의 크기가 같아야 한다(검증 3-6).
     for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
@@ -6917,7 +6917,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredTo
         const sw::string                     label   = sw::string( device->getBackendName() ) + ": ";
         sw::shared_ptr<sw::Material>         grid    = sw::Material::create();
         sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "Plane", sw::PrimitiveVertexColor::White );
-        bool                                 bOk     = grid->initialize( device.get(), "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
+        bool                                 bOk     = grid->initialize( device.get(), sw::ResourceID{ "engine/materials/prototypegrid_light.material" } ) && plane != nullptr;
         sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
         bOk                                          = checker != nullptr;
         if ( bOk )
@@ -7418,9 +7418,9 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewSortsTransparencyFromIts
             outMesh                 = sw::MeshUtil::createUnitCube();
             outGlass                = sw::Material::create();
             outTint                 = sw::Material::create();
-            const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+            const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) == false ||
                                       outGlass->setParameter( nullptr, sw::hashed_string( "_color" ), "0.2 0.9 0.3 0.55" ) == false ||
-                                      outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                                      outTint->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) == false ||
                                       outTint->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.1 0.1 0.6" ) == false;
             if ( bSetupFailed )
                 return false;
@@ -8074,7 +8074,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameD
             sw::shared_ptr<sw::Material> red   = sw::Material::create();
             sw::shared_ptr<sw::Material> blue  = sw::Material::create();
             const utf8*                  pPath = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
-            bOk                                = bOk && cube != nullptr && red->loadFromFile( pPath ) && blue->loadFromFile( pPath ) &&
+            bOk                                = bOk && cube != nullptr && red->loadFromFile( sw::ResourceID{ pPath } ) && blue->loadFromFile( sw::ResourceID{ pPath } ) &&
                   red->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.02 0.02 1.0" ) && blue->setParameter( nullptr, sw::hashed_string( "_color" ), "0.02 0.02 1.0 1.0" );
             sw::MeshComponent* pCube = nullptr;
             sw::MeshComponent* pWall = nullptr;
@@ -8521,7 +8521,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed, 
     for ( test::RHITestDevice& device : sweep )
     {
         const sw::shared_ptr<sw::Material> water = sw::Material::create();
-        SW_ASSERT_TRUE( water->initialize( device.get(), test::getEngineDefaultAssets()._waterMaterial.get() ) );
+        SW_ASSERT_TRUE( water->initialize( device.get(), sw::ResourceID{ test::getEngineDefaultAssets()._waterMaterial.get() } ) );
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
         // water.hlsl 의 MaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
         SW_EXPECT_EQUAL( 144u, water->getElementStride() );
@@ -9184,7 +9184,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         // 캔버스 — 글리프는 저장소 글꼴(라틴)이라 기계마다 같다.
         sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
         sw::vector<uint8>                   fontBytes;
-        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ "engine/fonts/kenney_future.ttf" }, fontBytes ) );
         const sw::FontFaceID face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
         SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
         sw::GlyphCache      glyphCache( *rasterizer, sw::GlyphFieldKind::Sdf );
@@ -9432,7 +9432,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled
         // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
         sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().declareRenderTarget( kTargetPath, 64, 64 );
         sw::shared_ptr<sw::Material> sprite = sw::Material::create();
-        bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
+        bOk                                 = bOk && sprite->loadFromFile( sw::ResourceID{ "engine/materials/sprite2d.material" } );
         const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );
         bOk                                 = bOk && pCamera != nullptr;
         sw::shared_ptr<sw::Mesh> quadMesh   = sw::MeshUtil::createSpriteQuad();

@@ -94,7 +94,7 @@ namespace sw
             settings._documentPath         = pSettings->_loadingScreen; // 칸이 없으면 로딩 화면 없음(`_documentPath.isSet()`)
             settings._listTip.clear();
             // 팁 파일을 적었는데 읽지 못하면 기동을 멈춘다 — 적지 않은 것(팁 없음)과 깨진 것을 섞지 않는다.
-            if ( pSettings->_loadingTips.isSet() && loadTipsFromResource( pSettings->_loadingTips.get(), settings._listTip ) == false )
+            if ( pSettings->_loadingTips.isSet() && loadTipsFromResource( ResourceID{ pSettings->_loadingTips.get() }, settings._listTip ) == false )
                 return SubsystemInitResult::Failed;
             setSettings( settings );
         }
@@ -188,13 +188,13 @@ namespace sw
         pProgress->setVisibility( WidgetVisibility::HitTestInvisible ); // 진행 막대는 입력을 받지 않는다
     }
 
-    bool LoadingScreenController::loadTipsFromResource( string_view path, vector<string>& outListTip )
+    bool LoadingScreenController::loadTipsFromResource( const ResourceID& resourceID, vector<string>& outListTip )
     {
         outListTip.clear();
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( XMLReadUtil::loadRootOrWarn( doc, path, "LoadingTips", root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, resourceID, "LoadingTips", root, sourceName ) == false )
             return false;
         return readTips( root, sourceName, outListTip );
     }

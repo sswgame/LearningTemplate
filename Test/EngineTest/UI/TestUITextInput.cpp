@@ -45,7 +45,7 @@ namespace
             , _viewport{}
             , _bReady{ false }
         {
-            _bReady = _input.initialize() && _ui.initialize( _input, pFontService, ::test::getEngineDefaultAssets()._uiInputMap.c_str() );
+            _bReady = _input.initialize() && _ui.initialize( _input, pFontService, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } );
             if ( _bReady == false )
                 return;
             sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();

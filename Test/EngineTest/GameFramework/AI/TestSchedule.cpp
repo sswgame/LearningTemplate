@@ -220,7 +220,7 @@ SW_TEST_CASE( ScheduleTest, ResourceSampleScheduleLoadsWithoutWarnings )
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     ScheduleCatalog          catalog;
     test::ScopedLogCollector logs;
-    SW_ASSERT_TRUE( catalog.loadFromResource( "game/harvestvalley/data/villagers.schedules.xml" ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ "game/harvestvalley/data/villagers.schedules.xml" } ) );
     SW_EXPECT_TRUE_MSG( logs.joined().empty(), logs.joined().c_str() );
     SW_EXPECT_TRUE( catalog.getNpcs().size() >= 2u );
 }

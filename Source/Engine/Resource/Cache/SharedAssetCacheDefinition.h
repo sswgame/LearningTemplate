@@ -114,10 +114,10 @@ namespace sw
     }
 
     template <typename AssetType>
-    void SharedAssetCache<AssetType>::reload( string_view relativePath, IRHIDevice* pDevice )
+    void SharedAssetCache<AssetType>::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( relativePath ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
+        (void)reloadShared( resourceID.view() ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
     }
 
     template <typename AssetType>

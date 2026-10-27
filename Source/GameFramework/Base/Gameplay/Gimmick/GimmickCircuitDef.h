@@ -22,6 +22,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -78,7 +80,7 @@ namespace sw
         static constexpr float32 kDefaultStepTime = 1.0f / 60.0f;
 
         /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief XML 텍스트를 읽습니다. 테스트와 에디터에서 씁니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 

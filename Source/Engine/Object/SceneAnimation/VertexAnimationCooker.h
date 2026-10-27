@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -45,7 +46,7 @@ namespace sw
         /** @brief XML 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 클립 이름의 파일 경로입니다(`<clip_folder>/<소문자>.animclip` — 애니메이터와 같은 규칙). */
         string makeClipPath( const hashed_string& clipName ) const;
 

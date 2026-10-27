@@ -349,7 +349,10 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
         {
             return GameDataXML::loadText( *this, &CountingCatalog::loadRootWithBonus, bonus, xmlText, "CountingCatalog", "Catalog" );
         }
-        bool loadFromResource( string_view path ) { return GameDataXML::loadFile( *this, &CountingCatalog::loadRoot, path, "Catalog" ); }
+        bool loadFromResource( const ResourceID& resourceID )
+        {
+            return GameDataXML::loadFile( *this, &CountingCatalog::loadRoot, resourceID, "Catalog" );
+        }
 
         int32 _itemCount{ 0 };
 
@@ -379,7 +382,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
         test::ScopedDefensiveTestLog expected( "catalog root missing, empty catalog and missing file" );
         SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Catalog><Thing/></Catalog>" ) ); // 읽은 것이 0
         SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Other><Item/></Other>" ) );      // 루트가 없다
-        SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
+        SW_EXPECT_FALSE( catalog.loadFromResource( sw::ResourceID{ "game/none/no_such_catalog.xml" } ) );
     }
     SW_EXPECT_TRUE( catalog.loadWithBonus( "<Catalog><Item/></Catalog>", 10 ) );
     SW_EXPECT_EQUAL( 11, catalog._itemCount );
@@ -397,7 +400,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, XMLCatalogBaseGivesBothLoadEntryPoints )
         test::ScopedDefensiveTestLog expected( "catalog base: empty catalog, wrong root and missing file" );
         SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Catalog><Thing/></Catalog>" ) );
         SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Other><Item/></Other>" ) );
-        SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
+        SW_EXPECT_FALSE( catalog.loadFromResource( sw::ResourceID{ "game/none/no_such_catalog.xml" } ) );
     }
 }
 

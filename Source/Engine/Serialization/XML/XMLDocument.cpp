@@ -610,8 +610,9 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool XMLDocument::loadResource( string_view relativePath, string* pOutAbsPath )
+    bool XMLDocument::loadResource( const ResourceID& resourceID, string* pOutAbsPath )
     {
+        const string_view relativePath = resourceID.view();
         if ( relativePath.empty() )
         {
             _lastError          = "empty path";
@@ -620,7 +621,7 @@ namespace sw
         }
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text, &absPath ) == false )
         {
             _lastError          = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             _bLastErrorNotFound = true;

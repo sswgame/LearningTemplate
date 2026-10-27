@@ -40,11 +40,12 @@ namespace sw
 
 namespace sw
 {
-    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, string_view sceneResourcePath, NavMeshAsset& outAsset )
+    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, const ResourceID& resourceID, NavMeshAsset& outAsset )
     {
-        outAsset = NavMeshAsset{};
+        const string_view sceneResourcePath = resourceID.view();
+        outAsset                            = NavMeshAsset{};
         SceneDocument document;
-        if ( document.loadXML( sceneResourcePath ) == false )
+        if ( document.loadXML( resourceID ) == false )
         {
             SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneResourcePath );
             return false;
@@ -125,7 +126,7 @@ namespace sw
                 if ( ResourceIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
                     return CookStep::Skipped;
                 NavMeshAsset asset;
-                if ( cookScene( services, relativePath, asset ) == false )
+                if ( cookScene( services, ResourceID{ relativePath }, asset ) == false )
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;

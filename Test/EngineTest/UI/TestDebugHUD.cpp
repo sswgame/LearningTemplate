@@ -104,7 +104,7 @@ namespace
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             _settings.initialize( targets );
-            SW_EXPECT_TRUE( _settings.loadSchema( ::test::getEngineDefaultAssets()._debugHUDSettingsSchema.get() ) );
+            SW_EXPECT_TRUE( _settings.loadSchema( sw::ResourceID{ ::test::getEngineDefaultAssets()._debugHUDSettingsSchema.get() } ) );
             _settings.reapplyAll();
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr ) );

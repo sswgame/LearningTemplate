@@ -226,16 +226,16 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
     SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
 
     const string jsonPath = test::makeTempPath( "crate.prefab.json" );
-    SW_ASSERT_TRUE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, jsonPath ) );
+    SW_ASSERT_TRUE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, sw::ResourceID{ jsonPath } ) );
     PrefabAsset reloaded;
-    SW_EXPECT_TRUE( reloaded.loadFromJSONFile( ::test::makeTempResourceID( jsonPath ) ) );
+    SW_EXPECT_TRUE( reloaded.loadFromJSONFile( sw::ResourceID{ ::test::makeTempResourceID( jsonPath ) } ) );
 
     const string scenePath = test::makeTempPath( "level.scene.xml" );
     const string kScene    = "<Scene name=\"Level\"/>\n";
     SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, kScene ) );
     {
         test::ScopedDefensiveTestLog expected( "a scene path is not a prefab path" );
-        SW_EXPECT_FALSE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, scenePath ) );
+        SW_EXPECT_FALSE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, sw::ResourceID{ scenePath } ) );
     }
     string sceneAfter;
     SW_ASSERT_TRUE( FileUtil::readTextFile( scenePath, sceneAfter ) );
@@ -319,7 +319,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
         prefab.setFromGameObject( pSource );
         SW_ASSERT_TRUE( prefab.saveToXMLFile( prefabPath ) );
         SW_ASSERT_TRUE( prefab.saveToBinaryFile( AssetCookPath::toCookedPath( prefabPath ) ) ); // 배포본은 쿠킹본만 읽는다
-        engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( ::test::makeTempResourceID( prefabPath ) );
+        engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( sw::ResourceID{ ::test::makeTempResourceID( prefabPath ) } );
     }
 
     SceneManager manager;

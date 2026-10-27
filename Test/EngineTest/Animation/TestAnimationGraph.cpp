@@ -74,7 +74,7 @@ SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseXML )
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
     AnimationGraphAsset loaded;
-    SW_EXPECT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( filePath ) ) );
+    SW_EXPECT_TRUE( loaded.loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( filePath ) } ) );
 
     AnimationGraphAsset parsed;
     SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );

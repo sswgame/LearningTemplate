@@ -20,10 +20,11 @@ namespace sw
             static constexpr float32 kLifeRatioMax = 1.0f;
 
             /** @brief 효과 파일을 읽는 로더 모양입니다(데이터 종류 표가 부릅니다). */
-            [[nodiscard]] static bool loadKind( const string& resourceID )
+            [[nodiscard]] static bool loadKind( const ResourceID& id )
             {
-                VfxEffectDef effect;
-                return effect.loadFromResource( resourceID );
+                const string& resourceID = id.str();
+                VfxEffectDef  effect;
+                return effect.loadFromResource( id );
             }
 
             /** @brief 필수 커브입니다. 키가 하나도 없으면 오류를 남기고 false, 키 시각이 0..1 밖이어도 false 입니다. */
@@ -230,10 +231,11 @@ namespace sw
 
 namespace sw
 {
-    bool VfxEffectDef::loadFromResource( string_view path )
+    bool VfxEffectDef::loadFromResource( const ResourceID& resourceID )
     {
-        *this = VfxEffectDef{};
-        return finishLoad( ReflectedXMLFile::loadDesc( path, *this ), path );
+        const string_view path = resourceID.view();
+        *this                  = VfxEffectDef{};
+        return finishLoad( ReflectedXMLFile::loadDesc( resourceID, *this ), path );
     }
 
     bool VfxEffectDef::loadFromDiskFile( string_view diskPath )

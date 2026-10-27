@@ -13,6 +13,7 @@
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -140,7 +141,7 @@ namespace sw
          * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.xml`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
          *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.
          */
-        [[nodiscard]] static bool bakeClipFile( string_view profilePath, string_view sourceClipPath, string_view outClipPath );
+        [[nodiscard]] static bool bakeClipFile( const ResourceID& profileID, const ResourceID& sourceClipID, string_view outClipPath );
     };
 } // namespace sw
 

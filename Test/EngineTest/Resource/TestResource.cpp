@@ -209,7 +209,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( test::getEngineDefaultAssets()._shaderForwardLit.get() ), material->getShaderPath() );
 }
@@ -233,7 +233,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_FALSE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_FALSE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
 }
 
 /**
@@ -339,7 +339,7 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
 
     // 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
     sw::string textContent;
-    const bool bReadOk = sw::ResourceIO::readTextResource( "ENGINE/PIPELINE/FORWARDPIPELINE.XML", textContent );
+    const bool bReadOk = sw::ResourceIO::readTextResource( sw::ResourceID{ "ENGINE/PIPELINE/FORWARDPIPELINE.XML" }, textContent );
     SW_EXPECT_TRUE( bReadOk );
     SW_EXPECT_FALSE( textContent.empty() );
     SW_EXPECT_TRUE( textContent.find( "<RenderPipeline" ) != sw::string::npos );
@@ -425,7 +425,7 @@ SW_TEST_CASE( ResourceTest, DDSLoaderLoadFromResource )
     sw::DDSImageData image;
     // **도메인까지 적은 engine 리소스**를 쓴다. 도메인 없는 "textures/splash.dds" 는 editor 도메인 에셋이라
     // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
-    SW_ASSERT_TRUE( sw::DDSLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromResource( sw::ResourceID{ "engine/textures/perlin.dds" }, image ) );
     SW_EXPECT_TRUE( image.isValid() );
     // `engine/textures_raw/perlin.png`(Scripts/dev/MakeNoiseTexture.py, 256 × 256)를 임포트 규칙 Fallback_Default(BC7 · sRGB · 밉)로 가져온 것.
     SW_EXPECT_EQUAL( 256u, image._width );
@@ -1087,7 +1087,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
     sw::string       content;
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( escapingID, content ) );
+        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ escapingID }, content ) );
     }
     SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( escapingID ).getDiskPath().empty() );
 }
@@ -1116,15 +1116,15 @@ SW_TEST_CASE( ResourceTest, ResourceEntryRefusesOSPathsInEveryMode )
         packManager.setAllowLooseFiles( bLoose );
         {
             SW_TEST_DEFENSIVE_SCOPE( "an OS path given to the resource entry" );
-            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( insideRoot, content ) );
-            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( outsideRoot, content ) );
-            SW_EXPECT_FALSE( sw::ResourceIO::hasResource( outsideRoot ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ insideRoot }, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ outsideRoot }, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::hasResource( sw::ResourceID{ outsideRoot } ) );
         }
         // 붙인 디스크 도메인은 팩 전용 모드에서도 디스크에서 읽는다.
         content.clear();
-        SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( outsideID, content ) );
+        SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ outsideID }, content ) );
         SW_EXPECT_EQUAL( sw::string( "OUTSIDE" ), content );
-        SW_EXPECT_TRUE( sw::ResourceIO::hasResource( outsideID ) );
+        SW_EXPECT_TRUE( sw::ResourceIO::hasResource( sw::ResourceID{ outsideID } ) );
     }
     content.clear();
     SW_EXPECT_TRUE( sw::ResourceIO::readTextFile( outsideRoot, content ) );

@@ -123,7 +123,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
                                                                       "</InputMap>",
                                                                       mapID ) );
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( mapID ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ mapID } ) );
     const sw::ActionBinding* pBinding = inputMap.getBinding( "Palette", 0 );
     SW_ASSERT_TRUE( pBinding != nullptr );
     SW_EXPECT_TRUE( pBinding->_kind == sw::BindingKind::Shortcut );
@@ -133,7 +133,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
     const sw::string savedPath = test::makeTempPath( "shortcut.saved.input.xml" );
     SW_ASSERT_TRUE( inputMap.saveToResource( savedPath ) );
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( test::makeTempResourceID( savedPath ) ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( sw::ResourceID{ test::makeTempResourceID( savedPath ) } ) );
     const sw::ActionBinding* pReloaded = reloaded.getBinding( "Palette", 0 );
     SW_ASSERT_TRUE( pReloaded != nullptr );
     SW_EXPECT_TRUE( pReloaded->_kind == sw::BindingKind::Shortcut );
@@ -144,7 +144,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
     SW_ASSERT_TRUE( TestInputMapToolInputInternal::writeTempInputMap( "badmodifier.input.xml",
                                                                       "<InputMap><action name=\"Save\"><bind source=\"key\" modifier=\"Control\" code=\"S\"/></action></InputMap>", badID ) );
     sw::InputMap badMap;
-    SW_EXPECT_FALSE( badMap.loadFromResource( badID ) );
+    SW_EXPECT_FALSE( badMap.loadFromResource( sw::ResourceID{ badID } ) );
 }
 
 /**
@@ -161,7 +161,7 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
                                                  "</InputMap>",
                                                  baseID ) );
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( baseID ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ baseID } ) );
 
     sw::string addID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "add.input.xml",
@@ -170,7 +170,7 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
                                                  "<layer name=\"Global\"><action name=\"Park.Open\"><bind source=\"key\" modifier=\"Ctrl+Alt\" code=\"P\"/></action></layer>"
                                                  "</InputMap>",
                                                  addID ) );
-    SW_ASSERT_TRUE( inputMap.appendFromResource( addID ) );
+    SW_ASSERT_TRUE( inputMap.appendFromResource( sw::ResourceID{ addID } ) );
     SW_EXPECT_TRUE( inputMap.hasAction( "Save" ) );
     SW_EXPECT_TRUE( inputMap.hasAction( "Park.Reload" ) ); // 다른 레이어의 같은 Ctrl+S 는 된다(패널마다 같은 키)
     SW_EXPECT_TRUE( inputMap.hasAction( "Park.Open" ) );
@@ -178,22 +178,22 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
 
     sw::string sameActionID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameaction.input.xml", "<InputMap><action name=\"Save\" layer=\"Global\"><bind source=\"key\" code=\"F2\"/></action></InputMap>", sameActionID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sameActionID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameActionID } ) );
 
     sw::string mapWideID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "mapwide.input.xml", "<InputMap doubleClickTime=\"0.5\"><action name=\"Other\" layer=\"Global\"><bind source=\"key\" code=\"F3\"/></action></InputMap>",
                                                  mapWideID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( mapWideID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ mapWideID } ) );
 
     sw::string relayerID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "relayer.input.xml", "<InputMap><layers><layer name=\"Global\" priority=\"9\"/></layers></InputMap>", relayerID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( relayerID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ relayerID } ) );
 
     sw::string sameInputID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameinput.input.xml",
                                                  "<InputMap><layer name=\"Global\"><action name=\"SaveAgain\"><bind source=\"key\" modifier=\"Ctrl\" code=\"S\"/></action></layer></InputMap>",
                                                  sameInputID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sameInputID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameInputID } ) );
 }
 
 /**

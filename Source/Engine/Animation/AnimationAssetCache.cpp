@@ -19,7 +19,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -32,7 +32,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, AnimationClip& outClip ) { return outClip.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, AnimationClip& outClip ) { return outClip.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -45,7 +45,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( resourceID ); }
     };
 } // namespace sw
 
@@ -58,7 +58,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( path ); }
+        [[nodiscard]] static bool load( const ResourceID& resourceID, RigAsset& outRig ) { return outRig.loadFromResource( resourceID ); }
     };
 } // namespace sw
 

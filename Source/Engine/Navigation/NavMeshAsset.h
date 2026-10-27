@@ -19,6 +19,7 @@
 
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Navigation/INavMesh.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -64,7 +65,7 @@ namespace sw
         /** @brief 바이트를 읽습니다. 매직, 형식 버전, 백엔드가 다르거나 잘렸으면 오류를 남기고 false 를 반환하며 내용을 비웁니다. */
         [[nodiscard]] bool readBytes( const uint8* pData, size_t size, string_view sourceLabel );
         /** @brief 리소스 경로의 쿠킹본을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view resourcePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 절대 경로에 씁니다(폴더가 없으면 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 

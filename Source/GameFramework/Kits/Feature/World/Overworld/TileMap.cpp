@@ -34,7 +34,7 @@ namespace sw
             return true;
         }
         TileSetAsset tileSet;
-        if ( tileSet.loadFromResource( xmlData._tileSetPath ) == false )
+        if ( tileSet.loadFromResource( ResourceID{ xmlData._tileSetPath } ) == false )
             return false;
         return assign( xmlData, tileSet );
     }

@@ -4,6 +4,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     /**
@@ -91,7 +93,7 @@ namespace sw
         /**
          * @brief VFS 리소스 상대 경로(예: "textures/splash.dds")에서 DDS 텍스처를 로드합니다(.pack 아카이브와 낱개 파일 모두 같은 방식으로).
          */
-        [[nodiscard]] static bool loadFromResource( string_view relativePath, DDSImageData& outImage );
+        [[nodiscard]] static bool loadFromResource( const ResourceID& resourceID, DDSImageData& outImage );
 
         /**
          * @brief 메모리 버퍼에서 DDS 텍스처를 로드합니다.

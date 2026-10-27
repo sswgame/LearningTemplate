@@ -66,7 +66,7 @@ namespace sw
                     const float3               position = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     IAudioService*             pAudio   = findAudioService( context );
                     if ( pAudio != nullptr )
-                        (void)pAudio->play( sound );
+                        (void)pAudio->play( ResourceID{ sound } );
                     record( context, hashed_string( sound ), position, 0, AnimationNotifyPhase::Instant );
                 }
 
@@ -144,7 +144,7 @@ namespace sw
                     const string               sound   = context._entry.getTextParam( s_sound );
                     IAudioService*             pAudio  = findAudioService( context );
                     if ( sound.empty() == false && pAudio != nullptr )
-                        (void)pAudio->play( StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) );
+                        (void)pAudio->play( ResourceID{ StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) } );
                     record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectID() : 0, AnimationNotifyPhase::Instant );
                 }
 

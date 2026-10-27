@@ -403,14 +403,15 @@ namespace sw
         static_assert( TileMapXMLInternal::isFlagLayerTableValid(), "kArrTileFlagLayerInfo must be ordered by TileFlagLayer and have at most one text layer" );
     } // namespace
 
-    bool TileMapXMLData::load( string_view path )
+    bool TileMapXMLData::load( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         if ( path.empty() )
             return false;
 
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( path, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
+        if ( ResourceIO::readTextResource( resourceID, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
         {
             SW_LOG_ERROR( "TileMap file not found: %#", path );
             return false;

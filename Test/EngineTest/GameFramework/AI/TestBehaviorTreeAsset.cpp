@@ -169,7 +169,7 @@ SW_TEST_CASE( BehaviorTreeAssetTest, StarSkirmishCommanderTreeMatchesTheKitTasks
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     BehaviorTreeAsset asset;
-    SW_ASSERT_TRUE( asset.loadFromResource( "game/starskirmish/data/commander.bt.xml" ) );
+    SW_ASSERT_TRUE( asset.loadFromResource( sw::ResourceID{ "game/starskirmish/data/commander.bt.xml" } ) );
     const BehaviorTree& tree = asset.getTree();
     SW_ASSERT_TRUE( tree.isValid() );
     SW_EXPECT_STREQ( "Root", tree.getNode( 0 )._name.c_str() );

@@ -44,10 +44,11 @@ namespace sw
 
 namespace sw
 {
-    bool NavMeshSettings::loadFromResource( string_view resourcePath )
+    bool NavMeshSettings::loadFromResource( const ResourceID& resourceID )
     {
-        *this = NavMeshSettings{};
-        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        const string_view resourcePath = resourceID.view();
+        *this                          = NavMeshSettings{};
+        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", resourcePath );
             return false;

@@ -40,7 +40,7 @@ namespace sw
             return;
         }
         LiveLinkFaceMapping mapping;
-        if ( mapping.loadFromResource( _mappingPath, _layout ) == false )
+        if ( mapping.loadFromResource( ResourceID{ _mappingPath }, _layout ) == false )
             return; // 읽기가 까닭을 알렸다(연결 표가 고른 패킷 배치 표까지)
         _source.initialize( _layout, mapping );
         _transport = make_unique<UDPNetTransport>();

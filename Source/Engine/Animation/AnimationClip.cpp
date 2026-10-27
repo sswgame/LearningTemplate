@@ -407,11 +407,12 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool AnimationClip::loadFromResource( string_view path )
+    bool AnimationClip::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Animation );
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
         {
             SW_LOG_ERROR( "Animation clip '%#' could not be read", path );
             clear();

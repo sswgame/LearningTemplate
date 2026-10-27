@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/DataPath.h"
 
 namespace sw
@@ -219,12 +220,12 @@ namespace sw
          * @brief 리소스(XML)에서 읽은 표를 만듭니다. 빈 경로면 path::kEngineDefaultAssets 를 씁니다.
          * @return 읽지 못했으면 nullptr 입니다(이유는 오류 로그) — 대신 쓸 내장 값은 없다. 테스트 · 쿠커가 데이터에서 읽는 창구다.
          */
-        [[nodiscard]] static unique_ptr<EngineDefaultAssets> load( string_view assetRelativePath = {} );
+        [[nodiscard]] static unique_ptr<EngineDefaultAssets> load( const ResourceID& resourceID = {} );
 
         /**
          * @brief 리소스 경로(XML)에서 이 표를 채웁니다. 빈 경로면 path::kEngineDefaultAssets 를 씁니다.
          * @return 파일을 못 읽었거나 `Required` 칸이 빠졌거나 (개발 빌드에서) 그 칸이 가리키는 파일이 없으면 false 입니다. 대신 쓸 내장 값은 없습니다.
          */
-        [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID = {} );
     };
 } // namespace sw

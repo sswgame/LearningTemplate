@@ -18,10 +18,12 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     /** @brief 리소스 id 의 데이터 파일을 실제 로더로 읽습니다. 모르는 키 · 열거자 · 참조는 로더가 경고를 남기고 false 를 반환합니다. */
-    using ResourceDataLoadFunc = bool ( * )( const string& resourceID );
+    using ResourceDataLoadFunc = bool ( * )( const ResourceID& resourceID );
 
     /** @brief 데이터 파일 한 종류의 등록 줄입니다. 문자열은 등록한 이미지(모듈)의 정적 저장소에 있습니다. */
     struct SW_API ResourceDataKind
@@ -129,10 +131,10 @@ namespace sw
 
         /** @brief `XMLCatalog` 를 물려받은 카탈로그를 `loadFromResource` 로 읽는 로더입니다. 등록 줄에 `&ResourceDataKindUtil::loadCatalog<CropCatalog>` 로 씁니다. */
         template <typename TCatalog>
-        [[nodiscard]] static bool loadCatalog( const string& resourceID )
+        [[nodiscard]] static bool loadCatalog( const ResourceID& id )
         {
             TCatalog catalog;
-            return catalog.loadFromResource( resourceID );
+            return catalog.loadFromResource( id );
         }
     };
 } // namespace sw

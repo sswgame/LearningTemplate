@@ -50,11 +50,11 @@ namespace sw
         return nullptr;
     }
 
-    bool GimmickCircuitDef::loadFromResource( string_view path )
+    bool GimmickCircuitDef::loadFromResource( const ResourceID& resourceID )
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( XMLReadUtil::loadRootOrWarn( doc, path, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, resourceID, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
             return false;
         return loadRoot( root );
     }

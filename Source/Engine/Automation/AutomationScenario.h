@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Automation/AutomationTimeLimits.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -151,7 +152,7 @@ namespace sw
         AutomationScenario();
 
         /** @brief 리소스 경로 또는 절대 경로에서 읽습니다. 형식 오류면 false 이고 @p outError 에 `경로: 이유` 를 씁니다. */
-        [[nodiscard]] bool loadFromPath( string_view path, string& outError );
+        [[nodiscard]] bool loadFromPath( const ResourceID& resourceID, string& outError );
         /** @brief XML 글에서 읽습니다. */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName, string& outError );
 

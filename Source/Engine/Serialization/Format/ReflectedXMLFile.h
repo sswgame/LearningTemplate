@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -27,16 +28,16 @@ namespace sw
     {
         /**
          * @brief 리플렉션 desc 를 XML 에서 읽습니다.
-         * @param assetRelativePath 리소스 상대 경로 (`engine/renderpass/defaultrenderpass.xml` 등).
+         * @param resourceID 리소스 id (`engine/renderpass/defaultrenderpass.xml` 등).
          * @param outDesc 읽어 채울 desc. **실패해도 부르는 쪽이 이미 비워 둔 상태를 그대로 둡니다.**
          * @return 성공 여부. TypeInfo 가 없거나(리플렉션 생성 누락) 파일을 못 읽으면 false.
          * @details 실패 로그는 이 함수가 남깁니다. 부르는 쪽마다 다른 문장을 적으면 무엇이 실패했는지
          *          로그만 보고는 알 수 없습니다. 타입 이름을 함께 찍으므로 어느 리소스인지 드러납니다.
          */
         template <typename DescType>
-        [[nodiscard]] static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
+        [[nodiscard]] static bool loadDesc( const ResourceID& resourceID, DescType& outDesc )
         {
-            return loadDescInternal( assetRelativePath, ReadSource::Resource, &outDesc, DescType::StaticType() );
+            return loadDescInternal( resourceID, &outDesc, DescType::StaticType() );
         }
 
         /**
@@ -49,7 +50,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool loadDescFromDiskFile( string_view diskPath, DescType& outDesc )
         {
-            return loadDescInternal( diskPath, ReadSource::DiskFile, &outDesc, DescType::StaticType() );
+            return loadDescFromDiskFileInternal( diskPath, &outDesc, DescType::StaticType() );
         }
 
         /**
@@ -64,15 +65,15 @@ namespace sw
         }
 
     private:
-        /** @brief 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
-        enum class ReadSource : uint8
-        {
-            Resource,
-            DiskFile,
-        };
-
-        /** @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XMLSerializer` 는 .cpp 에서만 봅니다). */
-        [[nodiscard]] static bool loadDescInternal( string_view path, ReadSource source, void* pDesc, const TypeInfo* pTypeInfo );
+        /**
+         * @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XMLSerializer` 는 .cpp 에서만 봅니다).
+         * @details 리소스 id 와 디스크 경로는 입구를 형식으로 가른다 — 한 함수가 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
+         */
+        [[nodiscard]] static bool loadDescInternal( const ResourceID& resourceID, void* pDesc, const TypeInfo* pTypeInfo );
+        /** @brief 디스크 파일 판입니다. */
+        [[nodiscard]] static bool loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo );
+        /** @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다. */
+        [[nodiscard]] static bool parseDesc( string_view sourceName, const string& text, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. */
         [[nodiscard]] static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );
     };

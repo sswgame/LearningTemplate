@@ -401,7 +401,7 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         SW_EXPECT_TRUE( sceneWrite.saveBinary( tempSceneBin ) );
 
         sw::SceneDocument sceneRead;
-        SW_EXPECT_TRUE( sceneRead.loadBinary( ::test::makeTempResourceID( tempSceneBin ) ) );
+        SW_EXPECT_TRUE( sceneRead.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( tempSceneBin ) } ) );
         SW_EXPECT_EQUAL( sw::string( "BinaryTestScene" ), sceneRead._name );
         SW_EXPECT_EQUAL( 2u, static_cast<uint32>( sceneRead._listSceneObjectNode.size() ) );
         SW_EXPECT_EQUAL( node1._name, sceneRead._listSceneObjectNode[0]._name );
@@ -420,7 +420,7 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         SW_EXPECT_TRUE( prefabWrite.saveToBinaryFile( tempPrefabBin ) );
 
         sw::PrefabAsset prefabRead;
-        SW_EXPECT_TRUE( prefabRead.loadFromBinaryFile( ::test::makeTempResourceID( tempPrefabBin ) ) );
+        SW_EXPECT_TRUE( prefabRead.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( tempPrefabBin ) } ) );
         SW_EXPECT_EQUAL( sw::string( "DragonBoss" ), prefabRead.getName() );
         SW_EXPECT_TRUE( prefabRead.getStateData().find( "DragonBoss" ) != sw::string::npos );
         SW_EXPECT_TRUE( prefabRead.isValid() );
@@ -1340,7 +1340,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedDocumentBinaryStreams )
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( testScenePath, corruptedSceneBytes, 8 ) );
 
         sw::SceneDocument sceneDoc;
-        SW_EXPECT_FALSE( sceneDoc.loadBinary( ::test::makeTempResourceID( testScenePath ) ) );
+        SW_EXPECT_FALSE( sceneDoc.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( testScenePath ) } ) );
         SW_EXPECT_FALSE( sceneDoc._bValid );
 
         // Cleanup
@@ -1354,7 +1354,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedDocumentBinaryStreams )
         SW_EXPECT_TRUE( sw::FileUtil::writeFile( testPrefabPath, corruptedPrefabBytes, 8 ) );
 
         sw::PrefabAsset prefabAsset;
-        SW_EXPECT_FALSE( prefabAsset.loadFromBinaryFile( ::test::makeTempResourceID( testPrefabPath ) ) );
+        SW_EXPECT_FALSE( prefabAsset.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( testPrefabPath ) } ) );
         SW_EXPECT_FALSE( prefabAsset.isValid() );
 
         // Cleanup

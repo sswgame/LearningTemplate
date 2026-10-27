@@ -268,9 +268,9 @@ SW_TEST_CASE( AppearanceTest, ExportedPresetRoundTripsAndOverlaysItsParent )
     SW_ASSERT_TRUE( doc.saveFile( path ) );
 
     const size_t presetCount = fixture._database.getPresets().getPresets().size();
-    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( ::test::makeTempResourceID( path ) ), fixture._database.getReport().joined().c_str() );
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( sw::ResourceID{ ::test::makeTempResourceID( path ) } ), fixture._database.getReport().joined().c_str() );
     SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
-    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( ::test::makeTempResourceID( path ) ), fixture._database.getReport().joined().c_str() ); // 다시 올리면 바꾼다
+    SW_ASSERT_TRUE_MSG( fixture._database.loadPresetFile( sw::ResourceID{ ::test::makeTempResourceID( path ) } ), fixture._database.getReport().joined().c_str() ); // 다시 올리면 바꾼다
     SW_EXPECT_EQUAL( presetCount + 1, fixture._database.getPresets().getPresets().size() );
 
     CharacterAppearanceSpec spec;
@@ -802,7 +802,7 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromResource( "game/shooter3d/data/items.xml" ) );
+    SW_ASSERT_TRUE( items.loadFromResource( sw::ResourceID{ "game/shooter3d/data/items.xml" } ) );
     AppearanceDatabase database;
     SW_ASSERT_TRUE_MSG( database.loadFromFolder( "game/shooter3d/data/appearance", &items ), database.getReport().joined().c_str() );
 
@@ -858,7 +858,7 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
 
     // 무기 표의 item · ammo 는 아이템 표에 있어야 하고, 각 무기의 아이템은 외형(소켓 포함)으로 풀린다.
     WeaponCatalog weapons;
-    SW_ASSERT_TRUE( weapons.loadFromResource( "game/shooter3d/data/weapons.xml" ) );
+    SW_ASSERT_TRUE( weapons.loadFromResource( sw::ResourceID{ "game/shooter3d/data/weapons.xml" } ) );
     vector<WeaponItemReference> listUnknown;
     SW_EXPECT_TRUE( weapons.findUnknownItems( items, listUnknown ) );
     for ( const WeaponDef& weapon : weapons.getAll() )

@@ -84,10 +84,11 @@ namespace sw
         return true;
     }
 
-    bool HeightfieldData::loadFromResource( string_view resourceID )
+    bool HeightfieldData::loadFromResource( const ResourceID& id )
     {
-        vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        const string_view resourceID = id.view();
+        vector<uint8>     bytes;
+        if ( ResourceIO::readBinaryResource( id, bytes ) == false )
         {
             SW_LOG_ERROR( "Heightfield '%#' could not be read", resourceID );
             return false;

@@ -84,7 +84,7 @@ namespace sw::editor
     void AudioEventBrowserPanel::beginEditing()
     {
         // 엔진의 사본이 아니라 파일을 다시 읽는다 — 엔진 설명자는 오디오 스레드가 참조하고, 저장은 파일이 원본이다.
-        if ( _editLibrary.loadFromResource( _selectedLibrary.view() ) == false )
+        if ( _editLibrary.loadFromResource( ResourceID{ _selectedLibrary.view() } ) == false )
         {
             endEditing();
             return;

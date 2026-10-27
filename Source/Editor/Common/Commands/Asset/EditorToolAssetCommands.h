@@ -10,6 +10,8 @@
 
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     struct TileMapXMLData;
@@ -97,7 +99,7 @@ namespace sw::editor
          */
         [[nodiscard]] static bool revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item );
         /** @brief 인스턴스 상태를 프리팹 템플릿에 저장합니다. */
-        [[nodiscard]] static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, string_view prefabPath );
+        [[nodiscard]] static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance, const ResourceID& resourceID );
         /** @brief 인스턴스를 프리팹 CDO 로 되돌립니다. */
         [[nodiscard]] static bool revertAllPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath );
     };

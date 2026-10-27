@@ -278,8 +278,8 @@ namespace sw
 
         SocketKindTable       kinds;
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
-        if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false ||
-             weaponSockets->loadFromResource( _settings._rigWeaponSockets.c_str(), kinds ) == false )
+        if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) == false ||
+             weaponSockets->loadFromResource( ResourceID{ _settings._rigWeaponSockets.c_str() }, kinds ) == false )
             SW_LOG_ERROR( "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
 
         const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;

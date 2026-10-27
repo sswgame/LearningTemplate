@@ -103,7 +103,7 @@ SW_TEST_CASE( GimmickStateBenchTest, ShowcaseCircuits )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/gimmickshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/gimmickshowcase.scene.xml" } ) );
     Scene scene{ "GimmickShowcase" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     GimmickStateBenchInternal::runAndReport( "scene", *scene.getObjectManager() );
@@ -120,7 +120,7 @@ SW_TEST_CASE( GimmickStateBenchTest, PrefabCircuits )
     for ( const string& filePath : listFile )
     {
         PrefabAsset prefab;
-        SW_ASSERT_TRUE( prefab.loadFromXMLFile( ResourcePaths::toResourceID( filePath ) ) );
+        SW_ASSERT_TRUE( prefab.loadFromXMLFile( sw::ResourceID{ ResourcePaths::toResourceID( filePath ) } ) );
         GameObject* pObject = manager.createGameObject( hashed_string( FileUtil::getFileNamePart( filePath ).c_str() ) );
         SW_ASSERT_TRUE( prefab.applyStateTo( pObject ) );
     }

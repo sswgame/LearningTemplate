@@ -42,7 +42,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bDecodeFailed = ResourceIO::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
+            const bool    bDecodeFailed = ResourceIO::readBinaryResource( ResourceID{ relative }, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
                                        AudioClipData::convertPcm( pcm, clip ) == false;
             if ( bDecodeFailed )
             {

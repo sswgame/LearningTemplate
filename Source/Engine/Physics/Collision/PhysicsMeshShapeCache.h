@@ -21,6 +21,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     struct PhysicsShapeDesc3D;
@@ -51,7 +53,7 @@ namespace sw
     {
     public:
         /** @brief `.mesh` 하나를 인덱스 없는 삼각형 목록(삼각형마다 위치 셋)으로 읽는 함수입니다. 읽지 못하면 false 입니다. */
-        using LoadTriangleListFunction = bool ( * )( string_view path, vector<float3>& outListPosition );
+        using LoadTriangleListFunction = bool ( * )( const ResourceID& resourceID, vector<float3>& outListPosition );
 
         /** @brief 읽기 함수를 넣습니다(`MeshCache` 생성자). nullptr 이면 뺍니다. 이미 읽은 표는 그대로입니다. */
         static void setLoadFunction( LoadTriangleListFunction pfnLoad );

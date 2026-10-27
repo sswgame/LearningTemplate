@@ -33,25 +33,26 @@ namespace sw
 
 namespace sw
 {
-    bool GameSound::play( string_view path, const hashed_string& bus )
+    bool GameSound::play( const ResourceID& resourceID, const hashed_string& bus )
     {
         IAudioService* pAudio = game::findSubsystem<IAudioService>();
-        return pAudio != nullptr && pAudio->play( path, bus );
+        return pAudio != nullptr && pAudio->play( resourceID, bus );
     }
 
-    bool GameSound::playMusic( string_view path )
+    bool GameSound::playMusic( const ResourceID& resourceID )
     {
         IAudioService* pAudio = game::findSubsystem<IAudioService>();
-        return pAudio != nullptr && pAudio->playMusic( path );
+        return pAudio != nullptr && pAudio->playMusic( resourceID );
     }
 
-    bool GameSound::loadEvents( string_view path )
+    bool GameSound::loadEvents( const ResourceID& resourceID )
     {
-        AudioEngine* pEngine = GameSoundInternal::findEngine();
+        const string_view path    = resourceID.view();
+        AudioEngine*      pEngine = GameSoundInternal::findEngine();
         if ( pEngine == nullptr )
             return true;
         AudioEventLibrary library;
-        if ( library.loadFromResource( path ) == false )
+        if ( library.loadFromResource( resourceID ) == false )
             return false;
         return pEngine->loadEventLibrary( hashed_string( path ), library );
     }
@@ -123,7 +124,7 @@ namespace sw
             {
                 case Kind::Clip:
                 {
-                    (void)GameSound::play( entry._pName );
+                    (void)GameSound::play( ResourceID{ entry._pName } );
                     break;
                 }
                 case Kind::Event:

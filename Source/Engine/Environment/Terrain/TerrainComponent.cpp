@@ -304,7 +304,7 @@ namespace sw
 
         HeightfieldData data;
         _loadedHeightfieldPath = _heightfieldPath;
-        if ( data.loadFromResource( _heightfieldPath ) == false )
+        if ( data.loadFromResource( ResourceID{ _heightfieldPath } ) == false )
             return false;
         if ( _heightfield.initialize( data, getWorldPosition(), _size, _heightMin, _heightMax ) == false )
             return false;
@@ -708,7 +708,7 @@ namespace sw
         if ( _layerWeightsPath.empty() )
             return true;
         LayerWeightsData data;
-        if ( data.loadFromResource( _layerWeightsPath ) == false )
+        if ( data.loadFromResource( ResourceID{ _layerWeightsPath } ) == false )
         {
             SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(),
                           string( LayerWeightsData::kExtension ).c_str() );

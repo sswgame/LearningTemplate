@@ -421,7 +421,7 @@ SW_TEST_CASE( UIBindingTest, DocumentReloadRebindsViewModel )
                                                                 "\t\t<TextWidget _name=\"Label\" _text=\"{bind:_name}\" />\n"
                                                                 "\t</BoxPanel>\n"
                                                                 "</UIDocument>\n" );
-    cache.reload( "test/binding/reload.ui.xml", nullptr );
+    cache.reload( sw::ResourceID{ "test/binding/reload.ui.xml" }, nullptr );
     SW_EXPECT_TRUE( pScreen->getViewModel() == &viewModel );
     UIBindingTestUtil::runFrame( fixture._input, fixture._ui );
     const sw::TextWidget* pLabel = pScreen->getTree().findWidget<sw::TextWidget>( "Label" );

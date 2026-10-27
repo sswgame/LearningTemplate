@@ -39,6 +39,7 @@
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 #include "Engine/Renderer/Vfx/VfxParticleRenderer.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include <optional>
 
@@ -138,7 +139,7 @@ namespace sw
         // 2) 파이프라인 · 실행: XML 로드, execute / executePacket
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML 로 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번만 바인딩합니다. */
-        [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
+        [[nodiscard]] bool loadPipeline( const ResourceID& resourceID );
         /**
          * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
          * @details 주 시점은 scene 의 게임 카메라(`Scene::pickActiveGameCamera`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.

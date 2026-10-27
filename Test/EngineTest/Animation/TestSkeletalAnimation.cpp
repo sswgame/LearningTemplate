@@ -453,11 +453,11 @@ SW_TEST_CASE( SkeletalAnimationTest, RepositorySkeletonResavesByteForByte )
     for ( const utf8* pSkeletonPath : arrSkeletonPath )
     {
         string fileText;
-        SW_ASSERT_TRUE_MSG( ResourceIO::readTextResource( pSkeletonPath, fileText ), pSkeletonPath );
+        SW_ASSERT_TRUE_MSG( ResourceIO::readTextResource( sw::ResourceID{ pSkeletonPath }, fileText ), pSkeletonPath );
         // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꿀 수 있다 — 저장소의 바이트(LF)로 비교한다.
         fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
         Skeleton skeleton;
-        SW_ASSERT_TRUE_MSG( skeleton.loadFromResource( pSkeletonPath ), pSkeletonPath );
+        SW_ASSERT_TRUE_MSG( skeleton.loadFromResource( sw::ResourceID{ pSkeletonPath } ), pSkeletonPath );
         SW_EXPECT_TRUE( skeleton.getBoneCount() > 0u );
         SW_EXPECT_TRUE_MSG( fileText == skeleton.toXML(), pSkeletonPath );
     }

@@ -140,10 +140,11 @@ namespace sw
         return true;
     }
 
-    bool LiveLinkFaceLayout::loadFromResource( string_view path )
+    bool LiveLinkFaceLayout::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face layout '%#' could not be read", path );
             *this = LiveLinkFaceLayout{};
@@ -179,7 +180,7 @@ namespace sw
             *this = LiveLinkFaceMapping{};
             return false;
         }
-        if ( outLayout.loadFromResource( _layoutPath ) == false )
+        if ( outLayout.loadFromResource( ResourceID{ _layoutPath } ) == false )
         {
             *this = LiveLinkFaceMapping{};
             return false; // 읽기가 까닭을 알렸다
@@ -210,10 +211,11 @@ namespace sw
         return true;
     }
 
-    bool LiveLinkFaceMapping::loadFromResource( string_view path, LiveLinkFaceLayout& outLayout )
+    bool LiveLinkFaceMapping::loadFromResource( const ResourceID& resourceID, LiveLinkFaceLayout& outLayout )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face mapping '%#' could not be read", path );
             *this     = LiveLinkFaceMapping{};

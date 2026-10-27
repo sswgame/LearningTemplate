@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -53,7 +54,7 @@ namespace sw
         /** @brief XML 을 읽습니다. 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
 
         /** @brief 내용 번호입니다. 읽을 때마다 새 번호가 되므로(핫 리로드는 제자리에서 다시 읽습니다) 마스크를 만든 쪽이 변경을 알아챕니다. */
         uint64 getRevision() const { return _revision; }

@@ -60,12 +60,13 @@ namespace sw
         return reader.finish();
     }
 
-    bool SocketKindTable::loadFromResource( string_view path )
+    bool SocketKindTable::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view   path = resourceID.view();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "SocketKinds", root ) )
+        if ( reader.loadRoot( document, resourceID, "SocketKinds", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
@@ -133,13 +134,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool SocketSet::loadFromResource( string_view path, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
+    bool SocketSet::loadFromResource( const ResourceID& resourceID, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
     {
+        const string_view path = resourceID.view();
         clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "SocketSet", root ) )
+        if ( reader.loadRoot( document, resourceID, "SocketSet", root ) )
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
         {

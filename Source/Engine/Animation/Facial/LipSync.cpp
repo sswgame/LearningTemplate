@@ -222,10 +222,11 @@ namespace sw
         return false;
     }
 
-    bool LipSyncSettings::loadFromResource( string_view path )
+    bool LipSyncSettings::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Lip sync settings '%#' could not be read", path );
             *this = LipSyncSettings{};
@@ -366,10 +367,11 @@ namespace sw
         return _frameRate > 0.0f;
     }
 
-    bool VisemeTrack::loadFromResource( string_view path )
+    bool VisemeTrack::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Viseme track '%#' could not be read", path );
             *this = VisemeTrack{};

@@ -497,7 +497,7 @@ namespace sw::editor
             // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 목록이 비어 미리보기를 세우지 않는다.
             _bResolutionTableAttempted                = true;
             const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-            if ( pDefaultAssets == nullptr || _resolutionTable.loadFromResource( pDefaultAssets->_uiResolutionPresets.get() ) == false )
+            if ( pDefaultAssets == nullptr || _resolutionTable.loadFromResource( ResourceID{ pDefaultAssets->_uiResolutionPresets.get() } ) == false )
                 return nullptr;
         }
         if ( _resolutionTable._listResolution.empty() )

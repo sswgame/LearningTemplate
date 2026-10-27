@@ -18,6 +18,12 @@ namespace sw
     {
         /** @brief 종료가 자기 태스크를 기다리는 최대 시간입니다. 이 큐의 태스크는 존재 확인 · 찾기라 짧다 — 넘기면 멈춘 것이므로 오류로 알린다. */
         constexpr uint32 kShutdownWaitMs = 10000;
+
+        /** @brief 요청 키(요청한 리소스 id 의 글)를 읽기 입구에 넘길 id 로 바꾸는 한 곳입니다. 요청 표는 이 글을 키로 든다. */
+        [[nodiscard]] ResourceID toResourceID( const string& requestPath )
+        {
+            return ResourceID{ requestPath };
+        }
     } // namespace
 
     AssetStreamingQueue::AssetStreamingQueue()
@@ -247,7 +253,7 @@ namespace sw
 
         // 엔진 서비스가 없거나(테스트 · 툴) 쿠킹 중이면 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
         vector<uint8> bytes;
-        const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( pathStr, bytes ) : ResourceIO::hasResource( pathStr );
+        const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( toResourceID( pathStr ), bytes ) : ResourceIO::hasResource( toResourceID( pathStr ) );
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );
     }
 
@@ -260,9 +266,8 @@ namespace sw
             if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
                 return;
         }
-        const AsyncReadHandle handle = ResourceIO::readBinaryResourceAsync(
-            pathStr, toIOPriority( priority ),
-            SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
+        const AsyncReadHandle handle = ResourceIO::readBinaryResourceAsync( toResourceID( pathStr ), toIOPriority( priority ),
+                                                                            SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
         {
             onDataRead( pathStr, generation, bSuccess, bytes );
         } ) );
@@ -351,9 +356,9 @@ namespace sw
         vector<uint8> bytes;
         bool          bSuccess = false;
         if ( bFetchData )
-            bSuccess = ResourceIO::readBinaryResource( pathStr, bytes );
+            bSuccess = ResourceIO::readBinaryResource( toResourceID( pathStr ), bytes );
         else
-            bSuccess = ResourceIO::hasResource( pathStr );
+            bSuccess = ResourceIO::hasResource( toResourceID( pathStr ) );
 
         ScopedLock<mutex> innerLock{ _mutex };
 

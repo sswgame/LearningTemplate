@@ -17,7 +17,7 @@ namespace
     {
         static constexpr const utf8* kDefaultTablePath = "common/data/elements/default.elements.xml";
 
-        [[nodiscard]] static bool loadDefaultTable( ElementRuleTable& outTable ) { return ResourcePaths::initialize() && outTable.loadFromResource( kDefaultTablePath ); }
+        [[nodiscard]] static bool loadDefaultTable( ElementRuleTable& outTable ) { return ResourcePaths::initialize() && outTable.loadFromResource( sw::ResourceID{ kDefaultTablePath } ); }
 
         /** @brief 풀 들판에 나무 · 얼음 · 물을 섞은 같은 판을 두 격자에 깝니다(재질 이름 = 키트 열거 이름). */
         static void fillField( ElementGrid& grid, const ElementRuleTable& table )

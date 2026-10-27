@@ -7,10 +7,10 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadPresetTable( const string& resourceID )
+        [[nodiscard]] bool loadPresetTable( const ResourceID& id )
         {
             NetEmulationPresetTable table;
-            return table.loadFromResource( resourceID );
+            return table.loadFromResource( id );
         }
     } // namespace
 

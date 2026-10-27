@@ -26,6 +26,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -95,7 +96,7 @@ namespace sw
             }
             getCacheStats().recordMiss();
             unique_ptr<TableType> table = make_unique<TableType>();
-            if ( table->loadFromResource( path ) == false )
+            if ( table->loadFromResource( toResourceID( path ) ) == false )
                 table.reset();
             const TableType* pTable = table.get();
             _mapTable[key]          = std::move( table );
@@ -114,8 +115,9 @@ namespace sw
         }
 
         /** @brief 읽은 적 있는 경로면 새 테이블로 다시 읽어 항목을 바꿉니다. 읽지 못하면 옛 테이블을 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
-        void reload( string_view relativePath, IRHIDevice* pDevice ) override
+        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override
         {
+            const string_view relativePath = resourceID.view();
             (void)pDevice;
             const string key = makeKey( relativePath );
             {
@@ -124,7 +126,7 @@ namespace sw
                     return; // 아무도 읽지 않았으므로 다음 `find` 가 새 내용을 읽는다.
             }
             unique_ptr<TableType> fresh = make_unique<TableType>();
-            if ( fresh->loadFromResource( relativePath ) == false )
+            if ( fresh->loadFromResource( resourceID ) == false )
             {
                 SW_LOG_ERROR( "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
                 return;
@@ -173,6 +175,8 @@ namespace sw
     private:
         /** @brief 테이블의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 항목을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
+        /** @brief 캐시 키(찾기 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
+        static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
 
         const utf8*                                            _pKindName;
         mutable mutex                                          _mutex;

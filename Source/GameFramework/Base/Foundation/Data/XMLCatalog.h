@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -23,7 +25,7 @@ namespace sw
         using ReadRootFunction = bool ( * )( void* pCatalog, const XMLNode& root, string_view sourceName );
 
         /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
-        [[nodiscard]] static bool loadFile( void* pCatalog, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
+        [[nodiscard]] static bool loadFile( void* pCatalog, ReadRootFunction pReadRoot, const ResourceID& resourceID, const utf8* pRootName );
         /** @brief XML 문자열 버전입니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool loadText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
 
@@ -60,7 +62,11 @@ namespace sw
     {
     public:
         /** @brief 리소스 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. */
-        [[nodiscard]] bool loadFromResource( string_view path ) { return XMLCatalogLoader::loadFile( this, &XMLCatalog::readRoot, path, TCatalog::kXMLRootName ); }
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID )
+        {
+            const string_view path = resourceID.view();
+            return XMLCatalogLoader::loadFile( this, &XMLCatalog::readRoot, resourceID, TCatalog::kXMLRootName );
+        }
         /** @brief XML 문자열을 읽습니다. 테스트와 에디터 미리보기가 씁니다. @p sourceName 은 경고에 쓰는 이름입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} )
         {

@@ -209,7 +209,7 @@ SW_TEST_CASE( UIScaleTest, ContentScaleIgnoredByDefault )
 SW_TEST_CASE( UIScaleTest, EngineScaleSettingsLoad )
 {
     sw::UIScaleSettings settings{};
-    SW_ASSERT_TRUE( settings.loadFromResource( ::test::getEngineDefaultAssets()._uiScaleSettings.c_str() ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._uiScaleSettings.c_str() } ) );
     SW_EXPECT_TRUE( settings._rule == sw::UIScaleRule::ShortestSide );
     SW_EXPECT_NEAR_EQUAL( 1080.0f, settings._referenceHeight, 0.001f );
     SW_EXPECT_FALSE( settings._bApplyContentScale );

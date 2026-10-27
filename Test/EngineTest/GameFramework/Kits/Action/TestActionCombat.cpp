@@ -1291,7 +1291,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReadsItsMonstersFromTheCatalogService 
                                                    "  </Monster>\n"
                                                    "</MonsterCatalog>\n" ) );
     MonsterCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
     const ScopedMonsterCatalogService scopedCatalog{ catalog };
     ActionRoom                        room;
     ActionRoomFrameInput              input;
@@ -1346,7 +1346,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAMonsterMissingFromTheCatalog )
     const string                       path = test::makeTempPath( "bat_monsters.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\" name=\"Bat\"/>\n</MonsterCatalog>\n" ) );
     MonsterCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
     const ScopedMonsterCatalogService scopedCatalog{ catalog };
 
     SW_TEST_DEFENSIVE_SCOPE( "a monster missing from the catalog is reported" );

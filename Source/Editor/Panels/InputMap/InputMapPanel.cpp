@@ -1106,7 +1106,7 @@ namespace sw::editor
     void InputMapPanel::reloadFromFile()
     {
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
-        if ( _inputMap.loadFromResource( _inputMapPath.c_str() ) == false )
+        if ( _inputMap.loadFromResource( ResourceID{ _inputMapPath.c_str() } ) == false )
         {
             SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return;

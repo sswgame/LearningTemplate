@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -49,7 +50,7 @@ namespace sw
         const utf8* getAssetKindName() const override { return _pAssetKindName; }
         bool        isCached( string_view relativePath ) const override;
         /** @brief 에셋을 다시 읽어 파싱합니다(에디터 핫 리로드). 되면 바꾸고 알림을 부릅니다. 디바이스는 쓰지 않습니다. */
-        void   reload( string_view relativePath, IRHIDevice* pDevice ) override;
+        void   reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
         size_t getCachedCount() const override { return _mapPathToAsset.size(); }
         /** @brief 읽어 둔 에셋과 메모리 글을 모두 비웁니다. */
         void clear() override;
@@ -71,7 +72,7 @@ namespace sw
 
     private:
         /** @brief 텍스트를 찾습니다(메모리, 리소스, 절대 경로 순서). */
-        [[nodiscard]] bool readText( const string& key, string_view path, string& outText ) const;
+        [[nodiscard]] bool readText( const string& key, const ResourceID& resourceID, string& outText ) const;
 
     private:
         unordered_map<string, shared_ptr<const void>> _mapPathToAsset;      ///< 정규화한 경로에서 파싱한 에셋을 찾는 맵입니다.

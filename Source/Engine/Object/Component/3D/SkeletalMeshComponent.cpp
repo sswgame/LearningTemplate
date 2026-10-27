@@ -295,7 +295,7 @@ namespace sw
     {
         // 본 LOD 는 스켈레톤 곁의 선택 파일이다 — 없으면 조용히 본 LOD 없이 간다.
         const string path = SkeletonBoneLOD::makePathForSkeleton( _skeletonPath );
-        if ( path.empty() || ResourceIO::hasResource( path ) == false )
+        if ( path.empty() || ResourceIO::hasResource( ResourceID{ path } ) == false )
         {
             setBoneLOD( nullptr );
             return;

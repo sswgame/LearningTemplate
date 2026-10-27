@@ -8,10 +8,10 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadGameSettings( const string& resourceID )
+        [[nodiscard]] bool loadGameSettings( const ResourceID& id )
         {
             GameSettings settings;
-            return settings.loadFromResource( resourceID );
+            return settings.loadFromResource( id );
         }
     } // namespace
 

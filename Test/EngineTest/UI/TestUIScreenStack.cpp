@@ -274,7 +274,7 @@ SW_TEST_CASE( UIScreenStackTest, BackClosesTopScreen )
     input.getInputMap().bind( "Pause", sw::Key::Escape );
     {
         sw::UISystem ui;
-        SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
         const sw::UIScreenHandle menu    = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );
         const sw::UIScreenHandle options = ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "options", 1 ) );
         SW_EXPECT_EQUAL( options, ui.getActiveScreen()->getHandle() );

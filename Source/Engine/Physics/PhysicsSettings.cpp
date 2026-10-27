@@ -14,10 +14,11 @@ namespace sw
 
 namespace sw
 {
-    bool PhysicsSettings::loadFromResource( string_view resourcePath )
+    bool PhysicsSettings::loadFromResource( const ResourceID& resourceID )
     {
-        *this = PhysicsSettings{};
-        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        const string_view resourcePath = resourceID.view();
+        *this                          = PhysicsSettings{};
+        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", resourcePath );
             return false;

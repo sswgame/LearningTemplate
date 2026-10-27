@@ -42,7 +42,7 @@ namespace
 SW_TEST_CASE( EditorNetConditionsTest, EveryPresetRowReachesThePanelWithItsValues )
 {
     NetEmulationPresetTable table;
-    SW_ASSERT_TRUE( table.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
+    SW_ASSERT_TRUE( table.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._netEmulationPresets.get() } ) );
     for ( const NetEmulationPresetDef& preset : table._listPreset )
     {
         SW_EXPECT_TRUE_MSG( preset._label.empty() == false, preset._name.c_str() );

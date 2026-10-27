@@ -475,7 +475,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, StatBlockAndLevelProgressReplayAfterRes
 SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 {
     ElementRuleTable table;
-    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( sw::ResourceID{ kValueStateElementTablePath } ) );
     ElementGrid grid;
     SW_EXPECT_TRUE( grid.initialize( 8, 3, &table ) );
     for ( int32 y = 0; y < 3; ++y )
@@ -511,7 +511,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridRefusesAShortArchive )
 {
     ElementRuleTable table;
-    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( sw::ResourceID{ kValueStateElementTablePath } ) );
     ElementGrid grid;
     SW_ASSERT_TRUE( grid.initialize( 4, 2, &table ) );
     grid.setMaterial( int2{ 1, 1 }, table.findMaterial( "Grass" ) );

@@ -238,7 +238,7 @@ namespace sw
         choice._bDeferred                  = gv_deferred;
         const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
 
-        if ( loadPipeline( resolvedPipeline ) == false )
+        if ( loadPipeline( ResourceID{ resolvedPipeline } ) == false )
         {
             _status = FrameRendererStatus::Failed;
             if ( _statusMessage.empty() )
@@ -316,14 +316,15 @@ namespace sw
         SW_LOG_INFO( "Shut down." );
     }
 
-    bool FrameRenderer::loadPipeline( string_view pipelineXMLPath )
+    bool FrameRenderer::loadPipeline( const ResourceID& resourceID )
     {
-        _pipelinePath    = pipelineXMLPath;
-        _bCallbacksBound = SW_FALSE;
+        const string_view pipelineXMLPath = resourceID.view();
+        _pipelinePath                     = pipelineXMLPath;
+        _bCallbacksBound                  = SW_FALSE;
         _graph.clear();
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXMLFile( pipelineXMLPath ) == false )
+        if ( _pipelineResource.loadFromXMLFile( resourceID ) == false )
         {
             _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;

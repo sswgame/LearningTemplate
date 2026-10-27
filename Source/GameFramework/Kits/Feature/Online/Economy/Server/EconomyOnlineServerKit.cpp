@@ -68,7 +68,7 @@ namespace sw
                     outError = "the economy kit needs the currencyCatalog and offerCatalog options";
                     return false;
                 }
-                if ( _currencyCatalog.loadFromResource( currencyPath ) == false || _offerCatalog.loadFromResource( offerPath ) == false )
+                if ( _currencyCatalog.loadFromResource( ResourceID{ currencyPath } ) == false || _offerCatalog.loadFromResource( ResourceID{ offerPath } ) == false )
                 {
                     outError = "the economy catalogs could not be read ('" + currencyPath + "', '" + offerPath + "')";
                     return false;

@@ -215,7 +215,7 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
     using Internal = NavMeshDynamicTestInternal;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/destructionshowcase.scene.xml" } ) );
     sw::Scene scene{ "NavDestruction" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObjectManager& manager    = *scene.getObjectManager();

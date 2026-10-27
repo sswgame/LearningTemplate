@@ -11,6 +11,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw::editor
 {
     /** @brief 대칭 평면의 법선 축입니다. 캐릭터는 보통 X 축(왼쪽 · 오른쪽)입니다. */
@@ -50,7 +52,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 현재 표를 XML 텍스트로 씁니다. */
         string saveToXMLText() const;
 

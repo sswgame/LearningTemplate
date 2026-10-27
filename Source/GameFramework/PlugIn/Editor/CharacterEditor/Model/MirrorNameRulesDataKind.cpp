@@ -8,10 +8,10 @@ namespace sw::editor
 {
     namespace
     {
-        [[nodiscard]] bool loadMirrorNames( const string& resourceID )
+        [[nodiscard]] bool loadMirrorNames( const ResourceID& id )
         {
             MirrorNameRules rules;
-            return rules.loadFromResource( resourceID );
+            return rules.loadFromResource( id );
         }
     } // namespace
 

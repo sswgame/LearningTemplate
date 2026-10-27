@@ -214,7 +214,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
     for ( uint32 pipelineIndex = 0; pipelineIndex < kPipelineCount; ++pipelineIndex )
     {
         sw::RenderPipelineAsset& probe = arrProbe[pipelineIndex];
-        SW_ASSERT_TRUE_MSG( probe.loadFromXMLFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
+        SW_ASSERT_TRUE_MSG( probe.loadFromXMLFile( sw::ResourceID{ arrPipeline[pipelineIndex] } ), arrPipeline[pipelineIndex] );
         for ( sw::RenderGraphPassDesc& pass : probe.getDesc()._listPass )
         {
             pass._shaderPath.clear();

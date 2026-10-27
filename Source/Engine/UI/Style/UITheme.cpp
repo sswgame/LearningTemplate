@@ -12,9 +12,10 @@ namespace sw
 {
     SW_LOG_CALLER( "UITheme" );
 
-    bool UIThemeCatalog::loadFromResource( string_view resourcePath )
+    bool UIThemeCatalog::loadFromResource( const ResourceID& resourceID )
     {
-        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        const string_view resourcePath = resourceID.view();
+        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[UI] UI theme catalog could not be read or holds unknown keys: %#", resourcePath );
             return false;

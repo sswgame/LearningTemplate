@@ -205,7 +205,7 @@ SW_TEST_CASE( JSONDocumentTest, ParseErrorNamesSourceLineAndColumn )
     }
     SW_EXPECT_TRUE_MSG( sw::StringUtil::startsWith( doc.getLastError(), "korean.json:1:" ), doc.getLastError().c_str() );
 
-    SW_EXPECT_FALSE( doc.loadResource( "no/such/dir/missing.json" ) );
+    SW_EXPECT_FALSE( doc.loadResource( sw::ResourceID{ "no/such/dir/missing.json" } ) );
     SW_EXPECT_TRUE_MSG( doc.getLastError().find( "missing.json: not found" ) != sw::string::npos, doc.getLastError().c_str() );
 
     SW_EXPECT_TRUE( doc.parse( "{}" ) );

@@ -87,7 +87,7 @@ SW_TEST_CASE( FractureBenchTest, ShowcaseBeginPlay )
     constexpr uint32 kRoundCount = 5;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( FractureBenchInternal::kScenePath ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ FractureBenchInternal::kScenePath } ) );
     sw::vector<int64> listMicros;
     for ( uint32 round = 0; round < kRoundCount; ++round )
     {
@@ -111,7 +111,7 @@ SW_TEST_CASE( FractureBenchTest, ShowcaseLeafShapeWarmUp )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( FractureBenchInternal::kScenePath ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ FractureBenchInternal::kScenePath } ) );
     sw::vector<int64> listWorstMicros;
     sw::vector<int64> listFrameCount;
     for ( uint32 round = 0; round < FractureBenchInternal::kRoundCount; ++round )
@@ -143,7 +143,7 @@ SW_TEST_CASE( FractureBenchTest, WallBreakFrameColdAndWarm )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( FractureBenchInternal::kScenePath ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ FractureBenchInternal::kScenePath } ) );
     sw::vector<int64> listColdMicros;
     sw::vector<int64> listWarmMicros;
     for ( uint32 round = 0; round < FractureBenchInternal::kRoundCount * 2; ++round )

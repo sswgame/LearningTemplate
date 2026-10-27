@@ -145,7 +145,7 @@ namespace sw
                     return;
                 const string sound = *pSound;
                 manager.executeOrDeferPostTick( [sound]()
-                { (void)GameSound::play( sound ); } );
+                { (void)GameSound::play( ResourceID{ sound } ); } );
             }
         };
     } // namespace

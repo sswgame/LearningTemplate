@@ -25,6 +25,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 #include <optional>
 
 namespace sw
@@ -108,7 +110,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 연산 이름과 인자는 @p operators 에 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path, const FitOperatorRegistry& operators );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const FitOperatorRegistry& operators );
 
         /** @brief 겹을 더합니다(같은 이름은 바꿈). */
         void addLayer( const FitLayerDef& layer );

@@ -342,7 +342,7 @@ SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ "game/shooter3d/data/shooter.input.xml" } ) );
     const utf8* const arrAction[] = { "Move", "Look", "Fire", "Jump", "Sprint", "Reload", "CycleCamera", "SwitchWeapon", "Weapon1", "Weapon2", "Weapon3" };
     for ( const utf8* pAction : arrAction )
     {
@@ -424,10 +424,10 @@ SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ "game/shooter3d/data/shooter.input.xml" } ) );
 
     SceneDocument document;
-    SW_ASSERT_TRUE( document.loadXML( "game/shooter3d/maps/arena.scene.xml" ) );
+    SW_ASSERT_TRUE( document.loadXML( sw::ResourceID{ "game/shooter3d/maps/arena.scene.xml" } ) );
     Scene scene{ "ShooterPawnSchema" };
     {
         // 아레나의 엄폐물 · 벽이 담은 게임 모듈 컴포넌트(`ShooterBlockerComponent` 등)는 이 실행 파일에 없는 타입이라 읽을 때 "모르는 타입" Warning 이 난다(데이터는 보존된다).

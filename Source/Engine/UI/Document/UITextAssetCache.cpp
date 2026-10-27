@@ -11,6 +11,15 @@ namespace sw
 {
     SW_LOG_CALLER( "UITextAssetCache" );
 
+    namespace
+    {
+        /** @brief 캐시 키(문서 · 스타일 시트 획득이 넘긴 경로)를 읽기 입구에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
+        [[nodiscard]] ResourceID toResourceID( string_view path )
+        {
+            return ResourceID{ path };
+        }
+    } // namespace
+
     UITextAssetCache::UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse )
         : IAssetCache{ CacheTracking::counted( pAssetKindName ) } // 캐시는 UI 시스템마다 있어 같은 이름의 칸을 이어 쓴다
         , _mapPathToAsset{}
@@ -39,7 +48,7 @@ namespace sw
 
         getCacheStats().recordMiss();
         string text;
-        if ( readText( key, path, text ) == false )
+        if ( readText( key, toResourceID( path ), text ) == false )
         {
             outError = string( path ) + ": " + _pAssetLabel + " not found";
             return asset;
@@ -63,12 +72,13 @@ namespace sw
         return _mapPathToAsset.find( FileUtil::normalizePath( relativePath ) ) != _mapPathToAsset.end();
     }
 
-    void UITextAssetCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    void UITextAssetCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
     {
+        const string_view relativePath = resourceID.view();
         (void)pDevice;
         const string key = FileUtil::normalizePath( relativePath );
         string       text;
-        if ( readText( key, relativePath, text ) == false )
+        if ( readText( key, resourceID, text ) == false )
         {
             SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
             return;
@@ -93,7 +103,7 @@ namespace sw
         getCacheStats().recordClear();
     }
 
-    bool UITextAssetCache::readText( const string& key, string_view path, string& outText ) const
+    bool UITextAssetCache::readText( const string& key, const ResourceID& resourceID, string& outText ) const
     {
         const auto memory = _mapPathToMemoryText.find( key );
         if ( memory != _mapPathToMemoryText.end() )
@@ -102,6 +112,6 @@ namespace sw
             return true;
         }
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
-        return ResourceIO::readTextResource( path, outText );
+        return ResourceIO::readTextResource( resourceID, outText );
     }
 } // namespace sw

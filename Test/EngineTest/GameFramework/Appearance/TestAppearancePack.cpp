@@ -26,7 +26,7 @@ SW_TEST_CASE( AppearancePackTest, PresetFolderInPackIsRead )
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromResource( "game/shooter3d/data/items.xml" ) );
+    SW_ASSERT_TRUE( items.loadFromResource( sw::ResourceID{ "game/shooter3d/data/items.xml" } ) );
 
     const sw::string presetPath = sw::string( "game/shooter3d/data/appearance/" ) + sw::AppearanceDatabase::kPresetFolder + "/packonlyprobe" +
                                   sw::AppearanceDatabase::kPresetExtension;
