@@ -91,14 +91,22 @@ namespace sw
 
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        if ( _bLoaded == SW_FALSE && loadOrCreateKeyLocked() == false )
-            return false;
-        std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );
-        return true;
+        string error;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _bLoaded == SW_TRUE || loadOrCreateKeyLocked( error ) )
+            {
+                std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );
+                return true;
+            }
+        }
+        // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
+        if ( error.empty() == false )
+            SW_LOG_ERROR( "%#", error.c_str() );
+        return false;
     }
 
-    bool LocalDeviceKeyProvider::loadOrCreateKeyLocked()
+    bool LocalDeviceKeyProvider::loadOrCreateKeyLocked( string& outError )
     {
         using Internal = LocalDeviceKeyProviderInternal;
         if ( FileUtil::isRegularFile( _keyFilePath ) )
@@ -107,7 +115,9 @@ namespace sw
             if ( FileUtil::readFile( _keyFilePath, bytes ) == false || Internal::unprotectKey( bytes, _arrKey, kKeySize ) == false )
             {
                 // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IOError 다.
-                SW_LOG_ERROR( "Local store key file cannot be opened on this device/user: %#", _keyFilePath.c_str() );
+                utf8 arrError[constant::kMaxBuffer512]{};
+                formatstring( arrError, sizeof( arrError ), "Local store key file cannot be opened on this device/user: %#", _keyFilePath.c_str() );
+                outError = arrError;
                 return false;
             }
             _bLoaded = SW_TRUE;
@@ -120,7 +130,9 @@ namespace sw
                               FileUtil::writeFile( _keyFilePath, bytes.data(), bytes.size() );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR( "Could not write the local store key file: %#", _keyFilePath.c_str() );
+            utf8 arrError[constant::kMaxBuffer512]{};
+            formatstring( arrError, sizeof( arrError ), "Could not write the local store key file: %#", _keyFilePath.c_str() );
+            outError = arrError;
             return false;
         }
         Internal::restrictToOwner( _keyFilePath );

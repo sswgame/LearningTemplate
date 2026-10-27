@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
@@ -119,7 +120,7 @@ namespace sw
         std::condition_variable_any                              _resolveReady;
         uint64 _nextRequestID                                    SW_GUARDED_BY( _mutex );
         int32                                                    _ioThreadCount;
-        uint8                                                    _bInitialized;
+        atomic<bool>                                             _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)
         uint8 _bResolverStopping                                 SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

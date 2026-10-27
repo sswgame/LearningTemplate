@@ -93,7 +93,11 @@ namespace sw::editor
         /** @brief 아래쪽 명령 입력란(개발 콘솔)을 그립니다. 명령과 전역 변수의 get, set, Tab 자동 완성, ↑↓ 기록을 지원합니다. */
         void drawCommandLine();
         /** @brief 지난 그리기의 행 수입니다. 접기와 필터링을 적용한 뒤의 수이며, 프로브 `Editor.OutputLogVisibleRows` 가 읽습니다. */
-        uint32 getRowCount() const { return static_cast<uint32>( _listRow.size() ); }
+        uint32 getRowCount() const
+        {
+            _uiThread.assumeHeld();
+            return static_cast<uint32>( _listRow.size() );
+        }
         /** @brief 보관 중인 로그를 모두 지웁니다. Clear 버튼과 Clear on Play 가 부릅니다. */
         void clearEntries();
         /** @brief 한 행의 전체 문자열(시각, 태그, 수준, 메시지)을 만듭니다. 복사가 씁니다. */
@@ -107,10 +111,11 @@ namespace sw::editor
 
     private:
         deque<LogEntry> _listEntry            SW_GUARDED_BY( _entriesMutex );
-        vector<LogEntry>                      _listDrawSnapshot;
-        vector<const LogEntry*>               _listVisible;
-        vector<ConsoleLogRow>                 _listRow;
-        ConsoleLogSelection                   _selection;
+        ThreadRole                            _uiThread; ///< UI 스레드 역할 — 그리기용 사본 · 행 · 선택은 패널을 그리는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<LogEntry> _listDrawSnapshot    SW_GUARDED_BY( _uiThread );
+        vector<const LogEntry*> _listVisible  SW_GUARDED_BY( _uiThread );
+        vector<ConsoleLogRow> _listRow        SW_GUARDED_BY( _uiThread );
+        ConsoleLogSelection _selection        SW_GUARDED_BY( _uiThread );
         string                                _cachedFilter;
         EditorLogTagFilter                    _tagFilter;
         uint32                                _cachedTagRevision;

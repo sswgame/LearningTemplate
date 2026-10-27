@@ -248,6 +248,7 @@ namespace sw::editor
 
     void ConsolePanel::updateFilteredEntries( const string& filterStr )
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         const EditorListFilter filter{ filterStr };
 
         _listVisible.clear();
@@ -281,6 +282,7 @@ namespace sw::editor
 
     void ConsolePanel::drawContent()
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         updatePlayReactions();
 
         bool bNewLogs{ false };
@@ -334,6 +336,7 @@ namespace sw::editor
 
     void ConsolePanel::drawConsoleToolbar( bool& bNewLogs )
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         const LevelCounts counts = ConsolePanelInternal::countLevels( _listDrawSnapshot );
 
         if ( EditorChrome::beginToolbar( "##ConsoleToolbar" ) )
@@ -392,6 +395,7 @@ namespace sw::editor
 
     void ConsolePanel::drawToolbarCommands()
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         ImGui::SameLine();
         if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
         {
@@ -428,6 +432,7 @@ namespace sw::editor
 
     void ConsolePanel::drawLogList( bool bNewLogs )
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         editor::EditorSectionDesc logDesc{};
         logDesc._pID   = "##log_scroll";
         logDesc._kind  = editor::EditorSectionKind::Child;
@@ -491,6 +496,7 @@ namespace sw::editor
 
     void ConsolePanel::drawLogRow( int32 rowIndex, float32 rowWidth, float32 lineHeight, bool bListHovered )
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         const ConsoleLogRow& row   = _listRow[static_cast<size_t>( rowIndex )];
         const LogEntry&      entry = *row._pEntry;
         ImGui::PushID( rowIndex );
@@ -548,6 +554,7 @@ namespace sw::editor
 
     void ConsolePanel::drawLogRowContextMenu( const LogEntry& entry )
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) == false )
             return;
         if ( ImGui::MenuItem( "Open in IDE" ) )
@@ -591,11 +598,13 @@ namespace sw::editor
 
     bool ConsolePanel::isMessageInSnapshot( string_view message ) const
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         return VectorUtil::containsBy<&LogEntry::_message>( _listDrawSnapshot, message );
     }
 
     bool ConsolePanel::isMessageVisible( string_view message ) const
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         for ( const LogEntry* pEntry : _listVisible )
         {
             if ( pEntry != nullptr && pEntry->_message == message )
@@ -606,6 +615,7 @@ namespace sw::editor
 
     void ConsolePanel::clearEntries()
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         ScopedLock<mutex> lock{ _entriesMutex };
         _listEntry.clear();
         _listDrawSnapshot.clear();
@@ -623,6 +633,7 @@ namespace sw::editor
 
     void ConsolePanel::copySelectedRows() const
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( _selection.hasSelection() == false )
             return;
         string text;
@@ -675,6 +686,7 @@ namespace sw::editor
 
     void ConsolePanel::drawTagFilterPopup()
     {
+        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( ImGui::BeginPopup( "##LogTagFilter" ) == false )
             return;
         // 지금 보관하고 있는 로그에 나온 태그만 보인다(순서는 처음 나온 순서).

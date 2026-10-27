@@ -24,7 +24,7 @@ namespace sw
         , _resolveReady{}
         , _nextRequestID{ 1 }
         , _ioThreadCount{ 0 }
-        , _bInitialized{ SW_FALSE }
+        , _bInitialized{ false }
         , _bResolverStopping{ SW_FALSE }
     {
     }
@@ -36,7 +36,7 @@ namespace sw
 
     bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
     {
-        if ( transport == nullptr || _bInitialized == SW_TRUE )
+        if ( transport == nullptr || _bInitialized.load( std::memory_order_acquire ) == true )
             return false;
         _transport     = std::move( transport );
         _settings      = settings;
@@ -47,13 +47,13 @@ namespace sw
             _transport.reset();
             return false;
         }
-        _bInitialized = SW_TRUE;
+        _bInitialized.store( true, std::memory_order_release );
         return true;
     }
 
     void HTTPClient::shutdown()
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -78,7 +78,7 @@ namespace sw
         _listResolvingCall.clear();
         _listResolveRequestID.clear();
         _bResolverStopping = SW_FALSE;
-        _bInitialized      = SW_FALSE;
+        _bInitialized.store( false, std::memory_order_release );
     }
 
     void HTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
@@ -92,7 +92,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         const uint64      requestID = _nextRequestID++;
         HTTPAddress       url;
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
         {
             failImmediately( requestID, "client is not running" );
             return requestID;
@@ -219,7 +219,7 @@ namespace sw
 
     void HTTPClient::update( int64 nowMs )
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         if ( _ioThreadCount == 0 )
             (void)_transport->pollIO( 0 );

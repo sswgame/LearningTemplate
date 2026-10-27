@@ -164,7 +164,8 @@ namespace sw
         int64 _commandBackoffMs                SW_GUARDED_BY( _mutex );
         int64 _subscribeBackoffMs              SW_GUARDED_BY( _mutex );
         uint64                                 _nextRequestID;
-        uint64                                 _subscriptionAckCount; ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
+        ThreadRole                             _ownerThread;                  ///< 소유 스레드 역할 — 구독 확인 수는 저장소를 부르는 스레드(펌프 · 구독)만 만진다(잠금이 아니라 분석용 능력)
+        uint64 _subscriptionAckCount           SW_GUARDED_BY( _ownerThread ); ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
         uint64 _subscriptionSentCount          SW_GUARDED_BY( _mutex );
         uint64                                 _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다
         uint8                                  _bInitialized;

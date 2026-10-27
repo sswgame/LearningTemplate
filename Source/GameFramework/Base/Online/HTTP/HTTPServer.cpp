@@ -18,7 +18,7 @@ namespace sw
         , _pHandler{ nullptr }
         , _ioThreadCount{ 0 }
         , _handledCount{ 0 }
-        , _bInitialized{ SW_FALSE }
+        , _bInitialized{ false }
     {
     }
 
@@ -30,7 +30,7 @@ namespace sw
     bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
                                  IHTTPRequestHandler* pHandler )
     {
-        const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized == SW_TRUE;
+        const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized.load( std::memory_order_acquire ) == true;
         if ( bCannotStart )
             return false;
         _transport     = std::move( transport );
@@ -44,26 +44,26 @@ namespace sw
             _transport.reset();
             return false;
         }
-        _bInitialized = SW_TRUE;
+        _bInitialized.store( true, std::memory_order_release );
         return true;
     }
 
     void HTTPServer::shutdown()
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         _transport->shutdown();
         _transport.reset();
         ScopedLock<mutex> lock{ _mutex };
         _mapPeer.clear();
         _listReady.clear();
-        _pHandler     = nullptr;
-        _bInitialized = SW_FALSE;
+        _pHandler = nullptr;
+        _bInitialized.store( false, std::memory_order_release );
     }
 
     void HTTPServer::update()
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         if ( _ioThreadCount == 0 )
             (void)_transport->pollIO( 0 );
