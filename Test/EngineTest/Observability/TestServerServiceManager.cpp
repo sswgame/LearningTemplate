@@ -93,6 +93,7 @@ SW_TEST_CASE( ServerServiceManagerTest, StartsInOrderAndStopsInReverse )
 
 SW_TEST_CASE( ServerServiceManagerTest, FailedStartStopsEveryStartedService )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a service that fails to start is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     ServerServiceTestLog::reset();
     {
         const ServerServiceRegistrar<FirstTestService>   first{ FirstTestService::kName, 9000 };

@@ -1098,6 +1098,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, HdrSourceKeepsValuesAboveOne )
     {
+        SW_TEST_DEFENSIVE_SCOPE( "an HDR source with a block format is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
         // RGBE: 값 = 가수 / 256 × 2^(지수 − 128). (128, 128, 128, 131) = 0.5 × 8 = 4.0.
         const string  sourcePath = test::makeTempPath( "bright.hdr" );
         const string  header     = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 4 +X 4\n";

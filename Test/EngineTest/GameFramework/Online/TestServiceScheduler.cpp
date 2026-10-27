@@ -159,6 +159,7 @@ SW_TEST_CASE( ServiceSchedulerTest, RestartAfterDaysRunsOnlyTheLatestOccurrence 
 
 SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOverByAnotherServer )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a run taken over by another server is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestServiceSchedulerInternal;
     MemoryServiceDatabase database;
     MemoryServiceStore    frontA{ &database };

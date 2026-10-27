@@ -92,6 +92,7 @@ namespace
 
 SW_TEST_CASE( ServerBusTest, LocalBusesDeliverOnlyToSubscribers )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bad topic is dropped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LocalServerBusHub hub;
     LocalServerBus    serverA{ &hub, 1 };
     LocalServerBus    serverB{ &hub, 2 };
@@ -100,6 +101,7 @@ SW_TEST_CASE( ServerBusTest, LocalBusesDeliverOnlyToSubscribers )
 
 SW_TEST_CASE( ServerBusTest, EphemeralBusesDeliverOnlyToSubscribers )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bad topic is dropped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SystemMonotonicClock    clock;
     MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    cacheA{ &database };
@@ -157,7 +159,7 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusSharesTheCacheFrontWithOtherServices )
         bus.subscribe( "account.revoke" );
         // 같은 앞으로 다른 서비스가 캐시 요청을 맡긴다. 버스가 앞을 혼자 쓰면 이 답을 버스가 가져간다.
         const Subscription replyOwner = router.openReplyOwner();
-        (void)router.submit( EphemeralRequest::makeGet( "presence:7" ),
+        (void)router.submit( EphemeralRequest::makeGet( "presence:7" ), // 요청 번호는 쓰지 않는다 - 답은 recorder 가 센다
                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &TestServerBusInternal::ReplyRecorder::onReply, &recorder ), replyOwner );
         TestServerBusInternal::publishText( bus, "account.revoke", "acct-7" );
         (void)router.pump();

@@ -80,7 +80,8 @@ SW_TEST_CASE( MeshModifierTextureSamplerTest, TexelCentersBilinearAndRepeat )
 
 SW_TEST_CASE( MeshModifierTextureSamplerTest, MissingFileAndEmptyPathAreFalse )
 {
-    MeshModifierTextureSampler sampler; // 캐시는 표본기 인스턴스의 것이라 테스트마다 비어 시작한다
+    SW_TEST_DEFENSIVE_SCOPE( "a missing texture file is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
+    MeshModifierTextureSampler sampler;                              // 캐시는 표본기 인스턴스의 것이라 테스트마다 비어 시작한다
     const float4               untouched{ 0.1f, 0.2f, 0.3f, 0.4f };
     float4                     color = untouched;
     SW_EXPECT_FALSE( sampler.trySample( "", float2{ 0.5f, 0.5f }, color ) );

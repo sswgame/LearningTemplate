@@ -579,6 +579,7 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
  */
 SW_TEST_CASE( InteractionTest, CatalogReadsStepPairedAnimations )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a paired animation entry with a missing role or both montage and paired animation is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     InteractionCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText(
         R"(<Interactions><Interaction id="Takedown" pairedAnimation="a.pairedanim.xml; b.pairedanim.xml" interactorRole="Attacker" interactableRole="Victim"/></Interactions>)",
@@ -637,7 +638,10 @@ SW_TEST_CASE( InteractionTest, PairedAnimationStepStartsSessionWithBothAnimators
     manager.beginPlay();
     SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) ); // 클립을 읽는 중인 참가자는 세션에 받지 않는다(ParticipantNotReady)
     InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
-    InteractionTestInternal::updateFrames( manager, 1, pInteractor, true );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a set that does not fit the side position is refused" ); // 맞지 않는 자리의 시작 거절 경고가 이 블록이 보려는 동작이다
+        InteractionTestInternal::updateFrames( manager, 1, pInteractor, true );
+    }
     PairedAnimationSystem* pSystem = PairedAnimationSystem::find( manager );
     SW_ASSERT_NOT_NULL( pSystem );
     SW_EXPECT_EQUAL( 0u, pSystem->getSessionCount() );

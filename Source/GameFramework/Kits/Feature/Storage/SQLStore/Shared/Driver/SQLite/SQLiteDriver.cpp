@@ -247,8 +247,9 @@ namespace sw
             return nullptr;
         }
         // WAL 은 읽기와 쓰기가 서로 막지 않게 한다. synchronous FULL 은 서비스 저장(거래)의 커밋이 정전에도 남게 한다. busy_timeout 은 다른 연결의 쓰기를 5초까지 기다린다.
+        // busy_timeout 을 **맨 먼저** 건다 - 새 파일을 여러 작업자가 동시에 열면 WAL 로 바꾸는 첫 문장이 서로 잠가("database is locked"), 늦게 건 시한은 그 문장을 지키지 못한다.
         utf8*       pError = nullptr;
-        const int32 code   = sqlite3_exec( pDatabase, "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;",
+        const int32 code   = sqlite3_exec( pDatabase, "PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;",
                                            nullptr, nullptr, &pError );
         if ( code != SQLITE_OK )
         {

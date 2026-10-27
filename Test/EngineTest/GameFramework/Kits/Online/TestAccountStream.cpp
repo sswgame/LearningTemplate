@@ -307,6 +307,7 @@ SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUDPConnec
 
 SW_TEST_CASE( AccountStreamTest, ForgedOrForeignTicketsAndBadTokensAreRefused )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "forged tickets and foreign protocols are refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     AccountRig rig{ false };
     ClientSide client{ rig._network, nullptr };
     rig._listClient.push_back( &client );

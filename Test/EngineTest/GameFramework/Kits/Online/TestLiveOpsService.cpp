@@ -141,6 +141,7 @@ SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
 
 SW_TEST_CASE( LiveOpsServiceTest, GmEventControlTakesAndListsJSONDefinitions )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken JSON definition is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = LiveOpsServiceTestInternal;
     MemoryServiceDatabase  database;
     LocalServerBusHub      hub;
@@ -196,6 +197,7 @@ SW_TEST_CASE( LiveOpsServiceTest, BoundaryRaisesStateChangeWithoutReload )
 
 SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHidesAll )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown remote config key leaves the parameter as is" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = LiveOpsServiceTestInternal;
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;

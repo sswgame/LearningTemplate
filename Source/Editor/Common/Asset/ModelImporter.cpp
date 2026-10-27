@@ -906,7 +906,9 @@ namespace sw::editor
             if ( pUri == nullptr || StringUtil::startsWith( pUri, "data:" ) )
                 continue;
             vector<uint8> bufferBytes;
-            if ( FileUtil::readFile( FileUtil::joinPath( directory, pUri ), bufferBytes ) && bufferBytes.empty() == false )
+            const string  bufferPath  = FileUtil::joinPath( directory, pUri );
+            const bool    bBufferRead = FileUtil::exists( bufferPath ) && FileUtil::readFile( bufferPath, bufferBytes ); // 해시는 있는 버퍼만 섞는다(없는 버퍼는 임포트가 오류로 알린다)
+            if ( bBufferRead && bufferBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bufferBytes.data() ), bufferBytes.size(), false, hash );
         }
         cgltf_free( pData );

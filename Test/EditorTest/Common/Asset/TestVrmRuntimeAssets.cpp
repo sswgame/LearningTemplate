@@ -124,6 +124,7 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringsBecomeSpringChainRig )
  */
 SW_TEST_CASE( VrmRuntimeAssetsTest, SpringChainJointsMustMatchBones )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a spring chain that does not match its bones is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const utf8*  pGood = R"(<RigAsset>
 	<nodes>
 		<item type="SpringChain" name="A" axis_pull="1.0">

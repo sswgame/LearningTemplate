@@ -161,6 +161,7 @@ SW_TEST_CASE( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely )
  */
 SW_TEST_CASE( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereIsNone )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "writing a crash report logs the fault as an error" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     prepareReportFolderInternal();
 
     utf8 arrContextPath[sw::constant::kMaxBuffer1024]{};

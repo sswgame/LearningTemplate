@@ -175,6 +175,7 @@ SW_TEST_CASE( UIDocumentTest, UnknownElementIsLoadError )
 /** @brief [UIDocumentTest] 모르는 속성은 파싱 오류, 모르는 열거자 · 읽지 못한 값은 짓기 오류다 — 조용히 기본값이 되지 않는다 */
 SW_TEST_CASE( UIDocumentTest, UnknownAttributeIsLoadError )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown attribute or enum value is a load error" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::UIDocumentCache cache;
     cache.registerMemoryDocument( "test/unknownattribute.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                   "\t<BoxPanel>\n"
@@ -451,6 +452,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
 /** @brief [UIDocumentTest] 다시 읽은 문서가 깨졌으면 옛 트리를 그대로 둔다 — 실패가 화면을 지우지 않는다 */
 SW_TEST_CASE( UIDocumentTest, FailedReloadKeepsOldTree )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed reload keeps the old tree" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     UIDocumentFixture    fixture;
     sw::UIDocumentCache& cache = fixture._ui.getDocumentCache();
     cache.registerMemoryDocument( "test/fail.ui.xml", UIReloadTestUtil::makeReloadDocument( false, "Old" ) );

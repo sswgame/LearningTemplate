@@ -819,6 +819,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick 
  */
 SW_TEST_CASE( ComponentTickGroupTest, OutOfRangeTickGroupIsRejected )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a tick group out of range is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( hashed_string( "Grouped" ) );
     auto*                 pComp   = pObject->addComponent<MockRootComponent>();
@@ -845,6 +846,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OutOfRangeTickGroupIsRejected )
  */
 SW_TEST_CASE( ComponentSubTickHybridTest, PriorityAboveTheBandStaysLastInItsPhase )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a priority above the band is clamped with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::GameObject*       pActor = manager.createGameObject( hashed_string( "PriorityActor" ) );
     auto*                 pComp  = pActor->addComponent<MockRootComponent>();

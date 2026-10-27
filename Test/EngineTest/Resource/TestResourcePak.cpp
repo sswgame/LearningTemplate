@@ -389,6 +389,7 @@ SW_TEST_CASE( ResourcePakTest, VFSPriorityStackAndOverrides )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePakTest, DlcEntitlementProtection )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a DLC pack without entitlement is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string dlcPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_secure_dlc.pack" );
     constexpr uint32 kDlcAppID   = 5001;
 
@@ -644,6 +645,7 @@ SW_TEST_CASE( ResourcePakTest, DynamicPriorityAutoCalculation )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePakTest, ZeroCopyAndCrc32CorruptionDetection )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a corrupted pack is detected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_tamper.pack" );
 
     const sw::string originalData = "INTEGRITY_CHECK_SAMPLE_PAYLOAD_DATA_1234567890";

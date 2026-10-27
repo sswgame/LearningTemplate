@@ -23,6 +23,20 @@ namespace
     constexpr const utf8* kCapturePrefix = "[TestLog] ";
 
     /**
+     * @brief 방어 구간(`SW_TEST_DEFENSIVE_SCOPE`)이 줄 앞에 붙인 표식을 뗀 줄을 돌려줍니다.
+     * @details 이 테스트들은 Warning · Error 를 일부러 남겨 로그 글이 그대로 전달되는지를 본다. 줄 자체는 방어 구간으로 덮어 판정이 예상 밖으로 세지 않게 하고,
+     *          글 비교는 표식 앞의 원문으로 한다.
+     */
+    sw::LogEntry withoutDefensiveMark( const sw::LogEntry& entry )
+    {
+        sw::LogEntry     plain = entry;
+        const sw::string mark  = sw::string( sw::AutomationLogPolicy::kDefensivePrefix ) + " ";
+        if ( sw::StringUtil::startsWith( plain._message, mark.c_str() ) )
+            plain._message = plain._message.substr( mark.size() );
+        return plain;
+    }
+
+    /**
      * @class LogCapture
      * @brief 전역 싱크에 리스너를 붙여 접두사가 맞는 LogEntry만 모으는 테스트 싱크
      * @note 접두사로 걸러 다른 스레드/서브시스템의 로그가 섞이지 않게 합니다.
@@ -37,8 +51,9 @@ namespace
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
-                if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
-                    _listEntry.push_back( entry );
+                const sw::LogEntry plain = withoutDefensiveMark( entry );
+                if ( sw::StringUtil::startsWith( plain._message, kCapturePrefix ) )
+                    _listEntry.push_back( plain );
             } ) );
         }
 
@@ -84,10 +99,11 @@ namespace
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
-                if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
+                const sw::LogEntry plain = withoutDefensiveMark( entry );
+                if ( sw::StringUtil::startsWith( plain._message, kCapturePrefix ) )
                 {
                     std::scoped_lock<sw::mutex> lock{ _mutex };
-                    _listEntry.push_back( entry );
+                    _listEntry.push_back( plain );
                 }
             } ) );
         }
@@ -291,6 +307,8 @@ SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
 
+    SW_TEST_DEFENSIVE_SCOPE( "every level is written on purpose to see it reach the sink" ); // Warning · Error 줄은 이 테스트가 전달을 보려는 대상이다
+
     // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
     // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
     const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
@@ -343,6 +361,7 @@ SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
 {
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
+    SW_TEST_DEFENSIVE_SCOPE( "an Error is written on purpose to see the verbosity keep it" ); // 남는 Error 줄은 이 테스트가 보려는 대상이다
 
     const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
     const struct VerbosityRestore
@@ -414,6 +433,8 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
 
+    SW_TEST_DEFENSIVE_SCOPE( "every macro is called on purpose to see its arguments formatted" ); // Warning · Error 줄은 이 테스트가 치환을 보려는 대상이다
+
     // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
     // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
     const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
@@ -469,6 +490,7 @@ SW_TEST_CASE( LogTest, LogCallerHandling )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a warning is written on purpose to see its caller" ); // Warning 줄은 이 테스트가 호출자 전달을 보려는 대상이다
     SW_LOG_INFO( "[TestLog] Custom caller message" );
     SW_LOG_WARNING( "[TestLog] Warning from caller" );
 
@@ -613,7 +635,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
         }
     }
 
-    logger.writeLog( sw::LogLevel::Error, "Test", "Cap", "한 줄", __FILE__, __LINE__ );
+    logger.writeLog( sw::LogLevel::Info, "Test", "Cap", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
     // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
@@ -781,7 +803,7 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
     SW_EXPECT_EQUAL( 1u, logger.removeListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );
     SW_EXPECT_EQUAL( 0u, logger.removeListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );
 
-    logger.writeLog( sw::LogLevel::Error, "Test", "Release", "한 줄", __FILE__, __LINE__ );
+    logger.writeLog( sw::LogLevel::Info, "Test", "Release", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
     SW_EXPECT_EQUAL( 0, releasedValue );
@@ -801,7 +823,7 @@ SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
     CapturingLogOutput*                pCapture = output.get();
     SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
 
-    logger.writeLog( sw::LogLevel::Error, "Test", "Utf8", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end"
+    logger.writeLog( sw::LogLevel::Info, "Test", "Utf8", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
     logger.shutdown();
 
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );

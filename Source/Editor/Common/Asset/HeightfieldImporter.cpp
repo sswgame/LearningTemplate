@@ -317,7 +317,9 @@ namespace sw::editor
             hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
             // 옆에 둔 레이어 4..7 파일(`x_splat1.png`)도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
             vector<uint8> highBytes;
-            if ( FileUtil::readFile( Internal::makeHighSplatPath( sourcePath ), highBytes ) && highBytes.empty() == false )
+            const string  highPath  = Internal::makeHighSplatPath( sourcePath );
+            const bool    bHighRead = FileUtil::exists( highPath ) && FileUtil::readFile( highPath, highBytes ); // 곁 파일은 선택이라 없는 것이 정상이다 - 읽기 오류로 알리지 않는다
+            if ( bHighRead && highBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( highBytes.data() ), highBytes.size(), false, hash );
             return hash;
         }
@@ -325,7 +327,9 @@ namespace sw::editor
         hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         // 옆에 둔 구멍 마스크도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
         vector<uint8> holeBytes;
-        if ( FileUtil::readFile( Internal::makeHolePath( sourcePath ), holeBytes ) && holeBytes.empty() == false )
+        const string  holePath  = Internal::makeHolePath( sourcePath );
+        const bool    bHoleRead = FileUtil::exists( holePath ) && FileUtil::readFile( holePath, holeBytes ); // 구멍 마스크도 선택이라 없는 것이 정상이다
+        if ( bHoleRead && holeBytes.empty() == false )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );
         return hash;
     }

@@ -50,6 +50,7 @@ SW_TEST_CASE( PackEngineSettingsTest, ReadsTheEngineElementAndGameSettingsSkipsI
  */
 SW_TEST_CASE( PackEngineSettingsTest, RejectsIncompleteOrUnknownSettings )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "incomplete or unknown pack settings are rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::PackEngineSettings settings;
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startMap>x</startMap></GameSettings>", "no element" ) );
     SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><Engine _bUIPauseMenu=\"true\" /></GameSettings>", "no title" ) );

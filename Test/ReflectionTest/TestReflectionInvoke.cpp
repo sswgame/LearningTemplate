@@ -211,6 +211,7 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
  */
 SW_TEST_CASE( ReflectionInvokeTest, EventBindsToFunctionByName )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an event bound to a missing function is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::InvokeDemoActor  source;
     sw::InvokeDemoActor  target;
     const sw::TypeInfo&  type   = getInvokeDemoType();

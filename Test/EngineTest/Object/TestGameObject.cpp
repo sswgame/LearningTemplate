@@ -329,6 +329,7 @@ SW_TEST_CASE( HierarchicalActiveStateTest, SubtreeTickSkip )
  */
 SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::GameObject*       parentPtr = manager.createGameObject( sw::hashed_string( "ParentGO" ) );
     sw::GameObject&       parent    = *parentPtr;
@@ -2375,6 +2376,7 @@ SW_TEST_CASE( GameObjectTest, DeepHierarchyMatrixCompositionStressTest )
  */
 SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::RegisterMockComponents();
 

@@ -123,6 +123,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, OneByteChunksGiveTheSameResult )
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPendingRequestOnceThenReconnects )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 3u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    store{ server };
@@ -155,6 +156,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndTheNextOneReconnects )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a timed out request is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 4u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    store{ server };
@@ -241,6 +243,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TLSCarriesTheCommands )
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheConnectionDrops )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 2u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    publisher{ server };

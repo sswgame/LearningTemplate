@@ -65,6 +65,7 @@ namespace
  */
 SW_TEST_CASE( EditorNavigationCommandsTest, BakesTheEditedSceneBeforePlay )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a scene without geometry has nothing to bake and says so" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = EditorNavigationCommandsTestInternal;
     sw::GameObjectManager manager;
     manager.getSubsystem<sw::SceneNavigation>().setSettings( Internal::makeSettings() );

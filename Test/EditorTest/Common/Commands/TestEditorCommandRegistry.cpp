@@ -97,6 +97,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, MenuLabelPrependsIconWhenPresent )
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ExecuteByIDRunsBoundAction )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a command with an empty id is not registered" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     EditorCommandRegistry registry;
     s_invokeCount = 0;
 

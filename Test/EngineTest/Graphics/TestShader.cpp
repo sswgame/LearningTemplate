@@ -303,6 +303,7 @@ SW_TEST_CASE( ShaderCookerTest, CachedSourceHashNoticesEditedFile )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( original.data() ), original.size() ) );
     SW_EXPECT_EQUAL( firstHash, sw::ShaderCooker::computeSourceFingerprint( path, listNoHeader ) );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a removed source is reported as unreadable and its fingerprint is 0" ); // 없는 소스를 읽으려는 오류가 이 테스트가 보려는 동작이다
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( path ) );
     SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeSourceFingerprint( path, listNoHeader ) );
 }
@@ -860,7 +861,10 @@ SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, shaderPath ) );
 
     // 스탬프에 없는 소스는 최신일 수 없다 — "파일이 있으니 최신" 으로 새지 않는지 본다.
-    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, resourceRoot.makePath( "engine/shaders/nosuchshader.hlsl" ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a source that is not in the stamp (and not on disk) is never current" ); // 없는 소스를 읽으려는 오류가 이 확인이 보려는 동작이다
+        SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, resourceRoot.makePath( "engine/shaders/nosuchshader.hlsl" ) ) );
+    }
 
     // 소스 지문은 셰이더마다 달라야 한다(같으면 캐시 항목이 셰이더를 못 가른다).
     const sw::vector<sw::string> listHeader{ headerPath };

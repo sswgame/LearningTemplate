@@ -880,6 +880,7 @@ SW_TEST_CASE( CameraPresetTest, PhotoModeReadsTheEnginePhotoModeMap )
  */
 SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a preset reading an action the input map lacks warns once" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)

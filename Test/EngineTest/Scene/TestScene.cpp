@@ -487,6 +487,7 @@ SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
  */
 SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a prefab path that does not exist is reported while its source path is still written" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::Scene scene{ "PrefabRoundTrip" };
     SW_ASSERT_NOT_NULL( scene.getObjectManager() );
 
@@ -1614,6 +1615,7 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
  */
 SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a non-root and an edit-time object are not carried across" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     manager.setWorldPlaying( true );
@@ -1952,6 +1954,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
     sw::vector<sw::string> listGameTypeName;
     gamemoduletypes::collectTypeNames( sw::ResourcePaths::getRootFolderPath(), listGameTypeName );
     test::ScopedDefensiveTestLog expectedGameTypes( "game module component types are unknown to this executable", gamemoduletypes::makeUnknownTypeNeedles( listGameTypeName ) );
+    test::ScopedDefensiveTestLog expectedValidationFixtures( "automation scenes built to raise validation issues", gamemoduletypes::makeValidationFixtureNeedles() );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );

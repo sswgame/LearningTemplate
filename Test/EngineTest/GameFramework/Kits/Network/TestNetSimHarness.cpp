@@ -448,6 +448,7 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
  */
 SW_TEST_CASE( NetSimHarnessTest, WorldsRunOnScenesLentBySceneSource )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a world with no scene is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     CountingSceneSource source;
     {
         CrateGame     game;

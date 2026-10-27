@@ -142,6 +142,7 @@ SW_TEST_CASE( AudioDuckingTest, BelowThresholdDoesNotDuck )
  */
 SW_TEST_CASE( AudioDuckingTest, BadDuckDataIsALoadError )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "bad duck data is a read error" ); // 아래 자료는 모두 일부러 깨져 있다
     test::ScopedLogCollector logs;
     sw::AudioMixerDesc       desc;
     SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master" />

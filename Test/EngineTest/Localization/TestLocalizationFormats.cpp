@@ -310,6 +310,7 @@ SW_TEST_CASE( XliffFileTest, RoundTrip )
  */
 SW_TEST_CASE( XliffFileTest, BadInputIsRejected )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "bad XLIFF input is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::XliffFile file;
     sw::string    error;
     SW_EXPECT_FALSE( file.parse( R"(<xliff version="2.0"><file><body/></file></xliff>)", &error ) );
@@ -375,6 +376,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
  */
 SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringFiles )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a table with a bad checksum is not loaded" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder  = test::makeTempDirectory( "loc_binary_cook" );
     const sw::string project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );

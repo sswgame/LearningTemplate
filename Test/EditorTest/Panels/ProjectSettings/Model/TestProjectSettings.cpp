@@ -32,6 +32,7 @@ namespace
  */
 SW_TEST_CASE( ProjectSettingsCatalogTest, PicksOnlyEditableJSONFiles )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a file that is not valid JSON is not editable" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string                             referenceJSON = R"({"files":[
         {"page":"EngineConfig","path":"Config/Engine/EngineConfig.json","type":"EngineConfig"},
         {"page":"PhysicsSettings","path":"Resource/engine/physics/physicssettings.xml","type":"PhysicsSettings"},
@@ -75,6 +76,7 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an edit that would not load is not saved" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string path     = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_pack_element" ), "gamesettings.xml" );
     const sw::string original = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                                 "<!-- probe pack -->\n"
@@ -132,6 +134,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementIsInsertedWhenMissing )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a save to a non-pack file is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder = test::makeTempDirectory( "project_settings_pack_insert" );
     const sw::string path   = sw::FileUtil::joinPath( folder, "gamesettings.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<GameSettings>\r\n  <startMap>game/probe/maps/start.scene.xml</startMap>\r\n</GameSettings>\r\n" ) );

@@ -75,6 +75,7 @@ namespace
             serverSettings._startMs            = kServerStartMs; // 첫 tick 과 같은 서비스 시각 — 실행마다 같은 표가 나와야 한다
             serverSettings._bLightPasswordHash = SW_TRUE;
             serverSettings._pClock             = &serverClock;
+            SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 로컬 서버는 개발 조립이라 개발용 키 경고가 난다
             SW_EXPECT_TRUE_MSG( server.initialize( serverTransport.get(), serverSettings, error ), error.c_str() );
 
             LoadBotRunner         runner;

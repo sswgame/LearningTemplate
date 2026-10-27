@@ -526,6 +526,7 @@ SW_TEST_CASE( MeshAssetTest, SectionsRoundTripAndAreValidated )
     SW_EXPECT_TRUE( mesh->setSections( read._listSection ) );
     SW_EXPECT_EQUAL( 1, mesh->findSectionIndex( sw::hashed_string( "Hair" ) ) );
     // 정점 밖 · 삼각형이 아님 · 이름 겹침은 받지 않는다(구간을 비운다).
+    SW_TEST_DEFENSIVE_SCOPE( "sections outside the vertices, not whole triangles or repeating a name are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
     SW_EXPECT_FALSE( mesh->setSections( {
         sw::MeshSection{ sw::hashed_string( "Out" ), 9, 6, sw::MeshPersonVisibility::Both }
     } ) );
@@ -564,7 +565,10 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentDrawsNamedSectionAndHonorsPerson )
     component.setFirstPersonView( true );
     SW_EXPECT_FALSE( component.isVisibleInCurrentPerson() );
     component.setSectionName( sw::hashed_string( "Missing" ) );
-    SW_EXPECT_FALSE( component.findDrawSection( first, count ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a section name the mesh lacks draws nothing and says so" ); // 없는 구간을 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( component.findDrawSection( first, count ) );
+    }
 }
 
 /**

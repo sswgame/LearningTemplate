@@ -85,6 +85,7 @@ SW_TEST_CASE( ComponentNameValidationTest, ConstructorDefaultsNameKnownTableEntr
  */
 SW_TEST_CASE( ComponentNameValidationTest, UnknownNamesAreErrorsNamingTheField )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown name is an error naming the field" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     using Internal = ComponentNameValidationTestInternal;
     GameObjectManager manager;

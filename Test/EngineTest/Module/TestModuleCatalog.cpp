@@ -188,6 +188,7 @@ SW_TEST_CASE( ModuleCatalogTest, DisabledAndUnavailableModulesAreSkipped )
  */
 SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a manifest with an unknown value is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const utf8*        pGood = R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_description": "farm",
                              "_listDependency": [ { "_name": "GameFramework", "_minVersion": "1.0.0" } ],
                              "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ],

@@ -24,7 +24,7 @@ namespace
   <Item id="herb" category="Material" maxStack="10" weight="0.1" value="2"/>
   <Item id="ore" category="Material" maxStack="5" weight="2" value="5" rarity="1"/>
   <Item id="potion" category="Consumable" maxStack="5" useEffect="Heal"/>
-  <Item id="sword" category="Weapon" slot="MainHand" weight="3" durability="10" maxStack="4" tags="Metal,Blade"><Stats attack="12" speed="-0.1"/></Item>
+  <Item id="sword" category="Weapon" slot="MainHand" weight="3" durability="10" tags="Metal,Blade"><Stats attack="12" speed="-0.1"/></Item>
   <Item id="axe" category="Weapon" slot="MainHand" weight="4"><Stats attack="16"/></Item>
   <Item id="ring" category="Accessory" slot="Ring" rarity="3"><Stats luck="2" attack="1"/></Item>
   <Item id="mortar" category="Tool"/>

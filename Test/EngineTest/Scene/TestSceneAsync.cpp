@@ -682,6 +682,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
  */
 SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a save is refused while a component blocks it" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.scene.xml" );
     const sw::string xmlStr  = "<Scene formatVersion=\"2\" name=\"SaveBlock\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );

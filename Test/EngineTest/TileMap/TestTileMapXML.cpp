@@ -151,7 +151,11 @@ SW_TEST_CASE( TileMapXMLTest, SavingWithShortTileArraysStaysInsideTheArrays )
     data._height = 4;
     // 배열은 비어 있다 — 크기만 바꾸고 칸을 채우지 않은 상태.
 
-    const sw::string xml = data.toXML();
+    sw::string xml;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "saving short tile arrays warns that the missing cells are written as defaults" ); // 모자란 칸을 알리는 Warning 이 이 테스트가 보려는 것이다
+        xml = data.toXML();
+    }
     SW_ASSERT_TRUE( xml.empty() == false );
 
     sw::TileMapXMLData loaded;
@@ -224,6 +228,7 @@ SW_TEST_CASE( TileMapXMLTest, MalformedDocumentFailsAndLeavesAnEmptyMap )
     sw::TileMapXMLData loaded = makeSampleMap();
     SW_ASSERT_EQUAL( size_t( 6 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a malformed tile map document fails to load with a reason" ); // 아래 자료는 모두 일부러 깨져 있다
     SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>2</width>" ) );
     SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
     SW_EXPECT_TRUE( loaded._name.empty() );
@@ -406,8 +411,11 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
     sw::TileMapXMLData data = makeSampleMap();
     SW_ASSERT_TRUE( data.addDataLayer( "cost", 1 ) );
     SW_ASSERT_TRUE( data.addDataLayer( "footstep", 0 ) );
-    SW_EXPECT_FALSE( data.addDataLayer( "cost", 5 ) ); // 겹치는 이름
-    SW_EXPECT_FALSE( data.addDataLayer( "", 5 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a duplicate or empty data layer name is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( data.addDataLayer( "cost", 5 ) );                                          // 겹치는 이름
+        SW_EXPECT_FALSE( data.addDataLayer( "", 5 ) );
+    }
     const int32 costLayer = data.findDataLayer( "cost" );
     SW_ASSERT_EQUAL( 0, costLayer );
     SW_EXPECT_TRUE( data.setCellData( costLayer, 2, 1, -3 ) );
@@ -435,6 +443,7 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
         "<layer name=\"cost\" default=\"0\">1 x</layer>",                                               // 숫자가 아니다
         "<layer name=\"cost\" default=\"0\">1 2</layer><layer name=\"cost\" default=\"0\">1 2</layer>", // 겹치는 이름
     };
+    SW_TEST_DEFENSIVE_SCOPE( "a broken data layer fails the whole map load with a reason" ); // 아래 자료는 모두 일부러 깨져 있다
     for ( const sw::string_view broken : arrBroken )
     {
         sw::TileMapXMLData map;

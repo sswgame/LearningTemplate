@@ -778,6 +778,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
 
     // 게임 모듈 타입의 "모르는 타입" Warning 만 의도된 줄이다(아래 `removeGameModuleTypeWarnings` 가 같은 줄을 판정에서 뺀다). 다른 줄은 표식 없이 남는다.
     test::ScopedDefensiveTestLog expectedGameTypes( "game module component types are unknown to this executable", gamemoduletypes::makeUnknownTypeNeedles( listGameTypeName ) );
+    test::ScopedDefensiveTestLog expectedValidationFixtures( "automation scenes built to raise validation issues", gamemoduletypes::makeValidationFixtureNeedles() );
 
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )

@@ -348,6 +348,7 @@ SW_TEST_CASE( UIStyleTest, VariablesResolveAndUnknownVariableIsError )
 /** @brief [UIStyleTest] 모르는 칸 · 읽지 못한 값 · 쓰지 않는 선택자 문법(`>` · 모르는 상태)은 로드 오류다 */
 SW_TEST_CASE( UIStyleTest, UnknownPropertyOrSelectorSyntaxIsLoadError )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown property or selector is a load error" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     struct BadCase
     {
         const utf8* _pRule;
@@ -432,6 +433,7 @@ SW_TEST_CASE( UIStyleTest, ComputedStylesAreShared )
 /** @brief [UIStyleTest] 테마를 바꾸면 열린 화면의 모든 위젯이 새 테마 시트로 다시 맞춰진다 */
 SW_TEST_CASE( UIStyleTest, ThemeSwitchRestylesEverything )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIStyleTestUtil;
     UIStyleFixture fixture;
     fixture._ui.getStyleSheetCache().registerMemorySheet( "test/light.uistyle.xml", "<UIStyleSheet _schemaVersion=\"1\">\n"
@@ -666,6 +668,7 @@ SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
  */
 SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GlobalVariableInfo* pSetting = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_uiTheme" );
     SW_ASSERT_NOT_NULL( pSetting );
     const sw::string   previous = pSetting->getValueAsString();

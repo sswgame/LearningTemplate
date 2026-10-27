@@ -71,7 +71,10 @@ SW_TEST_CASE( AudioGraphEditUtilTest, ConnectAddRemove )
     SW_EXPECT_EQUAL( size_t( 1 ), def._listNode[2]._listInput.size() );
     SW_EXPECT_TRUE( Util::removeNode( def, 1 ) ); // Tone 을 지우면 Amp 의 입력에서도 빠진다
     SW_EXPECT_TRUE( def._listNode[1]._listInput.empty() );
-    SW_EXPECT_FALSE( def.validate( "<test>" ) );  // 입력이 없는 게인 — 저장이 막힌다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a gain node without inputs fails validation with a reason" ); // 검증 실패를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( def.validate( "<test>" ) );                                            // 입력이 없는 게인 — 저장이 막힌다
+    }
     SW_EXPECT_TRUE( Util::removeNode( def, 1 ) ); // 출력 노드를 지우면 출력이 빈다
     SW_EXPECT_TRUE( def._output.empty() );
 }

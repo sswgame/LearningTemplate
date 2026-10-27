@@ -125,6 +125,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefRejectsMissingAndInvalidValues )
         // 고르기 조건이 둘이다
         R"(<PairedAnimation duration="1"><Role name="A" anchor="true" required="true" clip="X" enterBlend="0" exitState="Idle" exitBlend="0"/><Role name="B" required="true" clip="Y" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/><Select role="B" minAngle="-45" maxAngle="45" maxDistance="2"/><Select role="B" minAngle="135" maxAngle="-135" maxDistance="2"/></PairedAnimation>)",
     };
+    SW_TEST_DEFENSIVE_SCOPE( "invalid paired animation data is a read error" ); // 아래 자료는 모두 일부러 깨져 있다 — 읽기 오류 로그가 이 반복이 보려는 것이다
     for ( const utf8* pXML : kArrBadXML )
     {
         PairedAnimationDef def;

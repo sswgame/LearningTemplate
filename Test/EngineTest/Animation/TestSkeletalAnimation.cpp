@@ -1321,7 +1321,10 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorSeeksCurrentTime )
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
     pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Slide" );
-    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 0.5f ) ); // 시작 전이라 재생 중인 것이 없다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "seeking with nothing playing is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 0.5f ) );                              // 시작 전이라 재생 중인 것이 없다
+    }
 
     pAnimator->dispatchBeginPlay();
     SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) );
@@ -1330,8 +1333,11 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorSeeksCurrentTime )
     manager.getSubsystem<AnimationSystem>().evaluate( 0.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-3f );
 
-    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( -0.1f ) );
-    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 1.5f ) );
-    SW_EXPECT_FALSE( pAnimator->seekCurrentTime( std::numeric_limits<float32>::quiet_NaN() ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "seeking outside the clip is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( pAnimator->seekCurrentTime( -0.1f ) );
+        SW_EXPECT_FALSE( pAnimator->seekCurrentTime( 1.5f ) );
+        SW_EXPECT_FALSE( pAnimator->seekCurrentTime( std::numeric_limits<float32>::quiet_NaN() ) );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.5f, pAnimator->getGraphPlayer().getPlayer().getCurrentTime(), 1e-6f ); // 잘못된 시각은 시각을 바꾸지 않는다
 }

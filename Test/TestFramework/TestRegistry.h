@@ -70,8 +70,8 @@ namespace test
         const TestCatalog&    getCatalog() const { return _catalog; }
         TestRunOptions&       getOptions() { return _options; }
         const TestRunOptions& getOptions() const { return _options; }
-        /** @brief 호스트 스위트의 로그 판정기입니다. 틀 테스트가 허용 목록을 직접 넣을 때 씁니다(`HostLogJudge::getPolicy`). */
-        HostLogJudge& getHostLogJudge() { return _hostLogJudge; }
+        /** @brief 모든 케이스에 도는 로그 판정기입니다. 틀 테스트가 허용 목록을 직접 넣을 때 씁니다(`CaseLogJudge::getPolicy`). */
+        CaseLogJudge& getCaseLogJudge() { return _caseLogJudge; }
         /** @brief 명령줄에 `--help` · `-h` · `-?` · `/?` · `--gtest_help` 가 있었는가 — 있으면 하네스는 엔진을 세우지 않고 도움말만 찍고 끝난다. */
         bool isHelpRequested() const { return _options._bHelpRequested; }
 
@@ -104,7 +104,7 @@ namespace test
         TestEnvironment               _environment;
         ConsoleTestReporter           _consoleReporter;
         JSONTestReporter              _jsonReporter; ///< 프로세스 레지스트리만 붙는다(`(nested)` 레지스트리는 파일을 쓰지 않는다)
-        HostLogJudge                  _hostLogJudge;
+        CaseLogJudge                  _caseLogJudge;
         TimeBudgetJudge               _timeBudgetJudge;
         sw::vector<ITestRunListener*> _listListener; ///< 콘솔 보고기가 맨 앞
         sw::vector<ITestCaseJudge*>   _listJudge;    ///< 기본 판정기 둘이 맨 앞

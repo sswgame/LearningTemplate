@@ -75,6 +75,7 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
 
 SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBackends )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a backend that is built in cannot be registered again" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     test::LocalStoreTestKey key;
     const LocalSealContext  context = test::LocalStoreContract::makeSealContext( key );
     string                  error;

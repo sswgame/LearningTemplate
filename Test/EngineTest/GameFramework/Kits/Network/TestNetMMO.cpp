@@ -425,6 +425,7 @@ SW_TEST_CASE( NetMMOTest, ReorderedUpdateDoesNotOverwriteNewer )
  */
 SW_TEST_CASE( NetMMOTest, OversizedStateIsRefusedByTheServer )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an oversized state is refused by the server" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     MMONetSimGame game;
     game._table._listEntity.push_back( MMOEntity{
         vector<uint8>{},

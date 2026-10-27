@@ -121,6 +121,7 @@ SW_TEST_CASE( MeshModifierPropertiesTest, StackDocumentRoundTripsEveryModifier )
 
 SW_TEST_CASE( MeshModifierPropertiesTest, UnknownTypeIsSkippedOnRead )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown modifier type is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const string      text = R"({"version":1,"recomputeNormals":false,"modifiers":[{"type":"no_such_modifier"},{"type":"bend","params":{"Angle":45,"Unknown":3}}]})";
     MeshModifierStack stack;
     SW_ASSERT_TRUE( stack.readJSONText( text ) );

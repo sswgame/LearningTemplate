@@ -38,6 +38,7 @@ namespace
  */
 SW_TEST_CASE( GameNetSessionTest, ClientRetriesUntilTheServerStarts )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a client that cannot reach the server reports and retries" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const uint16 port = findFreePort();
     SW_ASSERT_TRUE( port != 0 );
 
@@ -86,6 +87,7 @@ SW_TEST_CASE( GameNetSessionTest, ClientRetriesUntilTheServerStarts )
  */
 SW_TEST_CASE( GameNetSessionTest, ServerOnAPortInUseStaysInactive )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a port in use leaves the server inactive" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     UDPNetTransport holder;
     SW_ASSERT_TRUE( holder.open( 0, true ) );
     GameNetSessionParams params;
@@ -174,6 +176,7 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
  */
 SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a server config that cannot be opened is refused with the reason" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GameNetSession       session;
     GameNetSessionParams params;
     ServerConfig         config;
@@ -387,6 +390,7 @@ SW_TEST_CASE( GameNetSessionTest, LaunchParamsOpenTheGamePortOnlyOnADedicatedSer
  */
 SW_TEST_CASE( GameNetSessionTest, AnInvalidServerConfigStopsTheLaunchInsteadOfStartingAlone )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an invalid server config stops the launch" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     ServerConfig config;
     config._listenAddress = "10.0.0.5"; // 게임 포트는 0.0.0.0 · 127.0.0.1 만 묶는다
     config._gamePort      = 0;

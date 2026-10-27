@@ -397,6 +397,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, SpawnScaleScalesRateAndBursts )
  */
 SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a full pool drops particles and warns once" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Tiny" );
     emitter._maxParticles     = 8;
     emitter._lifetimeMin      = 10.0f;
@@ -414,6 +415,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
  */
 SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a long frame is limited with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Stream" );
     emitter._spawnRate        = 60.0f;
     emitter._lifetimeMin      = 10.0f;
@@ -817,6 +819,7 @@ SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
  */
 SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an emitter whose module targets do not intersect is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::VfxSimulationTarget kCPU      = sw::VfxSimulationTarget::CPU;
     const sw::VfxSimulationTarget kGPU      = sw::VfxSimulationTarget::GPU;
     sw::VfxEmitterDef             billboard = sw::makeValidEmitter( "Billboard" );

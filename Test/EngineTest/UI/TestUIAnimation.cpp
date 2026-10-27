@@ -133,6 +133,7 @@ namespace
 /** @brief [UIAnimationTest] 트윈은 지금 값에서 끝값으로 곡선을 따라 옮긴다 — Linear 는 반에서 반, EaseIn(지수 2)은 반에서 1/4, 끝나면 끝값 · 트윈 없음 */
 SW_TEST_CASE( UIAnimationTest, TweenInterpolatesWithCurve )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a tween of an unknown property or a bad number is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIAnimationTestUtil;
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/tween.ui.xml", "" ) );
@@ -237,6 +238,7 @@ SW_TEST_CASE( UIAnimationTest, EventsFireOnce )
  */
 SW_TEST_CASE( UIAnimationTest, CurveEventsFireWhenValueCrossesThreshold )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a curve event on a scalar value is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIAnimationTestUtil;
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/curveevents.ui.xml", "" ) );

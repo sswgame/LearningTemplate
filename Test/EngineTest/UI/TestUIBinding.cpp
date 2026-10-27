@@ -227,6 +227,7 @@ SW_TEST_CASE( UIBindingTest, TwoWaySliderWritesBack )
 /** @brief [UIBindingTest] format= 은 현지화 키의 메시지 패턴에 값을 {value} 로 넣는다 — 표에 없으면 값 그대로 */
 SW_TEST_CASE( UIBindingTest, FormatUsesLocalizedPattern )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a missing key is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     UIBindingFixture fixture;
     fixture._localization.setString( "qa", sw::hashed_string( "HUD.Ammo" ), "Ammo: {value}" );
     SW_ASSERT_TRUE( fixture._localization.setCurrentLanguage( "qa" ) );

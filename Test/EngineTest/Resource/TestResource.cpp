@@ -154,6 +154,7 @@ SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
  */
 SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a taken name is reported and a new path is made" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const sw::string tempFolder = test::makeTempDirectory( "sw_unique_save" );

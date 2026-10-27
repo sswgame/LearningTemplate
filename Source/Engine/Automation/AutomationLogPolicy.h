@@ -8,7 +8,7 @@
  *          4. id 가 있으면 허용 목록 `Resource/engine/automation/allowedlogs.json` 에서 (id, 지금 범위)가 맞는 항목을 찾는다. 없으면 `NotAllowed` 다.
  *          허용 목록의 항목은 id · 범위(`scenario` 나 `suite` 중 하나) · 사유 · 처리 계획 문서가 모두 있어야 읽힌다. 하나라도 비었거나 `TODO` 이면 읽기 오류로 멈춘다 —
  *          범위 없는 전역 허용과 와일드카드 id 는 형식으로 만들 수 없다. 목록에 있으나 더 이상 나오지 않는 항목은 `Scripts` 의 `scenario-logs --check` 가 실패로 센다.
- *          `AutomationRunner`(프로세스 안, 시나리오 구간), `AppScenarioTest`(프로세스 출력 전체, 기동 · 종료 포함), 호스트 스위트의 `HostLogJudge` 가 같은 목록을 쓴다.
+ *          `AutomationRunner`(프로세스 안, 시나리오 구간), `AppScenarioTest`(프로세스 출력 전체, 기동 · 종료 포함), 테스트 케이스의 `CaseLogJudge` 가 같은 목록을 쓴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

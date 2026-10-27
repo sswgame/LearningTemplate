@@ -346,6 +346,7 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
  */
 SW_TEST_CASE( PrefabOverridesTest, OverrideOfVanishedComponentIsDroppedWithTheEntityName )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an override of a vanished component is dropped with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::PrefabAsset prefab = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
     sw::string            baseState;
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );

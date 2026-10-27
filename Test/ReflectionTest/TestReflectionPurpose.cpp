@@ -162,6 +162,7 @@ SW_TEST_CASE( ReflectionPurposeTest, PlainTypeSavesEverythingButTransient )
  */
 SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAnAuthoringFileFailsTheRead )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "runtime state in an authoring file fails the read" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::TypeInfo&         typeInfo  = *sw::PurposePlainSample::StaticType();
     const sw::SerializeContext& snapshot  = sw::SerializeContext::getDefault( sw::SerializePurpose::Snapshot );
     const sw::SerializeContext& authoring = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );

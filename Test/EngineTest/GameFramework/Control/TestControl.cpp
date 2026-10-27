@@ -898,6 +898,7 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
         // 30 프레임 × 4 m/s × 1/60 s = 2 m 에서 멈췄다.
         SW_EXPECT_NEAR_EQUAL( 2.0f, Internal::findPosition( *pHero )._z, 1.0e-3f );
 
+        SW_TEST_DEFENSIVE_SCOPE( "a scenario with an unknown attribute ends in a load error" ); // 읽기 오류 로그가 이 확인이 보려는 동작이다
         AutomationRunner badRunner;
         badRunner.setObjectManager( &manager );
         SW_ASSERT_TRUE( badRunner.startFromText( "<Scenario name=\"control.bad\"><At frame=\"0\"><Intent pawn=\"Hero\" speed=\"1\"/></At></Scenario>" ) );
@@ -1265,7 +1266,8 @@ SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
     }
 
     {
-        GameObjectManager manager; // "Gone" 폰이 없는 씬
+        SW_TEST_DEFENSIVE_SCOPE( "the track of a pawn that is not in the scene is skipped with a warning" ); // 건너뜀 경고가 이 블록이 보려는 동작이다
+        GameObjectManager manager;                                                                           // "Gone" 폰이 없는 씬
         PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
         manager.beginPlay();
         string error;
@@ -1286,6 +1288,7 @@ SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
     }
     (void)FileUtil::tryRemoveFile( path ); // 임시 파일 정리 — 지우지 못해도 테스트 결과와 무관하다
 
+    SW_TEST_DEFENSIVE_SCOPE( "playing a file that does not exist fails with an error message" ); // 없는 파일을 읽으려는 오류가 이 확인이 보려는 동작이다
     GameObjectManager manager;
     string            error;
     uint32            started = 99;

@@ -226,6 +226,39 @@ namespace test
 namespace test
 {
     /**
+     * @brief 스코프 동안 글 조각이 든 Warning · Error 줄을 케이스 판정(`CaseLogJudge`)에서 빼는 RAII 헬퍼입니다 — 줄에는 **표식을 붙이지 않는다**.
+     * @details `SW_TEST_DEFENSIVE_SCOPE` 의 표식은 시나리오 실행기의 로그 게이트도 그 줄을 건너뛰게 한다. 게이트 자체를 시험하는 테스트는 실행기가 표식 없는 줄을
+     *          처리하지 않은 줄로 세는지를 봐야 하므로 표식을 쓸 수 없다. 이 스코프는 판정기만 그 줄을 모르게 한다. 그 밖의 쓰임에는 `SW_TEST_DEFENSIVE_SCOPE` 를 쓴다.
+     */
+    class ScopedJudgeIgnoredLog
+    {
+    public:
+        ScopedJudgeIgnoredLog( sw::string needle, const utf8* pReason )
+            : _needle{ std::move( needle ) }
+        {
+            TestRegistry::getInstance().getCaseLogJudge().addIgnoredNeedle( sw::string_view{ _needle.c_str(), _needle.size() } );
+            sw::ILogSink* pSink = sw::Logger::getGlobalSink();
+            if ( pSink != nullptr )
+            {
+                sw::fixed_string<sw::constant::kMaxBuffer256> notice{};
+                sw::formatstring( notice.data(), notice.capacity(), ">>> [Judge Ignored] lines containing '%#': %#", _needle, pReason != nullptr ? pReason : "" );
+                pSink->writeLog( sw::LogLevel::Info, "Test", nullptr, notice.c_str(), __FILE__, __LINE__ );
+            }
+        }
+
+        ~ScopedJudgeIgnoredLog() { TestRegistry::getInstance().getCaseLogJudge().removeIgnoredNeedle( sw::string_view{ _needle.c_str(), _needle.size() } ); }
+
+        ScopedJudgeIgnoredLog( const ScopedJudgeIgnoredLog& )            = delete;
+        ScopedJudgeIgnoredLog& operator=( const ScopedJudgeIgnoredLog& ) = delete;
+
+    private:
+        sw::string _needle;
+    };
+} // namespace test
+
+namespace test
+{
+    /**
      * @brief 스코프 동안 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 멈추지 않고 세어지게 하는 RAII 헬퍼입니다.
      * @details Debug 의 단언은 디버거에서 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 이 스코프 안에서는
      *          단언이 세어지기만 하고 코드는 그 뒤로 이어진다(배포본과 같은 길). `getCount()` 로 "단언이 걸렸나" 를 묻는다.
@@ -342,3 +375,6 @@ namespace test
 
 /** @brief 현재 스코프를 의도된 방어/예외 테스트 구간으로 마킹하여 Error/Warning 로그에 [Expected Defensive Test]를 표기합니다. */
 #define SW_TEST_DEFENSIVE_SCOPE( ... ) test::ScopedDefensiveTestLog SW_CONCAT( defensiveLog_, __LINE__ )( "" __VA_ARGS__ )
+
+/** @brief 현재 스코프 동안 `needle` 이 든 Warning · Error 줄을 케이스 판정에서만 뺍니다(표식 없음 — 시나리오 로그 게이트를 시험하는 케이스용). */
+#define SW_TEST_JUDGE_IGNORE_LINES( needle, reason ) test::ScopedJudgeIgnoredLog SW_CONCAT( judgeIgnoredLog_, __LINE__ )( needle, reason )

@@ -231,6 +231,7 @@ SW_TEST_CASE( EditorNetPlaySessionTest, LineConditionsReachAClientAndItsReportSh
  */
 SW_TEST_CASE( EditorNetPlaySessionTest, StandaloneLaunchesNothing )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a standalone mode with players warns and launches nothing" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     EditorNetPlaySettings settings;
     settings._mode = EditorNetMode::Standalone;
     EditorNetPlaySession session;
@@ -280,6 +281,7 @@ SW_TEST_CASE( EditorNetPlaySessionTest, UnusableWindowLayoutLaunchesNothing )
  */
 SW_TEST_CASE( EditorNetPlaySessionTest, MissingExecutableFailsWithoutLeavingProcesses )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a missing executable fails the launch" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     EditorNetPlaySettings settings;
     settings._mode                 = EditorNetMode::DedicatedServer;
     settings._serverExecutablePath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_no_such_server.exe" );

@@ -812,6 +812,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
  */
 SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an oversized input is not sent" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     ReplicationClient offline;
     SW_EXPECT_TRUE( offline.initialize( nullptr, ReplicationClientConfig{} ) );
     SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );

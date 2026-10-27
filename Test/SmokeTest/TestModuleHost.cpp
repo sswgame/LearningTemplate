@@ -315,6 +315,7 @@ namespace
  */
 SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCaptured )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a game that cannot serialize keeps running" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     RHI              rhi;
     EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );

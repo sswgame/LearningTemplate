@@ -114,6 +114,7 @@ SW_TEST_CASE( MirrorNameRulesTest, RoundTripsThroughXMLAndRejectsBadPairs )
     SW_EXPECT_STREQ( "hand_R", Internal::mirrorOf( reloaded, "hand_L" ).c_str() );
 
     // 같은 두 토큰 · 모르는 원소 · 모르는 속성은 오류이고, 이전 표는 그대로다.
+    SW_TEST_DEFENSIVE_SCOPE( "invalid mirror name pairs are read errors" ); // 아래 자료는 모두 일부러 깨져 있다
     SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Pair first='_L' second='_L'/></MirrorNames>", "bad1.mirrornames.xml" ) );
     SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Twin first='_L' second='_R'/></MirrorNames>", "bad2.mirrornames.xml" ) );
     SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Pair first='_L' second='_R' weight='1'/></MirrorNames>", "bad3.mirrornames.xml" ) );
@@ -359,7 +360,10 @@ SW_TEST_CASE( SocketEditModelTest, FailedLoadKeepsContentAndLoadClearsHistory )
     SW_ASSERT_TRUE( model.addSocket( hashed_string( "B" ), hashed_string{}, hashed_string{}, error ) );
     SW_EXPECT_TRUE( model.canUndo() );
 
-    SW_EXPECT_FALSE( model.loadFromXMLText( "<SocketSet><Socket name='X' kind='Unknown'/></SocketSet>", "bad.sockets.xml" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a socket set with an unknown kind is a read error" ); // 일부러 깨진 자료의 읽기 오류 로그다
+        SW_EXPECT_FALSE( model.loadFromXMLText( "<SocketSet><Socket name='X' kind='Unknown'/></SocketSet>", "bad.sockets.xml" ) );
+    }
     SW_EXPECT_EQUAL( size_t( 2 ), model.getSockets().getSockets().size() );
     SW_EXPECT_TRUE( model.canUndo() );
 

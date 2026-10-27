@@ -252,6 +252,7 @@ SW_TEST_CASE( ShooterTest, SemiAutoShotgunSpreadIsBoundedAndDeterministic )
  */
 SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXML )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a weapon without an id is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     constexpr const utf8* kWeaponXML = R"(
 <WeaponCatalog>
   <Weapon id="shotgun" name="Shotgun" fireInterval="0.8" pelletCount="9" automatic="false" magazineSize="6" damage="7"/>

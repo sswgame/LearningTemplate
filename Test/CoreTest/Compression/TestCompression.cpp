@@ -214,6 +214,7 @@ SW_TEST_CASE( CompressionTest, CompressionStreamRoundtrip )
  */
 SW_TEST_CASE( CompressionTest, UnavailableCodecFailsInsteadOfSwappingForNull )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unregistered codec fails" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // Zstd 코덱은 Engine 쪽에 있고 빈 레지스트리에는 없으므로 "등록 안 된 코덱" 의 실물이다.
     sw::CompressionCodecRegistry registry;
     SW_EXPECT_TRUE( registry.isCodecRegistered( sw::CompressionCodecType::Zstd ) == false );
@@ -237,6 +238,7 @@ SW_TEST_CASE( CompressionTest, UnavailableCodecFailsInsteadOfSwappingForNull )
  */
 SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a stream with an unknown codec fails" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::CompressionCodecRegistry registry;
 
     const sw::string  source( 256, 'Z' );

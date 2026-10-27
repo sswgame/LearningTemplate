@@ -295,6 +295,7 @@ SW_TEST_CASE( GimmickTest, DelayBreaksSignalLoops )
  */
 SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken wire is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GimmickCircuit circuit;
     vector<string> listError;
     SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( circuit, R"(

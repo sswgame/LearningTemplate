@@ -510,8 +510,9 @@ namespace sw::editor
         for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
         {
             ProfilerTraceMergeInput input;
-            input._label = pChild->_label;
-            if ( pChild->_tracePath.empty() == false && FileUtil::readTextFile( pChild->_tracePath, input._json ) )
+            input._label          = pChild->_label;
+            const bool bTraceRead = pChild->_tracePath.empty() == false && FileUtil::exists( pChild->_tracePath ) && FileUtil::readTextFile( pChild->_tracePath, input._json ); // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
+            if ( bTraceRead )
                 listInput.push_back( std::move( input ) );
             else
                 SW_LOG_WARNING( "No trace from %# (%#)", pChild->_label, pChild->_tracePath );

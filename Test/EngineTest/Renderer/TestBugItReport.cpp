@@ -50,6 +50,7 @@ SW_TEST_CASE( BugItReportTest, UnknownKeysAreSkipped )
     SW_ASSERT_TRUE( sw::BugItReport::readInfo( directory, read ) );
     SW_EXPECT_TRUE( read._note == "hello" );
     SW_EXPECT_NEAR_EQUAL( 3.0f, read._cameraPosition._z, 0.0001f );
+    SW_TEST_DEFENSIVE_SCOPE( "a folder without an info file cannot be read" ); // 없는 파일을 읽으려는 오류가 이 확인이 보려는 동작이다
     SW_EXPECT_TRUE( sw::BugItReport::readInfo( sw::FileUtil::joinPath( directory, "missing" ), read ) == false );
 }
 

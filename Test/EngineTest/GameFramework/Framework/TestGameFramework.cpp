@@ -815,6 +815,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
 
     SW_EXPECT_TRUE( gameInstance.loadStateFromFile( savePath ) );
     const string missingPath = test::makeTempPath( "no_such_state.sav" );
+    SW_TEST_DEFENSIVE_SCOPE( "loading a save file that does not exist fails and still publishes the result" ); // 없는 파일을 읽으려는 오류가 이 확인이 보려는 동작이다
     SW_EXPECT_FALSE( gameInstance.loadStateFromFile( missingPath ) );
     SW_ASSERT_EQUAL( size_t( 2 ), listLoaded.size() );
     SW_EXPECT_EQUAL( savePath, listLoaded[0]._savePath );
@@ -1154,6 +1155,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a snapshot without a header is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     CustomStateGameInstance instance;
     instance._customState._score     = 12345;
     instance._customState._stageName = "SafeRoom";
@@ -3098,6 +3100,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
  */
 SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "components spawned bare warn about the pieces they normally pair with" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GameObjectManager manager;
     manager.beginPlay();
 

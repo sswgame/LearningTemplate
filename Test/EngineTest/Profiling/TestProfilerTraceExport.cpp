@@ -228,6 +228,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, WrittenFileParsesBackWithDepthAndNames )
  */
 SW_TEST_CASE( ProfilerTraceExportTest, ParseRejectsBrokenAndEmptyInput )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "broken and empty input is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::ProfilerLoadedTrace trace;
     sw::string              error;
     SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "not json", trace, error ) );
@@ -358,6 +359,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, MergeShiftsOtherHostsByWallClock )
  */
 SW_TEST_CASE( ProfilerTraceExportTest, MergeRejectsBadInput )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "bad input is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::string                              json;
     sw::string                              report;
     sw::vector<sw::ProfilerTraceMergeInput> listInput;

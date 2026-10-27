@@ -658,6 +658,7 @@ SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
  */
 SW_TEST_CASE( RHIMemoryLedgerTest, FreeSubtractsWhatTheSameKeyAdded )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a key recorded twice is replaced with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::RHIMemoryLedger ledger;
     constexpr uint64    kSharedHandle = 0x100000001ull;
     ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 1000 );

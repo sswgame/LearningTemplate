@@ -136,6 +136,7 @@ SW_TEST_CASE( AudioServiceTest, PlaybackHandling )
     SW_EXPECT_TRUE( pAudioService->initialize() );
 
     // 빈 경로 또는 존재하지 않는 파일 재생 실패 처리 검증
+    SW_TEST_DEFENSIVE_SCOPE( "playing an empty path or a file that does not exist fails with a reason" ); // 실패 이유를 알리는 로그가 이 확인이 보려는 것이다
     SW_EXPECT_FALSE( pAudioService->play( "" ) );
     SW_EXPECT_FALSE( pAudioService->play( "NonExistentSoundFile.wav" ) );
 
@@ -283,7 +284,10 @@ SW_TEST_CASE( AudioServiceTest, MusicPathTracksRequests )
     SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
     // 실패한 요청은 이미 걸린 곡을 건드리지 않는다.
-    SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "playing a music file that does not exist is refused with a reason" ); // 없는 파일을 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
+    }
     SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
     // 일시정지·재개는 요청 상태를 바꾸지 않는다.
@@ -426,7 +430,10 @@ SW_TEST_CASE( AudioServiceTest, FloatAndExtensibleWavsDecode )
     SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( floatPath ) ) );
     SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( extensiblePath ) ) );
     SW_EXPECT_TRUE( pAudioService->preload( test::makeTempResourceID( extFloatPath ) ) );
-    SW_EXPECT_FALSE( pAudioService->preload( "NonExistentSoundFile.wav" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "preloading a sound file that does not exist fails with a reason" ); // 디코드 실패를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( pAudioService->preload( "NonExistentSoundFile.wav" ) );
+    }
 
     pAudioService->shutdown();
 }

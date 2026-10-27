@@ -73,4 +73,14 @@ namespace gamemoduletypes
         }
         return listNeedle;
     }
+
+    /**
+     * @brief 저장소 전체를 읽는 테스트가 만나는, 일부러 검증 이슈를 내게 지은 장면 오브젝트의 Warning 문구 조각입니다.
+     * @details 에디터 자동화 시나리오(`lightprobebakecancel` · `mapcheck`)가 굽지 않은 프로브 볼륨과 반지름 0 조명을 `ExpectLog id="ObjectValidation.Issue"` 로
+     *          기대하는 장면이다. 그 두 오브젝트의 줄만 의도된 것이고, 다른 오브젝트의 검증 이슈는 표식 없이 남아 실패한다.
+     */
+    inline sw::vector<sw::string> makeValidationFixtureNeedles()
+    {
+        return { "Validation warning on 'ProbeVolume' (", "Validation error on 'ZeroRadiusLight' (" };
+    }
 } // namespace gamemoduletypes

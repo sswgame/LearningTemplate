@@ -118,6 +118,7 @@ namespace
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed save is reported with the path" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const string unwritable = makeUnwritablePath();
 
     AnimationGraphAsset asset;
@@ -132,6 +133,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, DialogueGraphSaveFailureIsReported )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed save is reported with the path" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const string unwritable = makeUnwritablePath();
 
     DialogueGraphAsset asset;
@@ -374,6 +376,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed save is reported with the path" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const string unwritable = makeUnwritablePath();
 
     struct SaveCase

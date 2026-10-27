@@ -59,6 +59,7 @@ namespace
 
 SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDown )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
 #endif
@@ -95,6 +96,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
 
 SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndependentKits )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
 #endif

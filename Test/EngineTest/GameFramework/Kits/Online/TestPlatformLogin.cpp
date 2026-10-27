@@ -341,6 +341,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
 
 SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCacheWhenJwksIsDown )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed key set fetch is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestPlatformLoginInternal;
     IssuerFixture    fixture;
     const SigningKey first  = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 );
@@ -402,6 +403,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
  */
 SW_TEST_CASE( PlatformLoginTest, TicketQueryProviderChecksTheResultPath )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a provider with an unset key variable is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     IssuerFixture               fixture;
     PlatformLoginProviderConfig settings;
     settings._name                 = "steam";
@@ -473,6 +475,7 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 
 SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "failed external sign-ins are reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestPlatformLoginInternal;
     IssuerFixture           fixture;
     RecordingBrowser        browser;
@@ -629,6 +632,7 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSetNeedsATrustFileForHTTPSProviders )
 
 SW_TEST_CASE( PlatformLoginTest, SystemBrowserOpensOnlyPlainWebAddresses )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a non-web address is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "https://accounts.example.com/authorize?client_id=a&redirect_uri=http%3A%2F%2F127.0.0.1%3A5%2Fcb" ) );
     SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "HTTP://127.0.0.1:8080/" ) );
     SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "file:///etc/passwd" ) );

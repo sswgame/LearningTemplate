@@ -396,6 +396,7 @@ SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
  */
 SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a failed write reports false and keeps the original" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string dir = test::makeTempPath( "SwFailedWriteTest" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
     const sw::string blockedPath = sw::FileUtil::joinPath( dir, "blocked" );
@@ -448,6 +449,7 @@ SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
  */
 SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a range past the end is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string dir      = test::makeTempDirectory( "SwReadRangeTest" );
     const sw::string filePath = sw::FileUtil::joinPath( dir, "range.bin" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "0123456789" ) );

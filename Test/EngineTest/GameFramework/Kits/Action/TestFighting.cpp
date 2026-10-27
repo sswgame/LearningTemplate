@@ -713,6 +713,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
 
     // 깨진 바이트는 거절하고 상태를 바꾸지 않는다.
     vector<uint8> broken( savedBuffer.begin(), savedBuffer.begin() + static_cast<ptrdiff_t>( savedBuffer.size() / 2 ) );
+    SW_TEST_DEFENSIVE_SCOPE( "truncated rollback bytes are rejected and the match keeps its state" ); // 거절 경고가 이 확인이 보려는 동작이다
     SW_EXPECT_FALSE( match.loadState( broken ) );
     vector<uint8> afterBroken;
     match.saveState( afterBroken );
@@ -769,6 +770,7 @@ SW_TEST_CASE( FightingTest, RollbackHashMatchesTheRecordedValueOnEveryBuild )
  */
 SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignBytes )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "foreign or truncated rollback bytes are rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     FightingFixture fixture;
     SW_ASSERT_TRUE( fixture._bLoaded );
     const FighterDef&      tester   = *fixture.findTester();
@@ -1002,6 +1004,7 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
  */
 SW_TEST_CASE( FightingTest, SaveStateWithOutOfRangeValuesIsRejected )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "out of range saved values fail the read with the field named" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     FightingFixture fixture;
     SW_ASSERT_TRUE( fixture._bLoaded );
     const FighterDef& tester = *fixture.findTester();

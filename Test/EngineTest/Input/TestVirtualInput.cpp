@@ -133,6 +133,7 @@ SW_TEST_CASE( VirtualInputTest, MixedModeKeepsOsEvents )
  */
 SW_TEST_CASE( VirtualInputTest, UnattendedBlockDropsOsDeviceEventsOnly )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "blocking without an exclusive virtual source warns" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = VirtualInputTestInternal;
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );

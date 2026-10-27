@@ -263,6 +263,7 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerDeadzoneAppliesInSetAxis )
  */
 SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndMissingFile )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a replay file that does not exist fails to load" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::InputReplay replay;
@@ -290,6 +291,7 @@ SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndMissingFile )
  */
 SW_TEST_CASE( InputStressTest, MultiThreadedRawEventConcurrentBurst )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a full raw input queue drops events with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 

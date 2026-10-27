@@ -298,6 +298,7 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
 
 SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdvantage )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a move without an id is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     MoveCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatStateMoveXML, "CombatStateTest" ) );
     SW_EXPECT_EQUAL( 2u, catalog.getAll().size() ); // id 없는 Move 는 버린다
@@ -393,6 +394,7 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 
 SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAndRollsDeterministically )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a rule naming an undeclared element and an empty chart are rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     ElementChart chart;
     SW_ASSERT_TRUE( chart.loadFromXMLText( kCombatStateElementXML, "CombatStateTest" ) );
     SW_EXPECT_EQUAL( 6u, chart.getElements().size() );

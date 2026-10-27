@@ -23,6 +23,7 @@
  */
 SW_TEST_CASE( ObjectIdentityTest, CreateWithIDReusesFreedIDOnly )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an id still registered is not reused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::GameObject*       pOriginal = manager.createGameObject( sw::hashed_string( "Original" ) );
     SW_ASSERT_NOT_NULL( pOriginal );

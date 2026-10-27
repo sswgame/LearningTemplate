@@ -382,6 +382,7 @@ SW_TEST_CASE( ModelImporterTest, SceneRootListingAChildNodeImportsFromItsTopAnce
  */
 SW_TEST_CASE( ModelImporterTest, GlbSceneRootListingAChildNodeImports )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a scene root listing a child node is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string        sourcePath = test::makeTempPath( "child_scene_root.glb" );
     const sw::vector<uint8> glbBytes   = TestModelImporterInternal::makeChildRootGlb();
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( sourcePath, glbBytes.data(), glbBytes.size() ) );

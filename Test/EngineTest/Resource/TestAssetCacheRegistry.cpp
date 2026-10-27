@@ -266,6 +266,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, UnregisterRemovesOnlyThatCache )
  */
 SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a leftover module cache is named in a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::AssetManager resources;
     ProbeAssetCache  probe;
 

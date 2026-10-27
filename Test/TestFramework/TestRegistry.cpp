@@ -38,7 +38,7 @@ namespace test
             }
         };
 
-        /** @brief 이 스레드가 지금 `addFailure` 안에 있는가 — 거기서 남기는 `[FAILED]` 줄은 예상 밖 Error 로 세지 않는다(`HostLogJudge`). */
+        /** @brief 이 스레드가 지금 `addFailure` 안에 있는가 — 거기서 남기는 `[FAILED]` 줄은 예상 밖 Error 로 세지 않는다(`CaseLogJudge`). */
         thread_local bool s_bReportingFailure = false;
     } // namespace
 } // namespace test
@@ -116,10 +116,10 @@ namespace test
         , _environment{}
         , _consoleReporter{ pLinePrefix }
         , _jsonReporter{}
-        , _hostLogJudge{ _catalog }
+        , _caseLogJudge{}
         , _timeBudgetJudge{ _catalog, _options }
         , _listListener{ &_consoleReporter }
-        , _listJudge{ &_hostLogJudge, &_timeBudgetJudge }
+        , _listJudge{ &_caseLogJudge, &_timeBudgetJudge }
         , _pFailureCapture{ nullptr }
         , _pLinePrefix{ pLinePrefix }
     {

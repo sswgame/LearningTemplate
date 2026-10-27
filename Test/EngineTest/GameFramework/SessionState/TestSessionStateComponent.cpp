@@ -260,6 +260,7 @@ SW_TEST_CASE( SessionStateComponentTest, SnapshotRestoresSharedStateBeforeTheDir
  */
 SW_TEST_CASE( SessionStateComponentTest, UnknownSectionIsSkippedAndMissingSectionStaysFresh )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown section is skipped and a wrong version starts fresh" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     Wallet wallet;
     wallet.add( "Gold", 42 );
     Archive walletBody;

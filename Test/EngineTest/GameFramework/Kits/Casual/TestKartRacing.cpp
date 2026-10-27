@@ -151,6 +151,7 @@ SW_TEST_CASE( KartRacingTest, TrackWithFewerThanThreePointsIsRejected )
 
 SW_TEST_CASE( KartRacingTest, TrackSplineGatesAndOffroad )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a track with too few control points is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     KartTrackCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kTrackXML, "test" ) );
 

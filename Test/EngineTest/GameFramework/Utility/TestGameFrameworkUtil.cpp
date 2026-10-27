@@ -216,6 +216,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )
  */
 SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a missing root and an item without an id are reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::XMLDocument doc;
     XMLNode         root;
     SW_EXPECT_FALSE( XMLReadUtil::parseRootOrWarn( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );

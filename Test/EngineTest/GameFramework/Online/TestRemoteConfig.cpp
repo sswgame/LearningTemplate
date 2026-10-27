@@ -117,6 +117,7 @@ SW_TEST_CASE( RemoteConfigTest, RolloutIsDeterministicPerAccount )
 
 SW_TEST_CASE( RemoteConfigTest, ExperimentAssignsStableVariantsAndCountsThem )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken remote config change is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestRemoteConfigInternal;
     vector<RemoteConfigVariant> listVariant;
     SW_EXPECT_TRUE( RemoteConfig::parseVariants( "control:5000;cheap_gems:5000", listVariant ) );

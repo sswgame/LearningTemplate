@@ -185,6 +185,7 @@ namespace
 
 SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseStatsAreNotLoaded )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a rated mode without a stat source is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = MatchQueueTestInternal;
     ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
@@ -380,6 +381,7 @@ SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtT
 
 SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a match with no server gives up after waiting" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = MatchQueueTestInternal;
     {
         ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };

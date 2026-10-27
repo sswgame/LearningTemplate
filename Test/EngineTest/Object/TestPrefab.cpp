@@ -585,6 +585,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
  */
 SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken prefab fails to cook" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string sourceRoot = test::makeTempDirectory( "prefab_src" );
     const sw::string cookedRoot = test::makeTempDirectory( "prefab_cooked" );
     SW_ASSERT_FALSE( sourceRoot.empty() );

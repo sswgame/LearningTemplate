@@ -328,6 +328,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameServiceMountsTheGameProject )
  */
 SW_TEST_CASE( LocalizationManagerTest, LocTextMacroLooksUpNamespaceDotKey )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a missing key is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::LocalizationManager& loc = sw::engine::getSubsystem<sw::LocalizationManager>();
     loc.setString( "qa", sw::hashed_string( "Menu.Start" ), "Commencer" );
     const sw::string previousLanguage = loc.getCurrentLanguage();
@@ -466,6 +467,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
  */
 SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPackExclusion )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken table file is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder = test::makeTempDirectory( "loc_staging" );
     (void)LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" ); // 테스트 준비 — 쓰기 실패는 아래 모으기 단언이 드러낸다
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.quit": { "text": "종료" })" );

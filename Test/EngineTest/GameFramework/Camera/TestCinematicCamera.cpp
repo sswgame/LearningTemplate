@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
@@ -66,6 +67,7 @@ SW_TEST_CASE( CinematicCameraTest, CutsBlendInAndOutOfTheGameCamera )
     SW_ASSERT_TRUE( pGame != nullptr && pShot != nullptr );
     GameObject* pSequenceObject = manager.createGameObject( hashed_string( "Sequence" ) );
     SW_ASSERT_NOT_NULL( pSequenceObject );
+    SW_ASSERT_NOT_NULL( pSequenceObject->addComponent<SequencePlayerComponent>() ); // 시네마틱 카메라는 곁의 시퀀서 플레이어 신호를 듣는다 - 신호는 아래에서 직접 보낸다
     CinematicCameraComponent* pCinematic = pSequenceObject->addComponent<CinematicCameraComponent>();
     SW_ASSERT_NOT_NULL( pCinematic );
     manager.beginPlay();
@@ -113,6 +115,7 @@ SW_TEST_CASE( CinematicCameraTest, PrewarmRegistersAPendingViewAndShakesMoveTheC
     SW_ASSERT_NOT_NULL( pCameraManager );
     GameObject* pSequenceObject = manager.createGameObject( hashed_string( "Sequence" ) );
     SW_ASSERT_NOT_NULL( pSequenceObject );
+    SW_ASSERT_NOT_NULL( pSequenceObject->addComponent<SequencePlayerComponent>() ); // 시네마틱 카메라는 곁의 시퀀서 플레이어 신호를 듣는다 - 신호는 아래에서 직접 보낸다
     CinematicCameraComponent* pCinematic = pSequenceObject->addComponent<CinematicCameraComponent>();
     SW_ASSERT_NOT_NULL( pCinematic );
     manager.beginPlay();

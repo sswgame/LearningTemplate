@@ -108,6 +108,7 @@ SW_TEST_CASE( DataModifiersTest, HitDeformDentsInsideRadiusOnly )
 
 SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedMesh )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a point cache that does not match the mesh is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // 정점 2 · 프레임 2 · fps 1. 프레임 1 은 프레임 0 을 x 로 2 만큼 옮긴 것
     const vector<float3> listFrame0{
         float3{0.0f, 0.0f, 0.0f},
@@ -259,6 +260,7 @@ SW_TEST_CASE( DataModifiersTest, WorldWarpAppliesTheSharedDefinitionFile )
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( emptied._listPosition, source._listPosition ) < 1e-6f );
 
     // 없는 파일은 항등이다(경고 한 번)
+    SW_TEST_DEFENSIVE_SCOPE( "a missing warp file is read as an identity and reported once" ); // 없는 파일 오류와 경고가 이 확인이 보려는 동작이다
     SW_EXPECT_TRUE( DataModifiersTestInternal::setText( *second, "Warp File", test::makeTempPath( "missing.mfwarp" ) ) );
     MeshModifierMesh missing = source;
     test::MeshModifierTestUtil::applyOne( *second, missing );
