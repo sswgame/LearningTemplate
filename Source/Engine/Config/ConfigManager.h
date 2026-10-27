@@ -238,17 +238,30 @@ namespace sw
         }
 
         /**
-         * @brief 등록된 설정과 그 다시 읽기 출처를 놓습니다. 없으면 아무것도 하지 않습니다.
-         * @details 모듈이 정의한 설정 형식은 모듈 이미지가 내려가기 전에 놓아야 한다 — 엔진 종료가 이 관리자를 지울 때는 모듈 코드가 이미 없어 소멸자를 부를 수 없다.
+         * @brief 설정 하나를 파일에서 읽어 @p outConfig 에 담습니다. **테이블에 등록하지 않습니다.**
+         * @details 모듈이 정의한 설정 타입은 이쪽으로 읽어 그 모듈의 객체(서비스 · 키트)가 소유한다. 이 매니저는 엔진 서비스라 모듈보다 오래 사는데, 모듈이 내려간 뒤 그 타입의
+         *          객체를 소멸시키면 가상 소멸자가 사라진 이미지로 들어가 죽는다. 등록하지 않으면 그럴 객체도 `_mapSource` 의 다시 읽는 함수(모듈 코드)도 남지 않는다.
+         * @return 없으면 `Missing`(로그 없음), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다). `loadConfigFile` 과 같은 경로 규칙이다.
          */
         template <typename T>
-        void unloadConfig()
+        [[nodiscard]] ConfigReadResult readConfigFileInto( const string& filePath, T& outConfig ) const
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            const uint32 key = getConfigKey<T>();
-            _mapConfig.erase( key );
-            _mapSource.erase( key );
+            string resolvedPath;
+            if ( resolveConfigPath( filePath, resolvedPath ) == false )
+                return ConfigReadResult::Missing;
+
+            string jsonStr;
+            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
+            {
+                SW_LOG_ERROR( "Cannot read config file %#", resolvedPath.c_str() );
+                return ConfigReadResult::Invalid;
+            }
+            if ( readConfigJSON( outConfig, jsonStr, resolvedPath.c_str() ) == false )
+                return ConfigReadResult::Invalid;
+            SW_LOG_INFO( "Config loaded successfully from %#", resolvedPath.c_str() );
+            return ConfigReadResult::Loaded;
         }
 
         /**

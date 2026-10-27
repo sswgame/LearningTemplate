@@ -63,15 +63,16 @@ namespace sw
         const bool bNoServerConfig = context._pServerConfig == nullptr || context._pConfigManager == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )
             return true; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
-        const string           path   = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
-        const ConfigReadResult result = context._pConfigManager->loadConfigFile<OnlineServerConfig>( path );
+        const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
+        // 설정 타입이 이 모듈에 있다 — 엔진의 ConfigManager 는 모듈보다 오래 살므로 테이블에 등록하지 않고 이 서비스가 직접 소유한다.
+        OnlineServerConfig     onlineConfig;
+        const ConfigReadResult result = context._pConfigManager->readConfigFileInto( path, onlineConfig );
         if ( result == ConfigReadResult::Missing )
         {
             SW_LOG_INFO( "Online services are off - '%#' does not exist", path.c_str() );
             return true;
         }
-        const OnlineServerConfig* pOnlineConfig = result == ConfigReadResult::Loaded ? context._pConfigManager->getConfig<OnlineServerConfig>() : nullptr;
-        if ( pOnlineConfig == nullptr )
+        if ( result != ConfigReadResult::Loaded )
         {
             outError = "online service config '" + path + "' is invalid";
             return false;
@@ -84,8 +85,7 @@ namespace sw
         }
 
         OnlineServerRuntimeConfig settings;
-        settings._config = *pOnlineConfig;
-        context._pConfigManager->unloadConfig<OnlineServerConfig>(); // 이 형식은 이 모듈의 것이라 모듈 이미지보다 오래 두면 엔진 종료가 지우지 못한다 — 복사해 뒀으니 놓는다
+        settings._config          = std::move( onlineConfig );
         settings._pMetricRegistry = context._pMetricRegistry;
         settings._pHealthRegistry = context._pHealthRegistry;
         settings._pClock          = &_clock;
