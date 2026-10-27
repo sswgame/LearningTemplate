@@ -43,6 +43,11 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다.
 판정 칸은 `나눔`(기준 번호와 단계) 또는 `유지`(이유)로 시작한다. `나눔 (예비)` 는 본문을 다 읽지 않고 단계 주석 · 케이스 모양으로 정한 것이라, 맡은 작업자가 읽고 확정한다. 기준 1(중복)은 어느 함수든 먼저 본다.
 
 | 파일 | 함수 | 판정 |
+| `Source/Engine/Input/Map/InputMapSerialization.cpp` | `InputMap::loadDefinition` | 나눔 (예비) — 기준 3: 장치 · 액션 · 바인딩 · 맥락 읽기 단계 |
+| `Source/Engine/Profiling/ProfilerTraceExport.cpp` | `ProfilerTraceExport::makeTraceJSON` | 나눔 (예비) — 기준 3: 머리말 · 스레드 이름 · 이벤트 · 카운터 쓰기 단계 |
+| `Source/App/App.cpp` | `App::run` | 유지 — 프레임 단계 본문이라 순서가 곧 의미(함수 주석에 이유) |
+| `Source/Engine/Graphics/RHI/DX11/D3D11RHIResourceFactoryPipeline.cpp` | `D3D11RHIResourceFactory::createPipelineState` | 유지 — 백엔드 API 호출 순서가 곧 의미(함수 주석에 이유) |
+| `Source/Engine/Renderer/Scene/GPUMeshMorphPool.cpp` | `GPUMeshMorphPool::update` | 나눔 (예비) — 기준 3: 요청 모으기 · 슬롯 배정 · 업로드 단계 |
 |---|---|---|
 | `Source/GameFramework/Base/Actor/AI/BehaviorTree.cpp` | `BehaviorTreeRunner::tickNode` | 유지 — 12 종류 `switch` 의 케이스가 평균 9 줄이고 합성 노드(`tickSequence` · `tickSelector`)는 이미 뺐다. 가장 긴 케이스(`Repeat` · `Cooldown`)도 13 줄 안쪽이라 더 가르면 같은 모양의 함수만 늘어난다. 함수 주석에 이유가 있다 |
 | `Source/GameFramework/Base/Online/Cache/MemoryEphemeralStore.cpp` | `MemoryEphemeralDatabase::executeValue` | 유지 — 연산 7 개의 `switch` 이고 케이스가 10 ~ 24 줄이다(`Increment` 가 가장 길다). 연산 하나의 규칙(RESP 와 같은 동작)을 한곳에서 읽는 값이 있어 유지하되, `Increment` 가 더 길어지면 그 케이스를 뺀다. 함수 주석에 이유가 있다 |
@@ -87,7 +92,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다.
 | `Source/Engine/Graphics/RHI/GL/OpenGLRHIDeviceInit.cpp` | `OpenGLRHIDevice::initializeInternal` | 유지 — 컨텍스트 · 확장 확인 · 기본 객체 생성의 순서가 곧 의미(함수 주석에 이유) |
 | `Source/Engine/Graphics/RHI/GL/OpenGLRHIDeviceInit.cpp` | `OpenGLRHIDevice::shutdownInternal` | 유지 — 생성의 역순으로 놓는 해제 목록(함수 주석에 이유) |
 | `Source/Engine/Graphics/RHI/GL/OpenGLRHICommandContext.cpp` | `OpenGLRHICommandContext::beginRenderPass` | 유지 — 백엔드 API 호출 순서가 곧 의미(함수 주석에 이유) |
-| `Source/Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.cpp` | `OpenGLRHIResourceFactory::createTexture2D` | 유지 — 백엔드 API 호출 순서가 곧 의미(함수 주석에 이유) |
 | `Source/Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.cpp` | `OpenGLRHIResourceFactory::submitTextureUpload` | 유지 — 검사 · 링 복사 · 컨텍스트 빌려 올리기 · 펜스의 순서가 곧 의미(전송 계약 1 · 2 · 4). 헤더 주석에 이유를 적어야 한다 |
 | `Source/Engine/Graphics/RHI/GL/Platform/GlxPlatformContext.cpp` | `GlxPlatformContext::initialize` | 유지 — 백엔드 API 호출 순서가 곧 의미(함수 주석에 이유) |
 | `Source/Engine/Graphics/RHI/GL/Platform/WglPlatformContext.cpp` | `WglPlatformContext::initialize` | 유지 — 백엔드 API 호출 순서가 곧 의미(함수 주석에 이유) |

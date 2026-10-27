@@ -9,14 +9,14 @@
     random        rand · srand · std::mt19937 · std::random_device           →  MathUtil::getRandom* · XorShift32 · GameRandom
     fileOpen      fopen · _wfopen · std::ifstream · std::ofstream · fstream  →  FileUtil::read*/write* · ResourceIO · AsyncFileIO
     processSpawn  system · popen · CreateProcess · ShellExecute · exec* · fork  →  sw::Process(execute · launch · launchDetached)
-    numberParse   atoi · strtol · strtod · std::stoi · sscanf …               →  StringUtil::parseInt · parseInt64 · parseFloat · tryParseBool …
+    numberParse   atoi · strtol · strtod · std::stoi · std::from_chars · sscanf …               →  StringUtil::parseInt · parseInt64 · parseFloat · tryParseBool …
 
 이미 따로 막는 것은 여기 넣지 않는다: 시계(`CheckClockReads`) · 환경 변수(`CheckProcessEnvironment`) · 스레드(`CheckStdThread`) ·
 맨 할당(`CheckRawAllocation`) · `std::filesystem`(`CheckStdFilesystemIsolation`) · 서드파티 헤더(`CheckThirdPartyIsolation`).
 
 판정: 주석 · 문자열은 가린 글에서 본다. 멤버 호출(`.printf(` · `->system(`)과 이름의 일부(`snprintf` · `getSystem(`)는 보지 않는다.
 허용 목록은 `Scripts/lint/rules/CheckFacilityBypass.toml` 의 `[exemption]` — 키는 `<규칙>:<경로 글롭>`, 그 기능을 구현하는 파일 자신만 둔다.
-그 밖의 기존 위반은 `[baseline]` 의 규칙별 건수로 센다(옮기는 일은 `docs/plans/ReuseExistingFacilities.md`). 커밋 훅은 추가한 줄만,
+그 밖의 기존 위반은 `[baseline]` 의 규칙별 건수로 센다(옮긴 이력과 남긴 자리의 이유는 결정 기록 5-3). 커밋 훅은 추가한 줄만,
 전체 훑기는 기준선을 넘을 때만 실패한다 — 두 모드는 기반(`LintGate.BaselineSourceGate`)이 정한다.
 
   python Scripts/lint/gate/CheckFacilityBypass.py [--root <repo>] [--files a.cpp b.h] [--whole-files] [--list]
@@ -71,7 +71,7 @@ _kListRule: tuple[BypassRule, ...] = (
                "sw::Process::execute · launch · launchDetached (Core/Process/Process.h)",
                "system 은 pch 의 `<cstdlib>` 에, CreateProcess · fork 는 OS 헤더에 있다 — OS 헤더는 플랫폼 TU 가 다른 이유로 include 해야 해서 숨길 수 없다"),
     BypassRule("numberParse",
-               re.compile(_kCallHead + r"(?:atoi|atol|atoll|atof|strtol|strtoul|strtoll|strtoull|strtod|strtof|strtold|sscanf|stoi|stol|stoll|stoul|stoull|stof|stod|stold)\s*\("),
+               re.compile(_kCallHead + r"(?:from_chars|atoi|atol|atoll|atof|strtol|strtoul|strtoll|strtoull|strtod|strtof|strtold|sscanf|stoi|stol|stoll|stoul|stoull|stof|stod|stold)\s*\("),
                "StringUtil::parseInt · parseInt64 · parseUint64 · parseFloat · parseDouble · tryParseBool (Core/Container/StringUtil.h)",
                "C 변환 함수는 pch 의 `<cstdlib>` 에, std::stoi 는 sw::string 이 감싸는 `<string>` 에 있어 숨길 수 없다"),
 )

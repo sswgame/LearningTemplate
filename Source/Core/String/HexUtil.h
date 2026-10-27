@@ -22,6 +22,8 @@ namespace sw
         [[nodiscard]] static string encodeBytes( const uint8* pData, size_t size, HexCase hexCase = HexCase::Lower );
         /** @brief @p value 를 큰 자리부터 @p digitCount 글자(1 ~ 16, 모자라면 0 채움)로 붙입니다. */
         static void appendUint64( string& inoutText, uint64 value, uint32 digitCount = 16, HexCase hexCase = HexCase::Lower );
+        /** @brief @p value 를 앞 0 없이(적어도 @p minDigits 글자, 0 은 한 글자) 붙입니다. 값이 필요한 만큼만 쓰고 싶을 때(청크 크기 · 주소)의 짝입니다. */
+        static void appendUint64Minimal( string& inoutText, uint64 value, uint32 minDigits = 1, HexCase hexCase = HexCase::Lower );
         /** @brief 두 글자씩 바이트로 읽습니다(대소문자 무관). 길이가 홀수이거나 16진 글자가 아니면 false 이고 @p outBytes 는 비웁니다. */
         [[nodiscard]] static bool decodeBytes( string_view text, vector<uint8>& outBytes );
     };

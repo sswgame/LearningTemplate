@@ -9,6 +9,7 @@
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Memory/Memory.h"
     #include "Core/Process/Process.h"
+    #include "Core/String/HexUtil.h"
     #include "Core/Time/MonotonicClock.h"
     #include "Core/Time/WallClock.h"
 
@@ -83,22 +84,9 @@ namespace sw
         /** @brief `0x` 와 대문자 16 진 숫자(적어도 @p minDigits 자리)입니다. */
         string makeHexText( uint64 value, uint32 minDigits )
         {
-            constexpr const utf8* kDigits    = "0123456789ABCDEF";
-            constexpr uint32      kMaxDigits = 16;
-            utf8                  arrDigit[kMaxDigits]{};
-            uint32                count = 0;
-            do
-            {
-                arrDigit[kMaxDigits - 1 - count] = kDigits[value & 0xFull];
-                ++count;
-                value >>= 4;
-            } while ( value != 0 && count < kMaxDigits );
-            while ( count < minDigits && count < kMaxDigits )
-            {
-                arrDigit[kMaxDigits - 1 - count] = '0';
-                ++count;
-            }
-            return "0x" + string( string_view{ arrDigit + ( kMaxDigits - count ), count } );
+            string text = "0x";
+            HexUtil::appendUint64Minimal( text, value, minDigits, HexCase::Upper );
+            return text;
         }
 
         /** @brief 지금 이 프로세스의 머리말(이름 · 호스트 · pid · 시계 쌍)입니다. */
