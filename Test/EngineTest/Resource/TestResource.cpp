@@ -1099,7 +1099,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
 SW_TEST_CASE( ResourceTest, ResourceEntryRefusesOSPathsInEveryMode )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     const bool              bWasLoose   = packManager.isAllowLooseFiles();
 
     const sw::string insideRoot  = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), "game/empty/maps/editortest.scene.xml" );

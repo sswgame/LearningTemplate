@@ -5,7 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -37,9 +37,143 @@ namespace sw
             uint64 _layoutGeneration{ 0 };
         };
 
+        /**
+         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. **만든 뒤 바꾸지 않는다.**
+         * @details 읽는 쪽(로더 · 디코드 워커 · 게임 스레드)은 지금 표를 원자 포인터로 한 번 잡아 잠금 없이 읽는다 — 쓰는 쪽이 칸을 제자리에서 고치던 때는 읽는 쪽이
+         *          반쯤 고친 벡터를 볼 수 있었다. 쓰기는 사본을 고쳐 새 표로 갈아 끼운다(`ResourcePathsInternal::publishTable`).
+         */
+        struct ResourcePathTable
+        {
+            string         _projectFolderPath{};      ///< 프로젝트 루트
+            string         _resourceRootFolderPath{}; ///< Resource/ 최상위 루트(유일한 기준점)
+            vector<string> _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
+            vector<string> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
+            vector<string> _listHostExcludedGroup{};  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
+        };
+
+        /**
+         * @brief 지금 경로 표와 지난 표들입니다. 지난 표는 놓지 않는다 — 읽는 쪽이 잡은 표의 참조(`getRootFolderPath` 의 `const string&` 따위)가 프로세스 끝까지 유효해야 한다.
+         * @details 표는 기동 · 설정 로드 · 호스트 타깃 · 테스트의 루트 바꾸기 때만 새로 생겨 몇 개뿐이다. `ResourcePathsInternal` 밖에 두는 까닭은 `PathCacheGuard` 와 같다.
+         */
+        struct ResourcePathTableStore
+        {
+            ResourcePathTable                     _initial{};
+            atomic<const ResourcePathTable*>      _pCurrent{ &_initial };
+            mutex                                 _publishMutex{};
+            vector<unique_ptr<ResourcePathTable>> _listPublished{};
+            atomic<bool>                          _bInitialized{ false }; ///< `initialize()` 가 **성공했는지**
+        };
+
+        /** @brief 이 파일의 경로 상태 전부(푼 경로 캐시의 잠금 · 세대와 경로 표)입니다 — 칸을 흩어 두지 않고 한 자리에 둔다. */
+        struct ResourcePathsState
+        {
+            PathCacheGuard         _pathCache{};
+            ResourcePathTableStore _pathTable{};
+        };
+
         struct ResourcePathsInternal
         {
-            inline static PathCacheGuard _s_pathCache{};
+            inline static ResourcePathsState _s_state{};
+
+            /** @brief 지금 경로 표입니다. 한 번 잡아 그 안에서 읽는다(칸마다 다시 잡으면 둘 사이에 표가 바뀔 수 있다). */
+            static const ResourcePathTable& getTable() { return *_s_state._pathTable._pCurrent.load( std::memory_order_acquire ); }
+
+            /**
+             * @brief 지금 표의 사본을 @p edit 로 고쳐 새 표로 갈아 끼웁니다. 쓰는 API(직렬 구간)만 부른다. @p edit 안에서 다시 갈아 끼우지 않는다.
+             * @return 새 표입니다.
+             */
+            template <typename TEdit>
+            static const ResourcePathTable& publishTable( TEdit&& edit )
+            {
+                ResourcePathTableStore&       store = _s_state._pathTable;
+                std::scoped_lock<mutex>       lock( store._publishMutex );
+                unique_ptr<ResourcePathTable> next = make_unique<ResourcePathTable>( getTable() );
+                edit( *next );
+                // 같은 내용의 표가 이미 있으면 그것으로 되돌린다 — 테스트가 루트를 바꿨다 되돌릴 때(`TestTempPath`) 표가 쌓이지 않게. 지난 표를 놓지 않는 대신 늘어나는 것은
+                // 서로 다른 내용(임시 루트마다 하나)뿐이다. 놓는 훅은 두지 않는다 — 읽는 쪽이 쥔 참조를 끊는 길이 된다.
+                const ResourcePathTable* pNext = isSameTable( store._initial, *next ) ? &store._initial : nullptr;
+                for ( size_t index = 0; pNext == nullptr && index < store._listPublished.size(); ++index )
+                {
+                    if ( isSameTable( *store._listPublished[index], *next ) )
+                        pNext = store._listPublished[index].get();
+                }
+                if ( pNext == nullptr )
+                {
+                    pNext = next.get();
+                    store._listPublished.push_back( std::move( next ) );
+                }
+                store._pCurrent.store( pNext, std::memory_order_release );
+                return *pNext;
+            }
+
+            /** @brief 두 표의 내용이 같으면 true 입니다(`publishTable` 이 같은 표를 다시 쓴다). */
+            static bool isSameTable( const ResourcePathTable& left, const ResourcePathTable& right )
+            {
+                return left._projectFolderPath == right._projectFolderPath && left._resourceRootFolderPath == right._resourceRootFolderPath &&
+                       left._listSearchPriority == right._listSearchPriority && left._listResourceFolder == right._listResourceFolder &&
+                       left._listHostExcludedGroup == right._listHostExcludedGroup;
+            }
+
+            /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(`findLooseDomainFolder` 의 본체 — 새 표를 짓는 동안 그 표의 루트로 푼다). */
+            static string findDomainFolderUnder( const string& root, string_view domainName, string_view subFolder )
+            {
+                if ( root.empty() || domainName.empty() )
+                    return {};
+                const string domainDir = FileUtil::joinPath( root, domainName );
+                if ( FileUtil::isDirectory( domainDir ) == false )
+                    return {};
+                if ( subFolder.empty() )
+                    return FileUtil::normalizeSeparators( domainDir );
+                const string targetDir = FileUtil::joinPath( domainDir, subFolder );
+                return FileUtil::isDirectory( targetDir ) ? FileUtil::normalizeSeparators( targetDir ) : string{};
+            }
+
+            /** @brief @p root 와 우선순위 @p listPriority 로 검색 루트 목록을 짓습니다(디스크를 본다 — 잠금 밖에서 부른다). */
+            static vector<string> buildResourceFolders( const string& root, const vector<string>& listPriority )
+            {
+                vector<string> listFolder;
+                if ( root.empty() )
+                    return listFolder;
+                listFolder.reserve( 16 );
+                // 순서는 우선순위 그대로 두고 같은 폴더는 한 번만 넣는다.
+                unordered_set<string> uniqueFolder;
+                const auto            appendFolder = [&listFolder, &uniqueFolder]( const string& folder )
+                {
+                    if ( uniqueFolder.insert( folder ).second )
+                        listFolder.push_back( folder );
+                };
+                for ( const string& tokenRaw : listPriority )
+                {
+                    const string token = FileUtil::normalizePath( tokenRaw );
+                    if ( token == "game" )
+                    {
+                        // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
+                        const GameConfig* pGameConfig = engine::findSubsystem<GameConfig>();
+                        const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string();
+                        if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
+                            appendFolder( FileUtil::normalizeSeparators( activePack ) );
+                        const string gameDir = findDomainFolderUnder( root, path::kGamePack, {} );
+                        if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
+                        {
+                            vector<string> listPackFolder;
+                            FileUtil::collectFolders( gameDir, listPackFolder, false );
+                            for ( const string& packFolder : listPackFolder )
+                            {
+                                appendFolder( FileUtil::normalizeSeparators( packFolder ) );
+                            }
+                            appendFolder( gameDir );
+                        }
+                    }
+                    else
+                    {
+                        // 모든 도메인 · 커스텀 팩 · DLC · 모드를 이름으로 푼다("engine", "common", "editor", "dlc/expansion1", "mods/pack1")
+                        const string domainDir = findDomainFolderUnder( root, token, {} );
+                        if ( domainDir.empty() == false )
+                            appendFolder( domainDir );
+                    }
+                }
+                return listFolder;
+            }
 
             /**
              * @brief 푼 경로 캐시의 한 칸입니다. `_path` 가 비면 "디스크에 없다" 를 기억한 칸(음성 결과)입니다.
@@ -67,7 +201,7 @@ namespace sw
             /** @brief 칸이 믿을 만한지 가르는 에포크입니다. 음성 칸(@p path 가 빔)은 만든 횟수, 양성 칸은 지운 횟수입니다. */
             static uint64 selectEpoch( const string& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
 
-            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_pathCache._mutex` 아래에서만 한다. */
+            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_state._pathCache._mutex` 아래에서만 한다. */
             inline static ScopeOwned<unordered_map<string, ResolvedEntry>> _s_mapResolvedPath{};
 
             /** @brief 푼 경로 캐시의 계측 칸입니다(`ResourcePath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). */
@@ -86,8 +220,8 @@ namespace sw
             /** @brief 해석을 시작하는 지금의 세대를 잡습니다. 찾기 전에 한 번 잡는다. */
             static PathCacheStamp captureStamp()
             {
-                std::scoped_lock<mutex> lock( _s_pathCache._mutex );
-                return PathCacheStamp{ _s_pathCache._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
+                std::scoped_lock<mutex> lock( _s_state._pathCache._mutex );
+                return PathCacheStamp{ _s_state._pathCache._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
             }
 
             /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 기억한 뒤 파일이 만들어졌거나(음성 칸) 지워진(양성 칸) 낡은 칸은 없는 것으로 칩니다. */
@@ -95,7 +229,7 @@ namespace sw
             {
                 const uint64                                      creationEpoch = FileUtil::getCreationEpoch();
                 const uint64                                      removalEpoch  = FileUtil::getRemovalEpoch();
-                std::scoped_lock<mutex>                           lock( _s_pathCache._mutex );
+                std::scoped_lock<mutex>                           lock( _s_state._pathCache._mutex );
                 const unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.find();
                 if ( pMapResolved == nullptr )
                     return false;
@@ -113,8 +247,8 @@ namespace sw
             {
                 // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
                 SW_MEMORY_SCOPE( Asset );
-                std::scoped_lock<mutex> lock( _s_pathCache._mutex );
-                if ( stamp._layoutGeneration != _s_pathCache._layoutGeneration )
+                std::scoped_lock<mutex> lock( _s_state._pathCache._mutex );
+                if ( stamp._layoutGeneration != _s_state._pathCache._layoutGeneration )
                     return;
                 unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.getOrCreate();
                 // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
@@ -185,7 +319,7 @@ namespace sw
             /**
              * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
              * @details 늦게 온 스레드는 첫 호출이 **끝날 때까지 막힙니다.** 그래서 초기화 도중의 빈 경로를
-             *          보는 일이 없습니다. 이 안에서 `_s_pathCache._mutex` 를 다시 잡는데,
+             *          보는 일이 없습니다. 이 안에서 `_s_state._pathCache._mutex` 를 다시 잡는데,
              *          반대 순서로 잡는 곳은 없습니다.
              */
             inline static std::once_flag _s_initOnce{};
@@ -376,7 +510,7 @@ namespace sw
 
     bool ResourcePaths::initialize()
     {
-        // `_s_bInitialize` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
+        // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
         //
         // 본문 맨 앞에서 이 플래그를 켜면 두 가지가 깨진다.
         //  1) 루트를 못 찾아 false 로 나가도 "초기화됨" 으로 남는다. `App::initialize` 는 반환값을
@@ -419,34 +553,40 @@ namespace sw
 
             rootToLog = rootPath;
 
-            _s_projectFolderPath = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
-
             const string resourceRoot = FileUtil::joinPath( rootPath, path::kResourceFolder );
-
             // Resource/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
-            _s_resourceRootFolderPath =
-                FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : "";
+            const string resourceRootFolderPath = FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : string{};
 
-            if ( _s_listSearchPriority.empty() )
-                _s_listSearchPriority = getDefaultSearchPriority();
-            if ( _s_listSearchPriority.empty() )
+            vector<string> listSearchPriority = ResourcePathsInternal::getTable()._listSearchPriority;
+            if ( listSearchPriority.empty() )
+                listSearchPriority = getDefaultSearchPriority();
+            if ( listSearchPriority.empty() )
             {
                 // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
                 SW_LOG_ERROR( "%#", ResourcePathsInternal::readBasePriority()._error );
                 return; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 initialize() 가 false 를 반환한다.
             }
 
-            setSearchPriority( _s_listSearchPriority );
+            // 루트 · 우선순위 · 검색 루트를 한 표로 한 번에 갈아 끼운다(읽는 쪽이 새 루트와 옛 검색 루트를 섞어 보지 않는다).
+            vector<string> listResourceFolder = ResourcePathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
+            (void)ResourcePathsInternal::publishTable( [&]( ResourcePathTable& table )
+            {
+                table._projectFolderPath      = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
+                table._resourceRootFolderPath = resourceRootFolderPath;
+                table._listSearchPriority     = std::move( listSearchPriority );
+                table._listResourceFolder     = std::move( listResourceFolder );
+            } );
+            clearPathCache();
 
             // 여기까지 와야 상태가 모두 채워진 것이다.
-            _s_bInitialize.store( true, std::memory_order_release );
+            ResourcePathsInternal::_s_state._pathTable._bInitialized.store( true, std::memory_order_release );
         } );
 
         SW_LOG_ASSERT( bRootMissing == false, "RootFolder not found" );
         if ( rootToLog.empty() == false )
             SW_LOG_INFO( "RootFolder : %#", rootToLog );
 
-        return _s_bInitialize.load( std::memory_order_acquire );
+        return ResourcePathsInternal::_s_state._pathTable._bInitialized.load( std::memory_order_acquire );
     }
 
     LooseFilePath ResourcePaths::findLooseFile( string_view filePath, string_view folderName )
@@ -521,10 +661,11 @@ namespace sw
         }
         else
         {
-            found = ResourcePathsInternal::tryResolveAmong( _s_listResourceFolder, lowerFile, lowerFolder );
+            const vector<string>& listResourceFolder = ResourcePathsInternal::getTable()._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
+            found                                    = ResourcePathsInternal::tryResolveAmong( listResourceFolder, lowerFile, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
             if ( found.empty() && ( lowerFile != filePath || ( folderName.empty() == false && lowerFolder != folderName ) ) )
-                found = ResourcePathsInternal::tryResolveAmong( _s_listResourceFolder, filePath, folderName );
+                found = ResourcePathsInternal::tryResolveAmong( listResourceFolder, filePath, folderName );
 #endif
         }
 
@@ -629,21 +770,10 @@ namespace sw
 
     LooseFilePath ResourcePaths::findLooseDomainFolder( string_view domainName, string_view subFolder )
     {
-        if ( _s_resourceRootFolderPath.empty() || domainName.empty() )
+        string folder = ResourcePathsInternal::findDomainFolderUnder( ResourcePathsInternal::getTable()._resourceRootFolderPath, domainName, subFolder );
+        if ( folder.empty() )
             return {};
-
-        const string domainDir = FileUtil::joinPath( _s_resourceRootFolderPath, domainName );
-        if ( FileUtil::isDirectory( domainDir ) == false )
-            return {};
-
-        if ( subFolder.empty() )
-            return LooseFilePath( FileUtil::normalizeSeparators( domainDir ) );
-
-        const string targetDir = FileUtil::joinPath( domainDir, subFolder );
-        if ( FileUtil::isDirectory( targetDir ) )
-            return LooseFilePath( FileUtil::normalizeSeparators( targetDir ) );
-
-        return {};
+        return LooseFilePath( std::move( folder ) );
     }
 
     bool ResourcePaths::mountDiskDomain( string_view domainName, string_view diskFolder )
@@ -661,7 +791,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
             return false;
         }
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _s_resourceRootFolderPath ) );
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( ResourcePathsInternal::getTable()._resourceRootFolderPath ) );
         if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
         {
             SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the resource root (packs-only builds would read loose assets)", domainName, diskFolder );
@@ -705,12 +835,12 @@ namespace sw
 
     const string& ResourcePaths::getRootFolderPath()
     {
-        return _s_resourceRootFolderPath;
+        return ResourcePathsInternal::getTable()._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
     }
 
     const string& ResourcePaths::getProjectFolderPath()
     {
-        return _s_projectFolderPath;
+        return ResourcePathsInternal::getTable()._projectFolderPath;
     }
 
     bool ResourcePaths::setSearchPriority( const vector<string>& listPriority )
@@ -718,76 +848,41 @@ namespace sw
         if ( listPriority.empty() )
             return false;
 
-        // 첫 `initialize()` 는 `call_once` 안(직렬)에서 이 함수를 부른다 — 성공 표시가 서기 전이라 그 호출은 단언 대상이 아니다.
-        if ( _s_bInitialize.load( std::memory_order_acquire ) )
+        // 첫 `initialize()` 는 `call_once` 안(직렬)에서 표를 짓는다 — 성공 표시가 서기 전의 호출은 단언 대상이 아니다.
+        if ( ResourcePathsInternal::_s_state._pathTable._bInitialized.load( std::memory_order_acquire ) )
             ResourcePathsInternal::assertSerialPhase( "setSearchPriority" );
 
-        _s_listSearchPriority = listPriority;
-
-        if ( _s_resourceRootFolderPath.empty() )
-            return true;
-
-        _s_listResourceFolder.clear();
-        _s_listResourceFolder.reserve( 16 );
-
-        for ( const string& tokenRaw : listPriority )
+        // 검색 루트는 디스크를 보고 짓는다 — 잠금 밖에서 지은 뒤 우선순위와 함께 한 표로 갈아 끼운다.
+        vector<string> listResourceFolder = ResourcePathsInternal::buildResourceFolders( ResourcePathsInternal::getTable()._resourceRootFolderPath, listPriority );
+        (void)ResourcePathsInternal::publishTable( [&]( ResourcePathTable& table )
         {
-            const string token = FileUtil::normalizePath( tokenRaw );
-            if ( token == "game" )
-            {
-                // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
-                const GameConfig* pGameConfig = engine::findSubsystem<GameConfig>();
-                const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findLooseDomainFolder( pGameConfig->_packRoot.get() ).getDiskPath() : string();
-                if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
-                {
-                    const string normPack = FileUtil::normalizeSeparators( activePack );
-                    if ( VectorUtil::contains( _s_listResourceFolder, normPack ) == false )
-                        _s_listResourceFolder.push_back( normPack );
-                }
-                const string gameDir = findLooseDomainFolder( path::kGamePack ).getDiskPath();
-                if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
-                {
-                    vector<string> listPackFolder;
-                    if ( FileUtil::collectFolders( gameDir, listPackFolder, false ) == false )
-                        SW_LOG_ERROR( "Pack folders under '%#' could not all be listed - the packs left out are not searched", gameDir );
-                    for ( const string& packFolder : listPackFolder )
-                    {
-                        const string normPack = FileUtil::normalizeSeparators( packFolder );
-                        if ( VectorUtil::contains( _s_listResourceFolder, normPack ) == false )
-                            _s_listResourceFolder.push_back( normPack );
-                    }
-                    if ( VectorUtil::contains( _s_listResourceFolder, gameDir ) == false )
-                        _s_listResourceFolder.push_back( gameDir );
-                }
-            }
-            else
-            {
-                // 모든 도메인 · 커스텀 팩 · DLC · 모드를 이름으로 푼다("engine", "common", "editor", "dlc/expansion1", "mods/pack1")
-                const string domainDir = findLooseDomainFolder( token ).getDiskPath();
-                if ( domainDir.empty() == false )
-                {
-                    if ( VectorUtil::contains( _s_listResourceFolder, domainDir ) == false )
-                        _s_listResourceFolder.push_back( domainDir );
-                }
-            }
-        }
-
+            table._listSearchPriority = listPriority;
+            if ( table._resourceRootFolderPath.empty() == false )
+                table._listResourceFolder = std::move( listResourceFolder );
+        } );
         clearPathCache();
         return true;
     }
 
     const vector<string>& ResourcePaths::getSearchPriority()
     {
-        return _s_listSearchPriority;
+        return ResourcePathsInternal::getTable()._listSearchPriority;
     }
 
     string ResourcePaths::exchangeRootFolderPath( string_view resourceRootFolderPath )
     {
         ResourcePathsInternal::assertSerialPhase( "exchangeRootFolderPath" );
-        string previous           = _s_resourceRootFolderPath;
-        _s_resourceRootFolderPath = FileUtil::normalizeSeparators( resourceRootFolderPath );
-        // 검색 폴더를 새 루트에서 다시 짓는다(경로 캐시도 거기서 비운다).
-        (void)setSearchPriority( _s_listSearchPriority );
+        const ResourcePathTable& current  = ResourcePathsInternal::getTable();
+        string                   previous = current._resourceRootFolderPath;
+        const string             newRoot  = FileUtil::normalizeSeparators( resourceRootFolderPath );
+        // 검색 폴더를 새 루트에서 다시 짓고, 루트와 함께 한 표로 갈아 끼운다.
+        vector<string> listResourceFolder = ResourcePathsInternal::buildResourceFolders( newRoot, current._listSearchPriority );
+        (void)ResourcePathsInternal::publishTable( [&]( ResourcePathTable& table )
+        {
+            table._resourceRootFolderPath = newRoot;
+            table._listResourceFolder     = std::move( listResourceFolder );
+        } );
+        clearPathCache();
         return previous;
     }
 
@@ -802,10 +897,10 @@ namespace sw
 
     void ResourcePaths::clearPathCache()
     {
-        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCache._mutex );
+        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_state._pathCache._mutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
         // 세대를 올려, 이 순간 이전의 검색 목록으로 풀던 호출이 결과를 새 캐시에 넣지 못하게 한다(`storeResolved`).
-        ++ResourcePathsInternal::_s_pathCache._layoutGeneration;
+        ++ResourcePathsInternal::_s_state._pathCache._layoutGeneration;
         unordered_map<string, ResourcePathsInternal::ResolvedEntry>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
         if ( pMapResolved != nullptr )
         {
@@ -822,7 +917,7 @@ namespace sw
         string physicalRoot;
         string rootNorm;
 
-        for ( const string& root : _s_listResourceFolder )
+        for ( const string& root : ResourcePathsInternal::getTable()._listResourceFolder )
         {
             ResourcePathsInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
@@ -891,39 +986,31 @@ namespace sw
         return savePath;
     }
 
-    atomic<bool> ResourcePaths::_s_bInitialize{ false };
-
-    string ResourcePaths::_s_projectFolderPath;
-
-    string ResourcePaths::_s_resourceRootFolderPath;
-
-    vector<string> ResourcePaths::_s_listSearchPriority;
-
-    vector<string> ResourcePaths::_s_listResourceFolder;
-
-    vector<string> ResourcePaths::_s_listHostExcludedGroup;
-
     void ResourcePaths::setHostTarget( string_view buildTargetName )
     {
         ResourcePathsInternal::assertSerialPhase( "setHostTarget" );
-        _s_listHostExcludedGroup.clear();
+        vector<string> listHostExcludedGroup;
 #define SW_ADD_HOST_EXCLUDED_GROUP( Target, Group ) \
     if ( buildTargetName == #Target )               \
-        _s_listHostExcludedGroup.emplace_back( #Group );
+        listHostExcludedGroup.emplace_back( #Group );
         SW_TARGET_EXCLUDED_GROUP_TABLE( SW_ADD_HOST_EXCLUDED_GROUP )
 #undef SW_ADD_HOST_EXCLUDED_GROUP
-        if ( _s_listHostExcludedGroup.empty() == false )
-            SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), _s_listHostExcludedGroup.size() );
+        const size_t excludedCount = listHostExcludedGroup.size();
+        (void)ResourcePathsInternal::publishTable( [&]( ResourcePathTable& table )
+        { table._listHostExcludedGroup = std::move( listHostExcludedGroup ); } );
+        if ( excludedCount > 0 )
+            SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), excludedCount );
     }
 
     bool ResourcePaths::isExcludedForHost( string_view resourcePath )
     {
-        if ( _s_listHostExcludedGroup.empty() )
+        const vector<string>& listHostExcludedGroup = ResourcePathsInternal::getTable()._listHostExcludedGroup; // 표 하나를 잡아 그 안에서 읽는다
+        if ( listHostExcludedGroup.empty() )
             return false;
         const string_view group = AssetTypeRegistry::findExcludeGroup( resourcePath );
         if ( group.empty() )
             return false;
-        for ( const string& excluded : _s_listHostExcludedGroup )
+        for ( const string& excluded : listHostExcludedGroup )
         {
             if ( StringUtil::equals( excluded, group, true ) )
                 return true;

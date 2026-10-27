@@ -32,7 +32,6 @@ namespace sw::editor
 
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
         EditorScopeSlot          s_editorScope{};
-        EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
         CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
         EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
         vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
@@ -101,16 +100,8 @@ namespace sw::editor
     EditorToolDefaults& getEditorToolDefaults()
     {
         // **참조를 반환하는 API 에는 "없다" 고 답할 방법이 없다.** 값의 원본은 editortooldefaults.json 이고 헤더는 형식만 가지므로
-        // 지어낼 기본값도 없다(빈 글꼴 목록 · 0 색). 기동(`ImGuiEditor::initializeEditorData`)은 파일을 못 읽으면 서지 않으니,
-        // 연결 전에 묻는 것은 호출 순서의 결함이다 — 모든 구성에서 이유를 남기고 멈춘다.
-        if ( s_pEditorToolDefaults == nullptr )
-            SW_FATAL( "EditorToolDefaults is read before the editor bound it (setEditorToolDefaults) - call order is wrong" );
-        return *s_pEditorToolDefaults;
-    }
-
-    void setEditorToolDefaults( EditorToolDefaults* pData )
-    {
-        s_pEditorToolDefaults = pData;
+        // 지어낼 기본값도 없다(빈 글꼴 목록 · 0 색). 에디터 컨텍스트가 범위에 건 뒤에 묻는 것이 계약이라, 없으면 `getSubsystem` 이 모든 구성에서 멈춘다.
+        return getSubsystem<EditorToolDefaults>();
     }
 
     Scene* getActiveScene()

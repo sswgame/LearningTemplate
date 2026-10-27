@@ -190,7 +190,7 @@ namespace sw
         if ( pEditSession != nullptr )
             pEditSession->setModuleImageKept( true );
 #endif
-        _pModuleHost->suspendModules( ModuleScope::Both, false );
+        _pModuleHost->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
 #if !defined( SW_SHIPPING )
         if ( pEditSession != nullptr )
             pEditSession->setModuleImageKept( false );

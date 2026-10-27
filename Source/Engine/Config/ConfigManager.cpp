@@ -224,11 +224,6 @@ namespace sw
 
     ConfigManager::~ConfigManager() = default;
 
-    ConfigManager* ConfigManager::findPrimary()
-    {
-        return engine::findSubsystem<ConfigManager>();
-    }
-
     unique_ptr<IConfig>* ConfigManager::findHostSlot( const TypeInfo& type )
     {
         if ( &type == EngineConfig::StaticType() )

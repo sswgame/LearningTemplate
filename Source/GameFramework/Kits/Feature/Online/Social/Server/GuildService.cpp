@@ -823,8 +823,7 @@ namespace sw
     void GuildService::shutdown()
     {
         _pStore        = nullptr;
-        _pLedgerPolicy = nullptr;
-        _onEvent       = GuildEventDelegate{};
+        _pLedgerPolicy = nullptr; // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
     }
 
     bool GuildService::isValidName( string_view name )
@@ -938,6 +937,6 @@ namespace sw
     void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs )
     {
         if ( _onEvent.isBound() )
-            _onEvent( GuildEvent{ accountID, guildID, nowMs, kind } );
+            _onEvent.get()( GuildEvent{ accountID, guildID, nowMs, kind } );
     }
 } // namespace sw

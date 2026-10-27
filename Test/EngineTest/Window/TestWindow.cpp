@@ -64,15 +64,15 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
         uint32 newWidth{ 0 };
         uint32 newHeight{ 0 };
 
-        window->setResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&bResized, &newWidth, &newHeight]( uint32 w, uint32 h )
+        const sw::Subscription resizeBinding = window->bindResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&bResized, &newWidth, &newHeight]( uint32 w, uint32 h )
         {
             bResized  = true;
             newWidth  = w;
             newHeight = h;
         } ) );
 
-        bool bMsgHandled{ false };
-        window->setCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, [&bMsgHandled]( const sw::NativeWindowEvent& ) -> bool
+        bool                   bMsgHandled{ false };
+        const sw::Subscription messageBinding = window->bindCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, [&bMsgHandled]( const sw::NativeWindowEvent& ) -> bool
         {
             bMsgHandled = true;
             return false;
@@ -229,8 +229,8 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
     SW_ASSERT_TRUE( hWnd != nullptr );
 
     sw::vector<sw::pair<uint32, uint32>> listResize;
-    window->setResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&listResize, hWnd]( uint32 width, uint32 height )
-    {
+    sw::Subscription                     resizeBinding = window->bindResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&listResize, hWnd]( uint32 width, uint32 height )
+                        {
         listResize.push_back( { width, height } );
         if ( listResize.size() == 1 )
             SendMessageW( hWnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM( 640, 480 ) ); // 콜백 안에서 크기가 또 바뀐다
@@ -242,7 +242,7 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
     SW_EXPECT_EQUAL( 480u, listResize.back().second );
     SW_EXPECT_EQUAL( size_t( 2 ), listResize.size() );
 
-    window->setResizeCallback( sw::WindowResizeDelegate{} );
+    resizeBinding.reset();
     window->destroy();
 }
 
@@ -267,7 +267,7 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
     SW_ASSERT_TRUE( window != nullptr );
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    window->setCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, [&input]( const sw::NativeWindowEvent& event ) -> bool
+    sw::Subscription messageBinding = window->bindCustomMessageHandler( SW_DELEGATE_LAMBDA( sw::WindowMessageHandlerDelegate, [&input]( const sw::NativeWindowEvent& event ) -> bool
     {
         input.processNativeEvent( event );
         return false;
@@ -303,7 +303,7 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
 
     input.setMouseLockMode( sw::MouseLockMode::None );
     input.shutdown();
-    pWindow->setCustomMessageHandler( sw::WindowMessageHandlerDelegate{} );
+    messageBinding.reset();
     pWindow->destroy();
 }
 

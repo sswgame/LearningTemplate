@@ -357,7 +357,7 @@ namespace sw
                 windowEvent._message = NativeWindowEvent::kMessageX11;
                 windowEvent._wParam  = 0;
                 windowEvent._lParam  = reinterpret_cast<intptr_t>( &event );
-                if ( _customHandler( windowEvent ) )
+                if ( _customHandler.get()( windowEvent ) )
                     continue;
             }
 
@@ -386,7 +386,7 @@ namespace sw
                     _width  = newW;
                     _height = newH;
                     if ( _onResize.isBound() )
-                        _onResize( _width, _height );
+                        _onResize.get()( _width, _height );
                 }
             }
         }

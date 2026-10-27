@@ -2,6 +2,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
@@ -96,10 +97,11 @@ namespace sw
         const string&         getCurrentText() const;
         const vector<string>& getCurrentChoices() const;
 
-        void setOnDialogueLine( OnDialogueLineFunc func );
-        void setOnDialogueChoices( OnDialogueChoicesFunc func );
-        void setOnDialogueEvent( OnDialogueEventFunc func );
-        void setOnDialogueFinished( OnDialogueFinishedFunc func );
+        // 대화 알림 칸은 칸마다 주인이 하나다(대화 UI) — 거는 쪽이 구독을 쥐고, 놓으면 칸이 빈다(이미 차 있으면 단언, `DelegateSlot`).
+        [[nodiscard]] Subscription bindOnDialogueLine( OnDialogueLineFunc func ) { return _onLine.bind( std::move( func ) ); }
+        [[nodiscard]] Subscription bindOnDialogueChoices( OnDialogueChoicesFunc func ) { return _onChoices.bind( std::move( func ) ); }
+        [[nodiscard]] Subscription bindOnDialogueEvent( OnDialogueEventFunc func ) { return _onEvent.bind( std::move( func ) ); }
+        [[nodiscard]] Subscription bindOnDialogueFinished( OnDialogueFinishedFunc func ) { return _onFinished.bind( std::move( func ) ); }
 
     private:
         /**
@@ -130,18 +132,18 @@ namespace sw
         /** @brief `_onChoices` 를 사본으로 부릅니다. 핸들러가 돌면서 `selectChoice()` 를 불러도 됩니다. */
         void notifyChoices();
 
-        DialogueGraphAsset     _graph;
-        GameFlags*             _pFlags;
-        UISystem*              _pUISystemOverride; ///< 자막을 보낼 UI(테스트), nullptr 이면 엔진 서비스
-        string                 _currentSpeaker;
-        string                 _currentText;
-        vector<string>         _listCurrentChoice;
-        OnDialogueLineFunc     _onLine;
-        OnDialogueChoicesFunc  _onChoices;
-        OnDialogueEventFunc    _onEvent;
-        OnDialogueFinishedFunc _onFinished;
-        DialogueRunnerState    _state;
-        int32                  _currentNodeID;
+        DialogueGraphAsset                   _graph;
+        GameFlags*                           _pFlags;
+        UISystem*                            _pUISystemOverride; ///< 자막을 보낼 UI(테스트), nullptr 이면 엔진 서비스
+        string                               _currentSpeaker;
+        string                               _currentText;
+        vector<string>                       _listCurrentChoice;
+        DelegateSlot<OnDialogueLineFunc>     _onLine;
+        DelegateSlot<OnDialogueChoicesFunc>  _onChoices;
+        DelegateSlot<OnDialogueEventFunc>    _onEvent;
+        DelegateSlot<OnDialogueFinishedFunc> _onFinished;
+        DialogueRunnerState                  _state;
+        int32                                _currentNodeID;
         /** @brief 노드에 들어가거나 대화를 멈출 때마다 늘어납니다. Action 핸들러가 그 안에서 대화를 옮겼는지 봅니다. */
         uint32 _transitionSerial;
     };

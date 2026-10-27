@@ -20,6 +20,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Time/GameTimer.h"
 
@@ -38,11 +39,14 @@ namespace sw
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
      *       (의존하는 쪽 먼저)입니다.
      *       - **적용 전 실패는 옛 이미지를 그대로 두고 계속 돕니다**(그래프를 막지 않습니다). 엔진 ABI 스탬프 불일치, 로드 실패, 이미지 검사
-     *         거절(`setOnValidateImage`), 배치 직전 콜백의 거절(`setOnBeforeCommitBatch`)이 여기에 해당합니다. 새 이미지가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
+     *         거절(`setOnValidateImage`), 배치 직전 콜백의 거절(`addOnBeforeCommitBatch`)이 여기에 해당합니다. 새 이미지가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
      *       - **적용 뒤 결함은 되돌리지 않습니다.** commit 중 실패, onAfter 의 결함, 그래프 막힘은 남은 commit 을 멈추고 그래프를 막습니다
      *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다. UE Live Coding 과 Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
+     *       - **콜백 등록은 모두 `Subscription` 을 돌려줍니다.** 등록한 쪽(모듈 호스트 · 서버)이 멤버로 들고, 사라지면 그 등록만 풀립니다 — 다른 쪽이 건 것을
+     *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
+     *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
-    class LiveReloadManager final
+    class LiveReloadManager final : public SubscriptionSource
     {
     public:
         using OnBeforeReloadDelegate = Delegate<void()>;
@@ -143,42 +147,34 @@ namespace sw
          */
         void update();
 
-        /** @brief 모듈이 리로드되기 직전에 호출할 델리게이트를 설정합니다. */
-        void setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate );
+        /** @brief 모듈이 리로드되기 직전에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
+        [[nodiscard]] Subscription setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate );
 
-        /** @brief 모듈이 리로드된 직후에 호출할 델리게이트를 설정합니다. */
-        void setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate );
+        /** @brief 모듈이 리로드된 직후에 호출할 델리게이트를 겁니다. 구독이 사라지면 풀립니다. */
+        [[nodiscard]] Subscription setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate );
         /**
-         * @brief 새 모듈 코드가 onAfterReload 안에서 결함(접근 위반 등)을 냈을 때 부를 콜백을 등록합니다.
+         * @brief 새 모듈 코드가 onAfterReload 안에서 결함(접근 위반 등)을 냈을 때 부를 콜백을 겁니다. 구독이 사라지면 풀립니다.
          * @details onAfterReload 는 새 이미지의 코드가 처음 도는 지점(API 바인딩, 인스턴스 생성, 상태 복원)이라 `ModuleCallGuard` 로
          *          보호한다. 결함이 나면 그래프를 막고 이 콜백을 부른다. 부르는 쪽은 그 모듈에서 받은 것(인스턴스, API 테이블)을 **그 모듈을
          *          부르지 않고** 버려야 한다. 반쯤 만들어진 인스턴스를 파괴하는 코드도 같은 모듈에 있기 때문이다.
          */
-        void setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate );
-        /** @brief 새 이미지를 옛 이미지가 언로드되기 전에 검사할 콜백을 등록합니다(`OnValidateImageDelegate`). */
-        void setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate );
+        [[nodiscard]] Subscription setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate );
+        /** @brief 새 이미지를 옛 이미지가 언로드되기 전에 검사할 콜백을 겁니다(`OnValidateImageDelegate`). 구독이 사라지면 풀립니다. */
+        [[nodiscard]] Subscription setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate );
 
         /**
-         * @brief 연쇄 교체 대상이 모두 prepare 된 뒤, 첫 commit 직전에 한 번 불립니다.
-         * @details 키트 DLL 을 언로드하기 전에 SWGame 을 먼저 언로드할 때 쓴다. false 를 반환하면 이번 연쇄를 취소하고 옛 이미지를 모두 유지한다.
+         * @brief 연쇄 교체 대상이 모두 prepare 된 뒤 첫 commit 직전에 부를 콜백을 목록에 더합니다. 구독이 사라지면 그 항목만 빠집니다.
+         * @details **나중에 더한 것이 먼저 불린다** — 바깥 층(서버 서비스, 모듈 호스트 뒤에 선다)이 안쪽 층(게임 언로드)보다 먼저 내려간다.
+         *          하나라도 false 면 거기서 멈추고 이번 연쇄를 취소해 옛 이미지를 모두 유지한다(앞에서 멈춘 것은 다음 틱에 스스로 다시 선다).
          */
-        void setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
+        [[nodiscard]] Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
 
         /**
-         * @brief 모듈을 언로드하기 직전에 불려 워커 스레드를 비웁니다.
-         * @details TaskManager 만으로는 부족하다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, App 이
+         * @brief 모듈을 언로드하기 직전에 불려 워커 스레드를 비울 콜백을 겁니다. 구독이 사라지면 풀립니다.
+         * @details TaskManager 만으로는 부족하다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, 모듈 호스트가
          *          renderThread->waitIdle() 와 device.waitIdle() 을 여기에 연결해야 Present 훅이 실행 중인 이미지를 FreeLibrary 하지 않는다.
          */
-        void setDrainWorkers( DrainWorkersDelegate delegate );
-
-        /**
-         * @brief 모듈마다 등록해 둔 리로드 델리게이트를 **모두** 해제합니다.
-         * @details 콜백은 보통 `ModuleHost` 의 메서드를 가리킨다. 그 객체가 이 레지스트리보다 먼저 사라지므로 사라지기 전에 자기 것을
-         *          해제해야 하는데, **어떤 모듈에 등록했는지를 등록하는 쪽이 모두 알지는 못한다**(게임플레이 키트는 설정 파일에서 온다).
-         *          이름을 두 곳에 적는 대신, 아는 쪽(레지스트리)이 한 번에 해제해 준다.
-         * @note 배치와 비우기 델리게이트는 각자의 setter 로 해제하십시오. 여기서는 건드리지 않습니다.
-         */
-        void clearReloadCallbacks();
+        [[nodiscard]] Subscription setDrainWorkers( DrainWorkersDelegate delegate );
 
         /** @brief DLL 그래프가 섞인 상태로 보고 이후 리로드를 막습니다. 프로세스를 다시 시작해야 합니다. */
         void markGraphBroken( string_view reason );
@@ -205,8 +201,40 @@ namespace sw
         /** @brief 교체된 뒤 언로드를 미루고 아직 로드해 둔 옛 이미지 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
         uint32 getDeferredUnloadImageCount() const { return _deferredUnloadQueue.getImageCount(); }
 
+    protected:
+        void releaseSubscription( uint64 id ) override;
+
     private:
         struct ModuleRecord;
+
+        /** @brief 구독 하나가 가리키는 칸의 종류입니다. */
+        enum class CallbackSlot : uint8
+        {
+            BeforeReload,
+            AfterReload,
+            ReloadFault,
+            ValidateImage,
+            BeforeCommitBatch,
+            DrainWorkers,
+        };
+        /** @brief 살아 있는 구독 하나 — 어느 모듈(배치 · 비우기는 빈 이름)의 어느 칸인지입니다. */
+        struct CallbackRegistration
+        {
+            uint64       _id;
+            string       _moduleName;
+            CallbackSlot _slot;
+        };
+        /** @brief 배치 직전 콜백 목록의 항목입니다. */
+        struct BeforeCommitBatchEntry
+        {
+            uint64                      _id;
+            OnBeforeCommitBatchDelegate _delegate;
+        };
+
+        /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
+        [[nodiscard]] Subscription issueSlotSubscription( string_view moduleName, CallbackSlot slot );
+        /** @brief @p registration 이 가리키는 칸을 비웁니다. */
+        void clearSlot( const CallbackRegistration& registration );
 
         struct PreparedShadow
         {
@@ -307,10 +335,12 @@ namespace sw
         FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
         mutable mutex                              _buildMutex;
         BuildNotice                                _buildNotice;
-        OnBeforeCommitBatchDelegate                _onBeforeCommitBatch;
+        vector<BeforeCommitBatchEntry>             _listBeforeCommitBatch; ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로)
         DrainWorkersDelegate                       _drainWorkers;
-        DeferredImageUnloadQueue                   _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
-        uint32                                     _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        vector<CallbackRegistration>               _listCallbackRegistration; ///< 살아 있는 구독이 가리키는 칸
+        uint64                                     _nextCallbackID;           ///< 다음 구독 번호(0 은 빈 구독)
+        DeferredImageUnloadQueue                   _deferredUnloadQueue;      ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
+        uint32                                     _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                      _bReloadGraphBroken : 1;
         uint8                                      _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
         [[maybe_unused]] uint8                     _reserved           : 6;

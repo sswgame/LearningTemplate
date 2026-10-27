@@ -23,6 +23,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 
+#include "ModuleHost/HostPart.h"
 #include "ModuleHost/ModuleReloadDriver.h"
 
 namespace sw
@@ -69,8 +70,13 @@ namespace sw
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleImages();
-        /** @brief EditorModuleHost 를 만들어 게임과 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 로드했습니다). */
-        bool startModules();
+        /**
+         * @brief 호스트 부품 하나를 세웁니다(`kArrClientHostPart` — 순서는 `HostPart` 의 의존 선언이 정한다).
+         * @details `Game` 은 EditorModuleHost 로 게임과 에디터 인스턴스를 만든다(모듈 이미지는 `loadModuleImages` 가 이미 로드했다).
+         */
+        [[nodiscard]] bool startHostPart( HostPartID id );
+        /** @brief `startHostPart` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
+        void stopHostPart( HostPartID id );
         /**
          * @brief 모듈이 모두 로드된 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
          * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류한다(모듈이 선언하는 변수는 파싱 시점에 아직 없다). 그래서 오타가
@@ -84,7 +90,7 @@ namespace sw
          */
         void startAutomationSession( const CommandLineManager& commandLineManager );
 
-        /** @brief 창 콜백 · 전역 변수 훅 · Present 훅을 연결하고, 교체기를 호스트 범위에 겁니다. */
+        /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 부품이 선 뒤). */
         void bindHostCallbacks();
 
         /**
@@ -144,7 +150,7 @@ namespace sw
         IWindow* _pWindow;
 
         FixedTimestep _fixedTimestep;
-        /** @brief 백엔드 교체기입니다. `bindHostCallbacks` 가 `_host` 에 걸고 `shutdown` 이 풉니다(시나리오 단계 `SwapBackend` · 탐침 `RHI.*` 가 찾는다). */
+        /** @brief 백엔드 교체기입니다. 부품 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 탐침 `RHI.*` 가 찾는다). */
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
 
@@ -153,8 +159,16 @@ namespace sw
         ViewCameraProviderDelegate _sceneViewCameraProvider;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 엔진이 설정 표를 내리면 무효가 된다. */
         Subscription _configReloadedSubscription;
+        /** @brief 주 창의 크기 · 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. */
+        Subscription _windowResizeSubscription;
+        Subscription _windowMessageSubscription;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
+        /**
+         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 부품(게임 · 교체기 · 사용자 설정 · 런타임 UI 훅 · 개발 콘솔)입니다. 순서는 `HostPart` 의 의존 선언이 정한다.
+         * @details 부품의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다). `shutdown` 이 엔진 종료 앞에서 내린다.
+         */
+        SubsystemCollection _hostParts;
 
         uint8                  _bEnableEditor        : 1;
         uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.

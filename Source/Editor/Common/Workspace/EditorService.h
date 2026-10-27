@@ -124,8 +124,11 @@ namespace sw::editor
         SubsystemScope* _pPrevious; ///< 등록하기 전의 지금 범위
     };
 
+    /**
+     * @brief 에디터 도구 시드(`editortooldefaults.json`)입니다 — 에디터 컨텍스트가 자기 범위에 빌려 건 값(`EditorContext::initialize`)을 찾는다.
+     * @details 정적 칸을 두지 않는다(결정 기록 5-10). 범위가 서기 전에 읽는 기동 단계(글꼴)는 값을 인자로 받는다. 없으면 부른 쪽의 잘못이라 모든 구성에서 멈춘다.
+     */
     EditorToolDefaults& getEditorToolDefaults();
-    void                setEditorToolDefaults( EditorToolDefaults* pData );
 
     // ------------------------------------------------------------------------------
     // 활성 씬 바로가기

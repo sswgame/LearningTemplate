@@ -125,7 +125,7 @@ namespace sw::editor
         _gameIndex = 0;
         vector<string> listFile;
         (void)FileUtil::collectFiles( FileUtil::joinPath( EditorPaths::getProjectRootPath(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
-        const string& packRoot = GameConfig::getActive()._packRoot.get();
+        const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, ".json", true ) == false )

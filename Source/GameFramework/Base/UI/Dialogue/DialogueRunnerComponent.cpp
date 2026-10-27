@@ -155,7 +155,10 @@ namespace sw
         _listCurrentChoice.clear();
 
         if ( bWasActive && _onFinished.isBound() )
-            _onFinished();
+        {
+            const OnDialogueFinishedFunc onFinished = _onFinished.get();
+            onFinished();
+        }
     }
 
     void DialogueRunnerComponent::previewLine( string speaker, string text )
@@ -197,26 +200,6 @@ namespace sw
         return _listCurrentChoice;
     }
 
-    void DialogueRunnerComponent::setOnDialogueLine( OnDialogueLineFunc func )
-    {
-        _onLine = std::move( func );
-    }
-
-    void DialogueRunnerComponent::setOnDialogueChoices( OnDialogueChoicesFunc func )
-    {
-        _onChoices = std::move( func );
-    }
-
-    void DialogueRunnerComponent::setOnDialogueEvent( OnDialogueEventFunc func )
-    {
-        _onEvent = std::move( func );
-    }
-
-    void DialogueRunnerComponent::setOnDialogueFinished( OnDialogueFinishedFunc func )
-    {
-        _onFinished = std::move( func );
-    }
-
     void DialogueRunnerComponent::notifyLine()
     {
         if ( _bPostSubtitles )
@@ -234,9 +217,10 @@ namespace sw
         // 를 부르는 순간 **자기가 받은 참조가 바뀌거나 비워진다.** 대화 UI 에서 "이 줄을 보고
         // 바로 다음으로 넘긴다" 는 가장 흔한 사용법이고, 그러면 핸들러가 돌아와서 읽는 `text`
         // 는 방금 받은 줄이 아니라 다음 줄이다(재할당이 일어났으면 그마저도 아니다).
-        const string speaker = _currentSpeaker;
-        const string text    = _currentText;
-        _onLine( speaker, text );
+        const string             speaker = _currentSpeaker;
+        const string             text    = _currentText;
+        const OnDialogueLineFunc onLine  = _onLine.get(); // 핸들러가 안에서 구독을 놓아도 부르는 델리게이트는 산다
+        onLine( speaker, text );
     }
 
     void DialogueRunnerComponent::notifyChoices()
@@ -246,8 +230,9 @@ namespace sw
 
         // 위와 같은 이유다. 이쪽은 더 나쁜데, 핸들러가 목록을 **돌면서** `selectChoice()` 를
         // 부르면 그 순간 `_listCurrentChoice` 가 비워지고 다시 채워진다.
-        const vector<string> listChoice = _listCurrentChoice;
-        _onChoices( listChoice );
+        const vector<string>        listChoice = _listCurrentChoice;
+        const OnDialogueChoicesFunc onChoices  = _onChoices.get();
+        onChoices( listChoice );
     }
 
     bool DialogueRunnerComponent::evaluateCondition( const string& condition ) const
@@ -270,7 +255,10 @@ namespace sw
         // 그 참조는 죽은 메모리가 되는데, **그 뒤로도 계속 읽는다**(`startsWith` · `substr`).
         SW_LOG_TRACE( "Execute Action: %#", actionCmd );
         if ( _onEvent.isBound() )
-            _onEvent( actionCmd );
+        {
+            const OnDialogueEventFunc onEvent = _onEvent.get();
+            onEvent( actionCmd );
+        }
 
         if ( _pFlags != nullptr )
         {
@@ -293,7 +281,10 @@ namespace sw
     {
         _state = DialogueRunnerState::Finished;
         if ( _onFinished.isBound() )
-            _onFinished();
+        {
+            const OnDialogueFinishedFunc onFinished = _onFinished.get();
+            onFinished();
+        }
     }
 
     void DialogueRunnerComponent::stepFrom( int32 nodeID, const DialogueStepInput& input, int32 recursionDepth )

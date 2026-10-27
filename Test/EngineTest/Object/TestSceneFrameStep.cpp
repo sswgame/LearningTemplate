@@ -24,7 +24,7 @@ SW_TEST_CASE( SceneFrameStepTest, StepsRunInTableOrder )
 {
     sw::GameObjectManager          manager;
     sw::vector<sw::SceneFrameStep> listStep;
-    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listStep]( sw::SceneFrameStep step )
+    sw::Subscription               observerBinding = manager.bindFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listStep]( sw::SceneFrameStep step )
     { listStep.push_back( step ); } ) );
 
     manager.update( 0.016f );
@@ -39,7 +39,7 @@ SW_TEST_CASE( SceneFrameStepTest, StepsRunInTableOrder )
     SW_EXPECT_STREQ( "Unknown", sw::getSceneFrameStepName( sw::SceneFrameStep::Count ) );
 
     // 관찰자를 풀면 더 부르지 않는다.
-    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver{} );
+    observerBinding.reset();
     manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( stepCount ), listStep.size() );
 }
@@ -59,8 +59,8 @@ SW_TEST_CASE( SceneFrameStepTest, PrePhysicsTickWritesLandInTheApplyStep )
     pMover->_bWriteLocalOnTick = SW_TRUE;
     pMover->_tickLocalPos      = sw::float3{ 5.0f, 0.0f, 0.0f };
 
-    sw::vector<float32> listLocalX( static_cast<size_t>( sw::SceneFrameStep::Count ), -1.0f );
-    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listLocalX, pMover]( sw::SceneFrameStep step )
+    sw::vector<float32>    listLocalX( static_cast<size_t>( sw::SceneFrameStep::Count ), -1.0f );
+    const sw::Subscription observerBinding = manager.bindFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listLocalX, pMover]( sw::SceneFrameStep step )
     { listLocalX[static_cast<size_t>( step )] = pMover->getLocalPosition()._x; } ) );
 
     manager.update( 0.016f );
@@ -200,10 +200,10 @@ SW_TEST_CASE( SceneFrameStepTest, EveryStepUpdatesItsRegisteredServicesOnce )
  */
 SW_TEST_CASE( SceneFrameStepTest, FrameSystemsRunInOrderBeforeThePrePhysicsTick )
 {
-    sw::GameObjectManager manager;
-    sw::vector<int32>     listCall;
-    sw::SceneFrameStep    lastStep = sw::SceneFrameStep::Count;
-    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
+    sw::GameObjectManager  manager;
+    sw::vector<int32>      listCall;
+    sw::SceneFrameStep     lastStep        = sw::SceneFrameStep::Count;
+    const sw::Subscription observerBinding = manager.bindFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
     { lastStep = step; } ) );
 
     sw::unique_ptr<SceneFrameStepTestSystem> pFirst    = sw::make_unique<SceneFrameStepTestSystem>( listCall, 1, lastStep, sw::hashed_string( "Second" ) );

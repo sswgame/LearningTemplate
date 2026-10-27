@@ -181,8 +181,8 @@ namespace sw
         /** @brief 모듈 하나를 강제로 리로드하고 onAfter 가 불릴 때까지 기다립니다. 기다리다 넘치면 false 입니다. */
         [[nodiscard]] bool reloadAndWait( sw::LiveReloadManager& manager, const utf8* pModuleName )
         {
-            bool bReloaded{ false };
-            manager.setOnAfterReload(
+            bool                   bReloaded{ false };
+            const sw::Subscription afterReload = manager.setOnAfterReload(
                 pModuleName,
                 SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bReloaded]( void* )
             {
@@ -194,8 +194,7 @@ namespace sw
                 std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
                 manager.update();
             }
-            manager.setOnAfterReload( pModuleName, sw::LiveReloadManager::OnAfterReloadDelegate{} );
-            return bReloaded;
+            return bReloaded; // 구독이 여기서 풀린다 — 지역 `bReloaded` 를 가리키는 콜백이 남지 않는다
         }
 
         /** @brief 처리기만 들고 아무것도 띄우지 않는 창입니다. 모듈 코드 정리 테스트가 활성 창으로 씁니다. */
@@ -359,8 +358,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOutsideBuildWaitsForStamp )
 
     sw::LiveReloadManager manager;
     SW_EXPECT_TRUE( manager.registerModule( "SWGame" ) );
-    uint32 reloadCount{ 0 };
-    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
+    uint32           reloadCount{ 0 };
+    sw::Subscription afterReload = manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
     {
         ++reloadCount;
     } ) );
@@ -388,7 +387,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOutsideBuildWaitsForStamp )
     SW_EXPECT_EQUAL( 1u, reloadCount );
     SW_EXPECT_FALSE( manager.isGraphBroken() );
 
-    manager.setOnAfterReload( "SWGame", sw::LiveReloadManager::OnAfterReloadDelegate{} );
+    afterReload.reset();
     manager.shutdown();
     SW_EXPECT_TRUE( sw::FileUtil::setFileWriteTime( dllPath, originalDllTicks ) );
 }
@@ -405,8 +404,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterBrokenGraphFailsRegister )
     SW_TEST_DEFENSIVE_SCOPE( "Testing registration failure when onAfter breaks the graph" );
     const uint32 shadowCountBefore = sw::countShadowCopies( "SWGame" );
 
-    sw::LiveReloadManager manager;
-    manager.setOnAfterReload(
+    sw::LiveReloadManager  manager;
+    const sw::Subscription afterReloadBinding1 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
     {
@@ -438,7 +437,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterBrokenGraph )
     void* const gameBefore = manager.getModuleHandle( "SWGame" );
     SW_EXPECT_TRUE( gameBefore != nullptr );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding2 = manager.setOnAfterReload(
         "GameFramework",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&manager]( void* )
     {
@@ -476,14 +475,14 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadSuccessfulShadowReload )
     bool  onAfterCalled{ false };
     void* newHandleInCb{ nullptr };
 
-    manager.setOnBeforeReload(
+    const sw::Subscription beforeReloadBinding3 = manager.setOnBeforeReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
     {
         onBeforeCalled = true;
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding4 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandleInCb]( void* pH )
     {
@@ -566,8 +565,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
     SW_EXPECT_TRUE( registry.findType( sampleFqn ) != nullptr );
 
     // 1) 성공 리로드: 타입 수 불변, 대표 타입 유지, 전역 헤드 drain 유지
-    bool onAfterCalled{ false };
-    manager.setOnAfterReload(
+    bool                   onAfterCalled{ false };
+    const sw::Subscription afterReloadBinding5 = manager.setOnAfterReload(
         "GameFramework",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled]( void* )
     {
@@ -609,28 +608,28 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 
     sw::vector<sw::string> reloadLog;
 
-    manager.setOnBeforeReload(
+    const sw::Subscription beforeReloadBinding6 = manager.setOnBeforeReload(
         "GameFramework",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
     {
         reloadLog.push_back( "GF_Before" );
     } ) );
 
-    manager.setOnBeforeReload(
+    const sw::Subscription beforeReloadBinding7 = manager.setOnBeforeReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&reloadLog]()
     {
         reloadLog.push_back( "Game_Before" );
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding8 = manager.setOnAfterReload(
         "GameFramework",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
     {
         reloadLog.push_back( "GF_After" );
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding9 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadLog]( void* )
     {
@@ -698,8 +697,8 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 
     // 창의 닫기 처리기(살아 있는 모든 창이 훑긴다 — 주 창일 필요가 없다)
     sw::HandlerOnlyWindow              window;
-    const sw::WindowCloseQueryDelegate onClose = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
-    window.setCloseQueryHandler( onClose );
+    const sw::WindowCloseQueryDelegate onClose      = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
+    const sw::Subscription             closeBinding = window.bindCloseQueryHandler( onClose ); // 훑기가 칸을 비우면 이 구독은 아무것도 풀지 않는다
     SW_EXPECT_FALSE( window.tryBeginClose() );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onClose ) );
     SW_EXPECT_TRUE( window.tryBeginClose() );
@@ -724,14 +723,14 @@ SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess 
     sw::LiveReloadManager manager;
     SW_ASSERT_TRUE( manager.registerModule( "SWGame" ) );
 
-    bool   bFaultReported{ false };
-    uint32 reportedFaultCode{ 0 };
-    manager.setOnReloadFault( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnReloadFaultDelegate, [&bFaultReported, &reportedFaultCode]( uint32 faultCode )
+    bool                   bFaultReported{ false };
+    uint32                 reportedFaultCode{ 0 };
+    const sw::Subscription reloadFaultBinding10 = manager.setOnReloadFault( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnReloadFaultDelegate, [&bFaultReported, &reportedFaultCode]( uint32 faultCode )
     {
         bFaultReported    = true;
         reportedFaultCode = faultCode;
     } ) );
-    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, []( void* )
+    const sw::Subscription afterReloadBinding11 = manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, []( void* )
     {
         *reinterpret_cast<volatile int32*>( sw::s_reloadFaultAddress ) = 7;
     } ) );
@@ -798,14 +797,14 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
     bool  onAfterCalled{ false };
     void* newHandle{ nullptr };
 
-    manager.setOnBeforeReload(
+    const sw::Subscription beforeReloadBinding12 = manager.setOnBeforeReload(
         "EditorModule",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
     {
         onBeforeCalled = true;
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding13 = manager.setOnAfterReload(
         "EditorModule",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
     {
@@ -902,7 +901,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
         bool  reloaded{ false };
         void* newH{ nullptr };
 
-        manager.setOnAfterReload(
+        const sw::Subscription afterReloadBinding14 = manager.setOnAfterReload(
             kitName,
             SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloaded, &newH]( void* pH )
         {
@@ -949,14 +948,14 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
     bool kitReloaded{ false };
     bool gameReloaded{ false };
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding15 = manager.setOnAfterReload(
         "GF_Overworld",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&kitReloaded]( void* )
     {
         kitReloaded = true;
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding16 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&gameReloaded]( void* )
     {
@@ -978,8 +977,8 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
     SW_EXPECT_TRUE( gameReloaded );
 
     // 2) 독립적인 EditorModule 리로드 트리거
-    bool editorReloaded{ false };
-    manager.setOnAfterReload(
+    bool                   editorReloaded{ false };
+    const sw::Subscription afterReloadBinding17 = manager.setOnAfterReload(
         "EditorModule",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&editorReloaded]( void* )
     {
@@ -1020,22 +1019,22 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
     gameDepends.push_back( "GF_CreatureLife" );
     SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", gameDepends ), "SWGame is built but did not register - see the log above" );
 
-    bool farmingReloaded{ false };
-    bool creatureReloaded{ false };
-    bool gameReloaded{ false };
-    manager.setOnAfterReload(
+    bool                   farmingReloaded{ false };
+    bool                   creatureReloaded{ false };
+    bool                   gameReloaded{ false };
+    const sw::Subscription afterReloadBinding18 = manager.setOnAfterReload(
         "GF_Farming",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&farmingReloaded]( void* )
     {
         farmingReloaded = true;
     } ) );
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding19 = manager.setOnAfterReload(
         "GF_CreatureLife",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&creatureReloaded]( void* )
     {
         creatureReloaded = true;
     } ) );
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding20 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&gameReloaded]( void* )
     {
@@ -1093,8 +1092,8 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
-    bool bGameReloaded{ false };
-    manager.setOnAfterReload(
+    bool                   bGameReloaded{ false };
+    const sw::Subscription afterReloadBinding21 = manager.setOnAfterReload(
         "SWGame",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bGameReloaded]( void* )
     {
@@ -1237,8 +1236,8 @@ SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
 
     sw::LiveReloadManager manager;
     SW_ASSERT_TRUE( manager.registerModule( "SWGame" ) );
-    uint32 reloadCount{ 0 };
-    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
+    uint32           reloadCount{ 0 };
+    sw::Subscription afterReload = manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
     { ++reloadCount; } ) );
 
     // 디바운스(300 ms)를 넉넉히 넘게 돌린다.
@@ -1278,7 +1277,7 @@ SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
     pump();
     SW_EXPECT_EQUAL( 2u, reloadCount );
 
-    manager.setOnAfterReload( "SWGame", sw::LiveReloadManager::OnAfterReloadDelegate{} );
+    afterReload.reset();
     manager.shutdown();
 }
 
@@ -1389,7 +1388,7 @@ namespace sw
         enum class PreApplyFailure : uint8
         {
             ImageRejected, ///< 이미지 검사(`setOnValidateImage`)가 새 이미지를 거절한다 — 모듈 API 표가 다른 빌드
-            BatchRefused,  ///< 배치 직전 콜백(`setOnBeforeCommitBatch`)이 거절한다 — 게임 상태를 찍지 못했다
+            BatchRefused,  ///< 배치 직전 콜백(`addOnBeforeCommitBatch`)이 거절한다 — 게임 상태를 찍지 못했다
         };
 
         /**
@@ -1403,15 +1402,16 @@ namespace sw
                 return false;
             void* const pOldHandle = manager.getModuleHandle( "SWGame" );
 
-            bool bInjected{ false };
-            bool bBeforeReloadCalled{ false };
-            manager.setOnBeforeReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&bBeforeReloadCalled]()
+            bool             bInjected{ false };
+            bool             bBeforeReloadCalled{ false };
+            sw::Subscription beforeReload = manager.setOnBeforeReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&bBeforeReloadCalled]()
             {
                 bBeforeReloadCalled = true;
             } ) );
+            sw::Subscription injection;
             if ( failure == PreApplyFailure::ImageRejected )
             {
-                manager.setOnValidateImage( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnValidateImageDelegate, [&bInjected, pOldHandle]( void* pNewHandle )
+                injection = manager.setOnValidateImage( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnValidateImageDelegate, [&bInjected, pOldHandle]( void* pNewHandle )
                 {
                     // 첫 로드(등록)는 받아들이고, 다시 올리는 이미지만 거절한다.
                     if ( pNewHandle == pOldHandle )
@@ -1422,7 +1422,7 @@ namespace sw
             }
             else
             {
-                manager.setOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeCommitBatchDelegate, [&bInjected]( const sw::vector<sw::string>& )
+                injection = manager.addOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeCommitBatchDelegate, [&bInjected]( const sw::vector<sw::string>& )
                 {
                     bInjected = true;
                     return false;
@@ -1446,9 +1446,8 @@ namespace sw
             SW_EXPECT_TRUE( sw::countShadowCopies( "SWGame" ) <= 2u );
 
             // 주입을 거두면 같은 매니저로 리로드가 된다(그래프가 살아 있다).
-            manager.setOnValidateImage( "SWGame", {} );
-            manager.setOnBeforeCommitBatch( {} );
-            manager.setOnBeforeReload( "SWGame", {} );
+            injection.reset();
+            beforeReload.reset();
             SW_EXPECT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
             SW_EXPECT_TRUE( manager.getModuleHandle( "SWGame" ) != pOldHandle );
             manager.shutdown();
@@ -1493,14 +1492,14 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     bool  onAfterCalled{ false };
     void* newHandle{ nullptr };
 
-    manager.setOnBeforeReload(
+    const sw::Subscription beforeReloadBinding22 = manager.setOnBeforeReload(
         "EditorModule",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&onBeforeCalled]()
     {
         onBeforeCalled = true;
     } ) );
 
-    manager.setOnAfterReload(
+    const sw::Subscription afterReloadBinding23 = manager.setOnAfterReload(
         "EditorModule",
         SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&onAfterCalled, &newHandle]( void* pH )
     {
@@ -2119,8 +2118,8 @@ SW_TEST_CASE( ArchitectureTest, RegistrationListsFollowTheEditorModuleLoadReload
         }
         SW_EXPECT_TRUE_MSG( enteredCount > 0, "the editor module registered nothing - the checks below prove nothing" );
 
-        bool bReloaded{ false };
-        manager.setOnAfterReload( "EditorModule", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bReloaded]( void* )
+        bool                   bReloaded{ false };
+        const sw::Subscription afterReloadBinding24 = manager.setOnAfterReload( "EditorModule", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bReloaded]( void* )
         {
             bReloaded = true;
         } ) );

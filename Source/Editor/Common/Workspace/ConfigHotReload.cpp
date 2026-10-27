@@ -96,7 +96,7 @@ namespace sw::editor
             return;
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
         // 모르는 파일(EditorConfig · 임포트 설정)은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
-        if ( reloadChangedFile( ConfigManager::findPrimary(), fullPath ) == ReloadOutcome::Failed )
+        if ( reloadChangedFile( editor::findSubsystem<ConfigManager>(), fullPath ) == ReloadOutcome::Failed )
             SW_LOG_WARNING( "Config hot reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }
 } // namespace sw::editor

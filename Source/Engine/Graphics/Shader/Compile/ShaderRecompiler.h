@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Delegate/DelegateSlot.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -43,8 +44,8 @@ namespace sw
         /** @brief 라벨을 기억하고 초기화된 것으로 표시합니다. */
         [[nodiscard]] bool initialize( string_view label = "Shaders" );
 
-        /** @brief 어떤 셰이더든 다시 컴파일되면 부르는 전역 콜백을 설정합니다(PSO 바인딩 레이아웃 무효화용). */
-        void setOnAnyShaderRecompiled( const ShaderRecompiledDelegate& onAnyRecompiled ) { _onAnyRecompiled = onAnyRecompiled; }
+        /** @brief 어떤 셰이더든 다시 컴파일되면 부르는 콜백을 겁니다(PSO 바인딩 레이아웃 무효화용). 칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다. */
+        [[nodiscard]] Subscription bindOnAnyShaderRecompiled( ShaderRecompiledDelegate onAnyRecompiled ) { return _onAnyRecompiled.bind( std::move( onAnyRecompiled ) ); }
 
         /** @brief 대기 중인 리로드 목록을 꺼내 다시 컴파일합니다. */
         void update();
@@ -60,10 +61,10 @@ namespace sw
         void triggerReloadAll();
 
     private:
-        mutable shared_mutex      _mutex;
-        vector<ShaderCompileDesc> _listPendingReload;
-        ShaderRecompiledDelegate  _onAnyRecompiled;
-        string                    _label;
-        bool                      _bInitialized{ false };
+        mutable shared_mutex                   _mutex;
+        vector<ShaderCompileDesc>              _listPendingReload;
+        DelegateSlot<ShaderRecompiledDelegate> _onAnyRecompiled;
+        string                                 _label;
+        bool                                   _bInitialized{ false };
     };
 } // namespace sw

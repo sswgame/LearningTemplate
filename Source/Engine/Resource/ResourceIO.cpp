@@ -27,7 +27,7 @@ namespace sw
          */
         const ResourcePakManager* findPackManager()
         {
-            return engine::areEngineServicesBound() ? &ResourceIO::getPackManager() : nullptr;
+            return engine::areEngineServicesBound() ? &engine::getSubsystem<AssetManager>().getPackManager() : nullptr;
         }
 
         /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저가 정하고, 엔진 밖이면 팩 매니저를 만들 때의 빌드 기본값과 같다(배포 구성은 금지). */
@@ -273,10 +273,5 @@ namespace sw
                 outListPath.push_back( std::move( listKeyed[index].second ) );
         }
         return ResourceFolderListing::Listed;
-    }
-
-    ResourcePakManager& ResourceIO::getPackManager()
-    {
-        return engine::getSubsystem<AssetManager>().getPackManager();
     }
 } // namespace sw

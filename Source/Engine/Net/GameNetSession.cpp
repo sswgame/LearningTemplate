@@ -358,7 +358,7 @@ namespace sw
         if ( bListen == false && bConnect == false )
         {
             // 개발 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
-            const ServerServiceContext* pHostContext = ServerServiceRegistry::findHostContext();
+            const ServerServiceContext* pHostContext = engine::areEngineServicesBound() ? engine::findSubsystem<ServerServiceContext>() : nullptr;
             if ( pHostContext == nullptr || pHostContext->_pServerConfig == nullptr )
                 return GameNetLaunch::None;
             return makeServerParams( *pHostContext->_pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;

@@ -322,11 +322,6 @@ namespace sw
         /** @brief 가상 소멸자입니다. 해체는 GameObjectManager::destroyComponentInstance 가 맡으며, 해제 콜백 호출, 소멸, 풀 반납 순서로 진행합니다. */
         virtual ~Component() = default;
 
-        /** @brief 게임 컴포넌트 기본값 XML(gamesettings.xml)의 경로를 지정합니다. 비어 있으면 기본값을 주입하지 않습니다. */
-        static void setDefaultGameSettingsPath( string_view path );
-        /** @brief 현재 게임 컴포넌트 기본값 XML 경로를 반환합니다. */
-        static string getDefaultGameSettingsPath();
-
         /**
          * @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. 인스턴스마다 **정확히 한 번** 불리며 `onEndPlay` 와 짝을 이룹니다.
          * @details 월드가 플레이 중이면(에디터 Play, 에디터 없는 App, Shipping 모두 `SceneManager::setWorldPlaying` 으로 판정한다) 활성 씬의 컴포넌트는

@@ -112,8 +112,10 @@ namespace sw
         , _seenBuildStamp{}
         , _buildMutex{}
         , _buildNotice{}
-        , _onBeforeCommitBatch{}
+        , _listBeforeCommitBatch{}
         , _drainWorkers{}
+        , _listCallbackRegistration{}
+        , _nextCallbackID{ 1 }
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
@@ -131,9 +133,14 @@ namespace sw
 
     void LiveReloadManager::shutdown()
     {
-        _drainWorkers        = {};
-        _onBeforeCommitBatch = {};
-        clearReloadCallbacks();
+        // 남은 구독은 무효로 만든다 — 주인이 나중에 놓아도 아무것도 풀지 않는다(칸은 아래 기록 비우기와 함께 사라진다).
+        // 아래 언로드가 콜백을 부르지 않도록 칸도 지금 비운다(매니저가 내려가는 중이라 다시 설 인스턴스가 없다).
+        detachAllSubscriptions();
+        for ( const CallbackRegistration& registration : _listCallbackRegistration )
+        {
+            clearSlot( registration );
+        }
+        _listCallbackRegistration.clear();
 
         // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
         (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
@@ -451,44 +458,125 @@ namespace sw
         }
     }
 
-    void LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
+    Subscription LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
     {
         getOrCreateRecord( moduleName )._onBeforeReload = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::BeforeReload );
     }
 
-    void LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
+    Subscription LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
     {
         getOrCreateRecord( moduleName )._onAfterReload = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::AfterReload );
     }
 
-    void LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
+    Subscription LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
     {
         getOrCreateRecord( moduleName )._onReloadFault = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::ReloadFault );
     }
 
-    void LiveReloadManager::setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate )
+    Subscription LiveReloadManager::setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate )
     {
         getOrCreateRecord( moduleName )._onValidateImage = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::ValidateImage );
     }
 
-    void LiveReloadManager::setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
+    Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
     {
-        _onBeforeCommitBatch = std::move( delegate );
+        const uint64 id = _nextCallbackID++;
+        _listBeforeCommitBatch.push_back( { id, std::move( delegate ) } );
+        _listCallbackRegistration.push_back( { id, string{}, CallbackSlot::BeforeCommitBatch } );
+        return issueSubscription( id );
     }
 
-    void LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
+    Subscription LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
     {
         _drainWorkers = std::move( delegate );
+        return issueSlotSubscription( string_view{}, CallbackSlot::DrainWorkers );
     }
 
-    void LiveReloadManager::clearReloadCallbacks()
+    Subscription LiveReloadManager::issueSlotSubscription( string_view moduleName, CallbackSlot slot )
     {
-        for ( auto& [name, context] : _mapModule )
+        // 같은 칸을 다시 걸면 앞 등록은 표에서 빠진다 — 앞 구독이 나중에 풀려도 새로 건 것을 지우지 않는다.
+        for ( size_t index = 0; index < _listCallbackRegistration.size(); ++index )
         {
-            context._onBeforeReload  = {};
-            context._onAfterReload   = {};
-            context._onReloadFault   = {};
-            context._onValidateImage = {};
+            const CallbackRegistration& registration = _listCallbackRegistration[index];
+            if ( registration._slot == slot && registration._moduleName == moduleName )
+            {
+                _listCallbackRegistration.erase( _listCallbackRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+                break;
+            }
+        }
+        const uint64 id = _nextCallbackID++;
+        _listCallbackRegistration.push_back( { id, string( moduleName ), slot } );
+        return issueSubscription( id );
+    }
+
+    void LiveReloadManager::releaseSubscription( uint64 id )
+    {
+        for ( size_t index = 0; index < _listCallbackRegistration.size(); ++index )
+        {
+            if ( _listCallbackRegistration[index]._id != id )
+                continue;
+            const CallbackRegistration registration = _listCallbackRegistration[index];
+            _listCallbackRegistration.erase( _listCallbackRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+            clearSlot( registration );
+            return;
+        }
+    }
+
+    void LiveReloadManager::clearSlot( const CallbackRegistration& registration )
+    {
+        if ( registration._slot == CallbackSlot::BeforeCommitBatch )
+        {
+            for ( size_t index = 0; index < _listBeforeCommitBatch.size(); ++index )
+            {
+                if ( _listBeforeCommitBatch[index]._id == registration._id )
+                {
+                    _listBeforeCommitBatch.erase( _listBeforeCommitBatch.begin() + static_cast<ptrdiff_t>( index ) );
+                    return;
+                }
+            }
+            return;
+        }
+        if ( registration._slot == CallbackSlot::DrainWorkers )
+        {
+            _drainWorkers = {};
+            return;
+        }
+        // 기록이 이미 지워졌으면(그래프 비우기) 비울 칸도 없다.
+        const auto recordIt = _mapModule.find( registration._moduleName );
+        if ( recordIt == _mapModule.end() )
+            return;
+        ModuleRecord& record = recordIt->second;
+        switch ( registration._slot )
+        {
+            case CallbackSlot::BeforeReload:
+            {
+                record._onBeforeReload = {};
+                break;
+            }
+            case CallbackSlot::AfterReload:
+            {
+                record._onAfterReload = {};
+                break;
+            }
+            case CallbackSlot::ReloadFault:
+            {
+                record._onReloadFault = {};
+                break;
+            }
+            case CallbackSlot::ValidateImage:
+            {
+                record._onValidateImage = {};
+                break;
+            }
+            case CallbackSlot::BeforeCommitBatch:
+            case CallbackSlot::DrainWorkers:
+            {
+                break;
+            }
         }
     }
 
@@ -909,7 +997,14 @@ namespace sw
         }
 
         // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 이미지만 버리고 옛 이미지로 계속 돈다.
-        if ( _onBeforeCommitBatch.isBound() && _onBeforeCommitBatch( listOrder ) == false )
+        // 나중에 더한 것(바깥 층)부터 부른다. 콜백이 목록을 바꿔도 이번 차례는 지금 목록대로 돈다.
+        const vector<BeforeCommitBatchEntry> listBeforeCommit = _listBeforeCommitBatch;
+        bool                                 bCommitAccepted  = true;
+        for ( auto it = listBeforeCommit.rbegin(); it != listBeforeCommit.rend() && bCommitAccepted; ++it )
+        {
+            bCommitAccepted = it->_delegate.isBound() == false || it->_delegate( listOrder );
+        }
+        if ( bCommitAccepted == false )
         {
             SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
             abortPrepared( listPrepared, 0 );

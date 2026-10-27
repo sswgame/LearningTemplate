@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -60,6 +61,8 @@ namespace sw
         SubsystemScope* _pHostScope;
         /** @brief `queueReload` 가 예약한 리로드가 끝났다고 볼 완료 수입니다(예약 때의 완료 수 + 1). 0 이면 예약한 적이 없다. */
         uint32 _reloadTargetCount;
+        /** @brief 모듈 이미지 창구에 건 "씬이 사라졌다" 훅의 구독입니다(창구가 먼저 사라지면 무효가 된다). */
+        Subscription _scenesReleasedHook;
 #endif
     };
 } // namespace sw

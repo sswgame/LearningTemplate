@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -145,6 +146,8 @@ namespace sw
         UIInputConsumption           _consumption;
         unique_ptr<InputMap>         _uiInputMap; ///< UI 액션 맵입니다(레이어 `UI` 는 활성 화면이 있을 때만 켭니다).
         InputManager*                _pInput;
+        Subscription                 _textInputSubscription;       ///< 입력 관리자의 UI 포커스 글자 칸 구독
+        Subscription                 _textCompositionSubscription; ///< 입력 관리자의 UI 포커스 조합 글자 칸 구독
         float2                       _lastPointerPosition;
         int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 위치입니다(창 픽셀).
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간입니다.

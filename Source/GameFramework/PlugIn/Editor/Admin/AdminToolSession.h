@@ -47,7 +47,7 @@ namespace sw::editor
 
         /**
          * @brief 서버의 GM 포트(`host:port`)에 연결을 걸고 실제 클라이언트로 보냅니다. 실패하면 메모리 제공자로 돌아가고 @p outError 에 이유가 있습니다.
-         * @details 로그인은 `getConnection().setLoginHook` 으로 끼운 쪽이 한다(에디터 확장은 계정 키트를 모른다). 연결이 닫혀 있는 동안은 `Unavailable` 응답입니다.
+         * @details 로그인은 `getConnection().bindLoginHook` 으로 끼운 쪽이 한다(에디터 확장은 계정 키트를 모른다). 연결이 닫혀 있는 동안은 `Unavailable` 응답입니다.
          */
         [[nodiscard]] bool connectLive( string_view address, string_view gameBuild, string& outError );
         /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */

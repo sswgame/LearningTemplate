@@ -95,7 +95,7 @@ namespace sw::editor
         {
             _bReadyReported = true;
             if ( _onReady.isBound() )
-                _onReady( _client );
+                _onReady.get()( _client );
         }
     }
 

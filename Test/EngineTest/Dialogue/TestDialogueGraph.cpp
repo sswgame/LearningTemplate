@@ -308,8 +308,8 @@ SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
 
         DialogueRunnerComponent runner;
         runner.setGraph( asset );
-        uint32 finishedCount{ 0 };
-        runner.setOnDialogueFinished( [&finishedCount]()
+        uint32                 finishedCount{ 0 };
+        const sw::Subscription dialogueFinishedBinding1 = runner.bindOnDialogueFinished( [&finishedCount]()
         { ++finishedCount; } );
         SW_EXPECT_TRUE( runner.startDialogue( 2 ) );
 
@@ -373,8 +373,8 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
 
         DialogueRunnerComponent runner;
         runner.setGraph( std::move( asset ) );
-        uint32 finishedCount{ 0 };
-        runner.setOnDialogueFinished( [&finishedCount]()
+        uint32                 finishedCount{ 0 };
+        const sw::Subscription dialogueFinishedBinding2 = runner.bindOnDialogueFinished( [&finishedCount]()
         { ++finishedCount; } );
         SW_EXPECT_TRUE( runner.startDialogue( 2 ) );
         SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Finished ), static_cast<uint8>( runner.getState() ) );
@@ -401,8 +401,8 @@ SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
 
     DialogueRunnerComponent runner;
     SW_EXPECT_TRUE( runner.loadGraphXML( pJSON ) );
-    string eventCommand;
-    runner.setOnDialogueEvent( [&eventCommand]( const string& command )
+    string                 eventCommand;
+    const sw::Subscription dialogueEventBinding3 = runner.bindOnDialogueEvent( [&eventCommand]( const string& command )
     { eventCommand = command; } );
     SW_EXPECT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( "open_curtain", eventCommand );

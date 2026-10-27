@@ -58,6 +58,7 @@ namespace sw
         , _pendingText{}
         , _pWindow{ nullptr }
         , _pInput{ nullptr }
+        , _textInputSubscription{}
         , _bOpen{ SW_FALSE }
         , _bShellMapChecked{ SW_FALSE }
         , _bShellMapComplete{ SW_FALSE }
@@ -75,7 +76,8 @@ namespace sw
         shutdown();
         _pInput = pInput;
         if ( _pInput != nullptr )
-            _pInput->setTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &DevConsoleController::onTextInput, this ), InputKeyboardFocus::DevConsole );
+            _textInputSubscription =
+                _pInput->bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &DevConsoleController::onTextInput, this ), InputKeyboardFocus::DevConsole );
         if ( pOwner != nullptr )
             _pWindow = IDevConsoleWindow::createPlatform( *pOwner );
         return _pWindow != nullptr;
@@ -85,7 +87,7 @@ namespace sw
     {
         if ( _pInput != nullptr )
         {
-            _pInput->setTextInputCallback( {}, InputKeyboardFocus::DevConsole );
+            _textInputSubscription.reset(); // 이 콘솔이 건 칸만 놓는다
             if ( _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole )
                 _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
             _pInput = nullptr;

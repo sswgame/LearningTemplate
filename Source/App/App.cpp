@@ -116,7 +116,10 @@ namespace sw
         , _userSettingsHost{}
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
+        , _windowResizeSubscription{}
+        , _windowMessageSubscription{}
         , _initializeStartMicro{ 0 }
+        , _hostParts{}
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
         , _reserved{ 0 }
@@ -196,13 +199,16 @@ namespace sw
         }
         [[maybe_unused]] const int64 windowEndMicro = MonotonicClock::nowMicroseconds();
 
-        // 3. ModuleHost(에디터와 게임의 수명 주기)를 연결한다.
+        // 3. 호스트 부품(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        if ( startModules() == false )
+        if ( startHostParts( _hostParts, kArrClientHostPart, SW_DELEGATE_METHOD( HostPartStartDelegate, &App::startHostPart, this ),
+                             SW_DELEGATE_METHOD( HostPartStopDelegate, &App::stopHostPart, this ) ) == false )
         {
+            SW_LOG_ERROR( "Host parts failed to start: %#", _hostParts.getError().c_str() );
             splash.dismiss();
             return false;
         }
+        SW_LOG_INFO( "Host parts up: %#", describeHostPartOrder( _hostParts ).c_str() );
         [[maybe_unused]] const int64 modulesEndMicro = MonotonicClock::nowMicroseconds();
 
         warnUnknownGlobalOverrides();
@@ -317,21 +323,97 @@ namespace sw
         return _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
-    bool App::startModules()
+    bool App::startHostPart( HostPartID id )
     {
-        if ( _moduleHost == nullptr )
-            _moduleHost = make_unique<EditorModuleHost>();
-        if ( _moduleHost->initialize( _moduleReload.getLiveReloadManager(),
-                                      _engine.getRHI(),
-                                      _pWindow,
-                                      _engine.getRenderThread(),
-                                      _bEnableEditor == SW_TRUE ) == false )
+        const bool bEnableEditor = _bEnableEditor == SW_TRUE;
+        switch ( id )
         {
-            SW_LOG_ERROR( "ModuleHost initialization failed." );
-            return false;
+            case HostPartID::Game:
+            {
+                if ( _moduleHost == nullptr )
+                    _moduleHost = make_unique<EditorModuleHost>();
+                const bool bStarted =
+                    _moduleHost->initialize( _moduleReload.getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
+                if ( bStarted == false )
+                    SW_LOG_ERROR( "ModuleHost initialization failed." );
+                return bStarted;
+            }
+            case HostPartID::BackendSwitcher:
+            {
+                _backendSwap.initialize( &_engine, _moduleHost.get(), bEnableEditor );
+                // 시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
+                return _host.bind( &_backendSwap );
+            }
+            case HostPartID::UserSettings:
+            {
+                _userSettingsHost.initialize( &_engine, _pWindow );
+                return true;
+            }
+            case HostPartID::RuntimeUIHooks:
+            {
+                installRuntimeUIHooks();
+                return true;
+            }
+            case HostPartID::DevConsole:
+            {
+                _devConsole.initialize( _pWindow, bEnableEditor );
+                return true;
+            }
+            case HostPartID::Observability:
+            case HostPartID::CrashReports:
+            case HostPartID::ServiceContext:
+            case HostPartID::StandardInput:
+            case HostPartID::DebugChannel:
+            {
+                break;
+            }
         }
+        SW_LOG_ERROR( "Host part %# is not a client part", HostPart::getName( id ) );
+        return false;
+    }
 
-        return true;
+    void App::stopHostPart( HostPartID id )
+    {
+        switch ( id )
+        {
+            case HostPartID::Game:
+            {
+                // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 부품은 엔진 종료 앞에서 내려간다.
+                _moduleHost->shutdown();
+                _moduleHost.reset();
+                return;
+            }
+            case HostPartID::BackendSwitcher:
+            {
+                // 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다. 전역 변수 훅은 GlobalVariableManager(엔진 소유)가 사라지기 전에 뗀다.
+                _host.unbind<RHIBackendSwitcher>();
+                _backendSwap.shutdown();
+                return;
+            }
+            case HostPartID::UserSettings:
+            {
+                _userSettingsHost.shutdown();
+                return;
+            }
+            case HostPartID::RuntimeUIHooks:
+            {
+                removeRuntimeUIHooks();
+                return;
+            }
+            case HostPartID::DevConsole:
+            {
+                _devConsole.shutdown();
+                return;
+            }
+            case HostPartID::Observability:
+            case HostPartID::CrashReports:
+            case HostPartID::ServiceContext:
+            case HostPartID::StandardInput:
+            case HostPartID::DebugChannel:
+            {
+                return;
+            }
+        }
     }
 
     void App::warnUnknownGlobalOverrides() const
@@ -376,8 +458,9 @@ namespace sw
 
     void App::bindHostCallbacks()
     {
-        _pWindow->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
-        _pWindow->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
+        // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
+        _windowResizeSubscription  = _pWindow->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
+        _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를
@@ -393,41 +476,18 @@ namespace sw
                 AppAssertDialog::installForInteractiveRun( *pCommandLine );
         }
 
-        _backendSwap.initialize( &_engine, _moduleHost.get(), _bEnableEditor == SW_TRUE );
-        // 시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
-        const bool bSwitcherBound = _host.bind( &_backendSwap );
-        SW_ASSERT( bSwitcherBound );
-        (void)bSwitcherBound;
-        _userSettingsHost.initialize( &_engine, _pWindow );
-        installRuntimeUIHooks();
-
         _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
     }
 
     void App::shutdown()
     {
-        // 전역 변수 훅은 그 변수를 소유한 GlobalVariableManager(Engine 소유)가 사라지기 전에 해제한다. 헤드리스 부팅처럼
-        // 연결되지 않은 경우에는 아무것도 하지 않는다. 교체기는 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다.
-        _host.unbind<RHIBackendSwitcher>();
-        _backendSwap.shutdown();
-        _userSettingsHost.shutdown();
-        removeRuntimeUIHooks();
+        // 호스트 부품을 선 순서의 역순으로 내린다(순서는 `HostPart` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
+        // 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
+        _hostParts.destroyAll();
+        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
+        _moduleHost.reset();
 
-        // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다. 아래 경로가 그대로 아무 일도 하지 않으므로 모드 분기를 따로 두지 않는다.
-        // 주의: ModuleHost 를 Engine 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰와 게임 뷰 RT 를 해제할 때 RenderThread 와
-        // RHI 디바이스를 쓰기 때문이다.
-        BLOCK( "Game / Editor 인스턴스 정리" )
-        {
-            if ( _moduleHost != nullptr )
-            {
-                _moduleHost->shutdown();
-                _moduleHost.reset();
-            }
-        }
-
-        // 콘솔은 엔진(입력 관리자)과 게임 창보다 먼저 내린다(`DevConsoleHost::shutdown`).
-        _devConsole.shutdown();
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
@@ -458,7 +518,6 @@ namespace sw
                      PlatformFileUtil::getFileOpenCount() );
 
         _fixedTimestep.start();
-        _devConsole.initialize( _pWindow, _bEnableEditor == SW_TRUE );
 
         // 페이서는 주 창 서비스가 든다 — 창(`_pWindow`)을 그 서비스에서 받았으므로 여기서 없으면 결함이다.
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();

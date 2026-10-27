@@ -8,7 +8,7 @@
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
  *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
- *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 친구 키트 서버 조립이 연결한다(`setEventDelegate` → 기반 `IGroupChannelMembership`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
+ *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 친구 키트 서버 조립이 연결한다(`bindEventDelegate` → 기반 `IGroupChannelMembership`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
  *            로그인한 계정의 길드는 바인딩(`SocialServer::onAccountJoined`)이 다음 틱에 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
  *
  *          - 길드 창고는 원장의 맡김(`esc/guild/<길드 16진>`)이다. 맡기기는 멤버 누구나, 꺼내기는 임원 이상이 하며 둘 다 클라이언트 멱등 키로 만든 분개 키가 필수이다.
@@ -26,6 +26,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
@@ -157,7 +158,8 @@ namespace sw
         /** @brief 경험치에 맞는 레벨입니다(1 부터). */
         int32 computeLevel( int64 experience ) const;
         /** @brief 이벤트를 받을 델리게이트입니다. 게임 조립 단계가 지정하며 비어 있으면 이벤트를 버립니다. */
-        void setEventDelegate( const GuildEventDelegate& onEvent ) { _onEvent = onEvent; }
+        /** @brief 길드 이벤트를 받을 함수를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다. */
+        [[nodiscard]] Subscription bindEventDelegate( GuildEventDelegate onEvent ) { return _onEvent.bind( std::move( onEvent ) ); }
         /** @brief 꺼내기가 계정 잔액 상한을 볼 정책입니다(화폐 카탈로그). 빌려 쓰며 nullptr 이면 원장 상한(`kMaxBalance`)만 봅니다. */
         void                 setLedgerPolicy( const ILedgerPolicy* pPolicy ) { _pLedgerPolicy = pPolicy; }
         const ILedgerPolicy* getLedgerPolicy() const { return _pLedgerPolicy; }
@@ -175,12 +177,12 @@ namespace sw
     private:
         void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs );
 
-        EventBuffer<GuildCompletion>    _completionBuffer;
-        EventBuffer<SocialNotification> _notificationBuffer;
-        GuildEventDelegate              _onEvent;
-        vector<int64>                   _listLevelExperience; ///< 레벨 2 부터의 누적 경험치이다. 데이터(서버 설정)가 원본이다
-        IServiceStore*                  _pStore;
-        const ILedgerPolicy*            _pLedgerPolicy;
-        int32                           _pendingCount;
+        EventBuffer<GuildCompletion>     _completionBuffer;
+        EventBuffer<SocialNotification>  _notificationBuffer;
+        DelegateSlot<GuildEventDelegate> _onEvent;
+        vector<int64>                    _listLevelExperience; ///< 레벨 2 부터의 누적 경험치이다. 데이터(서버 설정)가 원본이다
+        IServiceStore*                   _pStore;
+        const ILedgerPolicy*             _pLedgerPolicy;
+        int32                            _pendingCount;
     };
 } // namespace sw

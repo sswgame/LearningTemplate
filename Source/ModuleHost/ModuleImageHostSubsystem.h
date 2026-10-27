@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Module/ModuleImageHost.h"
@@ -42,8 +43,8 @@ namespace sw
          */
         [[nodiscard]] static ModuleImageHostSubsystem* initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName );
 
-        /** @brief 씬이 사라진 뒤 불릴 훅(모듈 DLL 내리기)을 겁니다. 엔진 범위가 종료하기 전에 겁니다. */
-        void setScenesReleasedHook( Delegate<void()> hook );
+        /** @brief 씬이 사라진 뒤 불릴 훅(모듈 DLL 내리기)을 겁니다. 엔진 범위가 종료하기 전에 겁니다. 주인은 하나다(이미 걸려 있으면 단언). */
+        [[nodiscard]] Subscription bindScenesReleasedHook( Delegate<void()> hook );
 
         [[nodiscard]] bool loadTypeProviders() override;
         void               onScenesReleased() override;
@@ -58,7 +59,7 @@ namespace sw
         span<const utf8* const> getSubsystemDependents() const override;
 
     private:
-        ModuleTypeLoaderDelegate _moduleTypeLoader;
-        Delegate<void()>         _scenesReleasedHook;
+        ModuleTypeLoaderDelegate       _moduleTypeLoader;
+        DelegateSlot<Delegate<void()>> _scenesReleasedHook;
     };
 } // namespace sw

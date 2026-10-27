@@ -192,7 +192,7 @@ namespace sw
         if ( _bDefaultsLoaded.load( std::memory_order_acquire ) == false )
             return;
 
-        // **`reloadDefaults()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서와 해석 결과를
+        // **`reload()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서와 해석 결과를
         // 락 없이 읽는다(컴포넌트 생성마다 도는 자리라 잠그면 직렬화된다). 다시 읽는 일은
         // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
         // 쪽의 몫이다.
@@ -354,30 +354,5 @@ namespace sw
         std::unique_lock<shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
         _listReplacedResolved.clear();
-    }
-
-    void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )
-    {
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<ComponentDefaults>().apply( pComp, typeInfo );
-    }
-
-    void ComponentDefaults::setDefaultsPath( string_view path )
-    {
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<ComponentDefaults>().setPath( path );
-    }
-
-    string ComponentDefaults::getDefaultsPath()
-    {
-        if ( engine::areEngineServicesBound() )
-            return engine::getSubsystem<ComponentDefaults>().getPath();
-        return {};
-    }
-
-    void ComponentDefaults::reloadDefaults()
-    {
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<ComponentDefaults>().reload();
     }
 } // namespace sw

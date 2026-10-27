@@ -17,6 +17,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorPanelHost.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -35,6 +36,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -59,8 +61,12 @@ namespace sw::editor
         shutdown();
     }
 
-    void EditorContext::initialize()
+    void EditorContext::initialize( EditorToolDefaults& toolDefaults )
     {
+        // 도구 시드는 서브시스템이 서며 읽을 수 있다(입력 맵 경로 · 핫 리로드 확장자) — 그보다 먼저 범위에 빌려 건다. 내리는 것은 `shutdown`.
+        const bool bToolDefaultsBound = _scope.bind( &toolDefaults );
+        SW_ASSERT( bToolDefaultsBound );
+        (void)bToolDefaultsBound;
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
         _scope.addSubsystem( make_unique<EditorStateStore>() ); // 한 파일 안의 상태(탐침이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
@@ -71,6 +77,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
         _scope.addSubsystem( make_unique<EditorNotificationManager>() );
         _scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        _scope.addSubsystem( make_unique<EditorObjectEditBindings>() ); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
         _scope.addSubsystem( make_unique<ConfigHotReload>() );
@@ -126,7 +133,8 @@ namespace sw::editor
         // 확장이 기여한 서브시스템은 내장 서브시스템을 쓸 수 있다 — 그들보다 먼저 종료한다.
         if ( EditorExtensionSubsystems* pExtensions = findSubsystem<EditorExtensionSubsystems>() )
             pExtensions->releaseAll();
-        _scope.destroyAll(); // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
+        _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
+        _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
     }
 
     void EditorContext::setDockLayout( EditorDockLayout* pDockLayout )

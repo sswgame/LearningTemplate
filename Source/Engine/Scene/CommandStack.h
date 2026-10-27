@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -116,8 +117,10 @@ namespace sw
         /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. */
         void jumpTo( size_t targetIndex );
 
-        /** @brief 데이터 명령의 알림 처리기를 등록합니다. 빈 델리게이트를 넘기면 해제합니다. */
-        void setObjectEditListener( ObjectEditListener listener );
+        /** @brief 데이터 명령의 알림 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다. */
+        [[nodiscard]] Subscription bindObjectEditListener( ObjectEditListener listener ) { return _objectEditListener.bind( std::move( listener ) ); }
+        /** @brief 알림 처리기가 걸려 있으면 true 입니다(모듈 언로드 훑기가 비웠으면 false — 새 모듈이 다시 건다). */
+        bool hasObjectEditListener() const { return _objectEditListener.isBound(); }
         /** @brief 데이터 명령이 오브젝트에 한 일을 처리기에 알립니다. 처리기가 없으면 아무것도 하지 않습니다. */
         void notifyObjectEdit( const ObjectEditNotice& notice ) const;
 
@@ -147,15 +150,15 @@ namespace sw
         static uint32 dropCommandsWithin( vector<Command>& inoutListCommand, size_t& inoutIndex, const void* pBegin, const void* pEnd );
 
     private:
-        vector<Command>    _listCommand;
-        vector<Command>    _listPendingTransactionCommand;
-        vector<Command>    _listParkedCommand; ///< 보관한 내역(`parkHistory`)
-        ObjectEditListener _objectEditListener;
-        string             _transactionLabel;
-        string             _lastCoalesceKey;
-        string             _empty;
-        size_t             _index;
-        size_t             _parkedIndex; ///< 보관한 내역의 위치
+        vector<Command>                  _listCommand;
+        vector<Command>                  _listPendingTransactionCommand;
+        vector<Command>                  _listParkedCommand; ///< 보관한 내역(`parkHistory`)
+        DelegateSlot<ObjectEditListener> _objectEditListener;
+        string                           _transactionLabel;
+        string                           _lastCoalesceKey;
+        string                           _empty;
+        size_t                           _index;
+        size_t                           _parkedIndex; ///< 보관한 내역의 위치
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
         bool   _bIsExecuting;

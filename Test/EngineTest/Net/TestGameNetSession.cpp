@@ -7,6 +7,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 
+#include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
@@ -318,10 +319,15 @@ SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstance
     config._gamePort      = 0;
     ServerServiceContext context;
     context._pServerConfig = &config;
-    ServerServiceRegistry::bindHostContext( &context );
     GameNetSession server;
-    const bool     bFirstOpened = server.openFromLaunch(); // 첫 게임 인스턴스
-    ServerServiceRegistry::bindHostContext( nullptr );
+    bool           bFirstOpened = false;
+    {
+        // 전용 서버처럼 서버 문맥을 범위에 빌려 건다 — 나가면 풀린다.
+        test::ScopedEngineServiceOverride hostScope;
+        SW_ASSERT_TRUE( hostScope.bindObject( &context ) );
+        SW_ASSERT_TRUE( hostScope.bind() == nullptr );
+        bFirstOpened = server.openFromLaunch(); // 첫 게임 인스턴스
+    }
     SW_ASSERT_TRUE( bFirstOpened );
     SW_ASSERT_TRUE( server.isActive() );
     const uint16 port = server.getListenPort();
@@ -364,9 +370,13 @@ SW_TEST_CASE( GameNetSessionTest, LaunchParamsOpenTheGamePortOnlyOnADedicatedSer
     config._gamePort      = 0;
     ServerServiceContext context;
     context._pServerConfig = &config;
-    ServerServiceRegistry::bindHostContext( &context );
-    const GameNetLaunch launch = session.makeLaunchParams( params );
-    ServerServiceRegistry::bindHostContext( nullptr );
+    GameNetLaunch launch   = GameNetLaunch::None;
+    {
+        test::ScopedEngineServiceOverride hostScope;
+        SW_ASSERT_TRUE( hostScope.bindObject( &context ) );
+        SW_ASSERT_TRUE( hostScope.bind() == nullptr );
+        launch = session.makeLaunchParams( params );
+    }
     SW_ASSERT_TRUE( launch == GameNetLaunch::Open );
     SW_EXPECT_TRUE( params._role == GameNetRole::Server );
     SW_EXPECT_TRUE( params._bLoopbackOnly );
@@ -382,12 +392,17 @@ SW_TEST_CASE( GameNetSessionTest, AnInvalidServerConfigStopsTheLaunchInsteadOfSt
     config._gamePort      = 0;
     ServerServiceContext context;
     context._pServerConfig = &config;
-    ServerServiceRegistry::bindHostContext( &context );
     GameNetSession       session;
     GameNetSessionParams params;
-    const GameNetLaunch  launch  = session.makeLaunchParams( params );
-    const bool           bOpened = session.openFromLaunch();
-    ServerServiceRegistry::bindHostContext( nullptr );
+    GameNetLaunch        launch  = GameNetLaunch::None;
+    bool                 bOpened = true;
+    {
+        test::ScopedEngineServiceOverride hostScope;
+        SW_ASSERT_TRUE( hostScope.bindObject( &context ) );
+        SW_ASSERT_TRUE( hostScope.bind() == nullptr );
+        launch  = session.makeLaunchParams( params );
+        bOpened = session.openFromLaunch();
+    }
     SW_EXPECT_TRUE( launch == GameNetLaunch::Invalid );
     SW_EXPECT_FALSE( bOpened );
     SW_EXPECT_FALSE( session.isActive() );

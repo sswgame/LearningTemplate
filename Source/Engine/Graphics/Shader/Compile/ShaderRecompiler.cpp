@@ -91,7 +91,7 @@ namespace sw
 
             ++changed;
             if ( _onAnyRecompiled.isBound() )
-                _onAnyRecompiled( desc._filePath, newResult );
+                _onAnyRecompiled.get()( desc._filePath, newResult );
         }
 
         if ( changed > 0 && engine::areEngineServicesBound() )

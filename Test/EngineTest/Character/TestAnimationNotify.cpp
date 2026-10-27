@@ -8,13 +8,13 @@
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
-#include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -405,7 +405,7 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
 
     vector<CameraShakeRequest> listShake;
     Subscription               shakeSubscription =
-        AnimationNotifyHandlerUtil::getCameraShakeRequested().add( SW_DELEGATE_LAMBDA( CameraShakeRequestCallback, [&listShake]( const CameraShakeRequest& request )
+        manager.getCameraRegistry().getShakeChannel().bind( SW_DELEGATE_LAMBDA( CameraShakeRequestCallback, [&listShake]( const CameraShakeRequest& request )
     { listShake.push_back( request ); } ) );
 
     test::TestPlayable                      clip( 1.0f, true );
@@ -455,4 +455,24 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
 
     shakeSubscription.reset();
     manager.endPlay();
+}
+
+/**
+ * @brief [AnimationNotifyTest] 흔들림 채널 — 전달 중에 자기 구독을 풀어도(같은 스레드 재진입) 막히지 않고, 푼 듣는 쪽은 다음 전달을 받지 않는다
+ */
+SW_TEST_CASE( AnimationNotifyTest, ShakeChannelReleasesInsideBroadcastWithoutDeadlock )
+{
+    CameraShakeChannel channel;
+    uint32             callCount = 0;
+    Subscription       subscription;
+    subscription = channel.bind( SW_DELEGATE_LAMBDA( CameraShakeRequestCallback, [&callCount, &subscription]( const CameraShakeRequest& )
+    {
+        ++callCount;
+        subscription.reset();
+    } ) );
+    SW_EXPECT_TRUE( channel.isBound() );
+    channel.broadcast( CameraShakeRequest{} );
+    channel.broadcast( CameraShakeRequest{} );
+    SW_EXPECT_EQUAL( 1u, callCount );
+    SW_EXPECT_FALSE( channel.isBound() );
 }

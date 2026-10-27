@@ -91,6 +91,8 @@ namespace sw
         , _offscreen{}
         , _documentCache{}
         , _styleSheetCache{}
+        , _documentReloadedSubscription{}
+        , _styleSheetReloadedSubscription{}
         , _theme{}
         , _listReopenDocument{}
         , _bindingConverters{}
@@ -142,12 +144,12 @@ namespace sw
 
     bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath )
     {
-        _pFontService              = pFontService;
-        _actionGlyphs._pInput      = &inputManager;
-        _actionGlyphs._pUIInputMap = nullptr;
-        _documentCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
-        _styleSheetCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
-        _textLayout = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
+        _pFontService                   = pFontService;
+        _actionGlyphs._pInput           = &inputManager;
+        _actionGlyphs._pUIInputMap      = nullptr;
+        _documentReloadedSubscription   = _documentCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
+        _styleSheetReloadedSubscription = _styleSheetCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
+        _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
         if ( _input.initialize( inputManager, uiInputMapPath ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
@@ -178,8 +180,8 @@ namespace sw
         _offscreen.clear();
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
-        _documentCache.setReloadedHandler( {} );
-        _styleSheetCache.setReloadedHandler( {} );
+        _documentReloadedSubscription.reset();
+        _styleSheetReloadedSubscription.reset();
         refreshActiveScreen();
         _input.shutdown();
         _paintState.releasePaintScratch(); // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다

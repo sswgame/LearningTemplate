@@ -17,6 +17,7 @@ namespace sw
         :
 #if !defined( SW_SHIPPING )
         _shaderRecompiler{ nullptr }
+        , _recompiledSubscription{}
         ,
 #endif
         _frameRendererSubsystem{ frameRendererSubsystem }
@@ -41,8 +42,8 @@ namespace sw
             SW_LOG_ERROR( "Failed to initialize ShaderRecompiler!" );
             return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
         }
-        _shaderRecompiler->setOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
-        _bReady = true;
+        _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
+        _bReady                 = true;
 #endif
         return SubsystemInitResult::Succeeded;
     }
@@ -50,6 +51,7 @@ namespace sw
     void LiveShaderSubsystem::shutdownSubsystem()
     {
 #if !defined( SW_SHIPPING )
+        _recompiledSubscription.reset(); // 백엔드 교체로 다시 서면 다시 건다
         if ( _shaderRecompiler != nullptr )
             _shaderRecompiler->shutdown();
 #endif

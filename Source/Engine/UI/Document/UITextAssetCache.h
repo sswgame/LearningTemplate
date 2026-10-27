@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
@@ -39,8 +40,11 @@ namespace sw
     public:
         ~UITextAssetCache() override;
 
-        /** @brief 다시 읽어 바꾼 에셋을 알릴 함수를 등록합니다(`UISystem` 이 등록하며, 그 에셋을 쓰는 화면을 다시 만들거나 맞춥니다). */
-        void setReloadedHandler( const UIAssetReloadedDelegate& handler ) { _reloadedHandler = handler; }
+        /**
+         * @brief 다시 읽어 바꾼 에셋을 알릴 함수를 겁니다(`UISystem` 이 걸며, 그 에셋을 쓰는 화면을 다시 만들거나 맞춥니다).
+         * @details 캐시는 `UISystem::getDocumentCache` 로 누구나 닿으므로 칸 주인을 구독으로 정한다 — 이미 걸려 있으면 단언, 구독이 풀리면 빈다.
+         */
+        [[nodiscard]] Subscription bindReloadedHandler( UIAssetReloadedDelegate handler ) { return _reloadedHandler.bind( std::move( handler ) ); }
 
         const utf8* getAssetKindName() const override { return _pAssetKindName; }
         bool        isCached( string_view relativePath ) const override;
@@ -72,7 +76,7 @@ namespace sw
     private:
         unordered_map<string, shared_ptr<const void>> _mapPathToAsset;      ///< 정규화한 경로에서 파싱한 에셋을 찾는 맵입니다.
         unordered_map<string, string>                 _mapPathToMemoryText; ///< 정규화한 경로에서 메모리 텍스트를 찾는 맵입니다.
-        UIAssetReloadedDelegate                       _reloadedHandler;
+        DelegateSlot<UIAssetReloadedDelegate>         _reloadedHandler;
         const utf8*                                   _pAssetKindName;
         const utf8*                                   _pAssetLabel;
         UITextAssetParseFunction                      _pParse;

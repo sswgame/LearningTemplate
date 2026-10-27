@@ -85,7 +85,7 @@ GM 전용 호스트 포트. 계약은 `OnlineServiceHost.h` 머리 주석과 `Se
 **설계** — 호스트는 하나로 두고 리슨만 둘로 나눕니다. 버린 길: 호스트 둘(계정 바인딩 · 로그인 이벤트가 쪼개짐), 전송 셋에 다중 리슨(epoll 을 이 PC 에서 빌드 못 함), 한 포트에서 원격 주소로 거르기(포트 분리가 아님). 노출 면은 서비스의 형식입니다: `IOnlineHostService::getExposure()`(`Player` 기본 · `Admin` · `PlayerAndAdmin`). 리슨과 노출이 맞지 않는 요청은 "없는 메서드" 와 같은 `kInvalidRequest` 로 답합니다(영역이 있는지 숨김). `_adminServicePort` 0 이면 GM 리슨이 없고 GM 키트(`Admin` 노출 서비스)를 켠 서버는 기동하지 못합니다(플레이어 포트로 받는 폴백 없음, 2026-10-27 U9). `_adminListenAddress` 기본은 `127.0.0.1` 입니다.
 
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동은 확인하지 않았습니다.
-- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 겁니다(포트 없는 주소는 거절). 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `getConnection().setLoginHook` 에 `AccountGmLogin`(계정 키트)을 끼워야 하고, 없으면 `Ready` 에서 멈춰 서버가 `NotLoggedIn` 으로 거절합니다. 이 조립을 하는 도구 실행 파일은 아직 없고 에디터 안에서는 이름 · 비밀번호 UI 가 필요합니다(U1). 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 씁니다.
+- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 겁니다(포트 없는 주소는 거절). 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `getConnection().bindLoginHook` 에 `AccountGmLogin`(계정 키트)을 끼워야 하고, 없으면 `Ready` 에서 멈춰 서버가 `NotLoggedIn` 으로 거절합니다. 이 조립을 하는 도구 실행 파일은 아직 없고 에디터 안에서는 이름 · 비밀번호 UI 가 필요합니다(U1). 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 씁니다.
 
 ### U1
 

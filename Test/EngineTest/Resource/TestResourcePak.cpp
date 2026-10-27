@@ -58,7 +58,7 @@ namespace sw
 
             ~GlobalVfsScope()
             {
-                ResourcePakManager& packManager = ResourceIO::getPackManager();
+                ResourcePakManager& packManager = engine::getSubsystem<AssetManager>().getPackManager();
                 packManager.unmountAll();
                 packManager.setAllowLooseFiles( true );
                 ResourcePaths::setSearchPriority( _listSearchPriority );
@@ -355,7 +355,7 @@ SW_TEST_CASE( ResourcePakTest, VFSPriorityStackAndOverrides )
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
 
     // 2. 엔진 & 게임 팩 마운트
@@ -439,7 +439,7 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
 
@@ -485,7 +485,7 @@ SW_TEST_CASE( ResourcePakTest, TextAndBinaryReadsPickTheSameSource )
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
 
@@ -535,7 +535,7 @@ SW_TEST_CASE( ResourcePakTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
                                                                                                                    { kKey, "FROM_PACK" }
     } ) );
 
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
     sw::string text;
@@ -594,7 +594,7 @@ SW_TEST_CASE( ResourcePakTest, DynamicPriorityAutoCalculation )
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
     // 우선순위 토큰 목록 설정: game > common > engine (3개 항목)
     const sw::vector<sw::string> listPriority = { "game", "common", "engine" };
@@ -966,7 +966,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
     SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( domainPack, 0, sw::PackCompressionType::None,
                                                                    { sw::makeListingEntry( "data/presets/d.appearance.xml" ) } ) );
 
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.unmountAll();
     packManager.setAllowLooseFiles( false );
     SW_ASSERT_TRUE( packManager.mountPack( fullPathPack, 1000 ) );
@@ -1006,7 +1006,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
 
     // 디스크에 실제로 있는 폴더(슈터 외형 데이터)를 쓴다 — 여섯 파일이 있다.
     const sw::string        folder      = "game/shooter3d/data/appearance";
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.setAllowLooseFiles( true );
 
     sw::vector<sw::string> listLoose;

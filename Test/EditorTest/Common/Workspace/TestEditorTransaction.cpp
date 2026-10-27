@@ -542,7 +542,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     SW_ASSERT_NOT_NULL( pAfterUndo );
     SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( pAfterUndo )._xml == beforeRename._xml );
 
-    EditorTransaction::bindObjectEditListener( stack );
+    getSubsystem<EditorObjectEditBindings>().ensureBound( stack ); // 새 모듈의 initialize 가 다시 거는 자리
     stack.redo();
     SW_EXPECT_TRUE( workspace.isSceneDirty() );
     GameObject* pAfterRedo = pManager->findGameObjectByID( targetID );

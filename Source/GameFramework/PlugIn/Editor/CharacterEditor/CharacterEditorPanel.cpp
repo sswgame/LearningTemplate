@@ -1658,7 +1658,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::ensurePackData()
     {
-        const string& packRoot = GameConfig::getActive()._packRoot.get();
+        const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( _packDataState != PackDataState::Unread && packRoot == _packRoot )
             return;
         _packRoot = packRoot;

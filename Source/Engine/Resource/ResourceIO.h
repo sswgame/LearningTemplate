@@ -91,8 +91,6 @@ namespace sw
          * @return 폴더가 없으면 `FolderMissing`, 인자가 잘못됐거나 디스크 폴더를 읽지 못하면 `Failed` 입니다. 그 둘이면 @p outListPath 는 비어 있습니다.
          */
         [[nodiscard]] static ResourceFolderListing collectResources( string_view relativeFolder, string_view extension, vector<string>& outListPath );
-
-        /** @brief VFS 팩 매니저를 반환합니다. */
-        static ResourcePakManager& getPackManager();
+        // VFS 팩 매니저는 `AssetManager` 가 소유한다 — `engine::getSubsystem<AssetManager>().getPackManager()` 로 닿는다(정적 창구를 두지 않는다).
     };
 } // namespace sw

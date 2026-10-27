@@ -13,6 +13,8 @@
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
 
+#include "ModuleHost/HostPart.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -638,6 +640,18 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
         SW_EXPECT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
     }
     SW_EXPECT_TRUE( hostKindCount >= 2 ); // 클라이언트 · 전용 서버
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 엔진 뒤에 서는 호스트 부품이 App · Server 마다 의존 선언(`HostPart`)이 정한 한 순서로 선다(종료는 그 역순)
+ * @details 두 실행 파일이 종료 순서를 손으로 적던 자리다. 서버 부팅 테스트(`ServerBootTest.StartsTicksAndExitsWithoutWindowOrGPU`)가 같은 표로 계산한 줄을
+ *          실제 서버 로그(`Host parts up: …`)에서 찾는다 — 표를 고치면 이 기대 순서도 함께 고친다(순서가 바뀌었다는 사실을 리뷰에 드러낸다).
+ */
+SW_TEST_CASE( EngineInitSequenceTest, HostPartsStartInTheDeclaredOrder )
+{
+    SW_EXPECT_STREQ( "Observability > CrashReports > ServiceContext > Game > DevConsole > DebugChannel > StandardInput",
+                     describeDeclaredHostPartOrder( kArrServerHostPart ).c_str() );
+    SW_EXPECT_STREQ( "Game > BackendSwitcher > DevConsole > RuntimeUIHooks > UserSettings", describeDeclaredHostPartOrder( kArrClientHostPart ).c_str() );
 }
 
 /**

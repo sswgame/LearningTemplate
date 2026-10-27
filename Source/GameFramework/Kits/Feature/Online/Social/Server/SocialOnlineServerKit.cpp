@@ -51,6 +51,7 @@ namespace sw
                 , _socialServer{}
                 , _blockList{ &_socialService }
                 , _pGroupChannels{ nullptr }
+                , _guildEventSubscription{}
                 , _bStarted{ false }
             {
             }
@@ -98,7 +99,7 @@ namespace sw
                 _guildService.setLedgerPolicy( context._pLedgerPolicy ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
                 _pGroupChannels = context._pGroupChannels;
                 if ( _pGroupChannels != nullptr )
-                    _guildService.setEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
+                    _guildEventSubscription = _guildService.bindEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
                 _socialServer.initialize( &_socialService, &_guildService, context._pPresence );
                 _bStarted = true;
                 return true;
@@ -113,6 +114,7 @@ namespace sw
             void shutdown() override
             {
                 // 친구 · 길드 로직은 저장소 일을 회수한 뒤(호스트와 저장소를 종료한 뒤) 종료한다 — 서비스 계약.
+                _guildEventSubscription.reset();
                 if ( _bStarted )
                 {
                     _guildService.shutdown();
@@ -137,7 +139,8 @@ namespace sw
             GuildService             _guildService;
             SocialServer             _socialServer;
             SocialBlockList          _blockList;
-            IGroupChannelMembership* _pGroupChannels; ///< 채팅 키트가 없으면 null 이고 길드 이벤트를 받지 않는다
+            IGroupChannelMembership* _pGroupChannels;         ///< 채팅 키트가 없으면 null 이고 길드 이벤트를 받지 않는다
+            Subscription             _guildEventSubscription; ///< 길드 이벤트 칸 구독(`start` 가 걸고 `shutdown` 이 놓는다)
             bool                     _bStarted;
         };
     } // namespace

@@ -2,8 +2,10 @@
 
 #include "EngineTest/RHITestDevice.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
 #include "TestFramework/TestRegistry.h"
 #include "TestFramework/TestScopes.h"
@@ -193,7 +195,7 @@ namespace test
         if ( _window == nullptr )
             return false;
 
-        sw::unique_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( _backend );
+        sw::unique_ptr<sw::IRHIDevice> device = sw::engine::getSubsystem<sw::RHIBackendRegistry>().createDevice( _backend );
         if ( device == nullptr )
             return false;
         device->setRenderSurface( _window.get() );

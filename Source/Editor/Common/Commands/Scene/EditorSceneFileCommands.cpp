@@ -283,7 +283,7 @@ namespace sw::editor
         params._bEnableMultiselect = false;
         // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
-        const string mapsDir = ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get(), path::kMapsFolder ).getDiskPath();
+        const string mapsDir = ResourcePaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ).getDiskPath();
         if ( FileUtil::isDirectory( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorSceneFileCommandsInternal::onSaveSceneDialogResult ) );

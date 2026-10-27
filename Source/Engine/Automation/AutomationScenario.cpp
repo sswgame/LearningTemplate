@@ -10,6 +10,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -31,7 +32,7 @@ namespace sw
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
                 const string loosePath = ResourcePaths::findLooseFile( path ).getDiskPath();
-                const bool   bPackOnly = engine::areEngineServicesBound() && ResourceIO::getPackManager().isAllowLooseFiles() == false;
+                const bool   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 return "[read] not found (resource root '" + ResourcePaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
                        ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
                        ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );

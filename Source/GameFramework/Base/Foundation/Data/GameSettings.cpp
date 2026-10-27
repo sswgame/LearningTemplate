@@ -122,8 +122,6 @@ namespace sw
 
     bool BootstrapConfig::load( string_view gameSettingsFileName )
     {
-        const string path = resolve( gameSettingsFileName );
-        Component::setDefaultGameSettingsPath( path );
-        return _data.loadFromResource( path );
+        return _data.loadFromResource( resolve( gameSettingsFileName ) );
     }
 } // namespace sw

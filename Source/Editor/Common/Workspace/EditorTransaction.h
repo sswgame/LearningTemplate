@@ -3,8 +3,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 #include "Engine/Scene/ObjectUndoUtil.h"
 
@@ -63,11 +65,29 @@ namespace sw::editor
         static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
                                         const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
                                         string_view coalesceKey = {} );
+    };
+} // namespace sw::editor
 
-        /**
-         * @brief 데이터 명령의 알림(`CommandStack::ObjectEditNotice`)을 이 모듈이 받게 겁니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
-         * @details 에디터가 설 때와 오브젝트 편집을 기록할 때 겁니다. 리로드 전에 기록한 명령도 새 모듈의 처리기로 알립니다.
-         */
-        static void bindObjectEditListener( CommandStack& stack );
+namespace sw::editor
+{
+    /**
+     * @class EditorObjectEditBindings
+     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditNotice`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
+     * @details 스택의 알림 칸은 주인이 하나다(`DelegateSlot`). 이 서브시스템(에디터 범위)이 스택마다의 구독을 쥐고, 범위가 내려가면 함께 놓는다.
+     *          에디터가 설 때 전역 스택에, 오브젝트 편집을 기록할 때 그 스택(미리보기 창의 스택 포함)에 겁니다. 모듈 언로드 훑기가 칸을 비웠으면 다시 겁니다 —
+     *          리로드 전에 기록한 명령도 새 모듈의 처리기로 알린다. 에디터 컨텍스트 없이 도는 테스트는 커맨드 스택 서비스와 함께 이것을 범위에 둔다.
+     */
+    class SW_EDITOR_API EditorObjectEditBindings final : public EditorSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorObjectEditBindings";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void                         shutdownSubsystem() override { _listSubscription.clear(); }
+
+        /** @brief @p stack 의 알림 칸이 비어 있으면 이 모듈의 처리기를 겁니다(이미 걸려 있으면 아무것도 하지 않는다). */
+        void ensureBound( CommandStack& stack );
+
+    private:
+        vector<Subscription> _listSubscription; ///< 스택마다의 구독(스택이 먼저 사라지면 무효가 되고 다음 걸 때 걷힌다)
     };
 } // namespace sw::editor

@@ -102,14 +102,8 @@ namespace sw
         RHIBackend getCommittedBackend() const { return _committedRHIBackend; }
 
         // ------------------------------------------------------------------------------
-        // 2) 팩토리: 백엔드 생성, 표시 이름, 플랫폼 기본, 셰이더 타깃
+        // 2) 표시 이름, 플랫폼 기본, 셰이더 타깃 — 디바이스 생성은 서비스 `RHIBackendRegistry::createDevice` 가 맡는다(정적 창구를 두지 않는다)
         // ------------------------------------------------------------------------------
-        /**
-         * @brief 지정 백엔드(DirectX11, DirectX12, Vulkan, OpenGL)의 RHI 디바이스를 만듭니다.
-         * @param backend 생성할 백엔드 종류
-         * @return 생성된 IRHIDevice unique_ptr (실패 시 nullptr)
-         */
-        static unique_ptr<IRHIDevice> createDevice( RHIBackend backend );
 
         /** @brief 백엔드 열거형의 표시용 이름을 반환합니다. */
         static const utf8* getBackendTypeName( RHIBackend backend );

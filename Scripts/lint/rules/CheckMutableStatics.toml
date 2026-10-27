@@ -91,7 +91,7 @@
 "Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.h" = 1
-"Source/Editor/Common/Workspace/EditorService.cpp" = 6
+"Source/Editor/Common/Workspace/EditorService.cpp" = 5
 # Source/Editor/Panels — 이전 대기
 "Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
 # Source/Editor/Viewport — 이전 대기
@@ -103,7 +103,6 @@
 "Source/Engine/Automation/AutomationScratch.cpp" = 1
 "Source/Engine/Automation/AutomationStepRegistry.cpp" = 1
 # Source/Engine/Character — 이전 대기
-"Source/Engine/Character/AnimationNotify/AnimationNotifyHandlers.cpp" = 1
 "Source/Engine/Character/AnimationNotify/AnimationNotifyTable.cpp" = 1
 "Source/Engine/Character/CharacterDataCache.cpp" = 1
 # Source/Engine/Common — 이전 대기
@@ -158,7 +157,7 @@
 "Source/Engine/Object/GameObject/Tick/TickBatchRegistry.cpp" = 1
 "Source/Engine/Object/Prefab/PrefabAsset.cpp" = 1
 # Source/Engine/Observability — 이전 대기
-"Source/Engine/Observability/ServerServiceRegistry.cpp" = 2
+"Source/Engine/Observability/ServerServiceRegistry.cpp" = 1
 # Source/Engine/Physics — 이전 대기
 "Source/Engine/Physics/Collision/PhysicsMeshShapeCache.cpp" = 1
 "Source/Engine/Physics/Jolt/JoltJobSystem.cpp" = 1
@@ -187,7 +186,6 @@
 "Source/Engine/Resource/Pack/ResourcePakCompressionUtil.cpp" = 1
 "Source/Engine/Resource/ResourceDataKind.cpp" = 1
 "Source/Engine/Resource/ResourcePaths.cpp" = 5
-"Source/Engine/Resource/ResourcePaths.h" = 6
 # Source/Engine/Serialization — 이전 대기
 "Source/Engine/Serialization/Fixed/FixedLayout.h" = 1
 # Source/Engine/Text — 이전 대기

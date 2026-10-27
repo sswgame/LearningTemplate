@@ -14,6 +14,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -158,7 +159,13 @@ namespace sw
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
-        _bootstrap._packRoot = GameConfig::getActive()._packRoot;
+        const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
+        if ( pGameConfig == nullptr )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - the required engine service GameConfig is missing from the game services" );
+            return false;
+        }
+        _bootstrap._packRoot = pGameConfig->_packRoot;
         // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
         if ( loadGameSettings() == false )
         {
@@ -221,6 +228,10 @@ namespace sw
 
     bool GameInstanceBase::loadGameSettings()
     {
+        // 컴포넌트 기본값 경로의 주인은 엔진 범위의 `ComponentDefaults` 다(정적 칸을 두지 않는다). 선택 조회: 엔진 서비스 없이 도는 하네스에서는 기본값을 쓰지 않는다.
+        ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
+        if ( pComponentDefaults != nullptr )
+            pComponentDefaults->setPath( _bootstrap.resolve( path::kGameSettingsFile ) );
         return _bootstrap.load( path::kGameSettingsFile );
     }
 

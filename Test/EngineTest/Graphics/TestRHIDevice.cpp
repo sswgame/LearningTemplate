@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
@@ -363,7 +364,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DeviceCreationAllBackends, test::list
         const bool bWanted = test::matchesCaseBackend( backend ) && test::isBackendUnderTest( backend );
         if ( bWanted == false || sw::RHIAvailability::isAvailable( backend ) == false )
             continue;
-        sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( backend );
+        sw::shared_ptr<sw::IRHIDevice> device = sw::engine::getSubsystem<sw::RHIBackendRegistry>().createDevice( backend );
         if ( device != nullptr )
         {
             SW_EXPECT_EQUAL( static_cast<int32>( backend ), static_cast<int32>( device->getBackendType() ) );

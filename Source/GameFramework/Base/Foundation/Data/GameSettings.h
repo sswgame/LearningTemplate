@@ -104,7 +104,7 @@ namespace sw
         /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듭니다. */
         string resolve( string_view packRelative ) const;
 
-        /** @brief `{packRoot}/data/gamesettings.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGameSettingsPath`)로 등록합니다. */
+        /** @brief `{packRoot}/data/gamesettings.xml` 을 읽습니다. 그 경로를 컴포넌트 기본값 경로로 거는 일은 게임 인스턴스가 서비스(`ComponentDefaults::setPath`)에 한다. */
         [[nodiscard]] bool load( string_view gameSettingsFileName = PackEngineSettings::kPackRelativePath );
     };
 } // namespace sw

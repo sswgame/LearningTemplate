@@ -30,8 +30,10 @@ namespace
             , _listNotification{}
         {
             _service.initialize( &_store );
-            _service.setEventDelegate( GuildEventDelegate::create<&GuildNode::onEvent>( this ) );
+            _eventSubscription = _service.bindEventDelegate( GuildEventDelegate::create<&GuildNode::onEvent>( this ) );
         }
+
+        Subscription _eventSubscription; ///< 길드 이벤트 칸 구독(노드와 함께 풀린다)
 
         void onEvent( const GuildEvent& event ) { _listEvent.push_back( event ); }
 

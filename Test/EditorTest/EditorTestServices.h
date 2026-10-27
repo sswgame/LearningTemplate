@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 
 namespace sw
 {
@@ -46,7 +47,10 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 스코프 동안 커맨드 스택을 지역 서비스로 걸어 둡니다. */
+    /**
+     * @brief 스코프 동안 커맨드 스택을 지역 서비스로 걸어 둡니다.
+     * @details 에디터 컨텍스트처럼 스택 알림 칸의 주인(`EditorObjectEditBindings`)도 같은 범위에 둔다 — 기록이 스택에 처리기를 걸고, 되돌리기가 선택 · dirty 를 맞춘다.
+     */
     class ScopedCommandStackService
     {
     public:
@@ -55,6 +59,7 @@ namespace sw::editor
             , _activeScope{ _scope }
         {
             (void)_scope.bind( &stack ); // 새 범위라 겹치지 않는다
+            (void)_scope.addSubsystem( make_unique<EditorObjectEditBindings>() );
         }
 
         ScopedCommandStackService( const ScopedCommandStackService& )            = delete;
