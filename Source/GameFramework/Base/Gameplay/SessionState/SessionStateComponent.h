@@ -6,6 +6,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -48,7 +49,7 @@ namespace sw
         int32                 _inventorySlotCount{ 0 };    ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `makeRefs` 의 가방 포인터가 nullptr 이다
         const WeatherCatalog* _pWeatherCatalog{ nullptr }; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다
         PROPERTY()
-        uint32 _weatherSeed{ 0 };
+        uint32 _weatherSeed{ DeterministicRandom32::kDefaultSeed }; ///< 날씨 수열의 씨앗(0 은 거절된다 — 씨앗을 주지 않으면 기본 씨앗)
         PROPERTY( Min = 0 )
         int32 _landWidth{ 0 }; ///< 공유 땅의 셀 수. 0 이면 땅이 없고 `makeRefs` 의 땅 포인터가 nullptr 이다. 격자 키트는 단독으로 쓴다
         PROPERTY( Min = 0 )

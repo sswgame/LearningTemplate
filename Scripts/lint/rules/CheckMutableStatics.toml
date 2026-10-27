@@ -4,6 +4,7 @@
 # 키는 "<저장소 기준 파일 경로>:<변수 이름>". 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 올린다(예: 범위가 서기 전 · 시그널 안에서도
 # 읽는 크래시 경로의 잠금 없는 저장소). 변수가 더는 위반이 아니면 낡은 예외로 실패한다. 상수(`static const` · `static constexpr`)는 애초에 대상이 아니다.
 [exemption]
+"Source/Core/Concurrency/mutex.cpp:t_leafLockExemptionDepth" = "교착 검출기 보고가 잠금을 쥔 채 로그를 쓰는 범위를 잎 잠금 규칙에서 빼는 스레드별 깊이(`ScopedLeafLockExemption`) — 쥔 잠금 수(`t_heldLockDepth`)와 같은 자리 · 같은 까닭의 스레드 지역 칸이라 소유 객체를 둘 수 없다"
 "Test/CoreTest/Common/TestLowLevelReport.cpp:_s_received" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
 "Test/CoreTest/Common/TestLowLevelReport.cpp:_s_pCapture" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
 "Test/CoreTest/Common/TestLowLevelReport.cpp:_s_bHandled" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"

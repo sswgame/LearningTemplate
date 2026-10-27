@@ -55,8 +55,12 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
 #endif
     using Internal = OnlineServerKitsTestInternal;
     LoopbackStreamNetwork        network;
-    unique_ptr<IStreamTransport> transport = network.createTransport();
-    OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7461 );
+    unique_ptr<IStreamTransport> transport      = network.createTransport();
+    OnlineServerRuntimeConfig    settings       = Internal::makeSettings( transport.get(), 7461 );
+    unique_ptr<IStreamTransport> adminTransport = network.createTransport(); // GM 키트는 GM 리슨이 있어야 오른다
+    settings._bAdminListener                    = SW_TRUE;
+    settings._pAdminTransport                   = adminTransport.get();
+    settings._adminListenAddress                = NetAddress::makeLoopback( 7561 );
     Internal::addOption( Internal::addKit( settings, "account" ), "lightPasswordHash", "1" );
     (void)Internal::addKit( settings, "mailbox" );
     Internal::addOption( Internal::addKit( settings, "trade" ), "tradable", "cur.gold" );
@@ -127,8 +131,8 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
 {
     LeaderboardCatalog boards;
     SW_ASSERT_TRUE( boards.loadFromXMLText( R"(<LeaderboardCatalog>
-            <Board id="kills" order="descending" update="sum" reset="weekly" resetMinute="60" resetDay="2" sourceStat="kills" clientSubmit="true"/>
-            <Board id="race" order="ascending">
+            <Board id="kills" order="Descending" update="Sum" reset="Weekly" resetMinute="60" resetDay="2" sourceStat="kills" clientSubmit="true"/>
+            <Board id="race" order="Ascending">
                 <Season id="1" startMs="1767225600000" endMs="1769904000000">
                     <Reward from="1" to="10" asset="cur.gem" amount="100" mailTitle="mail.season_reward"/>
                 </Season>
@@ -175,7 +179,7 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeRejectBrokenElements 
         SW_ASSERT_TRUE( boards.loadFromXMLText( R"(<LeaderboardCatalog>
             <Board id="kills"/>
             <Board id="broken" order="sideways"/>
-            <Board id="flipped" reset="season">
+            <Board id="flipped" reset="Season">
                 <Season id="1"><Reward from="10" to="1" asset="cur.gem" amount="100" mailTitle="mail.season_reward"/></Season>
             </Board>
             <Board id="late" resetMinute="1440"/>

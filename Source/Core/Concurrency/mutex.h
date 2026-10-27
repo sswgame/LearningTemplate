@@ -207,6 +207,22 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 이 범위에서 쓰는 로그를 잎 잠금 규칙(`mutex::getHeldLockDepth`)에서 뺍니다.
+     * @details 잠금 진단(교착 검출기)의 보고는 잠금 상태 자체를 알리는 글이라 잠금을 쥔 채 쓸 수밖에 없다. 다른 곳은 쓰지 않는다.
+     */
+    class SW_API ScopedLeafLockExemption
+    {
+    public:
+        ScopedLeafLockExemption();
+        ~ScopedLeafLockExemption();
+        ScopedLeafLockExemption( const ScopedLeafLockExemption& )            = delete;
+        ScopedLeafLockExemption& operator=( const ScopedLeafLockExemption& ) = delete;
+    };
+} // namespace sw
+
+namespace sw
+{
 #if defined( SW_ENABLE_DEADLOCK_DETECTION )
     struct MutexReentryGuard
     {

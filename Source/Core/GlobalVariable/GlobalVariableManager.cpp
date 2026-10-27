@@ -508,6 +508,7 @@ namespace sw
         std::unique_lock<shared_mutex> lock{ _mutex };
         if ( _mapVariable.find( name ) != _mapVariable.end() )
         {
+            lock.unlock(); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
             SW_LOG_WARNING( "Variable %# is already registered.", string( name ).c_str() );
             return false;
         }

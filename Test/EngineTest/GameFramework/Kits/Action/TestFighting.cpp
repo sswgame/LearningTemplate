@@ -759,7 +759,7 @@ SW_TEST_CASE( FightingTest, RollbackHashMatchesTheRecordedValueOnEveryBuild )
     if ( bPrint )
         std::fprintf( stdout, "golden = 0x%016" PRIX64 "ull\n", hash );
     // 기록값 — 통합이 Windows Debug 에서 `SW_FIGHTING_PRINT_GOLDEN=1` 로 처음 떠서 적는다(작업자는 테스트를 돌리지 않는다). 0 이면 아직 적지 않은 것이다.
-    constexpr uint64 kRecordedHash = 0ull;
+    constexpr uint64 kRecordedHash = 0x993F83E4FB361CDAull;
     SW_EXPECT_TRUE_MSG( kRecordedHash == hash, "fighting rollback hash differs from the recorded value - a compiler or build setting changed the arithmetic" );
 }
 

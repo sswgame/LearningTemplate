@@ -13,8 +13,24 @@ namespace sw
 #if defined( SW_DEBUG )
         /** @brief 이 스레드가 쥔 `mutex` · `shared_mutex` 수입니다(`mutex::getHeldLockDepth`). */
         thread_local uint32 t_heldLockDepth{ 0 };
+        /** @brief 잎 잠금 규칙에서 뺀 범위의 깊이입니다(`ScopedLeafLockExemption`). 0 보다 크면 `getHeldLockDepth` 는 0 입니다. */
+        thread_local uint32 t_leafLockExemptionDepth{ 0 };
 #endif
     } // namespace
+
+    ScopedLeafLockExemption::ScopedLeafLockExemption()
+    {
+#if defined( SW_DEBUG )
+        ++t_leafLockExemptionDepth;
+#endif
+    }
+
+    ScopedLeafLockExemption::~ScopedLeafLockExemption()
+    {
+#if defined( SW_DEBUG )
+        --t_leafLockExemptionDepth;
+#endif
+    }
 } // namespace sw
 
 namespace sw
@@ -43,7 +59,7 @@ namespace sw
             return 0;
 #endif
 #if defined( SW_DEBUG )
-        return t_heldLockDepth;
+        return t_leafLockExemptionDepth != 0 ? 0 : t_heldLockDepth;
 #else
         return 0;
 #endif

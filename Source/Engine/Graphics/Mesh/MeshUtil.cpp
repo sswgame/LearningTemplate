@@ -335,18 +335,18 @@ namespace sw
     static const utf8* canonicalPrimitiveIDVal( string_view meshID )
     {
         static constexpr NamedValue<const utf8*> kArrPrimitive[] = {
-            {      "Cube",       "cube"},
-            {      "Quad",       "quad"},
-            {    "Sprite",     "sprite"},
-            {     "Plane",      "plane"},
-            {    "Sphere",     "sphere"},
-            {  "Cylinder",   "cylinder"},
-            {   "Capsule",    "capsule"},
-            {      "Cone",       "cone"},
-            {"GrassClump", "grassclump"},
+            {      "Cube",       "Cube"},
+            {      "Quad",       "Quad"},
+            {    "Sprite",     "Sprite"},
+            {     "Plane",      "Plane"},
+            {    "Sphere",     "Sphere"},
+            {  "Cylinder",   "Cylinder"},
+            {   "Capsule",    "Capsule"},
+            {      "Cone",       "Cone"},
+            {"GrassClump", "GrassClump"},
         };
         if ( meshID.empty() )
-            return "cube";
+            return "Cube";
         const utf8* pKey = nullptr;
         return NamedValueUtil::find( kArrPrimitive, meshID, pKey ) ? pKey : nullptr;
     }
@@ -360,21 +360,21 @@ namespace sw
 
         const string_view canonical( pCanonical );
         shared_ptr<Mesh>  pMesh;
-        if ( canonical == "cube" )
+        if ( canonical == "Cube" )
             pMesh = createUnitCube();
-        else if ( canonical == "quad" )
+        else if ( canonical == "Quad" )
             pMesh = createRectMesh();
-        else if ( canonical == "sprite" )
+        else if ( canonical == "Sprite" )
             pMesh = createSpriteQuad();
-        else if ( canonical == "plane" )
+        else if ( canonical == "Plane" )
             pMesh = createPlane();
-        else if ( canonical == "sphere" )
+        else if ( canonical == "Sphere" )
             pMesh = createSphere();
-        else if ( canonical == "cylinder" )
+        else if ( canonical == "Cylinder" )
             pMesh = createCylinder();
-        else if ( canonical == "capsule" )
+        else if ( canonical == "Capsule" )
             pMesh = createCapsule();
-        else if ( canonical == "grassclump" )
+        else if ( canonical == "GrassClump" )
             pMesh = createGrassClump();
         else
             pMesh = createCone();
