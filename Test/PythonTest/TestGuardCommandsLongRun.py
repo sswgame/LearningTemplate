@@ -28,6 +28,10 @@ class ForegroundLongRunTest(unittest.TestCase):
         self.assertEqual("", GuardCommands.checkForegroundLongRun("py -3 -m Scripts verify-batch --owner x", True))
         self.assertEqual("", GuardCommands.checkForegroundLongRun("sleep 60; echo done", True))
 
+    def testListAndDryRunPass(self) -> None:
+        self.assertEqual("", GuardCommands.checkForegroundLongRun("py -3 -m Scripts verify-batch --owner x --dry-run --only a b", False))
+        self.assertEqual("", GuardCommands.checkForegroundLongRun("py -3 -m Scripts verify-batch --list", False))
+
     def testShortSleepAndQuotedTextPass(self) -> None:
         self.assertEqual("", GuardCommands.checkForegroundLongRun("sleep 3; ls", False))
         self.assertEqual("", GuardCommands.checkForegroundLongRun('git commit -m "verify-batch 는 sleep 30 으로 기다리지 않는다"', False))

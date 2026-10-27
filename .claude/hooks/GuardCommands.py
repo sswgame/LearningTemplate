@@ -42,7 +42,8 @@ kInterpreterHeredocPattern = re.compile(
     r"(?i)(?:\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<|\b(?:cat|tee)\b[^\n|;&<]*>>?\s*[^\s<>|;&]+\s*<<)")
 kShellWrapperPattern = re.compile(r"(?i)(?:\b(?:bash|sh|zsh|dash|pwsh|powershell(?:\.exe)?)\b[^\n|;&]*\s-(?:\w*c|Command)\b|\beval\b|\bcmd(?:\.exe)?\s+/c\b)")
 kLongRunPattern = re.compile(r"(?i)-m\s+Scripts\s+(?:verify-batch|full-build|soak|load\s+(?:suite|run)|perf-compare)\b")
-kSleepPattern = re.compile(r"(?i)\bsleep\s+(\d+)\b")
+kQuickFlagPattern = re.compile(r"(?i)\s(?:--dry-run|--list|--check|--help|-h)\b")
+kSleepPattern =re.compile(r"(?i)\bsleep\s+(\d+)\b")
 kMaxForegroundSleepSeconds = 20  # 이보다 짧은 sleep 은 재시도 간격 정도라 통과시킨다
 kRootFindPattern =re.compile(r"(?i)(?:^|[;&|('\"]|&&)\s*find\s+/(?:\s|$)")
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
@@ -127,6 +128,8 @@ def checkForegroundLongRun(command: str, bBackground: bool) -> str:
     if bBackground:
         return ""
     bare = stripQuoted(command)
+    if kLongRunPattern.search(bare) and kQuickFlagPattern.search(bare):
+        return ""  # 목록 · 점검 · 미리 보기는 바로 끝난다
     if kLongRunPattern.search(bare) or any(int(seconds) >= kMaxForegroundSleepSeconds for seconds in kSleepPattern.findall(bare)):
         return ("수 분 넘는 검증 · 빌드는 `run_in_background: true` 로 띄우고 끝 알림을 기다린다. 전경에서 돌리거나 `sleep` 폴링으로 기다리면 "
                 "그동안 도구 호출이 없어 메인 · 사용자의 메시지가 닿지 못한다(docs/12_Agents.md 2절).")
