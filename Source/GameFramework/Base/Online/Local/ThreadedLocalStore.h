@@ -52,6 +52,6 @@ namespace sw
         std::condition_variable_any                  _requestReady;
         uint64 _nextRequestID                        SW_GUARDED_BY( _mutex );
         int32 _pendingCount                          SW_GUARDED_BY( _mutex );
-        uint8                                        _bStopping;
+        uint8 _bStopping                             SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

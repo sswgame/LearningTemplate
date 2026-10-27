@@ -44,7 +44,7 @@ namespace sw
         void               shutdown();
 
         /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 등록합니다. */
-        void registerTLSContext( string_view host, ITLSContext* pTLSContext );
+        void registerTLSContext( string_view host, ITLSContext* pTLSContext ) SW_REQUIRES_LOCK( _sendMutex );
 
         /** @brief 요청 하나를 보내고 응답까지 막습니다. 보내지 못하면 `_status` 0 과 `_error` 입니다. */
         HTTPResponse send( const HTTPRequest& request ) override;
@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] static bool makeClientRequest( const HTTPRequest& request, HTTPClientRequest& outRequest );
 
     private:
-        mutex      _sendMutex; ///< `send` 를 한 번에 하나로 묶는다
-        HTTPClient _client;
+        mutex              _sendMutex; ///< `send` 를 한 번에 하나로 묶는다
+        HTTPClient _client SW_GUARDED_BY( _sendMutex );
     };
 } // namespace sw

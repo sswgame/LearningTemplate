@@ -42,9 +42,9 @@ namespace sw
             vector<string>           _listTopic{};
         };
 
-        mutable mutex                _mutex;
-        unordered_map<uint64, Inbox> _mapInbox;
-        uint64 _nextInboxID          SW_GUARDED_BY( _mutex );
+        mutable mutex                          _mutex;
+        unordered_map<uint64, Inbox> _mapInbox SW_GUARDED_BY( _mutex );
+        uint64 _nextInboxID                    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

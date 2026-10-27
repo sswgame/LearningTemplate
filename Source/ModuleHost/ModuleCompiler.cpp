@@ -47,7 +47,7 @@ namespace sw
     {
         if ( _bIsCompiling.load( std::memory_order_relaxed ) )
         {
-            SW_LOG_WARNING( "Compilation is already in progress (target: %#)", _targetName.c_str() );
+            SW_LOG_WARNING( "Compilation is already in progress (target: %#)", getTargetName().c_str() ); // 이름은 잠금 아래에서 복사한다
             return false;
         }
 

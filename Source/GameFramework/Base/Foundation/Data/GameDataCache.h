@@ -174,9 +174,9 @@ namespace sw
         /** @brief 테이블의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 항목을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
 
-        const utf8*                                  _pKindName;
-        mutable mutex                                _mutex;
-        unordered_map<string, unique_ptr<TableType>> _mapTable;
+        const utf8*                                            _pKindName;
+        mutable mutex                                          _mutex;
+        unordered_map<string, unique_ptr<TableType>> _mapTable SW_GUARDED_BY( _mutex );
         /// 다시 읽거나 비우기 전의 테이블. 원시 포인터로 참조하는 쪽이 있을 수 있어 `kRetainGenerations` 번 더 다시 읽을 때까지(또는 캐시가 사라질 때까지) 산다.
         struct RetiredTable
         {

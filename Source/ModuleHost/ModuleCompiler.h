@@ -95,7 +95,7 @@ namespace sw
         unique_ptr<Process>                 _pCurrentProcess;
         sw::thread                          _workerThread;
         GameTimer                           _buildTimer;
-        string                              _targetName;
+        string _targetName                  SW_GUARDED_BY( _mutex );
         mutable mutex                       _mutex;
         atomic<BuildState>                  _buildState;
         /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는지 여부입니다(핫 리로드로는 해결할 수 없습니다).
