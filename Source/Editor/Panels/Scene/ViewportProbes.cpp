@@ -119,6 +119,16 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 씬 뷰 카메라가 오빗 중심에서 떨어진 거리(m)입니다. 휠 돌리가 줄인다. */
+        [[nodiscard]] bool readSceneViewOrbitDistance( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const EditorViewportClient* pClient = findSceneViewClient();
+            if ( pClient == nullptr )
+                return false;
+            outValue = pClient->getCameraOrbitDistance();
+            return true;
+        }
+
         [[nodiscard]] bool readSceneViewCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             float3 position{};
@@ -378,6 +388,8 @@ namespace sw::editor
                          &readNavMeshSegments );
     SW_AUTOMATION_PROBE( editorSceneViewCameraX, "Editor.SceneViewCameraX", "Scene view (editor) camera world X", &readSceneViewCameraX );
     SW_AUTOMATION_PROBE( editorSceneViewCameraY, "Editor.SceneViewCameraY", "Scene view (editor) camera world Y", &readSceneViewCameraY );
+    SW_AUTOMATION_PROBE( editorSceneViewOrbitDistance, "Editor.SceneViewOrbitDistance",
+                         "Distance in meters from the scene view camera to its orbit center (wheel dolly shrinks it)", &readSceneViewOrbitDistance );
     SW_AUTOMATION_PROBE( editorGameViewCameraX, "Editor.GameViewCameraX", "Game view camera (the active scene's game camera) world X",
                          &readGameViewCameraX );
     SW_AUTOMATION_PROBE( editorGameViewCameraY, "Editor.GameViewCameraY", "Game view camera (the active scene's game camera) world Y",

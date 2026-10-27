@@ -20,7 +20,6 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 
@@ -103,43 +102,3 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 } // namespace sw::editor
-
-namespace sw
-{
-    namespace
-    {
-        struct SceneViewCameraProbeInternal
-        {
-            /** @brief 씬 뷰 클라이언트입니다. 에디터나 씬 뷰 패널이 없으면 nullptr 입니다(프로브는 값 없음으로 답한다). */
-            [[nodiscard]] static const editor::EditorViewportClient* findClient()
-            {
-                editor::EditorContext*        pContext = editor::findSubsystem<editor::EditorContext>();
-                const editor::SceneViewPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<editor::EditorPanelManager>().findPanel<editor::SceneViewPanel>() : nullptr;
-                return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
-            }
-
-            [[nodiscard]] static bool readCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const editor::EditorViewportClient* pClient = findClient();
-                if ( pClient == nullptr )
-                    return false;
-                outValue = pClient->getCameraPosition()._x;
-                return true;
-            }
-
-            [[nodiscard]] static bool readOrbitDistance( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const editor::EditorViewportClient* pClient = findClient();
-                if ( pClient == nullptr )
-                    return false;
-                outValue = pClient->getCameraOrbitDistance();
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_PROBE( sceneViewCameraX, "Editor.SceneViewCameraX", "World X of the scene view camera (middle-button pan moves it, wheel and fly do not change it by themselves)",
-                         &SceneViewCameraProbeInternal::readCameraX );
-    SW_AUTOMATION_PROBE( sceneViewOrbitDistance, "Editor.SceneViewOrbitDistance", "Distance in meters from the scene view camera to its orbit center (wheel dolly shrinks it)",
-                         &SceneViewCameraProbeInternal::readOrbitDistance );
-} // namespace sw

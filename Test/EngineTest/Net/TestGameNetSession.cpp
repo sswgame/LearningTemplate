@@ -164,9 +164,15 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
 
     config._listenAddress = "0.0.0.0";
     config._gamePort      = 7777;
+#if defined( SW_SHIPPING )
+    // Shipping 서버는 평문 게임 포트를 루프백 밖에 열지 않는다(결정 기록 5-9) — 접속 티켓 없이는 거절하고 인자를 비운다.
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
+    SW_EXPECT_TRUE( params._role == GameNetRole::None );
+#else
     SW_ASSERT_TRUE( session.makeServerParams( config, params ) );
     SW_EXPECT_EQUAL( 7777u, static_cast<uint32>( params._listenPort ) );
     SW_EXPECT_FALSE( params._bLoopbackOnly );
+#endif
 }
 
 /**

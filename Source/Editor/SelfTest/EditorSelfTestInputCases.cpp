@@ -166,7 +166,8 @@ namespace sw::editor
                         what += describeInputTarget( "hierarchy.filter" );
                         what += "]";
                         (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
-                        (void)context.expect( pHierarchy->getVisibleRootCount() == 1, "the typed tag filter did not find the probe object" );
+                        const string rootCountWhat = "the typed tag filter did not find the probe object (visible roots " + to_string( pHierarchy->getVisibleRootCount() ) + ")";
+                        (void)context.expect( pHierarchy->getVisibleRootCount() == 1, rootCountWhat.c_str() );
                         // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
                         ImGui::ClearActiveID();
                         pHierarchy->setFilterText( "" );

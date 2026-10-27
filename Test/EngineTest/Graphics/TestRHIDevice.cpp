@@ -1472,8 +1472,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListCreationAndExecution, test
     {
         cmdList->beginCommandList();
         sw::RHIViewport vp{ 0.0f, 0.0f, 800.0f, 600.0f, 0.0f, 1.0f };
-        cmdList->setViewport( vp );
-        cmdList->draw( 3, 0 );
+        cmdList->setViewport( vp ); // PSO 없이 그리면 백엔드 계약상 오류로 멈춘다 — 그리기는 PSO 를 거는 테스트가 보고 여기서는 상태 기록만 실행한다
         cmdList->endCommandList();
 
         rhiDevice->executeCommandList( cmdList.get() );
