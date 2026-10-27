@@ -830,6 +830,24 @@ namespace sw::editor
     }
 
     /**
+     * @brief [EditorTexturePipelineTest] 저장소 설정은 노멀 맵의 초록을 뒤집지 않는다 — 엔진의 노멀 맵 규약은 glTF(초록이 위)다
+     * @details 3D 노멀 맵을 읽는 셰이더(`toon.hlsl` 의 `applyNormalMap`)는 glTF · MikkTSpace 규약이고 `textures_raw/surfaces` 의 원본은 Poly Haven `nor_gl`(초록이 위)이라
+     *          `Base_NormalMap` 이 `invert_green` 을 켜면 요철의 명암이 거꾸로 보인다(2026-10-27, 구운 DDS 를 디코드해 원본과 초록이 반대임을 확인). DirectX 규약 원본이 들어오면
+     *          그 원본의 규칙에만 켠다. 변이: `Base_NormalMap` 의 `invert_green` 을 `true` 로 되돌리면 진다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, RepositoryNormalMapsKeepTheEngineGreenConvention )
+    {
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Loaded );
+
+        const TextureImportRuleMatch match = config.findMatchingRule( "engine/textures_raw/surfaces/red_brick/red_brick_normal.jpg" );
+        SW_EXPECT_FALSE_MSG( match.hasError(), match._error.c_str() );
+        SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), match._rule._name );
+        SW_EXPECT_EQUAL( SW_FALSE, match._rule._bInvertGreen );
+    }
+
+    /**
      * @brief [EditorTexturePipelineTest] 맨 끝의 조건 없는 규칙은 **정상**이다 — 경고하지 않는다
      * @details `Fallback_Default` 처럼 마지막에 두는 캐치올은 이 설정의 정상적인 쓰임이다. 진단이
      *          "조건이 없다" 만 보고 짖으면 멀쩡한 설정마다 경고가 떠서 아무도 안 읽게 된다 —

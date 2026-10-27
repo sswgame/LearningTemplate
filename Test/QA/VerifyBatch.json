@@ -997,6 +997,12 @@
       "covered": ["engine/automation/editor/audiographpanel.scenario.xml", "engine/automation/editor/behaviortreepanel.scenario.xml", "engine/automation/editor/worldcellspanel.scenario.xml", "engine/automation/editor/reflectionprobebake.scenario.xml", "game/wildwest/automation/autoplaymount.scenario.xml", "game/frontiertown/automation/autoplayclock.scenario.xml", "game/meadowvillage/automation/autoplayclock.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/AutomationSplit.md 8절", "result_doc": "docs/plans/AutomationSplit.md 8절",
       "note": "처음 도는 시나리오들이다. 지면 보고의 failures · unhandledLogs 를 본다 — 패널은 Editor.PanelOpen 이 안 서면 panel.focus 철자부터, 자동 플레이는 시한(30 · 40 초)이 8 배속 가정과 맞는지부터."
+    },
+    {
+      "id": "normal-maps-reimport", "title": "노멀 맵 열 장을 초록이 위인 그대로 다시 굽기(Base_NormalMap 의 invert_green 을 껐다)", "kind": "cook", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "tool": "app", "args": ["--import-textures"],
+      "source": "docs/plans/Candidates-quality.md ImageIntakeChecks", "result_doc": "docs/plans/Candidates-quality.md ImageIntakeChecks",
+      "note": "Resource/engine/textures/surfaces/*_normal.dds 열 장과 textures_raw/import.stamp 가 바뀐다 — 돌린 뒤 git status 로 그 열 장과 스탬프만 바뀌었는지 보고 커밋한다."
     }
   ]
 }
