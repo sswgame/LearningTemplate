@@ -381,6 +381,9 @@ namespace sw
         // 인스턴스가 사라지면 그 프레임을 렌더할 쪽도 없다(렌더 워커는 이미 비웠다). 남은 in-flight 표시를 풀지 않으면 종료 단계의 `waitForDrawSnapshotIdle` 이 영원히 반환하지 않는다.
         if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
             _editorAPI.abandonPendingDraw( _editor );
+        // 이번 프레임에 샘플한 게임 뷰 · 씬 뷰 RT 는 이 인스턴스가 가진 텍스처다. 리로드는 샘플(`updateEditorUI`) 뒤 · 엔진 갱신 앞에 일어나므로,
+        // 비우지 않으면 같은 프레임의 `Engine::update` 가 부서진 핸들에 그린다(포맷 Unknown — 출력 PSO 조회가 멈춘다). 새 인스턴스는 다음 샘플에서 채운다.
+        getMutableFrameState()._views = HostViewTargets{};
         ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 
