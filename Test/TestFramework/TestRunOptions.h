@@ -86,7 +86,7 @@ namespace test
         sw::string                   _caseCostText;                                         ///< 받은 그대로의 `--test_costs`(재현 명령용)
         sw::vector<sw::RHIBackend>   _listRequiredBackend;                                  ///< `--required_backends=` — 서지 못하면 건너뛰는 대신 지는 백엔드
         sw::string                   _requiredBackendText;                                  ///< 받은 그대로의 `--required_backends`(재현 명령용)
-        SuiteKindMode                _arrKindMode[static_cast<size_t>( SuiteKind::Count )]; ///< 기본: 호스트 All, 부하 Exclude
+        SuiteKindMode                _arrKindMode[static_cast<size_t>( SuiteKind::Count )]; ///< 기본: 호스트 All, 부하 Exclude, 데스크톱 All
         uint32                       _repeatCount;
         uint32                       _randomSeed; ///< `--test_seed` · `--test_shuffle=` · `--gtest_random_seed` — 0 이면 아직 정하지 않음
         uint32                       _shardIndex; ///< 이 실행의 샤드(0 부터) — `--test_shard=INDEX/COUNT`

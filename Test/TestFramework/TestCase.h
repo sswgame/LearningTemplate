@@ -18,6 +18,11 @@ namespace test
         float64 _expectedSeconds{ 0.0 };
         /** @brief 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)의 케이스면 그 매개변수(`-dx12` …), 아니면 빈 글. 도는 동안 `getCurrentCaseParameter` 로 보인다. */
         sw::string _parameter;
+        /**
+         * @brief 이 케이스 하나가 데스크톱 전역 상태를 쓴다(생성기가 정한다 — 예: 혼합 입력 시나리오). 스위트 선언(`SW_TEST_REQUIRES_DESKTOP`)과 함께
+         *        `SuiteKind::Desktop` 판정에 든다(`TestRegistry::isSelected`).
+         */
+        bool _bDesktop{ false };
 
         /** @brief `Suite.Test` 전체 이름을 반환합니다. */
         sw::string fullName() const { return _groupName + "." + _testName; }
@@ -43,6 +48,11 @@ namespace test
     {
         Host,
         Load,
+        /**
+         * @brief 데스크톱 전역 상태(실제 OS 입력 · 커서 클립 · 포그라운드 · 포커스 · UI Automation 실창)를 쓴다 — 다른 프로세스의 창과 겹치면 서로 방해한다.
+         *        `<타깃>_Desktop`(`--desktop_suites=only`, ctest RUN_SERIAL)에서만 돌고 호스트 조각은 `--desktop_suites=exclude` 로 뺀다.
+         */
+        Desktop,
         Count,
     };
 

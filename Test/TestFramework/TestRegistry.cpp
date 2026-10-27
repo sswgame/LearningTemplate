@@ -229,7 +229,9 @@ namespace test
             std::fprintf( stdout, "  %s\n", pTestInfo->fullName().c_str() );
         }
 
-        constexpr const utf8* kArrKindTitle[] = { "Host suites - CI cannot run these", "Load suites - run with --load_suites=only" };
+        constexpr const utf8* kArrKindTitle[] = { "Host suites - CI cannot run these", "Load suites - run with --load_suites=only",
+                                                  "Desktop suites - real OS input, cursor clip or foreground (run alone with --desktop_suites=only)" };
+        static_assert( sizeof( kArrKindTitle ) / sizeof( kArrKindTitle[0] ) == static_cast<size_t>( SuiteKind::Count ), "every SuiteKind needs its title" );
         for ( size_t kindIndex = 0; kindIndex < static_cast<size_t>( SuiteKind::Count ); ++kindIndex )
         {
             const sw::map<sw::string, sw::string>& mapReason = _catalog.getSuiteKindReasons( static_cast<SuiteKind>( kindIndex ) );

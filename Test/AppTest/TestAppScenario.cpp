@@ -211,15 +211,32 @@ namespace
             const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
             for ( const sw::string& scenarioPath : listScenario )
             {
-                const sw::string label = makeCaseLabel( scenarioPath, listScenario );
+                const sw::string label    = makeCaseLabel( scenarioPath, listScenario );
+                const bool       bDesktop = usesDesktop( scenarioPath );
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
-                    catalog.addCase( "AppScenarioTest", ( namePrefix + label + "." + getBackendName( pSwitch ) ).c_str(), [scenarioPath, pSwitch, extraArguments]()
+                    const sw::string           caseName = namePrefix + label + "." + getBackendName( pSwitch );
+                    const sw::Delegate<void()> body     = [scenarioPath, pSwitch, extraArguments]()
                     {
                         runScenarioCase( scenarioPath, pSwitch, extraArguments );
-                    }, caseSeconds );
+                    };
+                    if ( bDesktop )
+                        catalog.addDesktopCase( "AppScenarioTest", caseName.c_str(), body, caseSeconds );
+                    else
+                        catalog.addCase( "AppScenarioTest", caseName.c_str(), body, caseSeconds );
                 }
             }
+        }
+
+        /**
+         * @brief 시나리오가 데스크톱 전역 상태를 쓰면 true 입니다 — 혼합 입력(`input="mixed"`)이 그 표시다(실제 OS 입력 · 창 포커스 · 커서 가두기를 받는다,
+         *        `VirtualInputMode::Mixed`). 그 케이스는 `<타깃>_Desktop` 에서 혼자 돈다(`SuiteKind::Desktop`). 못 읽으면 false — 읽기 오류는 케이스 본문이 낸다.
+         */
+        static bool usesDesktop( const sw::string& scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            return scenario.loadFromPath( scenarioPath, error ) && scenario.getInputMode() == sw::VirtualInputMode::Mixed;
         }
 
         /**

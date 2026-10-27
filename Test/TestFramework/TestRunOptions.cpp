@@ -86,7 +86,7 @@ namespace test
         , _caseCostText{}
         , _listRequiredBackend{}
         , _requiredBackendText{}
-        , _arrKindMode{ SuiteKindMode::All, SuiteKindMode::Exclude }
+        , _arrKindMode{ SuiteKindMode::All, SuiteKindMode::Exclude, SuiteKindMode::All }
         , _repeatCount{ 1 }
         , _randomSeed{ 0 }
         , _shardIndex{ 0 }
@@ -272,7 +272,9 @@ namespace test
                 continue;
             }
 
-            if ( parseKind( arg, "--host_suites=", SuiteKind::Host ) || parseKind( arg, "--load_suites=", SuiteKind::Load ) )
+            const bool bKindArgument = parseKind( arg, "--host_suites=", SuiteKind::Host ) || parseKind( arg, "--load_suites=", SuiteKind::Load ) ||
+                                       parseKind( arg, "--desktop_suites=", SuiteKind::Desktop );
+            if ( bKindArgument )
                 continue;
 
             constexpr std::string_view kRequiredBackendPrefix = "--required_backends=";
@@ -401,6 +403,7 @@ namespace test
                       "  --test_costs=A.B=SEC,...          Expected seconds of slow cases - shards are balanced by cost\n"
                       "  --host_suites=exclude|only|all    Exclude or select suites that need a GPU, window or DXC (default all)\n"
                       "  --load_suites=exclude|only|all    Exclude or select load and time budget suites (default exclude)\n"
+                      "  --desktop_suites=exclude|only|all Exclude or select cases that use the desktop (real OS input, cursor clip, foreground) (default all)\n"
                       "  --enforce_budgets                 Fail cases that exceed their SW_TEST_TIME_BUDGET\n"
                       "  --required_backends=dx11,dx12,... Fail (instead of skip) when one of these RHI backends cannot stand up\n"
                       "  --test_report=PATH                Write the per-case result report (JSON) to PATH (--gtest_output=json:PATH; ctest sets SW_TEST_REPORT_DIR)\n"
@@ -428,8 +431,9 @@ namespace test
             const SuiteKindMode defaultMode = kindIndex == static_cast<size_t>( SuiteKind::Load ) ? SuiteKindMode::Exclude : SuiteKindMode::All;
             if ( _arrKindMode[kindIndex] == defaultMode )
                 continue;
-            append( sw::string( kindIndex == static_cast<size_t>( SuiteKind::Host ) ? "--host_suites=" : "--load_suites=" ) +
-                    TestRunOptionsInternal::getKindModeName( _arrKindMode[kindIndex] ) );
+            constexpr const utf8* kArrKindPrefix[] = { "--host_suites=", "--load_suites=", "--desktop_suites=" };
+            static_assert( sizeof( kArrKindPrefix ) / sizeof( kArrKindPrefix[0] ) == static_cast<size_t>( SuiteKind::Count ), "every SuiteKind needs its option" );
+            append( sw::string( kArrKindPrefix[kindIndex] ) + TestRunOptionsInternal::getKindModeName( _arrKindMode[kindIndex] ) );
         }
         if ( _bShuffle && _shardCount > 1 )
         {

@@ -46,7 +46,7 @@ namespace test
         {
             const SuiteKind     kind       = static_cast<SuiteKind>( kindIndex );
             const SuiteKindMode mode       = _options.getKindMode( kind );
-            const bool          bOfKind    = _catalog.isSuiteOfKind( testInfo._groupName, kind );
+            const bool          bOfKind    = _catalog.isCaseOfKind( testInfo, kind );
             const bool          bExcluded  = mode == SuiteKindMode::Exclude && bOfKind;
             const bool          bNotChosen = mode == SuiteKindMode::Only && bOfKind == false;
             if ( bExcluded || bNotChosen )

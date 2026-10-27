@@ -21,6 +21,7 @@
 // 진짜 창을 만든다. 헤드리스 CI 러너엔 디스플레이가 없다.
 
 SW_TEST_REQUIRES_HOST( WindowTest, "creates a real OS window; headless CI runners have no display" );
+SW_TEST_REQUIRES_DESKTOP( WindowTest, "ClipCursor and SetForegroundWindow are desktop-wide - another process window changes them" );
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Window/Windows/Win32Window.h"

@@ -115,6 +115,12 @@ namespace test
         _listCase.push_back( { pSuiteName, pTestName, func, expectedSeconds, pParameter } );
     }
 
+    void TestCatalog::addDesktopCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds )
+    {
+        addCase( pSuiteName, pTestName, func, expectedSeconds );
+        _listCase.back()._bDesktop = true;
+    }
+
     void TestCatalog::addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds )
     {
         _listParameterized.push_back( { pSuiteName, pTestName, listFunc, caseFunc, expectedSeconds } );
@@ -175,6 +181,13 @@ namespace test
         return mapReason.find( suiteName ) != mapReason.end();
     }
 
+    bool TestCatalog::isCaseOfKind( const TestCaseInfo& testInfo, SuiteKind kind ) const
+    {
+        if ( kind == SuiteKind::Desktop && testInfo._bDesktop )
+            return true;
+        return isSuiteOfKind( testInfo._groupName, kind );
+    }
+
     bool TestCatalog::isEnvironmentMissing( const sw::string& suiteName ) const
     {
         const auto suiteIt = _mapEnvironmentSuite.find( suiteName );
@@ -207,7 +220,7 @@ namespace test
             SW_LOG_ERROR( "%#( %# ) names a suite with no cases in this executable", pMacro, suiteName.c_str() );
         };
 
-        constexpr const utf8* kArrKindMacro[] = { "SW_TEST_REQUIRES_HOST", "SW_TEST_LOAD_SUITE" };
+        constexpr const utf8* kArrKindMacro[] = { "SW_TEST_REQUIRES_HOST", "SW_TEST_LOAD_SUITE", "SW_TEST_REQUIRES_DESKTOP" };
         static_assert( sizeof( kArrKindMacro ) / sizeof( kArrKindMacro[0] ) == static_cast<size_t>( SuiteKind::Count ), "every SuiteKind needs its macro name" );
         for ( size_t kindIndex = 0; kindIndex < static_cast<size_t>( SuiteKind::Count ); ++kindIndex )
         {

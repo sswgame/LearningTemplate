@@ -348,8 +348,17 @@ function(sw_registerTestPolicy TARGET_NAME)
 		math(EXPR swHostShardCost "(${swHostSeconds} + ${swHostShards} - 1) / ${swHostShards}")
 		# 이 PC 에 있어야 할 백엔드가 서지 못하면 건너뛰지 않고 진다(정책 `requiredBackends`).
 		sw_getRequiredBackendsArgument(swRequiredBackends requiredBackends)
+		# 데스크톱 전역 상태(실제 OS 입력 · 커서 클립 · 포그라운드 · UIA)를 쓰는 케이스(`SuiteKind::Desktop` — `SW_TEST_REQUIRES_DESKTOP` · 혼합 입력 시나리오)는
+		# 호스트 조각에서 빼고 `<타깃>_Desktop` 에서만 돈다. 조각은 GPU 칸만큼 겹쳐 돌지만 데스크톱은 프로세스마다 나눌 수 없다(쓰기 위치 격리로 못 막는다).
 		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
-			ARGS --host_suites=only ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
+			ARGS --host_suites=only --desktop_suites=exclude ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
+		# 선택 키 — desktopSeconds 없음 = 데스크톱 케이스가 없다(있으면 `--desktop_suites=only` 가 고를 것이 있어야 한다). RUN_SERIAL 이라 ctest 가 다른 항목과 겹치지 않게 돌린다.
+		sw_readOptionalJsonValue(swDesktopSeconds "${swPolicy}" executables ${TARGET_NAME} desktopSeconds)
+		if(DEFINED swDesktopSeconds)
+			sw_computeTestTimeout(swDesktopTimeout ${swDesktopSeconds} 1 0)
+			sw_registerTestRun(${TARGET_NAME}_Desktop ${TARGET_NAME} RUN_SERIAL GPU ${swHostLockArgs} COST ${swDesktopSeconds}
+				ARGS --host_suites=only --desktop_suites=only ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu;desktop" TIMEOUT ${swDesktopTimeout} ASAN_OPTIONS ${swAsanOptions})
+		endif()
 	endif()
 
 	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다

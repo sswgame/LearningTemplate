@@ -35,6 +35,7 @@
 // 다른 스레드에서 메뉴를 읽고(이름 · 컨트롤 타입) 누르고(Invoke) 슬라이더 값을 바꾸고(RangeValue) 포커스 이동 알림을 받는지 본다. 진짜 창이 필요해 CI 러너는 돌지 않는다.
 
 SW_TEST_REQUIRES_HOST( UiaClientTest, "creates a real window and drives it with a UI Automation client; headless CI runners have no desktop" );
+SW_TEST_REQUIRES_DESKTOP( UiaClientTest, "UI Automation focus and the foreground window are desktop-wide - another process window steals them" );
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
 namespace

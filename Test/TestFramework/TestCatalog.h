@@ -26,6 +26,8 @@ namespace test
          * @param expectedSeconds 예상 비용(초, 0 = 모름). 샤드 배정이 `--test_costs` 에 없는 케이스에 쓴다.
          */
         void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds = 0.0, const utf8* pParameter = "" );
+        /** @brief `addCase` 와 같고, 이 케이스 하나가 데스크톱 전역 상태를 쓴다고 표시합니다(`TestCaseInfo::_bDesktop` — 스위트 전체가 아니라 생성기가 고른 케이스). */
+        void addDesktopCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds = 0.0 );
         /** @brief 매개변수마다 케이스 하나인 묶음을 더합니다. 케이스 이름은 `<이름>.<매개변수 이름>`(`makeParameterLabel`)이고 `expandCaseGenerators` 가 만든다. */
         void addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds );
         /** @brief 매개변수의 케이스 이름 조각입니다 — 스위치 `-dx12` 는 `dx12`, 빈 글은 `default`(배포본의 백엔드 스위치 없음), 그 밖은 그대로. */
@@ -48,7 +50,9 @@ namespace test
         /** @brief 종류 @p kind 가 붙은 스위트 → 까닭. */
         const sw::map<sw::string, sw::string>& getSuiteKindReasons( SuiteKind kind ) const { return _arrMapSuiteKindReason[static_cast<size_t>( kind )]; }
         /** @brief 스위트에 종류 @p kind 가 붙었는가. */
-        bool                                         isSuiteOfKind( const sw::string& suiteName, SuiteKind kind ) const;
+        bool isSuiteOfKind( const sw::string& suiteName, SuiteKind kind ) const;
+        /** @brief 케이스가 종류 @p kind 인가 — 스위트 선언, 그리고 Desktop 이면 케이스 표시(`_bDesktop`)까지 본다. 선택 · 판정은 이것만 쓴다. */
+        bool                                         isCaseOfKind( const TestCaseInfo& testInfo, SuiteKind kind ) const;
         const sw::map<sw::string, EnvironmentSuite>& getEnvironmentSuites() const { return _mapEnvironmentSuite; }
         /** @brief 이 스위트가 환경 스위트이고 그 변수가 비었는가입니다. */
         bool isEnvironmentMissing( const sw::string& suiteName ) const;
@@ -197,6 +201,14 @@ namespace test
  *          `loadSuites` 여야 ctest 항목이 생긴다. 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
  */
 #define SW_TEST_LOAD_SUITE( SuiteName, reason ) static test::SuiteKindRegistrar loadSuite_##SuiteName( #SuiteName, test::SuiteKind::Load, reason )
+
+/**
+ * @brief 이 스위트는 데스크톱 전역 상태(실제 OS 입력 · 커서 클립 · 포그라운드 · 포커스 · UI Automation 실창)를 쓴다고 선언합니다 — 호스트 스위트여야 한다.
+ * @details 데스크톱은 프로세스마다 나눌 수 없다(쓰기 위치만 나누는 격리로는 못 막는다). 그래서 호스트 조각(`--desktop_suites=exclude`)에서 빠지고
+ *          `<타깃>_Desktop`(`--host_suites=only --desktop_suites=only`, ctest `RUN_SERIAL` — 다른 항목과 겹치지 않는다)에서만 돈다. 생성기가 만드는
+ *          케이스는 `TestCatalog::addDesktopCase` 로 케이스마다 표시한다(혼합 입력 시나리오). 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
+ */
+#define SW_TEST_REQUIRES_DESKTOP( SuiteName, reason ) static test::SuiteKindRegistrar desktopSuite_##SuiteName( #SuiteName, test::SuiteKind::Desktop, reason )
 
 /**
  * @brief 스위트가 바깥 환경(DB · 캐시 서버)을 요구하며 환경 변수 @p envName 이 그 주소를 준다고 선언합니다.
