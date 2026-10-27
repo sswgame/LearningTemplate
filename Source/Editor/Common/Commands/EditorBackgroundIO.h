@@ -84,10 +84,10 @@ namespace sw::editor
      * @class EditorGameDataScanJob
      * @brief 게임 데이터 XML 파일 목록을 워커에서 모읍니다.
      */
-    class EditorGameDataScanJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<GameDataFileEntry>>
+    class EditorGameDataScanJob final : public EditorBackgroundTask<string, vector<GameDataFileEntry>>
     {
     public:
-        /** @brief 워커에 XML 목록 스캔을 요청합니다. */
+        /** @brief 워커에 XML 목록 스캔을 요청합니다. data 폴더는 호출한(에디터) 스레드에서 찾아 넘긴다 — 에디터 상태는 워커가 읽지 않는다. */
         void request();
 
     private:

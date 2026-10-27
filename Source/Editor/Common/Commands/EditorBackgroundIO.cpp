@@ -73,7 +73,7 @@ namespace sw::editor
 
     void EditorGameDataScanJob::request()
     {
-        const uint32 generation = beginRequest( {} );
+        const uint32 generation = beginRequest( EditorDataTableCommands::getGameDataFolderPath() );
         submitEditorBackgroundJob( "EditorGameDataScan",
                                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
                                    MakeTaskArgs( _pState, generation ) );
@@ -84,13 +84,13 @@ namespace sw::editor
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
 
-        EditorBackgroundNoInput input;
-        if ( readInput( pState, generation, input ) == false )
+        string dataFolder;
+        if ( readInput( pState, generation, dataFolder ) == false )
             return;
 
         vector<GameDataFileEntry> listEntry;
         // 표시용 목록이다 — data 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 경로와 함께 알린 뒤 모은 데까지 보인다.
-        (void)EditorDataTableCommands::collectGameDataFiles( listEntry );
+        (void)EditorDataTableCommands::collectGameDataFiles( dataFolder, listEntry );
 
         publish( pState, generation, std::move( listEntry ) );
     }

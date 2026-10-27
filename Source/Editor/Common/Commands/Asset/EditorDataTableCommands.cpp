@@ -263,10 +263,9 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorDataTableCommands::collectGameDataFiles( vector<GameDataFileEntry>& outList )
+    bool EditorDataTableCommands::collectGameDataFiles( string_view dataFolder, vector<GameDataFileEntry>& outList )
     {
         outList.clear();
-        const string dataFolder = getGameDataFolderPath();
 
         vector<string> listFile;
         const bool     bListed = FileUtil::collectFiles( dataFolder, ".xml", listFile, false );

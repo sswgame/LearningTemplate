@@ -802,7 +802,6 @@ namespace sw::editor
         }
 
         GameObjectManager* pManager = pScene->getObjectManager();
-        HierarchyPanelInternal::refreshRowModel( *pManager, _filterBuffer.view() );
 
         HierarchyPanelInternal::beginRowFrame();
         // 이름 바꾸기 명령(맥락 메뉴 · F2)이 남긴 요청을 그 행의 입력 칸으로 연다.
@@ -819,6 +818,8 @@ namespace sw::editor
             pendingRenameID = 0;
         }
         drawToolbar( pManager );
+        // 행 모델은 툴바 뒤에 맞춘다 — 같은 프레임에 검색창에서 바뀐 글 · 만들기 단추가 바꾼 구조가 이 프레임 트리에 바로 닿는다(앞에서 맞추면 한 프레임 늦다).
+        HierarchyPanelInternal::refreshRowModel( *pManager, _filterBuffer.view() );
 
         ImGui::Separator();
 
