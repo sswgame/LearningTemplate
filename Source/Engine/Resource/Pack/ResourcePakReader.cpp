@@ -91,7 +91,8 @@ namespace sw
 
     bool ResourcePakReader::open( string_view packFilePath )
     {
-        ScopedLock<mutex> lock{ _fileMutex };
+        // 잠금은 잎이다 — 오류 · 안내 로그는 잠금을 놓은 뒤에 쓴다(실패 경로는 먼저 닫고 놓는다).
+        UniqueLock<mutex> lock{ _fileMutex };
         close();
 
         if ( packFilePath.empty() )
@@ -101,6 +102,7 @@ namespace sw
         const AsyncFileHandle file           = AsyncFileHandle::open( normalizedPath );
         if ( file.isValid() == false )
         {
+            lock.unlock();
             SW_LOG_ERROR( "Failed to open resource pack file: %#", packFilePath );
             return false;
         }
@@ -111,23 +113,26 @@ namespace sw
         // 1. 헤더(64B)를 읽는다
         if ( _file.readAt( 0, &_header, sizeof( PackHeader ) ) == false )
         {
-            SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
             close();
+            lock.unlock();
+            SW_LOG_ERROR( "Corrupted pack header: %#", packFilePath );
             return false;
         }
 
         if ( _header._magic != kPackMagic )
         {
-            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#",
-                          Fmt( _header._magic, Format( 8, Format::Padding::Zero ).hex() ), Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
             close();
+            lock.unlock();
+            SW_LOG_ERROR( "Invalid pack magic (0x%# vs expected 0x%#): %#", Fmt( _header._magic, Format( 8, Format::Padding::Zero ).hex() ),
+                          Fmt( kPackMagic, Format( 8, Format::Padding::Zero ).hex() ), packFilePath );
             return false;
         }
 
         if ( _header._formatVersion != kPackFormatVersion )
         {
-            SW_LOG_ERROR( "Unsupported pack format version %#: %#", _header._formatVersion, packFilePath );
             close();
+            lock.unlock();
+            SW_LOG_ERROR( "Unsupported pack format version %#: %#", _header._formatVersion, packFilePath );
             return false;
         }
 
@@ -135,19 +140,22 @@ namespace sw
         if ( ( _header._flags & static_cast<uint16>( PackFlag::Encrypted ) ) != 0 ||
              static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
         {
-            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", static_cast<uint32>( _header._encryptionType ), packFilePath );
             close();
+            lock.unlock();
+            SW_LOG_ERROR( "Encrypted packs are not supported (encryption type %#): %#", static_cast<uint32>( _header._encryptionType ), packFilePath );
             return false;
         }
 
         // 2. FAT 인덱스와 스트링 풀을 읽는다
         if ( loadIndexTable() == false )
         {
-            SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
             close();
+            lock.unlock();
+            SW_LOG_ERROR( "Failed to load FAT index table from pack: %#", packFilePath );
             return false;
         }
 
+        lock.unlock(); // 잠금은 잎이다 — 안내 로그는 놓은 뒤에 쓴다
 #if defined( SW_DEBUG )
         if ( engine::areEngineServicesBound() )
         {

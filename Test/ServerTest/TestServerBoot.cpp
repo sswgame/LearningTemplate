@@ -530,7 +530,7 @@ SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheSer
     (void)FileUtil::removeDirectory( folder );             // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
     expectCleanExit( run, "TickLimit" );
     SW_EXPECT_TRUE_MSG( run._output.find( "Online services listening on port " + to_string( port ) ) != string::npos, "the online services did not start" );
-    SW_EXPECT_TRUE_MSG( run._output.find( "kits: account, directory, chat" ) != string::npos, "the kits were not attached in their start order" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "kits: account, chat, directory" ) != string::npos, "the kits were not attached in dependency order, then by name" );
     SW_EXPECT_TRUE_MSG( run._output.find( "services 1 (connections 0)" ) != string::npos, "status did not count the online services" );
 #endif
 }

@@ -315,9 +315,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
         (void)sw::XMLSerializer::deserialize( &fromXML, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
         SW_EXPECT_TRUE( fromXML._mode == sw::NarrowEnum::One );
     }
-    sw::NarrowEnumHost caseInsensitive;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &caseInsensitive, *pHostType, R"({"_mode":"two"})" ) );
-    SW_EXPECT_TRUE( caseInsensitive._mode == sw::NarrowEnum::Two );
+    sw::NarrowEnumHost exactSpelling; // 이름은 철자 그대로만 읽는다(대소문자 별칭을 두지 않는다)
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &exactSpelling, *pHostType, R"({"_mode":"Two"})" ) );
+    SW_EXPECT_TRUE( exactSpelling._mode == sw::NarrowEnum::Two );
 
     // 쓰는 쪽이 적는 글은 모두 다시 읽힌다 — 등록된 모든 enum 의 모든 값과, 비트플래그의 0(`None`) · 모든 비트 합.
     sw::string report;
@@ -478,7 +478,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
     SW_EXPECT_TRUE( info.findValueByNameHash( sw::hashed_string( "Lime" ).getHash(), value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );
     value = -1;
-    SW_EXPECT_TRUE( info.tryParseText( "LIME", value ) );
+    SW_EXPECT_TRUE( info.tryParseText( "Lime", value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );
     SW_EXPECT_TRUE( info.toString( 1 ) == sw::hashed_string( "Green" ) );
     SW_EXPECT_FALSE( info.tryParseText( "Teal", value ) );

@@ -645,6 +645,7 @@ SW_TEST_CASE( ScheduleTest, SaveGamePurposeKeepsInterruptionAndAffinity )
     original.advanceTo( Internal::makeMinute( Internal::kWednesday, 11 ) );
     SW_EXPECT_TRUE( original.pushInterruption( pierre, "Talk" ) );
     original.addNpcTag( pierre, TagID::request( "Relationship.Player.Friend" ) );
+    original.advanceTo( Internal::makeMinute( Internal::kWednesday, 11 ) ); // 조건 변경(태그)을 반영한다 — 복원은 태그를 먼저 넣고 계획을 세워 같은 상태에 닿는다
 
     ScheduleSaveState saved;
     original.fillSaveState( saved );

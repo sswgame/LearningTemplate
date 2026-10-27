@@ -349,18 +349,23 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        ScopedLock<mutex> lock{ _vfsMutex };
-        for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
+        bool bUnmounted{ false };
         {
-            if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
+            ScopedLock<mutex> lock{ _vfsMutex };
+            for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
             {
-                it->_pReader->close();
-                _listMountedPack.erase( it );
-                SW_LOG_INFO( "Unmounted resource pack: %#", packFilePath );
-                return true;
+                if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
+                {
+                    it->_pReader->close();
+                    _listMountedPack.erase( it );
+                    bUnmounted = true;
+                    break;
+                }
             }
         }
-        return false;
+        if ( bUnmounted )
+            SW_LOG_INFO( "Unmounted resource pack: %#", packFilePath ); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
+        return bUnmounted;
     }
 
     void ResourcePakManager::unmountAll()
