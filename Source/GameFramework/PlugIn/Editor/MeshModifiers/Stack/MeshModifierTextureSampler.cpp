@@ -109,7 +109,7 @@ namespace sw::editor
             {
                 std::shared_ptr<DecodedTexture> pTexture;
                 {
-                    std::shared_lock<shared_mutex> lock( mutex );
+                    ScopedSharedLock<shared_mutex> lock{ mutex };
                     auto                           iter = cache.find( assetPath );
                     if ( iter != cache.end() )
                         pTexture = iter->second;
@@ -121,8 +121,8 @@ namespace sw::editor
 
                 if ( bReload )
                 {
-                    std::unique_lock<shared_mutex> lock( mutex );
-                    auto                           iter = cache.find( assetPath );
+                    UniqueLock<shared_mutex> lock{ mutex };
+                    auto                     iter = cache.find( assetPath );
                     // 다른 스레드가 잠금을 먼저 잡아 새로 읽었으면 그것을 쓴다.
                     if ( iter != cache.end() && iter->second != pTexture )
                     {
@@ -254,7 +254,7 @@ namespace sw::editor
 
     void MeshModifierTextureSampler::clearCache()
     {
-        std::unique_lock<shared_mutex> lock( _pState->_mutex );
+        UniqueLock<shared_mutex> lock{ _pState->_mutex };
         _pState->_cache.clear();
     }
 } // namespace sw::editor

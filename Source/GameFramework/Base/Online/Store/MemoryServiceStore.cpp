@@ -78,7 +78,7 @@ namespace sw
         outRecord._version = ServiceRecord::kAbsentVersion;
         if ( table.empty() || ServiceTransaction::isValidKey( key ) == false )
             return ServiceStoreResult::Invalid;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( consumeFault( ServiceStoreFault::RejectRead ) )
             return ServiceStoreResult::Unavailable;
         const Entry* pEntry = findEntry( table, key );
@@ -94,7 +94,7 @@ namespace sw
     {
         if ( table.empty() || maxCount <= 0 )
             return ServiceStoreResult::Invalid;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( consumeFault( ServiceStoreFault::RejectRead ) )
             return ServiceStoreResult::Unavailable;
         const auto tableIt = _mapTable.find( table );
@@ -138,7 +138,7 @@ namespace sw
     ServiceStoreResult MemoryServiceDatabase::commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo )
     {
         ServiceCommitInfo        info;
-        std::scoped_lock<mutex>  lock{ _mutex };
+        ScopedLock<mutex>        lock{ _mutex };
         const ServiceStoreResult validateResult = validate( transaction, info );
         if ( validateResult != ServiceStoreResult::Ok )
         {
@@ -184,34 +184,34 @@ namespace sw
 
     void MemoryServiceDatabase::armFault( ServiceStoreFault fault, int32 skipCount )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _armedFault     = fault;
         _faultSkipCount = std::max( skipCount, 0 );
     }
 
     bool MemoryServiceDatabase::isFaultArmed() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _armedFault != ServiceStoreFault::None;
     }
 
     uint64 MemoryServiceDatabase::getCommitCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _commitCount;
     }
 
     int32 MemoryServiceDatabase::countRecords( const hashed_string& table ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              tableIt = _mapTable.find( table );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        tableIt = _mapTable.find( table );
         return tableIt == _mapTable.end() ? 0 : static_cast<int32>( tableIt->second.size() );
     }
 
     uint64 MemoryServiceDatabase::computeContentHash() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        vector<hashed_string>   listTable;
+        ScopedLock<mutex>     lock{ _mutex };
+        vector<hashed_string> listTable;
         listTable.reserve( _mapTable.size() );
         for ( const auto& [table, entries] : _mapTable )
         {
@@ -287,7 +287,7 @@ namespace sw
     MemoryServiceStore::~MemoryServiceStore()
     {
         // 회수하지 않은 일은 complete 없이 버린다 — 서비스가 먼저 종료해 complete 가 가리킬 곳이 없다(SQL 구현도 같다).
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listCompleted.clear();
     }
 
@@ -295,7 +295,7 @@ namespace sw
     {
         bool bShutdown = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             bShutdown = _bShutdown == SW_TRUE;
         }
         work->bindLogContext( LogContext::getCurrent() );
@@ -311,7 +311,7 @@ namespace sw
                 work->run( *_pDatabase );
             }
         }
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listCompleted.push_back( std::move( work ) );
     }
 
@@ -320,7 +320,7 @@ namespace sw
         // complete 안에서 새 일을 맡길 수 있다 — 꺼낸 목록을 따로 돌고, 새로 쌓인 것은 다음 poll 이 회수한다(SQL 구현과 같은 순서 약속).
         vector<unique_ptr<IServiceStoreWork>> listReady;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listReady.swap( _listCompleted );
         }
         for ( unique_ptr<IServiceStoreWork>& work : listReady )
@@ -333,13 +333,13 @@ namespace sw
 
     int32 MemoryServiceStore::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<int32>( _listCompleted.size() );
     }
 
     void MemoryServiceStore::shutdown()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bShutdown = SW_TRUE;
     }
 } // namespace sw

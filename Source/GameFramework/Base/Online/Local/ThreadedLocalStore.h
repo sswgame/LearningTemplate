@@ -43,15 +43,15 @@ namespace sw
         uint64 enqueueRequest( LocalStoreRequest request );
         void   runWorker();
 
-        deque<LocalStoreRequest>      _listQueuedRequest;
-        vector<LocalStoreCompletion>  _listCompletion;
-        LocalSealContext              _sealContext;
-        unique_ptr<ILocalSlotStorage> _storage;
-        sw::thread                    _worker;
-        mutable mutex                 _mutex;
-        std::condition_variable_any   _requestReady;
-        uint64                        _nextRequestID;
-        int32                         _pendingCount;
-        uint8                         _bStopping;
+        deque<LocalStoreRequest> _listQueuedRequest  SW_GUARDED_BY( _mutex );
+        vector<LocalStoreCompletion> _listCompletion SW_GUARDED_BY( _mutex );
+        LocalSealContext                             _sealContext;
+        unique_ptr<ILocalSlotStorage>                _storage;
+        sw::thread                                   _worker;
+        mutable mutex                                _mutex;
+        std::condition_variable_any                  _requestReady;
+        uint64 _nextRequestID                        SW_GUARDED_BY( _mutex );
+        int32 _pendingCount                          SW_GUARDED_BY( _mutex );
+        uint8                                        _bStopping;
     };
 } // namespace sw

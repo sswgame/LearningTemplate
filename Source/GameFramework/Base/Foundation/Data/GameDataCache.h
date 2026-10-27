@@ -85,9 +85,9 @@ namespace sw
          */
         const TableType* find( string_view path )
         {
-            const string            key = makeKey( path );
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              iter = _mapTable.find( key );
+            const string      key = makeKey( path );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        iter = _mapTable.find( key );
             if ( iter != _mapTable.end() )
             {
                 getCacheStats().recordHit(); // 읽지 못한 경로를 기억한 빈 항목도 적중이다(같은 오류를 다시 읽지 않는다)
@@ -109,7 +109,7 @@ namespace sw
 
         bool isCached( string_view relativePath ) const override
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             return _mapTable.find( makeKey( relativePath ) ) != _mapTable.end();
         }
 
@@ -119,7 +119,7 @@ namespace sw
             (void)pDevice;
             const string key = makeKey( relativePath );
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _mapTable.find( key ) == _mapTable.end() )
                     return; // 아무도 읽지 않았으므로 다음 `find` 가 새 내용을 읽는다.
             }
@@ -129,9 +129,9 @@ namespace sw
                 SW_LOG_ERROR( "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
                 return;
             }
-            std::scoped_lock<mutex> lock{ _mutex };
-            unique_ptr<TableType>&  slot       = _mapTable[key];
-            const uint32            generation = _reloadCount.load( std::memory_order_relaxed ) + 1; // 이 리로드가 만드는 세대
+            ScopedLock<mutex>      lock{ _mutex };
+            unique_ptr<TableType>& slot       = _mapTable[key];
+            const uint32           generation = _reloadCount.load( std::memory_order_relaxed ) + 1; // 이 리로드가 만드는 세대
             if ( slot != nullptr )
                 _listRetired.push_back( RetiredTable{ std::move( slot ), generation } );
             slot = std::move( fresh );
@@ -144,8 +144,8 @@ namespace sw
         /** @brief 읽어 둔 테이블의 수입니다. 읽지 못한 빈 항목은 세지 않습니다. */
         size_t getCachedCount() const override
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            size_t                  count{ 0 };
+            ScopedLock<mutex> lock{ _mutex };
+            size_t            count{ 0 };
             for ( const auto& [key, table] : _mapTable )
             {
                 if ( table != nullptr )
@@ -160,7 +160,7 @@ namespace sw
          */
         void clear() override
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( auto& [key, table] : _mapTable )
             {
                 if ( table != nullptr )
@@ -185,7 +185,7 @@ namespace sw
         };
         static constexpr uint32 kRetainGenerations = 4; ///< 옛 표를 이 횟수만큼의 리로드 동안 둔다. 리로드는 사람 속도라 쓰는 쪽이 그 사이 다시 찾는다
 
-        vector<RetiredTable> _listRetired;
-        atomic<uint32>       _reloadCount;
+        vector<RetiredTable> _listRetired SW_GUARDED_BY( _mutex );
+        atomic<uint32>                    _reloadCount;
     };
 } // namespace sw

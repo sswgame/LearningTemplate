@@ -91,7 +91,7 @@ namespace sw
 
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bLoaded == SW_FALSE && loadOrCreateKeyLocked() == false )
             return false;
         std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );

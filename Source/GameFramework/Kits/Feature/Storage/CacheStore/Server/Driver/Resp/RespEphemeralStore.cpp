@@ -104,7 +104,7 @@ namespace sw
             return false;
         }
         _bInitialized = SW_TRUE;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)ensureCommandConnection();
         return true;
     }
@@ -144,7 +144,7 @@ namespace sw
             pumpTransport();
             vector<RespReplyRecord> listRecord;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _commandConnection.takeReplyRecords( listRecord );
             }
             for ( const RespReplyRecord& record : listRecord )
@@ -179,7 +179,7 @@ namespace sw
         _listChannel.emplace_back( channel );
         uint64 targetAckCount = 0;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _subscribeConnection.getState() == RespConnectionState::Closed )
             {
                 (void)ensureSubscribeConnection(); // 열리면 모든 채널을 다시 구독한다. 이 채널도 포함한다
@@ -202,7 +202,7 @@ namespace sw
             return;
         uint64 targetAckCount = 0;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _subscribeConnection.getState() == RespConnectionState::Closed )
                 return;
             RespCommand command{ "UNSUBSCRIBE" };
@@ -221,7 +221,7 @@ namespace sw
             pumpTransport();
             vector<RespValue> listValue;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _listChannel.empty() == false )
                     (void)ensureSubscribeConnection();
                 _subscribeConnection.takePushValues( listValue );
@@ -246,7 +246,7 @@ namespace sw
             return;
         _bShutdown = SW_TRUE;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _commandConnection.closeForShutdown( *_transport );
             _subscribeConnection.closeForShutdown( *_transport );
         }
@@ -265,7 +265,7 @@ namespace sw
     {
         (void)remote;
         (void)bAccepted;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _commandConnection.handleOpened( *_transport, handle ) )
         {
             _commandBackoffMs = 0;
@@ -277,7 +277,7 @@ namespace sw
 
     void RespEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _commandConnection.handleReceived( *_transport, handle, pData, size ) )
             return;
         (void)_subscribeConnection.handleReceived( *_transport, handle, pData, size );
@@ -285,8 +285,8 @@ namespace sw
 
     void RespEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const int64             nowNanoseconds = _clock.nowNanoseconds();
+        ScopedLock<mutex> lock{ _mutex };
+        const int64       nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
             _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
@@ -335,7 +335,7 @@ namespace sw
         operation._sentAtNanoseconds = _clock.nowNanoseconds();
         bool bConnected              = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             bConnected = ensureCommandConnection();
         }
         if ( bConnected == false )
@@ -447,7 +447,7 @@ namespace sw
             return;
         bool bSent = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             bSent = _commandConnection.sendCommand( *_transport, command, RespCommandTag{ operation._reply._requestID, step } );
         }
         if ( bSent )
@@ -720,7 +720,7 @@ namespace sw
             return;
         vector<RespReplyRecord> listRecord;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _commandConnection.abort( *_transport, "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
             // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
@@ -764,7 +764,7 @@ namespace sw
             pumpTransport();
             listValue.clear();
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _subscribeConnection.takePushValues( listValue );
                 if ( _subscribeConnection.getState() == RespConnectionState::Closed )
                     _subscriptionAckCount = std::max( _subscriptionAckCount, _subscriptionSentCount );

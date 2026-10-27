@@ -249,8 +249,8 @@ namespace sw
         Internal::BakedTable* pTable = Internal::s_bakedTable.getOrCreate();
         if ( pTable == nullptr )
             return false;
-        std::lock_guard<mutex> lock( pTable->_mutex );
-        const auto             found = pTable->_mapEntry.find( key );
+        ScopedLock<mutex> lock{ pTable->_mutex };
+        const auto        found = pTable->_mapEntry.find( key );
         if ( found == pTable->_mapEntry.end() || Internal::isAlive( found->second ) == false )
             return false;
         for ( const weak_ptr<Mesh>& mesh : found->second._listMesh )
@@ -266,7 +266,7 @@ namespace sw
         Internal::BakedTable* pTable = Internal::s_bakedTable.getOrCreate();
         if ( pTable == nullptr )
             return;
-        std::lock_guard<mutex> lock( pTable->_mutex );
+        ScopedLock<mutex> lock{ pTable->_mutex };
         for ( auto it = pTable->_mapEntry.begin(); it != pTable->_mapEntry.end(); )
         {
             if ( Internal::isAlive( it->second ) )

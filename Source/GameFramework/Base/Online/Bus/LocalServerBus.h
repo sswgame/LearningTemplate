@@ -44,7 +44,7 @@ namespace sw
 
         mutable mutex                _mutex;
         unordered_map<uint64, Inbox> _mapInbox;
-        uint64                       _nextInboxID;
+        uint64 _nextInboxID          SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

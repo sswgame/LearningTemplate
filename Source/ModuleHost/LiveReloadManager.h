@@ -306,7 +306,7 @@ namespace sw
         string                                     _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
         mutable mutex                              _buildMutex;
-        BuildNotice                                _buildNotice;
+        BuildNotice _buildNotice                   SW_GUARDED_BY( _buildMutex );
         OnBeforeCommitBatchDelegate                _onBeforeCommitBatch;
         DrainWorkersDelegate                       _drainWorkers;
         DeferredImageUnloadQueue                   _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)

@@ -56,8 +56,8 @@ namespace sw
         uint32 getCount() const;
 
     private:
-        mutable mutex                             _mutex;        ///< 등록 목록을 지킨다
-        RegistrationList<const BehaviorTaskEntry> _registration; ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
+        mutable mutex                                           _mutex;                  ///< 등록 목록을 지킨다
+        RegistrationList<const BehaviorTaskEntry> _registration SW_GUARDED_BY( _mutex ); ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
     };
 } // namespace sw
 

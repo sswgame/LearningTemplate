@@ -56,7 +56,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _bResolverStopping = SW_TRUE;
         }
         _resolveReady.notify_all();
@@ -64,7 +64,7 @@ namespace sw
             _resolver.join();   // 풀던 이름 하나는 해석기 시한까지 기다린다
         _transport->shutdown(); // 열린 연결은 Shutdown 으로 닫히며 onStreamClosed 가 요청을 끝낸다
         _transport.reset();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( auto& [packed, call] : _mapCall )
         {
             (void)packed;
@@ -83,15 +83,15 @@ namespace sw
 
     void HTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapHostToTLSContext[string( host )] = pTLSContext;
     }
 
     uint64 HTTPClient::submitRequest( const HTTPClientRequest& request, int64 nowMs )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            requestID = _nextRequestID++;
-        HTTPAddress             url;
+        ScopedLock<mutex> lock{ _mutex };
+        const uint64      requestID = _nextRequestID++;
+        HTTPAddress       url;
         if ( _bInitialized == SW_FALSE )
         {
             failImmediately( requestID, "client is not running" );
@@ -185,7 +185,7 @@ namespace sw
             string     host;
             NetAddress address;
             {
-                std::unique_lock<mutex> lock{ _mutex };
+                UniqueLock<mutex> lock{ _mutex };
                 while ( _listResolveRequestID.empty() && _bResolverStopping == SW_FALSE )
                 {
                     _resolveReady.wait( lock );
@@ -205,8 +205,8 @@ namespace sw
             }
             if ( host.empty() )
                 continue; // 그새 시한으로 끝났다
-            const bool              bResolved = PlatformSocketUtil::resolveAddress( host, address._port, address );
-            std::scoped_lock<mutex> lock{ _mutex };
+            const bool        bResolved = PlatformSocketUtil::resolveAddress( host, address._port, address );
+            ScopedLock<mutex> lock{ _mutex };
             for ( unique_ptr<Call>& call : _listResolvingCall )
             {
                 if ( call->_requestID != requestID )
@@ -225,7 +225,7 @@ namespace sw
             (void)_transport->pollIO( 0 );
         vector<StreamConnectionHandle> listExpired;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             advanceResolvingLocked( nowMs );
             for ( auto& [packed, call] : _mapCall )
             {
@@ -244,8 +244,8 @@ namespace sw
 
     int32 HTTPClient::pollResponses( vector<HTTPClientResponse>& outListResponse )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const int32             count = static_cast<int32>( _listDone.size() );
+        ScopedLock<mutex> lock{ _mutex };
+        const int32       count = static_cast<int32>( _listDone.size() );
         for ( HTTPClientResponse& response : _listDone )
         {
             outListResponse.push_back( std::move( response ) );
@@ -256,8 +256,8 @@ namespace sw
 
     int32 HTTPClient::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        int32                   count = static_cast<int32>( _listResolvingCall.size() );
+        ScopedLock<mutex> lock{ _mutex };
+        int32             count = static_cast<int32>( _listResolvingCall.size() );
         for ( const auto& [packed, call] : _mapCall )
         {
             (void)packed;
@@ -270,8 +270,8 @@ namespace sw
     {
         (void)remote;
         (void)bAccepted;
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              callIt = _mapCall.find( handle.packed() );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        callIt = _mapCall.find( handle.packed() );
         if ( callIt == _mapCall.end() || callIt->second->_requestID == 0 )
             return;
         Call& call    = *callIt->second;
@@ -286,8 +286,8 @@ namespace sw
 
     void HTTPClient::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              callIt = _mapCall.find( handle.packed() );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        callIt = _mapCall.find( handle.packed() );
         if ( callIt == _mapCall.end() || callIt->second->_requestID == 0 )
             return;
         Call& call = *callIt->second;
@@ -307,8 +307,8 @@ namespace sw
 
     void HTTPClient::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              callIt = _mapCall.find( handle.packed() );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        callIt = _mapCall.find( handle.packed() );
         if ( callIt == _mapCall.end() )
             return;
         Call& call = *callIt->second;

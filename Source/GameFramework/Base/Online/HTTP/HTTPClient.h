@@ -107,19 +107,19 @@ namespace sw
         /** @brief 해석 스레드입니다. 맡긴 이름을 하나씩 해석해 요청에 적습니다. 종료할 때까지 돕니다. */
         void runResolver();
 
-        mutable mutex                           _mutex;
-        unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
-        unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
-        vector<unique_ptr<Call>>                _listResolvingCall;    ///< 이름 해석을 기다리는 요청
-        deque<uint64>                           _listResolveRequestID; ///< 해석 스레드가 아직 집지 않은 요청 id
-        vector<HTTPClientResponse>              _listDone;
-        unique_ptr<IStreamTransport>            _transport;
-        HTTPClientConfig                        _settings;
-        sw::thread                              _resolver; ///< 처음 이름을 받을 때 띄운다
-        std::condition_variable_any             _resolveReady;
-        uint64                                  _nextRequestID;
-        int32                                   _ioThreadCount;
-        uint8                                   _bInitialized;
-        uint8                                   _bResolverStopping;
+        mutable mutex                                            _mutex;
+        unordered_map<uint64, unique_ptr<Call>>                  _mapCall; ///< 연결(packed) → 요청
+        unordered_map<string, ITLSContext*> _mapHostToTLSContext SW_GUARDED_BY( _mutex );
+        vector<unique_ptr<Call>>                                 _listResolvingCall;      ///< 이름 해석을 기다리는 요청
+        deque<uint64> _listResolveRequestID                      SW_GUARDED_BY( _mutex ); ///< 해석 스레드가 아직 집지 않은 요청 id
+        vector<HTTPClientResponse>                               _listDone;
+        unique_ptr<IStreamTransport>                             _transport;
+        HTTPClientConfig                                         _settings;
+        sw::thread                                               _resolver; ///< 처음 이름을 받을 때 띄운다
+        std::condition_variable_any                              _resolveReady;
+        uint64 _nextRequestID                                    SW_GUARDED_BY( _mutex );
+        int32                                                    _ioThreadCount;
+        uint8                                                    _bInitialized;
+        uint8 _bResolverStopping                                 SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

@@ -31,13 +31,13 @@ namespace sw
 
     bool BlockingHTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
     {
-        std::scoped_lock<mutex> lock{ _sendMutex };
+        ScopedLock<mutex> lock{ _sendMutex };
         return _client.initialize( std::move( transport ), transportSettings, settings );
     }
 
     void BlockingHTTPClient::shutdown()
     {
-        std::scoped_lock<mutex> lock{ _sendMutex };
+        ScopedLock<mutex> lock{ _sendMutex };
         _client.shutdown();
     }
 
@@ -75,7 +75,7 @@ namespace sw
             response._error = "unsupported HTTP method: " + request._method;
             return response;
         }
-        std::scoped_lock<mutex>    lock{ _sendMutex };
+        ScopedLock<mutex>          lock{ _sendMutex };
         const int64                startNanoseconds = MonotonicClock::nowNanoseconds();
         const uint64               requestID        = _client.submitRequest( clientRequest, 0 );
         vector<HTTPClientResponse> listResponse;

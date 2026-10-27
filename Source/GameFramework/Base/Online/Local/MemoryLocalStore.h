@@ -44,9 +44,9 @@ namespace sw
             int64         _writtenAtMs{ 0 };
         };
 
-        mutable mutex          _mutex;
-        map<string, SlotEntry> _mapSlot;
-        uint8                  _bFailNextWrite;
+        mutable mutex                   _mutex;
+        map<string, SlotEntry> _mapSlot SW_GUARDED_BY( _mutex );
+        uint8 _bFailNextWrite           SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

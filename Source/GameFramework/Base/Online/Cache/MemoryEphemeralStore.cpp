@@ -88,8 +88,8 @@ namespace sw
     {
         EphemeralReply reply;
         reply._operation = request._operation;
-        std::scoped_lock<mutex> lock{ _mutex };
-        const int64             nowMs = getNowMsLocked();
+        ScopedLock<mutex> lock{ _mutex };
+        const int64       nowMs = getNowMsLocked();
         switch ( request._operation )
         {
             case EphemeralOperation::Get:
@@ -123,22 +123,22 @@ namespace sw
 
     uint64 MemoryEphemeralDatabase::registerInbox()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxID = _nextInboxID++;
-        _mapInbox[inboxID]              = Inbox{};
+        ScopedLock<mutex> lock{ _mutex };
+        const uint64      inboxID = _nextInboxID++;
+        _mapInbox[inboxID]        = Inbox{};
         return inboxID;
     }
 
     void MemoryEphemeralDatabase::unregisterInbox( uint64 inboxID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapInbox.erase( inboxID );
     }
 
     void MemoryEphemeralDatabase::subscribe( uint64 inboxID, string_view channel )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
@@ -148,8 +148,8 @@ namespace sw
 
     void MemoryEphemeralDatabase::unsubscribe( uint64 inboxID, string_view channel )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
@@ -159,8 +159,8 @@ namespace sw
 
     int32 MemoryEphemeralDatabase::takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return 0;
         vector<EphemeralMessage>& listMessage = inboxIt->second._listMessage;
@@ -175,21 +175,21 @@ namespace sw
 
     void MemoryEphemeralDatabase::clearData()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapValue.clear();
         _mapScoreSet.clear();
     }
 
     void MemoryEphemeralDatabase::setManualTimeMs( int64 nowMs )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _manualTimeMs = nowMs;
         _bManualTime  = SW_TRUE;
     }
 
     void MemoryEphemeralDatabase::advanceTimeMs( int64 deltaMs )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bManualTime == SW_FALSE )
         {
             _manualTimeMs = getNowMsLocked();
@@ -200,7 +200,7 @@ namespace sw
 
     int64 MemoryEphemeralDatabase::getNowMs() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return getNowMsLocked();
     }
 

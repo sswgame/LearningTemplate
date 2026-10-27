@@ -15,8 +15,8 @@ namespace sw
 
     LocalStoreResult MemoryLocalDatabase::readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              slotIt = _mapSlot.find( slot );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
         if ( slotIt == _mapSlot.end() )
             return LocalStoreResult::NotFound;
         outEnvelopeBytes = slotIt->second._envelope;
@@ -25,7 +25,7 @@ namespace sw
 
     LocalStoreResult MemoryLocalDatabase::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bFailNextWrite == SW_TRUE )
         {
             _bFailNextWrite = SW_FALSE;
@@ -39,13 +39,13 @@ namespace sw
 
     LocalStoreResult MemoryLocalDatabase::eraseSlot( const string& slot )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _mapSlot.erase( slot ) > 0 ? LocalStoreResult::Ok : LocalStoreResult::NotFound;
     }
 
     LocalStoreResult MemoryLocalDatabase::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const auto& [slot, entry] : _mapSlot )
         {
             if ( slot.compare( 0, groupPrefix.size(), groupPrefix ) != 0 )
@@ -60,14 +60,14 @@ namespace sw
 
     void MemoryLocalDatabase::failNextWrite()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bFailNextWrite = SW_TRUE;
     }
 
     bool MemoryLocalDatabase::modifyEnvelopeByte( const string& slot, size_t offset, uint8 xorMask )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              slotIt = _mapSlot.find( slot );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
         if ( slotIt == _mapSlot.end() || offset >= slotIt->second._envelope.size() )
             return false;
         slotIt->second._envelope[offset] ^= xorMask;
@@ -76,8 +76,8 @@ namespace sw
 
     bool MemoryLocalDatabase::findEnvelope( const string& slot, vector<uint8>& outEnvelopeBytes ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              slotIt = _mapSlot.find( slot );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
         if ( slotIt == _mapSlot.end() )
             return false;
         outEnvelopeBytes = slotIt->second._envelope;

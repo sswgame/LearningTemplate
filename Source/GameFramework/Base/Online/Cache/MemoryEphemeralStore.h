@@ -82,7 +82,7 @@ namespace sw
         unordered_map<string, ScoreSetEntry> _mapScoreSet;
         unordered_map<uint64, Inbox>         _mapInbox;
         int64                                _manualTimeMs;
-        uint64                               _nextInboxID;
+        uint64 _nextInboxID                  SW_GUARDED_BY( _mutex );
         uint8                                _bManualTime;
     };
 } // namespace sw

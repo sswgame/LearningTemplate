@@ -55,7 +55,7 @@ namespace sw
             _workerThread.join();
 
         {
-            std::scoped_lock<mutex> lock( _mutex );
+            ScopedLock<mutex> lock{ _mutex };
             _targetName = string( targetName );
         }
 
@@ -87,7 +87,7 @@ namespace sw
 
         _bCancelRequested.store( true, std::memory_order_relaxed );
 
-        std::scoped_lock<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         if ( _pCurrentProcess != nullptr )
             _pCurrentProcess->terminate( 1 );
     }
@@ -102,7 +102,7 @@ namespace sw
 
     string ModuleCompiler::getTargetName() const
     {
-        std::scoped_lock<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return _targetName;
     }
 
@@ -153,7 +153,7 @@ namespace sw
     {
         int32 exitCode = -1;
         {
-            std::scoped_lock<mutex> lock( _mutex );
+            ScopedLock<mutex> lock{ _mutex };
             if ( _pCurrentProcess != nullptr )
             {
                 exitCode = _pCurrentProcess->waitForExit();
@@ -227,7 +227,7 @@ namespace sw
         }
 
         {
-            std::scoped_lock<mutex> lock( _mutex );
+            ScopedLock<mutex> lock{ _mutex };
             _pCurrentProcess = std::move( pProcess );
         }
 

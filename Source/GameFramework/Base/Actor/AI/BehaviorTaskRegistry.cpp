@@ -28,7 +28,7 @@ namespace sw
             return false;
         RegistrationResult result = RegistrationResult::Added;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             result = _registration.addLogged( pEntry, "Behavior task", pEntry->_pName );
         }
         return result == RegistrationResult::Added;
@@ -36,21 +36,21 @@ namespace sw
 
     void BehaviorTaskRegistry::unregisterTask( const BehaviorTaskEntry* pEntry )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_registration.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     BehaviorTaskFunction BehaviorTaskRegistry::findTask( string_view name ) const
     {
-        std::scoped_lock<mutex>  lock{ _mutex };
+        ScopedLock<mutex>        lock{ _mutex };
         const BehaviorTaskEntry* pEntry = _registration.findByName( name );
         return pEntry != nullptr ? pEntry->_function : nullptr;
     }
 
     string BehaviorTaskRegistry::joinNames() const
     {
-        string                  joined;
-        std::scoped_lock<mutex> lock{ _mutex };
+        string            joined;
+        ScopedLock<mutex> lock{ _mutex };
         for ( const BehaviorTaskEntry* pEntry : _registration.getItems() )
         {
             if ( joined.empty() == false )
@@ -62,7 +62,7 @@ namespace sw
 
     void BehaviorTaskRegistry::collectNames( vector<string>& outListName ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const BehaviorTaskEntry* pEntry : _registration.getItems() )
         {
             outListName.push_back( string{ pEntry->_pName } );
@@ -71,7 +71,7 @@ namespace sw
 
     uint32 BehaviorTaskRegistry::getCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.getCount();
     }
 } // namespace sw

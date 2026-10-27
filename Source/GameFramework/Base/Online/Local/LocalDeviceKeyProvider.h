@@ -38,7 +38,7 @@ namespace sw
         string                _keyFilePath;
         mutable mutex         _mutex;
         INetSecurityProvider* _pSecurityProvider;
-        uint8                 _arrKey[kKeySize];
+        uint8                 _arrKey[kKeySize] SW_GUARDED_BY( _mutex );
         uint8                 _bLoaded;
     };
 } // namespace sw

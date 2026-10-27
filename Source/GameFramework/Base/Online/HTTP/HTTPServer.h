@@ -94,14 +94,14 @@ namespace sw
             uint8                  _bMalformed{ SW_FALSE };
         };
 
-        mutable mutex                           _mutex;
-        unordered_map<uint64, unique_ptr<Peer>> _mapPeer;
-        vector<ReadyRequest>                    _listReady;
-        unique_ptr<IStreamTransport>            _transport;
-        HTTPServerConfig                        _settings;
-        IHTTPRequestHandler*                    _pHandler;
-        int32                                   _ioThreadCount;
-        int32                                   _handledCount;
-        uint8                                   _bInitialized;
+        mutable mutex                                    _mutex;
+        unordered_map<uint64, unique_ptr<Peer>> _mapPeer SW_GUARDED_BY( _mutex );
+        vector<ReadyRequest> _listReady                  SW_GUARDED_BY( _mutex );
+        unique_ptr<IStreamTransport>                     _transport;
+        HTTPServerConfig                                 _settings;
+        IHTTPRequestHandler*                             _pHandler;
+        int32                                            _ioThreadCount;
+        int32                                            _handledCount;
+        uint8                                            _bInitialized;
     };
 } // namespace sw

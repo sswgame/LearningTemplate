@@ -66,8 +66,8 @@ namespace sw
 
         mutable mutex                       _mutex;
         unordered_map<hashed_string, Table> _mapTable;
-        uint64                              _commitVersion;
-        uint64                              _commitCount;
+        uint64 _commitVersion               SW_GUARDED_BY( _mutex );
+        uint64 _commitCount                 SW_GUARDED_BY( _mutex );
         int32                               _faultSkipCount;
         ServiceStoreFault                   _armedFault;
     };
@@ -94,9 +94,9 @@ namespace sw
         MemoryServiceDatabase& getDatabase() { return *_pDatabase; }
 
     private:
-        mutable mutex                         _mutex; ///< 완료 큐를 보호한다. `submit` 은 아무 스레드에서나 부른다
-        vector<unique_ptr<IServiceStoreWork>> _listCompleted;
-        MemoryServiceDatabase*                _pDatabase;
-        uint8                                 _bShutdown;
+        mutable mutex                                        _mutex; ///< 완료 큐를 보호한다. `submit` 은 아무 스레드에서나 부른다
+        vector<unique_ptr<IServiceStoreWork>> _listCompleted SW_GUARDED_BY( _mutex );
+        MemoryServiceDatabase*                               _pDatabase;
+        uint8 _bShutdown                                     SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
