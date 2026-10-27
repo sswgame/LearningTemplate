@@ -52,13 +52,20 @@
 
 Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에서 졌고 수정 뒤 Debug 빌드로 다시 돌려 모두 통과했다(38 · 114 · 12 초).
 
-사용자 지시: 아래는 통합 S 에서 병합하지 않는다. 병합 순서 권고: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid`(호출처 대량 수정이라 마지막). 병합 뒤 통합이 `normal-maps-reimport` · `shared-module-unload-tests` · `log-gate-cleanup-tests` 를 돌린다. 작업자(worker)에게는 `SendMessage` 가 없다.
+**통합 T(진행 중, 2026-10-28)**: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid` 를 `D:\w\integ-t`(브랜치 `wt/integ-t`, main 에서 갈라 병합 + 수정 커밋 약 12 개)에 병합했다. **main 에는 아직 안 넣었고 push 도 안 했다** — 아래 남은 실패가 풀려야 한다. 병합 뒤 결함은 원인별로 고쳤다: resid 뒤 문자열 호출(TileMap · SequencePlayer · EditorInputActions · 테스트), 단위 철자, 중복 `toResourceID` 래퍼, 낡은 예외 자체 시험, 선언 없는 Error/Warning 으로 지던 테스트 약 78 개(`SW_TEST_DEFENSIVE_SCOPE` 를 그 로그를 내는 호출에), 서버 종료 크래시(`ConfigManager::unloadConfig` — 모듈이 정의한 설정이 모듈 이미지보다 오래 남아 엔진 종료가 지우다 죽었다), 법선맵 10 장 재굽기, `assetmanage` GL 색인 대기 한 곳 더, Shipping 컴파일 한 곳.
+
+| 구성 | 상태(integ-t 끝 커밋 6f1d18f0b) |
+|---|---|
+| Debug | 빌드 경고 0. 린트 · 대부분의 nogpu 통과. 남은 것은 아래 1 |
+| Release | 빌드 통과. `app-scenarios-release` 는 `catalogeditor`(DX11) 한 건만 졌고 단독 재실행은 3.4 초에 통과 — 병렬 부하에서 카탈로그 스캔이 `WaitUntil Editor.CatalogFileCount` 800 프레임 안에 안 끝난 흔들림 의심 |
+| Shipping | 빌드 통과. `ctest-nogpu-shipping` 실패: `SceneTest.RepositoryScenesAndPrefabsKeepComponentNames` · `GameNetSessionTest.ServerParamsComeFromTheServerConfig` · `UIBindingTest.PollBindingDetectsChange` · `ModuleHostTest.SurvivesAnRHIThatHasNoDevice` · `NetSecureHostTest.EphemeralModeWithoutAuthenticatorIsDevelopmentOnly` · `MaterialTest.EveryRepositoryMaterialMatchesItsShaderStruct`. `ctest-hostgpu-shipping` 실패: `AppTest_Desktop`. 아직 원인을 안 읽었다(Shipping 에서만 나는지 Debug 와 같은 원인인지부터) |
+
+남은 일(통합 T): 1) `NavMeshTileCacheTest.RotatedBoxFollowsObjectAxis` — 40° · -40° 에서 상자 장애물이 내비메시에 전혀 안 걸린다(반지름 4 m 원 위 36 점이 모두 열림; 0° · 90° 는 통과; `computeBoxYaw` 부호를 뒤집어도, 타일 크기를 96 으로 키워도 같음). Detour 소스가 이 PC 에 없다 — `RecastTileCache::addObstacle` 의 `addBoxObstacle(..., yRadians)` 호출과 Detour 의 방향 규약을 대조한다. 테스트는 직전에 실행 없이 추가됐다(42aeebd8b) 2) 위 Shipping 실패 7 건 3) `AutomationRunnerWatchTest.WallClockLimitEndsAHeldScenarioAndWritesTheReport`(벽시계 0.05 초 — 병렬 부하에서 한 번 졌고 단독 3 회 통과)와 `catalogeditor` 의 부하 흔들림은 대기를 시간 대신 상태로 바꿀지 정한다 4) `ServerRuntimeOpensTheSQLiteStore…` 는 표시만 달았다 — 종료 중 취소된 첫 reload 가 "Remote config reload failed" 경고로 나온다(`ServiceStoreResult` 에서 취소와 진짜 실패를 가르는 쪽이 근본책) 5) 위가 풀리면 `app-scenarios-release` · Shipping 항목을 `verify-batch --failed-from` 으로 다시 돌리고 `integ-t` 를 main 에 fast-forward · push. 병합 뒤 `shared-module-unload-tests` · `log-gate-cleanup-tests` · `normal-maps-reimport` 는 돌려 통과를 봤다(normal-maps 는 재굽기 커밋 4bd3616c3).
+
+같은 결함 후보(통합 T): `Units = "…"` 가 아는 단위 밖인 속성(파서가 걸러서 지금은 없음) · 로그 판정기가 넓어져 새로 드러난 방어 표시 누락은 새 테스트가 들어올 때마다 다시 생긴다 — 새 거절 경로 테스트를 짤 때 표시를 같이 달게 하는 구조(예: 거절 API 호출 헬퍼)를 검토한다. 작업자(worker)에게는 `SendMessage` 가 없다.
 
 | 브랜치 | 내용 · 병합 뒤 할 일 |
 |---|---|
-| `wt/cand-quality`(9 커밋) | `CaseLogJudge` 를 모든 스위트로 넓혔다. 확인: `ctest-nogpu` · `log-gate-cleanup-tests`. 넓힐 후보 5 개: `UIAnimationTest.CurveEventsFireWhenValueCrossesThreshold` · `LiveOpsServiceTest.ParameterResolvesRemoteConfigAndKillSwitchHidesAll` · `SessionStateComponentTest.UnknownSectionIsSkippedAndMissingSectionStaysFresh` · `InputManagerTest.ConcurrentMultiThreadEventPostingStress` · `PrefabTest.EngineCooksXMLAndJSONPrefabs`. `LocalizationGatherTest` 가 엔진 프로젝트를 덮는다(`App --gather-text`), `ServiceStoreSQLiteTest.*` 에 "database is locked" 가 없어야 한다 |
-| `wt/cand-engine`(2) · `wt/cand-gameplay`(2) | 겹치는 파일: `Test/QA/VerifyBatch.json` · `Scripts/qa/PerfCompare.py` · `docs/decisions/5-2·5-8` · `Candidates-*.md`(끝 추가라 풀기 쉽다) |
-| `wt/resid`(6) | 호출처 대량 수정 — 마지막에 병합 |
 | `wt/verifycmd`(4) | 측정대기 계획 문서 63 개를 닫고 매니페스트를 201→151 로 줄인다(문서 삭제 · 결정은 5-2~5-11 로 이전). 병합 뒤: `status-board --write`(지운 문서 링크 약 30 곳), 이 문서의 지운 `Vfx.md` 링크 정리, 셰이더 5 개 주석 정리(다음 쿠킹 때), 새 perf-compare 케이스 · `cook-pack-timing-release` · `write-snapshot` 인자를 첫 실행에서 확인. `need_command` 가 0 이면 `plans --check` 가 거절하게 막는 것이 구조적 마무리 |
 | `wt/verifyopt`(1) | 검증 시간 최적화(`shards` · `requires` · `functional` · 야간 `--measure`)를 `Scripts/common/VerifyManifest.py` · `RunVerifyBatch.py` · `RunTests.py` · `VerifyBatch.json` · 문서에 담았다. 빌드 · 실행 안 해 봤다. **충돌**: `VerifyBatch.json` 의 `app-scenarios-release`(이 브랜치는 `shards`, 통합 S 는 `ctest -L hostgpu`) — 통합 S 쪽을 기준으로 정하고, `scenario-timeline-measure` · `scenario-thresholds-promote` 에 `requires` · 인자를 `AppRuns` 로, `shooter3d-keyrebind-restart` 에 `functional: true`, 야간은 `--measure`. 병합 뒤 겹침 실행이 실제로 줄이는지 시간을 잰다 |
 | `wt/lockfmt` 끝 4 커밋 | f7ae810d7 · 0fca6afe8 · 015883359 · 119664da2 (동결 뒤 커밋이라 통합 S 에 안 들어갔다) |
