@@ -139,6 +139,7 @@ namespace sw
 
         _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * AudioChannelLayoutUtil::getChannelCount( layout ), 0.0f );
         _listDumpSample.clear();
+        _pEngine->releaseAudioThread(); // 렌더를 부를 스레드가 바뀐다(오프라인 → 장치 스레드)
         _bOutputOpen = _bDeviceOpen && startOutput( layout );
         if ( _bDeviceOpen && _bOutputOpen == false )
         {
@@ -226,6 +227,7 @@ namespace sw
         if ( _bOutputOpen )
             stopOutput();
         _bOutputOpen = false;
+        _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
         // 덤프 파일은 채널 수가 하나다. 옛 레이아웃으로 쌓은 것을 먼저 쓴다.
         writeOfflineDump();
         const bool               bChanged = _pEngine->setChannelLayout( layout );
@@ -235,6 +237,7 @@ namespace sw
             _speakerMode = mode;
         if ( _bDeviceOpen )
         {
+            _pEngine->releaseAudioThread(); // 레이아웃을 바꾼 게임 스레드에서 새 장치 스레드로 넘긴다
             _bOutputOpen = startOutput( current );
             if ( _bOutputOpen == false )
             {
@@ -277,6 +280,7 @@ namespace sw
         if ( _bOutputOpen )
             stopOutput();
         _bOutputOpen = false;
+        _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
         if ( _bDeviceOpen )
             closeDevice();
         _bDeviceOpen = false;

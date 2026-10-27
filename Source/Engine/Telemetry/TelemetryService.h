@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -188,8 +189,8 @@ namespace sw
         bool                    isSessionSampled() const;
         TelemetryStats          getStats() const;
         const TelemetrySchema&  getSchema() const { return _schema; }
-        const TelemetryContext& getContext() const { return _context; }
-        const string&           getSpoolFolder() const { return _spoolFolder; }
+        const TelemetryContext& getContext() const { return _context.get(); }
+        const string&           getSpoolFolder() const { return _spoolFolder.get(); }
 
     private:
         TelemetryRecordResult recordLocked( const TelemetryEvent& event ) SW_REQUIRES_LOCK( _mutex );
@@ -209,7 +210,7 @@ namespace sw
 
         mutable mutex                       _mutex;
         TelemetrySchema                     _schema;
-        TelemetryContext                    _context;
+        OnceInit<TelemetryContext>          _context; ///< initialize 가 한 번 정한다(shutdown 이 비운다).
         TelemetryStats _stats               SW_GUARDED_BY( _mutex );
         TelemetryFrameHistogram _frames     SW_GUARDED_BY( _mutex );
         Subscription                        _settingSubscription; ///< 동의 설정의 변경 통보 구독(`bindConsentSetting` ~ `shutdown`)
@@ -217,7 +218,7 @@ namespace sw
         vector<string> _listBreadcrumb      SW_GUARDED_BY( _mutex ); ///< 고리 — `_breadcrumbHead` 가 가장 오래된 자리
         vector<string> _listClosedFile      SW_GUARDED_BY( _mutex ); ///< 올릴 파일(오래된 것부터)
         vector<uint32> _listEventOccurrence SW_GUARDED_BY( _mutex ); ///< 스키마 사건마다 기록을 시도한 수(사건 표본의 열쇠)
-        string                              _spoolFolder;
+        OnceInit<string>                    _spoolFolder;            ///< initialize 가 한 번 정한다(shutdown 이 비운다).
         string _currentFile                 SW_GUARDED_BY( _mutex );
         string _currentScene                SW_GUARDED_BY( _mutex );
         UserSettingsManager*                _pSettings;

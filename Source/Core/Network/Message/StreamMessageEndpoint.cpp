@@ -115,7 +115,7 @@ namespace sw
         , _pumpingBytes{}
         , _mapLastPingTime{}
         , _settings{}
-        , _pTransport{ nullptr }
+        , _pTransport{}
     {
     }
 
@@ -125,8 +125,8 @@ namespace sw
     {
         if ( pTransport == nullptr )
             return false;
-        _pTransport = pTransport;
-        _settings   = settings;
+        _pTransport.set( pTransport );
+        _settings.set( settings );
         return true;
     }
 
@@ -135,7 +135,8 @@ namespace sw
         // 전송을 먼저 종료한다(소유자의 일). 그 뒤에는 콜백이 오지 않으므로 테이블과 큐를 비운다.
         ScopedLock<mutex> lock{ _tableMutex };
         _mapConnection.clear();
-        _pTransport = nullptr;
+        _pTransport.reset();
+        _settings.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
     }
 
     shared_ptr<StreamMessageEndpoint::Connection> StreamMessageEndpoint::findConnection( StreamConnectionHandle handle ) const
@@ -190,13 +191,13 @@ namespace sw
 
     void StreamMessageEndpoint::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {
-        shared_ptr<Connection> connection = make_shared<Connection>( _settings._maxFrameBodySize );
+        shared_ptr<Connection> connection = make_shared<Connection>( _settings->_maxFrameBodySize );
         connection->_handle               = handle;
         connection->_remote               = remote;
         connection->_bAccepted            = bAccepted ? SW_TRUE : SW_FALSE;
         // 세션은 테이블에 넣기 전에 만든다. 테이블에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게 하기 위해서다.
-        if ( _settings._security._pTLSContext != nullptr )
-            connection->_tlsSession = _settings._security._pTLSContext->createSession();
+        if ( _settings->_security._pTLSContext != nullptr )
+            connection->_tlsSession = _settings->_security._pTLSContext->createSession();
         {
             ScopedLock<mutex> lock{ _tableMutex };
             _mapConnection[handle.packed()] = connection;
@@ -204,7 +205,7 @@ namespace sw
         const AfterScope  flushLog{ [this, &connection]()
         { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
         ScopedLock<mutex> lock{ connection->_mutex };
-        if ( _settings._security._pTLSContext == nullptr )
+        if ( _settings->_security._pTLSContext == nullptr )
         {
             announceOpenLocked( *connection );
             return;
@@ -237,7 +238,7 @@ namespace sw
             return; // 이미 끊는 중이므로 남은 바이트는 버린다.
         if ( acceptIncomingLocked( *connection, pData, size ) == false )
             return;
-        if ( connection->_bReceivePaused == SW_FALSE && connection->_pendingBytes.load( std::memory_order_relaxed ) > _settings._maxPendingReceiveBytes )
+        if ( connection->_bReceivePaused == SW_FALSE && connection->_pendingBytes.load( std::memory_order_relaxed ) > _settings->_maxPendingReceiveBytes )
         {
             connection->_bReceivePaused = SW_TRUE;
             _pTransport->setReceivePaused( handle, true );
@@ -300,7 +301,7 @@ namespace sw
                 {
                     // 엔드포인트가 스스로 응답한다. 게임 스레드를 거치지 않으므로 RTT 에 프레임 길이가 섞이지 않는다.
                     connection._frameScratch.clear();
-                    if ( StreamFrameEncoder::appendFrame( connection._frameScratch, StreamFrameKind::Pong, 0, frame._pBody, frame._bodySize, _settings._maxFrameBodySize ) )
+                    if ( StreamFrameEncoder::appendFrame( connection._frameScratch, StreamFrameKind::Pong, 0, frame._pBody, frame._bodySize, _settings->_maxFrameBodySize ) )
                         (void)writeOutgoingLocked( connection, connection._frameScratch ); // Pong 전송이 실패하면 writeOutgoingLocked 가 연결을 닫고 알린다.
                     break;
                 }
@@ -320,7 +321,7 @@ namespace sw
                     if ( ( frame._flags & StreamFrameFlag::kCompressed ) != 0 )
                     {
                         // 원래 크기가 본문 상한을 넘으면 풀기 전에 끊는다(압축 폭탄). 모르는 코덱이나 깨진 봉투도 끊는다.
-                        if ( NetCompressionUtil::decompressEnvelope( frame._pBody, frame._bodySize, _settings._maxFrameBodySize, connection._decompressScratch ) == false )
+                        if ( NetCompressionUtil::decompressEnvelope( frame._pBody, frame._bodySize, _settings->_maxFrameBodySize, connection._decompressScratch ) == false )
                         {
                             closeForError( connection, StreamCloseReason::ProtocolError );
                             return false;
@@ -392,7 +393,7 @@ namespace sw
     StreamSendResult StreamMessageEndpoint::sendFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize )
     {
         shared_ptr<Connection> connection = findConnection( handle );
-        if ( connection == nullptr || _pTransport == nullptr )
+        if ( connection == nullptr || _pTransport.get() == nullptr )
             return StreamSendResult::Closed;
         const AfterScope  flushLog{ [this, &connection]()
         { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
@@ -402,17 +403,17 @@ namespace sw
         const uint8* pFrameBody    = pBody;
         int32        frameBodySize = bodySize;
         uint8        flags         = 0;
-        if ( bodySize <= _settings._maxFrameBodySize && NetCompressionUtil::compressEnvelope( _settings._compression, pBody, bodySize, connection->_compressScratch ) )
+        if ( bodySize <= _settings->_maxFrameBodySize && NetCompressionUtil::compressEnvelope( _settings->_compression, pBody, bodySize, connection->_compressScratch ) )
         {
             pFrameBody    = connection->_compressScratch.data();
             frameBodySize = static_cast<int32>( connection->_compressScratch.size() );
             flags         = StreamFrameFlag::kCompressed;
         }
-        if ( bodySize > _settings._maxFrameBodySize ||
-             StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, flags, pFrameBody, frameBodySize, _settings._maxFrameBodySize ) == false )
+        if ( bodySize > _settings->_maxFrameBodySize ||
+             StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, flags, pFrameBody, frameBodySize, _settings->_maxFrameBodySize ) == false )
         {
             StringBuilder<constant::kMaxBuffer256> text;
-            text.appendFormat( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings._maxFrameBodySize );
+            text.appendFormat( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings->_maxFrameBodySize );
             connection->deferError( text.c_str() );
             return StreamSendResult::QueueFull;
         }
@@ -426,12 +427,12 @@ namespace sw
 
     StreamConnectionHandle StreamMessageEndpoint::connect( const NetAddress& remote )
     {
-        return _pTransport != nullptr ? _pTransport->connect( remote ) : StreamConnectionHandle{};
+        return _pTransport.get() != nullptr ? _pTransport->connect( remote ) : StreamConnectionHandle{};
     }
 
     void StreamMessageEndpoint::close( StreamConnectionHandle handle, StreamCloseMode mode )
     {
-        if ( _pTransport == nullptr )
+        if ( _pTransport.get() == nullptr )
             return;
         const shared_ptr<Connection> connection = findConnection( handle );
         if ( connection != nullptr && mode == StreamCloseMode::Graceful )
@@ -485,7 +486,7 @@ namespace sw
                     if ( connection != nullptr )
                     {
                         const int32 remaining = connection->_pendingBytes.fetch_sub( event._size, std::memory_order_relaxed ) - event._size;
-                        if ( remaining <= _settings._maxPendingReceiveBytes / 2 )
+                        if ( remaining <= _settings->_maxPendingReceiveBytes / 2 )
                         {
                             ScopedLock<mutex> lock{ connection->_mutex };
                             if ( connection->_bReceivePaused == SW_TRUE )
@@ -506,10 +507,10 @@ namespace sw
             }
         }
         // 핑은 열린 연결마다 간격이 지났을 때 보낸다(전송의 유휴 시한을 넘지 않게 하고 RTT 를 측정한다).
-        if ( _settings._pingIntervalSeconds > 0.0 )
+        if ( _settings->_pingIntervalSeconds > 0.0 )
         {
             const int64 now      = MonotonicClock::nowNanoseconds();
-            const int64 interval = static_cast<int64>( _settings._pingIntervalSeconds * constant::kNanosecondsPerSecond );
+            const int64 interval = static_cast<int64>( _settings->_pingIntervalSeconds * constant::kNanosecondsPerSecond );
             uint8       arrBody[StreamMessageEndpointInternal::kPingBodySize];
             for ( auto& [packed, lastPingNanoseconds] : _mapLastPingTime )
             {

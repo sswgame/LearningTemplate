@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Console/DevCommandsEnabled.h"
 
 #if SW_DEV_COMMANDS_ENABLED
@@ -80,12 +81,12 @@ namespace sw
 
         void sendReply( uint64 packedHandle, bool bOk, string_view body ) const;
 
-        vector<Connection> _listConnection SW_GUARDED_BY( _mutex );
-        vector<Request> _listRequest       SW_GUARDED_BY( _mutex );
-        DebugChannelConfig                 _settings;
-        DebugChannelExecuteDelegate        _execute;
-        mutex                              _mutex;
-        IStreamTransport*                  _pTransport;
+        vector<Connection> _listConnection    SW_GUARDED_BY( _mutex );
+        vector<Request> _listRequest          SW_GUARDED_BY( _mutex );
+        OnceInit<DebugChannelConfig>          _settings;
+        OnceInit<DebugChannelExecuteDelegate> _execute;
+        mutex                                 _mutex;
+        OnceInit<IStreamTransport*>           _pTransport;
     };
 } // namespace sw
 

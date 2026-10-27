@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/Windows/IocpStreamTransport.h"
 
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -150,8 +151,8 @@ namespace sw
         vector<uint32> _listFreeIndex                      SW_GUARDED_BY( _tableMutex );
         unique_ptr<IocpAcceptSlot[]>                       _arrAcceptSlot;
         vector<sw::thread>                                 _listThread;
-        StreamTransportConfig                              _settings{};
-        IStreamHandler*                                    _pHandler{ nullptr };
+        OnceInit<StreamTransportConfig>                    _settings; ///< initialize 가 I/O 스레드를 띄우기 전에 한 번 정한다(shutdown 이 비운다).
+        OnceInit<IStreamHandler*>                          _pHandler; ///< 위와 같다.
         HANDLE                                             _completionPort{ nullptr };
         SOCKET                                             _listenSocket{ INVALID_SOCKET };
         LPFN_ACCEPTEX                                      _pAcceptEx{ nullptr };
@@ -190,14 +191,14 @@ namespace sw
             IocpConnection&   connection = *_listConnection[index];
             ScopedLock<mutex> connectionLock{ connection._mutex };
             connection._sendQueue.clear();
-            connection._sendQueue.configure( _settings._sendHighWatermarkBytes, _settings._sendLowWatermarkBytes, _settings._maxQueuedSendBytes );
-            connection._receiveBuffer.resize( static_cast<size_t>( _settings._receiveChunkBytes ) );
+            connection._sendQueue.configure( _settings->_sendHighWatermarkBytes, _settings->_sendLowWatermarkBytes, _settings->_maxQueuedSendBytes );
+            connection._receiveBuffer.resize( static_cast<size_t>( _settings->_receiveChunkBytes ) );
             connection._receiveOperation._index = index;
             connection._sendOperation._index    = index;
             connection._remote                  = remote;
             connection._socket                  = socket;
             connection._lastReceiveNanoseconds  = MonotonicClock::nowNanoseconds();
-            connection._deadlineNanoseconds     = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings._connectTimeoutSeconds );
+            connection._deadlineNanoseconds     = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings->_connectTimeoutSeconds );
             connection._pendingOperationCount   = 1; // 여는 쪽이 참조를 하나 잡는다. 열림 콜백(수락)이나 ConnectEx(연결)가 끝나면 놓는다.
             connection._closeReason             = StreamCloseReason::None;
             connection._state                   = state;
@@ -377,7 +378,7 @@ namespace sw
                     {
                         connection._state               = IocpConnectionState::Closing;
                         connection._closeReason         = StreamCloseReason::RemoteClose;
-                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings._closeLingerSeconds );
+                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings->_closeLingerSeconds );
                     }
                     if ( connection._bSendPosted == SW_FALSE )
                         postSendLocked( connection ); // 큐가 비었으면 FIN 을 보내고 닫는다.
@@ -441,7 +442,7 @@ namespace sw
                 if ( bConnectCompleted )
                 {
                     (void)setsockopt( connection._socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0 );
-                    Internal::setNoDelay( connection._socket, _settings._bTCPNoDelay == SW_TRUE );
+                    Internal::setNoDelay( connection._socket, _settings->_bTCPNoDelay == SW_TRUE );
                     connection._state                  = IocpConnectionState::Open;
                     connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
                     bOpened                            = true;
@@ -500,14 +501,14 @@ namespace sw
                 sockaddr_in remote{};
                 int32       length = sizeof( remote );
                 (void)getpeername( accepted, reinterpret_cast<sockaddr*>( &remote ), &length );
-                const bool bFull = _openCount.load( std::memory_order_relaxed ) >= _settings._maxConnections;
+                const bool bFull = _openCount.load( std::memory_order_relaxed ) >= _settings->_maxConnections;
                 if ( bFull || CreateIoCompletionPort( reinterpret_cast<HANDLE>( accepted ), _completionPort, Internal::kSocketKey, 0 ) == nullptr )
                 {
                     Internal::closeAbortive( accepted );
                 }
                 else
                 {
-                    Internal::setNoDelay( accepted, _settings._bTCPNoDelay == SW_TRUE );
+                    Internal::setNoDelay( accepted, _settings->_bTCPNoDelay == SW_TRUE );
                     IocpConnection*              pConnection = nullptr;
                     const NetAddress             address     = Internal::makeNetAddress( remote );
                     const StreamConnectionHandle handle      = allocateConnection( accepted, address, true, IocpConnectionState::Open, pConnection );
@@ -558,7 +559,7 @@ namespace sw
                     listConnection.push_back( connection.get() );
                 }
             }
-            const int64 idleNanoseconds = Internal::toNanoseconds( _settings._idleTimeoutSeconds );
+            const int64 idleNanoseconds = Internal::toNanoseconds( _settings->_idleTimeoutSeconds );
             for ( IocpConnection* pConnection : listConnection )
             {
                 ScopedLock<mutex> lock{ pConnection->_mutex };
@@ -679,8 +680,8 @@ namespace sw
             SW_LOG_ERROR( "CreateIoCompletionPort failed (%#)", GetLastError() );
             return false;
         }
-        _state->_pHandler = pHandler;
-        _state->_settings = settings;
+        _state->_pHandler.set( pHandler );
+        _state->_settings.set( settings );
         _state->_bStopping.store( false, std::memory_order_release );
         _state->_bExitThreads.store( false, std::memory_order_release );
         _state->_bInitialized = SW_TRUE;
@@ -741,6 +742,8 @@ namespace sw
         state._arrAcceptSlot.reset();
         state._listenPort   = 0;
         state._bInitialized = SW_FALSE;
+        state._settings.reset(); // I/O 스레드를 모두 합류한 뒤 — 다시 initialize 할 수 있게 비운다
+        state._pHandler.reset();
     }
 
     bool IocpStreamTransport::listen( const NetAddress& bindAddress )
@@ -756,7 +759,7 @@ namespace sw
         sockaddr_in local     = IocpStreamTransportInternal::makeNativeAddress( bindAddress );
         int32       length    = sizeof( local );
         const bool  bListened = bind( listenSocket, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) == 0 &&
-                               ::listen( listenSocket, state._settings._listenBacklog ) == 0 &&
+                               ::listen( listenSocket, state._settings->_listenBacklog ) == 0 &&
                                CreateIoCompletionPort( reinterpret_cast<HANDLE>( listenSocket ), state._completionPort, IocpStreamTransportInternal::kSocketKey, 0 ) != nullptr &&
                                getsockname( listenSocket, reinterpret_cast<sockaddr*>( &local ), &length ) == 0;
         state._pAcceptEx = bListened ? IocpStreamTransportInternal::findExtension<LPFN_ACCEPTEX>( listenSocket, WSAID_ACCEPTEX ) : nullptr;
@@ -852,7 +855,7 @@ namespace sw
             return;
         pConnection->_state               = IocpConnectionState::Closing;
         pConnection->_closeReason         = StreamCloseReason::LocalClose;
-        pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + IocpStreamTransportInternal::toNanoseconds( _state->_settings._closeLingerSeconds );
+        pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + IocpStreamTransportInternal::toNanoseconds( _state->_settings->_closeLingerSeconds );
         pConnection->_bReceivePaused      = SW_FALSE; // 상대의 FIN 을 받아야 끝난다.
         _state->postReceiveLocked( *pConnection );
         _state->postSendLocked( *pConnection );

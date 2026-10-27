@@ -15,7 +15,7 @@ namespace sw
         , _listReady{}
         , _transport{}
         , _settings{}
-        , _pHandler{ nullptr }
+        , _pHandler{}
         , _ioThreadCount{ 0 }
         , _handledCount{ 0 }
         , _bInitialized{ false }
@@ -33,15 +33,17 @@ namespace sw
         const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized.load( std::memory_order_acquire ) == true;
         if ( bCannotStart )
             return false;
-        _transport     = std::move( transport );
-        _settings      = settings;
-        _pHandler      = pHandler;
+        _transport.set( std::move( transport ) );
+        _settings.set( settings );
+        _pHandler.set( pHandler );
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false || _transport->listen( settings._listenAddress ) == false )
         {
             SW_LOG_ERROR( "HTTP server could not listen" );
             _transport->shutdown();
             _transport.reset();
+            _settings.reset();
+            _pHandler.reset();
             return false;
         }
         _bInitialized.store( true, std::memory_order_release );
@@ -54,10 +56,11 @@ namespace sw
             return;
         _transport->shutdown();
         _transport.reset();
+        _settings.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
         ScopedLock<mutex> lock{ _mutex };
         _mapPeer.clear();
         _listReady.clear();
-        _pHandler = nullptr;
+        _pHandler.reset();
         _bInitialized.store( false, std::memory_order_release );
     }
 
@@ -86,14 +89,14 @@ namespace sw
             const auto        peerIt = _mapPeer.find( ready._handle.packed() );
             if ( peerIt == _mapPeer.end() )
                 continue; // 그새 끊겼다
-            const bool bWritten = peerIt->second->_link.writePlain( *_transport, bytes.data(), bytes.size() );
+            const bool bWritten = peerIt->second->_link.writePlain( *_transport.get(), bytes.data(), bytes.size() );
             _transport->close( ready._handle, bWritten ? StreamCloseMode::Graceful : StreamCloseMode::Abort );
         }
     }
 
     uint16 HTTPServer::getListenPort() const
     {
-        return _transport != nullptr ? _transport->getListenPort() : 0;
+        return _transport.get() != nullptr ? _transport->getListenPort() : 0;
     }
 
     void HTTPServer::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
@@ -103,13 +106,13 @@ namespace sw
             return;
         ScopedLock<mutex> lock{ _mutex };
         unique_ptr<Peer>  peer = make_unique<Peer>();
-        if ( peer->_link.initialize( _settings._pTLSContext ) == false )
+        if ( peer->_link.initialize( _settings->_pTLSContext ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }
         peer->_link.setHandle( handle );
-        peer->_parser.reset( HTTPMessageKind::Request, _settings._maxRequestBodyBytes );
+        peer->_parser.reset( HTTPMessageKind::Request, _settings->_maxRequestBodyBytes );
         _mapPeer[handle.packed()] = std::move( peer );
     }
 
@@ -121,7 +124,7 @@ namespace sw
             return;
         Peer& peer = *peerIt->second;
         peer._plainBytes.clear();
-        if ( peer._link.readReceived( *_transport, pData, size, peer._plainBytes ) == false )
+        if ( peer._link.readReceived( *_transport.get(), pData, size, peer._plainBytes ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );
             return;

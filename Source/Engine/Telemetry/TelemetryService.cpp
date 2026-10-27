@@ -234,9 +234,9 @@ namespace sw
     {
         using Internal = TelemetryServiceInternal;
         ScopedLock<mutex> lock{ _mutex };
-        _spoolFolder = FileUtil::trimTrailingSlashes( spoolFolder );
-        _context     = context;
-        _stats       = TelemetryStats{};
+        _spoolFolder.set( FileUtil::trimTrailingSlashes( spoolFolder ) );
+        _context.set( context );
+        _stats = TelemetryStats{};
         _listPendingLine.clear();
         _listBreadcrumb.clear();
         _listClosedFile.clear();
@@ -253,11 +253,11 @@ namespace sw
         _bConsent          = SW_FALSE;
         _bInitialized      = SW_TRUE;
         _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
-        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context._sessionID ) ) ) ? SW_TRUE : SW_FALSE;
+        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( HashUtil::computeStringHash64( _context->_sessionID ) ) ) ? SW_TRUE : SW_FALSE;
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
         vector<string> listFile;
-        if ( FileUtil::isDirectory( _spoolFolder ) && FileUtil::collectFiles( _spoolFolder, "", listFile, false ) )
+        if ( FileUtil::isDirectory( _spoolFolder.get() ) && FileUtil::collectFiles( _spoolFolder.get(), "", listFile, false ) )
         {
             for ( const string& path : listFile )
             {
@@ -289,6 +289,8 @@ namespace sw
             uploadClosedLocked();
         }
         _bInitialized = SW_FALSE;
+        _spoolFolder.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
+        _context.reset();
     }
 
     span<const utf8* const> TelemetryService::getSubsystemDependencies() const
@@ -378,7 +380,7 @@ namespace sw
         }
         if ( bWasEnabled )
             return;
-        SW_LOG_INFO( "Telemetry consent given - session %# (%#)", _context._sessionID.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
+        SW_LOG_INFO( "Telemetry consent given - session %# (%#)", _context->_sessionID.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
         if ( _schema.findEvent( hashed_string( kSessionStartEvent ) ) != nullptr )
             (void)recordLocked( TelemetryEvent{ hashed_string( kSessionStartEvent ) } );
     }
@@ -483,7 +485,7 @@ namespace sw
     {
         if ( def._sampleRate >= 1.0f )
             return true;
-        uint64 hash = HashUtil::computeStringHash64( _context._sessionID );
+        uint64 hash = HashUtil::computeStringHash64( _context->_sessionID );
         hash        = HashUtil::computeStringHash64( def._id.c_str(), def._id.size(), true, hash );
         hash        = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &occurrence ), sizeof( occurrence ), false, hash );
         return TelemetryServiceInternal::passes( def._sampleRate, TelemetryServiceInternal::toUnit( hash ) );
@@ -513,11 +515,11 @@ namespace sw
         const JSONValue root = doc.makeObject();
         root.set( "type" ).setString( "context" );
         root.set( "schema" ).setInt( _schema.getVersion() );
-        root.set( "session" ).setString( _context._sessionID );
-        root.set( "build" ).setString( _context._buildConfig );
-        root.set( "platform" ).setString( _context._platform );
-        root.set( "buildId" ).setString( _context._buildID );
-        root.set( "game" ).setString( _context._game );
+        root.set( "session" ).setString( _context->_sessionID );
+        root.set( "build" ).setString( _context->_buildConfig );
+        root.set( "platform" ).setString( _context->_platform );
+        root.set( "buildId" ).setString( _context->_buildID );
+        root.set( "game" ).setString( _context->_game );
         root.set( "file" ).setUint( _fileIndex );
         return doc.dump( -1 );
     }
@@ -525,8 +527,8 @@ namespace sw
     string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::kMaxBuffer256> name;
-        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context._sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
-        return FileUtil::joinPath( _spoolFolder, name.c_str() );
+        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
+        return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
     }
 
     void TelemetryService::pushBreadcrumbLocked( const TelemetryEvent& event )
@@ -671,9 +673,9 @@ namespace sw
         using Internal = TelemetryServiceInternal;
         if ( _bInitialized == SW_FALSE || _bConsent == SW_FALSE )
             return;
-        if ( _listPendingLine.empty() == false && FileUtil::ensureDirectoryExists( _spoolFolder ) == false )
+        if ( _listPendingLine.empty() == false && FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
         {
-            SW_LOG_WARNING( "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.c_str(), static_cast<uint32>( _listPendingLine.size() ) );
+            SW_LOG_WARNING( "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( _listPendingLine.size() ) );
             _listPendingLine.clear();
             return;
         }
@@ -759,7 +761,7 @@ namespace sw
         {
             TelemetryUploadBatch batch;
             batch._filePath  = _listClosedFile.front();
-            batch._sessionID = _context._sessionID;
+            batch._sessionID = _context->_sessionID;
             if ( FileUtil::readTextFile( batch._filePath, batch._content ) == false )
             {
                 _listClosedFile.erase( _listClosedFile.begin() ); // 지워진 파일 — 목록에서만 뺀다

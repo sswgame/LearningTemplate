@@ -216,7 +216,7 @@ namespace sw
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const
         {
-            _renderThread.assumeHeld();
+            _renderThread.assumeHeldByJoinedTask(); // 커맨드 리스트 기록(병렬 패스 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
             return _timestampPool;
         }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */

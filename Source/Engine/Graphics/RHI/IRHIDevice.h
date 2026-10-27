@@ -516,6 +516,9 @@ namespace sw
          */
         [[nodiscard]] virtual bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) = 0;
 
+        /** @brief 렌더 스레드 역할의 소유자가 바뀌었습니다(`setRenderThreadDrain`). 자기 역할을 따로 든 백엔드 부품(스왑체인)이 같은 소유자로 맞춥니다. 빈 id 면 풀렸다. */
+        virtual void onRenderThreadRoleChanged( std::thread::id owner ) { (void)owner; }
+
         IRenderSurface* _pSurface;
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,
         ///        그 상태를 만지는 함수는 렌더 스레드에서 돌거나 렌더 스레드를 세운 뒤(`RenderThread::waitIdle` · 초기화 · 종료) 불린다고 진입에서 `assumeHeld` 로 적는다.

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -146,7 +147,7 @@ namespace sw
         vector<Event> _listPumping                                   SW_GUARDED_BY( _pumpThread ); ///< pump 스레드 전용. 맞바꿔서 꺼낸다.
         vector<uint8> _pumpingBytes                                  SW_GUARDED_BY( _pumpThread );
         unordered_map<uint64, int64>                                 _mapLastPingTime; ///< pump 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
-        StreamEndpointConfig                                         _settings;
-        IStreamTransport*                                            _pTransport;
+        OnceInit<StreamEndpointConfig>                               _settings;
+        OnceInit<IStreamTransport*>                                  _pTransport;
     };
 } // namespace sw

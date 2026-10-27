@@ -51,6 +51,7 @@ namespace sw
     void NetHostThread::run( ThreadStopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Net" );
+        _pHost->bindUpdateThread();
         const float64 maxWait = _settings._maxWaitSeconds > 0.0f ? static_cast<float64>( _settings._maxWaitSeconds ) : 0.0;
         while ( stopToken.stop_requested() == false )
         {
@@ -59,5 +60,6 @@ namespace sw
             // 받을 것이 오면 바로 깨고(UDP poll), 없으면 최대 대기 뒤에 보낼 시각 · 타임아웃을 보러 돈다.
             (void)_pHost->waitForReceive( maxWait );
         }
+        _pHost->releaseUpdateThread();
     }
 } // namespace sw

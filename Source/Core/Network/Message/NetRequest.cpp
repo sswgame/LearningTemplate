@@ -307,17 +307,16 @@ namespace sw
         , _writerMutex{}
         , _writer{}
         , _settings{}
-        , _pEndpoint{ nullptr }
+        , _pEndpoint{}
         , _nextSerial{ 1 }
     {
     }
 
     void NetRequestServer::initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerConfig& settings )
     {
-        // 시작 전 설정도 잠금 아래에 둔다(NetRequestClient::initialize 와 같다).
-        ScopedLock<mutex> lock{ _mutex };
-        _pEndpoint = pEndpoint;
-        _settings  = settings;
+        // 끝점 · 설정은 연결을 받기 전에 한 번 정하고 그 뒤로는 잠금 없이 읽는다(OnceInit — 다시 정하려면 shutdown).
+        _pEndpoint.set( pEndpoint );
+        _settings.set( settings );
     }
 
     void NetRequestServer::shutdown()
@@ -328,6 +327,8 @@ namespace sw
         _mapInFlightCount.clear();
         _mapIdempotency.clear();
         _listExpiry.clear();
+        _pEndpoint.reset();
+        _settings.reset();
     }
 
     bool NetRequestServer::registerMethod( uint16 method, INetRequestHandler* pHandler )
@@ -406,7 +407,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         const auto        handlerFound  = _mapHandler.find( header._method );
         int32&            inFlightCount = _mapInFlightCount[handle.packed()];
-        if ( handlerFound == _mapHandler.end() || inFlightCount >= _settings._maxInFlightPerConnection )
+        if ( handlerFound == _mapHandler.end() || inFlightCount >= _settings->_maxInFlightPerConnection )
         {
             admission._action      = RequestAdmission::Action::Reply;
             admission._replyStatus = handlerFound == _mapHandler.end() ? NetRequestStatus::UnknownMethod : NetRequestStatus::Overloaded;
@@ -511,7 +512,7 @@ namespace sw
                 entry._body.assign( pBody, pBody + bodySize );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
-                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings._idempotencyTtlSeconds * constant::kNanosecondsPerSecond );
+                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings->_idempotencyTtlSeconds * constant::kNanosecondsPerSecond );
                 listWaiter.swap( entry._listWaiter );
                 _listExpiry.emplace_back( inFlight._scope, entry._expireNanoseconds );
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );
@@ -548,7 +549,7 @@ namespace sw
 
     void NetRequestServer::purgeIdempotencyLocked( int64 now )
     {
-        const bool bOverCapacity = static_cast<int32>( _mapIdempotency.size() ) > _settings._maxIdempotencyEntries;
+        const bool bOverCapacity = static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries;
         while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || bOverCapacity ) )
         {
             const auto found                  = _mapIdempotency.find( _listExpiry.front().first );
@@ -556,7 +557,7 @@ namespace sw
             if ( bExpiredEntryCompleted )
                 _mapIdempotency.erase( found );
             _listExpiry.pop_front();
-            if ( bOverCapacity && static_cast<int32>( _mapIdempotency.size() ) <= _settings._maxIdempotencyEntries )
+            if ( bOverCapacity && static_cast<int32>( _mapIdempotency.size() ) <= _settings->_maxIdempotencyEntries )
                 break;
         }
     }

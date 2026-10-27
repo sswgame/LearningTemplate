@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
@@ -114,8 +115,8 @@ namespace sw
         unordered_map<string, ITLSContext*> _mapHostToTLSContext SW_GUARDED_BY( _mutex );
         vector<unique_ptr<Call>> _listResolvingCall              SW_GUARDED_BY( _mutex ); ///< 이름 해석을 기다리는 요청
         vector<HTTPClientResponse> _listDone                     SW_GUARDED_BY( _mutex );
-        unique_ptr<IStreamTransport>                             _transport;
-        HTTPClientConfig                                         _settings;
+        OnceInit<unique_ptr<IStreamTransport>>                   _transport;
+        OnceInit<HTTPClientConfig>                               _settings;
         DedicatedWorker<uint64>                                  _resolver; ///< 이름 해석 스레드(요청 id 를 받는다). 처음 이름을 받을 때 띄운다
         IDAllocator<uint64> _requestIDAllocator                  SW_GUARDED_BY( _mutex );
         int32                                                    _ioThreadCount;

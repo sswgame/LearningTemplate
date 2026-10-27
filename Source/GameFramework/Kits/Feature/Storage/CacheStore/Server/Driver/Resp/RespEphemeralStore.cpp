@@ -88,14 +88,17 @@ namespace sw
             outError = "RESP store needs a host:port endpoint";
             return false;
         }
-        _settings          = settings;
-        _transportSettings = transportSettings;
-        _transport         = std::move( transport );
-        _tlsContext        = std::move( tlsContext );
-        if ( _transport->initialize( this, _transportSettings ) == false )
+        _settings.set( settings );
+        _transportSettings.set( transportSettings );
+        _transport.set( std::move( transport ) );
+        _tlsContext.set( std::move( tlsContext ) );
+        if ( _transport->initialize( this, _transportSettings.get() ) == false )
         {
             outError = "RESP store could not start its stream transport";
             _transport.reset();
+            _settings.reset();
+            _transportSettings.reset();
+            _tlsContext.reset();
             return false;
         }
         _bInitialized = SW_TRUE;
@@ -187,7 +190,7 @@ namespace sw
             {
                 RespCommand command{ "SUBSCRIBE" };
                 command.addText( makeKey( channel ) );
-                if ( _subscribeConnection.sendCommand( *_transport, command, RespCommandTag{} ) )
+                if ( _subscribeConnection.sendCommand( *_transport.get(), command, RespCommandTag{} ) )
                     ++_subscriptionSentCount;
             }
             targetAckCount = _subscriptionSentCount;
@@ -206,7 +209,7 @@ namespace sw
                 return;
             RespCommand command{ "UNSUBSCRIBE" };
             command.addText( makeKey( channel ) );
-            if ( _subscribeConnection.sendCommand( *_transport, command, RespCommandTag{} ) )
+            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RespCommandTag{} ) )
                 ++_subscriptionSentCount;
             targetAckCount = _subscriptionSentCount;
         }
@@ -246,8 +249,8 @@ namespace sw
         _bShutdown = SW_TRUE;
         {
             ScopedLock<mutex> lock{ _mutex };
-            _commandConnection.closeForShutdown( *_transport );
-            _subscribeConnection.closeForShutdown( *_transport );
+            _commandConnection.closeForShutdown( *_transport.get() );
+            _subscribeConnection.closeForShutdown( *_transport.get() );
         }
         for ( Operation& operation : _listOperation )
         {
@@ -268,21 +271,21 @@ namespace sw
         (void)remote;
         (void)bAccepted;
         ScopedLock<mutex> lock{ _mutex };
-        if ( _commandConnection.handleOpened( *_transport, handle ) )
+        if ( _commandConnection.handleOpened( *_transport.get(), handle ) )
         {
             _commandBackoffMs = 0;
             return;
         }
-        if ( _subscribeConnection.handleOpened( *_transport, handle ) )
+        if ( _subscribeConnection.handleOpened( *_transport.get(), handle ) )
             _subscribeBackoffMs = 0;
     }
 
     void RespEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         ScopedLock<mutex> lock{ _mutex };
-        if ( _commandConnection.handleReceived( *_transport, handle, pData, size ) )
+        if ( _commandConnection.handleReceived( *_transport.get(), handle, pData, size ) )
             return;
-        (void)_subscribeConnection.handleReceived( *_transport, handle, pData, size );
+        (void)_subscribeConnection.handleReceived( *_transport.get(), handle, pData, size );
     }
 
     void RespEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
@@ -293,20 +296,20 @@ namespace sw
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
             _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
+            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
             return;
         }
         if ( _subscribeConnection.handleClosed( handle, reason ) )
         {
             _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
             _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
-            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
+            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings->_maxBackoffMs );
         }
     }
 
     void RespEphemeralStore::pumpTransport()
     {
-        if ( _transportSettings._ioThreadCount == 0 )
+        if ( _transportSettings->_ioThreadCount == 0 )
             (void)_transport->pollIO( 0 );
     }
 
@@ -451,7 +454,7 @@ namespace sw
         bool bSent = false;
         {
             ScopedLock<mutex> lock{ _mutex };
-            bSent = _commandConnection.sendCommand( *_transport, command, RespCommandTag{ operation._reply._requestID, step } );
+            bSent = _commandConnection.sendCommand( *_transport.get(), command, RespCommandTag{ operation._reply._requestID, step } );
         }
         if ( bSent )
             ++operation._awaitingReplyCount;
@@ -674,11 +677,11 @@ namespace sw
         if ( _clock.nowNanoseconds() < _nextCommandConnectNanoseconds )
             return false;
         const RespCommand authCommand = makeAuthCommand();
-        const bool        bAuth       = _settings._password.empty() == false;
-        if ( _commandConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) )
+        const bool        bAuth       = _settings->_password.empty() == false;
+        if ( _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) )
             return true;
         _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-        _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
+        _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
         return false;
     }
 
@@ -689,11 +692,11 @@ namespace sw
         if ( _clock.nowNanoseconds() < _nextSubscribeConnectNanoseconds )
             return false;
         const RespCommand authCommand = makeAuthCommand();
-        const bool        bAuth       = _settings._password.empty() == false;
-        if ( _subscribeConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) == false )
+        const bool        bAuth       = _settings->_password.empty() == false;
+        if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) == false )
         {
             _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
-            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
+            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings->_maxBackoffMs );
             return false;
         }
         // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
@@ -701,7 +704,7 @@ namespace sw
         {
             RespCommand command{ "SUBSCRIBE" };
             command.addText( makeKey( channel ) );
-            if ( _subscribeConnection.sendCommand( *_transport, command, RespCommandTag{} ) )
+            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RespCommandTag{} ) )
                 ++_subscriptionSentCount;
         }
         return true;
@@ -709,7 +712,7 @@ namespace sw
 
     void RespEphemeralStore::abortTimedOutRequests()
     {
-        const int64 timeoutNanoseconds = _settings._timeoutMs * constant::kNanosecondsPerMillisecond;
+        const int64 timeoutNanoseconds = _settings->_timeoutMs * constant::kNanosecondsPerMillisecond;
         const int64 nowNanoseconds     = _clock.nowNanoseconds();
         bool        bExpired           = false;
         for ( const Operation& operation : _listOperation )
@@ -724,11 +727,11 @@ namespace sw
         vector<RespReplyRecord> listRecord;
         {
             ScopedLock<mutex> lock{ _mutex };
-            _commandConnection.abort( *_transport, "request timed out" );
+            _commandConnection.abort( *_transport.get(), "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
             // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
             _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
+            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
         }
         for ( const RespReplyRecord& record : listRecord )
         {
@@ -752,17 +755,17 @@ namespace sw
         if ( kind.isText( "message" ) == false )
             return;
         const string_view channel = value._listElement[1].getText();
-        if ( channel.substr( 0, _settings._keyPrefix.size() ) != _settings._keyPrefix )
+        if ( channel.substr( 0, _settings->_keyPrefix.size() ) != _settings->_keyPrefix )
             return;
         EphemeralMessage& message = _listMessage.emplace_back();
-        message._channel          = string( channel.substr( _settings._keyPrefix.size() ) );
+        message._channel          = string( channel.substr( _settings->_keyPrefix.size() ) );
         message._bytes            = value._listElement[2]._bytes;
     }
 
     void RespEphemeralStore::waitForSubscriptionAck( uint64 targetAckCount )
     {
         _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
-        const Deadline    deadline = Deadline::afterMilliseconds( _settings._timeoutMs );
+        const Deadline    deadline = Deadline::afterMilliseconds( _settings->_timeoutMs );
         vector<RespValue> listValue;
         while ( _subscriptionAckCount < targetAckCount && deadline.isExpired() == false )
         {
@@ -782,12 +785,12 @@ namespace sw
                 RespEphemeralStoreInternal::sleepOneMillisecond();
         }
         if ( _subscriptionAckCount < targetAckCount )
-            SW_LOG_WARNING( "RESP subscription was not confirmed within %# ms", _settings._timeoutMs );
+            SW_LOG_WARNING( "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
     }
 
     string RespEphemeralStore::makeKey( string_view key ) const
     {
-        string prefixed = _settings._keyPrefix;
+        string prefixed = _settings->_keyPrefix;
         prefixed.append( key.data(), key.size() );
         return prefixed;
     }
@@ -795,9 +798,9 @@ namespace sw
     RespCommand RespEphemeralStore::makeAuthCommand() const
     {
         RespCommand command{ "AUTH" };
-        if ( _settings._userName.empty() == false )
-            command.addText( _settings._userName );
-        command.addText( _settings._password );
+        if ( _settings->_userName.empty() == false )
+            command.addText( _settings->_userName );
+        command.addText( _settings->_password );
         return command;
     }
 } // namespace sw

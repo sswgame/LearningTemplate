@@ -12,6 +12,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
@@ -122,8 +123,8 @@ namespace sw
         RespCommand makeAuthCommand() const SW_REQUIRES_LOCK( _mutex );
 
         const IClock&                          _clock;
-        RespStoreConfig                        _settings;
-        StreamTransportConfig                  _transportSettings;
+        OnceInit<RespStoreConfig>              _settings;
+        OnceInit<StreamTransportConfig>        _transportSettings;
         mutable mutex                          _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
         RespConnection _commandConnection      SW_GUARDED_BY( _mutex );
         RespConnection _subscribeConnection    SW_GUARDED_BY( _mutex );
@@ -132,8 +133,8 @@ namespace sw
         vector<RespValue>                      _listPushScratch;
         vector<string> _listChannel            SW_GUARDED_BY( _mutex ); ///< 구독 중인 채널이다. 접두어가 없는 이름이며 다시 연결하면 다시 구독한다
         deque<Operation>                       _listOperation;
-        unique_ptr<IStreamTransport>           _transport;
-        unique_ptr<ITLSContext>                _tlsContext;
+        OnceInit<unique_ptr<IStreamTransport>> _transport;
+        OnceInit<unique_ptr<ITLSContext>>      _tlsContext;
         int64 _nextCommandConnectNanoseconds   SW_GUARDED_BY( _mutex );
         int64 _nextSubscribeConnectNanoseconds SW_GUARDED_BY( _mutex );
         int64 _commandBackoffMs                SW_GUARDED_BY( _mutex );

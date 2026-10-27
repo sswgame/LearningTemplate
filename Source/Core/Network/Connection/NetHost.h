@@ -263,6 +263,10 @@ namespace sw
         void update( float64 nowSeconds ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
         bool waitForReceive( float64 timeoutSeconds ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 이 스레드를 `update` 스레드 역할의 소유자로 정합니다(`NetHostThread` 가 스레드를 시작할 때). Debug 가 `update` 진입에서 스레드를 확인한다. */
+        void bindUpdateThread() { _updateThread.bindToCurrentThread(); }
+        /** @brief `update` 스레드 역할을 놓습니다(그 스레드가 끝날 때) — 다음에 `update` 를 부르는 스레드가 받는다. */
+        void releaseUpdateThread() { _updateThread.unbind(); }
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
         [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) SW_EXCLUDES_LOCK( _mutex ) override;

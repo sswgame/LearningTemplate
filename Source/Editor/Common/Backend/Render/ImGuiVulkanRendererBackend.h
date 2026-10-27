@@ -3,6 +3,7 @@
  * @brief ImGui Vulkan 렌더러 백엔드
  */
 #pragma once
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 
@@ -68,9 +69,9 @@ namespace sw::editor
 
     private:
         ViewportGuard                          _viewportGuard;
-        VkDescriptorPool_T*                    _pImguiDescriptorPool{ nullptr };
-        VkDevice_T*                            _pDevice{ nullptr };
-        VkSampler_T*                           _pSampler{ nullptr };
+        OnceInit<VkDescriptorPool_T*>          _pImguiDescriptorPool;
+        OnceInit<VkDevice_T*>                  _pDevice;
+        OnceInit<VkSampler_T*>                 _pSampler;
         IRHIDevice*                            _pRHIDevice{ nullptr };
         mutex*                                 _pQueueMutex{ nullptr }; ///< RHI 디바이스의 큐 제출 잠금(`RHINativeHandles::_pQueueMutex`)
         unordered_map<void*, RHITextureHandle> _mapTextureID;

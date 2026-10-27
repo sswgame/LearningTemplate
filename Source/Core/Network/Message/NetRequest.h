@@ -10,6 +10,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
@@ -313,8 +314,8 @@ namespace sw
         deque<pair<ScopeKey, int64>> _listExpiry                  SW_GUARDED_BY( _mutex ); ///< 끝난 기억의 만료 순서.
         mutex                                                     _writerMutex;
         BitWriter _writer                                         SW_GUARDED_BY( _writerMutex ); ///< _writerMutex 안에서만 쓴다.
-        NetRequestServerConfig _settings                          SW_GUARDED_BY( _mutex );
-        StreamMessageEndpoint*                                    _pEndpoint;
+        OnceInit<NetRequestServerConfig>                          _settings;                     ///< initialize 가 한 번 정한다.
+        OnceInit<StreamMessageEndpoint*>                          _pEndpoint;                    ///< initialize 가 한 번 정한다.
         uint32 _nextSerial                                        SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

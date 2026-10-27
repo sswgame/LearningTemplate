@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
@@ -98,9 +99,9 @@ namespace sw
         mutable mutex                                    _mutex;
         unordered_map<uint64, unique_ptr<Peer>> _mapPeer SW_GUARDED_BY( _mutex );
         vector<ReadyRequest> _listReady                  SW_GUARDED_BY( _mutex );
-        unique_ptr<IStreamTransport>                     _transport;
-        HTTPServerConfig                                 _settings;
-        IHTTPRequestHandler*                             _pHandler;
+        OnceInit<unique_ptr<IStreamTransport>>           _transport;
+        OnceInit<HTTPServerConfig>                       _settings;
+        OnceInit<IHTTPRequestHandler*>                   _pHandler;
         int32                                            _ioThreadCount;
         int32                                            _handledCount;
         atomic<bool>                                     _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)

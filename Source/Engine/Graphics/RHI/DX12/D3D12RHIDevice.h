@@ -163,6 +163,8 @@ namespace sw
 
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;
+        /** @brief 스왑체인의 렌더 스레드 역할도 같은 소유자로 맞춥니다. */
+        void onRenderThreadRoleChanged( std::thread::id owner ) override;
 
         /** @brief 종료 3단계입니다. 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 분리합니다. */
         void detachCommandRecordingInternal() override;

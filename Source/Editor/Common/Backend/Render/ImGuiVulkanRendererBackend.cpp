@@ -197,24 +197,29 @@ namespace sw::editor
         if ( pRHIDevice->queryNativeHandles( RHIBackend::Vulkan, vkNative ) == false )
             return false;
 
-        _pRHIDevice  = pRHIDevice;
-        _pDevice     = static_cast<VkDevice>( vkNative._pDevice );
+        _pRHIDevice = pRHIDevice;
+        _pDevice.set( static_cast<VkDevice>( vkNative._pDevice ) );
         _pQueueMutex = static_cast<mutex*>( vkNative._pQueueMutex );
 
-        if ( ImGuiVulkanRendererBackendInternal::createDescriptorPool( _pDevice, &_pImguiDescriptorPool ) == false )
+        // 장치 · 풀 · 샘플러는 여기서 한 번 정하고 shutdown 까지 바뀌지 않는다(텍스처 등록 · 미뤄 둔 해제가 잠금 없이 읽는다). 실패해도 shutdown 이 정리한다.
+        VkDescriptorPool pImguiDescriptorPool = VK_NULL_HANDLE;
+        if ( ImGuiVulkanRendererBackendInternal::createDescriptorPool( _pDevice.get(), &pImguiDescriptorPool ) == false )
         {
             SW_LOG_ERROR( "Failed to create Vulkan descriptor pool for ImGui" );
             return false;
         }
+        _pImguiDescriptorPool.set( pImguiDescriptorPool );
 
         // ImGui 폰트 · 아이콘용 샘플러다. 엔진 기본 샘플러와 **같은 레시피**(`VulkanRHISamplerPreset`)를 쓰지만 같은 객체는
         // 아니다. 저쪽이 씬 텍스처를 위해 비등방 필터로 바뀌어도 UI 는 따라가면 안 된다.
         VkSamplerCreateInfo samplerInfo = VulkanRHISamplerPreset::linearClamp();
-        if ( vkCreateSampler( _pDevice, &samplerInfo, nullptr, &_pSampler ) != VK_SUCCESS )
+        VkSampler           pSampler    = VK_NULL_HANDLE;
+        if ( vkCreateSampler( _pDevice.get(), &samplerInfo, nullptr, &pSampler ) != VK_SUCCESS )
         {
             SW_LOG_ERROR( "Failed to create Vulkan sampler for ImGui textures" );
             return false;
         }
+        _pSampler.set( pSampler );
 
         // ImageCount 는 이 백엔드에서 뷰포트별 정점 · 인덱스 버퍼 링의 슬롯 수일 뿐이다(스왑체인 이미지 수와 상관없다). 슬롯이 GPU 에서 돌아오는 시간으로 정한다 —
         // 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`). ImGui 는 MinImageCount 이상을 요구한다.
@@ -224,11 +229,11 @@ namespace sw::editor
         ImGui_ImplVulkan_InitInfo init_info    = {};
         init_info.Instance                     = static_cast<VkInstance>( vkNative._pInstance );
         init_info.PhysicalDevice               = static_cast<VkPhysicalDevice>( vkNative._pPhysicalDevice );
-        init_info.Device                       = _pDevice;
+        init_info.Device                       = _pDevice.get();
         init_info.QueueFamily                  = vkNative._queueFamily;
         init_info.Queue                        = static_cast<VkQueue>( vkNative._pGraphicsQueue );
         init_info.PipelineCache                = VK_NULL_HANDLE;
-        init_info.DescriptorPool               = _pImguiDescriptorPool;
+        init_info.DescriptorPool               = _pImguiDescriptorPool.get();
         init_info.PipelineInfoMain.RenderPass  = static_cast<VkRenderPass>( vkNative._pRenderPass );
         init_info.PipelineInfoMain.Subpass     = 0;
         init_info.MinImageCount                = minImages;
@@ -266,19 +271,19 @@ namespace sw::editor
         }
         ImGuiVulkanRendererBackendInternal::clearVulkanViewportGuards( _viewportGuard );
 
-        if ( _pSampler != nullptr && _pDevice != nullptr )
+        if ( _pSampler.get() != nullptr && _pDevice.get() != nullptr )
         {
-            vkDestroySampler( _pDevice, _pSampler, nullptr );
-            _pSampler = nullptr;
+            vkDestroySampler( _pDevice.get(), _pSampler.get(), nullptr );
+            _pSampler.reset();
         }
 
-        if ( _pImguiDescriptorPool != nullptr && _pDevice != nullptr )
+        if ( _pImguiDescriptorPool.get() != nullptr && _pDevice.get() != nullptr )
         {
-            vkDestroyDescriptorPool( _pDevice, _pImguiDescriptorPool, nullptr );
-            _pImguiDescriptorPool = nullptr;
+            vkDestroyDescriptorPool( _pDevice.get(), _pImguiDescriptorPool.get(), nullptr );
+            _pImguiDescriptorPool.reset();
         }
 
-        _pDevice     = nullptr;
+        _pDevice.reset();
         _pRHIDevice  = nullptr;
         _pQueueMutex = nullptr;
     }
@@ -322,7 +327,7 @@ namespace sw::editor
 
     void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )
     {
-        const bool bCannotRegisterTexture = texture == 0 || _pRHIDevice == nullptr || _pSampler == nullptr;
+        const bool bCannotRegisterTexture = texture == 0 || _pRHIDevice == nullptr || _pSampler.get() == nullptr;
         if ( bCannotRegisterTexture )
             return nullptr;
 
@@ -337,7 +342,7 @@ namespace sw::editor
         VkDescriptorSet set{ VK_NULL_HANDLE };
         {
             ScopedLock<mutex> lock{ _descriptorPoolMutex };
-            set = ImGui_ImplVulkan_AddTexture( _pSampler, static_cast<VkImageView>( pImageViewPtr ), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            set = ImGui_ImplVulkan_AddTexture( _pSampler.get(), static_cast<VkImageView>( pImageViewPtr ), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
         if ( set == VK_NULL_HANDLE )
             return nullptr;
@@ -364,8 +369,8 @@ namespace sw::editor
         getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, set]()
         {
             ScopedLock<mutex> lock{ _descriptorPoolMutex };
-            if ( _pDevice != nullptr && _pImguiDescriptorPool != nullptr )
-                requireVk( vkFreeDescriptorSets( _pDevice, _pImguiDescriptorPool, 1, &set ), "vkFreeDescriptorSets (ImGui)" ); // 사양상 늘 VK_SUCCESS — 어기면 드라이버 결함
+            if ( _pDevice.get() != nullptr && _pImguiDescriptorPool.get() != nullptr )
+                requireVk( vkFreeDescriptorSets( _pDevice.get(), _pImguiDescriptorPool.get(), 1, &set ), "vkFreeDescriptorSets (ImGui)" ); // 사양상 늘 VK_SUCCESS — 어기면 드라이버 결함
         } ) );
     }
 } // namespace sw::editor
