@@ -96,7 +96,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */
-        [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromBinaryFile( const ResourceID& resourceID );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다. */
         [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
         /** @brief JSON 으로 저장합니다(GameObject 상태 JSON + `_listPrefabInstance`). 상태를 JSON 으로 옮기지 못하거나 쿠킹본 형식이면 쓰지 않고 오류를 알리며 false 입니다. */

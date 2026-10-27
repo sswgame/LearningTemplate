@@ -809,7 +809,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentDifferentKeysStaySeparate )
 
     // 블렌드 모드는 **부모 머티리얼**이 정한다 — 투명 머티리얼을 부모로 줘야 투명 배치가 된다.
     sw::shared_ptr<sw::Material> master = sw::Material::create();
-    SW_EXPECT_TRUE( master->loadFromFile( "engine/materials/glassmaterial.material" ) );
+    SW_EXPECT_TRUE( master->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) );
     sw::shared_ptr<sw::MaterialInstance> a = sw::MaterialInstance::create( master.get() );
     sw::shared_ptr<sw::MaterialInstance> b = sw::MaterialInstance::create( master.get() );
 
@@ -947,7 +947,7 @@ SW_TEST_CASE( GPUSceneTest, PerBatchMaterialElementsAreDistinct )
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+        if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
              material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
             material.reset();
         return material;
@@ -1027,7 +1027,7 @@ SW_TEST_CASE( GPUSceneTest, PermutationSplitsBatchesAcrossMaterials )
     {
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false )
+        if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false )
             material.reset();
         return material;
     };
@@ -1468,7 +1468,7 @@ SW_TEST_CASE( GPUSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
 SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
 {
     sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
-    SW_ASSERT_TRUE( materialGlass->loadFromFile( "engine/materials/glassmaterial.material" ) );
+    SW_ASSERT_TRUE( materialGlass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) );
 
     sw::Scene scene( "SnapshotPermutationScene" );
     SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
@@ -1538,7 +1538,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
 SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::Scene scene( "InstancePermutationScene" );
     SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
@@ -1613,7 +1613,7 @@ SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
 SW_TEST_CASE( GPUSceneTest, InstanceOnlyMeshUsesInstanceParent )
 {
     sw::shared_ptr<sw::Material> parent = sw::Material::create();
-    SW_ASSERT_TRUE( parent->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( parent->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     sw::Scene scene( "InstanceOnlyMeshScene" );
     SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
@@ -2037,7 +2037,7 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
         SW_ASSERT_NOT_NULL( cube.get() );
 
         sw::shared_ptr<sw::Material> glass = sw::Material::create();
-        SW_ASSERT_TRUE( glass->loadFromFile( "engine/materials/glassmaterial.material" ) );
+        SW_ASSERT_TRUE( glass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) );
         constexpr uint32                     kInstanceCount = 3;
         sw::shared_ptr<sw::MaterialInstance> arrInstance[kInstanceCount];
         for ( uint32 instanceIndex = 0; instanceIndex < kInstanceCount; ++instanceIndex )
@@ -2203,7 +2203,7 @@ namespace
         sw::shared_ptr<sw::Mesh>     _cube{ sw::MeshUtil::createUnitCube() };
         sw::shared_ptr<sw::Material> _glass{ sw::Material::create() };
 
-        [[nodiscard]] bool initialize() { return _scene.pickActiveGameCamera() && _glass->loadFromFile( "engine/materials/glassmaterial.material" ); }
+        [[nodiscard]] bool initialize() { return _scene.pickActiveGameCamera() && _glass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ); }
 
         sw::MeshComponent* addMesh( const utf8* pName, const sw::float3& position, uint32 sortKey )
         {

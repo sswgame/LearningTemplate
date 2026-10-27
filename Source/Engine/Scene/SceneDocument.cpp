@@ -197,24 +197,25 @@ namespace sw
 
     bool SceneDocument::loadXML( string_view path )
     {
-        return loadXMLSource( path, ReadSource::Resource );
+        return loadXMLSource( ResourceID{ path }, ReadSource::Resource );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
     {
-        return loadXMLSource( diskPath, ReadSource::DiskFile );
+        return loadXMLSource( ResourceID{ diskPath }, ReadSource::DiskFile );
     }
 
-    bool SceneDocument::loadXMLSource( string_view path, ReadSource source )
+    bool SceneDocument::loadXMLSource( const ResourceID& resourceID, ReadSource source )
     {
-        *this       = {};
-        _sourcePath = path;
+        const string_view path = resourceID.view();
+        *this                  = {};
+        _sourcePath            = path;
 
         AssetLoadScope loadScope( "Scene", path );
         XMLDocument    doc;
         string         absPath;
         // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( ResourceID{ path }, &absPath );
+        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( resourceID, &absPath );
         if ( source == ReadSource::DiskFile )
             absPath = string( path );
         if ( bRead == false )
@@ -368,16 +369,17 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::loadBinary( string_view path )
+    bool SceneDocument::loadBinary( const ResourceID& resourceID )
     {
-        *this       = {};
-        _sourcePath = path;
+        const string_view path = resourceID.view();
+        *this                  = {};
+        _sourcePath            = path;
 
         // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
         vector<uint8> bytes;
         const string  absPath{ path };
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -515,15 +517,15 @@ namespace sw
         const string binPath = AssetCookPath::toCookedPath( path );
 
 #if defined( SW_SHIPPING )
-        if ( binPath.empty() == false && loadBinary( binPath ) )
+        if ( binPath.empty() == false && loadBinary( ResourceID{ binPath } ) )
             return true;
         SW_LOG_ERROR( "Shipping requires cooked binary scene: %# (cooked name '%#')", path, binPath );
         return false;
 #else
         if ( FileUtil::hasExtension( path, ".bin" ) )
-            return loadBinary( path );
+            return loadBinary( ResourceID{ path } );
 
-        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( binPath );
+        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( ResourceID{ binPath } );
         if ( bBinaryLoaded )
             return true;
 

@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Scene/WorldSettings.h"
 
 namespace sw
@@ -92,7 +93,7 @@ namespace sw
         /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
         [[nodiscard]] SW_API bool saveXML( string_view path ) const;
         /** @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정과 셀까지 읽습니다. */
-        [[nodiscard]] SW_API bool loadBinary( string_view path );
+        [[nodiscard]] SW_API bool loadBinary( const ResourceID& resourceID );
         /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. 월드 설정과 셀까지 씁니다. */
         [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
         /** @brief 셀까지 모든 엔티티 수입니다. */
@@ -107,7 +108,7 @@ namespace sw
         };
 
         /** @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)의 본문입니다. */
-        [[nodiscard]] bool loadXMLSource( string_view path, ReadSource source );
+        [[nodiscard]] bool loadXMLSource( const ResourceID& resourceID, ReadSource source );
     };
 
 } // namespace sw

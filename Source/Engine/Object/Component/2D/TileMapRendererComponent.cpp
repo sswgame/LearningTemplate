@@ -117,7 +117,7 @@ namespace sw
     bool TileMapRendererComponent::loadTileMap()
     {
         TileMapXMLData map;
-        if ( map.load( _tileMapPath ) == false )
+        if ( map.load( ResourceID{ _tileMapPath } ) == false )
             return false;
         if ( map._tileSetPath.empty() )
         {

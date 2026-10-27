@@ -1625,7 +1625,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::loadSkeleton()
     {
-        if ( _pose.loadSkeleton( string_view( _skeletonPath.c_str() ) ) == false )
+        if ( _pose.loadSkeleton( ResourceID{ string_view( _skeletonPath.c_str() ) } ) == false )
         {
             _status = "Skeleton could not be loaded (see log)";
             return;

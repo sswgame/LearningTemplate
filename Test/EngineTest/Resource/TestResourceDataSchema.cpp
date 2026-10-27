@@ -113,17 +113,15 @@ namespace
         /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
         [[nodiscard]] static bool loadAnimationGraph( const sw::ResourceID& id )
         {
-            const sw::string&       resourceID = id.str();
             sw::AnimationGraphAsset graph;
-            return graph.loadFromFile( resourceID ) && graph._listNode.empty() == false;
+            return graph.loadFromFile( id ) && graph._listNode.empty() == false;
         }
         /** @brief 본 마스크 프리셋(그래프 레이어가 "file" 로 가리킨다) — 항목이 없거나 가중치가 범위 밖이면 로드 오류다. */
         static bool               isBoneMask( sw::string_view resourceID ) { return endsWith( resourceID, sw::AnimationBoneMaskDef::kExtension ); }
         [[nodiscard]] static bool loadBoneMask( const sw::ResourceID& id )
         {
-            const sw::string&        resourceID = id.str();
             sw::AnimationBoneMaskDef mask;
-            return mask.loadFromFile( resourceID );
+            return mask.loadFromFile( id );
         }
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
@@ -201,8 +199,7 @@ namespace
 
         [[nodiscard]] static bool loadEngineDefaultAssets( const sw::ResourceID& id )
         {
-            const sw::string& resourceID = id.str();
-            return sw::EngineDefaultAssets::load( resourceID ) != nullptr;
+            return sw::EngineDefaultAssets::load( id ) != nullptr;
         }
 
         /** @brief 시나리오는 형식(루트 · 루트 속성 · <At>)만 읽는다 — 단계 종류 · 탐침은 그 게임 모듈이 올라온 실기동(AppScenarioTest)이 본다. */
@@ -211,7 +208,7 @@ namespace
             const sw::string&      resourceID = id.str();
             sw::AutomationScenario scenario;
             sw::string             error;
-            const bool             bLoaded = scenario.loadFromPath( resourceID, error );
+            const bool             bLoaded = scenario.loadFromPath( sw::ResourceID{ resourceID }, error );
             if ( bLoaded == false )
                 SW_LOG_WARNING( "%#", error.c_str() );
             return bLoaded;
@@ -245,9 +242,8 @@ namespace
 
         [[nodiscard]] static bool loadMaterial( const sw::ResourceID& id )
         {
-            const sw::string&                  resourceID = id.str();
-            const sw::shared_ptr<sw::Material> material   = sw::Material::create();
-            return material != nullptr && material->loadFromFile( resourceID );
+            const sw::shared_ptr<sw::Material> material = sw::Material::create();
+            return material != nullptr && material->loadFromFile( id );
         }
 
         /**
@@ -261,9 +257,9 @@ namespace
             targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             settings.initialize( targets );
             const sw::string& engineSchema = test::getEngineDefaultAssets()._userSettingsSchema.get();
-            if ( resourceID != engineSchema && settings.loadSchema( engineSchema ) == false )
+            if ( resourceID != engineSchema && settings.loadSchema( sw::ResourceID{ engineSchema } ) == false )
                 return false;
-            return settings.loadSchema( resourceID );
+            return settings.loadSchema( id );
         }
 
         [[nodiscard]] static bool loadPhysicsAsset( const sw::ResourceID& id )
@@ -275,9 +271,8 @@ namespace
         /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
         [[nodiscard]] static bool loadTileMap( const sw::ResourceID& id )
         {
-            const sw::string&  resourceID = id.str();
             sw::TileMapXMLData map;
-            if ( map.load( resourceID ) == false )
+            if ( map.load( id ) == false )
                 return false;
             if ( map._tileSetPath.empty() )
                 return true;
@@ -312,9 +307,8 @@ namespace
         /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류 이름 · 채널 수가 틀린 트랙은 읽기 오류다). */
         [[nodiscard]] static bool loadSequence( const sw::ResourceID& id )
         {
-            const sw::string& resourceID = id.str();
             sw::SequenceAsset sequence;
-            if ( sequence.loadFromFile( resourceID ) == false )
+            if ( sequence.loadFromFile( id ) == false )
                 return false;
             for ( const sw::SequenceKeyTrack& track : sequence._listTrack )
             {
@@ -326,16 +320,14 @@ namespace
 
         [[nodiscard]] static bool loadSpriteClip( const sw::ResourceID& id )
         {
-            const sw::string&   resourceID = id.str();
             sw::SpriteClipAsset clip;
-            return clip.loadFromFile( resourceID );
+            return clip.loadFromFile( id );
         }
 
         [[nodiscard]] static bool loadDialogueGraph( const sw::ResourceID& id )
         {
-            const sw::string&      resourceID = id.str();
             sw::DialogueGraphAsset graph;
-            return graph.loadFromFile( resourceID );
+            return graph.loadFromFile( id );
         }
 
         // 캐릭터 데이터 — 소켓은 엔진 기본 종류 표에, 부품 피팅은 엔진 기본 피팅 표에 대조한다(모르는 이름은 로드 오류).
@@ -675,12 +667,13 @@ namespace
         }
 
         /** @brief XML 데이터의 루트 원소 이름이 게임 모듈 타입이면 true 입니다. */
-        static bool hasGameModuleRoot( const sw::string& resourceID, const sw::vector<sw::string>& listGameTypeName )
+        static bool hasGameModuleRoot( const sw::ResourceID& id, const sw::vector<sw::string>& listGameTypeName )
         {
+            const sw::string& resourceID = id.str();
             if ( endsWith( resourceID, ".xml" ) == false )
                 return false;
             sw::XMLDocument document;
-            if ( document.loadResource( sw::ResourceID{ resourceID } ) == false )
+            if ( document.loadResource( id ) == false )
                 return false;
             const sw::XMLNode root = document.getRoot( nullptr );
             if ( root.isValid() == false || root.getName() == nullptr )
@@ -854,7 +847,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         SW_EXPECT_TRUE_MSG( bUnambiguous, ( "한 파일이 두 종류에 맞습니다: " + resourceID + " - " + conflict ).c_str() );
         // 루트가 게임 모듈 타입인 리플렉션 데이터(`benchscene.xml` 의 `BenchSceneSettings`)는 그 게임 모듈이 데이터 종류로 등록한다 — 이 실행 파일은 게임 모듈을 올리지 않는다.
         // 루트가 리플렉션 타입이 아닌 게임 데이터(`autoplan.xml` 의 원소 목록)도 그 게임 모듈이 종류로 등록했으면 같다.
-        const bool bGameModuleData = kind._pLoad == nullptr && ( ResourceDataSchemaInternal::hasGameModuleRoot( resourceID, listGameTypeName ) ||
+        const bool bGameModuleData = kind._pLoad == nullptr && ( ResourceDataSchemaInternal::hasGameModuleRoot( sw::ResourceID{ resourceID }, listGameTypeName ) ||
                                                                  ResourceDataSchemaInternal::hasGameModuleDataKind( resourceID, listGameDataKindSuffix ) );
         if ( bGameModuleData )
             continue;

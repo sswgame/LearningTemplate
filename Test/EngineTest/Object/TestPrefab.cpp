@@ -182,7 +182,7 @@ SW_TEST_CASE( PrefabTest, XMLAndJSONBinaryRoundtrip )
     SW_EXPECT_EQUAL( src.getName(), fromJSON.getName() );
 
     sw::PrefabAsset fromBin;
-    SW_EXPECT_TRUE( fromBin.loadFromBinaryFile( ::test::makeTempResourceID( binPath ) ) );
+    SW_EXPECT_TRUE( fromBin.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     SW_EXPECT_TRUE( fromBin.isValid() );
     SW_EXPECT_EQUAL( src.getName(), fromBin.getName() );
 }
@@ -612,7 +612,7 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
     for ( const utf8* pCooked : { "/crate.prefab.bin", "/barrel.prefab.bin", "/sub/deep.prefab.bin" } )
     {
         sw::PrefabAsset cooked;
-        SW_ASSERT_TRUE_MSG( cooked.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + pCooked ) ), pCooked );
+        SW_ASSERT_TRUE_MSG( cooked.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( cookedRoot + pCooked ) } ), pCooked );
         SW_EXPECT_TRUE( cooked.getName() == crate.getName() );
         sw::GameObject* pObj = check.createGameObject( sw::hashed_string( "Check" ) );
         SW_ASSERT_TRUE( cooked.applyStateTo( pObj ) );
@@ -658,7 +658,7 @@ SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
         sw::PrefabAsset  fromCooked;
         const sw::string sourcePath = sourceRoot + pair._pSource;
         SW_ASSERT_TRUE_MSG( pair._bJSON ? fromSource.loadFromJSONFile( sw::ResourceID{ ::test::makeTempResourceID( sourcePath ) } ) : fromSource.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( sourcePath ) } ), pair._pSource );
-        SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + pair._pCooked ) ), pair._pCooked );
+        SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( cookedRoot + pair._pCooked ) } ), pair._pCooked );
         SW_EXPECT_EQUAL( fromSource.getName(), fromCooked.getName() );
 
         // 같은 형식으로 다시 써서 글 전체를 비교한다. 형식마다 다른 읽은 상태의 표현은 여기서 지워진다.
@@ -701,7 +701,7 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
     sw::PrefabAsset fromCooked;
     SW_ASSERT_TRUE( fromXML.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( sw::ResourceID{ ::test::makeTempResourceID( jsonPath ) } ) );
-    SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( ::test::makeTempResourceID( sw::AssetCookPath::toCookedPath( jsonPath ) ) ) );
+    SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( sw::AssetCookPath::toCookedPath( jsonPath ) ) } ) );
 
     sw::GameObjectManager check;
     for ( const sw::PrefabAsset* pAsset : { &fromXML, &fromJSON, &fromCooked } )
@@ -773,7 +773,7 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
     sw::PrefabAsset fromBinary;
     SW_ASSERT_TRUE( fromXML.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( sw::ResourceID{ ::test::makeTempResourceID( jsonPath ) } ) );
-    SW_ASSERT_TRUE( fromBinary.loadFromBinaryFile( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( fromBinary.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     for ( const sw::PrefabAsset* pLoaded : { &fromXML, &fromJSON, &fromBinary } )
     {
         SW_ASSERT_EQUAL( size_t( 3 ), pLoaded->getNestedInstances().size() );
@@ -955,7 +955,7 @@ SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
     SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/broken_cart.prefab.bin" ) );
 
     sw::PrefabAsset cookedTrain;
-    SW_ASSERT_TRUE( cookedTrain.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + "/train.prefab.bin" ) ) );
+    SW_ASSERT_TRUE( cookedTrain.loadFromBinaryFile( sw::ResourceID{ ::test::makeTempResourceID( cookedRoot + "/train.prefab.bin" ) } ) );
     SW_ASSERT_EQUAL( size_t( 3 ), cookedTrain.getNestedInstances().size() ); // Car, 그 아래 WheelL · WheelR
     SW_EXPECT_TRUE( cookedTrain.hasResolvedNestedInstances() );
     SW_EXPECT_EQUAL( -1, cookedTrain.getNestedInstances()[0]._parentIndex );

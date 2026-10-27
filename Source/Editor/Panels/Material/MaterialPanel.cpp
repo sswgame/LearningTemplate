@@ -524,7 +524,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        if ( _material->loadFromFile( path ) == false )
+        if ( _material->loadFromFile( ResourceID{ path } ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "LoadFailedStatus" );
             return ToolAssetLoadResult::Malformed;

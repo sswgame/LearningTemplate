@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -71,7 +72,7 @@ namespace sw
 
     private:
         /** @brief 텍스트를 찾습니다(메모리, 리소스, 절대 경로 순서). */
-        [[nodiscard]] bool readText( const string& key, string_view path, string& outText ) const;
+        [[nodiscard]] bool readText( const string& key, const ResourceID& resourceID, string& outText ) const;
 
     private:
         unordered_map<string, shared_ptr<const void>> _mapPathToAsset;      ///< 정규화한 경로에서 파싱한 에셋을 찾는 맵입니다.

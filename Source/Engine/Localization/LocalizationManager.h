@@ -21,6 +21,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/ReloadOutcome.h"
 
 namespace sw
@@ -130,7 +131,7 @@ namespace sw
          */
         [[nodiscard]] bool loadBinaryTable( const uint8* pData, size_t size );
         /** @brief 리소스 경로(또는 절대 경로)의 이진 번역 표를 읽습니다. */
-        [[nodiscard]] bool loadBinaryTableResource( string_view resourcePath );
+        [[nodiscard]] bool loadBinaryTableResource( const ResourceID& resourceID );
         /**
          * @brief 로드한 프로젝트에서 그 문화권의 화면에 나오는 글(낡은 번역 · 검토 번역 제외)을 이진 번역 표 바이트로 베이크합니다(쿠킹 단계가 부른다).
          * @return 그 문화권의 글이 하나도 없으면 false 입니다.

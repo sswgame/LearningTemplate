@@ -76,7 +76,7 @@ SW_TEST_CASE( WorldStreamingTest, WorldSettingsRoundTripThroughXMLAndBinary )
     const sw::string binPath = test::makeTempPath( "stream_town.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
     sw::SceneDocument readBinary{};
-    SW_ASSERT_TRUE( readBinary.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( readBinary.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     SW_EXPECT_TRUE( readBinary._worldSettings._bStreaming );
     SW_EXPECT_EQUAL( 4u, readBinary._worldSettings._maxCellLoadsPerFrame );
     SW_ASSERT_EQUAL( size_t( 1 ), readBinary._listStreamingCell.size() );

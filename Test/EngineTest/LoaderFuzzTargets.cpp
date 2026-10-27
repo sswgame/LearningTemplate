@@ -181,7 +181,7 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadBinary( ::test::makeTempResourceID( path ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)document.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( path ) } ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runGameObjectXML( const uint8* pData, size_t size )
             {

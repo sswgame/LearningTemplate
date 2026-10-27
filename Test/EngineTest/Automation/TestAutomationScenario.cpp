@@ -454,11 +454,11 @@ SW_TEST_CASE( AutomationScenarioTest, LoadsByResourceIDAndNamesTheFailingStage )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::AutomationScenario scenario;
     sw::string             error;
-    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( "engine/automation/runner.scenario.xml", error ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( scenario.loadFromPath( sw::ResourceID{ "engine/automation/runner.scenario.xml" }, error ), error.c_str() );
     SW_EXPECT_EQUAL( sw::string( "engine.runner" ), scenario.getName() );
 
     SW_TEST_DEFENSIVE_SCOPE( "a scenario id that resolves to no file is a [read] load error" );
-    SW_EXPECT_FALSE( scenario.loadFromPath( "engine/automation/nothere.scenario.xml", error ) );
+    SW_EXPECT_FALSE( scenario.loadFromPath( sw::ResourceID{ "engine/automation/nothere.scenario.xml" }, error ) );
     SW_EXPECT_TRUE_MSG( error.rfind( "[read]", 0 ) == 0, error.c_str() );
     SW_EXPECT_TRUE_MSG( error.find( sw::ResourcePaths::getRootFolderPath() ) != sw::string::npos, error.c_str() );
 }

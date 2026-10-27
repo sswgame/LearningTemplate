@@ -158,7 +158,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 )
                     return false;
                 OutfitAtlasSpec spec;
-                if ( OutfitAtlasBaker::loadSpec( listArgument[0], spec ) == false )
+                if ( OutfitAtlasBaker::loadSpec( ResourceID{ listArgument[0] }, spec ) == false )
                 {
                     outReply = "outfit atlas spec '" + listArgument[0] + "' could not be read (see the log)";
                     return false;
@@ -192,13 +192,14 @@ namespace sw::editor
         return bRead;
     }
 
-    bool OutfitAtlasBaker::loadSpec( string_view resourcePath, OutfitAtlasSpec& outSpec )
+    bool OutfitAtlasBaker::loadSpec( const ResourceID& resourceID, OutfitAtlasSpec& outSpec )
     {
-        outSpec = OutfitAtlasSpec{};
+        const string_view resourcePath = resourceID.view();
+        outSpec                        = OutfitAtlasSpec{};
         CharacterDataReader reader( resourcePath );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, ResourceID{ resourcePath }, "OutfitAtlas", root ) )
+        if ( reader.loadRoot( document, resourceID, "OutfitAtlas", root ) )
         {
             OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
             OutfitAtlasBakerInternal::validateSpec( outSpec, reader );

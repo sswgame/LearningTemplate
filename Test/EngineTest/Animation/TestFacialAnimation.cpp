@@ -506,7 +506,7 @@ SW_TEST_CASE( FacialAnimationTest, SpeechOpensTheMouthFromTrackOrAmplitude )
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestFacialAnimationInternal::getWeight( *pUnit, "jawOpen" ), 0.0f );
 
     // 트랙 파일이 곁에 있는 음성은 그 트랙을 말한다(임포트 결과).
-    SW_EXPECT_TRUE( pFace->speak( "game/empty/voice/testline.wav" ) );
+    SW_EXPECT_TRUE( pFace->speak( sw::ResourceID{ "game/empty/voice/testline.wav" } ) );
     SW_EXPECT_TRUE( pFace->isSpeaking() );
 }
 

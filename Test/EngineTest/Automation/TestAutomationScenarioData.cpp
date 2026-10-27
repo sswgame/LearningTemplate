@@ -155,7 +155,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             loadError;
-            const bool             bLoaded = scenario.loadFromPath( resourceID, loadError );
+            const bool             bLoaded = scenario.loadFromPath( sw::ResourceID{ resourceID }, loadError );
             if ( bLoaded == false )
             {
                 SW_EXPECT_TRUE_MSG( bLoaded, ( "시나리오를 읽지 못해 단계를 하나도 보지 못했습니다: " + resourceID + " - " + loadError ).c_str() );

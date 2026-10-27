@@ -274,7 +274,7 @@ namespace sw
         if ( audioEvents.isSet() == false )
             return true; // 적지 않은 게임은 사운드 이벤트가 없다
         const string& path = audioEvents.get();
-        if ( GameSound::loadEvents( path ) == false )
+        if ( GameSound::loadEvents( ResourceID{ path } ) == false )
         {
             SW_LOG_ERROR( "GameSettings audioEvents '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", path.c_str() );
             return false;
@@ -292,9 +292,10 @@ namespace sw
         return false;
     }
 
-    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const string& path ) const
+    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const ResourceID& resourceID ) const
     {
-        const utf8* pReason = ResourceIO::hasResource( ResourceID{ path } ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
+        const string& path    = resourceID.str();
+        const utf8*   pReason = ResourceIO::hasResource( resourceID ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
         SW_LOG_ERROR( "Required game data '%#' (%#) could not be loaded: %# - the game does not start", kindLabel, path.c_str(), pReason );
     }
 

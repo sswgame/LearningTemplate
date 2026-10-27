@@ -14,10 +14,10 @@ namespace sw
 {
     SW_LOG_CALLER( "EngineDefaultAssets" );
 
-    unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( string_view assetRelativePath )
+    unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( const ResourceID& resourceID )
     {
         unique_ptr<EngineDefaultAssets> assets = make_unique<EngineDefaultAssets>( ConstructKey{} );
-        if ( assets->loadFromResource( ResourceID{ assetRelativePath } ) == false )
+        if ( assets->loadFromResource( resourceID ) == false )
             return nullptr;
         return assets;
     }

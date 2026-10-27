@@ -80,11 +80,11 @@ namespace sw
         }
 
         /** @brief 같은 키를 텍스트 · 바이너리로 둘 다 읽습니다. 둘 다 읽었으면 true. */
-        [[nodiscard]] bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
+        [[nodiscard]] bool readTextAndBinaryResource( const ResourceID& resourceID, string& outText, string& outBinary )
         {
             vector<uint8> bytes;
-            const bool    bText   = ResourceIO::readTextResource( sw::ResourceID{ pKey }, outText );
-            const bool    bBinary = ResourceIO::readBinaryResource( sw::ResourceID{ pKey }, bytes );
+            const bool    bText   = ResourceIO::readTextResource( resourceID, outText );
+            const bool    bBinary = ResourceIO::readBinaryResource( resourceID, bytes );
             outBinary.assign( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             return bText && bBinary;
         }
@@ -542,23 +542,23 @@ SW_TEST_CASE( ResourcePakTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
     sw::string binary;
 
     packManager.setAllowLooseFiles( true ); // Dev · 쿠킹: 낱개가 이긴다
-    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( sw::ResourceID{ kKey }, text, binary ) );
     SW_EXPECT_EQUAL( sw::string( "FROM_LOOSE" ), text );
     SW_EXPECT_EQUAL( sw::string( "FROM_LOOSE" ), binary );
 
     packManager.setAllowLooseFiles( false ); // 배포: 팩만
-    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_ASSERT_TRUE( sw::readTextAndBinaryResource( sw::ResourceID{ kKey }, text, binary ) );
     SW_EXPECT_EQUAL( sw::string( "FROM_PACK" ), text );
     SW_EXPECT_EQUAL( sw::string( "FROM_PACK" ), binary );
 
     packManager.unmountAll(); // 팩에 없다 — 낱개 허용일 때만
     packManager.setAllowLooseFiles( true );
-    SW_EXPECT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+    SW_EXPECT_TRUE( sw::readTextAndBinaryResource( sw::ResourceID{ kKey }, text, binary ) );
     SW_EXPECT_TRUE( sw::ResourceIO::hasResource( sw::ResourceID{ kKey } ) );
     packManager.setAllowLooseFiles( false );
     {
         test::ScopedDefensiveTestLog expected( "a pack-only build refuses a loose read under the resource root" );
-        SW_EXPECT_FALSE( sw::readTextAndBinaryResource( kKey, text, binary ) );
+        SW_EXPECT_FALSE( sw::readTextAndBinaryResource( sw::ResourceID{ kKey }, text, binary ) );
     }
     SW_EXPECT_FALSE( sw::ResourceIO::hasResource( sw::ResourceID{ kKey } ) );
     packManager.setAllowLooseFiles( true );

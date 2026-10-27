@@ -191,7 +191,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     const sw::string binPath     = test::makeTempResourceID( binPathDisk );
     SW_ASSERT_TRUE( reopened.saveBinary( binPathDisk ) );
     sw::SceneDocument cooked;
-    SW_ASSERT_TRUE( cooked.loadBinary( binPath ) );
+    SW_ASSERT_TRUE( cooked.loadBinary( sw::ResourceID{ binPath } ) );
     const sw::SceneDocument::SceneObjectNode* pCookedA = sw::PrefabOverridesTestInternal::findEntity( cooked, "CrateA" );
     SW_ASSERT_NOT_NULL( pCookedA );
     SW_EXPECT_TRUE( pCookedA->_embeddedStateBytes.empty() && pCookedA->_prefabOverrideXML.empty() == false );
@@ -294,7 +294,7 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
     {
         test::ScopedDefensiveTestLog expected( "a cooked scene of another binary version" );
         sw::SceneDocument            doc;
-        SW_EXPECT_FALSE( doc.loadBinary( path ) );
+        SW_EXPECT_FALSE( doc.loadBinary( sw::ResourceID{ path } ) );
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.UnsupportedBinaryVersion" ) == 1, logs.joined().c_str() );

@@ -18,6 +18,7 @@
 
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
 #include "Engine/Utility/EngineFrameObserver.h"
@@ -154,7 +155,7 @@ namespace sw
         /** @brief 서버 크래시 묶기 · 텔레메트리는 후속이다(동의가 플레이어 설정이다). */
         SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
-        [[nodiscard]] bool loadSchema( string_view path );
+        [[nodiscard]] bool loadSchema( const ResourceID& resourceID );
         [[nodiscard]] bool loadSchemaText( string_view xmlText, string_view sourceName );
 
         /**

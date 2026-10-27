@@ -1408,9 +1408,9 @@ SW_TEST_CASE( RenderPassTest, MeshOutlineDrawsOnlyMaterialsWithOutline )
     SW_EXPECT_FALSE( info.hasFlag( sw::RenderPassTraitFlag::kDrawsTransparentBatch ) );
 
     sw::shared_ptr<sw::Material> toon = sw::Material::create();
-    SW_ASSERT_TRUE( toon->loadFromFile( "engine/materials/toon.material" ) );
+    SW_ASSERT_TRUE( toon->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } ) );
     sw::shared_ptr<sw::Material> lit = sw::Material::create();
-    SW_ASSERT_TRUE( lit->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( lit->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, nullptr ) );
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::MeshOutline, &toon->getCachedShaderDefines() ) );
@@ -1431,9 +1431,9 @@ SW_TEST_CASE( RenderPassTest, GBufferSkipsForwardOnlyMaterials )
 {
     SW_EXPECT_TRUE( sw::isPipelinePassType( sw::RenderPassType::ForwardOnlyOpaque ) );
     sw::shared_ptr<sw::Material> toon = sw::Material::create();
-    SW_ASSERT_TRUE( toon->loadFromFile( "engine/materials/toon.material" ) );
+    SW_ASSERT_TRUE( toon->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } ) );
     sw::shared_ptr<sw::Material> lit = sw::Material::create();
-    SW_ASSERT_TRUE( lit->loadFromFile( "engine/materials/defaultmaterial.material" ) );
+    SW_ASSERT_TRUE( lit->loadFromFile( sw::ResourceID{ "engine/materials/defaultmaterial.material" } ) );
 
     SW_EXPECT_FALSE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::GBuffer, &toon->getCachedShaderDefines() ) );
     SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOnlyOpaque, &toon->getCachedShaderDefines() ) );

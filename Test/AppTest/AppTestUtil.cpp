@@ -119,7 +119,7 @@ namespace test
                     sw::string             error;
                     if ( reason.empty() == false )
                         return;
-                    const bool bDeclares = scenario.loadFromPath( scenarioPath, error ) && scenario.getTestOptions()._listLaunchVariable.empty() == false;
+                    const bool bDeclares = scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) && scenario.getTestOptions()._listLaunchVariable.empty() == false;
                     if ( bDeclares == false )
                         return; // 못 읽은 시나리오는 App 이 읽기 오류(11)로 끝내 제 실행에서 진다
                     reason = sw::string( "<Launch> declares the development variable " ) + scenario.getTestOptions()._listLaunchVariable.front()._name;
@@ -592,7 +592,7 @@ namespace test
         sw::StringUtil::forEachToken( scenarioArgument, ",", [&policy, &error]( sw::string_view scenarioPath )
         {
             sw::AutomationScenario scenario;
-            if ( scenario.loadFromPath( scenarioPath, error ) == false )
+            if ( scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) == false )
                 return; // 읽지 못한 시나리오는 App 이 이미 11(읽기 오류)로 끝냈다
             policy.selectScenario( scenario.getName() );
             for ( const sw::AutomationStep& step : scenario.getSteps() )

@@ -58,15 +58,16 @@ namespace sw
         return false;
     }
 
-    bool AnimationGraphAsset::loadFromFile( string_view path )
+    bool AnimationGraphAsset::loadFromFile( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Animation );
         clear();
         if ( path.empty() )
             return false;
 
         XMLDocument doc;
-        if ( doc.loadResource( ResourceID{ path } ) == false )
+        if ( doc.loadResource( resourceID ) == false )
             return false;
         // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseXML 에 다시 넘기지 않는다).
         return parseRoot( doc.getRoot( "AnimationGraphAsset" ), path );
@@ -407,7 +408,7 @@ namespace sw
                 continue;
             }
             const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromFile( maskXML.getAttributeText( "file" ) ) : mask.parseObject( maskXML, context );
+            const bool   bLoaded = bFromFile ? mask.loadFromFile( ResourceID{ maskXML.getAttributeText( "file" ) } ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;

@@ -941,7 +941,7 @@ namespace sw
 
     unique_ptr<InputMap> Engine::createShellInputMap( string_view inputMapPath )
     {
-        return ShellInputActions::createInputMap( inputMapPath );
+        return ShellInputActions::createInputMap( ResourceID{ inputMapPath } );
     }
 
     void Engine::pollShaderReloadHotkey()

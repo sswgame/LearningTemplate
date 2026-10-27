@@ -301,7 +301,7 @@ namespace sw
         if ( listPath.empty() || ResourceIO::hasResource( ResourceID{ listPath } ) == false )
             return;
         vector<string> listAsset;
-        if ( ScenePreloadList::read( listPath, listAsset ) == false || listAsset.empty() )
+        if ( ScenePreloadList::read( ResourceID{ listPath }, listAsset ) == false || listAsset.empty() )
             return; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
         _pScenePreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
         if ( _services._pAssetManager != nullptr )

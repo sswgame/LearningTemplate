@@ -244,7 +244,7 @@ namespace
                     pLight->setIntensity( 2.0f );
             }
             _material = sw::Material::create();
-            if ( _material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( _material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  _material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.5 0.25 1.0" ) == false )
                 return false;
             _mesh = sw::MeshUtil::createUnitCube();
@@ -355,7 +355,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeMaterial( const utf8* pColor )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -497,7 +497,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeLitMaterial()
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), "0.9 0.5 0.25 1.0" ) == false )
                 material.reset();
             return material;
@@ -510,7 +510,7 @@ namespace
         static sw::shared_ptr<sw::Material> makeToonMaterial( bool bOutline )
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
+            const bool                   bLoaded  = material->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } );
             const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "0.9 0.5 0.25 1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "_shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "_shadingToony" ), "1.0" ) &&
@@ -1149,7 +1149,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialLifetimeFollowsPacket, te
 
     // GT 소유: 머티리얼 하나 + 그 인스턴스 하나. 아래에서 둘 다 놓는다.
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
     sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
     mesh->setMaterial( material.get() );
     mesh->setMaterialInstance( instance );
@@ -1368,7 +1368,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO
         // 실제 에셋을 쓴다 — 손으로 지은 XML 은 _permutations 가 빠져 검증하려던 것과 다른 걸 재게 된다.
         sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
         if ( bOk )
-            bOk = materialGlass->loadFromFile( "engine/materials/glassmaterial.material" );
+            bOk = materialGlass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } );
 
         sw::Scene scene( "MaterialPermutationPSOScene" );
         if ( bOk )
@@ -1732,7 +1732,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
             glassMaterial = sw::Material::create();
             // 반투명 전용 에셋 — blendMode 와 퍼뮤테이션이 불투명과 다르다. 불투명 에셋에
             // 알파만 낮춰 쓰면 "머티리얼은 불투명인데 블렌딩으로 그린다"는 어긋난 상태를 검증하게 된다.
-            bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" );
+            bOk = sharedMesh != nullptr && glassMaterial->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } );
         }
 
         if ( bOk )
@@ -1960,7 +1960,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PerBatchMaterialColorsReachShader
         {
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
+            if ( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) == false ||
                  material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
@@ -2566,7 +2566,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RendererSurvivesDeviceRecreate, t
     SW_ASSERT_NOT_NULL( mesh );
     mesh->setMesh( cube );
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromFile( kGlassMaterial ) );
+    SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ kGlassMaterial } ) );
     mesh->setMaterial( material.get() );
 
     sw::GPUSceneBuilder gtGPUScene;
@@ -4373,7 +4373,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
         // 다르게 무너진다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
+            bOk = material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) &&
                   material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
@@ -5089,7 +5089,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth, t
             SW_ASSERT_TRUE( pLightObject != nullptr && pLightObject->addComponent<sw::DirectionalLightComponent>() != nullptr );
 
             const sw::shared_ptr<sw::Material> material       = sw::Material::create();
-            const bool                         bMaterialReady = material->loadFromFile( "engine/materials/toon.material" ) &&
+            const bool                         bMaterialReady = material->loadFromFile( sw::ResourceID{ "engine/materials/toon.material" } ) &&
                                         material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "1.0 1.0 1.0 0.2" ) &&
                                         material->setParameter( nullptr, sw::hashed_string( "_alphaCutoff" ), "0.5" );
             SW_ASSERT_TRUE( bMaterialReady );
@@ -5502,7 +5502,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, NormalsStayPerpendicularUnderNonU
         const sw::string backendName( device->getBackendName() );
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+        SW_ASSERT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
         sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
         SW_ASSERT_NOT_NULL( quad.get() );
 
@@ -5925,7 +5925,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         }
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
-            bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
+            bOk = material->loadFromFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) &&
                   material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         // 큐브 셋(화면 안) + 왼쪽 가장자리를 넘어가는 긴 막대 하나(오른쪽 가장자리는 배경이다).
@@ -7418,9 +7418,9 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewSortsTransparencyFromIts
             outMesh                 = sw::MeshUtil::createUnitCube();
             outGlass                = sw::Material::create();
             outTint                 = sw::Material::create();
-            const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+            const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) == false ||
                                       outGlass->setParameter( nullptr, sw::hashed_string( "_color" ), "0.2 0.9 0.3 0.55" ) == false ||
-                                      outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                                      outTint->loadFromFile( sw::ResourceID{ "engine/materials/glassmaterial.material" } ) == false ||
                                       outTint->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.1 0.1 0.6" ) == false;
             if ( bSetupFailed )
                 return false;
@@ -8074,7 +8074,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameD
             sw::shared_ptr<sw::Material> red   = sw::Material::create();
             sw::shared_ptr<sw::Material> blue  = sw::Material::create();
             const utf8*                  pPath = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
-            bOk                                = bOk && cube != nullptr && red->loadFromFile( pPath ) && blue->loadFromFile( pPath ) &&
+            bOk                                = bOk && cube != nullptr && red->loadFromFile( sw::ResourceID{ pPath } ) && blue->loadFromFile( sw::ResourceID{ pPath } ) &&
                   red->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.02 0.02 1.0" ) && blue->setParameter( nullptr, sw::hashed_string( "_color" ), "0.02 0.02 1.0 1.0" );
             sw::MeshComponent* pCube = nullptr;
             sw::MeshComponent* pWall = nullptr;
@@ -9432,7 +9432,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled
         // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
         sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().declareRenderTarget( kTargetPath, 64, 64 );
         sw::shared_ptr<sw::Material> sprite = sw::Material::create();
-        bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
+        bOk                                 = bOk && sprite->loadFromFile( sw::ResourceID{ "engine/materials/sprite2d.material" } );
         const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );
         bOk                                 = bOk && pCamera != nullptr;
         sw::shared_ptr<sw::Mesh> quadMesh   = sw::MeshUtil::createSpriteQuad();

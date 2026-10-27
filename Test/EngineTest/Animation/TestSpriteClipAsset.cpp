@@ -83,7 +83,7 @@ SW_TEST_CASE( SpriteClipAssetTest, RepositoryClipResavesByteForByte )
     // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
     fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
     sw::SpriteClipAsset clip;
-    SW_ASSERT_TRUE( clip.loadFromFile( kClipPath ) );
+    SW_ASSERT_TRUE( clip.loadFromFile( sw::ResourceID{ kClipPath } ) );
     SW_ASSERT_EQUAL( 4, clip.getFrameCount() );
     SW_EXPECT_EQUAL( 250, clip._listFrame[3]._durationMs );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( clip._listAnimation.size() ) );

@@ -74,15 +74,15 @@ SW_TEST_CASE( ScenePreloadListTest, RoundTripsThroughAFileAndRefusesBrokenOnes )
     const sw::vector<sw::string> listWritten{ "game/demo/materials/x.material", "game/demo/models/a.mesh" };
     SW_ASSERT_TRUE( sw::ScenePreloadList::write( path, listWritten ) );
     sw::vector<sw::string> listRead;
-    SW_ASSERT_TRUE( sw::ScenePreloadList::read( ::test::makeTempResourceID( path ), listRead ) );
+    SW_ASSERT_TRUE( sw::ScenePreloadList::read( sw::ResourceID{ ::test::makeTempResourceID( path ) }, listRead ) );
     SW_EXPECT_TRUE( listRead == listWritten );
 
     SW_TEST_DEFENSIVE_SCOPE( "a preload list with another version or a non-string path is refused" );
     const sw::string brokenPath = sw::FileUtil::joinPath( test::makeTempPath( "preloadlist" ), "broken.preload.json" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, R"({"version": 99, "paths": []})" ) );
-    SW_EXPECT_FALSE( sw::ScenePreloadList::read( ::test::makeTempResourceID( brokenPath ), listRead ) );
+    SW_EXPECT_FALSE( sw::ScenePreloadList::read( sw::ResourceID{ ::test::makeTempResourceID( brokenPath ) }, listRead ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, R"({"version": 1, "paths": [3]})" ) );
-    SW_EXPECT_FALSE( sw::ScenePreloadList::read( ::test::makeTempResourceID( brokenPath ), listRead ) );
+    SW_EXPECT_FALSE( sw::ScenePreloadList::read( sw::ResourceID{ ::test::makeTempResourceID( brokenPath ) }, listRead ) );
     SW_EXPECT_TRUE( listRead.empty() );
 }
 
@@ -121,7 +121,7 @@ SW_TEST_CASE( ScenePreloadListTest, SceneCookWritesTheListBesideTheScene )
     const sw::string listPath = sw::FileUtil::joinPath( cooked, "game/demo/maps/level.preload.json" );
     SW_ASSERT_TRUE( sw::FileUtil::exists( listPath ) );
     sw::vector<sw::string> listRead;
-    SW_ASSERT_TRUE( sw::ScenePreloadList::read( ::test::makeTempResourceID( listPath ), listRead ) );
+    SW_ASSERT_TRUE( sw::ScenePreloadList::read( sw::ResourceID{ ::test::makeTempResourceID( listPath ) }, listRead ) );
     SW_EXPECT_TRUE( sw::VectorUtil::contains( listRead, sw::string( "game/demo/models/rock.mesh" ) ) );
     SW_EXPECT_TRUE( sw::VectorUtil::contains( listRead, sw::string( "game/demo/materials/rock.material" ) ) );
     sceneManager.shutdownSubsystem();

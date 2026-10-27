@@ -778,7 +778,7 @@ namespace sw
          * @brief `loadFromResource` 와 `appendFromResource` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
          * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
          */
-        [[nodiscard]] bool loadDefinition( string_view relativePath, bool bAppend );
+        [[nodiscard]] bool loadDefinition( const ResourceID& resourceID, bool bAppend );
         /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromResource`). */
         [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
 

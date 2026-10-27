@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -59,7 +60,7 @@ namespace sw
         void forgetRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
-        [[nodiscard]] bool loadFromFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
         /** @brief 인스턴스 XML 을 저장합니다. */
         [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
         /**

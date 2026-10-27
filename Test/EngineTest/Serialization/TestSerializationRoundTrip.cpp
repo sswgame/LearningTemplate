@@ -62,8 +62,9 @@ namespace
         }
 
         /** @brief 씬은 문서를 읽어 만들고, 프리팹은 오브젝트 하나에 적용합니다(ResourceDataSchemaTest 와 같은 로더). */
-        [[nodiscard]] static bool loadObjects( const sw::string& resourceID, LoadedObjects& outLoaded )
+        [[nodiscard]] static bool loadObjects( const sw::ResourceID& id, LoadedObjects& outLoaded )
         {
+            const sw::string& resourceID = id.str();
             if ( isScene( resourceID ) )
             {
                 sw::SceneDocument doc;
@@ -76,7 +77,7 @@ namespace
                 return true;
             }
             sw::PrefabAsset prefab;
-            const bool      bLoaded = sw::StringUtil::endsWith( resourceID, ".json", true ) ? prefab.loadFromJSONFile( sw::ResourceID{ resourceID } ) : prefab.loadFromXMLFile( sw::ResourceID{ resourceID } );
+            const bool      bLoaded = sw::StringUtil::endsWith( resourceID, ".json", true ) ? prefab.loadFromJSONFile( id ) : prefab.loadFromXMLFile( id );
             if ( bLoaded == false )
                 return false;
             outLoaded._manager      = sw::make_unique<sw::GameObjectManager>();
@@ -160,7 +161,7 @@ SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSam
     for ( const sw::string& resourceID : listResourceID )
     {
         SerializationRoundTripInternal::LoadedObjects loaded;
-        SW_EXPECT_TRUE_MSG( SerializationRoundTripInternal::loadObjects( resourceID, loaded ), resourceID.c_str() );
+        SW_EXPECT_TRUE_MSG( SerializationRoundTripInternal::loadObjects( sw::ResourceID{ resourceID }, loaded ), resourceID.c_str() );
         for ( sw::GameObject* pObject : loaded._listObject )
         {
             for ( sw::Component* pComponent : pObject->getComponents() )
@@ -197,7 +198,7 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
     for ( const sw::string& resourceID : SerializationRoundTripInternal::collectSceneAndPrefabIDs() )
     {
         SerializationRoundTripInternal::LoadedObjects loaded;
-        if ( SerializationRoundTripInternal::loadObjects( resourceID, loaded ) == false )
+        if ( SerializationRoundTripInternal::loadObjects( sw::ResourceID{ resourceID }, loaded ) == false )
             continue;
         for ( size_t objectIndex = 0; objectIndex < loaded._listObject.size(); ++objectIndex )
         {

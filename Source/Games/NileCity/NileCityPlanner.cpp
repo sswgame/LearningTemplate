@@ -187,15 +187,16 @@ namespace sw
         return bValid;
     }
 
-    bool NileCityPlanner::reset( const NileCityLayout& layout, string_view planPath )
+    bool NileCityPlanner::reset( const NileCityLayout& layout, const ResourceID& resourceID )
     {
-        using Internal = NileCityPlannerInternal;
+        const string_view planPath = resourceID.view();
+        using Internal             = NileCityPlannerInternal;
         _listStep.clear();
         _nextStep     = 0;
         _skippedCount = 0;
 
         vector<NileAutoPlanStep> listPlanStep;
-        if ( readPlanFile( ResourceID{ planPath }, listPlanStep ) == false )
+        if ( readPlanFile( resourceID, listPlanStep ) == false )
             return false;
         // Road 는 from → to 의 곧은 길, Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
         // 인구 임계값은 구역(block)의 시작 인구 + extra 다. 칸의 x 는 수이거나 배치의 이름(road · farm)이다.

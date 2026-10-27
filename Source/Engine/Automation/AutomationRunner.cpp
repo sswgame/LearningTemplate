@@ -1063,7 +1063,7 @@ namespace sw
         markWallStart();
         _reportWriter.setReportPath( reportPath );
         string error;
-        if ( _scenario.loadFromPath( scenarioPath, error ) == false )
+        if ( _scenario.loadFromPath( ResourceID{ scenarioPath }, error ) == false )
         {
             SW_LOG_ERROR( "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
             finish( AutomationOutcome::LoadError, error );

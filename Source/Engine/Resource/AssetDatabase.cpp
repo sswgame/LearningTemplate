@@ -267,12 +267,12 @@ namespace sw
         return count;
     }
 
-    uint32 AssetDatabase::loadRegistry( string_view registryRelativePath )
+    uint32 AssetDatabase::loadRegistry( const ResourceID& resourceID )
     {
-        if ( ResourceIO::hasResource( ResourceID{ registryRelativePath } ) == false )
+        if ( ResourceIO::hasResource( resourceID ) == false )
             return 0;
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ registryRelativePath }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
             return 0;
         return loadRegistryText( text );
     }

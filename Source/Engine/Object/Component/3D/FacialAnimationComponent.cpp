@@ -289,8 +289,9 @@ namespace sw
         _listTrackToRigViseme.clear();
     }
 
-    bool FacialAnimationComponent::speak( string_view audioPath )
+    bool FacialAnimationComponent::speak( const ResourceID& resourceID )
     {
+        const string_view audioPath = resourceID.view();
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
             if ( _lipSync.loadFromResource( ResourceID{ LipSyncSettings::kResourcePath } ) == false )
@@ -312,7 +313,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bAudioDecoded = ResourceIO::readBinaryResource( ResourceID{ audioPath }, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+            const bool    bAudioDecoded = ResourceIO::readBinaryResource( resourceID, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
                                        AudioClipData::convertPcm( pcm, clip );
             if ( bAudioDecoded )
             {

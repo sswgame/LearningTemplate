@@ -104,7 +104,7 @@ namespace sw
          *          임계값은 구역(1 · 2 · 3 — 배치의 구역 인구) + extra 다.
          * @return 파일을 읽지 못했거나 단계 하나라도 모양이 틀리면 오류를 남기고 false 이며 순서표는 빈다.
          */
-        [[nodiscard]] bool reset( const NileCityLayout& layout, string_view planPath );
+        [[nodiscard]] bool reset( const NileCityLayout& layout, const ResourceID& resourceID );
         /**
          * @brief 자동 계획 파일 @p planPath 의 단계를 배치 없이 읽습니다(원소 이름 · 칸의 형식과 필수 칸까지). 칸 좌표는 풀지 않는다.
          * @return 파일이나 단계 하나라도 읽지 못하면 오류를 남기고 false 이며 @p outListStep 은 빈다. 데이터 종류 등록(`NileAutoPlanDataKind.cpp`)도 이것으로 읽어 본다.

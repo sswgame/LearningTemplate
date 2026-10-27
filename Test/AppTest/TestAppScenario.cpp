@@ -104,7 +104,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            if ( scenario.loadFromPath( scenarioPath, error ) == false )
+            if ( scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) == false )
                 return false;
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
@@ -119,7 +119,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) && scenario.getTestOptions()._bRequiresEditor;
+            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) && scenario.getTestOptions()._bRequiresEditor;
         }
 
         /** @brief 시나리오가 `<Launch>` 로 선언한 기동 인자(`-gv_firstScene=…`)입니다. 못 읽으면 빈 글 — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
@@ -127,7 +127,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
+            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
         /** @brief 실행 쓰기 루트(`AppTestUtil::getRunFolder`) 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AutomationScenario.h` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
@@ -379,7 +379,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) == false || scenario.getTestOptions()._bIsolated;
+            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) == false || scenario.getTestOptions()._bIsolated;
         }
 
         /**

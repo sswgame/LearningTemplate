@@ -16,7 +16,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, SpriteClipAsset& outClip ) { return outClip.loadFromFile( path ); }
+        [[nodiscard]] static bool load( string_view path, SpriteClipAsset& outClip ) { return outClip.loadFromFile( ResourceID{ path } ); }
     };
 } // namespace sw
 

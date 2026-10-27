@@ -45,13 +45,14 @@ namespace sw
         return pAudio != nullptr && pAudio->playMusic( path );
     }
 
-    bool GameSound::loadEvents( string_view path )
+    bool GameSound::loadEvents( const ResourceID& resourceID )
     {
-        AudioEngine* pEngine = GameSoundInternal::findEngine();
+        const string_view path    = resourceID.view();
+        AudioEngine*      pEngine = GameSoundInternal::findEngine();
         if ( pEngine == nullptr )
             return true;
         AudioEventLibrary library;
-        if ( library.loadFromResource( ResourceID{ path } ) == false )
+        if ( library.loadFromResource( resourceID ) == false )
             return false;
         return pEngine->loadEventLibrary( hashed_string( path ), library );
     }

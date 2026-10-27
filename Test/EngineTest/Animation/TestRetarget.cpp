@@ -654,7 +654,7 @@ SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string outPath = FileUtil::joinPath( test::makeTempPath( "retargetbake" ), "walking_a_minion.animclip" );
-    SW_ASSERT_TRUE( RetargetBakeUtil::bakeClipFile( TestRetargetInternal::kProfile, TestRetargetInternal::kKnightWalk, outPath ) );
+    SW_ASSERT_TRUE( RetargetBakeUtil::bakeClipFile( sw::ResourceID{ TestRetargetInternal::kProfile }, sw::ResourceID{ TestRetargetInternal::kKnightWalk }, outPath ) );
     AnimationClip baked;
     AnimationClip source;
     Skeleton      minion;

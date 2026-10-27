@@ -831,8 +831,8 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
         sw::UserSettingsManager settings;
         sw::UserSettingsTargets targets;
         settings.initialize( targets );
-        SW_ASSERT_TRUE_MSG( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ), game._pSchema );
-        SW_ASSERT_TRUE_MSG( settings.loadSchema( game._pSchema ), game._pSchema );
+        SW_ASSERT_TRUE_MSG( settings.loadSchema( sw::ResourceID{ ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() } ), game._pSchema );
+        SW_ASSERT_TRUE_MSG( settings.loadSchema( sw::ResourceID{ game._pSchema } ), game._pSchema );
         sw::InputMap inputMap;
         SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( sw::ResourceID{ game._pInputMap } ), game._pInputMap );
         // 엔진 스키마의 키 바인딩(일시정지 메뉴 키 등)은 런타임 UI 맵의 액션이다(`UISystem` 이 키 바인딩 대상으로 더한다).
@@ -908,7 +908,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     sw::UserSettingsTargets    targets;
     targets._pGlobalVariableManager = &variables;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
+    SW_ASSERT_TRUE( settings.loadSchema( sw::ResourceID{ ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() } ) );
     settings.reapplyAll();
 
     SW_EXPECT_TRUE( settings.setPendingValue( "accessibility.colorVision", "deuteranopia" ) == sw::UserSettingSetResult::Accepted );
@@ -946,7 +946,7 @@ SW_TEST_CASE( UserSettingsTest, DisplaySettingsQueueARequestForTheHost )
 {
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
+    SW_ASSERT_TRUE( settings.loadSchema( sw::ResourceID{ ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() } ) );
     settings.reapplyAll();
 
     sw::DisplaySettingsRequest request;
@@ -978,7 +978,7 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
     sw::UserSettingsTargets targets;
     targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ) );
+    SW_ASSERT_TRUE( settings.loadSchema( sw::ResourceID{ ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() } ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1">
         <Setting id="gameplay.difficulty" category="gameplay" type="enum" default="normal">
             <Option value="easy"/><Option value="normal"/><Option value="hard"/>

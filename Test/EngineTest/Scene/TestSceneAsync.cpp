@@ -272,7 +272,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     SW_ASSERT_TRUE( originalDoc.saveBinary( binPath ) );
 
     sw::SceneDocument loadedDoc{};
-    SW_ASSERT_TRUE( loadedDoc.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( loadedDoc.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     SW_EXPECT_TRUE( loadedDoc._bValid );
     SW_EXPECT_STREQ( "BinaryTestScene", loadedDoc._name );
     SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listSceneObjectNode.size() );

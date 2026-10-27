@@ -193,10 +193,10 @@ namespace sw
         _bGPUDirty = SW_TRUE;
     }
 
-    bool MaterialInstance::loadFromFile( string_view assetRelativePath )
+    bool MaterialInstance::loadFromFile( const ResourceID& resourceID )
     {
         XMLDocument doc;
-        if ( doc.loadResource( ResourceID{ assetRelativePath } ) == false )
+        if ( doc.loadResource( resourceID ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }

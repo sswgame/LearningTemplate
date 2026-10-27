@@ -37,8 +37,9 @@ namespace sw
 
 namespace sw
 {
-    bool DialogueGraphAsset::loadFromFile( string_view path )
+    bool DialogueGraphAsset::loadFromFile( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Script );
         _listNode.clear();
         _listLink.clear();
@@ -46,7 +47,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read dialogue graph '%#'", path );
             return false;

@@ -208,7 +208,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kCurrent ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_TRUE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_TRUE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
     SW_EXPECT_EQUAL( sw::string( test::getEngineDefaultAssets()._shaderForwardLit.get() ), material->getShaderPath() );
 }
@@ -232,7 +232,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXML )
                                              static_cast<uint64>( sw::StringUtil::strlen( kLegacy ) ) ) );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_EXPECT_FALSE( material->loadFromFile( ::test::makeTempResourceID( tempPath ) ) );
+    SW_EXPECT_FALSE( material->loadFromFile( sw::ResourceID{ ::test::makeTempResourceID( tempPath ) } ) );
 }
 
 /**

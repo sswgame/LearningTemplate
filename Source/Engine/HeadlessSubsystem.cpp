@@ -294,7 +294,7 @@ namespace sw
                 if ( bWellFormed == false )
                     SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
                 inoutState._bFailed = bWellFormed == false ||
-                                      RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
+                                      RetargetBakeUtil::bakeClipFile( ResourceID{ StringUtil::trim( listArgument[0] ) }, ResourceID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
                 return true;
             }
 

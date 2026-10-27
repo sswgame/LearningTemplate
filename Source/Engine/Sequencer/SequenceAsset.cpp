@@ -61,14 +61,15 @@ namespace sw
 
 namespace sw
 {
-    bool SequenceAsset::loadFromFile( string_view path )
+    bool SequenceAsset::loadFromFile( const ResourceID& resourceID )
     {
-        *this = SequenceAsset{};
+        const string_view path = resourceID.view();
+        *this                  = SequenceAsset{};
         if ( path.empty() )
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sequence '%#'", path );
             return false;

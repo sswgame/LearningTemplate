@@ -83,11 +83,12 @@ namespace sw
         return document.saveFile( diskPath, 2 );
     }
 
-    bool ScenePreloadList::read( string_view listResourceID, vector<string>& outListPath )
+    bool ScenePreloadList::read( const ResourceID& resourceID, vector<string>& outListPath )
     {
+        const string_view listResourceID = resourceID.view();
         outListPath.clear();
         JSONDocument document;
-        if ( document.loadResource( ResourceID{ listResourceID } ) == false )
+        if ( document.loadResource( resourceID ) == false )
         {
             SW_LOG_ERROR( "Scene preload list '%#' could not be read: %#", listResourceID, document.getLastError().c_str() );
             return false;

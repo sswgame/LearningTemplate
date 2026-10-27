@@ -373,10 +373,10 @@ namespace sw
         }
     }
 
-    bool Material::loadFromFile( string_view assetRelativePath )
+    bool Material::loadFromFile( const ResourceID& resourceID )
     {
         XMLDocument doc;
-        if ( doc.loadResource( ResourceID{ assetRelativePath } ) == false )
+        if ( doc.loadResource( resourceID ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
@@ -408,7 +408,7 @@ namespace sw
         ScopedLock<mutex> lock{ state->_mutex };
         if ( state->_pMaterial == nullptr )
             return;
-        if ( state->_pMaterial->loadFromFile( args.get<string>( 1 ) ) == false )
+        if ( state->_pMaterial->loadFromFile( ResourceID{ args.get<string>( 1 ) } ) == false )
             SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
     }
 

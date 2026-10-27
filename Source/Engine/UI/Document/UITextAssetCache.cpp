@@ -39,7 +39,7 @@ namespace sw
 
         getCacheStats().recordMiss();
         string text;
-        if ( readText( key, path, text ) == false )
+        if ( readText( key, ResourceID{ path }, text ) == false )
         {
             outError = string( path ) + ": " + _pAssetLabel + " not found";
             return asset;
@@ -68,7 +68,7 @@ namespace sw
         (void)pDevice;
         const string key = FileUtil::normalizePath( relativePath );
         string       text;
-        if ( readText( key, relativePath, text ) == false )
+        if ( readText( key, ResourceID{ relativePath }, text ) == false )
         {
             SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
             return;
@@ -93,7 +93,7 @@ namespace sw
         getCacheStats().recordClear();
     }
 
-    bool UITextAssetCache::readText( const string& key, string_view path, string& outText ) const
+    bool UITextAssetCache::readText( const string& key, const ResourceID& resourceID, string& outText ) const
     {
         const auto memory = _mapPathToMemoryText.find( key );
         if ( memory != _mapPathToMemoryText.end() )
@@ -102,6 +102,6 @@ namespace sw
             return true;
         }
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
-        return ResourceIO::readTextResource( ResourceID{ path }, outText );
+        return ResourceIO::readTextResource( resourceID, outText );
     }
 } // namespace sw

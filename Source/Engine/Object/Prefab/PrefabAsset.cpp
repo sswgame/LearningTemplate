@@ -745,14 +745,15 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::loadFromBinaryFile( string_view assetRelativePath )
+    bool PrefabAsset::loadFromBinaryFile( const ResourceID& resourceID )
     {
-        _bValid = SW_FALSE;
+        const string_view assetRelativePath = resourceID.view();
+        _bValid                             = SW_FALSE;
         // 쿠킹한 프리팹은 팩에 든다 — 디스크 경로로 열지 않고 `ResourceIO` 로 읽는다(낱개 파일 허용 정책도 거기서 본다).
         const string  absPath{ assetRelativePath };
         vector<uint8> bytes;
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( ResourceID{ assetRelativePath }, bytes ) )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -1224,7 +1225,7 @@ namespace sw
 #endif
         if ( bReadsSource == false )
         {
-            if ( asset->loadFromBinaryFile( binPath ) == false )
+            if ( asset->loadFromBinaryFile( ResourceID{ binPath } ) == false )
             {
                 SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
                 return nullptr;

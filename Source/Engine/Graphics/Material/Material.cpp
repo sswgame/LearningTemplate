@@ -106,7 +106,7 @@ namespace sw
 
         // 못 읽은 머티리얼은 빈 값으로 올리지 않고 실패한다. 대신 그릴 것(마젠타 `missingmaterial`)은 부르는 쪽 한 곳이 정한다(`MeshComponent::resolveMaterialAsset`).
         AssetLoadScope loadScope( "Material", assetRelativePath );
-        if ( loadFromFile( assetRelativePath ) == false )
+        if ( loadFromFile( ResourceID{ assetRelativePath } ) == false )
         {
             SW_LOG_ERROR( "Material file '%#' could not be loaded", assetRelativePath );
             return false;

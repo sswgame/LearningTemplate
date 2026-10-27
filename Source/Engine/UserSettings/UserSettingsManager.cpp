@@ -102,10 +102,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 스키마
     // ------------------------------------------------------------------------------
-    bool UserSettingsManager::loadSchema( string_view resourcePath )
+    bool UserSettingsManager::loadSchema( const ResourceID& resourceID )
     {
         const UserSettingsSchema backup  = _schema;
-        const bool               bLoaded = _schema.loadFromResource( ResourceID{ resourcePath } );
+        const bool               bLoaded = _schema.loadFromResource( resourceID );
         if ( appendSchema( bLoaded ) )
             return true;
         _schema = backup;
@@ -1031,16 +1031,16 @@ namespace sw
         initialize( targets );
 
         const PackEngineSettings& packSettings = engine::getSubsystem<PackEngineSettings>();
-        if ( loadSchema( engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() ) && packSettings._userSettingsSchema.isSet() )
+        if ( loadSchema( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() } ) && packSettings._userSettingsSchema.isSet() )
         {
-            if ( loadSchema( packSettings._userSettingsSchema.get() ) == false )
+            if ( loadSchema( ResourceID{ packSettings._userSettingsSchema.get() } ) == false )
                 SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", packSettings._userSettingsSchema.c_str() );
         }
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         for ( DataPath EngineDefaultAssets::* pSchemaField : _listStartupSchemaField )
         {
             const DataPath& schemaPath = defaultAssets.*pSchemaField;
-            if ( loadSchema( schemaPath.get() ) == false )
+            if ( loadSchema( ResourceID{ schemaPath.get() } ) == false )
                 SW_LOG_ERROR( "User settings schema '%#' is not loaded", schemaPath.c_str() );
         }
         for ( const auto& [settingID, value] : packSettings._mapUserSettingDefault )

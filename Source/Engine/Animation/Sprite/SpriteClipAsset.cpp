@@ -32,14 +32,15 @@ namespace sw
 
 namespace sw
 {
-    bool SpriteClipAsset::loadFromFile( string_view path )
+    bool SpriteClipAsset::loadFromFile( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         clear();
         if ( path.empty() )
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sprite clip '%#'", path );
             return false;

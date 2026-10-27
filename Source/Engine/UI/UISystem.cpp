@@ -150,7 +150,7 @@ namespace sw
         _documentReloadedSubscription   = _documentCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = _styleSheetCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
-        if ( _input.initialize( inputManager, uiInputMapPath ) == false )
+        if ( _input.initialize( inputManager, ResourceID{ uiInputMapPath } ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
         _input.syncInputLayers( getActiveScreen(), _pauseMenuDocument.empty() == false );

@@ -221,7 +221,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
     SW_ASSERT_TRUE( doc.saveBinary( tempScenePath ) );
 
     sw::SceneDocument loaded{};
-    SW_ASSERT_TRUE( loaded.loadBinary( ::test::makeTempResourceID( tempScenePath ) ) );
+    SW_ASSERT_TRUE( loaded.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( tempScenePath ) } ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded._listSceneObjectNode.size() ) );
     SW_ASSERT_TRUE( loaded._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
     SW_EXPECT_TRUE( loaded._listSceneObjectNode[0]._embeddedXML.empty() );
@@ -564,7 +564,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     const sw::string tempSceneBin = test::makeTempPath( "guid_scene.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( tempSceneBin ) );
     sw::SceneDocument loadedBinaryDoc{};
-    SW_ASSERT_TRUE( loadedBinaryDoc.loadBinary( ::test::makeTempResourceID( tempSceneBin ) ) );
+    SW_ASSERT_TRUE( loadedBinaryDoc.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( tempSceneBin ) } ) );
     SW_ASSERT_FALSE( loadedBinaryDoc._listSceneObjectNode.empty() );
     SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedBinaryDoc._listSceneObjectNode[0]._prefabGuid.c_str() );
     if ( sw::engine::areEngineServicesBound() )
@@ -1021,7 +1021,7 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
     sw::SceneDocument corrupted{};
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( corrupted.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+        SW_EXPECT_FALSE( corrupted.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     }
     SW_EXPECT_TRUE( corrupted._listSceneObjectNode.empty() );
 }
@@ -1314,7 +1314,7 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
     const sw::string cookedPath = test::makeTempPath( "cook_order.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( cookedPath ) );
     sw::SceneDocument fromFile{};
-    SW_ASSERT_TRUE( fromFile.loadBinary( ::test::makeTempResourceID( cookedPath ) ) );
+    SW_ASSERT_TRUE( fromFile.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( cookedPath ) } ) );
 
     sw::Scene* pCooked = manager.createScene( "CookOrderWorldCooked" );
     SW_ASSERT_NOT_NULL( pCooked );
@@ -1927,7 +1927,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     const sw::string binPath = test::makeTempPath( "named_components.scene.bin" );
     SW_ASSERT_TRUE( fromXML.saveBinary( binPath ) );
     sw::SceneDocument fromBinary;
-    SW_ASSERT_TRUE( fromBinary.loadBinary( ::test::makeTempResourceID( binPath ) ) );
+    SW_ASSERT_TRUE( fromBinary.loadBinary( sw::ResourceID{ ::test::makeTempResourceID( binPath ) } ) );
     SW_ASSERT_TRUE( fromBinary._listSceneObjectNode.empty() == false && fromBinary._listSceneObjectNode[0]._embeddedStateBytes.empty() == false );
     sw::Scene* pFromBinary = manager.createScene( "NamedComponentWorldBinary" );
     SW_ASSERT_TRUE( pFromBinary->instantiate( fromBinary ) );
