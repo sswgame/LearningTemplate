@@ -34,7 +34,7 @@ namespace sw::editor
         bool takePending( vector<string>& outListPath );
 
     private:
-        mutex          _mutex;
-        vector<string> _listPendingPath;
+        mutex                           _mutex;
+        vector<string> _listPendingPath SW_GUARDED_BY( _mutex );
     };
 } // namespace sw::editor

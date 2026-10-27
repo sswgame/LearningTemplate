@@ -106,7 +106,7 @@ namespace sw::editor
         void updatePlayReactions();
 
     private:
-        deque<LogEntry>                       _listEntry;
+        deque<LogEntry> _listEntry            SW_GUARDED_BY( _entriesMutex );
         vector<LogEntry>                      _listDrawSnapshot;
         vector<const LogEntry*>               _listVisible;
         vector<ConsoleLogRow>                 _listRow;
@@ -116,17 +116,17 @@ namespace sw::editor
         uint32                                _cachedTagRevision;
         mutex                                 _entriesMutex;
         DelegateHandle                        _logListenerHandle;
-        uint64                                _errorSerial;     ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _entrySerial;     ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _snapshotSerial;  ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
-        uint64                                _seenErrorSerial; ///< Error Pause 가 마지막으로 확인한 누계
+        uint64 _errorSerial                   SW_GUARDED_BY( _entriesMutex ); ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
+        uint64 _entrySerial                   SW_GUARDED_BY( _entriesMutex ); ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
+        uint64 _snapshotSerial                SW_GUARDED_BY( _entriesMutex ); ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
+        uint64                                _seenErrorSerial;               ///< Error Pause 가 마지막으로 확인한 누계
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         DevConsole                            _devConsole;
         fixed_string<constant::kMaxBuffer512> _commandBuffer;
         bool                                  _arrLevelEnabled[4];
         bool                                  _arrCachedLevelEnabled[4];
         bool                                  _bAutoScroll;
-        uint8                                 _bHasNewLogs   : 1;
+        uint8                                 _bHasNewLogs   : 1 SW_GUARDED_BY( _entriesMutex );
         uint8                                 _bCollapse     : 1; ///< 같은 행을 한 행으로 접는다(유니티의 Collapse)
         uint8                                 _bClearOnPlay  : 1; ///< Play 를 시작하면 지운다
         uint8                                 _bErrorPause   : 1; ///< Play 중 오류 행이 들어오면 멈춘다

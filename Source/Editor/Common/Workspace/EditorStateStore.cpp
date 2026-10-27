@@ -14,7 +14,7 @@ namespace sw::editor
 
     void* EditorStateStore::findOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( Entry& entry : _listEntry )
         {
             if ( entry._typeHash != typeHash )
@@ -31,7 +31,7 @@ namespace sw::editor
 
     uint32 EditorStateStore::getStateCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<uint32>( _listEntry.size() );
     }
 } // namespace sw::editor

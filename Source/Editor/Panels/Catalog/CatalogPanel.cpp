@@ -43,7 +43,7 @@ namespace sw::editor
 
             vector<string> take()
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 return std::move( _listWarning );
             }
 
@@ -52,13 +52,13 @@ namespace sw::editor
             {
                 if ( entry._level != LogLevel::Warning && entry._level != LogLevel::Error )
                     return;
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _listWarning.push_back( entry._message );
             }
 
-            mutex          _mutex;
-            vector<string> _listWarning;
-            DelegateHandle _handle;
+            mutex                       _mutex;
+            vector<string> _listWarning SW_GUARDED_BY( _mutex );
+            DelegateHandle              _handle;
         };
 
         // 시나리오 탐침이 읽는 값입니다. 패널이 그릴 때 갱신하고 탐침은 게임 스레드에서 읽습니다.

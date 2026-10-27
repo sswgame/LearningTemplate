@@ -218,8 +218,8 @@ namespace sw::editor
         if ( bCannotAllocateDescriptor )
             return false;
 
-        std::scoped_lock<mutex> lock{ _descriptorMutex };
-        uint32                  index{ 0 };
+        ScopedLock<mutex> lock{ _descriptorMutex };
+        uint32            index{ 0 };
         if ( _listFreeDescriptor.empty() == false )
         {
             index = _listFreeDescriptor.back();
@@ -252,7 +252,7 @@ namespace sw::editor
         const uint32 index = static_cast<uint32>( ( cpu.ptr - start ) / _descriptorSize );
         if ( index >= _maxDescriptors )
             return;
-        std::scoped_lock<mutex> lock{ _descriptorMutex };
+        ScopedLock<mutex> lock{ _descriptorMutex };
         _listFreeDescriptor.push_back( index );
     }
 } // namespace sw::editor

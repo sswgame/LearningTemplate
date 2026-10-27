@@ -293,7 +293,7 @@ namespace sw::editor
         // 업로드는 큐에 제출하고 기다린다(큐 잠금). 글꼴 아틀라스 갱신도 같은 풀에서 세트를 잡고 놓는다(풀 잠금). 순서는 큐 → 풀이다 —
         // 렌더 스레드가 큐 잠금 안에서 미뤄 둔 해제(풀 잠금)를 부를 수 있다.
         const std::unique_lock<mutex> queueLock = lockSubmissionQueue();
-        std::scoped_lock<mutex>       lock{ _descriptorPoolMutex };
+        ScopedLock<mutex>             lock{ _descriptorPoolMutex };
         updatePendingTextures( &ImGui_ImplVulkan_UpdateTexture );
     }
 
@@ -335,7 +335,7 @@ namespace sw::editor
 
         VkDescriptorSet set{ VK_NULL_HANDLE };
         {
-            std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
+            ScopedLock<mutex> lock{ _descriptorPoolMutex };
             set = ImGui_ImplVulkan_AddTexture( _pSampler, static_cast<VkImageView>( pImageViewPtr ), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
         if ( set == VK_NULL_HANDLE )
@@ -362,7 +362,7 @@ namespace sw::editor
         const VkDescriptorSet set = static_cast<VkDescriptorSet>( pTextureID );
         getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, set]()
         {
-            std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
+            ScopedLock<mutex> lock{ _descriptorPoolMutex };
             if ( _pDevice != nullptr && _pImguiDescriptorPool != nullptr )
                 vkFreeDescriptorSets( _pDevice, _pImguiDescriptorPool, 1, &set );
         } ) );

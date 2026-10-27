@@ -20,13 +20,13 @@ namespace sw::editor
         if ( releaseDelegate.isBound() == false )
             return;
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listEntry.push( releaseDelegate, _lastPublishedSequence + 1 );
     }
 
     void EditorDrawReleaseQueue::markSnapshotPublished( uint64 snapshotSequence )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( snapshotSequence > _lastPublishedSequence )
             _lastPublishedSequence = snapshotSequence;
     }
@@ -38,7 +38,7 @@ namespace sw::editor
 
         vector<RHIResourceReleaseDelegate> listReady;
         {
-            std::unique_lock<mutex> lock{ _mutex };
+            UniqueLock<mutex> lock{ _mutex };
             _listEntry.extractReadyReserving( lock, renderedSnapshotSequence, listReady );
         }
 
@@ -53,7 +53,7 @@ namespace sw::editor
     {
         KeyedPendingList<RHIResourceReleaseDelegate> listFlush;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listFlush.swap( _listEntry );
         }
 
@@ -67,7 +67,7 @@ namespace sw::editor
 
     uint32 EditorDrawReleaseQueue::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<uint32>( _listEntry.size() );
     }
 } // namespace sw::editor

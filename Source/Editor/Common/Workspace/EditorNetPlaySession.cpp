@@ -207,7 +207,7 @@ namespace sw::editor
         string line;
         while ( pChild->_process.readOutputLine( line ) )
         {
-            std::scoped_lock<mutex> lock{ pChild->_mutex };
+            ScopedLock<mutex> lock{ pChild->_mutex };
             pChild->_listPendingLine.push_back( line );
         }
         pChild->_exitCode.store( pChild->_process.waitForExit() );
@@ -362,7 +362,7 @@ namespace sw::editor
             ChildProcess&  child = *_listProcess[processIndex];
             vector<string> listLine;
             {
-                std::scoped_lock<mutex> lock{ child._mutex };
+                ScopedLock<mutex> lock{ child._mutex };
                 listLine.swap( child._listPendingLine );
             }
             for ( string& line : listLine )

@@ -285,7 +285,7 @@ namespace sw::editor
 
         bool bNewLogs{ false };
         {
-            std::scoped_lock<mutex> lock{ _entriesMutex };
+            ScopedLock<mutex> lock{ _entriesMutex };
             if ( _bHasNewLogs == SW_TRUE )
             {
                 // 새 줄만 덧붙이고 넘친 앞줄을 뺀다. 통째로 다시 담으면 새 로그가 올 때마다 최대 2048 줄(글자열마다 할당)을 복사한다.
@@ -606,7 +606,7 @@ namespace sw::editor
 
     void ConsolePanel::clearEntries()
     {
-        std::scoped_lock<mutex> lock{ _entriesMutex };
+        ScopedLock<mutex> lock{ _entriesMutex };
         _listEntry.clear();
         _listDrawSnapshot.clear();
         _listVisible.clear();
@@ -663,7 +663,7 @@ namespace sw::editor
 
         uint64 errorSerial{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _entriesMutex };
+            ScopedLock<mutex> lock{ _entriesMutex };
             errorSerial = _errorSerial;
         }
         // 오류는 로그를 쓴 다음 그리기에서 본다 — 그 프레임이 끝나기 전에 멈추는 유니티 Error Pause 보다 한 프레임 늦다.
@@ -719,7 +719,7 @@ namespace sw::editor
     {
         // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 보관하고 있는 사본은 에디터 담당이다.
         SW_MEMORY_SCOPE( Editor );
-        std::scoped_lock<mutex> lock{ _entriesMutex };
+        ScopedLock<mutex> lock{ _entriesMutex };
         _listEntry.push_back( entry );
         ++_entrySerial;
         if ( entry._level == LogLevel::Error )

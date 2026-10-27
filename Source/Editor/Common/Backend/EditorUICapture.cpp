@@ -163,7 +163,7 @@ namespace sw::editor
 
     bool EditorUICapture::findResult( uint32 ticket, EditorUICaptureResult& outResult ) const
     {
-        const std::scoped_lock<mutex> lock{ _resultMutex };
+        const ScopedLock<mutex> lock{ _resultMutex };
         for ( const EditorUICaptureResult& result : _listResult )
         {
             if ( result._job._ticket == ticket )
@@ -303,7 +303,7 @@ namespace sw::editor
         // 성공이든 실패든 결과가 나온 순간이 끝이다 — `-gv_screenshotQuit` 이 이 결과로 앱을 끝낸다(렌더 스레드 안에서 부른다).
         if ( result._job._bFromStartupArgument )
             RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, result._bWritten == SW_TRUE );
-        const std::scoped_lock<mutex> lock{ _resultMutex };
+        const ScopedLock<mutex> lock{ _resultMutex };
         if ( _listResult.size() >= EditorUICaptureInternal::kMaxResultCount )
             _listResult.erase( _listResult.begin() );
         _listResult.push_back( result );

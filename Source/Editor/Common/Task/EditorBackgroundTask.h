@@ -77,7 +77,7 @@ namespace sw::editor
             if ( _pState == nullptr )
                 return EditorTaskPoll::Idle;
 
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
+            ScopedLock<mutex> lock{ _pState->_mutex };
             if ( _pState->_bReady == SW_FALSE )
                 return _pState->_bPending == SW_TRUE ? EditorTaskPoll::Running : EditorTaskPoll::Idle;
 
@@ -97,7 +97,7 @@ namespace sw::editor
             if ( _pState == nullptr )
                 return false;
 
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
+            ScopedLock<mutex> lock{ _pState->_mutex };
             return _pState->_bPending == SW_TRUE;
         }
 
@@ -131,7 +131,7 @@ namespace sw::editor
          */
         uint32 beginRequest( TInput input )
         {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
+            ScopedLock<mutex> lock{ _pState->_mutex };
             ++_pState->_generation;
             _pState->_input    = std::move( input );
             _pState->_result   = TResult{};
@@ -146,7 +146,7 @@ namespace sw::editor
             if ( pState == nullptr )
                 return false;
 
-            std::scoped_lock<mutex> lock{ pState->_mutex };
+            ScopedLock<mutex> lock{ pState->_mutex };
             if ( generation != pState->_generation )
                 return false;
 
@@ -160,7 +160,7 @@ namespace sw::editor
             if ( pState == nullptr )
                 return;
 
-            std::scoped_lock<mutex> lock{ pState->_mutex };
+            ScopedLock<mutex> lock{ pState->_mutex };
             if ( generation != pState->_generation )
                 return;
 
