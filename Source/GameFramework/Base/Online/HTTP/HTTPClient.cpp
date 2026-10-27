@@ -38,13 +38,14 @@ namespace sw
     {
         if ( transport == nullptr || _bInitialized.load( std::memory_order_acquire ) == true )
             return false;
-        _transport     = std::move( transport );
-        _settings      = settings;
+        _transport.set( std::move( transport ) );
+        _settings.set( settings );
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false )
         {
             SW_LOG_ERROR( "HTTP client transport did not start" );
             _transport.reset();
+            _settings.reset();
             return false;
         }
         _bInitialized.store( true, std::memory_order_release );
@@ -64,6 +65,7 @@ namespace sw
             _resolver.join();   // 풀던 이름 하나는 해석기 시한까지 기다린다
         _transport->shutdown(); // 열린 연결은 Shutdown 으로 닫히며 onStreamClosed 가 요청을 끝낸다
         _transport.reset();
+        _settings.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
         ScopedLock<mutex> lock{ _mutex };
         for ( auto& [packed, call] : _mapCall )
         {
@@ -102,7 +104,7 @@ namespace sw
             failImmediately( requestID, "malformed URL" );
             return requestID;
         }
-        if ( static_cast<int32>( _mapCall.size() ) >= _settings._maxConcurrentRequests )
+        if ( static_cast<int32>( _mapCall.size() ) >= _settings->_maxConcurrentRequests )
         {
             failImmediately( requestID, "too many requests in flight" );
             return requestID;
@@ -121,7 +123,7 @@ namespace sw
         unique_ptr<Call> call = make_unique<Call>();
         call->_requestID      = requestID;
         call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
-        call->_parser.reset( HTTPMessageKind::Response, _settings._maxResponseBodyBytes );
+        call->_parser.reset( HTTPMessageKind::Response, _settings->_maxResponseBodyBytes );
         HTTPWriteUtil::writeRequest( request, url, call->_requestBytes );
         if ( call->_link.initialize( pTLSContext ) == false )
         {
@@ -276,7 +278,7 @@ namespace sw
             return;
         Call& call    = *callIt->second;
         call._bOpened = SW_TRUE;
-        if ( call._link.writePlain( *_transport, call._requestBytes.data(), call._requestBytes.size() ) == false )
+        if ( call._link.writePlain( *_transport.get(), call._requestBytes.data(), call._requestBytes.size() ) == false )
         {
             finishLocked( call, "could not send the request" );
             _transport->close( handle, StreamCloseMode::Abort );
@@ -292,7 +294,7 @@ namespace sw
             return;
         Call& call = *callIt->second;
         call._plainBytes.clear();
-        if ( call._link.readReceived( *_transport, pData, size, call._plainBytes ) == false )
+        if ( call._link.readReceived( *_transport.get(), pData, size, call._plainBytes ) == false )
         {
             finishLocked( call, call._link.getFailureText() );
             _transport->close( handle, StreamCloseMode::Abort );

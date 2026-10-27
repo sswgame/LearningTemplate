@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -114,8 +115,8 @@ namespace sw
         vector<unique_ptr<Call>> _listResolvingCall              SW_GUARDED_BY( _mutex ); ///< 이름 해석을 기다리는 요청
         deque<uint64> _listResolveRequestID                      SW_GUARDED_BY( _mutex ); ///< 해석 스레드가 아직 집지 않은 요청 id
         vector<HTTPClientResponse> _listDone                     SW_GUARDED_BY( _mutex );
-        unique_ptr<IStreamTransport>                             _transport;
-        HTTPClientConfig                                         _settings;
+        OnceInit<unique_ptr<IStreamTransport>>                   _transport;
+        OnceInit<HTTPClientConfig>                               _settings;
         sw::thread                                               _resolver; ///< 처음 이름을 받을 때 띄운다
         std::condition_variable_any                              _resolveReady;
         uint64 _nextRequestID                                    SW_GUARDED_BY( _mutex );
