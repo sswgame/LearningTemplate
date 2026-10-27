@@ -5391,6 +5391,14 @@
    "presets": []
   },
   {
+   "name": "SW_ENFORCE_LEAF_LOCK_LOG",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "Debug: assert when a log is written while a sw::mutex is held (leaf lock rule)",
+   "presets": []
+  },
+  {
    "name": "SW_GAMES",
    "type": "STRING",
    "default": "",

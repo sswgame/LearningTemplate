@@ -128,7 +128,7 @@ namespace
         {
             (void)_hostServices.bind( &manager );                                // 새 범위 — 겹치지 않는다
             (void)_hostServices.bind( &engine::getSubsystem<GameNetSession>() ); // 타입이 달라 겹치지 않는다
-            engine::bindModuleServices( _hostServices, true );                   // 나머지 게임 공개 서비스(GameConfig · ComponentDefaults …) — 위에서 건 것은 겹쳐 건너뛴다
+            engine::bindModuleServices( _hostServices, true, true );             // 나머지 게임 공개 서비스(GameConfig · ComponentDefaults …) — 위에서 건 것은 겹쳐 건너뛴다
             game::bindGameService( _hostServices );
         }
         ~ScopedSceneGameService() { game::unbindGameService(); }
@@ -3019,7 +3019,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             (void)_hostServices.bind( &_input );                                      // 새 범위 — 겹치지 않는다
             (void)_hostServices.bind( &engine::getSubsystem<LocalizationManager>() ); // 타입이 달라 겹치지 않는다
             (void)_hostServices.bind( &engine::getSubsystem<GameNetSession>() );      // 필수 엔진 서비스(`GameInstanceBase::initialize`)
-            engine::bindModuleServices( _hostServices, true );                        // 나머지 게임 공개 서비스(GameConfig · ComponentDefaults …) — 위에서 건 것은 겹쳐 건너뛴다
+            engine::bindModuleServices( _hostServices, true, true );                  // 나머지 게임 공개 서비스(GameConfig · ComponentDefaults …) — 위에서 건 것은 겹쳐 건너뛴다
             game::bindGameService( _hostServices );
         }
         ~ScopedRunState()

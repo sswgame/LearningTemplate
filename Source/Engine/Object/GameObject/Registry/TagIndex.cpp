@@ -44,7 +44,7 @@ namespace sw
 
     void TagIndex::update( const TagComponent& tagComponent, GameObject* pOwner, const TagContainer& tags )
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        ScopedLock<shared_mutex> lock{ _mutex };
         _listScratchKey.clear();
         for ( const TagID& tag : tags.getTags() )
         {
@@ -75,8 +75,8 @@ namespace sw
 
     void TagIndex::remove( const TagComponent& tagComponent )
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          recordIt = _mapComponentToRecord.find( &tagComponent );
+        ScopedLock<shared_mutex> lock{ _mutex };
+        const auto               recordIt = _mapComponentToRecord.find( &tagComponent );
         if ( recordIt == _mapComponentToRecord.end() )
             return;
         removeFromBucketsUnlocked( recordIt->second );
@@ -90,8 +90,8 @@ namespace sw
         const vector<TagID>& listRequired = required.getTags();
         if ( listRequired.empty() )
             return;
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const vector<GameObject*>*          pSmallest = nullptr;
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const vector<GameObject*>*     pSmallest = nullptr;
         for ( const TagID& tag : listRequired )
         {
             const auto bucketIt = _mapKeyToObject.find( tag._id );

@@ -200,7 +200,7 @@ namespace sw
             }
 
             /** @brief 스키마 XML 의 `type` 값(철자 그대로)으로 설정 종류를 찾습니다. */
-            static bool findTypeByName( string_view name, UserSettingType& outType )
+            [[nodiscard]] static bool findTypeByName( string_view name, UserSettingType& outType )
             {
                 for ( const UserSettingTypeTraits& traits : kArrTypeTraits )
                 {

@@ -88,6 +88,11 @@ endfunction()
 sw_addCoreObjects(Core_objects core pch.h ${listCoreHighSource})
 # `SW_LOG_TAG` 는 높은 티어만 정의한다 — 낮은 티어는 `Logger.h` 가 없어 쓸 데가 없다. 두 타깃은 pch 를 따로 지으므로(clang 은 pch 와 `-D` 가 다르면 거부) 정의가 달라도 된다.
 target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
+# 잎 잠금 단언(잠금을 쥔 채 로그를 쓰면 Debug 에서 멈춘다) — 위반 자리를 다 고친 뒤 켠다(NEXT 의 lockfmt 후속). 꺼져 있으면 단언 대신 아무것도 하지 않는다.
+option(SW_ENFORCE_LEAF_LOCK_LOG "Debug: assert when a log is written while a sw::mutex is held (leaf lock rule)" OFF)
+if(SW_ENFORCE_LEAF_LOCK_LOG)
+	target_compile_definitions(Core_objects PRIVATE SW_ENFORCE_LEAF_LOCK_LOG)
+endif()
 
 sw_addCoreObjects(Core_low_objects corelow pchLow.h ${listCoreLowSource})
 # 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).

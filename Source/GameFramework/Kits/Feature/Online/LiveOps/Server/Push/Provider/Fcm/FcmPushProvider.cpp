@@ -206,7 +206,7 @@ namespace sw
             flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs ); // 서명하지 못했다 — 키가 틀렸다
     }
 
-    void FcmPushProvider::submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds nowMs )
+    void FcmPushProvider::submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds /*nowMs*/ )
     {
         HTTPClientRequest request;
         request._method    = HTTPMethod::Post;

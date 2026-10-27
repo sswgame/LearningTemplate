@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/String/HexUtil.h"
 
 namespace sw
 {
@@ -11,7 +12,6 @@ namespace sw
     {
         struct HTTPTypesInternal
         {
-            static constexpr utf8  kHexDigit[]     = "0123456789ABCDEF";
             static constexpr int32 kMaxChunkLine   = 64;
             static constexpr int64 kMaxChunkSize   = static_cast<int64>( 64 * constant::kBytesPerMegabyte );
             static constexpr int32 kMaxTargetBytes = 8192;
@@ -49,11 +49,7 @@ namespace sw
             static string makeHex( size_t value )
             {
                 string text;
-                do
-                {
-                    text.insert( text.begin(), kHexDigit[value & 0xFu] );
-                    value >>= 4;
-                } while ( value != 0 );
+                HexUtil::appendUint64Minimal( text, value, 1, HexCase::Upper );
                 return text;
             }
 
@@ -170,10 +166,8 @@ namespace sw
                 encoded.push_back( ch );
                 continue;
             }
-            const uint8 byteValue = static_cast<uint8>( ch );
             encoded.push_back( '%' );
-            encoded.push_back( HTTPTypesInternal::kHexDigit[byteValue >> 4] );
-            encoded.push_back( HTTPTypesInternal::kHexDigit[byteValue & 0xFu] );
+            HexUtil::appendUint64( encoded, static_cast<uint8>( ch ), 2, HexCase::Upper );
         }
         return encoded;
     }

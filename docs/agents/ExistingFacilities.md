@@ -1,6 +1,6 @@
 > 질문: 로그 · 시간 · 난수 · 파일 같은 흔한 일에 Core · Engine 의 무엇을 쓰고, 무엇을 직접 부르지 않는가?
 > 독자: C++ 코드에서 흔한 일을 처음 구현하려는 사람과 에이전트.
-> 결론: 새로 짜기 전에 아래 표의 "Use" 를 찾아 쓴다. "Do not use" 를 쓴 곳은 표의 게이트가 잡거나 이전 계획(`docs/plans/ReuseExistingFacilities.md`)이 옮긴다. 없는 기능은 직접 짜지 말고 Core · Engine 에 하나 더한다.
+> 결론: 새로 짜기 전에 아래 표의 "Use" 를 찾아 쓴다. "Do not use" 를 쓴 곳은 표의 게이트(`CheckFacilityBypass`)가 잡는다(옮긴 이력은 결정 기록 5-3). 없는 기능은 직접 짜지 말고 Core · Engine 에 하나 더한다.
 
 ## Existing facilities
 

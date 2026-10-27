@@ -203,24 +203,24 @@ namespace sw::editor
         UIScreen* findPreviewScreen() const;
 
     private:
-        vector<UIPreviewWidgetRow>      _listRow;                ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다
-        const WidgetTree*               _pRowTree{ nullptr };    ///< `_listRow` 를 지은 트리
-        uint64                          _rowTreeGeneration{ 0 }; ///< `_listRow` 를 지은 때의 `WidgetTree::getStructureGeneration`(세대는 1 부터)
-        vector<string>                  _listLanguage;           ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
-        vector<BaselineValue>           _listBaseline;           ///< 고른 위젯의 프로퍼티 기준 값
-        vector<const TypeInfo*>         _listPaletteType;        ///< 팔레트의 위젯 타입(이름순)
-        string                          _paletteFilter;          ///< 팔레트 검색어
-        string                          _slotDragBaseline;       ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
-        string                          _slotFieldBaseline;      ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
-        hashed_string                   _paletteType;            ///< 팔레트에서 고른 타입(Add 가 붙인다)
-        EditableResourcePath            _documentPath;           ///< 미리보는 문서. 처음 값은 editortooldefaults, 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
-        string                          _openedDocument;         ///< 지금 미리보기 화면의 문서
-        string                          _targetPath;             ///< 지금 렌더 텍스처 경로
-        string                          _error;                  ///< 마지막으로 열지 못한 까닭
-        string                          _lastFocusKey;           ///< 작업공간 포커스 확인 키(`consumeWorkspaceFocusKey`)
-        string                          _language;               ///< 고른 언어 코드. 빈 값 = 게임 언어 그대로
-        hashed_string                   _theme;                  ///< 빈 이름 = 게임의 지금 테마
-        hashed_string                   _animation;              ///< 고른 애니메이션(빈 이름 = 없음)
+        vector<UIPreviewWidgetRow>      _listRow;           ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다
+        const WidgetTree*               _pRowTree;          ///< `_listRow` 를 지은 트리
+        uint64                          _rowTreeGeneration; ///< `_listRow` 를 지은 때의 `WidgetTree::getStructureGeneration`(세대는 1 부터)
+        vector<string>                  _listLanguage;      ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
+        vector<BaselineValue>           _listBaseline;      ///< 고른 위젯의 프로퍼티 기준 값
+        vector<const TypeInfo*>         _listPaletteType;   ///< 팔레트의 위젯 타입(이름순)
+        string                          _paletteFilter;     ///< 팔레트 검색어
+        string                          _slotDragBaseline;  ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
+        string                          _slotFieldBaseline; ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
+        hashed_string                   _paletteType;       ///< 팔레트에서 고른 타입(Add 가 붙인다)
+        EditableResourcePath            _documentPath;      ///< 미리보는 문서. 처음 값은 editortooldefaults, 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
+        string                          _openedDocument;    ///< 지금 미리보기 화면의 문서
+        string                          _targetPath;        ///< 지금 렌더 텍스처 경로
+        string                          _error;             ///< 마지막으로 열지 못한 까닭
+        string                          _lastFocusKey;      ///< 작업공간 포커스 확인 키(`consumeWorkspaceFocusKey`)
+        string                          _language;          ///< 고른 언어 코드. 빈 값 = 게임 언어 그대로
+        hashed_string                   _theme;             ///< 빈 이름 = 게임의 지금 테마
+        hashed_string                   _animation;         ///< 고른 애니메이션(빈 이름 = 없음)
         UIViewport                      _viewport;
         UIPointerState                  _pointer; ///< 입력 흉내의 포인터 상태(미리보기 트리 하나만 본다)
         UIFocusManager                  _focus;   ///< 입력 흉내의 포커스(탐색 방향)

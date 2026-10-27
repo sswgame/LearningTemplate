@@ -110,9 +110,10 @@ namespace sw
         /**
          * @brief 모듈(게임 · 에디터)에 넘길 범위 @p outScope 에 지금 찾아 둔 서비스를 그 타입으로 겁니다(빌려 건다 — 서비스가 범위보다 오래 산다).
          * @param bGameModuleOnly true 면 `GameVisible` 행만 겁니다 — 게임 모듈은 호스트 전용 서비스를 찾지 못한다.
+         * @param bSkipAlreadyBound true 면 @p outScope 에 이미 걸린 타입은 건너뜁니다 — 테스트가 자기 서비스(예: 씬 매니저)를 먼저 걸고 나머지를 채울 때만 쓴다. false 면 겹침은 결함이라 멈춘다.
          * @note 빈 행은 걸지 않는다. 호스트 전용 서비스(모듈 컴파일러)는 호스트가 그 뒤에 더 건다.
          */
-        SW_API void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly );
+        SW_API void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound = false );
 
         namespace internal
         {

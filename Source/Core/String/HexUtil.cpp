@@ -60,6 +60,18 @@ namespace sw
         }
     }
 
+    void HexUtil::appendUint64Minimal( string& inoutText, uint64 value, uint32 minDigits, HexCase hexCase )
+    {
+        uint32 digitCount = 1;
+        for ( uint64 rest = value >> 4; rest != 0; rest >>= 4 )
+        {
+            ++digitCount;
+        }
+        if ( digitCount < minDigits )
+            digitCount = minDigits > 16 ? 16 : minDigits;
+        appendUint64( inoutText, value, digitCount, hexCase );
+    }
+
     bool HexUtil::decodeBytes( string_view text, vector<uint8>& outBytes )
     {
         outBytes.clear();

@@ -18,10 +18,7 @@ namespace sw
             const size_t   chunk  = byteCount < kMaxChunk ? byteCount : kMaxChunk;
             const NTSTATUS status = BCryptGenRandom( nullptr, pOutBytes, static_cast<ULONG>( chunk ), BCRYPT_USE_SYSTEM_PREFERRED_RNG );
             if ( BCRYPT_SUCCESS( status ) == false )
-            {
-                SW_LOW_LEVEL_ERROR( "BCryptGenRandom failed (NTSTATUS 0x%08x) - no OS randomness, stopping instead of using a predictable value", static_cast<uint32>( status ) );
-                std::abort();
-            }
+                SW_LOW_LEVEL_FATAL( "BCryptGenRandom failed (NTSTATUS 0x%08x) - no OS randomness, refusing a predictable value", static_cast<uint32>( status ) );
             pOutBytes += chunk;
             byteCount -= chunk;
         }

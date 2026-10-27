@@ -17,7 +17,6 @@ namespace sw
         {
             static constexpr int32 kDealAttemptCount = 16;
             static constexpr int32 kRibbonCount      = 4;
-            static constexpr int32 kDeckSize         = 48;
 
             /** @brief 같은 월 바닥 패 중 먼저 먹을 우선순위 값을 반환합니다(광 > 열끗 > 띠 > 쌍피 > 피). */
             static int32 computeCapturePriority( const Card& card )

@@ -29,7 +29,7 @@ namespace sw
         virtual ~IEditor() = default;
 
         /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
-        virtual bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) = 0;
+        [[nodiscard]] virtual bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) = 0;
         /** @brief 에디터 리소스를 해제합니다. */
         virtual void shutdown() = 0;
 

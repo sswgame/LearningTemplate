@@ -347,6 +347,8 @@ namespace sw::editor
     UIPreviewPanel::UIPreviewPanel()
         : IEditorPanel( false )
         , _listRow{}
+        , _pRowTree{ nullptr }
+        , _rowTreeGeneration{ 0 }
         , _listLanguage{}
         , _listBaseline{}
         , _listPaletteType{}
@@ -1901,7 +1903,6 @@ namespace sw::editor
         }
 
         // 왼쪽 영역: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 이미지.
-        const float32 dpi = EditorThemeUtil::getDpiScale();
         ImGui::BeginChild( "##uipreviewleft", measureExtent( EditorTextExtent::ofText( Internal::kLeftColumns, 0.0f ) ), ImGuiChildFlags_None );
         const float32 treeHeight    = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;
         const float32 paletteHeight = ImGui::GetContentRegionAvail().y * Internal::kPaletteRatio;

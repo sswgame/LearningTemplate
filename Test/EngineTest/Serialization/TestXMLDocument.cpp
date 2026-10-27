@@ -215,7 +215,7 @@ SW_TEST_CASE( XMLReadUtilTest, RootStatusAndTrimmedName )
 {
     sw::XMLDocument doc;
     sw::XMLNode     root;
-    SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, R"(<Table><row name="  sword  " blank="   "/></Table>)", "test", "table", root ) ==
+    SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, R"(<Table><row name="  sword  " blank="   "/></Table>)", "test", "Table", root ) ==
                     sw::XMLRootStatus::Found );
     SW_ASSERT_TRUE( root.isValid() );
 

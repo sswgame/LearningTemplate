@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <cstring>
@@ -26,6 +27,21 @@ namespace sw
         struct StreamMessageEndpointInternal
         {
             static constexpr int32 kPingBodySize = 8;
+        };
+
+        /** @brief 범위를 벗어날 때 함수를 부릅니다. 잠금보다 먼저 선언하면 잠금을 놓은 뒤에 불립니다(잠금 밖에서 지연 로그를 쓰려고). */
+        template <typename TFunction>
+        struct AfterScope
+        {
+            explicit AfterScope( TFunction function )
+                : _function{ std::move( function ) }
+            {
+            }
+            ~AfterScope() { _function(); }
+            AfterScope( const AfterScope& )            = delete;
+            AfterScope& operator=( const AfterScope& ) = delete;
+
+            TFunction _function;
         };
     } // namespace
 } // namespace sw
@@ -51,10 +67,24 @@ namespace sw
         uint8                   _bAccepted{ SW_FALSE };
         uint8                   _bOpenAnnounced{ SW_FALSE };
         uint8                   _bReceivePaused{ SW_FALSE };
+        /** @brief 잠금 안에서 모은 로그(오류 여부, 글)입니다. `_mutex` 가 지키고 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다 — 잠금은 잎이라 쥔 채 로그를 쓰지 않는다. */
+        vector<pair<bool, string>> _listDeferredLog{};
+        atomic<bool>               _bHasDeferredLog{ false }; ///< `_listDeferredLog` 가 비지 않았다 — 잠금 없이 먼저 보아 보내기 길을 늘리지 않는다
 
         explicit Connection( int32 maxBodySize )
             : _decoder{ maxBodySize }
         {
+        }
+
+        void deferWarning( const utf8* pText )
+        {
+            _listDeferredLog.emplace_back( false, string( pText ) );
+            _bHasDeferredLog.store( true, std::memory_order_release );
+        }
+        void deferError( const utf8* pText )
+        {
+            _listDeferredLog.emplace_back( true, string( pText ) );
+            _bHasDeferredLog.store( true, std::memory_order_release );
         }
     };
 
@@ -129,9 +159,30 @@ namespace sw
         if ( connection._errorReason == StreamCloseReason::None )
         {
             connection._errorReason = reason;
-            SW_LOG_WARNING( "Closing stream %# (%#): %#", connection._remote.toString().c_str(), connection._handle.packed(), toString( reason ) );
+            StringBuilder<constant::kMaxBuffer256> text;
+            text.appendFormat( "Closing stream %# (%#): %#", connection._remote.toString().c_str(), connection._handle.packed(), toString( reason ) );
+            connection.deferWarning( text.c_str() ); // `connection._mutex` 를 쥔 채 불린다 — 로그는 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다
         }
         _pTransport->close( connection._handle, StreamCloseMode::Abort );
+    }
+
+    void StreamMessageEndpoint::flushDeferredLog( Connection& connection )
+    {
+        if ( connection._bHasDeferredLog.load( std::memory_order_acquire ) == false )
+            return;
+        vector<pair<bool, string>> listLog;
+        {
+            ScopedLock<mutex> lock{ connection._mutex };
+            listLog.swap( connection._listDeferredLog );
+            connection._bHasDeferredLog.store( false, std::memory_order_release );
+        }
+        for ( const pair<bool, string>& entry : listLog )
+        {
+            if ( entry.first )
+                SW_LOG_ERROR( "%#", entry.second.c_str() );
+            else
+                SW_LOG_WARNING( "%#", entry.second.c_str() );
+        }
     }
 
     // ---- I/O 스레드 ----
@@ -149,6 +200,8 @@ namespace sw
             ScopedLock<mutex> lock{ _tableMutex };
             _mapConnection[handle.packed()] = connection;
         }
+        const AfterScope  flushLog{ [this, &connection]()
+        { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
         ScopedLock<mutex> lock{ connection->_mutex };
         if ( _settings._security._pTLSContext == nullptr )
         {
@@ -176,6 +229,8 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr )
             return;
+        const AfterScope  flushLog{ [this, &connection]()
+        { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
         ScopedLock<mutex> lock{ connection->_mutex };
         if ( connection->_errorReason != StreamCloseReason::None )
             return; // 이미 끊는 중이므로 남은 바이트는 버린다.
@@ -197,7 +252,9 @@ namespace sw
         (void)flushCiphertextLocked( connection ); // 핸드셰이크 응답, 세션 티켓, 실패 경고를 내보낸다.
         if ( bFed == false || session.getState() == TLSSessionState::Failed )
         {
-            SW_LOG_WARNING( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            StringBuilder<constant::kMaxBuffer256> text;
+            text.appendFormat( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            connection.deferWarning( text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure );
             return false;
         }
@@ -209,7 +266,9 @@ namespace sw
         connection._plainScratch.clear();
         if ( session.readPlaintext( connection._plainScratch ) == false )
         {
-            SW_LOG_WARNING( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            StringBuilder<constant::kMaxBuffer256> text;
+            text.appendFormat( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
+            connection.deferWarning( text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac).
             return false;
         }
@@ -334,6 +393,8 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr || _pTransport == nullptr )
             return StreamSendResult::Closed;
+        const AfterScope  flushLog{ [this, &connection]()
+        { flushDeferredLog( *connection ); } }; // 잠금보다 먼저 선언 — 잠금을 놓은 뒤에 지연 로그를 쓴다
         ScopedLock<mutex> lock{ connection->_mutex };
         connection->_frameScratch.clear();
         // 압축한 뒤 (TLS 면) 암호화하는 순서다. 줄어들지 않으면 원문을 보낸다. 상한은 원문 크기로 판단한다(받는 쪽도 푼 크기로 판단한다).
@@ -349,7 +410,9 @@ namespace sw
         if ( bodySize > _settings._maxFrameBodySize ||
              StreamFrameEncoder::appendFrame( connection->_frameScratch, kind, flags, pFrameBody, frameBodySize, _settings._maxFrameBodySize ) == false )
         {
-            SW_LOG_ERROR( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings._maxFrameBodySize );
+            StringBuilder<constant::kMaxBuffer256> text;
+            text.appendFormat( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings._maxFrameBodySize );
+            connection->deferError( text.c_str() );
             return StreamSendResult::QueueFull;
         }
         return writeOutgoingLocked( *connection, connection->_frameScratch );

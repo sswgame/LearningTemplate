@@ -65,7 +65,7 @@ namespace sw
         return url;
     }
 
-    uint64 TicketQueryLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
+    uint64 TicketQueryLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds /*nowMs*/ )
     {
         const uint64      verificationID = _verificationIDAllocator.allocate();
         const string_view ticket( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
@@ -96,7 +96,7 @@ namespace sw
         return count;
     }
 
-    void TicketQueryLoginProvider::update( UnixMilliseconds nowMs )
+    void TicketQueryLoginProvider::update( UnixMilliseconds /*nowMs*/ )
     {
         _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;

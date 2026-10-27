@@ -121,7 +121,7 @@ namespace sw
         return _clientSecret;
     }
 
-    uint64 AppleLoginProvider::submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs )
+    uint64 AppleLoginProvider::submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds /*nowMs*/ )
     {
         const string      body = HTTPUtil::encodeForm( listForm );
         HTTPClientRequest request;

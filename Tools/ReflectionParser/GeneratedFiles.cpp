@@ -41,9 +41,7 @@ namespace sw
              */
             [[nodiscard]] static bool parseWriteTime( string_view text, uint64& outTime )
             {
-                text                         = StringUtil::trim( text );
-                const auto [pEnd, errorCode] = std::from_chars( text.data(), text.data() + text.size(), outTime );
-                return errorCode == std::errc() && pEnd == text.data() + text.size();
+                return StringUtil::parseUint64( StringUtil::trim( text ), outTime );
             }
 
             /** @brief `"<키> <나머지>"` 꼴 줄에서 키 뒤의 나머지를 꺼냅니다. 키가 다르면 false. */

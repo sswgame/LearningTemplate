@@ -22,7 +22,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, AppliesBudgetsFromJSON )
     profiler.setBudget( sw::MemoryTag::Physics, 123 ); // 표에 없으니 지워진다
 
     sw::string error;
-    SW_ASSERT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "ui", "_megabytes": 0.5 } ] })",
+    SW_ASSERT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "UI", "_megabytes": 0.5 } ] })",
                                                                   profiler, error ),
                         error.c_str() );
     SW_EXPECT_EQUAL( uint64{ 2 * 1024 * 1024 }, profiler.getBudget( sw::MemoryTag::Texture ) );

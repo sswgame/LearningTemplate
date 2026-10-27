@@ -187,3 +187,7 @@ kNotOurDirNames: frozenset[str] = frozenset({
 #: 파일 종류만 보는 게이트(널 바이트 · 파이썬 판)는 이것으로 뺀다. `Tools` 를 통째로 빼지 않는다 — 우리 도구가 그 아래 있다.
 kNotOurCodeDirNames: frozenset[str] = kNotOurDirNames | frozenset({"ThirdParty"})
 
+#: 저장소 기준 경로로 못 박은 생성물 폴더 — .gitignore 대상이라 저장소에 들어 있지 않고, 테스트와 실행이 셰이더 · 텍스처 캐시 수만 개를 쌓는다.
+#: 이름만으로 빼면 같은 이름의 추적 폴더(`Source/Engine/Resource/Cache/`)까지 빠지므로 경로로 뺀다. 파일 걷기(`collectRepositoryFiles` · `resolveFileArguments`)가 건너뛴다.
+kGeneratedRelDirs: frozenset[str] = frozenset({"Resource/cache"})
+

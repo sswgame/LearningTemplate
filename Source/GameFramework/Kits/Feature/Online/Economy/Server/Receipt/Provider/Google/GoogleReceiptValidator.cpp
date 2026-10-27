@@ -134,7 +134,7 @@ namespace sw
                "/purchases/voidedpurchases?startTime=" + to_string( sinceUnixMs ) + "&maxResults=" + to_string( kVoidedMaxResults ) + "&type=0";
     }
 
-    void GoogleReceiptValidator::submitCall( const WaitingCall& call, UnixMilliseconds now )
+    void GoogleReceiptValidator::submitCall( const WaitingCall& call, UnixMilliseconds /*now*/ )
     {
         using Internal = GoogleReceiptValidatorInternal;
         string     url;

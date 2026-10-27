@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -317,10 +318,7 @@ namespace test
 
         [[nodiscard]] static bool parseIntegerText( sw::string_view text, int64& outValue )
         {
-            if ( text.empty() )
-                return false;
-            const std::from_chars_result result = std::from_chars( text.data(), text.data() + text.size(), outValue );
-            return result.ec == std::errc{} && result.ptr == text.data() + text.size();
+            return sw::StringUtil::parseInt64( text, outValue );
         }
 
         sw::vector<std::pair<sw::string, int64>> makeRanking( const Entry& entry ) const

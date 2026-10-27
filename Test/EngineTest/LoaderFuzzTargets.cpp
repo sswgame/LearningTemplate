@@ -379,7 +379,7 @@ namespace test
                 const size_t half = size / 2;
                 (void)parser.append( pData, half ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
                 (void)parser.append( pData + half, size - half );
-                (void)parser.finishOnClose();
+                (void)parser.finishOnClose(); // 퍼즈 대상 — 결과는 보지 않고 크래시만 본다
             }
             /** @brief 한 디코더(동적 표를 이어 쓴다)에 블록 둘(앞 반 · 뒤 반)을 먹입니다. */
             static void runHpack( const uint8* pData, size_t size )
@@ -445,7 +445,7 @@ namespace test
             {
                 JwksKeyCache cache;
                 (void)cache.replaceFromJwks( asText( pData, pData != nullptr ? size : 0 ), kFuzzNowMs ); // 퍼즈 대상 — 거절도 정상이다
-                (void)cache.findKey( "k1" );
+                (void)cache.findKey( "k1" );                                                             // 퍼즈 대상 — 결과는 보지 않고 크래시만 본다
             }
             static void runStateHashReport( const uint8* pData, size_t size )
             {

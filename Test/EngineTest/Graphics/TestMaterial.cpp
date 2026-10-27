@@ -1337,7 +1337,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     SW_EXPECT_TRUE( pShade->_value == "Lit" );
 
     // 아는 이름 · 숫자 · 쉼표 구분은 그대로 읽는다.
-    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "shadeMode" ), "unlit" ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "shadeMode" ), "Unlit" ) );
     SW_EXPECT_EQUAL( 0u, readUint( "shadeMode" ) );
     SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "flags" ), "ReceiveDecals, 1" ) );
     SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );

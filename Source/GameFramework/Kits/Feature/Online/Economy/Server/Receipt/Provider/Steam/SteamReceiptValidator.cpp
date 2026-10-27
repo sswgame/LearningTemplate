@@ -186,7 +186,7 @@ namespace sw
                "&maxresults=" + to_string( kReportMaxResults );
     }
 
-    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
+    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds /*now*/ )
     {
         if ( isOrderID( request._payload ) == false )
         {

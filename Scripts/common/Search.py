@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
-from .Constants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames
+from .Constants import kCppAllExtensions, kGeneratedRelDirs, kLintTargetRelDirs, kNotOurDirNames
 from .Parallel import mapConcurrent
 from .Paths import expandPathTemplate, platformKey
 
@@ -55,6 +55,14 @@ def collectSourceFiles(roots: Iterable[Path],
     return sorted(resultList)
 
 
+def _isGeneratedDirInternal(repositoryRoot: Path, directory: Path) -> bool:
+    """`directory` 가 저장소 기준 생성물 폴더(`kGeneratedRelDirs`)인가."""
+    try:
+        return directory.relative_to(repositoryRoot).as_posix() in kGeneratedRelDirs
+    except ValueError:
+        return False
+
+
 def collectRepositoryFiles(repositoryRoot: Path,
                            listRoot: Iterable[str] = ("",),
                            *,
@@ -78,7 +86,8 @@ def collectRepositoryFiles(repositoryRoot: Path,
         if not baseDir.is_dir():
             continue
         for current, listDirName, listFileName in os.walk(baseDir):
-            listDirName[:] = [name for name in listDirName if name not in setExcluded]
+            listDirName[:] = [name for name in listDirName
+                              if name not in setExcluded and _isGeneratedDirInternal(repositoryRoot, Path(current) / name) == False]
             for fileName in listFileName:
                 if bAnySuffix or fileName in setFileName or os.path.splitext(fileName)[1].lower() in setSuffix:
                     resultSet.add(Path(current) / fileName)
@@ -118,6 +127,8 @@ def resolveFileArguments(repositoryRoot: Path,
         except ValueError:
             continue
         if any(part in setExcluded for part in relative.split("/")[:-1]):
+            continue
+        if any(relative.startswith(generated + "/") for generated in kGeneratedRelDirs):
             continue
         if listScanPrefix and not any(relative.startswith(prefix) for prefix in listScanPrefix):
             continue
