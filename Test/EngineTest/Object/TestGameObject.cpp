@@ -2500,7 +2500,11 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 1) 부모 재지정 시도 (A -> B)
                 if ( pObjA != pObjB )
-                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 테스트하는 경로다
+                {
+                    // 무작위 조작 — 자기 자손을 부모로 삼는 순환 같은 거절도 테스트하는 경로다. 거절의 Warning 은 이 한 호출의 것만 의도된 줄이다.
+                    SW_TEST_DEFENSIVE_SCOPE( "a random reparent may be rejected (cycle or pending destroy)" );
+                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 테스트하는 경로다(거절돼도 부모 없이 남을 뿐이다)
+                }
             }
             else if ( actionType == 1 )
             {
@@ -2532,7 +2536,10 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                     pNewObj->addComponent<sw::MockMeshComponent>();
 
                     if ( listAliveObject.empty() == false )
-                        (void)pNewObj->attachToParent( listAliveObject.back() ); // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                    {
+                        SW_TEST_DEFENSIVE_SCOPE( "a random attach to the newest object may be rejected" ); // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                        (void)pNewObj->attachToParent( listAliveObject.back() );                           // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                    }
                     listAliveObject.push_back( pNewObj );
                 }
             }

@@ -600,14 +600,17 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 
     // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 테스트용 장치로 채우고, 한 개 더 시도한다.
     sw::vector<CountingLogOutput*> listAttached;
-    for ( uint32 attempt = 0; attempt < 16; ++attempt )
     {
-        sw::unique_ptr<CountingLogOutput> output = sw::make_unique<CountingLogOutput>();
-        CountingLogOutput*                pRaw   = output.get();
-        // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 **받아들여진 것만** 들고 있는다.
-        // 반환값이 없던 시절에는 이것을 알 방법이 없어, 죽은 포인터를 들고 있게 된다.
-        if ( logger.addOutput( std::move( output ) ) )
-            listAttached.push_back( pRaw );
+        SW_TEST_DEFENSIVE_SCOPE( "an output beyond the cap is rejected with a warning" ); // 상한을 넘은 장치마다 나는 거절 Warning 이 이 테스트가 보려는 것이다
+        for ( uint32 attempt = 0; attempt < 16; ++attempt )
+        {
+            sw::unique_ptr<CountingLogOutput> output = sw::make_unique<CountingLogOutput>();
+            CountingLogOutput*                pRaw   = output.get();
+            // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 **받아들여진 것만** 들고 있는다.
+            // 반환값이 없던 시절에는 이것을 알 방법이 없어, 죽은 포인터를 들고 있게 된다.
+            if ( logger.addOutput( std::move( output ) ) )
+                listAttached.push_back( pRaw );
+        }
     }
 
     logger.writeLog( sw::LogLevel::Error, "Test", "Cap", "한 줄", __FILE__, __LINE__ );

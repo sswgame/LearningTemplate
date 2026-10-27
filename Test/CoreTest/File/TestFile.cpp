@@ -574,6 +574,7 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
  */
 SW_TEST_CASE( FileTest, InvalidUtf8PathIsAnsweredNotThrown )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "invalid UTF-8 bytes in a path are replaced and reported" ); // 아래 호출마다 나는 변환 경고가 기대한 경고다
     const sw::string root        = test::makeTempPath( "SwInvalidUtf8PathTest" );
     const sw::string invalidPath = root + "/\xFF\xFE.txt";
 

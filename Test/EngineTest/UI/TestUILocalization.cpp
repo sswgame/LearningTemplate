@@ -42,6 +42,14 @@ namespace
      */
     struct UILocalizationFixture
     {
+        /**
+         * 문화권을 바꿀 때마다 그 문화권의 대체 가족(시스템 글꼴)이 시험용 카탈로그에 없다는 경고와, 사슬에 글리프가 없는 글자가 상자로 그려진다는 경고가 난다 — 이 테스트들이 시스템 글꼴 없이
+         * 사슬만 보는 설계의 정상 결과다. 그 두 문구만 의도된 줄이고 다른 Warning · Error 는 표식 없이 남는다. 가장 먼저 만들어 가장 늦게 부서진다.
+         */
+        test::ScopedDefensiveTestLog _expectedFontWarnings{
+            "culture fallback families are not in the test catalog and uncovered glyphs draw as boxes",
+            sw::vector<sw::string>{ "is not in the font catalog or could not be opened", "has a glyph for codepoint" }
+        };
         sw::LocalizationManager          _localization;
         sw::test::FakeFontServiceFixture _fonts;
         sw::InputManager                 _input;

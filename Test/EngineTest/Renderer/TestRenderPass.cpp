@@ -44,6 +44,29 @@
 
 // RenderPassTest — 파이프라인 XML · 렌더 그래프 위상 · 검증. GPU 디바이스를 만들지 않는다(nogpu).
 
+namespace
+{
+    /**
+     * @brief 일부러 깨뜨린 파이프라인을 검증하고 문제 수를 돌려줍니다 — 검증이 그 문제마다 남기는 Error 는 이 호출이 확인하려는 것이라 의도된 줄로 표시한다.
+     * @details 정상 입력이 문제 0 개인지 보는 호출은 이 함수를 쓰지 않는다(그쪽에서 Error 가 나면 예상 밖이다).
+     */
+    uint32 validateBroken( sw::RenderPipelineAsset& pipeline )
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a deliberately broken pipeline is reported by validate" );
+        return pipeline.validate( "unit-test" );
+    }
+
+    /** @brief `FrameRenderer::setDebugOverrides` 가 이 구성에 있는가 — 테스트 전용 덮어쓰기(시계 고정 포함)라 배포본에는 없어야 한다. */
+    template <typename T, typename = void>
+    struct HasDebugOverrides : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasDebugOverrides<T, std::void_t<decltype( std::declval<T&>().setDebugOverrides( sw::FrameDebugOverrides{} ) )>> : std::true_type
+    {
+    };
+} // namespace
+
 SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )
 {
     sw::RenderPassAsset passRes;
@@ -653,7 +676,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._listOutput.push_back( "Swapchain" );
         desc._listPass.push_back( pass );
         desc._listPass.push_back( pass );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( validateBroken( res ) > 0u );
     }
 
     // 1) 알 수 없는 패스 타입
@@ -664,7 +687,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._name = "Bad";
         pass._type = "NoSuchPassType";
         desc._listPass.push_back( pass );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( validateBroken( res ) > 0u );
         SW_EXPECT_TRUE( desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid );
     }
 
@@ -677,7 +700,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._type = "ForwardOpaque";
         pass._listOutput.push_back( "NotDeclared" );
         desc._listPass.push_back( pass );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( validateBroken( res ) > 0u );
     }
 
     // 3) Swapchain 은 첨부로 선언하지 않는 예약어라 통과해야 한다(화면에 낼 색 입력은 Present 의 필수 입력이다)
@@ -703,7 +726,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._type = "Present";
         pass._listOutput.push_back( "Swapchain" );
         res.getDesc()._listPass.push_back( pass );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     // 3-1-1) 출력 패스(kOutputPass)가 아닌 패스는 Swapchain 을 쓸 수 없다 — PSO 의 렌더 타깃 포맷을 정할 근거가 없다(RGBA8 로 짐작하지 않는다)
     {
@@ -717,7 +740,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._listInput.push_back( "SceneColor" );
         pass._listOutput.push_back( "Swapchain" );
         res.getDesc()._listPass.push_back( pass );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( validateBroken( res ) > 0u );
     }
     // 3-2) 컬러를 그리는 패스(외곽선 껍질 · TAA · 일반 풀스크린)도 컬러 출력 선언이 없으면 오류다
     for ( const utf8* pType : { "MeshOutline", "TAA", "Tonemap" } )
@@ -739,7 +762,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             pass._listInput.push_back( "SceneDepth" ); // TAA 는 기록을 깊이로 재투영한다
 
         res.getDesc()._listPass.push_back( pass );
-        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, pType );
+        SW_EXPECT_TRUE_MSG( validateBroken( res ) == 1u, pType );
     }
 
     // 4) 알 수 없는 첨부 포맷
@@ -750,7 +773,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         att._name   = "Weird";
         att._format = "R99G99_NOPE";
         desc._listAttachment.push_back( att );
-        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+        SW_EXPECT_TRUE( validateBroken( res ) > 0u );
     }
     // 4-2) 첨부 나눗수: 1 · 2 · 4 만 받고, 한 패스의 출력(컬러 · 깊이)은 같은 나눗수여야 한다.
     {
@@ -766,7 +789,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         {
             sw::RenderPipelineAsset res;
             res.getDesc()._listAttachment.push_back( makeAttachment( "Odd", "R8G8B8A8_UNORM", divisor ) );
-            SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, sw::to_string( divisor ).c_str() );
+            SW_EXPECT_TRUE_MSG( validateBroken( res ) == 1u, sw::to_string( divisor ).c_str() );
         }
         auto makeHalfPass = [&]( sw::RenderPipelineAsset& res, uint32 depthDivisor )
         {
@@ -788,7 +811,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         {
             sw::RenderPipelineAsset res;
             makeHalfPass( res, 1 );
-            SW_EXPECT_TRUE( res.validate( "unit-test" ) >= 1u );
+            SW_EXPECT_TRUE( validateBroken( res ) >= 1u );
         }
         // 크기는 올림이고 최소 1 이다 — 홀수 창에서 반해상도가 한 줄 모자라지 않는다.
         SW_EXPECT_EQUAL( 641u, sw::TransientAttachmentPool::computeScaledExtent( 1281u, 2u ) );
@@ -804,7 +827,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         att._name   = "NotRenderable";
         att._format = pFormat;
         res.getDesc()._listAttachment.push_back( att );
-        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, pFormat );
+        SW_EXPECT_TRUE_MSG( validateBroken( res ) == 1u, pFormat );
     }
     for ( const utf8* pFormat : { "R8G8B8A8_UNORM", "R16G16B16A16_FLOAT", "R32_FLOAT", "R32G32_FLOAT", "D24_UNORM_S8_UINT" } )
     {
@@ -828,7 +851,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             pass._type = pRemovedType;
             desc._listPass.push_back( pass );
             // 여기서 보는 것은 **이름 해석**뿐이다 — 입력 계약 위반(입력 없는 Tonemap)은 다른 케이스가 본다. 모르는 타입이면 문제가 하나 이상이다.
-            const bool bHasIssues = res.validate( "unit-test" ) > 0u;
+            const bool bHasIssues = validateBroken( res ) > 0u;
             return bHasIssues && desc._listPass[0]._resolvedType == sw::RenderPassType::Invalid;
         };
         SW_EXPECT_TRUE( removedTypeIsRejected( "Shading" ) );
@@ -851,7 +874,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._name = "Internal";
         pass._type = pInternalType;
         desc._listPass.push_back( pass );
-        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) > 0u, pInternalType );
+        SW_EXPECT_TRUE_MSG( validateBroken( res ) > 0u, pInternalType );
     }
 
     // 7) 풀스크린 패스의 입력은 그 타입의 계약과 맞아야 한다 — "선언만 있고 아무도 안 읽는 입력" 이 오류다.
@@ -904,21 +927,21 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "Tonemap", { "LitColor", "GBufferNormal" }, "BloomColor" );
-            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+            SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
         }
         // SSAO 는 깊이가 필수다.
         {
             sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "SSAO", { "GBufferNormal" }, "AOColor" );
-            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+            SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
         }
         // 가공할 컬러가 둘이면 셰이더가 어느 것을 읽을지 정할 수 없다.
         {
             sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "Bloom", { "LitColor", "BloomColor" }, "AOColor" );
-            SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+            SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
         }
     }
 }
@@ -975,19 +998,19 @@ SW_TEST_CASE( RenderPassTest, BypassPassOutputMustMatchItsSource )
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "R8G8B8A8_UNORM", nullptr );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     // 출력을 다른 패스도 쓰면 꺼진 뷰에서 그 쓰기가 원본을 덮는다.
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "R16G16B16A16_FLOAT", "DepthOfFieldColor" );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     // 뒤에서 원본을 쓰면 꺼진 뷰에서 출력을 읽는 쪽이 나중 판을 읽는다.
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "R16G16B16A16_FLOAT", "SceneColor" );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
 }
 
@@ -1037,7 +1060,7 @@ SW_TEST_CASE( RenderPassTest, OmittedPassOutputIsReadOnlyAsOptionalInput )
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "ForwardOpaque" );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
 }
 
@@ -1270,18 +1293,18 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainAlbedo", "MainDepth" } );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainAlbedo", "MainNormal", "MainDepth" } );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(SceneColor 를 짐작해 열지 않는다).
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "ForwardOpaque", { "MainDepth" } );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
         SW_EXPECT_TRUE( res.getGraphPass()[0]._listResolvedColorOutput.empty() );
     }
     // 뎁스 전용 패스는 컬러가 없어도 된다.
@@ -1364,22 +1387,9 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
     {
         sw::RenderPipelineAsset res;
         makeDeferred( res, "Albedo" );
-        SW_EXPECT_EQUAL( 3u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 3u, validateBroken( res ) );
     }
 }
-
-namespace
-{
-    /** @brief `FrameRenderer::setDebugOverrides` 가 이 구성에 있는가 — 테스트 전용 덮어쓰기(시계 고정 포함)라 배포본에는 없어야 한다. */
-    template <typename T, typename = void>
-    struct HasDebugOverrides : std::false_type
-    {
-    };
-    template <typename T>
-    struct HasDebugOverrides<T, std::void_t<decltype( std::declval<T&>().setDebugOverrides( sw::FrameDebugOverrides{} ) )>> : std::true_type
-    {
-    };
-} // namespace
 
 /**
  * @brief [RenderPassTest] 테스트 전용 덮어쓰기(`setDebugOverrides`, 시계 고정 포함)는 배포본에서 컴파일되지 않는다
@@ -1580,7 +1590,7 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         sw::RenderPipelineAsset res;
         res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "Swapchain" ) );
         addPresent( res );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     {
         sw::RenderPipelineAsset  res;
@@ -1589,7 +1599,7 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         res.getDesc()._listAttachment.push_back( attachment );
         addPresent( res );
         res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UIColor" ) );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
     {
         sw::RenderPipelineAsset  res;
@@ -1600,6 +1610,6 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         sw::RenderGraphPassDesc canvas = makePass( "Canvas", "Canvas", "Swapchain" );
         canvas._listInput.push_back( "SceneColor" );
         res.getDesc()._listPass.push_back( canvas );
-        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
     }
 }

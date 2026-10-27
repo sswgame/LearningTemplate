@@ -125,6 +125,7 @@ namespace
             inputMap.bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
             inputMap.bind( "Interact", Key::E );
             inputMap.bind( "Exit", Key::F );
+            inputMap.createAction( "Look", InputActionValueType::Axis2D ); // 폰이 기본으로 선언하는 시선 액션 — 안 쓰지만 맵에 없으면 플레이어 조종자가 경고한다
         }
 
         static void update( GameObjectManager& manager, InputManager& input )

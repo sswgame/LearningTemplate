@@ -69,6 +69,7 @@ SW_TEST_CASE( CookContractTest, EveryBackendCommandLineNameSelectsItsBackend )
 
     // 표 밖의 이름 · 옛 철자는 아무 백엔드도 고르지 않는다.
     SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( "metal" ) == ShaderTargetFormat::Count );
+    SW_TEST_DEFENSIVE_SCOPE( "names outside the contract are unregistered command line keys" ); // 등록되지 않은 키를 무시하며 내는 Warning 이 이 반복이 보려는 것이다
     for ( const string_view name : { "metal", "vulkan", "directx12", "d3d11", "spirv", "opengl" } )
     {
         RHIBackend backend = RHIBackend::DirectX11;

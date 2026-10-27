@@ -1619,6 +1619,7 @@ SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
  */
 SW_TEST_CASE( StringTest, Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "invalid UTF-8 bytes are replaced with U+FFFD and reported" ); // 변환마다 나는 경고가 이 테스트가 보려는 동작이다
     // 선두가 될 수 없는 바이트 → U+FFFD, 뒤의 ASCII 는 그대로
     const sw::wstring stray = sw::StringUtil::utf8ToUtf16( "\x80"
                                                            "abc" );

@@ -66,7 +66,10 @@ SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
         const_cast<utf8*>( "-ENABLE_EDITOR" ),
         const_cast<utf8*>( "-COOK_SHADERS" ),
     };
-    cmdManager.parse( 7, argv );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "enumerator spellings are not registered command line keys" ); // 등록되지 않은 키를 무시하며 내는 Warning 이 이 테스트가 보려는 것이다
+        cmdManager.parse( 7, argv );
+    }
 
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::WIDTH ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::LANGUAGE ) );
@@ -126,7 +129,10 @@ SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
         const_cast<utf8*>( "-IP=127.0.0.1" ),
         const_cast<utf8*>( "-PORT=7777" ),
     };
-    cmdManager.parse( 8, argv );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "non-hyphenated spellings are not registered command line keys" ); // 등록되지 않은 키를 무시하며 내는 Warning 이 이 테스트가 보려는 것이다
+        cmdManager.parse( 8, argv );
+    }
 
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SCENES ) );
@@ -199,7 +205,10 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
             const_cast<utf8*>( "TestApp.exe" ),
             const_cast<utf8*>( "vulkan" ),
         };
-        cmdManager.parse( 2, argv );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the old spelling 'vulkan' is not a registered command line key" ); // 무시하며 내는 Warning 이 이 블록이 보려는 것이다
+            cmdManager.parse( 2, argv );
+        }
 
         bool       bVk{ false };
         const bool bProvided = cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk );

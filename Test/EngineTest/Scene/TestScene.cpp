@@ -38,6 +38,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
 
+#include "EngineTest/GameModuleTypeNames.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
@@ -1945,6 +1946,12 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<sw::string> listFile;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourcePaths::getRootFolderPath(), "", listFile, true ) );
+
+    // 게임 팩의 씬 · 프리팹은 게임 모듈의 컴포넌트를 담는다 — 이 실행 파일은 게임 모듈을 올리지 않아 그 타입의 "모르는 타입" Warning 이 나는 것이 정상이다(데이터는 보존된다).
+    // 게임 소스에 선언된 타입 이름의 줄만 의도된 것으로 표시하고, 오타 · 지운 타입의 줄은 표식 없이 남아 실패한다.
+    sw::vector<sw::string> listGameTypeName;
+    gamemoduletypes::collectTypeNames( sw::ResourcePaths::getRootFolderPath(), listGameTypeName );
+    test::ScopedDefensiveTestLog expectedGameTypes( "game module component types are unknown to this executable", gamemoduletypes::makeUnknownTypeNeedles( listGameTypeName ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );

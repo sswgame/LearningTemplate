@@ -100,6 +100,19 @@ namespace
 
         static int64 readTriggerLookClock() { return s_triggerLookNowMicroseconds; }
 
+        /**
+         * @brief 폰이 기본으로 선언하는 이동 · 시선 액션(`Move` · `Look`)이 맵에 있게 합니다 — 이 테스트가 안 쓰는 쪽도 이름만 만든다.
+         * @details 플레이어 조종자가 폰을 쥘 때 맵에 없는 액션 이름을 경고한다(실제 게임의 맵 누락을 잡는 검사). 테스트의 맵도 폰이 선언한 이름을 갖춘다. 이미 있으면 그대로 둔다.
+         */
+        static void ensurePawnActions( InputMap& inputMap )
+        {
+            for ( const utf8* pName : { "Move", "Look" } )
+            {
+                if ( inputMap.hasAction( hashed_string( pName ) ) == false )
+                    inputMap.createAction( hashed_string( pName ), InputActionValueType::Axis2D );
+            }
+        }
+
         /** @brief 자리 · 폰(버튼 "Jump") · 테스트 이동을 가진 폰 오브젝트입니다. */
         static GameObject* spawnPawn( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
@@ -311,6 +324,7 @@ SW_TEST_CASE( ControlTest, PlayerAndAIWithTheSameIntentMoveTheSame )
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
     input.getInputMap().bind( "Jump", Key::Space );
+    Internal::ensurePawnActions( input.getInputMap() );
     SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) ) );
 
     {
@@ -351,6 +365,7 @@ SW_TEST_CASE( ControlTest, PossessionMovesViewTargetAndInputLayer )
     // 걷기 바인딩은 걷는 폰의 레이어에 있다 — 레이어 스택이 비지 않으면 스택에 든 레이어(와 늘 켜진 레이어)만 읽힌다.
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, "OnFoot" );
     input.getInputMap().bind( "Jump", Key::Space );
+    Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
         GameObject*       pCameraObject = manager.createGameObject( hashed_string( "PlayerCamera" ) );
@@ -415,6 +430,7 @@ SW_TEST_CASE( ControlTest, PossessionWarnsAboutAxisActionsAndLayersTheMapLacks )
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
 
+        SW_TEST_DEFENSIVE_SCOPE( "possessing a pawn whose axis action or input layer the InputMap lacks warns" ); // 이 테스트가 보려는 Warning 이다
         test::ScopedLogCollector logs;
         pPlayer->possess( *pWalker->getComponent<PawnComponent>() );
         SW_EXPECT_TRUE_MSG( logs.countWithID( "Control.AxisActionNotInInputMap" ) == 1u, logs.joined().c_str() );
@@ -539,6 +555,7 @@ SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    Internal::ensurePawnActions( input.getInputMap() );
     SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) ) );
     {
         GameObjectManager manager;
@@ -836,6 +853,8 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
     using Internal = ControlTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", Key::Space ); // 폰이 선언한 버튼 · 축 이름이 맵에 있어야 플레이어 조종자가 경고하지 않는다
+    Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
         GameObject*       pHero   = Internal::spawnPawn( manager, "Hero", float3{} );
@@ -897,6 +916,7 @@ SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindMouseDelta( "Look", 3.0f ); // 배율 3 — 액션 값이 원시 이동량의 세 배다
+    Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
         GameObject*       pViewer = View::spawnFirstPersonPawn( manager, false );
@@ -955,6 +975,7 @@ SW_TEST_CASE( ControlTest, TriggerLookCarriesTheControlRotationAtTheClick )
     input.setClock( &ControlTestInternal::readTriggerLookClock );
     input.getInputMap().bindMouseDelta( "Look", 3.0f );
     input.getInputMap().bind( "Fire", MouseButton::Left );
+    Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
         GameObject*       pViewer = ControlTestInternal::spawnFirstPersonPawn( manager, false );
@@ -1039,7 +1060,11 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
-        pPlayer->possess( *pHero );
+        {
+            // 입력 맵이 일부러 비어 있다(아래 시나리오가 Horse 의 경고를 센다) — 시나리오 밖의 이 첫 빙의가 내는 같은 경고는 준비 과정의 것이다.
+            SW_TEST_DEFENSIVE_SCOPE( "an empty InputMap makes the first possession warn about the pawn's actions" );
+            pPlayer->possess( *pHero );
+        }
 
         AutomationRunner runner;
         runner.setObjectManager( &manager );
@@ -1082,6 +1107,7 @@ SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindMouseDelta( "Look" );
     input.getInputMap().bind( "ToggleMouseLock", Key::Escape );
+    Internal::ensurePawnActions( input.getInputMap() );
     SW_ASSERT_NOT_NULL( input.getMouse() );
     {
         GameObjectManager manager;
@@ -1153,6 +1179,7 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bind( "Jump", GamepadButton::A, ActionTrigger::Down );
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    Internal::ensurePawnActions( input.getInputMap() );
     VirtualInputScript script;
     script.addEvent( 0, RawInputEvent::makeGamepadConnection( 0, true ) );
     SW_ASSERT_TRUE( script.addSlot( 1, InputSlot::fromGamepadButton( GamepadButton::A ), true ) );

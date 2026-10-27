@@ -62,13 +62,17 @@ namespace test
 
 namespace test
 {
-    /** @brief 스코프 내에서 Error/Warning 로그에 [Expected Defensive Test] 표기를 부착하는 테스트용 싱크 프록시 */
+    /**
+     * @brief 스코프 내에서 Error/Warning 로그에 [Expected Defensive Test] 표기를 부착하는 테스트용 싱크 프록시
+     * @param listNeedle 비어 있지 않으면 문구에 이 글 가운데 하나가 든 줄에만 표기한다 — 나머지 Warning · Error 는 표식 없이 지나가 예상 밖으로 세어진다.
+     */
     class DefensiveTestLogSink final : public sw::ILogSink
     {
     public:
-        DefensiveTestLogSink( sw::ILogSink* pWrappedSink, const utf8* pReason = nullptr )
+        DefensiveTestLogSink( sw::ILogSink* pWrappedSink, const utf8* pReason = nullptr, sw::vector<sw::string> listNeedle = {} )
             : _pWrappedSink{ pWrappedSink }
             , _reason{ pReason != nullptr ? pReason : "" }
+            , _listNeedle{ std::move( listNeedle ) }
         {
         }
 
@@ -89,7 +93,7 @@ namespace test
             if ( _pWrappedSink == nullptr )
                 return;
 
-            if ( level == sw::LogLevel::Error || level == sw::LogLevel::Warning )
+            if ( ( level == sw::LogLevel::Error || level == sw::LogLevel::Warning ) && isExpectedMessage( pMessage ) )
             {
                 sw::fixed_string<sw::constant::kMaxBuffer4096> decoratedMsg{};
                 sw::formatstring( decoratedMsg.data(), decoratedMsg.capacity(), "%# %#", sw::AutomationLogPolicy::kDefensivePrefix, pMessage != nullptr ? pMessage : "" );
@@ -126,8 +130,23 @@ namespace test
         }
 
     private:
-        sw::ILogSink* _pWrappedSink{ nullptr };
-        sw::string    _reason;
+        /** @brief 거름 글이 없으면 모든 줄이 의도된 것이고, 있으면 그 글 하나가 든 줄만 의도된 것이다. */
+        bool isExpectedMessage( const utf8* pMessage ) const
+        {
+            if ( _listNeedle.empty() )
+                return true;
+            const sw::string_view message{ pMessage != nullptr ? pMessage : "" };
+            for ( const sw::string& needle : _listNeedle )
+            {
+                if ( message.find( sw::string_view{ needle.c_str(), needle.size() } ) != sw::string_view::npos )
+                    return true;
+            }
+            return false;
+        }
+
+        sw::ILogSink*          _pWrappedSink{ nullptr };
+        sw::string             _reason;
+        sw::vector<sw::string> _listNeedle;
     };
 } // namespace test
 
@@ -161,13 +180,16 @@ namespace test
 
 namespace test
 {
-    /** @brief 스코프 내에서 발생하는 Error/Warning 로그를 의도된 방어/예외 테스트(Expected)로 마킹하는 RAII 헬퍼 */
+    /**
+     * @brief 스코프 내에서 발생하는 Error/Warning 로그를 의도된 방어/예외 테스트(Expected)로 마킹하는 RAII 헬퍼
+     * @param listNeedle 주면 문구에 그 글 하나가 든 줄만 마킹한다(예: `of unknown type '게임타입'`). 나머지 줄은 예상 밖으로 남는다 — 범위를 통째로 덮지 않으려는 쓰임이다.
+     */
     class ScopedDefensiveTestLog
     {
     public:
-        explicit ScopedDefensiveTestLog( const utf8* pReason = nullptr )
+        explicit ScopedDefensiveTestLog( const utf8* pReason = nullptr, sw::vector<sw::string> listNeedle = {} )
             : _pOldSink{ sw::Logger::getGlobalSink() }
-            , _defensiveSink{ _pOldSink, pReason }
+            , _defensiveSink{ _pOldSink, pReason, std::move( listNeedle ) }
         {
             if ( _pOldSink != nullptr )
             {

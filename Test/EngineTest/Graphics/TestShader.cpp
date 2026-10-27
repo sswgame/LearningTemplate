@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -585,7 +586,11 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedCacheAccessStress )
                 else if ( pathID == 1 )
                     desc._filePath = test::getEngineDefaultAssets()._shaderForwardLit.get();
                 else if ( pathID == 2 )
+                {
                     desc._filePath = test::getEngineDefaultAssets()._shaderShadowDepth.get();
+                    // 머티리얼 없는 깊이 셰이더는 패스 define 이 있어야 컴파일된다(`materialshader.hlsli` 의 `#error`) — 엔진이 그림자 패스에서 붙이는 퍼뮤테이션 그대로 묻는다.
+                    desc._listDefine.push_back( sw::ShaderMacroDefine::parse( sw::kPassShadowDefine ) );
+                }
                 else
                     desc._filePath = test::getEngineDefaultAssets()._shaderTonemap.get();
 
