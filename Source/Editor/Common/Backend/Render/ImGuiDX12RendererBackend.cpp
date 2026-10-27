@@ -68,8 +68,11 @@ namespace sw::editor
         _d3d12SrvHeap.set( std::move( srvHeap ) ); // 힙 · 크기는 여기서 한 번 정하고 shutdown 까지 바뀌지 않는다(어느 스레드든 잠금 없이 읽는다)
 
         _descriptorSize.set( pDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
-        _nextDescriptor = 0;
-        _listFreeDescriptor.clear();
+        {
+            ScopedLock<mutex> lock{ _descriptorMutex };
+            _nextDescriptor = 0;
+            _listFreeDescriptor.clear();
+        }
 
         SW_LOG_TRACE( "Populating ImGui_ImplDX12_InitInfo" );
         // NumFramesInFlight: ImGui 는 이 값을 뷰포트별 정점 · 인덱스 버퍼 링의 슬롯 수로 쓴다. 캡처 프레임은 메인 뷰포트를 두 번 그린다(`kImGuiDrawBufferRingSize`).
@@ -105,8 +108,11 @@ namespace sw::editor
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX12_Shutdown();
         _d3d12SrvHeap.reset();
-        _nextDescriptor = 0;
-        _listFreeDescriptor.clear();
+        {
+            ScopedLock<mutex> lock{ _descriptorMutex };
+            _nextDescriptor = 0;
+            _listFreeDescriptor.clear();
+        }
         _descriptorSize.reset();
         _pRHIDevice = nullptr;
     }
