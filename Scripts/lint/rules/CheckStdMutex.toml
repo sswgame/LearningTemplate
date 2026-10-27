@@ -7,7 +7,3 @@
 "Source/Core/Common/Macros.cpp" = "단언 · 낮은 층 보고 경로다 — 쥔 잠금 수 단언 · 교착 검출기가 다시 단언을 부르면 재진입한다"
 "Source/Core/String/hashed_string.h" = "clear 가 샤드 전부를 잠그는 가드 배열이다 — 잠금 수가 실행 때 정해져 범위 가드(ScopedLock)로 적을 수 없다"
 "Source/Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h" = "일회성 풀 잠금을 객체 수명(멤버)으로 쥐고 대기 동안만 놓는다 — 잠금이 함수 범위를 건너가 범위 가드로 적을 수 없다"
-"Source/Editor/Common/Backend/IImGuiRendererBackend.h" = "제출 큐 잠금을 가상 함수의 반환값으로 건넨다(백엔드에 큐 잠금이 없으면 빈 가드) — 잠금이 함수 밖으로 나가 범위 가드로 적을 수 없다"
-"Source/Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h" = "제출 큐 잠금을 가상 함수의 반환값으로 건넨다 — IImGuiRendererBackend.h 와 같은 이유"
-"Source/Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.cpp" = "제출 큐 잠금을 가상 함수의 반환값으로 건넨다 — IImGuiRendererBackend.h 와 같은 이유"
-"Source/Editor/ImGuiEditor.cpp" = "제출 큐 잠금을 가상 함수의 반환값으로 받는다 — IImGuiRendererBackend.h 와 같은 이유"
