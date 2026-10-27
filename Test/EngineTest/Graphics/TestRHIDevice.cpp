@@ -1551,7 +1551,15 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectComma
 
     if ( argBuf != 0 )
     {
-        rhiDevice->getResourceFactory()->updateStructuredBuffer( argBuf, &drawCmd, sizeof( sw::RHIDrawIndirectCommand ) );
+        sw::IRHIResourceFactory* pResource = rhiDevice->getResourceFactory();
+        pResource->updateStructuredBuffer( argBuf, &drawCmd, sizeof( sw::RHIDrawIndirectCommand ) );
+
+        // 드로우는 등록된 그래픽스 PSO 와 렌더 패스 안에서만 한다(PSO 없는 드로우는 백엔드가 멈춘다 — c76c00795). 간접 인자는 풀스크린 삼각형 정점 3 개다.
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( test::getEngineDefaultAssets()._shaderFullscreenTriangle.get() ) );
+        SW_ASSERT_TRUE( pso != 0 );
+        const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 32, 32 );
+        const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
+        SW_ASSERT_TRUE( rt != 0 );
 
         sw::unique_ptr<sw::IRHICommandList> cmdList = rhiDevice->createCommandList();
         if ( cmdList != nullptr )
@@ -1559,17 +1567,26 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectComma
             cmdList->beginCommandList();
             cmdList->dispatchCompute( 4, 1, 1 );
             cmdList->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
+            beginOffscreenRenderPass( *cmdList, rt, desc );
+            cmdList->setPipelineState( pso );
             cmdList->drawIndirect( argBuf, 0 );
             cmdList->drawIndirect( argBuf, 0, 1 ); // 멀티는 drawCount 만 다른 같은 호출이다
+            cmdList->endRenderPass();
             cmdList->dispatchCompute( 2, 1, 1 );
+            beginOffscreenRenderPass( *cmdList, rt, desc );
+            cmdList->setPipelineState( pso );
             cmdList->drawIndirect( argBuf, 0 );
+            cmdList->endRenderPass();
             cmdList->dispatchIndirect( argBuf, 0 );
             cmdList->endCommandList();
 
             rhiDevice->executeCommandList( cmdList.get() );
+            rhiDevice->waitIdle();
         }
 
-        rhiDevice->getResourceFactory()->destroyBuffer( argBuf );
+        pResource->destroyTexture( rt );
+        pResource->destroyPipelineState( pso );
+        pResource->destroyBuffer( argBuf );
     }
 }
 
