@@ -263,7 +263,7 @@ namespace sw
                           settings._inputMap.c_str() );
             return false;
         }
-        if ( _pInput->getInputMap().loadFromResource( settings._inputMap.get() ) == false )
+        if ( _pInput->getInputMap().loadFromResource( ResourceID{ settings._inputMap.get() } ) == false )
             SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         return true;
     }

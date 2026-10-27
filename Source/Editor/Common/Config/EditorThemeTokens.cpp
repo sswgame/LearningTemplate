@@ -100,8 +100,9 @@ namespace sw::editor
         return loadThemeFile( FileUtil::joinPath( folder, fileName ), outConfig, outError );
     }
 
-    bool EditorThemeTokens::loadThemeResource( const string& resourceID )
+    bool EditorThemeTokens::loadThemeResource( const ResourceID& id )
     {
+        const string&     resourceID = id.str();
         EditorThemeConfig config{};
         string            error;
         if ( loadThemeFile( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), config, error ) )

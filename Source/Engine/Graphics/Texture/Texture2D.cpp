@@ -109,20 +109,22 @@ namespace sw
         return drop;
     }
 
-    bool Texture2D::loadFromResource( IRHIDevice* pDevice, string_view relativePath )
+    bool Texture2D::loadFromResource( IRHIDevice* pDevice, const ResourceID& resourceID )
     {
+        const string_view relativePath = resourceID.view();
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
         DDSImageData image;
-        if ( readImage( relativePath, image ) == false )
+        if ( readImage( resourceID, image ) == false )
             return false;
         return loadFromImage( pDevice, relativePath, image, TextureResidency::Full );
     }
 
-    bool Texture2D::readImage( string_view relativePath, DDSImageData& outImage )
+    bool Texture2D::readImage( const ResourceID& resourceID, DDSImageData& outImage )
     {
-        AssetLoadScope loadScope( "Texture", relativePath );
-        if ( DDSLoader::loadFromResource( relativePath, outImage ) == false || outImage.isValid() == false )
+        const string_view relativePath = resourceID.view();
+        AssetLoadScope    loadScope( "Texture", relativePath );
+        if ( DDSLoader::loadFromResource( resourceID, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
             return false;
@@ -306,7 +308,7 @@ namespace sw
         // CPU 텍스처는 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
         if ( hasCPUBytes() )
             return true;
-        return loadFromResource( pDevice, _path );
+        return loadFromResource( pDevice, ResourceID{ _path } );
     }
 
     void Texture2D::setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes )

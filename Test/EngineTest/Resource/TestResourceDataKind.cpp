@@ -3,6 +3,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -10,7 +11,7 @@ using namespace sw;
 
 namespace
 {
-    [[nodiscard]] bool loadNothing( const string& resourceID )
+    [[nodiscard]] bool loadNothing( const ResourceID& resourceID )
     {
         (void)resourceID;
         return true;

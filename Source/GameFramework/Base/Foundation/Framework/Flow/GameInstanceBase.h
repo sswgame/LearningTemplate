@@ -13,6 +13,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/SerializePurpose.h"
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
@@ -256,7 +257,7 @@ namespace sw
         [[nodiscard]] bool loadRequiredCatalog( TCatalog& catalog )
         {
             if ( loadRequiredData( TCatalog::kDataKind, [&catalog]( const string& path )
-            { return catalog.loadFromResource( path ); } ) == false )
+            { return catalog.loadFromResource( ResourceID{ path } ); } ) == false )
                 return false;
             bindScopedService( &catalog );
             return true;

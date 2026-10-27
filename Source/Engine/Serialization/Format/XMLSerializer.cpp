@@ -933,11 +933,11 @@ namespace sw
         return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, context ) );
     }
 
-    bool XMLSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    bool XMLSerializer::loadFile( const ResourceID& resourceID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         string text;
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
             return false;
         return deserialize( pInstance, typeInfo, text, context );
     }

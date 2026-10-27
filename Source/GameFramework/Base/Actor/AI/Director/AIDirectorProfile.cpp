@@ -75,12 +75,12 @@ namespace sw
     {
     }
 
-    bool AIDirectorProfile::loadFromResource( string_view path )
+    bool AIDirectorProfile::loadFromResource( const ResourceID& resourceID )
     {
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        return XMLReadUtil::loadRootOrWarn( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
+        return XMLReadUtil::loadRootOrWarn( doc, resourceID, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
     }
 
     bool AIDirectorProfile::loadFromXMLText( string_view xmlText, string_view sourceName )

@@ -76,7 +76,7 @@ namespace
                 return true;
             }
             sw::PrefabAsset prefab;
-            const bool      bLoaded = sw::StringUtil::endsWith( resourceID, ".json", true ) ? prefab.loadFromJSONFile( resourceID ) : prefab.loadFromXMLFile( resourceID );
+            const bool      bLoaded = sw::StringUtil::endsWith( resourceID, ".json", true ) ? prefab.loadFromJSONFile( sw::ResourceID{ resourceID } ) : prefab.loadFromXMLFile( sw::ResourceID{ resourceID } );
             if ( bLoaded == false )
                 return false;
             outLoaded._manager      = sw::make_unique<sw::GameObjectManager>();

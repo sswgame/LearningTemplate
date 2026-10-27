@@ -72,8 +72,9 @@ namespace sw
         return reader.finish();
     }
 
-    bool FitTables::loadFromResource( string_view path, const FitOperatorRegistry& operators )
+    bool FitTables::loadFromResource( const ResourceID& resourceID, const FitOperatorRegistry& operators )
     {
+        const string_view path = resourceID.view();
         _listLayer.clear();
         _listRegion.clear();
         _listProfile.clear();
@@ -81,7 +82,7 @@ namespace sw
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "FitTables", root ) )
+        if ( reader.loadRoot( document, resourceID, "FitTables", root ) )
             readRoot( root, operators, reader );
         return reader.finish();
     }

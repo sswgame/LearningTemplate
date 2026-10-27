@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -106,7 +107,7 @@ namespace sw
         /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 같은 형식의 XML 로 씁니다(`parseXML` 이 그대로 다시 읽는다 — 에디터 리타깃 창이 저장한다). 기본값인 선택 키는 쓰지 않습니다. */
         string toXML() const;
         void   clear();

@@ -74,11 +74,12 @@ namespace sw
         return false;
     }
 
-    bool Skeleton::loadFromResource( string_view path )
+    bool Skeleton::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Animation );
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Skeleton '%#' could not be read", path );
             clear();

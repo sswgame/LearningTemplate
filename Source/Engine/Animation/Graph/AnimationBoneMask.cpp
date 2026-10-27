@@ -111,7 +111,7 @@ namespace sw
     {
         _listEntry.clear();
         XMLDocument doc;
-        if ( path.empty() || doc.loadResource( path ) == false )
+        if ( path.empty() || doc.loadResource( ResourceID{ path } ) == false )
         {
             SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
             return false;

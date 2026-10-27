@@ -598,19 +598,19 @@ namespace sw
         return saveToFile( path, data );
     }
 
-    bool MeshAssetFormat::loadFromResource( string_view path, MeshAssetData& outData )
+    bool MeshAssetFormat::loadFromResource( const ResourceID& resourceID, MeshAssetData& outData )
     {
         outData = MeshAssetData{};
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
             return false;
         return readFromBytes( bytes.data(), bytes.size(), outData );
     }
 
-    bool MeshAssetFormat::loadFromResource( string_view path, vector<RHIVertex>& outListVertex )
+    bool MeshAssetFormat::loadFromResource( const ResourceID& resourceID, vector<RHIVertex>& outListVertex )
     {
         MeshAssetData data{};
-        const bool    bRead = loadFromResource( path, data );
+        const bool    bRead = loadFromResource( resourceID, data );
         outListVertex       = std::move( data._listVertex );
         return bRead;
     }

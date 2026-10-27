@@ -36,7 +36,7 @@ namespace sw
     bool Render2DSettingsSubsystem::reload()
     {
         Render2DSettings engineSettings;
-        if ( engineSettings.loadFromResource( Render2DSettings::getEngineSettingsPath() ) == false )
+        if ( engineSettings.loadFromResource( ResourceID{ Render2DSettings::getEngineSettingsPath() } ) == false )
             return false;
         *_settings = engineSettings;
         return true;

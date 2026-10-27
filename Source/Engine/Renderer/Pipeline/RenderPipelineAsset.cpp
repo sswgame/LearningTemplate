@@ -19,10 +19,11 @@ namespace sw
 {
     SW_LOG_CALLER( "RenderPipelineAsset" );
 
-    bool RenderPipelineAsset::loadFromXMLFile( string_view assetRelativePath )
+    bool RenderPipelineAsset::loadFromXMLFile( const ResourceID& resourceID )
     {
-        _desc = {};
-        if ( ReflectedXMLFile::loadDesc( assetRelativePath, _desc ) == false )
+        const string_view assetRelativePath = resourceID.view();
+        _desc                               = {};
+        if ( ReflectedXMLFile::loadDesc( resourceID, _desc ) == false )
             return false;
         return finishLoad( assetRelativePath );
     }
@@ -683,7 +684,7 @@ namespace sw
         RenderPipelineAsset* pResource = args.get<RenderPipelineAsset*>( 0 );
         if ( pResource == nullptr )
             return;
-        if ( pResource->loadFromXMLFile( args.get<string>( 1 ) ) == false )
+        if ( pResource->loadFromXMLFile( ResourceID{ args.get<string>( 1 ) } ) == false )
             SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
     }
 

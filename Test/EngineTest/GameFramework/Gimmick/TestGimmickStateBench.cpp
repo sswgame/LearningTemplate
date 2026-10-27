@@ -120,7 +120,7 @@ SW_TEST_CASE( GimmickStateBenchTest, PrefabCircuits )
     for ( const string& filePath : listFile )
     {
         PrefabAsset prefab;
-        SW_ASSERT_TRUE( prefab.loadFromXMLFile( ResourcePaths::toResourceID( filePath ) ) );
+        SW_ASSERT_TRUE( prefab.loadFromXMLFile( sw::ResourceID{ ResourcePaths::toResourceID( filePath ) } ) );
         GameObject* pObject = manager.createGameObject( hashed_string( FileUtil::getFileNamePart( filePath ).c_str() ) );
         SW_ASSERT_TRUE( prefab.applyStateTo( pObject ) );
     }

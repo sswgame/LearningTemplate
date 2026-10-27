@@ -194,7 +194,7 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( XMLReadUtil::loadRootOrWarn( doc, path, "LoadingTips", root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, ResourceID{ path }, "LoadingTips", root, sourceName ) == false )
             return false;
         return readTips( root, sourceName, outListTip );
     }

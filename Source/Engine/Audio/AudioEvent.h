@@ -16,6 +16,7 @@
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -204,7 +205,7 @@ namespace sw
         vector<AudioEventDesc> _listEvent{};
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadFromResource( string_view resourcePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */

@@ -44,9 +44,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 정책 수치
     // ------------------------------------------------------------------------------
-    bool AutosaveSettings::loadFromResource( string_view path )
+    bool AutosaveSettings::loadFromResource( const ResourceID& resourceID )
     {
-        return GameDataXML::loadFile( *this, &AutosaveSettings::loadRoot, path, "Autosave" );
+        const string_view path = resourceID.view();
+        return GameDataXML::loadFile( *this, &AutosaveSettings::loadRoot, resourceID, "Autosave" );
     }
 
     bool AutosaveSettings::loadFromXMLText( string_view xmlText, string_view sourceName )

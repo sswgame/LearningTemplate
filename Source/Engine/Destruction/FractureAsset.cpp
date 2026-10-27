@@ -329,11 +329,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool FractureAsset::loadFromResource( string_view path )
+    bool FractureAsset::loadFromResource( const ResourceID& resourceID )
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
             return false;
         return readFromBytes( bytes.data(), bytes.size() );
     }

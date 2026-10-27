@@ -834,10 +834,10 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
         SW_ASSERT_TRUE_MSG( settings.loadSchema( ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() ), game._pSchema );
         SW_ASSERT_TRUE_MSG( settings.loadSchema( game._pSchema ), game._pSchema );
         sw::InputMap inputMap;
-        SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( game._pInputMap ), game._pInputMap );
+        SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( sw::ResourceID{ game._pInputMap } ), game._pInputMap );
         // 엔진 스키마의 키 바인딩(일시정지 메뉴 키 등)은 런타임 UI 맵의 액션이다(`UISystem` 이 키 바인딩 대상으로 더한다).
         sw::InputMap uiInputMap;
-        SW_ASSERT_TRUE( uiInputMap.loadFromResource( ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+        SW_ASSERT_TRUE( uiInputMap.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
 
         sw::vector<const sw::UserSettingDef*> listSetting;
         settings.collectSettings( "controls", listSetting );

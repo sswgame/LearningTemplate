@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQLMigrationRunner.h"
@@ -17,9 +18,10 @@ namespace sw
          *          보는 드라이버는 손으로 적은 이름 목록이 아니라 드라이버 등록 표(`SQLDriverRegistry`)의 이름과, 폴더의 방언 분기 파일이 가리키는 이름이다
          *          (등록 표에 아직 오르지 않은 드라이버의 방언 분기도 빠뜨리지 않는다).
          */
-        [[nodiscard]] bool loadSQLMigrationList( const string& resourceID )
+        [[nodiscard]] bool loadSQLMigrationList( const ResourceID& id )
         {
-            string_view folder;
+            const string& resourceID = id.str();
+            string_view   folder;
             FileUtil::getDirectoryPart( resourceID, folder );
             if ( folder.empty() )
                 return false;

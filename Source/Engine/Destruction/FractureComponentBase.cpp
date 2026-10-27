@@ -880,7 +880,7 @@ namespace sw
         if ( _asset == nullptr )
             return false;
         const string profilePath = _profilePath.empty() ? string{ DestructionProfile::kDefaultPath } : _profilePath;
-        if ( _profile.loadFromResource( profilePath ) == false )
+        if ( _profile.loadFromResource( ResourceID{ profilePath } ) == false )
             SW_LOG_ERROR( "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
                           profilePath.c_str() );
         vector<uint8> listAnchor;

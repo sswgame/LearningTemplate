@@ -67,9 +67,10 @@ namespace sw
 
 namespace sw
 {
-    XMLRootStatus XMLReadUtil::loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot, string* pOutAbsPath )
+    XMLRootStatus XMLReadUtil::loadRoot( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot, string* pOutAbsPath )
     {
-        if ( outDocument.loadResource( path, pOutAbsPath ) == false )
+        const string_view path = resourceID.view();
+        if ( outDocument.loadResource( resourceID, pOutAbsPath ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
@@ -135,10 +136,11 @@ namespace sw
         return text;
     }
 
-    bool XMLReadUtil::loadRootOrWarn( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
+    bool XMLReadUtil::loadRootOrWarn( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
     {
-        outSourceName = string( path );
-        switch ( loadRoot( outDocument, path, pRootName, outRoot, &outSourceName ) )
+        const string_view path = resourceID.view();
+        outSourceName          = string( path );
+        switch ( loadRoot( outDocument, resourceID, pRootName, outRoot, &outSourceName ) )
         {
             case XMLRootStatus::Found:
             {

@@ -198,7 +198,7 @@ namespace sw::editor
         CharacterDataReader reader( resourcePath );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourcePath, "OutfitAtlas", root ) )
+        if ( reader.loadRoot( document, ResourceID{ resourcePath }, "OutfitAtlas", root ) )
         {
             OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
             OutfitAtlasBakerInternal::validateSpec( outSpec, reader );

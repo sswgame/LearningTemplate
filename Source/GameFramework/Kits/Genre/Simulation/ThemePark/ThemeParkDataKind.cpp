@@ -16,8 +16,9 @@ namespace sw
          * @brief 공원 배치는 같은 팩의 코스터 레이아웃을 가리킵니다 — 그것을 먼저 읽습니다.
          * @details 코스터 파일 이름을 여기 다시 적지 않는다. 배치 종류의 접미를 떼어 팩 루트를 얻고, 코스터 종류의 등록 줄로 경로를 만든다(기준 하나).
          */
-        [[nodiscard]] bool loadParkLayout( const string& resourceID )
+        [[nodiscard]] bool loadParkLayout( const ResourceID& id )
         {
+            const string&           resourceID  = id.str();
             const ResourceDataKind* pLayoutKind = ResourceDataKindUtil::findByLabel( ParkLayout::kDataKind );
             if ( pLayoutKind == nullptr || pLayoutKind->_pSuffix == nullptr )
                 return false;
@@ -33,10 +34,10 @@ namespace sw
                 return false;
             }
             CoasterLayoutCatalog layouts;
-            if ( layouts.loadFromResource( coasterPath ) == false )
+            if ( layouts.loadFromResource( ResourceID{ coasterPath } ) == false )
                 return false;
             ParkLayout layout;
-            return layout.loadFromResource( resourceID, layouts );
+            return layout.loadFromResource( id, layouts );
         }
     } // namespace
 

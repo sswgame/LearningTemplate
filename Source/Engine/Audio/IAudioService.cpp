@@ -96,7 +96,7 @@ namespace sw
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDesc mixerDesc;
-        if ( mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
+        if ( mixerDesc.loadFromResource( ResourceID{ kDefaultMixerPath } ) == false )
         {
             SW_LOG_ERROR( "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
             return false;
@@ -364,7 +364,7 @@ namespace sw
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
-        if ( pMusic->loadFromResource( path ) == false )
+        if ( pMusic->loadFromResource( ResourceID{ path } ) == false )
             return false;
         if ( _musicPlayingID != 0 )
             _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
@@ -397,7 +397,7 @@ namespace sw
     bool IAudioService::loadMixer( string_view resourcePath )
     {
         AudioMixerDesc mixerDesc;
-        if ( mixerDesc.loadFromResource( resourcePath ) == false )
+        if ( mixerDesc.loadFromResource( ResourceID{ resourcePath } ) == false )
             return false;
         if ( _pEngine->loadMixer( mixerDesc ) == false )
             return false;
@@ -447,7 +447,7 @@ namespace sw
             return bReloaded;
         }
         AudioEventLibrary library;
-        if ( library.loadFromResource( resourcePath ) == false )
+        if ( library.loadFromResource( ResourceID{ resourcePath } ) == false )
             return false;
         // 이름은 라이브러리를 처음 올린 이름 그대로여야 같은 라이브러리를 바꾼다.
         if ( _pEngine->loadEventLibrary( libraryName, library ) == false )

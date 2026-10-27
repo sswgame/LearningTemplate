@@ -19,7 +19,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -32,7 +32,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, AnimationClip& outClip ) { return outClip.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, AnimationClip& outClip ) { return outClip.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -45,7 +45,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -58,7 +58,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 

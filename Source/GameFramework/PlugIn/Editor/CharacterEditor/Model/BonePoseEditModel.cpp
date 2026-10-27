@@ -36,7 +36,7 @@ namespace sw::editor
     bool BonePoseEditModel::loadSkeleton( string_view path )
     {
         Skeleton loaded;
-        if ( loaded.loadFromResource( path ) == false )
+        if ( loaded.loadFromResource( ResourceID{ path } ) == false )
             return false;
         _skeleton = std::move( loaded );
         return true;

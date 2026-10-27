@@ -35,13 +35,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool SurfaceChannelTable::loadFromResource( string_view path )
+    bool SurfaceChannelTable::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         _listChannel.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "SurfaceChannels", root ) )
+        if ( reader.loadRoot( document, resourceID, "SurfaceChannels", root ) )
             readRoot( root, reader );
         return reader.finish();
     }

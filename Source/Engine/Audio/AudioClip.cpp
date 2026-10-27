@@ -329,7 +329,7 @@ namespace sw
     {
         const string_view pathView = path.view();
         AudioGraphDef     def;
-        if ( def.loadFromResource( pathView ) == false )
+        if ( def.loadFromResource( ResourceID{ pathView } ) == false )
             return nullptr; // 읽기 · 검사가 오류를 남겼다
         // 그래뉼러 소스는 같은 캐시 규칙으로 푼다(이 작업 안에서 바로). 그래프 안의 그래프와 스트리밍 클립은 AudioGraph::create 가 오류로 멈춘다.
         vector<shared_ptr<const AudioClipData>> listNodeClip( def._listNode.size() );

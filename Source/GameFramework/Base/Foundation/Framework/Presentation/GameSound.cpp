@@ -51,7 +51,7 @@ namespace sw
         if ( pEngine == nullptr )
             return true;
         AudioEventLibrary library;
-        if ( library.loadFromResource( path ) == false )
+        if ( library.loadFromResource( ResourceID{ path } ) == false )
             return false;
         return pEngine->loadEventLibrary( hashed_string( path ), library );
     }

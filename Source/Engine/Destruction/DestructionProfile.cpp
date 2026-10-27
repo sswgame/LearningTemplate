@@ -79,13 +79,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool DestructionProfile::loadFromResource( string_view path )
+    bool DestructionProfile::loadFromResource( const ResourceID& resourceID )
     {
-        *this = DestructionProfile{};
+        const string_view path = resourceID.view();
+        *this                  = DestructionProfile{};
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "DestructionProfile", root ) )
+        if ( reader.loadRoot( document, resourceID, "DestructionProfile", root ) )
             readRoot( root, reader );
         if ( reader.hasError() )
             *this = DestructionProfile{};

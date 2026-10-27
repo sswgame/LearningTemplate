@@ -15,10 +15,11 @@ namespace sw
 
 namespace sw
 {
-    bool FontCatalogDesc::loadFromResource( string_view resourcePath )
+    bool FontCatalogDesc::loadFromResource( const ResourceID& resourceID )
     {
-        *this = FontCatalogDesc{};
-        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        const string_view resourcePath = resourceID.view();
+        *this                          = FontCatalogDesc{};
+        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[Text] Font catalog could not be read or holds unknown keys: %#", resourcePath );
             return false;

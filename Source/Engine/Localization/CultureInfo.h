@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -191,7 +192,7 @@ namespace sw
         /** @brief 테이블을 읽습니다(이미 있는 문화권은 바꿉니다). 실패하면 @p pOutError 에 이유를 적고 false 를 반환하며, 테이블은 그대로 둡니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         /** @brief 리소스 경로의 테이블을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view resourcePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
 
         /** @brief 정확히 그 코드의 문화권입니다(없으면 nullptr). */
         const CultureInfo* findCulture( string_view code ) const;

@@ -424,7 +424,7 @@ SW_TEST_CASE( ResourceTest, DDSLoaderLoadFromResource )
     sw::DDSImageData image;
     // **도메인까지 적은 engine 리소스**를 쓴다. 도메인 없는 "textures/splash.dds" 는 editor 도메인 에셋이라
     // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
-    SW_ASSERT_TRUE( sw::DDSLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromResource( sw::ResourceID{ "engine/textures/perlin.dds" }, image ) );
     SW_EXPECT_TRUE( image.isValid() );
     // `engine/textures_raw/perlin.png`(Scripts/dev/MakeNoiseTexture.py, 256 × 256)를 임포트 규칙 Fallback_Default(BC7 · sRGB · 밉)로 가져온 것.
     SW_EXPECT_EQUAL( 256u, image._width );

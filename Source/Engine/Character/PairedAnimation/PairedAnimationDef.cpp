@@ -196,13 +196,14 @@ namespace sw
         return bLoaded;
     }
 
-    bool PairedAnimationDef::loadFromResource( string_view path )
+    bool PairedAnimationDef::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, PairedAnimationDefInternal::kRootName, root ) )
+        if ( reader.loadRoot( document, resourceID, PairedAnimationDefInternal::kRootName, root ) )
             readRoot( root, reader );
         const bool bLoaded = reader.finish();
         if ( bLoaded == false )

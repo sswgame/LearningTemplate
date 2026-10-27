@@ -12,7 +12,7 @@
 - 리소스 id 입구가 OS 절대 경로도 받습니다(`ResourceIO.cpp` 찾는 순서 0단계 — 임시 파일 · 외부 세이브용). 디스크 경로와 리소스 id 가 같은 `string_view` 로 들어옵니다.
 - 리소스 루트 **안**의 절대 경로를 거절하는 규칙이 구성마다 다릅니다(`isLooseFileAllowed` 가 거짓일 때만). Dev 는 받고 Shipping 만 거절하므로 잘못 넣은 호출이 Dev 테스트를 지나 배포 구성에서야 드러납니다.
 
-같은 모양이 남을 수 있는 곳: `ResourceIO::readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` 와 그것을 부르는 모든 `load( string_view )` 입구(`collectResources` 는 이미 거절).
+같은 모양이 남을 수 있는 곳: `string_view` 를 받아 안에서 `ResourceID{ … }` 로 감싸는 에셋별 보조 함수(예: `EngineDefaultAssets::load`, `InputMap::loadDefinition`). 리소스 · 디스크를 열거형 하나로 고르던 안쪽 함수(`ReflectedXMLFile` · `PrefabAsset` 의 `ReadSource`)는 입구 함수가 형식으로 고르게 바꿨다.
 
 ## 2. 안과 결정
 
@@ -22,7 +22,10 @@
 | **B(채택)** | 리소스 id 입구는 **리소스 id 만** 받는다. OS 절대 경로면 오류로 멈추고 디스크 파일은 디스크 입구(`readTextFile` · `load*FromDiskFile`)로만 읽는다 | A 의 호출부 + 임시 파일 · 세이브를 리소스 입구로 읽는 호출부 |
 | C | `ResourceId` 형식을 입구 인자로(컴파일에서 막음) | 입구와 호출부 수백 곳의 시그니처가 바뀐다 |
 
-**C 도 들어갔다(2026-10-27, `wt/resid`, 감사 SG U12)** — 리소스 입구(`readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` · `collectResources` 의 폴더)의 인자가 `ResourceID`(`Engine/Resource/ResourceID.h`)이고, 글에서 암시적으로 만들 수 없어 일반 문자열 · 디스크 경로를 그대로 넘기면 컴파일되지 않는다. 호출 161 곳이 `ResourceID{ … }` 로 글을 id 로 쓴다는 것을 드러낸다. 실행 중 OS 경로 거절(B)은 그대로다 — 형식은 섞는 실수를 막고, 내용(OS 경로)은 입구가 본다. 남은 단계: 각 에셋의 `loadFromResource( string_view )`(선언 73 · 호출 약 390)와 `collectResources` 의 결과 목록, `ResourcePaths::toResourceID` 의 반환을 `ResourceID` 로 올리면 감싸는 자리가 데이터 읽기 쪽으로 올라간다.
+**C 도 들어갔다(2026-10-27, `wt/resid`, 감사 SG U12)** — 리소스 입구(`readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` · `collectResources` 의 폴더)의 인자가 `ResourceID`(`Engine/Resource/ResourceID.h`)이고, 글에서 암시적으로 만들 수 없어 일반 문자열 · 디스크 경로를 그대로 넘기면 컴파일되지 않는다. 실행 중 OS 경로 거절(B)은 그대로다 — 형식은 섞는 실수를 막고, 내용(OS 경로)은 입구가 본다.
+같은 브랜치 둘째 단계에서 그 위 층도 `const ResourceID&` 로 올렸다: 각 에셋의 `loadFromResource`(선언 · 정의 131, `Texture2D` 는 둘째 인자) · `XMLDocument` / `JSONDocument::loadResource` · `loadFromXMLFile` / `loadFromJSONFile`(프리팹 · 렌더 패스 · 파이프라인) · `ReflectedXMLFile::loadDesc` · `XMLSerializer` / `JSONSerializer::loadFile` · `XMLReadUtil::loadRoot(OrWarn)` · `CharacterDataReader::loadRoot` · `XMLCatalogLoader::loadFile` · `AppearanceDatabase::loadPresetFile` · `NileCityPlanner::readPlanFile`, 데이터 종류 로더 형식 `ResourceDataLoadFunc`, `collectResources` 의 결과 목록(`vector<ResourceID>`). 본문은 첫 줄에서 `id.view()` 로 글을 꺼내 로그 · 확장자 검사에 쓰고, 안쪽 입구에는 받은 id 를 그대로 넘긴다. `ReflectedXMLFile` · `PrefabAsset` 은 리소스 · 디스크 두 입구를 열거형(`ReadSource`) 하나로 고르던 것을, 입구 함수가 형식대로 읽고 안쪽은 읽은 본문 · 문서만 받게 갈랐다.
+`ResourceID{ … }` 로 글을 id 로 쓰는 자리는 이제 데이터 칸(`DataPath` · `hashed_string` 키 · 설정 값) · 문자열 리터럴 · 테스트의 `makeTempResourceID` 결과가 로더에 들어가는 곳이다.
+`ResourcePaths::toResourceID` 의 반환은 문자열로 둔다 — 호출 45 곳 대부분이 결과를 데이터 칸(메시 · 텍스처 경로) · 맵 키 · 로그에 담고 로더에 바로 넘기는 곳은 드물어, 형식을 바꾸면 `.str()` 만 늘고 막는 실수가 없다.
 
 B 는 구성마다 다른 규칙을 입구 하나의 규칙("리소스 id 만")으로 끝낸다. 디스크 쪽은 이미 `LooseFilePath` · `readTextFile` · `load*FromDiskFile` 로 갈라져 있어 새 형식이 필요 없다. 디스크 입구를 형식(`DiskFilePath`)으로 막는 안은 하지 않는다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수 없다.
 

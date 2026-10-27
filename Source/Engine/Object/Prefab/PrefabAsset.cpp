@@ -608,37 +608,47 @@ namespace sw
     {
     }
 
-    bool PrefabAsset::loadFromXMLFile( string_view assetRelativePath )
+    bool PrefabAsset::loadFromXMLFile( const ResourceID& resourceID )
     {
-        return loadFromXMLSource( assetRelativePath, ReadSource::Resource );
+        AssetLoadScope loadScope( "Prefab", resourceID.view() );
+        XMLDocument    doc;
+        string         absPath;
+        const bool     bRead = doc.loadResource( resourceID, &absPath );
+        return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
-    bool PrefabAsset::loadFromJSONFile( string_view assetRelativePath )
+    bool PrefabAsset::loadFromJSONFile( const ResourceID& resourceID )
     {
-        return loadFromJSONSource( assetRelativePath, ReadSource::Resource );
+        JSONDocument doc;
+        string       absPath;
+        const bool   bRead = doc.loadResource( resourceID, &absPath );
+        return readJSONSource( doc, bRead, absPath );
     }
 
     bool PrefabAsset::loadFromDiskFile( string_view diskPath )
     {
         // 형식은 확장자 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
+        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         if ( StringUtil::endsWith( diskPath, ".prefab.json", true ) )
-            return loadFromJSONSource( diskPath, ReadSource::DiskFile );
+        {
+            JSONDocument doc;
+            const bool   bRead = doc.loadFile( diskPath );
+            return readJSONSource( doc, bRead, string( diskPath ) );
+        }
         if ( StringUtil::endsWith( diskPath, ".prefab.xml", true ) )
-            return loadFromXMLSource( diskPath, ReadSource::DiskFile );
+        {
+            AssetLoadScope loadScope( "Prefab", diskPath );
+            XMLDocument    doc;
+            const bool     bRead = doc.loadFile( diskPath );
+            return readXMLSource( doc, bRead, string( diskPath ), loadScope );
+        }
         SW_LOG_ERROR( "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );
         return false;
     }
 
-    bool PrefabAsset::loadFromXMLSource( string_view path, ReadSource source )
+    bool PrefabAsset::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope )
     {
         _bValid = SW_FALSE;
-        AssetLoadScope loadScope( "Prefab", path );
-        string         absPath;
-        XMLDocument    doc;
-        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
-        if ( source == ReadSource::DiskFile )
-            absPath = string( path );
         if ( bRead == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
@@ -687,14 +697,9 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::loadFromJSONSource( string_view path, ReadSource source )
+    bool PrefabAsset::readJSONSource( JSONDocument& doc, const bool bRead, const string& absPath )
     {
         _bValid = SW_FALSE;
-        string       absPath;
-        JSONDocument doc;
-        const bool   bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
-        if ( source == ReadSource::DiskFile )
-            absPath = string( path );
         if ( bRead == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
@@ -1230,7 +1235,7 @@ namespace sw
             // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
             // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
             const bool bJSON         = FileUtil::hasExtension( resolvedPath, ".json" );
-            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( resolvedPath ) : asset->loadFromXMLFile( resolvedPath );
+            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( ResourceID{ resolvedPath } ) : asset->loadFromXMLFile( ResourceID{ resolvedPath } );
             if ( bSourceLoaded == false )
             {
                 SW_LOG_ERROR( "Prefab source could not be loaded: %#", resolvedPath );

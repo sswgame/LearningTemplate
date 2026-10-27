@@ -212,7 +212,7 @@ namespace sw
     void FacialAnimationComponent::loadRig()
     {
         FacialRig rig;
-        if ( _facialRigPath.empty() == false && rig.loadFromResource( _facialRigPath ) == false )
+        if ( _facialRigPath.empty() == false && rig.loadFromResource( ResourceID{ _facialRigPath } ) == false )
             SW_LOG_ERROR( "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
         setFacialRig( rig );
     }
@@ -293,7 +293,7 @@ namespace sw
     {
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
-            if ( _lipSync.loadFromResource( LipSyncSettings::kResourcePath ) == false )
+            if ( _lipSync.loadFromResource( ResourceID{ LipSyncSettings::kResourcePath } ) == false )
                 SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", LipSyncSettings::kResourcePath );
             _bLipSyncSettingsReady = SW_TRUE;
         }

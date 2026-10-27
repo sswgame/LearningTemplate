@@ -8,10 +8,10 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadNileAutoPlan( const string& resourceID )
+        [[nodiscard]] bool loadNileAutoPlan( const ResourceID& id )
         {
             vector<NileAutoPlanStep> listStep;
-            return NileCityPlanner::readPlanFile( resourceID, listStep );
+            return NileCityPlanner::readPlanFile( id, listStep );
         }
     } // namespace
 

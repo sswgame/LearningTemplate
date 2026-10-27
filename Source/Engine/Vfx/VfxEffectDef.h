@@ -16,6 +16,7 @@
 
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Utility/FloatCurve.h"
 
 namespace sw
@@ -333,7 +334,7 @@ namespace sw
         vector<VfxEmitterDef> _listEmitter{};
 
         /** @brief 리소스 상대 경로의 효과를 읽습니다. 모르는 이름 · 범위 밖 값 · 필수 칸 누락이면 오류를 남기고 false 이며 효과가 빕니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 디스크 파일의 효과를 읽습니다(도구 · 테스트용, `ReflectedXMLFile::loadDescFromDiskFile`). 실패하면 효과가 빕니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 방출기가 하나 이상이고 이름이 겹치지 않으며 방출기마다 `VfxEmitterDef::validate` 를 통과하면 true 입니다. */

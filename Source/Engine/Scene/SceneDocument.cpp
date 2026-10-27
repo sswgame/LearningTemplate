@@ -214,7 +214,7 @@ namespace sw
         XMLDocument    doc;
         string         absPath;
         // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( path, &absPath );
+        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( ResourceID{ path }, &absPath );
         if ( source == ReadSource::DiskFile )
             absPath = string( path );
         if ( bRead == false )

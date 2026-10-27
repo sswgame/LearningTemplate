@@ -202,7 +202,7 @@ namespace sw
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const PackEngineSettings&  packSettings  = engine::getSubsystem<PackEngineSettings>();
         UIScaleSettings            scaleSettings{};
-        if ( scaleSettings.loadFromResource( PackEngineSettings::resolve( packSettings._uiScaleSettings, defaultAssets._uiScaleSettings ) ) == false )
+        if ( scaleSettings.loadFromResource( ResourceID{ PackEngineSettings::resolve( packSettings._uiScaleSettings, defaultAssets._uiScaleSettings ) } ) == false )
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
@@ -221,7 +221,7 @@ namespace sw
         _styleSheetCacheRegistration = assetManager.registerAssetCache( &_styleSheetCache );
         // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
         UIThemeCatalog themes{};
-        if ( themes.loadFromResource( PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) ) == false )
+        if ( themes.loadFromResource( ResourceID{ PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) } ) == false )
             return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
         // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 기준이다.

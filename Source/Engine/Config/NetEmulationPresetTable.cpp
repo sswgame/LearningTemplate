@@ -37,10 +37,11 @@ namespace sw
         return conditions;
     }
 
-    bool NetEmulationPresetTable::loadFromResource( string_view path )
+    bool NetEmulationPresetTable::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         _listPreset.clear();
-        bool bOk = ReflectedXMLFile::loadDesc( path, *this );
+        bool bOk = ReflectedXMLFile::loadDesc( resourceID, *this );
         if ( bOk && _listPreset.empty() )
         {
             SW_LOG_ERROR_ID( "Net.PresetTableEmpty", "%#: no presets in <_listPreset>", path );

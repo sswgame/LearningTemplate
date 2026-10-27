@@ -847,7 +847,7 @@ namespace sw::editor
         _tileSetBuffer = _map._tileSetPath.c_str();
         _tileSet       = TileSetAsset{};
         _brushIndex    = 0;
-        if ( _map._tileSetPath.empty() == false && _tileSet.loadFromResource( _map._tileSetPath ) == false )
+        if ( _map._tileSetPath.empty() == false && _tileSet.loadFromResource( ResourceID{ _map._tileSetPath } ) == false )
             _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", _map._tileSetPath ) );
     }
 

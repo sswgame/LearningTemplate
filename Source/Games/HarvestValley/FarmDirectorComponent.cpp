@@ -415,7 +415,7 @@ namespace sw
     bool FarmDirectorComponent::startGame()
     {
         _cropCatalog.setKnownSeasons( FarmDirectorComponentInternal::makeSeasons() );
-        if ( _cropCatalog.loadFromResource( _cropDataPath ) == false || _cropCatalog.getCrops().empty() )
+        if ( _cropCatalog.loadFromResource( ResourceID{ _cropDataPath } ) == false || _cropCatalog.getCrops().empty() )
         {
             SW_LOG_WARNING( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;

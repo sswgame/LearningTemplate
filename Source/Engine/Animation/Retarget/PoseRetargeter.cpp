@@ -390,8 +390,8 @@ namespace sw
         Skeleton        sourceSkeleton;
         Skeleton        targetSkeleton;
         AnimationClip   sourceClip;
-        const bool      bLoaded = profile.loadFromResource( profilePath ) && sourceSkeleton.loadFromResource( profile.getSourceSkeletonPath() ) &&
-                             targetSkeleton.loadFromResource( profile.getTargetSkeletonPath() ) && sourceClip.loadFromResource( sourceClipPath );
+        const bool      bLoaded = profile.loadFromResource( ResourceID{ profilePath } ) && sourceSkeleton.loadFromResource( ResourceID{ profile.getSourceSkeletonPath() } ) &&
+                             targetSkeleton.loadFromResource( ResourceID{ profile.getTargetSkeletonPath() } ) && sourceClip.loadFromResource( ResourceID{ sourceClipPath } );
         if ( bLoaded == false )
         {
             SW_LOG_ERROR( "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
@@ -418,12 +418,12 @@ namespace sw
         outError.clear();
         Skeleton sourceSkeleton;
         Skeleton targetSkeleton;
-        if ( profile.getSourceSkeletonPath().empty() || sourceSkeleton.loadFromResource( profile.getSourceSkeletonPath() ) == false )
+        if ( profile.getSourceSkeletonPath().empty() || sourceSkeleton.loadFromResource( ResourceID{ profile.getSourceSkeletonPath() } ) == false )
         {
             outError = "The source skeleton could not be read";
             return false;
         }
-        if ( profile.getTargetSkeletonPath().empty() || targetSkeleton.loadFromResource( profile.getTargetSkeletonPath() ) == false )
+        if ( profile.getTargetSkeletonPath().empty() || targetSkeleton.loadFromResource( ResourceID{ profile.getTargetSkeletonPath() } ) == false )
         {
             outError = "The target skeleton could not be read";
             return false;

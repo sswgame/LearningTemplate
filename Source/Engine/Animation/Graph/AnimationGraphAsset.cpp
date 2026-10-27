@@ -66,7 +66,7 @@ namespace sw
             return false;
 
         XMLDocument doc;
-        if ( doc.loadResource( path ) == false )
+        if ( doc.loadResource( ResourceID{ path } ) == false )
             return false;
         // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseXML 에 다시 넘기지 않는다).
         return parseRoot( doc.getRoot( "AnimationGraphAsset" ), path );

@@ -137,7 +137,7 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     RetargetProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
+    SW_ASSERT_TRUE( profile.loadFromResource( sw::ResourceID{ TestRetargetInternal::kProfile } ) );
     SW_EXPECT_EQUAL( 8u, static_cast<uint32>( profile.getChains().size() ) );
     SW_EXPECT_TRUE( profile.getTargetPelvis() == hashed_string( "hips" ) );
     SW_EXPECT_TRUE( profile.getChains()[4]._bIKGoal == SW_TRUE );
@@ -184,7 +184,7 @@ SW_TEST_CASE( RetargetTest, ProfileWritesBackAndInspectsAgainstSkeletons )
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     RetargetProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
+    SW_ASSERT_TRUE( profile.loadFromResource( sw::ResourceID{ TestRetargetInternal::kProfile } ) );
     RetargetProfile copy;
     SW_ASSERT_TRUE( copy.parseXML( profile.toXML(), "roundtrip.retarget.xml" ) );
     SW_EXPECT_TRUE( copy.toXML() == profile.toXML() );
@@ -498,12 +498,12 @@ SW_TEST_CASE( RetargetTest, KnightWalkOnProportionedMinion )
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
     Skeleton minion;
-    SW_ASSERT_TRUE( knight.loadFromResource( TestRetargetInternal::kKnightSkeleton ) );
-    SW_ASSERT_TRUE( minion.loadFromResource( TestRetargetInternal::kMinionSkeleton ) );
+    SW_ASSERT_TRUE( knight.loadFromResource( sw::ResourceID{ TestRetargetInternal::kKnightSkeleton } ) );
+    SW_ASSERT_TRUE( minion.loadFromResource( sw::ResourceID{ TestRetargetInternal::kMinionSkeleton } ) );
     RetargetProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
+    SW_ASSERT_TRUE( profile.loadFromResource( sw::ResourceID{ TestRetargetInternal::kProfile } ) );
     AnimationClip walk;
-    SW_ASSERT_TRUE( walk.loadFromResource( TestRetargetInternal::kKnightWalk ) );
+    SW_ASSERT_TRUE( walk.loadFromResource( sw::ResourceID{ TestRetargetInternal::kKnightWalk } ) );
 
     // 하수인의 다리를 1.25 배 — 허벅지 스케일, 골반은 다리 길이의 0.25 만큼 올린다(발이 바닥에 남게).
     Pose minionReference;
@@ -658,9 +658,9 @@ SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
     AnimationClip baked;
     AnimationClip source;
     Skeleton      minion;
-    SW_ASSERT_TRUE( baked.loadFromResource( ::test::makeTempResourceID( outPath ) ) );
-    SW_ASSERT_TRUE( source.loadFromResource( TestRetargetInternal::kKnightWalk ) );
-    SW_ASSERT_TRUE( minion.loadFromResource( TestRetargetInternal::kMinionSkeleton ) );
+    SW_ASSERT_TRUE( baked.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( outPath ) } ) );
+    SW_ASSERT_TRUE( source.loadFromResource( sw::ResourceID{ TestRetargetInternal::kKnightWalk } ) );
+    SW_ASSERT_TRUE( minion.loadFromResource( sw::ResourceID{ TestRetargetInternal::kMinionSkeleton } ) );
     SW_EXPECT_NEAR_EQUAL( source.getDuration(), baked.getDuration(), 1e-3f );
     SW_ASSERT_EQUAL( minion.getBoneCount(), baked.getTrackCount() );
     SW_EXPECT_TRUE( baked.getTrackNames()[1] == minion.getBone( 1 )._name );

@@ -15,6 +15,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -99,7 +100,7 @@ namespace sw
         vector<PhysicsMaterialDef> _listMaterial;
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromResource( string_view resourcePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
         /** @brief 레이어 · 재질이 하나 이상인지, 이름이 겹치지 않는지, 레이어가 32 개 이하인지, 충돌 목록의 이름이 모두 존재하는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */

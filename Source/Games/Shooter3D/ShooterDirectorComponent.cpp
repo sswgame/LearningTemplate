@@ -387,7 +387,7 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        if ( _profile.loadFromResource( _pacingProfile ) == false || _table.loadFromResource( _spawnTable ) == false )
+        if ( _profile.loadFromResource( ResourceID{ _pacingProfile } ) == false || _table.loadFromResource( ResourceID{ _spawnTable } ) == false )
         {
             SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no enemies will come", _pacingProfile.c_str(), _spawnTable.c_str() );
             return;

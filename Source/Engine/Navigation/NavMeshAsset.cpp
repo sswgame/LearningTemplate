@@ -150,10 +150,11 @@ namespace sw
         return true;
     }
 
-    bool NavMeshAsset::loadFromResource( string_view resourcePath )
+    bool NavMeshAsset::loadFromResource( const ResourceID& resourceID )
     {
-        vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ resourcePath }, bytes ) == false )
+        const string_view resourcePath = resourceID.view();
+        vector<uint8>     bytes;
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
             return false;
         return readBytes( bytes.data(), bytes.size(), resourcePath );
     }

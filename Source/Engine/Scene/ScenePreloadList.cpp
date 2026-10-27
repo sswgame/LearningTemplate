@@ -87,7 +87,7 @@ namespace sw
     {
         outListPath.clear();
         JSONDocument document;
-        if ( document.loadResource( listResourceID ) == false )
+        if ( document.loadResource( ResourceID{ listResourceID } ) == false )
         {
             SW_LOG_ERROR( "Scene preload list '%#' could not be read: %#", listResourceID, document.getLastError().c_str() );
             return false;

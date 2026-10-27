@@ -26,6 +26,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -95,7 +96,7 @@ namespace sw
             }
             getCacheStats().recordMiss();
             unique_ptr<TableType> table = make_unique<TableType>();
-            if ( table->loadFromResource( path ) == false )
+            if ( table->loadFromResource( ResourceID{ path } ) == false )
                 table.reset();
             const TableType* pTable = table.get();
             _mapTable[key]          = std::move( table );
@@ -124,7 +125,7 @@ namespace sw
                     return; // 아무도 읽지 않았으므로 다음 `find` 가 새 내용을 읽는다.
             }
             unique_ptr<TableType> fresh = make_unique<TableType>();
-            if ( fresh->loadFromResource( relativePath ) == false )
+            if ( fresh->loadFromResource( ResourceID{ relativePath } ) == false )
             {
                 SW_LOG_ERROR( "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
                 return;

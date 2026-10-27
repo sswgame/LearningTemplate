@@ -151,13 +151,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool BodyShapeSet::loadFromResource( string_view path )
+    bool BodyShapeSet::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         _listAxis.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "BodyShapeSet", root ) )
+        if ( reader.loadRoot( document, resourceID, "BodyShapeSet", root ) )
             readRoot( root, reader );
         return reader.finish();
     }

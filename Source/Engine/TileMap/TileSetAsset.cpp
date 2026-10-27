@@ -80,10 +80,11 @@ namespace sw
         return _listFrameCell[static_cast<size_t>( index )];
     }
 
-    bool TileSetAsset::loadFromResource( string_view path )
+    bool TileSetAsset::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Tile set '%#' not found", path );
             return false;

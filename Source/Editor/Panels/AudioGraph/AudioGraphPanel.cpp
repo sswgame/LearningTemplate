@@ -73,7 +73,7 @@ namespace sw::editor
         const string_view path{ _pathInput.c_str() };
         _selectedNode      = -1;
         _pendingPlacedNode = -1;
-        if ( _editGraph.loadFromResource( path ) == false )
+        if ( _editGraph.loadFromResource( ResourceID{ path } ) == false )
         {
             _editGraph = AudioGraphDef{};
             _editPath  = hashed_string{};

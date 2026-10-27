@@ -24,7 +24,7 @@ namespace
         {
             static sw::CultureTable s_table;
             if ( s_table.getCultureCount() == 0 )
-                (void)s_table.loadFromResource( LocalizationTestUtil::kCultureTable ); // 실패는 로더가 오류로 남기고, 빈 표는 문화권을 찾는 단언이 드러낸다
+                (void)s_table.loadFromResource( sw::ResourceID{ LocalizationTestUtil::kCultureTable } ); // 실패는 로더가 오류로 남기고, 빈 표는 문화권을 찾는 단언이 드러낸다
             return s_table;
         }
 

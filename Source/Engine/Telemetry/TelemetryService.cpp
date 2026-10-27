@@ -349,7 +349,7 @@ namespace sw
     bool TelemetryService::loadSchema( string_view path )
     {
         ScopedLock<mutex> lock{ _mutex };
-        const bool        bLoaded = _schema.loadFromResource( path );
+        const bool        bLoaded = _schema.loadFromResource( ResourceID{ path } );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }

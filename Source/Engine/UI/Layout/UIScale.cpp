@@ -26,9 +26,10 @@ namespace sw
 
 namespace sw
 {
-    bool UIScaleSettings::loadFromResource( string_view resourcePath )
+    bool UIScaleSettings::loadFromResource( const ResourceID& resourceID )
     {
-        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        const string_view resourcePath = resourceID.view();
+        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[UI] UI scale settings could not be read or hold unknown keys: %#", resourcePath );
             return false;

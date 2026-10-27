@@ -352,7 +352,7 @@ namespace sw::editor
         {
             // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓴다 — 실패 표시를 남긴다.
             _bPresetTableAttempted = true;
-            _bPresetTableFailed    = _presetTable.loadFromResource( editor::getSubsystem<const EngineDefaultAssets>()._netEmulationPresets.get() ) == false;
+            _bPresetTableFailed    = _presetTable.loadFromResource( ResourceID{ editor::getSubsystem<const EngineDefaultAssets>()._netEmulationPresets.get() } ) == false;
         }
         if ( _bPresetTableFailed )
             ImGui::TextDisabled( "Network presets could not be read - see the log" );

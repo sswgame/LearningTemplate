@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/CharacterIssue.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -40,7 +41,7 @@ namespace sw
          */
         [[nodiscard]] bool parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot );
         /** @brief 리소스 경로(또는 절대 경로)의 문서를 읽고 루트 원소를 찾습니다. */
-        [[nodiscard]] bool loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot );
+        [[nodiscard]] bool loadRoot( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot );
 
         /**
          * @brief 오류 하나를 남깁니다. 원소 이름을 앞에 붙입니다. id 없는 형태는 없다 — 오류 종류마다 id 를 정한다.

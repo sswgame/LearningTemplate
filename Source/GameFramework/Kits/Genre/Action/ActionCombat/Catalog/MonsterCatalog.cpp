@@ -24,10 +24,11 @@ namespace sw
         clear();
     }
 
-    bool MonsterCatalog::loadFromResource( string_view assetRelativePath )
+    bool MonsterCatalog::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view assetRelativePath = resourceID.view();
         clear();
-        if ( XMLCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
+        if ( XMLCatalog<MonsterCatalog>::loadFromResource( resourceID ) )
             return true;
         // 파일이나 루트가 없거나 `<Monster>` 가 하나도 없는 경우다(읽는 쪽이 이미 원인을 알렸다). 코드 폴백 없이 빈 카탈로그로 둔다.
         SW_LOG_ERROR( "%# gave no monster definitions - the monster catalog stays empty", assetRelativePath );

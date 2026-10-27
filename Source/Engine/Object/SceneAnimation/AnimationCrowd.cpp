@@ -68,10 +68,11 @@ namespace sw
         return false;
     }
 
-    bool AnimationCrowdSettings::loadFromResource( string_view path )
+    bool AnimationCrowdSettings::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#' could not be read", path );
             *this = AnimationCrowdSettings{};
@@ -418,7 +419,7 @@ namespace sw
         entry._bAnchorRootMotion        = anchor;
         const string cookedPath         = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
         bool         bReady             = false;
-        const bool   bCookedBinaryFound = cookedPath.empty() == false && ResourceIO::hasResource( ResourceID{ cookedPath } ) && animation->loadFromResource( cookedPath );
+        const bool   bCookedBinaryFound = cookedPath.empty() == false && ResourceIO::hasResource( ResourceID{ cookedPath } ) && animation->loadFromResource( ResourceID{ cookedPath } );
         if ( bCookedBinaryFound )
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.

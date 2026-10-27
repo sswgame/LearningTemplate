@@ -11,6 +11,7 @@
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -75,12 +76,12 @@ namespace sw
         Texture2D& operator=( const Texture2D& ) = delete;
 
         /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 업로드합니다(`readImage` 다음 `loadFromImage`). */
-        [[nodiscard]] bool loadFromResource( IRHIDevice* pDevice, string_view relativePath );
+        [[nodiscard]] bool loadFromResource( IRHIDevice* pDevice, const ResourceID& resourceID );
         /**
          * @brief 리소스의 DDS 를 읽고 이 엔진이 올릴 수 있는 형식인지 확인합니다. 디바이스를 쓰지 않으므로 어느 스레드에서든 부릅니다(비동기 로드의 워커 단계).
          * @return 읽지 못했거나 포맷 · 차원이 맞지 않으면 오류를 남기고 false 를 반환합니다.
          */
-        [[nodiscard]] static bool readImage( string_view relativePath, DDSImageData& outImage );
+        [[nodiscard]] static bool readImage( const ResourceID& resourceID, DDSImageData& outImage );
         /**
          * @brief `readImage` 가 읽은 이미지를 GPU 에 업로드합니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다).
          * @param residency `StreamingBase` 면 아래쪽 밉만 업로드합니다 — 위쪽 밉은 `upgradeResidency` 가 같은 이미지로 뒤에 업로드합니다(`isFullyResident`).

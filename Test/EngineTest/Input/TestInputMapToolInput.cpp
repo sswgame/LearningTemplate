@@ -123,7 +123,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
                                                                       "</InputMap>",
                                                                       mapID ) );
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( mapID ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ mapID } ) );
     const sw::ActionBinding* pBinding = inputMap.getBinding( "Palette", 0 );
     SW_ASSERT_TRUE( pBinding != nullptr );
     SW_EXPECT_TRUE( pBinding->_kind == sw::BindingKind::Shortcut );
@@ -133,7 +133,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
     const sw::string savedPath = test::makeTempPath( "shortcut.saved.input.xml" );
     SW_ASSERT_TRUE( inputMap.saveToResource( savedPath ) );
     sw::InputMap reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromResource( test::makeTempResourceID( savedPath ) ) );
+    SW_ASSERT_TRUE( reloaded.loadFromResource( sw::ResourceID{ test::makeTempResourceID( savedPath ) } ) );
     const sw::ActionBinding* pReloaded = reloaded.getBinding( "Palette", 0 );
     SW_ASSERT_TRUE( pReloaded != nullptr );
     SW_EXPECT_TRUE( pReloaded->_kind == sw::BindingKind::Shortcut );
@@ -144,7 +144,7 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
     SW_ASSERT_TRUE( TestInputMapToolInputInternal::writeTempInputMap( "badmodifier.input.xml",
                                                                       "<InputMap><action name=\"Save\"><bind source=\"key\" modifier=\"Control\" code=\"S\"/></action></InputMap>", badID ) );
     sw::InputMap badMap;
-    SW_EXPECT_FALSE( badMap.loadFromResource( badID ) );
+    SW_EXPECT_FALSE( badMap.loadFromResource( sw::ResourceID{ badID } ) );
 }
 
 /**
@@ -161,7 +161,7 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
                                                  "</InputMap>",
                                                  baseID ) );
     sw::InputMap inputMap;
-    SW_ASSERT_TRUE( inputMap.loadFromResource( baseID ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ baseID } ) );
 
     sw::string addID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "add.input.xml",

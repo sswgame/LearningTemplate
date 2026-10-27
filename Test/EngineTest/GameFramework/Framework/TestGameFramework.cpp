@@ -1856,7 +1856,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
     MonsterCatalog catalog;
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( catalog.loadFromResource( "non_existent_monster.xml" ) );
+        SW_EXPECT_FALSE( catalog.loadFromResource( sw::ResourceID{ "non_existent_monster.xml" } ) );
     }
     SW_EXPECT_TRUE( catalog.getAllMonsters().empty() );
     SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\" name=\"Slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
@@ -1956,7 +1956,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is rejected" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           pixelCatalog;
-    SW_ASSERT_TRUE( pixelCatalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( pixelCatalog.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
     SW_EXPECT_NULL( pixelCatalog.findMonster( "bat" ) );
     SW_EXPECT_NOT_NULL( pixelCatalog.findMonster( "rat" ) );
     SW_EXPECT_TRUE_MSG( logCollector.countWithID( "GameData.ValueOutOfRange" ) >= 1u, logCollector.joined().c_str() );
@@ -1986,7 +1986,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
     SW_TEST_DEFENSIVE_SCOPE( "an unknown archetype name is reported" );
     test::ScopedLogCollector logCollector;
     MonsterCatalog           catalog;
-    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
 
     for ( uint32 value = 0; value < kArchetypeCount; ++value )
     {

@@ -9,10 +9,10 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadBenchSceneSettings( const string& resourceID )
+        [[nodiscard]] bool loadBenchSceneSettings( const ResourceID& id )
         {
             BenchSceneSettings settings;
-            return ReflectedXMLFile::loadDesc( resourceID, settings );
+            return ReflectedXMLFile::loadDesc( id, settings );
         }
     } // namespace
 

@@ -65,7 +65,7 @@ SW_TEST_CASE( NetSimLoadTest, DestructionReplicationUnderLoad )
     options._rampUpTicks = static_cast<uint32>( rampUpSeconds * Internal::kTickRate );
     options._tickCount   = static_cast<uint32>( MathUtil::max( 1.0f, durationSeconds ) * Internal::kTickRate );
     NetEmulationPresetTable presetTable;
-    SW_ASSERT_TRUE( presetTable.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
+    SW_ASSERT_TRUE( presetTable.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._netEmulationPresets.get() } ) );
     SW_ASSERT_TRUE_MSG( presetTable.tryGetConditions( network, options._conditions ), string( "unknown SW_LOAD_NETWORK preset " ) + string( network ) );
 
     const ScenarioResult result = runShowcase( document, options );

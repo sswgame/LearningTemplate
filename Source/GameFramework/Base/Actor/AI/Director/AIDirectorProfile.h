@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
@@ -244,7 +245,7 @@ namespace sw
     public:
         AIDirectorProfile();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 

@@ -11,6 +11,7 @@
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -88,8 +89,8 @@ namespace sw
         /** @brief 스킨 없는 정점 배열을 @p path 에 씁니다. */
         [[nodiscard]] static bool saveToFile( string_view path, const vector<RHIVertex>& listVertex );
         /** @brief 리소스 경로(또는 OS 절대 경로)의 `.mesh` 를 읽습니다. 팩 파일과 느슨한 파일 모두 `ResourcePaths` 로 읽습니다. */
-        [[nodiscard]] static bool loadFromResource( string_view path, MeshAssetData& outData );
+        [[nodiscard]] static bool loadFromResource( const ResourceID& resourceID, MeshAssetData& outData );
         /** @brief 정점만 읽습니다(스킨은 버립니다). */
-        [[nodiscard]] static bool loadFromResource( string_view path, vector<RHIVertex>& outListVertex );
+        [[nodiscard]] static bool loadFromResource( const ResourceID& resourceID, vector<RHIVertex>& outListVertex );
     };
 } // namespace sw

@@ -14,6 +14,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -115,7 +116,7 @@ namespace sw
         /** @brief XML 을 읽고 검사합니다. 모르는 속성 · 자식 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 단계가 비지 않았고, `_minScreenSize` 가 줄어드는 순이며, 마지막이 0 인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 화면 크기의 주기 단계입니다. 표가 비었으면 0 입니다. */

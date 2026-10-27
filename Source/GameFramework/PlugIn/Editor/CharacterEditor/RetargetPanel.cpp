@@ -248,7 +248,7 @@ namespace sw::editor
             _status = "New profile - set both skeletons and the root and pelvis pairs, then save";
             return ToolAssetLoadResult::Missing;
         }
-        if ( _profile.loadFromResource( path ) == false )
+        if ( _profile.loadFromResource( ResourceID{ path } ) == false )
         {
             _status = "The retarget profile could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
@@ -285,8 +285,8 @@ namespace sw::editor
 
     void RetargetPanel::reloadPreviewSkeletons()
     {
-        _bPreviewSourceReady = _profile.getSourceSkeletonPath().empty() == false && _previewSource.loadFromResource( _profile.getSourceSkeletonPath() ) ? SW_TRUE : SW_FALSE;
-        _bPreviewTargetReady = _profile.getTargetSkeletonPath().empty() == false && _previewTarget.loadFromResource( _profile.getTargetSkeletonPath() ) ? SW_TRUE : SW_FALSE;
+        _bPreviewSourceReady = _profile.getSourceSkeletonPath().empty() == false && _previewSource.loadFromResource( ResourceID{ _profile.getSourceSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
+        _bPreviewTargetReady = _profile.getTargetSkeletonPath().empty() == false && _previewTarget.loadFromResource( ResourceID{ _profile.getTargetSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
         _bFramePending       = SW_TRUE;
         rebuildPreviewPoses();
     }

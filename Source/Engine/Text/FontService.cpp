@@ -138,7 +138,7 @@ namespace sw
     bool FontService::initialize( string_view catalogPath )
     {
         FontCatalogDesc catalog;
-        if ( catalog.loadFromResource( catalogPath ) == false )
+        if ( catalog.loadFromResource( ResourceID{ catalogPath } ) == false )
             return false;
         if ( gv_fontMsdfGlyphs )
             catalog._glyphField = GlyphFieldKind::Msdf;

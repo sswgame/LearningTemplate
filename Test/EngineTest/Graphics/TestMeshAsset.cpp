@@ -126,7 +126,7 @@ SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
     const sw::string path = test::makeTempPath( "roundtrip.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, listWritten ) );
     sw::vector<sw::RHIVertex> listLoaded;
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( path ), listLoaded ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) }, listLoaded ) );
     SW_EXPECT_EQUAL( listWritten.size(), listLoaded.size() );
 }
 
@@ -588,7 +588,7 @@ SW_TEST_CASE( MeshAssetTest, LODLevelsRoundTripAndFollowLODZero )
     SW_EXPECT_EQUAL( 2u, mesh->selectLOD( 0.05f ) );
     // 물리 셰이프가 읽는 정점만 읽기는 LOD 0 이다.
     sw::vector<sw::RHIVertex> listPhysicsVertex;
-    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( path ), listPhysicsVertex ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) }, listPhysicsVertex ) );
     SW_EXPECT_EQUAL( size_t( 12 ), listPhysicsVertex.size() );
 
     // 정점을 바꾸면 옛 LOD 0 에서 만든 단계는 맞지 않아 떨어진다.

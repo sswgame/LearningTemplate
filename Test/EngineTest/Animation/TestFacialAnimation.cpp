@@ -242,7 +242,7 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     MeshAssetData mesh{};
-    SW_ASSERT_TRUE( MeshAssetFormat::loadFromResource( TestFacialAnimationInternal::kMeshPath, mesh ) );
+    SW_ASSERT_TRUE( MeshAssetFormat::loadFromResource( sw::ResourceID{ TestFacialAnimationInternal::kMeshPath }, mesh ) );
     SW_EXPECT_TRUE( mesh.hasSkin() );
     const utf8* arrName[7] = { "jawOpen", "mouthWide", "mouthRound", "mouthClose", "smile", "blinkLeft", "blinkRight" };
     SW_ASSERT_EQUAL( size_t( 7 ), mesh._listMorphTarget.size() );
@@ -255,12 +255,12 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
     }
 
     Skeleton skeleton;
-    SW_ASSERT_TRUE( skeleton.loadFromResource( TestFacialAnimationInternal::kSkeletonPath ) );
+    SW_ASSERT_TRUE( skeleton.loadFromResource( sw::ResourceID{ TestFacialAnimationInternal::kSkeletonPath } ) );
     SW_EXPECT_TRUE( skeleton.findBoneIndex( hashed_string( "eye.l" ) ) >= 0 );
     SW_EXPECT_TRUE( skeleton.findBoneIndex( hashed_string( "eye.r" ) ) >= 0 );
 
     AnimationClip talk;
-    SW_ASSERT_TRUE( talk.loadFromResource( string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" ) );
+    SW_ASSERT_TRUE( talk.loadFromResource( sw::ResourceID{ string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" } ) );
     const AnimationClipCurve* pJaw = talk.findCurve( hashed_string( "jawOpen" ) );
     SW_ASSERT_NOT_NULL( pJaw );
     float32 maxJaw = 0.0f;
@@ -271,7 +271,7 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
     SW_EXPECT_TRUE( maxJaw > 0.5f );
 
     FacialRig rig;
-    SW_ASSERT_TRUE( rig.loadFromResource( TestFacialAnimationInternal::kRigPath ) );
+    SW_ASSERT_TRUE( rig.loadFromResource( sw::ResourceID{ TestFacialAnimationInternal::kRigPath } ) );
     SW_EXPECT_TRUE( rig.validate( listTargetName, skeleton, "testhead" ) );
 
     test::ScopedDefensiveTestLog expected( "a rig naming a missing morph target fails validation" );
@@ -322,7 +322,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     LipSyncSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ LipSyncSettings::kResourcePath } ) );
 
     vector<float32> listSample;
     TestFacialAnimationInternal::appendSilence( listSample, 0.4f );
@@ -399,7 +399,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncConsonantCuesMarkPlosivesAndFricatives
     using Internal = TestFacialAnimationInternal;
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     LipSyncSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ LipSyncSettings::kResourcePath } ) );
 
     // 0.3 초에 "pa", 1.0 초에 "a", 1.7 초부터 "f" — 각 구간 앞은 무음이다(프레임 9 · 30 의 첫 표본에서 시작).
     vector<float32> listSample;
@@ -471,7 +471,7 @@ SW_TEST_CASE( FacialAnimationTest, SpeechOpensTheMouthFromTrackOrAmplitude )
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
     SW_ASSERT_NOT_NULL( pFace );
     LipSyncSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
+    SW_ASSERT_TRUE( settings.loadFromResource( sw::ResourceID{ LipSyncSettings::kResourcePath } ) );
     pFace->setLipSyncSettings( settings );
     AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
 
@@ -591,7 +591,7 @@ SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     AnimationClip grin;
-    SW_ASSERT_TRUE( grin.loadFromResource( string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" ) );
+    SW_ASSERT_TRUE( grin.loadFromResource( sw::ResourceID{ string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" } ) );
     grin.setName( hashed_string( "Grin" ) );
     AnimationClipCurve happy{};
     happy._name = hashed_string( "Happy" );
@@ -649,7 +649,7 @@ SW_TEST_CASE( FacialAnimationTest, LiveLinkFacePacketsParseAgainstTheDataLayout 
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     LiveLinkFaceLayout layout;
-    SW_ASSERT_TRUE( layout.loadFromResource( TestFacialAnimationInternal::kLiveLinkLayoutPath ) );
+    SW_ASSERT_TRUE( layout.loadFromResource( sw::ResourceID{ TestFacialAnimationInternal::kLiveLinkLayoutPath } ) );
     SW_ASSERT_EQUAL( size_t( 61 ), layout._listChannel.size() );
     const int32 jawOpen = layout.findChannelIndex( hashed_string( "JawOpen" ) );
     SW_ASSERT_TRUE( jawOpen >= 0 );
@@ -702,10 +702,10 @@ SW_TEST_CASE( FacialAnimationTest, AvatarSampleLiveLinkMappingNamesOnlyExpressio
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     FacialRig rig;
-    SW_ASSERT_TRUE( rig.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.facial.xml" ) );
+    SW_ASSERT_TRUE( rig.loadFromResource( sw::ResourceID{ "game/empty/models/avatarsample_d/avatarsample_d.facial.xml" } ) );
     LiveLinkFaceMapping mapping;
     LiveLinkFaceLayout  layout;
-    SW_ASSERT_TRUE( mapping.loadFromResource( "game/empty/data/avatarsample_d.livelinkface.xml", layout ) );
+    SW_ASSERT_TRUE( mapping.loadFromResource( sw::ResourceID{ "game/empty/data/avatarsample_d.livelinkface.xml" }, layout ) );
     SW_EXPECT_FALSE( mapping._listExpression.empty() );
     for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
     {
@@ -743,7 +743,7 @@ SW_TEST_CASE( FacialAnimationTest, LiveLinkFaceComponentDrivesExpressionsFromUDP
     SW_ASSERT_TRUE( pLink->getBoundPort() != 0 );
 
     LiveLinkFaceLayout layout;
-    SW_ASSERT_TRUE( layout.loadFromResource( TestFacialAnimationInternal::kLiveLinkLayoutPath ) );
+    SW_ASSERT_TRUE( layout.loadFromResource( sw::ResourceID{ TestFacialAnimationInternal::kLiveLinkLayoutPath } ) );
     LiveLinkFaceFrame frame;
     frame._subjectName = "iPhone";
     frame._listValue.assign( layout._listChannel.size(), 0.0f );

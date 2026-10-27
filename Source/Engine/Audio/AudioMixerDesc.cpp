@@ -13,10 +13,11 @@ namespace sw
 {
     SW_LOG_CALLER( "AudioMixerDesc" );
 
-    bool AudioMixerDesc::loadFromResource( string_view resourcePath )
+    bool AudioMixerDesc::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
+        const string_view resourcePath = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Audio mixer not found: %#", resourcePath );
             return false;

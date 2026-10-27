@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 
@@ -209,7 +210,7 @@ namespace sw
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 절대 경로나 리소스 경로에서 XML 을 읽어 역직렬화합니다. */
-        [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
+        [[nodiscard]] static bool loadFile( const ResourceID& resourceID, void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         // ------------------------------------------------------------------------------

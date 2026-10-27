@@ -664,7 +664,7 @@ namespace sw
         // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유). 텍스처 객체 해제도 같은 대기에 기댄다.
         pDevice->waitIdle();
         pTexture->releaseRHI( pDevice );
-        if ( pTexture->loadFromResource( pDevice, key ) == false )
+        if ( pTexture->loadFromResource( pDevice, ResourceID{ key } ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
 
         lock.lock();
@@ -929,7 +929,7 @@ namespace sw
         if ( _source != Source::File )
             return true;
         _pImage = make_unique<DDSImageData>();
-        if ( Texture2D::readImage( getPath(), *_pImage ) == false )
+        if ( Texture2D::readImage( ResourceID{ getPath() }, *_pImage ) == false )
         {
             _loadError = "the DDS could not be read or uses a format the engine cannot upload";
             _pImage.reset();

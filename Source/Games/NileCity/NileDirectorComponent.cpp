@@ -279,7 +279,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromResource( _cityDataPath ) == false )
+        if ( _catalog.loadFromResource( ResourceID{ _cityDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;

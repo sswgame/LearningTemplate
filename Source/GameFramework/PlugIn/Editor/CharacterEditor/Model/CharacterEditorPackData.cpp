@@ -60,10 +60,10 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool CharacterEditorPackData::loadFromResource( string_view path )
+    bool CharacterEditorPackData::loadFromResource( const ResourceID& resourceID )
     {
         *this = CharacterEditorPackData{};
-        if ( GameDataXML::loadFile( *this, &CharacterEditorPackData::loadRoot, path, CharacterEditorPackDataInternal::kRootName ) )
+        if ( GameDataXML::loadFile( *this, &CharacterEditorPackData::loadRoot, resourceID, CharacterEditorPackDataInternal::kRootName ) )
             return true;
         *this = CharacterEditorPackData{};
         return false;

@@ -497,7 +497,7 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     InteractionCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromResource( "common/data/interactions/default.interactions.xml" ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ "common/data/interactions/default.interactions.xml" } ) );
     const InteractionDef* pCraft = catalog.findInteraction( "Craft" );
     SW_ASSERT_NOT_NULL( pCraft );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), pCraft->_listStep.size() );

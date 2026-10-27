@@ -972,17 +972,17 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
     SW_ASSERT_TRUE( packManager.mountPack( fullPathPack, 1000 ) );
     SW_ASSERT_TRUE( packManager.mountPack( domainPack, 1000 ) );
 
-    sw::vector<sw::string> listPath;
+    sw::vector<sw::ResourceID> listPath;
     SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".appearance.xml", listPath ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_EQUAL( size_t( 3 ), listPath.size() );
-    SW_EXPECT_EQUAL( folder + "/A.appearance.xml", listPath[0] ); // 이름순은 대소문자를 가리지 않는다
-    SW_EXPECT_EQUAL( folder + "/b.appearance.xml", listPath[1] );
-    SW_EXPECT_EQUAL( folder + "/d.appearance.xml", listPath[2] ); // 도메인 팩 항목은 도메인을 다시 붙여 돌려준다
-    for ( const sw::string& path : listPath )
+    SW_EXPECT_EQUAL( folder + "/A.appearance.xml", listPath[0].str() ); // 이름순은 대소문자를 가리지 않는다
+    SW_EXPECT_EQUAL( folder + "/b.appearance.xml", listPath[1].str() );
+    SW_EXPECT_EQUAL( folder + "/d.appearance.xml", listPath[2].str() ); // 도메인 팩 항목은 도메인을 다시 붙여 돌려준다
+    for ( const sw::ResourceID& path : listPath )
     {
         sw::string text;
-        SW_ASSERT_TRUE_MSG( sw::ResourceIO::readTextResource( sw::ResourceID{ path }, text ), path.c_str() );
-        SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( text, sw::FileUtil::getFileNamePart( path ), true ), text.c_str() ); // 본문은 담을 때의 경로다
+        SW_ASSERT_TRUE_MSG( sw::ResourceIO::readTextResource( path, text ), path.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( text, sw::FileUtil::getFileNamePart( path.view() ), true ), text.c_str() ); // 본문은 담을 때의 경로다
     }
 
     // 거르지 않으면 같은 폴더의 다른 파일도 나오고, 하위 폴더 안은 여전히 빠진다.
@@ -990,7 +990,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
     SW_EXPECT_EQUAL( size_t( 4 ), listPath.size() );
 
     // 같은 입력이면 실행마다 같은 순서다.
-    sw::vector<sw::string> listAgain;
+    sw::vector<sw::ResourceID> listAgain;
     SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, {}, listAgain ) == sw::ResourceFolderListing::Listed );
     SW_EXPECT_TRUE( listAgain == listPath );
 }
@@ -1009,7 +1009,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
     sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     packManager.setAllowLooseFiles( true );
 
-    sw::vector<sw::string> listLoose;
+    sw::vector<sw::ResourceID> listLoose;
     SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".xml", listLoose ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_TRUE( listLoose.empty() == false );
 
@@ -1018,17 +1018,17 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
                                                                    { sw::makeListingEntry( folder + "/zz_packonly.xml" ), sw::makeListingEntry( folder + "/SLOTS.xml" ) } ) );
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
 
-    sw::vector<sw::string> listUnion;
+    sw::vector<sw::ResourceID> listUnion;
     SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".xml", listUnion ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_EQUAL( listLoose.size() + 1, listUnion.size() ); // SLOTS.xml 은 디스크의 slots.xml 과 같은 항목이다
-    SW_EXPECT_EQUAL( folder + "/zz_packonly.xml", listUnion.back() );
+    SW_EXPECT_EQUAL( folder + "/zz_packonly.xml", listUnion.back().str() );
     const sw::string packSpelling  = folder + "/SLOTS.xml";
     const sw::string diskSpelling  = folder + "/slots.xml";
     bool             bDiskSpelling = false;
-    for ( const sw::string& path : listUnion )
+    for ( const sw::ResourceID& path : listUnion )
     {
-        SW_EXPECT_TRUE_MSG( sw::StringUtil::equals( path, packSpelling, false ) == false, "디스크 표기(slots.xml)가 남아야 한다" );
-        bDiskSpelling = bDiskSpelling || sw::StringUtil::equals( path, diskSpelling, false );
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::equals( path.view(), packSpelling, false ) == false, "디스크 표기(slots.xml)가 남아야 한다" );
+        bDiskSpelling = bDiskSpelling || sw::StringUtil::equals( path.view(), diskSpelling, false );
     }
     SW_EXPECT_TRUE( bDiskSpelling );
     for ( size_t index = 1; index < listUnion.size(); ++index )
@@ -1045,12 +1045,12 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesTellsMissingFolderFromFailure )
     const sw::GlobalVfsScope vfsScope;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    sw::vector<sw::string> listPath{ "stale" };
+    sw::vector<sw::ResourceID> listPath{ sw::ResourceID{ "stale" } };
     SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ "game/shooter3d/data/no_such_folder_xyz" }, ".xml", listPath ) == sw::ResourceFolderListing::FolderMissing );
     SW_EXPECT_TRUE( listPath.empty() );
 
     test::ScopedLogSuppressor suppressor;
-    listPath = { "stale" };
+    listPath = { sw::ResourceID{ "stale" } };
     SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ "game/shooter3d/../../escape" }, ".xml", listPath ) == sw::ResourceFolderListing::Failed );
     SW_EXPECT_TRUE( listPath.empty() );
     SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ sw::ResourcePaths::getRootFolderPath() }, {}, listPath ) == sw::ResourceFolderListing::Failed );

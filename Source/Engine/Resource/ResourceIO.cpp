@@ -219,10 +219,10 @@ namespace sw
         return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
     }
 
-    ResourceFolderListing ResourceIO::collectResources( const ResourceID& folderID, string_view extension, vector<string>& outListPath )
+    ResourceFolderListing ResourceIO::collectResources( const ResourceID& folderID, string_view extension, vector<ResourceID>& outListID )
     {
         const string_view relativeFolder = folderID.view();
-        outListPath.clear();
+        outListID.clear();
         const bool bNotResourceID = relativeFolder.empty() || FileUtil::isAbsolutePath( relativeFolder ) || ResourcePaths::hasParentDirectoryComponent( relativeFolder );
         if ( bNotResourceID )
         {
@@ -274,7 +274,7 @@ namespace sw
         for ( size_t index = 0; index < listKeyed.size(); ++index )
         {
             if ( index == 0 || listKeyed[index].first != listKeyed[index - 1].first )
-                outListPath.push_back( std::move( listKeyed[index].second ) );
+                outListID.emplace_back( listKeyed[index].second );
         }
         return ResourceFolderListing::Listed;
     }

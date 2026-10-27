@@ -92,7 +92,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, CommanderTreeFileSurvivesAnEditRound )
     SW_EXPECT_TRUE( listIssue.empty() ); // 키트가 등록한 rts.* 작업을 다 안다
     BehaviorTreeAsset before;
     BehaviorTreeAsset after;
-    SW_ASSERT_TRUE( before.loadFromResource( "game/starskirmish/data/commander.bt.xml" ) );
+    SW_ASSERT_TRUE( before.loadFromResource( sw::ResourceID{ "game/starskirmish/data/commander.bt.xml" } ) );
     SW_ASSERT_TRUE( after.loadFromXMLText( model.write(), "rewritten" ) );
     SW_EXPECT_EQUAL( before.getTree().getNodeCount(), after.getTree().getNodeCount() );
 }

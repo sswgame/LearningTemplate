@@ -148,12 +148,13 @@ namespace sw
         _listStep.push_back( step );
     }
 
-    bool NileCityPlanner::readPlanFile( string_view planPath, vector<NileAutoPlanStep>& outListStep )
+    bool NileCityPlanner::readPlanFile( const ResourceID& resourceID, vector<NileAutoPlanStep>& outListStep )
     {
+        const string_view planPath = resourceID.view();
         outListStep.clear();
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::loadRoot( document, planPath, "NileAutoPlan", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::loadRoot( document, resourceID, "NileAutoPlan", root ) != XMLRootStatus::Found )
         {
             SW_LOG_ERROR( "[Nile] auto plan '%#' could not be read: %#", planPath, document.getLastError().c_str() );
             return false;
@@ -194,7 +195,7 @@ namespace sw
         _skippedCount = 0;
 
         vector<NileAutoPlanStep> listPlanStep;
-        if ( readPlanFile( planPath, listPlanStep ) == false )
+        if ( readPlanFile( ResourceID{ planPath }, listPlanStep ) == false )
             return false;
         // Road 는 from → to 의 곧은 길, Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
         // 인구 임계값은 구역(block)의 시작 인구 + extra 다. 칸의 x 는 수이거나 배치의 이름(road · farm)이다.

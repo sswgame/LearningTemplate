@@ -93,7 +93,7 @@ namespace sw
             [[nodiscard]] static bool loadTrianglePositions( string_view path, vector<float3>& outListPosition )
             {
                 vector<RHIVertex> listVertex;
-                if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+                if ( MeshAssetFormat::loadFromResource( ResourceID{ path }, listVertex ) == false )
                     return false;
                 outListPosition.clear();
                 outListPosition.reserve( listVertex.size() );
@@ -124,7 +124,7 @@ namespace sw
         // 읽기는 잠금 밖에서 한다(파일 IO). 다른 길(`reloadShared` 뒤의 새 요청)이 먼저 넣었으면 그것을 받는다.
         MeshAssetData  data{};
         AssetLoadScope loadScope( "Mesh", path );
-        bool           bLoaded = MeshAssetFormat::loadFromResource( path, data );
+        bool           bLoaded = MeshAssetFormat::loadFromResource( ResourceID{ path }, data );
         if ( bLoaded )
         {
             loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
@@ -227,7 +227,7 @@ namespace sw
 
         // 읽기에 실패하면 이전 정점을 유지한다. 저장 중이라 반쯤 쓰인 파일을 읽은 경우이며, 다음 감시 이벤트가 다시 읽는다.
         MeshAssetData data{};
-        if ( MeshAssetFormat::loadFromResource( path, data ) == false )
+        if ( MeshAssetFormat::loadFromResource( ResourceID{ path }, data ) == false )
         {
             SW_LOG_ERROR( "Hot-Reload failed for Mesh %#", path );
             return false;

@@ -1864,7 +1864,7 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
         }
 
         sw::PrefabAsset prefab;
-        SW_EXPECT_TRUE( prefab.loadFromXMLFile( ::test::makeTempResourceID( prefabPath ) ) );
+        SW_EXPECT_TRUE( prefab.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( prefabPath ) } ) );
     }
     SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
 }

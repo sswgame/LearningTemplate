@@ -97,10 +97,11 @@ namespace sw
         }
     } // namespace
 
-    bool AudioGraphDef::loadFromResource( string_view resourcePath )
+    bool AudioGraphDef::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
+        const string_view resourcePath = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Audio graph not found: %#", resourcePath );
             return false;

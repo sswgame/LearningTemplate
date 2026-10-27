@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -148,7 +149,7 @@ namespace sw
     public:
         RhythmChart();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 박의 음악 시각(초)을 반환합니다. 박 0 보다 앞은 첫 BPM 으로 늘려서 계산합니다. */

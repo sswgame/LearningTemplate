@@ -16,6 +16,7 @@
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -23,10 +24,13 @@ namespace sw
     struct ObjectIdentity;
     struct PrefabPartOverride;
 
+    class AssetLoadScope;
     class CookStore;
     class GameObject;
     class GameObjectManager;
+    class JSONDocument;
     class PrefabCache;
+    class XMLDocument;
 
     /// @brief 프리팹 상태 본문의 형식입니다. 읽을 때 한 번 정하고, 상태를 쓰는 쪽은 이 값을 봅니다(본문 첫 글자로 다시 짐작하지 않습니다).
     enum class PrefabStateFormat : uint8
@@ -82,9 +86,9 @@ namespace sw
          * @brief XML 에서 프리팹을 로드합니다(`<Prefab formatVersion="0" name="..."><GameObject …/><PrefabInstance …/></Prefab>`. 저장하는 형태 하나만 받습니다).
          * @details 중첩 인스턴스는 `<PrefabInstance name prefab prefabGuid attach>` 이고 안에 `<PrefabOverrides>` 와 그 인스턴스에 붙는 `<PrefabInstance>` 를 둔다.
          */
-        [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXMLFile( const ResourceID& resourceID );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
-        [[nodiscard]] bool loadFromJSONFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromJSONFile( const ResourceID& resourceID );
         /**
          * @brief **디스크 파일**에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
@@ -145,17 +149,14 @@ namespace sw
         bool hasResolvedNestedInstances() const;
 
     private:
-        /** @brief 원본 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
-        enum class ReadSource : uint8
-        {
-            Resource,
-            DiskFile,
-        };
-
-        /** @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)의 본문입니다. */
-        [[nodiscard]] bool loadFromXMLSource( string_view path, ReadSource source );
-        /** @brief JSON 원본 읽기 입구 둘(`loadFromJSONFile` · `loadFromDiskFile`)의 본문입니다. */
-        [[nodiscard]] bool loadFromJSONSource( string_view path, ReadSource source );
+        /**
+         * @brief XML 원본 읽기 입구 둘(`loadFromXMLFile` · `loadFromDiskFile`)이 읽은 문서를 풉니다.
+         * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 `string_view` 가 어느 쪽으로도 흘러간다.
+         * @param bRead 입구의 읽기 결과입니다. @param absPath 로그에 찍는 경로(리소스면 푼 절대 경로)입니다.
+         */
+        [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, AssetLoadScope& loadScope );
+        /** @brief JSON 원본 읽기 입구 둘(`loadFromJSONFile` · `loadFromDiskFile`)이 읽은 문서를 풉니다. */
+        [[nodiscard]] bool readJSONSource( JSONDocument& doc, bool bRead, const string& absPath );
 
         /**
          * @brief 상태를 다른 형식의 텍스트로 옮깁니다(XML ↔ JSON). 매니저가 있는 임시 오브젝트를 거칩니다.

@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
@@ -159,7 +160,7 @@ namespace sw
         ParkLayout();
 
         /** @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 놀이기구가 하나도 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromResource( string_view path, const CoasterLayoutCatalog& layouts );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const CoasterLayoutCatalog& layouts );
         /** @brief XML 문자열에서 읽습니다(테스트와 도구용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
 

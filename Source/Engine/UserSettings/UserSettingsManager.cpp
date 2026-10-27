@@ -105,7 +105,7 @@ namespace sw
     bool UserSettingsManager::loadSchema( string_view resourcePath )
     {
         const UserSettingsSchema backup  = _schema;
-        const bool               bLoaded = _schema.loadFromResource( resourcePath );
+        const bool               bLoaded = _schema.loadFromResource( ResourceID{ resourcePath } );
         if ( appendSchema( bLoaded ) )
             return true;
         _schema = backup;

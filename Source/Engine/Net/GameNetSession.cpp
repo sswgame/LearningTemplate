@@ -155,7 +155,7 @@ namespace sw
                 {
                     NetEmulationPresetTable presetTable;
                     const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
-                    if ( presetTable.loadFromResource( presetPath.get() ) == false )
+                    if ( presetTable.loadFromResource( ResourceID{ presetPath.get() } ) == false )
                     {
                         outReply = string( "net emulation presets could not be read (" ) + presetPath.get() + ")";
                         return true;
@@ -524,7 +524,7 @@ namespace sw
         {
             NetEmulationPresetTable presetTable;
             emulationConditions = NetEmulationConditions{};
-            if ( presetTable.loadFromResource( engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() ) &&
+            if ( presetTable.loadFromResource( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
                  presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
                 SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
         }

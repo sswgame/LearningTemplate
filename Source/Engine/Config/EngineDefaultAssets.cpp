@@ -17,14 +17,15 @@ namespace sw
     unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( string_view assetRelativePath )
     {
         unique_ptr<EngineDefaultAssets> assets = make_unique<EngineDefaultAssets>( ConstructKey{} );
-        if ( assets->loadFromResource( assetRelativePath ) == false )
+        if ( assets->loadFromResource( ResourceID{ assetRelativePath } ) == false )
             return nullptr;
         return assets;
     }
 
-    bool EngineDefaultAssets::loadFromResource( string_view assetRelativePath )
+    bool EngineDefaultAssets::loadFromResource( const ResourceID& resourceID )
     {
-        const string path = assetRelativePath.empty() ? string( path::kEngineDefaultAssets ) : string( assetRelativePath );
+        const string_view assetRelativePath = resourceID.view();
+        const string      path              = assetRelativePath.empty() ? string( path::kEngineDefaultAssets ) : string( assetRelativePath );
 
         // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질
         // 필요가 없고, Engine 내부 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
@@ -36,7 +37,7 @@ namespace sw
         }
 
         // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
-        if ( XMLSerializer::loadFile( path, this, *pTypeInfo ) == false )
+        if ( XMLSerializer::loadFile( ResourceID{ path }, this, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR( "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
             return false;

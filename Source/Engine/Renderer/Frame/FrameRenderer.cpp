@@ -323,7 +323,7 @@ namespace sw
         _graph.clear();
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXMLFile( pipelineXMLPath ) == false )
+        if ( _pipelineResource.loadFromXMLFile( ResourceID{ pipelineXMLPath } ) == false )
         {
             _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;

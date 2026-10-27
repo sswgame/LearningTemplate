@@ -66,10 +66,11 @@ namespace sw
         return true;
     }
 
-    bool LayerWeightsData::loadFromResource( string_view resourceID )
+    bool LayerWeightsData::loadFromResource( const ResourceID& id )
     {
-        vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ resourceID }, bytes ) == false )
+        const string_view resourceID = id.view();
+        vector<uint8>     bytes;
+        if ( ResourceIO::readBinaryResource( id, bytes ) == false )
         {
             SW_LOG_ERROR( "Layer weight map '%#' could not be read", resourceID );
             return false;

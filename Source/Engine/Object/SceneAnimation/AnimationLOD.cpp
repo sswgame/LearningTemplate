@@ -26,10 +26,11 @@ namespace sw
         return false;
     }
 
-    bool AnimationLODSettings::loadFromResource( string_view path )
+    bool AnimationLODSettings::loadFromResource( const ResourceID& resourceID )
     {
-        string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        const string_view path = resourceID.view();
+        string            text;
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
             *this = AnimationLODSettings{};

@@ -1236,8 +1236,9 @@ namespace sw
 
 namespace sw
 {
-    bool InputMap::loadFromResource( string_view relativePath )
+    bool InputMap::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view relativePath = resourceID.view();
         return loadDefinition( relativePath, false );
     }
 
@@ -1251,7 +1252,7 @@ namespace sw
         using InputMapXML = InputMapSerializationInternal::InputMapXML;
         XMLDocument doc;
         string      absPath;
-        if ( doc.loadResource( relativePath, &absPath ) == false )
+        if ( doc.loadResource( ResourceID{ relativePath }, &absPath ) == false )
         {
             SW_LOG_WARNING( "Failed to load InputMap %#", relativePath );
             return false;

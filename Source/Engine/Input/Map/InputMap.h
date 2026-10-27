@@ -21,6 +21,7 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputActionBuffer.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -371,7 +372,7 @@ namespace sw
         /** @brief 액션, 레이어, 바인딩을 모두 비웁니다. */
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
-        [[nodiscard]] bool loadFromResource( string_view relativePath );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /**
          * @brief 이미 읽은 맵에 다른 InputMap XML 의 레이어와 액션을 더합니다(확장 모듈 · 게임 모드가 기본 맵에 액션을 보탠다).
          * @details 더하는 파일은 맵 전체 값(`defaultLayer` · 시간 · 거리 · `virtualCursor`)을 적지 않는다 — 그것은 기본 맵의 것이다.

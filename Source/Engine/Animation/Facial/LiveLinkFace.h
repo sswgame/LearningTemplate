@@ -16,6 +16,7 @@
 
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -35,7 +36,7 @@ namespace sw
 
         /** @brief XML 을 읽고 검사합니다(채널이 비었거나 겹치면 오류). 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
-        [[nodiscard]] bool loadFromResource( string_view path );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
         /** @brief 채널 번호입니다. 없으면 -1 입니다. */
         int32 findChannelIndex( const hashed_string& channel ) const;
     };
@@ -92,7 +93,7 @@ namespace sw
          * @return 틀리면 오류를 남기고 false 이며, 연결 표는 기본값으로 돌아갑니다(쓰는 쪽은 둘 다 버린다).
          */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel, LiveLinkFaceLayout& outLayout );
-        [[nodiscard]] bool loadFromResource( string_view path, LiveLinkFaceLayout& outLayout );
+        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, LiveLinkFaceLayout& outLayout );
     };
 } // namespace sw
 

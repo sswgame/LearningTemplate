@@ -25,7 +25,7 @@ namespace sw
     {
         EngineDefaultAssets& defaultAssets = *_defaultAssets;
         // 셰이더 · 파이프라인 경로는 데이터에만 있다 — 못 읽으면 대신 쓸 값이 없으므로 기동을 멈춘다(이유는 loadFromResource 가 남긴다).
-        if ( defaultAssets.loadFromResource( path::kEngineDefaultAssets ) == false )
+        if ( defaultAssets.loadFromResource( ResourceID{ path::kEngineDefaultAssets } ) == false )
         {
             SW_LOG_ERROR( "Engine default assets could not be read - stopping startup" );
             return SubsystemInitResult::Failed;

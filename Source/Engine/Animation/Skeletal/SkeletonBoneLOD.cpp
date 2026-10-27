@@ -50,11 +50,12 @@ namespace sw
         return false;
     }
 
-    bool SkeletonBoneLOD::loadFromResource( string_view path )
+    bool SkeletonBoneLOD::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Animation );
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
+        if ( ResourceIO::readTextResource( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#' could not be read", path );
             _listLevel.clear();

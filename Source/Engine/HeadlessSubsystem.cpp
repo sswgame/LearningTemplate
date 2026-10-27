@@ -364,7 +364,7 @@ namespace sw
                 }
                 SW_LOG_INFO( "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
                 AnimationCrowdSettings crowdSettings{};
-                const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+                const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( ResourceID{ AnimationCrowdSettings::kResourcePath } );
                 const CookStore        cookStore            = CookStore::makeLocal();
                 // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
                 const CookSession cookSession;
@@ -389,7 +389,7 @@ namespace sw
                 LipSyncSettings         lipSyncSettings{};
                 uint32                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-                if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
+                if ( lipSyncSettings.loadFromResource( ResourceID{ LipSyncSettings::kResourcePath } ) )
                     lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;

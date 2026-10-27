@@ -631,7 +631,7 @@ SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
     };
     UIStyleFixture     fixture;
     sw::UIThemeCatalog catalog{};
-    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::getEngineDefaultAssets()._uiThemes.c_str() ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._uiThemes.c_str() } ) );
     SW_ASSERT_NOT_NULL( catalog.findTheme( "highcontrast" ) );
     fixture._ui.setThemeCatalog( catalog );
     SW_EXPECT_TRUE( fixture._ui.setTheme( "highcontrast" ) );
@@ -670,7 +670,7 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
     SW_ASSERT_NOT_NULL( pSetting );
     const sw::string   previous = pSetting->getValueAsString();
     sw::UIThemeCatalog catalog{};
-    SW_ASSERT_TRUE( catalog.loadFromResource( ::test::getEngineDefaultAssets()._uiThemes.c_str() ) );
+    SW_ASSERT_TRUE( catalog.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._uiThemes.c_str() } ) );
     {
         SW_EXPECT_TRUE( pSetting->setValueAsString( "highcontrast" ) );
         UIStyleFixture fixture;

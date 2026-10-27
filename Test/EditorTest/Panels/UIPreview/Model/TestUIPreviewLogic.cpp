@@ -58,7 +58,7 @@ SW_TEST_CASE( UIPreviewLogicTest, ResolutionPresetMakesScaledViewport )
 
     // 패널의 견본은 데이터 표다 — 읽히고, 모든 줄이 이름과 양의 크기를 가진다.
     sw::UIResolutionPresetTable table;
-    SW_ASSERT_TRUE( table.loadFromResource( ::test::getEngineDefaultAssets()._uiResolutionPresets.get() ) );
+    SW_ASSERT_TRUE( table.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._uiResolutionPresets.get() } ) );
     for ( const sw::UIResolutionPreset& resolution : table._listResolution )
     {
         SW_EXPECT_TRUE_MSG( resolution._name.empty() == false && resolution._width > 0u && resolution._height > 0u, resolution._name.c_str() );

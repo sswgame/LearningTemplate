@@ -352,18 +352,18 @@ namespace sw
 
     bool SkirmishDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromResource( _unitDataPath ) == false )
+        if ( _catalog.loadFromResource( ResourceID{ _unitDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
         _unitModelCatalog.clear();
-        if ( _unitModelCatalog.loadFromResource( _unitModelPath ) == false )
+        if ( _unitModelCatalog.loadFromResource( ResourceID{ _unitModelPath } ) == false )
         {
             SW_LOG_ERROR( "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
             return false;
         }
-        if ( _commanderTree.loadFromResource( _commanderTreePath ) == false )
+        if ( _commanderTree.loadFromResource( ResourceID{ _commanderTreePath } ) == false )
         {
             SW_LOG_ERROR( "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
             return false;

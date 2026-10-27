@@ -174,10 +174,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool MeshVertexAnimation::loadFromResource( string_view path )
+    bool MeshVertexAnimation::loadFromResource( const ResourceID& resourceID )
     {
-        vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
+        const string_view path = resourceID.view();
+        vector<uint8>     bytes;
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
         {
             SW_LOG_ERROR( "Vertex animation '%#' could not be read", path );
             *this = MeshVertexAnimation{};

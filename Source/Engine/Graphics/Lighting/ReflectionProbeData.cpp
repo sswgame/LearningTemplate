@@ -239,11 +239,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool ReflectionProbeData::loadFromResource( string_view path, string* pOutError )
+    bool ReflectionProbeData::loadFromResource( const ResourceID& resourceID, string* pOutError )
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
         {
             ReflectionProbeDataInternal::setError( pOutError, "reflection probe file could not be read" );
             return false;

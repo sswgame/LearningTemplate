@@ -125,7 +125,7 @@ namespace sw
             return false;
         }
         TileSetAsset tileSet;
-        if ( tileSet.loadFromResource( map._tileSetPath ) == false )
+        if ( tileSet.loadFromResource( ResourceID{ map._tileSetPath } ) == false )
             return false;
         setTileMapData( map, tileSet );
         return _bLoaded == SW_TRUE;

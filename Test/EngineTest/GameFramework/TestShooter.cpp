@@ -338,7 +338,7 @@ SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ "game/shooter3d/data/shooter.input.xml" } ) );
     const utf8* const arrAction[] = { "Move", "Look", "Fire", "Jump", "Sprint", "Reload", "CycleCamera", "SwitchWeapon", "Weapon1", "Weapon2", "Weapon3" };
     for ( const utf8* pAction : arrAction )
     {
@@ -420,7 +420,7 @@ SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();
-    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ "game/shooter3d/data/shooter.input.xml" } ) );
 
     SceneDocument document;
     SW_ASSERT_TRUE( document.loadXML( "game/shooter3d/maps/arena.scene.xml" ) );

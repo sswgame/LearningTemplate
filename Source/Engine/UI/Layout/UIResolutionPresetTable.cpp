@@ -11,10 +11,11 @@ namespace sw
 
     namespace
     {
-        [[nodiscard]] bool loadTable( const string& resourceID )
+        [[nodiscard]] bool loadTable( const ResourceID& id )
         {
+            const string&           resourceID = id.str();
             UIResolutionPresetTable table;
-            return table.loadFromResource( resourceID );
+            return table.loadFromResource( id );
         }
     } // namespace
 
@@ -24,10 +25,11 @@ namespace sw
 
 namespace sw
 {
-    bool UIResolutionPresetTable::loadFromResource( string_view path )
+    bool UIResolutionPresetTable::loadFromResource( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         _listResolution.clear();
-        bool bOk = ReflectedXMLFile::loadDesc( path, *this );
+        bool bOk = ReflectedXMLFile::loadDesc( resourceID, *this );
         if ( bOk && _listResolution.empty() )
         {
             SW_LOG_ERROR( "%#: no resolutions in <_listResolution>", path );

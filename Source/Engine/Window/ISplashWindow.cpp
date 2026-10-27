@@ -106,7 +106,7 @@ namespace sw
 
     bool ISplashWindow::loadSplashImage()
     {
-        if ( DDSLoader::loadFromResource( "textures/splash.dds", _splashData ) == false || _splashData.isValid() == false )
+        if ( DDSLoader::loadFromResource( ResourceID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
             return false;
 
         // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에

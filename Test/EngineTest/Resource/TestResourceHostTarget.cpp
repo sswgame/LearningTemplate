@@ -45,7 +45,7 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
     SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kShaderBinaryPath }, bytes ) );
     SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kPipelinePath }, bytes ) );
     sw::DDSImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
-    SW_EXPECT_FALSE( sw::DDSLoader::loadFromResource( kTexturePath, image ) );
+    SW_EXPECT_FALSE( sw::DDSLoader::loadFromResource( sw::ResourceID{ kTexturePath }, image ) );
     SW_EXPECT_TRUE_MSG( logCollector.joined().empty(), logCollector.joined().c_str() );
 }
 

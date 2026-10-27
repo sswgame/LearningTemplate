@@ -61,7 +61,7 @@ SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )
     SW_EXPECT_TRUE( passRes.saveToXMLFile( testPath ) );
 
     sw::RenderPassAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( testPath ) } ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
     SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachment[0]._name );
@@ -133,7 +133,7 @@ SW_TEST_CASE( RenderPassTest, PipelineXMLSerializationRoundtrip )
     SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( testPath ) } ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
@@ -163,7 +163,7 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 )" ) );
 
     sw::RenderPipelineAsset loaded;
-    SW_EXPECT_FALSE( loaded.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
+    SW_EXPECT_FALSE( loaded.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( testPath ) } ) );
 }
 
 // ------------------------------------------------------------------------------
@@ -400,7 +400,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
     for ( std::string_view path : arrPipeline )
     {
         sw::RenderPipelineAsset res;
-        SW_ASSERT_TRUE( res.loadFromXMLFile( path ) );
+        SW_ASSERT_TRUE( res.loadFromXMLFile( sw::ResourceID{ path } ) );
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
@@ -456,7 +456,7 @@ SW_TEST_CASE( RenderPassTest, UpscaleViewExtentFloorsAndCentersTheEnlargedImage 
 SW_TEST_CASE( RenderPassTest, DeferredBloomBrightIsComputedAtHalfResolution )
 {
     sw::RenderPipelineAsset res;
-    SW_ASSERT_TRUE( res.loadFromXMLFile( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
+    SW_ASSERT_TRUE( res.loadFromXMLFile( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() } ) );
     SW_EXPECT_EQUAL( 0u, res.validate( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
 
     const sw::RenderPassAttachment* pBright = nullptr;
@@ -628,7 +628,7 @@ SW_TEST_CASE( RenderPassTest, TonemapPassIsTonemapOrPostChainPresent )
     for ( const utf8* pPath : arrPipeline )
     {
         sw::RenderPipelineAsset pipeline;
-        SW_ASSERT_TRUE_MSG( pipeline.loadFromXMLFile( pPath ), pPath );
+        SW_ASSERT_TRUE_MSG( pipeline.loadFromXMLFile( sw::ResourceID{ pPath } ), pPath );
         uint32 tonemapCount = 0;
         for ( const sw::RenderGraphPassDesc& pass : pipeline.getGraphPass() )
         {
@@ -1147,7 +1147,7 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( testPath ) } ) );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
 
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
@@ -1209,7 +1209,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
     // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( sw::ResourceID{ ::test::makeTempResourceID( testPath ) } ) );
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
     SW_EXPECT_TRUE( loadedPass._geometryEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._hullEntryPoint.empty() );
@@ -1531,7 +1531,7 @@ SW_TEST_CASE( RenderPassTest, EngineGraphicsPipelinesEndWithCanvas )
     for ( std::string_view path : arrPipeline )
     {
         sw::RenderPipelineAsset res;
-        SW_ASSERT_TRUE( res.loadFromXMLFile( path ) );
+        SW_ASSERT_TRUE( res.loadFromXMLFile( sw::ResourceID{ path } ) );
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         const sw::RenderGraphPassDesc* pLastWriter = nullptr;
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )

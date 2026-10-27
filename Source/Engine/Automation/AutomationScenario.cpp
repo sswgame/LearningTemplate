@@ -270,7 +270,7 @@ namespace sw
     bool AutomationScenario::loadFromPath( string_view path, string& outError )
     {
         XMLDocument doc;
-        if ( doc.loadResource( path ) == false )
+        if ( doc.loadResource( ResourceID{ path } ) == false )
         {
             // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 `[scenario]` 로 붙는다.
             const bool bReadable = ResourceIO::hasResource( ResourceID{ path } );
@@ -544,7 +544,7 @@ namespace sw
             {
                 NetEmulationPresetTable presetTable;
                 const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
-                if ( presetTable.loadFromResource( presetPath.get() ) == false )
+                if ( presetTable.loadFromResource( ResourceID{ presetPath.get() } ) == false )
                 {
                     outReason = string( "network presets could not be read (" ) + presetPath.get() + ")";
                     return false;

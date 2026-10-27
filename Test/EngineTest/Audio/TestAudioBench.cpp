@@ -39,7 +39,7 @@ namespace
         [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine, uint32 realVoiceCount )
         {
             sw::AudioMixerDesc mixerDesc;
-            if ( mixerDesc.loadFromResource( "engine/audio/default.audiomixer.xml" ) == false )
+            if ( mixerDesc.loadFromResource( sw::ResourceID{ "engine/audio/default.audiomixer.xml" } ) == false )
                 return false;
             mixerDesc._maxRealVoiceCount = realVoiceCount;
             mixerDesc._maxVoiceCount     = 1024;

@@ -322,7 +322,7 @@ namespace sw
             return false;
         // 배치 값과 튜닝 값의 원본은 데이터입니다. 읽지 못해도 코드에 있는 값으로 대신 만들지 않습니다. 대신 만들면 기준 이미지와 다른 이미지가 나옵니다.
         _settings = BenchSceneSettings{};
-        if ( ReflectedXMLFile::loadDesc( kBenchSettingsPath, _settings ) == false )
+        if ( ReflectedXMLFile::loadDesc( ResourceID{ kBenchSettingsPath }, _settings ) == false )
         {
             SW_LOG_ERROR( "[Bench] Failed to read %#, not setting up the bench.", kBenchSettingsPath );
             return false;

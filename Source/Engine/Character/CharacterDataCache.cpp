@@ -26,7 +26,7 @@ namespace sw
 
             [[nodiscard]] static bool loadDefaultKinds( SocketKindTable& outKinds )
             {
-                if ( outKinds.loadFromResource( kDefaultSocketKindPath ) )
+                if ( outKinds.loadFromResource( ResourceID{ kDefaultSocketKindPath } ) )
                     return true;
                 SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - no socket asset is handed out", kDefaultSocketKindPath );
                 return false;
@@ -55,7 +55,7 @@ namespace sw
         [[nodiscard]] static bool load( string_view path, SocketSet& outSocketSet )
         {
             const SocketKindTable* pKinds = CharacterDataCacheInternal::findDefaultKinds();
-            return pKinds != nullptr && outSocketSet.loadFromResource( path, *pKinds );
+            return pKinds != nullptr && outSocketSet.loadFromResource( ResourceID{ path }, *pKinds );
         }
     };
 } // namespace sw
@@ -69,7 +69,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
+        [[nodiscard]] static bool load( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( ResourceID{ path }, AnimationNotifyHandlerRegistry::getDefault() ); }
     };
 } // namespace sw
 
@@ -83,7 +83,7 @@ namespace sw
         /** @brief 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. */
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
 
-        [[nodiscard]] static bool load( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, PairedAnimationDef& outDef ) { return outDef.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -96,7 +96,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Physics;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -113,7 +113,7 @@ namespace sw
         [[nodiscard]] static bool load( string_view path, FitTables& outTables )
         {
             const FitSolver solver;
-            return outTables.loadFromResource( path, solver.getOperatorRegistry() );
+            return outTables.loadFromResource( ResourceID{ path }, solver.getOperatorRegistry() );
         }
     };
 } // namespace sw
@@ -127,7 +127,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, FitPartData& outData ) { return outData.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, FitPartData& outData ) { return outData.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 
@@ -140,7 +140,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( string_view path, BodyShapeSet& outShapes ) { return outShapes.loadFromResource( path ); }
+        [[nodiscard]] static bool load( string_view path, BodyShapeSet& outShapes ) { return outShapes.loadFromResource( ResourceID{ path } ); }
     };
 } // namespace sw
 

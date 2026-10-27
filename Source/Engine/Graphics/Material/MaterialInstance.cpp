@@ -196,7 +196,7 @@ namespace sw
     bool MaterialInstance::loadFromFile( string_view assetRelativePath )
     {
         XMLDocument doc;
-        if ( doc.loadResource( assetRelativePath ) == false )
+        if ( doc.loadResource( ResourceID{ assetRelativePath } ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
