@@ -286,8 +286,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioMixerPanel, AudioMixerPanel::kPanelID, EditorPanelCategory::Tool, 2100 );
-    SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer",
-                       {}, &AudioMixerPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window" );
+    SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer", nullptr, &AudioMixerPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window", None, 0 );
 
     SW_AUTOMATION_PROBE( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
     SW_AUTOMATION_PROBE( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );

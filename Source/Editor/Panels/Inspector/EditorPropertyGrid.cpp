@@ -16,6 +16,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -242,7 +243,7 @@ namespace sw::editor
         // 켜져 있으면 강조색으로 그려 거른 상태임을 알린다. 꺼진 줄 모르고 프로퍼티가 사라졌다고 여기지 않게 한다.
         if ( EditorWidgets::drawToggleIconButton( "##inspectorViewOptions", _bShowModifiedOnly, editoricon::kFilter, editoricon::kFilter,
                                                   SW_LOCKEY( "EditorInspector", "ViewOptions" ), SW_LOCKEY( "EditorInspector", "ViewOptions" ) ) )
-            ImGui::OpenPopup( "InspectorViewOptions" );
+            EditorInputGUI::openPopup( "InspectorViewOptions" );
         EditorSelfTestMarks::note( "inspector.viewOptions" );
         if ( ImGui::BeginPopup( "InspectorViewOptions" ) )
         {
@@ -524,7 +525,7 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawPropertyRowMenu( const MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, const ObjectAddress defaultInstance )
     {
-        if ( ImGui::BeginPopupContextItem( "PropCtx" ) == false )
+        if ( EditorInputGUI::beginItemContextMenu( "PropCtx" ) == false )
             return;
 
         // 언리얼 Details 의 행 메뉴 Add to Favorites · Remove from Favorites 에 해당한다. 바꾸면 바로 저장한다.

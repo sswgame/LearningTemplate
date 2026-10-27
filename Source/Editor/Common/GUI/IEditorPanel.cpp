@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
 #include <imgui.h>
@@ -47,7 +48,7 @@ namespace sw::editor
         constexpr const utf8* kPopupID = "##UnsavedPanelClose";
         ImGui::PushID( this ); // 확인이 여러 패널에 동시에 걸릴 수 있다(최대화 · 레이아웃 불러오기)
         if ( ImGui::IsPopupOpen( kPopupID ) == false )
-            ImGui::OpenPopup( kPopupID );
+            EditorInputGUI::openPopup( kPopupID );
         applyCloseChoice( EditorWidgets::drawUnsavedChangesModal( kPopupID, "This document has unsaved changes. Close anyway?" ) );
         ImGui::PopID();
     }

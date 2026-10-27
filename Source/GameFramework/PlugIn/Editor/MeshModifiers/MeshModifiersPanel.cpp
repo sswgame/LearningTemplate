@@ -14,6 +14,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -513,7 +514,7 @@ namespace sw::editor
         const bool bOpenMenu  = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
         MeshModifiersPanelInternal::noteMark( pMarkPrefix, "add" );
         if ( bOpenMenu )
-            ImGui::OpenPopup( "##AddModifier" );
+            EditorInputGUI::openPopup( "##AddModifier" );
         if ( ImGui::BeginPopup( "##AddModifier" ) == false )
             return addedIndex;
         vector<const MeshModifierRegistration*> listRegistration;
@@ -808,7 +809,7 @@ namespace sw::editor
             _pCurveModifier      = &modifier;
             _curveParamIndex     = paramIndex;
             _curveItemIndex      = itemIndex;
-            ImGui::OpenPopup( "##CurveEditor" );
+            EditorInputGUI::openPopup( "##CurveEditor" );
         }
         MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "CurveEditHint" ) );
 

@@ -7,13 +7,14 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -345,7 +346,7 @@ namespace sw::editor
             return;
 
         if ( ImGui::IsPopupOpen( "##UnsavedSceneAction" ) == false )
-            ImGui::OpenPopup( "##UnsavedSceneAction" );
+            EditorInputGUI::openPopup( "##UnsavedSceneAction" );
 
         const utf8* pMessage = "You have unsaved changes. Continue?";
         if ( editorContext.getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::New )

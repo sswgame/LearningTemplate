@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -220,7 +221,7 @@ namespace sw::editor
     void GimmickGraphPanel::drawToolbar( GimmickCircuitComponent& circuit )
     {
         if ( ImGui::Button( "Add node" ) )
-            ImGui::OpenPopup( "##gimmickAddNode" );
+            EditorInputGUI::openPopup( "##gimmickAddNode" );
         EditorSelfTestMarks::note( "gimmick.addnode" );
         if ( ImGui::BeginPopup( "##gimmickAddNode" ) )
         {

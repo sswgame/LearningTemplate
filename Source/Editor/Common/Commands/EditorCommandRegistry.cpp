@@ -1,12 +1,11 @@
 /**
  * @file EditorCommandRegistry.cpp
- * @brief 에디터 커맨드 등록 · 조회 · 단축키 라벨입니다(ImGui 를 쓰지 않아 단위 테스트를 붙일 수 있습니다).
+ * @brief 에디터 커맨드 등록 · 조회 · 메뉴 · 검사입니다(ImGui 를 쓰지 않아 단위 테스트를 붙일 수 있습니다).
  */
 #include "pch.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
@@ -18,42 +17,6 @@ namespace sw::editor
     {
         struct EditorCommandRegistryInternal
         {
-            /**
-             * @brief EditorCommandKey 순서와 1:1로 맞춘 표시 이름 표입니다.
-             * @details 문자 키를 문자 코드 오프셋으로 계산하면 F 키·Space 가 예외가 되어 분기가 늘어납니다.
-             *          열거형을 하나 늘릴 때 여기 한 줄만 늘어나도록 테이블로 둡니다 (아래 static_assert 가
-             *          개수 불일치를 컴파일 타임에 잡습니다).
-             */
-            inline static const utf8* const _s_arrKeyName[] = {
-                "", // None
-                "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-                "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-                "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
-                "Space",
-                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Delete", "Insert", "Home", "End", "PageUp", "PageDown", "Left", "Right", "Up", "Down", "Tab", "Enter", "Escape", "Backspace", "Minus", "Equal", "Comma", "Period", "Slash" };
-
-            static_assert( sizeof( _s_arrKeyName ) / sizeof( _s_arrKeyName[0] ) == static_cast<size_t>( EditorCommandKey::Count ),
-                           "EditorCommandKey 와 표시 이름 표의 개수가 다릅니다" );
-
-            // 개수만 보는 static_assert 는 **가운데 삽입**을 잡지 못한다(이름을 하나 더하면 개수가 다시 맞는다).
-            // 그 경우는 열거형 값의 번호를 고정한 헤더의 static_assert 가 잡는다. `EditorCommandKey` 선언 바로 아래에 있다.
-
-            /** @brief 수정자와 키 이름을 outLabel 뒤에 붙입니다. 키가 없으면 아무것도 하지 않습니다. */
-            static void appendShortcut( const EditorCommandShortcut& shortcut, fixed_string<constant::kMaxBuffer64>& outLabel )
-            {
-                if ( shortcut._key == EditorCommandKey::None )
-                    return;
-
-                if ( ( shortcut._modifier & commandmodifier::kCtrl ) != 0 )
-                    outLabel.append( "Ctrl+" );
-                if ( ( shortcut._modifier & commandmodifier::kShift ) != 0 )
-                    outLabel.append( "Shift+" );
-                if ( ( shortcut._modifier & commandmodifier::kAlt ) != 0 )
-                    outLabel.append( "Alt+" );
-
-                outLabel.append( EditorCommandRegistry::getKeyName( shortcut._key ) );
-            }
-
             /** @brief 코드가 경로로 그리는 메뉴(`commandmenu::kArrHostedMenuPath`)면 true 입니다. */
             static bool isHostedMenuPath( const string& menuPath )
             {
@@ -61,32 +24,6 @@ namespace sw::editor
                 {
                     if ( menuPath == pHostedPath )
                         return true;
-                }
-                return false;
-            }
-
-            /** @brief 두 커맨드가 같은 조합을 처리하면 그 조합을 outChord 에 담고 true입니다. */
-            [[nodiscard]] static bool findSharedChord( const EditorCommandDesc& lhs, const EditorCommandDesc& rhs,
-                                                       EditorCommandShortcut& outChord )
-            {
-                const EditorCommandShortcut arrLhsChord[] = { lhs._shortcut, lhs._altShortcut };
-                const EditorCommandShortcut arrRhsChord[] = { rhs._shortcut, rhs._altShortcut };
-
-                for ( const EditorCommandShortcut& lhsChord : arrLhsChord )
-                {
-                    if ( EditorCommandRegistry::isHandledShortcut( lhsChord ) == false )
-                        continue;
-
-                    for ( const EditorCommandShortcut& rhsChord : arrRhsChord )
-                    {
-                        if ( EditorCommandRegistry::isHandledShortcut( rhsChord ) == false )
-                            continue;
-                        if ( EditorCommandRegistry::isSameShortcut( lhsChord, rhsChord ) == false )
-                            continue;
-
-                        outChord = lhsChord;
-                        return true;
-                    }
                 }
                 return false;
             }
@@ -133,23 +70,8 @@ namespace sw::editor
             return;
         }
 
-        desc._defaultShortcut    = desc._shortcut;
-        desc._defaultAltShortcut = desc._altShortcut;
         _listCommand.push_back( std::move( desc ) );
         rebuildMenus();
-    }
-
-    bool EditorCommandRegistry::setShortcut( string_view commandID, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut )
-    {
-        for ( EditorCommandDesc& desc : _listCommand )
-        {
-            if ( desc._id != commandID )
-                continue;
-            desc._shortcut    = shortcut;
-            desc._altShortcut = altShortcut;
-            return true;
-        }
-        return false;
     }
 
     const EditorMenu* EditorCommandRegistry::findMenu( string_view menuPath ) const
@@ -203,31 +125,53 @@ namespace sw::editor
         return VectorUtil::findBy<&EditorCommandDesc::_id>( _listCommand, commandID );
     }
 
-    bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc )
+    bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
         // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(베이크) 중이면 꺼진다.
         if ( desc._edit == EditorCommandEdit::Scene && EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( desc._enabledPredicate.isBound() == false )
             return true;
-        return desc._enabledPredicate();
+        return desc._enabledPredicate( target );
     }
 
-    bool EditorCommandRegistry::execute( string_view commandID )
+    bool EditorCommandRegistry::execute( string_view commandID, const EditorCommandTarget& target )
     {
         const EditorCommandDesc* pDesc = find( commandID );
         if ( pDesc == nullptr )
             return false;
-        return executeDesc( *pDesc );
+        return executeDesc( *pDesc, target );
     }
 
-    bool EditorCommandRegistry::executeDesc( const EditorCommandDesc& desc )
+    bool EditorCommandRegistry::executeDesc( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
-        if ( desc._action.isBound() == false || isEnabled( desc ) == false )
+        if ( desc._action.isBound() == false || isEnabled( desc, target ) == false )
             return false;
 
-        desc._action();
+        desc._action( target );
         return true;
+    }
+
+    void EditorCommandRegistry::collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const
+    {
+        outListItem.clear();
+        if ( kind == EditorCommandTargetKind::None )
+            return;
+        vector<uint32> listIndex;
+        for ( uint32 index = 0; index < static_cast<uint32>( _listCommand.size() ); ++index )
+        {
+            if ( _listCommand[index]._contextMenuKind == kind )
+                listIndex.push_back( index );
+        }
+        std::stable_sort( listIndex.begin(), listIndex.end(), [this]( uint32 lhsIndex, uint32 rhsIndex )
+        { return _listCommand[lhsIndex]._contextMenuOrder < _listCommand[rhsIndex]._contextMenuOrder; } );
+        for ( const uint32 commandIndex : listIndex )
+        {
+            const bool bSeparatorBefore = outListItem.empty() == false &&
+                                          EditorCommandRegistryInternal::isGroupBoundary( _listCommand[outListItem.back()._commandIndex]._contextMenuOrder,
+                                                                                          _listCommand[commandIndex]._contextMenuOrder );
+            outListItem.push_back( EditorMenuItem{ commandIndex, bSeparatorBefore } );
+        }
     }
 
     bool EditorCommandRegistry::validate( string& outReport ) const
@@ -262,14 +206,23 @@ namespace sw::editor
                     outReport += "\n";
                 }
 
-                EditorCommandShortcut sharedChord{};
-                if ( EditorCommandRegistryInternal::findSharedChord( desc, other, sharedChord ) )
+                const bool bSameContextSlot = desc._contextMenuKind != EditorCommandTargetKind::None && desc._contextMenuKind == other._contextMenuKind &&
+                                              desc._contextMenuOrder == other._contextMenuOrder;
+                if ( bSameContextSlot )
                 {
-                    fixed_string<constant::kMaxBuffer64> chordLabel;
-                    EditorCommandRegistryInternal::appendShortcut( sharedChord, chordLabel );
+                    outReport += "같은 맥락 메뉴 순서: ";
+                    outReport += desc._id;
+                    outReport += " / ";
+                    outReport += other._id;
+                    outReport += "\n";
+                }
 
-                    outReport += "중복 단축키 ";
-                    outReport += chordLabel.c_str();
+                // 한 액션을 두 명령이 부르면 한 번 눌러 둘이 돈다(예전의 같은 조합 두 처리기와 같은 결함).
+                const bool bSharedAction = desc._inputAction.empty() == false && desc._inputAction == other._inputAction;
+                if ( bSharedAction )
+                {
+                    outReport += "같은 입력 액션 ";
+                    outReport += desc._inputAction;
                     outReport += ": ";
                     outReport += desc._id;
                     outReport += " / ";
@@ -296,19 +249,6 @@ namespace sw::editor
         return outReport.empty();
     }
 
-    void EditorCommandRegistry::formatShortcutLabel( const EditorCommandDesc& desc, fixed_string<constant::kMaxBuffer64>& outLabel )
-    {
-        outLabel.clear();
-        EditorCommandRegistryInternal::appendShortcut( desc._shortcut, outLabel );
-
-        if ( desc._altShortcut._key == EditorCommandKey::None )
-            return;
-
-        if ( outLabel.empty() == false )
-            outLabel.append( " / " );
-        EditorCommandRegistryInternal::appendShortcut( desc._altShortcut, outLabel );
-    }
-
     void EditorCommandRegistry::formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::kMaxBuffer128>& outLabel )
     {
         outLabel.clear();
@@ -320,49 +260,6 @@ namespace sw::editor
         outLabel.append( desc._label.c_str() );
     }
 
-    const utf8* EditorCommandRegistry::getKeyName( EditorCommandKey key )
-    {
-        const size_t keyIndex = static_cast<size_t>( key );
-        if ( static_cast<size_t>( EditorCommandKey::Count ) <= keyIndex )
-            return "";
-        return EditorCommandRegistryInternal::_s_arrKeyName[keyIndex];
-    }
-
-    bool EditorCommandRegistry::findKeyByName( string_view name, EditorCommandKey& outKey )
-    {
-        for ( size_t keyIndex = 1; keyIndex < static_cast<size_t>( EditorCommandKey::Count ); ++keyIndex )
-        {
-            if ( StringUtil::equals( name, EditorCommandRegistryInternal::_s_arrKeyName[keyIndex] ) )
-            {
-                outKey = static_cast<EditorCommandKey>( keyIndex );
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool EditorCommandRegistry::isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs )
-    {
-        constexpr uint8 kChordMask    = commandmodifier::kCtrl | commandmodifier::kShift | commandmodifier::kAlt;
-        const bool      bSameKey      = ( lhs._key == rhs._key );
-        const bool      bSameModifier = ( ( lhs._modifier & kChordMask ) == ( rhs._modifier & kChordMask ) );
-        return bSameKey && bSameModifier;
-    }
-
-    bool EditorCommandRegistry::isHandledShortcut( const EditorCommandShortcut& shortcut )
-    {
-        const bool bHasKey      = ( shortcut._key != EditorCommandKey::None );
-        const bool bDisplayOnly = ( ( shortcut._modifier & commandmodifier::kDisplayOnly ) != 0 );
-        return bHasKey && bDisplayOnly == false;
-    }
-
-    bool EditorCommandRegistry::matchesPressedModifiers( const EditorCommandShortcut& shortcut, uint8 pressedModifier, bool bSuperDown )
-    {
-        if ( bSuperDown )
-            return false;
-        constexpr uint8 kChordMask = commandmodifier::kCtrl | commandmodifier::kShift | commandmodifier::kAlt;
-        return ( shortcut._modifier & kChordMask ) == ( pressedModifier & kChordMask );
-    }
 } // namespace sw::editor
 
 namespace sw::editor
@@ -386,15 +283,19 @@ namespace sw::editor
             desc._category        = row._pCategory != nullptr ? row._pCategory : "";
             desc._tooltip         = row._pTooltip != nullptr ? row._pTooltip : "";
             desc._detail          = row._pDetail != nullptr ? row._pDetail : "";
-            desc._shortcut        = row._shortcut;
-            desc._bPaletteVisible = true;
+            desc._inputAction     = row._pInputAction != nullptr ? row._pInputAction : "";
+            desc._bPaletteVisible = row._bPaletteVisible;
             desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
             desc._menuOrder       = row._order;
             if ( row._pfnAction != nullptr )
                 desc._action = row._pfnAction;
             if ( row._pfnEnabled != nullptr )
                 desc._enabledPredicate = row._pfnEnabled;
-            desc._edit = row._edit;
+            desc._edit             = row._edit;
+            desc._contextMenuKind  = row._contextMenuKind;
+            desc._contextMenuOrder = row._contextMenuOrder;
+            if ( row._pfnSubmenu != nullptr )
+                desc._submenu = row._pfnSubmenu;
             registry.registerCommand( std::move( desc ) );
         }
         return excludedCount;

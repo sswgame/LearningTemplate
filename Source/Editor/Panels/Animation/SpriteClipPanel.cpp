@@ -13,11 +13,13 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -266,13 +268,13 @@ namespace sw::editor
                                 0.0f, 0, 2.0f );
         }
 
-        if ( bHovered == false || ImGui::IsMouseClicked( ImGuiMouseButton_Left ) == false )
+        if ( bHovered == false || EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) == false )
             return;
         const ImVec2 mouse = ImGui::GetMousePos();
         const int32  cell  = AtlasGridUtil::findCellAtUv( ( mouse.x - imageMin.x ) / side, ( mouse.y - imageMin.y ) / side, _sliceColumns, _sliceRows );
         if ( cell < 0 )
             return;
-        const bool bAddFrame = ImGui::GetIO().KeyShift || _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() );
+        const bool bAddFrame = EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift ) || _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() );
         if ( bAddFrame )
         {
             _listFrame.push_back( Frame{} );

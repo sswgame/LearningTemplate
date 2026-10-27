@@ -20,6 +20,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -155,7 +156,7 @@ namespace sw::editor
                     picker._listEntry.clear();
                     picker._search.clear();
                     EditorResourceIndex::collectEntries( picker._listEntry );
-                    ImGui::OpenPopup( "AssetPicker" );
+                    EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
                 EditorSelfTestMarks::note( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );

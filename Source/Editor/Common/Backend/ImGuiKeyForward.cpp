@@ -1,5 +1,8 @@
 #include "pch.h"
 
+// 금지 헤더(EditorInputBan.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(유니티 묶음에서 빠진다, CMake `sw_applyEditorInputBan`).
+#define SW_EDITOR_INPUT_ADAPTER
+
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 
 #include "Core/Container/StringUtil.h"
@@ -135,6 +138,26 @@ namespace sw::editor
                 return key;
         }
         return Key::Unknown;
+    }
+
+    bool ImGuiKeyForward::findPressedChord( Key& outKey, uint8& outModifierMask )
+    {
+        for ( int32 keyIndex = static_cast<int32>( Key::Unknown ) + 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
+        {
+            const Key  key       = static_cast<Key>( keyIndex );
+            const bool bModifier = key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt ||
+                                   key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper;
+            if ( bModifier )
+                continue;
+            const ImGuiKey imguiKey = ImGuiKeyForwardInternal::toImGuiKey( key );
+            const bool     bPressed = imguiKey != ImGuiKey_None && ImGui::IsKeyPressed( imguiKey, false );
+            if ( bPressed == false )
+                continue;
+            outKey          = key;
+            outModifierMask = ImGuiKeyForwardInternal::makeModifierMask();
+            return true;
+        }
+        return false;
     }
 
     void ImGuiKeyForward::appendKeyChanges( vector<RawInputEvent>& outListEvent )

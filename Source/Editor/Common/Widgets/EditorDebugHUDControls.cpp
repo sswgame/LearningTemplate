@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -116,9 +117,7 @@ namespace sw::editor
 
     void EditorDebugHUDControls::drawSectionPopupOnRightClick( const utf8* pPopupID )
     {
-        if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) )
-            ImGui::OpenPopup( pPopupID );
-        if ( ImGui::BeginPopup( pPopupID ) )
+        if ( EditorInputGUI::beginItemContextMenu( pPopupID ) )
         {
             ImGui::SeparatorText( "Debug HUD sections" );
             drawSectionChecklist();

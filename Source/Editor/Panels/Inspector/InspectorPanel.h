@@ -77,14 +77,14 @@ namespace sw::editor
         void drawPrefabLinkSection( GameObject* pObj, string_view prefabPath );
         /** @brief 선택한 오브젝트의 컴포넌트 카드 목록을 그립니다. */
         void drawComponentList( GameObject* pObj, EditorWorkspace& workspace );
-        /** @brief 컴포넌트 카드의 우클릭 메뉴를 그립니다. */
-        void drawComponentContextMenu( GameObject* pObj, Component* pComp, EditorWorkspace& workspace, bool& bOutRemove );
-        /** @brief 컴포넌트 우클릭 메뉴의 복사 · 값 붙여넣기 · 새 컴포넌트로 붙여넣기 항목입니다. */
-        void drawComponentCopyPasteItems( GameObject* pObj, Component* pComp, EditorWorkspace& workspace );
-        /** @brief 컴포넌트 우클릭 메뉴의 위로 · 아래로 옮기기 항목입니다. 주 씬 컴포넌트와는 순서를 바꾸지 않습니다. */
-        void drawComponentMoveItems( GameObject* pObj, Component* pComp );
-        /** @brief 컴포넌트 우클릭 메뉴의 프리셋 하위 메뉴(이름 붙여 저장, 저장한 프리셋 적용)입니다. */
-        void drawComponentPresetsMenu( Component* pComp );
+        /** @brief 직전 카드 헤더에 컴포넌트 맥락 메뉴(`scene.component.*` 명령 — 계층 창의 컴포넌트 행과 같은 메뉴)를 엽니다. */
+        static void drawComponentContextMenu( const Component* pComp );
+
+    public:
+        /** @brief 컴포넌트 메뉴의 Presets 하위 메뉴 안(이름 붙여 저장, 저장한 프리셋 적용)을 그립니다. 하위 메뉴 명령 `inspector.component.presets` 가 부릅니다. */
+        void drawComponentPresetItems( Component* pComp );
+
+    private:
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
@@ -96,7 +96,7 @@ namespace sw::editor
         void drawFavoritesSection( GameObject* pObj );
         /**
          * @brief 미리보기 창의 선택(`editor::getFocusedSelection`)을 그립니다. 값 편집만 낸다 — 기록은 그 창의 스택이다(`InspectorPropertyUndo`).
-         * @details 컴포넌트 추가 · 제거 · 프리팹 줄은 활성 씬의 명령이라 미리보기 오브젝트에는 내지 않는다.
+         * @details 프리팹 줄은 활성 씬의 명령이라 내지 않는다. 컴포넌트 카드 메뉴는 메인 카드와 같은 컴포넌트 메뉴다.
          */
         void drawPreviewSelection( const EditorSelection& selection );
 
@@ -115,9 +115,7 @@ namespace sw::editor
         vector<string>                        _listComponentPresetFile;
         /** @brief `_nameEditBuffer` 가 가리키는 오브젝트입니다. 선택이 바뀌면 버립니다. */
         uint64                               _nameEditObjectID;
-        uint64                               _lockedObjectID;        ///< 자물쇠로 잠근 오브젝트다. 0 이면 선택을 따라간다
-        Component*                           _pPendingMoveComponent; ///< 카드 메뉴의 Move Up 과 Move Down 이 지정한 컴포넌트다. 목록을 다 그린 뒤가 아니라 그 카드 다음에 적용한다
-        int32                                _pendingMoveDirection;
+        uint64                               _lockedObjectID;     ///< 자물쇠로 잠근 오브젝트다. 0 이면 선택을 따라간다
         fixed_string<constant::kMaxBuffer64> _addComponentSearch; ///< Add Component 팝업의 검색어
         fixed_string<constant::kMaxBuffer64> _presetNameBuffer;   ///< Presets 메뉴의 새 프리셋 이름 칸 글
         uint8                                _bComponentPresetDirty : 1;

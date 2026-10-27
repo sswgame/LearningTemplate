@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -237,7 +238,7 @@ namespace sw::editor
             _editID = 0;
         }
 
-        if ( pValue != nullptr && ImGui::BeginPopupContextItem( "##cellMenu" ) )
+        if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
             if ( ImGui::MenuItem( "Unset attribute" ) )
             {
@@ -402,7 +403,7 @@ namespace sw::editor
         constexpr const utf8* kPopupName = "Curves##catalogCurves";
         if ( _bOpenCurvePopup )
         {
-            ImGui::OpenPopup( kPopupName );
+            EditorInputGUI::openPopup( kPopupName );
             _bOpenCurvePopup = false;
         }
         EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 27.0f ), false );

@@ -9,6 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -17,11 +18,10 @@
 #include "Editor/Viewport/EditorOrbitMath.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-
-#include <imgui.h>
 
 namespace sw::editor
 {
@@ -81,48 +81,48 @@ namespace sw::editor
 
     void EditorViewportCamera::processFlyInput( float32 deltaTime, float32& inoutCameraSpeed )
     {
-        ImGuiIO& io = ImGui::GetIO();
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
 
         // 회전 (마우스 델타)
-        _rotation._y += io.MouseDelta.x * 0.2f;
-        _rotation._x += io.MouseDelta.y * 0.2f;
+        _rotation._y += pointer._delta._x * 0.2f;
+        _rotation._x += pointer._delta._y * 0.2f;
         _rotation._x = MathUtil::clamp( _rotation._x, -89.0f, 89.0f );
 
-        // 이동 (WASD + QE)
+        // 이동 (WASD + QE) — 비행 레이어(`Editor.Viewport.Fly`, 오른쪽 단추를 누른 동안 켜진다)의 액션이다.
         const float32 yawRad  = MathUtil::toRadian( _rotation._y );
         const float3  forward = EditorViewportCameraInternal::computeForward( _rotation );
         const float3  right   = float3{ MathUtil::cos( yawRad ), 0.0f, -MathUtil::sin( yawRad ) };
         const float3  up      = float3{ 0.0f, 1.0f, 0.0f };
 
         float3 moveDir{ 0.0f, 0.0f, 0.0f };
-        if ( ImGui::IsKeyDown( ImGuiKey_W ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyForward" ) )
             moveDir += forward;
-        if ( ImGui::IsKeyDown( ImGuiKey_S ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyBack" ) )
             moveDir -= forward;
-        if ( ImGui::IsKeyDown( ImGuiKey_D ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyRight" ) )
             moveDir += right;
-        if ( ImGui::IsKeyDown( ImGuiKey_A ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyLeft" ) )
             moveDir -= right;
-        if ( ImGui::IsKeyDown( ImGuiKey_E ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyUp" ) )
             moveDir += up;
-        if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
+        if ( EditorInputGUI::isActionDown( "viewport.flyDown" ) )
             moveDir -= up;
 
         // 오른쪽 버튼을 누른 채 휠로 비행 속도를 바꾼다(언리얼과 유니티). 툴바 슬라이더와 같은 값이다.
-        if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-            inoutCameraSpeed = MathUtil::clamp( inoutCameraSpeed * MathUtil::pow( EditorViewportCameraInternal::kFlySpeedWheelRatio, io.MouseWheel ), EditorViewportCameraInternal::kFlySpeedMin,
+        if ( MathUtil::abs( pointer._wheel ) > 0.01f )
+            inoutCameraSpeed = MathUtil::clamp( inoutCameraSpeed * MathUtil::pow( EditorViewportCameraInternal::kFlySpeedWheelRatio, pointer._wheel ), EditorViewportCameraInternal::kFlySpeedMin,
                                                 EditorViewportCameraInternal::kFlySpeedMax );
         // 직교 보기에서 비행을 시작하면 원근 보기로 돌아간다. Godot 의 직교 보기와 같다. 직교로 둘러보는 것은 의미가 적기 때문이다.
         _bOrthographicView = SW_FALSE;
 
-        const float32 speed = inoutCameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
+        const float32 speed = inoutCameraSpeed * ( pointer.hasModifier( ModifierKey::Shift ) ? 3.0f : 1.0f ) * deltaTime;
         _position += moveDir * speed;
         // 궤도 중심은 매 프레임 시선 앞 궤도 거리에 둔다. 비행 뒤 Alt 궤도가 옛 중심으로 튀지 않는다(언리얼 · 유니티).
         syncOrbitTargetToView();
 
         // 누르는 프레임에 새 누름으로 지우고, 키로 옮긴 프레임이 하나라도 있으면 비행이다(맥락 메뉴가 놓을 때 본다).
         // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 임계값)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
-        if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
+        if ( pointer.wasPressed( EditorMouseButton::Right ) )
             _bFlownThisRightHold = SW_FALSE;
         const bool bMoved = moveDir._x != 0.0f || moveDir._y != 0.0f || moveDir._z != 0.0f;
         if ( bMoved )
@@ -131,22 +131,22 @@ namespace sw::editor
 
     void EditorViewportCamera::processOrbitInput()
     {
-        ImGuiIO& io = ImGui::GetIO();
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
 
         // Alt + LMB: 궤도 회전
-        if ( io.MouseDown[0] )
+        if ( pointer.isDown( EditorMouseButton::Left ) )
         {
-            _rotation._y += io.MouseDelta.x * 0.3f;
-            _rotation._x += io.MouseDelta.y * 0.3f;
+            _rotation._y += pointer._delta._x * 0.3f;
+            _rotation._x += pointer._delta._y * 0.3f;
             _rotation._x = MathUtil::clamp( _rotation._x, -89.0f, 89.0f );
         }
 
         // Alt + RMB 또는 휠: 궤도 줌
-        if ( io.MouseDown[1] )
-            _orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, EditorViewportCameraInternal::kOrbitDistanceMin );
+        if ( pointer.isDown( EditorMouseButton::Right ) )
+            _orbitDistance = MathUtil::max( _orbitDistance + ( pointer._delta._x - pointer._delta._y ) * 0.05f, EditorViewportCameraInternal::kOrbitDistanceMin );
 
-        if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-            dolly( io.MouseWheel );
+        if ( MathUtil::abs( pointer._wheel ) > 0.01f )
+            dolly( pointer._wheel );
 
         _position = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
@@ -178,30 +178,31 @@ namespace sw::editor
 
     void EditorViewportCamera::processBookmarkKeys()
     {
-        ImGuiIO& io = ImGui::GetIO();
+        // 1 ~ 9 는 북마크로 가고 Ctrl+1 ~ 9 는 지금 시점을 저장한다(`Editor.Panel.scene_view` 의 viewport.bookmarkN · viewport.setBookmarkN).
+        // 수정 키는 정확히 맞아야 발화하므로 Shift · Alt 를 누른 숫자는 어느 쪽도 아니다.
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         for ( int32 keyIndex = 0; keyIndex < 9; ++keyIndex )
         {
-            const ImGuiKey key = static_cast<ImGuiKey>( ImGuiKey_1 + keyIndex );
-            if ( ImGui::IsKeyPressed( key, false ) )
+            fixed_string<constant::kMaxBuffer32> setAction;
+            formatstring( setAction.data(), setAction.capacity(), "viewport.setBookmark%d", keyIndex + 1 );
+            fixed_string<constant::kMaxBuffer32> goAction;
+            formatstring( goAction.data(), goAction.capacity(), "viewport.bookmark%d", keyIndex + 1 );
+            if ( EditorInputGUI::wasActionTriggered( setAction.c_str() ) )
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                if ( io.KeyCtrl )
-                {
-                    CameraBookmark bm{};
-                    bm._position      = _position;
-                    bm._rotation      = _rotation;
-                    bm._orbitDistance = _orbitDistance;
-                    fixed_string<constant::kMaxBuffer32> arrName;
-                    formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
-                    bm._name = arrName.c_str();
-                    editorContext.getSubsystem<EditorWorkspace>().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
-                }
-                else if ( io.KeyAlt == false && io.KeyShift == false )
-                {
-                    const CameraBookmark* pBm = editorContext.getSubsystem<EditorWorkspace>().getCameraBookmark( static_cast<uint32>( keyIndex ) );
-                    if ( pBm != nullptr && pBm->_bValid )
-                        applyBookmark( *pBm );
-                }
+                CameraBookmark bm{};
+                bm._position      = _position;
+                bm._rotation      = _rotation;
+                bm._orbitDistance = _orbitDistance;
+                fixed_string<constant::kMaxBuffer32> arrName;
+                formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
+                bm._name = arrName.c_str();
+                editorContext.getSubsystem<EditorWorkspace>().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
+            }
+            else if ( EditorInputGUI::wasActionTriggered( goAction.c_str() ) )
+            {
+                const CameraBookmark* pBm = editorContext.getSubsystem<EditorWorkspace>().getCameraBookmark( static_cast<uint32>( keyIndex ) );
+                if ( pBm != nullptr && pBm->_bValid )
+                    applyBookmark( *pBm );
             }
         }
     }

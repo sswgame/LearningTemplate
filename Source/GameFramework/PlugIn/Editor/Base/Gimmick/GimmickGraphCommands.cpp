@@ -23,6 +23,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", 9300, "Gimmick Graph", editoricon::kSettings, "Gimmick", "기믹 회로 그래프 창을 엽니다", "Open the gimmick graph panel", {},
-                       &openGimmickGraphPanel, nullptr, NoScene, nullptr );
+    SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", 9300, "Gimmick Graph", editoricon::kSettings, "Gimmick", "기믹 회로 그래프 창을 엽니다", "Open the gimmick graph panel", nullptr,
+                       &openGimmickGraphPanel, nullptr, NoScene, nullptr, None, 0 );
 } // namespace sw::editor

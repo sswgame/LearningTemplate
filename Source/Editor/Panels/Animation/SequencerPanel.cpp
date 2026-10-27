@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -348,7 +349,7 @@ namespace sw::editor
         const int32   span   = MathUtil::max( _sequence->_frameMax - _sequence->_frameMin, 1 );
         if ( ImGui::InvisibleButton( "##keyStrip", ImVec2( width, height ) ) )
         {
-            const float32 ratio = MathUtil::clamp( ( ImGui::GetIO().MousePos.x - origin.x ) / width, 0.0f, 1.0f );
+            const float32 ratio = MathUtil::clamp( ( EditorInputGUI::readPointer()._position._x - origin.x ) / width, 0.0f, 1.0f );
             _selectedTrack      = trackIndex;
             _currentFrame       = _sequence->_frameMin + static_cast<int32>( MathUtil::round( ratio * static_cast<float32>( span ) ) );
             previewCurrentFrame();

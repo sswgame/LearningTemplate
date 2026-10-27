@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -122,7 +123,7 @@ namespace sw::editor
         {
             _addNodePosition = float2{ canvasMouse.x, canvasMouse.y };
             _addNodeFilter.clear();
-            ImGui::OpenPopup( "AddGraphNode" );
+            EditorInputGUI::openPopup( "AddGraphNode" );
         }
         bool bPicked = false;
         if ( ImGui::BeginPopup( "AddGraphNode" ) )

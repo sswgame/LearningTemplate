@@ -61,6 +61,7 @@
 |---|---|---|---|---|
 | `Resource/engine/settings/uiresolutions.xml` | `UIResolutionPresetTable::loadFromResource` (에디터 UI 미리보기 패널을 처음 그릴 때) — 패널을 처음 그릴 때 | 엔진 팩에 실림(읽는 곳은 에디터뿐) | 한다 | [형식 설명](../../Source/Engine/UI/Layout/UIResolutionPresetTable.h) |
 | `Config/Editor/editortooldefaults.json` | `EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동) — 에디터 기동 · 에디터 핫 리로드. 값의 정본(헤더는 형식만) — 없거나 필수 칸이 빠지면 에디터가 서지 않는다 | 없음(에디터 없음) | 한다 | [EditorToolDefaults](EditorToolDefaults.md) |
+| `Resource/editor/input/editor.input.xml` | `InputMap::loadFromResource` (에디터 단축키 입력 맵 — `EditorToolDefaults::_editorInputMap`, `EditorInputActions`) — 에디터 기동. 액션 이름 = 에디터 명령 id. 레이어 `Editor.Global` · `Editor.Panel.<패널 id>` | 없음(에디터 팩) | 한다 | [형식 설명](../../Source/Editor/Common/Input/EditorInputActions.h) |
 | `Saved/Editor/EditorPreferences.json` | `EditorPreferencesStore::loadAll` · `saveAll` — 에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시) | 없음(에디터 없음) | 안 한다 |  |
 | `Config/Editor/TextureImportConfig.json` | `TextureImportConfig::loadFromFile` (손으로 읽음) — 텍스처 임포트(에디터 · `App --import-textures`) | 없음(임포트는 Dev 만) | 한다 | [TextureImportConfig](TextureImportConfig.md) |
 | `Config/Editor/ModelImportConfig.json` | `ModelImportConfig::loadFromFile` (손으로 읽음) — 모델 임포트(에디터 · `App --import-models`) | 없음(임포트는 Dev 만) | 한다 | [ModelImportConfig](ModelImportConfig.md) |

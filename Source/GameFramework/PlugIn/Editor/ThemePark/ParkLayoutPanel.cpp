@@ -7,6 +7,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
@@ -57,7 +58,7 @@ namespace sw::editor
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
             ImGui::Selectable( ride._name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
-            if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+            if ( EditorInputGUI::wasItemDoubleClicked() )
                 (void)EditorSceneViewUtil::focusOn( ride._position, MathUtil::max( ride._size._x, ride._size._z ) ); // 씬 뷰가 닫혀 있으면 할 일이 없다
             ImGui::TableSetColumnIndex( 1 );
             ImGui::Text( "%d", ride._buildCost );

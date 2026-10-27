@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportGizmo.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -142,7 +143,7 @@ namespace sw::editor
         float32 arrMatrix[16];
         EditorViewportProjectionUtil::storeGizmoMatrix( arrMatrix, pSceneComp->getWorldMatrix() );
 
-        const bool bGizmoDragStarted = _bTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left );
+        const bool bGizmoDragStarted = _bTracking == SW_FALSE && ImGuizmo::IsOver() && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
         if ( bGizmoDragStarted )
         {
             _undoBefore = EditorTransaction::captureSnapshot( &object );
@@ -245,7 +246,7 @@ namespace sw::editor
             groupWorld._43 = centroid._z;
             EditorViewportProjectionUtil::storeGizmoMatrix( _arrGroupMatrix, groupWorld );
 
-            if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            if ( ImGuizmo::IsOver() && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
             {
                 _listObject.clear();
                 _listUndo.clear();

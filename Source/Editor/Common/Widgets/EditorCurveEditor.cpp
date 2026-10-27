@@ -6,9 +6,11 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -28,7 +30,6 @@ namespace sw::editor
             static constexpr float32 kWheelZoomPerStep = 1.15f;
 
             static ImVec2 toImVec2( const float2& value ) { return ImVec2{ value._x, value._y }; }
-            static float2 toFloat2( const ImVec2& value ) { return float2{ value.x, value.y }; }
 
             /** @brief 이름을 사각형 하나에 남깁니다(상호작용 없는 항목 — 캔버스의 누름을 뺏지 않는다). */
             static void noteRectMark( const utf8* pKey, const float2& center, float32 radius )
@@ -213,14 +214,14 @@ namespace sw::editor
             /** @brief 캔버스 위의 누름 · 끌기 · 휠 · 키를 처리합니다. 끌기를 놓아 편집을 마쳤으면 true 입니다. */
             static bool handleCanvasInput( EditorCurveEditorState& state, bool bHovered, bool bActive )
             {
-                ImGuiIO&         io           = ImGui::GetIO();
-                FloatCurve&      curve        = state._working;
-                EditorCurveView& view         = state._view;
-                const float32    pickRadius   = kPickRadius * EditorThemeUtil::getDpiScale();
-                const float2     mouse        = toFloat2( io.MousePos );
-                const float32    handleLength = kTangentLength * EditorThemeUtil::getDpiScale();
+                const EditorPointerState pointer      = EditorInputGUI::readPointer();
+                FloatCurve&              curve        = state._working;
+                EditorCurveView&         view         = state._view;
+                const float32            pickRadius   = kPickRadius * EditorThemeUtil::getDpiScale();
+                const float2             mouse        = pointer._position;
+                const float32            handleLength = kTangentLength * EditorThemeUtil::getDpiScale();
 
-                if ( bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                if ( bHovered && pointer.wasPressed( EditorMouseButton::Left ) )
                 {
                     state._drag       = EditorCurveDrag::None;
                     state._bDragMoved = false;
@@ -240,22 +241,24 @@ namespace sw::editor
                             state._drag = EditorCurveDrag::Key;
                     }
                 }
-                if ( bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Middle ) )
+                if ( bHovered && pointer.wasPressed( EditorMouseButton::Middle ) )
                     state._drag = EditorCurveDrag::Pan;
-                if ( bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Right ) )
+                // 메뉴는 오른쪽 단추를 끌기 문턱 안에서 뗀 순간 연다(R1 — 누르는 순간 열면 끌기와 구분되지 않는다).
+                if ( bHovered && pointer.wasClickedWithoutDrag( EditorMouseButton::Right ) )
                 {
                     state._menuKey = view.findKeyAt( curve, mouse, pickRadius );
                     view.toCurve( mouse, state._menuTime, state._menuValue );
-                    ImGui::OpenPopup( "CurveMenu" );
+                    EditorInputGUI::openPopup( "CurveMenu" );
                 }
-                if ( bHovered && io.MouseWheel != 0.0f )
-                    view.zoomAt( mouse, std::pow( kWheelZoomPerStep, io.MouseWheel ) );
-                if ( bHovered && ImGui::IsKeyPressed( ImGuiKey_F, false ) )
+                if ( bHovered && pointer._wheel != 0.0f )
+                    view.zoomAt( mouse, std::pow( kWheelZoomPerStep, pointer._wheel ) );
+                // F(모두 보기)는 에디터 입력 맵의 액션이다 — 캔버스 위에 있을 때만 읽는다.
+                if ( bHovered && EditorInputGUI::wasActionTriggered( "curveEditor.frameAll" ) )
                     state._bFitPending = true;
 
-                const bool bMoving = bActive && ( io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f );
+                const bool bMoving = bActive && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f );
                 if ( bMoving && state._drag == EditorCurveDrag::Pan )
-                    view.pan( toFloat2( io.MouseDelta ) );
+                    view.pan( pointer._delta );
                 const bool bDraggingSelectedKey = bMoving && state._drag == EditorCurveDrag::Key && state._selectedKey < curve._listKey.size();
                 if ( bDraggingSelectedKey )
                 {
@@ -263,9 +266,9 @@ namespace sw::editor
                     float32        time{ 0.0f };
                     float32        value{ 0.0f };
                     view.toCurve( mouse, time, value );
-                    if ( io.KeyCtrl == false )
+                    if ( pointer.hasModifier( ModifierKey::Ctrl ) == false )
                         key._time = clampKeyTime( curve, state._selectedKey, time ); // Ctrl = 값만
-                    if ( io.KeyShift == false )
+                    if ( pointer.hasModifier( ModifierKey::Shift ) == false )
                         key._value = value; // Shift = 시간만
                     curve.sortAndComputeAutoTangents();
                     state._bDragMoved = true;

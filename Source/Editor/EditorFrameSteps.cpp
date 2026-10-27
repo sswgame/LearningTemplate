@@ -4,12 +4,12 @@
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorNotificationView.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -24,6 +24,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -60,10 +61,10 @@ namespace sw::editor
         struct EditorFrameStepsInternal
         {
             /** @brief 1) 단축키, 메뉴가 미룬 패널 열기 요청, 씬 세션(세대 동기화 · 미저장 확인)을 처리합니다. */
-            static void runCommands( EditorContext& /*context*/ )
+            static void runCommands( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.commands" );
-                EditorCommandGUI::processHotkeys();
+                context.getSubsystem<EditorInputActions>().processFrame( GameTimeScale::getUnscaledDeltaTime() );
                 EditorMenuBar::processOpenPanelRequests();
                 EditorMenuBar::processSceneSession();
             }

@@ -147,6 +147,13 @@ namespace sw
         DoubleTap,      ///< 같은 키를 짧은 시간 안에 두 번 탭하면 발화한다.
         Repeat,         ///< 처음 누를 때 한 번 발화하고, navRepeatDelay 뒤부터 navRepeatRate 간격으로 반복 발화한다(UI 내비게이션).
         MultiTap,       ///< 같은 키를 누름 사이 간격 안에 N 번(`ActionBinding::_tapCount`) 누르면 발화한다(유니티 MultiTap). DoubleTap 은 N = 2 인 경우다.
+        /**
+         * @brief 누른 뒤 포인터가 끌기 문턱(`InputMap::getDragThreshold`) 안에 머문 채 뗀 순간 발화한다(클릭과 끌기를 가른다 — RTS 선택 상자, 에디터 뷰포트 우클릭 메뉴).
+         * @details 포인터가 없는 슬롯(키 · 패드)은 끌 수 없으므로 뗀 순간과 같다. 누름 위치는 그 누름의 마우스 위치다.
+         */
+        Click,
+        /** @brief 누른 채 포인터가 끌기 문턱을 처음 넘은 프레임에 한 번 발화한다(끌기 시작). 끄는 동안은 `isActionDown` 으로 읽는다. 포인터가 없는 슬롯은 발화하지 않는다. */
+        Drag,
         Count
     };
 
@@ -208,6 +215,8 @@ namespace sw
         inline constexpr float32 kDoubleClickTimeMin               = 0.05f;
         inline constexpr float32 kDoubleClickTimeMax               = 2.0f;
         inline constexpr float32 kDoubleClickDistanceMax           = 64.0f;
+        inline constexpr float32 kDragThreshold                    = 6.0f;  ///< 클릭과 끌기를 가르는 포인터 이동 거리(픽셀). ImGui `io.MouseDragThreshold` 의 기본값과 같다
+        inline constexpr float32 kDragThresholdMax                 = 64.0f; ///< `dragThreshold` 의 위 한계(픽셀)
         inline constexpr float32 kHoldThresholdMin                 = 0.05f;
         inline constexpr float32 kHoldThresholdMax                 = 10.0f;
         inline constexpr float32 kNeverPressedSentinel             = 1.0e9f;
@@ -364,9 +373,17 @@ namespace sw
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view relativePath );
         /**
+         * @brief 이미 읽은 맵에 다른 InputMap XML 의 레이어와 액션을 더합니다(확장 모듈 · 게임 모드가 기본 맵에 액션을 보탠다).
+         * @details 더하는 파일은 맵 전체 값(`defaultLayer` · 시간 · 거리 · `virtualCursor`)을 적지 않는다 — 그것은 기본 맵의 것이다.
+         *          이미 있는 액션 이름, 이미 있는 레이어를 `<layers>` 에 다시 정의한 것, 같은 레이어에서 같은 발화 규칙의 같은 입력(키 · 수정 키 · 단추)을
+         *          다른 액션이 이미 쓰는 바인딩은 오류다. 실패하면 맵이 일부만 더해진 채이므로 부른 쪽은 오류로 멈춘다.
+         * @return 모두 더했으면 true 입니다.
+         */
+        [[nodiscard]] bool appendFromResource( string_view relativePath );
+        /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
          * @param relativePath 리소스 id 또는 절대 경로입니다. 쓸 위치는 `ResourcePaths::getWritePath` 가 정하며, 작업 폴더 기준이 아닙니다.
-         * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 단축키, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
+         * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */
         [[nodiscard]] bool saveToResource( string_view relativePath ) const;
@@ -417,6 +434,11 @@ namespace sw
 
         /** @brief 조합 키(Chord) 바인딩을 등록합니다(예: Ctrl + F7, Shift + W). */
         void bindChord( const hashed_string& action, Key modifierKey, Key triggerKey, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );
+        /**
+         * @brief 수정 키 마스크 + 키 바인딩을 등록합니다(예: Ctrl + Shift + S).
+         * @details 수정 키는 **정확히** 그 조합이어야 한다 — 마스크에 없는 수정 키(Ctrl · Shift · Alt · Super)가 눌려 있으면 발화하지 않는다.
+         *          요구한 키만 보면 Ctrl+Shift+Z 가 Ctrl+Z 도 함께 발화시킨다. 방아쇠 키 자신이 수정 키면 그 수정 키는 비교에서 뺀다.
+         */
         void bindShortcut( const hashed_string& action, Key key, uint8 modifierMask, ActionTrigger trigger = ActionTrigger::Pressed, const hashed_string& layer = {} );
         void bindAnyKey( const hashed_string& action, const hashed_string& layer = {} );
 
@@ -486,6 +508,23 @@ namespace sw
         [[nodiscard]] bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
         [[nodiscard]] bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );
         /**
+         * @brief 키보드 바인딩 @p bindIndex 를 키 + 수정 키 마스크로 바꿉니다(단축키 재배치 — 수정 키도 바꾼다). 마스크가 0 이면 단일 키, 아니면 단축키가 됩니다.
+         * @details 키보드의 단일 키 · 단축키 바인딩만 바꾼다. `rebindSlot` 은 방아쇠 키만 바꿔 Ctrl+D 를 Ctrl+Shift+D 로 옮길 수 없다.
+         * @return 액션 · 바인딩이 없거나, 키보드 단일 키 · 단축키가 아니거나, 키가 없거나 모르는 수정 키 비트면 false 입니다.
+         */
+        [[nodiscard]] bool rebindKeyShortcut( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask );
+        /** @brief 처음 등록한 기본 바인딩(`resetActionToDefault` 가 되돌리는 대상)입니다. 없으면 nullptr 입니다. */
+        const ActionBinding* getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const;
+        /**
+         * @brief 바인딩 @p bindIndex 와 같은 레이어 · 같은 발화 규칙 · 같은 입력(키 · 수정 키 · 단추)을 다른 액션이 쓰면 그 이름을 @p outOtherAction 에 담고 true 입니다.
+         * @details 한 번 눌러 둘이 발화하는 겹침이다. 맵 더하기(`appendFromResource`)와 재배치 창이 같은 검사를 쓴다.
+         */
+        [[nodiscard]] bool findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const;
+        /** @brief `modifier` 속성 글자(`Ctrl`, `Ctrl+Shift` …)를 수정 키 마스크로 읽습니다. 모르는 이름 · 빈 글 · 같은 이름 두 번이면 false 입니다. */
+        [[nodiscard]] static bool tryParseModifierNames( string_view text, uint8& outModifierMask );
+        /** @brief 수정 키 마스크를 `modifier` 속성 글자로 씁니다(`Ctrl+Shift`). 0 이면 빈 글입니다. */
+        static string formatModifierNames( uint8 modifierMask );
+        /**
          * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 현재 키를 반환합니다.
          * @return 액션이나 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.
          */
@@ -516,11 +555,18 @@ namespace sw
          * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 셸 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
+         *          단, 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안은 이 맵도 키를 보지 않는다 — 에디터 패널에 친 글자가 셸 · UI 맵의 키(콘솔 여는 `~`, UI 확인 Enter)가 되지 않게.
+         *          도구 자신의 맵만 `setToolKeyboardReader( true )` 로 그 키를 읽는다.
          */
         void               setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
         bool               isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
         [[nodiscard]] bool setDoubleClickTime( float32 seconds );
         [[nodiscard]] bool setDoubleClickMaxDistance( float32 pixels );
+        /** @brief 클릭과 끌기를 가르는 포인터 이동 거리(픽셀)입니다. `Click` · `Drag` 트리거가 씁니다. [0, `kDragThresholdMax`] 밖이면 거절합니다. */
+        [[nodiscard]] bool setDragThreshold( float32 pixels );
+        /** @brief true 면 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안에도 키를 읽습니다(에디터 입력 맵). */
+        void               setToolKeyboardReader( bool bReads ) { _bReadsToolKeyboard = bReads ? SW_TRUE : SW_FALSE; }
+        bool               isToolKeyboardReader() const { return _bReadsToolKeyboard == SW_TRUE; }
         void               setDoubleTapTime( float32 seconds ) { _doubleTapTime = seconds; }
         [[nodiscard]] bool setHoldThreshold( float32 seconds );
         void               setNavRepeatTiming( float32 delaySeconds, float32 rateSeconds )
@@ -533,6 +579,8 @@ namespace sw
         void                  setVirtualCursorStick( InputMapVirtualCursor stick ) { _virtualCursorStick = stick; }
         InputManager*         getInputManager() const { return _pInput; }
         float32               getDoubleClickTime() const { return _doubleClickTime; }
+        float32               getDragThreshold() const { return _dragThreshold; }
+        float32               getDoubleClickMaxDistance() const { return _doubleClickMaxDistance; }
         float32               getDoubleTapTime() const { return _doubleTapTime; }
         float32               getHoldThreshold() const { return _holdThreshold; }
         float32               getNavRepeatDelay() const { return _navRepeatDelay; }
@@ -631,7 +679,9 @@ namespace sw
             uint8                  _bTriggered     : 1;
             uint8                  _bPhysicalDown  : 1; ///< 직전 프레임에 레이어 · 콘솔 가림과 상관없이 장치가 눌려 있었는지입니다.
             uint8                  _bLive          : 1; ///< 직전 프레임에 바인딩이 보였는지입니다(레이어가 켜져 있고, 콘솔이 눌린 키를 가리지 않음).
-            [[maybe_unused]] uint8 _reserved       : 7;
+            uint8                  _bDragged       : 1; ///< 이번 누름 동안 포인터가 끌기 문턱을 넘었는지입니다(`Click` · `Drag`). 뗀 다음 프레임에 지운다.
+            uint8                  _bDragStarted   : 1; ///< 이번 프레임에 끌기 문턱을 처음 넘었는지입니다(`Drag` 의 발화).
+            [[maybe_unused]] uint8 _reserved       : 5;
 
             ActionBindingState()
                 : _holdDuration{ 0.0f }
@@ -648,6 +698,8 @@ namespace sw
                 , _bTriggered{ SW_FALSE }
                 , _bPhysicalDown{ SW_FALSE }
                 , _bLive{ SW_FALSE }
+                , _bDragged{ SW_FALSE }
+                , _bDragStarted{ SW_FALSE }
                 , _reserved{ 0 } {}
         };
 
@@ -715,8 +767,19 @@ namespace sw
         bool evaluateGamepadStick( const ActionBinding& binding, float2& outValue ) const;
         /** @brief 가상 조이스틱 바인딩의 값을 읽습니다. 활성화 버튼을 처음 누른 지점이 앵커입니다. */
         bool evaluateVirtualJoystick( const ActionBinding& binding, float2& outValue, SlotRead read ) const;
-        /** @brief 단축키 바인딩이 요구하는 수정 키가 모두 눌려 있는지 봅니다. */
-        bool areShortcutModifiersHeld( const ActionBinding& binding, SlotRead read ) const;
+        /** @brief 눌린 수정 키(Ctrl · Shift · Alt · Super)가 단축키 바인딩의 마스크와 정확히 같은지 봅니다. 방아쇠 키 자신이 수정 키면 그 키는 비교에서 뺍니다. */
+        bool areShortcutModifiersExact( const ActionBinding& binding, SlotRead read ) const;
+        /** @brief 바인딩의 첫 슬롯이 마우스 단추면 true 입니다(끌기 · 더블클릭 거리를 보는 바인딩). */
+        static bool isPointerBinding( const ActionBinding& binding );
+        /** @brief 눌린 바인딩의 포인터가 이번 누름 위치(`_lastPress`)에서 끌기 문턱을 넘었는지 갱신합니다(`_bDragged` · `_bDragStarted`). */
+        void advanceDrag( const ActionBinding& binding, ActionBindingState& state, const int2& mousePos ) const;
+        /**
+         * @brief `loadFromResource` 와 `appendFromResource` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
+         * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
+         */
+        [[nodiscard]] bool loadDefinition( string_view relativePath, bool bAppend );
+        /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromResource`). */
+        [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
 
         /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
         struct ActionFrameAccum
@@ -751,6 +814,8 @@ namespace sw
         /** @brief 이 맵이 보는 키 하나의 눌림 상태입니다. `isKeyboardFocusIgnored` 면 장치 상태 그대로, 아니면 키보드 포커스를 따릅니다(`SlotRead::Device` 는 늘 장치 상태). */
         bool isKeyboardKeyDown( Key key, SlotRead read = SlotRead::Game ) const;
         bool wasKeyboardKeyPressed( Key key ) const;
+        /** @brief 포커스를 무시하는 맵이 지금 키보드를 보지 않아야 하면 true 입니다 — 도구 포커스 동안 도구 맵이 아닌 맵(`setToolKeyboardReader`). */
+        bool isToolKeyboardHidden() const;
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
         bool isSlotDown( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         bool wasSlotPressed( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
@@ -823,6 +888,7 @@ namespace sw
         InputPlayerSettings                  _playerSettings;
         float32                              _doubleClickTime;
         float32                              _doubleClickMaxDistance;
+        float32                              _dragThreshold; ///< 클릭과 끌기를 가르는 포인터 이동 거리(픽셀, `dragThreshold`)
         float32                              _doubleTapTime;
         float32                              _holdThreshold;
         float32                              _navRepeatDelay;
@@ -832,6 +898,7 @@ namespace sw
         InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(셸 맵). */
-        [[maybe_unused]] uint8               _reservedFlags              : 6;
+        uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */
+        [[maybe_unused]] uint8               _reservedFlags              : 5;
     };
 } // namespace sw

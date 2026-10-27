@@ -10,6 +10,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -123,7 +124,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( "Build" ) )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
+                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() ); // 막혀 있으면 빌드 상태 표시가 알린다
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
@@ -194,7 +195,7 @@ namespace sw::editor
         drawDetail();
         if ( _bOpenPreview )
         {
-            ImGui::OpenPopup( "Confirm Module Change" );
+            EditorInputGUI::openPopup( "Confirm Module Change" );
             _bOpenPreview = false;
         }
         drawPreview();

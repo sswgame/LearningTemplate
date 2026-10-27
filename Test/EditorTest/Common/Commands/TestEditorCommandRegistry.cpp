@@ -16,14 +16,26 @@ namespace
     int32 s_invokeCount = 0;
     bool  s_bEnabled    = true;
 
-    void bumpInvokeCount()
+    void bumpInvokeCount( const EditorCommandTarget& /*target*/ )
     {
         ++s_invokeCount;
     }
 
-    bool isEnabledProbe()
+    bool isEnabledProbe( const EditorCommandTarget& /*target*/ )
     {
         return s_bEnabled;
+    }
+
+    /** @brief 인자 없는 전역 동작 — 등록 줄이 대상을 버리는 감싸개로 맞춘다. */
+    void bumpWithoutTarget()
+    {
+        ++s_invokeCount;
+    }
+
+    /** @brief 선택이 정확히 하나일 때만 켜지는 조건(Rename 처럼 하나에만 뜻이 있는 명령 — R3). */
+    bool isSingleSelection( const EditorCommandTarget& target )
+    {
+        return target.hasSingleSelection();
     }
 
     /** @brief id 와 동작만 채운 최소 커맨드를 만듭니다. */
@@ -62,30 +74,6 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorCommandRegistryTest] 단축키 라벨이 Ctrl→Shift→Alt 순서로, 보조 조합은 " / " 로 이어붙는지 검증
- */
-SW_TEST_CASE( EditorCommandRegistryTest, ShortcutLabelUsesFixedModifierOrder )
-{
-    fixed_string<constant::kMaxBuffer64> label;
-
-    EditorCommandDesc single{};
-    single._shortcut = EditorCommandShortcut{ EditorCommandKey::B, commandmodifier::kCtrl | commandmodifier::kShift };
-    EditorCommandRegistry::formatShortcutLabel( single, label );
-    SW_EXPECT_STREQ( "Ctrl+Shift+B", label.c_str() );
-
-    EditorCommandDesc ctrlAlt{};
-    ctrlAlt._shortcut = EditorCommandShortcut{ EditorCommandKey::F11, commandmodifier::kCtrl | commandmodifier::kAlt };
-    // 보조 조합은 수정자 없이 F7 하나다 — 라벨에서 보조 조합이 빠지면 이 키는 메뉴 어디에도 보이지 않는다.
-    ctrlAlt._altShortcut = EditorCommandShortcut{ EditorCommandKey::F7, commandmodifier::kNone };
-    EditorCommandRegistry::formatShortcutLabel( ctrlAlt, label );
-    SW_EXPECT_STREQ( "Ctrl+Alt+F11 / F7", label.c_str() );
-
-    EditorCommandDesc none{};
-    EditorCommandRegistry::formatShortcutLabel( none, label );
-    SW_EXPECT_TRUE( label.empty() );
-}
-
-/**
  * @brief [EditorCommandRegistryTest] 아이콘이 있으면 라벨 앞에 두 칸 띄워 붙고, 없으면 라벨만 나오는지 검증
  */
 SW_TEST_CASE( EditorCommandRegistryTest, MenuLabelPrependsIconWhenPresent )
@@ -122,10 +110,10 @@ SW_TEST_CASE( EditorCommandRegistryTest, ExecuteByIDRunsBoundAction )
     SW_EXPECT_NOT_NULL( registry.find( "test.bump" ) );
     SW_EXPECT_NULL( registry.find( "test.missing" ) );
 
-    SW_EXPECT_TRUE( registry.execute( "test.bump" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.bump", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 
-    SW_EXPECT_FALSE( registry.execute( "test.missing" ) );
+    SW_EXPECT_FALSE( registry.execute( "test.missing", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 }
 
@@ -142,27 +130,115 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisabledCommandIsNotExecuted )
     registry.registerCommand( std::move( desc ) );
 
     s_bEnabled = false;
-    SW_EXPECT_FALSE( registry.execute( "test.gated" ) );
+    SW_EXPECT_FALSE( registry.execute( "test.gated", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 0, s_invokeCount );
 
     s_bEnabled = true;
-    SW_EXPECT_TRUE( registry.execute( "test.gated" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.gated", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 }
 
 /**
- * @brief [EditorCommandRegistryTest] 같은 조합을 두 커맨드가 주장하면 validate 가 잡는지 검증
- * @details 같은 조합을 두 처리기가 받으면(전역 처리기와 Inspector 가 각각 Ctrl+Z) 한 번 눌러 두 번 되돌아간다. 정의가 표 한곳에
- *          모여 있으므로 그 충돌을 validate 가 잡는다.
+ * @brief [EditorCommandRegistryTest] 동작과 켜짐 조건은 실행할 때 넘긴 대상을 받는다
+ * @details 인자 없는 동작이면 "누른 대상" 을 받을 수 없어 Duplicate · Delete 같은 대상 명령을 패널이 키를 직접 읽어 처리했다(EditorUX 10-2).
+ *          하나에만 뜻이 있는 명령은 다중 선택이면 꺼진다(R3).
  */
-SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIDAndChord )
+SW_TEST_CASE( EditorCommandRegistryTest, ActionAndEnabledReceiveTheTarget )
+{
+    EditorCommandRegistry registry;
+    int32                 invokeCount   = 0;
+    uint64                lastHoveredID = 0;
+
+    EditorCommandDesc rename = makeCommand( "test.rename" );
+    rename._action           = [&invokeCount, &lastHoveredID]( const EditorCommandTarget& target )
+    {
+        ++invokeCount;
+        lastHoveredID = target._hoveredID;
+    };
+    rename._enabledPredicate = &isSingleSelection;
+    registry.registerCommand( std::move( rename ) );
+
+    EditorCommandTarget single{};
+    single._kind           = EditorCommandTargetKind::GameObject;
+    single._listSelectedID = { 7 };
+    single._hoveredID      = 7;
+    SW_EXPECT_TRUE( registry.execute( "test.rename", single ) );
+    SW_EXPECT_EQUAL( 1, invokeCount );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 7 ), lastHoveredID );
+
+    EditorCommandTarget multiple = single;
+    multiple._listSelectedID     = { 7, 8 };
+    SW_EXPECT_FALSE( registry.execute( "test.rename", multiple ) );
+    SW_EXPECT_EQUAL( 1, invokeCount );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 등록 줄의 동작 칸은 인자 없는 함수 · 대상을 받는 함수 · nullptr 을 모두 대상을 받는 형식으로 맞춘다
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, TargetUtilAdaptsActionShapes )
+{
+    s_invokeCount                         = 0;
+    const EditorCommandActionFn pfnGlobal = EditorCommandTargetUtil::toAction<&bumpWithoutTarget>();
+    const EditorCommandActionFn pfnTarget = EditorCommandTargetUtil::toAction<&bumpInvokeCount>();
+    SW_ASSERT_TRUE( pfnGlobal != nullptr );
+    SW_EXPECT_TRUE( pfnTarget == &bumpInvokeCount );
+    SW_EXPECT_TRUE( EditorCommandTargetUtil::toAction<nullptr>() == nullptr );
+    SW_EXPECT_TRUE( EditorCommandTargetUtil::toEnabled<nullptr>() == nullptr );
+    pfnGlobal( EditorCommandTarget::none() );
+    SW_EXPECT_EQUAL( 1, s_invokeCount );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 맥락 메뉴는 대상 종류마다 명령의 맥락 메뉴 칸에서 나오고, 같은 자리는 validate 가 잡는다
+ * @details 메뉴 항목은 명령 id 만 가리킨다(R4). 같은 종류는 어느 패널에서 열어도 같은 메뉴다(R5).
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ContextMenuComesFromCommandColumns )
+{
+    EditorCommandRegistry registry;
+    const auto            addContext = [&]( const utf8* pID, EditorCommandTargetKind kind, int32 order )
+    {
+        EditorCommandDesc desc = makeCommand( pID );
+        desc._contextMenuKind  = kind;
+        desc._contextMenuOrder = order;
+        registry.registerCommand( std::move( desc ) );
+    };
+    addContext( "object.delete", EditorCommandTargetKind::GameObject, 900 );
+    addContext( "object.duplicate", EditorCommandTargetKind::GameObject, 110 );
+    addContext( "object.rename", EditorCommandTargetKind::GameObject, 100 );
+    addContext( "asset.reveal", EditorCommandTargetKind::Asset, 100 );
+    registry.registerCommand( makeCommand( "menu.none" ) );
+
+    vector<EditorMenuItem> listItem;
+    registry.collectContextMenuItems( EditorCommandTargetKind::GameObject, listItem );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listItem.size() ) );
+    SW_EXPECT_STREQ( "object.rename", registry.getCommands()[listItem[0]._commandIndex]._id.c_str() );
+    SW_EXPECT_STREQ( "object.duplicate", registry.getCommands()[listItem[1]._commandIndex]._id.c_str() );
+    SW_EXPECT_FALSE( listItem[1]._bSeparatorBefore );
+    SW_EXPECT_TRUE( listItem[2]._bSeparatorBefore );
+
+    registry.collectContextMenuItems( EditorCommandTargetKind::None, listItem );
+    SW_EXPECT_TRUE( listItem.empty() );
+
+    string report;
+    SW_EXPECT_TRUE( registry.validate( report ) );
+    addContext( "object.rename2", EditorCommandTargetKind::GameObject, 100 );
+    SW_EXPECT_FALSE( registry.validate( report ) );
+    SW_EXPECT_TRUE( report.find( "object.rename2" ) != string::npos );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 중복 id 와, 한 입력 액션을 두 커맨드가 부르는 것을 validate 가 잡는다
+ * @details 한 액션을 두 명령이 부르면 한 번 눌러 둘이 돈다(예전에 같은 조합을 전역 처리기와 Inspector 가 각각 Ctrl+Z 로 받던 결함과 같은 모양).
+ *          키 조합의 겹침은 입력 맵이 레이어 안에서 본다(`InputMap::findSameLayerInputConflict`).
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIDAndSharedAction )
 {
     EditorCommandRegistry clean;
-    clean.registerCommand( makeCommand( "test.a" ) );
-
-    EditorCommandDesc withChord = makeCommand( "test.b" );
-    withChord._shortcut         = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
-    clean.registerCommand( std::move( withChord ) );
+    EditorCommandDesc     undo = makeCommand( "edit.undo" );
+    undo._inputAction          = "edit.undo";
+    clean.registerCommand( std::move( undo ) );
+    clean.registerCommand( makeCommand( "edit.noShortcut" ) );
+    clean.registerCommand( makeCommand( "edit.noShortcut2" ) ); // 액션이 없는 명령끼리는 겹치지 않는다
 
     string report;
     SW_EXPECT_TRUE( clean.validate( report ) );
@@ -174,77 +250,11 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIDAndChord )
     SW_EXPECT_FALSE( duplicateID.validate( report ) );
     SW_EXPECT_FALSE( report.empty() );
 
-    EditorCommandRegistry duplicateChord;
-    EditorCommandDesc     undo = makeCommand( "test.undo" );
-    undo._shortcut             = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
-    duplicateChord.registerCommand( std::move( undo ) );
-
-    // 보조 조합끼리의 충돌도 잡아야 한다 — 주 조합만 보면 Ctrl+Z 를 보조로 든 커맨드를 놓친다.
-    EditorCommandDesc redo = makeCommand( "test.redo" );
-    redo._shortcut         = EditorCommandShortcut{ EditorCommandKey::Y, commandmodifier::kCtrl };
-    redo._altShortcut      = EditorCommandShortcut{ EditorCommandKey::Z, commandmodifier::kCtrl };
-    duplicateChord.registerCommand( std::move( redo ) );
-
-    SW_EXPECT_FALSE( duplicateChord.validate( report ) );
-    SW_EXPECT_FALSE( report.empty() );
-}
-
-/**
- * @brief [EditorCommandRegistryTest] 표시 전용 조합(Alt+F4)은 처리 대상이 아니고 충돌로도 세지 않는지 검증
- */
-SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
-{
-    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmodifier::kAlt | commandmodifier::kDisplayOnly };
-    const EditorCommandShortcut handled{ EditorCommandKey::F4, commandmodifier::kAlt };
-
-    SW_EXPECT_FALSE( EditorCommandRegistry::isHandledShortcut( displayOnly ) );
-    SW_EXPECT_TRUE( EditorCommandRegistry::isHandledShortcut( handled ) );
-    // DisplayOnly 비트는 조합 비교에서 무시된다 — 같은 키·같은 수정자이면 같은 조합이다.
-    SW_EXPECT_TRUE( EditorCommandRegistry::isSameShortcut( displayOnly, handled ) );
-
-    // 라벨에는 그대로 보여야 한다. OS 가 가로채는 키를 메뉴에 적어 두는 것이 목적이다.
-    EditorCommandDesc desc{};
-    desc._shortcut = displayOnly;
-    fixed_string<constant::kMaxBuffer64> label;
-    EditorCommandRegistry::formatShortcutLabel( desc, label );
-    SW_EXPECT_STREQ( "Alt+F4", label.c_str() );
-
-    // 표시 전용은 다른 커맨드와 나란히 있어도 중복으로 걸리지 않는다.
-    EditorCommandRegistry registry;
-    EditorCommandDesc     exitCommand = makeCommand( "test.exit" );
-    exitCommand._shortcut             = displayOnly;
-    registry.registerCommand( std::move( exitCommand ) );
-
-    EditorCommandDesc other = makeCommand( "test.other" );
-    other._shortcut         = displayOnly;
-    registry.registerCommand( std::move( other ) );
-
-    string report;
-    SW_EXPECT_TRUE( registry.validate( report ) );
-}
-
-/**
- * @brief [EditorCommandRegistryTest] 단축키 수정자는 정확히 같아야 하고, Super(Win 키)는 어떤 조합과도 맞지 않는다
- * @details 필요한 수정자만 보면 Ctrl+Shift+Z 가 Ctrl+Z(undo)까지 함께 발동한다. Super 를 Ctrl 로 치면 Win+Z 가 undo 가 된다 —
- *          지원하는 플랫폼(Windows · 리눅스)에 Cmd 키는 없다.
- */
-SW_TEST_CASE( EditorCommandRegistryTest, ShortcutModifiersMustMatchExactly )
-{
-    const EditorCommandShortcut undo{ EditorCommandKey::Z, commandmodifier::kCtrl };
-    const EditorCommandShortcut redo{ EditorCommandKey::Z, commandmodifier::kCtrl | commandmodifier::kShift };
-
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl, false ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl | commandmodifier::kShift, false ) );
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( redo, commandmodifier::kCtrl | commandmodifier::kShift, false ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kNone, false ) );
-
-    // Super 는 Ctrl 대신이 아니고, Ctrl 과 함께 눌려도 다른 조합이다.
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kNone, true ) );
-    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmodifier::kCtrl, true ) );
-
-    // DisplayOnly 비트는 수정자 비교에 들지 않는다(처리 여부는 `isHandledShortcut` 이 가린다).
-    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmodifier::kAlt | commandmodifier::kDisplayOnly };
-    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( displayOnly, commandmodifier::kAlt, false ) );
+    EditorCommandDesc redo = makeCommand( "edit.redo" );
+    redo._inputAction      = "edit.undo";
+    clean.registerCommand( std::move( redo ) );
+    SW_EXPECT_FALSE( clean.validate( report ) );
+    SW_EXPECT_TRUE( report.find( "edit.redo" ) != string::npos );
 }
 
 /**
@@ -341,7 +351,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcluded
 {
     s_invokeCount = 0;
     const EditorExtensionRegistrar<EditorCommandRegistration> registrar{
-        EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", { EditorCommandKey::F7, commandmodifier::kCtrl }, &bumpInvokeCount, nullptr, EditorCommandEdit::NoScene, "MainMenu/TestExtension" }
+        EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", "test.registeredAction", &bumpInvokeCount, nullptr, EditorCommandEdit::NoScene, "MainMenu/TestExtension", EditorCommandTargetKind::GameObject, 300, nullptr, true }
     };
     const EditorCommandRegistration* pRow = &registrar.getRegistration();
 
@@ -351,9 +361,11 @@ SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcluded
     SW_ASSERT_TRUE( pDesc != nullptr );
     SW_EXPECT_STREQ( "MainMenu/TestExtension", pDesc->_menuPath.c_str() );
     SW_EXPECT_EQUAL( 9100, pDesc->_menuOrder );
-    SW_EXPECT_TRUE( pDesc->_shortcut._key == EditorCommandKey::F7 );
+    SW_EXPECT_STREQ( "test.registeredAction", pDesc->_inputAction.c_str() );
+    SW_EXPECT_TRUE( pDesc->_contextMenuKind == EditorCommandTargetKind::GameObject );
+    SW_EXPECT_EQUAL( 300, pDesc->_contextMenuOrder );
     SW_EXPECT_TRUE( registry.findMenu( "MainMenu/TestExtension" ) != nullptr );
-    SW_EXPECT_TRUE( registry.execute( "test.registeredCommand" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.registeredCommand", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 
     EditorCommandRegistry excluded;

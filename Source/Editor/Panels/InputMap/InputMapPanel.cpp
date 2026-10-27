@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -623,7 +624,7 @@ namespace sw::editor
         if ( _bCapturingKey == SW_FALSE )
             return;
 
-        ImGui::OpenPopup( "Press Key / Button To Bind" );
+        EditorInputGUI::openPopup( "Press Key / Button To Bind" );
         if ( EditorWidgets::beginCenteredModal( "Press Key / Button To Bind" ) )
         {
             ImGui::Text( "Binding for Action: %s", _selectedAction.c_str() );

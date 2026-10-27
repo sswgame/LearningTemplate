@@ -18,10 +18,11 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorPanelHost.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
@@ -78,6 +79,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorNotificationManager>() );
         _scope.addSubsystem( make_unique<EditorCommandRegistry>() );
         _scope.addSubsystem( make_unique<EditorObjectEditBindings>() ); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
+        _scope.addSubsystem( make_unique<EditorInputActions>() );       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
         _scope.addSubsystem( make_unique<ConfigHotReload>() );

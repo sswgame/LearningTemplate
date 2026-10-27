@@ -9,9 +9,10 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -181,7 +182,7 @@ namespace sw::editor
     {
         const float32 side = ImGui::GetFrameHeight();
         if ( ImGui::Button( editoricon::kBookmark, ImVec2{ side, side } ) )
-            ImGui::OpenPopup( "##ViewportBookmarksPopup" );
+            EditorInputGUI::openPopup( "##ViewportBookmarksPopup" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraBookmarks" ) );
 
         if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
@@ -219,7 +220,7 @@ namespace sw::editor
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
         if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )
-            ImGui::OpenPopup( "##ViewportAlignPopup" );
+            EditorInputGUI::openPopup( "##ViewportAlignPopup" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "AlignSelected" ) );
         if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )

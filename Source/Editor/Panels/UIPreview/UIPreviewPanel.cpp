@@ -18,6 +18,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -107,15 +108,24 @@ namespace sw::editor
     {
         struct UIPreviewPanelInternal
         {
-            static constexpr float32     kLeftColumns          = 45.0f;
-            static constexpr float32     kIndentPerLevel       = 12.0f;
-            static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
-            static constexpr float32     kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
-            static constexpr float32     kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
-            static constexpr uint32      kPaletteRefreshFrames = 180;   ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
-            static constexpr const utf8* kPaletteDragPayload   = "SW_UIPREVIEW_WIDGET_TYPE";
-            static constexpr Color       kLayoutColor{ Color::fromBytes( 90, 200, 255, 110 ) };
-            static constexpr Color       kSafeZoneColor{ Color::fromBytes( 255, 80, 80, 200 ) };
+            static constexpr float32 kLeftColumns          = 45.0f;
+            static constexpr float32 kIndentPerLevel       = 12.0f;
+            static constexpr float32 kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
+            static constexpr float32 kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
+            static constexpr float32 kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
+            static constexpr uint32  kPaletteRefreshFrames = 180;   ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
+            /** @brief 레이아웃 사각형 · 안전 영역 선의 색입니다(테마 토큰 — 정보색 · 오류색을 반투명으로). */
+            static Color getLayoutColor() { return EditorThemeUtil::getInfoColor().withAlpha( 0.45f ); }
+            static Color getSafeZoneColor() { return EditorThemeUtil::getErrorColor().withAlpha( 0.8f ); }
+
+            /** @brief 직전 항목에 팔레트 위젯 타입({WidgetType, 이름 id})이 놓였으면 그 타입 이름을 @p outTypeName 에 담고 true 입니다. */
+            static bool acceptPaletteType( string& outTypeName )
+            {
+                EditorDragPayload payload{};
+                if ( EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::WidgetType }, payload ) == false )
+                    return false;
+                return EditorInputGUI::findPayloadName( EditorPayloadKind::WidgetType, payload._id, outTypeName );
+            }
 
             /** @brief 시나리오가 누를 레이블 `<접두어>.<접미어>` 를 남깁니다. 테스트를 켰을 때만 문자열을 만듭니다. */
             static void noteMark( const utf8* pPrefix, const utf8* pSuffix )
@@ -1143,12 +1153,9 @@ namespace sw::editor
 
     void UIPreviewPanel::acceptPaletteDrop( UIScreen& screen, Widget* pTarget )
     {
-        if ( ImGui::BeginDragDropTarget() == false )
-            return;
-        const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( UIPreviewPanelInternal::kPaletteDragPayload );
-        if ( pPayload != nullptr && pPayload->Data != nullptr )
-            (void)addWidget( screen, hashed_string( static_cast<const utf8*>( pPayload->Data ) ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
-        ImGui::EndDragDropTarget();
+        string typeName;
+        if ( UIPreviewPanelInternal::acceptPaletteType( typeName ) )
+            (void)addWidget( screen, hashed_string( typeName.c_str() ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
     }
 
     void UIPreviewPanel::drawPalette( UIScreen& screen )
@@ -1192,17 +1199,13 @@ namespace sw::editor
             if ( ImGui::Selectable( pName, bChosen, ImGuiSelectableFlags_AllowDoubleClick ) )
             {
                 _paletteType = pType->_name;
-                if ( ImGui::IsMouseDoubleClicked( 0 ) )
+                if ( EditorInputGUI::wasItemDoubleClicked() )
                     (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
             }
             Internal::noteMark( "uipreview.palette", pName );
-            // 끌어서 트리 줄이나 이미지에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`).
-            if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_None ) )
-            {
-                ImGui::SetDragDropPayload( Internal::kPaletteDragPayload, pName, StringUtil::strlen( pName ) + 1 );
-                ImGui::TextUnformatted( pName );
-                ImGui::EndDragDropSource();
-            }
+            // 끌어서 트리 줄이나 이미지에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`). 페이로드는 {WidgetType, 타입 이름 id} 다.
+            const EditorDragPayload payload{ EditorPayloadKind::WidgetType, EditorInputGUI::registerPayloadName( EditorPayloadKind::WidgetType, pName ) };
+            (void)EditorInputGUI::beginDragSource( payload, pName ); // 끌기를 시작했는지는 쓰지 않는다
         }
         ImGui::EndChild();
     }
@@ -1252,9 +1255,9 @@ namespace sw::editor
             }
             if ( ImGui::IsItemActive() && _bSlotDragging )
             {
-                const ImVec2     mouseDelta = ImGui::GetIO().MouseDelta;
+                const float2     mouseDelta = EditorInputGUI::readPointer()._delta;
                 WidgetLayoutSlot slot       = pWidget->getLayoutSlot();
-                if ( UIPreviewLogic::applySlotDrag( slot, row._handle, float2{ mouseDelta.x * toUIX, mouseDelta.y * toUIY } ) )
+                if ( UIPreviewLogic::applySlotDrag( slot, row._handle, float2{ mouseDelta._x * toUIX, mouseDelta._y * toUIY } ) )
                     pWidget->setLayoutSlot( slot );
             }
             if ( ImGui::IsItemDeactivated() && _bSlotDragging )
@@ -1644,10 +1647,10 @@ namespace sw::editor
 
     void UIPreviewPanel::feedPointer( UIScreen& screen, const float2& drawSize, const float2& origin, bool bHovered )
     {
-        WidgetTree&    tree = screen.getTree();
-        const ImGuiIO& io   = ImGui::GetIO();
-        UIPointerEvent event{};
-        event._position = UIPreviewLogic::mapImageToUI( float2{ io.MousePos.x - origin._x, io.MousePos.y - origin._y }, drawSize, _viewport );
+        WidgetTree&              tree    = screen.getTree();
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
+        UIPointerEvent           event{};
+        event._position = UIPreviewLogic::mapImageToUI( float2{ pointer._position._x - origin._x, pointer._position._y - origin._y }, drawSize, _viewport );
         event._delta    = float2{ event._position._x - _lastPointer._x, event._position._y - _lastPointer._y };
         if ( bHovered )
         {
@@ -1666,10 +1669,10 @@ namespace sw::editor
                 _lastPointer = event._position;
             }
             _bPointerInside = true;
-            if ( io.MouseWheel != 0.0f )
+            if ( pointer._wheel != 0.0f )
             {
                 event._kind  = UIPointerEventKind::Wheel;
-                event._wheel = io.MouseWheel;
+                event._wheel = pointer._wheel;
                 (void)_pointer.process( tree, event );
                 markPreviewMutated();
             }
@@ -1683,18 +1686,18 @@ namespace sw::editor
 
         struct ButtonMap
         {
-            int32       _imguiButton;
-            MouseButton _button;
+            EditorMouseButton _editorButton;
+            MouseButton       _button;
         };
         static constexpr ButtonMap kArrButton[] = {
-            {0,   MouseButton::Left},
-            {1,  MouseButton::Right},
-            {2, MouseButton::Middle},
+            {  EditorMouseButton::Left,   MouseButton::Left},
+            { EditorMouseButton::Right,  MouseButton::Right},
+            {EditorMouseButton::Middle, MouseButton::Middle},
         };
         for ( const ButtonMap& map : kArrButton )
         {
             event._button = map._button;
-            if ( bHovered && ImGui::IsMouseClicked( map._imguiButton ) )
+            if ( bHovered && pointer.wasPressed( map._editorButton ) )
             {
                 event._kind                  = UIPointerEventKind::Down;
                 const UIPointerResult result = _pointer.process( tree, event );
@@ -1704,7 +1707,7 @@ namespace sw::editor
                 markPreviewMutated();
             }
             // 이미지 밖에서 놓은 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
-            if ( ImGui::IsMouseReleased( map._imguiButton ) && ( bHovered || _bPointerPressed ) )
+            if ( pointer.wasReleased( map._editorButton ) && ( bHovered || _bPointerPressed ) )
             {
                 event._kind = UIPointerEventKind::Up;
                 (void)_pointer.process( tree, event );
@@ -1751,22 +1754,18 @@ namespace sw::editor
         ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
         EditorSelfTestMarks::note( "uipreview.image" );
-        if ( _bInteract == false && ImGui::BeginDragDropTarget() )
+        string droppedType;
+        if ( _bInteract == false && Internal::acceptPaletteType( droppedType ) )
         {
             // 팔레트 항목을 이미지 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
-            const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( Internal::kPaletteDragPayload );
-            if ( pPayload != nullptr && pPayload->Data != nullptr )
-            {
-                const ImVec2   mouse  = ImGui::GetMousePos();
-                const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
-                const WidgetID target = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
-                (void)addWidget( screen, hashed_string( static_cast<const utf8*>( pPayload->Data ) ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
-            }
-            ImGui::EndDragDropTarget();
+            const float2   mouse  = EditorInputGUI::readPointer()._position;
+            const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse._x - origin._x, mouse._y - origin._y }, drawSize, _viewport );
+            const WidgetID target = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
+            (void)addWidget( screen, hashed_string( droppedType.c_str() ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
         }
         // 이미지 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 이미지 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
         // 골라 손잡이가 사라지고 끌기가 시작되지 않는다.
-        const bool bImageClicked = _bInteract == false && ImGui::IsItemClicked();
+        const bool bImageClicked = _bInteract == false && EditorInputGUI::wasItemClicked();
         if ( _bInteract )
             feedPointer( screen, drawSize, origin, bImageHovered );
 
@@ -1783,7 +1782,7 @@ namespace sw::editor
             for ( const Widget* pWidget : listWidget )
             {
                 if ( pWidget->isVisible() )
-                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kLayoutColor ), 1.0f );
+                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( Internal::getLayoutColor() ), 1.0f );
             }
         }
         if ( pSelected != nullptr )
@@ -1793,7 +1792,7 @@ namespace sw::editor
         if ( bHasSafeInsets )
         {
             const UIRect safe{ insets._x, insets._y, _viewport._size._x - insets._z, _viewport._size._y - insets._w };
-            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kSafeZoneColor ), 1.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );
         }
         // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
         if ( _bInteract == false )

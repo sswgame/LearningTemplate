@@ -17,6 +17,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -726,17 +727,17 @@ namespace sw::editor
     {
         ImGui::InvisibleButton( "##TimelineCanvas", ImVec2{ geometry._totalWidth, MathUtil::max( geometry._totalHeight, geometry._laneHeight ) } );
         const bool   bHovered = ImGui::IsItemHovered();
-        const ImVec2 mouse    = ImGui::GetIO().MousePos;
-        if ( bHovered && ImGui::GetIO().MouseWheel != 0.0f )
+        const ImVec2 mouse    = ImGui::GetMousePos();
+        if ( bHovered && EditorInputGUI::readPointer()._wheel != 0.0f )
         {
-            const float32 factor = ImGui::GetIO().MouseWheel > 0.0f ? ProfilerPanelInternal::kTimelineWheelZoomFactor
-                                                                    : 1.0f / ProfilerPanelInternal::kTimelineWheelZoomFactor;
+            const float32 factor = EditorInputGUI::readPointer()._wheel > 0.0f ? ProfilerPanelInternal::kTimelineWheelZoomFactor
+                                                                               : 1.0f / ProfilerPanelInternal::kTimelineWheelZoomFactor;
             ProfilerTimelineLayout::zoom( _timelineViewBegin, _timelineViewEnd, mouse.x - geometry._trackLeft, geometry._trackWidth, factor, _timelineWindowBegin, _timelineWindowEnd );
             _bTimelineZoomed = SW_TRUE;
         }
         if ( ImGui::IsItemActive() && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
         {
-            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, ImGui::GetIO().MouseDelta.x, geometry._trackWidth, _timelineWindowBegin, _timelineWindowEnd );
+            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, EditorInputGUI::readPointer()._delta._x, geometry._trackWidth, _timelineWindowBegin, _timelineWindowEnd );
             _bTimelineZoomed = SW_TRUE;
         }
         return bHovered;
@@ -764,7 +765,7 @@ namespace sw::editor
                                                                    const vector<string>* pLoadedSlotName, bool bHovered )
     {
         const FrameProfiler* pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        const ImVec2         mouse     = ImGui::GetIO().MousePos;
+        const ImVec2         mouse     = ImGui::GetMousePos();
         ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
         pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
@@ -885,9 +886,9 @@ namespace sw::editor
             const ImVec2  plotMin    = ImGui::GetItemRectMin();
             const ImVec2  plotMax    = ImGui::GetItemRectMax();
             const float32 frameWidth = ( plotMax.x - plotMin.x ) / static_cast<float32>( _listScratchSeries.size() );
-            if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) && frameWidth > 0.0f )
+            if ( EditorInputGUI::wasItemClicked() && frameWidth > 0.0f )
             {
-                const int32 clicked    = static_cast<int32>( ( ImGui::GetIO().MousePos.x - plotMin.x ) / frameWidth );
+                const int32 clicked    = static_cast<int32>( ( EditorInputGUI::readPointer()._position._x - plotMin.x ) / frameWidth );
                 const int32 lastIndex  = static_cast<int32>( _listScratchSeries.size() ) - 1;
                 _rowQuery._frameOffset = static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) );
             }

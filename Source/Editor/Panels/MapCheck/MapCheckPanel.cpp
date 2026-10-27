@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -253,7 +254,7 @@ namespace sw::editor
             {
                 (void)selectRowObject( rowIndex ); // 활성 씬에 없는 오브젝트(지운 것)면 고를 것이 없다
                 SceneComponent* pSceneComponent = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-                if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) && pSceneComponent != nullptr )
+                if ( EditorInputGUI::wasItemDoubleClicked() && pSceneComponent != nullptr )
                     (void)EditorSceneViewUtil::focusOn( pSceneComponent->getWorldPosition(), MapCheckPanelInternal::kFocusRadius ); // 씬 뷰가 없으면 고르기만 한다
             }
             if ( EditorSelfTestMarks::isEnabled() )

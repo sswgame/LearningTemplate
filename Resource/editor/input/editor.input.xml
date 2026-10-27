@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Editor InputMap — editor command shortcuts (EditorInputActions owns this map; Config/Editor/editortooldefaults.json _editorInputMap points here).
+  Action names are editor command ids (EditorCommandDesc::_inputAction). A command without an action has no shortcut.
+  Layers are scopes: Editor.Global is always on; Editor.Panel.<panel id> is on only while that panel window has focus, and a command
+  of the focused panel's layer wins over a global command fired by the same press. Two actions in one layer may not share an input
+  (appendFromResource rejects it). Modifiers match exactly: Ctrl+Shift+Z does not fire Ctrl+Z.
+  Extension modules append their own *.input.xml (EditorInputExtensionRegistration). The user's rebinding lives in Saved/Editor/editorbindings.xml.
+-->
+<InputMap defaultLayer="Editor.Global" doubleClickTime="0.35" doubleClickMaxDistance="6" dragThreshold="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Editor.Global" priority="0" enabled="1" blockLower="0" alwaysOn="1"/>
+		<layer name="Editor.Panel.hierarchy" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.content_browser" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.scene_view" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.console" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.tile_map" priority="10" enabled="0" blockLower="0"/>
+		<!-- Mode layer: the scene view turns it on while the right mouse button is held (fly). It blocks lower layers so W/E/Q fly instead of switching the gizmo. -->
+		<layer name="Editor.Viewport.Fly" priority="20" enabled="0" blockLower="1"/>
+	</layers>
+
+	<layer name="Editor.Global">
+		<action name="scene.open" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="O"/>
+		</action>
+		<action name="asset.save" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="S"/>
+		</action>
+		<action name="editor.quickOpen" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="P"/>
+		</action>
+		<action name="editor.commandPalette" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="P"/>
+			<bind source="key" modifier="Ctrl" code="Space"/>
+		</action>
+		<action name="edit.undo" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Z"/>
+		</action>
+		<action name="edit.redo" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Y"/>
+			<bind source="key" modifier="Ctrl+Shift" code="Z"/>
+		</action>
+		<action name="build.compileGame" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Alt" code="F11"/>
+			<bind source="key" code="F7"/>
+		</action>
+		<action name="build.compileAll" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="B"/>
+		</action>
+		<action name="viewport.screenshot" trigger="Pressed">
+			<bind source="key" code="F9"/>
+		</action>
+		<action name="viewport.renderDocCapture" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="F12"/>
+		</action>
+		<action name="help.reportBug" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="F12"/>
+		</action>
+		<action name="play.eject" trigger="Pressed">
+			<bind source="key" code="F8"/>
+		</action>
+		<!-- Read by the curve editor widget only while the pointer is over its canvas (the widget lives in popups of several panels). -->
+		<action name="curveEditor.frameAll" trigger="Pressed">
+			<bind source="key" code="F"/>
+		</action>
+	</layer>
+
+	<!-- Hierarchy window: scene object commands act on the selection; selectAll / selectPrevious / selectNext are read by the panel (row order). -->
+	<layer name="Editor.Panel.hierarchy">
+		<action name="scene.duplicate" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="D"/>
+		</action>
+		<action name="scene.copy" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="C"/>
+		</action>
+		<action name="scene.paste" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="V"/>
+		</action>
+		<action name="scene.delete" trigger="Pressed">
+			<bind source="key" code="Delete"/>
+		</action>
+		<action name="scene.object.rename" trigger="Pressed">
+			<bind source="key" code="F2"/>
+		</action>
+		<action name="hierarchy.selectAll" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="A"/>
+		</action>
+		<action name="hierarchy.selectPrevious" trigger="Repeat">
+			<bind source="key" code="Up"/>
+		</action>
+		<action name="hierarchy.selectNext" trigger="Repeat">
+			<bind source="key" code="Down"/>
+		</action>
+	</layer>
+
+	<!-- Content Browser: asset commands act on the selected asset; navigateBack / navigateForward are read by the panel (folder history). -->
+	<layer name="Editor.Panel.content_browser">
+		<action name="asset.rename" trigger="Pressed">
+			<bind source="key" code="F2"/>
+		</action>
+		<action name="asset.duplicate" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="D"/>
+		</action>
+		<action name="asset.delete" trigger="Pressed">
+			<bind source="key" code="Delete"/>
+		</action>
+		<action name="contentBrowser.navigateBack" trigger="Pressed">
+			<bind source="key" modifier="Alt" code="Left"/>
+			<bind source="key" code="Backspace"/>
+		</action>
+		<action name="contentBrowser.navigateForward" trigger="Pressed">
+			<bind source="key" modifier="Alt" code="Right"/>
+		</action>
+	</layer>
+
+	<!-- Console: copy the selected log rows. -->
+	<layer name="Editor.Panel.console">
+		<action name="console.copySelection" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="C"/>
+		</action>
+	</layer>
+
+	<!-- Tile Map: paint tools (Unity Tile Palette keys). -->
+	<layer name="Editor.Panel.tile_map">
+		<action name="tileMap.brush" trigger="Pressed">
+			<bind source="key" code="B"/>
+		</action>
+		<action name="tileMap.rect" trigger="Pressed">
+			<bind source="key" code="U"/>
+		</action>
+		<action name="tileMap.fill" trigger="Pressed">
+			<bind source="key" code="G"/>
+		</action>
+		<action name="tileMap.picker" trigger="Pressed">
+			<bind source="key" code="I"/>
+		</action>
+	</layer>
+
+	<!-- Scene view: gizmo modes, framing, orthographic views, camera bookmarks (1-9 go, Ctrl+1-9 store), ruler (hold M). Read by the viewport. -->
+	<layer name="Editor.Panel.scene_view">
+		<action name="viewport.frameSelected" trigger="Pressed">
+			<bind source="key" code="F"/>
+		</action>
+		<action name="viewport.gizmoTranslate" trigger="Pressed">
+			<bind source="key" code="W"/>
+		</action>
+		<action name="viewport.gizmoRotate" trigger="Pressed">
+			<bind source="key" code="E"/>
+		</action>
+		<action name="viewport.gizmoScale" trigger="Pressed">
+			<bind source="key" code="R"/>
+		</action>
+		<action name="viewport.gizmoCycle" trigger="Pressed">
+			<bind source="key" code="Q"/>
+			<bind source="key" code="Space"/>
+		</action>
+		<action name="viewport.toggleMaximize" trigger="Pressed">
+			<bind source="key" modifier="Shift" code="Space"/>
+		</action>
+		<action name="viewport.viewTop" trigger="Pressed">
+			<bind source="key" code="Numpad7"/>
+		</action>
+		<action name="viewport.viewFront" trigger="Pressed">
+			<bind source="key" code="Numpad1"/>
+		</action>
+		<action name="viewport.viewRight" trigger="Pressed">
+			<bind source="key" code="Numpad3"/>
+		</action>
+		<action name="viewport.toggleOrthographic" trigger="Pressed">
+			<bind source="key" code="Numpad5"/>
+		</action>
+		<action name="viewport.rulerHold" trigger="Down">
+			<bind source="key" code="M"/>
+		</action>
+		<action name="viewport.bookmark1" trigger="Pressed">
+			<bind source="key" code="Digit1"/>
+		</action>
+		<action name="viewport.setBookmark1" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit1"/>
+		</action>
+		<action name="viewport.bookmark2" trigger="Pressed">
+			<bind source="key" code="Digit2"/>
+		</action>
+		<action name="viewport.setBookmark2" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit2"/>
+		</action>
+		<action name="viewport.bookmark3" trigger="Pressed">
+			<bind source="key" code="Digit3"/>
+		</action>
+		<action name="viewport.setBookmark3" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit3"/>
+		</action>
+		<action name="viewport.bookmark4" trigger="Pressed">
+			<bind source="key" code="Digit4"/>
+		</action>
+		<action name="viewport.setBookmark4" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit4"/>
+		</action>
+		<action name="viewport.bookmark5" trigger="Pressed">
+			<bind source="key" code="Digit5"/>
+		</action>
+		<action name="viewport.setBookmark5" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit5"/>
+		</action>
+		<action name="viewport.bookmark6" trigger="Pressed">
+			<bind source="key" code="Digit6"/>
+		</action>
+		<action name="viewport.setBookmark6" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit6"/>
+		</action>
+		<action name="viewport.bookmark7" trigger="Pressed">
+			<bind source="key" code="Digit7"/>
+		</action>
+		<action name="viewport.setBookmark7" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit7"/>
+		</action>
+		<action name="viewport.bookmark8" trigger="Pressed">
+			<bind source="key" code="Digit8"/>
+		</action>
+		<action name="viewport.setBookmark8" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit8"/>
+		</action>
+		<action name="viewport.bookmark9" trigger="Pressed">
+			<bind source="key" code="Digit9"/>
+		</action>
+		<action name="viewport.setBookmark9" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Digit9"/>
+		</action>
+	</layer>
+
+	<!-- Fly mode (right mouse button held over the scene view). Shift speeds up (modifier, read by the camera). -->
+	<layer name="Editor.Viewport.Fly">
+		<action name="viewport.flyForward" trigger="Down">
+			<bind source="key" code="W"/>
+		</action>
+		<action name="viewport.flyBack" trigger="Down">
+			<bind source="key" code="S"/>
+		</action>
+		<action name="viewport.flyRight" trigger="Down">
+			<bind source="key" code="D"/>
+		</action>
+		<action name="viewport.flyLeft" trigger="Down">
+			<bind source="key" code="A"/>
+		</action>
+		<action name="viewport.flyUp" trigger="Down">
+			<bind source="key" code="E"/>
+		</action>
+		<action name="viewport.flyDown" trigger="Down">
+			<bind source="key" code="Q"/>
+		</action>
+	</layer>
+</InputMap>

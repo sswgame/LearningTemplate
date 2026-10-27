@@ -322,6 +322,20 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 	endif()
 endforeach()
 
+# ------------------------------------------------------------------------------
+# 2-1) 에디터 코드의 ImGui 입력 함수 금지(EditorUX 10-4 · 10-5 I2 · I4 — 형식이 먼저, 린트는 형식이 못 막는 `ImGuiIO` 필드 읽기만)
+#      모든 뷰 부분(EditorTier<N>View)과 루트(EditorModule), 에디터 확장 모듈(`sw_addEditorExtension`)이 imgui.h 끝(사용자 헤더 자리)에
+#      `Common/Input/EditorInputBan.h` 를 붙이고 사용 중단 경고를 오류로 올린다(`sw_applyEditorInputBan`). 모델 부분은 ImGui 를 아예 include 하지 못한다.
+#      받지 않는 곳은 어댑터 두 파일(SW_EDITOR_INPUT_ADAPTER — 유니티 묶음에서 뺀다)뿐이다.
+# ------------------------------------------------------------------------------
+option(SW_EDITOR_INPUT_BAN "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorInputBan.h)" ON)
+foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
+	if(TARGET EditorTier${tier}View)
+		sw_applyEditorInputBan(EditorTier${tier}View)
+	endif()
+endforeach()
+sw_applyEditorInputBan(EditorModule)
+
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).
 set_target_properties(EditorModule ${listEditorPart} PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)   # EditorCore 부분은 만들 때 이미 껐다
 

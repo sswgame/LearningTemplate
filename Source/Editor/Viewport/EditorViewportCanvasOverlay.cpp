@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorGridUtil.h"
@@ -244,7 +245,7 @@ namespace sw::editor
             if ( ax._depth > -0.2f && ax._pLabel[0] != '-' )
                 pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), EditorColorUtil::toImU32( EditorViewportCanvasOverlayInternal::kCubeLabel ), ax._pLabel );
 
-            if ( bHovered && ImGui::IsMouseClicked( 0 ) )
+            if ( bHovered && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
                 camera.orbitTo( ax._targetRot );
         }
     }
@@ -287,7 +288,7 @@ namespace sw::editor
         if ( bInvalidRulerInputs )
             return;
 
-        if ( ImGui::IsKeyDown( ImGuiKey_M ) == false && bShowRuler == false )
+        if ( EditorInputGUI::isActionDown( "viewport.rulerHold" ) == false && bShowRuler == false )
         {
             _bRulerActive = SW_FALSE;
             return;
@@ -302,13 +303,13 @@ namespace sw::editor
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&
              EditorViewportRayPick::rayHitsAxisPlane( mouseRay, 1, groundPt ) )
         {
-            if ( ImGui::IsMouseClicked( 0 ) )
+            if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
             {
                 _rulerStartWorld = groundPt;
                 _rulerEndWorld   = groundPt;
                 _bRulerActive    = SW_TRUE;
             }
-            else if ( ImGui::IsMouseDown( 0 ) && _bRulerActive == SW_TRUE )
+            else if ( EditorInputGUI::readPointer().isDown( EditorMouseButton::Left ) && _bRulerActive == SW_TRUE )
             {
                 _rulerEndWorld = groundPt;
             }

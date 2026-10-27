@@ -2123,6 +2123,15 @@
        "description": "입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(리소스 경로)"
       },
       {
+       "name": "_editorInputMap",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "에디터 단축키 · 몸짓의 입력 맵(리소스 경로, `EditorInputActions` — 패널마다 레이어)"
+      },
+      {
        "name": "_clearColor",
        "type": "float4",
        "default": "",
@@ -5256,6 +5265,14 @@
    "default": "17",
    "choices": [],
    "description": "C++ 표준(17 이상 — 20 · 23)",
+   "presets": []
+  },
+  {
+   "name": "SW_EDITOR_INPUT_BAN",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorInputBan.h)",
    "presets": []
   },
   {

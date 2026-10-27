@@ -23,7 +23,6 @@
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorFontSetup.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorPanelDump.h"
@@ -32,6 +31,7 @@
 #include "Editor/Common/GUI/EditorRedrawUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/EditorUIContext.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -688,9 +688,6 @@ namespace sw::editor
         _editorContext->getSubsystem<EditorRenderViews>().setRendererBackend( _rendererBackend.get() );
 
         _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
-        // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
-        if ( EditorCommandGUI::loadShortcutOverrides() == EditorUserFileResult::Missing )
-            SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
         _editorContext->getSubsystem<EditorObjectEditBindings>().ensureBound( editor::getSubsystem<CommandStack>() ); // 필수 - 기동 경로다
@@ -975,6 +972,8 @@ namespace sw::editor
         }
 
         // ImGui 가 가져간 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
+        // 에디터 창이 가진 키는 OS 메시지 대신 ImGui 가 받은 키로 엔진 입력 매니저에 들어간다(`EditorInputActions::forwardEditorKeyboard`) — 주 창 · 떼어 낸 창 ·
+        // 자동화가 넣은 키가 한 길로 에디터 입력 맵에 닿고, 그동안 게임 · 셸 · UI 맵은 키보드 포커스 `Tool` 로 가려진다.
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewFocused();

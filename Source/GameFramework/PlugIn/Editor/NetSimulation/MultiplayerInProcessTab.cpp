@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -112,7 +113,7 @@ namespace sw::editor
                     pViewport->draw( float2{ width, height }, bFocused );
                     if ( EditorSelfTestMarks::isEnabled() )
                         EditorSelfTestMarks::note( ( "multiplayer.inprocess.world" + to_string( worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
-                    if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) && bFocused == false )
+                    if ( EditorInputGUI::wasItemClicked() && bFocused == false )
                         (void)_session.setInputFocus( worldIndex );
                 }
                 ImGui::EndGroup();

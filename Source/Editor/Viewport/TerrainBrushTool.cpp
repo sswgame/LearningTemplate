@@ -9,6 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -711,7 +712,7 @@ namespace sw::editor
             else if ( state._bHit )
                 Internal::applyStroke( state, *pTerrain, hit, deltaTime );
         }
-        else if ( bClaim && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+        else if ( bClaim && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
         {
             TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
             if ( pTerrain != nullptr && Internal::beginStroke( state, *pTerrain, hit ) )

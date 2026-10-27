@@ -14,12 +14,14 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Probe/AutomationProbe.h"
@@ -423,7 +425,7 @@ namespace sw::editor
         else
             formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
         if ( ImGui::Button( tagLabel.c_str() ) )
-            ImGui::OpenPopup( "##LogTagFilter" );
+            EditorInputGUI::openPopup( "##LogTagFilter" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
         drawTagFilterPopup();
 
@@ -479,7 +481,8 @@ namespace sw::editor
             }
         }
 
-        const bool bCopyShortcutPressed = _selection.hasSelection() && ImGui::IsWindowFocused() && ImGui::IsKeyChordPressed( ImGuiMod_Ctrl | ImGuiKey_C );
+        // Ctrl+C 는 `Editor.Panel.console` 레이어의 액션이다(이 창이 포커스일 때만 켜진다).
+        const bool bCopyShortcutPressed = _selection.hasSelection() && EditorInputGUI::wasActionTriggered( "console.copySelection" );
         if ( bCopyShortcutPressed )
             copySelectedRows();
 
@@ -531,15 +534,16 @@ namespace sw::editor
             const string tooltipText = SW_LOCKEYFORMAT( "EditorConsole", "EntrySource", TextArgumentList().addText( "file", entry._file.c_str() ).addInteger( "line", entry._line ) );
             EditorWidgets::drawTooltip( tooltipText.c_str() );
         }
-        if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+        if ( EditorInputGUI::wasItemDoubleClicked() )
             openEntryInIde( entry );
 
-        // 줄을 누르면 고르고, 누른 채 끌거나 Shift 로 누르면 넓힌다(언리얼 Output Log 의 여러 줄 선택).
+        // 줄을 누르면 고르고, 누른 채 끌거나 Shift 로 누르면 넓힌다(언리얼 Output Log 의 여러 줄 선택). 선택 밖 줄을 오른쪽으로 누르면 그 줄만 고른다(R2).
         if ( bListHovered && ImGui::IsMouseHoveringRect( rowMin, rowMax, false ) )
         {
-            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
-                _selection.press( static_cast<uint32>( rowIndex ), ImGui::GetIO().KeyShift );
-            else if ( ImGui::IsMouseClicked( ImGuiMouseButton_Right ) && _selection.isSelected( static_cast<uint32>( rowIndex ) ) == false )
+            const EditorPointerState pointer = EditorInputGUI::readPointer();
+            if ( pointer.wasPressed( EditorMouseButton::Left ) )
+                _selection.press( static_cast<uint32>( rowIndex ), pointer.hasModifier( ModifierKey::Shift ) );
+            else if ( pointer.wasPressed( EditorMouseButton::Right ) && _selection.isSelected( static_cast<uint32>( rowIndex ) ) == false )
             {
                 _selection.press( static_cast<uint32>( rowIndex ), false );
                 _selection.release();
@@ -554,7 +558,7 @@ namespace sw::editor
 
     void ConsolePanel::drawLogRowContextMenu( const LogEntry& entry )
     {
-        if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) == false )
+        if ( EditorInputGUI::beginItemContextMenu( "LogEntryCtx" ) == false )
             return;
         if ( ImGui::MenuItem( "Open in IDE" ) )
             openEntryInIde( entry );

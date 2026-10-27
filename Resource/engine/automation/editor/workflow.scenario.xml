@@ -19,7 +19,7 @@
 
 	<!-- 2) 컴포넌트 붙이기 — 선택한 줄을 오른쪽 클릭 → Add Component → 검색 → 항목 -->
 	<At frame="110"><EditorClick mark="hierarchy.selectedRow" button="1"/></At>
-	<At frame="120"><EditorClick mark="hierarchy.addComponent"/></At>
+	<At frame="120"><EditorClick mark="menu.scene.object.addComponent"/></At>
 	<At frame="130"><EditorClick mark="hierarchy.addComponent.search"/></At>
 	<At frame="140"><EditorText value="PointLight"/></At>
 	<At frame="150"><EditorClick mark="hierarchy.addComponent.PointLightComponent"/></At>

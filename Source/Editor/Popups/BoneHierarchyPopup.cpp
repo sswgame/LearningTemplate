@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
