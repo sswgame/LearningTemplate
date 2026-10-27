@@ -52,11 +52,10 @@
 
 Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에서 졌고 수정 뒤 Debug 빌드로 다시 돌려 모두 통과했다(38 · 114 · 12 초).
 
-**통합 T(2026-10-28, 마무리 단계)**: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid` 를 `D:\w\integ-t`(브랜치 `wt/integ-t`)에 병합하고 병합 뒤 결함을 고쳤다. **main 에 아직 안 넣었다(push 도 안 함).** 끝 검증(integ-t e2ea13ed6 + 시나리오 수정 한 커밋): Debug(린트 · nogpu · race) 통과, Shipping(nogpu · hostgpu) 통과, Release 는 `app-scenarios-release` 의 `editor.animgraphedit`(에디터 체인 6단계)만 졌다 — 원인은 병렬 조각의 백엔드별 체인이 추적 중인 원본 `animgraphedit.animgraph.xml` 에 동시에 저장하던 것이었고, 시나리오가 실행마다 새 사본(`<Scratch>`)에 쓰게 고쳤다(`uipreview.scenario.xml` 도 같은 모양). 고친 뒤 DX11 · GL 체인을 따로 돌려 각 3 회 통과했으나 **ctest 5 조각 전체로는 아직 안 돌렸다.**
+**통합 T(2026-10-28, 끝)**: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid` 를 병합하고 병합 뒤 결함을 고쳐 main 에 넣고 push 했다. 검증: Debug(린트 · nogpu · race) · Shipping(nogpu · hostgpu) · Release 전체(통과 57 · 실패 0) 통과. `animgraphedit` 은 병렬 조각의 동시 저장 경합이어서 시나리오가 실행마다 새 사본에 쓰게 고쳤고, `assetmanage` 는 이름 바꾸기 직전마다 참조 색인을 기다리게 했다.
 
 고친 것(이번 통합): resid 뒤 문자열 호출 · 단위 철자 · 중복 `toResourceID` 래퍼 · 선언 없는 Error/Warning 으로 지던 테스트 약 90 개(`SW_TEST_DEFENSIVE_SCOPE` 를 그 로그를 내는 호출에) · 서버 종료 크래시(`ConfigManager::unloadConfig` — 모듈이 정의한 설정이 모듈 이미지보다 오래 남아 엔진 종료가 지우다 죽었다) · 법선맵 10 장 재굽기 · 내비 `findNearestPoint` 가 상자 밖 점을 돌려주던 것과 8 타일 층을 넘는 장애물을 조용히 자르던 것(`RecastNavMesh`/`RecastTileCache`) · Shipping 전용(원본 리소스가 필요한 두 테스트는 `SourceResources` 가 없으면 건너뜀, `AppTest_Desktop` 은 정책 `desktopInShipping: false` 로 Shipping 에서 등록 안 함) · `assetmanage` 의 GL 색인 대기.
 
-첫 일(다음 세션): 1) `D:\w\integ-t` 에서 `py -3 -m Scripts verify-batch --owner integ-t --config Release --skip-kind measure --failed-from <지난 출력>` 대신 **전체 Release** 를 한 번 돌려 `app-scenarios-release` 5 조각이 모두 통과하는지 본다 2) 통과하면 `git -C <main> merge --ff-only wt/integ-t` 후 push(force 없이), `worktree-remove integ-t` 3) 안 되면 졌던 단계의 chain 로그(`build/Ninja-Release/AppRuns/shard*/…/Saved/Automation/chain_editor_*.log`)로 원인을 본다.
 
 남은 후보(통합 T에서 드러남): 시나리오가 `scratch/` 밖의 추적 파일에 쓰는 것을 막는 형식이 없다(`asset.openScratch` 는 여는 쪽만 막고 Quick Open 은 열림) — 자동화 실행 중 Resource 원본 쓰기를 오류로 만드는 저장 입구 게이트 · `uipreviewdesigner.scenario.xml` 이 원본 `save_probe.ui.xml` 을 연다 · `findNearestPoly` 로 시작 · 끝 점을 붙이는 `RecastNavMesh::findPath` 등이 상자 밖 점에 붙을 수 있다 · `AutomationRunnerWatchTest.WallClockLimitEndsAHeldScenarioAndWritesTheReport`(벽시계 0.05 초)와 `catalogeditor` 는 병렬 부하에서 한 번씩 졌다(단독 통과) — 대기를 시간 대신 상태로 · `ServerRuntimeOpensTheSQLiteStore…` 는 표시만 달았다(종료 중 취소된 첫 reload 가 경고로 나옴 — `ServiceStoreResult` 에서 취소와 진짜 실패를 가르는 것이 근본책). 새 거절 경로 테스트는 로그 판정기가 넓어져 표시를 같이 달아야 한다.
 
