@@ -2,10 +2,12 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Resource/Cook/CookStore.h"
@@ -31,6 +33,13 @@ namespace
             pMesh->setMeshID( meshPath );
             if ( materialPath.empty() == false )
                 pMesh->setMaterialPath( materialPath );
+            // 없는 메시는 워커가 읽다 실패해 그때 경고하므로, 표시가 끝나기 전에 로드가 끝나기를 기다린다.
+            const sw::Stopwatch stopwatch;
+            while ( pMesh->isMeshLoading() && stopwatch.getElapsedMilliseconds() < 10'000 )
+            {
+                manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
+                std::this_thread::yield();
+            }
         }
         return pObject;
     }

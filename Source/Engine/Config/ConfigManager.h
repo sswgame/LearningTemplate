@@ -238,6 +238,20 @@ namespace sw
         }
 
         /**
+         * @brief 등록된 설정과 그 다시 읽기 출처를 놓습니다. 없으면 아무것도 하지 않습니다.
+         * @details 모듈이 정의한 설정 형식은 모듈 이미지가 내려가기 전에 놓아야 한다 — 엔진 종료가 이 관리자를 지울 때는 모듈 코드가 이미 없어 소멸자를 부를 수 없다.
+         */
+        template <typename T>
+        void unloadConfig()
+        {
+            static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
+
+            const uint32 key = getConfigKey<T>();
+            _mapConfig.erase( key );
+            _mapSource.erase( key );
+        }
+
+        /**
          * @brief 설정 JSON 하나를 @p pInstance 에 엄격하게 읽습니다.
          * @details 모르는 키, 대소문자만 다른 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )` — 구조체 칸 · 구조체 목록 원소 안까지), `PROPERTY( Min/Max )` 밖 숫자를 **모두** 키 이름과 @p pSourceLabel 로 오류 로그에 남기고
          *          false 를 반환한다(첫 오류에서 멈추지 않는다. 한 번에 다 고치게 하려는 것이다). 설정이 아닌 리플렉션 타입(`EditorToolDefaults`)도 이 함수로 읽는다.

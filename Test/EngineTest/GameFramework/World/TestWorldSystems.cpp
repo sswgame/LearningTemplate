@@ -304,7 +304,10 @@ SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier
     SW_EXPECT_TRUE( listVisited[0] == cellar ); // 이름 순
     SW_EXPECT_TRUE( listVisited[3] == hashed_string( "kitchen" ) );
     AreaGraph loaded;
-    SW_ASSERT_TRUE( loaded.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "reloading the same area graph text reports the skipped and locked links again" ); // 같은 글을 다시 읽으니 같은 경고가 다시 난다
+        SW_ASSERT_TRUE( loaded.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
+    }
     loaded.restoreState( listVisited, listDiscovered );
     SW_EXPECT_NEAR_EQUAL( graph.computeExplorationRatio(), loaded.computeExplorationRatio(), 1.0e-6f );
     SW_EXPECT_TRUE( loaded.isDiscovered( hashed_string( "vault" ) ) );

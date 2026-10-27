@@ -84,7 +84,8 @@ namespace sw
         }
 
         OnlineServerRuntimeConfig settings;
-        settings._config          = *pOnlineConfig;
+        settings._config = *pOnlineConfig;
+        context._pConfigManager->unloadConfig<OnlineServerConfig>(); // 이 형식은 이 모듈의 것이라 모듈 이미지보다 오래 두면 엔진 종료가 지우지 못한다 — 복사해 뒀으니 놓는다
         settings._pMetricRegistry = context._pMetricRegistry;
         settings._pHealthRegistry = context._pHealthRegistry;
         settings._pClock          = &_clock;
@@ -108,7 +109,7 @@ namespace sw
             settings._adminListenAddress._port = adminPort;
             settings._bAdminListener           = SW_TRUE;
         }
-        if ( fillStoreSettings( serverConfig, *pOnlineConfig, settings, outError ) == false )
+        if ( fillStoreSettings( serverConfig, settings._config, settings, outError ) == false )
             return false;
         // 서비스 스트림은 TLS 1.3 이다. 인증서와 키 경로는 서버 설정에 있고, 키 암호는 환경 변수에서 읽는다(결정 기록 5-9).
         settings._bTLS               = SW_TRUE;
