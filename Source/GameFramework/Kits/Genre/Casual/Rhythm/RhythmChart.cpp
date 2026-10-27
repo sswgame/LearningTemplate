@@ -34,33 +34,17 @@ namespace sw
             /** @brief `_beat` 가 @p beat 보다 작은 점의 수를 반환합니다(이분 탐색). */
             static size_t countPointsBeforeBeat( const vector<RhythmTimingPoint>& listPoint, float32 beat )
             {
-                size_t low  = 0;
-                size_t high = listPoint.size();
-                while ( low < high )
-                {
-                    const size_t middle = low + ( high - low ) / 2;
-                    if ( listPoint[middle]._beat < beat )
-                        low = middle + 1;
-                    else
-                        high = middle;
-                }
-                return low;
+                const auto found = std::lower_bound( listPoint.begin(), listPoint.end(), beat, []( const RhythmTimingPoint& point, float32 value )
+                { return point._beat < value; } );
+                return static_cast<size_t>( found - listPoint.begin() );
             }
 
             /** @brief `_time` 이 @p seconds 이하인 점의 수를 반환합니다(이분 탐색). */
             static size_t countPointsUpToTime( const vector<RhythmTimingPoint>& listPoint, float32 seconds )
             {
-                size_t low  = 0;
-                size_t high = listPoint.size();
-                while ( low < high )
-                {
-                    const size_t middle = low + ( high - low ) / 2;
-                    if ( listPoint[middle]._time <= seconds )
-                        low = middle + 1;
-                    else
-                        high = middle;
-                }
-                return low;
+                const auto found = std::upper_bound( listPoint.begin(), listPoint.end(), seconds, []( float32 value, const RhythmTimingPoint& point )
+                { return value < point._time; } );
+                return static_cast<size_t>( found - listPoint.begin() );
             }
 
             /**
