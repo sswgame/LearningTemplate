@@ -186,10 +186,9 @@
       "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절"
     },
     {
-      "id": "app-scenarios-release", "title": "AppScenarioTest 전부(네 백엔드 × 게임 · 에디터 시나리오, 녹화 재생)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 240,
-      "filter": "AppScenarioTest.*", "extra_args": ["--host_suites=all"],
+      "id": "app-scenarios-release", "title": "AppScenarioTest 전부(네 백엔드 × 게임 · 에디터 시나리오, 녹화 재생) — ctest 샤드", "kind": "ctest", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 240, "label": "hostgpu",
       "source": "docs/08_Verification.md 3절 실기동 확인은 시나리오로", "result_doc": "docs/08_Verification.md 3절 실기동 확인은 시나리오로",
-      "note": "에디터 시나리오 사례는 한 체크아웃에서 하나씩 돈다(같은 프로세스 안에서 차례로 돈다). 진 뒤에는 git status 로 리소스 트리를 되돌린다."
+      "note": "`Scripts test AppScenarioTest.*` 는 샤드 1개(shard0of1)로 전부 직렬이라 686~1129초였다. 시나리오 × 백엔드 케이스 분할(scnsplit)과 비용표 샤드(AppTest_HostOnly_Shard1~5)를 쓰려고 ctest -L hostgpu 로 돈다. 진 뒤에는 git status 로 리소스 트리를 되돌린다."
     },
     {
       "id": "render-pass-gpu-tests", "title": "렌더 패스 GPU 테스트(파티클 · 후처리 융합 · 모프 풀 · 2D 조명)와 셰이더 · 그래픽스 형식 테스트", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 120,
