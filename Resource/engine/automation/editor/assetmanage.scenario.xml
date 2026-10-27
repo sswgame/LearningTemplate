@@ -33,6 +33,9 @@
 	<At frame="135"><EditorKey key="F2"/></At>
 	<At frame="150"><EditorText value="probe_renamed"/></At>
 	<At frame="160"><EditorKey key="Enter"/></At>
+	<!-- 이름 바꾸기가 고친 파일을 색인이 따라왔는지 기다린다. 시계 잡기(ContentBrowserReferenceIndex)는 콘텐츠가 보일 때만 잡아, 느린 백엔드(GL)에서는
+	     따라오기 전에 아래 단언이 "no value" 를 읽었다 -->
+	<At frame="175"><WaitUntil probe="Editor.ReferenceIndexReady" equals="1"/></At>
 	<At frame="180">
 		<ExpectLog contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
 		<Expect probe="Editor.ReferenceCount" equals="0"/>
@@ -51,6 +54,7 @@
 	<At frame="255">
 		<Variable name="gv_editorProbeAsset" value="scratch/assetmanage/probe.material"/>
 	</At>
+	<At frame="258"><WaitUntil probe="Editor.ReferenceIndexReady" equals="1"/></At>
 	<At frame="260"><Expect probe="Editor.ReferenceCount" equals="1"/></At>
 	<At frame="270"><EditorClick mark="contentBrowser.asset.new_material.material" state="down"/></At>
 	<At frame="273"><EditorClick mark="contentBrowser.asset.new_material.material" state="up"/></At>
