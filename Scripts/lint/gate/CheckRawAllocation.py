@@ -103,9 +103,9 @@ class CheckRawAllocationGate(LintGate):
         },
         {
             "name": "맨 할당을 더는 쓰지 않는 예외 파일(낡은 예외)",
-            "expectedViolation": "[낡은 예외] 'Source/Engine/UI/Document/UIDocumentLoader.cpp' 의 대상은 그대로인데 규칙을 어기지 않습니다",
+            "expectedViolation": "[낡은 예외] 'Source/Engine/Compression/ZlibCompressionCodec.cpp' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
-                "Source/Engine/UI/Document/UIDocumentLoader.cpp": "// Memory::allocate 는 주석 안이라 쓰임이 아니다\nint probe() { return 0; }\n",
+                "Source/Engine/Compression/ZlibCompressionCodec.cpp": "// Memory::allocate 는 주석 안이라 쓰임이 아니다\nint probe() { return 0; }\n",
             },
         },
     ]

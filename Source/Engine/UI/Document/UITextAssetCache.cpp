@@ -11,15 +11,6 @@ namespace sw
 {
     SW_LOG_CALLER( "UITextAssetCache" );
 
-    namespace
-    {
-        /** @brief 캐시 키(문서 · 스타일 시트 획득이 넘긴 경로)를 읽기 입구에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
-        [[nodiscard]] ResourceID toResourceID( string_view path )
-        {
-            return ResourceID{ path };
-        }
-    } // namespace
-
     UITextAssetCache::UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse )
         : IAssetCache{ CacheTracking::counted( pAssetKindName ) } // 캐시는 UI 시스템마다 있어 같은 이름의 칸을 이어 쓴다
         , _mapPathToAsset{}
@@ -48,7 +39,7 @@ namespace sw
 
         getCacheStats().recordMiss();
         string text;
-        if ( readText( key, toResourceID( path ), text ) == false )
+        if ( readText( key, ResourceID{ path }, text ) == false )
         {
             outError = string( path ) + ": " + _pAssetLabel + " not found";
             return asset;

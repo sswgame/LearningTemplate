@@ -75,5 +75,5 @@
 | - | [WorldWidgetInput](docs/plans/WorldWidgetInput.md) — 월드 공간 위젯의 입력 · 가려짐 | 측정대기 | 4/4 | 없음 | ui | G-3 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 10개 · 후보 절 63개
+후보 문서 10개 · 후보 절 44개
 <!-- status-board:end -->
