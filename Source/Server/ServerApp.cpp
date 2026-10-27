@@ -459,8 +459,10 @@ namespace sw
         const uint32               newCount = crashReports.collectNewCrashes();
         vector<CrashReportSummary> listReport;
         crashReports.collectReports( listReport );
+        // 지난 실행의 크래시를 묶는 것은 이번 실행의 이상이 아니라 정리다 — 클라이언트(TelemetryService)와 같이 정보로 남긴다. 크래시 자체는 그 실행이 이미
+        // 오류로 남겼다. 경고로 두면 같은 바이너리 폴더(Bin/Saved/Logs)를 쓰는 앞선 실행의 잔재가 이번 실행의 판정(시나리오의 처리 안 된 경고)을 바꾼다.
         if ( newCount > 0 )
-            SW_LOG_WARNING( "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
+            SW_LOG_INFO( "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
         MetricGauge* pCrashGauge = _metricRegistry->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
         if ( pCrashGauge != nullptr )
             pCrashGauge->set( static_cast<float64>( listReport.size() ) );
