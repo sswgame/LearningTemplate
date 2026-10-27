@@ -83,7 +83,7 @@ namespace sw::editor
         /** @brief 필터를 통과한 로그 포인터 목록을 다시 만듭니다. */
         void updateFilteredEntries( const string& filterStr );
         /** @brief 태그 팝업의 태그 목록(그리기용 복사본에 나온 카테고리, 이름 순)을 복사본이 바뀌었을 때만 다시 짓습니다. */
-        const vector<string>& getSnapshotTags();
+        const vector<string>& getSnapshotTags() SW_REQUIRES_LOCK( _uiThread );
         /** @brief 로그 행의 카테고리를 반환합니다. 로그를 쓴 위치(`SW_LOG_CALLER`)이고, 없으면 모듈 태그입니다. 태그 필터와 팝업이 이 이름을 씁니다. */
         static const string& getEntryCategory( const LogEntry& entry );
         /** @brief 태그(로거 카테고리)를 켜고 끄는 팝업을 그립니다. */

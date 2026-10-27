@@ -714,7 +714,6 @@ namespace sw::editor
 
     const vector<string>& ConsolePanel::getSnapshotTags()
     {
-        _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
         if ( _tagCacheGeneration == _snapshotGeneration )
             return _listTagCache;
         // 지금 보관하고 있는 로그에 나온 태그만 보인다.
