@@ -397,7 +397,7 @@ namespace sw
         /** @brief 깎인 체력 @p amount 를 피해 숫자로 띄웁니다. 틱 중이면 틱 직후에 띄웁니다. */
         void spawnDamageNumber( float32 amount );
         /** @brief base 를 쓰기 직전에 부릅니다. @p name 이 체력이고 무적이면 내려가는 @p inoutNewBase 를 @p oldBase 로 되돌립니다(`getInvulnerableTag`). */
-        void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase ) const;
+        void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase );
         /** @brief 모듈을 언로드하기 전에, [@p pBegin, @p pEnd) 안의 코드(어빌리티, 세트, 실행 계산의 vtable과 델리게이트 스텁)를 가리키는 참조를 제거합니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
@@ -421,6 +421,7 @@ namespace sw
         float32                                                                                         _time;
         uint64                                                                                          _nextHandleID;
         uint32                                                                                          _listLockDepth;
+        uint32                                                                                          _blockedHealthDecreaseCount; ///< 무적이 체력 내림을 막은 횟수(`guardHealthBaseChange`) — `executeSpec` 이 앞뒤를 견줘 막힌 피격의 즉시 큐를 거른다
         uint8                                                                                           _bHasPendingRemoval;
         uint8                                                                                           _bRefreshingOngoingTags; ///< `refreshOngoingTagRequirements` 안이다 — 그 안에서 바뀐 태그로 다시 들어가지 않는다
 

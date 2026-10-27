@@ -168,11 +168,14 @@ namespace sw
         return "State.Invulnerable"_tag;
     }
 
-    void AbilitySystemComponent::guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase ) const
+    void AbilitySystemComponent::guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase )
     {
         const bool bHealthGoesDown = name == _healthAttribute && inoutNewBase < oldBase;
         if ( bHealthGoesDown && isInvulnerable() )
+        {
             inoutNewBase = oldBase;
+            ++_blockedHealthDecreaseCount;
+        }
     }
 
     Subscription AbilitySystemComponent::registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate )

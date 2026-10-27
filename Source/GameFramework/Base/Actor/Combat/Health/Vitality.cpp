@@ -109,10 +109,9 @@ namespace sw
     VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
     {
         VitalityDamageResult result;
-        amount                    = MathUtil::max( 0.0f, amount );
-        poiseDamage               = MathUtil::max( 0.0f, poiseDamage );
-        const bool bIgnoresDamage = _state == VitalityState::Dead || isInvulnerable() || isDamageImmune();
-        if ( bIgnoresDamage )
+        amount      = MathUtil::max( 0.0f, amount );
+        poiseDamage = MathUtil::max( 0.0f, poiseDamage );
+        if ( ignoresDamage() )
         {
             result._bIgnored = SW_TRUE;
             return result;

@@ -581,6 +581,46 @@ SW_TEST_CASE( AbilitySystemTest, InvulnerableTagKeepsHealthFromGoingDown )
 }
 
 /**
+ * @brief [AbilitySystemTest] 무적이 막은 피격은 즉시 큐(피격 섬광 · 소리)를 내지 않고 무적이 풀리면 다시 낸다
+ * @details 막힌 피격에 소리가 나던 결함을 사람 귀 대신 큐 이벤트 수로 잡는다(AbilityArena 의 피격음은 `GameplayCue.Hit` 큐가 낸다).
+ */
+SW_TEST_CASE( AbilitySystemTest, InvulnerableTargetGetsNoImmediateHitCue )
+{
+    EventDispatcher                   dispatcher;
+    const AbilityTestScopedDispatcher scopedDispatcher{ dispatcher };
+    GameObjectManager                 manager;
+    AbilitySystemComponent*           pAttacker = spawnCombatant( manager, "Attacker", 100.0f, 0.0f, 20.0f );
+    AbilitySystemComponent*           pTarget   = spawnCombatant( manager, "Target", 100.0f, 100.0f, 0.0f );
+    SW_ASSERT_TRUE( pAttacker != nullptr && pTarget != nullptr );
+
+    shared_ptr<GameplayEffectDef> pDamage = make_shared<GameplayEffectDef>();
+    pDamage->_id                          = hashed_string( "Damage" );
+    pDamage->_cueTags.addTag( "GameplayCue.Hit"_tag );
+    shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
+    pExecution->setParameters( "Damage", 1.0f, 0.0f );
+    pDamage->_listExecution.push_back( pExecution );
+    GameplayEffectSpec spec = pAttacker->makeOutgoingSpec( pDamage );
+    spec.setSetByCallerMagnitude( "Damage", 30.0f );
+
+    int32              hitCueCount     = 0;
+    const Subscription cueSubscription = pTarget->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&hitCueCount]( const GameplayCueEvent& cue )
+    {
+        if ( cue._cueTag == "GameplayCue.Hit"_tag && cue._phase == GameplayCuePhase::Executed )
+            ++hitCueCount;
+    } ) );
+
+    pTarget->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), 1 );
+    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 큐 수와 체력 단언이 본다
+    SW_EXPECT_EQUAL( 0, hitCueCount );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+
+    pTarget->getOwnedTagCounts().updateCount( AbilitySystemComponent::getInvulnerableTag(), -1 );
+    (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 큐 수와 체력 단언이 본다
+    SW_EXPECT_EQUAL( 1, hitCueCount );
+    SW_EXPECT_NEAR_EQUAL( 75.0f, pTarget->getAttributeValue( CombatAttributes::health() ).value(), 0.001f );
+}
+
+/**
  * @brief [AbilitySystemTest] 체력이 0 에 닿으면 HP 바가 쓰러짐을 받는다 — `_bHideWhenDead` 인 바는 숨는다
  * @details 어빌리티 시스템은 체력 원천(`HealthSourceComponent`)이고 알림 종류를 읽기(체력 0 = 쓰러짐)에서 정한다. 바뀜(`Changed`)으로만 알리면 쓰러져도 숨지 않는다.
  */

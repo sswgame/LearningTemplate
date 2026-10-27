@@ -89,6 +89,7 @@ namespace sw
         , _time{ 0.0f }
         , _nextHandleID{ 0 }
         , _listLockDepth{ 0 }
+        , _blockedHealthDecreaseCount{ 0 }
         , _bHasPendingRemoval{ SW_FALSE }
         , _bRefreshingOngoingTags{ SW_FALSE }
         , _abilitySetID{}

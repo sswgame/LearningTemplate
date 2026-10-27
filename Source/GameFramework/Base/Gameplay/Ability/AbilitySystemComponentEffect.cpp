@@ -384,12 +384,16 @@ namespace sw
 
         const float32 stackScale     = static_cast<float32>( MathUtil::max( 1, stackCount ) );
         float32       totalMagnitude = 0.0f;
+        const uint32  blockedBefore  = _blockedHealthDecreaseCount;
         for ( const EvaluatedModifier& modifier : listModifier )
         {
             applyModifierToBase( modifier, stackScale, spec );
             if ( modifier._op == AttributeModOp::Add )
                 totalMagnitude += modifier._magnitude * stackScale;
         }
+        // 결정: 무적이 체력 내림을 막은 피격은 맞은 것이 아니므로 즉시 큐(피격 섬광 · 소리)를 내지 않는다 — 언리얼 Lyra 의 `Gameplay.DamageImmunity` 가 이펙트를 막아 큐도 안 나가는 것과 같은 결과다.
+        if ( _blockedHealthDecreaseCount != blockedBefore )
+            return;
         dispatchCues( spec, GameplayCuePhase::Executed, totalMagnitude );
     }
 

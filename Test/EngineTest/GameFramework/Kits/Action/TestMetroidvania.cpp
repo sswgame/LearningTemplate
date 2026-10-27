@@ -444,6 +444,26 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     SW_EXPECT_TRUE( arrShard[0] > 0 );
 }
 
+/**
+ * @brief [MetroidvaniaTest] 무적(시간 · 면역)인 듀얼리스트는 맞은 것이 아니다 — 결과는 Ignored 이고 가드 스태미나도 패리 창도 쓰지 않는다
+ */
+SW_TEST_CASE( MetroidvaniaTest, InvulnerableDuelistIgnoresAttacksWithoutGuardOrParryEffects )
+{
+    MetroScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+    MetroDuelist guard;
+    SW_EXPECT_TRUE( guard.initialize( &scene._catalog ) );
+    guard.setGuarding( true );
+    guard.getVitality().setDamageImmune( true );
+    const MetroDefenseOutcome outcome = guard.receiveAttack( 40.0f, 10.0f );
+    SW_EXPECT_TRUE( outcome._result == MetroDefenseResult::Ignored );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, outcome._healthDamage, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, guard.getStamina().getValue(), 1.0e-3f ); // 막아서 스태미나를 쓰지 않았다
+
+    guard.getVitality().setDamageImmune( false );
+    SW_EXPECT_TRUE( guard.receiveAttack( 40.0f, 0.0f )._result == MetroDefenseResult::Blocked ); // 면역을 풀면 다시 막는다
+}
+
 SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
 {
     MetroScene scene;
