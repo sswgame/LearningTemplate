@@ -33,12 +33,13 @@ namespace sw
         [[nodiscard]] bool getSealKey( uint8 ( &outKey )[kKeySize] ) override;
 
     private:
-        [[nodiscard]] bool loadOrCreateKeyLocked();
+        /** @brief 키를 읽거나 만들어 둡니다. 실패하면 @p outError 에 이유를 적고 false 입니다 — 로그는 부르는 쪽이 잠금을 놓은 뒤 남긴다. */
+        [[nodiscard]] bool loadOrCreateKeyLocked( string& outError ) SW_REQUIRES_LOCK( _mutex );
 
         string                _keyFilePath;
         mutable mutex         _mutex;
         INetSecurityProvider* _pSecurityProvider;
         uint8                 _arrKey[kKeySize] SW_GUARDED_BY( _mutex );
-        uint8                 _bLoaded;
+        uint8 _bLoaded        SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

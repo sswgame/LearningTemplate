@@ -287,6 +287,7 @@ namespace sw
 
     void RespEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         ScopedLock<mutex> lock{ _mutex };
         const int64       nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
@@ -739,6 +740,7 @@ namespace sw
 
     void RespEphemeralStore::handlePushValue( const RespValue& value )
     {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         if ( value._type != RespType::Array || value._listElement.size() < 3 )
             return;
         const RespValue& kind = value._listElement[0];
@@ -759,6 +761,7 @@ namespace sw
 
     void RespEphemeralStore::waitForSubscriptionAck( uint64 targetAckCount )
     {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         const Deadline    deadline = Deadline::afterMilliseconds( _settings._timeoutMs );
         vector<RespValue> listValue;
         while ( _subscriptionAckCount < targetAckCount && deadline.isExpired() == false )

@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
@@ -118,6 +119,6 @@ namespace sw
         DedicatedWorker<uint64>                                  _resolver; ///< 이름 해석 스레드(요청 id 를 받는다). 처음 이름을 받을 때 띄운다
         IDAllocator<uint64> _requestIDAllocator                  SW_GUARDED_BY( _mutex );
         int32                                                    _ioThreadCount;
-        uint8                                                    _bInitialized;
+        atomic<bool>                                             _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)
     };
 } // namespace sw

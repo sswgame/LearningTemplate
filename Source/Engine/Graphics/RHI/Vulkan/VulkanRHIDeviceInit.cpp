@@ -515,6 +515,7 @@ namespace sw
 
     bool VulkanRHIDevice::createFrameFences()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         // 펜스는 인플라이트 슬롯마다 하나다. 스왑체인 이미지 개수와 무관하다.
         // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
         _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
@@ -536,6 +537,7 @@ namespace sw
 
     void VulkanRHIDevice::destroyFrameFences()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _device == nullptr )
             return;
 

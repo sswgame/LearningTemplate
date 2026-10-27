@@ -46,8 +46,9 @@ namespace sw
         void clear();
 
     private:
-        mutex                         _mutex;
-        vector<Callback> _listPending SW_GUARDED_BY( _mutex ); ///< 넣은 일(잠금 아래)
-        vector<Callback>              _listProcessing;         ///< 비우는 중인 일(비우는 스레드만)
+        mutex                            _mutex;
+        vector<Callback> _listPending    SW_GUARDED_BY( _mutex );       ///< 넣은 일(잠금 아래)
+        ThreadRole                       _drainThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<Callback> _listProcessing SW_GUARDED_BY( _drainThread ); ///< 비우는 중인 일(비우는 스레드만)
     };
 } // namespace sw

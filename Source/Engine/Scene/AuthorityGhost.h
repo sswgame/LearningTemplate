@@ -90,17 +90,18 @@ namespace sw
         void startPoller();
         void runPoller( ThreadStopToken stopToken );
 
-        mutable mutex          _mutex;
-        string                 _latestText;               ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
-        string                 _parsedText;               ///< 마지막으로 파싱한 글(게임 스레드)
-        vector<AuthorityPose>  _listServerPose;           ///< 게임 스레드
-        vector<AuthorityPose>  _listLocalPose;            ///< 로컬 이름 순 포즈(게임 스레드). 오브젝트 목록은 구조 세대가 바뀔 때만 다시 모으고 위치만 프레임마다 읽는다
-        uint64                 _localStructureGeneration; ///< `_listLocalPose` 를 모은 때의 구조 세대(`GameObjectManager::getStructureGeneration`, 매니저끼리 겹치지 않는다)
-        vector<AuthorityDelta> _listDelta;                ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
-        sw::thread             _thread;                   ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
-        uint8                  _bStarted  : 1;
-        uint8                  _bReceived : 1; ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
-        [[maybe_unused]] uint8 _reserved  : 6;
+        mutable mutex                         _mutex;
+        string _latestText                    SW_GUARDED_BY( _mutex );        ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
+        string _parsedText                    SW_GUARDED_BY( _mutex );        ///< 마지막으로 파싱한 글(게임 스레드)
+        ThreadRole                            _updateThread;                  ///< update 스레드 역할 — 풀어 둔 서버 자세는 update 를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<AuthorityPose> _listServerPose SW_GUARDED_BY( _updateThread ); ///< 게임 스레드
+        vector<AuthorityPose> _listLocalPose  SW_GUARDED_BY( _updateThread ); ///< 로컬 이름 순 포즈(게임 스레드). 오브젝트 목록은 구조 세대가 바뀔 때만 다시 모으고 위치만 프레임마다 읽는다
+        uint64 _localStructureGeneration      SW_GUARDED_BY( _updateThread ); ///< `_listLocalPose` 를 모은 때의 구조 세대(`GameObjectManager::getStructureGeneration`, 매니저끼리 겹치지 않는다)
+        vector<AuthorityDelta> _listDelta     SW_GUARDED_BY( _mutex );        ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
+        sw::thread                            _thread;                        ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
+        uint8                                 _bStarted  : 1;
+        uint8                                 _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
+        [[maybe_unused]] uint8                _reserved  : 6;
     };
 } // namespace sw
 

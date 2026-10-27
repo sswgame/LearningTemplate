@@ -95,9 +95,13 @@ namespace sw
         if ( probe == nullptr )
             return false;
         probe.reset();
-        _pDriver   = pDriver;
-        _settings  = settings;
-        _bStopping = SW_FALSE;
+        _pDriver  = pDriver;
+        _settings = settings;
+        {
+            // 일꾼 대기 술어가 잠금 아래에서 읽는다 — 시작 전 초기화도 잠금 아래에서 한다.
+            ScopedLock<mutex> lock{ _mutex };
+            _bStopping = SW_FALSE;
+        }
         _listWorker.reserve( static_cast<size_t>( settings._workerCount ) );
         for ( int32 workerIndex = 0; workerIndex < settings._workerCount; ++workerIndex )
         {

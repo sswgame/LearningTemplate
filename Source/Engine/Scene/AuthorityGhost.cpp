@@ -239,6 +239,7 @@ namespace sw
 
     void AuthorityGhost::update( Scene* pScene, DebugDrawQueue& queue )
     {
+        _updateThread.assumeHeld(); // update 는 게임 스레드 하나가 부른다
         if ( gv_authorityGhostPort <= 0 )
             return;
         if ( _bStarted == SW_FALSE )

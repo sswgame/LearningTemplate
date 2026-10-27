@@ -178,6 +178,7 @@ namespace sw
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
                  ? constant::kMaxGPUTimestampSlot
                  : 0u;
@@ -240,6 +241,7 @@ namespace sw
 
     void VulkanRHIDevice::ensureTimestampPool()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         const bool bTimestampPoolNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
                                              _physicalDevice == VK_NULL_HANDLE;
         if ( bTimestampPoolNotNeeded )
@@ -265,6 +267,7 @@ namespace sw
 
     void VulkanRHIDevice::collectTimestampsForSlot()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         _timestampFrame._listMicro.clear();
         const bool bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
                                          _arrTimestampSubmitted[_currentFrame] == SW_FALSE;
@@ -301,6 +304,7 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
     void VulkanRHIDevice::beginFrame()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
         restoreDroppedFrameLayouts();
         _bFrameStarted = SW_FALSE;
@@ -453,6 +457,7 @@ namespace sw
 
     void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         (void)vsync;
         if ( _bFrameStarted == SW_FALSE )
         {

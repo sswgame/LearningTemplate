@@ -23,7 +23,7 @@ namespace sw
         , _resolver{}
         , _requestIDAllocator{}
         , _ioThreadCount{ 0 }
-        , _bInitialized{ SW_FALSE }
+        , _bInitialized{ false }
     {
     }
 
@@ -34,7 +34,7 @@ namespace sw
 
     bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
     {
-        if ( transport == nullptr || _bInitialized == SW_TRUE )
+        if ( transport == nullptr || _bInitialized.load( std::memory_order_acquire ) == true )
             return false;
         _transport     = std::move( transport );
         _settings      = settings;
@@ -45,13 +45,13 @@ namespace sw
             _transport.reset();
             return false;
         }
-        _bInitialized = SW_TRUE;
+        _bInitialized.store( true, std::memory_order_release );
         return true;
     }
 
     void HTTPClient::shutdown()
     {
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         _resolver.stop();       // 풀던 이름 하나는 해석기 시한까지 기다린다. 남은 이름은 풀지 않고 아래에서 끝낸다
         _transport->shutdown(); // 열린 연결은 Shutdown 으로 닫히며 onStreamClosed 가 요청을 끝낸다
@@ -68,7 +68,7 @@ namespace sw
         }
         _mapCall.clear();
         _listResolvingCall.clear();
-        _bInitialized = SW_FALSE;
+        _bInitialized.store( false, std::memory_order_release );
     }
 
     void HTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
@@ -82,7 +82,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         const uint64      requestID = _requestIDAllocator.allocate();
         HTTPAddress       url;
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
         {
             failImmediately( requestID, "client is not running" );
             return requestID;
@@ -200,7 +200,7 @@ namespace sw
     void HTTPClient::update()
     {
         const MonotonicMilliseconds now = _clock.nowMilliseconds();
-        if ( _bInitialized == SW_FALSE )
+        if ( _bInitialized.load( std::memory_order_acquire ) == false )
             return;
         if ( _ioThreadCount == 0 )
             (void)_transport->pollIO( 0 );
