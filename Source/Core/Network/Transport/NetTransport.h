@@ -137,10 +137,10 @@ namespace sw
             NetAddress    _to{};
         };
 
-        mutable mutex            _mutex;
-        deque<LoopbackTransport> _listEndpoint; ///< deque — 엔드포인트 주소가 움직이지 않는다
-        vector<InFlight>         _listInFlight; ///< 보낸 순서
-        uint64                   _droppedCount;
-        uint64                   _deliveredCount;
+        mutable mutex                          _mutex;
+        deque<LoopbackTransport> _listEndpoint SW_GUARDED_BY( _mutex ); ///< deque — 엔드포인트 주소가 움직이지 않는다
+        vector<InFlight> _listInFlight         SW_GUARDED_BY( _mutex ); ///< 보낸 순서
+        uint64 _droppedCount                   SW_GUARDED_BY( _mutex );
+        uint64 _deliveredCount                 SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

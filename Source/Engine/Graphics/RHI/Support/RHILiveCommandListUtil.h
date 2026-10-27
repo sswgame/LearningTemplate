@@ -22,7 +22,7 @@ namespace sw
         template <typename TCommandList>
         static void detachAll( mutex& listMutex, vector<TCommandList*>& inoutListLiveCmd )
         {
-            std::scoped_lock<mutex> lock{ listMutex };
+            ScopedLock<mutex> lock{ listMutex };
             for ( TCommandList* pLiveList : inoutListLiveCmd )
             {
                 if ( pLiveList != nullptr )

@@ -86,7 +86,7 @@ namespace sw
 
     Subscription SceneAudio::addListener( AudioListenerComponent* pListener )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listener.addLogged( pListener, "Audio listener" ) != RegistrationResult::Added )
             return {};
         return issueSubscription( reinterpret_cast<uint64>( pListener ) );
@@ -94,7 +94,7 @@ namespace sw
 
     Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( pEmitter == nullptr )
         {
             reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
@@ -107,7 +107,7 @@ namespace sw
 
     Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _zone.addLogged( pZone, "Audio reverb zone" ) != RegistrationResult::Added )
             return {};
         return issueSubscription( reinterpret_cast<uint64>( pZone ) );
@@ -118,7 +118,7 @@ namespace sw
         void* const                  pItem    = reinterpret_cast<void*>( id ); // 주소로만 찾는다 — 든 목록을 찾기 전에는 역참조하지 않는다
         AudioEmitterComponent* const pEmitter = static_cast<AudioEmitterComponent*>( pItem );
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _listener.remove( static_cast<AudioListenerComponent*>( pItem ) ) || _zone.remove( static_cast<AudioReverbZoneComponent*>( pItem ) ) )
                 return;
             if ( _emitter.remove( pEmitter ) == false )
@@ -134,8 +134,8 @@ namespace sw
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        const float3            previousListenerPosition = _primaryListenerPosition;
+        ScopedLock<mutex> lock{ _mutex };
+        const float3      previousListenerPosition = _primaryListenerPosition;
         updateListeners( *pEngine, deltaSeconds, pCamera );
         updateEmitters( *pEngine, deltaSeconds, previousListenerPosition != _primaryListenerPosition );
         updateOcclusion( *pEngine, pScene3D, pScene2D );

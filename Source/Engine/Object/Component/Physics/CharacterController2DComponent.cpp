@@ -35,13 +35,13 @@ namespace sw
 
     void CharacterController2DComponent::setMoveVelocity( float32 velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _moveVelocity = velocity;
     }
 
     void CharacterController2DComponent::jump( float32 speed )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _pendingJumpSpeed = speed;
     }
 
@@ -125,7 +125,7 @@ namespace sw
         float32 moveVelocity = 0.0f;
         float32 jumpSpeed    = 0.0f;
         {
-            std::scoped_lock<SpinLock> lock{ _commandLock };
+            ScopedLock<SpinLock> lock{ _commandLock };
             moveVelocity      = _moveVelocity;
             jumpSpeed         = _pendingJumpSpeed;
             _pendingJumpSpeed = 0.0f;

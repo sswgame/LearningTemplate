@@ -46,8 +46,8 @@ namespace sw
         void clear();
 
     private:
-        mutex            _mutex;
-        vector<Callback> _listPending;    ///< 넣은 일(잠금 아래)
-        vector<Callback> _listProcessing; ///< 비우는 중인 일(비우는 스레드만)
+        mutex                         _mutex;
+        vector<Callback> _listPending SW_GUARDED_BY( _mutex ); ///< 넣은 일(잠금 아래)
+        vector<Callback>              _listProcessing;         ///< 비우는 중인 일(비우는 스레드만)
     };
 } // namespace sw

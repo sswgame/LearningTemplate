@@ -50,8 +50,8 @@ namespace sw
     {
         if ( pComponent == nullptr || typeKey == 0 )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        Bucket*                 pBucket = findBucket( typeKey, channel );
+        ScopedLock<mutex> lock{ _mutex };
+        Bucket*           pBucket = findBucket( typeKey, channel );
         if ( pBucket == nullptr )
         {
             _listBucket.push_back( sw::make_unique<Bucket>( Bucket{ typeKey, channel, {} } ) );
@@ -66,8 +66,8 @@ namespace sw
     {
         if ( pComponent == nullptr || typeKey == 0 )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        Bucket*                 pBucket = findBucket( typeKey, channel );
+        ScopedLock<mutex> lock{ _mutex };
+        Bucket*           pBucket = findBucket( typeKey, channel );
         if ( pBucket == nullptr )
             return;
         vector<Entry>& listEntry = pBucket->_listEntry;

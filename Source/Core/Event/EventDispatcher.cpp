@@ -85,7 +85,7 @@ namespace sw
         vector<pair<hashed_string, IEvent*>> activeChannels;
         BLOCK( "Swap Event Queues" )
         {
-            std::scoped_lock<SpinLock> lock{ _queueSpinLock };
+            ScopedLock<SpinLock> lock{ _queueSpinLock };
             currentAllocIdx         = _activeAllocatorIndex.load( std::memory_order_relaxed );
             const int32 newAllocIdx = ( currentAllocIdx + 1 ) % 2;
             _activeAllocatorIndex.store( newAllocIdx, std::memory_order_relaxed );
@@ -124,7 +124,7 @@ namespace sw
                 {
                     ChannelDispatchEntry callback;
                     {
-                        std::scoped_lock<SpinLock>       lock{ _busSpinLock };
+                        ScopedLock<SpinLock>             lock{ _busSpinLock };
                         pair<hashed_string, EventTypeID> key( channel, pEvent->getEventType() );
                         auto                             iter = _mapChannelDispatchTable.find( key );
                         if ( iter != _mapChannelDispatchTable.end() )
@@ -156,7 +156,7 @@ namespace sw
 
         uint32                                   releasedCount{ 0 };
         vector<pair<hashed_string, EventTypeID>> listErase;
-        std::scoped_lock<SpinLock>               lock{ _busSpinLock };
+        ScopedLock<SpinLock>                     lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
             if ( entry.isBound() == false || entry._pfnRemoveCodeWithin == nullptr )
@@ -186,8 +186,8 @@ namespace sw
 
     uint32 EventDispatcher::countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const
     {
-        uint32                     count{ 0 };
-        std::scoped_lock<SpinLock> lock{ _busSpinLock };
+        uint32               count{ 0 };
+        ScopedLock<SpinLock> lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
             if ( IModuleUnloadListener::isAddressWithin( reinterpret_cast<const void*>( reinterpret_cast<uintptr_t>( entry._pfnBroadcast ) ), pBegin, pEnd ) )
@@ -207,8 +207,8 @@ namespace sw
 
     uint32 EventDispatcher::removeQueuedEventsWithin( const void* pBegin, const void* pEnd )
     {
-        uint32                     releasedCount{ 0 };
-        std::scoped_lock<SpinLock> lock{ _queueSpinLock };
+        uint32               releasedCount{ 0 };
+        ScopedLock<SpinLock> lock{ _queueSpinLock };
         for ( auto& [channel, list] : _mapChannelQueue )
         {
             // 목록은 새것 → 옛것 순의 단일 연결이다. 남는 것끼리 같은 순서로 다시 잇는다. 메모리는 프레임 아레나 · 넘침 목록의 것이라 다음 되감기가 거둔다.
@@ -244,14 +244,14 @@ namespace sw
         assertBusThread();
         BLOCK( "Clear Bus Handlers" )
         {
-            std::scoped_lock<SpinLock> lock{ _busSpinLock };
+            ScopedLock<SpinLock> lock{ _busSpinLock };
             _mapChannelDispatchTable.clear();
             _mapChannelDispatchTable.reserve( 16 );
         }
 
         BLOCK( "Clear Event Queues" )
         {
-            std::scoped_lock<SpinLock> lock{ _queueSpinLock };
+            ScopedLock<SpinLock> lock{ _queueSpinLock };
             removeQueuedEvents();
             _mapChannelQueue.clear();
             for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )

@@ -199,7 +199,7 @@ namespace sw::editor
         string                   _selectedComponentKey;
         string                   _focusedAssetPath;
         EditorPanelOpenRequest   _pendingOpenPanel;
-        string                   _pendingScenePath;
+        string _pendingScenePath SW_GUARDED_BY( _pendingSceneMutex );
         string                   _pendingSceneActionPath;
         string                   _copiedComponentXML;
         string                   _copiedComponentTypeName;

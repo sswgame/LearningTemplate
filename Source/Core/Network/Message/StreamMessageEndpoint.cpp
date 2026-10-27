@@ -102,21 +102,21 @@ namespace sw
     void StreamMessageEndpoint::shutdown()
     {
         // 전송을 먼저 종료한다(소유자의 일). 그 뒤에는 콜백이 오지 않으므로 테이블과 큐를 비운다.
-        std::scoped_lock<mutex> lock{ _tableMutex };
+        ScopedLock<mutex> lock{ _tableMutex };
         _mapConnection.clear();
         _pTransport = nullptr;
     }
 
     shared_ptr<StreamMessageEndpoint::Connection> StreamMessageEndpoint::findConnection( StreamConnectionHandle handle ) const
     {
-        std::scoped_lock<mutex> lock{ _tableMutex };
-        const auto              found = _mapConnection.find( handle.packed() );
+        ScopedLock<mutex> lock{ _tableMutex };
+        const auto        found = _mapConnection.find( handle.packed() );
         return found != _mapConnection.end() ? found->second : shared_ptr<Connection>{};
     }
 
     void StreamMessageEndpoint::pushEvent( Event&& event, const uint8* pBody, int32 bodySize )
     {
-        std::scoped_lock<mutex> lock{ _inboxMutex };
+        ScopedLock<mutex> lock{ _inboxMutex };
         event._offset = static_cast<int32>( _inboxBytes.size() );
         event._size   = bodySize;
         if ( bodySize > 0 )
@@ -146,10 +146,10 @@ namespace sw
         if ( _settings._security._pTLSContext != nullptr )
             connection->_tlsSession = _settings._security._pTLSContext->createSession();
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             _mapConnection[handle.packed()] = connection;
         }
-        std::scoped_lock<mutex> lock{ connection->_mutex };
+        ScopedLock<mutex> lock{ connection->_mutex };
         if ( _settings._security._pTLSContext == nullptr )
         {
             announceOpenLocked( *connection );
@@ -176,7 +176,7 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ connection->_mutex };
+        ScopedLock<mutex> lock{ connection->_mutex };
         if ( connection->_errorReason != StreamCloseReason::None )
             return; // 이미 끊는 중이므로 남은 바이트는 버린다.
         if ( acceptIncomingLocked( *connection, pData, size ) == false )
@@ -289,8 +289,8 @@ namespace sw
     {
         shared_ptr<Connection> connection;
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
-            const auto              found = _mapConnection.find( handle.packed() );
+            ScopedLock<mutex> lock{ _tableMutex };
+            const auto        found = _mapConnection.find( handle.packed() );
             if ( found != _mapConnection.end() )
             {
                 connection = found->second;
@@ -334,7 +334,7 @@ namespace sw
         shared_ptr<Connection> connection = findConnection( handle );
         if ( connection == nullptr || _pTransport == nullptr )
             return StreamSendResult::Closed;
-        std::scoped_lock<mutex> lock{ connection->_mutex };
+        ScopedLock<mutex> lock{ connection->_mutex };
         connection->_frameScratch.clear();
         // 압축한 뒤 (TLS 면) 암호화하는 순서다. 줄어들지 않으면 원문을 보낸다. 상한은 원문 크기로 판단한다(받는 쪽도 푼 크기로 판단한다).
         const uint8* pFrameBody    = pBody;
@@ -373,7 +373,7 @@ namespace sw
         if ( connection != nullptr && mode == StreamCloseMode::Graceful )
         {
             // 우아한 종료이므로 close_notify 를 먼저 보낸다(상대가 잘린 연결과 정상 종료를 구분할 수 있다).
-            std::scoped_lock<mutex> lock{ connection->_mutex };
+            ScopedLock<mutex> lock{ connection->_mutex };
             if ( connection->_tlsSession != nullptr && connection->_tlsSession->getState() == TLSSessionState::Established )
             {
                 connection->_tlsSession->close();
@@ -395,7 +395,7 @@ namespace sw
     int32 StreamMessageEndpoint::pump( IStreamEndpointListener& listener )
     {
         {
-            std::scoped_lock<mutex> lock{ _inboxMutex };
+            ScopedLock<mutex> lock{ _inboxMutex };
             _listPumping.clear();
             _pumpingBytes.clear();
             _listPumping.swap( _listInbox );
@@ -422,7 +422,7 @@ namespace sw
                         const int32 remaining = connection->_pendingBytes.fetch_sub( event._size, std::memory_order_relaxed ) - event._size;
                         if ( remaining <= _settings._maxPendingReceiveBytes / 2 )
                         {
-                            std::scoped_lock<mutex> lock{ connection->_mutex };
+                            ScopedLock<mutex> lock{ connection->_mutex };
                             if ( connection->_bReceivePaused == SW_TRUE )
                             {
                                 connection->_bReceivePaused = SW_FALSE;

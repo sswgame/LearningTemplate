@@ -662,8 +662,8 @@ namespace sw
         /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 _commandList 로 시작합니다.
         ID3D12GraphicsCommandList* _pActiveFrameList;
         /// @brief 병렬 기록용 리스트와 얼로케이터의 재사용 풀입니다. 태스크 스레드가 동시에 빌려 가므로 잠급니다.
-        mutex                         _cmdListPoolMutex;
-        vector<D3D12CommandListEntry> _listFreeCmdListEntry;
+        mutex                                               _cmdListPoolMutex;
+        vector<D3D12CommandListEntry> _listFreeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
 
         /** @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다. */
         mutex                        _liveCmdListMutex;
@@ -727,8 +727,8 @@ namespace sw
         /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).
         atomic<uint8> _bDeviceRemovedLogged;
         /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다. 병렬 기록 워커가 함께 쓰므로 atomic 입니다.
-        atomic<uint8> _bBlitMismatchLogged;
-        uint8         _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.
+        atomic<uint8>                     _bBlitMismatchLogged;
+        uint8 _bOnlineHeapExhaustedLogged SW_GUARDED_BY( _onlineBlockMutex ); ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.
         /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측에는 비용이 듭니다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 입니다.
         atomic<uint8>  _bTimestampEnabled;
         atomic<uint32> _validationMessageCount;   ///< 디버그 레이어가 알린 경고 이상의 메시지 수(`onValidationMessage`)
@@ -790,12 +790,12 @@ namespace sw
         /// @brief 업로드 스테이징 링입니다(`gv_rhiStagingRingMegabytes`).
         D3D12StagingRing _uploadRing;
         /// @brief 놀고 있는 전송 작업 목록입니다. 펜스 줄의 회수 콜백 안에서도 잡는 잎 락(`_transferJobMutex`)이 지킵니다.
-        mutex                    _transferJobMutex;
-        vector<D3D12TransferJob> _listFreeTransferJob;
+        mutex                                         _transferJobMutex;
+        vector<D3D12TransferJob> _listFreeTransferJob SW_GUARDED_BY( _transferJobMutex );
         /// @brief 텍스처 핸들에서 마지막 전송(업로드 또는 읽기 원본)의 시리얼을 찾는 표를 지킵니다(DX12 텍스처는 레코드 없이 리소스 포인터만 들고 있다).
         mutex _textureTransferMutex;
         /// @brief 텍스처 핸들에서 마지막 전송의 시리얼을 찾는 표입니다. `_textureTransferMutex` 가 지킵니다.
-        unordered_map<RHITextureHandle, uint64> _mapTextureTransferSerial;
+        unordered_map<RHITextureHandle, uint64> _mapTextureTransferSerial SW_GUARDED_BY( _textureTransferMutex );
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
 

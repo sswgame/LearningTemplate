@@ -91,7 +91,7 @@ namespace sw
         // 만든 횟수는 읽기 전에 잡는다 — 읽는 동안 파일이 만들어졌으면 이 결과로 남기는 "읽지 못함" 은 다음 조회에서 낡은 것으로 버려진다.
         const uint64 creationEpoch = FileUtil::getCreationEpoch();
         {
-            std::scoped_lock<mutex>                                                             lock{ table._mutex };
+            ScopedLock<mutex>                                                                   lock{ table._mutex };
             const unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>::const_iterator found = table._mapPathToData.find( key );
             if ( found != table._mapPathToData.end() )
             {
@@ -116,10 +116,10 @@ namespace sw
             bool bFirstFailure = false;
             {
                 // 잠금 안에서는 기록만 하고 오류는 놓은 뒤에 남긴다(잠금은 잎 잠금, 결정 5-3).
-                std::scoped_lock<mutex> lock{ table._mutex };
-                const auto              failedInserted = table._mapFailedPathToEpoch.try_emplace( key, creationEpoch );
-                failedInserted.first->second           = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
-                bFirstFailure                          = failedInserted.second;
+                ScopedLock<mutex> lock{ table._mutex };
+                const auto        failedInserted = table._mapFailedPathToEpoch.try_emplace( key, creationEpoch );
+                failedInserted.first->second     = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
+                bFirstFailure                    = failedInserted.second;
             }
             if ( bFirstFailure && pfnLoad == nullptr )
                 SW_LOG_ERROR( "Physics shape mesh '%#' needs a load function - PhysicsMeshShapeCache::setLoadFunction was never called", path );
@@ -131,7 +131,7 @@ namespace sw
         shared_ptr<PhysicsMeshShapeData> loaded = make_shared<PhysicsMeshShapeData>();
         makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, *loaded );
 
-        std::scoped_lock<mutex> lock{ table._mutex };
+        ScopedLock<mutex> lock{ table._mutex };
         (void)table._mapFailedPathToEpoch.erase( key ); // 이제 읽혔다 — 앞서 못 읽은 기억은 버린다
         shared_ptr<const PhysicsMeshShapeData>& slot = table._mapPathToData[key];
         if ( slot == nullptr )
@@ -196,7 +196,7 @@ namespace sw
         PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
         if ( pTable == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pTable->_mutex };
+        ScopedLock<mutex> lock{ pTable->_mutex };
         PhysicsMeshShapeCacheInternal::getStats().addItemCount( -static_cast<int64>( pTable->_mapPathToData.size() ) );
         pTable->_mapPathToData        = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
         pTable->_mapFailedPathToEpoch = unordered_map<string, uint64>{};
@@ -208,7 +208,7 @@ namespace sw
         PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
         if ( pTable == nullptr )
             return 0;
-        std::scoped_lock<mutex> lock{ pTable->_mutex };
+        ScopedLock<mutex> lock{ pTable->_mutex };
         return pTable->_mapPathToData.size();
     }
 } // namespace sw

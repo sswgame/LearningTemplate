@@ -62,9 +62,9 @@ namespace sw
             int32  _team{ 0 };
         };
 
-        mutable mutex                      _mutex; ///< 접속 예정자 목록을 지킨다(인증기는 네트워크 스레드)
-        unordered_map<AccountID, Expected> _mapAccountToExpected;
-        EventBuffer<MatchFormed>           _newMatchBuffer;
-        ServerDescriptor                   _descriptor; ///< 이 게임 서버(백필 요청에 싣는다)
+        mutable mutex                                            _mutex; ///< 접속 예정자 목록을 지킨다(인증기는 네트워크 스레드)
+        unordered_map<AccountID, Expected> _mapAccountToExpected SW_GUARDED_BY( _mutex );
+        EventBuffer<MatchFormed>                                 _newMatchBuffer;
+        ServerDescriptor                                         _descriptor; ///< 이 게임 서버(백필 요청에 싣는다)
     };
 } // namespace sw

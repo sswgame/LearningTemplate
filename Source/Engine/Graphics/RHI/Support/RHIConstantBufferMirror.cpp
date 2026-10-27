@@ -8,20 +8,20 @@ namespace sw
 {
     void RHIConstantBufferMirror::forget( RHIBufferHandle buffer )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPendingWrite.erase( buffer );
     }
 
     void RHIConstantBufferMirror::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPendingWrite.clear();
         _listFilledScratch.clear();
     }
 
     uint32 RHIConstantBufferMirror::getPendingBufferCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<uint32>( _mapPendingWrite.size() );
     }
 

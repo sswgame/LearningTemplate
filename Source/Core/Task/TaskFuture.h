@@ -50,7 +50,7 @@ namespace sw
                 if ( _bReady.load( std::memory_order_acquire ) )
                     return;
 
-                std::unique_lock<mutex> lock{ _mutex };
+                UniqueLock<mutex> lock{ _mutex };
                 _cv.wait( lock, [this]()
                 {
                     return _bReady.load( std::memory_order_acquire );
@@ -63,7 +63,7 @@ namespace sw
                 if ( _bReady.load( std::memory_order_acquire ) )
                     return true;
 
-                std::unique_lock<mutex> lock{ _mutex };
+                UniqueLock<mutex> lock{ _mutex };
                 return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
                 {
                     return _bReady.load( std::memory_order_acquire );
@@ -84,7 +84,7 @@ namespace sw
                 TDelegate continuation;
                 bool      bMarkedNow = false;
                 {
-                    std::scoped_lock<mutex> lock{ _mutex };
+                    ScopedLock<mutex> lock{ _mutex };
                     if ( _bReady.load( std::memory_order_relaxed ) == false )
                     {
                         storeValue();
@@ -106,7 +106,7 @@ namespace sw
             template <typename TDelegate>
             TDelegate takeImmediateOrStore( TDelegate continuation, TDelegate& outStorage )
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _bReady.load( std::memory_order_acquire ) )
                     return continuation;
 
@@ -494,7 +494,7 @@ namespace sw
             {
                 bool bDone = false;
                 {
-                    std::scoped_lock<mutex> lock{ pContext->_mutex };
+                    ScopedLock<mutex> lock{ pContext->_mutex };
                     pContext->_listResult[futureIndex] = val;
                     --pContext->_remaining;
                     if ( pContext->_remaining == 0 )

@@ -63,7 +63,7 @@ namespace sw
 
         // unique_ptr 로 저장해 unordered_map 리해시가 일어나도 반환한 참조와 포인터가 안정적이게 한다
         // (병렬 커맨드 기록에서 layoutForPSO 포인터가 재배치로 무효화되면 데이터 레이스).
-        mutable mutex                                        _mutex;
-        unordered_map<hashed_string, unique_ptr<CacheEntry>> _mapEntry;
+        mutable mutex                                                  _mutex;
+        unordered_map<hashed_string, unique_ptr<CacheEntry>> _mapEntry SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

@@ -63,7 +63,7 @@ namespace sw
         , _mapFolderEntry{}
         , _stringPoolBytes{}
     {
-        std::scoped_lock<mutex> lock( other._fileMutex );
+        ScopedLock<mutex> lock{ other._fileMutex };
         takeFromLocked( other );
     }
 
@@ -71,7 +71,7 @@ namespace sw
     {
         if ( this != &other )
         {
-            std::scoped_lock<mutex, mutex> lock( _fileMutex, other._fileMutex );
+            ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
             close();
             takeFromLocked( other );
         }
@@ -91,7 +91,7 @@ namespace sw
 
     bool ResourcePakReader::open( string_view packFilePath )
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         close();
 
         if ( packFilePath.empty() )
@@ -179,13 +179,13 @@ namespace sw
 
     bool ResourcePakReader::isOpen() const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _file.isValid();
     }
 
     bool ResourcePakReader::hasFile( uint64 pathHash ) const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _mapEntry.find( pathHash ) != _mapEntry.end();
     }
 
@@ -196,8 +196,8 @@ namespace sw
 
     bool ResourcePakReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
-        auto                    it = _mapEntry.find( pathHash );
+        ScopedLock<mutex> lock{ _fileMutex };
+        auto              it = _mapEntry.find( pathHash );
         if ( it == _mapEntry.end() )
             return false;
 
@@ -212,7 +212,7 @@ namespace sw
 
     void ResourcePakReader::collectAllEntryPaths( vector<string>& outListPath ) const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         outListPath.reserve( outListPath.size() + _mapEntry.size() );
         for ( const auto& mapItem : _mapEntry )
         {
@@ -223,8 +223,8 @@ namespace sw
     void ResourcePakReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
     {
         // 폴더 색인(`populateFolderIndex`)에서 그 폴더의 항목만 읽는다 — 팩 전체를 잠금 안에서 훑지 않는다(항목 N 개에 호출마다 O(N) 이었다).
-        std::scoped_lock<mutex> lock( _fileMutex );
-        const auto              itFolder = _mapFolderEntry.find( makeFolderKey( folder ) );
+        ScopedLock<mutex> lock{ _fileMutex };
+        const auto        itFolder = _mapFolderEntry.find( makeFolderKey( folder ) );
         if ( itFolder == _mapFolderEntry.end() )
             return;
         outListPath.reserve( outListPath.size() + itFolder->second.size() );
@@ -257,7 +257,7 @@ namespace sw
 
     bool ResourcePakReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         if ( _file.isValid() == false )
             return false;
 
@@ -371,25 +371,25 @@ namespace sw
 
     const PackHeader& ResourcePakReader::getHeader() const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _header;
     }
 
     uint32 ResourcePakReader::getDlcAppID() const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _header._dlcAppID;
     }
 
     uint32 ResourcePakReader::getFileCount() const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _header._fileCount;
     }
 
     const string& ResourcePakReader::getPackPath() const
     {
-        std::scoped_lock<mutex> lock( _fileMutex );
+        ScopedLock<mutex> lock{ _fileMutex };
         return _packFilePath;
     }
 

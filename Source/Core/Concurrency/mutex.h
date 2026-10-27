@@ -1,6 +1,6 @@
 /**
  * @file mutex.h
- * @brief 엔진의 잠금 타입(`sw::mutex` · `sw::shared_mutex`)과 잠금 가드(`ScopedLock` · `ScopedSharedLock`)입니다.
+ * @brief 엔진의 잠금 타입(`sw::mutex` · `sw::shared_mutex`)과 잠금 가드(`ScopedLock` · `ScopedSharedLock` · `UniqueLock`, `ScopedLock.h`)입니다.
  * @details 잠금은 잎 잠금이다 — 쥔 채 로그 · 콜백 · 장치 · 외부 호출을 하지 않는다(결정 5-3). 그 규칙을 세 겹으로 지킨다.
  *          - 형식: 잠금 타입은 `SW_CAPABILITY` 이고(`ThreadSafety.h`), clang 빌드는 `-Wthread-safety` 로 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` 계약을 컴파일 때 본다.
  *          - 실행(Debug): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/ThreadSafety.h"
 
 #include <mutex>
@@ -146,62 +147,6 @@ namespace sw
 
     private:
         std::shared_mutex _mutex;
-    };
-
-    // ------------------------------------------------------------------------------
-    // 4) 잠금 가드 — 분석(-Wthread-safety)이 알아보는 RAII. std::scoped_lock 은 표준 라이브러리에 주석이 없어 분석이 못 본다
-    // ------------------------------------------------------------------------------
-    /**
-     * @brief 생성에서 @p TLock 을 독점으로 잡고 소멸에서 풉니다. `SW_GUARDED_BY` 멤버를 만지는 자리는 이 가드를 씁니다.
-     */
-    template <class TLock>
-    class SW_SCOPED_CAPABILITY ScopedLock
-    {
-    public:
-        explicit ScopedLock( TLock& lock ) SW_ACQUIRE_LOCK( lock )
-            : _lock{ lock }
-        {
-            _lock.lock();
-        }
-
-        ~ScopedLock() SW_RELEASE_LOCK()
-        {
-            _lock.unlock();
-        }
-
-        ScopedLock( const ScopedLock& )            = delete;
-        ScopedLock& operator=( const ScopedLock& ) = delete;
-
-    private:
-        TLock& _lock;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief 생성에서 @p TLock 을 공유로 잡고 소멸에서 풉니다.
-     */
-    template <class TLock>
-    class SW_SCOPED_CAPABILITY ScopedSharedLock
-    {
-    public:
-        explicit ScopedSharedLock( TLock& lock ) SW_ACQUIRE_SHARED_LOCK( lock )
-            : _lock{ lock }
-        {
-            _lock.lock_shared();
-        }
-
-        ~ScopedSharedLock() SW_RELEASE_LOCK()
-        {
-            _lock.unlock_shared();
-        }
-
-        ScopedSharedLock( const ScopedSharedLock& )            = delete;
-        ScopedSharedLock& operator=( const ScopedSharedLock& ) = delete;
-
-    private:
-        TLock& _lock;
     };
 } // namespace sw
 

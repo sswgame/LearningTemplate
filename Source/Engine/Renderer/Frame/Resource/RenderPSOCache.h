@@ -131,17 +131,17 @@ namespace sw
         }
 
     private:
-        ShaderBindingLayoutCache                                          _bindingLayoutCache;
-        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout;
-        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPSODesc;
-        mutable mutex                                                     _layoutMutex;
+        ShaderBindingLayoutCache                                                        _bindingLayoutCache;
+        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout SW_GUARDED_BY( _layoutMutex );
+        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
+        mutable mutex                                                                   _layoutMutex;
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
         /// @brief 모듈 패스의 PSO 입니다(키 = 패스의 `_resolvedModulePass`). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
-        unordered_map<hashed_string, RHIPipelineStateHandle> _mapModulePassPSO;
-        unordered_map<uint64, MaterialPSOEntry>              _mapMaterialPSO;
-        mutable mutex                                        _materialPSOMutex;
+        unordered_map<hashed_string, RHIPipelineStateHandle>    _mapModulePassPSO;
+        unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
+        mutable mutex                                           _materialPSOMutex;
     };
 } // namespace sw

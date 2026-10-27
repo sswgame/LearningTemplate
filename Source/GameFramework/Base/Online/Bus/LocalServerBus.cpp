@@ -23,7 +23,7 @@ namespace sw
     Subscription LocalServerBusHub::registerInbox( uint64& outInboxID )
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             outInboxID            = _inboxIDAllocator.allocate();
             _mapInbox[outInboxID] = Inbox{};
         }
@@ -32,14 +32,14 @@ namespace sw
 
     void LocalServerBusHub::releaseSubscription( uint64 id )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapInbox.erase( id );
     }
 
     void LocalServerBusHub::subscribe( uint64 inboxID, string_view topic )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
@@ -49,8 +49,8 @@ namespace sw
 
     void LocalServerBusHub::unsubscribe( uint64 inboxID, string_view topic )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
@@ -60,8 +60,8 @@ namespace sw
 
     int32 LocalServerBusHub::deliver( const ServerBusMessage& message )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        int32                   receiverCount = 0;
+        ScopedLock<mutex> lock{ _mutex };
+        int32             receiverCount = 0;
         for ( auto& [inboxID, inbox] : _mapInbox )
         {
             (void)inboxID;
@@ -75,8 +75,8 @@ namespace sw
 
     int32 LocalServerBusHub::takeMessages( uint64 inboxID, vector<ServerBusMessage>& outListMessage )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxID );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return 0;
         vector<ServerBusMessage>& listMessage = inboxIt->second._listMessage;

@@ -118,7 +118,7 @@ namespace sw
             outListSystem.clear(); // 아직 일정 시스템이 하나도 서지 않았다
             return;
         }
-        std::lock_guard<mutex> lock( pRegistry->_mutex );
+        ScopedLock<mutex> lock{ pRegistry->_mutex };
         outListSystem = pRegistry->_listSystem;
     }
 
@@ -149,7 +149,7 @@ namespace sw
         ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.getOrCreate();
         if ( pRegistry == nullptr )
             return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 올릴 목록이 없다
-        std::lock_guard<mutex> lock( pRegistry->_mutex );
+        ScopedLock<mutex> lock{ pRegistry->_mutex };
         pRegistry->_listSystem.push_back( this );
     }
 
@@ -159,7 +159,7 @@ namespace sw
         ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
         if ( pRegistry == nullptr )
             return; // 목록이 먼저 사라졌다(엔진 종료 · 프로세스 끝) — 뺄 것이 없다
-        std::lock_guard<mutex> lock( pRegistry->_mutex );
+        ScopedLock<mutex> lock{ pRegistry->_mutex };
         for ( size_t systemIndex = 0; systemIndex < pRegistry->_listSystem.size(); ++systemIndex )
         {
             if ( pRegistry->_listSystem[systemIndex] != this )

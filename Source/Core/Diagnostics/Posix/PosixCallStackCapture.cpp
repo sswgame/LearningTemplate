@@ -49,8 +49,8 @@ namespace sw
             // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
             // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
             // (DbgHelp 와 backtrace_symbols).
-            std::unique_lock<mutex> lock{ s_symbolMutex, std::try_to_lock };
-            if ( lock.owns_lock() == false )
+            UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
+            if ( lock.try_lock() == false )
                 return formatRawCallStackFrames( ppFrame, frameCount );
 
             StringBuilder<constant::kMaxBuffer8192> sb;

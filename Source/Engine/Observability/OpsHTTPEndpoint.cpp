@@ -120,7 +120,7 @@ namespace sw
         if ( _pTransport != nullptr )
             _pTransport->shutdown();
         _pTransport = nullptr;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listConnection.clear();
     }
 
@@ -169,17 +169,17 @@ namespace sw
         (void)remote;
         if ( bAccepted == false )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        Connection&             connection = _listConnection.emplace_back();
-        connection._packedHandle           = handle.packed();
+        ScopedLock<mutex> lock{ _mutex };
+        Connection&       connection = _listConnection.emplace_back();
+        connection._packedHandle     = handle.packed();
     }
 
     void OpsHTTPEndpoint::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         string response;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            Connection*             pConnection = findConnection( handle.packed() );
+            ScopedLock<mutex> lock{ _mutex };
+            Connection*       pConnection = findConnection( handle.packed() );
             if ( pConnection == nullptr || pConnection->_bAnswered == SW_TRUE )
                 return;
             pConnection->_buffer.append( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( size ) );
@@ -208,7 +208,7 @@ namespace sw
     void OpsHTTPEndpoint::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         (void)reason;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( size_t connectionIndex = 0; connectionIndex < _listConnection.size(); ++connectionIndex )
         {
             if ( _listConnection[connectionIndex]._packedHandle == handle.packed() )

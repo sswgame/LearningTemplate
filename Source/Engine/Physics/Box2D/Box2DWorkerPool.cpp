@@ -27,6 +27,7 @@ namespace sw
 {
     Box2DWorkerPool::Box2DWorkerPool( uint32 workerCount )
         : _listThread{}
+        , _stepThread{}
         , _listTask{}
         , _listFreeTask{}
         , _listRange{}
@@ -59,12 +60,14 @@ namespace sw
     void* Box2DWorkerPool::enqueueTask( b2TaskCallback* pTask, int32 itemCount, int32 minRange, void* pTaskContext, void* pUserContext )
     {
         Box2DWorkerPool& pool = *static_cast<Box2DWorkerPool*>( pUserContext );
+        pool._stepThread.assumeHeld(); // Box2D 는 이 콜백을 스텝(`b2World_Step`)을 부른 스레드에서만 부른다
         return pool.enqueue( pTask, itemCount, minRange, pTaskContext );
     }
 
     void Box2DWorkerPool::finishTask( void* pUserTask, void* pUserContext )
     {
         Box2DWorkerPool& pool = *static_cast<Box2DWorkerPool*>( pUserContext );
+        pool._stepThread.assumeHeld(); // Box2D 는 이 콜백을 스텝(`b2World_Step`)을 부른 스레드에서만 부른다
         pool.finish( static_cast<Task*>( pUserTask ) );
     }
 

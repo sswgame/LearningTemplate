@@ -313,7 +313,7 @@ namespace sw
         template <typename Func>
         void forEachType( Func&& func ) const
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
@@ -326,7 +326,7 @@ namespace sw
         template <typename Func>
         void forEachEnum( Func&& func ) const
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             for ( const auto& [key, pEnumInfo] : _mapNameToEnum )
             {
                 if ( key == pEnumInfo->_fullyQualifiedName )
@@ -345,7 +345,7 @@ namespace sw
             const hashed_string&    baseFqn = pBaseType->_fullyQualifiedName;
             vector<const TypeInfo*> listResult;
 
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
@@ -453,20 +453,20 @@ namespace sw
          *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 됩니다. 값은 **주소가 고정**입니다. 커져도
          *        옮기지 않고, 모듈을 해제해도 지우지 않고 `_bAlive` 를 내립니다(묘비).
          */
-        unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType;
+        unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType SW_GUARDED_BY( _mutex );
         /** @brief 짧은 이름과 별칭에서 FQN 으로 가는 맵입니다. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모입니다. */
-        unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
+        unordered_map<hashed_string, hashed_string> _mapAliasToFqn SW_GUARDED_BY( _mutex );
         /**
          * @brief FQN 하나당 EnumInfo **하나**입니다(주소 고정, 지우지 않음. TypeInfo 와 같은 규칙).
          * @details 이 맵은 밀집 배열이라 값으로 보관하면 enum 이 하나 더 등록되어 배열이 커질 때 **모든 EnumInfo 가 옮겨져** `findEnum` 이 반환한
          *          포인터가 죽는다(워커가 씬을 만드는 동안 모듈이 로드되는 경우). 짧은 이름과 별칭도 복사본이 아니라 같은 객체를 가리킨다.
          *          복사본이면 핫 리로드로 열거자가 늘어도 별칭 쪽이 이전 목록으로 답한다.
          */
-        unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum;
+        unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum SW_GUARDED_BY( _mutex );
         /** @brief FQN, 짧은 이름, 별칭에서 `_mapFqnToEnum` 의 객체로 가는 맵입니다. 모듈을 해제하면 여기서만 지웁니다. */
-        unordered_map<hashed_string, EnumInfo*> _mapNameToEnum;
-        unordered_map<uint32, hashed_string>    _mapHashToCanonicalName;
-        hashed_string                           _activeModuleName;
+        unordered_map<hashed_string, EnumInfo*> _mapNameToEnum       SW_GUARDED_BY( _mutex );
+        unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
+        hashed_string                                                _activeModuleName;
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
     };

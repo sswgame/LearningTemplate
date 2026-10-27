@@ -44,7 +44,7 @@ namespace sw
 
     bool ConsoleLogOutput::open()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
 
 #if defined( SW_PLATFORM_WINDOWS )
         SetConsoleOutputCP( CP_UTF8 );
@@ -76,7 +76,7 @@ namespace sw
 
     void ConsoleLogOutput::close()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         std::fflush( stdout );
         _pCachedConsoleHandle = nullptr;
         _bHasConsole          = false;
@@ -87,7 +87,7 @@ namespace sw
         const LogLevel level    = record._level;
         const utf8*    pMessage = record._formatted.c_str();
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
 
 #if defined( SW_PLATFORM_WINDOWS )
         if ( _bHasConsole && _pCachedConsoleHandle != nullptr )

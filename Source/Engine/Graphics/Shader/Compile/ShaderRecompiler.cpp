@@ -42,7 +42,7 @@ namespace sw
         vector<ShaderCompileDesc> listDesc;
         engine::getSubsystem<ShaderCache>().collectCompiledDescs( listDesc );
 
-        std::unique_lock<shared_mutex> lock{ _mutex };
+        UniqueLock<shared_mutex> lock{ _mutex };
         _listPendingReload = std::move( listDesc );
     }
 
@@ -53,7 +53,7 @@ namespace sw
 
         vector<ShaderCompileDesc> listToCompile;
         {
-            std::unique_lock<shared_mutex> lock{ _mutex };
+            UniqueLock<shared_mutex> lock{ _mutex };
             if ( _listPendingReload.empty() )
                 return;
             listToCompile = std::move( _listPendingReload );
@@ -110,7 +110,7 @@ namespace sw
 
     void ShaderRecompiler::shutdown()
     {
-        std::unique_lock<shared_mutex> lock{ _mutex };
+        UniqueLock<shared_mutex> lock{ _mutex };
         _listPendingReload.clear();
         _bInitialized = false;
     }

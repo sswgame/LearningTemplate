@@ -209,7 +209,7 @@ namespace sw
     bool AsyncFileIOQueue::push( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _bStopping )
                 return false;
             pRequest->_pQueue = this;
@@ -243,8 +243,8 @@ namespace sw
     {
         bool bRemovedFromQueue{ false };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              state = static_cast<AsyncReadState>( pRequest->_state.load( std::memory_order_acquire ) );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        state = static_cast<AsyncReadState>( pRequest->_state.load( std::memory_order_acquire ) );
             if ( state == AsyncReadState::InFlight )
             {
                 pRequest->_bCancelRequested.store( true, std::memory_order_release );
@@ -276,7 +276,7 @@ namespace sw
 
     shared_ptr<AsyncReadRequest> AsyncFileIOQueue::tryPop()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _inFlightCount >= _maxInFlightCount )
             return nullptr;
         for ( uint32 index = kAsyncIOPriorityCount; index > 0; --index )
@@ -295,7 +295,7 @@ namespace sw
 
     shared_ptr<AsyncReadRequest> AsyncFileIOQueue::waitPop()
     {
-        std::unique_lock<mutex> lock{ _mutex };
+        UniqueLock<mutex> lock{ _mutex };
         while ( true )
         {
             for ( uint32 index = kAsyncIOPriorityCount; index > 0; --index )
@@ -358,7 +358,7 @@ namespace sw
         // 성공으로 끝난다.
         bool bCanceled{ false };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _inFlightCount > 0 )
                 --_inFlightCount;
             bCanceled = request._bCancelRequested.load( std::memory_order_acquire );
@@ -410,7 +410,7 @@ namespace sw
         }
         request._doneStatus.store( static_cast<uint8>( request._result._status ), std::memory_order_release );
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             request._state.store( static_cast<uint8>( AsyncReadState::Done ), std::memory_order_release );
             if ( _outstandingCount > 0 )
                 --_outstandingCount;
@@ -422,7 +422,7 @@ namespace sw
     {
         vector<shared_ptr<AsyncReadRequest>> listCanceled;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _bStopping = true;
             for ( deque<shared_ptr<AsyncReadRequest>>& queue : _arrQueue )
             {
@@ -446,40 +446,40 @@ namespace sw
 
     bool AsyncFileIOQueue::isStopping() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bStopping;
     }
 
     uint32 AsyncFileIOQueue::getInFlightCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _inFlightCount;
     }
 
     uint32 AsyncFileIOQueue::getOutstandingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _outstandingCount;
     }
 
     void AsyncFileIOQueue::waitIdle() const
     {
-        std::unique_lock<mutex> lock{ _mutex };
+        UniqueLock<mutex> lock{ _mutex };
         _cv.wait( lock, [this]()
         { return _outstandingCount == 0; } );
     }
 
     bool AsyncFileIOQueue::waitIdleFor( uint32 timeoutMs ) const
     {
-        std::unique_lock<mutex> lock{ _mutex };
+        UniqueLock<mutex> lock{ _mutex };
         return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
         { return _outstandingCount == 0; } );
     }
 
     bool AsyncFileIOQueue::waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const
     {
-        std::unique_lock<mutex> lock{ _mutex };
-        const auto              isDone = [&request]()
+        UniqueLock<mutex> lock{ _mutex };
+        const auto        isDone = [&request]()
         {
             return request._state.load( std::memory_order_acquire ) == static_cast<uint8>( AsyncReadState::Done );
         };

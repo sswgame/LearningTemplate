@@ -224,7 +224,7 @@ namespace sw
         NullTelemetryUploader   _nullUploader; ///< 기본 업로더(값) — 아무 데도 보내지 않는다
         ITelemetryUploader*     _pUploader;    ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
         float64                 _sessionSeconds;
-        float32                 _flushTimer;
+        float32 _flushTimer     SW_GUARDED_BY( _mutex );
         uint64                  _currentFileBytes;
         uint32                  _sequence;
         uint32                  _fileIndex;

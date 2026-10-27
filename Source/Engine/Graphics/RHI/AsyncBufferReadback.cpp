@@ -17,21 +17,21 @@ namespace sw
      */
     struct AsyncBufferReadback::State
     {
-        mutex           _mutex;
-        IRHIDevice*     _pDevice{ nullptr }; ///< `shutdown` 이 null 로 만든다 — 그 뒤의 콜백은 읽지 않는다
-        uint32          _sizeBytes{ 0 };
-        RHIBufferHandle _arrBuffer[kSlotCount]{};
-        uint64          _arrTag[kSlotCount]{};
-        uint8           _arrBusy[kSlotCount]{}; ///< GPU 가 쓰는 중(요청했고 콜백이 아직 안 왔다)
-        vector<uint8>   _latest{};              ///< 가장 최근에 도착한 내용
-        uint64          _latestTag{ 0 };
-        uint8           _bHasLatest{ SW_FALSE };
-        uint8           _bFresh{ SW_FALSE }; ///< `_latest` 를 아직 아무도 가져가지 않았다
+        mutex                 _mutex;
+        IRHIDevice*           _pDevice{ nullptr }; ///< `shutdown` 이 null 로 만든다 — 그 뒤의 콜백은 읽지 않는다
+        uint32                _sizeBytes{ 0 };
+        RHIBufferHandle       _arrBuffer[kSlotCount]{};
+        uint64                _arrTag[kSlotCount] SW_GUARDED_BY( _mutex ){};
+        uint8                 _arrBusy[kSlotCount] SW_GUARDED_BY( _mutex ){}; ///< GPU 가 쓰는 중(요청했고 콜백이 아직 안 왔다)
+        vector<uint8> _latest SW_GUARDED_BY( _mutex ){};                      ///< 가장 최근에 도착한 내용
+        uint64 _latestTag     SW_GUARDED_BY( _mutex ){ 0 };
+        uint8 _bHasLatest     SW_GUARDED_BY( _mutex ){ SW_FALSE };
+        uint8 _bFresh         SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `_latest` 를 아직 아무도 가져가지 않았다
 
         /** @brief 요청 하나의 GPU 작업이 끝났을 때(해제 큐 콜백) 부릅니다. 읽어 오고 슬롯을 비웁니다. */
         void onGPUDone( uint32 slot )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _arrBusy[slot] = SW_FALSE;
             if ( _pDevice == nullptr )
                 return;
@@ -86,9 +86,9 @@ namespace sw
         if ( _pState == nullptr )
             return;
         {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
-            IRHIDevice*             pDevice = _pState->_pDevice;
-            _pState->_pDevice               = nullptr; // 이미 등록된 콜백은 도착해도 읽지 않는다
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            IRHIDevice*       pDevice = _pState->_pDevice;
+            _pState->_pDevice         = nullptr; // 이미 등록된 콜백은 도착해도 읽지 않는다
             for ( RHIBufferHandle& buffer : _pState->_arrBuffer )
             {
                 if ( buffer != 0 && pDevice != nullptr )
@@ -108,7 +108,7 @@ namespace sw
         IRHIDevice* pDevice = nullptr;
         uint32      slot    = kSlotCount;
         {
-            std::scoped_lock<mutex> lock{ _pState->_mutex };
+            ScopedLock<mutex> lock{ _pState->_mutex };
             pDevice = _pState->_pDevice;
             for ( uint32 index = 0; index < kSlotCount && slot == kSlotCount; ++index )
             {
@@ -135,7 +135,7 @@ namespace sw
     {
         if ( _pState == nullptr )
             return false;
-        std::scoped_lock<mutex> lock{ _pState->_mutex };
+        ScopedLock<mutex> lock{ _pState->_mutex };
         if ( _pState->_bFresh == SW_FALSE )
             return false;
         outBytes         = _pState->_latest;

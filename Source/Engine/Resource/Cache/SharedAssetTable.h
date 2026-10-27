@@ -56,9 +56,9 @@ namespace sw
                 pFailed->markFailedWithoutLoad( "the asset path is empty" );
                 return pFailed;
             }
-            const string            key = makeKey( path );
-            std::scoped_lock<mutex> lock{ _loadingMutex };
-            const auto              it = _mapKeyToLoading.find( key );
+            const string      key = makeKey( path );
+            ScopedLock<mutex> lock{ _loadingMutex };
+            const auto        it = _mapKeyToLoading.find( key );
             if ( it != _mapKeyToLoading.end() )
             {
                 shared_ptr<Block> pLoading = it->second.lock();
@@ -91,7 +91,7 @@ namespace sw
             if ( bLoaded )
                 outAsset = _table.insertOrGetLive( key, std::move( loaded ) );
             // 결과가 표에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 표 둘 중 하나를 반드시 본다.
-            std::scoped_lock<mutex> lock{ _loadingMutex };
+            ScopedLock<mutex> lock{ _loadingMutex };
             _mapKeyToLoading.erase( key );
             return bLoaded;
         }
@@ -143,9 +143,9 @@ namespace sw
         /** @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
 
-        WeakInternTable<string, AssetType>                               _table;
-        mutex                                                            _loadingMutex;
-        unordered_map<string, weak_ptr<SharedAssetLoadBlock<AssetType>>> _mapKeyToLoading; ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 블록, 이중 읽기 없음)
-        atomic<uint32>                                                   _reloadCount;
+        WeakInternTable<string, AssetType>                                                _table;
+        mutex                                                                             _loadingMutex;
+        unordered_map<string, weak_ptr<SharedAssetLoadBlock<AssetType>>> _mapKeyToLoading SW_GUARDED_BY( _loadingMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 블록, 이중 읽기 없음)
+        atomic<uint32>                                                                    _reloadCount;
     };
 } // namespace sw

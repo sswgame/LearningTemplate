@@ -41,7 +41,7 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
 
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
     }
 
@@ -54,14 +54,14 @@ namespace sw
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, buffer );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다.
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
     }
@@ -69,7 +69,7 @@ namespace sw
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
     }
 
@@ -128,7 +128,7 @@ namespace sw
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer )
     {
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_listUavFree.empty() == false )
         {
             const RHIDescriptorIndex index = _pDevice->_listUavFree.back();
@@ -146,7 +146,7 @@ namespace sw
     void D3D11RHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )
             return;
         _pDevice->_listRegisteredUAV[index].Reset();

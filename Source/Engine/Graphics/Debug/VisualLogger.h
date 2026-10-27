@@ -123,7 +123,7 @@ namespace sw
 
         mutable mutex         _mutex;
         deque<VisualLogEntry> _listEntry;
-        uint64                _frame;
+        uint64 _frame         SW_GUARDED_BY( _mutex );
         uint32                _capacity;
         uint8                 _bEnabled;
     };

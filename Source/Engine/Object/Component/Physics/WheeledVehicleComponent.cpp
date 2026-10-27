@@ -39,7 +39,7 @@ namespace sw
 
     void WheeledVehicleComponent::setDriverInput( float32 forward, float32 right, float32 brake, float32 handBrake )
     {
-        std::scoped_lock<SpinLock> lock{ _inputLock };
+        ScopedLock<SpinLock> lock{ _inputLock };
         _inputForward   = forward;
         _inputRight     = right;
         _inputBrake     = brake;
@@ -118,7 +118,7 @@ namespace sw
         float32 brake     = 0.0f;
         float32 handBrake = 0.0f;
         {
-            std::scoped_lock<SpinLock> lock{ _inputLock };
+            ScopedLock<SpinLock> lock{ _inputLock };
             forward   = _inputForward;
             right     = _inputRight;
             brake     = _inputBrake;

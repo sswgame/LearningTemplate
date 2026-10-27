@@ -222,9 +222,9 @@ namespace sw
         void subtractLocked( const LiveEntry& entry );
 
         mutable mutex                    _mutex;
-        unordered_map<uint64, LiveEntry> _arrMapIDToEntry[kRHIMemoryKeySpaceCount];
+        unordered_map<uint64, LiveEntry> _arrMapIDToEntry[kRHIMemoryKeySpaceCount] SW_GUARDED_BY( _mutex );
         RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount];
-        RHIMemoryBudget                  _driverBudget;
+        RHIMemoryBudget _driverBudget    SW_GUARDED_BY( _mutex );
         RHIMemorySizeBasis               _sizeBasis;
     };
 } // namespace sw

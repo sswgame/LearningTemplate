@@ -28,9 +28,9 @@ namespace sw
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */
             const utf8* store( string_view text )
             {
-                const uint64            contentHash = HashUtil::computeStringHash64( text );
-                std::scoped_lock<mutex> lock{ _mutex };
-                const auto              it = _mapByContent.find( contentHash );
+                const uint64      contentHash = HashUtil::computeStringHash64( text );
+                ScopedLock<mutex> lock{ _mutex };
+                const auto        it = _mapByContent.find( contentHash );
                 if ( it != _mapByContent.end() && string_view{ it->second } == text )
                     return it->second;
 
@@ -55,11 +55,11 @@ namespace sw
             }
 
         private:
-            mutex                              _mutex;
-            vector<MemoryBlock>                _listBlock;
-            unordered_map<uint64, const utf8*> _mapByContent;
-            utf8*                              _pCursor{ nullptr };
-            size_t                             _remainingBytes{ 0 };
+            mutex                                            _mutex;
+            vector<MemoryBlock> _listBlock                   SW_GUARDED_BY( _mutex );
+            unordered_map<uint64, const utf8*> _mapByContent SW_GUARDED_BY( _mutex );
+            utf8* _pCursor                                   SW_GUARDED_BY( _mutex ){ nullptr };
+            size_t _remainingBytes                           SW_GUARDED_BY( _mutex ){ 0 };
         };
 
         /** @brief 모든 테이블이 함께 쓰는 저장소입니다. 엔진 수명 범위가 닫히면(엔진 종료) 소멸하고, 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다. */
@@ -91,7 +91,7 @@ namespace sw
     const utf8* StringTable::findByHash( uint64 keyHash ) const
     {
         // 가리키는 문자열은 `LocalizedTextArena` 에 있어 테이블이 바뀌어도 사라지지 않는다. 락을 놓은 뒤 가지고 있어도 된다.
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     iter = _mapTable.find( keyHash );
         if ( iter != _mapTable.end() )
             return iter->second;
@@ -100,7 +100,7 @@ namespace sw
 
     bool StringTable::contains( const hashed_string& key ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _mapTable.find( key.getHash() ) != _mapTable.end();
     }
 
@@ -114,25 +114,25 @@ namespace sw
         const utf8* const pStored = store( value );
         if ( pStored == nullptr )
             return;
-        std::unique_lock<shared_mutex> lock( _mutex );
+        UniqueLock<shared_mutex> lock{ _mutex };
         _mapTable[keyHash] = pStored;
     }
 
     void StringTable::clear()
     {
-        std::unique_lock<shared_mutex> lock( _mutex );
+        UniqueLock<shared_mutex> lock{ _mutex };
         _mapTable.clear();
     }
 
     size_t StringTable::size() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _mapTable.size();
     }
 
     bool StringTable::empty() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _mapTable.empty();
     }
 } // namespace sw

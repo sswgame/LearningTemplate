@@ -41,7 +41,7 @@ namespace sw::editor
 
             vector<string> take()
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 return std::move( _listWarning );
             }
 
@@ -50,7 +50,7 @@ namespace sw::editor
             {
                 if ( entry._level != LogLevel::Warning && entry._level != LogLevel::Error )
                     return;
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _listWarning.push_back( entry._message );
             }
 

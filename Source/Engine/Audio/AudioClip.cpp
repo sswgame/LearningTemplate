@@ -176,8 +176,8 @@ namespace sw
 
     shared_ptr<const AudioClipData> AudioClipCache::findClip( const hashed_string& path ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              it = _mapPathToEntry.find( path );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        it = _mapPathToEntry.find( path );
         if ( it == _mapPathToEntry.end() || it->second._status != AssetLoadState::Ready )
             return nullptr;
         return it->second._pClip;
@@ -185,8 +185,8 @@ namespace sw
 
     std::optional<AssetLoadState> AudioClipCache::findLoadState( const hashed_string& path ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              it = _mapPathToEntry.find( path );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        it = _mapPathToEntry.find( path );
         if ( it == _mapPathToEntry.end() )
             return std::nullopt;
         return it->second._status;
@@ -195,8 +195,8 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::loadClip( const hashed_string& path )
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              it = _mapPathToEntry.find( path );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        it = _mapPathToEntry.find( path );
             if ( it != _mapPathToEntry.end() && it->second._status == AssetLoadState::Ready )
                 return it->second._pClip;
         }
@@ -210,7 +210,7 @@ namespace sw
         if ( path.empty() )
             return;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             // 새 엔트리는 `Loading` 으로 생긴다 — 있던 엔트리가 준비됐거나 디코드 중이면 다시 띄우지 않는다(실패한 것만 다시 시도한다).
             const auto it = _mapPathToEntry.find( path );
             if ( it != _mapPathToEntry.end() && it->second._status != AssetLoadState::Failed )
@@ -237,8 +237,8 @@ namespace sw
 
     bool AudioClipCache::findReadyPath( string_view path, hashed_string& outPath ) const
     {
-        const string            wanted = FileUtil::normalizeSeparators( path );
-        std::scoped_lock<mutex> lock{ _mutex };
+        const string      wanted = FileUtil::normalizeSeparators( path );
+        ScopedLock<mutex> lock{ _mutex };
         for ( const auto& entry : _mapPathToEntry )
         {
             const bool bSamePath = entry.second._status == AssetLoadState::Ready && StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true );
@@ -270,7 +270,7 @@ namespace sw
 
     void AudioClipCache::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPathToEntry.clear();
     }
 
@@ -365,9 +365,9 @@ namespace sw
 
     void AudioClipCache::storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        Entry&                  entry = _mapPathToEntry[path];
-        entry._status                 = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
-        entry._pClip                  = std::move( pClip );
+        ScopedLock<mutex> lock{ _mutex };
+        Entry&            entry = _mapPathToEntry[path];
+        entry._status           = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
+        entry._pClip            = std::move( pClip );
     }
 } // namespace sw

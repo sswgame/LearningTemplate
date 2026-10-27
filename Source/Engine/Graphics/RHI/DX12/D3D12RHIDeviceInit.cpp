@@ -202,7 +202,7 @@ namespace sw
             _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
         }
         {
-            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+            ScopedLock<mutex> lock{ _onlineBlockMutex };
             _listFreeOnlineBlock.clear();
             for ( uint32 block = kOnlineBlockCount; block > 0; --block )
             {
@@ -282,7 +282,7 @@ namespace sw
         _cbvHeap.Reset();
         _offlineViewHeap.Reset();
         {
-            std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+            ScopedLock<mutex> lock{ _onlineBlockMutex };
             _listFreeOnlineBlock.clear();
         }
         _dsvHeap.Reset();
@@ -294,7 +294,7 @@ namespace sw
             allocator.Reset();
         }
         {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.clear();
         }
         _frameStreamState._bRecording = SW_FALSE;
@@ -326,7 +326,7 @@ namespace sw
         if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
         {
             {
-                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
             requireHr( _commandList->Close(), "ID3D12GraphicsCommandList::Close (resize)" );

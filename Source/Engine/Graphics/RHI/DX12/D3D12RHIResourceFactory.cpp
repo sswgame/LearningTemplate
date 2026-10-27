@@ -30,7 +30,7 @@ namespace sw
         {
             // 상수버퍼 맵은 렌더 스레드가 드로우마다 읽는다(`resolveBufferAddress`). 에디터가 없는 빌드는 게임 틱과 기록이 겹치므로, 게임 스레드의
             // 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
-            std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbAlignedSize[handle] = alignedSize;
             _pDevice->_mapCbMapped[handle]      = pMapped;
         }
@@ -45,7 +45,7 @@ namespace sw
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
         // 도중에 쓰면 안 된다.
-        std::shared_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
             return;
         _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
@@ -71,12 +71,12 @@ namespace sw
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
         }
         {
             // 등록(registerBindlessBufferSrv · registerBindlessBufferUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
-            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
         }
         return handle;
@@ -229,7 +229,7 @@ namespace sw
         if ( pDest == nullptr )
             return;
 
-        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
+        ScopedLock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         // **조각을 모두 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
         // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(호출당 ~3.3 us).
@@ -264,7 +264,7 @@ namespace sw
 
         D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
         {
-            std::scoped_lock<mutex>                                                     lock{ _pDevice->_resourceStateMutex };
+            ScopedLock<mutex>                                                           lock{ _pDevice->_resourceStateMutex };
             const unordered_map<RHIBufferHandle, D3D12_RESOURCE_STATES>::const_iterator stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
             if ( stateIt != _pDevice->_mapStructuredBufferState.end() )
                 stateBefore = stateIt->second;
@@ -305,7 +305,7 @@ namespace sw
         // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState[buffer] = kShaderReadState;
         }
     }
@@ -760,11 +760,11 @@ namespace sw
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
         // 풀어 건너뛴다.
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState.erase( buffer );
         }
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const auto                     mapIt = _pDevice->_mapCbMapped.find( buffer );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const auto               mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
         {
             ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
@@ -930,7 +930,7 @@ namespace sw
         // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
         // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 읽는 쪽만 잠그면
         // 생성/파괴가 맵을 리해시할 때 읽는 쪽이 무효한 참조를 잡는다.
-        std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
+        ScopedLock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 
         for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
@@ -1036,7 +1036,7 @@ namespace sw
             return;
         _pDevice->assertRegistryMutableNow( "destroyTexture" );
         {
-            std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
+            ScopedLock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 
             auto it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it != _pDevice->_mapOffscreenTexture.end() )
@@ -1062,7 +1062,7 @@ namespace sw
             return;
 
         {
-            std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
             {
                 if ( record._texture != texture )

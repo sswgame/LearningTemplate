@@ -74,14 +74,14 @@ namespace sw
         [[nodiscard]] bool findAllCapturesFinished( bool& outBFailed ) const;
 
     private:
-        mutable mutex    _mutex;
-        string           _pendingPath;
-        string           _lastPath;
-        RHITextureHandle _pendingTexture{ 0 };
-        RHIFormat        _pendingFormat{ RHIFormat::R8G8B8A8_UNORM };
-        atomic<uint32>   _completedSerial{ 0 };
-        atomic<uint32>   _expectedCaptureMask{ 0 };
-        atomic<uint32>   _finishedCaptureMask{ 0 };
-        atomic<uint32>   _failedCaptureMask{ 0 };
+        mutable mutex                    _mutex;
+        string _pendingPath              SW_GUARDED_BY( _mutex );
+        string _lastPath                 SW_GUARDED_BY( _mutex );
+        RHITextureHandle _pendingTexture SW_GUARDED_BY( _mutex ){ 0 };
+        RHIFormat _pendingFormat         SW_GUARDED_BY( _mutex ){ RHIFormat::R8G8B8A8_UNORM };
+        atomic<uint32>                   _completedSerial{ 0 };
+        atomic<uint32>                   _expectedCaptureMask{ 0 };
+        atomic<uint32>                   _finishedCaptureMask{ 0 };
+        atomic<uint32>                   _failedCaptureMask{ 0 };
     };
 } // namespace sw

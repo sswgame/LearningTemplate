@@ -129,7 +129,7 @@ namespace sw::editor
         bool                                  _arrLevelEnabled[4];
         bool                                  _arrCachedLevelEnabled[4];
         bool                                  _bAutoScroll;
-        uint8                                 _bHasNewLogs   : 1;
+        uint8                                 _bHasNewLogs   : 1 SW_GUARDED_BY( _entriesMutex );
         uint8                                 _bCollapse     : 1; ///< 같은 행을 한 행으로 접는다(유니티의 Collapse)
         uint8                                 _bClearOnPlay  : 1; ///< Play 를 시작하면 지운다
         uint8                                 _bErrorPause   : 1; ///< Play 중 오류 행이 들어오면 멈춘다

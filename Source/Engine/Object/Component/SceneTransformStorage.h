@@ -183,11 +183,11 @@ namespace sw
         /** @brief 페이지 테이블입니다. 한 번 발행한 페이지는 저장소가 소멸할 때까지 그 위치에 있습니다. */
         atomic<SceneTransformPage*> _arrPage[kMaxPageCount];
         /** @brief 반환된 슬롯입니다. 나중에 반환된 것부터 다시 씁니다. */
-        vector<uint32> _listFreeSlot;
+        vector<uint32> _listFreeSlot SW_GUARDED_BY( _mutex );
         /** @brief 한 번도 쓰지 않은 슬롯의 첫 번호입니다. */
-        uint32 _nextSlot;
+        uint32 _nextSlot SW_GUARDED_BY( _mutex );
         /** @brief 지금 쓰이는 슬롯 수입니다. */
-        uint32 _liveSlotCount;
+        uint32 _liveSlotCount SW_GUARDED_BY( _mutex );
         /** @brief 슬롯 받기, 반환, 페이지 만들기를 보호합니다. */
         mutable mutex _mutex;
     };

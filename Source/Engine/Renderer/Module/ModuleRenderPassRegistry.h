@@ -65,9 +65,9 @@ namespace sw
         bool noteMissingOnce( const hashed_string& modulePass );
 
     private:
-        mutable mutex                  _mutex;
-        NameRegistry<vector<Constant>> _registryPass; ///< 패스 이름 → 상수 목록. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
-        unordered_set<hashed_string>   _uniqueMissingLogged;
+        mutable mutex                                     _mutex;
+        NameRegistry<vector<Constant>> _registryPass      SW_GUARDED_BY( _mutex ); ///< 패스 이름 → 상수 목록. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
+        unordered_set<hashed_string> _uniqueMissingLogged SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

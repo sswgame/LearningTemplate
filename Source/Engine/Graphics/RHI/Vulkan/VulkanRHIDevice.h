@@ -598,8 +598,8 @@ namespace sw
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀입니다. 펜스를 통과한 것만 들어 있습니다.
-        mutable mutex                  _cmdListPoolMutex;
-        vector<VulkanCommandListEntry> _listFreeCmdListEntry;
+        mutable mutex                                        _cmdListPoolMutex;
+        vector<VulkanCommandListEntry> _listFreeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
         /**
          * @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다.
          * @details 렌더 그래프가 리스트를 프레임을 넘겨 가지고 있으므로 디바이스가 먼저 종료될 수 있다. 끊지 않으면
@@ -839,16 +839,16 @@ namespace sw
          * @brief 텍스처 전송의 기록과 제출을 직렬화합니다. 전송 커맨드 풀, 전송이 바꾸는 레이아웃 기록의 순서를 지킨다.
          * @details 잡는 순서는 `_transferMutex` → `_imageLayoutMutex`(짧게) · `_queueMutex` → `_transferFenceQueue` 이다. 링 할당과 소스 복사는 이 락 밖에서 한다.
          */
-        mutex                     _transferMutex;
-        VkCommandPool             _transferCommandPool; ///< 텍스처 전송 전용 풀(RESET_COMMAND_BUFFER). `_transferMutex` 가 지킨다
-        mutex                     _transferJobMutex;    ///< `_listFreeTransferJob` 만 지키는 잎 락(펜스 줄의 회수 콜백 안에서 잡는다)
-        vector<VulkanTransferJob> _listFreeTransferJob;
+        mutex                                          _transferMutex;
+        VkCommandPool                                  _transferCommandPool; ///< 텍스처 전송 전용 풀(RESET_COMMAND_BUFFER). `_transferMutex` 가 지킨다
+        mutex                                          _transferJobMutex;    ///< `_listFreeTransferJob` 만 지키는 잎 락(펜스 줄의 회수 콜백 안에서 잡는다)
+        vector<VulkanTransferJob> _listFreeTransferJob SW_GUARDED_BY( _transferJobMutex );
 
         sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;
 
         /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
-        fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker;
-        mutable mutex                        _submittedMarkerMutex;
+        fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker SW_GUARDED_BY( _submittedMarkerMutex );
+        mutable mutex                                                  _submittedMarkerMutex;
     };
 } // namespace sw

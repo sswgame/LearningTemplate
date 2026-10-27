@@ -50,20 +50,20 @@ namespace sw
 
             void add( const LocalStoreBackend& backend )
             {
-                std::scoped_lock<mutex>                   lock{ _mutex };
+                ScopedLock<mutex>                         lock{ _mutex };
                 [[maybe_unused]] const RegistrationResult result = _registeredBackend.addLogged( &backend, "Local store backend", backend._pName );
                 SW_ASSERT( result == RegistrationResult::Added );
             }
 
             void remove( const LocalStoreBackend& backend )
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 (void)_registeredBackend.remove( &backend ); // 언로드 리스너가 이미 지웠거나 거절된 등록이면 올라 있지 않다
             }
 
             LocalSlotStorageCreateFunction find( string_view backendName ) const
             {
-                std::scoped_lock<mutex>  lock{ _mutex };
+                ScopedLock<mutex>        lock{ _mutex };
                 const LocalStoreBackend* pBackend = _registeredBackend.findByName( backendName );
                 return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
@@ -74,8 +74,8 @@ namespace sw
             uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
             {
                 (void)outKeepImageMapped;
-                std::scoped_lock<mutex> lock{ _mutex };
-                uint32                  releasedCount = 0;
+                ScopedLock<mutex> lock{ _mutex };
+                uint32            releasedCount = 0;
                 for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )
                 {
                     const LocalStoreBackend* pBackend = _registeredBackend.getAt( index - 1 );
@@ -99,10 +99,10 @@ namespace sw
                 (void)_registeredBackend.addLogged( &_memoryBackend, "Local store backend", _memoryBackend._pName );
             }
 
-            mutable mutex                             _mutex;
-            RegistrationList<const LocalStoreBackend> _registeredBackend;
-            LocalStoreBackend                         _fileBackend;   ///< 기반 백엔드. 표가 소유하고, 이미지를 내려도 지워지지 않는다(만들기 함수가 기반 이미지에 있다)
-            LocalStoreBackend                         _memoryBackend; ///< 기반 백엔드
+            mutable mutex                                                _mutex;
+            RegistrationList<const LocalStoreBackend> _registeredBackend SW_GUARDED_BY( _mutex );
+            LocalStoreBackend                                            _fileBackend;   ///< 기반 백엔드. 표가 소유하고, 이미지를 내려도 지워지지 않는다(만들기 함수가 기반 이미지에 있다)
+            LocalStoreBackend                                            _memoryBackend; ///< 기반 백엔드
         };
     } // namespace
 } // namespace sw

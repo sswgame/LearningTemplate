@@ -160,10 +160,10 @@ namespace sw
             AssetLoadState                  _status{ AssetLoadState::Loading }; ///< 엔트리는 요청(`requestClip`)이나 결과(`storeResult`)가 만든다
         };
 
-        unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry;   /**< 경로에서 엔트리로 가는 맵입니다. */
-        AudioFallbackDecodeFunction                                  _pFallbackDecoder; /**< 대체 디코더입니다(없으면 nullptr). */
-        float32                                                      _streamMinSeconds; /**< 이보다 긴 소리는 스트리밍합니다. */
-        mutable mutex                                                _mutex;            /**< `_mapPathToEntry` 를 지킵니다. */
-        TaskHandleTracker                                            _decodeTracker;    /**< 띄운 워커 디코드 태스크의 핸들입니다(소멸자가 이것만 기다린다). */
+        unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry SW_GUARDED_BY( _mutex ); /**< 경로에서 엔트리로 가는 맵입니다. */
+        AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
+        float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
+        mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
+        TaskHandleTracker                                                            _decodeTracker;          /**< 띄운 워커 디코드 태스크의 핸들입니다(소멸자가 이것만 기다린다). */
     };
 } // namespace sw

@@ -104,7 +104,7 @@ namespace sw
         if ( _bInitialized.exchange( false, std::memory_order_acq_rel ) == false )
             return;
         {
-            std::scoped_lock<mutex> lock{ _commandMutex };
+            ScopedLock<mutex> lock{ _commandMutex };
             _listPendingCommand.clear();
         }
         _listApplyingCommand.clear();
@@ -427,7 +427,7 @@ namespace sw
         command._name      = eventName;
         command._emitterID = emitterID;
         // id 는 명령을 쌓을 때(잠금 안에서) 매긴다. 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정이 맞다.
-        std::scoped_lock<mutex> lock{ _commandMutex };
+        ScopedLock<mutex> lock{ _commandMutex };
         command._playingID             = _nextPlayingID.fetch_add( 1 );
         const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
@@ -444,7 +444,7 @@ namespace sw
         command._path       = path;
         command._name       = bus;
         command._clipParams = params;
-        std::scoped_lock<mutex> lock{ _commandMutex };
+        ScopedLock<mutex> lock{ _commandMutex };
         command._playingID             = _nextPlayingID.fetch_add( 1 );
         const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
@@ -497,7 +497,7 @@ namespace sw
         command._type   = CommandType::StartMusic;
         command._pMusic = std::move( pMusic );
         command._value  = fadeSeconds;
-        std::scoped_lock<mutex> lock{ _commandMutex };
+        ScopedLock<mutex> lock{ _commandMutex };
         command._playingID             = _nextPlayingID.fetch_add( 1 );
         const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
@@ -664,7 +664,7 @@ namespace sw
 
     void AudioEngine::pushCommand( Command&& command )
     {
-        std::scoped_lock<mutex> lock{ _commandMutex };
+        ScopedLock<mutex> lock{ _commandMutex };
         _listPendingCommand.push_back( std::move( command ) );
     }
 
@@ -707,7 +707,7 @@ namespace sw
     void AudioEngine::applyCommands()
     {
         {
-            std::scoped_lock<mutex> lock{ _commandMutex };
+            ScopedLock<mutex> lock{ _commandMutex };
             _listApplyingCommand.swap( _listPendingCommand );
         }
         for ( Command& command : _listApplyingCommand )

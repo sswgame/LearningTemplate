@@ -97,7 +97,7 @@ namespace sw
     {
         unordered_map<uint64, Pending> mapPending;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             mapPending = std::move( _mapPending );
             _mapPending.clear();
         }
@@ -131,7 +131,7 @@ namespace sw
         NetRequestStatus failure     = NetRequestStatus::Ok;
         uint64           requestID   = 0;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _pEndpoint == nullptr || static_cast<int32>( _mapPending.size() ) >= _maxPendingRequests )
             {
                 failure = NetRequestStatus::Overloaded;
@@ -186,8 +186,8 @@ namespace sw
     {
         Pending pending;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapPending.find( requestID );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        found = _mapPending.find( requestID );
             if ( found == _mapPending.end() )
                 return false;
             pending = std::move( found->second );
@@ -211,8 +211,8 @@ namespace sw
             return true; // 깨진 응답 — 그 요청은 시한으로 끝난다
         Pending pending;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapPending.find( requestID );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        found = _mapPending.find( requestID );
             if ( found == _mapPending.end() || found->second._handle != handle )
                 return true; // 이미 끝났다(시한 · 취소) — 늦은 응답
             pending = std::move( found->second );
@@ -229,7 +229,7 @@ namespace sw
     {
         vector<pair<uint64, Pending>> listLost;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( auto iterator = _mapPending.begin(); iterator != _mapPending.end(); )
             {
                 if ( iterator->second._handle == handle )
@@ -254,7 +254,7 @@ namespace sw
         const int64                   now = MonotonicClock::nowNanoseconds();
         vector<pair<uint64, Pending>> listExpired;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( auto iterator = _mapPending.begin(); iterator != _mapPending.end(); )
             {
                 if ( iterator->second._deadlineNanoseconds <= now )
@@ -276,7 +276,7 @@ namespace sw
 
     int32 NetRequestClient::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<int32>( _mapPending.size() );
     }
 } // namespace sw
@@ -318,7 +318,7 @@ namespace sw
 
     void NetRequestServer::shutdown()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapInFlight.clear();
         _mapSerialByRequest.clear();
         _mapInFlightCount.clear();
@@ -328,8 +328,8 @@ namespace sw
 
     bool NetRequestServer::registerMethod( uint16 method, INetRequestHandler* pHandler )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bInserted = _mapHandler.emplace( method, pHandler ).second;
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bInserted = _mapHandler.emplace( method, pHandler ).second;
         if ( bInserted == false )
             SW_LOG_ERROR( "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
         return bInserted;
@@ -337,19 +337,19 @@ namespace sw
 
     void NetRequestServer::unregisterMethod( uint16 method )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapHandler.erase( method );
     }
 
     void NetRequestServer::setPrincipal( StreamConnectionHandle handle, uint64 principalID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPrincipal[handle.packed()] = principalID;
     }
 
     void NetRequestServer::sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize )
     {
-        std::scoped_lock<mutex> lock{ _writerMutex };
+        ScopedLock<mutex> lock{ _writerMutex };
         _writer.clear();
         _writer.writeVarUint( requestID );
         _writer.writeBits( static_cast<uint32>( status ), 8 );
@@ -365,8 +365,8 @@ namespace sw
         const uint64 requestID = reader.readVarUint();
         if ( reader.hasOverflowed() )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestID } );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestID } );
         if ( found != _mapSerialByRequest.end() )
             _mapInFlight[found->second]._bCancelled = SW_TRUE;
     }
@@ -398,10 +398,10 @@ namespace sw
 
     NetRequestServer::RequestAdmission NetRequestServer::admitRequest( StreamConnectionHandle handle, const RequestHeader& header )
     {
-        RequestAdmission        admission;
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              handlerFound  = _mapHandler.find( header._method );
-        int32&                  inFlightCount = _mapInFlightCount[handle.packed()];
+        RequestAdmission  admission;
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        handlerFound  = _mapHandler.find( header._method );
+        int32&            inFlightCount = _mapInFlightCount[handle.packed()];
         if ( handlerFound == _mapHandler.end() || inFlightCount >= _settings._maxInFlightPerConnection )
         {
             admission._action      = RequestAdmission::Action::Reply;
@@ -490,8 +490,8 @@ namespace sw
     {
         vector<NetRequestToken> listWaiter;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapInFlight.find( token._serial );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        found = _mapInFlight.find( token._serial );
             if ( found == _mapInFlight.end() )
                 return false; // 이미 답했다
             const InFlight inFlight = found->second;
@@ -523,22 +523,22 @@ namespace sw
 
     bool NetRequestServer::isCancelled( const NetRequestToken& token ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              found = _mapInFlight.find( token._serial );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        found = _mapInFlight.find( token._serial );
         return found != _mapInFlight.end() && found->second._bCancelled == SW_TRUE;
     }
 
     void NetRequestServer::onConnectionClosed( StreamConnectionHandle handle )
     {
         // 처리 중 기록은 지우지 않는다 — 처리기가 나중에 답하면 멱등 기억이 남아 재접속한 재시도가 받는다. 연결별 수 · 주체만 지운다.
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapInFlightCount.erase( handle.packed() );
         _mapPrincipal.erase( handle.packed() );
     }
 
     void NetRequestServer::update()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );
     }
 

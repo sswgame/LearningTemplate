@@ -16,7 +16,7 @@ namespace sw
 {
     void TaskHandleTracker::track( const TaskHandle& handle )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 올릴 때마다 훑으면 요청이 수천 개 쌓일 때 제곱으로 든다. 문턱을 넘을 때만 끝난 것을 버리고, 문턱은 남은 수의 두 배로 다시 잡는다.
         if ( _listHandle.size() >= _pruneThreshold )
         {
@@ -30,8 +30,8 @@ namespace sw
 
     uint32 TaskHandleTracker::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        uint32                  count{ 0 };
+        ScopedLock<mutex> lock{ _mutex };
+        uint32            count{ 0 };
         for ( const TaskHandle& tracked : _listHandle )
         {
             if ( tracked.isCompleted() == false )
@@ -42,7 +42,7 @@ namespace sw
 
     string TaskHandleTracker::describeFirstPending() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const TaskHandle& tracked : _listHandle )
         {
             if ( tracked.isCompleted() )
@@ -58,7 +58,7 @@ namespace sw
 
     TaskManager* TaskHandleTracker::findPendingOwner() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const TaskHandle& tracked : _listHandle )
         {
             if ( tracked.isCompleted() )

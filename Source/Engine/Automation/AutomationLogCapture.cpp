@@ -49,8 +49,8 @@ namespace sw
 
     uint32 AutomationLogCapture::countMatchingLines( const string& needle, uint32 sinceFrame ) const
     {
-        uint32                  matchCount = 0;
-        std::scoped_lock<mutex> lock{ _mutex };
+        uint32            matchCount = 0;
+        ScopedLock<mutex> lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
             if ( line._frameIndex >= sinceFrame && line._message.find( needle ) != string::npos )
@@ -61,8 +61,8 @@ namespace sw
 
     uint32 AutomationLogCapture::countLinesWithID( const string& id, uint32 sinceFrame ) const
     {
-        uint32                  matchCount = 0;
-        std::scoped_lock<mutex> lock{ _mutex };
+        uint32            matchCount = 0;
+        ScopedLock<mutex> lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
             if ( line._frameIndex >= sinceFrame && line._id == id )
@@ -73,8 +73,8 @@ namespace sw
 
     AutomationLogJudgement AutomationLogCapture::judgeLines( const AutomationLogPolicy& policy ) const
     {
-        AutomationLogJudgement  judgement;
-        std::scoped_lock<mutex> lock{ _mutex };
+        AutomationLogJudgement judgement;
+        ScopedLock<mutex>      lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
             policy.judge( line._level, line._caller, line._id, line._message, judgement );
@@ -84,7 +84,7 @@ namespace sw
 
     bool AutomationLogCapture::containsLine( string_view needle ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return VectorUtil::containsIf( _listLogLine, [&]( const AutomationLogLine& line )
         { return string_view( line._message ).find( needle ) != string_view::npos; } );
     }
@@ -94,7 +94,7 @@ namespace sw
         // 실행기 자신의 줄([Scenario])은 세지 않는다. 실패 줄이 단언 문구를 반복해 ExpectLog 를 맞추지 않게 하기 위해서다.
         if ( StringUtil::startsWith( string_view{ entry._message }, AutomationLogPolicy::kRunnerPrefix ) )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listLogLine.size() >= AutomationLogCaptureInternal::kMaxLogLine )
             return;
         AutomationLogLine line{};

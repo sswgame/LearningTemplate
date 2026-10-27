@@ -47,7 +47,7 @@ namespace sw
         // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다) — 캐시를 올릴 레지스트리가 없다.
         if ( pState == nullptr )
             return;
-        std::scoped_lock<mutex>            lock{ pState->_mutex };
+        ScopedLock<mutex>                  lock{ pState->_mutex };
         GameDataCacheInternal::CacheEntry& entry = pState->_listCache.emplace_back();
         entry._pCache                            = pCache;
         if ( pState->_pAssetManager != nullptr )
@@ -59,7 +59,7 @@ namespace sw
         GameDataCacheInternal::RegistryState* const pState = GameDataCacheInternal::s_state.find();
         if ( pState == nullptr )
             return; // 레지스트리가 먼저 사라졌다(프로세스 끝 · 엔진 종료) — 뺄 목록이 없다
-        std::scoped_lock<mutex> lock{ pState->_mutex };
+        ScopedLock<mutex> lock{ pState->_mutex };
         for ( size_t index = 0; index < pState->_listCache.size(); ++index )
         {
             if ( pState->_listCache[index]._pCache == pCache ) // 지우면 등록 구독도 함께 풀린다
@@ -76,7 +76,7 @@ namespace sw
         GameDataCacheInternal::RegistryState* const pState = pAssetManager != nullptr ? GameDataCacheInternal::s_state.getOrCreate() : GameDataCacheInternal::s_state.find();
         if ( pState == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pState->_mutex };
+        ScopedLock<mutex> lock{ pState->_mutex };
         if ( pState->_pAssetManager == pAssetManager )
             return;
         pState->_pAssetManager = pAssetManager;

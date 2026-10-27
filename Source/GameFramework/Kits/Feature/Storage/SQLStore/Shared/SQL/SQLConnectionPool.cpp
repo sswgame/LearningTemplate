@@ -74,7 +74,7 @@ namespace sw
     {
         shutdown();
         // 회수하지 않은 작업은 complete 없이 버린다. 맡긴 서비스가 먼저 종료되어 complete 가 가리킬 대상이 없기 때문이며, 메모리 구현도 같다.
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listCompleted.clear();
     }
 
@@ -109,7 +109,7 @@ namespace sw
     void SQLConnectionPool::shutdown()
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _bStopping = SW_TRUE;
         }
         _jobReady.notify_all();
@@ -125,14 +125,14 @@ namespace sw
         {
             unique_ptr<ISQLJob> job;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _listQueuedJob.empty() )
                     break;
                 job = std::move( _listQueuedJob.front() );
                 _listQueuedJob.pop_front();
             }
             job->run( closed );
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listCompleted.push_back( std::move( job ) );
         }
         _settings._secret.clear();
@@ -142,7 +142,7 @@ namespace sw
     {
         bool bStopping = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             ++_pendingCount;
             bStopping = _bStopping == SW_TRUE || _listWorker.empty();
             if ( bStopping == false )
@@ -155,7 +155,7 @@ namespace sw
         }
         SQLConnectionPoolInternal::ClosedConnection closed;
         job->run( closed );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listCompleted.push_back( std::move( job ) );
     }
 
@@ -164,7 +164,7 @@ namespace sw
         // complete 안에서 새 작업을 맡길 수 있다. 그래서 꺼낸 목록을 락 밖에서 순회한다. 메모리 구현과 같은 순서 규약이다.
         vector<unique_ptr<ISQLJob>> listReady;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listReady.swap( _listCompleted );
             _pendingCount -= static_cast<int32>( listReady.size() );
         }
@@ -177,7 +177,7 @@ namespace sw
 
     int32 SQLConnectionPool::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pendingCount;
     }
 
@@ -199,7 +199,7 @@ namespace sw
             unique_ptr<ISQLJob> job;
             bool                bStopping = false;
             {
-                std::unique_lock<mutex> lock{ _mutex };
+                UniqueLock<mutex> lock{ _mutex };
                 _jobReady.wait( lock, [this]()
                 { return _bStopping == SW_TRUE || _listQueuedJob.empty() == false; } );
                 if ( _listQueuedJob.empty() )
@@ -229,7 +229,7 @@ namespace sw
                 job->run( *connection );
             else
                 job->run( closed );
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listCompleted.push_back( std::move( job ) );
         }
     }

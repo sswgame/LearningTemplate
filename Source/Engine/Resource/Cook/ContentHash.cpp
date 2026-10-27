@@ -59,8 +59,8 @@ namespace sw
         const bool bStamped = FileUtil::getFileStamp( absPath, stamp );
         if ( bStamped )
         {
-            std::scoped_lock<mutex> lock{ ContentHashInternal::_s_mutex };
-            const auto              iter = ContentHashInternal::_s_mapEntry.find( string( absPath ) );
+            ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
+            const auto        iter = ContentHashInternal::_s_mapEntry.find( string( absPath ) );
             if ( iter != ContentHashInternal::_s_mapEntry.end() && iter->second._stamp == stamp )
                 return iter->second._hash;
         }
@@ -69,7 +69,7 @@ namespace sw
         // 읽는 사이에 파일이 바뀌었으면 옛 시각에 새 해시가 붙는다. 다음 조회는 시각이 달라 다시 읽으므로 틀린 값이 남지 않는다.
         if ( bStamped && hash != 0 )
         {
-            std::scoped_lock<mutex> lock{ ContentHashInternal::_s_mutex };
+            ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
             ContentHashInternal::_s_mapEntry[string( absPath )] = ContentHashInternal::Entry{ stamp, hash };
         }
         return hash;
@@ -77,7 +77,7 @@ namespace sw
 
     void ContentHash::clearCache()
     {
-        std::scoped_lock<mutex> lock{ ContentHashInternal::_s_mutex };
+        ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
         ContentHashInternal::_s_mapEntry.clear();
     }
 } // namespace sw

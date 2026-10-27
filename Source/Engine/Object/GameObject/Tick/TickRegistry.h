@@ -264,25 +264,25 @@ namespace sw
         /** @brief 오브젝트의 이 그룹 항목이 일괄 틱 대상이면 그 함수입니다(정확한 타입의 주 틱 하나). 아니면 nullptr 입니다. */
         static TickBatchFunction findBatchFunction( const TickItem* pItem, uint32 itemCount );
 
-        vector<TickObjectEntry> _arrListEntry[kGroupCount]; ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 항목이다. 오브젝트를 소유하지 않는다.
-        vector<TickBatchList>   _arrListBatch[kGroupCount]; ///< 그룹마다 타입별 일괄 틱 목록이다. 오브젝트는 칸 목록과 이 목록 중 한 곳에만 있다
-        uint32                  _batchGeneration;           ///< 마지막으로 본 `TickBatchRegistry::getGeneration` — 바뀌면 모두 다시 훑는다
-        vector<uint64>          _listDirtyObjectID;         ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
-        vector<uint64>          _listProcessingObjectID;    ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
-        mutex                   _dirtyMutex;                ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다
-        atomic<uint8>           _bAllDirty;                 ///< 전부 다시 훑을지 여부
-        uint32                  _prerequisiteCount;         ///< 등록된 서브틱 선행 조건의 총수
-        uint32                  _stageItemCount;            ///< 스테이지가 도는 항목 수
-        uint32                  _stageBuildCount;           ///< 스테이지를 다시 만든 횟수(진단)
-        uint32                  _stageDeltaCount;           ///< 말단 오브젝트의 항목만 끼우거나 뺀 횟수(진단)
-        uint32                  _stageCompactCount;         ///< 스테이지를 훑어 항목을 걷어 낸 횟수(진단) — 제거 요청 수가 아니라 `flushStageEdits` 횟수다
-        uint64                  _stageEditOrder;            ///< 스테이지 편집 요청마다 오르는 순번이다(제거와 끼움의 선후를 가린다)
-        vector<StageRemoval>    _listStageRemoval;          ///< 스테이지에서 빼 달라는 대기 요청이다. `flushStageEdits` 가 적용한다
-        vector<StageInsertion>  _listStageInsertion;        ///< 레벨 0 스테이지에 끼울 대기 항목이다(요청 순서)
-        uint64                  _stageGeneration;           ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오른다
-        uint64                  _builtStageGeneration;      ///< `_listStage` 를 만든 세대
-        vector<uint64>          _listDependentObjectID;     ///< 선행 조건을 가진 항목이 있는 오브젝트 id(정렬됨 — 스테이지가 늘 같은 순서로 지어진다)
-        vector<uint64>          _listReferencedObjectID;    ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 id(정렬됨, 중복 없음)다. 바뀌면 다시 만든다
-        vector<TickStage>       _listStage;                 ///< 선행 조건을 가진 항목의 스테이지(그룹 순)
+        vector<TickObjectEntry>           _arrListEntry[kGroupCount];   ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 항목이다. 오브젝트를 소유하지 않는다.
+        vector<TickBatchList>             _arrListBatch[kGroupCount];   ///< 그룹마다 타입별 일괄 틱 목록이다. 오브젝트는 칸 목록과 이 목록 중 한 곳에만 있다
+        uint32                            _batchGeneration;             ///< 마지막으로 본 `TickBatchRegistry::getGeneration` — 바뀌면 모두 다시 훑는다
+        vector<uint64> _listDirtyObjectID SW_GUARDED_BY( _dirtyMutex ); ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
+        vector<uint64>                    _listProcessingObjectID;      ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
+        mutex                             _dirtyMutex;                  ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다
+        atomic<uint8>                     _bAllDirty;                   ///< 전부 다시 훑을지 여부
+        uint32                            _prerequisiteCount;           ///< 등록된 서브틱 선행 조건의 총수
+        uint32                            _stageItemCount;              ///< 스테이지가 도는 항목 수
+        uint32                            _stageBuildCount;             ///< 스테이지를 다시 만든 횟수(진단)
+        uint32                            _stageDeltaCount;             ///< 말단 오브젝트의 항목만 끼우거나 뺀 횟수(진단)
+        uint32                            _stageCompactCount;           ///< 스테이지를 훑어 항목을 걷어 낸 횟수(진단) — 제거 요청 수가 아니라 `flushStageEdits` 횟수다
+        uint64                            _stageEditOrder;              ///< 스테이지 편집 요청마다 오르는 순번이다(제거와 끼움의 선후를 가린다)
+        vector<StageRemoval>              _listStageRemoval;            ///< 스테이지에서 빼 달라는 대기 요청이다. `flushStageEdits` 가 적용한다
+        vector<StageInsertion>            _listStageInsertion;          ///< 레벨 0 스테이지에 끼울 대기 항목이다(요청 순서)
+        uint64                            _stageGeneration;             ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오른다
+        uint64                            _builtStageGeneration;        ///< `_listStage` 를 만든 세대
+        vector<uint64>                    _listDependentObjectID;       ///< 선행 조건을 가진 항목이 있는 오브젝트 id(정렬됨 — 스테이지가 늘 같은 순서로 지어진다)
+        vector<uint64>                    _listReferencedObjectID;      ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 id(정렬됨, 중복 없음)다. 바뀌면 다시 만든다
+        vector<TickStage>                 _listStage;                   ///< 선행 조건을 가진 항목의 스테이지(그룹 순)
     };
 } // namespace sw

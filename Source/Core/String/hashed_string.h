@@ -487,7 +487,7 @@ namespace sw
                 _arrShard[shardIndex]._mapExactKeyToIndex = typename Shard::SpellingIndexMap{};
             }
 
-            std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
+            ScopedLock<mutex> globalLock{ _globalAppendMutex };
 
             for ( uint32 chunkIndex = 0; chunkIndex < kMaxChunks; ++chunkIndex )
             {
@@ -608,7 +608,7 @@ namespace sw
         auto&           shard      = info._arrShard[shardIndex];
         StringKey       lookupKey{ hash, text.data(), static_cast<size_type>( text.size() ) };
 
-        std::shared_lock<shared_mutex> readLock{ shard._mutex };
+        ScopedSharedLock<shared_mutex> readLock{ shard._mutex };
         // 그 철자가 있으면 그것을, 없고 이름만 있으면 이름의 첫 철자를 반환한다(철자를 새로 넣지 않고 찾기만 한다).
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
         if ( exactIter != shard._mapExactKeyToIndex.end() )
@@ -660,14 +660,14 @@ namespace sw
 
         // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다).
         {
-            std::shared_lock<shared_mutex> readLock{ shard._mutex };
+            ScopedSharedLock<shared_mutex> readLock{ shard._mutex };
             const auto                     iter = shard._mapExactKeyToIndex.find( lookupKey );
             if ( iter != shard._mapExactKeyToIndex.end() )
                 return makeInterned( iter->second );
         }
 
         // 2단계: 새 철자를 등록한다. 샤드 배타 락과 전역 할당 락을 잡는다.
-        std::unique_lock<shared_mutex>              writeLock{ shard._mutex };
+        UniqueLock<shared_mutex>                    writeLock{ shard._mutex };
         const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
 
         // 다시 확인한다(double-check).
@@ -680,7 +680,7 @@ namespace sw
         const bool   bKnownName     = nameIter != shard._mapKeyToIndex.end();
         const uint32 knownNameIndex = bKnownName ? nameIter->second : 0;
 
-        std::scoped_lock<mutex> allocLock{ info._globalAppendMutex };
+        ScopedLock<mutex> allocLock{ info._globalAppendMutex };
 
         const uint32 newIndex = info._entryCount.load( std::memory_order_relaxed );
         if ( newIndex >= kMaxChunks * kChunkSize )

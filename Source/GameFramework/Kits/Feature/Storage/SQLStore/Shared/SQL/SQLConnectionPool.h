@@ -81,14 +81,14 @@ namespace sw
     private:
         void runWorker( int32 workerIndex );
 
-        vector<sw::thread>          _listWorker;
-        deque<unique_ptr<ISQLJob>>  _listQueuedJob;
-        vector<unique_ptr<ISQLJob>> _listCompleted;
-        SQLConnectionPoolConfig     _settings;
-        mutable mutex               _mutex;
-        std::condition_variable_any _jobReady;
-        ISQLDriver*                 _pDriver;
-        int32                       _pendingCount;
-        uint8                       _bStopping;
+        vector<sw::thread>                         _listWorker;
+        deque<unique_ptr<ISQLJob>>                 _listQueuedJob;
+        vector<unique_ptr<ISQLJob>> _listCompleted SW_GUARDED_BY( _mutex );
+        SQLConnectionPoolConfig                    _settings;
+        mutable mutex                              _mutex;
+        std::condition_variable_any                _jobReady;
+        ISQLDriver*                                _pDriver;
+        int32 _pendingCount                        SW_GUARDED_BY( _mutex );
+        uint8                                      _bStopping;
     };
 } // namespace sw

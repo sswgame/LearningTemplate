@@ -29,22 +29,22 @@ namespace sw
         if ( pso == 0 )
             return;
         const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, RHI::getShaderTargetFormat( backend ) );
-        std::scoped_lock<mutex>    lock{ _layoutMutex };
+        ScopedLock<mutex>          lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;
     }
 
     const ShaderBindingLayout* RenderPSOCache::findLayout( RHIPipelineStateHandle pso ) const
     {
-        std::scoped_lock<mutex> lock{ _layoutMutex };
-        const auto              it = _mapPSOLayout.find( pso );
+        ScopedLock<mutex> lock{ _layoutMutex };
+        const auto        it = _mapPSOLayout.find( pso );
         return it != _mapPSOLayout.end() ? it->second : nullptr;
     }
 
     bool RenderPSOCache::findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
-        std::scoped_lock<mutex> lock{ _layoutMutex };
-        const auto              it = _mapPSODesc.find( pso );
+        ScopedLock<mutex> lock{ _layoutMutex };
+        const auto        it = _mapPSODesc.find( pso );
         if ( it == _mapPSODesc.end() )
             return false;
         outDesc = it->second;
@@ -58,7 +58,7 @@ namespace sw
 
     void RenderPSOCache::collectLayouts( vector<RegisteredLayout>& outListLayout ) const
     {
-        std::scoped_lock<mutex> lock{ _layoutMutex };
+        ScopedLock<mutex> lock{ _layoutMutex };
         outListLayout.clear();
         outListLayout.reserve( _mapPSOLayout.size() );
         for ( const auto& [pso, pLayout] : _mapPSOLayout )
@@ -118,20 +118,20 @@ namespace sw
 
     bool RenderPSOCache::hasMaterialPSO( uint64 key ) const
     {
-        std::scoped_lock<mutex> lock{ _materialPSOMutex };
+        ScopedLock<mutex> lock{ _materialPSOMutex };
         return _mapMaterialPSO.find( key ) != _mapMaterialPSO.end();
     }
 
     void RenderPSOCache::setMaterialPSO( uint64 key, const MaterialPSOEntry& entry )
     {
-        std::scoped_lock<mutex> lock{ _materialPSOMutex };
+        ScopedLock<mutex> lock{ _materialPSOMutex };
         _mapMaterialPSO.insert_or_assign( key, entry );
     }
 
     RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( uint64 key ) const
     {
-        std::scoped_lock<mutex> lock{ _materialPSOMutex };
-        const auto              it = _mapMaterialPSO.find( key );
+        ScopedLock<mutex> lock{ _materialPSOMutex };
+        const auto        it = _mapMaterialPSO.find( key );
         return ( it != _mapMaterialPSO.end() ) ? it->second._pso : 0;
     }
 
@@ -146,7 +146,7 @@ namespace sw
         // 퍼뮤테이션 변형을 **패스 PSO 보다 먼저** 파괴한다. `_bOwned` 가 0 인 항목은 패스 PSO 를 그대로
         // 담고 있을 뿐이라 여기서 파괴하면 두 번 파괴하는 셈이 된다.
         {
-            std::scoped_lock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<mutex> lock{ _materialPSOMutex };
             for ( auto& [key, entry] : _mapMaterialPSO )
             {
                 if ( entry._bOwned != 0 && entry._pso != 0 )
@@ -180,7 +180,7 @@ namespace sw
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
         // 죽은 항목(RHIPipelineStateDesc 통째)이 계속 쌓인다.
         {
-            std::scoped_lock<mutex> lock{ _layoutMutex };
+            ScopedLock<mutex> lock{ _layoutMutex };
             _mapPSOLayout.clear();
             _mapPSODesc.clear();
         }
@@ -192,11 +192,11 @@ namespace sw
         _mapOutputPSO.clear();
         _mapModulePassPSO.clear();
         {
-            std::scoped_lock<mutex> lock{ _materialPSOMutex };
+            ScopedLock<mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();
         }
         {
-            std::scoped_lock<mutex> lock{ _layoutMutex };
+            ScopedLock<mutex> lock{ _layoutMutex };
             _mapPSOLayout.clear();
             _mapPSODesc.clear();
         }

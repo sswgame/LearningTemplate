@@ -49,7 +49,7 @@ namespace sw
             const ResourceDataKind* pKind = listKind[index - 1];
             if ( registerKind( pKind ) == false )
                 continue;
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _mapModuleKind[string{ moduleName }].push_back( pKind );
             ++registeredCount;
         }
@@ -58,8 +58,8 @@ namespace sw
 
     uint32 ResourceDataKindRegistry::unregisterModuleKinds( string_view moduleName )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              iter = _mapModuleKind.find( string{ moduleName } );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        iter = _mapModuleKind.find( string{ moduleName } );
         if ( iter == _mapModuleKind.end() )
             return 0;
         uint32 removedCount = 0;
@@ -79,7 +79,7 @@ namespace sw
             return false;
         RegistrationResult result = RegistrationResult::Added;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             result = _registration.add( pKind, pKind->_pLabel );
         }
         reportRegistrationRejected( result, "Resource data kind", pKind->_pLabel );
@@ -88,20 +88,20 @@ namespace sw
 
     void ResourceDataKindRegistry::unregisterKind( const ResourceDataKind* pKind )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_registration.remove( pKind ); // 등록되어 있지 않은 종류를 빼는 것은 할 일이 없다
     }
 
     const ResourceDataKind* ResourceDataKindRegistry::findByLabel( string_view label ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.findByName( label );
     }
 
     void ResourceDataKindRegistry::collectMatches( string_view resourceID, vector<const ResourceDataKind*>& outListKind ) const
     {
         outListKind.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const ResourceDataKind* pKind : _registration.getItems() )
         {
             if ( pKind->matches( resourceID ) )
@@ -112,7 +112,7 @@ namespace sw
     void ResourceDataKindRegistry::collectKinds( vector<const ResourceDataKind*>& outListKind ) const
     {
         outListKind.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const ResourceDataKind* pKind : _registration.getItems() )
         {
             outListKind.push_back( pKind );
@@ -121,7 +121,7 @@ namespace sw
 
     uint32 ResourceDataKindRegistry::getCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.getCount();
     }
 } // namespace sw

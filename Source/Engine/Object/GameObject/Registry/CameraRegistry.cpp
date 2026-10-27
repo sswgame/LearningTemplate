@@ -16,7 +16,7 @@ namespace sw
 {
     Subscription CameraRegistry::add( CameraComponent* pCamera )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // nullptr · 이미 등록된 카메라는 목록이 거절한다 — 먼저 받은 구독이 쥔다.
         if ( _registeredCamera.addLogged( pCamera, "Camera" ) != RegistrationResult::Added )
             return {};
@@ -27,8 +27,8 @@ namespace sw
     void CameraRegistry::releaseSubscription( uint64 id )
     {
         // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다. 주소로만 찾고 역참조하지 않는다.
-        CameraComponent* const  pCamera = reinterpret_cast<CameraComponent*>( id );
-        std::scoped_lock<mutex> lock{ _mutex };
+        CameraComponent* const pCamera = reinterpret_cast<CameraComponent*>( id );
+        ScopedLock<mutex>      lock{ _mutex };
         if ( _registeredCamera.remove( pCamera ) )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
         if ( _pCutCamera == pCamera )
@@ -37,13 +37,13 @@ namespace sw
 
     void CameraRegistry::setCutCamera( CameraComponent* pCamera )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pCutCamera = pCamera;
     }
 
     CameraComponent* CameraRegistry::getCutCamera() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pCutCamera;
     }
 

@@ -24,7 +24,7 @@ namespace sw
         if ( releaseDelegate.isBound() == false )
             return;
 
-        std::scoped_lock<SpinLock> lock{ _spinLock };
+        ScopedLock<SpinLock> lock{ _spinLock };
         _listFrameEntry.push( releaseDelegate, _currentFrame + static_cast<uint64>( _frameLatency ) );
     }
 
@@ -33,7 +33,7 @@ namespace sw
         if ( releaseDelegate.isBound() == false )
             return;
 
-        std::scoped_lock<SpinLock> lock{ _spinLock };
+        ScopedLock<SpinLock> lock{ _spinLock };
         _listGPUEntry.push( releaseDelegate, fenceValue );
     }
 
@@ -41,7 +41,7 @@ namespace sw
     {
         uint64 currentFrame{ 0 };
         {
-            std::scoped_lock<SpinLock> lock{ _spinLock };
+            ScopedLock<SpinLock> lock{ _spinLock };
             currentFrame = ++_currentFrame;
         }
         releaseReady( _listFrameEntry, currentFrame );
@@ -60,7 +60,7 @@ namespace sw
         // 잠금 안에서는 할당하지 않는다(`KeyedPendingList::extractReadyReserving`).
         vector<RHIResourceReleaseDelegate> listReady;
         {
-            std::unique_lock<SpinLock> lock{ _spinLock };
+            UniqueLock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
             list.extractReadyReserving( lock, threshold, listReady );
         }
@@ -71,7 +71,7 @@ namespace sw
                 callback();
         }
         listReady.clear();
-        std::scoped_lock<SpinLock> lock{ _spinLock };
+        ScopedLock<SpinLock> lock{ _spinLock };
         // 그사이 다른 tick 이 돌려놓은 것이 더 크면 그것을 둔다.
         if ( listReady.capacity() > _listReadyScratch.capacity() )
             _listReadyScratch.swap( listReady );
@@ -82,7 +82,7 @@ namespace sw
         KeyedPendingList<RHIResourceReleaseDelegate> listFrameFlush;
         KeyedPendingList<RHIResourceReleaseDelegate> listGPUFlush;
         {
-            std::scoped_lock<SpinLock> lock{ _spinLock };
+            ScopedLock<SpinLock> lock{ _spinLock };
             listFrameFlush.swap( _listFrameEntry );
             listGPUFlush.swap( _listGPUEntry );
         }
@@ -100,7 +100,7 @@ namespace sw
 
     uint32 RHIReleaseQueue::getPendingReleaseCount() const
     {
-        std::scoped_lock<SpinLock> lock{ _spinLock };
+        ScopedLock<SpinLock> lock{ _spinLock };
         return static_cast<uint32>( _listFrameEntry.size() + _listGPUEntry.size() );
     }
 } // namespace sw

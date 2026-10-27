@@ -125,7 +125,7 @@ namespace sw
             SW_LOG_ERROR( "VisualLogger capacity must be at least 1 entry" );
             return false;
         }
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _capacity = capacity;
         trimLocked();
         return true;
@@ -133,25 +133,25 @@ namespace sw
 
     void VisualLogger::endFrame()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         ++_frame;
     }
 
     uint64 VisualLogger::getFrame() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _frame;
     }
 
     void VisualLogger::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listEntry.clear();
     }
 
     size_t VisualLogger::getEntryCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _listEntry.size();
     }
 
@@ -169,7 +169,7 @@ namespace sw
             return;
         if ( entry._category.empty() )
             entry._category = hashed_string( kDefaultCategoryName );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         entry._frame = _frame;
         _listEntry.push_back( std::move( entry ) );
         trimLocked();
@@ -252,7 +252,7 @@ namespace sw
     void VisualLogger::collect( uint64 firstFrame, uint64 lastFrame, uint64 objectID, const hashed_string& category, vector<VisualLogEntry>& outListEntry ) const
     {
         outListEntry.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const VisualLogEntry& entry : _listEntry )
         {
             const bool bInRange = firstFrame <= entry._frame && entry._frame <= lastFrame;
@@ -263,7 +263,7 @@ namespace sw
 
     bool VisualLogger::findFrameRange( uint64& outFirstFrame, uint64& outLastFrame ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listEntry.empty() )
             return false;
         outFirstFrame = _listEntry.front()._frame; // 기록은 프레임 순으로 쌓인다
@@ -318,14 +318,14 @@ namespace sw
         JSONValue    root = document.makeObject();
         root.set( "version" ).setUint( kFileVersion );
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             root.set( "frame" ).setUint( _frame );
         }
         JSONValue listNode = root.set( "entries" );
         listNode.setArray();
         vector<VisualLogEntry> listEntry;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listEntry.assign( _listEntry.begin(), _listEntry.end() );
         }
         for ( const VisualLogEntry& entry : listEntry )
@@ -377,7 +377,7 @@ namespace sw
             }
             listLoaded.push_back( std::move( entry ) );
         }
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listEntry = std::move( listLoaded );
         _frame     = *frame;
         trimLocked();

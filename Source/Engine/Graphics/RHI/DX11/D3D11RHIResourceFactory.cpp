@@ -261,7 +261,7 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
         {
             if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
@@ -743,7 +743,7 @@ namespace sw
             return;
 
         {
-            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
             {
                 if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )

@@ -89,9 +89,9 @@ namespace sw
         bool isClosed() const { return _bClosed.load( std::memory_order_acquire ); }
 
     private:
-        LifetimeScopeEntry* _pHead;   ///< 등록된 고리(나중에 등록한 것이 앞이라 앞에서부터 소멸시키면 역순이다)
-        SpinLock            _lock;    ///< `_pHead` · `_bClosed` 를 지킨다
-        atomic<bool>        _bClosed; ///< `close` 뒤 true
+        LifetimeScopeEntry* _pHead SW_GUARDED_BY( _lock ); ///< 등록된 고리(나중에 등록한 것이 앞이라 앞에서부터 소멸시키면 역순이다)
+        SpinLock                   _lock;                  ///< `_pHead` · `_bClosed` 를 지킨다
+        atomic<bool>               _bClosed;               ///< `close` 뒤 true
     };
 } // namespace sw
 
@@ -143,7 +143,7 @@ namespace sw
             if ( pValue != nullptr )
                 return pValue;
 
-            std::lock_guard<SpinLock> lock( _createLock );
+            ScopedLock<SpinLock> lock{ _createLock };
             pValue = _pValue.load( std::memory_order_acquire );
             if ( pValue != nullptr )
                 return pValue;

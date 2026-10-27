@@ -331,7 +331,7 @@ namespace sw
         // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다). 매니페스트를 들 곳이 없으니 찾지 못한 것으로 답한다.
         if ( pState == nullptr )
             return false;
-        std::scoped_lock<mutex>                                   lock{ pState->_mutex };
+        ScopedLock<mutex>                                         lock{ pState->_mutex };
         unordered_map<string, ShaderReflectionLibrary::EntryMap>& mapManifest = pState->_mapManifest;
 
         auto manifestIter = mapManifest.find( binDirRel );
@@ -402,7 +402,7 @@ namespace sw
         ManifestState* const pState = s_manifestState.getOrCreate();
         if ( pState == nullptr )
             return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 버릴 캐시가 없다
-        std::scoped_lock<mutex> lock{ pState->_mutex };
+        ScopedLock<mutex> lock{ pState->_mutex };
         pState->_mapManifest.clear();
         pState->_generation.fetch_add( 1u, std::memory_order_acq_rel );
     }
@@ -412,7 +412,7 @@ namespace sw
         ManifestState* const pState = s_manifestState.find();
         if ( pState == nullptr )
             return 0u; // 아직 아무 매니페스트도 읽지 않았다
-        std::scoped_lock<mutex> lock{ pState->_mutex };
+        ScopedLock<mutex> lock{ pState->_mutex };
         return static_cast<uint32>( pState->_mapManifest.size() );
     }
 

@@ -964,7 +964,7 @@ namespace sw
             }
             report._impulse = impulse;
         }
-        std::scoped_lock<mutex> lock{ _reportMutex };
+        ScopedLock<mutex> lock{ _reportMutex };
         _listContactReport.push_back( report );
     }
 
@@ -987,7 +987,7 @@ namespace sw
         report._subShapeA   = subShapePair.GetSubShapeID1().GetValue();
         report._subShapeB   = subShapePair.GetSubShapeID2().GetValue();
         report._kind        = 2;
-        std::scoped_lock<mutex> lock{ _reportMutex };
+        ScopedLock<mutex> lock{ _reportMutex };
         _listContactReport.push_back( report );
     }
 

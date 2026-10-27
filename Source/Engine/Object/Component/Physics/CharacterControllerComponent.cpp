@@ -43,31 +43,31 @@ namespace sw
 
     void CharacterControllerComponent::setMoveVelocity( const float3& velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _moveVelocity = float3{ velocity._x, 0.0f, velocity._z };
     }
 
     void CharacterControllerComponent::jump( float32 speed )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _pendingJumpSpeed = speed;
     }
 
     void CharacterControllerComponent::addRootMotionDisplacement( const float3& worldDisplacement )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _pendingRootMotion += float3{ worldDisplacement._x, 0.0f, worldDisplacement._z };
     }
 
     void CharacterControllerComponent::launch( const float3& velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _pendingLaunch = velocity;
     }
 
     void CharacterControllerComponent::addSurfaceVelocity( const float3& velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _pendingSurfaceVelocity += float3{ velocity._x, 0.0f, velocity._z };
     }
 
@@ -158,7 +158,7 @@ namespace sw
         float3  moveVelocity{};
         float32 jumpSpeed = 0.0f;
         {
-            std::scoped_lock<SpinLock> lock{ _commandLock };
+            ScopedLock<SpinLock> lock{ _commandLock };
             moveVelocity      = _moveVelocity;
             jumpSpeed         = _pendingJumpSpeed;
             _pendingJumpSpeed = 0.0f;

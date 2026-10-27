@@ -114,7 +114,7 @@ namespace sw
             SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
             return;
         }
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         _slots.initialize( *pDef );
         // 저장된 차지 상태(세이브, 핫 리로드)를 복원한다.
         for ( size_t slot = 0; slot < _listClaimant.size() && slot < static_cast<size_t>( _slots.getSlotCount() ); ++slot )
@@ -178,7 +178,7 @@ namespace sw
 
     void SmartObjectComponent::setDefinition( const SmartObjectDef& def )
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         _bHasOverride = SW_TRUE;
         _slots.initialize( def );
         _listClaimant.assign( def._listSlot.size(), GameObjectHandle{} );
@@ -200,7 +200,7 @@ namespace sw
 
     bool SmartObjectComponent::claimSlot( const GameObject& claimant, int32 slot )
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
         const bool bClaimed = _slots.claim( slot, claimant.getObjectID() );
         syncClaimants();
@@ -209,7 +209,7 @@ namespace sw
 
     int32 SmartObjectComponent::claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags )
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
         const int32 owned = _slots.findSlotOf( claimant.getObjectID() );
         if ( owned >= 0 )
@@ -223,39 +223,39 @@ namespace sw
 
     bool SmartObjectComponent::releaseSlot( const GameObject& claimant )
     {
-        std::lock_guard<mutex> lock( _mutex );
-        const bool             bReleased = _slots.release( claimant.getObjectID() );
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bReleased = _slots.release( claimant.getObjectID() );
         syncClaimants();
         return bReleased;
     }
 
     int32 SmartObjectComponent::findSlotOf( const GameObject& claimant ) const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return _slots.findSlotOf( claimant.getObjectID() );
     }
 
     int32 SmartObjectComponent::countFreeSlots() const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return _slots.countFree();
     }
 
     hashed_string SmartObjectComponent::getDefinitionID() const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return _slots.getDefinitionID();
     }
 
     int32 SmartObjectComponent::getSlotCount() const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return _slots.getSlotCount();
     }
 
     bool SmartObjectComponent::computeSlotTransform( int32 slot, float3& outPosition, float32& outYaw ) const
     {
-        std::lock_guard<mutex>    lock( _mutex );
+        ScopedLock<mutex>         lock{ _mutex };
         const SmartObjectSlotDef* pSlot  = _slots.findSlotDef( slot );
         const GameObject*         pOwner = getOwner();
         const SceneComponent*     pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;

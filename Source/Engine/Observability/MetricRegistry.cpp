@@ -245,8 +245,8 @@ namespace sw
             labelText.push_back( '"' );
         }
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        Family*                 pFamily = nullptr;
+        ScopedLock<mutex> lock{ _mutex };
+        Family*           pFamily = nullptr;
         for ( unique_ptr<Family>& family : _listFamily )
         {
             if ( family->_name == name )
@@ -312,8 +312,8 @@ namespace sw
     {
         static constexpr const utf8* kArrTypeName[] = { "counter", "gauge", "histogram" };
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        vector<const Family*>   listFamily;
+        ScopedLock<mutex>     lock{ _mutex };
+        vector<const Family*> listFamily;
         listFamily.reserve( _listFamily.size() );
         for ( const unique_ptr<Family>& family : _listFamily )
         {
@@ -382,8 +382,8 @@ namespace sw
 
     int32 MetricRegistry::getSeriesCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        int32                   seriesCount = 0;
+        ScopedLock<mutex> lock{ _mutex };
+        int32             seriesCount = 0;
         for ( const unique_ptr<Family>& family : _listFamily )
         {
             seriesCount += static_cast<int32>( family->_listSeries.size() );

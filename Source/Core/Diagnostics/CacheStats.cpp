@@ -87,7 +87,7 @@ namespace sw
         CacheStatsInternal::AddFailure failure{ CacheStatsInternal::AddFailure::None };
         CacheStatsHandle               handle{};
         {
-            std::scoped_lock<mutex> lock{ registry._mutex };
+            ScopedLock<mutex> lock{ registry._mutex };
             bDuplicate = CacheStatsInternal::findIndex( registry, name ) != registry._entryCount;
             if ( bDuplicate == false )
                 handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
@@ -104,9 +104,9 @@ namespace sw
         CacheStatsInternal::AddFailure failure{ CacheStatsInternal::AddFailure::None };
         CacheStatsHandle               handle{};
         {
-            std::scoped_lock<mutex> lock{ registry._mutex };
-            const uint32            index = CacheStatsInternal::findIndex( registry, name );
-            handle                        = index != registry._entryCount ? CacheStatsHandle{ &registry._arrEntry[index] } : CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
+            ScopedLock<mutex> lock{ registry._mutex };
+            const uint32      index = CacheStatsInternal::findIndex( registry, name );
+            handle                  = index != registry._entryCount ? CacheStatsHandle{ &registry._arrEntry[index] } : CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
         }
         CacheStatsInternal::reportAddFailure( failure, name );
         return handle;
@@ -115,7 +115,7 @@ namespace sw
     void CacheStats::markWindowStart()
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         for ( uint32 index = 0; index < registry._entryCount; ++index )
         {
             CacheStatsCounters& entry = registry._arrEntry[index];
@@ -129,7 +129,7 @@ namespace sw
     {
         outListSnapshot.clear();
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         outListSnapshot.reserve( registry._entryCount );
         for ( uint32 index = 0; index < registry._entryCount; ++index )
         {
@@ -148,7 +148,7 @@ namespace sw
     uint32 CacheStats::getCount()
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         return registry._entryCount;
     }
 } // namespace sw

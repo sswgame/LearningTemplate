@@ -1035,7 +1035,7 @@ namespace sw
 
         const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
 
-        std::unique_lock<shared_mutex> writeLock{ _mapCacheMutex };
+        UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         // 읽는 중인 로드는 옛 파일을 읽었을 수 있다 — 세대를 올려 그 결과가 캐시에 들지 않게 하고, 다음 요청은 새로 읽게 진행 중 표에서 뗀다.
         _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
         _mapLoading.clear();
@@ -1062,19 +1062,19 @@ namespace sw
             return false;
 
         const string                   cacheKey = PrefabAssetInternal::makePrefabCacheKey( assetRelativePath );
-        std::shared_lock<shared_mutex> readLock{ _mapCacheMutex };
+        ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
         return _mapCache.find( cacheKey ) != _mapCache.end();
     }
 
     size_t PrefabCache::getCachedCount() const
     {
-        std::shared_lock<shared_mutex> readLock{ _mapCacheMutex };
+        ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
         return _mapCache.size();
     }
 
     void PrefabCache::clear()
     {
-        std::unique_lock<shared_mutex> writeLock{ _mapCacheMutex };
+        UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
         _mapLoading.clear();
         _mapCache.clear();
@@ -1095,7 +1095,7 @@ namespace sw
         // 워커가 아직 이 캐시로 읽고 있을 수 있다(블록이 원시 포인터를 쥔다). 모두 끝날 때까지 기다린다 — 아무도 집지 않은 로드는 여기서 실행한다.
         vector<shared_ptr<PrefabLoadBlock>> listLoading;
         {
-            std::unique_lock<shared_mutex> writeLock{ _mapCacheMutex };
+            UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
             for ( const auto& [key, weakBlock] : _mapLoading )
             {
                 shared_ptr<PrefabLoadBlock> pBlock = weakBlock.lock();
@@ -1123,8 +1123,8 @@ namespace sw
         {
             // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
             // 이 블록의 칸일 때만 뺀다(다시 읽기가 표를 비운 뒤 새 요청이 새 블록을 넣었을 수 있다).
-            std::unique_lock<shared_mutex> writeLock{ _pCache->_mapCacheMutex };
-            const auto                     it = _pCache->_mapLoading.find( _cacheKey );
+            UniqueLock<shared_mutex> writeLock{ _pCache->_mapCacheMutex };
+            const auto               it = _pCache->_mapLoading.find( _cacheKey );
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
                 _pCache->_mapLoading.erase( it );
         }
@@ -1155,8 +1155,8 @@ namespace sw
 
         shared_ptr<PrefabLoadBlock> pBlock;
         {
-            std::unique_lock<shared_mutex> writeLock{ _mapCacheMutex };
-            const auto                     loadingIt = _mapLoading.find( cacheKey );
+            UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
+            const auto               loadingIt = _mapLoading.find( cacheKey );
             if ( loadingIt != _mapLoading.end() )
                 pBlock = loadingIt->second.lock();
             if ( pBlock != nullptr )
@@ -1195,7 +1195,7 @@ namespace sw
         const string cacheKey   = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
         const uint32 generation = _cacheGeneration.load( std::memory_order_acquire );
         {
-            std::shared_lock<shared_mutex> readLock{ _mapCacheMutex };
+            ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
             const auto                     cacheIt = _mapCache.find( cacheKey );
             if ( cacheIt != _mapCache.end() )
                 return cacheIt->second;
@@ -1242,8 +1242,8 @@ namespace sw
         if ( validateNestedInstances( *asset, cacheKey ) == false )
             return nullptr;
 
-        std::unique_lock<shared_mutex> writeLock{ _mapCacheMutex };
-        const auto                     cacheIt = _mapCache.find( cacheKey );
+        UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
+        const auto               cacheIt = _mapCache.find( cacheKey );
         if ( cacheIt != _mapCache.end() )
             return cacheIt->second;
         // 읽는 사이 캐시를 버렸다(다시 읽기 · 비우기) — 옛 파일을 읽었을 수 있으니 넣지 않고 요청한 쪽에만 준다.

@@ -322,6 +322,11 @@ _kWholeScanCleanCase: dict[str, str] = {
     "Source/Probe/GuardedTable.cpp": (
         '#include "pch.h"\n\nGuardedTable::GuardedTable()\n    : _first{ 1 }\n    , _mutex{}\n    , _innerMutex{}\n    , _last{ 2 }\n{\n}\n'
     ),
+    # 주석이 붙은 잠금 계약 줄을 함수 서명으로 읽으면 다음 `{` 부터 멤버가 지역 변수로 걸린다(Naming/LocalNoUnderscore).
+    "Source/Probe/GuardedCounter.h": (
+        "#pragma once\n\nstruct GuardedCounter\n{\n"
+        "    int32 _value SW_GUARDED_BY( _mutex ) = 0; ///< 잠금 아래\n    mutex _mutex;\n    int32 _count{ 0 };\n};\n"
+    ),
     # 같은 이름이 두 폭으로 선언돼 있으면 **어느 쪽을 쓴 것인지 단정할 수 없다** — 건너뛴다.
     "Source/Probe/WidthClash.h": (
         "#pragma once\n\nstruct NarrowFlags\n{\n    uint8 _bReady : 1;\n};\n\n"

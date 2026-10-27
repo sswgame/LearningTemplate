@@ -170,7 +170,7 @@ namespace sw
         bool bAttached{ false };
         {
             // 검사와 붙이기를 한 잠금 안에서 한다 — 동시에 걸린 `A→B` 와 `B→A` 가 서로를 못 보고 둘 다 통과하지 않게.
-            std::scoped_lock<mutex> lock{ _pNode->_pPool->getDependencyMutex() };
+            ScopedLock<mutex> lock{ _pNode->_pPool->getDependencyMutex() };
 
             // 사이클: 자기 자신이거나, 후속에서 후속 목록을 따라 이 태스크에 닿는다. 둘 중 하나가 이미 끝났다면 새 간선이 기다림을
             // 만들지 못하므로(끝난 선행은 목록이 닫혀 간선이 붙지 않고, 끝난 후속은 다시 돌지 않는다) 사이클이 아니다.

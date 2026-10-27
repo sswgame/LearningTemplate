@@ -117,12 +117,12 @@ namespace sw
         /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다. 패치는 그 문서에서 푼 값입니다. */
         void clearResolvedCache();
 
-        XMLDocument _defaultsDoc;
-        string      _customDefaultsPath;
+        XMLDocument                _defaultsDoc;
+        string _customDefaultsPath SW_GUARDED_BY( _defaultsMutex );
 
-        mutable shared_mutex                                         _resolvedMutex;
-        unordered_map<const TypeInfo*, unique_ptr<ResolvedDefaults>> _mapResolved;
-        vector<unique_ptr<ResolvedDefaults>>                         _listReplacedResolved; ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
+        mutable shared_mutex                                                      _resolvedMutex;
+        unordered_map<const TypeInfo*, unique_ptr<ResolvedDefaults>> _mapResolved SW_GUARDED_BY( _resolvedMutex );
+        vector<unique_ptr<ResolvedDefaults>> _listReplacedResolved                SW_GUARDED_BY( _resolvedMutex ); ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
 
         mutable mutex _defaultsMutex;
         /**

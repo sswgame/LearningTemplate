@@ -162,7 +162,7 @@ namespace sw
 
     bool TransientAttachmentPool::markCleared( const hashed_string& key )
     {
-        std::scoped_lock<mutex> lock{ _clearedMutex };
+        ScopedLock<mutex> lock{ _clearedMutex };
         if ( VectorUtil::contains( _listClearedThisFrame, key ) )
             return false;
         _listClearedThisFrame.push_back( key );
@@ -171,7 +171,7 @@ namespace sw
 
     void TransientAttachmentPool::resetCleared()
     {
-        std::scoped_lock<mutex> lock{ _clearedMutex };
+        ScopedLock<mutex> lock{ _clearedMutex };
         _listClearedThisFrame.clear();
     }
 } // namespace sw

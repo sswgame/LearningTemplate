@@ -155,7 +155,7 @@ namespace sw
 
     void MaterialInstance::forgetRHI( IRHIDevice* pDevice )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         // 텍스처는 디바이스와 함께 갔다(TextureCache 의 Texture2D 도 같은 통보를 받는다). 참조만 놓는다.
         if ( _pTextureDevice == pDevice )
             releaseTextureOverrides( nullptr );
@@ -170,7 +170,7 @@ namespace sw
 
     void MaterialInstance::releaseRHI( IRHIDevice* pRHI )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         if ( pRHI == nullptr || _pTextureDevice == pRHI )
             releaseTextureOverrides( pRHI );
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
@@ -254,7 +254,7 @@ namespace sw
     {
         if ( pRHI == nullptr || _pParentMaterial == nullptr )
             return false;
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
 
         // 백엔드가 바뀌었으면 상수버퍼 · 인덱스는 옛 디바이스 것이다. 잊고 새로 만든다(destroy 는 해제 후 사용이다).
         // 핸들이 0 이 아닌 것과 "이 디바이스 것" 은 다른 말이다. RHIResidentBuffer 가 세대로 가른다.
@@ -413,7 +413,7 @@ namespace sw
 
     void MaterialInstance::collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         if ( pOutSlot == nullptr || _pParentMaterial == nullptr )
             return;
         const vector<RHIDescriptorIndex>& listParentSrv = _pParentMaterial->getMaterialTextureSrvs();
@@ -433,7 +433,7 @@ namespace sw
 
     void MaterialInstance::clearOverrides()
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         _listValueOverride.clear();
         _listScalarOverride.clear();
         _listVectorOverride.clear();
@@ -452,7 +452,7 @@ namespace sw
 
     void MaterialInstance::enableKeyword( hashed_string keyword )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
@@ -461,7 +461,7 @@ namespace sw
 
     void MaterialInstance::disableKeyword( hashed_string keyword )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
@@ -470,7 +470,7 @@ namespace sw
 
     void MaterialInstance::setParent( Material* pParentMaterial )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
@@ -479,7 +479,7 @@ namespace sw
 
     void MaterialInstance::setParameter( hashed_string name, string_view value )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string( value ) );
         _bGPUDirty = SW_TRUE;
     }
@@ -488,7 +488,7 @@ namespace sw
     {
         if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, true ) == false )
             return;
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listScalarOverride, name, value );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( value ) );
         _bGPUDirty = SW_TRUE;
@@ -498,7 +498,7 @@ namespace sw
     {
         if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, false ) == false )
             return;
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex>       lock{ _overrideMutex };
         const array<float32, 4> val = { value._x, value._y, value._z, value._w };
         MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
         StringBuilder<constant::kMaxBuffer64> sb;
@@ -510,7 +510,7 @@ namespace sw
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
         // 게임 스레드는 원하는 경로만 적는다. 빌리고 돌려주는 것은 렌더 스레드의 updateRHI 다(syncTextureOverrides).
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         _bGPUDirty = SW_TRUE;
         for ( TextureOverride& texture : _listTextureOverride )
         {
@@ -532,7 +532,7 @@ namespace sw
 
     void MaterialInstance::setQualityLevel( MaterialQualityLevel level )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         if ( _qualityOverride != level )
         {
             _qualityOverride = level;
@@ -544,7 +544,7 @@ namespace sw
 
     void MaterialInstance::setMultiCompile( hashed_string name, string_view selectedOption )
     {
-        std::scoped_lock<mutex> lock{ _overrideMutex };
+        ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();

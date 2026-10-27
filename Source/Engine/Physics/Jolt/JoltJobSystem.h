@@ -61,7 +61,7 @@ namespace sw
 
         ExecutorSlot                _arrExecutorSlot[kMaxExecutorSlotCount];
         JPH::FixedSizeFreeList<Job> _jobs;
-        deque<Job*>                 _listQueuedJob;
+        deque<Job*> _listQueuedJob  SW_GUARDED_BY( _queueMutex );
         mutable mutex               _queueMutex;
         atomic<uint32>              _pendingTaskCount; ///< 내고 아직 끝나지 않은 엔진 태스크 수(소멸이 기다린다)
         uint32                      _maxConcurrency;

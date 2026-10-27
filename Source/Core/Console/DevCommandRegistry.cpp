@@ -35,7 +35,7 @@ namespace sw
             return false;
         RegistrationResult result = RegistrationResult::Added;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             result = _registration.add( pRegistration, pRegistration->_pName ); // 잠금은 잎이다 — 거절 로그는 놓은 뒤에 쓴다
         }
         reportRegistrationRejected( result, "Dev command", pRegistration->_pName );
@@ -44,26 +44,26 @@ namespace sw
 
     void DevCommandRegistry::unregisterCommand( const DevCommandRegistration* pRegistration )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_registration.remove( pRegistration ); // 등록되어 있지 않은 명령을 빼는 것은 할 일이 없다
     }
 
     const DevCommandRegistration* DevCommandRegistry::findCommand( string_view name ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.findByName( name );
     }
 
     uint32 DevCommandRegistry::getCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.getCount();
     }
 
     void DevCommandRegistry::collectNames( string_view prefix, vector<string>& outListName ) const
     {
         outListName.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const DevCommandRegistration* pRegistration : _registration.getItems() )
         {
             if ( StringUtil::startsWith( pRegistration->_pName, prefix, true ) )

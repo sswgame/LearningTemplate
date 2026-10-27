@@ -54,7 +54,7 @@ namespace sw
             return;
         _transport->shutdown();
         _transport.reset();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPeer.clear();
         _listReady.clear();
         _pHandler     = nullptr;
@@ -69,7 +69,7 @@ namespace sw
             (void)_transport->pollIO( 0 );
         vector<ReadyRequest> listReady;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listReady.swap( _listReady );
         }
         for ( ReadyRequest& ready : listReady )
@@ -82,8 +82,8 @@ namespace sw
             ++_handledCount;
             vector<uint8> bytes;
             HTTPWriteUtil::writeResponse( response, bytes );
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              peerIt = _mapPeer.find( ready._handle.packed() );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        peerIt = _mapPeer.find( ready._handle.packed() );
             if ( peerIt == _mapPeer.end() )
                 continue; // 그새 끊겼다
             const bool bWritten = peerIt->second->_link.writePlain( *_transport, bytes.data(), bytes.size() );
@@ -101,8 +101,8 @@ namespace sw
         (void)remote;
         if ( bAccepted == false )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        unique_ptr<Peer>        peer = make_unique<Peer>();
+        ScopedLock<mutex> lock{ _mutex };
+        unique_ptr<Peer>  peer = make_unique<Peer>();
         if ( peer->_link.initialize( _settings._pTLSContext ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );
@@ -115,8 +115,8 @@ namespace sw
 
     void HTTPServer::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              peerIt = _mapPeer.find( handle.packed() );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        peerIt = _mapPeer.find( handle.packed() );
         if ( peerIt == _mapPeer.end() || peerIt->second->_bComplete == SW_TRUE )
             return;
         Peer& peer = *peerIt->second;
@@ -150,7 +150,7 @@ namespace sw
     void HTTPServer::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         (void)reason;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapPeer.erase( handle.packed() );
     }
 } // namespace sw

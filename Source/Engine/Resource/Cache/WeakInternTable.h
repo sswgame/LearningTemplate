@@ -36,8 +36,8 @@ namespace sw
         /** @brief 그 키를 지금 쥔 값입니다. 없으면 nullptr 입니다. */
         shared_ptr<ValueType> findLive( const KeyType& key ) const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              it = _mapValue.find( key );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        it = _mapValue.find( key );
             return ( it != _mapValue.end() ) ? it->second.lock() : nullptr;
         }
 
@@ -47,7 +47,7 @@ namespace sw
          */
         shared_ptr<ValueType> insertOrGetLive( const KeyType& key, shared_ptr<ValueType> value )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( auto iter = _mapValue.begin(); iter != _mapValue.end(); )
             {
                 if ( iter->second.expired() )
@@ -84,15 +84,15 @@ namespace sw
         /** @brief 그 키의 칸을 뗍니다. 쥔 쪽의 값은 그대로 살고, 다음 요청은 새로 짓습니다. */
         void erase( const KeyType& key )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _mapValue.erase( key );
         }
 
         /** @brief 살아 있는 항목 수입니다. */
         size_t countLive() const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            size_t                  liveCount{ 0 };
+            ScopedLock<mutex> lock{ _mutex };
+            size_t            liveCount{ 0 };
             for ( const auto& [key, value] : _mapValue )
             {
                 if ( value.expired() == false )
@@ -104,7 +104,7 @@ namespace sw
         /** @brief 표를 비우고 버킷까지 돌려줍니다(종료 누수 검사에 표의 몫이 남지 않게). 쥔 쪽의 값은 그대로 살고, 다음 요청은 새로 짓습니다. */
         void clear()
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _mapValue = unordered_map<KeyType, weak_ptr<ValueType>, KeyHash>{};
         }
 

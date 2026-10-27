@@ -231,13 +231,13 @@ namespace sw
 
     size_t D3D11RHIDevice::bindlessBufferCount() const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         return _listRegisteredBindless.size();
     }
 
     RHIBufferHandle D3D11RHIDevice::bindlessBufferAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredBindless.size() )
             return 0;
         return _listRegisteredBindless[index];
@@ -245,7 +245,7 @@ namespace sw
 
     RHITextureHandle D3D11RHIDevice::bindlessTextureAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredTexture.size() )
             return 0;
         return _listRegisteredTexture[index];
@@ -253,7 +253,7 @@ namespace sw
 
     Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUavAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredUAV.size() )
             return nullptr;
         return _listRegisteredUAV[index];
@@ -261,7 +261,7 @@ namespace sw
 
     RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listUavSourceBuffer.size() )
             return RHIBufferHandle{ 0 };
         return _listUavSourceBuffer[index];
@@ -456,7 +456,7 @@ namespace sw
     #if !defined( SW_SHIPPING )
     bool D3D11RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Texture )
             return index < _listRegisteredTexture.size() && _listRegisteredTexture[index] != 0;
         return index < _listRegisteredBindless.size() && _listRegisteredBindless[index] != 0;

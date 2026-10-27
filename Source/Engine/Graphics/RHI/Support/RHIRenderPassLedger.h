@@ -25,8 +25,8 @@ namespace sw
         /** @brief 서술자를 등록하고 핸들(1 부터)을 돌려줍니다. */
         [[nodiscard]] RHIRenderPassHandle add( const RHIRenderPassDesc& desc )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            Record                  record{};
+            ScopedLock<mutex> lock{ _mutex };
+            Record            record{};
             record._desc   = desc;
             record._bAlive = SW_TRUE;
             _listRecord.push_back( record );
@@ -36,7 +36,7 @@ namespace sw
         /** @brief 핸들의 기록을 죽은 것으로 표시하고 서술자를 비웁니다. 0 이거나 등록한 적 없는 핸들이면 아무 일도 하지 않습니다. */
         void retire( RHIRenderPassHandle handle )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( handle == 0 || handle > _listRecord.size() )
                 return;
             Record& record = _listRecord[handle - 1];
@@ -47,7 +47,7 @@ namespace sw
         /** @brief 모든 기록을 지웁니다. 장치 종료에서 부릅니다. */
         void clear()
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listRecord.clear();
         }
 
@@ -58,7 +58,7 @@ namespace sw
             uint8             _bAlive{ SW_FALSE };
         };
 
-        mutex          _mutex;
-        vector<Record> _listRecord;
+        mutex                      _mutex;
+        vector<Record> _listRecord SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

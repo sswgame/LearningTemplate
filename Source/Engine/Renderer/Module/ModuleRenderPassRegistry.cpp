@@ -10,7 +10,7 @@ namespace sw
 
     bool ModuleRenderPassRegistry::registerPass( const hashed_string& modulePass )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _registryPass.addLogged( modulePass, vector<Constant>{}, "Module render pass" ) == false )
             return false;
         _uniqueMissingLogged.erase( modulePass );
@@ -19,14 +19,14 @@ namespace sw
 
     void ModuleRenderPassRegistry::unregisterPass( const hashed_string& modulePass )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_registryPass.remove( modulePass ); // 없는 이름이면 할 일이 없다(등록하지 못한 객체가 풀 때도 있다)
     }
 
     bool ModuleRenderPassRegistry::setConstant( const hashed_string& modulePass, const hashed_string& name, const float4& value )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        vector<Constant>*       pListConstant = _registryPass.find( modulePass );
+        ScopedLock<mutex> lock{ _mutex };
+        vector<Constant>* pListConstant = _registryPass.find( modulePass );
         if ( pListConstant == nullptr || name.empty() )
             return false;
         for ( Constant& constant : *pListConstant )
@@ -48,14 +48,14 @@ namespace sw
 
     bool ModuleRenderPassRegistry::isRegistered( const hashed_string& modulePass ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registryPass.find( modulePass ) != nullptr;
     }
 
     bool ModuleRenderPassRegistry::copyConstants( const hashed_string& modulePass, vector<Constant>& outListConstant ) const
     {
         outListConstant.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex>       lock{ _mutex };
         const vector<Constant>* pListConstant = _registryPass.find( modulePass );
         if ( pListConstant == nullptr )
             return false;
@@ -65,7 +65,7 @@ namespace sw
 
     bool ModuleRenderPassRegistry::noteMissingOnce( const hashed_string& modulePass )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _uniqueMissingLogged.insert( modulePass ).second;
     }
 

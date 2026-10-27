@@ -56,7 +56,7 @@ namespace sw
         static void finishTask( void* pUserTask, void* pUserContext );
 
     private:
-        /** @brief Box2D 태스크 하나입니다. 스텝 스레드만 만들고 되돌리므로 목록은 잠그지 않습니다. */
+        /** @brief Box2D 태스크 하나입니다. 스텝 스레드만 만들고 되돌리므로 목록은 잠그지 않습니다(`_stepThread` 역할 — 선언의 `SW_GUARDED_BY`). */
         struct Task
         {
             b2TaskCallback* _pCallback{ nullptr };
@@ -72,19 +72,20 @@ namespace sw
             int32 _endIndex{ 0 };
         };
 
-        Task* enqueue( b2TaskCallback* pTask, int32 itemCount, int32 minRange, void* pTaskContext );
-        void  finish( Task* pTask );
+        Task* enqueue( b2TaskCallback* pTask, int32 itemCount, int32 minRange, void* pTaskContext ) SW_REQUIRES_LOCK( _stepThread );
+        void  finish( Task* pTask ) SW_REQUIRES_LOCK( _stepThread );
         /** @brief 대기열의 조각 하나를 꺼내 @p workerIndex 로 실행합니다. 꺼낼 것이 없으면 false 입니다. */
         [[nodiscard]] bool tryRunOne( uint32 workerIndex );
         void               runWorker( uint32 workerIndex, ThreadStopToken stopToken );
 
-        vector<sw::thread>       _listThread;
-        vector<unique_ptr<Task>> _listTask;               ///< 만든 태스크 전부(소유). 스텝 스레드만 만진다.
-        vector<Task*>            _listFreeTask;           ///< 다시 쓸 태스크. 스텝 스레드만 만진다.
-        vector<Range> _listRange SW_GUARDED_BY( _mutex ); ///< 대기열.
-        mutex                    _mutex;
-        atomic<uint32>           _wakeWord;               ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
-        uint32 _nextRangeIndex   SW_GUARDED_BY( _mutex ); ///< `_listRange` 에서 다음에 꺼낼 칸.
-        uint32                   _workerCount;
+        vector<sw::thread>                 _listThread;
+        ThreadRole                         _stepThread;                  ///< 스텝 스레드(월드를 가진 쪽) 역할 — 잠금이 아니라 분석용 능력이다
+        vector<unique_ptr<Task>> _listTask SW_GUARDED_BY( _stepThread ); ///< 만든 태스크 전부(소유)
+        vector<Task*> _listFreeTask        SW_GUARDED_BY( _stepThread ); ///< 다시 쓸 태스크
+        vector<Range> _listRange           SW_GUARDED_BY( _mutex );      ///< 대기열.
+        mutex                              _mutex;
+        atomic<uint32>                     _wakeWord;               ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
+        uint32 _nextRangeIndex             SW_GUARDED_BY( _mutex ); ///< `_listRange` 에서 다음에 꺼낼 칸.
+        uint32                             _workerCount;
     };
 } // namespace sw

@@ -320,13 +320,13 @@ namespace sw
 
     void LiveReloadManager::notifyBuildStarted()
     {
-        std::scoped_lock<mutex> lock( _buildMutex );
+        ScopedLock<mutex> lock{ _buildMutex };
         _buildNotice._bInProgress = true;
     }
 
     void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
     {
-        std::scoped_lock<mutex> lock( _buildMutex );
+        ScopedLock<mutex> lock{ _buildMutex };
         _buildNotice._bInProgress      = false;
         _buildNotice._bFinishedPending = true;
         _buildNotice._bSucceeded       = bSucceeded;
@@ -337,7 +337,7 @@ namespace sw
     {
         BuildNotice notice;
         {
-            std::scoped_lock<mutex> lock( _buildMutex );
+            ScopedLock<mutex> lock{ _buildMutex };
             notice                         = _buildNotice;
             _buildNotice._bFinishedPending = false;
         }

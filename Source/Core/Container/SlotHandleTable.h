@@ -32,7 +32,7 @@ namespace sw
         /** @brief 값을 넣고 핸들을 반환합니다. */
         SlotHandle insert( T value )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
 
             if ( _listFree.empty() == false )
             {
@@ -81,8 +81,8 @@ namespace sw
         /** @brief 슬롯을 비우고 세대를 올린 뒤, 꺼낸 값을 outValue 에 담습니다. 핸들이 무효면 false 입니다. */
         bool take( SlotHandle handle, T& outValue )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            Slot*                   pSlot = findOccupiedSlot( handle );
+            ScopedLock<mutex> lock{ _mutex };
+            Slot*             pSlot = findOccupiedSlot( handle );
             if ( pSlot == nullptr )
                 return false;
             outValue = std::move( pSlot->_value );
@@ -93,8 +93,8 @@ namespace sw
         /** @brief 핸들이 가리키는 슬롯을 비워 핸들을 무효로 만듭니다. */
         void erase( SlotHandle handle )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            Slot*                   pSlot = findOccupiedSlot( handle );
+            ScopedLock<mutex> lock{ _mutex };
+            Slot*             pSlot = findOccupiedSlot( handle );
             if ( pSlot == nullptr )
                 return;
             freeSlot( handle.index(), *pSlot );
@@ -104,7 +104,7 @@ namespace sw
         template <typename Fn>
         void forEach( Fn&& fn )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
                 Slot* pSlot = _listSlot.find( slotIndex );
@@ -117,7 +117,7 @@ namespace sw
         template <typename Fn>
         void forEachHandle( Fn&& fn )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
                 Slot* pSlot = _listSlot.find( slotIndex );
@@ -130,7 +130,7 @@ namespace sw
         template <typename Fn>
         void forEachHandle( Fn&& fn ) const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
                 const Slot* pSlot = _listSlot.find( slotIndex );
@@ -142,7 +142,7 @@ namespace sw
         /** @brief 지금 점유된 슬롯 수를 반환합니다. */
         uint32 size() const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             return _slotCount - static_cast<uint32>( _listFree.size() );
         }
 
@@ -156,7 +156,7 @@ namespace sw
          */
         void clear()
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( uint32 slotIndex = 0; slotIndex < _slotCount; ++slotIndex )
             {
                 Slot* pSlot = _listSlot.find( slotIndex );
@@ -221,9 +221,9 @@ namespace sw
             _listFree.push_back( index );
         }
 
-        PagedArray<Slot> _listSlot;
-        vector<uint32>   _listFree;
-        mutable mutex    _mutex;
-        uint32           _slotCount{ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
+        PagedArray<Slot>  _listSlot;
+        vector<uint32>    _listFree;
+        mutable mutex     _mutex;
+        uint32 _slotCount SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
     };
 } // namespace sw

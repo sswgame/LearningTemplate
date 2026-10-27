@@ -72,8 +72,8 @@ namespace sw
         [[nodiscard]] static SnapshotReadResult readSnapshot( const vector<uint8>& bytes, vector<uint8>& outStateBytes, vector<FractureGroupPose>& outListPose );
 
     private:
-        mutex                     _driveMutex;
-        vector<FractureGroupPose> _listPendingDrive; ///< `queueDriveTarget` 이 쌓은 목표다(`_driveMutex` 아래).
-        TickRingBuffer<uint64>    _listRecentHash;   ///< 사건 수로 찾는 최근 상태 해시다. 받는 쪽만 쓰므로 처음 기록할 때 슬롯을 잡는다.
+        mutex                                       _driveMutex;
+        vector<FractureGroupPose> _listPendingDrive SW_GUARDED_BY( _driveMutex ); ///< `queueDriveTarget` 이 쌓은 목표다(`_driveMutex` 아래).
+        TickRingBuffer<uint64>                      _listRecentHash;              ///< 사건 수로 찾는 최근 상태 해시다. 받는 쪽만 쓰므로 처음 기록할 때 슬롯을 잡는다.
     };
 } // namespace sw

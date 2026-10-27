@@ -147,7 +147,7 @@ namespace sw
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
-            std::shared_lock<shared_mutex> lock{ _mutex };
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             const WalkScope                walkScope{};
             for ( GameObject* pObj : _listGameObject )
             {
@@ -178,7 +178,7 @@ namespace sw
         {
             if ( pToType == nullptr )
                 return;
-            std::shared_lock<shared_mutex> lock{ _mutex };
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             const WalkScope                walkScope{};
             for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
@@ -350,9 +350,9 @@ namespace sw
         TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트와 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다. 해체 단언에 쓰며, 단언이 빠지는 Release 와 Shipping 에서는 읽는 곳이 없다
 
-        TypedPoolAllocator<GameObject>                               _poolGameObject;
-        unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>> _mapComponentPool;       ///< 키는 타입 FQN(`getOrCreateComponentPoolEntry` 설명 참고)
-        vector<ComponentPoolEntry*>                                  _listComponentPoolEntry; ///< 항목을 처음 나온 순서로 둔다. 순회(`forEachComponentOfType`)가 이 목록을 돈다
+        TypedPoolAllocator<GameObject>                                                 _poolGameObject;
+        unordered_map<hashed_string, unique_ptr<ComponentPoolEntry>> _mapComponentPool SW_GUARDED_BY( _mutex ); ///< 키는 타입 FQN(`getOrCreateComponentPoolEntry` 설명 참고)
+        vector<ComponentPoolEntry*> _listComponentPoolEntry                            SW_GUARDED_BY( _mutex ); ///< 항목을 처음 나온 순서로 둔다. 순회(`forEachComponentOfType`)가 이 목록을 돈다
 
         vector<GameObject*>                           _listGameObject;
         unordered_map<hashed_string, NameEntry>       _mapNameToObject;
@@ -363,13 +363,13 @@ namespace sw
          */
         unordered_map<uint64, GameObject*> _mapIDToObject;
         /** @brief id → 오브젝트의 **빠른 읽기 경로**입니다. 슬롯이 막힌 id 만 위 맵으로 갑니다. */
-        ObjectSlotTable         _objectSlotTable;
-        atomic<uint32>          _overflowObjectCount; ///< `_mapIDToObject` 의 크기다. 0 이면 읽는 쪽이 테이블에서 못 찾은 id 로 잠금을 잡지 않는다
-        vector<GameObject*>     _listPendingAdd;
-        vector<GameObject*>     _listPendingDestroyObject;
-        vector<ComponentHandle> _listPendingDestroyComponent; ///< 핸들로 보관한다(`destroyComponent` 설명 참고)
-        vector<GameObject*>     _listProcessingDestroyObject;
-        vector<ComponentHandle> _listProcessingDestroyComponent;
+        ObjectSlotTable                                      _objectSlotTable;
+        atomic<uint32>                                       _overflowObjectCount; ///< `_mapIDToObject` 의 크기다. 0 이면 읽는 쪽이 테이블에서 못 찾은 id 로 잠금을 잡지 않는다
+        vector<GameObject*>                                  _listPendingAdd;
+        vector<GameObject*> _listPendingDestroyObject        SW_GUARDED_BY( _mutex );
+        vector<ComponentHandle> _listPendingDestroyComponent SW_GUARDED_BY( _mutex ); ///< 핸들로 보관한다(`destroyComponent` 설명 참고)
+        vector<GameObject*>                                  _listProcessingDestroyObject;
+        vector<ComponentHandle>                              _listProcessingDestroyComponent;
 
         mutable shared_mutex _mutex;
         /**

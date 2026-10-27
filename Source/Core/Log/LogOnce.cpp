@@ -40,7 +40,7 @@ namespace sw
         if ( pState == nullptr )
             return true;
         pState->_arrAttemptCount[kindIndex].fetch_add( 1, std::memory_order_relaxed );
-        std::lock_guard<mutex> lock( pState->_mutex );
+        ScopedLock<mutex> lock{ pState->_mutex };
         return pState->_arrClaimed[kindIndex].insert( key ).second;
     }
 
@@ -57,7 +57,7 @@ namespace sw
         LogOnceInternal::State* const pState = LogOnceInternal::s_state.find();
         if ( pState == nullptr )
             return; // 아직 아무것도 알리지 않았다 — 잊을 키가 없다
-        std::lock_guard<mutex> lock( pState->_mutex );
+        ScopedLock<mutex> lock{ pState->_mutex };
         for ( unordered_set<uint64>& claimed : pState->_arrClaimed )
         {
             claimed.clear();

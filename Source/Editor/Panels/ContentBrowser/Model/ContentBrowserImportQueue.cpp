@@ -31,14 +31,14 @@ namespace sw::editor
 
     void ContentBrowserImportQueue::onDialogResult( const vector<string>& listPath )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listPendingPath.insert( _listPendingPath.end(), listPath.begin(), listPath.end() );
     }
 
     bool ContentBrowserImportQueue::takePending( vector<string>& outListPath )
     {
         outListPath.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listPendingPath.empty() )
             return false;
         outListPath.swap( _listPendingPath );

@@ -132,8 +132,8 @@ namespace sw
     private:
         ValidationIssueLog() = default;
 
-        mutable mutex           _mutex;
-        vector<ValidationIssue> _listIssue;
-        atomic<uint32>          _revision{ 0 };
+        mutable mutex                      _mutex;
+        vector<ValidationIssue> _listIssue SW_GUARDED_BY( _mutex );
+        atomic<uint32>                     _revision{ 0 };
     };
 } // namespace sw

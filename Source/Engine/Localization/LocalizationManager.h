@@ -258,8 +258,8 @@ namespace sw
         vector<string>                                 _listLookupCulture;
         unordered_map<uint64, LanguageChangedCallback> _mapCallback; ///< 구독 번호 → 콜백
 
-        mutable mutex       _missingMutex;
-        mutable set<string> _uniqueMissingKey;
+        mutable mutex                         _missingMutex;
+        mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
         std::atomic<uint32> _textRevision;
         IDAllocator<uint32> _callbackIDAllocator;

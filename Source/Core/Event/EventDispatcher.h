@@ -80,7 +80,7 @@ namespace sw
         [[nodiscard]] Subscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
         {
             assertBusThread();
-            std::scoped_lock<SpinLock> lock{ _busSpinLock };
+            ScopedLock<SpinLock> lock{ _busSpinLock };
             return findOrCreateChannelDelegateUnlocked<T>( channel )->add( delegate );
         }
 
@@ -101,7 +101,7 @@ namespace sw
             assertBusThread();
             shared_ptr<MulticastDelegate<void( const T& )>> mcast;
             {
-                std::scoped_lock<SpinLock> lock{ _busSpinLock };
+                ScopedLock<SpinLock> lock{ _busSpinLock };
                 mcast = findOrCreateChannelDelegateUnlocked<T>( channel );
             }
             mcast->broadcast( event );
@@ -123,8 +123,8 @@ namespace sw
         template <typename T>
         void enqueueEvent( hashed_string channel, const T& event )
         {
-            std::scoped_lock<SpinLock> lock{ _queueSpinLock };
-            const int32                allocIdx = _activeAllocatorIndex.load( std::memory_order_relaxed );
+            ScopedLock<SpinLock> lock{ _queueSpinLock };
+            const int32          allocIdx = _activeAllocatorIndex.load( std::memory_order_relaxed );
 
             void* pMem = _arrFrameAllocator[allocIdx].allocate( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )
@@ -204,8 +204,8 @@ namespace sw
         /** @brief 큐에 대기 중인 이벤트 수를 반환합니다. */
         size_t getPendingEventCount() const
         {
-            std::scoped_lock<SpinLock> lock{ _queueSpinLock };
-            size_t                     count = 0;
+            ScopedLock<SpinLock> lock{ _queueSpinLock };
+            size_t               count = 0;
             for ( const auto& [channel, list] : _mapChannelQueue )
             {
                 IEvent* pCurr = list->_pHead.load( std::memory_order_relaxed );

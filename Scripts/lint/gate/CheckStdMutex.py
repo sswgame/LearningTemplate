@@ -7,7 +7,10 @@
 단언 — 잎 잠금 규칙, 결정 5-3), 교착 검출 빌드의 대기 그래프. `std::` 잠금을 직접 쓰면 셋이 모두 꺼진다. 형식(타입)만으로는 `std::` 를 쓰는 것을
 막을 수 없어 이 게이트가 그 틈을 막는다.
 
-`std::scoped_lock` · `std::unique_lock` · `std::shared_lock` 같은 가드는 보지 않는다(감싼 잠금과 함께 쓸 수 있다). 주석 · 문자열 안의 언급도 보지 않는다.
+가드 `std::scoped_lock` · `std::lock_guard` · `std::unique_lock` · `std::shared_lock` 도 잡는다 — MSVC STL 에 능력 주석이 없어 그 범위를 분석이 잠긴 범위로
+보지 못하므로(`SW_GUARDED_BY` 멤버가 경고가 된다) 가드는 `Core/Concurrency/ScopedLock.h` 의 `ScopedLock` · `ScopedSharedLock` · `UniqueLock` ·
+`ScopedLockPair` 다. 그 넷이 지역 가드 · 조건 변수 대기 · 늦게 잡기 · 둘 잡기를 모두 덮고, 남는 틈(잠금이 배열 · 멤버 · 반환값으로 범위를 건너가는 곳)만
+예외 표에 이유와 함께 둔다. 주석 · 문자열 안의 언급은 보지 않는다.
 테스트(`Test/`)는 대상이 아니다 — 하네스 · 짧은 테스트 스레드는 엔진 잠금 규칙과 상관없다.
 
 예외는 `Scripts/lint/rules/CheckStdMutex.toml` 의 `[exemption]` 한 곳이다. 예외 파일이 더는 쓰지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).
@@ -31,7 +34,7 @@ from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 _kListScanRoot = ("Source",)
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
-_kStdMutexRe = re.compile(r"(?<![\w$])std::(?:shared_|recursive_|timed_|shared_timed_|recursive_timed_)?mutex(?![\w$])")
+_kStdMutexRe = re.compile(r"(?<![\w$])std::(?:(?:shared_|recursive_|timed_|shared_timed_|recursive_timed_)?mutex|scoped_lock|lock_guard|unique_lock|shared_lock)(?![\w$])")
 
 
 def findStdMutexUses(source: SourceFile) -> list[str]:
@@ -57,7 +60,7 @@ def findStdMutexUses(source: SourceFile) -> list[str]:
 class CheckStdMutexGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "엔진 코드가 std::mutex · std::shared_mutex 가 아니라 sw::mutex · sw::shared_mutex(잠금 계약 분석 · 쥔 잠금 수 · 교착 검출)를 쓰는지 검사"
+    description = "엔진 코드가 std 잠금 · 가드가 아니라 sw::mutex · sw::shared_mutex 와 ScopedLock 계열(잠금 계약 분석 · 쥔 잠금 수 · 교착 검출)을 쓰는지 검사"
     buildComment = "Checking that engine code locks through sw::mutex / sw::shared_mutex, not std::mutex..."
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
@@ -69,6 +72,7 @@ class CheckStdMutexGate(LintGate):
     hint = (
         "  잠금은 Source/Core/Concurrency/mutex.h 의 sw::mutex · sw::shared_mutex 입니다(std 와 같은 모양):\n"
         "      #include \"Core/Concurrency/mutex.h\"      mutable shared_mutex _mutex;   ScopedLock<mutex> lock{ _mutex };\n"
+        "  가드는 ScopedLock · ScopedSharedLock · UniqueLock(조건 변수 · 늦게 잡기) · ScopedLockPair(둘) 입니다(Core/Concurrency/ScopedLock.h).\n"
         "  -Wthread-safety 계약(SW_GUARDED_BY), Debug 의 '잠금을 쥔 채 로그' 단언, 교착 검출이 켜집니다.\n"
         "  정말 std:: 잠금이 필요하면 Scripts/lint/rules/CheckStdMutex.toml 의 [exemption] 에 이유와 함께 적습니다."
     )
@@ -94,6 +98,18 @@ class CheckStdMutexGate(LintGate):
                     "void probe( Table& table )\n"
                     "{\n"
                     "    std::scoped_lock<std::mutex> lock{ table._mutex };\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "std::unique_lock 가드",
+            "expectedViolation": "ProbeQueue.cpp:3: std::unique_lock",
+            "files": {
+                "Source/Probe/ProbeQueue.cpp": (
+                    "void probe( Queue& queue )\n"
+                    "{\n"
+                    "    std::unique_lock<mutex> lock{ queue._mutex };\n"
                     "}\n"
                 ),
             },

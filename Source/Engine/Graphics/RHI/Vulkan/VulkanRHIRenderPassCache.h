@@ -143,13 +143,13 @@ namespace sw
 
     private:
         /// @brief 합성 프레임버퍼 캐시를 보호합니다. 여러 스레드가 동시에 beginRenderPass 를 부릅니다.
-        mutable mutex                                                  _compositeMutex;
-        unordered_map<CompositeKey, CompositeRecord, CompositeKeyHash> _mapComposite;
+        mutable mutex                                                                _compositeMutex;
+        unordered_map<CompositeKey, CompositeRecord, CompositeKeyHash> _mapComposite SW_GUARDED_BY( _compositeMutex );
         /// @brief PSO 호환 렌더패스 맵을 보호합니다(PSO 생성이 워커 스레드에서 불릴 수 있다).
-        mutable mutex                                             _pipelineMutex;
-        unordered_map<PipelineKey, VkRenderPass, PipelineKeyHash> _mapPipelineRenderPass;
+        mutable mutex                                                                    _pipelineMutex;
+        unordered_map<PipelineKey, VkRenderPass, PipelineKeyHash> _mapPipelineRenderPass SW_GUARDED_BY( _pipelineMutex );
         /// @brief desc 렌더패스 레코드 목록을 보호합니다(`createRenderPass` 는 어느 스레드에서나 불린다). 잎 락입니다.
-        mutable mutex            _recordMutex;
-        vector<RenderPassRecord> _listRenderPassRecord;
+        mutable mutex                                  _recordMutex;
+        vector<RenderPassRecord> _listRenderPassRecord SW_GUARDED_BY( _recordMutex );
     };
 } // namespace sw

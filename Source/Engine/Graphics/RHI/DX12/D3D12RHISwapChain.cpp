@@ -148,7 +148,7 @@ namespace sw
 
         // 상태 확인과 배리어 기록이 한 덩어리여야 한다. 병렬 패스 기록에서 이 둘이 갈라지면 두
         // 스레드가 같은 "이전 상태"를 보고 각자 배리어를 기록하고, 두 번째가 before==after 가 된다.
-        std::scoped_lock<mutex> lock{ _stateMutex };
+        ScopedLock<mutex> lock{ _stateMutex };
         if ( _state == stateAfter )
             return;
 
@@ -167,13 +167,13 @@ namespace sw
 
     void D3D12RHISwapChain::markPresented()
     {
-        std::scoped_lock<mutex> lock{ _stateMutex };
+        ScopedLock<mutex> lock{ _stateMutex };
         _state = D3D12_RESOURCE_STATE_PRESENT;
     }
 
     D3D12_RESOURCE_STATES D3D12RHISwapChain::getState() const
     {
-        std::scoped_lock<mutex> lock{ _stateMutex };
+        ScopedLock<mutex> lock{ _stateMutex };
         return _state;
     }
 

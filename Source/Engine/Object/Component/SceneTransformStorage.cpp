@@ -54,7 +54,7 @@ namespace sw
         uint32              slot  = kInvalidSlot;
         SceneTransformPage* pPage = nullptr;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( tryPopFreeListIndex( _listFreeSlot, slot ) == false )
             {
                 // 닿지 않는 한계다(`kMaxPageCount` 설명). 닿았다면 칸 없이 컴포넌트를 만들 방법이 없다 — 알리고 멈춘다.
@@ -95,14 +95,14 @@ namespace sw
         pPage->_arrPendingMask[pageIndex]    = 0;
         pPage->_arrFlag[pageIndex]           = 0;
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listFreeSlot.push_back( slot );
         --_liveSlotCount;
     }
 
     uint32 SceneTransformStorage::getLiveSlotCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _liveSlotCount;
     }
 

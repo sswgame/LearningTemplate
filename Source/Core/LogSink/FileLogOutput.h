@@ -44,11 +44,11 @@ namespace sw
         const string& getLogFolderPath() const { return _logFolderPath; }
 
     private:
-        mutex      _mutex; ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
-        string     _logFolderPath;
-        string     _currentLogFileName;
-        std::FILE* _pFile;
-        int32      _lastLogHour; ///< 시간별 로그 파일 교체를 감지하는 데 쓴다
-        bool       _bOpened;
+        mutex                      _mutex; ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
+        string                     _logFolderPath;
+        string _currentLogFileName SW_GUARDED_BY( _mutex );
+        std::FILE* _pFile          SW_GUARDED_BY( _mutex );
+        int32 _lastLogHour         SW_GUARDED_BY( _mutex ); ///< 시간별 로그 파일 교체를 감지하는 데 쓴다
+        bool _bOpened              SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

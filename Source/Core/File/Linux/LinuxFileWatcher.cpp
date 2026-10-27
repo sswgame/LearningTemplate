@@ -115,7 +115,7 @@ namespace sw
             _workerThread.join();
 
         {
-            std::scoped_lock<mutex> lock{ _watchMutex };
+            ScopedLock<mutex> lock{ _watchMutex };
             for ( const pair<int32, string>& pair : _mapWatchDescriptorToPath )
             {
                 inotify_rm_watch( _inotifyFd, pair.first );
@@ -218,8 +218,8 @@ namespace sw
 
         string watchedDir;
         {
-            std::scoped_lock<mutex> lock{ _watchMutex };
-            auto                    it = _mapWatchDescriptorToPath.find( watchDescriptor );
+            ScopedLock<mutex> lock{ _watchMutex };
+            auto              it = _mapWatchDescriptorToPath.find( watchDescriptor );
             if ( it == _mapWatchDescriptorToPath.end() )
                 return true;
             watchedDir = it->second;
@@ -297,15 +297,15 @@ namespace sw
             return false;
         }
 
-        std::scoped_lock<mutex> lock{ _watchMutex };
+        ScopedLock<mutex> lock{ _watchMutex };
         _mapWatchDescriptorToPath[wd] = normalized;
         return true;
     }
 
     void LinuxFileWatcher::removeWatch( int32 watchDescriptor )
     {
-        std::scoped_lock<mutex> lock{ _watchMutex };
-        auto                    it = _mapWatchDescriptorToPath.find( watchDescriptor );
+        ScopedLock<mutex> lock{ _watchMutex };
+        auto              it = _mapWatchDescriptorToPath.find( watchDescriptor );
         if ( it == _mapWatchDescriptorToPath.end() )
             return;
         inotify_rm_watch( _inotifyFd, watchDescriptor );

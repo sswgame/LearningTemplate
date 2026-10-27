@@ -39,9 +39,9 @@ namespace sw
         static void setFlushEveryLine( bool bFlushEveryLine );
 
     private:
-        mutex                   _mutex;                   ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다
-        void*                   _pCachedConsoleHandle;    ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시(Windows)
-        [[maybe_unused]] uint16 _defaultConsoleAttribute; ///< 처음 콘솔 텍스트 색상 속성(Windows. 다른 플랫폼은 읽지 않는다)
-        bool                    _bHasConsole;             ///< 표준 출력이 콘솔(터미널)인지 — 아니면 색을 쓰지 않는다(리눅스는 journald · 파일 · 파이프에 이스케이프가 섞이지 않게)
+        mutex                                            _mutex;                  ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다
+        void* _pCachedConsoleHandle                      SW_GUARDED_BY( _mutex ); ///< GetStdHandle(STD_OUTPUT_HANDLE) 캐시(Windows)
+        [[maybe_unused]] uint16 _defaultConsoleAttribute SW_GUARDED_BY( _mutex ); ///< 처음 콘솔 텍스트 색상 속성(Windows. 다른 플랫폼은 읽지 않는다)
+        bool _bHasConsole                                SW_GUARDED_BY( _mutex ); ///< 표준 출력이 콘솔(터미널)인지 — 아니면 색을 쓰지 않는다(리눅스는 journald · 파일 · 파이프에 이스케이프가 섞이지 않게)
     };
 } // namespace sw

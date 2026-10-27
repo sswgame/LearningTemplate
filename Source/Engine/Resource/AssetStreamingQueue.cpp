@@ -43,7 +43,7 @@ namespace sw
 
     void AssetStreamingQueue::initialize()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bInitialized = true;
     }
 
@@ -54,7 +54,7 @@ namespace sw
         (void)_taskTracker.waitIdle( kShutdownWaitMs, "AssetStreamingQueue::shutdown" ); // 시간 초과는 추적기가 원인 태스크 이름과 함께 오류로 남긴다
         vector<AsyncReadHandle> listIO;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( auto& [path, handle] : _mapInFlightIO )
             {
                 listIO.push_back( handle );
@@ -73,7 +73,7 @@ namespace sw
         (void)_taskTracker.waitIdle( kShutdownWaitMs, "AssetStreamingQueue::shutdown" );
 
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _uniqueActiveRequest.clear();
             _uniqueActiveDataRequest.clear();
             _mapInFlightCallback.clear();
@@ -83,7 +83,7 @@ namespace sw
             _listDetachedIO.clear();
             _bInitialized = false;
         }
-        std::scoped_lock<mutex> completedLock{ _completedMutex };
+        ScopedLock<mutex> completedLock{ _completedMutex };
         _listCompleted.clear();
     }
 
@@ -100,9 +100,9 @@ namespace sw
         // `requestAsset`) 같은 뮤텍스에 재진입해 스레드가 스스로 멈춘다.
         bool bAlreadyLoaded{ false };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              itResult = _mapAssetResult.find( pathStr );
-            bAlreadyLoaded                   = ( itResult != _mapAssetResult.end() && itResult->second );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        itResult = _mapAssetResult.find( pathStr );
+            bAlreadyLoaded             = ( itResult != _mapAssetResult.end() && itResult->second );
         }
         if ( bAlreadyLoaded )
         {
@@ -111,7 +111,7 @@ namespace sw
             return true;
         }
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
 
         if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
         {
@@ -138,7 +138,7 @@ namespace sw
         uint64       generation{ 0 };
         bool         bIssueRead{ false };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
 
             // **바이트를 읽는 요청에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
             // 않으므로, 거기 붙으면 `bSuccess = true` 에 빈 버퍼를 받는다. 그때는 세대를 올려
@@ -255,8 +255,8 @@ namespace sw
     {
         // 찾기 태스크가 도는 사이 취소 · 다시 요청됐으면 걸지 않는다(취소가 이미 콜백을 실패로 돌려보냈다).
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              itGeneration = _mapRequestGeneration.find( pathStr );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        itGeneration = _mapRequestGeneration.find( pathStr );
             if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
                 return;
         }
@@ -267,9 +267,9 @@ namespace sw
             onDataRead( pathStr, generation, bSuccess, bytes );
         } ) );
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              itGeneration = _mapRequestGeneration.find( pathStr );
-        const bool              bCurrent     = itGeneration != _mapRequestGeneration.end() && itGeneration->second == generation;
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        itGeneration = _mapRequestGeneration.find( pathStr );
+        const bool        bCurrent     = itGeneration != _mapRequestGeneration.end() && itGeneration->second == generation;
         if ( handle.isValid() == false )
         {
             // 어디에도 없다(낱개 파일 · 팩 모두). 읽기를 걸지 않았으니 여기서 실패로 끝낸다.
@@ -287,8 +287,8 @@ namespace sw
 
     void AssetStreamingQueue::onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              itGeneration = _mapRequestGeneration.find( pathStr );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        itGeneration = _mapRequestGeneration.find( pathStr );
         if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
             return;
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );
@@ -338,7 +338,7 @@ namespace sw
 
     void AssetStreamingQueue::pushCompleted( CompletedItem&& item )
     {
-        std::scoped_lock<mutex> lock{ _completedMutex };
+        ScopedLock<mutex> lock{ _completedMutex };
         _listCompleted.push_back( std::move( item ) );
     }
 
@@ -355,7 +355,7 @@ namespace sw
         else
             bSuccess = ResourceIO::hasResource( pathStr );
 
-        std::scoped_lock<mutex> innerLock{ _mutex };
+        ScopedLock<mutex> innerLock{ _mutex };
 
         const auto itGeneration = _mapRequestGeneration.find( pathStr );
         if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
@@ -369,7 +369,7 @@ namespace sw
         const string    pathStr = string( assetPath );
         AsyncReadHandle ioHandle;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _uniqueActiveRequest.erase( pathStr );
             _uniqueActiveDataRequest.erase( pathStr );
             const auto itIO = _mapInFlightIO.find( pathStr );
@@ -410,8 +410,8 @@ namespace sw
             // 워커가 이미 끝냈지만 `update` 가 아직 부르지 않은 완료도 실패로 바꾼다. 취소와 완료는 서로 다른 스레드라 어느 쪽이 먼저일지 정할 수
             // 없다 — 취소가 돌아온 뒤에는 이 경로에 성공 콜백이 오지 않는다는 것만 계약이다. 그 완료가 남긴 성공 기록도 지운다.
             {
-                std::scoped_lock<mutex> completedLock{ _completedMutex };
-                bool                    bRevokedSuccess{ false };
+                ScopedLock<mutex> completedLock{ _completedMutex };
+                bool              bRevokedSuccess{ false };
                 for ( CompletedItem& item : _listCompleted )
                 {
                     if ( item._path != pathStr )
@@ -445,34 +445,34 @@ namespace sw
 
     void AssetStreamingQueue::clearCompletionRecord()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapAssetResult.clear();
     }
 
     bool AssetStreamingQueue::isStreaming( string_view assetPath ) const
     {
-        const string            pathStr = string( assetPath );
-        std::scoped_lock<mutex> lock{ _mutex };
+        const string      pathStr = string( assetPath );
+        ScopedLock<mutex> lock{ _mutex };
         return _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end();
     }
 
     bool AssetStreamingQueue::isLoaded( string_view assetPath ) const
     {
-        const string            pathStr = string( assetPath );
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              itResult = _mapAssetResult.find( pathStr );
+        const string      pathStr = string( assetPath );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        itResult = _mapAssetResult.find( pathStr );
         return itResult != _mapAssetResult.end() && itResult->second;
     }
 
     size_t AssetStreamingQueue::getPendingCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _uniqueActiveRequest.size();
     }
 
     size_t AssetStreamingQueue::getCompletedCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _mapAssetResult.size();
     }
 
@@ -481,8 +481,8 @@ namespace sw
         // 한 번에 꺼내 잠금 밖에서 부른다 — 콜백이 다시 요청을 넣어도(같은 잠금) 막히지 않는다.
         vector<CompletedItem> listReady;
         {
-            std::scoped_lock<mutex> lock{ _completedMutex };
-            const size_t            readyCount = _listCompleted.size() < maxCompletionsPerFrame ? _listCompleted.size() : maxCompletionsPerFrame;
+            ScopedLock<mutex> lock{ _completedMutex };
+            const size_t      readyCount = _listCompleted.size() < maxCompletionsPerFrame ? _listCompleted.size() : maxCompletionsPerFrame;
             listReady.reserve( readyCount );
             for ( size_t index = 0; index < readyCount; ++index )
             {

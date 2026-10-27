@@ -130,13 +130,13 @@ namespace sw
         {
             static string formatValue( const GlobalVariableInfo& info )
             {
-                std::shared_lock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                ScopedSharedLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                 return *static_cast<const string*>( info._pData );
             }
 
             [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
             {
-                std::unique_lock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                 *static_cast<string*>( info._pData ) = string{ text };
                 return true;
             }
@@ -145,7 +145,7 @@ namespace sw
             {
                 if ( std::holds_alternative<string>( info._defaultValue ) == false )
                     return;
-                std::unique_lock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                 *static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
             }
 
@@ -160,7 +160,7 @@ namespace sw
                 string value;
                 if ( commandLine.getArgument( info._name, value ) == false )
                     return false;
-                std::unique_lock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                 *static_cast<string*>( info._pData ) = std::move( value );
                 return true;
             }
@@ -386,7 +386,7 @@ namespace sw
             return false;
 
         {
-            std::unique_lock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+            UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
             *static_cast<string*>( _pData ) = string{ val };
         }
         if ( _onValueChanged.isBound() )
@@ -505,7 +505,7 @@ namespace sw
             return false;
         }
 
-        std::unique_lock<shared_mutex> lock{ _mutex };
+        UniqueLock<shared_mutex> lock{ _mutex };
         if ( _mapVariable.find( name ) != _mapVariable.end() )
         {
             lock.unlock(); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
@@ -586,8 +586,8 @@ namespace sw
      */
     void GlobalVariableManager::unregisterVariablesByModule( string_view moduleName )
     {
-        std::unique_lock<shared_mutex> lock{ _mutex };
-        string                         strModule{ moduleName };
+        UniqueLock<shared_mutex> lock{ _mutex };
+        string                   strModule{ moduleName };
         for ( auto it = _mapVariable.begin(); it != _mapVariable.end(); )
         {
             if ( it->second->_moduleName == strModule )
@@ -632,7 +632,7 @@ namespace sw
         // 1단계: unique_lock 안에서 값만 직접 되돌리고, 부를 콜백 목록을 모은다
         vector<pair<GlobalVariableChangedDelegate, GlobalVariableInfo*>> listPendingCallback;
         {
-            std::unique_lock<shared_mutex> lock{ _mutex };
+            UniqueLock<shared_mutex> lock{ _mutex };
             for ( auto& [name, info] : _mapVariable )
             {
                 if ( info->_pData == nullptr )
@@ -680,7 +680,7 @@ namespace sw
 
     GlobalVariableInfo* GlobalVariableManager::findVariable( string_view name )
     {
-        std::shared_lock<shared_mutex> lock{ _mutex };
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     iter = _mapVariable.find( name );
         if ( iter != _mapVariable.end() )
             return iter->second.get();
@@ -689,7 +689,7 @@ namespace sw
 
     void GlobalVariableManager::collectVariables( vector<GlobalVariableInfo*>& outListVariable ) const
     {
-        std::shared_lock<shared_mutex> lock{ _mutex };
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         outListVariable.clear();
         outListVariable.reserve( _mapVariable.size() );
         for ( const auto& [name, pInfo] : _mapVariable )
@@ -703,7 +703,7 @@ namespace sw
      */
     uint32 GlobalVariableManager::getVariableCount() const
     {
-        std::shared_lock<shared_mutex> lock{ _mutex };
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return static_cast<uint32>( _mapVariable.size() );
     }
 

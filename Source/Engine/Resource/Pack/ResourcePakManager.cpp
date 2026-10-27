@@ -246,7 +246,7 @@ namespace sw
 
     ResourcePakManager::ResourcePakManager( ResourcePakManager&& other ) noexcept
     {
-        std::scoped_lock<mutex> lock( other._vfsMutex );
+        ScopedLock<mutex> lock{ other._vfsMutex };
         _listMountedPack  = std::move( other._listMountedPack );
         _dlcValidator     = std::move( other._dlcValidator );
         _bAllowLooseFiles = other._bAllowLooseFiles;
@@ -256,7 +256,7 @@ namespace sw
     {
         if ( this != &other )
         {
-            std::scoped_lock<mutex, mutex> lock( _vfsMutex, other._vfsMutex );
+            ScopedLockPair<mutex> lock{ _vfsMutex, other._vfsMutex };
             _listMountedPack  = std::move( other._listMountedPack );
             _dlcValidator     = std::move( other._dlcValidator );
             _bAllowLooseFiles = other._bAllowLooseFiles;
@@ -311,7 +311,7 @@ namespace sw
         }
 
         {
-            std::scoped_lock<mutex> lock( _vfsMutex );
+            ScopedLock<mutex> lock{ _vfsMutex };
 
             // 이미 마운트되어 있으면 이전 팩을 뺀다
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
@@ -349,7 +349,7 @@ namespace sw
         if ( packFilePath.empty() )
             return false;
 
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )
         {
             if ( it->_pReader != nullptr && FileUtil::pathsEqualNormalized( it->_pReader->getPackPath(), packFilePath ) )
@@ -365,7 +365,7 @@ namespace sw
 
     void ResourcePakManager::unmountAll()
     {
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         for ( auto& mounted : _listMountedPack )
         {
             if ( mounted._pReader != nullptr )
@@ -379,7 +379,7 @@ namespace sw
         if ( relativePath.empty() )
             return false;
 
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         return ResourcePakManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
                                                                []( const MountedPack&, uint64, string_view )
         { return true; } );
@@ -390,7 +390,7 @@ namespace sw
         if ( relativeFolder.empty() )
             return;
 
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         // 패치 팩이 지운 경로는 그 패치보다 아래 팩에서 나온 항목이면 뺀다(`visitPacksWithFile` 과 같은 규칙).
         vector<string> listPackEntry;
         for ( size_t packIndex = 0; packIndex < _listMountedPack.size(); ++packIndex )
@@ -432,7 +432,7 @@ namespace sw
     shared_ptr<ResourcePakReader> ResourcePakManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
     {
         shared_ptr<ResourcePakReader> pFound;
-        std::scoped_lock<mutex>       lock( _vfsMutex );
+        ScopedLock<mutex>             lock{ _vfsMutex };
         ResourcePakManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
                                                         [&]( const MountedPack& mounted, uint64 pathHash, string_view pathInPack )
         {
@@ -485,7 +485,7 @@ namespace sw
 
     void ResourcePakManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )
     {
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         _dlcValidator = std::move( validator );
     }
 
@@ -501,7 +501,7 @@ namespace sw
 
     size_t ResourcePakManager::getMountedPackCount() const
     {
-        std::scoped_lock<mutex> lock( _vfsMutex );
+        ScopedLock<mutex> lock{ _vfsMutex };
         return _listMountedPack.size();
     }
 
@@ -580,7 +580,7 @@ namespace sw
 
         int32 priority = 0;
         {
-            std::scoped_lock<mutex> lock( _vfsMutex );
+            ScopedLock<mutex> lock{ _vfsMutex };
             for ( const MountedPack& mounted : _listMountedPack )
             {
                 priority = mounted._priority > priority ? mounted._priority : priority;

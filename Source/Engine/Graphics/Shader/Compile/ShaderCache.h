@@ -159,8 +159,8 @@ namespace sw
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
 
-        unordered_map<string, ShaderCacheEntry>          _mapCache;
-        unordered_map<string, weak_ptr<ShaderLoadBlock>> _mapLoading; ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 블록). `_mutexCache` 로 지킨다
-        mutable mutex                                    _mutexCache;
+        unordered_map<string, ShaderCacheEntry> _mapCache            SW_GUARDED_BY( _mutexCache );
+        unordered_map<string, weak_ptr<ShaderLoadBlock>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 블록). `_mutexCache` 로 지킨다
+        mutable mutex                                                _mutexCache;
     };
 } // namespace sw

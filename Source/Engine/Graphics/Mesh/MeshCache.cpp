@@ -146,7 +146,7 @@ namespace sw
         // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
         {
             MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
-            std::scoped_lock<mutex>           lock{ inFlight._mutex };
+            ScopedLock<mutex>                 lock{ inFlight._mutex };
             inFlight._mapKeyToBlock.erase( key );
         }
         if ( bLoaded == false )
@@ -185,8 +185,8 @@ namespace sw
         MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
         shared_ptr<MeshLoadBlock>         pBlock;
         {
-            std::scoped_lock<mutex> lock{ inFlight._mutex };
-            const auto              it = inFlight._mapKeyToBlock.find( key );
+            ScopedLock<mutex> lock{ inFlight._mutex };
+            const auto        it = inFlight._mapKeyToBlock.find( key );
             if ( it != inFlight._mapKeyToBlock.end() )
                 pBlock = it->second.lock();
             if ( pBlock != nullptr )

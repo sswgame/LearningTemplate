@@ -92,13 +92,13 @@ namespace sw
         PROPERTY( Category = "Engine", DisplayName = "Drive", Tooltip = "Which wheels the engine drives" )
         WheelDrive _drive;
 
-        mutable SpinLock     _inputLock;
-        float32              _inputForward;   ///< `_inputLock`
-        float32              _inputRight;     ///< `_inputLock`
-        float32              _inputBrake;     ///< `_inputLock`
-        float32              _inputHandBrake; ///< `_inputLock`
-        PhysicsVehicleState  _state;          ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
-        PhysicsVehicleHandle _vehicle;
-        PhysicsBodyHandle    _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
+        mutable SpinLock        _inputLock;
+        float32 _inputForward   SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
+        float32 _inputRight     SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
+        float32 _inputBrake     SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
+        float32 _inputHandBrake SW_GUARDED_BY( _inputLock ); ///< `_inputLock`
+        PhysicsVehicleState     _state;                      ///< 마지막 물리 프레임의 끝(게임 스레드가 쓴다)
+        PhysicsVehicleHandle    _vehicle;
+        PhysicsBodyHandle       _vehicleChassis; ///< 차를 지은 차체 바디(다시 지어졌는지 본다)
     };
 } // namespace sw

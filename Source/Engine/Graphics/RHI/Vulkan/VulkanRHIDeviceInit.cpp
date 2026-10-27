@@ -577,7 +577,7 @@ namespace sw
         if ( bCannotRecreateSwapChain )
             return false;
         {
-            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            ScopedLock<mutex> queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSwapChain: vkDeviceWaitIdle" );
         }
         // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
@@ -635,7 +635,7 @@ namespace sw
         if ( bCannotRecreateSurface )
             return false;
         {
-            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            ScopedLock<mutex> queueLock{ _queueMutex };
             reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSurfaceAndSwapChain: vkDeviceWaitIdle" );
         }
         if ( isDeviceLost() )

@@ -33,8 +33,8 @@ namespace sw
     {
         if ( pNode == nullptr || pNode->_pName == nullptr )
             return false;
-        std::scoped_lock<mutex> lock{ _mutex };
-        ServiceFactoryNode**    ppLink = &_pHead;
+        ScopedLock<mutex>    lock{ _mutex };
+        ServiceFactoryNode** ppLink = &_pHead;
         while ( *ppLink != nullptr )
         {
             ServiceFactoryNode* pExisting = *ppLink;
@@ -66,8 +66,8 @@ namespace sw
     {
         if ( pNode == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        ServiceFactoryNode**    ppLink = &_pHead;
+        ScopedLock<mutex>    lock{ _mutex };
+        ServiceFactoryNode** ppLink = &_pHead;
         while ( *ppLink != nullptr )
         {
             if ( *ppLink == pNode )
@@ -117,7 +117,7 @@ namespace sw
     {
         outListNode.clear();
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( ServiceFactoryNode* pNode = _pHead; pNode != nullptr; pNode = pNode->_pNext )
             {
                 outListNode.push_back( pNode );
@@ -128,7 +128,7 @@ namespace sw
 
     int32 ServiceFactoryList::getCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _count;
     }
 } // namespace sw

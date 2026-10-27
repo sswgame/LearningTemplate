@@ -452,7 +452,7 @@ namespace sw
         NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostConfig _settings                       SW_GUARDED_BY( _mutex );
         NetMessageKindTallyTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
-        INetTransport*                                _pTransport;
+        INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );
         uint64 _rejectedPacketCount                   SW_GUARDED_BY( _mutex );
         uint64 _authenticationFailureCount            SW_GUARDED_BY( _mutex );
         uint64 _replayRejectedCount                   SW_GUARDED_BY( _mutex );

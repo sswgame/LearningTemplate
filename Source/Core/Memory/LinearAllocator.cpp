@@ -23,7 +23,7 @@ namespace sw
             _arrBlock[slotIndex].store( nullptr, std::memory_order_relaxed );
         }
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         allocateNewBlock( initialCapacity );
     }
 
@@ -52,8 +52,8 @@ namespace sw
 
             if ( pCurrentBlock == nullptr )
             {
-                std::scoped_lock<mutex> lock{ _mutex };
-                const size_t            recheckIndex = _currentBlockIndex.load( std::memory_order_relaxed );
+                ScopedLock<mutex> lock{ _mutex };
+                const size_t      recheckIndex = _currentBlockIndex.load( std::memory_order_relaxed );
                 if ( recheckIndex >= kMaxBlockCount || _arrBlock[recheckIndex].load( std::memory_order_relaxed ) == nullptr )
                 {
                     if ( allocateNewBlock( size + alignment ) == false )
@@ -83,7 +83,7 @@ namespace sw
             // 블록이 가득 찼다. **이미 가지고 있는 다음 블록부터 본다.** reset() 은 오프셋만 되돌리므로 그 뒤의 블록들은 빈
             // 채로 남아 있다. 여기서 곧바로 새 블록을 잡으면 그 빈 블록들은 다음 clear() 까지 놀고, reset 할 때마다 표가 한 칸씩
             // 늘면서 블록 용량은 두 배로 커진다(EventDispatcher 는 프레임마다 reset 하므로, 거기서 프레임마다 메모리가 불어난다).
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _currentBlockIndex.load( std::memory_order_acquire ) == blockIndex )
             {
                 if ( advanceToHeldBlock( blockIndex, size + alignment ) == false )
@@ -97,8 +97,8 @@ namespace sw
 
     void LinearAllocator::reset()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const size_t            blockCount = _blockCount.load( std::memory_order_acquire );
+        ScopedLock<mutex> lock{ _mutex };
+        const size_t      blockCount = _blockCount.load( std::memory_order_acquire );
         for ( size_t blockIndex = 0; blockIndex < blockCount; ++blockIndex )
         {
             _arrBlock[blockIndex].load( std::memory_order_acquire )->_offset.store( 0, std::memory_order_release );
@@ -109,8 +109,8 @@ namespace sw
 
     void LinearAllocator::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const size_t            blockCount = _blockCount.load( std::memory_order_relaxed );
+        ScopedLock<mutex> lock{ _mutex };
+        const size_t      blockCount = _blockCount.load( std::memory_order_relaxed );
         for ( size_t blockIndex = 0; blockIndex < blockCount; ++blockIndex )
         {
             Block* pBlock = _arrBlock[blockIndex].load( std::memory_order_relaxed );

@@ -372,9 +372,9 @@ namespace sw
         /// @brief setDynamic 을 참고하세요. 업로드 큐에 넣지 않는(정점 풀이 올리는) 프레임마다의 메시입니다.
         uint8 _bDynamic{ SW_FALSE };
         /// @brief setGPUDeformProgram 을 참고하세요. 잠금(`_deformProgramMutex`) 안에서만 읽고 씁니다.
-        shared_ptr<const vector<float4>> _deformProgram;
-        mutable mutex                    _deformProgramMutex;
-        atomic<uint64>                   _deformProgramGeneration{ 0 };
+        shared_ptr<const vector<float4>> _deformProgram SW_GUARDED_BY( _deformProgramMutex );
+        mutable mutex                                   _deformProgramMutex;
+        atomic<uint64>                                  _deformProgramGeneration{ 0 };
         /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };

@@ -86,7 +86,7 @@ namespace sw
             static const ResourcePathTable& publishTable( TEdit&& edit )
             {
                 ResourcePathTableStore&       store = _s_state._pathTable;
-                std::scoped_lock<mutex>       lock( store._publishMutex );
+                ScopedLock<mutex>             lock( store._publishMutex );
                 unique_ptr<ResourcePathTable> next = make_unique<ResourcePathTable>( getTable() );
                 edit( *next );
                 // 같은 내용의 표가 이미 있으면 그것으로 되돌린다 — 테스트가 루트를 바꿨다 되돌릴 때(`TestTempPath`) 표가 쌓이지 않게. 지난 표를 놓지 않는 대신 늘어나는 것은
@@ -220,7 +220,7 @@ namespace sw
             /** @brief 해석을 시작하는 지금의 세대를 잡습니다. 찾기 전에 한 번 잡는다. */
             static PathCacheStamp captureStamp()
             {
-                std::scoped_lock<mutex> lock( _s_state._pathCache._mutex );
+                ScopedLock<mutex> lock( _s_state._pathCache._mutex );
                 return PathCacheStamp{ _s_state._pathCache._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
             }
 
@@ -229,7 +229,7 @@ namespace sw
             {
                 const uint64                                      creationEpoch = FileUtil::getCreationEpoch();
                 const uint64                                      removalEpoch  = FileUtil::getRemovalEpoch();
-                std::scoped_lock<mutex>                           lock( _s_state._pathCache._mutex );
+                ScopedLock<mutex>                                 lock( _s_state._pathCache._mutex );
                 const unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.find();
                 if ( pMapResolved == nullptr )
                     return false;
@@ -247,7 +247,7 @@ namespace sw
             {
                 // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
                 SW_MEMORY_SCOPE( Asset );
-                std::scoped_lock<mutex> lock( _s_state._pathCache._mutex );
+                ScopedLock<mutex> lock( _s_state._pathCache._mutex );
                 if ( stamp._layoutGeneration != _s_state._pathCache._layoutGeneration )
                     return;
                 unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.getOrCreate();
@@ -286,8 +286,8 @@ namespace sw
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash == string_view::npos || firstSlash == 0 )
                     return false;
-                const string_view       domain = lowerRel.substr( 0, firstSlash );
-                std::scoped_lock<mutex> lock( _s_diskDomainMutex );
+                const string_view domain = lowerRel.substr( 0, firstSlash );
+                ScopedLock<mutex> lock{ _s_diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : _s_listDiskDomain )
                 {
                     if ( mounted._domain == domain )
@@ -303,8 +303,8 @@ namespace sw
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
             [[nodiscard]] static bool findDiskDomainID( const string& absolutePath, string& outID )
             {
-                const string            path = FileUtil::normalizePath( absolutePath );
-                std::scoped_lock<mutex> lock( _s_diskDomainMutex );
+                const string      path = FileUtil::normalizePath( absolutePath );
+                ScopedLock<mutex> lock{ _s_diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : _s_listDiskDomain )
                 {
                     const string folder = FileUtil::normalizePath( mounted._folder );
@@ -802,7 +802,7 @@ namespace sw
         string conflictFolder;
         bool   bConflict{ false };
         {
-            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_diskDomainMutex );
+            ScopedLock<mutex> lock{ ResourcePathsInternal::_s_diskDomainMutex };
             for ( const ResourcePathsInternal::MountedDiskDomain& mounted : ResourcePathsInternal::_s_listDiskDomain )
             {
                 if ( mounted._domain != domain )
@@ -897,7 +897,7 @@ namespace sw
 
     void ResourcePaths::clearPathCache()
     {
-        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_state._pathCache._mutex );
+        ScopedLock<mutex> lock( ResourcePathsInternal::_s_state._pathCache._mutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
         // 세대를 올려, 이 순간 이전의 검색 목록으로 풀던 호출이 결과를 새 캐시에 넣지 못하게 한다(`storeResolved`).
         ++ResourcePathsInternal::_s_state._pathCache._layoutGeneration;

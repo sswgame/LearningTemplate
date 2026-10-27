@@ -44,7 +44,7 @@ namespace sw
                 RecursiveFontIndex* const pIndex = s_recursiveIndex.getOrCreate();
                 if ( pIndex == nullptr )
                     return {};
-                std::scoped_lock<mutex> lock{ pIndex->_mutex };
+                ScopedLock<mutex> lock{ pIndex->_mutex };
                 if ( pIndex->_bBuilt == false )
                 {
                     pIndex->_bBuilt = true;

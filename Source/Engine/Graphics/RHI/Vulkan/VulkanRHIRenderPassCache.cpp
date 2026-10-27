@@ -170,8 +170,8 @@ namespace sw
 
     VkRenderPass VulkanRHIRenderPassCache::ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const RenderPassSpec& spec )
     {
-        std::scoped_lock<mutex> lock{ _pipelineMutex };
-        const auto              existing = _mapPipelineRenderPass.find( key );
+        ScopedLock<mutex> lock{ _pipelineMutex };
+        const auto        existing = _mapPipelineRenderPass.find( key );
         if ( existing != _mapPipelineRenderPass.end() )
             return existing->second;
 
@@ -186,8 +186,8 @@ namespace sw
                                                     const VkImageView* pAttachmentView, uint32 attachmentCount, uint32 width, uint32 height,
                                                     CompositeRecord& outRecord )
     {
-        std::scoped_lock<mutex> lock{ _compositeMutex };
-        const auto              existing = _mapComposite.find( key );
+        ScopedLock<mutex> lock{ _compositeMutex };
+        const auto        existing = _mapComposite.find( key );
         if ( existing != _mapComposite.end() )
         {
             outRecord = existing->second;
@@ -227,7 +227,7 @@ namespace sw
     {
         if ( texture == 0 )
             return;
-        std::scoped_lock<mutex> lock{ _compositeMutex };
+        ScopedLock<mutex> lock{ _compositeMutex };
         for ( auto it = _mapComposite.begin(); it != _mapComposite.end(); )
         {
             bool bUses = ( it->first._depth == texture );
@@ -250,7 +250,7 @@ namespace sw
         RenderPassRecord record{};
         record._renderPass = renderPass;
         record._bOwned     = bOwned ? SW_TRUE : SW_FALSE;
-        std::scoped_lock<mutex> lock{ _recordMutex };
+        ScopedLock<mutex> lock{ _recordMutex };
         _listRenderPassRecord.push_back( record );
         return _listRenderPassRecord.size();
     }
@@ -259,7 +259,7 @@ namespace sw
     {
         RenderPassRecord record{};
         {
-            std::scoped_lock<mutex> lock{ _recordMutex };
+            ScopedLock<mutex> lock{ _recordMutex };
             if ( handle == 0 || handle > _listRenderPassRecord.size() )
                 return;
             record                            = _listRenderPassRecord[handle - 1];
@@ -273,7 +273,7 @@ namespace sw
     void VulkanRHIRenderPassCache::destroyAll( VkDevice device, VkRenderPass swapchainRenderPass )
     {
         {
-            std::scoped_lock<mutex> lock{ _compositeMutex };
+            ScopedLock<mutex> lock{ _compositeMutex };
             for ( auto& pair : _mapComposite )
             {
                 if ( pair.second._framebuffer != VK_NULL_HANDLE )
@@ -284,7 +284,7 @@ namespace sw
             _mapComposite.clear();
         }
         {
-            std::scoped_lock<mutex> lock{ _pipelineMutex };
+            ScopedLock<mutex> lock{ _pipelineMutex };
             for ( auto& pair : _mapPipelineRenderPass )
             {
                 if ( pair.second != VK_NULL_HANDLE )
@@ -292,7 +292,7 @@ namespace sw
             }
             _mapPipelineRenderPass.clear();
         }
-        std::scoped_lock<mutex> lock{ _recordMutex };
+        ScopedLock<mutex> lock{ _recordMutex };
         for ( RenderPassRecord& record : _listRenderPassRecord )
         {
             const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;

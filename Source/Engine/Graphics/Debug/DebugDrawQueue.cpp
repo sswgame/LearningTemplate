@@ -60,7 +60,7 @@ namespace sw
 
     void DebugDrawQueue::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listLine.clear();
         _listSphere.clear();
         _listText.clear();
@@ -71,7 +71,7 @@ namespace sw
 
     void DebugDrawQueue::endFrame( float32 deltaSeconds )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
 
         _listVisibleLine.clear();
         for ( const DebugLine& line : _listLine )
@@ -99,14 +99,14 @@ namespace sw
 
     void DebugDrawQueue::drawLine( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         pushLineLocked( from, to, color, durationSeconds, registerCategoryLocked( category ) );
     }
 
     void DebugDrawQueue::drawSphere( const float3& center, float32 radius, const float4& color, float32 durationSeconds, const hashed_string& category )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        DebugSphere             sphere{};
+        ScopedLock<mutex> lock{ _mutex };
+        DebugSphere       sphere{};
         sphere._center           = center;
         sphere._radius           = radius;
         sphere._color            = color;
@@ -127,8 +127,8 @@ namespace sw
         const float3 axisY = float3::transform( float3{ 0.0f, halfExtent._y, 0.0f }, rotation );
         const float3 axisZ = float3::transform( float3{ 0.0f, 0.0f, halfExtent._z }, rotation );
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        const hashed_string     resolvedCategory = registerCategoryLocked( category );
+        ScopedLock<mutex>   lock{ _mutex };
+        const hashed_string resolvedCategory = registerCategoryLocked( category );
 
         // 반 크기가 0 인 축이 있으면 사각형 하나다(2D). 위 · 아래 면이 겹치고 세로 모서리는 길이가 0 이라 선 넷만 남긴다.
         const float3  arrAxis[]  = { axisX, axisY, axisZ };
@@ -191,8 +191,8 @@ namespace sw
         const float32 headWidth    = headLength * 0.5f;
         const float3  headBase     = to - direction * headLength;
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        const hashed_string     resolvedCategory = registerCategoryLocked( category );
+        ScopedLock<mutex>   lock{ _mutex };
+        const hashed_string resolvedCategory = registerCategoryLocked( category );
         pushLineLocked( from, to, color, durationSeconds, resolvedCategory );
         pushLineLocked( to, headBase + sideA * headWidth, color, durationSeconds, resolvedCategory );
         pushLineLocked( to, headBase - sideA * headWidth, color, durationSeconds, resolvedCategory );
@@ -202,8 +202,8 @@ namespace sw
 
     void DebugDrawQueue::drawText( const float3& position, string_view text, const float4& color, float32 durationSeconds, const hashed_string& category )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        DebugText               item{};
+        ScopedLock<mutex> lock{ _mutex };
+        DebugText         item{};
         item._position         = position;
         item._color            = color;
         item._text             = string( text );
@@ -214,14 +214,14 @@ namespace sw
 
     void DebugDrawQueue::setCategoryEnabled( const hashed_string& category, bool bEnabled )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const hashed_string     resolved = registerCategoryLocked( category );
-        _mapCategoryEnabled[resolved]    = bEnabled ? 1 : 0;
+        ScopedLock<mutex>   lock{ _mutex };
+        const hashed_string resolved  = registerCategoryLocked( category );
+        _mapCategoryEnabled[resolved] = bEnabled ? 1 : 0;
     }
 
     bool DebugDrawQueue::isCategoryEnabled( const hashed_string& category ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return isCategoryEnabledLocked( category.empty() ? hashed_string( kDefaultCategoryName ) : category );
     }
 
@@ -229,7 +229,7 @@ namespace sw
     {
         outListCategory.clear();
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             outListCategory.reserve( _mapCategoryEnabled.size() );
             for ( const auto& [category, enabled] : _mapCategoryEnabled )
             {

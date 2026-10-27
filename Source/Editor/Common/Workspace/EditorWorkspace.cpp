@@ -183,13 +183,13 @@ namespace sw::editor
 
     void EditorWorkspace::requestLoadScene( string_view path )
     {
-        std::scoped_lock<mutex> lock{ _pendingSceneMutex };
+        ScopedLock<mutex> lock{ _pendingSceneMutex };
         _pendingScenePath = path;
     }
 
     bool EditorWorkspace::consumeLoadScene( string& outPath )
     {
-        std::scoped_lock<mutex> lock{ _pendingSceneMutex };
+        ScopedLock<mutex> lock{ _pendingSceneMutex };
         if ( _pendingScenePath.empty() )
             return false;
         outPath = _pendingScenePath;

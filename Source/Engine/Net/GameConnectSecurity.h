@@ -44,9 +44,9 @@ namespace sw
         [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override;
 
     private:
-        mutable mutex             _mutex;
-        INetSecurityProvider*     _pProvider;
-        INetConnectAuthenticator* _pAuthenticator;
-        atomic<uint64>            _refusedWhileUnbound;
+        mutable mutex                             _mutex;
+        INetSecurityProvider* _pProvider          SW_GUARDED_BY( _mutex );
+        INetConnectAuthenticator* _pAuthenticator SW_GUARDED_BY( _mutex );
+        atomic<uint64>                            _refusedWhileUnbound;
     };
 } // namespace sw

@@ -233,7 +233,7 @@ namespace sw
     void TelemetryService::initialize( string_view spoolFolder, const TelemetryContext& context )
     {
         using Internal = TelemetryServiceInternal;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _spoolFolder = FileUtil::trimTrailingSlashes( spoolFolder );
         _context     = context;
         _stats       = TelemetryStats{};
@@ -272,7 +272,7 @@ namespace sw
     {
         _settingSubscription.reset();
         _pSettings = nullptr;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bInitialized == SW_FALSE )
             return;
         if ( _bConsent == SW_TRUE )
@@ -348,25 +348,25 @@ namespace sw
 
     bool TelemetryService::loadSchema( string_view path )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bLoaded = _schema.loadFromResource( path );
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bLoaded = _schema.loadFromResource( path );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }
 
     bool TelemetryService::loadSchemaText( string_view xmlText, string_view sourceName )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }
 
     void TelemetryService::setConsent( bool bEnabled )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bWasEnabled = _bConsent == SW_TRUE;
-        _bConsent                           = bEnabled ? SW_TRUE : SW_FALSE;
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bWasEnabled = _bConsent == SW_TRUE;
+        _bConsent                     = bEnabled ? SW_TRUE : SW_FALSE;
         if ( _bInitialized == SW_FALSE )
             return;
         if ( bEnabled == false )
@@ -385,7 +385,7 @@ namespace sw
 
     bool TelemetryService::hasConsent() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bConsent == SW_TRUE;
     }
 
@@ -416,13 +416,13 @@ namespace sw
 
     void TelemetryService::setUploader( ITelemetryUploader& uploader )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pUploader = &uploader;
     }
 
     TelemetryRecordResult TelemetryService::record( const TelemetryEvent& event )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return recordLocked( event );
     }
 
@@ -554,7 +554,7 @@ namespace sw
 
     void TelemetryService::collectBreadcrumbs( vector<string>& outListBreadcrumb ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListBreadcrumb.clear();
         const size_t count = _listBreadcrumb.size();
         for ( size_t offset = 0; offset < count; ++offset )
@@ -565,7 +565,7 @@ namespace sw
 
     void TelemetryService::collectSpoolFiles( vector<string>& outListFilePath ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListFilePath = _listClosedFile;
         if ( _currentFile.empty() == false )
             outListFilePath.push_back( _currentFile );
@@ -573,25 +573,25 @@ namespace sw
 
     bool TelemetryService::isInitialized() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bInitialized == SW_TRUE;
     }
 
     bool TelemetryService::isSessionSampled() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bSessionSampled == SW_TRUE;
     }
 
     TelemetryStats TelemetryService::getStats() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _stats;
     }
 
     void TelemetryService::update( float32 deltaSeconds )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bInitialized == SW_FALSE || deltaSeconds <= 0.0f )
             return;
         _sessionSeconds += static_cast<float64>( deltaSeconds );
@@ -606,8 +606,8 @@ namespace sw
 
     void TelemetryService::recordFrame( string_view sceneID, float32 deltaSeconds )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bTelemetryDisabled = _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f;
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bTelemetryDisabled = _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f;
         if ( bTelemetryDisabled )
             return;
         if ( _currentScene != sceneID )
@@ -662,7 +662,7 @@ namespace sw
 
     void TelemetryService::flush()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         flushLocked();
     }
 

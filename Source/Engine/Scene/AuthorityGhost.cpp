@@ -213,7 +213,7 @@ namespace sw
             {
                 if ( client.request( "scene.poses", AuthorityGhostInternal::kRequestTimeoutMilli, body ) )
                 {
-                    std::scoped_lock<mutex> lock{ _mutex };
+                    ScopedLock<mutex> lock{ _mutex };
                     _latestText = body;
                     _bReceived  = SW_TRUE;
                 }
@@ -250,7 +250,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _bReceived == SW_FALSE )
                 return;
             if ( _latestText != _parsedText )
@@ -294,13 +294,13 @@ namespace sw
             label += " m";
             queue.drawText( delta._server, label, errorColor, 0.0f, category );
         }
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listDelta = listDelta;
     }
 
     bool AuthorityGhost::describe( string& outText ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bReceived == SW_FALSE )
             return false;
         float32 maxDistance = 0.0f;

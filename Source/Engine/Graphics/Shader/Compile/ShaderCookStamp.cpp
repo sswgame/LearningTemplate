@@ -456,7 +456,7 @@ namespace sw
                 }
                 {
                     // 방금 쓴 스탬프를 다음 조회가 읽게 한다(읽기 캐시에 옛 글이 남아 있으면 갓 쿠킹한 산출물이 낡음으로 보인다).
-                    std::scoped_lock<mutex> lock{ _s_stampMutex };
+                    ScopedLock<mutex> lock{ _s_stampMutex };
                     _s_mapStamp.clear();
                 }
                 return true;
@@ -706,7 +706,7 @@ namespace sw
 
     void ShaderCooker::invalidateSharedHeaderCache()
     {
-        std::scoped_lock<mutex> lock{ ShaderCookStampInternal::_s_stampMutex };
+        ScopedLock<mutex> lock{ ShaderCookStampInternal::_s_stampMutex };
         ShaderCookStampInternal::_s_mapStamp.clear();
         // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
         ContentHash::clearCache();
@@ -826,7 +826,7 @@ namespace sw
         uint64                            stampedSourceHash{ 0 };
         vector<Internal::StampDependency> listDependency;
         {
-            std::scoped_lock<mutex> lock{ Internal::_s_stampMutex };
+            ScopedLock<mutex> lock{ Internal::_s_stampMutex };
 
             const Internal::StampInfo& stamp = Internal::readCookStamp( rhiDir );
             const auto                 iter  = stamp._mapSourceHash.find( stampKey );

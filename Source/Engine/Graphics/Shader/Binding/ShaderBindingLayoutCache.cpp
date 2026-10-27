@@ -83,8 +83,8 @@ namespace sw
         const hashed_string key = makeCacheKey( desc, targetFormat );
 
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            auto                    it = _mapEntry.find( key );
+            ScopedLock<mutex> lock{ _mutex };
+            auto              it = _mapEntry.find( key );
             if ( it != _mapEntry.end() )
                 return it->second->_layout;
         }
@@ -131,8 +131,8 @@ namespace sw
         entry->_layout               = ShaderBindingLayout::make( listStage );
         entry->_listSourcePath       = std::move( listSourcePath );
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        auto                    it = _mapEntry.find( key );
+        ScopedLock<mutex> lock{ _mutex };
+        auto              it = _mapEntry.find( key );
         if ( it == _mapEntry.end() )
             it = _mapEntry.emplace( key, std::move( entry ) ).first;
         return it->second->_layout;
@@ -142,7 +142,7 @@ namespace sw
     {
         const string needle{ shaderRelativePath };
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( auto it = _mapEntry.begin(); it != _mapEntry.end(); )
         {
             bool bMatch = false;
@@ -163,7 +163,7 @@ namespace sw
 
     void ShaderBindingLayoutCache::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapEntry.clear();
     }
 } // namespace sw

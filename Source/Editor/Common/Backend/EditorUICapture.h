@@ -98,16 +98,16 @@ namespace sw::editor
         void addResult( const EditorUICaptureResult& result );
 
     private:
-        vector<EditorUICaptureJob>    _listQueued; ///< UI 스레드 전용
-        mutable mutex                 _resultMutex;
-        vector<EditorUICaptureResult> _listResult;    ///< `_resultMutex` 로 지킨다
-        EditorUICaptureJob            _renderedJob{}; ///< 렌더 스레드 전용 — 이번 프레임에 그린 것
-        uint64                        _texture{ 0 };  ///< 렌더 스레드 전용 — RHITextureHandle
-        uint32                        _textureWidth{ 0 };
-        uint32                        _textureHeight{ 0 };
-        uint32                        _nextTicket{ 1 };
-        uint32                        _uiFrameCount{ 0 };     ///< `-gv_screenshotEditor` 대기 프레임 수
-        uint8                         _bRendered{ SW_FALSE }; ///< 렌더 스레드 전용
-        uint8                         _bGlobalRequested{ SW_FALSE };
+        vector<EditorUICaptureJob>                _listQueued; ///< UI 스레드 전용
+        mutable mutex                             _resultMutex;
+        vector<EditorUICaptureResult> _listResult SW_GUARDED_BY( _resultMutex ); ///< `_resultMutex` 로 지킨다
+        EditorUICaptureJob                        _renderedJob{};                ///< 렌더 스레드 전용 — 이번 프레임에 그린 것
+        uint64                                    _texture{ 0 };                 ///< 렌더 스레드 전용 — RHITextureHandle
+        uint32                                    _textureWidth{ 0 };
+        uint32                                    _textureHeight{ 0 };
+        uint32                                    _nextTicket{ 1 };
+        uint32                                    _uiFrameCount{ 0 };     ///< `-gv_screenshotEditor` 대기 프레임 수
+        uint8                                     _bRendered{ SW_FALSE }; ///< 렌더 스레드 전용
+        uint8                                     _bGlobalRequested{ SW_FALSE };
     };
 } // namespace sw::editor
