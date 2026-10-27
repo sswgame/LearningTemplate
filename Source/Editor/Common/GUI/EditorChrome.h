@@ -175,6 +175,13 @@ namespace sw::editor
          * @details 음수면 ImGui 규칙대로 오른쪽 여백이 그 칸 수만큼 남는 폭입니다. 글꼴 크기(UI 배율 포함)를 따라가므로 배율을 따로 곱하지 않는다.
          */
         static void setNextItemWidthColumns( float32 columns );
+        /** @brief 숫자 "0" 폭의 @p columns 배인 폭입니다(`setNextItemWidthColumns` 와 같은 값 — 줄바꿈 판단에 쓴다). */
+        [[nodiscard]] static float32 measureColumns( float32 columns );
+        /**
+         * @brief 다음 항목(폭 @p itemWidth)이 이 줄 오른쪽 끝 안에 들어가면 같은 줄에 이어 놓고, 아니면 줄을 바꿉니다.
+         * @details 도구 줄이 창보다 길면 오른쪽 항목이 창 밖에 놓여 누를 수 없다(좁은 창 · 넓은 도크 · 기본 배치 변경). 사람도 시나리오도 닿을 수 있어야 한다.
+         */
+        static void sameLineIfFits( float32 itemWidth );
         /** @brief 메인 뷰포트의 위치와 크기를 얻습니다. */
         [[nodiscard]] static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
 

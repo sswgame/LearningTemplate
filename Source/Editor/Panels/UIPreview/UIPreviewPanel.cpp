@@ -109,6 +109,7 @@ namespace sw::editor
         struct UIPreviewPanelInternal
         {
             static constexpr float32 kLeftColumns          = 45.0f;
+            static constexpr float32 kLanguageComboColumns = 20.0f; ///< 언어 콤보 폭(글자 칸) — 줄바꿈 판단과 폭이 같은 값을 쓴다
             static constexpr float32 kIndentPerLevel       = 12.0f;
             static constexpr float32 kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
             static constexpr float32 kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
@@ -892,7 +893,7 @@ namespace sw::editor
     void UIPreviewPanel::drawLanguageCombo()
     {
         const string preview = _language.empty() ? string( "(game language)" ) : _language;
-        EditorChrome::setNextItemWidthColumns( 20.0f );
+        EditorChrome::setNextItemWidthColumns( UIPreviewPanelInternal::kLanguageComboColumns );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
         EditorWidgets::drawTooltip( "Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages "
@@ -940,7 +941,8 @@ namespace sw::editor
         UIPreviewPanelInternal::noteMark( "uipreview", "save" );
         EditorWidgets::drawTooltip( "Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback "
                                     "changed the preview tree - Reload first." );
-        ImGui::SameLine();
+        // 도구 줄이 패널보다 길면 오른쪽 콤보(언어)가 패널 밖에 놓여 누를 수 없다 — 들어가지 않으면 줄을 바꾼다.
+        EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 25.0f ) );
         EditorChrome::setNextItemWidthColumns( 25.0f );
         const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
         const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
@@ -954,7 +956,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 20.0f ) );
         EditorChrome::setNextItemWidthColumns( 20.0f );
         const bool bThemeOpen = ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
@@ -969,7 +971,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureColumns( UIPreviewPanelInternal::kLanguageComboColumns ) );
         drawLanguageCombo();
         EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );

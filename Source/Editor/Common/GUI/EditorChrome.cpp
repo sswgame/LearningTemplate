@@ -165,7 +165,20 @@ namespace sw::editor
 
     void EditorChrome::setNextItemWidthColumns( float32 columns )
     {
-        ImGui::SetNextItemWidth( columns * ImGui::CalcTextSize( "0" ).x );
+        ImGui::SetNextItemWidth( measureColumns( columns ) );
+    }
+
+    float32 EditorChrome::measureColumns( float32 columns )
+    {
+        return columns * ImGui::CalcTextSize( "0" ).x;
+    }
+
+    void EditorChrome::sameLineIfFits( float32 itemWidth )
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float32     limit = ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - style.WindowPadding.x;
+        if ( ImGui::GetItemRectMax().x + style.ItemSpacing.x + itemWidth <= limit )
+            ImGui::SameLine();
     }
 
     void EditorChrome::setNextWindowExtent( const EditorTextExtent& extent, bool bAlways )

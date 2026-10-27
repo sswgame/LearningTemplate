@@ -13,6 +13,7 @@
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
@@ -54,18 +55,6 @@ namespace sw::editor
         {
             /** @brief 작은 단추의 폭입니다(글자 + 좌우 안쪽 여백). */
             static float32 measureSmallButton( const utf8* pLabel ) { return ImGui::CalcTextSize( pLabel ).x + ImGui::GetStyle().FramePadding.x * 2.0f; }
-
-            /**
-             * @brief 다음 항목(폭 @p itemWidth)이 이 줄 오른쪽 끝 안에 들어가면 같은 줄에 이어 놓고, 아니면 줄을 바꿉니다.
-             * @details 도구 줄이 창보다 길면 오른쪽 단추가 창 밖에 놓여 누를 수 없다(좁은 창 · 넓은 도크). 사람도 시나리오도 닿을 수 있어야 한다.
-             */
-            static void sameLineIfFits( float32 itemWidth )
-            {
-                const ImGuiStyle& style = ImGui::GetStyle();
-                const float32     limit = ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - style.WindowPadding.x;
-                if ( ImGui::GetItemRectMax().x + style.ItemSpacing.x + itemWidth <= limit )
-                    ImGui::SameLine();
-            }
 
             static constexpr Color kTimelineLabel{ Color::fromBytes( 0, 0, 0, 255 ) };
             static constexpr Color kFrameBoundary{ Color::fromBytes( 255, 255, 255, 160 ) };
@@ -382,7 +371,7 @@ namespace sw::editor
         ImGui::SameLine();
         const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
         ImGui::TextDisabled( "%u frames window, %u captured", _scopeHistory.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
-        ProfilerPanelInternal::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Clear" ) );
+        EditorChrome::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Clear" ) );
         if ( ImGui::SmallButton( "Clear" ) )
         {
             _scopeHistory.reset();
@@ -391,7 +380,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "profiler.capture.clear" );
 
         // 정지, 스파이크, 캡처 파일을 다룬다. 유니티 Profiler 의 Record 끄기, 언리얼의 stat hitches, Save/Load 에 해당한다.
-        ProfilerPanelInternal::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( _bCapturePaused == SW_TRUE ? "Resume" : "Pause" ) );
+        EditorChrome::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( _bCapturePaused == SW_TRUE ? "Resume" : "Pause" ) );
         if ( _bCapturePaused == SW_TRUE )
         {
             if ( ImGui::SmallButton( "Resume" ) )
@@ -404,18 +393,18 @@ namespace sw::editor
         else if ( ImGui::SmallButton( "Pause" ) )
             _bCapturePaused = SW_TRUE;
         EditorSelfTestMarks::note( "profiler.capture.pause" );
-        ProfilerPanelInternal::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
+        EditorChrome::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
         bool bPauseOnSpike = _bPauseOnSpike == SW_TRUE;
         if ( ImGui::Checkbox( "Pause on spike", &bPauseOnSpike ) )
             _bPauseOnSpike = bPauseOnSpike ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
-        ProfilerPanelInternal::sameLineIfFits( ImGui::GetFontSize() * 4.0f );
+        EditorChrome::sameLineIfFits( ImGui::GetFontSize() * 4.0f );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
         ImGui::DragFloat( "##spikeMs", &_spikeThresholdMs, 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
-        ProfilerPanelInternal::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Save" ) );
+        EditorChrome::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Save" ) );
         if ( ImGui::SmallButton( "Save" ) )
         {
             const string path = getCaptureFilePath();
@@ -426,7 +415,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "profiler.capture.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveCapture" ) );
-        ProfilerPanelInternal::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Load" ) );
+        EditorChrome::sameLineIfFits( ProfilerPanelInternal::measureSmallButton( "Load" ) );
         if ( ImGui::SmallButton( "Load" ) )
         {
             const string path = getCaptureFilePath();
