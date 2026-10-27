@@ -100,7 +100,7 @@ namespace sw
     void LocalizationManager::clear()
     {
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             _listProject.clear();
             _mapLooseTable.clear();
             _mapBinaryTable.clear();
@@ -137,7 +137,7 @@ namespace sw
             return false;
         }
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             _cultureTable = std::move( loaded );
             rebuildTablesLocked();
             rebuildLookupChainLocked();
@@ -148,7 +148,7 @@ namespace sw
 
     CultureInfo LocalizationManager::resolveCulture( string_view culture ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const CultureInfo*             pCulture = _cultureTable.resolveCulture( culture );
         if ( pCulture == nullptr )
             pCulture = _cultureTable.resolveCulture( _fallbackLanguage );
@@ -242,8 +242,8 @@ namespace sw
         string oldLanguage;
         string newLanguage;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
-            bool                           bReplaced{ false };
+            UniqueLock<shared_mutex> lock{ _mutex };
+            bool                     bReplaced{ false };
             for ( MountedProject& existing : _listProject )
             {
                 if ( existing._project._name == mounted._project._name )
@@ -271,8 +271,8 @@ namespace sw
     {
         string language;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
-            const size_t                   before = _listProject.size();
+            UniqueLock<shared_mutex> lock{ _mutex };
+            const size_t             before = _listProject.size();
             for ( size_t index = _listProject.size(); index > 0; --index )
             {
                 if ( _listProject[index - 1]._scope == scope )
@@ -289,7 +289,7 @@ namespace sw
 
     vector<string> LocalizationManager::getMountedProjectNames() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         vector<string>                 listName;
         for ( const MountedProject& project : _listProject )
         {
@@ -308,7 +308,7 @@ namespace sw
         string                        currentLanguage;
         string                        fallbackLanguage;
         {
-            std::shared_lock<shared_mutex> lock( source._mutex );
+            ScopedSharedLock<shared_mutex> lock{ source._mutex };
             cultureTable     = source._cultureTable;
             listProject      = source._listProject;
             mapLooseTable    = source._mapLooseTable;
@@ -317,7 +317,7 @@ namespace sw
         }
         string oldLanguage;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             oldLanguage       = _currentLanguage;
             _cultureTable     = std::move( cultureTable );
             _listProject      = std::move( listProject );
@@ -335,7 +335,7 @@ namespace sw
         string            projectPath;
         LocalizationScope scope{ LocalizationScope::Game };
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             for ( const MountedProject& project : _listProject )
             {
                 for ( const string& filePath : project._listFilePath )
@@ -361,7 +361,7 @@ namespace sw
         }
         string language;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             for ( MountedProject& project : _listProject )
             {
                 if ( project._projectPath == projectPath )
@@ -378,7 +378,7 @@ namespace sw
 
     bool LocalizationManager::isProjectFile( string_view path ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         for ( const MountedProject& project : _listProject )
         {
             for ( const string& filePath : project._listFilePath )
@@ -402,9 +402,9 @@ namespace sw
         string oldLanguage;
         string newLanguage;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
-            const string                   code  = normalizeLanguageCode( languageCode );
-            TranslationTable&              loose = _mapLooseTable[code];
+            UniqueLock<shared_mutex> lock{ _mutex };
+            const string             code  = normalizeLanguageCode( languageCode );
+            TranslationTable&        loose = _mapLooseTable[code];
             loose.setCulture( code );
             for ( const auto& [key, entry] : table.getEntries() )
             {
@@ -423,9 +423,9 @@ namespace sw
 
     void LocalizationManager::setString( string_view languageCode, const hashed_string& key, string_view value )
     {
-        std::unique_lock<shared_mutex> lock( _mutex );
-        const string                   code  = normalizeLanguageCode( languageCode );
-        TranslationTable&              loose = _mapLooseTable[code];
+        UniqueLock<shared_mutex> lock{ _mutex };
+        const string             code  = normalizeLanguageCode( languageCode );
+        TranslationTable&        loose = _mapLooseTable[code];
         loose.setCulture( code );
         TranslationEntry& entry = loose.getOrAddEntry( key.c_str() );
         entry._text             = string( value );
@@ -441,10 +441,10 @@ namespace sw
     {
         string language;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
-            const string                   code         = normalizeLanguageCode( languageCode );
-            const size_t                   erasedLoose  = _mapLooseTable.erase( code );
-            const size_t                   erasedBinary = _mapBinaryTable.erase( code );
+            UniqueLock<shared_mutex> lock{ _mutex };
+            const string             code         = normalizeLanguageCode( languageCode );
+            const size_t             erasedLoose  = _mapLooseTable.erase( code );
+            const size_t             erasedBinary = _mapBinaryTable.erase( code );
             if ( erasedLoose == 0 && erasedBinary == 0 )
                 return;
             rebuildTablesLocked();
@@ -472,7 +472,7 @@ namespace sw
         string oldLanguage;
         string newLanguage;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             _mapBinaryTable[code] = std::move( table );
             oldLanguage           = _currentLanguage;
             if ( _currentLanguage.empty() )
@@ -500,7 +500,7 @@ namespace sw
     {
         const string                   code = normalizeLanguageCode( languageCode );
         LocalizationBinaryTable        table;
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         table.setCulture( code );
         for ( const MountedProject& project : _listProject )
         {
@@ -696,7 +696,7 @@ namespace sw
         const string code = normalizeLanguageCode( languageCode );
         string       oldLanguage;
         {
-            std::unique_lock<shared_mutex> lock( _mutex );
+            UniqueLock<shared_mutex> lock{ _mutex };
             if ( _currentLanguage == code )
                 return true;
             oldLanguage      = _currentLanguage;
@@ -710,28 +710,28 @@ namespace sw
 
     string LocalizationManager::getCurrentLanguage() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _currentLanguage;
     }
 
     void LocalizationManager::setFallbackLanguage( string_view languageCode )
     {
-        string                         code = normalizeLanguageCode( languageCode );
-        std::unique_lock<shared_mutex> lock( _mutex );
+        string                   code = normalizeLanguageCode( languageCode );
+        UniqueLock<shared_mutex> lock{ _mutex };
         _fallbackLanguage = std::move( code );
         rebuildLookupChainLocked();
     }
 
     string LocalizationManager::getFallbackLanguage() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _fallbackLanguage;
     }
 
     bool LocalizationManager::hasLanguage( string_view languageCode ) const
     {
         const string                   code = normalizeLanguageCode( languageCode );
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     it = _mapLanguageTable.find( code );
         if ( it == _mapLanguageTable.end() || it->second->empty() )
             return false;
@@ -747,7 +747,7 @@ namespace sw
     {
         vector<string> listLanguage;
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             listLanguage.reserve( _mapLanguageTable.size() );
             for ( const auto& [code, pTable] : _mapLanguageTable )
             {
@@ -772,19 +772,19 @@ namespace sw
 
     vector<string> LocalizationManager::getLookupChain() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _listLookupCulture;
     }
 
     bool LocalizationManager::isRightToLeft() const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         return _currentCulture._bRightToLeft;
     }
 
     vector<string> LocalizationManager::getFontFallback( string_view languageCode ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         vector<string>                 listChain;
         const string                   code = languageCode.empty() ? _currentLanguage : normalizeLanguageCode( languageCode );
         LocalizationManagerInternal::appendWithParents( _cultureTable, code, listChain );
@@ -800,7 +800,7 @@ namespace sw
 
     LocalizationCultureStatistics LocalizationManager::getStatistics( string_view languageCode ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     it = _mapCultureStatistic.find( normalizeLanguageCode( languageCode ) );
         return it != _mapCultureStatistic.end() ? it->second : LocalizationCultureStatistics{};
     }
@@ -833,7 +833,7 @@ namespace sw
 
     const utf8* LocalizationManager::findByHash( uint64 keyHash ) const
     {
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         for ( const string& code : _listLookupCulture )
         {
             const auto it = _mapLanguageTable.find( code );
@@ -849,7 +849,7 @@ namespace sw
     const utf8* LocalizationManager::getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText ) const
     {
         const string                   code = normalizeLanguageCode( languageCode );
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     it = _mapLanguageTable.find( code );
         if ( it != _mapLanguageTable.end() )
         {
@@ -868,7 +868,7 @@ namespace sw
     const StringTable* LocalizationManager::getLanguageTable( string_view languageCode ) const
     {
         const string                   code = normalizeLanguageCode( languageCode );
-        std::shared_lock<shared_mutex> lock( _mutex );
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
         const auto                     it = _mapLanguageTable.find( code );
         return it != _mapLanguageTable.end() ? it->second.get() : nullptr;
     }
@@ -877,7 +877,7 @@ namespace sw
     {
         CultureInfo culture;
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             culture = _currentCulture;
         }
         string text;
@@ -899,7 +899,7 @@ namespace sw
             return;
         string language;
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             const bool                     bNoTextLoaded = _listProject.empty() && _mapLooseTable.empty() && _mapBinaryTable.empty();
             if ( bNoTextLoaded )
                 return; // 텍스트를 하나도 로드하지 않은 실행(로컬라이제이션 없는 게임, 테스트)은 모든 키가 빠지므로 알릴 필요가 없다
@@ -907,7 +907,7 @@ namespace sw
         }
         bool bFirst{ false };
         {
-            std::scoped_lock<mutex> lock( _missingMutex );
+            ScopedLock<mutex> lock{ _missingMutex };
             bFirst = _uniqueMissingKey.insert( string( key ) ).second;
         }
         if ( bFirst )
@@ -916,13 +916,13 @@ namespace sw
 
     vector<string> LocalizationManager::getMissingKeys() const
     {
-        std::scoped_lock<mutex> lock( _missingMutex );
+        ScopedLock<mutex> lock{ _missingMutex };
         return vector<string>( _uniqueMissingKey.begin(), _uniqueMissingKey.end() );
     }
 
     void LocalizationManager::clearMissingKeys()
     {
-        std::scoped_lock<mutex> lock( _missingMutex );
+        ScopedLock<mutex> lock{ _missingMutex };
         _uniqueMissingKey.clear();
     }
 
@@ -933,9 +933,9 @@ namespace sw
     {
         if ( callback == nullptr )
             return 0;
-        std::unique_lock<shared_mutex> lock( _mutex );
-        const uint32                   callbackID = _nextCallbackID++;
-        _mapCallback[callbackID]                  = std::move( callback );
+        UniqueLock<shared_mutex> lock{ _mutex };
+        const uint32             callbackID = _nextCallbackID++;
+        _mapCallback[callbackID]            = std::move( callback );
         return callbackID;
     }
 
@@ -943,7 +943,7 @@ namespace sw
     {
         if ( callbackID == 0 )
             return;
-        std::unique_lock<shared_mutex> lock( _mutex );
+        UniqueLock<shared_mutex> lock{ _mutex };
         _mapCallback.erase( callbackID );
     }
 
@@ -952,7 +952,7 @@ namespace sw
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
         vector<LanguageChangedCallback> listCallback;
         {
-            std::shared_lock<shared_mutex> lock( _mutex );
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
             listCallback.reserve( _mapCallback.size() );
             for ( const auto& pair : _mapCallback )
             {

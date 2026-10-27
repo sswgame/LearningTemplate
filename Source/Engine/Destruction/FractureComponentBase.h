@@ -339,36 +339,36 @@ namespace sw
         PROPERTY( Category = "Fracture", DisplayName = "Authority", Tooltip = "Physics impacts create damage events (turn off on network clients)" )
         bool _bAuthority;
 
-        shared_ptr<const FractureAsset> _asset;
-        unique_ptr<IFracturePhysics>    _physics;
-        DestructionProfile              _profile;
-        DestructionState                _state;
-        DestructionEventLog             _eventLog;
-        vector<FractureGroupPose>       _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
-        mutable mutex                   _pendingMutex;
-        FractureNetworkSync             _networkSync; ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
-        vector<FracturePendingDamage>   _listPendingDamage;
-        vector<PhysicsBodyHandle>       _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
-        vector<FractureGroupRuntime>    _listRuntime;        ///< 그룹 번호 오름차순이다.
-        vector<BoneTransform>           _listPiecePose;      ///< 잎마다 본 로컬 변환이다.
-        vector<uint32>                  _listRuntimeOfLeaf;  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
-        FractureRenderUnits             _renderUnits;        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
-        TComponentHandle<MeshComponent> _intactMesh;
-        ComponentHandle                 _intactBody;     ///< 3D 는 `RigidBodyComponent`, 2D 는 `RigidBody2DComponent` 라 타입 없는 핸들로 둔다
-        float3                          _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
-        quaternion                      _objectRotation;
-        float3                          _intactLinearVelocity;
-        float3                          _intactAngularVelocity;
-        float32                         _objectScale;    ///< 고른 배율(축 배율의 평균)
-        float32                         _leafShapeScale; ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
-        float32                         _lastApplyMicroseconds;
-        float32                         _lastPoseMicroseconds;
-        float32                         _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
-        uint32                          _nextSpawnOrder;
-        uint32                          _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
-        uint8                           _bStateReady;
-        uint8                           _bFractured;
-        uint8                           _bPoseDirty;
-        uint8                           _bFractureMissing; ///< 데이터를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
+        shared_ptr<const FractureAsset>                  _asset;
+        unique_ptr<IFracturePhysics>                     _physics;
+        DestructionProfile                               _profile;
+        DestructionState                                 _state;
+        DestructionEventLog                              _eventLog;
+        vector<FractureGroupPose>                        _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
+        mutable mutex                                    _pendingMutex;
+        FractureNetworkSync                              _networkSync; ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
+        vector<FracturePendingDamage> _listPendingDamage SW_GUARDED_BY( _pendingMutex );
+        vector<PhysicsBodyHandle>                        _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
+        vector<FractureGroupRuntime>                     _listRuntime;        ///< 그룹 번호 오름차순이다.
+        vector<BoneTransform>                            _listPiecePose;      ///< 잎마다 본 로컬 변환이다.
+        vector<uint32>                                   _listRuntimeOfLeaf;  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
+        FractureRenderUnits                              _renderUnits;        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
+        TComponentHandle<MeshComponent>                  _intactMesh;
+        ComponentHandle                                  _intactBody;     ///< 3D 는 `RigidBodyComponent`, 2D 는 `RigidBody2DComponent` 라 타입 없는 핸들로 둔다
+        float3                                           _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
+        quaternion                                       _objectRotation;
+        float3                                           _intactLinearVelocity;
+        float3                                           _intactAngularVelocity;
+        float32                                          _objectScale;    ///< 고른 배율(축 배율의 평균)
+        float32                                          _leafShapeScale; ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
+        float32                                          _lastApplyMicroseconds;
+        float32                                          _lastPoseMicroseconds;
+        float32                                          _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
+        uint32                                           _nextSpawnOrder;
+        uint32                                           _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
+        uint8                                            _bStateReady;
+        uint8                                            _bFractured;
+        uint8                                            _bPoseDirty;
+        uint8                                            _bFractureMissing; ///< 데이터를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
     };
 } // namespace sw

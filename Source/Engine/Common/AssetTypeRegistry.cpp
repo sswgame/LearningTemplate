@@ -62,7 +62,7 @@ namespace sw
     void AssetTypeRegistry::registerType( const AssetTypeDef& def )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         for ( const AssetTypeDef* pType : table._listType )
         {
             if ( StringUtil::equals( pType->_name, def._name, true ) )
@@ -106,7 +106,7 @@ namespace sw
     void AssetTypeRegistry::unregisterType( const AssetTypeDef& def )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         VectorUtil::removeValue( table._listType, &def );
         VectorUtil::removeIf( table._listSuffix, [&def]( const AssetTypeRegistryInternal::SuffixEntry& entry )
         { return entry._pType == &def; } );
@@ -115,7 +115,7 @@ namespace sw
     const AssetTypeDef* AssetTypeRegistry::findType( string_view name )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         for ( const AssetTypeDef* pType : table._listType )
         {
             if ( StringUtil::equals( pType->_name, name, true ) )
@@ -127,14 +127,14 @@ namespace sw
     vector<const AssetTypeDef*> AssetTypeRegistry::collectTypes()
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         return table._listType;
     }
 
     AssetSuffixMatch AssetTypeRegistry::findSuffix( string_view path )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         for ( const AssetTypeRegistryInternal::SuffixEntry& entry : table._listSuffix )
         {
             if ( StringUtil::endsWith( path, entry._pSuffix->_text, true ) )
@@ -158,7 +158,7 @@ namespace sw
     bool AssetTypeRegistry::hasExcludeGroup( string_view group )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         for ( const AssetTypeDef* pType : table._listType )
         {
             if ( group.empty() == false && StringUtil::equals( pType->_excludeGroup, group, true ) )
@@ -170,7 +170,7 @@ namespace sw
     void AssetTypeRegistry::collectProblems( vector<string>& outListProblem )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
-        std::scoped_lock<mutex>           lock( table._mutex );
+        ScopedLock<mutex>                 lock{ table._mutex };
         outListProblem.insert( outListProblem.end(), table._listProblem.begin(), table._listProblem.end() );
     }
 

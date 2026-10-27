@@ -232,23 +232,23 @@ namespace sw
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
     private:
-        mutable shared_mutex                           _mutex;
-        string                                         _currentLanguage;
-        string                                         _fallbackLanguage;
-        CultureTable                                   _cultureTable;
-        CultureInfo                                    _currentCulture; ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
-        vector<MountedProject>                         _listProject;
-        map<string, TranslationTable>                  _mapLooseTable;
-        map<string, LocalizationBinaryTable>           _mapBinaryTable; ///< 문화권 코드 → 쿠킹된 이진 표
-        unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
-        map<string, LocalizationCultureStatistics>     _mapCultureStatistic;
-        vector<string>                                 _listLookupCulture;
-        unordered_map<uint32, LanguageChangedCallback> _mapCallback;
+        mutable shared_mutex                                        _mutex;
+        string                                                      _currentLanguage;
+        string                                                      _fallbackLanguage;
+        CultureTable                                                _cultureTable;
+        CultureInfo                                                 _currentCulture; ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
+        vector<MountedProject>                                      _listProject;
+        map<string, TranslationTable>                               _mapLooseTable;
+        map<string, LocalizationBinaryTable>                        _mapBinaryTable; ///< 문화권 코드 → 쿠킹된 이진 표
+        unordered_map<string, unique_ptr<StringTable>>              _mapLanguageTable;
+        map<string, LocalizationCultureStatistics>                  _mapCultureStatistic;
+        vector<string>                                              _listLookupCulture;
+        unordered_map<uint32, LanguageChangedCallback> _mapCallback SW_GUARDED_BY( _mutex );
 
-        mutable mutex       _missingMutex;
-        mutable set<string> _uniqueMissingKey;
+        mutable mutex                         _missingMutex;
+        mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
-        std::atomic<uint32> _textRevision;
-        uint32              _nextCallbackID;
+        std::atomic<uint32>    _textRevision;
+        uint32 _nextCallbackID SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

@@ -78,7 +78,7 @@ namespace sw
         shared_ptr<const OcclusionTileSnapshot> getLatest() const;
 
     private:
-        mutable mutex                           _mutex;
-        shared_ptr<const OcclusionTileSnapshot> _pLatest;
+        mutable mutex                                    _mutex;
+        shared_ptr<const OcclusionTileSnapshot> _pLatest SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

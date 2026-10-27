@@ -18,19 +18,19 @@ namespace sw
 
     void GameConnectSecurity::setProvider( INetSecurityProvider* pProvider )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pProvider = pProvider;
     }
 
     INetSecurityProvider* GameConnectSecurity::findProvider() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pProvider;
     }
 
     bool GameConnectSecurity::bindAuthenticator( INetConnectAuthenticator* pAuthenticator )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( pAuthenticator == nullptr || pAuthenticator == this )
             return false;
         if ( _pAuthenticator != nullptr && _pAuthenticator != pAuthenticator )
@@ -44,20 +44,20 @@ namespace sw
 
     void GameConnectSecurity::unbindAuthenticator( INetConnectAuthenticator* pAuthenticator )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _pAuthenticator == pAuthenticator )
             _pAuthenticator = nullptr;
     }
 
     bool GameConnectSecurity::isAuthenticatorBound() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pAuthenticator != nullptr;
     }
 
     bool GameConnectSecurity::findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _pAuthenticator == nullptr )
         {
             // 서비스가 서기 전이다 — 받지 않는다. 처음과 2 의 거듭제곱 번째만 알린다(공격 패킷으로 로그를 채우지 않게).

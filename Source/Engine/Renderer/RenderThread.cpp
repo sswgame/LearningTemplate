@@ -196,7 +196,7 @@ namespace sw
             // 멈춤 표시는 **대기 쪽과 같은 락 안에서** 설정한다. 렌더 스레드는 `_mutex` 를 잡은 채 조건(_bStop, 새 패킷)을 보고 잠드는데, 락 밖에서
             // 설정하고 알리면 "조건을 거짓으로 본 뒤, 실제로 잠들기 전" 틈에 알림이 끼어 사라지고, 렌더 스레드는 영영 자고 아래 join 이 멈춘다
             // (백엔드 교체와 gv_useRenderThread 토글에서 가장 잘 드러났다).
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _bStop.store( true, std::memory_order_release );
         }
         _cvProduce.notify_all();
@@ -257,7 +257,7 @@ namespace sw
         uint32 nextHead    = ( currentHead + 1 ) % _s_kRingCapacity;
 
         {
-            std::unique_lock<mutex> lock{ _mutex };
+            UniqueLock<mutex> lock{ _mutex };
             _cvProduce.wait( lock, [this, nextHead]()
             { return _bStop.load( std::memory_order_relaxed ) || nextHead != _tail.load( std::memory_order_acquire ); } );
 
@@ -269,7 +269,7 @@ namespace sw
         // 생산자는 이 스레드 하나라 놓은 사이에 슬롯이 다시 차지 않고(소비자는 tail 만 민다), 멈춤(`stop`)도 이 스레드가 부른다.
         _pDevice->notifyRenderFrameQueued();
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             // 맞바꾸기다. 호출하는 쪽은 이 슬롯에 있던 지난 패킷의 저장소를 받아 다음 프레임에 그대로 쓴다.
             std::swap( _arrRingBuffer[currentHead], packet );
             _head.store( nextHead, std::memory_order_release );
@@ -286,7 +286,7 @@ namespace sw
     {
         if ( _bRunning.load( std::memory_order_acquire ) == false || std::this_thread::get_id() == _thread.get_id() )
             return;
-        std::unique_lock<mutex> lock{ _mutex };
+        UniqueLock<mutex> lock{ _mutex };
         _cvIdle.wait( lock, [this]()
         { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
@@ -298,7 +298,7 @@ namespace sw
 
         if ( std::this_thread::get_id() != _thread.get_id() )
         {
-            std::unique_lock<mutex> lock{ _mutex };
+            UniqueLock<mutex> lock{ _mutex };
             _cvIdle.wait( lock, [this]()
             { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
         }
@@ -327,7 +327,7 @@ namespace sw
             uint32 currentTail = _tail.load( std::memory_order_relaxed );
 
             {
-                std::unique_lock<mutex> lock{ _mutex };
+                UniqueLock<mutex> lock{ _mutex };
                 _cvConsume.wait( lock, [this, currentTail]()
                 { return _bStop.load( std::memory_order_relaxed ) || currentTail != _head.load( std::memory_order_acquire ); } );
             }
@@ -348,7 +348,7 @@ namespace sw
                 _pDevice->notifyRenderFrameRetired();
 
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _tail.store( ( currentTail + 1 ) % _s_kRingCapacity, std::memory_order_release );
             }
             _cvProduce.notify_one();

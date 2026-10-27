@@ -653,7 +653,7 @@ namespace sw
         FracturePendingDamage pending;
         pending._kind  = FracturePendingDamage::Kind::Mesh;
         pending._event = event;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
 
@@ -667,7 +667,7 @@ namespace sw
         pending._event._strain  = strain;
         pending._event._impulse = impulse;
         pending._event._kind    = DestructionDamageKind::Point;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
 
@@ -678,7 +678,7 @@ namespace sw
         pending._event         = event;
         pending._groupPose     = groupPose;
         pending._bHasGroupPose = SW_TRUE;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
 
@@ -691,7 +691,7 @@ namespace sw
         pending._event._strain  = strain;
         pending._event._impulse = impulse;
         pending._event._kind    = DestructionDamageKind::Radial;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
 
@@ -738,7 +738,7 @@ namespace sw
         pending._event          = DestructionDamageUtil::makeImpactEvent( _profile, float3{}, float3{}, collision._impulse );
         if ( pending._event._strain <= 0.0f )
             return;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( pending );
     }
 
@@ -931,7 +931,7 @@ namespace sw
     {
         vector<FracturePendingDamage> listPending;
         {
-            std::scoped_lock<mutex> lock{ _pendingMutex };
+            ScopedLock<mutex> lock{ _pendingMutex };
             listPending.swap( _listPendingDamage );
         }
         if ( listPending.empty() )
@@ -1603,7 +1603,7 @@ namespace sw
 
     bool FractureComponentBase::hasPendingDamage() const
     {
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         return _listPendingDamage.empty() == false;
     }
 
@@ -1652,7 +1652,7 @@ namespace sw
         FracturePendingDamage pending;
         pending._kind = FracturePendingDamage::Kind::Snapshot;
         pending._snapshotBytes.assign( pData, pData + size );
-        std::scoped_lock<mutex> lock{ _pendingMutex };
+        ScopedLock<mutex> lock{ _pendingMutex };
         _listPendingDamage.push_back( std::move( pending ) );
     }
 

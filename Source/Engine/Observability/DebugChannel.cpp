@@ -96,7 +96,7 @@ namespace sw
         if ( _pTransport != nullptr )
             _pTransport->shutdown();
         _pTransport = nullptr;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listConnection.clear();
         _listRequest.clear();
     }
@@ -119,7 +119,7 @@ namespace sw
     {
         vector<Request> listRequest;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             listRequest.swap( _listRequest );
         }
         for ( const Request& request : listRequest )
@@ -136,9 +136,9 @@ namespace sw
         (void)remote;
         if ( bAccepted == false )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
-        Connection&             connection = _listConnection.emplace_back();
-        connection._packedHandle           = handle.packed();
+        ScopedLock<mutex> lock{ _mutex };
+        Connection&       connection = _listConnection.emplace_back();
+        connection._packedHandle     = handle.packed();
     }
 
     void DebugChannel::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
@@ -147,8 +147,8 @@ namespace sw
         bool bTooBusy = false;
         bool bTooLong = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            Connection*             pConnection = nullptr;
+            ScopedLock<mutex> lock{ _mutex };
+            Connection*       pConnection = nullptr;
             for ( Connection& connection : _listConnection )
             {
                 if ( connection._packedHandle == handle.packed() )
@@ -200,7 +200,7 @@ namespace sw
     void DebugChannel::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         (void)reason;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( size_t connectionIndex = 0; connectionIndex < _listConnection.size(); ++connectionIndex )
         {
             if ( _listConnection[connectionIndex]._packedHandle == handle.packed() )
@@ -263,7 +263,7 @@ namespace sw
             if ( isConnected() )
                 return true;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _bClosed == SW_TRUE )
                     break;
             }
@@ -278,7 +278,7 @@ namespace sw
         if ( _transport != nullptr )
             _transport->shutdown();
         _transport.reset();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _received.clear();
         _handle  = StreamConnectionHandle{};
         _bOpen   = SW_FALSE;
@@ -287,7 +287,7 @@ namespace sw
 
     bool DebugChannelClient::isConnected() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bOpen == SW_TRUE && _bClosed == SW_FALSE;
     }
 
@@ -297,7 +297,7 @@ namespace sw
         if ( _transport == nullptr || isConnected() == false )
             return false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _received.clear();
         }
         string line = _token;
@@ -309,8 +309,8 @@ namespace sw
         while ( DebugChannelInternal::nowMilli() < deadline )
         {
             {
-                std::scoped_lock<mutex> lock{ _mutex };
-                const size_t            headEnd = _received.find( '\n' );
+                ScopedLock<mutex> lock{ _mutex };
+                const size_t      headEnd = _received.find( '\n' );
                 if ( headEnd != string::npos )
                 {
                     const string_view head      = string_view( _received ).substr( 0, headEnd );
@@ -337,14 +337,14 @@ namespace sw
         (void)handle;
         (void)remote;
         (void)bAccepted;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bOpen = SW_TRUE;
     }
 
     void DebugChannelClient::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         (void)handle;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _received.append( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( size ) );
     }
 
@@ -352,7 +352,7 @@ namespace sw
     {
         (void)handle;
         (void)reason;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bClosed = SW_TRUE;
     }
 } // namespace sw

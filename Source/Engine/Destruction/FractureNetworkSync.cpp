@@ -32,7 +32,7 @@ namespace sw
 
     void FractureNetworkSync::queueDriveTarget( const FractureGroupPose& target )
     {
-        std::scoped_lock<mutex> lock{ _driveMutex };
+        ScopedLock<mutex> lock{ _driveMutex };
         for ( FractureGroupPose& existing : _listPendingDrive )
         {
             if ( existing._groupID == target._groupID )
@@ -47,7 +47,7 @@ namespace sw
     void FractureNetworkSync::takeDriveTargets( vector<FractureGroupPose>& outListTarget )
     {
         outListTarget.clear();
-        std::scoped_lock<mutex> lock{ _driveMutex };
+        ScopedLock<mutex> lock{ _driveMutex };
         outListTarget.swap( _listPendingDrive );
     }
 

@@ -164,7 +164,7 @@ namespace sw
 
         Series* findOrAddSeries( Kind kind, string_view name, string_view help, const vector<MetricLabel>& listLabel, const vector<float64>* pUpperBound );
 
-        vector<unique_ptr<Family>> _listFamily;
-        mutable mutex              _mutex;
+        vector<unique_ptr<Family>> _listFamily SW_GUARDED_BY( _mutex );
+        mutable mutex                          _mutex;
     };
 } // namespace sw

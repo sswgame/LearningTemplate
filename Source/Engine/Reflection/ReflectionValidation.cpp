@@ -202,7 +202,7 @@ namespace sw
 
     void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listIssue.empty() && listIssue.empty() )
             return;
         // 제자리에서 지운다. 씬 언로드는 오브젝트마다 여기를 지나므로 새 목록을 만들지 않는다.
@@ -234,19 +234,19 @@ namespace sw
 
     void ValidationIssueLog::collectIssues( vector<ValidationIssue>& outListIssue ) const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         outListIssue = _listIssue;
     }
 
     uint32 ValidationIssueLog::getIssueCount() const
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         return static_cast<uint32>( _listIssue.size() );
     }
 
     void ValidationIssueLog::clear()
     {
-        std::lock_guard<mutex> lock( _mutex );
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listIssue.empty() == false )
             _revision.fetch_add( 1, std::memory_order_acq_rel );
         _listIssue.clear();

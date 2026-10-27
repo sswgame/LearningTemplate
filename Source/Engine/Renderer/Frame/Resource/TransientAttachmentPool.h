@@ -100,9 +100,9 @@ namespace sw
     private:
         unordered_map<string, Attachment> _mapAttachment;
         /// @brief 이번 프레임에 이미 클리어한 첨부들입니다. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호합니다.
-        vector<hashed_string> _listClearedThisFrame;
-        mutable mutex         _clearedMutex;
-        uint32                _width;
-        uint32                _height;
+        vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
+        mutable mutex                               _clearedMutex;
+        uint32                                      _width;
+        uint32                                      _height;
     };
 } // namespace sw

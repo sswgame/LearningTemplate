@@ -41,7 +41,7 @@ namespace sw
 
     int32 ServiceHealthRegistry::registerCheck( string_view name, bool bRequiredForReady )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 같은 이름은 같은 검사다. 서비스를 멈췄다 다시 시작해도(모듈 리로드) 보고에 같은 줄이 둘 생기지 않는다.
         for ( size_t checkIndex = 0; checkIndex < _listCheck.size(); ++checkIndex )
         {
@@ -61,7 +61,7 @@ namespace sw
 
     void ServiceHealthRegistry::setCheck( int32 checkIndex, HealthState state, string_view detail )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( checkIndex < 0 || checkIndex >= static_cast<int32>( _listCheck.size() ) )
             return;
         Check& check  = _listCheck[static_cast<size_t>( checkIndex )];
@@ -71,44 +71,44 @@ namespace sw
 
     void ServiceHealthRegistry::markTick( int64 monotonicMs )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _lastTickMs = monotonicMs;
         _bTicked    = SW_TRUE;
     }
 
     void ServiceHealthRegistry::setDraining( bool bDraining )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _bDraining = bDraining ? SW_TRUE : SW_FALSE;
     }
 
     void ServiceHealthRegistry::setLivenessTimeoutMs( int64 timeoutMs )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _livenessTimeoutMs = timeoutMs;
     }
 
     bool ServiceHealthRegistry::isLive( int64 monotonicMs ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return isLiveLocked( monotonicMs );
     }
 
     bool ServiceHealthRegistry::isReady( int64 monotonicMs ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return isReadyLocked( monotonicMs );
     }
 
     bool ServiceHealthRegistry::isDraining() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bDraining == SW_TRUE;
     }
 
     void ServiceHealthRegistry::writeReport( string& outText, int64 monotonicMs ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outText += isLiveLocked( monotonicMs ) ? "live 1\n" : "live 0\n";
         outText += isReadyLocked( monotonicMs ) ? "ready 1\n" : "ready 0\n";
         outText += _bDraining == SW_TRUE ? "draining 1\n" : "draining 0\n";

@@ -271,8 +271,8 @@ namespace sw
         if ( pName == nullptr )
             return nullptr;
 
-        const utf8*             pTrimmedFile = ProfilerBackendInternal::trimSourcePath( pFile );
-        std::scoped_lock<mutex> lock{ ProfilerBackendInternal::s_siteMutex };
+        const utf8*       pTrimmedFile = ProfilerBackendInternal::trimSourcePath( pFile );
+        ScopedLock<mutex> lock{ ProfilerBackendInternal::s_siteMutex };
         for ( uint32 index = 0; index < ProfilerBackendInternal::s_siteCount; ++index )
         {
             const ProfileZoneSite& site      = ProfilerBackendInternal::s_arrSite[index];
@@ -301,7 +301,7 @@ namespace sw
 
     const utf8* ProfilerBackend::internName( const utf8* pName )
     {
-        std::scoped_lock<mutex> lock{ ProfilerBackendInternal::s_siteMutex };
+        ScopedLock<mutex> lock{ ProfilerBackendInternal::s_siteMutex };
         return ProfilerBackendInternal::internLocked( pName );
     }
 } // namespace sw

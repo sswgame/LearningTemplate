@@ -65,19 +65,19 @@ namespace sw
 
     void OcclusionTileMailbox::publish( shared_ptr<const OcclusionTileSnapshot> pSnapshot )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pLatest = std::move( pSnapshot );
     }
 
     void OcclusionTileMailbox::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pLatest.reset();
     }
 
     shared_ptr<const OcclusionTileSnapshot> OcclusionTileMailbox::getLatest() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pLatest;
     }
 } // namespace sw

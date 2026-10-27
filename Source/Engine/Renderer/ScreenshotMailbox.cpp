@@ -6,7 +6,7 @@ namespace sw
 {
     void ScreenshotMailbox::put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
-        const std::scoped_lock<mutex> lock{ _mutex };
+        const ScopedLock<mutex> lock{ _mutex };
         _pendingPath    = string{ filePath };
         _pendingTexture = sourceTexture;
         _pendingFormat  = sourceFormat;
@@ -14,7 +14,7 @@ namespace sw
 
     bool ScreenshotMailbox::take( ScreenshotRequest& outRequest )
     {
-        const std::scoped_lock<mutex> lock{ _mutex };
+        const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPath.empty() )
             return false;
         outRequest._path.swap( _pendingPath );
@@ -27,7 +27,7 @@ namespace sw
     void ScreenshotMailbox::reportCompleted( bool bWritten, const string& writtenPath )
     {
         {
-            const std::scoped_lock<mutex> lock{ _mutex };
+            const ScopedLock<mutex> lock{ _mutex };
             _lastPath = bWritten ? writtenPath : string{};
         }
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
@@ -35,7 +35,7 @@ namespace sw
 
     string ScreenshotMailbox::getLastPath() const
     {
-        const std::scoped_lock<mutex> lock{ _mutex };
+        const ScopedLock<mutex> lock{ _mutex };
         return _lastPath;
     }
 
