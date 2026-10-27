@@ -76,6 +76,33 @@ namespace
         return listNotice;
     }
 
+    /**
+     * @brief 가짜 서버가 조회를 한 번 더 받을 때까지(@p hitCounter 가 @p hitsBefore 를 넘을 때까지) 돌리고, 그 응답이 처리되도록 잠시 더 돌려 나온 환불을 모읍니다.
+     * @details 정해진 시간만 기다리면 부하가 큰 기계에서 조회가 늦게 가 실패한다 — 조건이 서면 끝낸다.
+     */
+    vector<ReceiptRefundNotice> collectRefundsAfterHit( test::FakeHTTPSFixture& https, IReceiptValidator& validator, int64 nowMs, const int32& hitCounter, int32 hitsBefore )
+    {
+        vector<ReceiptRefundNotice>     listNotice;
+        vector<ReceiptValidationResult> listIgnored;
+        const Deadline                  deadline = Deadline::afterMilliseconds( 10000 );
+        while ( hitCounter <= hitsBefore && deadline.isExpired() == false )
+        {
+            https.pump();
+            validator.update( UnixMilliseconds{ nowMs } );
+            validator.pollCompletions( listIgnored );
+            validator.pollRefunds( listNotice );
+        }
+        const Deadline settle = Deadline::afterMilliseconds( 100 );
+        while ( settle.isExpired() == false )
+        {
+            https.pump();
+            validator.update( UnixMilliseconds{ nowMs } );
+            validator.pollCompletions( listIgnored );
+            validator.pollRefunds( listNotice );
+        }
+        return listNotice;
+    }
+
     /** @brief 가짜 스팀 — QueryTxn(키 · 앱 · 주문)과 GetReport. */
     class FakeSteamHandler final : public IHTTPRequestHandler
     {
@@ -349,7 +376,7 @@ SW_TEST_CASE( SteamReceiptTest, TheRefundReportNotifiesEachRefundedOrderOnce )
 
     // 시각을 조회 주기만큼 밀면 두 번째 보고서가 온다 — 그래도 같은 주문을 다시 알리지 않는다.
     const int32                       reportHits = fixture._handler._reportHits;
-    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, kTestNowMs + SteamReceiptSettings{}._reportPollIntervalMs, 1, 300 );
+    const vector<ReceiptRefundNotice> listAgain  = collectRefundsAfterHit( fixture._https, fixture._validator, kTestNowMs + SteamReceiptSettings{}._reportPollIntervalMs, fixture._handler._reportHits, reportHits );
     SW_EXPECT_TRUE( fixture._handler._reportHits > reportHits );
     SW_EXPECT_EQUAL( listAgain.size(), size_t( 0 ) );
 }
@@ -450,7 +477,7 @@ SW_TEST_CASE( GoogleReceiptTest, TheVoidedPurchaseListNotifiesEachRefundOnce )
     SW_EXPECT_EQUAL( listNotice[0]._refundedMs, int64( 1700000000000ll ) );
     // 시각을 조회 주기만큼 밀면 두 번째 목록이 온다 — 그래도 같은 주문을 다시 알리지 않는다.
     const int32                       voidedHits = fixture._handler._voidedHits;
-    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, kTestNowMs + GoogleReceiptSettings{}._voidedPollIntervalMs, 1, 300 );
+    const vector<ReceiptRefundNotice> listAgain  = collectRefundsAfterHit( fixture._https, fixture._validator, kTestNowMs + GoogleReceiptSettings{}._voidedPollIntervalMs, fixture._handler._voidedHits, voidedHits );
     SW_EXPECT_TRUE( fixture._handler._voidedHits > voidedHits );
     SW_EXPECT_EQUAL( listAgain.size(), size_t( 0 ) );
 }

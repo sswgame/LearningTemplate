@@ -24,7 +24,11 @@ from pathlib import Path
 from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
+from common.Constants import kNotOurDirNames  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
 
+#: 훑지 않는 폴더 이름 — 빌드 산출물에 더해 `Resource/cache/`(.gitignore 대상, 테스트가 만드는 셰이더 캐시 수만 개)다. 저장소에 든 것이 아니라 훑는 시간만 늘린다.
+_kSkippedDirNames = kNotOurDirNames | frozenset({"cache"})
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 #: 런타임 텍스처 폴더 이름.
@@ -100,7 +104,7 @@ class CheckTextureFoldersGate(LintGate):
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         resourceRoot = (repositoryRoot / "Resource").resolve()
         listPath = [path.resolve().relative_to(resourceRoot).as_posix()
-                    for path in self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Resource",), bAnySuffix=True)]
+                    for path in self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Resource",), bAnySuffix=True, excludedDirNames=_kSkippedDirNames)]
         violations = findTextureFolderViolations(listPath)
         return GateResult(listViolation=violations, summary=f"Resource 파일 {len(listPath)}개")
 

@@ -289,6 +289,30 @@ namespace
             }
             return listNotice;
         }
+
+        /** @brief 가짜 서버가 조회를 한 번 더 받을 때까지 돌리고, 그 응답이 처리되도록 잠시 더 돌려 나온 환불을 모읍니다(정해진 시간만 기다리면 부하가 큰 기계에서 늦는다). */
+        vector<ReceiptRefundNotice> collectRefundsAfterHit( UnixMilliseconds nowMs, const int32& hitCounter, int32 hitsBefore )
+        {
+            vector<ReceiptRefundNotice>     listNotice;
+            vector<ReceiptValidationResult> listIgnored;
+            const Deadline                  deadline = Deadline::afterMilliseconds( 10000 );
+            while ( hitCounter <= hitsBefore && deadline.isExpired() == false )
+            {
+                _https.pump();
+                _validator.update( nowMs );
+                _validator.pollCompletions( listIgnored );
+                _validator.pollRefunds( listNotice );
+            }
+            const Deadline settle = Deadline::afterMilliseconds( 100 );
+            while ( settle.isExpired() == false )
+            {
+                _https.pump();
+                _validator.update( nowMs );
+                _validator.pollCompletions( listIgnored );
+                _validator.pollRefunds( listNotice );
+            }
+            return listNotice;
+        }
     };
 
     ReceiptValidationRequest makeRequest( const utf8* pPayload, uint64 ticket )
@@ -380,7 +404,7 @@ SW_TEST_CASE( AppleReceiptTest, TheNotificationHistoryNotifiesEachRefundOnceAcro
 
     // 시각을 조회 주기만큼 밀어 다시 읽어도 같은 거래를 다시 알리지 않는다.
     const int32                       historyHits = fixture._handler._historyHits;
-    const vector<ReceiptRefundNotice> listAgain   = fixture.collectRefunds( fixture._nowMs + AppleReceiptSettings{}._historyPollIntervalMs, 1, 300 );
+    const vector<ReceiptRefundNotice> listAgain   = fixture.collectRefundsAfterHit( fixture._nowMs + AppleReceiptSettings{}._historyPollIntervalMs, fixture._handler._historyHits, historyHits );
     SW_EXPECT_TRUE( fixture._handler._historyHits > historyHits );
     SW_EXPECT_EQUAL( listAgain.size(), size_t( 0 ) );
 }
