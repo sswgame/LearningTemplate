@@ -180,7 +180,7 @@ namespace sw
         float32 _intensity{ 0.0f };
 
         /**
-         * @brief 어느 쪽에서도 돕니다 — CPU 는 씬 라이트 목록에, GPU 는 라이트 버퍼의 GPU 구간에 빛을 냅니다(`VfxGpuLights.md` L4).
+         * @brief 어느 쪽에서도 돕니다 — CPU 는 씬 라이트 목록에, GPU 는 라이트 버퍼의 GPU 구간에 빛을 냅니다(결정 기록 5-5 VfxGpuLights L4).
          * @details 옛 규칙(빛을 내면 CPU 전용)은 깊이 충돌(GPU 전용)과 한 방출기에 둘 수 없었다. 이제 한 방출기에 둘 다 있으면 GPU 로 돈다.
          */
         VfxSimulationTargetSet getSupportedTargets() const { return VfxSimulationTargetSet::makeAll(); }

@@ -68,7 +68,7 @@ namespace test
             if ( imported._clip.saveToFile( clipPath ) == false )
                 return false;
         }
-        outRig._clipFolder = test::makeTempResourceID( clipDiskFolder ); // 애니메이터는 리소스 id 만 받는다(계획 DiskPathVsResourceId)
+        outRig._clipFolder = test::makeTempResourceID( clipDiskFolder ); // 애니메이터는 리소스 id 만 받는다(결정 기록 5-4)
         if ( outRig._clipFolder.empty() )
             return false;
         // 리그도 `.glb` 처럼 그 옆 디스크 파일을 임포터처럼 파일로 읽는다. 둘 다 쿠킹에서 빠지는 원본(`rigs_raw`)이라 `ResourceIO` 로 읽으면 배포본(팩만 읽고

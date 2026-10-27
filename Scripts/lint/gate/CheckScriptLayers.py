@@ -15,7 +15,7 @@ Scripts 층 검사 — `Scripts/` 의 파이썬 모듈은 층을 거꾸로 · �
 
 왜 게이트인가: 파이썬에는 CMake 의 링크 가시성(`target_link_libraries`)에 해당하는 형식이 없어 import 방향을 형식으로 막을 수 없고,
 파일을 경로로 돌리면 파이썬이 그 파일의 폴더를 sys.path 맨 앞에 넣으므로 맨 이름 import 도 형식으로 막지 못한다. 숨은 라이브러리를
-층 0 · 1 로 옮겨 import 할 이유를 없앴고(`docs/plans/ScriptsStructure.md`), 이 게이트는 남은 틈만 본다. 같은 파일이 실제로 두 이름으로
+층 0 · 1 로 옮겨 import 할 이유를 없앴고(`docs/decisions/5-2_Build.md`), 이 게이트는 남은 틈만 본다. 같은 파일이 실제로 두 이름으로
 로드되는지는 `Test/PythonTest/TestScriptsImportIdentity.py` 가 본다.
 
 동적 import(`importlib.import_module`)는 보지 않는다. 린트 틀(`LintCatalog`)이 층 2 의 린트를 폴더로 찾아 싣는 것은 언리얼 UAT 가
@@ -170,7 +170,7 @@ class CheckScriptLayersGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "Scripts 층 위반"
     hint = (
-        "  다른 명령이 쓸 코드는 common/(공용) 이나 lint/ 의 틀 모듈로 옮긴다(docs/plans/ScriptsStructure.md 2절).\n"
+        "  다른 명령이 쓸 코드는 common/(공용) 이나 lint/ 의 틀 모듈로 옮긴다(`docs/decisions/5-2_Build.md`).\n"
         "  조립 명령처럼 이유가 있는 간선만 Scripts/lint/rules/CheckScriptLayers.toml 의 [exemption] 에 '<파일>|<모듈>' 로 이유와 함께 둔다."
     )
     selfTestCases = [

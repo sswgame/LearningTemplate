@@ -10,7 +10,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 팩 단위 차분 배포(docs/plans/PatchDeltaDelivery.md) — 차이 셈, 패치 목록 형식, 패치 사슬, 지움 목록으로 아래 팩 가리기.
+// 팩 단위 차분 배포(docs/decisions/5-9_OnlineNet.md) — 차이 셈, 패치 목록 형식, 패치 사슬, 지움 목록으로 아래 팩 가리기.
 
 /**
  * @brief [PackPatchTest] 두 빌드의 차이는 새 · 바뀐 경로와 지운 경로다 — 같은 내용은 싣지 않고, 결과는 경로 사전순이다

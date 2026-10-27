@@ -1,5 +1,5 @@
 """
-Scripts/common — 공용 라이브러리 층(층 0, `docs/plans/ScriptsStructure.md`). 위 층(lint · 명령)을 import 하지 않는다.
+Scripts/common — 공용 라이브러리 층(층 0, `docs/decisions/5-2_Build.md`). 위 층(lint · 명령)을 import 하지 않는다.
 
 패키지는 아무 이름도 다시 내보내지 않는다. 쓰는 쪽은 모듈을 이름으로 부른다(`from common.Process import runProcess`) — 어느 모듈에 기대는지가
 import 줄에 보이고, 프로세스마다 쓰지 않는 모듈까지 읽지 않는다. 모듈 목록과 한 줄 설명은 `py -3 -m Scripts --list common` 이다.

@@ -1,6 +1,6 @@
 /**
  * @file EditorLightProbeBakeCommand.cpp
- * @brief 에디터 커맨드 "Bake Light Probes"(`lighting.bakeProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 라이트 프로브 볼륨을 베이크합니다(IndirectLighting.md P6).
+ * @brief 에디터 커맨드 "Bake Light Probes"(`lighting.bakeProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 라이트 프로브 볼륨을 베이크합니다(결정 기록 5-5 P6).
  * @details 선택한 오브젝트 중 볼륨이 있으면 그것만, 없으면 씬의 모든 볼륨을 베이크한다(언리얼 Build Lighting 의 선택 베이크와 같은 구분).
  *          커맨드는 베이크 세션(`EditorLightProbeBakeSession`)을 시작만 한다 — 베이크는 에디터 프레임에 나눠 돌고(나눠 베이크하는 규칙은 그 헤더), 진행은 상태줄에 보인다.
  */

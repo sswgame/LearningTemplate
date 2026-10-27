@@ -380,7 +380,7 @@ SW_TEST_CASE( UIInputTest, PointerPositionSubtractsViewportOrigin )
 /**
  * @brief [UIInputTest] 툴팁은 설명 글이 있는 위젯 위에 지연 시간(0.5 초) 머문 뒤 뜨고, 머무는 동안 화면이 다시 열리지 않으며(깜빡임 없음) 화면 안에 놓이고, 포인터가 떠나면 닫힌다 —
  *        호버한 위젯의 커서 모양은 입력 관리자에 가고 떠나면 화살표로 돌아온다
- * @details UiTooltipAndCursor T4 의 "툴팁 위치 · 깜빡임" 을 디바이스 없이 확인한다. 변이: 주인이 같은데 `hide` 를 부르면 화면 핸들이 바뀌어 진다. 위치를 화면 안으로 모으지 않으면 오른쪽 변의 단추에서 화면 밖으로 나가 진다.
+ * @details 결정 기록 5-7 T4 의 "툴팁 위치 · 깜빡임" 을 디바이스 없이 확인한다. 변이: 주인이 같은데 `hide` 를 부르면 화면 핸들이 바뀌어 진다. 위치를 화면 안으로 모으지 않으면 오른쪽 변의 단추에서 화면 밖으로 나가 진다.
  */
 SW_TEST_CASE( UIInputTest, TooltipShowsAfterDelayStaysPutAndClosesOffTheWidget )
 {
@@ -430,7 +430,7 @@ SW_TEST_CASE( UIInputTest, TooltipShowsAfterDelayStaysPutAndClosesOffTheWidget )
 /**
  * @brief [UIInputTest] 마우스로 월드 공간 단추를 누른다 — 카메라 광선이 화면 가운데의 단추를 맞혀 호버 · 클릭이 되고 게임의 Fire 는 먹힌다. 화면이 창 안 (600, 400) 에 놓인
  *        에디터 게임 뷰(배율 2)에서도 창 (1560, 940) 이 같은 가운데다 — 화면 위젯 밖의 누름은 그대로 게임에 간다
- * @details WorldWidgetInput W4 의 "마우스로 월드 단추 누르기" 를 디바이스 없이 확인한다(`UISystem::processWorldPointer` → `WorldWidgetPick::makeRay` → `WidgetComponent`).
+ * @details 결정 기록 5-7 W4 의 "마우스로 월드 단추 누르기" 를 디바이스 없이 확인한다(`UISystem::processWorldPointer` → `WorldWidgetPick::makeRay` → `WidgetComponent`).
  *          변이: `processWorldPointer` 가 광선 위치에 `_pointerOrigin` 이 빠진 값을 쓰면 원점이 있는 판에서 단추를 놓쳐 진다. 단추를 처리한 누름을 소비하지 않으면 Fire 가 새어 진다.
  */
 SW_TEST_CASE( UIInputTest, MouseClickOnWorldWidgetThroughCameraRay )

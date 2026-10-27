@@ -1,7 +1,7 @@
 /**
  * @file AssetMeta.h
  * @brief 에셋 곁의 `.meta`(에셋 식별자 GUID · 소스 경로 · 임포트 산출물 여부)의 형식입니다. `.meta` 를 읽고 쓰는 곳은 이 구조체 하나입니다.
- * @details `.meta` 는 에셋 곁에 놓이고 에셋과 함께 참조되므로 에셋의 형식(XML)을 따른다 — 예전의 `key=value` 텍스트(`KeyValueFile`)를 옮겼다(계획 StructureSimplification TX1).
+ * @details `.meta` 는 에셋 곁에 놓이고 에셋과 함께 참조되므로 에셋의 형식(XML)을 따른다 — 예전의 `key=value` 텍스트(`KeyValueFile`)를 옮겼다(결정 기록 5-4 TX1).
  *          한 요소 `<AssetMeta _guid="…" _sourcePath="…" _bImported="false"/>` 이고 리플렉션으로 엄격하게 읽는다(모르는 속성 · 빠진 필수 칸은 오류).
  *          `_sourcePath` 는 사람이 읽으라고 남긴다 — 레지스트리는 `.meta` 가 놓인 자리를 경로로 쓴다(`AssetDatabase::makeRegistryText`).
  *          임포터(`ModelImportMaterial`)와 `AssetDatabase` 가 같은 `toXML` 로 쓰므로 형식이 둘로 갈라지지 않는다.

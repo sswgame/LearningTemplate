@@ -1095,7 +1095,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
 /**
  * @brief [ResourceTest] 리소스 입구는 OS 경로를 구성과 무관하게 거절하고, 디스크 파일은 디스크 입구 · 붙인 디스크 도메인으로 읽는다
  * @details 예전에는 OS 절대 경로를 디스크에서 바로 읽고 팩 전용 모드만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 를 지나 배포 테스트에서야
- *          드러났다(계획 `DiskPathVsResourceId` 안 B). 이제 두 모드 모두 거절하고, 루트 밖 파일은 `readTextFile` 이나 `mountDiskDomain` 의 id 로 읽는다.
+ *          드러났다(결정 기록 5-4 안 B). 이제 두 모드 모두 거절하고, 루트 밖 파일은 `readTextFile` 이나 `mountDiskDomain` 의 id 로 읽는다.
  */
 SW_TEST_CASE( ResourceTest, ResourceEntryRefusesOSPathsInEveryMode )
 {
@@ -1188,7 +1188,7 @@ SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
 
 /**
  * @brief [AssetTypeRegistryTest] 등록된 종류는 이름 · 접미사가 겹치지 않고, 접미사는 가장 긴 것이 먼저 맞는다
- * @details 종류의 사실(접미사 · 쿠킹 역할 · 판)은 정의 하나에서 나온다(계획 StructureSimplification AT1). 쿠킹 역할이 있는 접미사는 쿠킹본 이름으로 풀리고,
+ * @details 종류의 사실(접미사 · 쿠킹 역할 · 판)은 정의 하나에서 나온다(결정 기록 5-4 AT1). 쿠킹 역할이 있는 접미사는 쿠킹본 이름으로 풀리고,
  *          저작 소스 판정이 역할과 같다. 표의 적은 순서가 아니라 길이가 우선순위다 — `.scene.xml` 이 `.scene` 보다, `.prefab.json` 이 `.prefab` 보다 먼저.
  */
 SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )

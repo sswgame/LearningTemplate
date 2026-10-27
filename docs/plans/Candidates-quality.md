@@ -3,7 +3,7 @@
 > 상태: 후보 · 선행: 없음 · 영역: quality · 옛번호: B-5, B-7, B-15, C-28, C-33, E-4, E-10 · 진행: 해당없음
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 쿠킹, 간헐 실패 관찰 가운데 아직 착수하지 않은 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다.
-이미 계획 문서가 있는 일은 [BuildSpeed](BuildSpeed.md) · [GpuVerification](GpuVerification.md) · [ImportRuleOverlap](ImportRuleOverlap.md) · [SourceScanGates](SourceScanGates.md) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md) 에 있습니다.
+이미 계획 문서가 있는 일은 [BuildSpeed](BuildSpeed.md) · [GpuVerification](GpuVerification.md) · [결정 기록 5-11](../decisions/5-11_Editor.md) · [결정 기록 5-2](../decisions/5-2_Build.md) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md) 에 있습니다.
 
 ## 확인 대기
 
@@ -18,6 +18,13 @@
 제목: 이미지 도입의 확인
 옛번호: B-15
 남은 것: 노멀 맵 열 장(`textures_raw/surfaces/*_normal.jpg`, 모두 Poly Haven `nor_gl` = 초록이 위)을 다시 굽는 일. 셰이더(`toon.hlsl`)가 glTF 규약(초록이 위)인데 `Base_NormalMap` 이 `invert_green: true` 로 구워 DDS 의 초록이 원본과 반대였다(BC5 를 디코드해 견줌, 상관 -0.997). 2026-10-27 `invert_green` 을 껐고(결정 기록 5-5) 저장소 설정은 `EditorTexturePipelineTest.RepositoryNormalMapsKeepTheEngineGreenConvention` 이 지킨다. 구운 열 장과 `import.stamp` 는 아직 옛 규칙의 것이다 — 매니페스트 id `normal-maps-reimport`. 다시 구워 커밋하면 이 절을 지운다(이 열 장을 쓰는 머티리얼은 아직 없다).
+
+### HostGpuIsolationChecks
+제목: 호스트 GPU 테스트의 쓰기 위치 분리 뒤 첫 실행 확인
+옛번호: 없음
+왜 필요한가: `AppBin` 잠금을 풀어(H2 ~ H4) `AppTest_HostOnly` 조각과 `QaGoldenImages` 가 GPU 슬롯 둘로 함께 돈다(결정 기록 5-2). 빌드 · 실행 전에 코드로만 정했다.
+남은 것(통합): 실행 대기: 매니페스트 id `host-write-snapshot-editor`, `host-write-snapshot-game`, `ctest-hostgpu-debug`. 앞 둘은 알려진 쓰기 위치 표(`Test/AppTest/HostWriteLocations.json`) 밖의 쓰기가 없는지 보고(에디터는 `-gv_editorStateDir` 없이 띄워 프로젝트 루트 `Saved/Editor/` 쓰기까지 본다) 셋째는 Debug `hostgpu` 시간을 잠금 해제 전 기준 2,254 s 와 견준다. 상시 `ctest-hostgpu-shipping` 이 같은 구성에서 세 번 반복해 재현율을 적고 한 번 지면 단독으로 다시 돌려 경합 탓인지 가른다. 보는 곳: 에디터 시나리오 두 백엔드 동시(`EditorScenariosPassOnOpenGL` + `EditorScenariosPassOnVulkan`)가 단독과 같은 통과 수인지, `AppScenarioTest.*.*` + `AppUITest.DemoScreenMatchesAcrossBackends`(같은 `uidemo`)의 레이아웃 · 휘도 단언, `AppSmokeTest.BenchFrameMatchesGoldenImage` 를 `QaGoldenImages` 와 동시에 돌린 골든 오차, `AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` 시간 전후(셰이더 캐시가 `Bin/Saved/ShaderCache` 그대로인지). 지면 `TestPolicy.json` 의 `hostResourceLock` 을 되살리는 H4 커밋 하나만 되돌린다.
+함정: 옛 `Bin/Saved/Automation` 의 보고는 더 갱신되지 않는다 — `scenario-logs` 가 낡은 보고를 읽지 않게 통합이 한 번 지운다. `packaging` 시나리오는 `Bin` 을 쓰기 루트 아래 `Saved/Packages/` 로 복사하므로 경로가 260 자를 넘는지 본다. 빌드 뒤 `-L nogpu`(`AutomationScratchTest.ScratchIDsBindToThisProcess` — 작업자 문법 검사 도구가 이 파일을 "command line is too long" 으로 못 봤다)와 `-L lint` 도 본다.
 
 ## 정리
 

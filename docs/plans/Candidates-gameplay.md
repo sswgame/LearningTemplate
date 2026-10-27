@@ -3,18 +3,19 @@
 > 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8,D4-9,D4-10,D4-11,D4-12,D4-13,D4-14,D4-15,D4-17,G-4,G-6,G-7 · 진행: 해당없음
 
 GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 착수 전 후보 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
-이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [MotionMatching](MotionMatching.md) · [WildWestHorseMount](WildWestHorseMount.md). 끝난 계획의 사람 확인 · 아직 명령이 없는 확인은 아래 첫 절에 있습니다.
+이미 계획 문서가 있는 일의 남은 것은 그 문서에 있습니다: [MotionMatching](MotionMatching.md) · [WildWestHorseMount](WildWestHorseMount.md). 끝난 계획의 사람 확인 · 장비 · 데이터가 없는 확인은 아래 첫 절에 있습니다.
 남은 기능 대기열은 [FeatureQueue](FeatureQueue.md) 계획 문서로 옮겼다.
 
 ## 확인 대기
 
-테스트 필터 · 시나리오로 도는 확인은 검증 묶음(`Test/QA/VerifyBatch.json`)이 돌렸고, 아래는 명령이 아직 없거나(`need_command`) 사람이 해야 해서(`manual`) 묶음이 돌리지 못하는 확인이다. 각 절의 `매니페스트 id` 줄이 항목의 주인이다. 명령이 생기면 항목에 달고 사람이 끝내면 항목과 절을 지운다. 남은 절은 모두 GPU 화면 · 임포트 산출물 · 장비 · 외부 에셋 · 사람의 판단이 있어야 끝나는 일이다(코드로 풀리는 일은 처리했다).
+테스트 필터 · 시나리오로 도는 확인은 검증 묶음(`Test/QA/VerifyBatch.json`)이 돌렸고, 아래는 사람이 해야 하거나 장비 · 데이터가 없어서(`manual`) 묶음이 돌리지 못하는 확인이다. 각 절의 `매니페스트 id` 줄이 항목의 주인이다. 명령이 생기면 항목에 달고 사람이 끝내면 항목과 절을 지운다. 남은 절은 모두 GPU 화면 · 임포트 산출물 · 장비 · 외부 에셋 · 사람의 판단이 있어야 끝나는 일이다(코드로 풀리는 일은 처리했다).
 
 ### AnimationLodAndCrowdChecks
 제목: 스킨드 LOD 사진
 옛번호: D4-6
 왜 필요한가: 스킨드 메시가 LOD 를 받고(`makeLODLevels( …, skinBoneCount, … )` · `.mesh` 의 선택 덩어리 `LSKN`) 고른 메시 단계가 본 LOD 단계를 정한다(`AnimationSystem::updateLOD` 가 `min( 메시 단계, 본 LOD 단계 수 - 1 )`, 한 프레임 늦음). 군중 공유 측정은 항목 `shooter-crowd-measure`(perf-compare `crowdShare`)가 돈다.
 남은 것: 매니페스트 id `skinned-lod-gpu-check` — LOD 규칙(simplify)을 건 스킨드 모델이 데이터에 아직 없다. 규칙을 건 모델을 `App --import-models` 로 임포트해(산출물 `.mesh` 를 커밋) 먼 거리 사진에서 낮은 단계가 스키닝되어 그려지고 본 LOD 단계가 메시 단계를 따르는지 본다.
+남은 것: 매니페스트 id `shooter-crowd-measure` — 적 30 마리를 세워 군중 포즈 공유 끔 대 켬의 GT.Animation 비용을 재는 perf-compare 케이스가 없다.
 못 하는 이유: 임포트 산출물을 만들려면 App 을 돌려야 하고 사진은 GPU 가 있어야 본다. 풀리는 조건: 통합 담당이 임포트와 사진을 한 번에 한다.
 함정: 외형이 구운 메시(`createBakedMesh`)와 병합 메시(`mergeMeshes`)는 LOD 를 갖지 않는다 — 몸에 LOD 를 쓰려면 병합을 끄고 베이크하지 않는 차림이어야 한다. 휘두름 · 움찔 클립(반복하지 않음)으로 갈 때 혼자로 내려가는 것은 맞다. 군중 시나리오의 사진에서 섞기 묶음이 끝날 때 위상이 튀면 들어가는 클립 시각을 다음 묶음의 칸 시각에 맞추는 길을 본다.
 
@@ -58,6 +59,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 남은 것:
 - 매니페스트 id `paired-animation-editor-window` — 미리보기 창(`PairedAnimationPanel`)에서 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 매니페스트 id `bowshoot-projectile-checks` — 쇼케이스(`bowshoot.scenario.xml`): ① 앞에서 보는 카메라를 씬에 더해 놓은 뒤 날아가는 투사체의 `_localDirection` 이 화살 앞이고 `_alignGain` 이 머리를 속도 쪽으로 돌리는지 본다 ② 당김 내내 화살 길이만 한 가는 줄 하나가 활 쪽에 붙어 보인다(활 메시의 시위 띠 스킨 의심).
+- 매니페스트 id `paired-animation-two-process` — Server + App 두 프로세스로 세션 시작 · 늦은 참가 · 끝 복제를 보는 확인을 한 명령으로 묶는다(지금은 두 프로세스를 띄우는 명령이 없다).
 함정: 재생 속도를 매 프레임 쓰는 컴포넌트가 새로 생기면 세션 쥠(`setPlayRateHeld`)을 받아야 한다 — 안 받으면 시각 검사가 어긋남으로 보고 중단한다. 복원은 `warp` 창을 다시 열지 않아 창 도중에 이어 받은 클라이언트는 휘지 않은 루트 모션으로 가고 서버 보정을 받는다. 프롭 역할 묶기는 시작 때 매니저 전체를 훑고 같은 에셋 · 같은 역할의 프롭이 둘 이상이면 거절한다.
 
 ### RigEditingScreenChecks
@@ -72,6 +74,14 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 렌더 스케일 · 시야 거리 · 후처리 품질 · 텍스처 품질 · 이펙트 품질 · 색각 보정 · 모션 블러 · 머리 흔들림이 값을 읽는다. 시나리오(`useroptions`)와 TAA 테스트는 통과했다.
 남은 것: 매니페스트 id `usersettings-visual-review`(사람) — 렌더 스케일 0.5 에서 장면만 흐리고 UI 는 그대로인지, 텍스처 품질 low 에서 흐려지는지(재시작), 이펙트 품질 low 에서 입자 수가 주는지, 색각 보정이 장면과 UI 에 한 번씩만 걸리는지(렌더 텍스처 모니터가 두 번 보정되지 않음). 포워드 넷의 모션 블러와 TAA 이웃 클램프(카메라를 돌릴 때 앞 그림이 겹치지 않음)도 이때 본다. 머리 흔들림 진폭은 데이터라 화면을 보고 고친다.
 못 하는 이유: UI · 렌더 텍스처 모니터 · 입자까지 한 그림에서 사람이 판단하는 확인이라 지표로 정할 값이 없다. 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다. X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 환경이 없어 풀리지 않는다.
+
+## 조건부
+
+### InteractionGridThreshold
+제목: 상호작용 공유 격자를 켜는 하는 쪽 수 문턱
+옛번호: G-4
+왜 필요한가: 하는 쪽이 둘 이상인 공간만 공유 공간 격자(`InteractionSpatialIndex`)를 맞춘다(`kMinInteractorCountForGrid`, 결정 기록 5-8). 문턱이 맞는지는 재야 안다.
+착수 조건: 매니페스트 id `interaction-bench`(`InteractionBenchTest.*` Release)에서 하는 쪽 8 · 64(격자)의 하는 쪽 수로 나눈 틱 비용이 하는 쪽 1(목록 순회)보다 낮지 않을 때 — `kMinInteractorCountForGrid` 를 올린다. 낮으면 이 절을 지운다.
 
 ## 기능
 

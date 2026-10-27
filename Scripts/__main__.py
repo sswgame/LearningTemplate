@@ -23,7 +23,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(docs/plans/ScriptsStructure.md)
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(`docs/decisions/5-2_Build.md`)
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ScriptCatalog import readScriptSummaries  # noqa: E402
@@ -72,6 +72,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("perf", "qa.PerfRegression", "Release 프레임 p50 · p99 를 이 기계의 기준과 견준다"),
     Subcommand("load", "qa.Load", "부하 검증 — 부하 시나리오 × 하드웨어 프로필을 Release 로 재고 예산(p50 · p99 · max) · 기준선과 견주며 병목을 적는다"),
     Subcommand("perf-compare", "qa.PerfCompare", "성능 변경의 전 · 후(스위치 · 바이너리 A/B)를 번갈아 여러 번 재고 중앙값 표를 낸다"),
+    Subcommand("write-snapshot", "qa.WriteSnapshot", "App 한 번의 전후로 쓰기 후보 폴더의 파일 목록을 견줘 알려진 쓰기 위치 표(Test/AppTest/HostWriteLocations.json)에 없는 쓰기를 찾는다"),
     Subcommand("scene-load-bench", "qa.SceneLoadBench", "큰 씬을 만들어 원본 XML 과 쿠킹본의 로드 시간 · 로드 중 최악 프레임을 견준다"),
     Subcommand("symbols", "dev.StoreSymbols", "빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사"),
     Subcommand("editor-theme", "dev.MakeEditorTheme", "에디터 테마 토큰(tokens.json)을 Figma 변수 · DTCG 와 주고받고 검사한다(import-figma · export-figma · check)"),

@@ -4,7 +4,7 @@
 
 ## 통합 CLI (`py -3 -m Scripts`)
 
-목록은 코드에서 만든다 — 손으로 적은 목록은 낡는다(`docs/plans/ScriptsStructure.md`).
+목록은 코드에서 만든다 — 손으로 적은 목록은 낡는다(`docs/decisions/5-2_Build.md`).
 
 ```bash
 # Windows: py -3 -m Scripts <명령>  /  POSIX: python3 -m Scripts <명령>

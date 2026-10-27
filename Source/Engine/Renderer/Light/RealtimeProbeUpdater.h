@@ -1,6 +1,6 @@
 /**
  * @file RealtimeProbeUpdater.h
- * @brief 실시간 라이트 프로브 갱신의 렌더 스레드 쪽입니다 — 복셀 · 기록(history) · 입력 행 버퍼를 갖추고 컴퓨트(`probeupdate.hlsl`)를 기록합니다(RealtimeGlobalIllumination.md R6).
+ * @brief 실시간 라이트 프로브 갱신의 렌더 스레드 쪽입니다 — 복셀 · 기록(history) · 입력 행 버퍼를 갖추고 컴퓨트(`probeupdate.hlsl`)를 기록합니다(결정 기록 5-5 R6).
  * @details 흐름: 게임 스레드의 `collectSceneLights` 가 실시간 볼륨마다 `RealtimeProbeRequest`(볼륨 원소 사본, 갱신 값, 복셀 격자)를 만든다. 이 클래스는
  *          (1) `prepare` 가 기록 전에 버퍼를 갖춘다 - 복셀 단어(격자가 바뀐 프레임에만 올린다), 기록(볼륨 구성이 바뀌면 0 으로 되돌린다), 입력 행(프레임마다);
  *          (2) `dispatch` 가 라이트 업로드 뒤 · 조명 전에 컴퓨트 한 번을 돈다. 컴퓨트는 모든 실시간 프로브를 한 번에 돈다 - 프로브마다 이번 프레임의 조면 광선을 쏘아 기록을 갱신하고,

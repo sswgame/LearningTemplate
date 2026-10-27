@@ -3,7 +3,7 @@
  * @brief 팩 단위 차분 배포(패치)의 형식입니다 — 두 빌드의 내용 목록에서 바뀐 · 지운 경로를 셈하고, 패치 목록 파일(`*.packpatch.xml`)을 읽고 쓰고,
  *        설치된 빌드에서 목표 빌드까지 이어지는 패치 순서를 정합니다.
  * @details 패치 하나는 팩 하나(바뀐 · 새 파일)와 목록 하나(어느 빌드에서 어느 빌드로, 지운 경로)다. 런타임은 패치 팩을 기본 팩보다 높은 우선순위로
- *          지움 목록과 함께 마운트한다(`ResourcePakManager::mountPatchPack`). 설계와 남은 단위는 docs/plans/PatchDeltaDelivery.md 이다.
+ *          지움 목록과 함께 마운트한다(`ResourcePakManager::mountPatchPack`). 설계와 남은 단위는 docs/decisions/5-9_OnlineNet.md 이다.
  *          빌드 번호는 목록에 적힌 글 그대로 비교한다 — 대소 비교를 하지 않는다(순서는 목록의 from → to 사슬이 정한다).
  */
 #pragma once

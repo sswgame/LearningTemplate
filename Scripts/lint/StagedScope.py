@@ -2,7 +2,7 @@
 커밋 훅의 파일 단위 검사 범위 — 병합 커밋이면 어느 부모와도 내용이 다른 staged 파일만 넘긴다.
 
 훅(`PreCommitLint.py`)과 그 셀프테스트(`selftest/CheckMergeCommitScope.py`)가 같은 판정을 쓴다. 셀프테스트가 훅 명령 모듈의 비공개 함수를
-import 하면 린트 명령끼리 의존하게 되므로(층 2 끼리, `docs/plans/ScriptsStructure.md`) 판정을 여기 둔다.
+import 하면 린트 명령끼리 의존하게 되므로(층 2 끼리, `docs/decisions/5-2_Build.md`) 판정을 여기 둔다.
 """
 
 from __future__ import annotations

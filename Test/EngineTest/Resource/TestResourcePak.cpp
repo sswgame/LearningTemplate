@@ -1069,7 +1069,7 @@ static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string_view> == fals
 // `sw::string` 은 제약 없는 explicit 템플릿 생성자(StringViewLike)가 있어 is_constructible 로는 볼 수 없다 — 암시 변환 금지 둘과 string_view 로 본다.
 static_assert( std::is_constructible_v<sw::string_view, sw::LooseFilePath> == false );
 static_assert( std::is_constructible_v<sw::LooseFilePath, sw::string> == false ); // 만드는 쪽은 ResourcePaths 하나다
-// 리소스 입구의 인자(`ResourceID`)는 글에서 저절로 만들어지지 않는다 — 디스크 경로 · 일반 문자열을 그대로 넘기면 컴파일되지 않는다(계획 DiskPathVsResourceId 안 C).
+// 리소스 입구의 인자(`ResourceID`)는 글에서 저절로 만들어지지 않는다 — 디스크 경로 · 일반 문자열을 그대로 넘기면 컴파일되지 않는다(결정 기록 5-4 "리소스 입구" 안 C).
 static_assert( std::is_convertible_v<sw::string_view, sw::ResourceID> == false );
 static_assert( std::is_convertible_v<const utf8*, sw::ResourceID> == false );
 static_assert( std::is_convertible_v<sw::string, sw::ResourceID> == false );

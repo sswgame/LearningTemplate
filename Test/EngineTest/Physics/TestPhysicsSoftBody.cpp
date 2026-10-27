@@ -155,7 +155,7 @@ SW_TEST_CASE( PhysicsSoftBodyTest, PinnedVerticesFollowTheObject )
 }
 
 /**
- * @brief [PhysicsSoftBodyTest] 고정 본을 정했는데 스켈레탈 메시가 없으면 천을 만들지 않는다 — 오브젝트 자세로 대신 걸지 않는다(ClothFollowups C3)
+ * @brief [PhysicsSoftBodyTest] 고정 본을 정했는데 스켈레탈 메시가 없으면 천을 만들지 않는다 — 오브젝트 자세로 대신 걸지 않는다(결정 기록 5-5 C3)
  * @details 본을 비우면 고정 자세는 오브젝트의 월드 자세다.
  */
 SW_TEST_CASE( PhysicsSoftBodyTest, MissingPinBoneLeavesTheClothUnsimulated )

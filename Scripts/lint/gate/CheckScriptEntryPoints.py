@@ -10,7 +10,7 @@ Scripts/lint/gate/CheckScriptEntryPoints.py
 (`Scripts/common/__init__.py` 머리), 진입점이 `common` 을 부르면 이 결함이 원리상 생기지 않는다.
 
 - 직접(`import common` · `from common import ...`)이든, `common` 을 부르는 `Scripts/` 안 모듈(`lint.LintGate` · `lint.LintFixer` …)을 거쳐서든 된다.
-  모듈은 `Scripts/` 기준 점 이름으로 찾는다(import 루트가 하나다 — `docs/plans/ScriptsStructure.md`).
+  모듈은 `Scripts/` 기준 점 이름으로 찾는다(import 루트가 하나다 — `docs/decisions/5-2_Build.md`).
 - **함수 안의 import 는 치지 않는다** — 그 함수가 불리기 전의 출력은 보호받지 못한다(`RunForwardDeclarationCandidates.py` 가
   `--verify-unused` 갈래에서만 `common` 을 끌어와 `--apply` 끝에서 죽었다).
 
@@ -19,7 +19,7 @@ Scripts/lint/gate/CheckScriptEntryPoints.py
 
 **sys.path 는 진입점의 한 줄만 바꾼다**: `sys.path.insert(0, str(Path(__file__).resolve().parents[N]))` 가 `Scripts/` 를 가리킨다(N 은 `Scripts/`
 아래 폴더 깊이, `__main__.py` 는 `.parent`). 라이브러리(진입점이 아닌 모듈)는 sys.path 를 건드리지 않는다 — 루트가 늘면 같은 파일이 두 이름으로
-로드된다(`docs/plans/ScriptsStructure.md`). 층과 맨 이름 import 는 `CheckScriptLayers` 가 본다.
+로드된다(`docs/decisions/5-2_Build.md`). 층과 맨 이름 import 는 `CheckScriptLayers` 가 본다.
 
   python Scripts/lint/gate/CheckScriptEntryPoints.py [--root <repo>] [--files a.py b.py]
 """

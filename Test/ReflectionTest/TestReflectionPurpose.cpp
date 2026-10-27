@@ -188,7 +188,7 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAnAuthoringFileFailsTheRead )
 /**
  * @brief [ReflectionPurposeTest] 컨테이너 원소인 값 구조체 안의 RuntimeState 필드도 소프트 읽기를 객체째 실패시킨다(칸째 되돌려 orphan 으로 넘기지 않는다)
  * @details 예전에는 원소 읽기의 실패가 "필드 실패" 하나로 내려와 그 칸이 읽기 전 값으로 되돌려지고 orphan 이 되어 읽기가 성공했다
- *          (`docs/plans/SerializerSilentSkips.md` S3). 이제 원소 결과가 `ContainerReadResult::ObjectRejected` 로 올라온다. 바이너리는 `RuntimeStateInAContainerElementRejectsTheBinarySoftRead`.
+ *          (docs/decisions/5-4_DataConfig.md S3). 이제 원소 결과가 `ContainerReadResult::ObjectRejected` 로 올라온다. 바이너리는 `RuntimeStateInAContainerElementRejectsTheBinarySoftRead`.
  */
 SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSoftRead )
 {
@@ -227,7 +227,7 @@ SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheSo
  * @brief [ReflectionPurposeTest] 바이너리도 컨테이너 원소인 값 구조체 안의 RuntimeState 필드가 소프트 읽기를 객체째 실패시킨다
  * @details 원소 구조체는 `BinarySerializer::deserialize` 의 bool 로 읽혀 금지된 필드가 원소 실패(스트림 깨짐)로 내려왔고, 그 칸이 읽기 전 값으로
  *          되돌려져 orphan 이 되어 읽기가 성공했다. 이제 `deserializeNested` 의 `FieldReadResult::ObjectRejected` 가 그대로 올라온다
- *          (`docs/plans/SerializerSilentSkips.md` S4).
+ *          (docs/decisions/5-4_DataConfig.md S4).
  */
 SW_TEST_CASE( ReflectionPurposeTest, RuntimeStateInAContainerElementRejectsTheBinarySoftRead )
 {

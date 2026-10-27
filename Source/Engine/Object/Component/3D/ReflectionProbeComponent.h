@@ -1,6 +1,6 @@
 /**
  * @file ReflectionProbeComponent.h
- * @brief 반사 프로브 하나입니다. 이 위치에서 찍어 거른 둘레의 빛(`.reflprobe`)을 축 정렬 상자 안의 표면 반사로 씁니다(IndirectLighting.md P4).
+ * @brief 반사 프로브 하나입니다. 이 위치에서 찍어 거른 둘레의 빛(`.reflprobe`)을 축 정렬 상자 안의 표면 반사로 씁니다(결정 기록 5-5 P4).
  */
 #pragma once
 #include "Core/Common/Macros.h"

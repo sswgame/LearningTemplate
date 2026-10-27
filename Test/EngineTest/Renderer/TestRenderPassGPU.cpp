@@ -5222,7 +5222,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, LightProbeVolumeReplacesAmbient, 
 }
 
 /**
- * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(IndirectLighting.md P5)
+ * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(결정 기록 5-5 P5)
  * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
  *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 SurfaceOutput::store · 실행의 셋째 MRT · 바인딩 · PassTexture::loadGbufferMaterial 중 하나다.
  */
@@ -5266,7 +5266,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MetallicChangesForwardAndDeferred
 }
 
 /**
- * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(Vfx.md V5)
+ * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(결정 기록 5-5 V5)
  * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 비교한다.
  *          두 시뮬레이션은 같은 시계(`VfxEmitterClock`)와 같은 난수 수열(splitmix64)을 쓰므로 입자 수와 위치가 같아야 한다. 입자 하나가 빠지거나 위치가 틀리면
  *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 화소가 입자 화소의 `kMaxParticleDifferingPercent` % 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있다.

@@ -4,7 +4,7 @@ Scripts/lint/IncludeOrderRules.py
 include 순서 규칙 — `computeIncludeOrderInternal`(판정)과 `fixText`(고침). 게이트 `CheckIncludeOrder` 와 픽서 `FormatIncludeOrder` 가 같이 읽는다.
 
 판정을 린트 틀 층(층 1)에 두는 까닭: 게이트 · 픽서 · 보고서(층 2)가 서로의 모듈을 import 하면 명령끼리 의존한다.
-(`docs/plans/ScriptsStructure.md`, 층 게이트 `CheckScriptLayers`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
+(`docs/decisions/5-2_Build.md`, 층 게이트 `CheckScriptLayers`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
 """
 
 from __future__ import annotations

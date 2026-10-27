@@ -6,7 +6,7 @@
 
     py -3 -m Scripts doc 09_Decisions                       # docs/09_Decisions.md 의 목차
     py -3 -m Scripts doc 09_Decisions --section 5-4         # 결정 기록 5-4 영역 파일(docs/decisions/5-4_*.md) 전체. 다른 문서는 번호가 5-4 인 절만
-    py -3 -m Scripts doc docs/plans/Vfx.md --section V2     # 저장소 기준 경로도 된다. 제목 일부로 맞춘다
+    py -3 -m Scripts doc docs/plans/ClusteredLighting.md --section S3     # 저장소 기준 경로도 된다. 제목 일부로 맞춘다
 
 이유(2026-10-19 토큰 절감): 290KB 문서를 통째로 읽는 일을 규칙이 아니라 호출 형식으로 막는다(`.claude/hooks/ReadGuard.py`). 절을 자르는 구현은
 `common/MarkdownSections.py` 하나다(`plans --file --section` 과 공용). 절이 없거나 여럿에 맞으면 후보를 보이고 종료 1 이다.

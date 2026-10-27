@@ -150,7 +150,7 @@ namespace test
              *            `Saved/Editor`(레이아웃 · 테마 · 설정)를 읽고 써 동시에 도는 실행끼리 같은 JSON 을 고친다.
              *          - `-gv_userSettingsFile` 이 없으면 `<쓰기 루트>/Saved/UserSettings/usersettings.json` — 없으면 App 이 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>/`)의
              *            설정을 읽어 결과가 그 PC 의 설정에 달리고, 설정을 바꾸는 시나리오가 그 파일을 고친다.
-             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 배포본의 사용자 설정은 사용자 폴더 그대로다(HostGpuIsolation W11).
+             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 배포본의 사용자 설정은 사용자 폴더 그대로다(결정 기록 5-2 W11).
              */
             static sw::vector<sw::string> makeIsolationArguments( sw::string_view arguments, const sw::string& runFolder )
             {

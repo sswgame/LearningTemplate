@@ -4,7 +4,7 @@
 
 2026-10-04 사용자 지시로 빠른 순으로 둔 기능 대기열이다. 진행 방식은 [작업 방식](../11_Workflow.md) — 결함 먼저 · 겹치는 파일 없게 나누고, 병합은 준비되는 대로, 전체 검증은 큰 묶음 뒤 한 번.
 착수하는 것부터 이름 있는 계획 문서로 떼어 내고 여기서 지운다. **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시).
-다른 문서에 있는 것은 여기 다시 적지 않는다: 메시 LOD · PSO 미리 만들기 · 밉 스트리밍은 [PreloadAndLod](PreloadAndLod.md), 카메라는 [결정 기록 5-5](../decisions/5-5_GraphicsRHI.md), 리플레이 · 킬캠은 [결정 기록 5-8](../decisions/5-8_GameFramework.md), 하늘 · 높이 안개 옛 D2-5, 천 · 머리카락은 [ClothFollowups](ClothFollowups.md), DPI 실물 확인 옛 B-8.
+다른 문서에 있는 것은 여기 다시 적지 않는다: 메시 LOD · PSO 미리 만들기 · 밉 스트리밍은 [PreloadAndLod](PreloadAndLod.md), 카메라는 [결정 기록 5-5](../decisions/5-5_GraphicsRHI.md), 리플레이 · 킬캠은 [결정 기록 5-8](../decisions/5-8_GameFramework.md), 하늘 · 높이 안개 옛 D2-5, 천 · 머리카락은 [결정 기록 5-5](../decisions/5-5_GraphicsRHI.md), DPI 실물 확인 옛 B-8.
 
 ## 1. 대기열
 

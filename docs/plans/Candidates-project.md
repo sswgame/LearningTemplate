@@ -13,7 +13,7 @@
 남은 것:
 - `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
 - `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 부하가 섞여 무효. 다른 빌드가 없을 때 다시 잰다.
-- 실행 명령: 이 항목들은 `Test/QA/VerifyBatch.json` 에 이미 있다 — `half-resolution-bloom` · `runtime-quality-adjust-tracy` · `build-speed-unity-batch`(`need_command` 에 한 명령으로 안 되는 까닭), `terrain-bench-release` · `net-udp-bench`(명령 있음, `pending`). 새 항목을 만들지 않고 그 id 로 돌린다.
+- 실행 명령: 이 항목들은 `Test/QA/VerifyBatch.json` 에 이미 있다 — `half-resolution-bloom` · `runtime-quality-adjust-tracy` · `build-speed-unity-batch`(`manual` 에 한 명령으로 안 되는 까닭), `terrain-bench-release` · `net-udp-bench`(명령 있음, `pending`). 새 항목을 만들지 않고 그 id 로 돌린다.
 - 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak, 커밋 `14c775c55`)은 온라인 B([고정 배치형 코덱 계약](../../Source/Engine/Serialization/Fixed/README.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤). 매니페스트 `load-baseline-suite` 는 `--record` 가 없어 판정만 하므로, 갱신할 때는 `args` 에 `"--record"` 를 더한 항목(초안: `{"id": "load-baseline-record", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 240, "tool": "scripts", "args": ["load", "suite", "baseline", "--runs", "3", "--record"], "limit": "기준선 갱신 — 새 값이 예산 안인지 본다", "judge": "exit", "source": "docs/plans/Candidates-project.md InvalidMeasurementCleanup", "result_doc": "docs/plans/Candidates-project.md"}`)을 verifycmd 정리가 끝난 뒤 더한다.
 지금 못 하는 까닭: 전부 Release 빌드와 GPU · 서버를 혼자 쓰는 측정이다. 풀리는 조건: 통합이 끝나 빌드가 조용할 때 항목별 후보 절의 순서대로.
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.
@@ -23,7 +23,7 @@
 옛번호: C-75
 왜 필요한가: 측정 조건(기계 · 규모 · 날짜 · 근거 커밋)이 떨어져 나가면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했고(결정 기록 3절 머리, `[측정: 기계 · 규모 · 날짜 · 근거 커밋]`, 모르면 `미상`) 3절의 측정 기반 기각 줄은 채웠다. 기계가 `미상` 인 칸은 재측정 때 `PC SW` 처럼 적어 고친다.
 남은 것:
-- 재측정: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다(매니페스트 id `spin-and-hot-pool-heavy-frame` — 무거운 프레임을 만드는 perf-compare 케이스가 없어 명령이 아직 없다). `flatMapInProcesses` 16 → 8 워커는 `ctest -j` 겹침에서 다시 잰다.
+- 재측정: 스핀 늘리기(2→50 us) · hot pool 은 09-20 측정(조건 변수 시절, 0.7 ms 프레임, ±40 % 흔들림, p99 없음)이 근거라 무거운 프레임(8 ms 이상)에서 다시 잰다(매니페스트 id `spin-and-hot-pool-heavy-frame` — 상수를 바꾼 전 · 후 바이너리와 무거운 프레임을 만드는 장면이 있어야 해서 사람이 잰다). `flatMapInProcesses` 16 → 8 워커는 `ctest -j` 겹침에서 다시 잰다.
 - 재검토: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다.
 지금 못 하는 까닭: 재측정은 무거운 프레임 · `ctest -j` 겹침이 필요하고, 재검토는 사용자가 판단할 일이다. 풀리는 조건: 빌드가 조용할 때, 재검토는 사용자가 GT 병렬화를 다시 올릴 때.
 

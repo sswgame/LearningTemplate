@@ -31,7 +31,7 @@
     #include <UIAutomationClient.h>
 #endif
 
-// UiaClientTest — 내레이터 실기 확인(ScreenReaderSupport A6)을 대신한다. 진짜 창에 UIA 브리지를 달고, 같은 프로세스의 UI Automation 클라이언트(내레이터가 쓰는 같은 COM 길)가
+// UiaClientTest — 내레이터 실기 확인(결정 기록 5-7 A6)을 대신한다. 진짜 창에 UIA 브리지를 달고, 같은 프로세스의 UI Automation 클라이언트(내레이터가 쓰는 같은 COM 길)가
 // 다른 스레드에서 메뉴를 읽고(이름 · 컨트롤 타입) 누르고(Invoke) 슬라이더 값을 바꾸고(RangeValue) 포커스 이동 알림을 받는지 본다. 진짜 창이 필요해 CI 러너는 돌지 않는다.
 
 SW_TEST_REQUIRES_HOST( UiaClientTest, "creates a real window and drives it with a UI Automation client; headless CI runners have no desktop" );
@@ -243,7 +243,7 @@ namespace
 /**
  * @brief [UiaClientTest] 같은 프로세스의 UIA 클라이언트가 진짜 창에 단 브리지를 통해 메뉴를 읽고 조작한다 — 이름 · 컨트롤 타입(단추 50000 · 슬라이더 50015), Invoke 가 단추 클릭이 되고,
  *        RangeValue 로 슬라이더 값이 바뀌고(범위 0 ~ 10), 체크 상자의 켬 상태와 꺼진 단추의 비활성이 보이고, 포커스가 옮겨 간 위젯의 이름이 알림으로 온다
- * @details ScreenReaderSupport A6(내레이터 실기 확인)의 자동화 몫이다 — 내레이터가 쓰는 같은 UIA 클라이언트 길(`IUIAutomation`)이라 제공자 쪽 모양(스레드 넘김 · 패턴 · 이름 · 알림)을 사람 귀 없이 본다.
+ * @details 결정 기록 5-7 A6(내레이터 실기 확인)의 자동화 몫이다 — 내레이터가 쓰는 같은 UIA 클라이언트 길(`IUIAutomation`)이라 제공자 쪽 모양(스레드 넘김 · 패턴 · 이름 · 알림)을 사람 귀 없이 본다.
  *          클라이언트 호출은 메인 스레드(창 메시지 펌프)로 넘어와 답하므로 클라이언트는 다른 스레드에서 돈다. 변이: 제공자가 Invoke 패턴을 내지 않으면 클릭 수가 0 이라 진다.
  */
 SW_TEST_CASE( UiaClientTest, ClientReadsAndDrivesTheMenuThroughTheRealWindow )

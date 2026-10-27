@@ -41,6 +41,15 @@
 남은 것: 벤치 판 `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertzEncrypted` 를 Release 로 세 번 돌려 평문 판과의 `[Bench]` 줄 차를 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄로 적는다.
 실행 대기: 매니페스트 id `net-replication-bench`(혼자 돌 때 Release, 세 번).
 
+### RollbackPredictionLteRun
+제목: Shooter3D 예측 · 롤백의 lte 실행 확인
+옛번호: D7-8
+왜 필요한가: 몸 이동 예측 · 서버 보정 · 시각 보정(R1 ~ R4)은 코드와 테스트가 들어갔다(결정 기록 5-9). 지연 · 손실이 있는 연결에서 보정이 얼마나 일어나고 화면이 튀지 않는지는 실행해야 안다.
+남은 것:
+- 매니페스트 id `rollback-prediction-lte-run` — Shooter3D 전용 서버 + 클라이언트(`Server -game=Shooter3D` · `App -game=Shooter3D -gv_netConnectAddress=127.0.0.1:7777`)에 `-gv_netEmuPreset=lte` 를 걸고 움직여 보정 횟수(`getCorrectionCount`)와 화면이 튀지 않는지 본다.
+- 매니페스트 id `shooter-net-jump-lte` — 같은 실행에서 짧게 눌러도 점프가 매번 나가는지(`ShooterNetPawnComponent::_bJumpPending`)와 보정 횟수를 본다.
+못 하는 이유: 서버 + 클라이언트 두 프로세스에 입력을 주고 보정 횟수를 읽는 한 명령이 없고, 점프를 짧게 누르는 일과 화면 튐은 사람이 본다. 풀리는 조건: `netplay.scenario.xml` 에 점프 입력 단계와 보정 횟수 탐침이 생기면 `manual` 을 떼고 시나리오로 옮긴다.
+
 ## 정리
 
 ### ConfigRangeRejectRemaining
@@ -76,8 +85,8 @@
 제목: 네트워크 확장 후보
 옛번호: D7-9
 왜 필요한가: 쓰는 게임이 생기면 설계한다. 지금 못 하는 이유: 요구하는 게임이 없다. 풀리는 조건: 해당 기능을 쓰는 게임 · 키트가 정해질 때.
-재확인(2026-10-27): 물리 객체 예측은 선행 [RollbackPrediction](RollbackPrediction.md) 이 `측정대기` 라 착수하지 못하고, 음성 채팅 · 치팅 방어 · 서버 오케스트레이션을 요구하는 게임 · 키트는 `Source/Games` · 결정 기록 5-12 어디에도 없어 조건이 그대로다.
-남은 것: 물리 객체 예측([RollbackPrediction](RollbackPrediction.md) 다음), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장).
+재확인(2026-10-27): 물리 객체 예측은 선행인 클라이언트 예측 · 롤백(결정 기록 5-9 의 R1 ~ R4)이 코드까지 들어갔지만 `lte` 실행 확인(`RollbackPredictionLteRun`)이 남아 착수하지 않고, 음성 채팅 · 치팅 방어 · 서버 오케스트레이션을 요구하는 게임 · 키트는 `Source/Games` · 결정 기록 5-12 어디에도 없어 조건이 그대로다.
+남은 것: 물리 객체 예측(예측 · 롤백 `RollbackPredictionLteRun` 다음), 음성 채팅, 치팅 방어 체계(서버 검증 규칙 목록 · 이상 탐지), 서버 오케스트레이션(매칭 뒤 인스턴스 할당 · 확장).
 
 ## 조건부
 
@@ -87,6 +96,27 @@
 착수 조건: 출시 플랫폼이 정해지면.
 재확인(2026-10-27): 결정 기록(`09_Decisions.md` · `decisions/`)에 출시 플랫폼을 정한 줄이 없다. 제공자 SDK 연동은 외부 계정 · 라이선스가 걸려 사용자 결정 몫이라 착수하지 않았다.
 왜 필요한가: 업적 · 클라우드 세이브 · 오버레이 · 친구가 없다. 온라인 서비스의 제공자 추상에 붙일 자리는 있다.
+
+### PackPatchAppStartRun
+제목: 만든 패치를 Packs/ 에 두고 App 이 시작해 적용하는 실행
+옛번호: G-16
+왜 필요한가: 패치 만들기 · 시작 마운트는 Debug 테스트(`PackPatchTest` · `ResourcePakTest` · `PackLayoutTest`)가 `scanAndMountPacks` 를 직접 불러 확인했다. 실제 `Packs/` 폴더에 패치를 두고 App 이 시작할 때 적용하는 실행은 해 보지 않았다.
+착수 조건: 스팀 밖 채널이나 콘텐츠 핫픽스로 패치 사슬을 처음 쓸 때(출시는 스팀 기준이라 지금은 쓰지 않는다 — 결정 기록 5-9).
+남은 것: `App -game=Empty -cook-all -pack-build=1.0` → 파일 하나 더하기 → `-pack-build=1.1` → `-make-patch` → 패치를 `Packs/` 에 두고 App 시작 로그에서 사슬이 얹히는지 본다. 이 흐름을 한 명령으로 묶는 스크립트가 먼저다.
+
+### PackPatchSigning
+제목: 패치 목록 서명 · 팩 해시 확인과 배포 경로
+옛번호: G-16
+왜 필요한가: 스팀 전용 출시면 SteamPipe 가 무결성을 맡으므로 취소했다(P6, 결정 기록 5-9). 스팀 밖 채널(런처 · CDN · 스토어)이 생기면 패치 팩의 무결성을 엔진이 확인해야 한다.
+착수 조건: 스팀 밖 채널이 생길 때. 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저다.
+남은 것: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`) 시작 마운트가 마운트 전에 확인한다(실패하면 올린 팩을 모두 내린다).
+
+### PackSlotLayout
+제목: 항목 추가 · 삭제에 밀리지 않는 팩 슬롯 배치
+옛번호: G-16
+왜 필요한가: 팩은 가변 길이 이어 붙임 배치라 항목 하나를 추가 · 삭제하면 해시 순으로 뒤에 오는 항목의 37 ~ 45 % 가 섹터 단위로 밀려 고정 1 MB 청크 기준 업데이트 크기가 46 ~ 56 % 가 된다(합성 입력 측정, 결정 기록 5-9).
+착수 조건: 첫 스팀 업로드 두 번의 실제 업데이트 크기를 재서 나쁠 때(스팀이 내용 기준으로 청크를 자르면 지금 배치로 충분하다 — 문서로 확인하지 못했다).
+남은 것: 항목마다 청크 단위 패딩이나 슬롯 배치(팩 형식 변경, `Config/Engine/PackFormat.json`)를 낸다.
 
 ## 보류
 

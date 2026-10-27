@@ -24,7 +24,7 @@ namespace sw
 namespace sw::editor
 {
     /**
-     * @brief 미리보기 씬에 스폰하는 조명 환경 프리셋입니다. 씬 안의 오브젝트로 스폰하므로 따로 된 "환경" 타입이 없습니다(`EditorMultiWorld.md` 2.1).
+     * @brief 미리보기 씬에 스폰하는 조명 환경 프리셋입니다. 씬 안의 오브젝트로 스폰하므로 따로 된 "환경" 타입이 없습니다(결정 기록 5-11 의 다중 월드 줄).
      * @note 하늘은 `SkyComponent` 하나다(색은 컴포넌트의 기본값). `_bSky` 를 끄면 배경은 파이프라인의 SceneColor 클리어 색이다.
      */
     struct EditorPreviewEnvironment

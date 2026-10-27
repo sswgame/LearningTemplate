@@ -1,7 +1,7 @@
 /**
  * @file EditorPanelVisibility.h
  * @brief 에디터 패널마다 열림 · 닫힘을 기억하는 사용자 상태(`Saved/Editor/windows.json`, 이름 붙인 레이아웃의 `<이름>.windows.json`)입니다.
- * @details 사용자 상태는 리플렉션 JSON 이다(계획 StructureSimplification TX2 — 예전 `key=value` 의 `windows.ini`). `Saved/Editor/` 는 git 이 무시하는
+ * @details 사용자 상태는 리플렉션 JSON 이다(결정 기록 5-4 TX2 — 예전 `key=value` 의 `windows.ini`). `Saved/Editor/` 는 git 이 무시하는
  *          앱 상태라 옛 파일을 읽는 길을 두지 않는다 — 옛 `windows.ini` 가 남아 있어도 읽지 않고, 다음 저장이 새 파일을 쓴다.
  *          적지 않은 패널은 지금 상태 그대로 둔다(새로 생긴 패널은 등록한 기본 가시성).
  */

@@ -1,7 +1,7 @@
 /**
  * @file NetInterestGrid.h
  * @brief 관심 영역(relevancy) 격자입니다 — 엔티티 점을 XZ 평면 공간 해시에 두고, 들어오는 반경 · 나가는 반경(히스테리시스)으로 관찰자에게 보일지 정합니다.
- * @details 복제 키트(MMO 의 `MMOReplicator`, 클라이언트-서버의 관심 영역 거르기)가 같은 규칙을 쓰도록 Core 에 둔다(계획 `RollbackPrediction` 1단계).
+ * @details 복제 키트(MMO 의 `MMOReplicator`, 클라이언트-서버의 관심 영역 거르기)가 같은 규칙을 쓰도록 Core 에 둔다(결정 기록 5-9 1단계).
  *          - 들어오는 반경 안이면 보이기 시작하고, 나가는 반경 밖으로 가야 보이지 않게 된다. 나가는 반경 < 들어오는 반경은 `initialize` 가 거절한다(경계에서 들락날락한다).
  *          - 격자는 점만 든다(위치의 원본은 부르는 쪽의 엔티티 표다). 읽기(`queryEntering` · `isOutsideLeaveRadius`)는 상태를 바꾸지 않아 여러 스레드가 함께 불러도 된다 —
  *            쓰기(`setPoint` · `removePoint`)와 겹치지 않을 때.

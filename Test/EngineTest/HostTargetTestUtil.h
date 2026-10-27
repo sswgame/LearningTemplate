@@ -22,7 +22,7 @@ namespace test
          * @brief 전용 서버 빌드에서 @p resourceID 를 찾을 수 없으면 true 입니다.
          * @details 서버 패키지는 쿠킹 표 `target_excluded_asset_kinds` 의 종류(텍스처 · 셰이더 바이너리 · 오디오)를 담지 않는다. 클라이언트 코드가 든
          *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 테스트는 돌아서 진다.
-         *          글을 받는다 — 로더가 아니라 테스트 조건 판정이고, 부르는 쪽이 리터럴 · 기본 에셋 칸을 그대로 넘긴다(계획 DiskPathVsResourceId 1절).
+         *          글을 받는다 — 로더가 아니라 테스트 조건 판정이고, 부르는 쪽이 리터럴 · 기본 에셋 칸을 그대로 넘긴다(결정 기록 5-4 "리소스 입구").
          */
         static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceIO::hasResource( sw::ResourceID{ resourceID } ) == false; }
     };

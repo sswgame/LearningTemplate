@@ -32,7 +32,7 @@
 - `OctahedralNormal` 의 글 · 인자 성분은 방향이 아니라 저장된 좌표 (u, v) 입니다(방향으로 풀고 다시 담으면 비트가 흔들려 글 왕복이 불안정). 인스펙터만 방향 xyz 로 편집합니다(`InspectorValueWidget::Direction`).
 - 인자 변환(`ReflectValue`)은 성분이 하나면 숫자도 받고 범위 밖은 거절, 여럿이면 글만 받습니다.
 - 헤더: `Core/Math/PackedTypesFwd.h`(이름과 별칭의 유일한 정의)와 `PackedTypes.h`(완전한 정의 묶음). 표의 C++ 타입 칸에는 별칭만 씁니다(템플릿 이름의 쉼표가 매크로 인자를 나눔).
-- 한계: (1) `Transient` 가 아닌 압축 타입 `PROPERTY` 는 고정 배치형 코덱의 인코딩 표 밖이라 코드 생성기가 **생성 오류로 멈춥니다**([ReflectionFormats](ReflectionFormats.md) 3.1 · 3.4). 압축 타입을 B 코덱에 넣는 일은 새 인코딩 종류를 더하는 별도 단계 후보입니다. (2) 인스펙터는 색 선택기 · `Min` · `Max` 메타를 읽지 않고 성분 드래그입니다. (3) UI 바인딩과 스키마 이주는 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 숫자를 가릅니다. (4) `PROPERTY` 의 타입은 별칭(`unorm8x4`)으로 적습니다(풀어 쓴 `NormalizedVector<unorm8, 4>` 는 모르는 이름).
+- 한계: (1) `Transient` 가 아닌 압축 타입 `PROPERTY` 는 고정 배치형 코덱의 인코딩 표 밖이라 코드 생성기가 **생성 오류로 멈춥니다**([결정 기록 5-4](../decisions/5-4_DataConfig.md) 3.1 · 3.4). 압축 타입을 B 코덱에 넣는 일은 새 인코딩 종류를 더하는 별도 단계 후보입니다. (2) 인스펙터는 색 선택기 · `Min` · `Max` 메타를 읽지 않고 성분 드래그입니다. (3) UI 바인딩과 스키마 이주는 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 숫자를 가릅니다. (4) `PROPERTY` 의 타입은 별칭(`unorm8x4`)으로 적습니다(풀어 쓴 `NormalizedVector<unorm8, 4>` 는 모르는 이름).
 - 확인: `PackedValueTraitsTest`(CoreTest) · `PackedValueSerializationTest`(EngineTest) · `InspectorBuiltinValueTest`(EditorTest), 매니페스트 id `packed-types-test`.
 
 ## 2. 새 포맷 규칙

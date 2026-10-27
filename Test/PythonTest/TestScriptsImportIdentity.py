@@ -4,7 +4,7 @@
 `Scripts/` 의 모든 모듈은 이름이 하나다 — `Scripts/` 기준 점 이름(`lint.gate.CheckEngineLayers`, `common.Worktree`).
 
 import 루트가 여럿이면 같은 파일이 `gate.CheckX` 와 `CheckX` 처럼 두 모듈로 로드되어 모듈 상태 · 예외 클래스 · `mock.patch.object` 대상이
-갈라진다(`docs/plans/ScriptsStructure.md`). 모든 모듈을 점 이름으로 import 한 뒤 `sys.modules` 에서 같은 파일을 가진 모듈이 둘 이상이면 진다.
+갈라진다(`docs/decisions/5-2_Build.md`). 모든 모듈을 점 이름으로 import 한 뒤 `sys.modules` 에서 같은 파일을 가진 모듈이 둘 이상이면 진다.
 맨 이름 import 를 쓰는 자리는 `CheckScriptLayers` 가 막고, 이 테스트는 실제로 두 번 로드되는 경로를 잡는다.
 """
 
