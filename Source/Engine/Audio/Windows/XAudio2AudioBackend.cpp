@@ -403,6 +403,7 @@ namespace sw
         {
             callback.submitNext();
         }
+        getEngine().releaseAudioThread(); // 처음 버퍼는 이 스레드가 렌더했다 — 이후 렌더는 XAudio2 콜백 스레드가 맡는다(첫 호출이 역할을 받는다)
         hr = _impl->_pStreamVoice->Start( 0 );
         if ( FAILED( hr ) )
         {
