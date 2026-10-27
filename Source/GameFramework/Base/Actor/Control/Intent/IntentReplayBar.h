@@ -63,7 +63,8 @@ namespace sw
 
         UISystem*            _pUI;
         IntentRewindSession* _pSession;
-        Subscription         _scrubSubscription; ///< 슬라이더 값 변경 구독. 화면이 먼저 닫혀 슬라이더가 사라지면 무효가 된다
+        Subscription         _scrubSubscription;         ///< 슬라이더 값 변경 구독. 화면이 먼저 닫혀 슬라이더가 사라지면 무효가 된다
+        Subscription         _arrCommandRegistration[3]; ///< 화면 명령(뒤로 · 정지 · 닫기) 등록 구독. 화면이 먼저 닫히면 무효가 된다
         float32              _tickSeconds;
         float32              _shownMin;
         float32              _shownMax;

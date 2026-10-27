@@ -643,7 +643,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingReachesAnAddedInputMap )
         <Setting id="controls.pause" category="controls" type="keyBinding" action="UI.Pause" default=""/></UserSettingsSchema>)",
                                                     "uimap.settings.xml" ) );
     settings.reapplyAll(); // UI 맵이 아직 없다 — 건너뛴다
-    settings.addKeyBindingInputMap( uiMap );
+    sw::Subscription uiMapRegistration = settings.addKeyBindingInputMap( uiMap );
 
     sw::UserSettingBindingConflict conflict;
     SW_EXPECT_TRUE( settings.findBindingConflict( "controls.pause", "Key.Backspace", conflict ) ); // 같은 UI 레이어의 UI.Back
@@ -656,14 +656,13 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingReachesAnAddedInputMap )
     SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::P ) );
 
     // 나중에 더한 맵(다시 만든 UI)에도 확정 값이 바로 들어간다.
-    settings.removeKeyBindingInputMap( uiMap );
+    uiMapRegistration.reset();
     sw::InputMap rebuiltMap;
     rebuiltMap.registerLayer( "UIGlobal", 0, true, false, false );
     rebuiltMap.bind( "UI.Pause", sw::Key::Escape, sw::ActionTrigger::Pressed, "UIGlobal" );
-    settings.addKeyBindingInputMap( rebuiltMap );
+    const sw::Subscription rebuiltMapRegistration = settings.addKeyBindingInputMap( rebuiltMap );
     SW_ASSERT_TRUE( rebuiltMap.findRebindSlot( "UI.Pause", 0, slot ) );
     SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::P ) );
-    settings.removeKeyBindingInputMap( rebuiltMap );
 }
 
 /**

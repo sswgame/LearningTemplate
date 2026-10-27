@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/NavMeshGeometry.h"
@@ -83,6 +84,7 @@ namespace sw
         float3                _carvedPosition;
         float32               _carvedYaw;
         uint32                _navIndex;
+        Subscription          _navRegistration;      ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         uint32                _seenTransformVersion; ///< `_volume` 을 만든 때의 월드 변경 번호(`SceneComponent::getWorldTransformVersion`)
         uint8                 _bCarved     : 1;      ///< 내비메시가 이 장애물을 품고 있다
         uint8                 _bShapeDirty : 1;      ///< 모양을 바꿨다 — 다음 갱신에 다시 뚫는다

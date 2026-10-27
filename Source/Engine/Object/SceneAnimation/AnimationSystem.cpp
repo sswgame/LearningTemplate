@@ -235,16 +235,16 @@ namespace sw
         SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }
 
-    void AnimationSystem::registerLODClient( IAnimationLODClient* pClient )
+    Subscription AnimationSystem::registerLODClient( IAnimationLODClient* pClient )
     {
-        if ( pClient == nullptr )
-            return;
-        (void)_lodClientList.add( pClient ); // 이미 있으면 아무것도 하지 않는다
+        if ( pClient == nullptr || _lodClientList.add( pClient ) == false )
+            return {}; // 이미 있으면 먼저 받은 구독이 쥔다
+        return issueSubscription( reinterpret_cast<uint64>( pClient ) );
     }
 
-    void AnimationSystem::unregisterLODClient( IAnimationLODClient* pClient )
+    void AnimationSystem::releaseSubscription( uint64 id )
     {
-        (void)_lodClientList.remove( pClient ); // 없으면 아무것도 하지 않는다
+        (void)_lodClientList.remove( reinterpret_cast<const IAnimationLODClient*>( id ) ); // 구독 하나가 등록 하나라 늘 있다
     }
 
     void AnimationSystem::setLODViews( const vector<AnimationLODView>& listView )

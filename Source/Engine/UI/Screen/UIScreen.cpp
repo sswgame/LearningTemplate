@@ -24,6 +24,7 @@ namespace sw
         , _bindingSet{}
         , _animationPlayer{ _tree }
         , _mapCommandToHandler{}
+        , _nextCommandID{ 1 }
         , _pUISystem{ nullptr }
         , _handle{ kInvalidUIScreenHandle }
         , _lastFocused{ kInvalidWidgetID }
@@ -103,22 +104,31 @@ namespace sw
     {
     }
 
-    void UIScreen::registerCommand( const hashed_string& command, const UICommandDelegate& handler )
+    Subscription UIScreen::registerCommand( const hashed_string& command, const UICommandDelegate& handler )
     {
-        _mapCommandToHandler[command] = handler;
+        const uint64 id               = _nextCommandID++;
+        _mapCommandToHandler[command] = CommandEntry{ handler, id };
+        return issueSubscription( id );
     }
 
-    void UIScreen::unregisterCommand( const hashed_string& command )
+    void UIScreen::releaseSubscription( uint64 id )
     {
-        _mapCommandToHandler.erase( command );
+        // 명령은 화면마다 몇 개뿐이다. 교체된 옛 구독이면 같은 번호가 없어 할 일이 없다.
+        for ( auto iter = _mapCommandToHandler.begin(); iter != _mapCommandToHandler.end(); ++iter )
+        {
+            if ( iter->second._id != id )
+                continue;
+            _mapCommandToHandler.erase( iter );
+            return;
+        }
     }
 
     bool UIScreen::onCommand( const hashed_string& command, Widget& source )
     {
         const auto iter = _mapCommandToHandler.find( command );
-        if ( iter == _mapCommandToHandler.end() || iter->second.isBound() == false )
+        if ( iter == _mapCommandToHandler.end() || iter->second._handler.isBound() == false )
             return false;
-        iter->second( command, source );
+        iter->second._handler( command, source );
         return true;
     }
 

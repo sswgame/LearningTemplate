@@ -81,14 +81,15 @@ namespace sw
         _bDisplayDirty = false;
     }
 
-    void UserSettingsEngineHandlers::addBindingInputMap( InputMap& inputMap )
+    bool UserSettingsEngineHandlers::addBindingInputMap( InputMap& inputMap )
     {
         for ( const InputMap* pInputMap : _listBindingInputMap )
         {
             if ( pInputMap == &inputMap )
-                return;
+                return false;
         }
         _listBindingInputMap.push_back( &inputMap );
+        return true;
     }
 
     void UserSettingsEngineHandlers::removeBindingInputMap( const InputMap& inputMap )

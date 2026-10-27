@@ -86,9 +86,9 @@ namespace sw
         _shownMax                              = 0.0f;
         _scrubSubscription                     = pScrub->getOnValueChanged().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &IntentReplayBar::onScrub, this ) );
         const UICommandDelegate commandHandler = SW_DELEGATE_METHOD( UICommandDelegate, &IntentReplayBar::onCommand, this );
-        pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kStepBack ), commandHandler );
-        pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kTogglePause ), commandHandler );
-        pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kClose ), commandHandler );
+        _arrCommandRegistration[0]             = pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kStepBack ), commandHandler );
+        _arrCommandRegistration[1]             = pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kTogglePause ), commandHandler );
+        _arrCommandRegistration[2]             = pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kClose ), commandHandler );
         updatePauseLabel();
         return true;
     }
@@ -98,14 +98,13 @@ namespace sw
         if ( _bOpen == SW_FALSE )
             return;
         _scrubSubscription.reset();
+        for ( Subscription& registration : _arrCommandRegistration )
+        {
+            registration.reset(); // 화면이 먼저 닫혔으면 이미 무효다
+        }
         UIScreen* pScreen = _pUI != nullptr ? _pUI->findScreen( _screen ) : nullptr;
         if ( pScreen != nullptr )
-        {
-            pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kStepBack ) );
-            pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kTogglePause ) );
-            pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kClose ) );
             _pUI->closeScreen( _screen );
-        }
         _screen  = kInvalidUIScreenHandle;
         _bOpen   = SW_FALSE;
         _bPaused = SW_FALSE;

@@ -97,9 +97,9 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     SkeletalMeshComponent* pUnit = TestPoseModifierInternal::createUnit( manager, "Hero", float3{ 5.0f, 0.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pUnit );
     TestPoseModifierInternal::RootTurnTask turn;
-    turn._angle = 0.5f;
-    pUnit->registerAnimationPhaseTask( &turn );
-    GameObject* pBall = TestPoseModifierInternal::createMarker( manager, "Ball", float3{ 5.0f, 1.5f, 1.0f } );
+    turn._angle                       = 0.5f;
+    sw::Subscription turnRegistration = pUnit->registerAnimationPhaseTask( &turn );
+    GameObject*      pBall            = TestPoseModifierInternal::createMarker( manager, "Ball", float3{ 5.0f, 1.5f, 1.0f } );
     SW_ASSERT_NOT_NULL( pBall );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig(
         *pUnit, R"(<RigAsset><targets><item name="Ball" object="Ball" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="Ball" /></nodes></RigAsset>)" );
@@ -116,7 +116,7 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     // 기본 포즈(루트 회전)는 리그 앞에 있었다 — 리그가 덮지 않은 본 1 은 돌아간 자리다.
     SW_EXPECT_TRUE( MathUtil::abs( pUnit->getLocalPose().getBoneTransform( 0 )._rotation._y ) > 0.1f );
 
-    pUnit->unregisterAnimationPhaseTask( &turn );
+    turnRegistration.reset();
     pModifier->setRigEnabled( false );
     manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f ); // 끈 프레임 — 리그 없는 포즈를 한 번 다시 만든다
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 2.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
@@ -160,7 +160,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Body", float3{ 0.0f, 0.0f, 0.0f } );
     SW_ASSERT_TRUE( pProp != nullptr && pBody != nullptr );
     TestPoseModifierInternal::RootTurnTask turn;
-    pBody->registerAnimationPhaseTask( &turn );
+    sw::Subscription                       turnRegistration = pBody->registerAnimationPhaseTask( &turn );
 
     PoseModifierComponent* pFollow = TestPoseModifierInternal::addRig( *pProp, R"(<RigAsset>
 	<targets>
@@ -206,7 +206,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     }
     system.evaluate( 1.0f / 60.0f );
     SW_EXPECT_FALSE( system.getComponents().hasCycle() );
-    pBody->unregisterAnimationPhaseTask( &turn );
+    turnRegistration.reset();
 }
 
 /**
@@ -218,8 +218,8 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
     SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Body", float3{} );
     SW_ASSERT_NOT_NULL( pBody );
     TestPoseModifierInternal::RootTurnTask turn;
-    pBody->registerAnimationPhaseTask( &turn );
-    GameObject* pGrip = TestPoseModifierInternal::createMarker( manager, "Grip", float3{} );
+    sw::Subscription                       turnRegistration = pBody->registerAnimationPhaseTask( &turn );
+    GameObject*                            pGrip            = TestPoseModifierInternal::createMarker( manager, "Grip", float3{} );
     SW_ASSERT_NOT_NULL( pGrip );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"(<RigAsset>
 	<targets>
@@ -247,7 +247,7 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
         if ( frame > 0 )
             SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( expected, TestPoseModifierInternal::getBoneModel( *pBody, 2 ), 1e-4f ) );
     }
-    pBody->unregisterAnimationPhaseTask( &turn );
+    turnRegistration.reset();
 }
 
 /**
@@ -530,9 +530,9 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
         }
         float32 _degrees{ 90.0f };
     };
-    ElbowTask elbow;
-    pUnit->registerAnimationPhaseTask( &elbow );
-    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"(<RigAsset>
+    ElbowTask              elbow;
+    sw::Subscription       elbowRegistration = pUnit->registerAnimationPhaseTask( &elbow );
+    PoseModifierComponent* pModifier         = TestPoseModifierInternal::addRig( *pUnit, R"(<RigAsset>
 	<nodes>
 		<item type="PoseDriver" name="Elbow" driver="bone1" radius_degrees="60">
 			<poses>
@@ -557,5 +557,5 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
     pUnit->markPoseDirty();
     manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getMorphWeights()[0], 1e-4f );
-    pUnit->unregisterAnimationPhaseTask( &elbow );
+    elbowRegistration.reset();
 }

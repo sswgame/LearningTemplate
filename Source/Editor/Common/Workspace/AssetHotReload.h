@@ -191,8 +191,8 @@ namespace sw::editor
         bool                             _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
         uint64                           _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
         int64                            _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
-        FileWatchHandle                  _resourceWatchHandle;
-        FileWatchHandle                  _contentWatchHandle; ///< 확장자와 무관한 감시다. 변경 번호와 바뀐 파일을 모은다
+        Subscription                     _resourceWatch;                  ///< 리소스 종류 감시 구독
+        Subscription                     _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
         uint64                           _contentChangeSerial;
         vector<string>                   _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
         bool                             _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)

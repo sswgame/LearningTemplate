@@ -158,7 +158,7 @@ namespace sw
         dispatchEvents( listEvent );
     }
 
-    FileWatchHandle FileWatchDispatcher::registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch )
+    Subscription FileWatchDispatcher::registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch )
     {
         WatchEntry entry{};
         entry._handle = FileWatchHandle{ _watchIDAllocator.allocate() };
@@ -171,16 +171,13 @@ namespace sw
         _listWatch.push_back( entry );
 
         SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
-        return entry._handle;
+        return issueSubscription( entry._id );
     }
 
-    void FileWatchDispatcher::unregisterWatch( FileWatchHandle handle )
+    void FileWatchDispatcher::releaseSubscription( uint64 id )
     {
-        if ( handle.isValid() == false )
-            return;
-
-        VectorUtil::removeIf( _listWatch, [&handle]( const WatchEntry& entry )
-        { return entry._handle == handle; } );
+        VectorUtil::removeIf( _listWatch, [id]( const WatchEntry& entry )
+        { return entry._id == id; } ); // `shutdown` 이 목록을 비웠으면 할 일이 없다
     }
 
     bool FileWatchDispatcher::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,

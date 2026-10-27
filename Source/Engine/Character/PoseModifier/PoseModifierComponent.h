@@ -12,6 +12,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -199,6 +200,7 @@ namespace sw
         string _physicsAssetPath;
 
         PoseModifierBinding                             _binding;
+        Subscription                                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         RigInstance                                     _instance;
         shared_ptr<const RigAsset>                      _asset;
         shared_ptr<const SocketSet>                     _ownSockets;

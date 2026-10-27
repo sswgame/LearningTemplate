@@ -7,6 +7,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -364,14 +365,15 @@ namespace sw
             }
         }
 
-        vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
-        unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
-        SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        string                          _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        UISystem*                       _pUISystem;            ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
-        UserSettingsManager*            _pUserSettings;        ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
-        InputManager*                   _pInput;               ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyBootstrap`)
-        uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        vector<PendingSceneLoad>        _listPendingSceneLoad;      ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<StatefulComponentType>   _listStatefulType;          ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
+        unique_ptr<ComponentStateStore> _pComponentStateStore;      ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        SubsystemScope                  _gameScope;                 ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        string                          _loadedAudioEvents;         ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        UISystem*                       _pUISystem;                 ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
+        Subscription                    _returnToTitleRegistration; ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
+        UserSettingsManager*            _pUserSettings;             ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
+        InputManager*                   _pInput;                    ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyBootstrap`)
+        uint8                           _bResumingWorld;            ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

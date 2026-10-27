@@ -178,7 +178,7 @@ namespace sw
     PoseModifierComponent::~PoseModifierComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
     }
 
     void PoseModifierComponent::onBeginPlay()
@@ -195,7 +195,7 @@ namespace sw
     {
         releaseDependencies();
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = nullptr;
         _instance.shutdown();
         Component::onEndPlay();
@@ -370,10 +370,10 @@ namespace sw
         if ( pUnit != _pUnit )
         {
             if ( _pUnit != nullptr )
-                _pUnit->unregisterAnimationPhaseTask( &_binding );
+                _bindingRegistration.reset();
             _pUnit = pUnit;
             if ( _pUnit != nullptr )
-                _pUnit->registerAnimationPhaseTask( &_binding );
+                _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         }
         _pBoundSkeleton = ( _pUnit != nullptr ) ? &_pUnit->getSkeleton() : nullptr;
         if ( _pUnit == nullptr || _asset == nullptr )

@@ -212,7 +212,7 @@ namespace sw
         setUserSettings( &userSettings );
         // UI 행동(일시정지 · 확인 · 뒤로 …)도 키 바인딩 설정의 대상이다 — 사용자 파일의 UI 키를 지금 넣고, 옵션 메뉴가 바꿀 수 있게 한다.
         if ( InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
-            userSettings.addKeyBindingInputMap( *pUIInputMap );
+            _uiKeyBindingRegistration = userSettings.addKeyBindingInputMap( *pUIInputMap );
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
         AssetManager& assetManager   = engine::getSubsystem<AssetManager>();
         _documentCacheRegistration   = assetManager.registerAssetCache( &_documentCache );
@@ -244,8 +244,7 @@ namespace sw
 #endif
         _styleSheetCacheRegistration.reset();
         _documentCacheRegistration.reset();
-        if ( const InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr && _pUserSettings != nullptr )
-            _pUserSettings->removeKeyBindingInputMap( *pUIInputMap );
+        _uiKeyBindingRegistration.reset();
         shutdown();
         setLocalization( nullptr );
         setUserSettings( nullptr );

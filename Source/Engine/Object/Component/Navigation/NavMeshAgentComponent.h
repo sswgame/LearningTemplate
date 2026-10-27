@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -168,6 +169,7 @@ namespace sw
         hashed_string     _linkType;        ///< 건너는 링크의 종류 이름
         NavCrowdAgentID   _crowdAgentID;
         uint32            _navIndex;                ///< `SceneNavigation` 의 목록 자리
+        Subscription      _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         uint32            _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
         uint32            _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
         NavMoveStatus     _moveStatus;

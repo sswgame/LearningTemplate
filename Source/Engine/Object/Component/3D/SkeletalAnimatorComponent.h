@@ -5,9 +5,11 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -217,10 +219,11 @@ namespace sw
         void setNotifyListener( IAnimationNotifyListener* pListener ) { _pNotifyListener = pListener; }
         /** @brief 등록된 알림 수신자를 반환합니다. */
         IAnimationNotifyListener* getNotifyListener() const { return _pNotifyListener; }
-        /** @brief 루트 모션을 옮기기 전에 고치는 쪽을 등록합니다(소유하지 않으므로 사라지기 전에 해제해야 합니다). 등록한 순서대로 불립니다. */
-        void registerRootMotionModifier( IRootMotionModifier* pModifier );
-        /** @brief 고치는 쪽을 해제합니다. */
-        void unregisterRootMotionModifier( IRootMotionModifier* pModifier );
+        /**
+         * @brief 루트 모션을 옮기기 전에 고치는 쪽을 등록하고 그 구독을 돌려줍니다(소유하지 않는다). 등록한 순서대로 불립니다.
+         * @details 고치는 쪽이 구독을 들고, 놓으면 빠집니다. 애니메이터가 먼저 사라지면 구독은 무효가 됩니다. nullptr 이면 빈 구독입니다.
+         */
+        [[nodiscard]] Subscription registerRootMotionModifier( IRootMotionModifier* pModifier );
         /** @brief 루트 모션을 같은 오브젝트의 캐릭터 컨트롤러로 옮길지 정합니다(컨트롤러가 있을 때만 적용되며, 벽에 막히고 턱을 오릅니다). */
         void setRootMotionThroughController( bool bThrough ) { _bRootMotionThroughController = bThrough ? SW_TRUE : SW_FALSE; }
         /** @brief 재생 속도 배율을 반환합니다. */
@@ -251,6 +254,22 @@ namespace sw
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
     private:
+        /** @brief 루트 모션 수정자 등록의 출처입니다. 구독이 풀리면 그 수정자를 뺍니다. 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
+        class RootMotionModifierSource final : public SubscriptionSource
+        {
+        public:
+            explicit RootMotionModifierSource( vector<IRootMotionModifier*>& listModifier )
+                : _listModifier{ listModifier }
+            {
+            }
+            [[nodiscard]] Subscription issue( IRootMotionModifier* pModifier ) { return issueSubscription( reinterpret_cast<uint64>( pModifier ) ); }
+
+        private:
+            void releaseSubscription( uint64 id ) override { VectorUtil::removeFirst( _listModifier, reinterpret_cast<IRootMotionModifier*>( id ) ); }
+
+            vector<IRootMotionModifier*>& _listModifier;
+        };
+
         /**
          * @brief 화면에 보인 지난 두 포즈입니다. inertialization · 이어 섞기의 출발 포즈와 출발 속도가 여기서 나옵니다.
          * @details 출발 포즈는 "지금 화면에 보이는 포즈" 여야 한다. 화면 밖 · 숨김으로 포즈를 건너뛴 프레임이 끼면(`AnimationFrameContext::_bOnScreen` 거짓) 아무도 보지 않은
@@ -394,6 +413,7 @@ namespace sw
         float32 _syncWeight;
 
         SkeletalAnimatorBinding _binding;
+        Subscription            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         AnimationGraphAsset     _graph;
         AnimationGraphPlayer    _graphPlayer;
         AnimationParameterSet   _parameters;
@@ -419,7 +439,8 @@ namespace sw
         vector<AnimationFiredNotify>                                  _listFiredNotify;
         vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
         vector<IRootMotionModifier*>                                  _listRootMotionModifier;
-        CurveAccumulator                                              _curves; ///< 이번 프레임 커브(이름 → 값)
+        RootMotionModifierSource                                      _rootMotionModifierSource; ///< `_listRootMotionModifier` 의 등록 구독을 내준다
+        CurveAccumulator                                              _curves;                   ///< 이번 프레임 커브(이름 → 값)
         Pose                                                          _scratchPose;
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;

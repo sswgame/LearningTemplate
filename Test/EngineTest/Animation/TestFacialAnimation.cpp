@@ -781,9 +781,9 @@ SW_TEST_CASE( FacialAnimationTest, LiveSourceChannelsDriveExpressions )
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
     SW_ASSERT_NOT_NULL( pFace );
     TestFacialLiveSource source;
-    source._happy = 0.5f;
-    pFace->registerLiveSource( &source );
-    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    source._happy                           = 0.5f;
+    Subscription     liveSourceRegistration = pFace->registerLiveSource( &source );
+    AnimationSystem& system                 = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 1.0f / 30.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.15f, TestFacialAnimationInternal::getWeight( *pUnit, "mouthWide" ), 0.0001f );
@@ -792,7 +792,7 @@ SW_TEST_CASE( FacialAnimationTest, LiveSourceChannelsDriveExpressions )
     system.evaluate( 1.0f / 30.0f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
 
-    pFace->unregisterLiveSource();
+    liveSourceRegistration.reset();
     system.evaluate( 1.0f / 30.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
 }

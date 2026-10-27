@@ -608,9 +608,9 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
     TestSkeletalAnimationInternal::RecordingTask taskA( &listOrder, 0.1f );
     TestSkeletalAnimationInternal::RecordingTask taskB( &listOrder, 0.2f );
     TestSkeletalAnimationInternal::RecordingTask taskC( &listOrder, 0.3f );
-    pUnitA->registerAnimationPhaseTask( &taskA );
-    pUnitB->registerAnimationPhaseTask( &taskB );
-    pUnitC->registerAnimationPhaseTask( &taskC );
+    sw::Subscription                             taskARegistration = pUnitA->registerAnimationPhaseTask( &taskA );
+    sw::Subscription                             taskBRegistration = pUnitB->registerAnimationPhaseTask( &taskB );
+    sw::Subscription                             taskCRegistration = pUnitC->registerAnimationPhaseTask( &taskC );
 
     AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 0.016f );
@@ -641,9 +641,9 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
     system.evaluate( 0.016f );
     SW_EXPECT_FALSE( system.getComponents().hasCycle() );
 
-    pUnitA->unregisterAnimationPhaseTask( &taskA );
-    pUnitB->unregisterAnimationPhaseTask( &taskB );
-    pUnitC->unregisterAnimationPhaseTask( &taskC );
+    taskARegistration.reset();
+    taskBRegistration.reset();
+    taskCRegistration.reset();
 }
 
 /**
@@ -846,8 +846,8 @@ SW_TEST_CASE( SkeletalAnimationTest, ComponentsHandleEmptyAndIdleUnits )
     listUnit[2]->setLeaderPose( listUnit[1] );
     TestSkeletalAnimationInternal::RecordingTask idleTask( nullptr, 0.1f );
     TestSkeletalAnimationInternal::RecordingTask leaderTask( nullptr, 0.2f );
-    listUnit[0]->registerAnimationPhaseTask( &idleTask );
-    listUnit[1]->registerAnimationPhaseTask( &leaderTask );
+    sw::Subscription                             idleTaskRegistration   = listUnit[0]->registerAnimationPhaseTask( &idleTask );
+    sw::Subscription                             leaderTaskRegistration = listUnit[1]->registerAnimationPhaseTask( &leaderTask );
 
     system.evaluate( 0.016f );
     SW_EXPECT_EQUAL( 2u, system.getActiveComponents().getComponentCount() );
@@ -881,8 +881,8 @@ SW_TEST_CASE( SkeletalAnimationTest, ComponentsHandleEmptyAndIdleUnits )
     SW_EXPECT_EQUAL( 0u, system.getComponents().getComponentCount() );
     system.evaluate( 0.016f );
     SW_EXPECT_EQUAL( 0u, system.getActiveComponents().getComponentCount() );
-    listUnit[0]->unregisterAnimationPhaseTask( &idleTask );
-    listUnit[1]->unregisterAnimationPhaseTask( &leaderTask );
+    idleTaskRegistration.reset();
+    leaderTaskRegistration.reset();
 }
 
 /**
@@ -966,7 +966,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderFinalPoseAfterAttachment
     SkeletalMeshComponent* pPart = TestSkeletalAnimationInternal::createUnit( manager, "Part", 3 );
     SW_ASSERT_TRUE( pBody != nullptr && pPart != nullptr );
     TestSkeletalAnimationInternal::AttachmentHeightTask proportion( 2.5f );
-    pBody->registerAnimationPhaseTask( &proportion );
+    sw::Subscription                                    proportionRegistration = pBody->registerAnimationPhaseTask( &proportion );
     pPart->setLeaderPose( pBody );
 
     manager.getSubsystem<AnimationSystem>().evaluate( 0.016f );
@@ -980,7 +980,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderFinalPoseAfterAttachment
     // 부품은 몸의 최종 포즈를 따라야 한다.
     SW_EXPECT_NEAR_EQUAL( 2.5f, pPart->getLocalPose().getBoneTransform( 1 )._translation._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( bodyBone.getTranslation()._y, partBone.getTranslation()._y, 1e-5f );
-    pBody->unregisterAnimationPhaseTask( &proportion );
+    proportionRegistration.reset();
 }
 
 /**
@@ -999,9 +999,10 @@ SW_TEST_CASE( SkeletalAnimationTest, PosePhasesRunUnitFirstInsideComponentAfterE
     TestSkeletalAnimationInternal::PhaseSequenceTask        task2( &sequence );
     TestSkeletalAnimationInternal::PhaseSequenceTask        task3( &sequence );
     TestSkeletalAnimationInternal::PhaseSequenceTask* const arrTask[kUnitCount] = { &task0, &task1, &task2, &task3 };
+    sw::Subscription                                        arrRegistration[kUnitCount];
     for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
     {
-        listUnit[unitID]->registerAnimationPhaseTask( arrTask[unitID] );
+        arrRegistration[unitID] = listUnit[unitID]->registerAnimationPhaseTask( arrTask[unitID] );
     }
     listUnit[1]->addAnimationDependency( listUnit[0] );
     listUnit[2]->addAnimationDependency( listUnit[1] );
@@ -1025,9 +1026,9 @@ SW_TEST_CASE( SkeletalAnimationTest, PosePhasesRunUnitFirstInsideComponentAfterE
     SW_EXPECT_TRUE( lastTime < firstPose );
     SW_EXPECT_TRUE( task0._arrSequence[kPost] < task1._arrSequence[kBasePose] );
     SW_EXPECT_TRUE( task1._arrSequence[kPost] < task2._arrSequence[kBasePose] );
-    for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
+    for ( sw::Subscription& registration : arrRegistration )
     {
-        listUnit[unitID]->unregisterAnimationPhaseTask( arrTask[unitID] );
+        registration.reset();
     }
 }
 
@@ -1040,8 +1041,8 @@ SW_TEST_CASE( SkeletalAnimationTest, LODSkipsPoseEvaluation )
     SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Lod", 3 );
     SW_ASSERT_NOT_NULL( pUnit );
     TestSkeletalAnimationInternal::RecordingTask task( nullptr, 0.5f );
-    pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    sw::Subscription                             taskRegistration = pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem&                             system           = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다
     const uint32 baseCount = pUnit->getPoseEvaluationCount();
 
@@ -1070,7 +1071,7 @@ SW_TEST_CASE( SkeletalAnimationTest, LODSkipsPoseEvaluation )
     system.evaluate( 0.016f );
     SW_EXPECT_EQUAL( 0u, system.getActiveUnitCount() );
     SW_EXPECT_EQUAL( timeCalls, task._timeCallCount );
-    pUnit->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
 }
 
 /**
@@ -1083,7 +1084,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
     SkeletalMeshComponent* pLeader   = TestSkeletalAnimationInternal::createUnit( manager, "Leader", 3 );
     SW_ASSERT_TRUE( pFollower != nullptr && pLeader != nullptr );
     TestSkeletalAnimationInternal::RecordingTask task( nullptr, 0.7f );
-    pLeader->registerAnimationPhaseTask( &task );
+    sw::Subscription                             taskRegistration = pLeader->registerAnimationPhaseTask( &task );
     pFollower->setLeaderPose( pLeader );
     SW_EXPECT_TRUE( pFollower->findLeaderPose() == pLeader );
 
@@ -1096,7 +1097,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
     SW_ASSERT_TRUE( pFollower->findBoneModelTransform( hashed_string( "bone1" ), followerBone ) );
     SW_EXPECT_NEAR_EQUAL( leaderBone._41, followerBone._41, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( leaderBone._43, followerBone._43, 1e-5f );
-    pLeader->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
 }
 
 /**

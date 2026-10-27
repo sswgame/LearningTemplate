@@ -432,9 +432,9 @@ SW_TEST_CASE( UIOptionsMenuTest, HeldPauseKeyDoesNotCloseThePauseMenu )
 
 /**
  * @brief [UIOptionsMenuTest] 일시정지 메뉴의 "타이틀로" · "끝내기" 단추 — 전역 명령 표에 같은 이름이 등록돼 있는 동안만 보이고, 누르면 메뉴를 닫고 등록한 함수를 부르며,
- *        등록한 처리 함수로만 거둘 수 있다
+ *        교체된 옛 구독을 놓아도 지금 등록은 남는다
  * @details 변이: `PauseMenuScreen::onTick` 이 표를 보지 않고 늘 보이면 처음 접힘 단언이 진다. 전역 표로 넘기지 않으면 호출 수가 0 이고, 메뉴를 닫지 않으면 화면이 남는다.
- *          `unregisterCommand` 가 처리 함수를 비교하지 않으면 옛 주인이 거둘 때 등록이 사라져 진다.
+ *          구독 해제가 지금 등록의 구독인지 보지 않으면 옛 주인이 놓을 때 등록이 사라져 진다.
  */
 SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
 {
@@ -452,23 +452,25 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
     SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 등록한 쪽이 없으면 접혀 있다
     SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Collapsed );
 
-    /** 등록한 쪽 — 거둘 때 같은 대상의 처리 함수여야 한다(람다 사본은 서로 같지 않다). */
+    /** 등록한 쪽 — 옛 인스턴스와 새 인스턴스가 따로 등록한다. */
     struct QuitCounter
     {
         uint32 _count{ 0 };
         void   onQuit( const sw::hashed_string&, sw::Widget& ) { ++_count; }
     };
-    QuitCounter                 quit;
-    QuitCounter                 staleOwner;
-    const sw::UICommandDelegate quitHandler = SW_DELEGATE_METHOD( sw::UICommandDelegate, &QuitCounter::onQuit, &quit );
-    fixture._ui.getGlobalCommands().registerCommand( sw::UIGlobalCommandRegistry::kQuitGame, quitHandler );
+    QuitCounter quit;
+    QuitCounter staleOwner;
+    // 옛 인스턴스가 먼저 등록하고, 새 인스턴스가 같은 이름을 교체한다(핫 리로드 순서).
+    sw::Subscription staleRegistration =
+        fixture._ui.getGlobalCommands().registerCommand( sw::UIGlobalCommandRegistry::kQuitGame, SW_DELEGATE_METHOD( sw::UICommandDelegate, &QuitCounter::onQuit, &staleOwner ) );
+    sw::Subscription quitRegistration =
+        fixture._ui.getGlobalCommands().registerCommand( sw::UIGlobalCommandRegistry::kQuitGame, SW_DELEGATE_METHOD( sw::UICommandDelegate, &QuitCounter::onQuit, &quit ) );
     fixture.runFrame();
     SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Visible );
     SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 다른 명령은 그대로
 
-    // 다른 처리 함수로 거두면(핫 리로드의 옛 인스턴스) 지금 등록은 남는다.
-    fixture._ui.getGlobalCommands().unregisterCommand( sw::UIGlobalCommandRegistry::kQuitGame,
-                                                       SW_DELEGATE_METHOD( sw::UICommandDelegate, &QuitCounter::onQuit, &staleOwner ) );
+    // 교체된 옛 구독을 놓아도(핫 리로드의 옛 인스턴스가 내려간다) 지금 등록은 남는다.
+    staleRegistration.reset();
     SW_EXPECT_TRUE( fixture._ui.getGlobalCommands().hasCommand( sw::UIGlobalCommandRegistry::kQuitGame ) );
 
     // 세션을 떠나는 명령은 메뉴를 닫고(정지가 남지 않게) 등록한 함수를 부른다.
@@ -478,7 +480,7 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
     const sw::UIScreen* pClosed = fixture._ui.findScreen( pauseHandle );
     SW_EXPECT_TRUE( pClosed == nullptr || pClosed->isClosing() ); // 닫는 애니메이션이 있으면 끝날 때까지 남는다
 
-    fixture._ui.getGlobalCommands().unregisterCommand( sw::UIGlobalCommandRegistry::kQuitGame, quitHandler );
+    quitRegistration.reset();
     SW_EXPECT_FALSE( fixture._ui.getGlobalCommands().hasCommand( sw::UIGlobalCommandRegistry::kQuitGame ) );
 }
 

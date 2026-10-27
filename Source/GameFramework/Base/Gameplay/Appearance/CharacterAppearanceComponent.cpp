@@ -698,12 +698,12 @@ namespace sw
         const bool bWantsTask = _bodyProportion.getEntries().empty() == false;
         if ( bWantsTask && _bProportionTask == SW_FALSE )
         {
-            body.registerAnimationPhaseTask( &_proportionTask );
-            _bProportionTask = SW_TRUE;
+            _proportionTaskRegistration = body.registerAnimationPhaseTask( &_proportionTask );
+            _bProportionTask            = SW_TRUE;
         }
         else if ( bWantsTask == false && _bProportionTask == SW_TRUE )
         {
-            body.unregisterAnimationPhaseTask( &_proportionTask );
+            _proportionTaskRegistration.reset();
             _bProportionTask = SW_FALSE;
         }
         body.markPoseDirty(); // 비율이 바뀌면 쉬는 몸도 포즈를 다시 만든다
@@ -1375,21 +1375,16 @@ namespace sw
         if ( _taskUnit == bodyHandle )
             return;
         unregisterSocketTask();
-        body.registerAnimationPhaseTask( &_socketTask );
-        _taskUnit = bodyHandle;
+        _socketTaskRegistration = body.registerAnimationPhaseTask( &_socketTask );
+        _taskUnit               = bodyHandle;
     }
 
     void CharacterAppearanceComponent::unregisterSocketTask()
     {
-        GameObjectManager*     pManager = findManager();
-        SkeletalMeshComponent* pUnit    = pManager != nullptr ? pManager->resolveComponent( _taskUnit ) : nullptr;
-        _taskUnit                       = TComponentHandle<SkeletalMeshComponent>{};
-        if ( pUnit != nullptr )
-        {
-            pUnit->unregisterAnimationPhaseTask( &_socketTask );
-            if ( _bProportionTask == SW_TRUE )
-                pUnit->unregisterAnimationPhaseTask( &_proportionTask );
-        }
+        // 유닛이 먼저 사라졌으면 구독은 이미 무효다 — 푸는 것이 할 일 없이 끝난다.
+        _taskUnit = TComponentHandle<SkeletalMeshComponent>{};
+        _socketTaskRegistration.reset();
+        _proportionTaskRegistration.reset();
         _bProportionTask = SW_FALSE;
     }
 

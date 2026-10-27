@@ -444,7 +444,8 @@ namespace sw
         const UIScreenHandle menuHandle = getHandle();
         const auto           findMenu   = [pUI, menuHandle]()
         { return static_cast<OptionsMenuScreen*>( pUI->findScreen( menuHandle ) ); };
-        pPrompt->registerCommand( "Apply", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
+        _listPromptCommand.clear(); // 앞서 연 창의 구독(창이 닫혔으면 이미 무효)
+        _listPromptCommand.push_back( pPrompt->registerCommand( "Apply", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
             OptionsMenuScreen* pMenu = findMenu();
@@ -453,8 +454,8 @@ namespace sw
                 pMenu->apply();
                 pMenu->close();
             }
-        } ) );
-        pPrompt->registerCommand( "Discard", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
+        } ) ) );
+        _listPromptCommand.push_back( pPrompt->registerCommand( "Discard", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
             OptionsMenuScreen* pMenu = findMenu();
@@ -464,9 +465,9 @@ namespace sw
                     pMenu->_pSettings->revertPending();
                 pMenu->close();
             }
-        } ) );
-        pPrompt->registerCommand( "Cancel", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt]( const hashed_string&, Widget& )
-        { pPrompt->close(); } ) );
+        } ) ) );
+        _listPromptCommand.push_back( pPrompt->registerCommand( "Cancel", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt]( const hashed_string&, Widget& )
+        { pPrompt->close(); } ) ) );
     }
 
     bool OptionsMenuScreen::isPromptOpen() const

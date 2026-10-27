@@ -188,7 +188,7 @@ namespace sw
         unbindFromUnit();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->registerAnimationPhaseTask( &_binding );
+            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else
             SW_LOG_WARNING( "'%#': ragdoll has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
@@ -196,7 +196,7 @@ namespace sw
     void RagdollComponent::unbindFromUnit()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = nullptr;
     }
 

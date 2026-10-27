@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
@@ -94,9 +95,10 @@ namespace sw
         PROPERTY( Category = "Link", DisplayName = "Enabled", Tooltip = "A disabled link is not crossed (a closed door)" )
         bool _bLinkEnabled;
 
-        AABB   _reportedBounds; ///< 마지막으로 다시 베이크하게 한 영역
-        uint32 _navIndex;
-        uint8  _bEnabledDirty : 1; ///< 막기 · 풀기를 아직 내비메시에 넣지 않았다
-        uint8  _reserved      : 7;
+        AABB         _reportedBounds; ///< 마지막으로 다시 베이크하게 한 영역
+        uint32       _navIndex;
+        Subscription _navRegistration;   ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        uint8        _bEnabledDirty : 1; ///< 막기 · 풀기를 아직 내비메시에 넣지 않았다
+        uint8        _reserved      : 7;
     };
 } // namespace sw

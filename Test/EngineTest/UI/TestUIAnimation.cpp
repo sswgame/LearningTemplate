@@ -200,15 +200,15 @@ SW_TEST_CASE( UIAnimationTest, EventsFireOnce )
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/events.ui.xml", "" ) );
     SW_ASSERT_NOT_NULL( pScreen );
-    uint32 startCount  = 0;
-    uint32 middleCount = 0;
-    uint32 endCount    = 0;
-    pScreen->registerCommand( "Start", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&startCount]( const sw::hashed_string&, sw::Widget& )
-    { ++startCount; } ) );
-    pScreen->registerCommand( "Middle", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&middleCount]( const sw::hashed_string&, sw::Widget& )
+    uint32                 startCount    = 0;
+    uint32                 middleCount   = 0;
+    uint32                 endCount      = 0;
+    const sw::Subscription startCommand  = pScreen->registerCommand( "Start", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&startCount]( const sw::hashed_string&, sw::Widget& )
+     { ++startCount; } ) );
+    const sw::Subscription middleCommand = pScreen->registerCommand( "Middle", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&middleCount]( const sw::hashed_string&, sw::Widget& )
     { ++middleCount; } ) );
-    pScreen->registerCommand( "End", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&endCount]( const sw::hashed_string&, sw::Widget& )
-    { ++endCount; } ) );
+    const sw::Subscription endCommand    = pScreen->registerCommand( "End", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&endCount]( const sw::hashed_string&, sw::Widget& )
+       { ++endCount; } ) );
 
     sw::UIAnimation animation{};
     animation._name = "Pulse";
@@ -241,11 +241,11 @@ SW_TEST_CASE( UIAnimationTest, CurveEventsFireWhenValueCrossesThreshold )
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/curveevents.ui.xml", "" ) );
     SW_ASSERT_NOT_NULL( pScreen );
-    uint32 upCount   = 0;
-    uint32 downCount = 0;
-    pScreen->registerCommand( "Up", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&upCount]( const sw::hashed_string&, sw::Widget& )
-    { ++upCount; } ) );
-    pScreen->registerCommand( "Down", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&downCount]( const sw::hashed_string&, sw::Widget& )
+    uint32                 upCount     = 0;
+    uint32                 downCount   = 0;
+    const sw::Subscription upCommand   = pScreen->registerCommand( "Up", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&upCount]( const sw::hashed_string&, sw::Widget& )
+      { ++upCount; } ) );
+    const sw::Subscription downCommand = pScreen->registerCommand( "Down", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&downCount]( const sw::hashed_string&, sw::Widget& )
     { ++downCount; } ) );
 
     sw::UIAnimation animation = Util::makeAnimation( "Blink", "Box", "_opacity", "0", "1", 0.5f );

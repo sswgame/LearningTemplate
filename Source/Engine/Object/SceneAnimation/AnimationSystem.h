@@ -10,6 +10,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
@@ -442,7 +443,7 @@ namespace sw
      *          (4) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
-    class SW_API AnimationSystem final : public ISceneService
+    class SW_API AnimationSystem final : public ISceneService, private SubscriptionSource
     {
     public:
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
@@ -478,10 +479,8 @@ namespace sw
         void evaluate( float32 deltaSeconds );
 
         // --- LOD (AnimationLOD.h) ---
-        /** @brief LOD 판정을 받을 대상을 등록합니다(유닛, 스프라이트 애니메이터). */
-        void registerLODClient( IAnimationLODClient* pClient );
-        /** @brief 등록을 해제합니다. 여러 번 불러도 안전합니다. */
-        void unregisterLODClient( IAnimationLODClient* pClient );
+        /** @brief LOD 판정을 받을 대상을 등록하고 그 구독을 돌려줍니다(유닛, 스프라이트 애니메이터). 구독이 사라지면 빠집니다. nullptr · 이미 등록했으면 빈 구독입니다. */
+        [[nodiscard]] Subscription registerLODClient( IAnimationLODClient* pClient );
         /**
          * @brief 다음 평가가 쓸 뷰 목록입니다(주 시점과 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
          *        (모든 클라이언트가 보이고 매 프레임 평가합니다. 테스트, 서버, 뷰가 없는 실행이 그렇습니다).
@@ -590,22 +589,25 @@ namespace sw
         unordered_set<const SkeletalMeshComponent*> _uniqueSingletonRemoval; ///< 성분 목록에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushSingletonRemoval` 이 비운다)
         AnimationComponentSet                       _componentAll;           ///< 모든 유닛의 성분이다(평가 순서 — 외톨이 해제는 지름길로 뺀다)
         AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다). 단계를 처리하는 유닛 전부다
-        AnimationOrderedList<IAnimationLODClient>   _lodClientList;          ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
-        vector<AnimationLODView>                    _listLODView;
-        AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
-        vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
-        vector<AnimationBudgetItem>                 _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
-        vector<AnimationDependencyEdge>             _listScratchEdge;            ///< 성분을 지을 때 모은 의존 간선이다(재사용)
-        vector<uint32>                              _listScratchPendingCount;    ///< 유닛마다 아직 놓이지 않은 위 유닛 수다(재사용)
-        vector<uint32>                              _listScratchDependentStart;  ///< 위 유닛마다 `_listScratchDependent` 안의 아래 유닛 구간 시작이다(끝 하나 더, 재사용)
-        vector<uint32>                              _listScratchDependentCursor; ///< 아래 유닛 구간을 채우는 위치다(재사용)
-        vector<uint32>                              _listScratchDependent;       ///< 위 유닛별로 모은 아래 유닛 번호다(재사용)
-        vector<uint32>                              _listScratchOrder;           ///< 위상 순서로 이은 유닛 번호다(Kahn 의 큐를 겸한다). 고리의 남은 유닛은 등록 순서로 뒤에 온다(재사용)
-        vector<uint32>                              _listScratchComponentRoot;   ///< 유닛마다 같은 성분의 대표 유닛 번호다(union-find, 대표는 성분에서 가장 작은 번호, 재사용)
-        vector<uint32>                              _listScratchComponentOf;     ///< 유닛마다 성분 번호다(재사용)
-        vector<uint32>                              _listScratchComponentCursor; ///< 성분 구간을 채우는 칸 번호다(재사용)
-        AnimationLODSettings                        _lodSettings;
-        AnimationCrowd                              _crowd;
+        /** @brief LOD 클라이언트 구독이 풀렸습니다(@p id 는 클라이언트 주소). 목록에서 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
+
+        AnimationOrderedList<IAnimationLODClient> _lodClientList; ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
+        vector<AnimationLODView>                  _listLODView;
+        AnimationLODView                          _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
+        vector<AnimationLODState>                 _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
+        vector<AnimationBudgetItem>               _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
+        vector<AnimationDependencyEdge>           _listScratchEdge;            ///< 성분을 지을 때 모은 의존 간선이다(재사용)
+        vector<uint32>                            _listScratchPendingCount;    ///< 유닛마다 아직 놓이지 않은 위 유닛 수다(재사용)
+        vector<uint32>                            _listScratchDependentStart;  ///< 위 유닛마다 `_listScratchDependent` 안의 아래 유닛 구간 시작이다(끝 하나 더, 재사용)
+        vector<uint32>                            _listScratchDependentCursor; ///< 아래 유닛 구간을 채우는 위치다(재사용)
+        vector<uint32>                            _listScratchDependent;       ///< 위 유닛별로 모은 아래 유닛 번호다(재사용)
+        vector<uint32>                            _listScratchOrder;           ///< 위상 순서로 이은 유닛 번호다(Kahn 의 큐를 겸한다). 고리의 남은 유닛은 등록 순서로 뒤에 온다(재사용)
+        vector<uint32>                            _listScratchComponentRoot;   ///< 유닛마다 같은 성분의 대표 유닛 번호다(union-find, 대표는 성분에서 가장 작은 번호, 재사용)
+        vector<uint32>                            _listScratchComponentOf;     ///< 유닛마다 성분 번호다(재사용)
+        vector<uint32>                            _listScratchComponentCursor; ///< 성분 구간을 채우는 칸 번호다(재사용)
+        AnimationLODSettings                      _lodSettings;
+        AnimationCrowd                            _crowd;
 #if SW_ANIMATION_REWIND_ENABLED
         AnimationRewindRecorder _rewind;
         Pose                    _rewindScratchPose; ///< 되감기 포즈를 해석할 임시 포즈다(재사용)

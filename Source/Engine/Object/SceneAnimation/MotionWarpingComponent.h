@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -102,9 +103,9 @@ namespace sw
         void bindToAnimator();
         void unbindFromAnimator();
 
-        MotionWarpingBinding                        _binding;
-        vector<MotionWarpTarget>                    _listTarget;
-        vector<MotionWarpWindow>                    _listWindow;
-        TComponentHandle<SkeletalAnimatorComponent> _animator; ///< 등록한 애니메이터(해제할 때 찾는다)
+        MotionWarpingBinding     _binding;
+        vector<MotionWarpTarget> _listTarget;
+        vector<MotionWarpWindow> _listWindow;
+        Subscription             _animatorRegistration; ///< 애니메이터의 루트 모션 수정자 등록 구독(놓으면 빠진다)
     };
 } // namespace sw

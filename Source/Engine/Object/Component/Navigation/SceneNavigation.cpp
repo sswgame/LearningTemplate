@@ -112,12 +112,20 @@ namespace sw
         return _settings;
     }
 
-    void SceneNavigation::registerAgent( NavMeshAgentComponent* pAgent )
+    Subscription SceneNavigation::issueRegistration( const void* pItem, RegistrationKind kind )
+    {
+        const uint64 address = reinterpret_cast<uint64>( pItem );
+        SW_ASSERT( ( address & kRegistrationKindMask ) == 0 );
+        return issueSubscription( address | static_cast<uint64>( kind ) );
+    }
+
+    Subscription SceneNavigation::registerAgent( NavMeshAgentComponent* pAgent )
     {
         if ( pAgent == nullptr || pAgent->_navIndex != kNotRegistered )
-            return;
+            return {};
         pAgent->_navIndex = static_cast<uint32>( _listAgent.size() );
         _listAgent.push_back( pAgent );
+        return issueRegistration( pAgent, RegistrationKind::Agent );
     }
 
     void SceneNavigation::unregisterAgent( NavMeshAgentComponent* pAgent )
@@ -146,11 +154,13 @@ namespace sw
         pAgent->_velocity       = float3{};
     }
 
-    void SceneNavigation::registerSurface( NavMeshSurfaceComponent* pSurface )
+    Subscription SceneNavigation::registerSurface( NavMeshSurfaceComponent* pSurface )
     {
         // 표면은 내비 메시 하나에 하나라 씬에 많아야 수십 개이고 해제(선형)는 언로드 때만 온다 — 색인 구조를 두지 않는다. 등록은 컴포넌트의 onRegister 에서 한 번만 온다.
-        if ( pSurface != nullptr )
-            _listSurface.push_back( pSurface );
+        if ( pSurface == nullptr )
+            return {};
+        _listSurface.push_back( pSurface );
+        return issueRegistration( pSurface, RegistrationKind::Surface );
     }
 
     void SceneNavigation::unregisterSurface( NavMeshSurfaceComponent* pSurface )
@@ -163,12 +173,13 @@ namespace sw
         }
     }
 
-    void SceneNavigation::registerObstacle( NavMeshObstacleComponent* pObstacle )
+    Subscription SceneNavigation::registerObstacle( NavMeshObstacleComponent* pObstacle )
     {
         if ( pObstacle == nullptr || pObstacle->_navIndex != kNotRegistered )
-            return;
+            return {};
         pObstacle->_navIndex = static_cast<uint32>( _listObstacle.size() );
         _listObstacle.push_back( pObstacle );
+        return issueRegistration( pObstacle, RegistrationKind::Obstacle );
     }
 
     void SceneNavigation::unregisterObstacle( NavMeshObstacleComponent* pObstacle )
@@ -190,22 +201,52 @@ namespace sw
         // nullptr · 이미 등록한 소스는 목록이 거절한다(같은 소스가 두 번 들면 빼기가 하나만 지워 죽은 포인터가 남는다).
         if ( _listGeometrySource.addLogged( pSource, "Navigation geometry source" ) != RegistrationResult::Added )
             return {};
-        return issueSubscription( reinterpret_cast<uint64>( pSource ) );
+        return issueRegistration( pSource, RegistrationKind::GeometrySource );
     }
 
     void SceneNavigation::releaseSubscription( uint64 id )
     {
-        (void)_listGeometrySource.remove( reinterpret_cast<const INavGeometrySource*>( id ) ); // 구독 하나가 등록 하나라 늘 있다
+        // 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`) — 주소를 그 종류로 돌려 쓴다.
+        void* const pItem = reinterpret_cast<void*>( id & ~kRegistrationKindMask );
+        switch ( static_cast<RegistrationKind>( id & kRegistrationKindMask ) )
+        {
+            case RegistrationKind::GeometrySource:
+            {
+                (void)_listGeometrySource.remove( static_cast<const INavGeometrySource*>( pItem ) ); // 구독 하나가 등록 하나라 늘 있다
+                break;
+            }
+            case RegistrationKind::Agent:
+            {
+                unregisterAgent( static_cast<NavMeshAgentComponent*>( pItem ) );
+                break;
+            }
+            case RegistrationKind::Surface:
+            {
+                unregisterSurface( static_cast<NavMeshSurfaceComponent*>( pItem ) );
+                break;
+            }
+            case RegistrationKind::Obstacle:
+            {
+                unregisterObstacle( static_cast<NavMeshObstacleComponent*>( pItem ) );
+                break;
+            }
+            case RegistrationKind::Link:
+            {
+                unregisterLink( static_cast<NavMeshLinkComponent*>( pItem ) );
+                break;
+            }
+        }
     }
 
-    void SceneNavigation::registerLink( NavMeshLinkComponent* pLink )
+    Subscription SceneNavigation::registerLink( NavMeshLinkComponent* pLink )
     {
         if ( pLink == nullptr || pLink->_navIndex != kNotRegistered )
-            return;
+            return {};
         pLink->_navIndex = static_cast<uint32>( _listLink.size() );
         // 막힌 채 들어온 링크(씬 데이터)는 다음 갱신에 막는다.
         pLink->_bEnabledDirty = pLink->_bLinkEnabled ? SW_FALSE : SW_TRUE;
         _listLink.push_back( pLink );
+        return issueRegistration( pLink, RegistrationKind::Link );
     }
 
     void SceneNavigation::unregisterLink( NavMeshLinkComponent* pLink )

@@ -12,6 +12,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
@@ -68,5 +69,7 @@ namespace sw
         vector<TagID> _listExcludeTag;
         PROPERTY( Category = "Surface", DisplayName = "Bounds Half Extents", Tooltip = "Bake only inside this box around the object (0 = everything)", Units = m )
         float3 _boundsHalfExtents;
+
+        Subscription _navRegistration; ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
     };
 } // namespace sw

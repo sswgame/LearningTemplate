@@ -101,11 +101,12 @@ namespace sw
         bool isPromptOpen() const;
 
     private:
-        vector<hashed_string> _listCategory;  ///< 탭 순서의 카테고리 id 입니다.
-        vector<WidgetID>      _listTabButton; ///< 탭 버튼입니다(같은 순서).
-        vector<RowEntry>      _listRow;       ///< 지금 탭의 행
-        UserSettingsManager*  _pSettings;     ///< 설정 출처입니다(엔진 서비스나 테스트의 것이며, 메뉴보다 오래 삽니다).
-        UIScreenHandle        _promptScreen;  ///< 이 메뉴가 연 확인 창입니다.
+        vector<hashed_string> _listCategory;      ///< 탭 순서의 카테고리 id 입니다.
+        vector<WidgetID>      _listTabButton;     ///< 탭 버튼입니다(같은 순서).
+        vector<RowEntry>      _listRow;           ///< 지금 탭의 행
+        UserSettingsManager*  _pSettings;         ///< 설정 출처입니다(엔진 서비스나 테스트의 것이며, 메뉴보다 오래 삽니다).
+        UIScreenHandle        _promptScreen;      ///< 이 메뉴가 연 확인 창입니다.
+        vector<Subscription>  _listPromptCommand; ///< 확인 창 단추(적용 · 버리기 · 취소) 명령 구독. 처리 함수가 이 메뉴의 일이라 메뉴가 든다
         uint32                _selectedTab;
     };
 } // namespace sw

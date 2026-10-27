@@ -20,7 +20,7 @@ namespace sw::editor
 
     ConfigHotReload::ConfigHotReload()
         : _pFileWatchDispatcher{ nullptr }
-        , _configWatchHandle{}
+        , _configWatch{}
     {
     }
 
@@ -47,17 +47,15 @@ namespace sw::editor
             return false;
         }
         const FileWatchMatchDelegate onChanged{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &ConfigHotReload::onConfigFileChanged, this ) };
-        _configWatchHandle = _pFileWatchDispatcher->registerWatch( configFolder, { ".json" }, onChanged );
-        return _configWatchHandle.isValid();
+        _configWatch = _pFileWatchDispatcher->registerWatch( configFolder, { ".json" }, onChanged );
+        return _configWatch.isActive();
     }
 
     void ConfigHotReload::shutdown()
     {
         if ( _pFileWatchDispatcher == nullptr )
             return;
-        if ( _configWatchHandle.isValid() )
-            _pFileWatchDispatcher->unregisterWatch( _configWatchHandle );
-        _configWatchHandle = {};
+        _configWatch.reset();
         _pFileWatchDispatcher->shutdown();
         _pFileWatchDispatcher.reset();
     }

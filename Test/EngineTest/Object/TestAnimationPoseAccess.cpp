@@ -289,10 +289,10 @@ SW_TEST_CASE( AnimationPoseAccessTest, ProportionTaskWithoutProportionIsReadOnly
     SW_EXPECT_TRUE( task.getPoseAccess() == AnimationPoseAccess::ReadsOnly );
 
     // 작업은 매니저보다 먼저 지워지므로 끝에서 직접 뗀다.
-    pUnit->registerAnimationPhaseTask( &task );
+    sw::Subscription taskRegistration = pUnit->registerAnimationPhaseTask( &task );
     system.evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( isShared( *pUnit ) );
-    pUnit->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
     SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
 }
 
@@ -313,12 +313,12 @@ SW_TEST_CASE( AnimationPoseAccessTest, ReadsOnlyTaskThatWritesTripsTheAssert )
     system.setCrowdSettings( AnimationCrowdSettings{} );
     SkeletalMeshComponent* pUnit = test::createCrowdCharacter( manager, "Liar", data._skeleton, data._mesh, data._folder, false );
     SW_ASSERT_NOT_NULL( pUnit );
-    pUnit->registerAnimationPhaseTask( &liar );
+    sw::Subscription liarRegistration = pUnit->registerAnimationPhaseTask( &liar );
 
     SW_TEST_DEFENSIVE_SCOPE( "a ReadsOnly task that changes the pose trips the assert" );
     const test::ScopedAssertCapture assertCapture;
     system.evaluate( 1.0f / 60.0f );
     if ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
-    pUnit->unregisterAnimationPhaseTask( &liar );
+    liarRegistration.reset();
 }

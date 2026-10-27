@@ -12,6 +12,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -118,7 +119,8 @@ namespace sw
         vector<LocomotionOrientationBone> _listOrientationBone;
 
         LocomotionWarpingBinding _binding;
-        SkeletalMeshComponent*   _pUnit; ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
+        Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SkeletalMeshComponent*   _pUnit;               ///< 같은 오브젝트의 유닛(일을 건 곳 — 유닛이 사라지면 알려 준다)
         float3                   _previousPosition;
         float3                   _measuredVelocity;
         float32                  _orientationAngle;

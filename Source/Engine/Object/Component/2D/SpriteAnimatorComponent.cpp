@@ -19,7 +19,7 @@ namespace sw
     static_assert( sizeof( SpriteAnimatorComponent ) <=
                        ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
                          sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimationGraphPlayer ) + sizeof( vector<AnimationFiredNotify> ) +
-                         sizeof( IAnimationNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
+                         sizeof( IAnimationNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( Subscription ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
                          sizeof( const SpriteClipAsset* ) + sizeof( AnimationSystem* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
@@ -145,15 +145,15 @@ namespace sw
     void SpriteAnimatorComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
-        _pAnimationSystem->registerLODClient( &_lodClient );
+        _pAnimationSystem  = &manager.getSubsystem<AnimationSystem>();
+        _lodRegistration   = _pAnimationSystem->registerLODClient( &_lodClient );
         const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
         _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
     }
 
     void SpriteAnimatorComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<AnimationSystem>().unregisterLODClient( &_lodClient );
+        _lodRegistration.reset();
         _pAnimationSystem = nullptr;
         SceneComponent::onUnregister( manager );
     }

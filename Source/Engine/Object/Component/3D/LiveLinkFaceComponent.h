@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Facial/LiveLinkFace.h"
@@ -61,10 +62,10 @@ namespace sw
         vector<uint8>               _listReceive;
         unique_ptr<UDPNetTransport> _transport;
         uint32                      _appliedPacketCount;
+        Subscription                _faceRegistration; ///< 얼굴에 건 입력의 구독(`onBeginPlay` 가 받고 `onEndPlay` 가 놓는다)
         PROPERTY( Category = "Live Link Face", DisplayName = "Loopback Only", Tooltip = "Accept packets from this machine only (local sender, tests)" )
         uint8                  _bLoopbackOnly  : 1;
-        uint8                  _bRegistered    : 1; ///< 얼굴에 입력을 걸었다
         uint8                  _bReportedError : 1; ///< 깨진 패킷을 알렸다(한 번만)
-        [[maybe_unused]] uint8 _reserved       : 5;
+        [[maybe_unused]] uint8 _reserved       : 6;
     };
 } // namespace sw
