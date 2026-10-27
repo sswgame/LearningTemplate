@@ -81,13 +81,16 @@ namespace sw
     {
         bindBusThread();
         assertBusThread();
-        int32                                currentAllocIdx{ 0 };
         vector<pair<hashed_string, IEvent*>> activeChannels;
         BLOCK( "Swap Event Queues" )
         {
             ScopedLock<SpinLock> lock{ _queueSpinLock };
-            currentAllocIdx         = _activeAllocatorIndex.load( std::memory_order_relaxed );
-            const int32 newAllocIdx = ( currentAllocIdx + 1 ) % 2;
+            const int32          currentAllocIdx = _activeAllocatorIndex.load( std::memory_order_relaxed );
+            const int32          newAllocIdx     = ( currentAllocIdx + 1 ) % 2;
+            // 생산자가 넘어올 칸은 지난 처리 뒤 아무도 쓰지 않았다(그 이벤트는 그 처리에서 소멸했다) — 저장소를 여기서, 잠금 안에서 비운다.
+            // 처리가 끝난 뒤 잠금 밖에서 비우면 "그 칸은 버스 스레드만 만진다" 는 약속이 형식(SW_GUARDED_BY)에 담기지 않는다.
+            _arrListOverflowAllocation[newAllocIdx].clear(); // 블록은 목록이 소유한다
+            _arrFrameAllocator[newAllocIdx].reset();
             _activeAllocatorIndex.store( newAllocIdx, std::memory_order_relaxed );
 
             for ( auto& [channel, list] : _mapChannelQueue )
@@ -99,11 +102,7 @@ namespace sw
         }
 
         if ( activeChannels.empty() )
-        {
-            _arrListOverflowAllocation[currentAllocIdx].clear(); // 블록은 목록이 소유한다
-            _arrFrameAllocator[currentAllocIdx].reset();
             return;
-        }
 
         BLOCK( "Dispatch Events" )
         {
@@ -139,12 +138,6 @@ namespace sw
                     pEvent = pNextEvent;
                 }
             }
-        }
-
-        BLOCK( "Cleanup Frame Allocator" )
-        {
-            _arrListOverflowAllocation[currentAllocIdx].clear();
-            _arrFrameAllocator[currentAllocIdx].reset();
         }
     }
 

@@ -271,7 +271,7 @@ namespace sw
          * @brief 큐에 남은 이벤트의 소멸자를 부릅니다. `_queueSpinLock` 을 **잡은 채로** 부르십시오.
          * @details 아레나를 되감으면 메모리만 돌아올 뿐이고, 소멸자는 여기서만 불립니다.
          */
-        void removeQueuedEvents();
+        void removeQueuedEvents() SW_REQUIRES_LOCK( _queueSpinLock );
 
         /** @brief (채널, 이벤트 타입) 쌍의 해시입니다. */
         struct HashPair
@@ -334,7 +334,7 @@ namespace sw
          *          잠금 밖에서 돕니다.
          */
         template <typename T>
-        shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel )
+        shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel ) SW_REQUIRES_LOCK( _busSpinLock )
         {
             pair<hashed_string, EventTypeID> key( channel, T::kType );
 
@@ -355,8 +355,8 @@ namespace sw
          * @details 같은 키로 멀티캐스트를 가리키는 표를 따로 두지 말 것 — 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면,
          *          한쪽만 고친 날 디스패치가 이미 사라진 멀티캐스트를 부르게 됩니다.
          */
-        unordered_map<pair<hashed_string, EventTypeID>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
-        unordered_map<hashed_string, unique_ptr<ChannelEventList>>                      _mapChannelQueue;
+        unordered_map<pair<hashed_string, EventTypeID>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable SW_GUARDED_BY( _busSpinLock );
+        unordered_map<hashed_string, unique_ptr<ChannelEventList>> _mapChannelQueue                              SW_GUARDED_BY( _queueSpinLock );
 
         /**
          * @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다.
@@ -364,8 +364,8 @@ namespace sw
          */
         atomic<std::thread::id> _busThreadID;
 
-        LinearAllocator     _arrFrameAllocator[2];
-        vector<MemoryBlock> _arrListOverflowAllocation[2]; ///< 프레임 아레나에 못 담은 이벤트의 블록. 목록이 소유한다
+        LinearAllocator     _arrFrameAllocator[2] SW_GUARDED_BY( _queueSpinLock );
+        vector<MemoryBlock> _arrListOverflowAllocation[2] SW_GUARDED_BY( _queueSpinLock ); ///< 프레임 아레나에 못 담은 이벤트의 블록. 목록이 소유한다
         atomic<int32>       _activeAllocatorIndex;
     };
 } // namespace sw

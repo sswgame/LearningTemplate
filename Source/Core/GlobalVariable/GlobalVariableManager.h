@@ -245,7 +245,7 @@ namespace sw
         /**
          * @brief 이름 → 변수 맵입니다. **값이 `unique_ptr` 인 이유는 주소 안정성**입니다(`findVariable` 참고).
          */
-        unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable;
+        unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable SW_GUARDED_BY( _mutex );
         /**
          * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
          * @details 소유하지 않습니다. 둘 다 `Engine` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
@@ -255,7 +255,7 @@ namespace sw
         /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */
         unordered_map<string, string> _mapPendingEnumText;
         /** @brief enum 변수의 글 값 파서입니다(`setEnumTextParser`). 등록한 enum 변수가 이 주소를 가리키므로 매니저는 옮겨지지 않습니다(복사 금지). */
-        GlobalVariableEnumTextParser _enumTextParser;
+        GlobalVariableEnumTextParser _enumTextParser SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

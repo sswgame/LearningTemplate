@@ -88,11 +88,11 @@ namespace sw
         bool isCodecRegistered( CompressionCodecType type ) const;
 
     private:
-        void registerBuiltinCodecs();
+        void registerBuiltinCodecs() SW_REQUIRES_LOCK( _mutex );
 
     private:
-        mutable mutex                                                      _mutex;
-        unordered_map<CompressionCodecType, unique_ptr<ICompressionCodec>> _mapCodec;
+        mutable mutex                                                                _mutex;
+        unordered_map<CompressionCodecType, unique_ptr<ICompressionCodec>> _mapCodec SW_GUARDED_BY( _mutex );
         /**
          * @brief 기본 코덱 종류입니다. `_mutex` 로 보호할 수 없어서 원자 변수로 둡니다.
          * @details `getDefaultCodec()` 은 이 값을 읽은 직후 `getCodec()` 을 부르고, 그쪽이 `_mutex` 를 잡습니다. 여기서도 같은 뮤텍스를

@@ -35,7 +35,7 @@ namespace sw
         /** @brief 읽기 스레드를 띄웁니다. 두 번 불러도 한 번입니다. */
         void start();
         /** @brief 읽기 스레드를 멈추고 기다립니다. 두 번 불러도 됩니다. */
-        void stop();
+        void stop() SW_REQUIRES_LOCK( _mutex );
         /** @brief 모인 줄을 @p outListLine 뒤에 옮깁니다(게임 스레드). */
         void drainLines( vector<string>& outListLine );
 
@@ -47,11 +47,11 @@ namespace sw
         bool takeLine( string& outLine );
 
     private:
-        sw::thread     _thread;
-        mutex          _mutex;
-        vector<string> _listLine;    ///< 읽기 스레드가 넣고 게임 스레드가 꺼낸다(_mutex)
-        string         _partialLine; ///< 읽기 스레드만 — 줄바꿈을 기다리는 조각
-        atomic<uint32> _stopRequested;
-        atomic<uint32> _endOfInput;
+        sw::thread               _thread;
+        mutex                    _mutex;
+        vector<string> _listLine SW_GUARDED_BY( _mutex ); ///< 읽기 스레드가 넣고 게임 스레드가 꺼낸다(_mutex)
+        string                   _partialLine;            ///< 읽기 스레드만 — 줄바꿈을 기다리는 조각
+        atomic<uint32>           _stopRequested;
+        atomic<uint32>           _endOfInput;
     };
 } // namespace sw

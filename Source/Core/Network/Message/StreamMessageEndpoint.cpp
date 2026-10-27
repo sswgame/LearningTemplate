@@ -80,6 +80,7 @@ namespace sw
         , _inboxMutex{}
         , _listInbox{}
         , _inboxBytes{}
+        , _pumpThread{}
         , _listPumping{}
         , _pumpingBytes{}
         , _mapLastPingTime{}
@@ -394,6 +395,7 @@ namespace sw
 
     int32 StreamMessageEndpoint::pump( IStreamEndpointListener& listener )
     {
+        _pumpThread.assumeHeld(); // 받은 것을 꺼내 알리는 스레드는 하나다(엔드포인트 계약) — 꺼낸 목록은 그 스레드 것이다
         {
             ScopedLock<mutex> lock{ _inboxMutex };
             _listPumping.clear();

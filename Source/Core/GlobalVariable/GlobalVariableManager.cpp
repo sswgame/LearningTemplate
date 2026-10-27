@@ -453,11 +453,20 @@ namespace sw
             return;
 
         // 파싱이 끝난 뒤 등록되는 변수(모듈이 선언한 것)가 보류값을 꺼낼 수 있도록 파서를 잡아 둔다.
-        _pCmdLineManager = pCmdLineManager;
-
-        for ( const auto& [name, info] : _mapVariable )
+        // 표는 잠금 안에서 훑어 사본으로 들고, 커맨드라인 관리자는 잠금 밖에서 부른다(잠금은 잎 잠금, 결정 5-3).
+        vector<GlobalVariableInfo*> listInfo;
         {
-            GlobalVariableTypeTable::getRow( info->_type )._addCommandLineArgument( *pCmdLineManager, *info );
+            ScopedLock<shared_mutex> lock{ _mutex };
+            _pCmdLineManager = pCmdLineManager;
+            listInfo.reserve( _mapVariable.size() );
+            for ( const auto& [name, info] : _mapVariable )
+            {
+                listInfo.push_back( info.get() );
+            }
+        }
+        for ( GlobalVariableInfo* pInfo : listInfo )
+        {
+            GlobalVariableTypeTable::getRow( pInfo->_type )._addCommandLineArgument( *pCmdLineManager, *pInfo );
         }
     }
 
@@ -472,21 +481,37 @@ namespace sw
         if ( pCmdLineManager == nullptr )
             return;
 
-        for ( auto& [name, info] : _mapVariable )
+        // 표는 잠금 안에서 사본으로 훑고, 값 읽기 · 변경 알림(콜백)은 잠금 밖에서 한다 — 콜백이 이 관리자를 다시 부르면 같은 잠금에 멈춘다.
+        vector<pair<string, GlobalVariableInfo*>> listVariable;
         {
-            if ( info->_pData == nullptr )
-                continue;
-
-            string pendingText;
-            if ( GlobalVariableTypeTable::getRow( info->_type )._readCommandLineArgument( *pCmdLineManager, *info, pendingText ) )
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            listVariable.reserve( _mapVariable.size() );
+            for ( auto& [name, info] : _mapVariable )
             {
-                if ( info->_onValueChanged.isBound() )
-                    info->_onValueChanged( info.get() );
+                if ( info->_pData != nullptr )
+                    listVariable.emplace_back( name, info.get() );
+            }
+        }
+        vector<pair<string, string>> listPendingText;
+        for ( const auto& [name, pInfo] : listVariable )
+        {
+            string pendingText;
+            if ( GlobalVariableTypeTable::getRow( pInfo->_type )._readCommandLineArgument( *pCmdLineManager, *pInfo, pendingText ) )
+            {
+                if ( pInfo->_onValueChanged.isBound() )
+                    pInfo->_onValueChanged( pInfo );
             }
             else if ( pendingText.empty() == false )
             {
-                _mapPendingEnumText[name] = std::move( pendingText );
+                listPendingText.emplace_back( name, std::move( pendingText ) );
             }
+        }
+        if ( listPendingText.empty() )
+            return;
+        ScopedLock<shared_mutex> lock{ _mutex };
+        for ( auto& [name, text] : listPendingText )
+        {
+            _mapPendingEnumText[name] = std::move( text );
         }
     }
 
@@ -654,6 +679,7 @@ namespace sw
      */
     void GlobalVariableManager::setEnumTextParser( const GlobalVariableEnumTextParser& parser )
     {
+        ScopedLock<shared_mutex> lock{ _mutex };
         _enumTextParser = parser;
     }
 

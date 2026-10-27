@@ -198,7 +198,7 @@ namespace sw
         };
 
         /** @brief 핸들이 가리키는 점유된 슬롯을 찾습니다(뮤텍스를 잡은 상태에서 부릅니다). */
-        Slot* findOccupiedSlot( SlotHandle handle )
+        Slot* findOccupiedSlot( SlotHandle handle ) SW_REQUIRES_LOCK( _mutex )
         {
             if ( handle.isValid() == false )
                 return nullptr;
@@ -209,7 +209,7 @@ namespace sw
         }
 
         /** @brief 슬롯을 비우고 세대를 올린 뒤 프리 리스트에 넣습니다(뮤텍스를 잡은 상태에서 부릅니다). */
-        void freeSlot( uint32 index, Slot& slot )
+        void freeSlot( uint32 index, Slot& slot ) SW_REQUIRES_LOCK( _mutex )
         {
             slot._value = T{};
             // 점유 해제와 세대 증가를 한 번의 store 로 발행한다. 둘로 나누면 그 사이에 락 없이 읽는 쪽이
@@ -221,9 +221,9 @@ namespace sw
             _listFree.push_back( index );
         }
 
-        PagedArray<Slot>  _listSlot;
-        vector<uint32>    _listFree;
-        mutable mutex     _mutex;
-        uint32 _slotCount SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
+        PagedArray<Slot>         _listSlot;
+        vector<uint32> _listFree SW_GUARDED_BY( _mutex );
+        mutable mutex            _mutex;
+        uint32 _slotCount        SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
     };
 } // namespace sw

@@ -32,7 +32,7 @@
  *          `update` 는 소켓 받기와 보내기를 **잠금 밖에서** 묶어 처리하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이 보내는 쪽 스레드를 막지 않는다.
  *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetHostThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
  *          그래서 로딩이나 프레임 멈춤 중에도 연결이 끊기지 않는다.
- *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖), 나머지는 모두 `_mutex` 아래다(선언의 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` 을 clang `-Wthread-safety` 가 본다).
+ *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖, `_updateThread` 역할), 나머지는 모두 `_mutex` 아래다(선언의 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` 을 clang `-Wthread-safety` 가 본다).
  *          잠금은 `_mutex` 하나뿐이고, 잠금을 쥔 채 부르는 바깥 코드는 `INetConnectAuthenticator` 와 `INetSecurityProvider` 뿐이다(둘 다 `NetHost` 를 부르지 않는다).
  *          전송의 `receive` · `send` 와 비동기 연결 결과(`TaskPromise::setValue`)는 잠금 밖에서 부른다.
  *
@@ -445,15 +445,16 @@ namespace sw
         NetChallenge _challenge                       SW_GUARDED_BY( _mutex ); ///< 챌린지 값의 비밀 키와 솔트 수열.
         NetPacketSealer _sealer                       SW_GUARDED_BY( _mutex ); ///< 암호화 방식의 봉인과 열기(스크래치 버퍼를 다시 쓴다).
         vector<NetHostEvent> _listEvent               SW_GUARDED_BY( _mutex );
-        OutgoingBatch _pendingBatch                   SW_GUARDED_BY( _mutex ); ///< 잠금 안에서 쌓인 보낼 데이터그램
-        BitWriter _packetWriter                       SW_GUARDED_BY( _mutex ); ///< 보낼 패킷의 몸
-        TaskPromise<NetConnectResult> _connectPromise SW_GUARDED_BY( _mutex ); ///< 기다리는 비동기 연결(`_bConnectPending`).
-        vector<FinishedConnect> _listFinished         SW_GUARDED_BY( _mutex ); ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
-        vector<ReceivedDatagram>                      _listReceived;           ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
-        OutgoingBatch                                 _flushBatch;             ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
-        vector<FinishedConnect>                       _listDeliver;            ///< `update` 스레드 전용.
-        BitWriter _plainWriter                        SW_GUARDED_BY( _mutex ); ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
-        NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
+        OutgoingBatch _pendingBatch                   SW_GUARDED_BY( _mutex );        ///< 잠금 안에서 쌓인 보낼 데이터그램
+        BitWriter _packetWriter                       SW_GUARDED_BY( _mutex );        ///< 보낼 패킷의 몸
+        TaskPromise<NetConnectResult> _connectPromise SW_GUARDED_BY( _mutex );        ///< 기다리는 비동기 연결(`_bConnectPending`).
+        vector<FinishedConnect> _listFinished         SW_GUARDED_BY( _mutex );        ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
+        ThreadRole                                    _updateThread;                  ///< `update` 를 도는 스레드 역할 — 아래 셋은 그 스레드만 잠금 밖에서 만진다(잠금이 아니라 분석용 능력)
+        vector<ReceivedDatagram> _listReceived        SW_GUARDED_BY( _updateThread ); ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
+        OutgoingBatch _flushBatch                     SW_GUARDED_BY( _updateThread ); ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
+        vector<FinishedConnect> _listDeliver          SW_GUARDED_BY( _updateThread ); ///< `update` 스레드 전용.
+        BitWriter _plainWriter                        SW_GUARDED_BY( _mutex );        ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
+        NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex );        ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostConfig _settings                       SW_GUARDED_BY( _mutex );
         NetMessageKindTallyTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );
