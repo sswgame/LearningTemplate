@@ -804,7 +804,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         // 배포본은 마운트된 팩만 읽는다(낱개 파일 꺼짐) — 이 구성의 입력은 쿠킹이 팩에 넣은 파일이다. 디스크 목록을 폴더 이름(`editor/` · `rigs_raw/`)으로
         // 거르지 않고 팩에 있는가로 가른다. 이름 목록은 쿠킹 제외 목록(`Config/Engine/PackConfig.json`)의 사본이 되어, 데이터 확장자를 가진 원본 폴더가
         // 늘면 어긋난다. 팩에 없는 파일은 Dev 빌드의 이 테스트가 낱개로 읽는다.
-        if ( sw::ResourceIO::hasResource( id ) == false )
+        if ( sw::ResourceIO::hasResource( sw::ResourceID{ resourceID } ) == false )
             continue;
 #endif
 

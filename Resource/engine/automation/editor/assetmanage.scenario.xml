@@ -50,6 +50,8 @@
 	<At frame="198"><EditorClick mark="contentBrowser.asset.probe_renamed.material" state="up"/></At>
 	<At frame="210"><EditorKey key="F2"/></At>
 	<At frame="225"><EditorText value="probe"/></At>
+	<!-- 첫 이름 바꾸기가 남긴 파일 변경 알림이 느린 백엔드(GL)에서 뒤늦게 닿아 색인이 다시 낡을 수 있다 — 낡은 색인에서는 이름 바꾸기가 거절된다(아무것도 안 옮김) -->
+	<At frame="232"><WaitUntil probe="Editor.ReferenceIndexReady" equals="1"/></At>
 	<At frame="235"><EditorKey key="Enter"/></At>
 	<At frame="255">
 		<Variable name="gv_editorProbeAsset" value="scratch/assetmanage/probe.material"/>
