@@ -145,7 +145,7 @@ namespace sw
                 if ( api.hasMediaFoundation() == false )
                     return false; // Media Foundation 이 없는 Windows(N 에디션) — 공통 디코더가 못 푸는 형식은 재생하지 않는다
                 vector<uint8> bytes;
-                if ( ResourceIO::readBinaryResource( path, bytes ) == false || bytes.empty() )
+                if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false || bytes.empty() )
                     return false;
                 ScopedThreadComAndMf threadComScope;
                 IStream*             pMemoryStream = api._pfnSHCreateMemStream( bytes.data(), static_cast<UINT>( bytes.size() ) );

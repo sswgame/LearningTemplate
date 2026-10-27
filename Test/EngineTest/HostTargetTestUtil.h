@@ -23,7 +23,7 @@ namespace test
          * @details 서버 패키지는 쿠킹 표 `target_excluded_asset_kinds` 의 종류(텍스처 · 셰이더 바이너리 · 오디오)를 담지 않는다. 클라이언트 코드가 든
          *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 테스트는 돌아서 진다.
          */
-        static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceIO::hasResource( resourceID ) == false; }
+        static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceIO::hasResource( sw::ResourceID{ resourceID } ) == false; }
     };
 } // namespace test
 

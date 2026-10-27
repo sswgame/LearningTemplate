@@ -410,7 +410,7 @@ namespace sw
 
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( path, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
         {
             SW_LOG_ERROR( "TileMap file not found: %#", path );
             return false;

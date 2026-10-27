@@ -429,7 +429,7 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     const utf8* pAssetPath = assetPath.c_str();
 
     sw::vector<uint8> directBytes;
-    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( pAssetPath, directBytes ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ pAssetPath }, directBytes ) );
     SW_ASSERT_TRUE( directBytes.empty() == false );
 
     constexpr uint32 kRound = 32;

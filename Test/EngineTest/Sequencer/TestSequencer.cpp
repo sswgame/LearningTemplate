@@ -549,7 +549,7 @@ SW_TEST_CASE( SequencerTest, RepositorySequenceResavesByteForByte )
 {
     constexpr const utf8* kSequencePath = "engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml";
     sw::string            fileText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kSequencePath, fileText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ kSequencePath }, fileText ) );
     // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
     fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
     sw::SequenceAsset asset;

@@ -123,7 +123,7 @@ namespace sw
         const string                presetFolder = FileUtil::joinPath( folder, kPresetFolder );
         vector<string>              listPresetFile;
         bool                        bPresetsRead = true;
-        const ResourceFolderListing listing      = ResourceIO::collectResources( presetFolder, kPresetExtension, listPresetFile );
+        const ResourceFolderListing listing      = ResourceIO::collectResources( ResourceID{ presetFolder }, kPresetExtension, listPresetFile );
         if ( listing == ResourceFolderListing::Failed )
         {
             _report.addErrorWithID( "Appearance.PresetFolderUnreadable", "%#: cannot list the appearance preset folder", presetFolder );

@@ -83,8 +83,8 @@ namespace sw
         [[nodiscard]] bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
         {
             vector<uint8> bytes;
-            const bool    bText   = ResourceIO::readTextResource( pKey, outText );
-            const bool    bBinary = ResourceIO::readBinaryResource( pKey, bytes );
+            const bool    bText   = ResourceIO::readTextResource( sw::ResourceID{ pKey }, outText );
+            const bool    bBinary = ResourceIO::readBinaryResource( sw::ResourceID{ pKey }, bytes );
             outBinary.assign( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             return bText && bBinary;
         }
@@ -363,22 +363,22 @@ SW_TEST_CASE( ResourcePakTest, VFSPriorityStackAndOverrides )
     SW_ASSERT_TRUE( packManager.mountPack( gamePack, 5000 ) );
 
     sw::string content;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "config/gameplay.xml", content ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "config/gameplay.xml" }, content ) );
     SW_EXPECT_EQUAL( content, "VERSION_GAME" ); // game(5000) > engine(3000)
 
     // 3. DLC 팩 마운트 (DLC가 본편 오버라이드)
     SW_ASSERT_TRUE( packManager.mountPack( dlcPack, 8000 ) );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "config/gameplay.xml", content ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "config/gameplay.xml" }, content ) );
     SW_EXPECT_EQUAL( content, "VERSION_DLC" ); // dlc(8000) > game(5000)
 
     // 4. 긴급 핫픽스 팩 마운트 (patch.pack이 최우선 오버라이드)
     SW_ASSERT_TRUE( packManager.mountPack( patchPack, 10000 ) );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "config/gameplay.xml", content ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "config/gameplay.xml" }, content ) );
     SW_EXPECT_EQUAL( content, "VERSION_PATCH_HOTFIX" ); // patch(10000) > dlc(8000)
 
     // 5. 핫픽스 언마운트 시 DLC로 안전하게 롤백
     packManager.unmountPack( patchPack );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "config/gameplay.xml", content ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "config/gameplay.xml" }, content ) );
     SW_EXPECT_EQUAL( content, "VERSION_DLC" );
 
     packManager.unmountAll();
@@ -446,7 +446,7 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
     // 1. 기본 상태: 팩 내용이 우선
     packManager.setAllowLooseFiles( false );
     sw::string content;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "test_loose_file.xml", content ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "test_loose_file.xml" }, content ) );
     SW_EXPECT_EQUAL( content, "CONTENT_IN_PACK" );
 
     // 2. 모딩/개발용 Loose File 우선 모드 활성화: 검색 루트의 낱개 파일이 같은 키의 팩 항목보다 먼저다.
@@ -456,7 +456,7 @@ SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
         SW_ASSERT_TRUE( tempRoot.writeTextFile( "common/test_loose_file.xml", "CONTENT_ON_DISK" ) );
         SW_ASSERT_TRUE( sw::ResourcePaths::setSearchPriority( sw::ResourcePaths::getSearchPriority() ) ); // 방금 만든 도메인 폴더를 검색 루트에 넣는다
         packManager.setAllowLooseFiles( true );
-        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "test_loose_file.xml", content ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "test_loose_file.xml" }, content ) );
         SW_EXPECT_EQUAL( content, "CONTENT_ON_DISK" );
     }
 
@@ -495,10 +495,10 @@ SW_TEST_CASE( ResourcePakTest, TextAndBinaryReadsPickTheSameSource )
         packManager.setAllowLooseFiles( bAllowLoose );
 
         sw::string textContent;
-        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kKey, textContent ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ kKey }, textContent ) );
 
         sw::vector<uint8> binaryContent;
-        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( kKey, binaryContent ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kKey }, binaryContent ) );
 
         const sw::string binaryAsText( reinterpret_cast<const utf8*>( binaryContent.data() ), binaryContent.size() );
         SW_EXPECT_TRUE_MSG( textContent == binaryAsText,
@@ -510,8 +510,8 @@ SW_TEST_CASE( ResourcePakTest, TextAndBinaryReadsPickTheSameSource )
     {
         sw::string        missingText;
         sw::vector<uint8> missingBytes;
-        const bool        bTextOk   = sw::ResourceIO::readTextResource( "config/no_such_key.txt", missingText );
-        const bool        bBinaryOk = sw::ResourceIO::readBinaryResource( "config/no_such_key.txt", missingBytes );
+        const bool        bTextOk   = sw::ResourceIO::readTextResource( sw::ResourceID{ "config/no_such_key.txt" }, missingText );
+        const bool        bBinaryOk = sw::ResourceIO::readBinaryResource( sw::ResourceID{ "config/no_such_key.txt" }, missingBytes );
         SW_EXPECT_TRUE_MSG( bTextOk == bBinaryOk, "없는 키에 대해 두 읽기의 답이 갈렸습니다" );
         SW_EXPECT_TRUE( bTextOk == false );
     }
@@ -554,13 +554,13 @@ SW_TEST_CASE( ResourcePakTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
     packManager.unmountAll(); // 팩에 없다 — 낱개 허용일 때만
     packManager.setAllowLooseFiles( true );
     SW_EXPECT_TRUE( sw::readTextAndBinaryResource( kKey, text, binary ) );
-    SW_EXPECT_TRUE( sw::ResourceIO::hasResource( kKey ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::hasResource( sw::ResourceID{ kKey } ) );
     packManager.setAllowLooseFiles( false );
     {
         test::ScopedDefensiveTestLog expected( "a pack-only build refuses a loose read under the resource root" );
         SW_EXPECT_FALSE( sw::readTextAndBinaryResource( kKey, text, binary ) );
     }
-    SW_EXPECT_FALSE( sw::ResourceIO::hasResource( kKey ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::hasResource( sw::ResourceID{ kKey } ) );
     packManager.setAllowLooseFiles( true );
 }
 
@@ -606,34 +606,34 @@ SW_TEST_CASE( ResourcePakTest, DynamicPriorityAutoCalculation )
     SW_ASSERT_TRUE( packManager.mountPack( gamePack, 0 ) );
 
     sw::string versionText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "GAME_1.0", versionText ); // game(3000) > common(2000) > engine(1000)
 
     // 2. 게임 전용 패치 팩 마운트
     SW_ASSERT_TRUE( packManager.mountPack( patchGame, 0 ) );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "PATCH_GAME_1.1", versionText ); // patch_game(3500) > game(3000)
 
     // 3. 글로벌 긴급 핫픽스 팩 마운트
     SW_ASSERT_TRUE( packManager.mountPack( hotfixPack, 0 ) );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "HOTFIX_GLOBAL_1.2", versionText ); // patch_hotfix(4000) > patch_game(3500)
 
     // 4. 핫픽스 언마운트 시 단계별 롤백 검증
     packManager.unmountPack( hotfixPack );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "PATCH_GAME_1.1", versionText );
 
     packManager.unmountPack( patchGame );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "GAME_1.0", versionText );
 
     packManager.unmountPack( gamePack );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "COMMON_1.0", versionText );
 
     packManager.unmountPack( commonPack );
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "core/version.txt", versionText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "core/version.txt" }, versionText ) );
     SW_EXPECT_EQUAL( "ENGINE_1.0", versionText );
 
     packManager.unmountAll();
@@ -973,7 +973,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
     SW_ASSERT_TRUE( packManager.mountPack( domainPack, 1000 ) );
 
     sw::vector<sw::string> listPath;
-    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".appearance.xml", listPath ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".appearance.xml", listPath ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_EQUAL( size_t( 3 ), listPath.size() );
     SW_EXPECT_EQUAL( folder + "/A.appearance.xml", listPath[0] ); // 이름순은 대소문자를 가리지 않는다
     SW_EXPECT_EQUAL( folder + "/b.appearance.xml", listPath[1] );
@@ -981,17 +981,17 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
     for ( const sw::string& path : listPath )
     {
         sw::string text;
-        SW_ASSERT_TRUE_MSG( sw::ResourceIO::readTextResource( path, text ), path.c_str() );
+        SW_ASSERT_TRUE_MSG( sw::ResourceIO::readTextResource( sw::ResourceID{ path }, text ), path.c_str() );
         SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( text, sw::FileUtil::getFileNamePart( path ), true ), text.c_str() ); // 본문은 담을 때의 경로다
     }
 
     // 거르지 않으면 같은 폴더의 다른 파일도 나오고, 하위 폴더 안은 여전히 빠진다.
-    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder + "/", {}, listPath ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder + "/" }, {}, listPath ) == sw::ResourceFolderListing::Listed );
     SW_EXPECT_EQUAL( size_t( 4 ), listPath.size() );
 
     // 같은 입력이면 실행마다 같은 순서다.
     sw::vector<sw::string> listAgain;
-    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, {}, listAgain ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, {}, listAgain ) == sw::ResourceFolderListing::Listed );
     SW_EXPECT_TRUE( listAgain == listPath );
 }
 
@@ -1010,7 +1010,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
     packManager.setAllowLooseFiles( true );
 
     sw::vector<sw::string> listLoose;
-    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".xml", listLoose ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".xml", listLoose ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_TRUE( listLoose.empty() == false );
 
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "listing_union.pack" );
@@ -1019,7 +1019,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
 
     sw::vector<sw::string> listUnion;
-    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( folder, ".xml", listUnion ) == sw::ResourceFolderListing::Listed );
+    SW_ASSERT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ folder }, ".xml", listUnion ) == sw::ResourceFolderListing::Listed );
     SW_ASSERT_EQUAL( listLoose.size() + 1, listUnion.size() ); // SLOTS.xml 은 디스크의 slots.xml 과 같은 항목이다
     SW_EXPECT_EQUAL( folder + "/zz_packonly.xml", listUnion.back() );
     const sw::string packSpelling  = folder + "/SLOTS.xml";
@@ -1046,15 +1046,15 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesTellsMissingFolderFromFailure )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<sw::string> listPath{ "stale" };
-    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "game/shooter3d/data/no_such_folder_xyz", ".xml", listPath ) == sw::ResourceFolderListing::FolderMissing );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ "game/shooter3d/data/no_such_folder_xyz" }, ".xml", listPath ) == sw::ResourceFolderListing::FolderMissing );
     SW_EXPECT_TRUE( listPath.empty() );
 
     test::ScopedLogSuppressor suppressor;
     listPath = { "stale" };
-    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "game/shooter3d/../../escape", ".xml", listPath ) == sw::ResourceFolderListing::Failed );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ "game/shooter3d/../../escape" }, ".xml", listPath ) == sw::ResourceFolderListing::Failed );
     SW_EXPECT_TRUE( listPath.empty() );
-    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourcePaths::getRootFolderPath(), {}, listPath ) == sw::ResourceFolderListing::Failed );
-    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( "", {}, listPath ) == sw::ResourceFolderListing::Failed );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ sw::ResourcePaths::getRootFolderPath() }, {}, listPath ) == sw::ResourceFolderListing::Failed );
+    SW_EXPECT_TRUE( sw::ResourceIO::collectResources( sw::ResourceID{ "" }, {}, listPath ) == sw::ResourceFolderListing::Failed );
 }
 
 // 디스크 전용 해석 결과는 문자열로 저절로 바뀌지 않는다 — 바뀌면 `FileUtil` 로 그대로 흘러가 팩 빌드에서 조용히 "없음" 이 된다.
@@ -1063,6 +1063,11 @@ static_assert( std::is_convertible_v<sw::LooseFilePath, sw::string_view> == fals
 // `sw::string` 은 제약 없는 explicit 템플릿 생성자(StringViewLike)가 있어 is_constructible 로는 볼 수 없다 — 암시 변환 금지 둘과 string_view 로 본다.
 static_assert( std::is_constructible_v<sw::string_view, sw::LooseFilePath> == false );
 static_assert( std::is_constructible_v<sw::LooseFilePath, sw::string> == false ); // 만드는 쪽은 ResourcePaths 하나다
+// 리소스 입구의 인자(`ResourceID`)는 글에서 저절로 만들어지지 않는다 — 디스크 경로 · 일반 문자열을 그대로 넘기면 컴파일되지 않는다(계획 DiskPathVsResourceId 안 C).
+static_assert( std::is_convertible_v<sw::string_view, sw::ResourceID> == false );
+static_assert( std::is_convertible_v<const utf8*, sw::ResourceID> == false );
+static_assert( std::is_convertible_v<sw::string, sw::ResourceID> == false );
+static_assert( std::is_convertible_v<sw::ResourceID, sw::string_view> == false );
 
 /**
  * @brief [ResourcePakTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인

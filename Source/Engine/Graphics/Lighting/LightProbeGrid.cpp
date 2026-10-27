@@ -174,7 +174,7 @@ namespace sw
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
         {
             LightProbeGridInternal::setError( pOutError, "probe file could not be read" );
             return false;

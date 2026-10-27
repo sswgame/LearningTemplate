@@ -22,7 +22,9 @@
 | **B(채택)** | 리소스 id 입구는 **리소스 id 만** 받는다. OS 절대 경로면 오류로 멈추고 디스크 파일은 디스크 입구(`readTextFile` · `load*FromDiskFile`)로만 읽는다 | A 의 호출부 + 임시 파일 · 세이브를 리소스 입구로 읽는 호출부 |
 | C | `ResourceId` 형식을 입구 인자로(컴파일에서 막음) | 입구와 호출부 수백 곳의 시그니처가 바뀐다 |
 
-B 는 구성마다 다른 규칙을 입구 하나의 규칙("리소스 id 만")으로 끝낸다. 디스크 쪽은 이미 `LooseFilePath` · `readTextFile` · `load*FromDiskFile` 로 갈라져 있어 새 형식이 필요 없다. C 는 B 뒤에도 같은 결함이 다시 나올 때 한다. 디스크 입구를 형식(`DiskFilePath`)으로 막는 안은 하지 않는다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수 없다.
+**C 도 들어갔다(2026-10-27, `wt/resid`, 감사 SG U12)** — 리소스 입구(`readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` · `collectResources` 의 폴더)의 인자가 `ResourceID`(`Engine/Resource/ResourceID.h`)이고, 글에서 암시적으로 만들 수 없어 일반 문자열 · 디스크 경로를 그대로 넘기면 컴파일되지 않는다. 호출 161 곳이 `ResourceID{ … }` 로 글을 id 로 쓴다는 것을 드러낸다. 실행 중 OS 경로 거절(B)은 그대로다 — 형식은 섞는 실수를 막고, 내용(OS 경로)은 입구가 본다. 남은 단계: 각 에셋의 `loadFromResource( string_view )`(선언 73 · 호출 약 390)와 `collectResources` 의 결과 목록, `ResourcePaths::toResourceID` 의 반환을 `ResourceID` 로 올리면 감싸는 자리가 데이터 읽기 쪽으로 올라간다.
+
+B 는 구성마다 다른 규칙을 입구 하나의 규칙("리소스 id 만")으로 끝낸다. 디스크 쪽은 이미 `LooseFilePath` · `readTextFile` · `load*FromDiskFile` 로 갈라져 있어 새 형식이 필요 없다. 디스크 입구를 형식(`DiskFilePath`)으로 막는 안은 하지 않는다 — Shipping App 이 쿠킹 호스트라 디스크 입구를 컴파일에서 뺄 수 없다.
 
 ## 3. 구현 단위 (D1 ~ D3 끝)
 
@@ -30,7 +32,7 @@ D1 호출부 정적 조사, D2 호출부 이전, D3 `ResourceIO` 의 0단계(OS 
 
 ## 4. 정한 것
 
-- **입구가 둘이다.** 리소스 입구(`readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` · `collectResources`)는 리소스 id 만 받고 OS 경로는 `rejectsOSPath` 가 거절한다. 디스크 입구는 `ResourceIO::readTextFile` · `readBinaryFile`.
+- **입구가 둘이다.** 리소스 입구(`readTextResource` · `readBinaryResource` · `readBinaryResourceAsync` · `hasResource` · `collectResources`)는 `ResourceID` 만 받고(형식) OS 경로는 `rejectsOSPath` 가 거절한다(내용). 디스크 입구는 `ResourceIO::readTextFile` · `readBinaryFile`.
 - **루트 밖 폴더는 붙여서 id 로 읽는다.** `ResourcePaths::mountDiskDomain( 이름, 폴더 )` 가 디스크 폴더를 도메인으로 붙이고 그 id 는 팩을 보지 않고 디스크에서 읽는다(낱개 파일을 막는 구성에서도). 리소스 루트 안 폴더는 붙일 수 없다(언리얼 마운트 지점과 같은 자리). 테스트는 `test::makeTempResourceID( 디스크 경로 )` 로 임시 폴더를 도메인 `testtemp` 로 붙이고 id 를 얻는다 — 쓰기는 디스크 경로, 읽기(로더 · 캐시 · 컴포넌트 경로 칸)는 id.
 - 옮긴 Source: 사용자 바인딩(`InputMap::loadUserBindings` · `ShellInputActions::loadUserBindings`), `ModelImportUtil::readClipData`, `Archive` 의 파일 생성자(디스크만), 로컬라이즈 파일 읽기, 에디터 도구 문서(`EditorToolAssetCommands` 의 `loadFromDiskFile`). 테스트는 임시 파일을 리소스 로더로 읽던 약 140 곳(`makeTempResourceID`), 절대 경로 테스트는 "모든 구성에서 거절"(`ResourceTest.ResourceEntryRefusesOSPathsInEveryMode`)로 다시 썼다.
 - 조사는 정적이라 함수 인자 · 구조체로 건너간 경로는 놓쳤을 수 있다 — 테스트 실행의 `is an OS path, not a resource id` 오류 줄이 남은 곳을 알린다(파일을 쓰지 않는 "없는 파일" 경로 변수는 정적 조사가 놓쳤다).

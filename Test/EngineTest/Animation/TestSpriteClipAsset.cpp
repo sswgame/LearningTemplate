@@ -79,7 +79,7 @@ SW_TEST_CASE( SpriteClipAssetTest, RepositoryClipResavesByteForByte )
 {
     constexpr const utf8* kClipPath = "engine/textures/test/quadrants.sprite.xml";
     sw::string            fileText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kClipPath, fileText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ kClipPath }, fileText ) );
     // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
     fileText.erase( std::remove( fileText.begin(), fileText.end(), '\r' ), fileText.end() );
     sw::SpriteClipAsset clip;

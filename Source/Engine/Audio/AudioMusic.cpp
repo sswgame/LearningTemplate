@@ -15,7 +15,7 @@ namespace sw
     bool AudioMusicDesc::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
         {
             SW_LOG_ERROR( "Music not found: %#", resourcePath );
             return false;

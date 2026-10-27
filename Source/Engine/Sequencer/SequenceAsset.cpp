@@ -68,7 +68,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sequence '%#'", path );
             return false;

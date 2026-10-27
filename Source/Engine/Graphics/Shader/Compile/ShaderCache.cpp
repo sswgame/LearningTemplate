@@ -322,7 +322,7 @@ namespace sw
         const string   precookedRelPath = makePrecookedRelativePath( desc );
         vector<uint8>  precookedBytes;
         vector<string> listPrecookedHeader;
-        const bool     bPrecookedBinaryLoaded = isPrecookedCurrent( precookedRelPath, absPath, listPrecookedHeader ) && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) &&
+        const bool     bPrecookedBinaryLoaded = isPrecookedCurrent( precookedRelPath, absPath, listPrecookedHeader ) && ResourceIO::readBinaryResource( ResourceID{ precookedRelPath }, precookedBytes ) &&
                                             precookedBytes.empty() == false;
         if ( bPrecookedBinaryLoaded )
         {

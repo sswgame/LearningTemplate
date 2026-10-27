@@ -27,7 +27,7 @@ namespace sw
             return false;
 
         const string path = string( assetRelativePath );
-        if ( ResourceIO::hasResource( path ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ path } ) == false )
             return false;
 
         // **먼저 비운다.**

@@ -59,7 +59,7 @@ namespace sw
             }
 #if !defined( SW_SHIPPING )
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 · 글꼴)는 팩에 없다 — 그 칸은 쓰는 쪽도 없으므로 보지 않는다.
-            if ( ResourcePaths::isExcludedForHost( pValue->get() ) == false && ResourceIO::hasResource( pValue->get() ) == false )
+            if ( ResourcePaths::isExcludedForHost( pValue->get() ) == false && ResourceIO::hasResource( ResourceID{ pValue->get() } ) == false )
             {
                 SW_LOG_ERROR( "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
                 bComplete = false;

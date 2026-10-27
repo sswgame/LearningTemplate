@@ -198,7 +198,7 @@ namespace sw
     bool RigAsset::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Rig '%#' could not be read", path );
             clear();

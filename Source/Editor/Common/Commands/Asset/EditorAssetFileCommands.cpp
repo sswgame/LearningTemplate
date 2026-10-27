@@ -225,7 +225,7 @@ namespace sw::editor
                 return false;
             }
             const DataPath& sourcePath = assetTemplate._pfnSourcePath( *pAssets );
-            if ( ResourceIO::readTextResource( sourcePath.get(), text ) == false )
+            if ( ResourceIO::readTextResource( ResourceID{ sourcePath.get() }, text ) == false )
             {
                 SW_LOG_ERROR( "Could not read the new asset template '%#'", sourcePath.c_str() );
                 return false;

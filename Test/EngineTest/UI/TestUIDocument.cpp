@@ -389,7 +389,7 @@ SW_TEST_CASE( UIDocumentTest, RoundTripSaveMatchesSource )
     UIDocumentFixture fixture;
     const utf8*       kPausePath = ::test::getEngineDefaultAssets()._uiPauseMenu.c_str();
     sw::string        sourceText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kPausePath, sourceText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ kPausePath }, sourceText ) );
     sw::XMLDocument source;
     SW_ASSERT_TRUE( source.parse( sourceText ) );
 

@@ -247,7 +247,7 @@ namespace sw
 
         // 엔진 서비스가 없거나(테스트 · 툴) 쿠킹 중이면 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
         vector<uint8> bytes;
-        const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( pathStr, bytes ) : ResourceIO::hasResource( pathStr );
+        const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( ResourceID{ pathStr }, bytes ) : ResourceIO::hasResource( ResourceID{ pathStr } );
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );
     }
 
@@ -260,9 +260,8 @@ namespace sw
             if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
                 return;
         }
-        const AsyncReadHandle handle = ResourceIO::readBinaryResourceAsync(
-            pathStr, toIOPriority( priority ),
-            SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
+        const AsyncReadHandle handle = ResourceIO::readBinaryResourceAsync( ResourceID{ pathStr }, toIOPriority( priority ),
+                                                                            SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
         {
             onDataRead( pathStr, generation, bSuccess, bytes );
         } ) );
@@ -351,9 +350,9 @@ namespace sw
         vector<uint8> bytes;
         bool          bSuccess = false;
         if ( bFetchData )
-            bSuccess = ResourceIO::readBinaryResource( pathStr, bytes );
+            bSuccess = ResourceIO::readBinaryResource( ResourceID{ pathStr }, bytes );
         else
-            bSuccess = ResourceIO::hasResource( pathStr );
+            bSuccess = ResourceIO::hasResource( ResourceID{ pathStr } );
 
         ScopedLock<mutex> innerLock{ _mutex };
 

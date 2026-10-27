@@ -338,7 +338,7 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
 
     // 6. 텍스트 리소스 읽기 시 대문자 키 전달 검증
     sw::string textContent;
-    const bool bReadOk = sw::ResourceIO::readTextResource( "ENGINE/PIPELINE/FORWARDPIPELINE.XML", textContent );
+    const bool bReadOk = sw::ResourceIO::readTextResource( sw::ResourceID{ "ENGINE/PIPELINE/FORWARDPIPELINE.XML" }, textContent );
     SW_EXPECT_TRUE( bReadOk );
     SW_EXPECT_FALSE( textContent.empty() );
     SW_EXPECT_TRUE( textContent.find( "<RenderPipeline" ) != sw::string::npos );
@@ -1086,7 +1086,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
     sw::string       content;
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( escapingID, content ) );
+        SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ escapingID }, content ) );
     }
     SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( escapingID ).getDiskPath().empty() );
 }
@@ -1115,15 +1115,15 @@ SW_TEST_CASE( ResourceTest, ResourceEntryRefusesOSPathsInEveryMode )
         packManager.setAllowLooseFiles( bLoose );
         {
             SW_TEST_DEFENSIVE_SCOPE( "an OS path given to the resource entry" );
-            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( insideRoot, content ) );
-            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( outsideRoot, content ) );
-            SW_EXPECT_FALSE( sw::ResourceIO::hasResource( outsideRoot ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ insideRoot }, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::readTextResource( sw::ResourceID{ outsideRoot }, content ) );
+            SW_EXPECT_FALSE( sw::ResourceIO::hasResource( sw::ResourceID{ outsideRoot } ) );
         }
         // 붙인 디스크 도메인은 팩 전용 모드에서도 디스크에서 읽는다.
         content.clear();
-        SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( outsideID, content ) );
+        SW_EXPECT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ outsideID }, content ) );
         SW_EXPECT_EQUAL( sw::string( "OUTSIDE" ), content );
-        SW_EXPECT_TRUE( sw::ResourceIO::hasResource( outsideID ) );
+        SW_EXPECT_TRUE( sw::ResourceIO::hasResource( sw::ResourceID{ outsideID } ) );
     }
     content.clear();
     SW_EXPECT_TRUE( sw::ResourceIO::readTextFile( outsideRoot, content ) );

@@ -564,7 +564,7 @@ namespace sw
                 vector<uint8> bytes;
                 AudioPcm      pcm;
                 AudioClipData clip;
-                const bool    bDecoded = ResourceIO::readBinaryResource( path.get(), bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
+                const bool    bDecoded = ResourceIO::readBinaryResource( ResourceID{ path.get() }, bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
                                       AudioClipData::convertPcm( pcm, clip );
                 if ( bDecoded == false || clip._frameCount == 0 )
                 {

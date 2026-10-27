@@ -27,8 +27,8 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
 {
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( kTexturePath ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
-    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( kTexturePath ), kTexturePath );
-    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( kShaderBinaryPath ), kShaderBinaryPath );
+    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( sw::ResourceID{ kTexturePath } ), kTexturePath );
+    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( sw::ResourceID{ kShaderBinaryPath } ), kShaderBinaryPath );
 
     test::ScopedLogCollector     logCollector;
     const test::ScopedHostTarget hostTarget{ "Server" };
@@ -40,10 +40,10 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
     SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( "engine/myshaders/binary/x.txt" ) ); // 폴더 조각은 경계에서만 맞는다
 
     sw::vector<uint8> bytes;
-    SW_EXPECT_FALSE( sw::ResourceIO::hasResource( kTexturePath ) );
-    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( kTexturePath, bytes ) );
-    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( kShaderBinaryPath, bytes ) );
-    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kPipelinePath, bytes ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::hasResource( sw::ResourceID{ kTexturePath } ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kTexturePath }, bytes ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kShaderBinaryPath }, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kPipelinePath }, bytes ) );
     sw::DDSImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
     SW_EXPECT_FALSE( sw::DDSLoader::loadFromResource( kTexturePath, image ) );
     SW_EXPECT_TRUE_MSG( logCollector.joined().empty(), logCollector.joined().c_str() );
@@ -59,6 +59,6 @@ SW_TEST_CASE( ResourceHostTargetTest, ClientReadsEveryKind )
     const test::ScopedHostTarget hostTarget{ "Client" };
     sw::vector<uint8>            bytes;
     SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( kTexturePath ) );
-    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kTexturePath, bytes ) );
-    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kShaderBinaryPath, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kTexturePath }, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kShaderBinaryPath }, bytes ) );
 }

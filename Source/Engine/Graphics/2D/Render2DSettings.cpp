@@ -57,7 +57,7 @@ namespace sw
     bool Render2DSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "2D render settings '%#' not found", path );
             return false;

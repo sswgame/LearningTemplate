@@ -26,7 +26,7 @@ namespace sw
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.
         // 디스크 파일은 부르는 쪽이 이름(`loadDescFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         const bool bRead = source == ReadSource::DiskFile ? ResourceIO::readTextFile( assetRelativePath, text )
-                                                          : ResourceIO::readTextResource( assetRelativePath, text );
+                                                          : ResourceIO::readTextResource( ResourceID{ assetRelativePath }, text );
         if ( bRead == false )
         {
             SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", assetRelativePath, pTypeInfo->_name.c_str() );

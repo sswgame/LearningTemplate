@@ -19,7 +19,7 @@ namespace
         static sw::FontFaceID openEngineFace( sw::IFontRasterizer& rasterizer )
         {
             sw::vector<uint8> bytes;
-            if ( sw::ResourceIO::readBinaryResource( kFontPath, bytes ) == false )
+            if ( sw::ResourceIO::readBinaryResource( sw::ResourceID{ kFontPath }, bytes ) == false )
                 return sw::kInvalidFontFaceID;
             return rasterizer.loadFace( std::move( bytes ), 0, kFontPath );
         }

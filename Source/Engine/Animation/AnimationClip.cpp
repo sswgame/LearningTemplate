@@ -411,7 +411,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Animation );
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
         {
             SW_LOG_ERROR( "Animation clip '%#' could not be read", path );
             clear();

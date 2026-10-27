@@ -177,7 +177,7 @@ namespace sw
     bool MeshVertexAnimation::loadFromResource( string_view path )
     {
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) == false )
         {
             SW_LOG_ERROR( "Vertex animation '%#' could not be read", path );
             *this = MeshVertexAnimation{};

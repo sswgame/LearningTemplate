@@ -110,10 +110,10 @@ namespace sw
 
 namespace sw
 {
-    bool ResourceIO::readTextResource( string_view relativePath, string& outText,
-                                       string* pOutAbsPath )
+    bool ResourceIO::readTextResource( const ResourceID& id, string& outText, string* pOutAbsPath )
     {
-        const bool bRead = readResourceCommon(
+        const string_view relativePath = id.view();
+        const bool        bRead        = readResourceCommon(
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
         { return FileUtil::readTextFile( absPath, outText ); },
@@ -149,9 +149,10 @@ namespace sw
         return CookJob::admitRead( filePath, outBytes.data(), outBytes.size() );
     }
 
-    bool ResourceIO::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
+    bool ResourceIO::readBinaryResource( const ResourceID& id, vector<uint8>& outBytes )
     {
-        const bool bRead = readResourceCommon(
+        const string_view relativePath = id.view();
+        const bool        bRead        = readResourceCommon(
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
         { return FileUtil::readFile( absPath, outBytes ); },
@@ -165,10 +166,11 @@ namespace sw
         return CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
     }
 
-    AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
+    AsyncReadHandle ResourceIO::readBinaryResourceAsync( const ResourceID& id, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
     {
-        AsyncFileIO&    io = engine::getSubsystem<AsyncFileIO>();
-        AsyncReadHandle handle;
+        const string_view relativePath = id.view();
+        AsyncFileIO&      io           = engine::getSubsystem<AsyncFileIO>();
+        AsyncReadHandle   handle;
         // 완료가 다른 스레드에서 오므로 쿠킹 작업의 입력으로 기록할 수 없다 — 쿠킹 중이면 걸지 않는다.
         if ( CookJob::admitAsyncRead( relativePath ) == false )
             return handle;
@@ -192,8 +194,9 @@ namespace sw
         return handle;
     }
 
-    bool ResourceIO::hasResource( string_view relativePath )
+    bool ResourceIO::hasResource( const ResourceID& id )
     {
+        const string_view relativePath = id.view();
         // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
         if ( relativePath.empty() || rejectsOSPath( relativePath ) )
             return false;
@@ -216,8 +219,9 @@ namespace sw
         return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
     }
 
-    ResourceFolderListing ResourceIO::collectResources( string_view relativeFolder, string_view extension, vector<string>& outListPath )
+    ResourceFolderListing ResourceIO::collectResources( const ResourceID& folderID, string_view extension, vector<string>& outListPath )
     {
+        const string_view relativeFolder = folderID.view();
         outListPath.clear();
         const bool bNotResourceID = relativeFolder.empty() || FileUtil::isAbsolutePath( relativeFolder ) || ResourcePaths::hasParentDirectoryComponent( relativeFolder );
         if ( bNotResourceID )

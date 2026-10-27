@@ -382,7 +382,7 @@ namespace sw
         }
         else if ( bResourcePath )
         {
-            bRead = ResourceIO::readBinaryResource( path, bytes );
+            bRead = ResourceIO::readBinaryResource( ResourceID{ path }, bytes );
         }
         else
         {

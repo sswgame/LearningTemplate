@@ -143,7 +143,7 @@ namespace sw
     bool LiveLinkFaceLayout::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face layout '%#' could not be read", path );
             *this = LiveLinkFaceLayout{};
@@ -213,7 +213,7 @@ namespace sw
     bool LiveLinkFaceMapping::loadFromResource( string_view path, LiveLinkFaceLayout& outLayout )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face mapping '%#' could not be read", path );
             *this     = LiveLinkFaceMapping{};

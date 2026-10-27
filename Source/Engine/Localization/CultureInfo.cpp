@@ -944,7 +944,7 @@ namespace sw
     bool CultureTable::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
         {
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;

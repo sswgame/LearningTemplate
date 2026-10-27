@@ -102,6 +102,6 @@ namespace sw
             return true;
         }
         // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
-        return ResourceIO::readTextResource( path, outText );
+        return ResourceIO::readTextResource( ResourceID{ path }, outText );
     }
 } // namespace sw

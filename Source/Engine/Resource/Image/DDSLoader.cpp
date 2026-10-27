@@ -182,7 +182,7 @@ namespace sw
         if ( ResourcePaths::isExcludedForHost( relativePath ) )
             return false;
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( relativePath, bytes ) == false || bytes.empty() )
+        if ( ResourceIO::readBinaryResource( ResourceID{ relativePath }, bytes ) == false || bytes.empty() )
         {
             SW_LOG_ERROR( "Failed to read DDS resource: %#", relativePath );
             return false;

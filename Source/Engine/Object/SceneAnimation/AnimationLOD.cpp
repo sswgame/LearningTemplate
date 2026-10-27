@@ -29,7 +29,7 @@ namespace sw
     bool AnimationLODSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
             *this = AnimationLODSettings{};

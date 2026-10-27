@@ -747,7 +747,7 @@ namespace sw
         const string  absPath{ assetRelativePath };
         vector<uint8> bytes;
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( assetRelativePath, bytes ) )
+        if ( ResourceIO::readBinaryResource( ResourceID{ assetRelativePath }, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {

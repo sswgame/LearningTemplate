@@ -18,7 +18,7 @@ namespace sw
     bool AudioEventLibrary::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
         {
             SW_LOG_ERROR( "Audio event library not found: %#", resourcePath );
             return false;

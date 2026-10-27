@@ -225,7 +225,7 @@ namespace sw
     bool LipSyncSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Lip sync settings '%#' could not be read", path );
             *this = LipSyncSettings{};
@@ -369,7 +369,7 @@ namespace sw
     bool VisemeTrack::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Viseme track '%#' could not be read", path );
             *this = VisemeTrack{};

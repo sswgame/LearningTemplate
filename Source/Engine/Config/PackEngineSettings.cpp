@@ -18,7 +18,7 @@ namespace sw
     {
         const string path = FileUtil::joinPath( FileUtil::trimTrailingSlashes( packRoot.get() ), kPackRelativePath );
         string       text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "%#: the pack settings file could not be read", path.c_str() );
             return false;
@@ -59,7 +59,7 @@ namespace sw
             const DataPath* pValue    = prop.getValuePtr<DataPath>( this );
             const bool      bNotSet   = pValue == nullptr || pValue->isSet() == false;
             const bool      bSkipHost = bNotSet || ResourcePaths::isExcludedForHost( pValue->get() );
-            if ( bSkipHost || ResourceIO::hasResource( pValue->get() ) )
+            if ( bSkipHost || ResourceIO::hasResource( ResourceID{ pValue->get() } ) )
                 continue;
             SW_LOG_ERROR( "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );
             bComplete = false;

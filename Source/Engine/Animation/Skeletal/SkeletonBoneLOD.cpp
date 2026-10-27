@@ -54,7 +54,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Animation );
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#' could not be read", path );
             _listLevel.clear();

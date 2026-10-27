@@ -19,7 +19,7 @@ namespace sw
             static NavMeshSettings loadSettingsFromFile()
             {
                 NavMeshSettings settings;
-                if ( ResourceIO::hasResource( NavMeshSettings::kResourcePath ) == false || settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
+                if ( ResourceIO::hasResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false || settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
                     settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표면 모든 영역 이름이 오류로 보인다
                 return settings;
             }

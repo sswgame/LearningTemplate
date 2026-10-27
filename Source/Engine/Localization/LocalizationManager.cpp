@@ -29,10 +29,10 @@ namespace sw
              * @details 프로젝트 · 테이블 · 번역 경로는 모두 리소스 id 다. 루트 밖 폴더(테스트 임시 폴더, 도구 작업 폴더)는 `ResourcePaths::mountDiskDomain`
              *          으로 붙여 id 로 부른다 — 예전에는 디스크를 먼저 보고 없으면 리소스로 다시 찾아 두 종류의 경로가 한 입구로 들어왔다.
              */
-            [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText ) { return ResourceIO::readTextResource( path, outText ); }
+            [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText ) { return ResourceIO::readTextResource( ResourceID{ path }, outText ); }
 
             /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
-            static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( path ); }
+            static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( ResourceID{ path } ); }
 
             /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )
@@ -488,7 +488,7 @@ namespace sw
     bool LocalizationManager::loadBinaryTableResource( string_view resourcePath )
     {
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourcePath, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( ResourceID{ resourcePath }, bytes ) == false )
         {
             SW_LOG_WARNING( "Binary localization table '%#' cannot be read", resourcePath );
             return false;

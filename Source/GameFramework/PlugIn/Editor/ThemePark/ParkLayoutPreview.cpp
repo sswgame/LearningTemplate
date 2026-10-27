@@ -90,13 +90,13 @@ namespace sw::editor
             clearPreview( false );
             return false;
         }
-        if ( ResourceIO::hasResource( _layoutPath ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ _layoutPath } ) == false )
         {
             clearPreview( true ); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
             return false;
         }
         string text;
-        if ( ResourceIO::readTextResource( _layoutPath, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ _layoutPath }, text ) == false )
         {
             if ( _bWarned == false )
                 SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );

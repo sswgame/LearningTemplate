@@ -16,7 +16,7 @@ namespace sw
     bool AudioMixerDesc::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ resourcePath }, text ) == false )
         {
             SW_LOG_ERROR( "Audio mixer not found: %#", resourcePath );
             return false;

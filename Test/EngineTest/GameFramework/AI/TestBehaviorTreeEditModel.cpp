@@ -83,7 +83,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, CommanderTreeFileSurvivesAnEditRound )
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources );
     string fileText;
-    SW_ASSERT_TRUE( ResourceIO::readTextResource( "game/starskirmish/data/commander.bt.xml", fileText ) );
+    SW_ASSERT_TRUE( ResourceIO::readTextResource( sw::ResourceID{ "game/starskirmish/data/commander.bt.xml" }, fileText ) );
     BehaviorTreeEditModel model;
     string                error;
     SW_ASSERT_TRUE_MSG( model.parse( fileText, error ), error.c_str() );

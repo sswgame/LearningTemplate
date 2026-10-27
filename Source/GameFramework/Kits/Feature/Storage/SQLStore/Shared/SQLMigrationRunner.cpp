@@ -98,7 +98,7 @@ namespace sw
             {
                 const string listPath = FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName );
                 string       text;
-                if ( ResourceIO::readTextResource( listPath, text ) == false )
+                if ( ResourceIO::readTextResource( ResourceID{ listPath }, text ) == false )
                 {
                     outError = formatText( "cannot read the migration list '%#'", listPath );
                     return false;
@@ -202,8 +202,8 @@ namespace sw
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
             const string driverPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
             const string commonPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
-            const bool   bHasDriver = ResourceIO::hasResource( driverPath );
-            if ( bHasDriver == false && ResourceIO::hasResource( commonPath ) == false )
+            const bool   bHasDriver = ResourceIO::hasResource( ResourceID{ driverPath } );
+            if ( bHasDriver == false && ResourceIO::hasResource( ResourceID{ commonPath } ) == false )
             {
                 outError = SQLMigrationRunnerInternal::makeText( "migration ", file._version, " has no common file and no file for driver ", driverName );
                 return false;
@@ -212,7 +212,7 @@ namespace sw
             SQLMigration& migration = outListMigration.emplace_back();
             migration._version      = file._version;
             migration._name         = file._name;
-            if ( ResourceIO::readTextResource( path, migration._sql ) == false )
+            if ( ResourceIO::readTextResource( ResourceID{ path }, migration._sql ) == false )
             {
                 outError = SQLMigrationRunnerInternal::formatText( "cannot read migration file '%#'", path );
                 return false;

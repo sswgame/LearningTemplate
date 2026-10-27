@@ -478,7 +478,7 @@ SW_TEST_CASE( AudioServiceTest, OggVorbisDecodesToPcm )
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "game/empty/sounds/click.ogg" ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::vector<uint8> listBytes;
-    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ "game/empty/sounds/click.ogg" }, listBytes ) );
 
     sw::AudioPcm pcm;
     SW_ASSERT_TRUE( sw::AudioClipDecoder::decode( "game/empty/sounds/click.ogg", listBytes.data(), listBytes.size(), pcm ) );

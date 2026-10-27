@@ -377,7 +377,7 @@ namespace sw
         vector<uint8> bytes;
         const string  absPath{ path };
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( path, bytes ) )
+        if ( ResourceIO::readBinaryResource( ResourceID{ path }, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -523,7 +523,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( path );
 
-        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( binPath ) && loadBinary( binPath );
+        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( binPath );
         if ( bBinaryLoaded )
             return true;
 

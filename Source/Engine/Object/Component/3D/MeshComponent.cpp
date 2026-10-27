@@ -89,7 +89,7 @@ namespace sw
         if ( path.empty() == false )
         {
             // 디바이스 없이 잡는 acquire 는 파일을 읽지 않아 늘 성공한다 — 없는 파일은 여기서 가린다.
-            pMaterial    = ResourceIO::hasResource( path.c_str() ) ? cache.acquire( path.c_str(), nullptr ) : nullptr;
+            pMaterial    = ResourceIO::hasResource( ResourceID{ path.c_str() } ) ? cache.acquire( path.c_str(), nullptr ) : nullptr;
             borrowedPath = path;
             if ( pMaterial == nullptr )
             {

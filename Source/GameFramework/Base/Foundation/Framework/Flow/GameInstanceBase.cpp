@@ -294,7 +294,7 @@ namespace sw
 
     void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const string& path ) const
     {
-        const utf8* pReason = ResourceIO::hasResource( path ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
+        const utf8* pReason = ResourceIO::hasResource( ResourceID{ path } ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
         SW_LOG_ERROR( "Required game data '%#' (%#) could not be loaded: %# - the game does not start", kindLabel, path.c_str(), pReason );
     }
 

@@ -302,7 +302,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( ResourceIO::readTextResource( trackPath, trackText ) && track.parseXML( trackText, trackPath ) )
+        if ( ResourceIO::readTextResource( ResourceID{ trackPath }, trackText ) && track.parseXML( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;
@@ -312,7 +312,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bAudioDecoded = ResourceIO::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+            const bool    bAudioDecoded = ResourceIO::readBinaryResource( ResourceID{ audioPath }, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
                                        AudioClipData::convertPcm( pcm, clip );
             if ( bAudioDecoded )
             {

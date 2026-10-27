@@ -60,7 +60,7 @@ namespace sw
     bool VertexAnimationCookList::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceIO::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ path }, text ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#' could not be read", path );
             *this = VertexAnimationCookList{};
@@ -94,14 +94,14 @@ namespace sw
             _listClip.push_back( hashed_string( string_view{ clip.getText() } ) );
         }
         // 가리키는 파일이 모두 있어야 한다 — 이름이 틀린 목록이 쿠킹 때 조용히 빠지지 않게.
-        if ( ResourceIO::hasResource( _meshPath ) == false || ResourceIO::hasResource( _skeletonPath ) == false )
+        if ( ResourceIO::hasResource( ResourceID{ _meshPath } ) == false || ResourceIO::hasResource( ResourceID{ _skeletonPath } ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
         for ( const hashed_string& clipName : _listClip )
         {
-            if ( ResourceIO::hasResource( makeClipPath( clipName ) ) == false )
+            if ( ResourceIO::hasResource( ResourceID{ makeClipPath( clipName ) } ) == false )
             {
                 SW_LOG_ERROR( "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
                 return false;

@@ -708,7 +708,7 @@ namespace
     void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent, float32 shadowViewDistance = 0.0f, uint32 cascadeCount = 1 )
     {
         sw::string pipelineText;
-        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() }, pipelineText ) );
         constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
         constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
         const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
@@ -4490,7 +4490,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() }, pipelineText ) );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
     // 그림자 맵도 이름을 바꾸고 역할을 적는다 — ForwardOpaque 는 그림자 맵을 이름이 아니라 ShadowMap 역할의 입력으로 찾는다.
@@ -4564,7 +4564,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedAttachmentsRenderTheSameIm
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() }, pipelineText ) );
     struct AttachmentRename
     {
         const utf8* _pOldName;
@@ -4745,7 +4745,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, 
     constexpr const utf8* kPresentTexture = "engine/textures/test/checker.dds";
     constexpr const utf8* kAbsentTexture  = "engine/textures/test/doesnotexist.dds";
     sw::string            xml;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/materials/benchtextured.material", xml ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/materials/benchtextured.material" }, xml ) );
     SW_ASSERT_TRUE( xml.find( kPresentTexture ) != sw::string::npos );
     xml                             = sw::StringUtil::replace( xml, kPresentTexture, kAbsentTexture );
     const sw::string missingTexture = test::getEngineDefaultAssets()._missingTexture.get();
@@ -4951,7 +4951,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAs
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthPrepassRendersTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string prepassText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardprepasspipeline.xml" }, prepassText ) );
     SW_ASSERT_TRUE( prepassText.find( "_type=\"DepthPrepass\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renamedprepasspipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, sw::StringUtil::replace( prepassText, "SceneDepth", "MainDepth" ) ) );
@@ -6314,7 +6314,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, R8MaskTextureSamplesAsRedOnEveryB
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardpipelinestaged.xml" }, pipelineText ) );
     // 장면 색 · 깊이와 후처리 사슬을 모두 나눈다 — 꺼지면 원본을 가리키는 패스(블룸 · 외곽선)는 출력과 원본의 형식 · 나눗수가 같아야 해서(검증 3-6)
     // BloomColor 만 나눌 수 없다. 원본 크기 SceneColor 는 나누지 않은 파이프라인으로 따로 그려 견준다.
     for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
@@ -6447,7 +6447,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversIts
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( sw::ResourceID{ "engine/pipeline/forwardpipelinestaged.xml" }, pipelineText ) );
     // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 모션 블러의 출력(카메라가 서 있으면 피사계 심도 출력
     // 그대로, 조리개 0 이면 장면 색 그대로)이다. 외곽선 출력도 나눈다 — 꺼지면 원본(블룸 출력)을 가리키는 패스는 출력과 원본의 크기가 같아야 한다(검증 3-6).
     for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
@@ -9184,7 +9184,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         // 캔버스 — 글리프는 저장소 글꼴(라틴)이라 기계마다 같다.
         sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
         sw::vector<uint8>                   fontBytes;
-        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( sw::ResourceID{ "engine/fonts/kenney_future.ttf" }, fontBytes ) );
         const sw::FontFaceID face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
         SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
         sw::GlyphCache      glyphCache( *rasterizer, sw::GlyphFieldKind::Sdf );

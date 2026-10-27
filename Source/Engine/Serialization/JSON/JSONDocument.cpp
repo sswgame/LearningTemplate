@@ -536,7 +536,7 @@ namespace sw
         }
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ relativePath }, text, &absPath ) == false )
         {
             _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;

@@ -153,7 +153,7 @@ namespace sw
     bool NavMeshAsset::loadFromResource( string_view resourcePath )
     {
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourcePath, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( ResourceID{ resourcePath }, bytes ) == false )
             return false;
         return readBytes( bytes.data(), bytes.size(), resourcePath );
     }
