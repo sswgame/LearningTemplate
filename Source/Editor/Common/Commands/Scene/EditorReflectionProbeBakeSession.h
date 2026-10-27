@@ -1,6 +1,6 @@
 /**
  * @file EditorReflectionProbeBakeSession.h
- * @brief 반사 프로브 베이크를 에디터 프레임에 프로브 단위로 나눠 진행하는 세션입니다(IndirectLighting.md P4). 커맨드 `lighting.bakeReflectionProbes` 가 시작합니다.
+ * @brief 반사 프로브 베이크를 에디터 프레임에 프로브 단위로 나눠 진행하는 세션입니다(결정 기록 5-5 P4). 커맨드 `lighting.bakeReflectionProbes` 가 시작합니다.
  * @details 라이트 프로브 세션(`EditorLightProbeBakeSession`)과 같은 틀이다 — 돌고 있는가 · 편집 잠금 · 멈출 이유(씬이 바뀜 / 플레이 시작 / 잠금을 지나친 편집) · 프레임 예산 ·
  *          끝난 횟수는 `EditorBakeRunState` 를 함께 쓴다. 프레임마다 예산(`EditorBakeRunState::kFrameBudgetMilliseconds`) 안에서 프로브를 하나씩 굽고, 프로브 하나가 끝나면
  *          그 자리에서 파일을 쓰고 프로브에 넘긴다(앞서 끝난 프로브는 취소해도 남는다). 상태줄 항목(`EditorReflectionProbeBakeStatus.cpp`)이 진행과 Cancel 단추를 보인다.

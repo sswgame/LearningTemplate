@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — VFX 미리보기 창(Vfx V3): 창을 열고 Quick Open 으로 엔진 표본 효과(engine/vfx/sparks.vfx.xml)를 고르면 창이 그 효과를 문서로 받아
+  에디터 시나리오 — VFX 미리보기 창(결정 기록 5-5 V3): 창을 열고 Quick Open 으로 엔진 표본 효과(engine/vfx/sparks.vfx.xml)를 고르면 창이 그 효과를 문서로 받아
   미리보기 씬의 VfxComponent 로 재생하고, 렌더러가 그 씬을 창의 렌더 타깃에 그린다(투명 패스의 입자 빌보드 — particle.hlsl).
   탐침: Editor.VfxPreviewDocumentIsProbeAsset(문서 교체) → Editor.VfxPreviewParticleCount(일정이 입자를 만든다 — 표본의 두 방출기는 기본 GPU 시뮬레이션이라 살아 있는 수는 GPU 에만 있다) → Editor.VfxPreviewSceneFrames(그렸다).
   눈 확인: -gv_editorPreviewScreenshot=<경로>.ppm 를 주면 미리보기 타깃을 찍는다(바닥 위 원점에서 주황 불꽃이 솟고 회색 연기가 오른다).

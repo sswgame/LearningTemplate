@@ -844,7 +844,7 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     SW_EXPECT_TRUE( depth.computeSupportedTargets().has( kGPU ) );
     SW_EXPECT_TRUE( depth.validate( "test" ) );
 
-    // 라이트는 CPU(씬 라이트 목록) · GPU(라이트 버퍼의 GPU 구간) 어디서나 돈다 — VfxGpuLights.md L4.
+    // 라이트는 CPU(씬 라이트 목록) · GPU(라이트 버퍼의 GPU 구간) 어디서나 돈다 — 결정 기록 5-5 L4.
     sw::VfxEmitterDef light = billboard;
     light._light._maxLights = 2;
     light._light._radius    = 1.0f;

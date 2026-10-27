@@ -983,7 +983,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
 /**
  * @brief [ReflectionSerializationTest] 컨테이너 안의 모르는 열거자는 그 칸을 실패시키고, 모르는 칸을 받는 문맥은 그 칸을 **읽기 전 값**으로 남긴다 — 다른 칸은 읽힌다
  * @details 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 스트림은 멈추지 않는다(망가진 스트림은 그대로 멈춘다). 원소 하나만 빼고 나머지를 받으면
- *          다음 저장이 그 원소를 조용히 지우므로 칸째 되돌린다(SerializerSilentSkips S1 · S2, 세 형식이 같다).
+ *          다음 저장이 그 원소를 조용히 지우므로 칸째 되돌린다(결정 기록 5-4 S1 · S2, 세 형식이 같다).
  */
 SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerKeepsTheFieldValueBeforeTheRead )
 {
@@ -3541,7 +3541,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
 /**
  * @brief [ReflectionSerializationTest] 기록 타입이 다른 비트필드를 바이너리로 읽으면 그 비트만 바뀐다(같은 바이트의 다른 플래그는 그대로)
  * @details 태그 스트림의 이관 경로가 `getRawPtr` 로 비트필드의 바이트 주소를 꺼내 bool 을 통째로 썼다. 이제 프로퍼티 단위(`tryCoercePropertyBinary`)로 옮긴다
- *          (`docs/plans/SerializerSilentSkips.md` S4).
+ *          (docs/decisions/5-4_DataConfig.md S4).
  */
 SW_TEST_CASE( ReflectionSerializationTest, CoercedBitFieldReadTouchesOnlyItsOwnBit )
 {
@@ -3578,7 +3578,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CoercedBitFieldReadTouchesOnlyItsOwnB
 /**
  * @brief [ReflectionSerializationTest] 비트필드에 텍스트를 쓰면 그 비트만 바뀐다(같은 바이트의 다른 플래그는 그대로)
  * @details 비트필드는 값 주소가 없어(`PropertyInfo::getRawPtr`) 그 바이트 주소를 값 주소로 받아 쓰면 bool 이 같은 바이트의 다른 플래그를 지웠다.
- *          프로퍼티 단위 쓰기(`applyPropertyTextCoerced`)는 그 비트만 바꾼다(`docs/plans/SerializerSilentSkips.md` S4).
+ *          프로퍼티 단위 쓰기(`applyPropertyTextCoerced`)는 그 비트만 바꾼다(docs/decisions/5-4_DataConfig.md S4).
  */
 SW_TEST_CASE( ReflectionSerializationTest, TextWriteToBitFieldTouchesOnlyItsOwnBit )
 {
@@ -4054,7 +4054,7 @@ SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadRejectsAnUnknownEnumera
 /**
  * @brief [ReflectionSerializationTest] 읽지 못한 필드를 넘기고 이어 읽는 읽기는 그 필드를 **읽기 전 값**으로 남긴다 — 읽다 만 컨테이너가 남지 않는다
  * @details 컨테이너는 원소를 채운 뒤 끝에서 실패한다(모르는 열거자 원소만 빼고 필드는 실패). 예전에는 오브젝트 상태의 엄격 읽기와 소프트 읽기가 그 필드를
- *          건너뛰면서 앞 원소가 써진 채로 남았다(`docs/plans/SerializerSilentSkips.md`). 엄격 읽기(실패하면 객체째 버림)는 그대로 실패다.
+ *          건너뛰면서 앞 원소가 써진 채로 남았다(docs/decisions/5-4_DataConfig.md). 엄격 읽기(실패하면 객체째 버림)는 그대로 실패다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeTheRead )
 {
@@ -4111,7 +4111,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeThe
 
 /**
  * @brief [ReflectionSerializationTest] JSON 소프트 읽기도 읽지 못한 필드를 **읽기 전 값**으로 남긴다 — 앞 원소를 채우다 만 목록이 남지 않는다
- * @details 예전에는 원소 하나를 읽지 못한 목록이 앞 원소가 써진 채로 남고 orphan 으로 넘어갔다(`docs/plans/SerializerSilentSkips.md` S2).
+ * @details 예전에는 원소 하나를 읽지 못한 목록이 앞 원소가 써진 채로 남고 orphan 으로 넘어갔다(docs/decisions/5-4_DataConfig.md S2).
  *          바이너리(`UnreadableFieldKeepsItsValueBeforeTheRead`)와 같은 `PropertyReadRollback` 을 쓴다. 엄격 읽기는 그대로 실패다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, JSONSoftReadKeepsUnreadableFieldValueBeforeTheRead )

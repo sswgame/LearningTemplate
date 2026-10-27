@@ -97,6 +97,15 @@ kListCase: tuple[PerfCase, ...] = (
              ("-gv_deferred=1", "-gv_benchMeshes=4000"), listScope=("GPU.Frame", "GPU.Shadow")),
     PerfCase("hangulGlyphsCPU", "test", "single", "한글 새 글리프 400 개의 CPU 래스터화 · SDF(기준값, 시스템 한글 글꼴이 없으면 건너뜀)",
              ("--test_filter=GlyphBenchTest.*",)),
+    PerfCase("cubeBench20k", "app", "single", "큐브 2만 개 움직이는 씬의 게임 스레드 틱(기준값, 엔진 분할 E3 의 ScenePrimitive 슬롯 — 트랜스폼 전파 핫 패스에 가상 호출이 없어야 한다)",
+             ("-gv_benchMeshes=20000", "-gv_benchTickMovers=1"),
+             listScope=("GT.Frame", "GT.Scene.tick.components", "GT.Scene.tick.objectRange", "GT.Scene.tick.pendingSlotApply", "GT.Scene.tick.queuedTransforms")),
+    PerfCase("clothShowcase", "app", "single", "천 쇼케이스 씬의 정점 풀 시간(기준값, 천 C2) — 동적 메시가 풀의 구간만 올리면 RT.GPUScene.vertexPool 이 작아야 한다",
+             ("-gv_firstScene=game/empty/maps/clothshowcase.scene.xml",), listScope=("GT.Frame", "RT.GPUScene.vertexPool")),
+    PerfCase("realtimeProbe", "app", "single", "실시간 GI 씬의 프로브 갱신 컴퓨트(기준값, 실시간 전역 조명 R6) — 프로브 수 · 광선 수 스윕의 기준",
+             ("-gv_firstScene=game/empty/maps/realtimegi.scene.xml",), listScope=("GPU.Frame", "GPU.Compute", "RT.Probe.Update")),
+    PerfCase("vfxGpuLights", "app", "single", "GPU 파티클 라이트 씬의 컴퓨트 프리패스(기준값, 기본 슬롯) — 슬롯 32 · 128 · 256 스윕의 기준",
+             ("-gv_firstScene=game/empty/maps/vfxgpulights.scene.xml",), listScope=("GPU.Frame", "GPU.Compute", "RT.Vfx.Simulate")),
 ) + tuple(
     # 클러스터드 라이팅 측정(ClusteredLighting.md S3) — 디퍼드, 큐브 4000, 라이트 16 · 128 · 1024. A 는 그리드 없음(gv_lightCulling=None), B 는 CPU · GPU 생산자(열거자 이름만 받는다).
     # 디퍼드 조명 패스의 이름은 deferredpipeline.xml 의 "Shading" 이다(GPU.<패스 이름>). GPU 생산자의 디스패치는 컴퓨트 프리패스(GPU.Compute)에 든다.

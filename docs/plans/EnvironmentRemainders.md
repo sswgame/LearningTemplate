@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-5, D2-5.2, D2-5.5 · 진행: 3/4
 
-후보 `TerrainWaterVegetationRemainders` 를 계획으로 올린 문서입니다. 들어간 것과 계약(지형 충돌 · 부력 포함)은 `Source/Engine/Environment` 각 헤더 주석에 있습니다. 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 [TerrainEditCost](TerrainEditCost.md), 안개 · 대기는 [RealtimeGlobalIllumination](RealtimeGlobalIllumination.md) R1 ~ R3 이 맡습니다(물속 안개 값은 `WaterBodyComponent::findUnderwaterFog` 가 준다).
+후보 `TerrainWaterVegetationRemainders` 를 계획으로 올린 문서입니다. 들어간 것과 계약(지형 충돌 · 부력 포함)은 `Source/Engine/Environment` 각 헤더 주석에 있습니다. 지형 LOD 교체 · 지형 쓰기의 비용과 식생 부분 계산은 [TerrainEditCost](TerrainEditCost.md), 안개 · 대기는 [결정 기록 5-5](../decisions/5-5_GraphicsRHI.md) R1 ~ R3 이 맡습니다(물속 안개 값은 `WaterBodyComponent::findUnderwaterFog` 가 준다).
 
 ## 1. 단위
 

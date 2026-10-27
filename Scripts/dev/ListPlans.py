@@ -7,8 +7,8 @@
     py -3 -m Scripts plans                      # 표(문서, 상태, 진행, 영역, 선행, 옛번호, 제목)
     py -3 -m Scripts plans --status 구현중      # 그 상태의 문서만
     py -3 -m Scripts plans --area editor        # 그 영역의 문서만
-    py -3 -m Scripts plans --file Vfx           # 그 문서의 머리 줄과 절 제목 목록(`Vfx.md` 도 된다)
-    py -3 -m Scripts plans --file Vfx --section V2   # 제목에 `V2` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
+    py -3 -m Scripts plans --file ClusteredLighting           # 그 문서의 머리 줄과 절 제목 목록(`ClusteredLighting.md` 도 된다)
+    py -3 -m Scripts plans --file ClusteredLighting --section S3   # 제목에 `S3` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
     py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
     py -3 -m Scripts plans --check              # 로드맵의 링크가 맞는지, 진행 n/n 인데 구현 중인 문서가 없는지, 대기 줄이 검증 묶음 id 를 가리키는지, 긴 함수 표가 코드와 맞는지(틀리면 종료 1)
 
@@ -59,7 +59,7 @@ def formatPlanDetail(plan: PlanDoc) -> str:
 
 
 def findPlace(listPlan: list[PlanDoc], query: str) -> list[str]:
-    """옛 번호(`C-30`)나 이름(문서 `Vfx` · 단위 `Vfx.V2` · 후보 `Wayland`)이 있는 곳. 모르면 빈 목록."""
+    """옛 번호(`C-30`)나 이름(문서 `ClusteredLighting` · 단위 `ClusteredLighting.S3` · 후보 `Wayland`)이 있는 곳. 모르면 빈 목록."""
     listPlace: list[str] = []
     upper = query.upper()
     for plan in listPlan:
@@ -78,9 +78,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다.")
     parser.add_argument("--status", choices=kListPlanStatus, help="이 상태의 문서만")
     parser.add_argument("--area", choices=kListPlanArea, help="이 영역의 문서만")
-    parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: Vfx)의 머리 줄과 절 제목 목록")
+    parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: ClusteredLighting)의 머리 줄과 절 제목 목록")
     parser.add_argument("--section", metavar="TITLE", help="--file 과 함께: 제목에 TITLE 이 든 절의 본문만(없거나 여럿에 맞으면 오류와 후보)")
-    parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(Vfx · Vfx.V2 · 후보 이름)이 있는 곳")
+    parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(ClusteredLighting · ClusteredLighting.S3 · 후보 이름)이 있는 곳")
     parser.add_argument("--check", action="store_true", help="로드맵의 문서 링크 · 파일 · #앵커가 맞는지, 진행 n/n 인데 상태가 구현 중인 문서가 없는지, `확인 대기` 류 줄이 매니페스트(Test/QA/VerifyBatch.json) id 를 가리키는지 본다(틀리면 종료 1)")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     args = parser.parse_args(argv)

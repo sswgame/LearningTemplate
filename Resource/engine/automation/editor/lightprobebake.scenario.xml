@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — lighting.bakeProbes 커맨드(Build > Bake Light Probes, IndirectLighting.md P6).
+  에디터 시나리오 — lighting.bakeProbes 커맨드(Build > Bake Light Probes, 결정 기록 5-5 P6).
   볼륨이 없는 씬에서 커맨드가 돌고("Nothing to bake" 경고) 구운 볼륨 수가 0 인지, 볼륨을 붙인 뒤에도 굽기 전에는 0 인지 본다.
   볼륨이 있는 굽기는 씬 옆에 .probes 파일을 쓰므로 이 시나리오는 하지 않는다(저장소 리소스를 바꾸지 않는다) — 파일 쓰기와 읽기는 LightProbeGridTest 가 본다.
   실행: py -3 -m Scripts scenario lightprobebake

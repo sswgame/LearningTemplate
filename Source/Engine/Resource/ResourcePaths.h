@@ -110,7 +110,7 @@ namespace sw
 
         /**
          * @brief 리소스 루트 **밖**의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
-         * @details 리소스 입구(`ResourceIO::read*Resource` · `hasResource`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다(계획 `DiskPathVsResourceId` 안 B).
+         * @details 리소스 입구(`ResourceIO::read*Resource` · `hasResource`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다(결정 기록 5-4 안 B).
          *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 리소스로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
          *          붙인 도메인은 낱개 파일 금지 구성(배포본)에서도 디스크에서 읽습니다 — 붙인 쪽이 고른 것이고, 팩에는 없습니다.
          *          리소스 루트 **안**의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).

@@ -1,8 +1,36 @@
 # 그래픽스 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: E-3, E-13 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-2, D2-5.2, D2-6, D2-7, D2-9, D2-10, D2-11, D2-12, D2-14, E-3, E-13 · 진행: 해당없음
 
 이 문서는 그래픽스 · RHI · 셰이더 영역에서 착수 전인 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
+
+## 확인 대기
+
+테스트 필터 · 시나리오로 도는 확인은 검증 묶음(`Test/QA/VerifyBatch.json`)이 돌렸고, 아래는 사람 눈이 필요하거나 전 바이너리를 따로 지어야 해서(`manual`) 묶음이 돌리지 못하는 확인이다. 각 절의 `매니페스트 id` 줄이 항목의 주인이다. 사람이 끝내면 항목과 절을 지운다.
+
+### GraphicsFormatBundleChecks
+제목: 그래픽스 형식 묶음의 화면 확인과 Release 비용
+옛번호: D2-1, D2-6, D2-7, D2-10
+왜 필요한가: HDR 장면 색(포워드 넷의 `SceneColor` R16F) · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간의 코드와 테스트(`RenderPassGPUTest`)는 통과했고 2D 쿠키 시나리오 `light2dcookie` 도 통과한다(결정 기록 5-5). 화면과 Release 비용 확인이 남았다.
+남은 것:
+- 매니페스트 id `graphics-format-visual-checks` — G2 VRM 스펙 샘플 "VRMC_materials_mtoon UV Animation Test" 의 UV 방향, G5 와이어프레임 선이 면 위에 보이고 z-fighting 이 없는지(포워드 · 디퍼드 · 깊이 프리패스 네 백엔드, 바이어스 상수 -4 · 기울기 -1 은 그때 맞춘다), G6 2D 쇼케이스 씬(자유 모양 · 곱하기 · 부드러운 그림자 빛)의 네 백엔드 캡처.
+- 매니페스트 id `graphics-format-release-cost` — G1 대역폭(R16F `SceneColor`), G3 모프 풀 48 B 업로드 · 스키닝(`RT.GPUScene`), G6 부드러운 그림자(가림막 검사가 다섯 배라 토막 수백 개에서 GPU 시간)를 Release 로 잰다.
+못 하는 이유: 화면 항목은 사람 눈이 판정하고(VRM 샘플 · 선 모양은 기준 그림이 없다), 비용 항목은 R8G8B8A8 시절 `SceneColor` 와 모프 풀 이전 바이너리가 있어야 하는 바이너리 A/B 라 한 명령에 전 바이너리를 줄 길이 없다(`perf-compare` 의 `morphPool` 케이스는 있다). 풀리는 조건: 기준 그림을 정하면 캡처를 시나리오로 옮기고, 이득 판정이 필요 없어지면 비용 항목을 지운다.
+함정: avatarsample_d 를 다시 임포트하면(`kVersion` 2 · `SECT`) 구간 메시 폴더가 사라지고 프리팹이 생기므로 `toonshowcase.scene.xml` 의 구간 엔티티 열일곱을 프리팹 인스턴스 하나로 바꾼다. VRoid 텍스처 BC7 재임포트는 Release 로 한다.
+
+### IndirectLightingScreenChecks
+제목: 반사 프로브 · 금속도 PBR 의 화면 확인
+옛번호: D2-12
+왜 필요한가: 라이트 프로브(P0 ~ P3, P6)와 반사 프로브(P4) · 금속도 PBR(P5) · G버퍼 셋째 타깃(D2-6.4)의 코드와 테스트는 통과했고 에디터 굽기 시나리오(`lightprobebake` · `reflectionprobebake`)도 통과한다(결정 기록 5-5). 쿠킹 뒤 화면이 남았다.
+남은 것: 매니페스트 id `indirect-lighting-visual-checks` — 반사 프로브 · 금속도 PBR · 셋째 타깃의 쿠킹 뒤 네 백엔드 화면(GL · DX11 에서 에디터가 렌더 스레드의 컨텍스트를 잡는지 포함)과 골든 다시 뜨기(유전체에도 하이라이트가 생겼다).
+못 하는 이유: 새 하이라이트가 맞는 그림인지는 사람이 보고 골든을 다시 뜰지 정한다. 풀리는 조건: 사람이 보고 골든(`golden-record`)을 다시 뜨면 이 절과 항목을 지운다.
+
+### HalfResolutionBloomMeasurement
+제목: 반해상도 블룸의 전후 GPU 시간
+옛번호: D2-9
+왜 필요한가: 디퍼드 블룸의 밝은 부분을 반해상도 패스(`BloomDownsample`)로 옮겼다(`ee6fff232`). 후(`GPU.BloomDownsample` + `GPU.PostBloom`)의 p50 이 전(`GPU.PostBloom`)보다 작지 않으면 `deferredpipeline.xml` 에서 `BloomDownsample` 패스 · `BloomBright` 첨부 · `PostBloom` 입력을 지워 되돌린다. 코드(`Bloom::computeBrightDownsampled`)는 포워드 단계 파이프라인이 쓰는 한 둔다.
+남은 것: 매니페스트 id `half-resolution-bloom` — `py -3 -m Scripts perf-compare --app <후>/App.exe --app-before <전>/App.exe --cases deferredBloom --runs 5`(전은 `ee6fff232^` 의 Release 전체 빌드).
+못 하는 이유: 전 커밋을 따로 지어야 하는 바이너리 A/B 이다. 풀리는 조건: 되돌리지 않기로 하면 이 절과 항목을 지운다.
 
 ## 관찰
 
@@ -45,6 +73,36 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 - DX11 은 당분간 지원한다 — FXC 경로가 남으므로 `SW_ROOT` 같은 백엔드 차이 매크로는 지금 못 없앤다. 함수 안 `#if` 는 정의로 몰아 호출 쪽 본문에서 없앤다. `IndentPPDirectives: BeforeHash` 는 바꾸지 않는다(`None` 은 C++ 400 개 중 61 개를 바꾸고 `Leave` 는 20.1.8 이 못 읽으며 `PPIndentWidth: 2` 는 3중첩에서 `#` 줄이 코드와 겹친다).
 
 ## 조건부
+
+### VfxMultiGroupCompaction
+제목: GPU 방출기 다중 그룹 압축
+옛번호: D2-11
+왜 필요한가: GPU 시뮬레이션은 방출기 하나를 그룹 하나(256 스레드)가 돌아 풀이 수만 개면 느리다(결정 기록 5-5). 풀이 크면 디스패치 셋으로 나눈다: (1) 그룹마다 생성 · 적분 · 생존 표시와 개수, (2) 개수의 접두사 합(그룹 하나), (3) 그룹마다 자기 시작 위치로 안정 압축. 단계마다 셋이라 여러 단계를 한 디스패치에 못 넣는다.
+착수 조건: 풀이 수만 개인 GPU 방출기의 컴퓨트 프리패스 시간(`RT.Vfx.Simulate`)이 프레임 시간에서 보이면, 단계 수 × 3 디스패치가 그룹 하나보다 빨라지는 풀 크기를 Release 로 잰 뒤 풀 크기로 두 경로를 고를지(같은 결과여야 한다) 정한다.
+
+### VfxGpuLightSlotSweep
+제목: GPU 파티클 라이트 슬롯 수별 컴퓨트 시간
+옛번호: 없음
+왜 필요한가: GPU 구간 상한(`GPULightBuffer::kMaxGpuLight` = 프레임 라이트 상한의 4분의 1)은 측정 뒤 확정하기로 했다(결정 기록 5-5). 기준값은 `vfxgpulights` 씬의 기본 슬롯 `RT.Vfx.Simulate` 이고 `perf-compare --cases vfxGpuLights` 가 낸다(매니페스트 id `vfx-gpu-lights-measure`).
+착수 조건: 기준값이 컴퓨트 프리패스에서 눈에 띄면(0.2 ms 이상) 슬롯 32 · 128 · 256 에서 같은 시간을 재고 상한을 줄인다. 슬롯 수를 바꾸는 스위치가 없어 슬롯별 효과 파일을 더하는 일이 먼저다.
+
+### RealtimeProbeUpdateSweep
+제목: 실시간 프로브 갱신 컴퓨트의 프로브 수 · 광선 수별 GPU 시간
+옛번호: D2-14, D2-5.2
+왜 필요한가: 안개 · 하늘 · 복셀 · 프로브 갱신의 테스트와 시나리오(`fog` · `sky` · `realtimegi`)는 통과했다. 시나리오 문턱은 첫 측정 전의 어림값이라 `measured` 로 올릴 값(예: 하늘 `atMost` -0.02)은 통합 측정이 정한다. 기준값은 `realtimegi` 씬의 `RT.Probe.Update` 이고 `perf-compare --cases realtimeProbe` 가 낸다(매니페스트 id `realtime-probe-measure`).
+착수 조건: 기준값이 눈에 띄면(0.5 ms 이상) 프로브 수 · 광선 수 · 갱신 주기별 GPU 시간과 수렴 속도를 재서 기본값을 정한다. 볼륨 값을 바꾸는 스위치가 없어 볼륨 파일을 값별로 더하는 일이 먼저다.
+
+### SpanAllocatorVatSkinPools
+제목: 스킨 원본 · VAT 풀의 구간 할당기
+옛번호: C-55
+왜 필요한가: 스킨 원본 전체 다시 올리기(`RT.Deform.rebuildSkinSources`, 집합이 바뀐 프레임에만 찍힘)와 VAT 테이블 풀(`RT.Deform.rebuildVertexAnimationPool`)을 `GPUMeshVertexPool` · `GPUMeshMorphPool` 과 같은 모양의 `SpanAllocator` 구간 갱신으로 바꿀 이득이 있는지는 재야 안다. 구간은 이미 들어갔다.
+착수 조건: 스트리밍 셀 진입 · 군중 합류 프레임의 프로파일에서 집합이 바뀐 프레임의 두 구간이 1 ms 이상으로 보이면 구간 할당기로 옮기는 단위를 계획 문서로 올린다. 1 ms 미만이면 접는다(이 절만 지운다).
+
+### DirectionalShadowCascadeCulling
+제목: 방향광 그림자 캐스케이드별 컬링
+옛번호: D2-2
+왜 필요한가: 뷰마다 그림자 컬링 칸이 하나(`_shadowCullSlot`)인 GPU 컬링 구조를 캐스케이드별 타일 칸으로 늘리면 그림자 패스 비용이 줄 수 있다. 이득이 있는지는 그림자 패스의 몫으로 정한다.
+착수 조건: `perf-compare --cases shadowPassShare`(큐브 4000, 매니페스트 id `perf-compare-shadow-pass-share`)에서 `GPU.Shadow` 가 `GPU.Frame` 의 한 자리 퍼센트를 넘으면 칸을 타일로 늘리는 단위를 올린다. 한 자리 퍼센트면 접는다. 여드름(shadow acne) 눈 확인은 게임마다 빌드가 따로라(`SW_ACTIVE_GAME`) 착수할 때 게임별 빌드로 전후 스크린샷을 찍는다(경계 구 맞춤 · envshowcase CSM 포함).
 
 ### R8TextureSampling
 제목: R8 텍스처를 네 백엔드에서 샘플링

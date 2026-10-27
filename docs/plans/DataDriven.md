@@ -84,7 +84,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
   1. 스키마 읽기: `GameDataXML::readFields` 가 리플렉션 Def 를 읽습니다. 기본값은 Def 의 초기값이고 `PROPERTY( Required )` 와 `Min` · `Max` 가 검사됩니다. 데이터 카탈로그는 모두 이 길로 갑니다.
   2. 필수 손 읽기: `[[nodiscard]] std::optional<T> readRequiredAttribute<T>( name )`. 없거나 깨지면 원소와 속성 이름으로 오류를 남기고 `nullopt`.
   3. 선택 손 읽기: `[[nodiscard]] bool readOptionalAttribute<T>( name, std::optional<T>& out )`. 없으면 `out` 이 비고 true, 깨진 값은 오류와 false. "없음"은 기본값이 아니라 형식(`std::optional`)으로 남습니다.
-  `JSONValue` 도 같은 세 길입니다(`KeyValueFile` 은 [구조 단순화](StructureSimplification.md) TX3 에서 지웠다).
+  `JSONValue` 도 같은 세 길입니다(`KeyValueFile` 은 [구조 단순화](결정 기록 5-4) TX3 에서 지웠다).
 - **이름으로 찾는 값은 로드할 때 키를 확인합니다.** 이름을 핸들로 바꾸고 대상 테이블에 없으면 로드 오류. 핸들로 바꿀 수 없는 찾기(블랙보드처럼 실행 중에 키가 생기는 것)는 `std::optional<T>` 을 돌려줍니다.
 - **로드 결과는 세 값입니다.** 정상인 `Absent` · `NotTracked` 가 따로 있어 `(void)` 로 버릴 이유가 없습니다(`ConfigReadResult`(Loaded · Missing · Invalid), `ReloadOutcome`(Reloaded · NotTracked · Failed)). `Failed` 는 함수 안에서 오류를 한 번 남기고 호출부는 `switch` 로 고릅니다.
 - **자동화 단계는 한 번만 읽습니다.** 구현은 검사와 실행이 같은 `parse*` 함수를 쓰는 모양이다(단계 레지스트리의 함수 포인터 모양을 바꾸지 않기 위해).

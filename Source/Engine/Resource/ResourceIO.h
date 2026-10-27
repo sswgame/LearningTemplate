@@ -3,7 +3,7 @@
  * @brief 리소스 id 를 해석해 낱개 파일 또는 마운트된 VFS .pack 에서 읽습니다. 경로 해석은 ResourcePaths 가 맡습니다.
  * @details 입구는 둘로 나뉩니다. 리소스 입구(`read*Resource` · `hasResource` · `collectResources`)는 리소스 id 만 받고, 디스크 입구(`readTextFile` ·
  *          `readBinaryFile`)는 디스크 경로만 받습니다. 리소스 입구에 OS 경로를 넣으면 구성과 무관하게 오류로 멈춥니다 — 예전에는 Dev 가 받고 배포본만
- *          거절해 잘못 넣은 호출이 배포 테스트에서야 드러났습니다(계획 `DiskPathVsResourceId`).
+ *          거절해 잘못 넣은 호출이 배포 테스트에서야 드러났습니다(결정 기록 5-4).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -40,7 +40,7 @@ namespace sw
     public:
         /**
          * @brief 리소스 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
-         *        **OS 경로는 받지 않습니다** — 모든 구성에서 오류 로그를 남기고 false 입니다(계획 `DiskPathVsResourceId` 안 B). 디스크 파일은
+         *        **OS 경로는 받지 않습니다** — 모든 구성에서 오류 로그를 남기고 false 입니다(결정 기록 5-4 안 B). 디스크 파일은
          *        `readTextFile` 로, 루트 밖 폴더를 리소스로 읽으려면 `ResourcePaths::mountDiskDomain` 으로 붙여 id 로 읽습니다.
          * @param relativePath 팩 상대 키 또는 전역 ID. 풀지 못하면 false 입니다(작업 폴더 기준 경로로 다시 열어 보지 않는다)
          * @param outText 읽은 UTF-8 본문

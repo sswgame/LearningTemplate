@@ -2,7 +2,7 @@
  * @file TestMemoryCopyBench.cpp
  * @brief `Memory::copy` · `Memory::compare` 한 번의 비용 — 8 · 16 · 64 · 256 · 4096 바이트.
  * @details 숫자를 **찍기만** 한다. Release 로 읽는다. 구조 최적화 B ⑤(헤더 inline — DLL 경계를 넘는 호출을 없애 작은 크기를 내장 복사로)의 전/후를
- *          측정한다(표는 `docs/plans/StructuralOptimization.md`).
+ *          측정한다(표는 docs/decisions/5-3_CorePlatform.md).
  */
 #include "pch.h"
 

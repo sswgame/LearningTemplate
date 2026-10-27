@@ -7,7 +7,7 @@
 > 결론: 업로드와 되읽기는 "제출 → 티켓 → 폴링" 계약 하나로 바꾸고(RHI ABI 버전을 한 번 높여 옛 동기 함수 세 개를 지운다), 새 머티리얼과 PSO 는 "준비 전 / 준비됨 / 실패" 상태를 데이터로 두어 준비 전에는 그리지 않는다. 프레임 경로에는 `waitIdle` 을 새로 만들지 않는다. ABI 변경이 없는 Vulkan 대기 좁히기(U2)는 B0 에 들어갔다.
 
 2026-10-25 코드 읽기로 정리했습니다. 근거는 **[코드]**(읽어서 확인), **[추정]**, **[확인 전]** 으로 표시합니다. 프로파일 스코프 `GT.Material.waitIdle`, `RT.Upload.waitIdle`, `RT.PSO.create`, `GT.Load.sync` 는 `wt/profscopes` 브랜치가 붙이는 중이라 모든 측정(M0, M1)은 그 스코프로 합니다(스코프가 어느 줄을 감싸는지는 확인하지 못했습니다).
-관련 문서: [AsyncResourceLoading](AsyncResourceLoading.md)(핸들 상태와 로드 중 규칙), [PreloadAndLod](PreloadAndLod.md)(PSO 미리 만들기와 텍스처 밉 스트리밍), [GraphicsFormatBundle](GraphicsFormatBundle.md)(머티리얼 PSO 변형이 실패하면 그리지 않는 규칙, G11). 이 문서는 그 위에서 GPU 쪽 대기만 다룹니다.
+관련 문서: [결정 기록 5-4](../decisions/5-4_DataConfig.md)(핸들 상태와 로드 중 규칙), [PreloadAndLod](PreloadAndLod.md)(PSO 미리 만들기와 텍스처 밉 스트리밍), [결정 기록 5-5](../decisions/5-5_GraphicsRHI.md)(머티리얼 PSO 변형이 실패하면 그리지 않는 규칙, G11). 이 문서는 그 위에서 GPU 쪽 대기만 다룹니다.
 
 ## 1. 지금 동기 대기 지점
 
@@ -87,13 +87,13 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 바꾸는 흐름:
 1. `requestInitialize` 는 그대로(컴포넌트는 디바이스를 모름).
-2. 파일 읽기와 파싱(`Material::loadFromFile`)은 워커 단계로(텍스처 로드의 두 단계 구조와 같음, [AsyncResourceLoading](AsyncResourceLoading.md) 3절).
+2. 파일 읽기와 파싱(`Material::loadFromFile`)은 워커 단계로(텍스처 로드의 두 단계 구조와 같음, [결정 기록 5-4](../decisions/5-4_DataConfig.md) 3절).
 3. GPU 단계(상수 버퍼 생성과 첫 쓰기, `registerBindlessBufferSrv`, 텍스처 SRV 해석)는 RT 셋업 구간에서 `MaterialCache::initializePending` 이 하며 프레임당 개수 상한은 M1 이 정합니다.
 4. `Material` 에 원자 상태 `GpuState`(`NotRequested`, `Pending`, `Ready`, `Failed`)를 둡니다(`Pending` 은 `requestInitialize`, `Ready` · `Failed` 는 RT 가 쓰고 게임 스레드가 읽음). 반쯤 초기화된 상태를 못 구분하는 `isRHIValid()` 를 대체합니다.
 5. 패킷 빌더(`GPUSceneBuilder.cpp` 1558 주변)는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않고 건너뛴 수를 `GT.Material.notReadyBatches` 로 셉니다. `Failed` 는 `initializePending` 이 오류를 한 번 남기고 그 메시는 그려지지 않습니다(`MeshComponent.cpp` 97 주석과 같은 동작 **[코드]**).
 6. `Engine.cpp` 612-617 의 `waitIdle` 블록을 지웁니다.
 
-보이는 변화는 새 머티리얼을 쓰는 오브젝트가 파일을 읽는 시간과 패킷 링 깊이만큼(수 프레임) 늦게 나타나는 것이며, 이를 숨기는 등장 디더([AsyncResourceLoading](AsyncResourceLoading.md) 3절 B2)를 준비 시점에 맞추는 일은 O1 입니다.
+보이는 변화는 새 머티리얼을 쓰는 오브젝트가 파일을 읽는 시간과 패킷 링 깊이만큼(수 프레임) 늦게 나타나는 것이며, 이를 숨기는 등장 디더([결정 기록 5-4](../decisions/5-4_DataConfig.md) 3절 B2)를 준비 시점에 맞추는 일은 O1 입니다.
 
 인덱스 재사용: 새 등록은 새 인덱스를 받고 게임 스레드가 놓은 핸들은 `releaseHandle` 이 "넘긴 프레임 + 1" 뒤까지 미루므로(`IRHIDevice.h` 195-205 주석) 이미 만든 패킷이 옛 인덱스를 값으로 보관하는 문제는 막혀 있습니다 **[코드]**. RT 가 직접 해제하는 DX11 · GL 경로에서 같은 보장이 서는지는 확인하지 못했습니다 **[확인 전]**. `MaterialInstance::updateRHI`(`MaterialInstance.cpp` 306)와 `refreshTextureBindings` 가 상수 버퍼를 어느 스레드에서 쓰는지도 확인하지 못했습니다 **[확인 전]**(U10 작업자가 먼저 읽고 이 절에 적는다).
 
@@ -110,7 +110,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 **빌더.** 전용 스레드 하나가 요청을 순서대로 만듭니다(이번 프레임 배치가 필요한 키가 먼저, 미리 만들기 `warmPinnedMaterialPSOs` 가 나중). 결과는 완료 목록에 쌓고 RT 가 셋업 구간에서 캐시에 합치므로 캐시를 쓰는 스레드가 RT 하나로 유지되어 "삽입은 기록 시작 전에만"이라는 불변식이 서고 `bCreatedVariant` 후처리(`ensureMaterialFallbackBuffers`)도 합치는 자리에서 합니다.
 **GL.** `_bThreadSafeResourceCreation` 이 거짓이라 빌더 스레드를 쓸 수 없어 RT 가 프레임당 시간 예산 안에서 만들고 남은 키는 `Building` 으로 둡니다(폴백이 아니라 같은 상태 규칙을 다른 방식으로 채우는 것).
 **기각된 결정과의 관계.** PSO 병렬 생성은 이득 9 %(드라이버가 직렬)로 기각됐습니다(결정 기록 3절). 이 설계는 빠르게 만들려는 것이 아니라 RT 임계 경로에서 빼려는 것이라 스레드는 하나입니다. 레인 없이 공유 풀에서 돌린 GT 병렬화가 RT 를 170 → 261 µs 로 늦춘 선례가 있어(결정 기록 3절 "태스크") 빌더는 풀 작업이 아니라 전용 스레드입니다(드라이버 컴파일이 ms 단위라 풀 워커를 오래 붙잡음 **[추정]**).
-**`warmPinnedMaterialPSOs`.** 루프(등장 디더 둘 × 패스 × 뷰 모드)는 "우선순위가 낮은 요청"을 넣는 일이 되어 별도 생성 루프가 사라지고, "고정한 머티리얼의 PSO 가 모두 `Ready`" 를 물을 수 있어 [AsyncResourceLoading](AsyncResourceLoading.md) 의 준비 집합이 로딩 화면 종료 조건으로 쓸 수 있습니다.
+**`warmPinnedMaterialPSOs`.** 루프(등장 디더 둘 × 패스 × 뷰 모드)는 "우선순위가 낮은 요청"을 넣는 일이 되어 별도 생성 루프가 사라지고, "고정한 머티리얼의 PSO 가 모두 `Ready`" 를 물을 수 있어 [결정 기록 5-4](../decisions/5-4_DataConfig.md) 의 준비 집합이 로딩 화면 종료 조건으로 쓸 수 있습니다.
 **키 공간 전망.** 키 = (씬 메시 패스 수) × (머티리얼 퍼뮤테이션 수) × (마스크에 포함된 뷰 모드 수) × (컬 반전 2) **[코드: `materialPSOKey`, `collectFrameViewModeMask`]** 이라 불리언 스위치 하나가 키 수를 두 배로 만듭니다. 에디터에서 뷰 모드를 바꾸면 (머티리얼 수 × 패스 수)만큼 새 키가 한꺼번에 생겨 가장 큰 히치 후보입니다 **[추정]**. 실제 키 수와 생성 시간 분포는 M0 이 `RT.PSO.create` 로 잽니다. 쿠킹 산출물도 같은 곱을 따르며 게임 셰이더 하나가 백엔드당 180 파일입니다(결정 기록 5-5). Shipping 에서는 드라이버 컴파일만 남을 것입니다 **[추정]**.
 
 **빌더 안전성 점검.** Vulkan · DX12 의 `createPipelineState` 는 워커에서 부를 수 있습니다(렌더패스 캐시 락 vkrpcache, `RHIRenderPassLedger` 로 DX11 · DX12 · GL 의 렌더패스 벡터 락). **DX11 과 GL 은 아직 점검하지 않았고 Dev 의 `ShaderCache::getOrCompile` 도 보지 않아** U12 시작 전에 해야 합니다 **[확인 전]**.

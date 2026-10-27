@@ -5,7 +5,7 @@
  * [어디에 쓰는가]
  * 편집은 한 씬으로 하고, 쿠킹이 오브젝트 위치와 이 격자로 엔티티를 셀로 나눈다(`SceneCooker`). 런타임은 플레이어(서버는 접속자마다) 둘레의 셀을 활성 씬에 더해
  * 올리고 내린다. 언리얼 World Partition 의 런타임 격자(`UWorldPartitionRuntimeHashSet` 의 셀 크기 · 로딩 반경)와 같은 자리다.
- * 설계와 단위 나눔은 docs/plans/WorldStreaming.md.
+ * 설계와 단위 나눔은 docs/decisions/5-4_DataConfig.md.
  *
  * [값의 기준]
  * 셀 크기와 로딩 반경은 데이터(`WorldCellGridDef`, 씬의 월드 설정)다. 코드에는 형식만 있고 기본값이 없다 — 셀 크기가 0 이하면 격자를

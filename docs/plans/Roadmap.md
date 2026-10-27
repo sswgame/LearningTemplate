@@ -12,28 +12,22 @@
 
 1. **설계는 끝났고 코드가 없거나 검증이 남은 단위**
    - 데이터화 [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
-   - 엔진 분할 [EnginePartition](EnginePartition.md) 6.4. [단독: 모든 모듈 재빌드]
    - Linux 와 GPU 검증 [GpuVerification](GpuVerification.md) 2절. [병렬 가능]
 2. **새 시스템**
-   - [Vfx](Vfx.md) 실행 확인. [병렬 가능]
    - 누수 탐지 [LeakDetection](LeakDetection.md). [단독: `Memory.h` 를 바꿔 여러 모듈이 다시 빌드됨, 측정은 Release 에서 혼자]
    - 클러스터드 라이팅 [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
-   - 그래픽스 측정 · 확인 [GraphicsMeasurements](GraphicsMeasurements.md), 파티클 GPU 라이트 [VfxGpuLights](VfxGpuLights.md), 실시간 GI 와 볼륨 표현 [RealtimeGlobalIllumination](RealtimeGlobalIllumination.md), 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
-   - 간접 조명 [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
-   - 월드 스트리밍 [WorldStreaming](WorldStreaming.md). [단독: 히치 측정은 Release 에서 혼자]
+   - 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12)
    1. 에디터 시나리오 GraphSaveScenarioRun. [병렬 가능]
    2. 미리보기 창 [EditorMultiWorld](EditorMultiWorld.md) 6절. [병렬 가능]
    3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 셰이더 재베이크, 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md), 온라인 키트 마감 [OnlineKits](OnlineKits.md). [병렬 가능]
-   5. 애니메이션 · 게임플레이: 천 [ClothFollowups](ClothFollowups.md), 물리 [PhysicsExtensions](PhysicsExtensions.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 네트워크 [RollbackPrediction](RollbackPrediction.md), 게임플레이 키트 [WildWestHorseMount](WildWestHorseMount.md). [병렬 가능]
-   6. 그래픽스 형식 묶음 [GraphicsFormatBundle](GraphicsFormatBundle.md). [단독: 셰이더 재베이크 · 에셋 재작성]
+   5. 애니메이션 · 게임플레이: Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 네트워크 [RollbackPrediction](RollbackPrediction.md), 게임플레이 키트 [WildWestHorseMount](WildWestHorseMount.md). [병렬 가능]
    7. 런타임 UI: [MsdfGlyphs](MsdfGlyphs.md) · [GlyphRasterizationHitch](GlyphRasterizationHitch.md) · [UiDrawPerformance](UiDrawPerformance.md)(측정이 이득을 보일 때만). [병렬 가능]
    11. 프리로딩 · LOD [PreloadAndLod](PreloadAndLod.md). [단독: `.mesh` 판 올림 · 셰이더 재베이크]
    12. 뒤 순서: [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) · [MeshModifierPreviewCost](MeshModifierPreviewCost.md). [병렬 가능]
-4. **파일이 겹쳐 미룬 정리**(위 1 ~ 2 뒤에): [LongFunctions](LongFunctions.md) · [EngineCleanups](EngineCleanups.md). [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
-5. **새로 쓴 정리**(정리 → 기능 순서): [SerializerSilentSkips](SerializerSilentSkips.md) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [DiskPathVsResourceId](DiskPathVsResourceId.md) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md). [병렬 가능]
-6. **구조 단순화 네 정책**(필수 설정 → 팩 쿠킹을 C++ 로 → 에셋 종류 등록 줄 하나 → 텍스트 형식 역할별 하나): [StructureSimplification](StructureSimplification.md). DataDriven D8 · D9 와 겹치는 지점은 그 문서 2절. [단독: `AssetFormat.h` · `GameConfig.h` 를 바꿔 여러 모듈이 다시 빌드됨]
+4. **파일이 겹쳐 미룬 정리**(위 1 ~ 2 뒤에): [LongFunctions](LongFunctions.md). [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
+5. **새로 쓴 정리**(정리 → 기능 순서): [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md). [병렬 가능]
 8. **조건부에서 착수한 일**: [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md) · [InteractionSpatialGrid](InteractionSpatialGrid.md). [병렬 가능]
 9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) [BuildSpeed](BuildSpeed.md). [단독: 다른 작업이 모두 끝난 뒤 혼자, 빌드가 도는 동안은 측정이 무효]
 10. **2026-10-23 사용자와 정한 일**

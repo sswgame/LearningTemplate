@@ -21,7 +21,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// SceneVoxelGridTest · SceneVoxelizerTest · RealtimeProbeTest — 실시간 프로브 갱신의 CPU 쪽(RealtimeGlobalIllumination.md R5 · R6). 디바이스 없음(nogpu).
+// SceneVoxelGridTest · SceneVoxelizerTest · RealtimeProbeTest — 실시간 프로브 갱신의 CPU 쪽(결정 기록 5-5 R5 · R6). 디바이스 없음(nogpu).
 //
 // GPU 컴퓨트(probeupdate.hlsl)는 여기서 돌지 않는다. 대신 컴퓨트가 읽는 두 입력 - 점유 복셀(식은 셰이더 traceVoxelRay 와 같다)과 입력 행 배치 - 를 CPU 에서 닫힌 값으로 본다.
 // 컴퓨트의 갱신 결과(방 안이 밝아지는지)는 시나리오 realtimegi 가 네 백엔드에서 본다.

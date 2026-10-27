@@ -24,7 +24,7 @@
 - **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교):
   - 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면).
   - 선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite`). 지금은 오브젝트에 붙인 순서와 `_tickAfter` 가 순서를 주고 키트 코드끼리의 의존은 0 곳이다.
-  - 에셋 로더 등록제는 재개했다(2026-10-20, 로더 20 종 이상 — UE `UFactory`, [구조 단순화](plans/StructureSimplification.md) AT).
+  - 에셋 로더 등록제는 재개했다(2026-10-20, 로더 20 종 이상 — UE `UFactory`, [구조 단순화](decisions/5-4_DataConfig.md) AT).
   - 참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`). Mesh/Material `SlotHandle`(`shared_ptr` 이 수명과 RT 안전을 한 번에 준다). `ResourceUtil` 소유 객체화(UE `FPaths` 도 정적).
   - 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR). GameFramework 기반을 `GFS_*` DLL 여럿으로 쪼개는 안도 하지 않는다(2026-10-05, 층은 `CheckGameFrameworkLayers`).
   - `UnitStatsComponent` 를 기반(`Combat/`)으로(2026-10-05 — 쓰는 게임 0, 옮기면 데미지 숫자 · `MonsterDef` · `DamageAppliedEvent` 셋을 끊어야 층이 맞는다. 체력 읽기는 `HealthSourceComponent`). 다시 볼 조건: 다른 키트 · 게임이 피해 입구(`takeDamage` · 무적 · `DamageAppliedEvent`)를 이 키트 없이 쓰려 할 때 — 그때 `DamageAppliedEvent` 를 기반으로, `setStats( MonsterDef )` 를 키트 도우미로, 데미지 숫자를 `HealthListenerComponent` 파생으로 내리고 `generated/GF_ActionCombat/UnitStatsComponent.gen.*` 을 지운 뒤 re-configure 한다. 피해 입구 인터페이스도 같은 조건에서 `Combat/` 에 `takeDamage( 양, 쏜 쪽 )` 하나(언리얼 `AActor::TakeDamage`).

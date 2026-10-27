@@ -34,4 +34,4 @@
 
 ## 3. 맡기지 않은 것
 
-동기 `acquire` 호출처(Ragdoll · Socket · MaterialInstance · Canvas 텍스처)는 [AsyncResourceLoading](AsyncResourceLoading.md) 의 비동기 로드 작업과 같은 파일이라 그 작업이 끝난 뒤 그 계획에서 옮긴다.
+동기 `acquire` 호출처(Ragdoll · Socket · MaterialInstance · Canvas 텍스처)는 [결정 기록 5-4](../decisions/5-4_DataConfig.md) 의 비동기 로드 작업과 같은 파일이라 그 작업이 끝난 뒤 그 계획에서 옮긴다.
