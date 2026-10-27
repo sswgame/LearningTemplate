@@ -3,6 +3,8 @@
  * @brief ImGui OpenGL 렌더러 백엔드
  */
 #pragma once
+#include "Core/Concurrency/OnceInit.h"
+
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
 namespace sw
@@ -48,6 +50,6 @@ namespace sw::editor
         void unregisterTexture( void* pTextureID ) override;
 
     private:
-        IRHIDevice* _pRHIDevice{ nullptr };
+        OnceInit<IRHIDevice*> _pRHIDevice;
     };
 } // namespace sw::editor

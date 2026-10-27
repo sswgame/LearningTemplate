@@ -17,8 +17,8 @@ namespace sw::editor
 
     bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
-        _pRHIDevice = pRHIDevice;
-        if ( _pRHIDevice == nullptr )
+        _pRHIDevice.set( pRHIDevice );
+        if ( _pRHIDevice.get() == nullptr )
             return false;
 
         // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — D3D11 디바이스인지와 값이 있는지를 `queryNativeHandles` 한 곳에서 확인한다.
@@ -51,12 +51,12 @@ namespace sw::editor
     {
         // `install()` 을 부른 쪽이 `clear()` 도 부른다. 가드 헤더가 "백엔드를 종료할 때 부르십시오" 라고 적어 둔 짝이다(DX12 도 같다).
         // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
-        flushDrawReleases( _pRHIDevice );
+        flushDrawReleases( _pRHIDevice.get() );
         _viewportSizeGuard.clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_Shutdown();
         _listRegisteredSrv.clear();
-        _pRHIDevice = nullptr;
+        _pRHIDevice.reset();
     }
 
     void ImGuiDX11RendererBackend::newFrame()
@@ -67,7 +67,7 @@ namespace sw::editor
 
     void ImGuiDX11RendererBackend::processTextureUpdates()
     {
-        if ( _pRHIDevice == nullptr )
+        if ( _pRHIDevice.get() == nullptr )
             return;
         // UpdateSubresource 묶음이 다른 스레드의 전송 · 폴링과 섞이지 않게 즉시 컨텍스트 잠금 안에서 한다.
         // initialize 가 백엔드를 확인했고, 다르면 withNativeContext 가 로그를 남긴다.
@@ -78,7 +78,7 @@ namespace sw::editor
     void ImGuiDX11RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
         (void)pRHIDevice;
-        if ( pDrawData == nullptr || _pRHIDevice == nullptr )
+        if ( pDrawData == nullptr || _pRHIDevice.get() == nullptr )
             return;
         // ImGui 가 상태를 백업 · 설정 · 복원하는 묶음을 즉시 컨텍스트 잠금 안에서 한다(컨텍스트는 Init 에서 받은 것을 쓴다).
         // initialize 가 백엔드를 확인했고, 다르면 withNativeContext 가 로그를 남긴다.
@@ -88,7 +88,7 @@ namespace sw::editor
 
     void ImGuiDX11RendererBackend::renderPlatformWindows()
     {
-        if ( _pRHIDevice == nullptr )
+        if ( _pRHIDevice.get() == nullptr )
             return;
         // initialize 가 백엔드를 확인했고, 다르면 withNativeContext 가 로그를 남긴다.
         (void)_pRHIDevice->withNativeContext( RHIBackend::DirectX11, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, []( void* pContext )
@@ -103,7 +103,7 @@ namespace sw::editor
 
     void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle texture )
     {
-        if ( texture == 0 || _pRHIDevice == nullptr )
+        if ( texture == 0 || _pRHIDevice.get() == nullptr )
             return nullptr;
 
         ID3D11Texture2D* pTex = static_cast<ID3D11Texture2D*>( _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::DirectX11, texture ) );
