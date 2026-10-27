@@ -396,8 +396,12 @@ namespace sw
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
         // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
+        // 에디터 UI 가 ImGui 키를 넘긴 이벤트(`_bEditorUI`)는 OS 입력이 아니라 에디터의 것이라 남긴다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다.
         if ( bOsSuppressed )
-            _listDrainedEvent.clear();
+        {
+            (void)VectorUtil::removeIf( _listDrainedEvent, []( const RawInputEvent& event )
+            { return event._bEditorUI == SW_FALSE; } ); // 지운 수는 쓰지 않는다
+        }
         // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
         _frameEndMicroseconds = _pfnNowMicroseconds();
         assignFrameFractions( _listDrainedEvent.size(), deltaSeconds );

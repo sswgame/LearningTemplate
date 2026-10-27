@@ -7,7 +7,7 @@
 -->
 <Scenario name="editor.charactereditor" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="10"><DevCommand line="layout.reset"/></At>
-	<At frame="20"><ResizeWindow width="1900" height="1000"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="20"><ResizeWindow width="1900" height="1200"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="60"><EditorKey key="Ctrl+Shift+P"/></At>
 	<At frame="75"><EditorText value="Character Editor"/></At>
 	<At frame="90"><EditorKey key="Enter"/></At>

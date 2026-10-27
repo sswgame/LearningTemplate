@@ -63,7 +63,8 @@ namespace sw
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
         uint8                  _bRepeat    : 1;
         uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 이벤트입니다. `InputManager::beginFrame` 이 켭니다. */
-        [[maybe_unused]] uint8 _reserved   : 6;
+        uint8                  _bEditorUI  : 1; /**< 에디터 UI(ImGui)가 받은 키를 엔진 입력 맵에 넘긴 이벤트입니다(`EditorInputActions`). 배타 가상 입력이 OS 이벤트를 버려도 이것은 남는다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다. */
+        [[maybe_unused]] uint8 _reserved   : 5;
         /**
          * @brief 프레임 안의 자리입니다. 0 은 이 프레임 창의 시작(지난 `beginFrame`), 1 은 이번 `beginFrame` 입니다(서브틱 입력).
          * @details OS 이벤트는 `beginFrame` 이 `_timeMicroseconds` 로 채운다. 가상 이벤트(리플레이 · 시나리오)는 녹화된 값 그대로이고(파일에 저장된다), 손으로 지은 가상 이벤트는 0(프레임 시작)이다.
@@ -111,6 +112,7 @@ namespace sw
             , _modifierMask{ 0 }
             , _bRepeat{ SW_FALSE }
             , _bSynthetic{ SW_FALSE }
+            , _bEditorUI{ SW_FALSE }
             , _reserved{ 0 }
             , _frameFraction{ 0.0f }
             , _timeMicroseconds{ 0 }

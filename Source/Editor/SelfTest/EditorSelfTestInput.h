@@ -76,7 +76,7 @@ namespace sw::editor
          * @details 플랫폼 백엔드가 프레임마다 실제 커서를 넣으므로 누름과 뗌을 한 프레임에 몰면 뗄 때 커서가 위젯 밖에 있다. 그래서 뗌 앞에서 끊고 커서를 다시 옮긴다.
          */
         static void waitNextFrame();
-        /** @brief 키 하나를 누르거나 뗍니다. ImGuiKey 값을 쓰며, 수정자는 ImGuiMod_* 입니다. */
+        /** @brief 키 하나를 누르거나 뗍니다. ImGuiKey 값을 쓰며, 수정자는 왼쪽 키(ImGuiKey_LeftCtrl 등)입니다 — ImGui 가 그 키로 수정자를 만들고 에디터 입력 맵으로 가는 길도 같은 키를 본다. */
         static void setKey( int32 imguiKey, bool bDown );
         /**
          * @brief 키 이름을 ImGuiKey 값으로 찾습니다. `ImGui::GetKeyName` 의 문자열이며 "Enter", "Escape", "A", "F5" 가 있고, 수정자는 "Ctrl", "Shift", "Alt" 입니다.

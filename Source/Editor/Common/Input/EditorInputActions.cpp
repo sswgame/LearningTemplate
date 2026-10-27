@@ -29,6 +29,17 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "Editor" );
 
+    namespace
+    {
+        /** @brief 에디터 UI 가 넘긴 키의 뗌 이벤트입니다(`_bEditorUI` — 배타 가상 입력이 OS 이벤트를 버려도 남는다). */
+        RawInputEvent makeForwardedKeyUp( Key key )
+        {
+            RawInputEvent event = RawInputEvent::makeKeyUp( key );
+            event._bEditorUI    = SW_TRUE;
+            return event;
+        }
+    } // namespace
+
     EditorInputActions::EditorInputActions()
         : _map{}
         , _listQueuedCommand{}
@@ -235,8 +246,9 @@ namespace sw::editor
         }
         vector<RawInputEvent> listEvent;
         ImGuiKeyForward::appendKeyChanges( listEvent );
-        for ( const RawInputEvent& event : listEvent )
+        for ( RawInputEvent& event : listEvent )
         {
+            event._bEditorUI = SW_TRUE; // 배타 가상 입력(시나리오)이 OS 이벤트를 버려도 이 키는 남는다
             if ( input.postRawEvent( event ) == false )
                 continue; // 큐가 차면 이 사건만 잃는다
             const size_t keyIndex = static_cast<size_t>( event._payload._keyData._key );
@@ -252,7 +264,7 @@ namespace sw::editor
         for ( size_t keyIndex = 0; keyIndex < std::size( _arrForwardedKey ); ++keyIndex )
         {
             // 큐가 차서 못 넣은 뗌은 다음 프레임에 다시 시도한다.
-            if ( _arrForwardedKey[keyIndex] && input.postRawEvent( RawInputEvent::makeKeyUp( static_cast<Key>( keyIndex ) ) ) )
+            if ( _arrForwardedKey[keyIndex] && input.postRawEvent( makeForwardedKeyUp( static_cast<Key>( keyIndex ) ) ) )
                 _arrForwardedKey[keyIndex] = false;
         }
     }

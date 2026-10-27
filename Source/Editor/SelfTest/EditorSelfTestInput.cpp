@@ -229,6 +229,22 @@ namespace sw::editor
         event._code  = imguiKey;
         event._bDown = bDown ? SW_TRUE : SW_FALSE;
         EditorSelfTestInputInternal::push( std::move( event ) );
+        // 실제 플랫폼 백엔드와 같이 수정 키는 두 이벤트다 — 왼쪽 키(에디터 입력 맵이 읽는다)와 ImGui 의 수정자 비트(`io.KeyCtrl`, 서드파티 노드 에디터가 읽는다).
+        int32 modifierBit = 0;
+        if ( imguiKey == ImGuiKey_LeftCtrl )
+            modifierBit = ImGuiMod_Ctrl;
+        else if ( imguiKey == ImGuiKey_LeftShift )
+            modifierBit = ImGuiMod_Shift;
+        else if ( imguiKey == ImGuiKey_LeftAlt )
+            modifierBit = ImGuiMod_Alt;
+        if ( modifierBit != 0 )
+        {
+            EditorSelfTestInputInternal::PendingEvent modifierEvent;
+            modifierEvent._kind  = EditorSelfTestInputInternal::EventKind::Key;
+            modifierEvent._code  = modifierBit;
+            modifierEvent._bDown = bDown ? SW_TRUE : SW_FALSE;
+            EditorSelfTestInputInternal::push( std::move( modifierEvent ) );
+        }
     }
 
     bool EditorSelfTestInput::findKeyByName( string_view name, int32& outImguiKey )
@@ -239,9 +255,9 @@ namespace sw::editor
             int32       _key;
         };
         constexpr ModifierName kArrModifier[] = {
-            { "Ctrl",  ImGuiMod_Ctrl},
-            {"Shift", ImGuiMod_Shift},
-            {  "Alt",   ImGuiMod_Alt},
+            { "Ctrl",  ImGuiKey_LeftCtrl},
+            {"Shift", ImGuiKey_LeftShift},
+            {  "Alt",   ImGuiKey_LeftAlt},
         };
         for ( const ModifierName& modifier : kArrModifier )
         {

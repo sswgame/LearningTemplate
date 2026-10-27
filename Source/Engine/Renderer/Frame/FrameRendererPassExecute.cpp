@@ -1023,8 +1023,8 @@ namespace sw
         // TAA 이력은 선언 검증 밖이라 이 단언이 지킨다.
         auto pickOne = []( RHIDescriptorIndex first, RHIDescriptorIndex second, RHIDescriptorIndex third ) -> RHIDescriptorIndex
         {
-            const uint32 presentCount = ( first != kInvalidDescriptorIndex ? 1u : 0u ) + ( second != kInvalidDescriptorIndex ? 1u : 0u ) +
-                                        ( third != kInvalidDescriptorIndex ? 1u : 0u );
+            [[maybe_unused]] const uint32 presentCount = ( first != kInvalidDescriptorIndex ? 1u : 0u ) + ( second != kInvalidDescriptorIndex ? 1u : 0u ) +
+                                                         ( third != kInvalidDescriptorIndex ? 1u : 0u );
             SW_ASSERT( presentCount <= 1 );
             if ( first != kInvalidDescriptorIndex )
                 return first;

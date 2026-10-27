@@ -809,7 +809,7 @@ namespace sw
         return settingIndex;
     }
 
-    const string& UserSettingsManager::getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const
+    const string& UserSettingsManager::getKeyValue( [[maybe_unused]] const hashed_string& settingID, uint32 settingIndex ) const
     {
         // 핸들은 이 관리자의 스키마에서 풀렸다. 스키마를 비우고(`shutdown`) 다시 읽었는데 옛 핸들을 쓰면 다른 설정을 읽게 된다.
         SW_ASSERT( settingIndex < static_cast<uint32>( _listState.size() ) && _schema.getSettings()[settingIndex]._id == settingID );

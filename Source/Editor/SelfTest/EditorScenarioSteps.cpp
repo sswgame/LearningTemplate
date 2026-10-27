@@ -64,11 +64,11 @@ namespace sw::editor
             {
                 vector<int32> listKey;
                 if ( ( modifierMask & EditorModifierBit::kCtrl ) != 0 )
-                    listKey.push_back( ImGuiMod_Ctrl );
+                    listKey.push_back( ImGuiKey_LeftCtrl );
                 if ( ( modifierMask & EditorModifierBit::kShift ) != 0 )
-                    listKey.push_back( ImGuiMod_Shift );
+                    listKey.push_back( ImGuiKey_LeftShift );
                 if ( ( modifierMask & EditorModifierBit::kAlt ) != 0 )
-                    listKey.push_back( ImGuiMod_Alt );
+                    listKey.push_back( ImGuiKey_LeftAlt );
                 return listKey;
             }
 
