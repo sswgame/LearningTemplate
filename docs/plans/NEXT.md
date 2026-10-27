@@ -17,7 +17,7 @@
 | `verify-batch` Release 전체(첫 판, 606a0c07a) | 통과 94 · 실패 40 · 건너뜀 67. 실패 40 중 32 개는 `app-scenarios-release` 가 덮는 `covered` 항목 |
 | 실패 원인 고침 | 에디터 인스턴스 파괴 뒤 프레임 상태의 뷰 RT 해제(A) · 간접 드로우 테스트의 PSO(C) · GL 간접 디스패치의 컴퓨트 프로그램(E) · 텍스처 리로드 테스트(F) · 무인 실행의 사양 품질 프리셋(`flowterrain` · `terrainbrush`) · 키보드 주인 판정(`netsim`) · UI 미리보기 도구 줄(`uipreview`) · `assetmanage` GL 색인 대기 · 새 에디터 인스턴스 첫 UI 프레임의 병렬 기록 경합 · 서버의 지난 크래시 묶기 경고 · 데스크톱 전역 상태 케이스의 `SuiteKind::Desktop` 분리 |
 | `app-scenarios-release`(이제 `ctest -L hostgpu` 샤드 + `*_Desktop`) | 통과, 1300 s(c62f76b26). 시나리오 Warning/Error 0 |
-| 건너뛴 것 | `load-baseline-suite` 실패(기준 낡음 의심, 남은 일 1) · `scenario-thresholds-promote` 실패(낡은 인자, 남은 일 2) · `load-auto-render-scale` 은 통과했으나 첫 측정이 예산의 1/10 이라 전환 확인 못 함. 동 일회성 항목 외 Debug 3 개의 결과는 아래 3절 첫 줄 |
+| 건너뛴 것 | `load-baseline-suite` 실패(기준 낡음 의심, 남은 일 1) · `scenario-thresholds-promote` 실패(낡은 인자, 남은 일 2) · `load-auto-render-scale` 은 통과했으나 첫 측정이 예산의 1/10 이라 전환 확인 못 함. Debug `ctest-lint` · `ctest-race` · `app-hang-watch` 는 통과. Release 첫 판의 나머지 `covered` 32 개는 `app-scenarios-release` 통과로 덮인다 |
 
 검증 도구도 이번에 바뀌었다: `verify-batch --failed-from <결과 폴더> --skip-kind <종류>`(실패 항목과 그 빌드만), 가드 훅이 전경 `verify-batch` · 20 초 넘는 `sleep` 을 막는다(긴 검증은 `run_in_background`, [12 에이전트와 토큰](../12_Agents.md) 2절).
 
@@ -50,7 +50,7 @@
 
 ## 3. 따로 병합할 브랜치와 확인할 것
 
-Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에서 졌고 수정 뒤 Debug 빌드로 다시 돌렸다(결과는 `build/verify-batch` 의 가장 최근 폴더 — 이 문서가 push 된 시점에 확인되지 않았으면 먼저 돌린다).
+Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에서 졌고 수정 뒤 Debug 빌드로 다시 돌려 모두 통과했다(38 · 114 · 12 초).
 
 사용자 지시: 아래는 통합 S 에서 병합하지 않는다. 병합 순서 권고: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid`(호출처 대량 수정이라 마지막). 병합 뒤 통합이 `normal-maps-reimport` · `shared-module-unload-tests` · `log-gate-cleanup-tests` 를 돌린다. 작업자(worker)에게는 `SendMessage` 가 없다.
 
