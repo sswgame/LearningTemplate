@@ -3982,7 +3982,6 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialRequestedWithoutADeviceIs
 SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches, test::listRHIBackendParameter, 0.4 )
 {
     const sw::string      kTexturePath = "engine/textures/test/checker.dds";
-    int32                 changedIndexCount{ 0 };
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
     {
@@ -4011,8 +4010,11 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
             const sw::RHIDescriptorIndex after = pTexture->getSrv();
-            if ( after != before )
-                ++changedIndexCount;
+            // 지연 해제(DX12 · Vulkan)가 있으면 돌려준 자리는 아직 비지 않아 새 인덱스가 언제나 다르다 — 같으면 이 백엔드에서 테스트가 결함을 보지 못한다.
+            // DX11 · GL 은 같은 인덱스가 돌아올 수 있어 상태만 본다. 케이스는 백엔드마다 하나라(bb5bfcacf) 백엔드 사이를 합쳐 세지 않는다.
+            const bool bDeferredRelease = device.getBackend() == sw::RHIBackend::DirectX12 || device.getBackend() == sw::RHIBackend::Vulkan;
+            if ( bDeferredRelease )
+                SW_EXPECT_TRUE_MSG( after != before, "지연 해제 백엔드에서 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 테스트가 결함을 볼 수 없습니다" );
 
             // 다음 씬 빌드가 새 인덱스를 받게 한다 — 머티리얼(바이트 · 슬롯 목록)과 배치(슬롯 바인딩 백엔드가 값으로 든 SRV).
             builder.populateFromScene( &scene, camPos );
@@ -4036,8 +4038,6 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the texture reload rebinding test" );
-    // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 테스트는 아무것도 보지 못한 것이다.
-    SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 테스트가 결함을 볼 수 없습니다" );
 }
 
 /**
