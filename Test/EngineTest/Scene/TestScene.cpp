@@ -1950,6 +1950,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
  */
 SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 저장소 원본 씬을 디스크에서 읽는다 — 배포본은 마운트한 팩만 읽어 그 씬의 메시 · 머티리얼을 얻지 못한다
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<sw::string> listFile;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourcePaths::getRootFolderPath(), "", listFile, true ) );

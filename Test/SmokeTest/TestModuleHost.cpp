@@ -46,7 +46,10 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRHIThatHasNoDevice )
     EditorModuleHost host;
     // 리로드 매니저·창·렌더 스레드 없이. 개발 구성은 등록할 모듈이 없어 그대로 성공하고,
     // 배포 구성은 정적 게임 API 를 묶다가 **디바이스가 없다는 것을 알고 멈춘다.**
-    SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a shipping host refuses to create the game instance without an RHI device" ); // 거절 로그가 이 호출이 보려는 동작이다
+        SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
+    }
 
     // 디바이스가 없으면 재생성도 거절한다 — 여기서 true 를 돌려주면 호출자가 인스턴스가 있다고 믿는다.
     SW_EXPECT_FALSE( host.reinitializeAfterRHISwap( nullptr, nullptr ) );

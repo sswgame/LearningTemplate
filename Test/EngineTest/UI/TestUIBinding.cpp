@@ -366,8 +366,11 @@ SW_TEST_CASE( UIBindingTest, PollBindingDetectsChange )
     viewModel._ammo         = 3;
     sw::TextWidget* pText   = nullptr;
     sw::UIScreen*   pScreen = fixture._ui.findScreen( fixture._ui.pushScreen( UIBindingTestUtil::makeTextScreen( "_text", "{poll:_ammo}", pText ) ) );
-    pScreen->setViewModel( &viewModel );
-    UIBindingTestUtil::runFrame( fixture._input, fixture._ui );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a poll binding in a shipped build is warned about" ); // 바인딩을 만드는 이 호출의 경고가 의도다
+        pScreen->setViewModel( &viewModel );
+        UIBindingTestUtil::runFrame( fixture._input, fixture._ui );
+    }
     SW_EXPECT_STREQ( "3", pText->getText().c_str() );
     const uint32 writesBefore = pScreen->getBindingSet().getWriteCount();
     UIBindingTestUtil::runFrame( fixture._input, fixture._ui );

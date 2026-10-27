@@ -168,7 +168,10 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
     config._gamePort      = 7777;
 #if defined( SW_SHIPPING )
     // Shipping 서버는 평문 게임 포트를 루프백 밖에 열지 않는다(결정 기록 5-9) — 접속 티켓 없이는 거절하고 인자를 비운다.
-    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a shipping server refuses a plain non-loopback game port" ); // 거절 로그가 이 호출이 보려는 동작이다
+        SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
+    }
     SW_EXPECT_TRUE( params._role == GameNetRole::None );
 #else
     SW_ASSERT_TRUE( session.makeServerParams( config, params ) );

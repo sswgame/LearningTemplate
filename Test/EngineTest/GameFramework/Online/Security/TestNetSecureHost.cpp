@@ -249,6 +249,7 @@ SW_TEST_CASE( NetSecureHostTest, OneSidedEncryptionIsRefusedAsSecurityMismatch )
 
 SW_TEST_CASE( NetSecureHostTest, EphemeralModeWithoutAuthenticatorIsDevelopmentOnly )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a shipping server refuses encrypted listen without an authenticator" ); // 거절 로그는 SecurePair 가 listen 하는 이 줄에서 난다
     SecurePair pair( NetSecurityMode::Encrypted, NetSecurityMode::Encrypted, false );
 #if defined( SW_SHIPPING )
     // Shipping 서버는 인증기 없이 암호화로 listen 하지 못한다(일회 키는 중간자를 못 막는다).

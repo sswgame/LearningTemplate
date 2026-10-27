@@ -353,8 +353,10 @@ function(sw_registerTestPolicy TARGET_NAME)
 		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
 			ARGS --host_suites=only --desktop_suites=exclude ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
 		# 선택 키 — desktopSeconds 없음 = 데스크톱 케이스가 없다(있으면 `--desktop_suites=only` 가 고를 것이 있어야 한다). RUN_SERIAL 이라 ctest 가 다른 항목과 겹치지 않게 돌린다.
+		# `desktopInShipping` false = 그 케이스가 Shipping 에 없다(예: 게임 팩 시나리오) — Shipping 에서는 고를 것이 없어 등록하지 않는다.
 		sw_readOptionalJsonValue(swDesktopSeconds "${swPolicy}" executables ${TARGET_NAME} desktopSeconds)
-		if(DEFINED swDesktopSeconds)
+		sw_readOptionalJsonValue(swDesktopInShipping "${swPolicy}" executables ${TARGET_NAME} desktopInShipping)
+		if(DEFINED swDesktopSeconds AND NOT (SW_SHIPPING_BUILD AND DEFINED swDesktopInShipping AND NOT swDesktopInShipping))
 			sw_computeTestTimeout(swDesktopTimeout ${swDesktopSeconds} 1 0)
 			sw_registerTestRun(${TARGET_NAME}_Desktop ${TARGET_NAME} RUN_SERIAL GPU ${swHostLockArgs} COST ${swDesktopSeconds}
 				ARGS --host_suites=only --desktop_suites=only ${swRequiredBackends} LABELS "${swBaseLabels};hostgpu;desktop" TIMEOUT ${swDesktopTimeout} ASAN_OPTIONS ${swAsanOptions})

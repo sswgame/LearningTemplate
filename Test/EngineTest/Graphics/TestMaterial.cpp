@@ -1099,6 +1099,7 @@ SW_TEST_CASE( MaterialTest, ReflectionWithoutMaterialSchemaFailsTheSync )
  */
 SW_TEST_CASE( MaterialTest, EveryRepositoryMaterialMatchesItsShaderStruct )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 배포본은 쿠킹한 매니페스트만 읽고 활성 백엔드 몫뿐이라 Vulkan 형식의 모든 셰이더를 되짚을 수 없다 — 원본 리소스가 있는 구성에서만 본다
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string engineDir = sw::ResourcePaths::findLooseDomainFolder( "engine", "materials" ).getDiskPath();
     if ( engineDir.empty() )

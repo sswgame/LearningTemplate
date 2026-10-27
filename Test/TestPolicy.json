@@ -62,6 +62,8 @@
       "hostSeconds": 2175,
       "hostShards": 5,
       "desktopSeconds": 120,
+      "desktopInShipping": false,
+      "_desktopInShippingReason": "혼합 입력 시나리오가 게임 팩 시나리오(Shooter3D.closewindow)뿐인데 Shipping 에는 게임 팩이 없어 --desktop_suites=only 가 고를 케이스가 0 이라 지던 것(2026-10-28).",
       "_desktopSecondsReason": "<타깃>_Desktop(RUN_SERIAL) 한 실행 — 혼합 입력 시나리오(지금 Shooter3D.closewindow × 백엔드 넷). 커서 클립 · 포그라운드는 데스크톱 전역이라 겹치는 조각의 창이 서로 방해했다(2026-10-27 hostgpu 재검증).",
       "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). Debug 한 실행 2254 s(2026-10-16) 중 에디터 시나리오가 백엔드마다 5~8 분이라, 가장 비싼 케이스(497 s) 하나가 한 조각이 되게 다섯으로 나눈다. 조각은 잠금 없이 GPU 칸(gpuSlots)만큼 겹쳐 돈다 — App 은 케이스마다의 실행 쓰기 루트(build/<프리셋>/AppRuns, AppTestUtil::getRunFolder)에 쓰고 시나리오 사본은 프로세스 꼬리(scratch/<이름>_p<pid>)를 가져 조각끼리 · QaGoldenImages 와 쓰는 곳이 겹치지 않는다(docs/plans/HostGpuIsolation.md). 2175 s 는 활성 게임 팩 시나리오를 -game= 로 한 번 더 돌던 몫(약 85 s)을 뺀 추정이다 — 케이스 이름 · 비용은 hostCaseCosts 의 이유를 본다.",
       "hostCaseCosts": {
