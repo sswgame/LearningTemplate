@@ -1,6 +1,6 @@
 """
 게이트 여럿이 같이 읽는 C++ 규칙 표 — 한 게이트의 비공개 표를 다른 게이트가 import 하면 린트 명령끼리 의존한다(층 2 끼리,
-`docs/plans/ScriptsStructure.md`). 그래서 둘 이상이 읽는 표는 여기(린트 틀 층) 둔다.
+`docs/decisions/5-2_Build.md`). 그래서 둘 이상이 읽는 표는 여기(린트 틀 층) 둔다.
 
 - `kListLibraryRule`: 감싼 서드파티 라이브러리 표 — `gate/CheckThirdPartyIsolation.py`(헤더 · 링크 자리)와 `gate/CheckProductNames.py`(제품 이름 자리).
 - `readFallibleVerbs`: 실패할 수 있는 동사(`rules/CheckFallibleNodiscard.toml`) — `gate/CheckFallibleNodiscard.py` 와 `gate/CheckDiscardReason.py`.

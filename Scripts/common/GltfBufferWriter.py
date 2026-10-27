@@ -2,7 +2,7 @@
 glTF 바이너리(BIN 청크)와 그 위의 bufferView · accessor 목록을 쌓는 도우미입니다.
 
 합성 리그(`dev/MakeSyntheticRig.py`)와 활 · 화살 프롭(`dev/MakeBowProps.py`) 두 생성기가 함께 쓴다. 명령(층 2)끼리 import 하지 않도록
-공용 층(`common`)에 둔다(`docs/plans/ScriptsStructure.md` 2절).
+공용 층(`common`)에 둔다(`docs/decisions/5-2_Build.md`).
 """
 
 from __future__ import annotations

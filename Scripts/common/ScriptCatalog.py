@@ -2,7 +2,7 @@
 `Scripts/` 의 파이썬 파일 목록과 한 줄 설명 — `py -3 -m Scripts --list` 가 찍는다.
 
 설명은 파일 docstring 의 첫 내용 줄이다(파일 경로 · `@file` 줄은 건너뛰고 `@brief ` 는 뗀다). AST 로 읽고 import 하지 않는다 — 목록을 보는 데
-명령 모듈을 싣는 비용 · 부작용이 없다. 손으로 쓴 파일 목록 문서는 두지 않는다: 코드에서 만든 목록은 낡지 않는다(`docs/plans/ScriptsStructure.md`).
+명령 모듈을 싣는 비용 · 부작용이 없다. 손으로 쓴 파일 목록 문서는 두지 않는다: 코드에서 만든 목록은 낡지 않는다(`docs/decisions/5-2_Build.md`).
 """
 
 from __future__ import annotations

@@ -25,7 +25,7 @@
 ### AtSpiBridge
 제목: 리눅스 AT-SPI 스크린 리더 브리지
 옛번호: G-9
-왜 필요한가: Windows 는 UI Automation 브리지가 있고([ScreenReaderSupport](ScreenReaderSupport.md) A4), 리눅스 클라이언트에는 Orca 같은 스크린 리더에 닿는 길이 없다. 접근성 트리(`UIAccessibilityTree`) · 브리지 계약(`IUIAccessibilityBridge`)은 플랫폼과 무관해 AT-SPI 구현만 비어 있다.
+왜 필요한가: Windows 는 UI Automation 브리지가 있고([결정 기록 5-7](../decisions/5-7_RuntimeUI.md) A4), 리눅스 클라이언트에는 Orca 같은 스크린 리더에 닿는 길이 없다. 접근성 트리(`UIAccessibilityTree`) · 브리지 계약(`IUIAccessibilityBridge`)은 플랫폼과 무관해 AT-SPI 구현만 비어 있다.
 착수 조건: 리눅스 클라이언트가 제품 대상이 되고 Orca + at-spi2 를 올린 세션(CI 에 xvfb + dbus + orca 를 띄우거나 실기)을 확보할 때.
 2026-10-27 구현(미확인): `Engine/UI/Accessibility/Linux/AtSpiAccessibilityBridge.cpp` 가 libdbus-1 로 `Accessible` · `Component` · `Action` · `Value` 객체와 레지스트리 등록(`Socket.Embed`), 포커스 · 알림 신호를 낸다. 역할 · 상태 번호 규칙(`AtSpiMapping`)은 `AtSpiMappingTest` 가 본다. `-DSW_ENABLE_ATSPI=ON`(libdbus-1-dev) 일 때만 짓고 기본은 끈다 — 리눅스에서 지어 본 적도 Orca 에 붙여 본 적도 없다.
 남은 것: 리눅스 CI 에서 `SW_ENABLE_ATSPI=ON` 으로 짓기(컴파일 오류가 있으면 고친다), Orca + at-spi2 세션에서 트리 · 포커스 · 누르기 확인, 이벤트 서명(`siiva{sv}`)과 알림(`Announcement`)의 값이 at-spi2-core 판과 맞는지 확인, 사각형에 창 위치를 더해 화면 좌표로 맞추기(지금은 창 클라이언트 기준이라 확대기 · 강조 상자가 창 위치만큼 어긋난다).

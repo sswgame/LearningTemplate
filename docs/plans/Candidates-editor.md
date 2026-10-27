@@ -2,7 +2,7 @@
 
 > 상태: 후보 · 선행: 없음 · 영역: editor · 옛번호: B-4, D3-9 · 진행: 해당없음
 
-에디터 패널, 에디터 플러그인, 에디터 시나리오의 착수 전 후보 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 이미 계획 문서가 있는 일은 [EditorMultiWorld](EditorMultiWorld.md)(다중 월드 · 툴 창), [EditorUX](EditorUX.md)(UX 남은 결함), [EditorFeatureGaps](EditorFeatureGaps.md)(지형 칠하기 · UI 디자이너 · 치트 · 타입 핸들 인스펙터), [DataKindRegistry](DataKindRegistry.md), [MeshModifierPreviewCost](MeshModifierPreviewCost.md), [ContentBrowserWatchAndScan](ContentBrowserWatchAndScan.md)(콘텐츠 브라우저 감시 지연 · 스캔 비용)에 있습니다.
+에디터 패널, 에디터 플러그인, 에디터 시나리오의 착수 전 후보 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 이미 계획 문서가 있는 일은 [EditorMultiWorld](EditorMultiWorld.md)(다중 월드 · 툴 창), [EditorUX](EditorUX.md)(UX 남은 결함), [결정 기록 5-11](../decisions/5-11_Editor.md)(지형 칠하기 · UI 디자이너 · 치트 · 타입 핸들 인스펙터), [결정 기록 5-11](../decisions/5-11_Editor.md), [MeshModifierPreviewCost](MeshModifierPreviewCost.md), [결정 기록 5-11](../decisions/5-11_Editor.md)(콘텐츠 브라우저 감시 지연 · 스캔 비용)에 있습니다.
 
 ## 확인 대기
 
@@ -49,7 +49,7 @@
 ### BehaviorTreeLiveCommander
 제목: 행동 트리 창에서 지휘관 AI 의 활성 노드 보기
 옛번호: 없음
-왜 필요한가: 행동 트리 창([DesignerDataToolsAudit](DesignerDataToolsAudit.md) D2)은 선택한 오브젝트의 `AIControllerComponent` 실행기만 읽는다. RTS 지휘관 AI(`RTSCommanderAI`)는 컴포넌트가 아니라 경기 상태(`SkirmishMatch`)가 쥐는 일반 클래스라 창이 닿지 못한다.
+왜 필요한가: 행동 트리 창([결정 기록 5-11](../decisions/5-11_Editor.md) D2)은 선택한 오브젝트의 `AIControllerComponent` 실행기만 읽는다. RTS 지휘관 AI(`RTSCommanderAI`)는 컴포넌트가 아니라 경기 상태(`SkirmishMatch`)가 쥐는 일반 클래스라 창이 닿지 못한다.
 착수 조건: 컴포넌트에 안 붙은 행동 트리 실행기를 쓰는 게임이 둘 이상이 되어 트리를 고치며 활성 노드를 봐야 하는 일이 반복될 때.
 남은 것: 실행기를 내놓는 작은 인터페이스(`IBehaviorTreeDebugSource`: 실행기 목록과 이름)를 GameFramework 에 두고 지휘관을 가진 컴포넌트(`SkirmishDirectorComponent`)가 구현해 창이 선택한 오브젝트에서 찾는다.
 함정: 실행기 노드 번호는 깊이 우선 번호이므로 창에 연 파일과 실행기가 쥔 트리가 같은 파일일 때만 맞다 — 인터페이스가 파일 경로도 내놓아 다르면 표시하지 않는다.

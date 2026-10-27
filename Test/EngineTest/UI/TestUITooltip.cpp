@@ -10,7 +10,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 런타임 UI 툴팁과 커서 모양(docs/plans/UiTooltipAndCursor.md) — 호버 경로에서 주인과 모양을 고르는 규칙.
+// 런타임 UI 툴팁과 커서 모양(`docs/decisions/5-7_RuntimeUI.md`) — 호버 경로에서 주인과 모양을 고르는 규칙.
 
 /**
  * @brief [UITooltipTest] 커서 모양은 잎에서 올라가 처음 만난 Inherit 가 아닌 값이고, 루트까지 모두 Inherit 면 화살표다. 툴팁 주인은 설명 글을 가진 가장 가까운 위젯이다

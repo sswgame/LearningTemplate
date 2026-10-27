@@ -26,12 +26,7 @@
     },
     {
       "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
-      "source": "docs/plans/ScriptsStructure.md 6절", "result_doc": "docs/plans/ScriptsStructure.md 6절"
-    },
-    {
-      "id": "resource-data-schema-test", "title": "ResourceDataSchemaTest 필터(데이터 종류를 타입 .cpp 의 등록 줄로 옮긴 DK1 ~ DK5)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "ResourceDataSchemaTest.*",
-      "source": "docs/plans/DataKindRegistry.md DK1 ~ DK5", "result_doc": "docs/plans/DataKindRegistry.md 상태를 끝으로"
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절"
     },
     {
       "id": "skin-vat-pool-range-allocator", "title": "스킨 원본 · VAT 풀 구간 할당기 이득(RT.Deform.rebuild* 구간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
@@ -144,23 +139,6 @@
       "id": "async-read-frame-time", "title": "시작 뒤 읽기가 프레임 시간을 늘리지 않는지(Release)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "perf-compare 에 이 비교 케이스가 없다(읽기를 켜고 끄는 스위치 A/B 케이스를 더해야 한다)",
       "source": "docs/plans/AsyncResourceLoading.md 5절", "result_doc": "docs/plans/AsyncResourceLoading.md 상태를 끝으로"
-    },
-    {
-      "id": "panel-id-literals-p3", "title": "에디터 자체 테스트(창 제목 상수를 쓰는 sceneView.* · toolbar.* · 플러그인 패널 테스트와 gameView.pointerOriginReachesTheGame)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
-      "filter": "AppSmokeTest.EditorSelfTestsPassInsideTheEditor", "extra_args": ["--host_suites=all"],
-      "source": "docs/plans/PanelIDLiterals.md P3, docs/plans/UiInputRemaining.md I3", "result_doc": "docs/plans/PanelIDLiterals.md 상태를 끝으로"
-    },
-    {
-      "id": "ui-notification-in-game", "title": "meadowvillage 목표 마커가 부탁을 받으면 뜨고 끝나면 사라진다(questmarker 시나리오)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["game/meadowvillage/automation/questmarker.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/UiNotificationRemaining.md N2", "result_doc": "docs/plans/UiNotificationRemaining.md 상태를 끝으로",
-      "note": "부탁이 Active 인 구간이 한두 프레임이면 마커 가시성 이력이 놓칠 수 있다 — 지면 AdvanceGameTime 을 더 잘게 나눈다."
-    },
-    {
-      "id": "ui-input-real-device", "title": "UI 입력 단위 테스트(월드 단추 마우스 클릭 · 툴팁 자리 · 지연 · 멈춘 월드 위젯 · 물리 가림)", "kind": "covered", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
-      "covered": ["UIInputTest.MouseClickOnWorldWidgetThroughCameraRay", "UIInputTest.TooltipShowsAfterDelayStaysPutAndClosesOffTheWidget", "UITooltipTest.PlacementFlipsAtScreenEdgesAndClamps", "WidgetComponentTest.CleanWorldWidgetSkipsRepaint", "WidgetComponentTest.PhysicsBodyBlocksWorldInputWhenOccluded", "WidgetComponentTest.PhysicsBodyHidesOccludedScreenMarker"], "covered_by": "ctest-nogpu",
-      "source": "docs/plans/UiInputRemaining.md I3, docs/plans/WorldWidgetInput.md W3 · W4, docs/plans/UiTooltipAndCursor.md T4", "result_doc": "docs/plans/UiInputRemaining.md 상태를 끝으로",
-      "note": "리눅스 클립보드 왕복(WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr)은 CI 리눅스 xvfb 의 swrender 묶음이 돈다 — 푸시 뒤 ci-jobs --summary 로 본다."
     },
     {
       "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
@@ -892,22 +870,6 @@
       "source": "docs/plans/MsdfGlyphs.md M5", "result_doc": "docs/plans/MsdfGlyphs.md M5"
     },
     {
-      "id": "uia-client-test", "title": "UIA 클라이언트가 진짜 창의 메뉴를 읽고 조작한다(UiaClientTest, 내레이터 실기 확인의 자동화 몫)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
-      "filter": "UiaClientTest.*", "extra_args": ["--host_suites=all"],
-      "source": "docs/plans/ScreenReaderSupport.md A6", "result_doc": "docs/plans/ScreenReaderSupport.md 상태를 끝으로",
-      "note": "진짜 창과 UIA 서비스가 필요하다. 지면 클라이언트 스레드가 제공자 호출에서 멈췄는지(30 초 시한) 먼저 본다."
-    },
-    {
-      "id": "ui-preview-logic-test", "title": "UIPreviewLogicTest 필터(앵커 프리셋의 슬롯 여백 계산 포함)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "UIPreviewLogicTest.*",
-      "source": "docs/plans/EditorFeatureGaps.md UIPreview.U2", "result_doc": "docs/plans/EditorFeatureGaps.md 상태를 끝으로"
-    },
-    {
-      "id": "inspector-handle-scenario", "title": "editor.inspectorhandle 시나리오(CallInEditor 인자 선택기 ⑥ 포함)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/inspectorhandle.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/EditorFeatureGaps.md TypedHandle.H3", "result_doc": "docs/plans/EditorFeatureGaps.md 상태를 끝으로"
-    },
-    {
       "id": "preview-windows-scenarios", "title": "미리보기 창 시나리오(panelclose · prefabwindow · previewsky · previewreopen · previewswap)를 네 백엔드로", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["engine/automation/editor/panelclose.scenario.xml", "engine/automation/editor/prefabwindow.scenario.xml", "engine/automation/editor/previewsky.scenario.xml", "engine/automation/editor/previewreopen.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/EditorMultiWorld.md 6절 1 · 3 · 5 · 6", "result_doc": "docs/plans/EditorMultiWorld.md 상태를 끝으로",
@@ -917,17 +879,6 @@
       "id": "preview-window-reopen-cost", "title": "미리보기 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간(정점 풀까지 나눌 값이 있는지)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "창 여럿을 띄우고 닫으며 GPU 메모리와 첫 프레임 시간을 재는 perf-compare 케이스가 없다(previewreopen 시나리오는 렌더러 수만 센다)",
       "source": "docs/plans/EditorMultiWorld.md 6절 4", "result_doc": "docs/plans/EditorMultiWorld.md 6절 4"
-    },
-    {
-      "id": "asset-hot-reload-test", "title": "AssetHotReloadTest 필터(바뀐 파일 기억 · 폴더는 전체 스캔 · 울타리 표지)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "AssetHotReloadTest.*",
-      "source": "docs/plans/ContentBrowserWatchAndScan.md CW1 · CW2", "result_doc": "docs/plans/ContentBrowserWatchAndScan.md 상태를 끝으로"
-    },
-    {
-      "id": "content-watch-fence-scenarios", "title": "사본 폴더를 쓰는 에디터 시나리오(assetmanage · contentthumbnails)가 울타리 · 증분 갱신 아래서 통과한다([ContentWatchFence] 오류 줄 없음)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/assetmanage.scenario.xml", "engine/automation/editor/contentthumbnails.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/ContentBrowserWatchAndScan.md CW1 · CW2", "result_doc": "docs/plans/ContentBrowserWatchAndScan.md 상태를 끝으로",
-      "note": "체인 시간이 줄었는지(전 · 후 assetmanage 의 시계 잡은 프레임 수)도 이 실행의 로그로 비교한다."
     },
     {
       "id": "mesh-modifiers-captures", "title": "meshmodifiers 시나리오의 캡처 세 장(panel · gizmo · nested)을 눈으로 본다", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
@@ -941,21 +892,6 @@
       "source": "docs/plans/MeshModifierPreviewCost.md MM2", "result_doc": "docs/plans/MeshModifierPreviewCost.md 2절"
     },
     {
-      "id": "behavior-tree-tests", "title": "행동 트리 데이터 파일 로더 · 편집 모델 · 지휘관 AI 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "BehaviorTreeAssetTest.*,BehaviorTreeEditModelTest.*,RealTimeStrategyTest.*",
-      "source": "docs/plans/DesignerDataToolsAudit.md D1 D2", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
-    },
-    {
-      "id": "catalog-curve-model-test", "title": "카탈로그 곡선 · 그래디언트 도우미와 문서(중첩 키 편집 · 빈 채널 키 더하기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "CatalogCurveModelTest.*,CatalogDocumentTest.*",
-      "source": "docs/plans/DesignerDataToolsAudit.md D4", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
-    },
-    {
-      "id": "behavior-tree-editor-selftests", "title": "에디터 자체 테스트 behaviorTree.panelDraws · behaviorTree.modelRoundTrips(행동 트리 창이 확장 이미지에서 그려진다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["AppSmokeTest.EditorSelfTestsPassInsideTheEditor"], "covered_by": "panel-id-literals-p3",
-      "source": "docs/plans/DesignerDataToolsAudit.md D2", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
-    },
-    {
       "id": "packed-types-test", "title": "저장 전용 압축 타입 테스트(half 65536 비트 전수 왕복 · unorm/snorm 전수 왕복 · 옥타헤드럴 법선 오차 상한과 셰이더 식 일치 · RGB10A2 · 리플렉션 접점: 성분 특성 · 이진/글 직렬화 왕복 · 인자 변환 · 인스펙터 위젯 분기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "HalfTest.*,NormalizedIntTest.*,OctahedralNormalTest.*,RGB10A2Test.*,PackedValueTraitsTest.*,PackedValueSerializationTest.*,InspectorBuiltinValueTest.*",
       "source": "docs/plans/PackedTypes.md P1", "result_doc": "docs/plans/PackedTypes.md"
@@ -965,11 +901,6 @@
       "covered": ["engine/automation/editor/uiaudit.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/decisions/5-5_GraphicsRHI.md withNativeContext 항목", "result_doc": "docs/plans/RhiAsyncUploads.md U5",
       "note": "에디터 UI 가 네 백엔드에서 그대로 그려지는지(DX11 은 텍스처 갱신 · 보조 뷰포트를 렌더 스레드가 그린다) 캡처로 본다. DX11 은 플로팅 창을 띄우고 크기를 바꿔 ResizeBuffers 실패 · 렌더 타깃 깨짐이 없는지 본다(이것을 한 명령으로 도는 시나리오는 아직 없다). DX12 는 rhi-transfer-b0-gpu 와 함께 돌려 'GPU has not reached fence' 경고 · DEVICE_HUNG 이 없는지 본다."
-    },
-    {
-      "id": "import-rule-overlap-test", "title": "임포트 규칙 겹침 막기(모델 · 텍스처 규칙의 마디 단위 매칭 · 겹침 오류 · 저장소 원본이 규칙 하나에만 맞음 · 같은 원본을 두 번 임포트하면 같은 바이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
-      "filter": "ModelImporterTest.*,EditorTexturePipelineTest.*,TextureImportStampTest.*",
-      "source": "docs/plans/ImportRuleOverlap.md I1 ~ I3", "result_doc": "docs/plans/ImportRuleOverlap.md 상태를 끝으로"
     },
     {
       "id": "host-write-snapshot", "title": "HostGpuIsolation H1 — 시나리오마다 Scripts/qa/WriteSnapshot.py 로 App 을 돌려 HostWriteLocations.json 에 없는 쓰기 위치를 찾는다", "kind": "test", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": false,

@@ -392,7 +392,7 @@ namespace
 
 /**
  * @brief [WindowTest] 리눅스 클립보드: 한 창이 복사한 글(한글 포함)을 다른 창이 읽고, 반대로도 되며, X 요청 한 번보다 큰 글(INCR)도 두 방향으로 온전히 간다
- * @details 두 창은 각자 디스플레이 연결을 가져 서로 다른 프로그램처럼 요청한다(`XConvertSelection` → `SelectionNotify`). UiInputRemaining I3 의 "다른 프로그램과 주고받기" 를 xvfb 위에서 본다.
+ * @details 두 창은 각자 디스플레이 연결을 가져 서로 다른 프로그램처럼 요청한다(`XConvertSelection` → `SelectionNotify`). 결정 기록 5-7 I3 의 "다른 프로그램과 주고받기" 를 xvfb 위에서 본다.
  *          변이: `X11Window::beginClipboardIncr` 를 건너뛰면 큰 글이 요청 한계에서 잘리거나 거절되어 진다. X 서버가 없으면 건너뛰고, 리눅스 클라이언트가 아니어도 건너뛴다.
  */
 SW_TEST_CASE( WindowTest, X11ClipboardRoundTripsBetweenWindowsIncludingIncr )

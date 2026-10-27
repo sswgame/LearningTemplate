@@ -23,7 +23,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(docs/plans/ScriptsStructure.md)
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 루트는 하나다(`docs/decisions/5-2_Build.md`)
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ScriptCatalog import readScriptSummaries  # noqa: E402
