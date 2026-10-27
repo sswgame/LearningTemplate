@@ -425,7 +425,6 @@ SW_TEST_CASE( NetMMOTest, ReorderedUpdateDoesNotOverwriteNewer )
  */
 SW_TEST_CASE( NetMMOTest, OversizedStateIsRefusedByTheServer )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an oversized state is refused by the server" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     MMONetSimGame game;
     game._table._listEntity.push_back( MMOEntity{
         vector<uint8>{},
@@ -443,7 +442,10 @@ SW_TEST_CASE( NetMMOTest, OversizedStateIsRefusedByTheServer )
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( sw::SceneEngineServices::makeFromBoundEngine(), NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
-    harness.stepTicks( 60 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an oversized state is refused by the server" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        harness.stepTicks( 60 );
+    }
 
     const MMOReplicator& server = getMMOServer( harness ).getServer();
     const MMOClientView& view   = getMMOClient( harness, client ).getView();

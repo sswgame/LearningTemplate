@@ -108,7 +108,6 @@ SW_TEST_CASE( DataModifiersTest, HitDeformDentsInsideRadiusOnly )
 
 SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedMesh )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a point cache that does not match the mesh is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // 정점 2 · 프레임 2 · fps 1. 프레임 1 은 프레임 0 을 x 로 2 만큼 옮긴 것
     const vector<float3> listFrame0{
         float3{0.0f, 0.0f, 0.0f},
@@ -156,7 +155,10 @@ SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedM
     MeshModifierMesh other = DataModifiersTestInternal::makePointMesh( vector<float3>{
         float3{ 5.0f, 5.0f, 5.0f }
     } );
-    modifier->apply( other, evaluation );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a point cache that does not match the mesh is skipped" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        modifier->apply( other, evaluation );
+    }
     SW_EXPECT_TRUE( other._listPosition[0] == ( float3{ 5.0f, 5.0f, 5.0f } ) );
 }
 

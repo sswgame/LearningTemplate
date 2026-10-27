@@ -238,7 +238,6 @@ SW_TEST_CASE( CompressionTest, UnavailableCodecFailsInsteadOfSwappingForNull )
  */
 SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a stream with an unknown codec fails" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::CompressionCodecRegistry registry;
 
     const sw::string  source( 256, 'Z' );
@@ -252,6 +251,7 @@ SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
     pHeader->_codecType = sw::CompressionCodecType::LZ4;
     pHeader->_flags     = 0;
 
+    SW_TEST_DEFENSIVE_SCOPE( "a stream with an unknown codec fails" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     sw::vector<uint8> restored( source.size(), 0 );
     size_t            uncompressedSize = 0;
     const bool        bDecompressed    = sw::CompressionStream::decompressBuffer(

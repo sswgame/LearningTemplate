@@ -658,7 +658,6 @@ SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
  */
 SW_TEST_CASE( RHIMemoryLedgerTest, FreeSubtractsWhatTheSameKeyAdded )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a key recorded twice is replaced with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::RHIMemoryLedger ledger;
     constexpr uint64    kSharedHandle = 0x100000001ull;
     ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 1000 );
@@ -681,7 +680,10 @@ SW_TEST_CASE( RHIMemoryLedgerTest, FreeSubtractsWhatTheSameKeyAdded )
     ledger.recordFree( sw::RHIMemoryKey::makeBuffer( 0x7777ull ) );
     SW_EXPECT_EQUAL( 1000ull, ledger.getTrackedBytes() );
 
-    ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 300 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a key recorded twice is replaced with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 300 );
+    }
     SW_EXPECT_EQUAL( 300ull, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveBytes );
     SW_EXPECT_EQUAL( 1u, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveCount );
 

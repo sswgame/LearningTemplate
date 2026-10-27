@@ -1098,7 +1098,6 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, HdrSourceKeepsValuesAboveOne )
     {
-        SW_TEST_DEFENSIVE_SCOPE( "an HDR source with a block format is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
         // RGBE: 값 = 가수 / 256 × 2^(지수 − 128). (128, 128, 128, 131) = 0.5 × 8 = 4.0.
         const string  sourcePath = test::makeTempPath( "bright.hdr" );
         const string  header     = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 4 +X 4\n";
@@ -1146,8 +1145,11 @@ namespace sw::editor
         SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
-        rule._format = TextureImportFormat::BC7;
-        SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "bright_bc7.dds" ), rule ) );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "an HDR source with a block format is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            rule._format = TextureImportFormat::BC7;
+            SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "bright_bc7.dds" ), rule ) );
+        }
     }
 
     /**

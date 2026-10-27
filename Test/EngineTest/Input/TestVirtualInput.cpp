@@ -133,7 +133,6 @@ SW_TEST_CASE( VirtualInputTest, MixedModeKeepsOsEvents )
  */
 SW_TEST_CASE( VirtualInputTest, UnattendedBlockDropsOsDeviceEventsOnly )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "blocking without an exclusive virtual source warns" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = VirtualInputTestInternal;
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -159,7 +158,10 @@ SW_TEST_CASE( VirtualInputTest, UnattendedBlockDropsOsDeviceEventsOnly )
     // 혼합 모드에서는 막기를 켜도 켜지지 않는다(사람 입력도 받는 시나리오).
     sw::VirtualInputScript mixedScript;
     input.attachVirtualInput( &mixedScript, sw::VirtualInputMode::Mixed );
-    input.setOsDeviceInputBlocked( true );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "blocking without an exclusive virtual source warns" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        input.setOsDeviceInputBlocked( true );
+    }
     SW_EXPECT_FALSE( input.isOsDeviceInputBlocked() );
     SW_EXPECT_FALSE( input.shouldDropNativeEvent( mouseMove ) );
     input.detachVirtualInput();

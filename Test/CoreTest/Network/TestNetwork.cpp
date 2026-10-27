@@ -1008,7 +1008,6 @@ SW_TEST_CASE( NetworkTest, EveryChannelPairsItsSendAndReceiveFlows )
 
 SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDisconnects )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "hosts refuse foreign protocols and full servers" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     NetHostConfig settings;
     settings._maxConnections = 1;
     settings._timeoutSeconds = 1.0;
@@ -1047,7 +1046,10 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     // 가득 찬 서버 · 다른 게임.
     SW_ASSERT_TRUE( second.connect( NetAddress::makeLoopback( 4000 ) ) );
     SW_ASSERT_TRUE( foreign.connect( NetAddress::makeLoopback( 4000 ) ) );
-    runAll( 0.5, true, true );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "hosts refuse foreign protocols and full servers" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        runAll( 0.5, true, true );
+    }
     vector<NetHostEvent> listEvent;
     second.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 1 );
@@ -1163,7 +1165,6 @@ SW_TEST_CASE( NetworkTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
  */
 SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a wire version mismatch is refused with the reason" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     static_assert( NetProtocol::makeProtocolID( 7u, 1u ) != NetProtocol::makeProtocolID( 7u, 2u ), "the wire version is part of the protocol id" );
     static_assert( NetProtocol::makeProtocolID( 7u, 1u ) != NetProtocol::makeProtocolID( 8u, 1u ), "the game id is part of the protocol id" );
     static_assert( NetWireVersion::combine( { 1u, 2u } ) != NetWireVersion::combine( { 2u, 1u } ), "layer order is part of the version" );
@@ -1184,6 +1185,7 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
     SW_ASSERT_TRUE( current.connect( NetAddress::makeLoopback( 4000 ) ) );
     SW_ASSERT_TRUE( outdated.connect( NetAddress::makeLoopback( 4000 ) ) );
     float64 time = 0.0;
+    SW_TEST_DEFENSIVE_SCOPE( "a wire version mismatch is refused with the reason" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     for ( int32 frame = 0; frame < 20; ++frame )
     {
         time += 1.0 / 60.0;

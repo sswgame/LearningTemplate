@@ -329,7 +329,6 @@ SW_TEST_CASE( HierarchicalActiveStateTest, SubtreeTickSkip )
  */
 SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::GameObject*       parentPtr = manager.createGameObject( sw::hashed_string( "ParentGO" ) );
     sw::GameObject&       parent    = *parentPtr;
@@ -350,7 +349,10 @@ SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
     SW_EXPECT_EQUAL( &child, childrenOf( parent )[0] );
 
     // 순환 attach 는 실패해야 한다.
-    SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
+    }
 
     parent.setActive( false );
     SW_EXPECT_FALSE( parent.isActiveInHierarchy() );
@@ -2376,7 +2378,6 @@ SW_TEST_CASE( GameObjectTest, DeepHierarchyMatrixCompositionStressTest )
  */
 SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GameObjectManager manager;
     sw::RegisterMockComponents();
 
@@ -2422,7 +2423,10 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
     SW_EXPECT_EQUAL( pNode4, pNode16->getParent() );
 
     // 순환 참조 방어 (자식 Node_16을 부모 Node_4의 부모로 지정 시도 -> 실패해야 함)
-    SW_EXPECT_FALSE( pNode4->attachToParent( pNode16 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( pNode4->attachToParent( pNode16 ) );
+    }
 
     manager.flushSceneTransforms();
     // Node_4 월드 X = 5 * 2 = 10. Node_16부터 Node_31까지 16개 단계이므로 리프(Node_31) 월드 X = 10 + (16 * 2) = 42.0f

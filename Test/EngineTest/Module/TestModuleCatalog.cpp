@@ -188,7 +188,6 @@ SW_TEST_CASE( ModuleCatalogTest, DisabledAndUnavailableModulesAreSkipped )
  */
 SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a manifest with an unknown value is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const utf8*        pGood = R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_description": "farm",
                              "_listDependency": [ { "_name": "GameFramework", "_minVersion": "1.0.0" } ],
                              "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client", "Server" ],
@@ -220,11 +219,14 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Editor" ] })",
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ] })",
     };
-    for ( const utf8* pBad : arrBad )
     {
-        sw::string badError;
-        SW_EXPECT_FALSE_MSG( sw::ModuleCatalog::parseManifest( pBad, "Source/X/GF_Farm.module.json", manifest, badError ), pBad );
-        SW_EXPECT_FALSE_MSG( badError.empty(), pBad );
+        SW_TEST_DEFENSIVE_SCOPE( "a manifest with an unknown value is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        for ( const utf8* pBad : arrBad )
+        {
+            sw::string badError;
+            SW_EXPECT_FALSE_MSG( sw::ModuleCatalog::parseManifest( pBad, "Source/X/GF_Farm.module.json", manifest, badError ), pBad );
+            SW_EXPECT_FALSE_MSG( badError.empty(), pBad );
+        }
     }
 
     sw::ModuleCatalog catalog;

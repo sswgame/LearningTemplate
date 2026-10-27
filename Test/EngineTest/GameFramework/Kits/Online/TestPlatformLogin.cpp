@@ -341,7 +341,6 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
 
 SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCacheWhenJwksIsDown )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a failed key set fetch is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestPlatformLoginInternal;
     IssuerFixture    fixture;
     const SigningKey first  = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 );
@@ -362,8 +361,9 @@ SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCa
     fixture._handler._bDown = SW_TRUE;
     fixture._nowMs += 31000;
     SW_EXPECT_TRUE( fixture.verify( provider, Internal::makeToken( second, "https://issuer.test", "client-a", 5000, "u", nullptr ) ).isVerified() );
-    const SigningKey                unknown = Internal::makeKey( "k3", NetSignatureAlgorithm::RsaPkcs1Sha256 );
-    const PlatformLoginVerification down    = fixture.verify( provider, Internal::makeToken( unknown, "https://issuer.test", "client-a", 5000, "u", nullptr ) );
+    const SigningKey unknown = Internal::makeKey( "k3", NetSignatureAlgorithm::RsaPkcs1Sha256 );
+    SW_TEST_DEFENSIVE_SCOPE( "a failed key set fetch is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+    const PlatformLoginVerification down = fixture.verify( provider, Internal::makeToken( unknown, "https://issuer.test", "client-a", 5000, "u", nullptr ) );
     SW_EXPECT_TRUE( down._bUnavailable == SW_TRUE );
     SW_EXPECT_TRUE( down._bRejected == SW_FALSE );
 
@@ -403,7 +403,6 @@ SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
  */
 SW_TEST_CASE( PlatformLoginTest, TicketQueryProviderChecksTheResultPath )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a provider with an unset key variable is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     IssuerFixture               fixture;
     PlatformLoginProviderConfig settings;
     settings._name                 = "steam";
@@ -442,8 +441,11 @@ SW_TEST_CASE( PlatformLoginTest, TicketQueryProviderChecksTheResultPath )
     // 키 환경 변수가 없으면 만들지 않는다(서버 기동 실패 — 키 없는 확인으로 대신 뜨지 않는다).
     const SystemMonotonicClock clock;
     HTTPClient                 unused{ clock };
-    settings._keySecretEnvironment = "SW_TEST_TICKET_KEY_THAT_IS_NOT_SET";
-    SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( settings, nullptr, &unused ) == nullptr );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a provider with an unset key variable is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        settings._keySecretEnvironment = "SW_TEST_TICKET_KEY_THAT_IS_NOT_SET";
+        SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( settings, nullptr, &unused ) == nullptr );
+    }
 }
 
 SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
@@ -475,7 +477,6 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 
 SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "failed external sign-ins are reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestPlatformLoginInternal;
     IssuerFixture           fixture;
     RecordingBrowser        browser;
@@ -536,6 +537,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     SW_EXPECT_EQUAL( 1, rejectedPageCount );
 
     // 사용자가 거절했다 — 취소로 끝난다.
+    SW_TEST_DEFENSIVE_SCOPE( "failed external sign-ins are reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     (void)client.beginLogin( "google", MonotonicMilliseconds{ kNowMs.count() } );
     const string      secondState = Internal::findQuery( browser._lastURL, "state" );
     HTTPClientRequest denied;

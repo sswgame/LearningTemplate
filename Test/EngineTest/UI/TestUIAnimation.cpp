@@ -133,7 +133,6 @@ namespace
 /** @brief [UIAnimationTest] 트윈은 지금 값에서 끝값으로 곡선을 따라 옮긴다 — Linear 는 반에서 반, EaseIn(지수 2)은 반에서 1/4, 끝나면 끝값 · 트윈 없음 */
 SW_TEST_CASE( UIAnimationTest, TweenInterpolatesWithCurve )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a tween of an unknown property or a bad number is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIAnimationTestUtil;
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/tween.ui.xml", "" ) );
@@ -153,8 +152,11 @@ SW_TEST_CASE( UIAnimationTest, TweenInterpolatesWithCurve )
     SW_EXPECT_EQUAL( 0u, pScreen->getAnimationPlayer().getTweenCount() );
 
     // 모르는 경로 · 읽지 못하는 값은 걸지 않는다
-    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_noSuchProperty", "1", 1.0f ) );
-    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_opacity", "not a number", 1.0f ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a tween of an unknown property or a bad number is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_noSuchProperty", "1", 1.0f ) );
+        SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_opacity", "not a number", 1.0f ) );
+    }
 }
 
 /** @brief [UIAnimationTest] 렌더 변환 트랙은 레이아웃을 다시 측정하지 않는다(measure 0) — 그래도 기하는 움직인다 */
@@ -238,7 +240,6 @@ SW_TEST_CASE( UIAnimationTest, EventsFireOnce )
  */
 SW_TEST_CASE( UIAnimationTest, CurveEventsFireWhenValueCrossesThreshold )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a curve event on a scalar value is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIAnimationTestUtil;
     UIAnimationScreenFixture fixture;
     sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/curveevents.ui.xml", "" ) );
@@ -256,6 +257,7 @@ SW_TEST_CASE( UIAnimationTest, CurveEventsFireWhenValueCrossesThreshold )
     animation._listTrack[0]._listCurveEvent.push_back( sw::UIAnimationCurveEvent{ 0.5f, 0, sw::UICurveCrossing::Falling, "Down" } );
     sw::UIAnimation broken = Util::makeAnimation( "Broken", "Box", "_opacity", "0.3", "1", 1.0f );
     broken._listTrack[0]._listCurveEvent.push_back( sw::UIAnimationCurveEvent{ 0.5f, 1, sw::UICurveCrossing::Either, "Up" } );
+    SW_TEST_DEFENSIVE_SCOPE( "a curve event on a scalar value is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     sw::vector<sw::UIAnimation> listAnimation;
     listAnimation.push_back( std::move( animation ) );
     listAnimation.push_back( std::move( broken ) );

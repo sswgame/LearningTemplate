@@ -376,7 +376,6 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
  */
 SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringFiles )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a table with a bad checksum is not loaded" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder  = test::makeTempDirectory( "loc_binary_cook" );
     const sw::string project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
@@ -400,7 +399,10 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     test::ScopedLogCollector logs;
     sw::vector<uint8>        broken = bytes;
     broken[broken.size() - 1] ^= 0xFFu;
-    SW_EXPECT_FALSE( runtime.loadBinaryTable( broken.data(), broken.size() ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a table with a bad checksum is not loaded" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( runtime.loadBinaryTable( broken.data(), broken.size() ) );
+    }
     SW_EXPECT_STREQ( "시작", runtime.getString( sw::hashed_string( "ui.start" ) ) );
 
     runtime.unloadLanguage( "ko" );

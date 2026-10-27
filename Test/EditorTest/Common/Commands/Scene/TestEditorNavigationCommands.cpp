@@ -65,11 +65,13 @@ namespace
  */
 SW_TEST_CASE( EditorNavigationCommandsTest, BakesTheEditedSceneBeforePlay )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a scene without geometry has nothing to bake and says so" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = EditorNavigationCommandsTestInternal;
     sw::GameObjectManager manager;
     manager.getSubsystem<sw::SceneNavigation>().setSettings( Internal::makeSettings() );
-    SW_EXPECT_EQUAL( 0u, sw::editor::EditorNavigationCommands::bakeAll( manager ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a scene without geometry has nothing to bake and says so" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_EQUAL( 0u, sw::editor::EditorNavigationCommands::bakeAll( manager ) );
+    }
     SW_EXPECT_EQUAL( 0u, sw::editor::EditorNavigationCommands::countBakedMeshes( manager ) );
 
     Internal::spawnStaticBox( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 10.0f, 0.5f, 10.0f } );

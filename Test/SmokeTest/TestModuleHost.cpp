@@ -315,7 +315,6 @@ namespace
  */
 SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCaptured )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a game that cannot serialize keeps running" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     RHI              rhi;
     EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
@@ -325,7 +324,10 @@ SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCapture
 
     s_listGameCall.clear();
     s_bGameSerializeSucceeds = false;
-    SW_EXPECT_FALSE( host.onBeforeCommitBatch( listBatch ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a game that cannot serialize keeps running" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( host.onBeforeCommitBatch( listBatch ) );
+    }
     SW_EXPECT_TRUE( hasCall( s_listGameCall, "serializeState" ) );
     SW_EXPECT_FALSE_MSG( hasCall( s_listGameCall, "shutdown" ) || hasCall( s_listGameCall, "destroy" ),
                          "the game was torn down although its state was not captured" );

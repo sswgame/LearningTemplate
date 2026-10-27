@@ -812,16 +812,21 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
  */
 SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an oversized input is not sent" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     ReplicationClient offline;
     SW_EXPECT_TRUE( offline.initialize( nullptr, ReplicationClientConfig{} ) );
-    SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an oversized input is not sent" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
+    }
     SW_EXPECT_TRUE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes, 1 ) ) );
 
     // 손으로 지은 메시지 — 틱 4 는 1 B, 틱 5 는 300 B(상한 넘음).
     ReplicationServer server;
     SW_ASSERT_TRUE( server.initialize( nullptr, ReplicationServerConfig{}, nullptr ) );
-    SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, makeInputMessage( 4, { vector<uint8>{ 9 }, vector<uint8>( 300, 7 ) } ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an oversized input item makes the message malformed" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, makeInputMessage( 4, { vector<uint8>{ 9 }, vector<uint8>( 300, 7 ) } ) ) );
+    }
     vector<uint8> input;
     bool          bExact = false;
     SW_EXPECT_FALSE( server.popInput( 0, 4, input, bExact ) ); // 깨진 항목 앞의 성한 입력도 들어가지 않았다

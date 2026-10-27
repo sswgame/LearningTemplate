@@ -1155,15 +1155,17 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a snapshot without a header is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     CustomStateGameInstance instance;
     instance._customState._score     = 12345;
     instance._customState._stageName = "SafeRoom";
 
     // 1) Null/빈 버퍼 주입
-    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, {} ) );
-    SW_EXPECT_FALSE( instance.deserializeState( nullptr, 100 ) );
-    SW_EXPECT_FALSE( instance.deserializeState( nullptr, 0 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a snapshot without a header is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, {} ) );
+        SW_EXPECT_FALSE( instance.deserializeState( nullptr, 100 ) );
+        SW_EXPECT_FALSE( instance.deserializeState( nullptr, 0 ) );
+    }
 
     // 2) 정상 스냅샷 생성
     vector<uint8> validSnapshot;
@@ -1172,13 +1174,19 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
     // 3) 잘린 버퍼(Truncated payload) 주입
     vector<uint8> truncated = validSnapshot;
     truncated.resize( 6 ); // 헤더만 겨우 있고 바디 없음
-    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, truncated ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a truncated snapshot is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, truncated ) );
+    }
 
     // 4) 매직 변조
     vector<uint8> badMagic = validSnapshot;
     badMagic[0] ^= 0xFF;
     // 매직이 맞지 않으면 복원하지 않고 실패한다
-    SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, badMagic ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a snapshot with a wrong magic is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( instance.restoreSnapshot( sw::SerializePurpose::Snapshot, badMagic ) );
+    }
 
     // 5) 빈 게임 인스턴스 (커스텀 상태 없음) 동작 검증
     GameInstanceBase defaultGameInstance;

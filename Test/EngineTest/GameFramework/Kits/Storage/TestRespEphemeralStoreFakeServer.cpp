@@ -123,7 +123,6 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, OneByteChunksGiveTheSameResult )
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPendingRequestOnceThenReconnects )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 3u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    store{ server };
@@ -137,6 +136,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
     }
     vector<EphemeralReply> listReply;
     SW_EXPECT_EQUAL( 0, RespStoreHarness::collectReplies( store, 5, 50, listReply ) ); // 서버가 붙잡고 있다
+    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" );                     // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     server.dropAllConnections();
     SW_ASSERT_EQUAL( 5, RespStoreHarness::collectReplies( store, 5, 3000, listReply ) );
     for ( const EphemeralReply& reply : listReply )
@@ -156,7 +156,6 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndTheNextOneReconnects )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a timed out request is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 4u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    store{ server };
@@ -169,10 +168,13 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndT
     const int64            startNanoseconds = server.nowNanoseconds();
     const uint64           requestID        = store.submit( EphemeralRequest::makeIncrement( "n", 1, 0 ) );
     vector<EphemeralReply> listReply;
-    for ( int32 step = 0; step < 100 && listReply.empty(); ++step )
     {
-        server.advanceTimeMs( 10 );
-        (void)store.pollReplies( listReply );
+        SW_TEST_DEFENSIVE_SCOPE( "a timed out request is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        for ( int32 step = 0; step < 100 && listReply.empty(); ++step )
+        {
+            server.advanceTimeMs( 10 );
+            (void)store.pollReplies( listReply );
+        }
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listReply.size() );
     SW_EXPECT_TRUE( listReply[0]._requestID == requestID );
@@ -243,7 +245,6 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TLSCarriesTheCommands )
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheConnectionDrops )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LoopbackStreamNetwork network{ 2u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    publisher{ server };
@@ -253,6 +254,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheCon
     subscriber.subscribe( "news" );
     SW_EXPECT_EQUAL( 1, server.getSubscriberCount( "t1:news" ) );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a dropped connection is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     server.dropAllConnections();
     const Deadline           deadline = Deadline::afterMilliseconds( 3000 );
     vector<EphemeralMessage> listMessage;

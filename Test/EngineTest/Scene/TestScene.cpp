@@ -1615,7 +1615,6 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
  */
 SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a non-root and an edit-time object are not carried across" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     manager.setWorldPlaying( true );
@@ -1642,7 +1641,10 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     manager.markPersistent( pKeeper );
     SW_EXPECT_TRUE( manager.isPersistent( pKeeper ) );
     // 루트가 아닌 것은 표시하지 않는다(유니티도 루트만 받는다).
-    manager.markPersistent( pSpeaker );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a non-root and an edit-time object are not carried across" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        manager.markPersistent( pSpeaker );
+    }
     SW_EXPECT_FALSE( manager.isPersistent( pSpeaker ) );
 
     const uint64              keeperID      = pKeeper->getObjectID();
@@ -1680,7 +1682,10 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     // 플레이를 멈추면 표시를 잊는다. 편집 중에는 표시를 받지 않는다.
     manager.setWorldPlaying( false );
     sw::GameObject* pEditTime = pThird->getObjectManager()->createGameObject( sw::hashed_string( "EditTime" ) );
-    manager.markPersistent( pEditTime );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an edit-time object is not marked persistent" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        manager.markPersistent( pEditTime );
+    }
     SW_EXPECT_FALSE( manager.isPersistent( pEditTime ) );
     // 다음 플레이에서 씬을 바꿔도 지난 플레이의 표시로 옮겨 가지 않는다.
     manager.setWorldPlaying( true );

@@ -423,7 +423,6 @@ SW_TEST_CASE( AutomationScenarioTest, EditorRootAttributeMarksEditorScenarios )
  */
 SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWithoutTheForeground )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a scenario without the foreground window is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = TestAutomationScenarioInternal;
     sw::AutomationScenario scenario;
     sw::string             error;
@@ -439,6 +438,7 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" requireForeground="true" startAfter="Immediately" startTimeoutFrames="3">
         <At frame="0"><TestMark/><Pass/></At>
       </Scenario>)" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a scenario without the foreground window is skipped" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     const sw::AutomationOutcome result = Internal::run( runner, input, 20 );
     SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Skipped, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );

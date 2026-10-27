@@ -141,7 +141,6 @@ SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
 
 SW_TEST_CASE( LiveOpsServiceTest, GmEventControlTakesAndListsJSONDefinitions )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a broken JSON definition is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = LiveOpsServiceTestInternal;
     MemoryServiceDatabase  database;
     LocalServerBusHub      hub;
@@ -150,6 +149,7 @@ SW_TEST_CASE( LiveOpsServiceTest, GmEventControlTakesAndListsJSONDefinitions )
     node.step( nowMs );
     ILiveEventControl& control = node._service;
     control.putEventJSON( LiveOpsProtocol::writeEventJSON( Internal::makeHalloween() ), 7, "json", nowMs, 1 );
+    SW_TEST_DEFENSIVE_SCOPE( "a broken JSON definition is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     control.putEventJSON( "{not json", 7, "json", nowMs, 2 );
     node.step( nowMs );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 2 ) );
@@ -197,7 +197,6 @@ SW_TEST_CASE( LiveOpsServiceTest, BoundaryRaisesStateChangeWithoutReload )
 
 SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHidesAll )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an unknown remote config key leaves the parameter as is" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Internal = LiveOpsServiceTestInternal;
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
@@ -222,6 +221,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     definition._listParameter.push_back( LiveEventParameter{ "missing", "@event.nope" } );
     const UnixMilliseconds nowMs{ Internal::kMonday20261005 + Internal::kHour };
     node._service.putEvent( definition, 0, "", nowMs, 1 );
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown remote config key leaves the parameter as is" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     node.step( nowMs );
     string value;
     SW_ASSERT_TRUE( node._service.findParameter( "halloween", "rate", value ) );

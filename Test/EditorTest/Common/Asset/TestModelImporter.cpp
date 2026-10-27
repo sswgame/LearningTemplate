@@ -382,7 +382,6 @@ SW_TEST_CASE( ModelImporterTest, SceneRootListingAChildNodeImportsFromItsTopAnce
  */
 SW_TEST_CASE( ModelImporterTest, GlbSceneRootListingAChildNodeImports )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a scene root listing a child node is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string        sourcePath = test::makeTempPath( "child_scene_root.glb" );
     const sw::vector<uint8> glbBytes   = TestModelImporterInternal::makeChildRootGlb();
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( sourcePath, glbBytes.data(), glbBytes.size() ) );
@@ -398,8 +397,11 @@ SW_TEST_CASE( ModelImporterTest, GlbSceneRootListingAChildNodeImports )
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ -2.0f, 1.0f, 1.5f } ) );
 
     // translation 규칙이 배치 오프셋을 지운다(원본 공간 (-2, 0, -1.5)).
-    SW_ASSERT_TRUE( sw::editor::ModelImporter::readModel(
-        sourcePath, TestModelImporterInternal::makeRule( sw::editor::ModelRecenter::None, sw::float3{ -2.0f, 0.0f, -1.5f } ), listVertex ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the non-conforming scene root is fixed up with a warning on every read" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_ASSERT_TRUE( sw::editor::ModelImporter::readModel(
+            sourcePath, TestModelImporterInternal::makeRule( sw::editor::ModelRecenter::None, sw::float3{ -2.0f, 0.0f, -1.5f } ), listVertex ) );
+    }
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ 0.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ -1.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ 0.0f, 1.0f, 0.0f } ) );

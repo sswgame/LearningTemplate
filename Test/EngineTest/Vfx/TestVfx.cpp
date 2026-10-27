@@ -819,7 +819,6 @@ SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
  */
 SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an emitter whose module targets do not intersect is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::VfxSimulationTarget kCPU      = sw::VfxSimulationTarget::CPU;
     const sw::VfxSimulationTarget kGPU      = sw::VfxSimulationTarget::GPU;
     sw::VfxEmitterDef             billboard = sw::makeValidEmitter( "Billboard" );
@@ -874,6 +873,7 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     impossible._collision._method = static_cast<sw::VfxCollisionMethod>( 99 );
     SW_EXPECT_TRUE( impossible.computeSupportedTargets().isEmpty() );
     {
+        SW_TEST_DEFENSIVE_SCOPE( "an emitter whose module targets do not intersect is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         test::ScopedLogCollector collector;
         SW_EXPECT_FALSE( impossible.validate( "test" ) );
         SW_EXPECT_EQUAL( uint32( 1 ), collector.countWithID( "Vfx.NoSimulationTargetForEmitter" ) );

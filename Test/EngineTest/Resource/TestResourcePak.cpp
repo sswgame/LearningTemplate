@@ -389,7 +389,6 @@ SW_TEST_CASE( ResourcePakTest, VFSPriorityStackAndOverrides )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePakTest, DlcEntitlementProtection )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a DLC pack without entitlement is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string dlcPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_secure_dlc.pack" );
     constexpr uint32 kDlcAppID   = 5001;
 
@@ -406,7 +405,10 @@ SW_TEST_CASE( ResourcePakTest, DlcEntitlementProtection )
     } );
 
     // 미소유 시 마운트 거부 확인
-    SW_EXPECT_FALSE( packManager.mountPack( dlcPackPath, 8000 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a DLC pack without entitlement is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( packManager.mountPack( dlcPackPath, 8000 ) );
+    }
     SW_EXPECT_FALSE( packManager.hasFile( "dlc/secret_weapon.xml" ) );
 
     // 유저가 DLC 5001을 정상 구매한 상태로 콜백 변경
@@ -645,7 +647,6 @@ SW_TEST_CASE( ResourcePakTest, DynamicPriorityAutoCalculation )
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePakTest, ZeroCopyAndCrc32CorruptionDetection )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a corrupted pack is detected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_tamper.pack" );
 
     const sw::string originalData = "INTEGRITY_CHECK_SAMPLE_PAYLOAD_DATA_1234567890";
@@ -682,7 +683,10 @@ SW_TEST_CASE( ResourcePakTest, ZeroCopyAndCrc32CorruptionDetection )
 
         sw::vector<uint8> buffer;
         // CRC32 불일치 오류 로그와 함께 false를 반환해야 함
-        SW_EXPECT_FALSE( reader.readFile( "secure/token.bin", buffer ) );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a corrupted pack is detected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            SW_EXPECT_FALSE( reader.readFile( "secure/token.bin", buffer ) );
+        }
         SW_EXPECT_TRUE( buffer.empty() );
         reader.close();
     }

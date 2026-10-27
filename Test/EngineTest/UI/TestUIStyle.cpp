@@ -433,7 +433,6 @@ SW_TEST_CASE( UIStyleTest, ComputedStylesAreShared )
 /** @brief [UIStyleTest] 테마를 바꾸면 열린 화면의 모든 위젯이 새 테마 시트로 다시 맞춰진다 */
 SW_TEST_CASE( UIStyleTest, ThemeSwitchRestylesEverything )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIStyleTestUtil;
     UIStyleFixture fixture;
     fixture._ui.getStyleSheetCache().registerMemorySheet( "test/light.uistyle.xml", "<UIStyleSheet _schemaVersion=\"1\">\n"
@@ -469,7 +468,10 @@ SW_TEST_CASE( UIStyleTest, ThemeSwitchRestylesEverything )
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "A" ) ) == Util::kBlue );
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "B" ) ) == Util::kBlue );
-    SW_EXPECT_FALSE( fixture._ui.setTheme( "missing" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( fixture._ui.setTheme( "missing" ) );
+    }
 }
 
 /** @brief [UIStyleTest] 전환을 적은 칸은 계산된 스타일이 바뀔 때 옛 값에서 새 값으로 옮겨 가고(반에서 반), 끝나면 나눠 쓰는 계산된 스타일로 돌아간다 */
@@ -668,7 +670,6 @@ SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
  */
 SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::GlobalVariableInfo* pSetting = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_uiTheme" );
     SW_ASSERT_NOT_NULL( pSetting );
     const sw::string   previous = pSetting->getValueAsString();
@@ -684,8 +685,11 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
         UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
         SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
 
-        SW_EXPECT_TRUE( pSetting->setValueAsString( "missing" ) ); // 모르는 이름 — 경고하고 지금 테마를 둔다
-        UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            SW_EXPECT_TRUE( pSetting->setValueAsString( "missing" ) );     // 모르는 이름 — 경고하고 지금 테마를 둔다
+            UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        }
         SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
     }
     {

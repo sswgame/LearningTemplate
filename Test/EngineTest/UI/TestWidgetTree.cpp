@@ -28,7 +28,6 @@ namespace
 /** @brief [WidgetTreeTest] 붙이면 번호 · 이름으로 찾고, 떼면 못 찾는다. 같은 이름 둘이면 경고 한 번 · 먼저 붙은 것 */
 SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a name used twice is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::WidgetTree   tree;
     auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
     sw::PanelWidget* pRoot = root.get();
@@ -42,6 +41,7 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
     SW_EXPECT_TRUE( pA->getParent() == pRoot );
 
     {
+        SW_TEST_DEFENSIVE_SCOPE( "a name used twice is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         test::ScopedLogCollector logs;
         sw::Widget* const        pSecond = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
         SW_EXPECT_EQUAL( 1u, logs.countWithID( "UI.WidgetNameDuplicate" ) );

@@ -76,7 +76,6 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "an edit that would not load is not saved" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string path     = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_pack_element" ), "gamesettings.xml" );
     const sw::string original = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                                 "<!-- probe pack -->\n"
@@ -122,8 +121,11 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
     SW_EXPECT_FALSE( reopened.isModified() );
 
     // 기본값으로 되돌리면 필수 칸(창 제목)이 비어 다음 기동이 읽지 못한다 — 저장하지 않고 파일은 그대로다.
-    reopened.resetToDefault();
-    SW_EXPECT_FALSE( reopened.save() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an edit that would not load is not saved" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        reopened.resetToDefault();
+        SW_EXPECT_FALSE( reopened.save() );
+    }
     sw::string unchangedText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, unchangedText ) );
     SW_EXPECT_TRUE( unchangedText == fileText );
@@ -134,7 +136,6 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementIsInsertedWhenMissing )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a save to a non-pack file is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder = test::makeTempDirectory( "project_settings_pack_insert" );
     const sw::string path   = sw::FileUtil::joinPath( folder, "gamesettings.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<GameSettings>\r\n  <startMap>game/probe/maps/start.scene.xml</startMap>\r\n</GameSettings>\r\n" ) );
@@ -156,7 +157,10 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementIsInsertedWhenMissing )
     (void)sw::FileUtil::removeFile( missingPath ); // 임시 폴더는 실행마다 비워지지 않는다(없어도 괜찮다)
     SW_ASSERT_TRUE( noFile.open( *sw::PackEngineSettings::StaticType(), missingPath, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Missing );
     static_cast<sw::PackEngineSettings*>( noFile.getInstance() )->_windowTitle = "Nowhere";
-    SW_EXPECT_FALSE( noFile.save() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a save to a non-pack file is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( noFile.save() );
+    }
     SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( missingPath ) );
 }
 

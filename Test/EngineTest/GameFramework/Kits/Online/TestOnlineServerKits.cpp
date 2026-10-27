@@ -59,7 +59,6 @@ namespace
 
 SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDown )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
 #endif
@@ -77,7 +76,10 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     Internal::addOption( Internal::addKit( settings, "admin" ), "seedAdmin", "1:super" );
     OnlineServerRuntime runtime;
     string              error;
-    SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
+    }
     const OnlineServerKitContext& context = runtime.getContext();
     SW_EXPECT_TRUE( context._kits.find<IAccountDirectory>() != nullptr ); // 계정 키트가 내놓았다
     const bool bAccountExposed = context._kits.find<IAccountPresence>() != nullptr && context._kits.find<IAccountSessionControl>() != nullptr && context._kits.find<const IAccountNameIndex>() != nullptr;
@@ -96,7 +98,6 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
 
 SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndependentKits )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
 #endif
@@ -118,7 +119,10 @@ SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndepende
         (void)Internal::addKit( settings, "admin" );
         OnlineServerRuntime runtime;
         string              error;
-        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the account kit without a ticket key variable falls back to the Dev key with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
+        }
         vector<string> listKitName;
         runtime.collectKitNames( listKitName );
         SW_ASSERT_EQUAL( listKitName.size(), size_t( 8 ) );

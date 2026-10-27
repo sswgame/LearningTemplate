@@ -14,6 +14,12 @@ namespace sw
     {
         struct SQLiteDriverInternal
         {
+            /** @brief 다른 연결의 잠금을 기다리는 시한입니다. `sqlite3_busy_timeout` 으로 **열자마자** 건다 - 설정 문장에 섞어 적으면 순서에 기대게 된다. */
+            static constexpr int32 kBusyTimeoutMilliseconds = 5000;
+
+            /** @brief 연결마다 한 번 도는 설정 문장입니다(잠금 시한은 이미 걸려 있어 이 문장들의 순서와 무관하게 지켜진다). WAL 은 읽기와 쓰기가 서로 막지 않게 하고, synchronous FULL 은 거래의 커밋이 정전에도 남게 한다. */
+            static constexpr const utf8* kSetupSQL = "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;";
+
             static const SQLDialect& getDialect()
             {
                 static const SQLDialect s_dialect{ "sqlite",
@@ -246,11 +252,11 @@ namespace sw
             sqlite3_close_v2( pDatabase );
             return nullptr;
         }
-        // WAL 은 읽기와 쓰기가 서로 막지 않게 한다. synchronous FULL 은 서비스 저장(거래)의 커밋이 정전에도 남게 한다. busy_timeout 은 다른 연결의 쓰기를 5초까지 기다린다.
-        // busy_timeout 을 **맨 먼저** 건다 - 새 파일을 여러 작업자가 동시에 열면 WAL 로 바꾸는 첫 문장이 서로 잠가("database is locked"), 늦게 건 시한은 그 문장을 지키지 못한다.
+        // 잠금 시한을 어떤 문장보다 먼저 건다 - 새 파일을 여러 작업자가 동시에 열면 WAL 로 바꾸는 첫 문장이 서로 잠가("database is locked"), 늦게 건 시한은 그 문장을 지키지 못한다.
+        // API 로 걸어 설정 문장의 순서에서 떼어 놓았다(SQLite 를 여는 곳은 이 함수 하나다).
+        sqlite3_busy_timeout( pDatabase, SQLiteDriverInternal::kBusyTimeoutMilliseconds );
         utf8*       pError = nullptr;
-        const int32 code   = sqlite3_exec( pDatabase, "PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;",
-                                           nullptr, nullptr, &pError );
+        const int32 code   = sqlite3_exec( pDatabase, SQLiteDriverInternal::kSetupSQL, nullptr, nullptr, &pError );
         if ( code != SQLITE_OK )
         {
             outError = "sqlite setup of '" + path + "' failed: " + ( pError != nullptr ? pError : sqlite3_errmsg( pDatabase ) );

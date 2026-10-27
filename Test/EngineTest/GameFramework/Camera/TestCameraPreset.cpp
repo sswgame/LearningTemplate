@@ -880,7 +880,6 @@ SW_TEST_CASE( CameraPresetTest, PhotoModeReadsTheEnginePhotoModeMap )
  */
 SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a preset reading an action the input map lacks warns once" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)
@@ -908,12 +907,15 @@ SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
     pDirector->onTick( 0.016f );
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Camera.PresetActionNotInInputMap" ) == 0u, logs.joined().c_str() ); // 둘러보기 액션은 맵에 있다
 
-    input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
-    input.beginFrame( 0.016f );
-    pDirector->onTick( 0.016f );
-    SW_ASSERT_TRUE( pDirector->getActivePresetID() == hashed_string( "zoomer" ) );
-    pDirector->onTick( 0.016f );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Camera.PresetActionNotInInputMap" ) == 1u, logs.joined().c_str() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a preset reading an action the input map lacks warns once" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
+        input.beginFrame( 0.016f );
+        pDirector->onTick( 0.016f );
+        SW_ASSERT_TRUE( pDirector->getActivePresetID() == hashed_string( "zoomer" ) );
+        pDirector->onTick( 0.016f );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Camera.PresetActionNotInInputMap" ) == 1u, logs.joined().c_str() );
+    }
 
     manager.endPlay();
     scope.unbind<InputManager>();

@@ -38,7 +38,6 @@ namespace
  */
 SW_TEST_CASE( GameNetSessionTest, ClientRetriesUntilTheServerStarts )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a client that cannot reach the server reports and retries" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const uint16 port = findFreePort();
     SW_ASSERT_TRUE( port != 0 );
 
@@ -51,6 +50,7 @@ SW_TEST_CASE( GameNetSessionTest, ClientRetriesUntilTheServerStarts )
     SW_EXPECT_TRUE( client.getRole() == GameNetRole::Client );
 
     // 첫 시도가 서버 없이 시간 초과로 끝날 만큼 기다린다.
+    SW_TEST_DEFENSIVE_SCOPE( "a client that cannot reach the server reports and retries" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     const Deadline firstAttempt = Deadline::afterMilliseconds( 500 );
     while ( firstAttempt.isExpired() == false )
     {

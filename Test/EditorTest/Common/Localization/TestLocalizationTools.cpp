@@ -315,7 +315,6 @@ SW_TEST_CASE( TranslationExchangeTest, ExportWithBrokenMemoryFailsAndWritesNothi
  */
 SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a key not in the string tables is skipped with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder      = test::makeTempDirectory( "loc_po_roundtrip" );
     const sw::string projectPath = LocalizationToolsTestInternal::writeExchangeProject( folder );
 
@@ -363,8 +362,11 @@ SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
 
     sw::LocalizationExchangeResult imported;
     {
-        test::ScopedLogCollector logs; // 모르는 키는 경고
-        SW_ASSERT_TRUE( sw::LocalizationTools::importPo( projectPath, editedPath, imported ) );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a key not in the string tables is skipped with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            test::ScopedLogCollector logs;                                                         // 모르는 키는 경고
+            SW_ASSERT_TRUE( sw::LocalizationTools::importPo( projectPath, editedPath, imported ) );
+        }
     }
     SW_EXPECT_EQUAL( uint32( 1 ), imported._unknownKeyCount );
     SW_EXPECT_EQUAL( uint32( 1 ), imported._fuzzyCount );
