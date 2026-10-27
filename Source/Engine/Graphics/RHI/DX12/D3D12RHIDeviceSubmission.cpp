@@ -22,6 +22,8 @@ namespace sw
 
     void D3D12RHIDevice::waitIdleInternal()
     {
+        // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`App::onResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
+        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         waitForPreviousFrame();
         // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
         retireCompletedTransfers();
