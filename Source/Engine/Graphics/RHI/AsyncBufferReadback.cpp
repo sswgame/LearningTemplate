@@ -17,10 +17,22 @@ namespace sw
      */
     struct AsyncBufferReadback::State
     {
+        /** @brief 만든 버퍼로 상태를 세웁니다 — 크기는 이 뒤로 바뀌지 않고(const), 장치 · 버퍼는 `shutdown` 이 잠금 아래에서 비운다. */
+        State( IRHIDevice* pDevice, uint32 sizeBytes, const RHIBufferHandle ( &arrBuffer )[kSlotCount] )
+            : _mutex{}
+            , _pDevice{ pDevice }
+            , _sizeBytes{ sizeBytes }
+        {
+            for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+            {
+                _arrBuffer[slot] = arrBuffer[slot];
+            }
+        }
+
         mutex                 _mutex;
-        IRHIDevice*           _pDevice{ nullptr }; ///< `shutdown` 이 null 로 만든다 — 그 뒤의 콜백은 읽지 않는다
-        uint32                _sizeBytes{ 0 };
-        RHIBufferHandle       _arrBuffer[kSlotCount]{};
+        IRHIDevice* _pDevice  SW_GUARDED_BY( _mutex ); ///< `shutdown` 이 null 로 만든다 — 그 뒤의 콜백은 읽지 않는다
+        const uint32          _sizeBytes;
+        RHIBufferHandle       _arrBuffer[kSlotCount] SW_GUARDED_BY( _mutex ){};
         uint64                _arrTag[kSlotCount] SW_GUARDED_BY( _mutex ){};
         uint8                 _arrBusy[kSlotCount] SW_GUARDED_BY( _mutex ){}; ///< GPU 가 쓰는 중(요청했고 콜백이 아직 안 왔다)
         vector<uint8> _latest SW_GUARDED_BY( _mutex ){};                      ///< 가장 최근에 도착한 내용
@@ -60,22 +72,20 @@ namespace sw
         const bool bInvalid = pDevice == nullptr || elementSize == 0 || elementCount == 0;
         if ( bInvalid )
             return false;
-        shared_ptr<State> pState = make_shared<State>();
-        pState->_pDevice         = pDevice;
-        pState->_sizeBytes       = elementSize * elementCount;
+        RHIBufferHandle arrBuffer[kSlotCount]{};
         for ( uint32 slot = 0; slot < kSlotCount; ++slot )
         {
-            pState->_arrBuffer[slot] = pDevice->getResourceFactory()->createReadbackBuffer( elementSize, elementCount );
-            if ( pState->_arrBuffer[slot] != 0 )
+            arrBuffer[slot] = pDevice->getResourceFactory()->createReadbackBuffer( elementSize, elementCount );
+            if ( arrBuffer[slot] != 0 )
                 continue;
             SW_LOG_ERROR( "Failed to create readback buffer %# (%# x %# bytes)", slot, elementSize, elementCount );
             for ( uint32 made = 0; made < slot; ++made )
             {
-                pDevice->getResourceFactory()->destroyBuffer( pState->_arrBuffer[made] );
+                pDevice->getResourceFactory()->destroyBuffer( arrBuffer[made] );
             }
             return false;
         }
-        _pState       = std::move( pState );
+        _pState       = make_shared<State>( pDevice, elementSize * elementCount, arrBuffer );
         _elementSize  = elementSize;
         _elementCount = elementCount;
         return true;
@@ -85,16 +95,23 @@ namespace sw
     {
         if ( _pState == nullptr )
             return;
+        // 잠금 안에서는 장치 · 버퍼를 꺼내 비우고, 장치 호출(버퍼 지우기)은 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).
+        IRHIDevice*     pDevice = nullptr;
+        RHIBufferHandle arrBuffer[kSlotCount]{};
         {
             ScopedLock<mutex> lock{ _pState->_mutex };
-            IRHIDevice*       pDevice = _pState->_pDevice;
-            _pState->_pDevice         = nullptr; // 이미 등록된 콜백은 도착해도 읽지 않는다
-            for ( RHIBufferHandle& buffer : _pState->_arrBuffer )
+            pDevice           = _pState->_pDevice;
+            _pState->_pDevice = nullptr; // 이미 등록된 콜백은 도착해도 읽지 않는다
+            for ( uint32 slot = 0; slot < kSlotCount; ++slot )
             {
-                if ( buffer != 0 && pDevice != nullptr )
-                    pDevice->getResourceFactory()->destroyBuffer( buffer ); // 백엔드가 GPU 가 쓰는 동안은 지우지 않는다(지연 해제)
-                buffer = 0;
+                arrBuffer[slot]           = _pState->_arrBuffer[slot];
+                _pState->_arrBuffer[slot] = 0;
             }
+        }
+        for ( const RHIBufferHandle buffer : arrBuffer )
+        {
+            if ( buffer != 0 && pDevice != nullptr )
+                pDevice->getResourceFactory()->destroyBuffer( buffer ); // 백엔드가 GPU 가 쓰는 동안은 지우지 않는다(지연 해제)
         }
         _pState.reset();
         _elementSize  = 0;
@@ -105,8 +122,9 @@ namespace sw
     {
         if ( _pState == nullptr || source == 0 )
             return false;
-        IRHIDevice* pDevice = nullptr;
-        uint32      slot    = kSlotCount;
+        IRHIDevice*     pDevice = nullptr;
+        uint32          slot    = kSlotCount;
+        RHIBufferHandle target  = 0;
         {
             ScopedLock<mutex> lock{ _pState->_mutex };
             pDevice = _pState->_pDevice;
@@ -119,9 +137,10 @@ namespace sw
                 return false;
             _pState->_arrBusy[slot] = SW_TRUE;
             _pState->_arrTag[slot]  = tag;
+            target                  = _pState->_arrBuffer[slot];
         }
         commands.transitionBuffer( source, RHIBufferState::CopySource );
-        commands.copyBufferToReadback( source, _pState->_arrBuffer[slot], _pState->_sizeBytes );
+        commands.copyBufferToReadback( source, target, _pState->_sizeBytes );
         commands.transitionBuffer( source, stateAfter );
         // 이 프레임의 GPU 작업이 끝난 뒤에 불린다 — 그때 읽어도 기다리지 않는다.
         shared_ptr<State> pState = _pState;
