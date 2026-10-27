@@ -62,7 +62,7 @@ namespace sw
     {
         if ( _sequencePath.empty() )
             return;
-        if ( _player.loadFromFile( _sequencePath ) == false )
+        if ( _player.loadFromFile( ResourceID{ _sequencePath } ) == false )
             SW_LOG_WARNING( "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
