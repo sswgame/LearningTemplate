@@ -1,5 +1,5 @@
 {
-	"_comment": "App 한 번이 쓰는 알려진 위치(docs/plans/HostGpuIsolation.md 2절 표 W1~W13). Scripts/qa/WriteSnapshot.py 가 읽는다. 표에 없는 쓰기가 나오면 점검이 진다 - 새 위치는 여기와 2절 표에 같이 적는다.",
+	"_comment": "App 한 번이 쓰는 알려진 위치 W1~W13 의 정본이다(결정 기록 5-2). Scripts/qa/WriteSnapshot.py(write-snapshot)가 읽는다. 표에 없는 쓰기가 나오면 점검이 진다 - 새 위치는 여기에 적는다.",
 	"roots": {
 		"binSaved": "Bin 폴더의 Saved",
 		"resource": "프로젝트 루트의 Resource",

@@ -22,4 +22,4 @@
 - **RGBA8 한 장에 MSDF(RGB) + 일반 SDF(A)를 둔다**(MTSDF). 3 채널 텍스처 형식이 없어서이기도 하고, 알파의 참 SDF 는 외곽선 · 굵게 같은 효과가 모서리 보정 없이 쓸 수 있다. 페이지 메모리는 SDF 의 네 배다.
 - 알려진 한계: 겹치는 윤곽(가변 폰트 글리프)은 합치지 않아 겹친 자리에 거짓 선이 생길 수 있다. 오차 정정은 단순 판정(보간한 중앙값이 두 끝의 안팎과 어긋나는 텍셀 쌍을 일반 SDF 로 접기)이라 msdfgen 의 모서리 보호보다 거칠다.
 - 이 설정을 `Msdf` 로 바꾸기 전에 M4 셰이더가 쿠킹돼야 한다(셰이더가 없으면 R 채널만 읽어 글리프가 틀리게 그려진다). M5 의 `AppUITest` 가 그 틀림을 평균 휘도 · 가장자리 수로 잡는다.
-- 글자가 빠지던 결함: 기본 예산(`gv_uiGlyphRasterBudgetMicros` 4000)이 프로파일러 꺼진 설정에서 한 번 차면 다시 안 열려 SDF · MSDF 모두 글리프가 빠졌다. 프레임 시계를 `GlyphCache::beginFrame` 으로 옮겨 고쳤다([GlyphRasterizationHitch](GlyphRasterizationHitch.md) 1절). `uidemo` 시나리오는 `UI.DeferredGlyphs` 가 0 이 된 뒤에 찍으므로 M5 의 픽셀 비교는 완성된 화면을 본다.
+- 글자가 빠지던 결함: 기본 예산(`gv_uiGlyphRasterBudgetMicros` 4000)이 프로파일러 꺼진 설정에서 한 번 차면 다시 안 열려 SDF · MSDF 모두 글리프가 빠졌다. 프레임 시계를 `GlyphCache::beginFrame` 으로 옮겨 고쳤다([결정 기록 5-7](../decisions/5-7_RuntimeUI.md) 1절). `uidemo` 시나리오는 `UI.DeferredGlyphs` 가 0 이 된 뒤에 찍으므로 M5 의 픽셀 비교는 완성된 화면을 본다.

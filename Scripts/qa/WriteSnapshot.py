@@ -3,10 +3,10 @@
 """
 쓰기 위치 스냅샷 점검 — 명령(App) 한 번을 돌리기 전후로 쓰기 후보 폴더의 파일 목록(경로 · 크기 · 수정 시각)을 견주어
 새로 생기거나 바뀌거나 사라진 경로를 찍고, `Test/AppTest/HostWriteLocations.json` 에 없는 위치가 있으면 진다.
-(docs/plans/HostGpuIsolation.md H1 — 잠금을 풀기 전에 2절 표에 빠진 쓰기 위치를 찾는다.)
+(결정 기록 5-2 의 HostGpuIsolation H1 — 잠금을 풀기 전에 알려진 위치 표에 빠진 쓰기 위치를 찾는다.)
 
-    py -3 -m Scripts.qa.WriteSnapshot --app build/Ninja-Shipping/Bin/App.exe -- -game=NileCity
-    py -3 -m Scripts.qa.WriteSnapshot --app <App> --label editor.assetmanage -- -EnableEditor -scenario=editor.assetmanage
+    py -3 -m Scripts write-snapshot --app build/Ninja-Shipping/Bin/App.exe -- -game=NileCity
+    py -3 -m Scripts write-snapshot --app <App> --label editor.assetmanage -- -EnableEditor -scenario=engine/automation/editor/assetmanage.scenario.xml
 
 `--` 뒤는 App 인자다. 작업 폴더는 App 이 있는 `Bin` 이다. 보는 곳: `Bin/Saved`, `Resource`, 프로젝트 루트 `Saved`,
 `%LOCALAPPDATA%/SWEngine`, `%TEMP%` 안의 `sw_*` 폴더(다른 프로그램의 임시 파일이 섞이지 않게). 알려진 위치 표는 데이터 파일이고

@@ -52,6 +52,13 @@
   replication 의 tick p99 가 러너에서 15 → 17.5 ms 로 오른 것이 회귀인지는 이 PC 에서 `py -3 -m Scripts load run replication --profile Mid LowEnd --runs 3` 을 기준선(약 10 ms)과 견줘 본다.
 - Windows STL containers 잡에서 건너뛰게 한 테스트 셋(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`)이 기본 컨테이너 구성에서도 가끔 지는지.
 
+### HostGpuIsolationChecks
+제목: 호스트 GPU 테스트의 쓰기 위치 분리 뒤 첫 실행 확인
+옛번호: 없음
+왜 필요한가: `AppBin` 잠금을 풀어(H2 ~ H4) `AppTest_HostOnly` 조각과 `QaGoldenImages` 가 GPU 슬롯 둘로 함께 돈다(결정 기록 5-2). 빌드 · 실행 전에 코드로만 정했다.
+남은 것(통합): 실행 대기: 매니페스트 id `host-write-snapshot-editor`, `host-write-snapshot-game`, `ctest-hostgpu-debug`. 앞 둘은 알려진 쓰기 위치 표(`Test/AppTest/HostWriteLocations.json`) 밖의 쓰기가 없는지 보고(에디터는 `-gv_editorStateDir` 없이 띄워 프로젝트 루트 `Saved/Editor/` 쓰기까지 본다) 셋째는 Debug `hostgpu` 시간을 잠금 해제 전 기준 2,254 s 와 견준다. 상시 `ctest-hostgpu-shipping` 이 같은 구성에서 세 번 반복해 재현율을 적고 한 번 지면 단독으로 다시 돌려 경합 탓인지 가른다. 보는 곳: 에디터 시나리오 두 백엔드 동시(`EditorScenariosPassOnOpenGL` + `EditorScenariosPassOnVulkan`)가 단독과 같은 통과 수인지, `AppScenarioTest.*.*` + `AppUITest.DemoScreenMatchesAcrossBackends`(같은 `uidemo`)의 레이아웃 · 휘도 단언, `AppSmokeTest.BenchFrameMatchesGoldenImage` 를 `QaGoldenImages` 와 동시에 돌린 골든 오차, `AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` 시간 전후(셰이더 캐시가 `Bin/Saved/ShaderCache` 그대로인지). 지면 `TestPolicy.json` 의 `hostResourceLock` 을 되살리는 H4 커밋 하나만 되돌린다.
+함정: 옛 `Bin/Saved/Automation` 의 보고는 더 갱신되지 않는다 — `scenario-logs` 가 낡은 보고를 읽지 않게 통합이 한 번 지운다. `packaging` 시나리오는 `Bin` 을 쓰기 루트 아래 `Saved/Packages/` 로 복사하므로 경로가 260 자를 넘는지 본다. 빌드 뒤 `-L nogpu`(`AutomationScratchTest.ScratchIDsBindToThisProcess` — 작업자 문법 검사 도구가 이 파일을 "command line is too long" 으로 못 봤다)와 `-L lint` 도 본다.
+
 ## 정리
 
 ### TestFrameworkRemainders

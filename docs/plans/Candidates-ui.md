@@ -3,7 +3,7 @@
 > 상태: 후보 · 선행: 없음 · 영역: ui · 옛번호: G-13, D6-4 · 진행: 해당없음
 
 이 문서는 착수 전 후보의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 런타임 UI, 글자 렌더링, 접근성, DPI 가 범위다.
-계획 문서로 옮긴 것: [GlyphRasterizationHitch](GlyphRasterizationHitch.md)(새 글리프 래스터화 히치) · [UiDrawPerformance](UiDrawPerformance.md)(그리기 성능의 남은 것).
+글리프 래스터화 히치와 그리기 성능의 남은 것은 결정이 [결정 기록](../decisions/5-7_RuntimeUI.md) 5-7 에 있고 측정 조건은 아래 조건부 절(`GlyphRasterBudgetValue` · `UiDrawCacheInvalidation`)이 가진다.
 
 ## 기능
 
@@ -32,6 +32,19 @@
 함정: 스냅샷을 UIA 와 같은 방식으로 쓴다(브리지는 위젯을 쥐지 않고 (화면 핸들, 위젯 번호)로 찾는다). 붙은 스크린 리더가 없으면 일하지 않는 규칙(`isClientActive`)도 같다.
 
 ## 조건부
+
+### GlyphRasterBudgetValue
+제목: 글리프 래스터 예산 값의 확정
+옛번호: C-9
+왜 필요한가: 새 글리프 래스터화는 프레임 예산(`gv_uiGlyphRasterBudgetMicros`, 기본 4000)으로 묶었다(결정 기록 5-7). 한글 400 글리프는 프레임당 두 개 안팎이라 200 프레임쯤 걸린다 — 길면 값을 올려 `GT.Frame` max 와 나타나는 속도의 균형을 정한다.
+착수 조건: `perf-compare --cases hangulGlyphBudget`(매니페스트 id `glyph-hangul-hitch-measure`, 제한 없음 0 대 4000 us)의 `GT.Frame` max 가 옛 784 ms 에서 크게 줄지 않거나 글자가 나타나는 속도가 느릴 때.
+남은 것: 값을 올려 균형점을 재고 기본값을 바꾼다. 글이 모두 나온 뒤에 찍히는지는 `UI.DeferredGlyphs` 탐침 대기가 맡는다. 함정: `-lang=ko` 로 재야 한다(영어 문화권 대체 글꼴 사슬에는 한글 글꼴이 없다).
+
+### UiDrawCacheInvalidation
+제목: 패널마다 하위 출력 캐시와 조상 변환을 캐시 밖에서 곱하기
+옛번호: D6-6
+왜 필요한가: 목표(`GT.UI` p50 0.3 ms) 안인 값을 더 줄이는 후보 둘이다 — U1 패널마다 하위 출력 캐시(Slate Invalidation Panel), U2 조상의 `kTransform` 이면 자손까지 다시 칠하는 그림 캐시의 변환을 캐시 밖에서 곱하기. 둘 다 그림 캐시의 무효화 계약(조상 불투명도 · 자르기가 캐시에 반영됨)을 바꾸는 일이라 무효화 누락이라는 새 결함 모양이 생긴다(결정 기록 5-7).
+착수 조건: 매니페스트 id `ui-draw-performance-measures`(`perf-compare` 의 `uiDrawStill` · `uiDrawChurn` · `uiDrawOpacityPulse`, 위젯 1 만)의 세 측정 중 하나라도 `GT.UI.Paint` + `GT.UI.Layout` p50 합이 0.3 ms 를 넘을 때 — 멈춘 화면 · 일부만 바뀜은 U1, 조상 변환은 U2 를 구현한다. 모두 안이면 이 절을 지운다.
 
 ### MarkerComputeProjection
 제목: 화면 마커의 투영 · 컬링을 컴퓨트로

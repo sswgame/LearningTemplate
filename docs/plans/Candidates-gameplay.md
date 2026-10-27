@@ -107,6 +107,14 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 남은 것: 매니페스트 id `usersettings-visual-review`(사람) — 렌더 스케일 0.5 에서 장면만 흐리고 UI 는 그대로인지, 텍스처 품질 low 에서 흐려지는지(재시작), 이펙트 품질 low 에서 입자 수가 주는지, 색각 보정이 장면과 UI 에 한 번씩만 걸리는지(렌더 텍스처 모니터가 두 번 보정되지 않음). 포워드 넷의 모션 블러와 TAA 이웃 클램프(카메라를 돌릴 때 앞 그림이 겹치지 않음)도 이때 본다. 머리 흔들림 진폭은 데이터라 화면을 보고 고친다.
 못 하는 이유: UI · 렌더 텍스처 모니터 · 입자까지 한 그림에서 사람이 판단하는 확인이라 지표로 정할 값이 없다. 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다. X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 환경이 없어 풀리지 않는다.
 
+## 조건부
+
+### InteractionGridThreshold
+제목: 상호작용 공유 격자를 켜는 하는 쪽 수 문턱
+옛번호: G-4
+왜 필요한가: 하는 쪽이 둘 이상인 공간만 공유 공간 격자(`InteractionSpatialIndex`)를 맞춘다(`kMinInteractorCountForGrid`, 결정 기록 5-8). 문턱이 맞는지는 재야 안다.
+착수 조건: 매니페스트 id `interaction-bench`(`InteractionBenchTest.*` Release)에서 하는 쪽 8 · 64(격자)의 하는 쪽 수로 나눈 틱 비용이 하는 쪽 1(목록 순회)보다 낮지 않을 때 — `kMinInteractorCountForGrid` 를 올린다. 낮으면 이 절을 지운다.
+
 ## 기능
 
 지금 남은 후보는 없다. `PhotoModePauseUpdate`(D4-14)는 2026-10-27 에 닫았다 — 포토 모드는 게임 일시정지에서만 움직인다([결정 기록](../09_Decisions.md) 5-8).

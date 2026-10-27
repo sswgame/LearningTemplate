@@ -20,7 +20,7 @@ cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 �
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
 # 커밋 훅 · full-build · Scripts test 의 출력은 요약이다(실패만 상세, 전부는 --verbose)
 py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반 영역별 표(기준선 0 으로 수렴)
-# -j 는 값 없이 준다(CMake 3.29+). 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼. AppTest 의 hostgpu 조각 · Race · QaGoldenImages 는 잠금 없이 GPU 슬롯만큼 겹친다 — App 은 케이스마다의 작업 폴더 build/<프리셋>/AppRuns/ 에서 뜬다(docs/plans/HostGpuIsolation.md).
+# -j 는 값 없이 준다(CMake 3.29+). 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼. AppTest 의 hostgpu 조각 · Race · QaGoldenImages 는 잠금 없이 GPU 슬롯만큼 겹친다 — App 은 케이스마다의 작업 폴더 build/<프리셋>/AppRuns/ 에서 뜬다(docs/decisions/5-2_Build.md).
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 
@@ -79,6 +79,7 @@ cd build/Ninja-Debug/Bin; ./App.exe -gv_profileFrames=40 -dx12 -EnableEditor    
     빌드 · 쿠킹 · 골든 · 측정 · GPU 독점 항목은 언제나 혼자 돌고 잠금 없는 `ctest` · `test` 항목과 GPU 공유 항목은 겹친다(이유는 [결정 기록](09_Decisions.md) 검증 묶음 행). 겹친 항목이 CPU 경합으로 시간 제한에 걸린 것 같으면 `--jobs 1 --only <id>` 로 다시 돈다.
   - 전 · 후 비교 — `py -3 -m Scripts perf-compare --app <후>/App.exe [--app-before <전>/App.exe] [--cases <이름…>] [--runs N]`(케이스마다 A · B 를 번갈아 재 중앙값 표. `--app-before` 가 없으면 같은 바이너리의 `-gv_` 스위치 A/B).
   - 이 기계의 기준과 견주기 — `py -3 -m Scripts perf`(프레임 p50 · p99).
+  - 쓰기 위치 — `py -3 -m Scripts write-snapshot --app <App> [--label <이름>] -- <App 인자>`(App 한 번의 전후로 쓰기 후보 폴더의 파일 목록을 견줘 `Test/AppTest/HostWriteLocations.json` 에 없는 쓰기가 나오면 진다).
   - 씬 로드 — `py -3 -m Scripts scene-load-bench --app <Release>/App.exe [--count 8000] [--runs 5] [--asset-report]`.
   - 프로파일러가 없으면 `Ninja-Release`(PDB 있음) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러). ICF 로 함수가 남의 이름으로 보인다.
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 — p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는 `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
@@ -174,7 +175,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의 줄끝이 체크아웃과 다르면 main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다. 워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
 - **배포 구성(Shipping · Shipping-Server) 빌드 폴더의 `Bin/Packs` 는 활성 게임(empty) 팩만 굽는다** — 오래 쓴 폴더에 남은 다른 게임의 낡은 팩으로 통과하던 테스트가 새 워크트리에서 진다. 그런 케이스는 맨 앞에 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 `SW_TEST_SKIP` 보다 **먼저** 둔다(`CheckTestSuites` 규칙 10 이 막는다).
 - **통합 검증에서 에디터를 한 번은 실제로 띄운다** — Release `-EnableEditor` 시나리오 하나 × 네 백엔드와 Debug 시나리오 하나(dx12). Shipping `hostgpu` 에는 에디터가 없고 Debug `nogpu` 는 ImGui 렌더러 백엔드를 띄우지 않아 기동하자마자 멈추는 결함이 초록 뒤에 숨는다.
-- **Debug App 이 크래시로 끝나면 `Bin/Saved` 에 크래시 묶음이 남아 다음 `ServerTest` 샤드들이 같은 폴더를 동시에 묶다가 `manifest.json` 을 못 찾는 Error 로 진다**(`ServerBootTest.EveryBuiltGameStartsAsADedicatedServer`, 다시 돌리면 통과). 크래시를 낸 실행 뒤의 첫 실패는 이것부터 의심한다([HostGpuIsolation](plans/HostGpuIsolation.md)).
+- **Debug App 이 크래시로 끝나면 `Bin/Saved` 에 크래시 묶음이 남아 다음 `ServerTest` 샤드들이 같은 폴더를 동시에 묶다가 `manifest.json` 을 못 찾는 Error 로 진다**(`ServerBootTest.EveryBuiltGameStartsAsADedicatedServer`, 다시 돌리면 통과). 크래시를 낸 실행 뒤의 첫 실패는 이것부터 의심한다([결정 기록 5-2](decisions/5-2_Build.md)).
 - **렌더 변경은 스크린샷까지 봐야 검증이다.** 로그 · 테스트가 다 초록인데 화면만 찢어진 적이 있다. 정적 씬은 바이트까지 결정적이라 4 백엔드 전후 sha 로 비교한다. 4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
 - **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동 지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
 - **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다). 렌더 변경 뒤 이 줄이 0 인지 본다. 테스트는 그리기 전후의 수를 비교해 단언한다. 검증 레이어를 켜는 `-gv_` 스위치는 없다 — 레이어는 Debug 빌드에서만 켜지므로 레이어 오류를 보려면 `build/Ninja-Debug` 로 돌린다. 오류는 `[Warning]` · `[Error]` 줄이라 시나리오 로그 게이트가 지고, 손으로는 `Saved/Automation/<이름>_<백엔드>.log` 에서 찾는다.

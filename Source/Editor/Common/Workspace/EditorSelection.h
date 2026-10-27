@@ -40,7 +40,7 @@ namespace sw::editor
      *          같은 id 로 오브젝트를 복원하므로 그 뒤에도 선택이 이어진다.
      *
      *          **범위**: 에디터 컨텍스트가 가진 하나(메인 선택)는 편집 중인 씬(`editor::findGameObject`)과 전역 Undo 스택을 쓴다. 미리보기 창
-     *          (`EditorPreviewPanel`)은 자기 인스턴스를 자기 씬과 자기 스택에 묶는다(`bindPreviewScope`, `docs/plans/EditorMultiWorld.md` 2.3).
+     *          (`EditorPreviewPanel`)은 자기 인스턴스를 자기 씬과 자기 스택에 묶는다(`bindPreviewScope`, docs/decisions/5-11_Editor.md 2.3).
      *          인스펙터와 기즈모처럼 "지금 대상인 선택" 을 쓰는 곳은 `editor::getFocusedSelection` 하나로 묻는다. 가장 최근에 바뀌었거나 포커스를 얻은
      *          선택이며, 메인 선택이 바뀌거나 메인 씬 창이 포커스를 얻으면 메인으로 돌아온다. 타입 조회로는 얻지 못한다(`kAccessorOnly`).
      *          `EditorService.h` 의 세 접근자 중 하나를 골라 호출부에 어느 선택인지 적는다.

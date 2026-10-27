@@ -39,7 +39,7 @@ namespace
         {
             Own,         ///< 캐릭터마다 자기 포즈(군중 공유 끔)
             OwnRig,      ///< Own + 후처리 리그(다리 TwoBoneIK · 사슬 SpringChain)
-            OwnFullBody, ///< Own + 전신 IK 리그(`FullBodyIK` — 몸 사슬 넷 · 골반 반복 4, 계획 AnimationAdvancedFeatures A1)
+            OwnFullBody, ///< Own + 전신 IK 리그(`FullBodyIK` — 몸 사슬 넷 · 골반 반복 4, 결정 기록 5-6 A1)
             Crowd,       ///< 군중 포즈 공유(같은 클립 · 위상 슬롯이면 버킷 하나가 평가)
         };
 
@@ -271,7 +271,7 @@ SW_TEST_CASE( SyntheticRigBenchTest, EvaluateByBonesCharactersAndMode )
 
 /**
  * @brief [SyntheticRigBenchTest] 코덱별 디코드 비용 — 대표 합성 리그 네 개의 첫 클립을 30 Hz 원본으로 다시 뽑아 Raw 와 ACL 로 압축하고, 같은 시각 열을 샘플하는 데 드는 시간(호출당 ns)과
- *        압축 크기 · 압축률 · 최대 오차를 찍는다. ACL 은 트랙 절반을 끈 마스크(본 LOD)도 잰다 — 계획 AnimationAdvancedFeatures A3 가 샘플(디코드)의 몫을 코덱 선택의 근거로 삼는다.
+ *        압축 크기 · 압축률 · 최대 오차를 찍는다. ACL 은 트랙 절반을 끈 마스크(본 LOD)도 잰다 — 결정 기록 5-6 A3 가 샘플(디코드)의 몫을 코덱 선택의 근거로 삼는다.
  * @details ACL 의 키 줄이기는 가상 정점(`_shellDistance`)의 모델 공간 오차를 계층(`_listTrackParent`)을 따라 잰다 — 오차 예산을 본 깊이로 나누는 일을 라이브러리가 한다.
  *          값은 Release 로 읽는다. 가장 짧은 판의 호출당 시간이라 스케줄러가 끼어든 판은 버려진다.
  */
