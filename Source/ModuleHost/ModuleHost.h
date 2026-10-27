@@ -230,8 +230,14 @@ namespace sw
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
         LiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
         /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
-        void     holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
-        RHI*     getRHI() const { return _pRHI; }
+        void holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
+        RHI* getRHI() const { return _pRHI; }
+        /**
+         * @brief 렌더 스레드가 받은 패킷을 다 그릴 때까지 기다립니다(GPU 는 기다리지 않는다). 렌더 스레드가 없으면 바로 돌아옵니다.
+         * @details 패스 병렬 기록 중에는 리소스 표를 바꿀 수 없다(`IRHIDevice::setParallelRecording`). 호스트 모듈이 그 순서를 스스로 보장하지 못하는
+         *          프레임(새로 만든 에디터 인스턴스의 첫 UI 프레임)에서 부릅니다.
+         */
+        void     waitRenderThreadIdle();
         IWindow* getWindow() const { return _pWindow; }
 
         // 호스트 모듈(App 의 에디터)이 끼어드는 지점. 이 클래스만으로는(전용 서버) 모두 아무 일도 하지 않는다.

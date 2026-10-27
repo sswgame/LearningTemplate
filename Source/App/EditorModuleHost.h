@@ -173,8 +173,9 @@ namespace sw
         unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindEditorService` 가 새로 만든다)
         vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleImages` 가 모은다).
 
-        uint8                  _bEnableEditor       : 1;
-        uint8                  _bEditorModuleActive : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다).
-        [[maybe_unused]] uint8 _reserved            : 6;
+        uint8                  _bEnableEditor        : 1;
+        uint8                  _bEditorModuleActive  : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다).
+        uint8                  _bFreshEditorInstance : 1; ///< 인스턴스를 새로 만든 뒤 첫 UI 프레임 전이다(`updateEditorUI` 가 렌더 스레드를 기다린 뒤 내린다).
+        [[maybe_unused]] uint8 _reserved             : 5;
     };
 } // namespace sw

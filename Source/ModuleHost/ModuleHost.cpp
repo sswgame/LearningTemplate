@@ -346,6 +346,14 @@ namespace sw
     // 보조 함수. 비우기와 그래프 깨짐 표시.
     // ======================================================================
 
+    void ModuleHost::waitRenderThreadIdle()
+    {
+#if defined( SW_WITH_CLIENT_CODE )
+        if ( _pRenderThread != nullptr )
+            _pRenderThread->waitIdle();
+#endif
+    }
+
     void ModuleHost::drainRenderWorkers( DrainReason reason )
     {
 #if defined( SW_WITH_CLIENT_CODE )
