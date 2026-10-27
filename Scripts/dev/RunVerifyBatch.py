@@ -35,6 +35,7 @@ import datetime
 import json
 import os
 import platform
+import re
 import sys
 import threading
 import time
@@ -82,6 +83,25 @@ def selectItems(manifest: VerifyManifest, listOnlyId: list[str], listConfigName:
         manifest.findConfig(name)
     return [item for item in manifest.listItem
             if (not listOnlyId or item.itemId in listOnlyId) and (not listConfigName or item.config in listConfigName)]
+
+
+_kFailedLineRe = re.compile(r"끝 (?P<id>[\w.-]+): (?:실패|막힘)")
+
+
+def readFailedIds(logPath: Path) -> list[str]:
+    """이전 `verify-batch` 출력 로그에서 실패 · 막힌 항목 id 를 모은다. 없으면 `VerifyManifestError`(없는 것을 전부 다시 돌리지 않는다)."""
+    listId = list(dict.fromkeys(_kFailedLineRe.findall(logPath.read_text(encoding="utf-8", errors="replace"))))
+    if not listId:
+        raise VerifyManifestError(f"--failed-from: {logPath} 에 실패 · 막힌 항목 줄이 없습니다")
+    return listId
+
+
+def addBuildItems(manifest: VerifyManifest, listItem: list[VerifyItem]) -> list[VerifyItem]:
+    """고른 항목의 구성에 맞는 빌드 항목을 앞에 붙인다(최신이면 몇 초면 끝나고, 낡았으면 실패 원인이 되기 때문이다)."""
+    setConfig = {item.config for item in listItem}
+    setId = {item.itemId for item in listItem}
+    listBuild = [item for item in manifest.listItem if item.kind == "build" and item.config in setConfig and item.itemId not in setId and item.needCommand == ""]
+    return [item for item in manifest.listItem if item in listBuild or item in listItem]
 
 
 def describeEnvironment(repositoryRoot: Path, owner: str) -> str:
@@ -256,6 +276,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--owner", default="", help="소유자 이름(워크트리 이름) — 빌드 · GPU 잠금에 적힌다. 돌릴 때 필요하다")
     parser.add_argument("--config", action="append", default=[], help="이 구성만(여러 번 가능: Debug · Shipping · Release)")
     parser.add_argument("--only", nargs="+", default=[], help="이 id 의 항목만")
+    parser.add_argument("--failed-from", dest="failedFrom", type=Path, default=None,
+                        help="이전 실행 출력 로그에서 실패 · 막힌 항목과 그 구성의 빌드만 다시 돈다(통과한 것은 다시 돌리지 않는다)")
+    parser.add_argument("--skip-kind", nargs="+", default=[], help="이 종류의 항목은 뺀다(예: measure — 성능 측정은 성능에 닿는 변경에서만)")
     parser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"잠금을 기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 그 묶음은 막힘")
     parser.add_argument("--jobs", type=int, default=kDefaultJobs, help=f"동시에 돌 항목 수(기본 {kDefaultJobs}). 1 이면 매니페스트 순서로 하나씩. 빌드 · 쿠킹 · 골든 · 측정 · 독점 잠금 항목은 언제나 혼자")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
@@ -269,7 +292,11 @@ def main(argv: list[str] | None = None) -> int:
         return ExitCode.Violation if listViolation else ExitCode.Passed
     try:
         manifest = readManifest(repositoryRoot)
-        listItem = selectItems(manifest, args.only, args.config)
+        listOnly = args.only + (readFailedIds(args.failedFrom) if args.failedFrom else [])
+        listItem = selectItems(manifest, listOnly, args.config)
+        if args.failedFrom:
+            listItem = addBuildItems(manifest, listItem)
+        listItem = [item for item in listItem if item.kind not in args.skip_kind]
     except VerifyManifestError as error:
         print(f"[VerifyBatch] 오류: {error}", file=sys.stderr)
         return ExitCode.CheckInvalid
