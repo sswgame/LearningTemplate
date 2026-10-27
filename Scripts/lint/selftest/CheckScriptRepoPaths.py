@@ -37,6 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.Constants import kGeneratedRelDirs  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kRepoRoot = ("Source/", "Test/", "Resource/")
@@ -54,7 +55,9 @@ _kUsePrefix = "prefix"
 
 
 def isMissingPathInternal(repositoryRoot: Path, text: str, bPrefix: bool = False) -> bool:
-    """`text` 가 가리키는 파일 · 폴더 · 앞머리 · 글롭이 저장소에 없는가."""
+    """`text` 가 가리키는 파일 · 폴더 · 앞머리 · 글롭이 저장소에 없는가. 생성물 폴더(`kGeneratedRelDirs`)는 새 체크아웃에 없는 것이 정상이라 없는 것으로 치지 않는다."""
+    if text.rstrip("/") in kGeneratedRelDirs:
+        return False
     if _kGlobRe.search(text):
         listPart = text.split("/")
         listFixed = [part for part in listPart[:next(index for index, part in enumerate(listPart) if _kGlobRe.search(part))]]
@@ -167,6 +170,8 @@ class CheckScriptRepoPathsGate(LintGate):
          "files": {"Scripts/common/B.py": "kHeaderRelativePath = \"Source/Core/Gone.h\"\n_kOk = \"Source/Core/\"\n", "Source/Core/Real.h": "// 있다\n"}},
         {"name": "함수 안 Path 연산과 다른 폴더의 스크립트", "expectedViolation": "경로 'Test/Gone/Case.cpp'",
          "files": {"Scripts/qa/C.py": "def f(root):\n    return (root / \"Test/Gone/Case.cpp\").read_text()\n", "Test/Real/Case.cpp": "// 있다\n"}},
+        {"name": "생성물 폴더는 없어도 통과(위반 없음)", "expectedViolation": "경로 'Resource/gone/shaders/'",
+         "files": {"Scripts/dev/E.py": "_kCache = \"Resource/cache\"\n_kGone = \"Resource/gone/shaders/\"\n", "Source/Real/A.h": "// 있다\n"}},
         {"name": "함수 안 비교와 startswith", "expectedViolation": "경로 'Resource/gone/shaders/'",
          "files": {"Scripts/dev/D.py": "def f(relative):\n    return relative.startswith(\"Source/Real/\") and relative == \"Resource/gone/shaders/\"\n", "Source/Real/A.h": "// 있다\n"}},
     ]

@@ -152,7 +152,11 @@ namespace sw
                 string commandWithoutStderr( command );
                 commandWithoutStderr.append( " 2>/dev/null" );
                 Process process;
-                if ( process.launch( commandWithoutStderr ) == false )
+                // `2>/dev/null` 리디렉션이 셸 문법이라 셸을 실행 파일로 쓴다. 호출자가 인자를 shellQuote 로 이미 인용했다.
+                if ( process.launch( ProcessCommand{
+                         "/bin/sh",
+                         { "-c", commandWithoutStderr }
+                } ) == false )
                     return {};
 
                 string output;
