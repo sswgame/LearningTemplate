@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
@@ -88,7 +89,7 @@ namespace sw
                 , _settings{}
                 , _stats{}
                 , _pState{ pState }
-                , _pHandler{ nullptr }
+                , _pHandler{}
                 , _localPort{ 0 }
                 , _listenPort{ 0 }
                 , _bInitialized{ SW_FALSE }
@@ -106,8 +107,8 @@ namespace sw
                     SW_LOG_ERROR( "LoopbackStreamTransport: needs a handler and _ioThreadCount == 0 (it is driven by pollIO)" );
                     return false;
                 }
-                _pHandler     = pHandler;
-                _settings     = settings;
+                _pHandler.set( pHandler );
+                _settings.set( settings );
                 _bInitialized = SW_TRUE;
                 return true;
             }
@@ -142,6 +143,9 @@ namespace sw
                     }
                 }
                 _bInitialized = SW_FALSE;
+                // 링크 · 리슨 표에서 모두 빠졌으므로 저쪽이 더 읽지 않는다 — 다시 initialize 할 수 있게 비운다.
+                _settings.reset();
+                _pHandler.reset();
             }
 
             bool listen( const NetAddress& bindAddress ) override
@@ -163,7 +167,7 @@ namespace sw
                 const StreamConnectionHandle   handle          = allocateSlotLocked();
                 const auto                     found           = _pState->_mapListener.find( remote._port );
                 LoopbackStreamTransport* const pPeer           = found != _pState->_mapListener.end() ? found->second : nullptr;
-                const bool                     bConnectRefused = pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings._maxConnections;
+                const bool                     bConnectRefused = pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings->_maxConnections;
                 if ( bConnectRefused )
                 {
                     // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다.
@@ -180,7 +184,7 @@ namespace sw
                 link._arrHandle[1]                      = peerHandle;
                 for ( int32 side = 0; side < 2; ++side )
                 {
-                    const StreamTransportConfig& sideSettings = link._arrSide[side]->_settings;
+                    const StreamTransportConfig& sideSettings = link._arrSide[side]->_settings.get();
                     link._arrQueue[side].configure( sideSettings._sendHighWatermarkBytes, sideSettings._sendLowWatermarkBytes, sideSettings._maxQueuedSendBytes );
                 }
                 _listSlot[handle._index]._linkIndex            = linkIndex;
@@ -457,17 +461,17 @@ namespace sw
                 }
             }
 
-            vector<LoopbackHandleSlot> _listSlot;
-            vector<uint32>             _listFreeSlot;
-            vector<LoopbackEvent>      _listPending;  ///< 망 잠금 안에서 쌓인 사건
-            vector<LoopbackEvent>      _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
-            StreamTransportConfig      _settings;
-            StreamTransportStats       _stats;
-            LoopbackNetworkState*      _pState;
-            IStreamHandler*            _pHandler;
-            uint16                     _localPort; ///< 이 전송이 건 연결의 "보낸 쪽 포트"(저쪽의 getRemoteAddress)
-            uint16                     _listenPort;
-            uint8                      _bInitialized;
+            vector<LoopbackHandleSlot>      _listSlot;
+            vector<uint32>                  _listFreeSlot;
+            vector<LoopbackEvent>           _listPending;  ///< 망 잠금 안에서 쌓인 사건
+            vector<LoopbackEvent>           _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
+            OnceInit<StreamTransportConfig> _settings;     ///< initialize 가 한 번 정한다 — 저쪽 전송이 망 잠금 아래에서 읽는다.
+            StreamTransportStats            _stats;
+            LoopbackNetworkState* const     _pState; ///< 생성자에서 받는다(망이 전송보다 오래 산다).
+            OnceInit<IStreamHandler*>       _pHandler;
+            uint16                          _localPort; ///< 이 전송이 건 연결의 "보낸 쪽 포트"(저쪽의 getRemoteAddress)
+            uint16                          _listenPort;
+            uint8                           _bInitialized;
         };
     } // namespace
 } // namespace sw

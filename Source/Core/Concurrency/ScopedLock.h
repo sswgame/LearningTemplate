@@ -1,6 +1,6 @@
 /**
  * @file ScopedLock.h
- * @brief 잠금 계약 분석(clang `-Wthread-safety`)이 알아보는 잠금 가드입니다 — `ScopedLock` · `ScopedSharedLock` · `UniqueLock` · `ScopedLockPair`.
+ * @brief 잠금 계약 분석(clang `-Wthread-safety`)이 알아보는 잠금 가드입니다 — `ScopedLock` · `ScopedSharedLock` · `UniqueLock` · `ScopedLockPair` · `ScopedOptionalLock`.
  * @details `std::scoped_lock` · `lock_guard` · `unique_lock` · `shared_lock` 은 MSVC STL 에 능력 주석이 없어 분석이 그 범위를 잠긴 범위로 보지 못한다.
  *          그래서 엔진 코드는 이 가드로 잠그고, `std::` 가드 직접 사용은 `CheckStdMutex` 가 막는다. 잠금 타입(`sw::mutex` · `sw::shared_mutex` · `SpinLock`)과
  *          함께 쓴다 — `lock` · `unlock`(공유는 `lock_shared` · `unlock_shared`)이 있는 타입이면 된다.
@@ -157,5 +157,38 @@ namespace sw
     private:
         TLock& _first;
         TLock& _second;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 있을 수도 없을 수도 있는 잠금(@p pLock 이 null 이면 아무것도 하지 않는다)을 범위 동안 잡습니다.
+     * @details 백엔드마다 다른 바깥 잠금(예: Vulkan 큐 제출 잠금, 다른 백엔드는 없음)을 인터페이스가 `TLock*` 로 내줄 때 쓴다 —
+     *          빈 `std::unique_lock` 을 값으로 돌려주던 자리다. 잡을지가 실행 중에 정해지므로 분석에는 능력으로 알리지 않는다(이 잠금이 지키는
+     *          `SW_GUARDED_BY` 멤버를 두지 않는 바깥 잠금에만 쓴다).
+     */
+    template <class TLock>
+    class ScopedOptionalLock
+    {
+    public:
+        explicit ScopedOptionalLock( TLock* pLock ) SW_NO_THREAD_SAFETY_ANALYSIS
+            : _pLock{ pLock }
+        {
+            if ( _pLock != nullptr )
+                _pLock->lock();
+        }
+
+        ~ScopedOptionalLock() SW_NO_THREAD_SAFETY_ANALYSIS
+        {
+            if ( _pLock != nullptr )
+                _pLock->unlock();
+        }
+
+        ScopedOptionalLock( const ScopedOptionalLock& )            = delete;
+        ScopedOptionalLock& operator=( const ScopedOptionalLock& ) = delete;
+
+    private:
+        TLock* const _pLock;
     };
 } // namespace sw

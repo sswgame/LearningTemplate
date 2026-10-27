@@ -209,7 +209,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         # 함수 선언 / 정의 감지
         isFnSig = False
         sigParamStr = None
-        if not trimmed.startswith(("#", "//", "/*", "*", "return", "if", "while", "for", "switch", "catch")) and \
+        # `else if ( … )` · `else if constexpr ( … )` 도 제어문이다 — `else` 를 떼고 본다(안 떼면 `constexpr ( … )` 가 함수 서명으로 읽힌다).
+        controlTrimmed = trimmed[len("else"):].lstrip() if re.match(r"else\b", trimmed) else trimmed
+        if not controlTrimmed.startswith(("#", "//", "/*", "*", "return", "if", "while", "for", "switch", "catch")) and \
            not any(k in trimmed for k in ("SW_ASSERT", "SW_LOG", "SW_STATIC_ASSERT", "SW_EXPECT")):
             if lambdaMatch := _kLambdaParameterRe.search(codeWithoutStrings):
                 sigParamStr = lambdaMatch.group(1)
@@ -229,6 +231,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         if isFnSig and not trimmed.endswith(";"):
             pendingFunc = True
+        elif pendingFunc and trimmed.endswith(";") and "{" not in codeWithoutStrings:
+            # 서명 뒤에 `{` 없이 끝난 문장이 왔으면 그 서명은 정의가 아니었다 — 기다림을 남기면 다음 `{`(멤버의 `{}` 초기화)에서 함수를 연다.
+            pendingFunc = False
 
         # 함수 매개변수 — 서명을 쪼갠 매개변수마다 규칙에 넘긴다
         if sigParamStr is not None and sigParamStr.strip():

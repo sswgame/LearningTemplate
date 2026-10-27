@@ -67,10 +67,10 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
         IRHIDevice*                                            _pRHIDevice{ nullptr };
         OnceInit<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _d3d12SrvHeap;
-        vector<uint32>                                         _listFreeDescriptor;
+        vector<uint32> _listFreeDescriptor                     SW_GUARDED_BY( _descriptorMutex );
         OnceInit<UINT>                                         _descriptorSize;
         static constexpr uint32                                kMaxDescriptors = 128;
-        uint32                                                 _nextDescriptor{ 0 };
+        uint32 _nextDescriptor                                 SW_GUARDED_BY( _descriptorMutex ){ 0 };
         /// @brief `_listFreeDescriptor` · `_nextDescriptor` 잠금입니다. UI 스레드가 할당하고, 미뤄 둔 반환은 렌더 스레드에서 불립니다.
         mutex _descriptorMutex;
         /// @brief 디바이스 제거를 이미 로그로 남겼으면 true 입니다. 복구되지 않아 프레임마다 반복되므로 한 번만 남깁니다.

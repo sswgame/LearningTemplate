@@ -64,7 +64,7 @@ namespace sw
         , _settings{}
         , _mutex{}
         , _jobReady{}
-        , _pDriver{ nullptr }
+        , _pDriver{}
         , _pendingCount{ 0 }
         , _bStopping{ SW_FALSE }
     {
@@ -95,8 +95,8 @@ namespace sw
         if ( probe == nullptr )
             return false;
         probe.reset();
-        _pDriver  = pDriver;
-        _settings = settings;
+        _pDriver.set( pDriver );
+        _settings.set( settings );
         {
             // 일꾼 대기 술어가 잠금 아래에서 읽는다 — 시작 전 초기화도 잠금 아래에서 한다.
             ScopedLock<mutex> lock{ _mutex };
@@ -139,7 +139,8 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _listCompleted.push_back( std::move( job ) );
         }
-        _settings._secret.clear();
+        _settings.reset(); // 비밀값까지 비운다 — 다시 initialize 할 수 있다
+        _pDriver.reset();
     }
 
     void SQLConnectionPool::submit( unique_ptr<ISQLJob> job )
@@ -193,7 +194,7 @@ namespace sw
 
         SQLConnectionPoolInternal::ClosedConnection closed;
         string                                      error;
-        unique_ptr<ISQLConnection>                  connection   = _pDriver->openConnection( _settings._connection, _settings._secret, error );
+        unique_ptr<ISQLConnection>                  connection   = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
         int64                                       retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
         Deadline                                    retryAt      = Deadline::afterMilliseconds( 0 );
         if ( connection == nullptr )
@@ -216,7 +217,7 @@ namespace sw
             const bool bShouldReconnect = bNeedsReconnect && bStopping == false && retryAt.isExpired();
             if ( bShouldReconnect )
             {
-                connection = _pDriver->openConnection( _settings._connection, _settings._secret, error );
+                connection = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
                 if ( connection == nullptr )
                 {
                     SW_LOG_WARNING( "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );

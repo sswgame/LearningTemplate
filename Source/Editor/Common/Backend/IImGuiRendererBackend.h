@@ -85,9 +85,9 @@ namespace sw::editor
         /**
          * @brief UI 스레드가 ImGui 백엔드 코드로 GPU 큐에 제출하고 대기하는 동안 잡는 락입니다. 보조 뷰포트의 생성, 렌더, 파괴와 텍스처 업로드가 해당합니다.
          * @details Vulkan 큐는 외부 동기화 대상이므로 렌더 스레드의 제출과 겹치면 안 된다. Vulkan 백엔드는 RHI 디바이스의 큐 락을
-         *          반환한다(`RHINativeHandles::_pQueueMutex`). 다른 백엔드는 빈 락이다. 다른 락보다 먼저 잡는다.
+         *          돌려준다(`RHINativeHandles::_pQueueMutex`). 다른 백엔드는 null 이다. 부르는 쪽은 `ScopedOptionalLock` 으로 잡고, 다른 락보다 먼저 잡는다.
          */
-        virtual std::unique_lock<mutex> lockSubmissionQueue() { return std::unique_lock<mutex>{}; }
+        virtual mutex* getSubmissionQueueMutex() { return nullptr; }
 
         // ------------------------------------------------------------------------------
         // 2) ImGui 텍스처(씬 뷰와 게임 뷰의 렌더 타깃 등)

@@ -46,8 +46,8 @@ namespace sw::editor
         void newFrame() override;
         /** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 UI 스레드에서 처리합니다. 업로드가 큐에 제출하므로 큐 잠금 안에서 합니다. */
         void processTextureUpdates() override;
-        /** @brief RHI 디바이스의 그래픽스 큐 잠금을 쥡니다. */
-        std::unique_lock<mutex> lockSubmissionQueue() override;
+        /** @brief RHI 디바이스의 그래픽스 큐 잠금입니다(초기화 전 · 종료 뒤는 null). */
+        mutex* getSubmissionQueueMutex() override { return _pQueueMutex; }
         /** @brief ImGui draw data를 Vulkan으로 그립니다. */
         void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) override;
 

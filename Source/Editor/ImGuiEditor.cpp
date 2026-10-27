@@ -847,7 +847,7 @@ namespace sw::editor
             // 뷰포트의 GPU 렌더와 present 는 한 스레드에서만 실행해야 한다. GL 에서는 그 스레드가 렌더 스레드다(아래 render() 에서 처리).
             // 창 생성, 크기 변경, 파괴와 렌더가 GPU 큐에 제출하고 대기하므로 렌더러 백엔드의 큐 락 안에서 실행한다.
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
-            const std::unique_lock<mutex> queueLock = ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
+            const ScopedOptionalLock<mutex> queueLock{ _rendererBackend != nullptr ? _rendererBackend->getSubmissionQueueMutex() : nullptr };
             ImGui::UpdatePlatformWindows();
             if ( _rendererBackend != nullptr && bRenderThreadContext == false )
                 _rendererBackend->renderPlatformWindows();
