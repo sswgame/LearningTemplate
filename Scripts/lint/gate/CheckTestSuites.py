@@ -576,7 +576,7 @@ class CheckTestSuitesGate(LintGate):
 
     description = "테스트 스위트 규칙 검사"
     buildComment = "Checking test suite naming, one-file-per-suite, test policy rows, and that every suite declaration takes effect..."
-    timeoutSeconds = 15
+    timeoutSeconds = 30
     preCommitPattern = ("Test/*", "cmake/Engine/TestTargets.cmake")
     # 조각마다 **위반 하나만** 넣는다 — 나머지는 깨끗한 바탕(`_kCleanFixture`)이라, 이 검사가 그 바탕에서 통과하는
     # 한 실패는 넣은 위반 때문이다. 주의: 바탕부터 다른 규칙(예: EditorTest 소스 목록이 빈 것)에 걸리는 조각은

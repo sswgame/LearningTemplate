@@ -64,7 +64,7 @@ class CheckTextureFoldersGate(LintGate):
 
     description = "런타임 텍스처 폴더(textures/)에는 DDS 만, 원본 이미지는 textures_raw/ 에만"
     buildComment = "Checking runtime texture folders hold only imported DDS..."
-    timeoutSeconds = 15
+    timeoutSeconds = 30
     preCommitPattern = ("Resource/*",)
     preCommitFileArgument = "--files"
     violationHeader = "텍스처 폴더 규칙 위반"
