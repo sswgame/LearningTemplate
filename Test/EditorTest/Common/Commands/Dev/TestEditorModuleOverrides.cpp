@@ -33,6 +33,7 @@ namespace
  */
 SW_TEST_CASE( EditorModuleOverridesTest, SetOverrideAddsAndRemovesLine )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken document is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const utf8* pProject = R"({ "_name": "SWGame", "_version": "1.0.0", "_kind": "Game", "_listModuleOverride": [ { "_name": "GF_Other", "_bEnabled": false } ] })";
     string      off;
     SW_ASSERT_TRUE( EditorModuleOverrideUtil::setOverride( pProject, "GF_Farm", false, true, off ) );

@@ -349,7 +349,10 @@ SW_TEST_CASE( GameObjectHierarchyTest, ParentChildAttachAndActivePropagation )
     SW_EXPECT_EQUAL( &child, childrenOf( parent )[0] );
 
     // 순환 attach 는 실패해야 한다.
-    SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( parent.attachToParent( &grand ) );
+    }
 
     parent.setActive( false );
     SW_EXPECT_FALSE( parent.isActiveInHierarchy() );
@@ -2420,7 +2423,10 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
     SW_EXPECT_EQUAL( pNode4, pNode16->getParent() );
 
     // 순환 참조 방어 (자식 Node_16을 부모 Node_4의 부모로 지정 시도 -> 실패해야 함)
-    SW_EXPECT_FALSE( pNode4->attachToParent( pNode16 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a parent in its own subtree is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( pNode4->attachToParent( pNode16 ) );
+    }
 
     manager.flushSceneTransforms();
     // Node_4 월드 X = 5 * 2 = 10. Node_16부터 Node_31까지 16개 단계이므로 리프(Node_31) 월드 X = 10 + (16 * 2) = 42.0f
@@ -2500,7 +2506,11 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 1) 부모 재지정 시도 (A -> B)
                 if ( pObjA != pObjB )
-                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 테스트하는 경로다
+                {
+                    // 무작위 조작 — 자기 자손을 부모로 삼는 순환 같은 거절도 테스트하는 경로다. 거절의 Warning 은 이 한 호출의 것만 의도된 줄이다.
+                    SW_TEST_DEFENSIVE_SCOPE( "a random reparent may be rejected (cycle or pending destroy)" );
+                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 테스트하는 경로다(거절돼도 부모 없이 남을 뿐이다)
+                }
             }
             else if ( actionType == 1 )
             {
@@ -2532,7 +2542,10 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                     pNewObj->addComponent<sw::MockMeshComponent>();
 
                     if ( listAliveObject.empty() == false )
-                        (void)pNewObj->attachToParent( listAliveObject.back() ); // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                    {
+                        SW_TEST_DEFENSIVE_SCOPE( "a random attach to the newest object may be rejected" ); // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                        (void)pNewObj->attachToParent( listAliveObject.back() );                           // 무작위 조작 — 거절돼도 루트로 남을 뿐이다
+                    }
                     listAliveObject.push_back( pNewObj );
                 }
             }

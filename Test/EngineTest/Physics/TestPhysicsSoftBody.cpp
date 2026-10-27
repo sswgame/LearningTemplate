@@ -171,8 +171,11 @@ SW_TEST_CASE( PhysicsSoftBodyTest, MissingPinBoneLeavesTheClothUnsimulated )
 
     pCloth->setPinBones( { sw::hashed_string( "neck" ) } );
     SW_EXPECT_FALSE( pCloth->findPinPose( position, rotation ) );
-    manager.beginPlay();
-    test::updateFrames( manager, 10 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "pin bones missing from the skeletal mesh leave the cloth unsimulated" ); // 천을 만들지 못한다는 오류 로그가 이 확인이 보려는 것이다
+        manager.beginPlay();
+        test::updateFrames( manager, 10 );
+    }
     SW_EXPECT_FALSE( pCloth->isClothCreated() );
     manager.endPlay();
 }

@@ -299,7 +299,10 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
 SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdvantage )
 {
     MoveCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatStateMoveXML, "CombatStateTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a move without an id is skipped" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatStateMoveXML, "CombatStateTest" ) );
+    }
     SW_EXPECT_EQUAL( 2u, catalog.getAll().size() ); // id 없는 Move 는 버린다
     const MoveFrameData* pJab = catalog.find( hashed_string( "jab" ) );
     SW_ASSERT_NOT_NULL( pJab );
@@ -394,7 +397,10 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAndRollsDeterministically )
 {
     ElementChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXMLText( kCombatStateElementXML, "CombatStateTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a rule naming an undeclared element and an empty chart are rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_ASSERT_TRUE( chart.loadFromXMLText( kCombatStateElementXML, "CombatStateTest" ) );
+    }
     SW_EXPECT_EQUAL( 6u, chart.getElements().size() );
     const hashed_string water( "Water" );
     const hashed_string electric( "Electric" );
@@ -437,7 +443,10 @@ SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAnd
 
     // 선언된 속성이 없으면 실패.
     ElementChart emptyChart;
-    SW_EXPECT_TRUE( emptyChart.loadFromXMLText( "<ElementChart><Rule attack=\"A\" defend=\"B\" multiplier=\"2\"/></ElementChart>", "CombatStateTest" ) == false );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an element chart without any element is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_TRUE( emptyChart.loadFromXMLText( "<ElementChart><Rule attack=\"A\" defend=\"B\" multiplier=\"2\"/></ElementChart>", "CombatStateTest" ) == false );
+    }
 }
 
 SW_TEST_CASE( CombatStateTest, GaugeRegenScaleReduceAndDrainAtEmptyKeepDelay )

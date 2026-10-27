@@ -308,7 +308,8 @@ SW_TEST_CASE( PairedAnimationTest, SessionAbortsWhenRequiredRoleIsInterrupted )
     TestPairedAnimationInternal::step( manager, system );
     TestPairedAnimationInternal::step( manager, system );
 
-    SW_ASSERT_TRUE( pFollower->play( hashed_string( "Late" ), false, 0.0f ) ); // 세션 밖에서 끊는다
+    SW_TEST_DEFENSIVE_SCOPE( "a required role interrupted outside the session aborts it" ); // 중단을 알리는 로그가 이 테스트가 보려는 것이다
+    SW_ASSERT_TRUE( pFollower->play( hashed_string( "Late" ), false, 0.0f ) );              // 세션 밖에서 끊는다
     system.runBeforeTick( manager, TestPairedAnimationInternal::kStep );
     const PairedAnimationSession* pSession = system.findSession( sessionID );
     SW_ASSERT_NOT_NULL( pSession );
@@ -385,6 +386,7 @@ SW_TEST_CASE( PairedAnimationTest, StartRefusesWithoutSideEffects )
     const PairedAnimationBinding follower{ hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower ) };
     uint32                       sessionID = 0;
 
+    SW_TEST_DEFENSIVE_SCOPE( "a refused session start reports why" ); // 아래 시작 거절마다 이유를 로그로 남기는 것이 이 테스트가 보려는 동작이다
     SW_EXPECT_TRUE( system.startSession( manager, def, { leader }, sessionID ) == PairedAnimationStartResult::MissingRequiredRole );
     SW_EXPECT_TRUE( system.startSession( manager, def, {
                                                            leader, follower, PairedAnimationBinding{ hashed_string( "Ghost" ), TComponentHandle<SkeletalAnimatorComponent>( pOther ) }
@@ -822,6 +824,7 @@ SW_TEST_CASE( PairedAnimationTest, RestoreRefusesMismatchedSnapshotWithoutSideEf
     const vector<PairedAnimationBinding> listBinding = TestPairedAnimationInternal::makeBindings( pLeader, pFollower );
     const PairedAnimationSessionSnapshot good        = PairedAnimationSessionSnapshot::makeAtElapsedTime( *def, 5, 0.5f );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a snapshot that does not fit the asset is refused with a reason" ); // 거절마다 이유를 로그로 남기는 것이 이 테스트가 보려는 동작이다
     PairedAnimationSessionSnapshot wrongRoleCount = good;
     wrongRoleCount._listRole.pop_back();
     SW_EXPECT_TRUE( system.restoreSession( manager, def, listBinding, wrongRoleCount ) == PairedAnimationStartResult::InvalidSnapshot );

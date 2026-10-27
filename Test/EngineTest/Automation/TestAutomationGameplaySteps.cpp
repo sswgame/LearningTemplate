@@ -242,6 +242,7 @@ SW_TEST_CASE( AutomationGameplayStepsTest, ActionStepsPressTheBoundSlots )
     input.getInputMap().createAction( "Move", sw::InputActionValueType::Axis2D );
     input.getInputMap().bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
     input.getInputMap().bindGamepadStick2D( "Move", sw::GamepadStick::Left, 0.0f );
+    input.getInputMap().createAction( "Look", sw::InputActionValueType::Axis2D ); // 폰이 기본으로 선언하는 시선 액션 — 안 쓰지만 맵에 없으면 플레이어 조종자가 경고한다
     {
         // 점프하고 0.1 초 뒤 오른쪽 위로 이동 — 이동하는 동안 두 번 더 점프(간격 4 프레임)
         sw::AutomationRunner runner;

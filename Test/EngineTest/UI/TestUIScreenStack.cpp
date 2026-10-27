@@ -247,6 +247,7 @@ SW_TEST_CASE( UIScreenStackTest, PausingScreenStopsGameTime )
 /** @brief [UIScreenStackTest] 내려가는 모듈 이미지에 vtable 이 있는 위젯이 든 화면은 그 자리에서 닫힌다 — 다른 화면은 남는다 */
 SW_TEST_CASE( UIScreenStackTest, ModuleUnloadClosesScreensWithItsWidgets )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a screen holding widget code of an unloading module is closed" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     using Util = UIScreenTestUtil;
     UIScreenFixture          fixture;
     const sw::UIScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );

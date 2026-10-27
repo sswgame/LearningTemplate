@@ -1058,6 +1058,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
  */
 SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bar on a bare object warns that it has no widget to draw into" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GameObjectManager   manager;
     UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 100, 0, 0.0f );
     SW_ASSERT_NOT_NULL( pUnit );
@@ -1084,6 +1085,7 @@ SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
  */
 SW_TEST_CASE( ActionCombatTest, UnitDeathHidesAHealthBarThatHidesOnDeath )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bar on a bare object warns that it has no widget to draw into" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GameObjectManager   manager;
     UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 30, 0, 0.0f );
     SW_ASSERT_NOT_NULL( pUnit );
@@ -1108,6 +1110,7 @@ SW_TEST_CASE( ActionCombatTest, UnitDeathHidesAHealthBarThatHidesOnDeath )
  */
 SW_TEST_CASE( ActionCombatTest, HealthBarAddedAfterAHitStartsAtTheUnitsHealth )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bar on a bare object warns that it has no widget to draw into" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     GameObjectManager   manager;
     UnitStatsComponent* pUnit = spawnUnit( manager, "Hero", 0.0f, 100, 0, 0.0f );
     SW_ASSERT_NOT_NULL( pUnit );

@@ -113,6 +113,7 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
  */
 SW_TEST_CASE( AssetStreamingTest, PreloadSetWalksEveryPathWithinTheBudget )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "paths that do not exist fail to load and are listed as failed" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::AssetStreamingQueue queue;
     queue.initialize();
     sw::vector<sw::string> listPath;

@@ -601,7 +601,8 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
     // 프리팹이 아닌 XML 은 건드리지 않는다.
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/notes.xml", "<Notes/>" ) );
 
-    uint32       failedCount  = 0;
+    uint32 failedCount = 0;
+    SW_TEST_DEFENSIVE_SCOPE( "a broken prefab fails to cook" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount );
     SW_EXPECT_EQUAL( 4u, writtenCount ); // crate · barrel · deep · twin 둘 중 하나
     SW_EXPECT_EQUAL( 2u, failedCount );  // broken · twin 의 나머지 하나

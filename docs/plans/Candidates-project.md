@@ -34,8 +34,8 @@
 남은 것:
 - 리플렉션 크기: 단계 1 의 Release `App.exe` · 모듈 DLL 전후 값만 아직 없다(Debug 값은 `Source/Engine/Serialization/Fixed/README.md` 3.1 절). 두 커밋을 Release 로 지어 재야 한다. 커밋마다 새 빌드 트리가 필요해 매니페스트 `measure` 한 항목(`tool: scripts`)으로 달 수 없다(`build-speed-reflection-fanout` 은 Debug 팬아웃이라 다른 일).
 - 셰이더 bindless 입문: `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다.
-- 리눅스 CI 가 초록이 된 뒤 `E-1` `E-4` `E-10` `C-29 ⑤` 관찰 항목과 `B-5` `B-7` 을 본다.
-풀리는 조건: 각각 빌드가 조용할 때 · shaderdoc 결과 · 사용자 확인 · 리눅스 CI 초록.
+- 리눅스 CI 는 초록이 됐다(2026-10-26 메인 실행 40380883651). 남은 관찰은 각자의 절에서 본다: `ShardExitCodeAfterPass`(`E-4` `E-10`), `RuntimeQualityAdjust`(`C-29 ⑤`), `LinuxManualChecks`(`B-7`). `E-1` 은 다 풀려 지웠다.
+풀리는 조건: 각각 빌드가 조용할 때 · shaderdoc 결과 · 사용자 확인.
 
 ## 보류
 

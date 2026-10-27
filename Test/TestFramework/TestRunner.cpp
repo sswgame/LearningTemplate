@@ -175,7 +175,7 @@ namespace test
         if ( sw::FileUtil::removeDirectory( getProcessTempDirectory() ) == false )
             SW_LOG_WARNING( "Could not remove the process temp directory %# - is a file handle left open?", getProcessTempDirectory().c_str() );
 
-        _hostLogJudge.printAllowedSummary();
+        _caseLogJudge.printAllowedSummary();
         for ( ITestRunListener* pListener : _listListener )
         {
             pListener->onRunFinished( _catalog, _options, summary );

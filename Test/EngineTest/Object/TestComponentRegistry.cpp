@@ -492,6 +492,8 @@ SW_TEST_CASE( TypedComponentBucketTest, ComponentsAddedToPendingObjectsStayHidde
         else if ( roll < 11 && listDying.empty() == false )
         {
             // 불변식을 깨려는 시도: 삭제 대기 오브젝트에 붙인다. 붙기는 하지만 삭제 대기로 시작해야 한다.
+            // 이 오브젝트는 이미 씬 컴포넌트가 있어 둘째 씬 컴포넌트는 첫째 아래로 못 들어가고 뿌리로 남는다 — 그 Warning 은 이 걸음이 의도한 것이다.
+            SW_TEST_DEFENSIVE_SCOPE( "a second scene component added to a pending-destroy object stays a root" );
             GameObject*          pObject = listDying[Internal::nextRandom( state ) % listDying.size()];
             PointLightComponent* pAdded  = pObject->addComponent<PointLightComponent>();
             if ( pAdded == nullptr || pAdded->isPendingDestroy() == false )

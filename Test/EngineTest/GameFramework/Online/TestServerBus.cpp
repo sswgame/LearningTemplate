@@ -92,6 +92,7 @@ namespace
 
 SW_TEST_CASE( ServerBusTest, LocalBusesDeliverOnlyToSubscribers )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bad topic is dropped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     LocalServerBusHub hub;
     LocalServerBus    serverA{ &hub, 1 };
     LocalServerBus    serverB{ &hub, 2 };
@@ -100,6 +101,7 @@ SW_TEST_CASE( ServerBusTest, LocalBusesDeliverOnlyToSubscribers )
 
 SW_TEST_CASE( ServerBusTest, EphemeralBusesDeliverOnlyToSubscribers )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a bad topic is dropped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SystemMonotonicClock    clock;
     MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    cacheA{ &database };

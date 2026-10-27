@@ -331,19 +331,28 @@ SW_TEST_CASE( AccountStreamTest, ForgedOrForeignTicketsAndBadTokensAreRefused )
     NetConnectCredentials forgedCredentials;
     AccountClient::makeConnectCredentials( forged, forgedCredentials );
     SW_ASSERT_TRUE( forgedPair._client.connect( NetAddress::makeLoopback( 4100 ), forgedCredentials ) );
-    forgedPair.run( 0.5 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "forged tickets and foreign protocols are refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        forgedPair.run( 0.5 );
+    }
     SW_EXPECT_EQUAL( 0, forgedPair._server.getConnectedCount() );
 
     UDPPair               otherZone{ rig._server->_loginService.getTicketAuthority(), "zone-2", rig._nowMs };
     NetConnectCredentials credentials;
     AccountClient::makeConnectCredentials( ticket._ticket, credentials );
     SW_ASSERT_TRUE( otherZone._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
-    otherZone.run( 0.5 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a ticket for another zone is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        otherZone.run( 0.5 );
+    }
     SW_EXPECT_EQUAL( 0, otherZone._server.getConnectedCount() );
 
     UDPPair expired{ rig._server->_loginService.getTicketAuthority(), "zone-1", UnixMilliseconds{ ticket._ticket._expiresAtMs } };
     SW_ASSERT_TRUE( expired._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
-    expired.run( 0.5 );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an expired ticket is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        expired.run( 0.5 );
+    }
     SW_EXPECT_EQUAL( 0, expired._server.getConnectedCount() );
 }
 

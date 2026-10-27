@@ -72,19 +72,28 @@ namespace
 	</_listNode>
 </AudioGraphDef>)";
 
+        /** @brief 라이브러리에 없는 게임 파라미터(`NotDeclared`)를 읽는 그래프입니다 — 읽을 때는 맞고, 재생이 그 파라미터를 못 찾아 멈춘다. */
+        static constexpr const utf8* kOrphanGraphXML = R"(<AudioGraphDef _output="A" _durationSeconds="1"><_listNode>
+        <AudioGraphNodeDesc _name="A" _type="Sine"><_listParameter><AudioGraphParameterDesc _name="frequencyHz" _parameter="NotDeclared">
+        <_listPoint><AudioCurvePoint _x="0" _y="100" /><AudioCurvePoint _x="1" _y="200" /></_listPoint></AudioGraphParameterDesc></_listParameter></AudioGraphNodeDesc>
+        </_listNode></AudioGraphDef>)";
+
         /** @brief 엔진을 기본 그래프 · 테스트 라이브러리로 만들고 그래프 클립을 넣습니다. */
         [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine )
         {
             if ( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Stereo ) == false )
                 return false;
             engine.setRandomSeed( 7 );
-            const sw::shared_ptr<const sw::AudioClipData> pSource = test::AudioTestUtil::makeSineClip( 300.0f, 0.5f, 48000 );
-            const sw::shared_ptr<const sw::AudioClipData> pTone   = makeGraphClip( kToneGraphXML, { nullptr, nullptr } );
-            const sw::shared_ptr<const sw::AudioClipData> pGrains = makeGraphClip( kGrainGraphXML, { pSource } );
-            if ( pTone == nullptr || pGrains == nullptr )
+            const sw::shared_ptr<const sw::AudioClipData> pSource     = test::AudioTestUtil::makeSineClip( 300.0f, 0.5f, 48000 );
+            const sw::shared_ptr<const sw::AudioClipData> pTone       = makeGraphClip( kToneGraphXML, { nullptr, nullptr } );
+            const sw::shared_ptr<const sw::AudioClipData> pGrains     = makeGraphClip( kGrainGraphXML, { pSource } );
+            const sw::shared_ptr<const sw::AudioClipData> pOrphan     = makeGraphClip( kOrphanGraphXML, { nullptr } );
+            const bool                                    bClipsBuilt = pTone != nullptr && pGrains != nullptr && pOrphan != nullptr;
+            if ( bClipsBuilt == false )
                 return false;
             engine.getClipStore().addClip( sw::hashed_string( "test/tone.audiograph.xml" ), pTone );
             engine.getClipStore().addClip( sw::hashed_string( "test/grains.audiograph.xml" ), pGrains );
+            engine.getClipStore().addClip( sw::hashed_string( "test/orphan.audiograph.xml" ), pOrphan ); // 라이브러리가 가리키는 클립은 모두 먼저 있어야 한다(없으면 읽기 오류)
             sw::AudioEventLibrary library;
             return library.loadFromXMLText( kLibraryXML ) && engine.loadEventLibrary( sw::hashed_string( "graphtest" ), library );
         }
@@ -98,6 +107,7 @@ SW_TEST_CASE( AudioGraphTest, ValidationRejectsBrokenGraphs )
 {
     sw::AudioGraphDef def;
     SW_EXPECT_TRUE( def.loadFromXMLText( AudioGraphTestInternal::kToneGraphXML ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a broken audio graph is a read error" ); // 아래 자료는 모두 일부러 깨져 있다
     SW_EXPECT_FALSE( def.loadFromXMLText( R"(<AudioGraphDef _output="A" _durationSeconds="1"><_listNode>
         <AudioGraphNodeDesc _name="A" _type="Gain"><_listInput><item>B</item></_listInput></AudioGraphNodeDesc>
         <AudioGraphNodeDesc _name="B" _type="Gain"><_listInput><item>A</item></_listInput></AudioGraphNodeDesc></_listNode></AudioGraphDef>)" ) );
@@ -160,13 +170,7 @@ SW_TEST_CASE( AudioGraphTest, UnknownGameParameterStopsTheVoice )
 {
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioGraphTestInternal::initializeEngine( engine ) );
-    const sw::shared_ptr<const sw::AudioClipData> pOrphan = AudioGraphTestInternal::makeGraphClip( R"(<AudioGraphDef _output="A" _durationSeconds="1"><_listNode>
-        <AudioGraphNodeDesc _name="A" _type="Sine"><_listParameter><AudioGraphParameterDesc _name="frequencyHz" _parameter="NotDeclared">
-        <_listPoint><AudioCurvePoint _x="0" _y="100" /><AudioCurvePoint _x="1" _y="200" /></_listPoint></AudioGraphParameterDesc></_listParameter></AudioGraphNodeDesc>
-        </_listNode></AudioGraphDef>)",
-                                                                                                   { nullptr } );
-    SW_ASSERT_TRUE( pOrphan != nullptr );
-    engine.getClipStore().addClip( sw::hashed_string( "test/orphan.audiograph.xml" ), pOrphan );
+    SW_TEST_DEFENSIVE_SCOPE( "a graph reading an undeclared game parameter stops its voice with a reason" ); // 멈춤 이유를 알리는 로그가 이 확인이 보려는 것이다
     const sw::AudioPlayingID  playingID  = engine.postEvent( sw::hashed_string( "Orphan" ) );
     const sw::vector<float32> listOutput = test::AudioTestUtil::render( engine, sw::audio::kBlockFrameCount * 4 );
     SW_EXPECT_FALSE( engine.isPlaying( playingID ) );

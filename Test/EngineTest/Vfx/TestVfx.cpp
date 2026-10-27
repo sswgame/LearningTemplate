@@ -55,7 +55,7 @@ namespace sw
         }
 
         /**
-         * @brief 범위 동안 `gv_vfxSimulation` 을 바꿉니다. Shipping 은 변수가 없어(GPU 고정) `isApplied` 가 false 다.
+         * @brief 범위 동안 `gv_vfxSimulation` 을 바꿉니다. Shipping 은 변수가 없어(GPU 고정) `isApplied` 가 false 다 — CPU 를 요구하는 케이스는 `DevelopmentBuild` 로 먼저 거른다.
          * @details 시뮬레이션 대상은 효과를 읽을 때 정하므로 효과를 읽기 전에 만든다.
          */
         class ScopedVfxSimulationTarget
@@ -397,6 +397,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, SpawnScaleScalesRateAndBursts )
  */
 SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a full pool drops particles and warns once" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Tiny" );
     emitter._maxParticles     = 8;
     emitter._lifetimeMin      = 10.0f;
@@ -414,6 +415,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
  */
 SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a long frame is limited with a warning" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::VfxEmitterDef emitter = sw::makeValidEmitter( "Stream" );
     emitter._spawnRate        = 60.0f;
     emitter._lifetimeMin      = 10.0f;
@@ -557,9 +559,9 @@ SW_TEST_CASE( VfxCPUSimulationTest, CollisionBouncesOrKills )
  */
 SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThem )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)
     const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
-    if ( cpuTarget.isApplied() == false )
-        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
+    SW_ASSERT_TRUE( cpuTarget.isApplied() );
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "Vfx" ) );
     sw::VfxComponent*     pVfx    = pObject->addComponent<sw::VfxComponent>();
@@ -602,9 +604,9 @@ SW_TEST_CASE( VfxComponentTest, PlayPublishesParticlesPerEmitterAndStopClearsThe
  */
 SW_TEST_CASE( VfxComponentTest, SameSeedReplaysTheSameParticles )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)
     const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
-    if ( cpuTarget.isApplied() == false )
-        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
+    SW_ASSERT_TRUE( cpuTarget.isApplied() );
     sw::GameObjectManager manager;
     sw::VfxComponent*     arrVfx[3]{};
     const uint32          arrSeed[3] = { 7, 7, 8 };
@@ -650,9 +652,9 @@ SW_TEST_CASE( VfxComponentTest, MissingEffectHasNoEmitters )
  */
 SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)
     const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
-    if ( cpuTarget.isApplied() == false )
-        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
+    SW_ASSERT_TRUE( cpuTarget.isApplied() );
     sw::Scene scene( "VfxSnapshot" );
     SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     const float32     arrDistance[3] = { 5.0f, 20.0f, 12.0f };
@@ -770,9 +772,9 @@ SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
 SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
 {
     // 라이트 방출기도 GPU 로 돌 수 있다(VfxLightDef) — 이 테스트는 CPU 방출기의 라이트(씬 라이트 목록)를 본다. GPU 방출기의 빛은 라이트 버퍼의 GPU 구간이 맡는다.
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)
     const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
-    if ( cpuTarget.isApplied() == false )
-        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
+    SW_ASSERT_TRUE( cpuTarget.isApplied() );
     sw::Scene scene( "VfxTrail" );
     SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "Trail" ) )->addComponent<sw::VfxComponent>();
@@ -871,6 +873,7 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     impossible._collision._method = static_cast<sw::VfxCollisionMethod>( 99 );
     SW_EXPECT_TRUE( impossible.computeSupportedTargets().isEmpty() );
     {
+        SW_TEST_DEFENSIVE_SCOPE( "an emitter whose module targets do not intersect is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         test::ScopedLogCollector collector;
         SW_EXPECT_FALSE( impossible.validate( "test" ) );
         SW_EXPECT_EQUAL( uint32( 1 ), collector.countWithID( "Vfx.NoSimulationTargetForEmitter" ) );

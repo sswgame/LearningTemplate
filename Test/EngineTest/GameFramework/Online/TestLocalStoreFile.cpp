@@ -97,7 +97,8 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     SW_EXPECT_TRUE( error.find( "cloud" ) != string::npos );
     {
         // 기반 이름은 키트가 덮지 못한다 — 기반 백엔드도 같은 표에 있어 이름 중복으로 거절되고, 등록은 단언으로 멈춘다.
-        test::ScopedAssertCapture           assertCapture;
+        test::ScopedAssertCapture assertCapture;
+        SW_TEST_DEFENSIVE_SCOPE( "a backend that is built in cannot be registered again" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         const LocalStoreBackendRegistration reserved{ LocalStoreFactory::kFileBackendName, createNeverUsedLocalStorage };
         if ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );

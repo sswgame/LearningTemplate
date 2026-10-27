@@ -215,6 +215,7 @@ SW_TEST_CASE( AnimationNotifyTest, TableRejectsUnknownHandlerAndArguments )
     SW_EXPECT_NEAR_EQUAL( 3.0f, pSwing->getFloatParam( hashed_string( "samples" ) ), 1e-6f );
 
     AnimationNotifyTable bad;
+    SW_TEST_DEFENSIVE_SCOPE( "an invalid notify table is a read error" ); // 아래 자료는 모두 일부러 깨져 있다
     SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimationNotifies><Notify name="A" handler="NoSuchHandler"/></AnimationNotifies>)", "unknownHandler", registry ) );
     SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimationNotifies><Notify name="A" handler="CameraShake" amplitde="0.1"/></AnimationNotifies>)", "typo", registry ) );
     SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimationNotifies><Notify name="A" handler="Footstep"/></AnimationNotifies>)", "missingRequired", registry ) );
@@ -400,8 +401,12 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
                                             "builtins", AnimationNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
 
-    manager.beginPlay();
-    manager.update( TestAnimationNotifyInternal::kFrame ); // 바디를 만든다
+    {
+        // 알림 컴포넌트는 같은 오브젝트의 애니메이터가 프레임을 먹이는 것이 정상이다 — 이 테스트는 프레임을 직접 먹이므로 애니메이터가 없다는 경고가 한 번 난다.
+        SW_TEST_DEFENSIVE_SCOPE( "this test feeds notify frames directly, so the object has no animator" );
+        manager.beginPlay();
+        manager.update( TestAnimationNotifyInternal::kFrame ); // 바디를 만든다
+    }
 
     vector<CameraShakeRequest> listShake;
     Subscription               shakeSubscription =

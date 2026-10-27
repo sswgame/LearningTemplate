@@ -150,7 +150,8 @@ namespace sw
                     // 최신 바이너리의 리플렉션을 이전 매니페스트에서 가져오지 않는 이유는 `docs/09_Decisions.md` 에 있다.
                     const Stopwatch reflectWatch;
                     vector<uint8>   bytecode;
-                    if ( FileUtil::readFile( task._outPath, bytecode ) && bytecode.empty() == false )
+                    const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
+                    if ( bOutputRead && bytecode.empty() == false )
                     {
                         outResult._reflection = ShaderReflection::reflect( bytecode, task._format );
                         // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.

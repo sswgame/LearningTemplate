@@ -120,6 +120,7 @@ SW_TEST_CASE( AnimationFootContactTest, TableReadsAndValidatesFootContacts )
         R"(<AnimationNotifies><Notify name="FootL" handler="Record"/><FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.1" max_vertical_speed="0.6" speed="1"/></AnimationNotifies>)",
         R"(<AnimationNotifies><Notify name="FootL" handler="Record"/><FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.1" max_vertical_speed="0.6"/><FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.1" max_vertical_speed="0.6"/></AnimationNotifies>)",
     };
+    SW_TEST_DEFENSIVE_SCOPE( "invalid foot contact data is a read error" ); // 아래 자료는 모두 일부러 깨져 있다
     for ( const utf8* pXML : arrBad )
     {
         AnimationNotifyTable bad;

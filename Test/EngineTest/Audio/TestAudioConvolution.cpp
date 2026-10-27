@@ -124,5 +124,6 @@ SW_TEST_CASE( AudioConvolutionTest, MixerLoadRejectsConvolutionReverbWithoutImpu
     sw::AudioMixerDesc desc;
     const sw::string   xml = "<AudioMixerDesc><_listBus><AudioBusDesc _name=\"master\"><_listEffect>"
                              "<AudioEffectDesc _type=\"ConvolutionReverb\" /></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>";
+    SW_TEST_DEFENSIVE_SCOPE( "a convolution reverb without an impulse response is a read error" ); // 일부러 깨진 자료의 읽기 오류 로그다
     SW_EXPECT_FALSE( desc.loadFromXMLText( xml ) );
 }

@@ -474,6 +474,7 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
     struct ObjectSnapshotRecord
     {
         string        _name;
+        uint64        _objectID; ///< 되돌릴 때 같은 id 로 다시 만든다 — 자식이 저장한 부모 참조가 id 로 풀린다(`EditorPlaySession` 의 복원과 같다)
         vector<uint8> _bytes;
     };
     vector<ObjectSnapshotRecord> listRecord;
@@ -498,11 +499,11 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
 
         vector<uint8> rootBytes;
         SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pRoot, rootBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
-        listRecord.push_back( { rootName, std::move( rootBytes ) } );
+        listRecord.push_back( { rootName, pRoot->getObjectID(), std::move( rootBytes ) } );
 
         vector<uint8> childBytes;
         SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pChild, childBytes, sw::ObjectSaveOptions{ sw::SerializePurpose::Snapshot } ) );
-        listRecord.push_back( { childName, std::move( childBytes ) } );
+        listRecord.push_back( { childName, pChild->getObjectID(), std::move( childBytes ) } );
     }
 
     // 2. PIE 세션 모의 변이 (삭제, 추가, 위치 변형)
@@ -524,8 +525,9 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
 
     for ( const auto& record : listRecord )
     {
-        GameObject* pRestored = manager.createGameObject( hashed_string( record._name.c_str() ) );
+        GameObject* pRestored = manager.createGameObjectWithID( hashed_string( record._name.c_str() ), record._objectID );
         SW_ASSERT_NOT_NULL( pRestored );
+        SW_EXPECT_EQUAL( record._objectID, pRestored->getObjectID() );
         const size_t bytesRead = ObjectStateSerializer::loadFromBinaryBuffer( pRestored, record._bytes.data(), record._bytes.size(), sw::ObjectLoadContext{ sw::SerializePurpose::Snapshot } );
         SW_EXPECT_EQUAL( record._bytes.size(), bytesRead );
     }
@@ -548,6 +550,7 @@ SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
         SW_EXPECT_NEAR_EQUAL( 1.0f, pChildSc->getLocalPosition()._x, 0.001f );
         SW_EXPECT_NEAR_EQUAL( 2.0f, pChildSc->getLocalPosition()._y, 0.001f );
         SW_EXPECT_NEAR_EQUAL( 3.0f, pChildSc->getLocalPosition()._z, 0.001f );
+        SW_EXPECT_TRUE_MSG( pChildSc->getParent() == pRootSc, childName.c_str() ); // 계층도 되돌아왔다 — 같은 id 로 만들었으므로 부모 참조가 풀린다
     }
 }
 

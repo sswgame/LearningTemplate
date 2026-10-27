@@ -54,6 +54,7 @@
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "EngineTest/GameModuleTypeNames.h"
 #include "EngineTest/HostTargetTestUtil.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
@@ -562,45 +563,7 @@ namespace
          */
         static void collectGameModuleTypeNames( const sw::string& resourceRoot, sw::vector<sw::string>& outListTypeName )
         {
-            outListTypeName.clear();
-            const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( resourceRoot ) );
-            sw::vector<sw::string> listHeader;
-            if ( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( repositoryRoot, "Source/Games" ), ".h", listHeader, true ) == false )
-                return;
-            for ( const sw::string& headerPath : listHeader )
-            {
-                sw::string text;
-                if ( sw::FileUtil::readTextFile( headerPath, text ) == false )
-                    continue;
-                for ( size_t reflectPos = text.find( "REFLECT(" ); reflectPos != sw::string::npos; reflectPos = text.find( "REFLECT(", reflectPos + 1 ) )
-                {
-                    // 다음 `class` · `struct` 중 가까운 것이 이 REFLECT 의 타입이다(설정 구조체도 게임 모듈 타입이다).
-                    const size_t classPos   = text.find( "class ", reflectPos );
-                    const size_t structPos  = text.find( "struct ", reflectPos );
-                    const bool   bStruct    = structPos != sw::string::npos && ( classPos == sw::string::npos || structPos < classPos );
-                    const size_t keywordPos = bStruct ? structPos : classPos;
-                    if ( keywordPos == sw::string::npos )
-                        break;
-                    size_t nameStart = keywordPos + ( bStruct ? 7 : 6 );
-                    while ( nameStart < text.size() && text.compare( nameStart, 3, "SW_" ) == 0 )
-                    {
-                        // 내보내기 매크로(`SW_API` 등)를 건너뛴다.
-                        nameStart = text.find( ' ', nameStart );
-                        if ( nameStart == sw::string::npos )
-                            break;
-                        ++nameStart;
-                    }
-                    if ( nameStart == sw::string::npos )
-                        break;
-                    size_t nameEnd = nameStart;
-                    while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
-                    {
-                        ++nameEnd;
-                    }
-                    if ( nameEnd > nameStart )
-                        outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
-                }
-            }
+            gamemoduletypes::collectTypeNames( resourceRoot, outListTypeName ); // 씬 · 프리팹을 읽는 다른 테스트도 같은 목록을 쓴다(EngineTest/GameModuleTypeNames.h)
         }
 
         /**
@@ -812,6 +775,10 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
     sw::unique_ptr<test::ScopedHostTarget> pServerHost;
     if ( test::HostTargetTestUtil::isServerOnlyBuild() )
         pServerHost = sw::make_unique<test::ScopedHostTarget>( "Server" );
+
+    // 게임 모듈 타입의 "모르는 타입" Warning 만 의도된 줄이다(아래 `removeGameModuleTypeWarnings` 가 같은 줄을 판정에서 뺀다). 다른 줄은 표식 없이 남는다.
+    test::ScopedDefensiveTestLog expectedGameTypes( "game module component types are unknown to this executable", gamemoduletypes::makeUnknownTypeNeedles( listGameTypeName ) );
+    test::ScopedDefensiveTestLog expectedValidationFixtures( "automation scenes built to raise validation issues", gamemoduletypes::makeValidationFixtureNeedles() );
 
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )

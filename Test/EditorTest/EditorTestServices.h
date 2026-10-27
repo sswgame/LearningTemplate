@@ -195,7 +195,8 @@ namespace sw::editor
             : _scope{}
             , _activeScope{ _scope }
         {
-            (void)_scope.bind( &service ); // 새 범위라 겹치지 않는다
+            // 새 범위라 겹치지 않는다. const 서비스(`ScopedEditorService<const T>`)는 const 를 떼어 건다 - 찾는 쪽이 `findSubsystem<const T>` 로 const 를 되붙인다.
+            (void)_scope.bind( const_cast<std::remove_const_t<T>*>( &service ) );
         }
 
         ScopedEditorService( const ScopedEditorService& )            = delete;

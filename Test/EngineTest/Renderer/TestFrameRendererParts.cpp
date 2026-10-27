@@ -204,6 +204,7 @@ SW_TEST_CASE( RenderTargetImageFileTest, UnpacksDepthAndSingleChannelAsGray )
  */
 SW_TEST_CASE( FrameCaptureTest, StaysInactiveWithoutDeviceAndRejectsMismatchedOutput )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a mismatched capture output is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::IRHIDevice*             pDevice = nullptr;
     sw::TransientAttachmentPool pool;
     sw::RenderPipelineAsset     pipeline;

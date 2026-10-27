@@ -136,7 +136,10 @@ SW_TEST_CASE( RemoteConfigTest, ExperimentAssignsStableVariantsAndCountsThem )
     server.submitSet( front, "exp.gem_price", experiment, Internal::makeAudit( 1 ) );
     RemoteConfigValue broken = experiment;
     broken._text             = "control:9999";
-    server.submitSet( front, "exp.broken", broken, Internal::makeAudit( 2 ) ); // 쓰기 전에 거절된다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a broken remote config change is rejected" );    // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        server.submitSet( front, "exp.broken", broken, Internal::makeAudit( 2 ) ); // 쓰기 전에 거절된다
+    }
     front.pollCompletions();
     string variant;
     SW_EXPECT_FALSE( server.findVariant( "exp.broken", 1, variant ) );

@@ -218,14 +218,17 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
 {
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_EXPECT_FALSE( XMLReadUtil::parseRootOrWarn( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
-    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
-    int32 idCount = 0;
-    for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
     {
-        idCount += XMLReadUtil::findRequiredID( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+        SW_TEST_DEFENSIVE_SCOPE( "a missing root and an item without an id are reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( XMLReadUtil::parseRootOrWarn( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
+        SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
+        int32 idCount = 0;
+        for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+        {
+            idCount += XMLReadUtil::findRequiredID( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+        }
+        SW_EXPECT_EQUAL( 1, idCount );
     }
-    SW_EXPECT_EQUAL( 1, idCount );
 
     // 벡터는 정확히 그 개수의 실수여야 한다 — 모자라거나 남거나 숫자가 아니면 실패이고 값은 그대로다(빠진 성분을 기본값으로 메우지 않는다).
     float4 color{ 9.0f, 9.0f, 9.0f, 0.75f };

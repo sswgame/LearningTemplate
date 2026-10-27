@@ -310,6 +310,7 @@ SW_TEST_CASE( XliffFileTest, RoundTrip )
  */
 SW_TEST_CASE( XliffFileTest, BadInputIsRejected )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "bad XLIFF input is rejected" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::XliffFile file;
     sw::string    error;
     SW_EXPECT_FALSE( file.parse( R"(<xliff version="2.0"><file><body/></file></xliff>)", &error ) );
@@ -398,7 +399,10 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     test::ScopedLogCollector logs;
     sw::vector<uint8>        broken = bytes;
     broken[broken.size() - 1] ^= 0xFFu;
-    SW_EXPECT_FALSE( runtime.loadBinaryTable( broken.data(), broken.size() ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a table with a bad checksum is not loaded" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( runtime.loadBinaryTable( broken.data(), broken.size() ) );
+    }
     SW_EXPECT_STREQ( "시작", runtime.getString( sw::hashed_string( "ui.start" ) ) );
 
     runtime.unloadLanguage( "ko" );

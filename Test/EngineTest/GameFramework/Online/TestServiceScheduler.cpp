@@ -186,8 +186,11 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOverByAnotherServer )
     SW_EXPECT_EQUAL( handlerA._listRun[0]._occurrenceMs.count(), handlerB._listRun[0]._occurrenceMs.count() );
 
     const uint64 commitsBefore = database.getCommitCount();
-    schedulerA.completeRun( handlerA._listRun[0], true ); // 늦게 깨어난 A 의 끝 알림은 판이 낡아 적히지 않는다
-    frontA.pollCompletions();
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a run taken over by another server is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        schedulerA.completeRun( handlerA._listRun[0], true );                        // 늦게 깨어난 A 의 끝 알림은 판이 낡아 적히지 않는다
+        frontA.pollCompletions();
+    }
     SW_EXPECT_EQUAL( commitsBefore, database.getCommitCount() );
     schedulerB.completeRun( handlerB._listRun[0], true );
     frontB.pollCompletions();

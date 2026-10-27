@@ -4,6 +4,10 @@
 
 #include "Editor/Common/Localization/LocalizationTools.h"
 
+#include "EditorTest/EditorTestServices.h"
+
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/PortableObjectFile.h"
 #include "Engine/Localization/TextGatherer.h"
@@ -165,9 +169,11 @@ SW_TEST_CASE( LocalizationGatherTest, RepositoryProjectsAreUpToDate )
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build carries no property metadata (Localizable) - gathering runs in development builds
 #endif
-    sw::vector<sw::string> listProjectPath;
+    // 엔진 문자열 프로젝트의 경로는 엔진 기본 에셋 표에 있다 - 에디터 서비스로 걸지 않으면 엔진 프로젝트가 모음에서 빠진 채 이 확인이 지나간다.
+    sw::editor::ScopedEditorService<const sw::EngineDefaultAssets> defaultAssetsService( sw::engine::getSubsystem<sw::EngineDefaultAssets>() );
+    sw::vector<sw::string>                                         listProjectPath;
     sw::LocalizationTools::collectProjectPaths( listProjectPath, true );
-    SW_ASSERT_TRUE( listProjectPath.size() >= 2u ); // 엔진 + Shooter3D
+    SW_ASSERT_TRUE( listProjectPath.size() >= 3u ); // 엔진 + 에디터 + Shooter3D
     const sw::string repositoryRoot = sw::LocalizationTools::findRepositoryRoot();
     for ( const sw::string& projectPath : listProjectPath )
     {
@@ -356,8 +362,11 @@ SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
 
     sw::LocalizationExchangeResult imported;
     {
-        test::ScopedLogCollector logs; // 모르는 키는 경고
-        SW_ASSERT_TRUE( sw::LocalizationTools::importPo( projectPath, editedPath, imported ) );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a key not in the string tables is skipped with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            test::ScopedLogCollector logs;                                                         // 모르는 키는 경고
+            SW_ASSERT_TRUE( sw::LocalizationTools::importPo( projectPath, editedPath, imported ) );
+        }
     }
     SW_EXPECT_EQUAL( uint32( 1 ), imported._unknownKeyCount );
     SW_EXPECT_EQUAL( uint32( 1 ), imported._fuzzyCount );

@@ -363,6 +363,7 @@ SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
  */
 SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown node type finishes the dialogue" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const DialogueAssetNodeType arrUnknownType[] = { DialogueAssetNodeType::Count, static_cast<DialogueAssetNodeType>( 42 ) };
     for ( DialogueAssetNodeType unknownType : arrUnknownType )
     {

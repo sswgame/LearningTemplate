@@ -335,6 +335,7 @@ SW_TEST_CASE( LocalizationManagerTest, LocTextMacroLooksUpNamespaceDotKey )
 
     SW_EXPECT_STREQ( "Commencer", SW_LOCTEXT( "Menu", "Start", "Start" ) );
     {
+        SW_TEST_DEFENSIVE_SCOPE( "a missing key is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         test::ScopedLogCollector logs;
         SW_EXPECT_STREQ( "Options", SW_LOCTEXT( "Menu", "Options", "Options" ) );
     }
@@ -345,6 +346,7 @@ SW_TEST_CASE( LocalizationManagerTest, LocTextMacroLooksUpNamespaceDotKey )
     }
     SW_EXPECT_TRUE( bReported );
 
+    SW_TEST_DEFENSIVE_SCOPE( "a missing format key is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     const sw::string formatted = SW_LOCFORMAT( "Menu", "Count", "{n} items", sw::TextArgumentList().addInteger( "n", 3 ) );
     SW_EXPECT_STREQ( "3 items", formatted.c_str() );
 
@@ -466,6 +468,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
  */
 SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPackExclusion )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a broken table file is reported" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string folder = test::makeTempDirectory( "loc_staging" );
     (void)LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" ); // 테스트 준비 — 쓰기 실패는 아래 모으기 단언이 드러낸다
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.quit": { "text": "종료" })" );

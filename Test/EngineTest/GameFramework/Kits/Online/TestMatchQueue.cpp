@@ -197,7 +197,10 @@ SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseSt
     dependencies._pRouter  = &router;
     dependencies._serverID = 1;
     MatchQueueService withoutStats;
-    SW_EXPECT_FALSE( withoutStats.initialize( dependencies, vector<MatchModeDefinition>{ rated } ) ); // 기본 실력으로 조용히 돌지 않는다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a rated mode without a stat source is refused" );                       // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( withoutStats.initialize( dependencies, vector<MatchModeDefinition>{ rated } ) ); // 기본 실력으로 조용히 돌지 않는다
+    }
 
     FakeStatSource stats;
     dependencies._pStatSource = &stats;
@@ -412,7 +415,10 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         node.step( UnixMilliseconds{ 1000 } );
         node.step( UnixMilliseconds{ 1000 + MatchQueueLimit::kNoServerGiveUpMs - 1 } );
         SW_EXPECT_TRUE( node._listNotification.empty() );
-        node.step( UnixMilliseconds{ 1000 + MatchQueueLimit::kNoServerGiveUpMs } ); // 끝내 서버가 없다
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a match with no server gives up after waiting" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            node.step( UnixMilliseconds{ 1000 + MatchQueueLimit::kNoServerGiveUpMs } ); // 끝내 서버가 없다
+        }
         SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
         for ( const MatchQueueNotification& notification : node._listNotification )
         {

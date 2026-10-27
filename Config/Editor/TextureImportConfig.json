@@ -11,7 +11,7 @@
       "format": "BC5_UNORM",
       "generate_mips": true,
       "srgb": false,
-      "invert_green": true,
+      "invert_green": false,
       "swizzle": "RGBA"
     },
     "Base_UI": {

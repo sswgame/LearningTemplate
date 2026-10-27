@@ -175,12 +175,15 @@ SW_TEST_CASE( WorldSystemsTest, FlagConditionsFollowPrecedenceParenthesesAndReje
 
     // 잘못된 식은 거짓 — 참이 될 수 있는 앞부분이 있어도.
     const utf8* const arrBadExpression[] = { "a &&", "(a", "a)", "a b", "count >=", "&& a", "a ||| c", "a & c", "99999999999", "!" };
-    for ( const utf8* pExpression : arrBadExpression )
     {
-        bool bResult = true;
-        SW_EXPECT_FALSE( GameFlags::parseCondition( pExpression, flags, bResult ) );
-        SW_EXPECT_FALSE( bResult );
-        SW_EXPECT_FALSE( flags.evaluate( pExpression ) );
+        SW_TEST_DEFENSIVE_SCOPE( "a malformed flag condition is reported and evaluates false" ); // 이 반복이 일부러 내는 Warning 이다
+        for ( const utf8* pExpression : arrBadExpression )
+        {
+            bool bResult = true;
+            SW_EXPECT_FALSE( GameFlags::parseCondition( pExpression, flags, bResult ) );
+            SW_EXPECT_FALSE( bResult );
+            SW_EXPECT_FALSE( flags.evaluate( pExpression ) );
+        }
     }
     bool bResult = false;
     SW_EXPECT_TRUE( GameFlags::parseCondition( "((a))", flags, bResult ) );
@@ -241,7 +244,10 @@ SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier
     SW_EXPECT_TRUE( listPath.empty() );
     // 잘못된 조건의 문은 늘 잠긴다.
     flags.setFlag( hashed_string( "hasKey" ) );
-    SW_EXPECT_FALSE( graph.canTraverse( hashed_string( "garden" ), hashed_string( "vault" ), flags ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a door with a malformed condition stays locked and reports it" );
+        SW_EXPECT_FALSE( graph.canTraverse( hashed_string( "garden" ), hashed_string( "vault" ), flags ) );
+    }
     // 조건식의 비교도 문에 쓴다.
     flags.setFlag( hashed_string( "ladder" ), 1 );
     SW_EXPECT_FALSE( graph.canTraverse( hall, hashed_string( "attic" ), flags ) );

@@ -53,29 +53,37 @@ namespace
         outReachedEnd = true;
     }
 
-    /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 남깁니다. */
+    /**
+     * @brief 아래 탐침 본문이 상태를 적을 지역 레지스트리 — 탐침은 프로세스 레지스트리가 아니라 그 레지스트리의 지금 케이스를 향한다.
+     * @details 판정기를 시험하는 탐침은 실제 로그를 내지 않고 그 레지스트리의 판정기에 줄을 **값으로** 넣는다(`CaseLogJudge::recordLine`). 실제 로그를 내면 일부러 낸 Error 가
+     *          바깥 실행의 출력에 처리하지 않은 줄로 남고, 이 줄을 표식(방어 구간)으로 가리면 안쪽 판정기도 그 줄을 의도된 것으로 알아 시험이 서로 어긋난다.
+     */
+    test::TestRegistry* s_pProbeRegistry = nullptr;
+
+    /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 넣습니다(로그 id 없음). */
     void logProbeError()
     {
-        SW_LOG_ERROR_ID( "Test.ProbeError", "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
+        s_pProbeRegistry->getCaseLogJudge().recordLine( sw::LogLevel::Error, "Probe", "", "Deliberate probe error (TestFrameworkTest.CaseFailsOnUnexpectedErrorLog)" );
     }
 
-    /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Warning 을 하나 남깁니다. */
+    /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Warning 을 하나 넣습니다. */
     void logProbeWarning()
     {
-        SW_LOG_WARNING( "Deliberate probe warning (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
+        s_pProbeRegistry->getCaseLogJudge().recordLine( sw::LogLevel::Warning, "Probe", "", "Deliberate probe warning (TestFrameworkTest.CaseFailsOnUnexpectedErrorLog)" );
     }
 
-    /** @brief 지역 레지스트리의 케이스 본문 — 로그 id(`Probe.Deliberate`)가 붙은 Error 를 하나 남깁니다. */
+    /** @brief 지역 레지스트리의 케이스 본문 — 로그 id(`Probe.Deliberate`)가 붙은 Error 를 하나 넣습니다. */
     void logProbeErrorWithID()
     {
-        SW_LOG_ERROR_ID( "Probe.Deliberate", "Deliberate probe error with a log id (TestFrameworkTest.AllowedLogIsToleratedOnlyForItsSuiteAndID)" );
+        s_pProbeRegistry->getCaseLogJudge().recordLine( sw::LogLevel::Error, "Probe", "Probe.Deliberate",
+                                                        "Deliberate probe error with a log id (TestFrameworkTest.AllowedLogIsToleratedOnlyForItsSuiteAndID)" );
     }
 
     /** @brief 지역 레지스트리의 호스트 판정기에 허용 목록 글을 직접 넣습니다 — 저장소의 파일을 읽지 않는다. */
     void useAllowList( test::TestRegistry& registry, const utf8* pAllowListJSON )
     {
         sw::string error;
-        SW_EXPECT_TRUE_MSG( registry.getHostLogJudge().getPolicy().parseAllowList( pAllowListJSON, "probe.json", error ), error.c_str() );
+        SW_EXPECT_TRUE_MSG( registry.getCaseLogJudge().getPolicy().parseAllowList( pAllowListJSON, "probe.json", error ), error.c_str() );
     }
 
     /** @brief 지역 레지스트리의 케이스 본문 — 방어 테스트 구간 안에서 Error 를 남깁니다. */
@@ -93,9 +101,6 @@ namespace
         utf8*      argv[] = { programName, argument.data() };
         registry.configureFromArgs( 2, argv );
     }
-
-    /** @brief 아래 탐침 본문이 상태를 적을 지역 레지스트리 — 탐침은 프로세스 레지스트리가 아니라 그 레지스트리의 지금 케이스를 건너뛰게 한다. */
-    test::TestRegistry* s_pProbeRegistry = nullptr;
 
     /** @brief 지역 레지스트리의 케이스 본문 — 구성 기능이 없어 건너뛴 것으로 표시한다(어느 구성에서나 같은 판정을 보려고 직접 표시). */
     void skipForMissingDevelopmentFeature()
@@ -457,64 +462,81 @@ SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )
 }
 
 /**
- * @brief [TestFrameworkTest] 호스트 스위트 케이스는 예상 밖 Error 로그 하나로 진다 — 방어 구간의 Error 와 일반 스위트는 그대로 통과
- * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
- *          통과한 적이 있다). 이 케이스는 일부러 Error 한 줄을 남기므로 그 줄이 이 실행의 출력에 보인다.
+ * @brief [TestFrameworkTest] 모든 스위트의 케이스는 예상 밖 Error · Warning 로그 하나로 진다 — 방어 구간의 Error 는 그대로 통과
+ * @details 스위트 종류(호스트 · 일반)로 가르지 않는다. 가르면 CPU 테스트가 깨진 자료를 읽어 남기는 거절 로그 수백 줄이 표식 없이 쌓여도 아무도 지지 않았다.
+ *          GPU 테스트는 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
+ *          통과한 적이 있다). 이 케이스는 일부러 낸 Error 를 실제 로그가 아니라 판정기에 값으로 넣고(`CaseLogJudge::recordLine`), 진다고 기대하는 실행의 실패 보고는 막아 바깥 출력에 남지 않는다.
  */
-SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
+SW_TEST_CASE( TestFrameworkTest, CaseFailsOnUnexpectedErrorLog )
 {
-    test::TestRegistry hostRegistry;
-    useAllowList( hostRegistry, R"({ "allowed": [] })" );
-    hostRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    hostRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( hostRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Error must fail" );
+    {
+        // 진다고 기대하는 실행은 실패 보고를 로그로 찍는다 — 그 줄은 이 시험의 일부라 막는다. 판정 입력은 값으로 넣으므로 막아도 판정은 같다.
+        SW_TEST_SUPPRESS_LOGS();
+        test::TestRegistry hostRegistry;
+        s_pProbeRegistry = &hostRegistry;
+        useAllowList( hostRegistry, R"({ "allowed": [] })" );
+        hostRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+        hostRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+        SW_EXPECT_TRUE_MSG( hostRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Error must fail" );
 
-    test::TestRegistry warningRegistry;
-    useAllowList( warningRegistry, R"({ "allowed": [] })" );
-    warningRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    warningRegistry.getCatalog().addCase( "GpuProbeTest", "LogsWarning", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeWarning ) );
-    SW_EXPECT_TRUE_MSG( warningRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Warning must fail" );
+        test::TestRegistry warningRegistry;
+        s_pProbeRegistry = &warningRegistry;
+        useAllowList( warningRegistry, R"({ "allowed": [] })" );
+        warningRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+        warningRegistry.getCatalog().addCase( "GpuProbeTest", "LogsWarning", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeWarning ) );
+        SW_EXPECT_TRUE_MSG( warningRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Warning must fail" );
 
+        // 스위트 종류 표식이 없는 일반 스위트도 같은 줄에 진다.
+        test::TestRegistry plainRegistry;
+        s_pProbeRegistry = &plainRegistry;
+        useAllowList( plainRegistry, R"({ "allowed": [] })" );
+        plainRegistry.getCatalog().addCase( "PlainProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+        SW_EXPECT_TRUE_MSG( plainRegistry.runAllTests() == 1, "every suite counts an unexpected Error, not only host suites" );
+        s_pProbeRegistry = nullptr;
+    }
+
+    // 방어 구간 안의 실제 로그는 리스너를 지나 표식으로 가려진다 — 실제 로그 경로는 이 한 곳에서 시험한다(줄은 표식이 붙어 나간다).
     test::TestRegistry defensiveRegistry;
-    defensiveRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    defensiveRegistry.getCatalog().addCase( "GpuProbeTest", "LogsDefensiveError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorInDefensiveScope ) );
+    defensiveRegistry.getCatalog().addCase( "PlainProbeTest", "LogsDefensiveError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorInDefensiveScope ) );
     SW_EXPECT_TRUE_MSG( defensiveRegistry.runAllTests() == 0, "an Error inside SW_TEST_DEFENSIVE_SCOPE is expected, not a failure" );
-
-    test::TestRegistry plainRegistry;
-    plainRegistry.getCatalog().addCase( "PlainProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( plainRegistry.runAllTests() == 0, "only host suites count Error logs" );
 }
 
 /**
  * @brief [TestFrameworkTest] 허용 목록의 `suite` 항목은 그 스위트 · 그 로그 id 만 견디고, 로그 id 가 없는 줄은 어떤 항목으로도 가릴 수 없다
- * @details 허용 목록(`allowedlogs.json`)은 시나리오 실행기와 호스트 스위트가 함께 쓰는 하나뿐인 목록이다. 다른 id 나 다른 스위트까지 빼 주거나
- *          id 없는 줄을 문구로 빼 주면 호스트 스위트의 Error 판정이 다시 구멍이 된다.
+ * @details 허용 목록(`allowedlogs.json`)은 시나리오 실행기와 테스트 스위트가 함께 쓰는 하나뿐인 목록이다. 다른 id 나 다른 스위트까지 빼 주거나
+ *          id 없는 줄을 문구로 빼 주면 케이스의 Error 판정이 다시 구멍이 된다.
  */
 SW_TEST_CASE( TestFrameworkTest, AllowedLogIsToleratedOnlyForItsSuiteAndID )
 {
+    SW_TEST_SUPPRESS_LOGS(); // 진다고 기대하는 실행의 실패 보고 줄을 막는다 — 판정 입력은 값(`recordLine`)이라 판정은 같다
     test::TestRegistry knownRegistry;
+    s_pProbeRegistry = &knownRegistry;
     useAllowList( knownRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     knownRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     knownRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
     SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "an allowed log id must be tolerated in its suite" );
 
     test::TestRegistry otherIDRegistry;
+    s_pProbeRegistry = &otherIDRegistry;
     useAllowList( otherIDRegistry, R"({ "allowed": [ { "id": "Probe.Other", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     otherIDRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     otherIDRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
     SW_EXPECT_TRUE_MSG( otherIDRegistry.runAllTests() == 1, "an allowed log id must not tolerate a different id" );
 
     test::TestRegistry otherSuiteRegistry;
+    s_pProbeRegistry = &otherSuiteRegistry;
     useAllowList( otherSuiteRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "OtherProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     otherSuiteRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     otherSuiteRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
     SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "an allowed log id must not tolerate another suite" );
 
     test::TestRegistry noIDRegistry;
+    s_pProbeRegistry = &noIDRegistry;
     useAllowList( noIDRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     noIDRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     noIDRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( noIDRegistry.runAllTests() == 1, "a line without a log id can never be tolerated" );
+    s_pProbeRegistry = nullptr;
 }
 
 /**

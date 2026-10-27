@@ -36,7 +36,8 @@ namespace
             for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
             {
                 const sw::string candidate = sw::FileUtil::joinPath( directory, kFontRepoPath );
-                if ( sw::FileUtil::readFile( candidate, outBytes ) )
+                // 위로 올라가며 후보를 찾는다 — 없는 후보는 읽지 않는다(없는 파일을 읽으면 읽는 쪽이 후보마다 Error 를 남긴다).
+                if ( sw::FileUtil::exists( candidate ) && sw::FileUtil::readFile( candidate, outBytes ) )
                     return true;
                 const sw::string parent = sw::FileUtil::getDirectoryPart( directory );
                 if ( parent == directory )

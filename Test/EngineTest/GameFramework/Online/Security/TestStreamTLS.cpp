@@ -187,6 +187,7 @@ SW_TEST_CASE( StreamTLSTest, FramesFlowAfterHandshakeAndWireIsCiphertext )
 
 SW_TEST_CASE( StreamTLSTest, TamperedRecordClosesWithSecurityFailure )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a tampered record closes the stream with a security failure" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     TLSContexts contexts;
     SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, false, contexts ) );
     EndpointRecord           serverRecord;
@@ -209,6 +210,7 @@ SW_TEST_CASE( StreamTLSTest, TamperedRecordClosesWithSecurityFailure )
 
 SW_TEST_CASE( StreamTLSTest, UntrustedServerNeverOpens )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an untrusted server never opens" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     TLSContexts contexts;
     SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, true, contexts ) );
     EndpointRecord           serverRecord;
@@ -225,6 +227,7 @@ SW_TEST_CASE( StreamTLSTest, UntrustedServerNeverOpens )
 
 SW_TEST_CASE( StreamTLSTest, TLS12ClientNeverOpens )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a TLS 1.2 client never opens" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     TLSContexts contexts;
     SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS12, false, contexts ) );
     EndpointRecord           serverRecord;
@@ -241,6 +244,7 @@ SW_TEST_CASE( StreamTLSTest, TLS12ClientNeverOpens )
 
 SW_TEST_CASE( StreamTLSTest, PlaintextClientAgainstTLSServerIsRejected )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a plaintext client is rejected by a TLS server" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     TLSContexts contexts;
     SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, false, contexts ) );
     EndpointRecord           serverRecord;

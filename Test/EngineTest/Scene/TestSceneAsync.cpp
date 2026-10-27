@@ -700,7 +700,10 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 
     manager.setSaveBlockReason( "test: components removed" );
     SW_EXPECT_TRUE( manager.isSaveBlocked() );
-    SW_EXPECT_FALSE( manager.saveActiveScene( savePath ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a save is refused while a component blocks it" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( manager.saveActiveScene( savePath ) );
+    }
     SW_EXPECT_FALSE( sw::FileUtil::exists( savePath ) );
 
     manager.setSaveBlockReason( {} );

@@ -12,6 +12,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Automation/UIAutomationSteps.h"
 #include "Engine/UI/Base/PanelWidget.h"
@@ -273,7 +274,8 @@ SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
     SW_ASSERT_TRUE_MSG( directory.empty() == false, "engine/ui folder not found" );
     sw::vector<sw::string> listPath;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( directory, ".xml", listPath, false ) );
-    uint32 checkedCount = 0;
+    constexpr const utf8* kDebugHUDSchemaPath = "engine/settings/debughud.settings.xml";
+    uint32                checkedCount        = 0;
     for ( const sw::string& path : listPath )
     {
         const sw::string fileName = sw::FileUtil::getFileNamePart( path );
@@ -281,6 +283,9 @@ SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
             continue; // uiscale.xml · uithemes.xml
         const sw::string    documentPath = "engine/ui/" + fileName;
         UINavigationFixture fixture;
+        // 디버그 HUD 문서는 엔진의 디버그 HUD 설정(`debug.hud` …)에 묶여 있다 - 그 스키마를 실제 파일에서 올려 묶음이 풀리게 한다(Dev 만 읽는 스키마라 있을 때만).
+        if ( fileName == "debughud.ui.xml" && sw::ResourceIO::hasResource( kDebugHUDSchemaPath ) )
+            SW_ASSERT_TRUE( fixture._settings.loadSchema( kDebugHUDSchemaPath ) );
         if ( documentPath == ::test::getEngineDefaultAssets()._uiOptionsMenu.c_str() )
         {
             const sw::UIScreenHandle handle = sw::OptionsMenuScreen::open( fixture._ui );

@@ -7,8 +7,11 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+
+#include "EngineTest/GameModuleTypeNames.h"
 
 #include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Actor/Combat/Weapon/WeaponMath.h"
@@ -249,6 +252,7 @@ SW_TEST_CASE( ShooterTest, SemiAutoShotgunSpreadIsBoundedAndDeterministic )
  */
 SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXML )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a weapon without an id is skipped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     constexpr const utf8* kWeaponXML = R"(
 <WeaponCatalog>
   <Weapon id="shotgun" name="Shotgun" fireInterval="0.8" pelletCount="9" automatic="false" magazineSize="6" damage="7"/>
@@ -425,7 +429,15 @@ SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
     SceneDocument document;
     SW_ASSERT_TRUE( document.loadXML( "game/shooter3d/maps/arena.scene.xml" ) );
     Scene scene{ "ShooterPawnSchema" };
-    SW_ASSERT_TRUE( scene.instantiate( document ) );
+    {
+        // 아레나의 엄폐물 · 벽이 담은 게임 모듈 컴포넌트(`ShooterBlockerComponent` 등)는 이 실행 파일에 없는 타입이라 읽을 때 "모르는 타입" Warning 이 난다(데이터는 보존된다).
+        // 게임 소스에 선언된 타입 이름의 줄만 의도된 것이다 — 다른 줄은 표식 없이 남는다.
+        SW_ASSERT_TRUE( ResourcePaths::initialize() );
+        sw::vector<sw::string> listGameTypeName;
+        gamemoduletypes::collectTypeNames( sw::ResourcePaths::getRootFolderPath(), listGameTypeName );
+        test::ScopedDefensiveTestLog expectedGameTypes( "game module component types are unknown to this executable", gamemoduletypes::makeUnknownTypeNeedles( listGameTypeName ) );
+        SW_ASSERT_TRUE( scene.instantiate( document ) );
+    }
     const PawnComponent* pPlayerPawn = nullptr;
     scene.getObjectManager()->forEachComponentOfType<PawnComponent>( [&pPlayerPawn]( PawnComponent* pPawn )
     {

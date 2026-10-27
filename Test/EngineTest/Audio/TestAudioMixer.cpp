@@ -351,5 +351,6 @@ SW_TEST_CASE( AudioMixerTest, StereoBusInsideSurroundOutput )
     SW_EXPECT_NEAR_EQUAL( kCenterFold, mixer.getBusPeak( fxIndex ), 1e-4f );
 
     sw::AudioMixerDesc stereoMaster;
+    SW_TEST_DEFENSIVE_SCOPE( "a master bus that is not the output layout is a read error" ); // 일부러 깨진 자료의 읽기 오류 로그다
     SW_EXPECT_FALSE( stereoMaster.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master" _channels="Stereo" /></_listBus></AudioMixerDesc>)" ) );
 }

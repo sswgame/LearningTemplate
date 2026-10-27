@@ -42,6 +42,7 @@ SW_TEST_CASE( GamePackDataTest, MissingRuleIsAnError )
  */
 SW_TEST_CASE( GamePackDataTest, CharacterEditorDataNeedsEveryField )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a character editor entry missing a field is rejected with the field named" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::editor::CharacterEditorPackData data;
     SW_ASSERT_TRUE( data.loadFromXMLText(
         R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.xml" items="items.xml" appearance="appearance" clipFolder="clips" previewPreset="Adventurer"/>)", "full" ) );

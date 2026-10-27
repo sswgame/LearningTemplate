@@ -113,7 +113,10 @@ SW_TEST_CASE( AnimationGraphLayersTest, BoneMaskPropagatesRootsAndOverridesSingl
     SW_EXPECT_NEAR_EQUAL( 0.25f, listWeight[4], 1e-6f );
 
     mask._listEntry.push_back( TestAnimationGraphLayersInternal::makeEntry( "missing", 1.0f, true ) );
-    SW_EXPECT_FALSE( mask.computeBoneWeights( skeleton, listWeight ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a bone mask naming a bone the skeleton lacks is an error" ); // 없는 본을 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( mask.computeBoneWeights( skeleton, listWeight ) );
+    }
     for ( const float32 weight : listWeight )
     {
         SW_EXPECT_NEAR_EQUAL( 0.0f, weight, 1e-6f );
@@ -220,6 +223,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, InvalidLayerDataFailsTheGraphLoad )
         R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M" /></bone_masks></AnimationGraphAsset>)",
         R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M"><roots><entry bone="b" /></roots></bone_mask></bone_masks></AnimationGraphAsset>)",
     };
+    SW_TEST_DEFENSIVE_SCOPE( "invalid layer data fails the graph load with a reason" ); // 아래 자료는 모두 일부러 깨져 있다
     for ( const string_view json : arrXML )
     {
         AnimationGraphAsset graph;
@@ -452,6 +456,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, GraphLayerMasksUpperBodyFromData )
     pAnimator->getParameters().setFloat( hashed_string( "UpperWeight" ), 0.0f );
     manager.getSubsystem<AnimationSystem>().evaluate( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, TestAnimationGraphLayersInternal::getBoneX( *pUnit, 2 ), 1e-3f );
+    SW_TEST_DEFENSIVE_SCOPE( "setting a layer weight from code is refused when data or a missing layer owns it" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Upper" ), 0.5f ) );
     SW_EXPECT_FALSE( pAnimator->setGraphLayerWeight( hashed_string( "Missing" ), 0.5f ) );
 }

@@ -281,7 +281,10 @@ SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndMissingFile )
     replay.recordFrame( 0.016f, {} );
     SW_EXPECT_EQUAL( 0u, replay.getFrameCount() );
 
-    SW_EXPECT_FALSE( replay.loadFromFile( "non_existent_file.swreplay" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a replay file that does not exist fails to load" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( replay.loadFromFile( "non_existent_file.swreplay" ) );
+    }
     input.shutdown();
 }
 
@@ -296,6 +299,7 @@ SW_TEST_CASE( InputStressTest, MultiThreadedRawEventConcurrentBurst )
     constexpr uint32 kThreadCount     = 4;
     constexpr uint32 kEventsPerThread = 2500;
 
+    SW_TEST_DEFENSIVE_SCOPE( "a full raw input queue drops events with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     sw::vector<std::thread> listThread;
     listThread.reserve( kThreadCount );
 

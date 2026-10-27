@@ -100,7 +100,7 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 - 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog id="…">`(로그 id 가 있는 줄 — 문구가 바뀌어도 따라온다)나 `<ExpectLog contains="…">`(id 없는 줄만, 본문 전체와 같을 때만 가린다)로 선언합니다(줄 수 단언과 짝, `id` 와 `contains` 는 정확히 하나, `count="0"` 은 선언이 아니다). 린트 `CheckExpectLogPhrases` 가 id · 문구가 소스에 있는지 봅니다. 이미 진 실행(10 · 12 …)도 같은 게이트를 지나 처리하지 않은 줄이 `unhandledLogs[]` 에 남습니다.
 - 고칠 수 없는 줄은 `Resource/engine/automation/allowedlogs.json` 의 항목으로 허용합니다. 항목은 **로그 id**(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`), **범위**(`scenario` 나 `suite` 중 정확히 하나 — 전역 허용은 없다), **사유**(`reason`), **처리 계획 문서 이름**(`plan`)이 모두 있어야 읽히고 하나라도 비었거나 `TODO` 이면, id 에 와일드카드가 있거나 같은 항목이 두 번이면 읽기 오류(11)입니다.
 
-로그 id 가 없는 줄은 허용 목록으로 가릴 수 없으니 소스에 id 를 붙입니다(텍스트 로그에는 `[id:영역.사건]` 꼬리표로 찍힌다). 실행기 줄(`[Scenario]`)과 테스트의 방어 구간 줄(`[Expected Defensive Test]`)은 보지 않고, 호스트 테스트 스위트(`HostLogJudge`)도 이 목록의 `suite` 항목을 씁니다.
+로그 id 가 없는 줄은 허용 목록으로 가릴 수 없으니 소스에 id 를 붙입니다(텍스트 로그에는 `[id:영역.사건]` 꼬리표로 찍힌다). 실행기 줄(`[Scenario]`)과 테스트의 방어 구간 줄(`[Expected Defensive Test]`)은 보지 않고, 테스트 케이스의 판정기(`CaseLogJudge` — 모든 스위트)도 이 목록의 `suite` 항목을 씁니다.
 보고 JSON 의 `unhandledLogs[]` · `allowedLogs[]` 를 `py -3 -m Scripts scenario-logs` 가 읽습니다(`--check` 는 더 안 나오는 항목과 15 로 끝난 보고를 실패로 세고 `--regen` 은 처리하지 않은 줄을 사유 · 계획이 `TODO` 인 초안으로 더한다). 처음 채우는 절차는 [GPU 검증](../../../docs/plans/GpuVerification.md) 4절입니다.
 
 **시작을 미루는 조건.** `startAfter` 가 무엇이든 아래 조건이 풀려야 시작합니다(`AutomationStepRegistry::isStartBlocked`): `UILoadingScreen`, `ContentWatchFence`(사본 폴더를 새로 만든 뒤 파일 감시 표지가 오거나 시한이 지날 때), 시계를 붙잡는 `QuickLauncherIndexing` · `EditorAssetValidation` · `ContentBrowserReferenceIndex`(끝나지 않으면 시계 보류 시한 170 초와 벽시계 상한이 12 로 끝낸다), 화면 캡처만 미루는 `ScreenFade`.

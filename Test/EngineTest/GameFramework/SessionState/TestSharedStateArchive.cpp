@@ -186,6 +186,7 @@ SW_TEST_CASE( SharedStateArchiveTest, ReputationRoundTrip )
  */
 SW_TEST_CASE( SharedStateArchiveTest, QuestLogRoundTripDropsUnknownQuests )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a saved quest missing from the catalog is dropped" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     QuestCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kSharedStateQuestXML, "SharedStateArchiveTest" ) );
     QuestCatalog otherCatalog;

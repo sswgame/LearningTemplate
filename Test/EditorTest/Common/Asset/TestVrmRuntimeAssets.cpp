@@ -143,5 +143,8 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringChainJointsMustMatchBones )
     sw::RigAsset good;
     SW_EXPECT_TRUE( good.parseXML( pGood, "good.rig.xml" ) );
     sw::RigAsset bad;
-    SW_EXPECT_FALSE( bad.parseXML( pBad, "bad.rig.xml" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a spring chain that does not match its bones is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( bad.parseXML( pBad, "bad.rig.xml" ) );
+    }
 }

@@ -438,6 +438,7 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" requireForeground="true" startAfter="Immediately" startTimeoutFrames="3">
         <At frame="0"><TestMark/><Pass/></At>
       </Scenario>)" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a scenario without the foreground window is skipped" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     const sw::AutomationOutcome result = Internal::run( runner, input, 20 );
     SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Skipped, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
@@ -692,6 +693,7 @@ SW_TEST_CASE( AutomationScenarioTest, RegisteredStepRunsOnItsFrame )
  */
 SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner counts probe lines since a frame" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
@@ -717,6 +719,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
  */
 SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesByID )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner counts probe lines by id" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
@@ -742,6 +745,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesByID )
  */
 SW_TEST_CASE( AutomationScenarioTest, ShortExpectLogPhraseDoesNotHideOtherWarnings )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner gate sees a warning a short phrase does not hide" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
@@ -773,6 +777,7 @@ SW_TEST_CASE( AutomationScenarioTest, ShortExpectLogPhraseDoesNotHideOtherWarnin
  */
 SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner gate ends a run on an undeclared warning" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     for ( const bool bWithID : { false, true } )
@@ -809,6 +814,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
  */
 SW_TEST_CASE( AutomationScenarioTest, UnhandledLogOutranksUnconfirmed )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner gate ends a run on an undeclared warning" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     const sw::string folder    = test::makeTempDirectory( "UnhandledLogPriority" );
     const sw::string imagePath = folder + "/flat.ppm";
     sw::string       ppm       = "P6\n2 2\n255\n";

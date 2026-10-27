@@ -152,6 +152,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
  */
 SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "the deadlock detector reports the wait cycle" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     SW_TEST_REQUIRES_FEATURE( DebugAsserts );
     const ScopedHostLockObserverRemoval hostObserverRemoval;
     sw::DeadlockDetector                detector;

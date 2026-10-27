@@ -163,10 +163,13 @@ SW_TEST_CASE( DebugHUDTest, RegistryOrdersAndRejects )
     SW_EXPECT_TRUE( late._bRegistered && early._bRegistered );
     SW_EXPECT_TRUE( registry.getSections().front() == &kEarly );
     SW_EXPECT_TRUE( registry.getSections().back() == &kLate );
-    SW_EXPECT_FALSE( registry.registerSection( &kDuplicate ) );
-    SW_EXPECT_FALSE( registry.registerSection( &kReserved ) );
-    SW_EXPECT_FALSE( registry.registerSection( &kSpaced ) );
-    SW_EXPECT_FALSE( registry.registerSection( &kDash ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a duplicate, reserved or malformed section name is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( registry.registerSection( &kDuplicate ) );
+        SW_EXPECT_FALSE( registry.registerSection( &kReserved ) );
+        SW_EXPECT_FALSE( registry.registerSection( &kSpaced ) );
+        SW_EXPECT_FALSE( registry.registerSection( &kDash ) );
+    }
     SW_EXPECT_TRUE( registry.findSection( "testlate" ) == &kLate );
 }
 

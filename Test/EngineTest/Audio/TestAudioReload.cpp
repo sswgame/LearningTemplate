@@ -52,10 +52,11 @@ namespace
  */
 SW_TEST_CASE( AudioReloadTest, EventLibraryReloadsFromTheChangedFile )
 {
-    test::ScopedLogCollector logs; // 없는 클립 · 깨진 파일의 오류와 경고가 로그에 남는다
-    const sw::string         folder   = test::makeTempDirectory( "audio_reload_library" );
-    const sw::string         pathDisk = sw::FileUtil::joinPath( folder, "game.audioevents.xml" );
-    const sw::string         path     = test::makeTempResourceID( pathDisk );
+    test::ScopedLogCollector logs;                                                                              // 없는 클립 · 깨진 파일의 오류와 경고가 로그에 남는다
+    SW_TEST_DEFENSIVE_SCOPE( "a missing clip and a broken file are reported and the current library is kept" ); // 위 로그는 모두 이 테스트가 보려는 동작이다
+    const sw::string folder   = test::makeTempDirectory( "audio_reload_library" );
+    const sw::string pathDisk = sw::FileUtil::joinPath( folder, "game.audioevents.xml" );
+    const sw::string path     = test::makeTempResourceID( pathDisk );
     AudioReloadTestInternal::write( pathDisk, AudioReloadTestInternal::makeLibraryXML( "Alpha", "sfx" ) );
 
     sw::unique_ptr<sw::IAudioService> pService = sw::IAudioService::createNull();
@@ -89,11 +90,12 @@ SW_TEST_CASE( AudioReloadTest, EventLibraryReloadsFromTheChangedFile )
 SW_TEST_CASE( AudioReloadTest, MixerGraphReloadsFromTheChangedFile )
 {
     test::ScopedLogCollector logs;
-    const sw::string         folder          = test::makeTempDirectory( "audio_reload_mixer" );
-    const sw::string         mixerPathDisk   = sw::FileUtil::joinPath( folder, "game.audiomixer.xml" );
-    const sw::string         mixerPath       = test::makeTempResourceID( mixerPathDisk );
-    const sw::string         libraryPathDisk = sw::FileUtil::joinPath( folder, "extra.audioevents.xml" );
-    const sw::string         libraryPath     = test::makeTempResourceID( libraryPathDisk );
+    SW_TEST_DEFENSIVE_SCOPE( "a library sending to a missing bus and a broken mixer are rejected with a reason" ); // 거절 로그는 모두 이 테스트가 보려는 동작이다
+    const sw::string folder          = test::makeTempDirectory( "audio_reload_mixer" );
+    const sw::string mixerPathDisk   = sw::FileUtil::joinPath( folder, "game.audiomixer.xml" );
+    const sw::string mixerPath       = test::makeTempResourceID( mixerPathDisk );
+    const sw::string libraryPathDisk = sw::FileUtil::joinPath( folder, "extra.audioevents.xml" );
+    const sw::string libraryPath     = test::makeTempResourceID( libraryPathDisk );
     AudioReloadTestInternal::write( mixerPathDisk, AudioReloadTestInternal::makeMixerXML( nullptr ) );
     AudioReloadTestInternal::write( libraryPathDisk, AudioReloadTestInternal::makeLibraryXML( "Gamma", "extra" ) );
 

@@ -165,6 +165,7 @@ SW_TEST_CASE( AutomationRunnerWatchTest, ImmediatelyWaitsForStartBlockers )
  */
 SW_TEST_CASE( AutomationRunnerWatchTest, FailedRunStillReportsUnhandledLogs )
 {
+    SW_TEST_JUDGE_IGNORE_LINES( "[AutoProbe]", "the runner reports an undeclared warning of a failed run" ); // 표식 없는 줄을 실행기의 로그 게이트가 세는지 보는 테스트라 판정기만 그 줄을 뺀다
     using Internal = TestAutomationRunnerWatchInternal;
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );

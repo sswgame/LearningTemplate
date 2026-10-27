@@ -171,6 +171,7 @@ SW_TEST_CASE( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereIsN
     sw::makeCrashReportPath( arrDumpPath, sw::constant::kMaxBuffer1024, "dmp" );
 
     // 1) 덤프가 없을 때 — 컨텍스트와 스택 파일만 적혀야 한다.
+    SW_TEST_DEFENSIVE_SCOPE( "writing a crash report logs the fault as an error" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     sw::writeCrashReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, false );
 
     sw::string text;

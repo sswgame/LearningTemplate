@@ -1106,6 +1106,7 @@ SW_TEST_CASE( InputManagerTest, ConcurrentMultiThreadEventPostingStress )
     constexpr uint32 kThreadCount     = 4;
     constexpr uint32 kEventsPerThread = 2500;
 
+    SW_TEST_DEFENSIVE_SCOPE( "a full raw input queue drops events with a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     sw::vector<std::thread> listThread;
     listThread.reserve( kThreadCount );
 

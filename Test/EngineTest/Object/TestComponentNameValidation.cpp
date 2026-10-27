@@ -95,9 +95,12 @@ SW_TEST_CASE( ComponentNameValidationTest, UnknownNamesAreErrorsNamingTheField )
     pBody->setLayer( hashed_string( "Static" ) );
     pBody->setMaterial( hashed_string( "Wood" ) );
     SW_EXPECT_TRUE_MSG( Internal::validate( pBody, joined ) == 0u, joined.c_str() );
-    pBody->setLayer( hashed_string( "Statik" ) );
-    pBody->setMaterial( hashed_string( "Plastic" ) );
-    SW_EXPECT_TRUE_MSG( Internal::validate( pBody, joined ) == 2u, joined.c_str() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown name is an error naming the field" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        pBody->setLayer( hashed_string( "Statik" ) );
+        pBody->setMaterial( hashed_string( "Plastic" ) );
+        SW_EXPECT_TRUE_MSG( Internal::validate( pBody, joined ) == 2u, joined.c_str() );
+    }
     SW_EXPECT_TRUE_MSG( joined.find( "_layer names 'Statik'" ) != string::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( joined.find( "_material names 'Plastic'" ) != string::npos, joined.c_str() );
 
@@ -105,14 +108,20 @@ SW_TEST_CASE( ComponentNameValidationTest, UnknownNamesAreErrorsNamingTheField )
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->setAreaName( hashed_string( "Mud" ) );
     SW_EXPECT_TRUE_MSG( Internal::validate( pModifier, joined ) == 0u, joined.c_str() );
-    pModifier->setAreaName( hashed_string( "Mudd" ) );
-    SW_EXPECT_TRUE_MSG( Internal::validate( pModifier, joined ) == 1u, joined.c_str() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown area name is an error naming the field" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        pModifier->setAreaName( hashed_string( "Mudd" ) );
+        SW_EXPECT_TRUE_MSG( Internal::validate( pModifier, joined ) == 1u, joined.c_str() );
+    }
 
     SpriteComponent* pSprite = Internal::addAlone<SpriteComponent>( manager );
     SW_ASSERT_NOT_NULL( pSprite );
     pSprite->setSortingLayer( hashed_string( "Overlay" ) );
     SW_EXPECT_TRUE_MSG( Internal::validate( pSprite, joined ) == 0u, joined.c_str() );
-    pSprite->setSortingLayer( hashed_string( "Ovelray" ) );
-    SW_EXPECT_TRUE_MSG( Internal::validate( pSprite, joined ) == 1u, joined.c_str() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown sorting layer is an error naming the field" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        pSprite->setSortingLayer( hashed_string( "Ovelray" ) );
+        SW_EXPECT_TRUE_MSG( Internal::validate( pSprite, joined ) == 1u, joined.c_str() );
+    }
     SW_EXPECT_TRUE_MSG( joined.find( "_sortingLayer names 'Ovelray'" ) != string::npos, joined.c_str() );
 }

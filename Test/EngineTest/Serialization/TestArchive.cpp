@@ -1038,6 +1038,7 @@ SW_TEST_CASE( ArchiveTest, BoundsChecksSurviveSizeOverflow )
  */
 SW_TEST_CASE( ArchiveTest, CorruptedBufferFaultInjectionAndGracefulHandling )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a stream from a newer wire version is not read" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // 1) 머리의 값 인코딩 버전이 이 빌드의 것이 아니다(위 8비트 0)
     const sw::vector<uint8> wrongVersion = { 0x03, 0x00, 0x00, 0x00 };
     TestReflectedPlayer     dummyPlayer;
@@ -1292,6 +1293,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
 
 SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "invalid inputs fail to transcode" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::TypeInfo* pPlayerType = TestReflectedPlayer::StaticType();
     SW_EXPECT_NOT_NULL( pPlayerType );
 
@@ -1330,6 +1332,7 @@ SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
 
 SW_TEST_CASE( ArchiveTest, CorruptedDocumentBinaryStreams )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "corrupted document streams fail to read" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     // 1. SceneDocument corrupted binary magic
     {
         const uint8      corruptedSceneBytes[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };

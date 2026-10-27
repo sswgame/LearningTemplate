@@ -219,6 +219,7 @@ SW_TEST_CASE( PairedAnimationReplicationTest, RefusesUnreplicableSessionsAndBadS
     SW_EXPECT_FALSE( server.makeSessionState( *pSession, unused ) );
 
     // 번호표에 없는 오브젝트 · 역할 수가 다른 상태.
+    SW_TEST_DEFENSIVE_SCOPE( "unreplicable sessions and bad state are refused with a reason" ); // 거절마다 이유를 로그로 남기는 것이 이 테스트가 보려는 동작이다
     PairedAnimationReplicationClient client;
     client.initialize( &manager );
     PairedAnimationNetState state{};

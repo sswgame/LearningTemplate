@@ -297,18 +297,21 @@ SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 {
     GimmickCircuit circuit;
     vector<string> listError;
-    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( circuit, R"(
-<GimmickCircuit>
-  <Node id="plate" kind="PressurePlate" threshold="heavy"/>
-  <Node id="plate" kind="Volume"/>
-  <Node id="door" kind="Door" opnTime="1"/>
-  <Node id="ghost" kind="Teleporter"/>
-  <Node id="mover" kind="Mover" mode="Sideways"/>
-  <Wire from="plate.Pressed" to="gate.Open"/>
-  <Wire from="plate.Squashed" to="door.Open"/>
-  <Wire from="plate.Pressed" to="door.Slam"/>
-</GimmickCircuit>)",
-                                                        listError ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a broken wire is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( circuit, R"(
+    <GimmickCircuit>
+      <Node id="plate" kind="PressurePlate" threshold="heavy"/>
+      <Node id="plate" kind="Volume"/>
+      <Node id="door" kind="Door" opnTime="1"/>
+      <Node id="ghost" kind="Teleporter"/>
+      <Node id="mover" kind="Mover" mode="Sideways"/>
+      <Wire from="plate.Pressed" to="gate.Open"/>
+      <Wire from="plate.Squashed" to="door.Open"/>
+      <Wire from="plate.Pressed" to="door.Slam"/>
+    </GimmickCircuit>)",
+                                                            listError ) );
+    }
     const string joined = GimmickTestInternal::joinErrors( listError );
     SW_EXPECT_TRUE_MSG( GimmickTestInternal::hasErrorContaining( listError, "parameter 'threshold' is not a number" ), joined.c_str() );
     SW_EXPECT_TRUE_MSG( GimmickTestInternal::hasErrorContaining( listError, "duplicate node id" ), joined.c_str() );
@@ -322,7 +325,10 @@ SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 
     // 형식 오류(점 없는 배선)는 읽기에서 거절한다.
     GimmickCircuitDef def;
-    SW_EXPECT_FALSE( def.loadFromXMLText( "<GimmickCircuit><Wire from=\"plate\" to=\"door.Open\"/></GimmickCircuit>", "broken.gimmick.xml" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a wire without a port is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( def.loadFromXMLText( "<GimmickCircuit><Wire from=\"plate\" to=\"door.Open\"/></GimmickCircuit>", "broken.gimmick.xml" ) );
+    }
 }
 
 /**

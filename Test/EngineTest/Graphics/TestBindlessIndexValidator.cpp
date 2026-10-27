@@ -18,6 +18,7 @@
  */
 SW_TEST_CASE( BindlessIndexValidatorTest, OnlyDeadIndicesFail )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a dead bindless index is reported as an error" ); // 죽은 번호를 알리는 Error 가 이 테스트가 보려는 동작이다
     sw::BindlessIndexValidator::clearReports();
 
     test::FakeRHIDevice device;
@@ -51,6 +52,7 @@ SW_TEST_CASE( BindlessIndexValidatorTest, OnlyDeadIndicesFail )
  */
 SW_TEST_CASE( BindlessIndexValidatorTest, ReportsEachSiteOnce )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "each site's first dead index is reported as an error" ); // 자리마다 한 번 남는 Error 가 이 테스트가 보려는 동작이다
     sw::BindlessIndexValidator::clearReports();
 
     const sw::hashed_string passName{ "ForwardTransparent" };
@@ -96,6 +98,7 @@ SW_TEST_CASE( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
  */
 SW_TEST_CASE( BindlessIndexValidatorTest, ConcurrentReportsLogOnce )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a dead bindless index reported concurrently logs one error" ); // 한 줄만 남는 Error 가 이 테스트가 보려는 동작이다
     sw::BindlessIndexValidator::clearReports();
 
     constexpr uint32        kThreadCount = 8;

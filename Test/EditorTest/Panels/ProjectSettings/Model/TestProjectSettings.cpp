@@ -32,6 +32,7 @@ namespace
  */
 SW_TEST_CASE( ProjectSettingsCatalogTest, PicksOnlyEditableJSONFiles )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a file that is not valid JSON is not editable" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::string                             referenceJSON = R"({"files":[
         {"page":"EngineConfig","path":"Config/Engine/EngineConfig.json","type":"EngineConfig"},
         {"page":"PhysicsSettings","path":"Resource/engine/physics/physicssettings.xml","type":"PhysicsSettings"},
@@ -120,8 +121,11 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementKeepsTheRestOfTheFile )
     SW_EXPECT_FALSE( reopened.isModified() );
 
     // 기본값으로 되돌리면 필수 칸(창 제목)이 비어 다음 기동이 읽지 못한다 — 저장하지 않고 파일은 그대로다.
-    reopened.resetToDefault();
-    SW_EXPECT_FALSE( reopened.save() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an edit that would not load is not saved" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        reopened.resetToDefault();
+        SW_EXPECT_FALSE( reopened.save() );
+    }
     sw::string unchangedText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, unchangedText ) );
     SW_EXPECT_TRUE( unchangedText == fileText );
@@ -153,7 +157,10 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, PackElementIsInsertedWhenMissing )
     (void)sw::FileUtil::removeFile( missingPath ); // 임시 폴더는 실행마다 비워지지 않는다(없어도 괜찮다)
     SW_ASSERT_TRUE( noFile.open( *sw::PackEngineSettings::StaticType(), missingPath, sw::PackEngineSettings::kElementName ) == sw::ConfigReadResult::Missing );
     static_cast<sw::PackEngineSettings*>( noFile.getInstance() )->_windowTitle = "Nowhere";
-    SW_EXPECT_FALSE( noFile.save() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a save to a non-pack file is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( noFile.save() );
+    }
     SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( missingPath ) );
 }
 

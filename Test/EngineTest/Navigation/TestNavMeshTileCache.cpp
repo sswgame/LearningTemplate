@@ -96,6 +96,7 @@ SW_TEST_CASE( NavMeshTileCacheTest, LayerPacksRoundTripThroughInstall )
  */
 SW_TEST_CASE( NavMeshTileCacheTest, RebakeModeRejectsCacheObstacles )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an obstacle in a navmesh without a tile cache is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::NavMeshSettings settings = navtest::makeSettings();
     sw::NavMeshGeometry       geometry;
     navtest::addFloor( geometry, -5.0f, -5.0f, 5.0f, 5.0f );

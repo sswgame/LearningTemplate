@@ -155,7 +155,10 @@ SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedM
     MeshModifierMesh other = DataModifiersTestInternal::makePointMesh( vector<float3>{
         float3{ 5.0f, 5.0f, 5.0f }
     } );
-    modifier->apply( other, evaluation );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a point cache that does not match the mesh is skipped" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        modifier->apply( other, evaluation );
+    }
     SW_EXPECT_TRUE( other._listPosition[0] == ( float3{ 5.0f, 5.0f, 5.0f } ) );
 }
 
@@ -259,6 +262,7 @@ SW_TEST_CASE( DataModifiersTest, WorldWarpAppliesTheSharedDefinitionFile )
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( emptied._listPosition, source._listPosition ) < 1e-6f );
 
     // 없는 파일은 항등이다(경고 한 번)
+    SW_TEST_DEFENSIVE_SCOPE( "a missing warp file is read as an identity and reported once" ); // 없는 파일 오류와 경고가 이 확인이 보려는 동작이다
     SW_EXPECT_TRUE( DataModifiersTestInternal::setText( *second, "Warp File", test::makeTempPath( "missing.mfwarp" ) ) );
     MeshModifierMesh missing = source;
     test::MeshModifierTestUtil::applyOne( *second, missing );

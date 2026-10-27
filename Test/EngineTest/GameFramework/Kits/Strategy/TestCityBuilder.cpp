@@ -428,6 +428,7 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
 
     BLOCK( "크기가 다른 도시 · 잘린 바이트는 거절하고 그대로 둔다" )
     {
+        SW_TEST_DEFENSIVE_SCOPE( "a city without a lent wallet and invalid sizes or settings are refused" ); // 지갑 없는 작은 도시의 경고와 거절 로그가 이 블록이 보려는 동작이다
         CityCatalog    catalog;
         CitySimulation smallCity;
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );

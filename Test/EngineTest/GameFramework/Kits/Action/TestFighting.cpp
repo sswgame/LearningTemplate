@@ -713,6 +713,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
 
     // 깨진 바이트는 거절하고 상태를 바꾸지 않는다.
     vector<uint8> broken( savedBuffer.begin(), savedBuffer.begin() + static_cast<ptrdiff_t>( savedBuffer.size() / 2 ) );
+    SW_TEST_DEFENSIVE_SCOPE( "truncated rollback bytes are rejected and the match keeps its state" ); // 거절 경고가 이 확인이 보려는 동작이다
     SW_EXPECT_FALSE( match.loadState( broken ) );
     vector<uint8> afterBroken;
     match.saveState( afterBroken );
@@ -812,7 +813,10 @@ SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignByte
     SW_EXPECT_TRUE( impostor.initialize( impostorDef, impostorDef, settings ) );
     vector<uint8> impostorBefore;
     impostor.saveState( impostorBefore );
-    SW_EXPECT_FALSE( impostor.loadState( bytes ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "foreign or truncated rollback bytes are rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( impostor.loadState( bytes ) );
+    }
     vector<uint8> impostorAfter;
     impostor.saveState( impostorAfter );
     SW_EXPECT_TRUE( impostorAfter == impostorBefore );
@@ -823,10 +827,13 @@ SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignByte
     vector<uint8> targetBefore;
     target.saveState( targetBefore );
     const size_t arrLength[] = { 0, 1, bytes.size() / 2, bytes.size() - 1 };
-    for ( const size_t length : arrLength )
     {
-        const vector<uint8> prefix( bytes.begin(), bytes.begin() + static_cast<ptrdiff_t>( length ) );
-        SW_EXPECT_FALSE( target.loadState( prefix ) );
+        SW_TEST_DEFENSIVE_SCOPE( "truncated rollback bytes are rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        for ( const size_t length : arrLength )
+        {
+            const vector<uint8> prefix( bytes.begin(), bytes.begin() + static_cast<ptrdiff_t>( length ) );
+            SW_EXPECT_FALSE( target.loadState( prefix ) );
+        }
     }
     vector<uint8> targetAfter;
     target.saveState( targetAfter );
@@ -1016,6 +1023,7 @@ SW_TEST_CASE( FightingTest, SaveStateWithOutOfRangeValuesIsRejected )
     SW_ASSERT_TRUE( pHead != nullptr );
     SW_ASSERT_TRUE( pFrameList != nullptr );
 
+    SW_TEST_DEFENSIVE_SCOPE( "out of range saved values fail the read with the field named" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
     FightingMatch lastWinnerCase                        = source;
     *pLastWinner->getValuePtr<int32>( &lastWinnerCase ) = 3; // [−1, 2] 밖
     SW_EXPECT_FALSE( readsSaveOf( lastWinnerCase, tester ) );

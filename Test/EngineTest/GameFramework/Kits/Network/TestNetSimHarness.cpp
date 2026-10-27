@@ -469,7 +469,10 @@ SW_TEST_CASE( NetSimHarnessTest, WorldsRunOnScenesLentBySceneSource )
         SW_EXPECT_TRUE( harness.areAllClientsConnected() );
 
         source._bRefuse = true;
-        SW_EXPECT_EQUAL( -1, harness.addClient( {} ) ); // 씬이 없으면 월드도 없다
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a world with no scene is reported" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            SW_EXPECT_EQUAL( -1, harness.addClient( {} ) );                 // 씬이 없으면 월드도 없다
+        }
         SW_EXPECT_EQUAL( 2, harness.getClientCount() );
     }
     SW_EXPECT_TRUE( source._listScene.empty() );

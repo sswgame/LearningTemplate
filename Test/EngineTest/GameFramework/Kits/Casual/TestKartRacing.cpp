@@ -159,7 +159,10 @@ SW_TEST_CASE( KartRacingTest, TrackSplineGatesAndOffroad )
     KartTrackDef tooFew;
     tooFew._listControlPoint.push_back( float3{ 0.0f, 0.0f, 0.0f } );
     KartTrack broken;
-    SW_EXPECT_FALSE( broken.initialize( tooFew ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a track with too few control points is rejected" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( broken.initialize( tooFew ) );
+    }
 
     // 닫힌 곡선 — 조절점을 지나고, 길이는 조절점 다각형 둘레(약 490 m) 근처.
     SW_EXPECT_TRUE( track.getLength() > 480.0f && track.getLength() < 530.0f );

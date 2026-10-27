@@ -168,6 +168,7 @@ SW_TEST_CASE( HeightfieldImporterTest, ImportsSplatSourceAsLayerWeights )
     }
 
     // 알파 없는 스플랫은 읽지 않는다(디코더가 알파를 255 로 채우면 레이어 3 이 말없이 가득 찬다). 원본이 바뀌었으니 어긋남이고 임포트는 실패한다.
+    SW_TEST_DEFENSIVE_SCOPE( "a splat without alpha is rejected with the channel count" ); // 아래 거절 로그가 이 테스트가 보려는 동작이다
     SW_ASSERT_TRUE( Internal::writeBytes( splatSource, Internal::kArrSplatRgbPng, sizeof( Internal::kArrSplatRgbPng ) ) );
     sw::LayerWeightsData rejected;
     SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::readLayerWeights( splatSource, rejected ) );

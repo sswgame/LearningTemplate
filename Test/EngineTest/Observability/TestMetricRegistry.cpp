@@ -46,6 +46,7 @@ SW_TEST_CASE( MetricRegistryTest, MismatchedRegistrationsAreRefused )
 {
     MetricRegistry registry;
     SW_ASSERT_TRUE( registry.registerCounter( "a_total", "A" ) != nullptr );
+    SW_TEST_DEFENSIVE_SCOPE( "mismatched or invalid metric registrations are refused with a reason" ); // 거절 이유를 알리는 Error 가 이 테스트가 보려는 동작이다
     SW_EXPECT_TRUE( registry.registerGauge( "a_total", "A" ) == nullptr );                             // 종류가 다르다
     SW_EXPECT_TRUE( registry.registerCounter( "a_total", "A", makeOneLabel( "x", "1" ) ) == nullptr ); // 라벨 이름이 다르다
     SW_EXPECT_TRUE( registry.registerCounter( "9bad", "B" ) == nullptr );                              // 이름 규칙

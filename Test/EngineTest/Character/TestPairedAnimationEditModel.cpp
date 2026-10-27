@@ -68,10 +68,13 @@ SW_TEST_CASE( PairedAnimationEditModelTest, EditsUndoAndRefuseInvalidValues )
     SW_EXPECT_FALSE( model.canUndo() );
     SW_EXPECT_FALSE( model.isDirty() );
 
-    SW_EXPECT_FALSE( model.setNotifyTime( 0, 2.0f, false, error ) );           // 타임라인 밖
-    SW_EXPECT_FALSE( model.setRoleOffset( 2, float3{}, 0.0f, false, error ) ); // Arrow 는 정렬하지 않는다
-    SW_EXPECT_FALSE( model.setRoleStart( 0, 0.1f, false, error ) );            // 앵커
-    SW_EXPECT_FALSE( model.addNotify( hashed_string( "Hit" ), hashed_string( "Nobody" ), 0.5f, error ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an out-of-range or rule-breaking edit is refused with a reason" ); // 거절마다 이유를 로그로 남기는 것이 이 블록이 보려는 동작이다
+        SW_EXPECT_FALSE( model.setNotifyTime( 0, 2.0f, false, error ) );                             // 타임라인 밖
+        SW_EXPECT_FALSE( model.setRoleOffset( 2, float3{}, 0.0f, false, error ) );                   // Arrow 는 정렬하지 않는다
+        SW_EXPECT_FALSE( model.setRoleStart( 0, 0.1f, false, error ) );                              // 앵커
+        SW_EXPECT_FALSE( model.addNotify( hashed_string( "Hit" ), hashed_string( "Nobody" ), 0.5f, error ) );
+    }
     SW_EXPECT_FALSE( model.canUndo() );
 
     SW_EXPECT_TRUE( model.addNotify( hashed_string( "Hit" ), hashed_string( "Victim" ), 0.5f, error ) );
@@ -79,6 +82,7 @@ SW_TEST_CASE( PairedAnimationEditModelTest, EditsUndoAndRefuseInvalidValues )
     SW_EXPECT_TRUE( model.isValid() );
     // 역할 시작이 길이 뒤면 다시 읽기가 거절한다 — 저장하지 않는다.
     SW_EXPECT_TRUE( model.setRoleStart( 2, 1.7f, false, error ) );
+    SW_TEST_DEFENSIVE_SCOPE( "content that breaks the asset rules is invalid and says why" ); // 유효성 검사가 다시 읽으며 남기는 읽기 오류가 이 확인이 보려는 것이다
     SW_EXPECT_FALSE( model.isValid() );
 }
 

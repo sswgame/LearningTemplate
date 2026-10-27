@@ -30,6 +30,7 @@ SW_TEST_CASE( ObjectIdentityTest, CreateWithIDReusesFreedIDOnly )
 
     BLOCK( "아직 등록돼 있으면 새 id" )
     {
+        SW_TEST_DEFENSIVE_SCOPE( "an id still registered is not reused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         sw::GameObject* pClash = manager.createGameObjectWithID( sw::hashed_string( "Clash" ), originalID );
         SW_ASSERT_NOT_NULL( pClash );
         SW_EXPECT_TRUE( pClash->getObjectID() != originalID );
@@ -38,6 +39,7 @@ SW_TEST_CASE( ObjectIdentityTest, CreateWithIDReusesFreedIDOnly )
     BLOCK( "삭제 대기도 등록돼 있는 것이다 — 지연 파괴가 끝나기 전에는 새 id" )
     {
         manager.destroyObject( pOriginal );
+        SW_TEST_DEFENSIVE_SCOPE( "a deferred-destroyed id is not reused before the destruction ends" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
         sw::GameObject* pEarly = manager.createGameObjectWithID( sw::hashed_string( "Early" ), originalID );
         SW_ASSERT_NOT_NULL( pEarly );
         SW_EXPECT_TRUE( pEarly->getObjectID() != originalID );

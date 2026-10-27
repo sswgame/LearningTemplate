@@ -119,7 +119,7 @@ py -3 -m Scripts test --changed                                    # main 과 �
 `hostSplit` 인 실행 파일은 `<타깃>_NoGPU`(`--host_suites=exclude`, `nogpu`)와 `<타깃>_HostOnly`(`--host_suites=only`, `hostgpu`)로 나뉩니다. 선언된 호스트 스위트는 `EngineTest --test_list` 끝에 이유와 함께 나옵니다.
 
 - `--host_suites=only` 가 아무것도 고르지 않거나 선언한 스위트에 케이스가 없으면 실패합니다.
-- **호스트 스위트의 케이스는 처리하지 않은 `[Error]` · `[Warning]` 로그 하나로 실패합니다**(검증 레이어 · 드라이버 오류는 로그로만 남기 때문). 일부러 거절 경로를 부르는 곳은 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 감쌉니다. App 시나리오(`AppScenarioTest`)는 같은 규칙을 로그 게이트(`Source/Engine/Automation/AutomationLogPolicy.h`)로 지키고 실패는 종료 코드 15 입니다.
+- **모든 스위트의 케이스는 처리하지 않은 `[Error]` · `[Warning]` 로그 하나로 실패합니다**(검증 레이어 · 드라이버 오류, 깨진 자료를 읽는 거절 경로는 로그로만 남기 때문). 일부러 거절 경로를 부르는 곳은 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 그 호출만 감쌉니다. 시나리오 실행기의 로그 게이트 자체를 시험하는 케이스는 표식을 붙일 수 없으므로 `SW_TEST_JUDGE_IGNORE_LINES( "글 조각", "이유" )` 로 케이스 판정에서만 뺍니다. App 시나리오(`AppScenarioTest`)는 같은 규칙을 로그 게이트(`Source/Engine/Automation/AutomationLogPolicy.h`)로 지키고 실패는 종료 코드 15 입니다.
 - 원인이 엔진에 있고 못 고친 줄은 `Resource/engine/automation/allowedlogs.json` 에 `suite` 항목(로그 id · 스위트 · 사유 · 처리 계획 문서)으로 적습니다(시나리오와 같은 하나뿐인 목록). 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 가릴 수 없습니다.
 
 **샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은 `max(60, 4 × max(조각 하나의 초, 가장 비싼 케이스의 초))` 입니다(멈춤을 잡는 그물이고 느려짐은 `SW_TEST_TIME_BUDGET` 이 판정). 샤드는 `<타깃>_Shard1..n` 으로 `--test_shard=<k>/<n>` 으로 돌고,

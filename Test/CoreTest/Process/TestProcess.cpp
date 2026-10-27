@@ -270,7 +270,8 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     for ( uint32 attempt = 0; attempt < 200 && bFinished == false; ++attempt )
     {
         sw::string text;
-        bFinished = sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
+        // 표식이 생기기 전에는 읽지 않는다 — 없는 파일을 읽으면 읽는 쪽이 Error 를 남기고, 기다리는 동안 그 줄이 쌓인다.
+        bFinished = sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
         if ( bFinished == false )
             std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
     }

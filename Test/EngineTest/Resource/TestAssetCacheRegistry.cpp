@@ -282,7 +282,10 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
     SW_EXPECT_TRUE_MSG( warningText.empty(), "내장 캐시를 두고 간 것으로 잘못 보고했습니다" );
 
     const sw::Subscription registration = resources.registerAssetCache( &probe );
-    resources.warnAboutRemainingModuleCaches();
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a leftover module cache is named in a warning" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        resources.warnAboutRemainingModuleCaches();
+    }
     subscription.reset();
 
     SW_EXPECT_TRUE_MSG( warningText.find( "ProbeKind" ) != sw::string::npos,

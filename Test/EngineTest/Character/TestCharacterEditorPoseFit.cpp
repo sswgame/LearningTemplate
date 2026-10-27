@@ -172,7 +172,10 @@ SW_TEST_CASE( BonePoseEditModelTest, RoundTripsThroughFile )
     SW_EXPECT_NEAR_EQUAL( 1.2f, effective._scale._y, 1.0e-6f );
     SW_EXPECT_FALSE( reloaded.isDirty() );
 
-    SW_EXPECT_FALSE( reloaded.loadFromXMLText( "<ReferencePose><Bone name='spine' weird='1'/></ReferencePose>", "bad.refpose.xml" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a reference pose with an unknown attribute is a read error" ); // 일부러 깨진 자료의 읽기 오류 로그다
+        SW_EXPECT_FALSE( reloaded.loadFromXMLText( "<ReferencePose><Bone name='spine' weird='1'/></ReferencePose>", "bad.refpose.xml" ) );
+    }
     SW_EXPECT_TRUE( reloaded.hasOverride( hashed_string( "spine" ) ) );
 }
 
@@ -252,6 +255,7 @@ SW_TEST_CASE( AppearanceEditModelDatabaseTest, SavesAndReopensPresetFile )
     SW_EXPECT_STREQ( "helm", second.findSlotItem( hashed_string( "Head" ) ).c_str() );
     SW_ASSERT_NOT_NULL( second.getSelection()._customization.findValue( hashed_string( "Height" ) ) );
     SW_EXPECT_NEAR_EQUAL( 1.5f, second.getSelection()._customization.findValue( hashed_string( "Height" ) )->_number._x, 0.01f );
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown preset name and a missing preset file are refused" ); // 없는 이름 · 없는 파일 거절 로그가 이 확인이 보려는 동작이다
     SW_EXPECT_FALSE( second.loadFromPreset( reopened, "Nobody" ) );
     SW_EXPECT_FALSE( AppearanceEditModel::loadPresetFile( reopened, test::makeTempPath( "missing.presets.txt" ) ) );
 }

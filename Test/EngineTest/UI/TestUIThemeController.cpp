@@ -44,6 +44,7 @@ SW_TEST_CASE( UIThemeControllerTest, SettingThemeIsUsedOnlyWhenListed )
 /** @brief [UIThemeControllerTest] 모르는 이름은 거절하고 지금 테마를 유지한다 */
 SW_TEST_CASE( UIThemeControllerTest, UnknownThemeKeepsCurrent )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name keeps the current one" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     sw::UIThemeController controller;
     controller.setCatalog( UIThemeControllerTestUtil::makeCatalog(), sw::string() );
     SW_EXPECT_TRUE( controller.getThemeName().empty() );

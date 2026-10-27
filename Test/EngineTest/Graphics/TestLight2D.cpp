@@ -103,6 +103,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
  */
 SW_TEST_CASE( Light2DTest, FreeformAttenuationInsideAndFalloff )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "a polygon with too few corners is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const sw::vector<sw::float2> listSquare = {
         sw::float2{0.0f, 0.0f},
         sw::float2{2.0f, 0.0f},

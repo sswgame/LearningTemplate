@@ -175,6 +175,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
         stack.undo();
         pManager->mergePendingAdds();
         SW_EXPECT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Born" ) );
+        pManager->processDeferredDestruction(); // 옛 오브젝트의 지연 파괴가 끝나야 되살린 것이 원래 id 를 받는다(편집기는 프레임 사이에 돈다)
 
         stack.redo();
         pManager->mergePendingAdds();
@@ -191,6 +192,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
         EditorTransaction::recordDestruction( pDoomed, "Delete Doomed" );
         pManager->destroyObject( pDoomed );
         SW_ASSERT_EQUAL( size_t( 0 ), countLiveObjectsNamed( *pManager, "Doomed" ) );
+        pManager->processDeferredDestruction(); // 지연 파괴가 끝나야 되돌린 오브젝트가 원래 id 를 받는다
 
         stack.undo();
         pManager->mergePendingAdds();

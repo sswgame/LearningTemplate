@@ -348,6 +348,7 @@ SW_TEST_CASE( UIStyleTest, VariablesResolveAndUnknownVariableIsError )
 /** @brief [UIStyleTest] 모르는 칸 · 읽지 못한 값 · 쓰지 않는 선택자 문법(`>` · 모르는 상태)은 로드 오류다 */
 SW_TEST_CASE( UIStyleTest, UnknownPropertyOrSelectorSyntaxIsLoadError )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown property or selector is a load error" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     struct BadCase
     {
         const utf8* _pRule;
@@ -467,7 +468,10 @@ SW_TEST_CASE( UIStyleTest, ThemeSwitchRestylesEverything )
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "A" ) ) == Util::kBlue );
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "B" ) ) == Util::kBlue );
-    SW_EXPECT_FALSE( fixture._ui.setTheme( "missing" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+        SW_EXPECT_FALSE( fixture._ui.setTheme( "missing" ) );
+    }
 }
 
 /** @brief [UIStyleTest] 전환을 적은 칸은 계산된 스타일이 바뀔 때 옛 값에서 새 값으로 옮겨 가고(반에서 반), 끝나면 나눠 쓰는 계산된 스타일로 돌아간다 */
@@ -681,8 +685,11 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
         UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
         SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
 
-        SW_EXPECT_TRUE( pSetting->setValueAsString( "missing" ) ); // 모르는 이름 — 경고하고 지금 테마를 둔다
-        UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "an unknown theme name is refused" ); // 거절 · 실패 로그가 이 구간이 보려는 동작이다
+            SW_EXPECT_TRUE( pSetting->setValueAsString( "missing" ) );     // 모르는 이름 — 경고하고 지금 테마를 둔다
+            UIStyleTestUtil::runFrame( fixture._input, fixture._ui );
+        }
         SW_EXPECT_STREQ( "default", fixture._ui.getThemeName().c_str() );
     }
     {
