@@ -1720,15 +1720,36 @@ SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
 }
 
 /**
- * @brief [ModuleAPITest] Full Game Scene, Component Lifecycle & Tick Verification
+ * @brief [ModuleAPITest] Full Game Scene, Component Lifecycle & Tick Verification (자식 프로세스에서 돈다)
+ * @details 이 케이스는 GameFramework 의 정적 등록(데이터 종류 · 탐침 · 단계 · 개발 명령 · 서비스 팩토리)이 프로세스에 한 벌뿐이라는 전제가 필요하다. 앞 케이스(`ExportGameAPI`)가
+ *          원본 이미지를 일부러 내리지 않아 이 프로세스에는 이미 한 벌이 있으므로, 깨끗한 자식에서 `ModuleHost` 와 같은 순서(공용 모듈 → 키트 → SWGame)로 돈다.
  */
 SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
 {
-    // 앞 테스트의 라이브 리로드가 "GameFramework" 타입을 해제했으면(묘비) 이 프로세스에 이미 올라온 GameFramework 이미지는 등록기를 다시 돌리지
-    // 않아 게임 설정 읽기가 타입을 찾지 못한다. 앱과 같은 길(섀도 복사본을 올려 그 등록기를 제 이름으로)로 GameFramework 타입을 살려 둔다.
-    // 이 호스트가 가장 먼저 만들어져 가장 늦게 부서지므로 아래 게임이 내려간 뒤에 해제된다.
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_FULL_GAME_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.FullGameSceneAndComponentLifecycleChild", arrEnvironment, 120 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "게임 씬 · 컴포넌트 수명 확인이 자식에서 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/**
+ * @brief [ModuleAPITest] 자식 프로세스 역할: 게임 모듈로 씬과 컴포넌트 수명을 한 바퀴 돌린다. 그냥 실행하면 건너뛴다.
+ * @details 공용 모듈을 `loadSharedModule` 로 먼저 올려 제 이름으로 등록하고(`ModuleHost` 의 순서) 키트와 SWGame 은 원시로 올린다. 키트 · SWGame 이 import 하는 GameFramework 는
+ *          같은 이미지라 정적 등록이 한 벌이다. 매니저가 가장 먼저 만들어져 가장 늦게 부서지므로 게임이 내려간 뒤에 공용 모듈이 해제된다.
+ */
+SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycleChild )
+{
+    if ( sw::ProcessEnvironment::isSet( "SW_FULL_GAME_CHILD" ) == false )
+        SW_TEST_SKIP( "child only — FullGameSceneAndComponentLifecycle launches it" );
+
     sw::LiveReloadManager gameFrameworkHost;
-    SW_ASSERT_TRUE_MSG( gameFrameworkHost.registerModule( "GameFramework" ), "GameFramework did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.loadSharedModule( "GameFramework" ), "GameFramework did not load - see the log above" );
 
     void* hOverworld = sw::loadModule( "GF_Overworld" );
     if ( hOverworld != nullptr )
@@ -1989,13 +2010,33 @@ SW_TEST_CASE( ModuleAPITest, EveryModulePropertyHasATypeTheSerializersCanCarry )
 }
 
 /**
- * @brief [ModuleAPITest] SWGame 모듈 반복 로드/언로드 사이클 안정성
+ * @brief [ModuleAPITest] SWGame 모듈 반복 로드/언로드 사이클 안정성 (자식 프로세스에서 돈다 — `FullGameSceneAndComponentLifecycle` 과 같은 까닭)
  */
 SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
 {
-    // FullGameSceneAndComponentLifecycle 과 같은 까닭으로 GameFramework 타입을 먼저 살려 둔다(게임 설정 읽기가 그 타입을 쓴다).
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_REPEATED_RELOAD_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.GameModuleRepeatedReloadCycleChild", arrEnvironment, 120 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "SWGame 반복 로드 · 언로드가 자식에서 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/**
+ * @brief [ModuleAPITest] 자식 프로세스 역할: SWGame 을 두 번 올리고 내린다. 그냥 실행하면 건너뛴다.
+ * @details 공용 모듈은 `loadSharedModule` 로 한 번만 올려 두고(게임 설정 읽기가 그 타입을 쓴다) SWGame · 키트만 반복한다.
+ */
+SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycleChild )
+{
+    if ( sw::ProcessEnvironment::isSet( "SW_REPEATED_RELOAD_CHILD" ) == false )
+        SW_TEST_SKIP( "child only — GameModuleRepeatedReloadCycle launches it" );
+
     sw::LiveReloadManager gameFrameworkHost;
-    SW_ASSERT_TRUE_MSG( gameFrameworkHost.registerModule( "GameFramework" ), "GameFramework did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( gameFrameworkHost.loadSharedModule( "GameFramework" ), "GameFramework did not load - see the log above" );
 
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {
@@ -2223,12 +2264,27 @@ SW_TEST_CASE( ModuleAPITest, UnloadReleasesTheChannelsTheImageCreated )
  * @brief [ModuleAPITest] 모듈 이미지를 내려도 그 이미지가 끌어온 의존 이미지(GameFramework)는 올라와 있다
  * @details 의존 이미지의 코드(그것이 만든 이벤트 채널 항목)를 쥔 등록은 모듈을 내릴 때 뗄 수 없다 — 의존이 함께 내려갈지는 로더만 안다. 그래서
  *          `ModuleImageUtil::unloadModuleImage` 는 의존을 고정한다. Windows 는 지연 로드가 GameFramework 를 원래 잡고 있고, 리눅스는 `DT_NEEDED` 참조가
- *          함께 풀려 GameFramework 가 내려간다.
+ *          함께 풀려 GameFramework 가 내려간다. 앞 케이스가 GameFramework 를 이미 올려 고정해 두었으면 아래 확인이 저절로 참이 되므로 깨끗한 자식에서 돈다.
  */
 SW_TEST_CASE( ModuleAPITest, UnloadKeepsTheImagesTheModulePulledIn )
 {
-    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false )
-        SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다" );
+    if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_UNLOAD_KEEPS_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.UnloadKeepsTheImagesTheModulePulledInChild", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "SWGame 을 내린 뒤 의존 이미지가 내려갔거나 자식이 죽었습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/** @brief [ModuleAPITest] 자식 프로세스 역할: SWGame 이 끌어온 GameFramework 가 SWGame 을 내린 뒤에도 올라와 있는지 본다. 그냥 실행하면 건너뛴다. */
+SW_TEST_CASE( ModuleAPITest, UnloadKeepsTheImagesTheModulePulledInChild )
+{
+    if ( sw::ProcessEnvironment::isSet( "SW_UNLOAD_KEEPS_CHILD" ) == false )
+        SW_TEST_SKIP( "child only — UnloadKeepsTheImagesTheModulePulledIn launches it" );
 
     void* const hGame = sw::loadModule( "SWGame" );
     SW_ASSERT_NOT_NULL( hGame );

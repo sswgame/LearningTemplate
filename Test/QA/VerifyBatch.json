@@ -1008,7 +1008,7 @@
       "id": "shared-module-unload-tests", "title": "공용 모듈을 매니저가 shutdown 에서 내린다(SmokeTest 의 모듈 호스트 · 리로드 · 모듈 API 케이스)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
       "filter": "ModuleHostTest.*,ArchitectureTest.*,ModuleAPITest.*",
       "source": "docs/plans/Candidates-quality.md LogGateRemainders", "result_doc": "docs/plans/Candidates-quality.md LogGateRemainders",
-      "note": "모두 통과해야 하고, 로그에서 `already registered` · `registered twice` · `already defined` 줄이 `ArchitectureTest.LiveReload*` 안에서 사라졌는지 센다(표식 없는 줄이 0 이어야 한다). 남으면 SWGame 단독 등록 케이스가 지연 로드로 올린 GameFramework 이미지 몫이다."
+      "note": "기대 결과: (1) 모두 통과 — 자식 프로세스로 옮긴 FullGameSceneAndComponentLifecycle · GameModuleRepeatedReloadCycle · UnloadKeepsTheImagesTheModulePulledIn 은 부모 케이스가 자식 종료 코드 0 을 본다(자식 이름은 …Child, 그냥 돌리면 건너뜀). (2) LastTest.log 의 `already registered` · `registered twice` · `already defined` 표식 없는 줄이 SmokeTest 전체에서 0 — 앞서 4묶음 412줄이었다. (3) 자식 케이스 안의 로그는 부모 로그에 안 나오므로 자식이 실패하면 부모 메시지의 마지막 출력을 본다. 자식에서 `already registered` 가 보이면 공용 모듈 한 벌 가정이 깨진 것이다(키트 · SWGame 이 import 한 GameFramework 가 loadSharedModule 이 올린 것과 다른 파일인지 본다)."
     }
   ]
 }
