@@ -217,6 +217,12 @@ namespace sw
             _pRenderThreadDrainContext.store( nullptr, std::memory_order_relaxed );
             _renderThreadID.store( std::thread::id{}, std::memory_order_relaxed );
         }
+        // 렌더 스레드 역할의 소유자도 여기서 정한다(Debug 가 역할 진입에서 스레드를 확인한다). 풀면 다음에 들어오는 스레드(종료 · 인라인 실행)가 받는다.
+        if ( pfnDrain != nullptr )
+            _renderThread.bindToThread( renderThreadID );
+        else
+            _renderThread.unbind();
+        onRenderThreadRoleChanged( pfnDrain != nullptr ? renderThreadID : std::thread::id{} );
         // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 맞춘다.
         _pDeferredHandleQueue->_retiredFrameCount.store( _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire ), std::memory_order_release );
         flushDeferredHandleReleases();

@@ -336,6 +336,8 @@ namespace sw
         }
 
         waitForPreviousFrame();
+        // resize 는 렌더 스레드를 세운 뒤(`App::onResize` 의 `waitIdle`) 부른다 — 그동안 백 버퍼를 다시 만드는 이 스레드가 렌더 스레드 역할을 빌린다.
+        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         _swapChain.releaseBackBuffers();
         if ( _swapChain.resize( width, height ) == false )
             return;
@@ -343,5 +345,9 @@ namespace sw
         _swapChain.acquireNextImage();
     }
 
+    void D3D12RHIDevice::onRenderThreadRoleChanged( std::thread::id owner )
+    {
+        _swapChain.bindRenderThread( owner );
+    }
 } // namespace sw
 #endif

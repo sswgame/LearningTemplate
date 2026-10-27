@@ -218,6 +218,8 @@ namespace sw
          * @details 안에서는 블록(`audio::kBlockFrameCount`) 단위로 평면 렌더하고, 블록을 시작할 때 쌓인 명령을 적용한다. 장치 경계에서 교차로 바꾼다. 초기화 전이면 0 을 쓴다.
          */
         void render( float32* pOutput, uint32 frameCount );
+        /** @brief 오디오 스레드 역할을 놓습니다. 출력을 닫거나 열기 직전에 부른다 — 다음에 `render` 를 부르는 스레드(새 장치 스레드 · 오프라인 렌더)가 역할을 받는다. */
+        void releaseAudioThread() { _audioThread.unbind(); }
         /** @brief 버스 하나의 마지막 블록 피크를 반환합니다. 오디오 스레드와 테스트가 씁니다. 없는 버스면 0 입니다. */
         float32 getBusPeak( const hashed_string& bus ) const;
         /** @brief 파라미터의 현재 값(seek 이후)을 반환합니다. 오디오 스레드와 테스트가 씁니다. 모르는 파라미터면 0 입니다. */

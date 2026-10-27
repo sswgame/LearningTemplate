@@ -178,7 +178,7 @@ namespace sw
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
     {
-        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        _renderThread.assumeHeldByJoinedTask(); // 패스 실행(병렬 기록 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
         return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
                  ? constant::kMaxGPUTimestampSlot
                  : 0u;

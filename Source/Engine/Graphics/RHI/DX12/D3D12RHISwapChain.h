@@ -85,13 +85,24 @@ namespace sw
          */
         void setBarrierWatcher( const IRHIDevice* pWatcher ) { _pBarrierWatcher = pWatcher; }
 
+        /** @brief 렌더 스레드 역할의 소유자를 맞춥니다(디바이스의 `onRenderThreadRoleChanged`). 빈 id 면 놓습니다. */
+        void bindRenderThread( std::thread::id owner )
+        {
+            if ( owner == std::thread::id{} )
+                _renderThread.unbind();
+            else
+                _renderThread.bindToThread( owner );
+        }
+        /** @brief 렌더 스레드 역할입니다 — 렌더 스레드를 세운 뒤 다른 스레드가 백 버퍼를 다시 만들 때 빌린다(`ScopedThreadRoleBorrow`). */
+        ThreadRole& getRenderThreadRole() { return _renderThread; }
+
         /** @brief 네이티브 스왑체인이 있는지 확인합니다(오프스크린 전용 디바이스면 false). */
         bool isValid() const { return _swapChain != nullptr; }
 
         /** @brief 지금 그릴 수 있는 백버퍼가 준비돼 있는지 확인합니다. */
         bool isBackBufferReady() const
         {
-            _renderThread.assumeHeld();
+            _renderThread.assumeHeldByJoinedTask(); // 병렬 패스 기록 태스크도 부른다(렌더 스레드가 합류를 기다린다)
             return _backBufferIndex < _listBackBuffer.size();
         }
         uint32 getBufferCount() const { return _bufferCount; }
