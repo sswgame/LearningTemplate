@@ -102,7 +102,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < MapRegistry::getCount(); ++index )
         {
             const EditorInputMapRegistration& row = MapRegistry::getAt( index );
-            if ( _map.appendFromResource( row._pResourcePath ) == false )
+            if ( _map.appendFromResource( ResourceID{ row._pResourcePath } ) == false )
             {
                 SW_LOG_ERROR( "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pResourcePath, row._pID );
                 bValid = false;
