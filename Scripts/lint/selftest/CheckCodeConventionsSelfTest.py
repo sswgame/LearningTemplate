@@ -379,9 +379,12 @@ _kBraceScopeCases: list[tuple[str, str]] = [
     ("문자 리터럴 안의 {", "        return c == '{';\n"),
     ("줄 끝 // 주석 안의 {", "        run(); // {\n"),
     ("줄 끝 /* */ 주석 안의 {", "        run(); /* { */\n"),
+    # 중괄호 없는 `else if constexpr ( … )` 를 함수 서명으로 읽으면, 그 서명이 다음 `{` 를 기다리다 멤버의 `{}` 초기화에서 함수를 연다.
+    ("중괄호 없는 else if constexpr", "        if constexpr ( kA )\n            return true;\n        else if constexpr ( kB )\n            return false;\n        else\n            return c == 0;\n"),
+    # 서명처럼 보이는 줄 뒤에 `;` 로 끝나는 문장이 오면 그 서명은 정의가 아니다 — 기다림이 남으면 같은 일이 생긴다.
+    ("서명처럼 보이는 줄 뒤의 문장", "        run( c )\n            ;\n        return true;\n"),
 ]
 _kBraceScopeLocalRules = ("Naming/LocalNoUnderscore", "Naming/LocalContainer", "Naming/LocalPointer")
-_kBraceScopeFirstFunctionLine = 13   # 아래 조각에서 클래스 뒤 함수(`braceAfter`)가 시작하는 줄 — 그 앞은 클래스 본문이다
 
 
 def checkBraceScopeInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
@@ -390,15 +393,16 @@ def checkBraceScopeInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
     for caseIndex, (label, trickyLine) in enumerate(_kBraceScopeCases):
         content = (
             "#pragma once\n\nclass BraceProbe\n{\n    bool go( char c )\n    {\n" + trickyLine + "    }\n"
-            "    vector<Foo> _listItem;\n    unique_ptr<Bar> _pItem;\n};\n\n"
+            "    vector<Foo> _listItem;\n    unique_ptr<Bar> _pItem;\n    int32 _count{ 0 };\n};\n\n"
             "inline void braceAfter()\n{\n    int32 _val = 0;\n}\n"
         )
         caseRoot = tempRoot / f"brace_scope_{caseIndex}"
         path = writeFixtureInternal(caseRoot, "Source/Probe/BraceScope.h", content)
         resetPathMapCacheInternal()
+        firstFunctionLine = content[: content.index("inline void braceAfter")].count("\n") + 1   # 그 앞은 클래스 본문이다
         listViolation = [v for v in CheckCodeConventions.runConventionsCheck(caseRoot, [str(path)]) if v.rule_category in _kBraceScopeLocalRules]
-        listMemberLine = sorted({v.line_number for v in listViolation if v.line_number < _kBraceScopeFirstFunctionLine})
-        bCaughtLocal = any(v.rule_category == "Naming/LocalNoUnderscore" and v.line_number >= _kBraceScopeFirstFunctionLine for v in listViolation)
+        listMemberLine = sorted({v.line_number for v in listViolation if v.line_number < firstFunctionLine})
+        bCaughtLocal = any(v.rule_category == "Naming/LocalNoUnderscore" and v.line_number >= firstFunctionLine for v in listViolation)
         if bVerbose:
             print(f"  [중괄호 깊이: {label}] 멤버 줄에서 걸린 곳={listMemberLine} 클래스 뒤 지역 변수 잡음={bCaughtLocal}")
         if listMemberLine:
