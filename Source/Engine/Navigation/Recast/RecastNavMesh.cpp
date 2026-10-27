@@ -775,6 +775,10 @@ namespace sw
         releaseQuery( bLocked );
         if ( dtStatusFailed( status ) || polyRef == 0 )
             return false;
+        // Detour 는 경계 상자만 질의 상자에 걸친 폴리곤도 고르고 그 폴리곤 위 가장 가까운 점을 돌려준다 — 점이 상자 밖일 수 있다(돌린 장애물 구멍 옆 삼각형).
+        // 계약(상자 안의 점)을 여기서 지킨다. 높이는 경사면 투영이 상자 밖으로 나갈 수 있어 가로(XZ)만 본다.
+        if ( MathUtil::abs( arrNearest[0] - position._x ) > searchExtent._x || MathUtil::abs( arrNearest[2] - position._z ) > searchExtent._z )
+            return false;
         outLocation._position = RecastNavMeshInternal::toFloat3( arrNearest );
         outLocation._poly     = static_cast<NavPolyRef>( polyRef );
         return true;

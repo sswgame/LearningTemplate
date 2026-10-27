@@ -415,20 +415,44 @@ namespace sw
     {
         if ( _pTileCache == nullptr )
             return 0;
-        dtObstacleRef ref{ 0 };
-        dtStatus      status{ DT_FAILURE };
+        // Detour 가 쓸 모양을 먼저 채워 그 경계 상자(Detour 식 그대로)가 걸치는 타일 층을 센다.
+        dtTileCacheObstacle probe{};
         if ( desc._bCylinder )
         {
             // Detour 원기둥의 자리는 바닥 가운데다.
-            const float32 arrBase[3] = { desc._center._x, desc._center._y - desc._halfExtents._y, desc._center._z };
-            status                   = _pTileCache->addObstacle( arrBase, desc._halfExtents._x, desc._halfExtents._y * 2.0f, &ref );
+            probe.type            = DT_OBSTACLE_CYLINDER;
+            probe.cylinder.pos[0] = desc._center._x;
+            probe.cylinder.pos[1] = desc._center._y - desc._halfExtents._y;
+            probe.cylinder.pos[2] = desc._center._z;
+            probe.cylinder.radius = desc._halfExtents._x;
+            probe.cylinder.height = desc._halfExtents._y * 2.0f;
         }
         else
         {
-            const float32 arrCenter[3]      = { desc._center._x, desc._center._y, desc._center._z };
-            const float32 arrHalfExtents[3] = { desc._halfExtents._x, desc._halfExtents._y, desc._halfExtents._z };
-            status                          = _pTileCache->addBoxObstacle( arrCenter, arrHalfExtents, desc._yaw, &ref );
+            probe.type                       = DT_OBSTACLE_ORIENTED_BOX;
+            probe.orientedBox.center[0]      = desc._center._x;
+            probe.orientedBox.center[1]      = desc._center._y;
+            probe.orientedBox.center[2]      = desc._center._z;
+            probe.orientedBox.halfExtents[0] = desc._halfExtents._x;
+            probe.orientedBox.halfExtents[1] = desc._halfExtents._y;
+            probe.orientedBox.halfExtents[2] = desc._halfExtents._z;
         }
+        // Detour 는 장애물 하나가 고칠 타일 층을 DT_MAX_TOUCHED_TILES 개에서 말없이 자른다 — 넘으면 일부 타일에만 구멍이 난다. 자르지 않고 거절한다.
+        float32 arrBoundsMin[3]{};
+        float32 arrBoundsMax[3]{};
+        _pTileCache->getObstacleBounds( &probe, arrBoundsMin, arrBoundsMax );
+        dtCompressedTileRef arrTouched[DT_MAX_TOUCHED_TILES + 1]{};
+        int32               touchedCount{ 0 };
+        _pTileCache->queryTiles( arrBoundsMin, arrBoundsMax, arrTouched, &touchedCount, DT_MAX_TOUCHED_TILES + 1 );
+        if ( touchedCount > DT_MAX_TOUCHED_TILES )
+        {
+            SW_LOG_ERROR( "Nav obstacle bounds (%# x %# m) touch more than %# tile layers - split the obstacle or raise _tileSize", arrBoundsMax[0] - arrBoundsMin[0],
+                          arrBoundsMax[2] - arrBoundsMin[2], DT_MAX_TOUCHED_TILES );
+            return 0;
+        }
+        dtObstacleRef  ref{ 0 };
+        const dtStatus status = desc._bCylinder ? _pTileCache->addObstacle( probe.cylinder.pos, probe.cylinder.radius, probe.cylinder.height, &ref )
+                                                : _pTileCache->addBoxObstacle( probe.orientedBox.center, probe.orientedBox.halfExtents, desc._yaw, &ref );
         if ( dtStatusFailed( status ) )
         {
             SW_LOG_ERROR( "Nav obstacle could not enter the tile cache (cache full or too many requests this frame) - raise _maxCacheObstacleCount" );

@@ -164,7 +164,7 @@ namespace sw
          *          장애물은 `addCacheObstacle` 로 넣는다. `RebakeTiles` 면 장애물 부피를 덧칠해 타일을 다시 베이크하고, 아래 세 함수는 오류다.
          */
         virtual NavObstacleMode getObstacleMode() const = 0;
-        /** @brief 장애물 캐시에 장애물을 넣습니다(다음 `updateCacheObstacles` 가 닿은 타일을 층에서 다시 짓는다). 실패하면 오류를 남기고 0 입니다. */
+        /** @brief 장애물 캐시에 장애물을 넣습니다(다음 `updateCacheObstacles` 가 닿은 타일을 층에서 다시 짓는다). 실패하면 오류를 남기고 0 입니다 — 경계 상자(돌린 상자는 1.41 × 긴 반 크기)가 타일 층 8 개를 넘게 걸쳐도 실패다. */
         virtual NavObstacleRef addCacheObstacle( const NavCacheObstacleDesc& desc ) = 0;
         /** @brief 장애물 캐시에서 장애물을 뺍니다. */
         virtual void removeCacheObstacle( NavObstacleRef obstacle ) = 0;
@@ -173,7 +173,7 @@ namespace sw
          */
         virtual bool updateCacheObstacles( float32 deltaSeconds ) = 0;
 
-        /** @brief @p position 에서 반 크기 @p searchExtent 상자 안의 가장 가까운 내비메시 위 점입니다. 없으면 false 입니다. */
+        /** @brief @p position 에서 반 크기 @p searchExtent 상자 안(가로 XZ 기준)의 가장 가까운 내비메시 위 점입니다. 없으면 false 입니다 — 폴리곤의 경계 상자만 걸치고 점은 상자 밖이면 false 다. */
         [[nodiscard]] virtual bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const = 0;
         /**
          * @brief @p start 에서 @p end 까지의 경로를 구해 다듬습니다(줄 당기기, 모퉁이만 남깁니다).

@@ -94,13 +94,16 @@ SW_TEST_CASE( NavMeshTileCacheTest, LayerPacksRoundTripThroughInstall )
 
 /**
  * @brief [NavMeshTileCacheTest] Y 축으로 돌린 오브젝트의 긴 상자 장애물은 오브젝트 +X 축 쪽을 막고 그와 직각인 쪽은 열어 둔다 — 요 부호(`computeBoxYaw` ↔ Detour yRadians)가 맞다
- * @details 회전 +40° 와 -40° 를 둘 다 본다(부호가 뒤집히면 막는 쪽이 거울로 바뀌어 둘 중 하나가 틀린다). 바닥 20 m, 상자는 반 길이 7 m · 반 폭 0.6 m.
+ * @details 회전 +40° 와 -40° 를 둘 다 본다(부호가 뒤집히면 막는 쪽이 거울로 바뀌어 둘 중 하나가 틀린다). 바닥 20 m, 상자는 반 길이 7 m · 반 폭 1.2 m.
+ *          반 폭은 비스듬한 구멍의 계단 셀(반 셀)과 윤곽 단순화(`_maxEdgeError` 1.3 셀)가 깎는 몫에 질의 상자 모서리(0.3 m × √2)를 더한 것보다 넉넉해야 한다(0.6 m 는 모자랐다).
+ *          돌린 상자의 Detour 경계는 1.41 × 7 m 정사각형이라 타일 32 셀(6.4 m)이면 타일 16 개에 걸쳐 거절된다 — 타일을 96 셀(19.2 m)로 키워 4 개에 담는다.
  */
 SW_TEST_CASE( NavMeshTileCacheTest, RotatedBoxFollowsObjectAxis )
 {
-    using Internal                     = TestNavMeshTileCacheInternal;
-    const sw::NavMeshSettings settings = Internal::makeCacheSettings();
-    sw::NavMeshGeometry       geometry;
+    using Internal                            = TestNavMeshTileCacheInternal;
+    sw::NavMeshSettings settings              = Internal::makeCacheSettings();
+    settings._listAgentType.front()._tileSize = 96;
+    sw::NavMeshGeometry geometry;
     navtest::addFloor( geometry, -10.0f, -10.0f, 10.0f, 10.0f );
     const sw::float3         tightExtent{ 0.3f, 1.0f, 0.3f };
     const sw::NavQueryFilter filter = settings.makeDefaultFilter();
@@ -112,7 +115,7 @@ SW_TEST_CASE( NavMeshTileCacheTest, RotatedBoxFollowsObjectAxis )
         const sw::float4x4       world = sw::float4x4::makeRotationY( sw::MathUtil::toRadian( degrees ) );
         sw::NavCacheObstacleDesc box;
         box._center      = sw::float3{ 0.0f, 0.5f, 0.0f };
-        box._halfExtents = sw::float3{ 7.0f, 0.5f, 0.6f };
+        box._halfExtents = sw::float3{ 7.0f, 0.5f, 1.2f };
         box._yaw         = sw::NavMeshObstacleComponent::computeBoxYaw( world );
         SW_ASSERT_TRUE( pNavMesh->addCacheObstacle( box ) != 0 );
         Internal::settle( *pNavMesh );
@@ -125,6 +128,26 @@ SW_TEST_CASE( NavMeshTileCacheTest, RotatedBoxFollowsObjectAxis )
         SW_EXPECT_FALSE( pNavMesh->findNearestPoint( alongAxis, tightExtent, filter, location ) );
         SW_EXPECT_TRUE( pNavMesh->findNearestPoint( acrossAxis, tightExtent, filter, location ) );
     }
+}
+
+/**
+ * @brief [NavMeshTileCacheTest] 경계 상자가 타일 층 8 개(Detour `DT_MAX_TOUCHED_TILES`)를 넘게 걸치는 장애물은 오류이고 0 이다 — 일부 타일에만 구멍이 나지 않는다
+ * @details 타일 32 셀(6.4 m)에서 반 길이 7 m 상자의 경계는 1.41 × 7 m 정사각형이라 바닥 20 m 의 타일 16 개에 걸친다.
+ */
+SW_TEST_CASE( NavMeshTileCacheTest, ObstacleTouchingTooManyTilesIsRefused )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "an obstacle whose bounds touch more tile layers than Detour rebuilds is refused" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
+    using Internal                     = TestNavMeshTileCacheInternal;
+    const sw::NavMeshSettings settings = Internal::makeCacheSettings();
+    sw::NavMeshGeometry       geometry;
+    navtest::addFloor( geometry, -10.0f, -10.0f, 10.0f, 10.0f );
+    sw::unique_ptr<sw::INavMesh> pNavMesh = navtest::bake( settings, geometry );
+    SW_ASSERT_NOT_NULL( pNavMesh.get() );
+    sw::NavCacheObstacleDesc box;
+    box._center      = sw::float3{ 0.0f, 0.5f, 0.0f };
+    box._halfExtents = sw::float3{ 7.0f, 0.5f, 1.2f };
+    SW_EXPECT_EQUAL( sw::NavObstacleRef{ 0 }, pNavMesh->addCacheObstacle( box ) );
+    SW_EXPECT_FALSE( pNavMesh->updateCacheObstacles( 0.0f ) );
 }
 
 /**
