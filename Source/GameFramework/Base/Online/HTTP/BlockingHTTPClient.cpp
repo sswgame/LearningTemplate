@@ -20,7 +20,8 @@ namespace sw
 {
     BlockingHTTPClient::BlockingHTTPClient()
         : _sendMutex{}
-        , _client{}
+        , _clock{}
+        , _client{ _clock }
     {
     }
 
@@ -76,13 +77,11 @@ namespace sw
             return response;
         }
         std::scoped_lock<mutex>    lock{ _sendMutex };
-        const int64                startNanoseconds = MonotonicClock::nowNanoseconds();
-        const uint64               requestID        = _client.submitRequest( clientRequest, 0 );
+        const uint64               requestID = _client.submitRequest( clientRequest );
         vector<HTTPClientResponse> listResponse;
         for ( ;; )
         {
-            const int64 elapsedNanoseconds = MonotonicClock::nowNanoseconds() - startNanoseconds;
-            _client.update( elapsedNanoseconds / constant::kNanosecondsPerMillisecond );
+            _client.update();
             listResponse.clear();
             (void)_client.pollResponses( listResponse ); // 이 객체만 요청을 맡기므로 다른 요청의 응답은 없다
             for ( const HTTPClientResponse& clientResponse : listResponse )

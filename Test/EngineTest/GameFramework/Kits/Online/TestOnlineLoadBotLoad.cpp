@@ -3,6 +3,8 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
@@ -23,10 +25,10 @@ namespace
 {
     struct OnlineLoadBotLoadTestInternal
     {
-        static constexpr int64  kTickMs        = 10;
-        static constexpr int64  kServerStartMs = 1000000; ///< 서비스 시각(가짜 UTC) — 실행기 시각과 따로
-        static constexpr int32  kMaxTickCount  = 60000;   ///< 가짜 10 분
-        static constexpr uint16 kServerPort    = 7520;
+        static constexpr int64            kTickMs = 10;
+        static constexpr UnixMilliseconds kServerStartMs{ 1000000 }; ///< 서비스 시각(가짜 UTC) — 실행기 시각과 따로
+        static constexpr int32            kMaxTickCount = 60000;     ///< 가짜 10 분
+        static constexpr uint16           kServerPort   = 7520;
 
         /** @brief 봇 200 — 모두 들어간 뒤 말하고(늘리기 2 초 < 기다림 3 초), 모두 다 말한 뒤 떠난다(말하기 끝 < 마지막 기다림). */
         static constexpr const utf8* kChatAndMatchScenario = R"({
@@ -58,11 +60,13 @@ namespace
             LoopbackStreamNetwork        network( static_cast<uint32>( networkSeed ) );
             unique_ptr<IStreamTransport> serverTransport = network.createTransport();
             unique_ptr<IStreamTransport> botTransport    = network.createTransport();
+            ManualClock                  serverClock{ MonotonicMilliseconds{ 0 } }; // 서버 캐시 만료를 실행기와 같은 가짜 경과로 잰다
             LoadBotLocalServer           server;
             LoadBotLocalServerSettings   serverSettings;
             serverSettings._port               = kServerPort;
             serverSettings._startMs            = kServerStartMs; // 첫 tick 과 같은 서비스 시각 — 실행마다 같은 표가 나와야 한다
             serverSettings._bLightPasswordHash = SW_TRUE;
+            serverSettings._pClock             = &serverClock;
             SW_EXPECT_TRUE_MSG( server.initialize( serverTransport.get(), serverSettings, error ), error.c_str() );
 
             LoadBotRunner         runner;
@@ -74,10 +78,12 @@ namespace
             bool  bRunning  = true;
             while ( bRunning && tickCount < kMaxTickCount )
             {
-                const int64 nowMs = tickCount * kTickMs;
-                runner.setManualClock( nowMs );
+                const int64                 elapsedMs = tickCount * kTickMs;
+                const MonotonicMilliseconds tickTime{ elapsedMs }; // 실행기 · 서버 캐시가 같은 가짜 단조 시각을 쓴다
+                runner.setManualClock( tickTime );
+                serverClock.setMilliseconds( tickTime );
                 bRunning = runner.update();
-                server.update( kServerStartMs + nowMs );
+                server.update( kServerStartMs + elapsedMs );
                 ++tickCount;
             }
             SW_EXPECT_FALSE( bRunning ); // 시한 전에 모두 끝났다

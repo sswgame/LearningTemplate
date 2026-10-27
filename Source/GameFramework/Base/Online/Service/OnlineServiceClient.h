@@ -29,6 +29,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -154,8 +155,8 @@ namespace sw
                                                        const OnlineServiceClientConfig& settings );
         void               shutdown();
 
-        /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. */
-        void update( int64 nowMs );
+        /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. @p nowMs 는 단조 시각이라 벽시계 보정에 시한 · 백오프가 흔들리지 않습니다. */
+        void update( MonotonicMilliseconds nowMs );
 
         /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
@@ -197,7 +198,7 @@ namespace sw
             NetRequestOptions      _options{};
             OnlineResponseDelegate _onResponse{};
             uint64                 _requestID{ 0 };
-            int64                  _deadlineMs{ 0 };
+            MonotonicMilliseconds  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
             uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequestsOf` 가 취소 표시했다. 부르지도 보내지도 않는다
         };
@@ -237,8 +238,8 @@ namespace sw
         IStreamTransport*                  _pTransport;
         const QueuedCall*                  _pSendingCall; ///< `sendRequest` 가 즉시 실패를 부를 때의 대상
         StreamConnectionHandle             _connection;
-        int64                              _nowMs;
-        int64                              _nextConnectMs;
+        MonotonicMilliseconds              _nowMs;
+        MonotonicMilliseconds              _nextConnectMs;
         int64                              _backoffMs;
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;

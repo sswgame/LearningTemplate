@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
@@ -51,7 +52,7 @@ namespace sw
         void shutdown();
 
         /** @brief 단계를 진행합니다(기다림 · 응답 대기면 시한만 본다). 시나리오를 다 돌았거나 연결을 잃고 멈췄으면 false. */
-        bool update( int64 nowMs );
+        bool update( MonotonicMilliseconds nowMs );
 
         // 실행기가 넘긴다 — 이 봇의 연결 사건
         void handleOpened( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle );
@@ -83,7 +84,7 @@ namespace sw
 
         const LoadBotStep* findCurrentStep() const;
         void               advance();
-        void               startStep( const LoadBotStep& step, int64 nowMs );
+        void               startStep( const LoadBotStep& step, MonotonicMilliseconds nowMs );
         void               startLogin( const LoadBotStep& step );
         bool               startRemoteStep( const LoadBotStep& step );
         void               finishStep( string_view errorKey );
@@ -91,7 +92,7 @@ namespace sw
         string             expandText( const string& text );
         void               drainNotifications();
         void               pollAccountReplies();
-        void               pollMatchResult( int64 nowMs );
+        void               pollMatchResult( MonotonicMilliseconds nowMs );
         void               stop();
 
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)
@@ -127,7 +128,7 @@ namespace sw
         LoadBotRunner*             _pRunner;
         StreamConnectionHandle     _connection;
         AccountID                  _accountID;
-        int64                      _waitUntilMs;
+        MonotonicMilliseconds      _waitUntilMs;
         int64                      _requestStartUs;
         int32                      _botIndex;
         int32                      _sendSequence;

@@ -18,6 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/CacheRecordUpdater.h"
@@ -107,7 +108,7 @@ namespace sw
             uint64              _lobbyID{ 0 };
             uint64              _ticketID{ 0 };
             uint64              _requestTag{ 0 };
-            int64               _nowMs{ 0 };
+            UnixMilliseconds    _nowMs{ 0 };
             PartyLobbyOperation _operation{ PartyLobbyOperation::PartyCreate };
             uint8               _bReady{ SW_FALSE };
         };
@@ -140,7 +141,7 @@ namespace sw
 
         // 로비
         /** @brief @p request 의 이름, 모드, 정원, 설정으로 로비를 만듭니다. 만든 사람이 방장입니다. */
-        void createLobby( AccountID accountID, const LobbySnapshot& request, int64 nowMs, uint64 requestTag );
+        void createLobby( AccountID accountID, const LobbySnapshot& request, UnixMilliseconds nowMs, uint64 requestTag );
         void listLobbies( string_view modeID, uint64 requestTag );
         void joinLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag );
         void leaveLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag );

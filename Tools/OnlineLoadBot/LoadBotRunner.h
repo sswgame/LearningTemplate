@@ -15,6 +15,7 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Time/TimePoint.h"
 
 #include "OnlineLoadBot/LoadBotMetrics.h"
 #include "OnlineLoadBot/LoadBotScenario.h"
@@ -54,7 +55,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 테스트 — 시계를 바깥이 정한다(밀리초, 처음 값이 시작). 한 번이라도 부르면 그 뒤로 이 값만 쓴다. */
-        void setManualClock( int64 nowMs );
+        void setManualClock( MonotonicMilliseconds nowMs );
 
         /** @brief 한 틱 — 전송 · 엔드포인트 · 요청 시한을 돌고, 늘리는 중이면 봇을 더 띄우고, 봇마다 다음 단계를 본다. 시나리오가 끝났으면 false. */
         bool update();
@@ -64,11 +65,14 @@ namespace sw
         int32                  getBotCount() const { return static_cast<int32>( _listBot.size() ); }
         int32                  getRunningBotCount() const;
         /** @brief 시작(첫 틱)부터 지난 밀리초입니다. */
-        int64 getElapsedMs() const { return getNowMs(); }
+        int64 getElapsedMs() const { return getNowMs() - kRunStart; }
 
         // 봇이 부른다
-        LoadBotMetrics&        getMutableMetrics() { return _metrics; }
-        int64                  getNowMs() const;
+        LoadBotMetrics& getMutableMetrics() { return _metrics; }
+        /** @brief 실행기 시각의 기원입니다. 봇의 시한과 시작 순서가 같은 단조 시각에서 잰다. */
+        static constexpr MonotonicMilliseconds kRunStart{ 0 };
+
+        MonotonicMilliseconds  getNowMs() const;
         int64                  getNowUs() const;
         LoadBot*               findBot( int32 botIndex ) const;
         StreamConnectionHandle connectBot( int32 botIndex );
@@ -92,8 +96,8 @@ namespace sw
         NetRequestClient             _requestClient;
         IStreamTransport*            _pTransport;
         int64                        _startUs;
-        int64                        _manualNowMs;
-        int64                        _manualStartMs;
+        MonotonicMilliseconds        _manualNowMs;
+        MonotonicMilliseconds        _manualStartMs;
         int32                        _launchedCount;
         uint8                        _bManualClock;
         uint8                        _bInitialized;

@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -38,7 +39,7 @@ namespace sw
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return ChatProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;

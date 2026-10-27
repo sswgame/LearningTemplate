@@ -173,13 +173,13 @@ namespace sw
         return PushDeliveryStatus::Rejected; // 401 · 403 과 그 밖의 4xx
     }
 
-    void FcmPushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs )
+    void FcmPushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         (void)locale; // 문구는 현지화 키라 기기가 푼다
         queueSend( deliveryID, makeMessageJSON( deviceToken, {}, message ), nowMs );
     }
 
-    void FcmPushProvider::sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    void FcmPushProvider::sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         if ( isValidTopic( topic ) == false )
         {
@@ -190,7 +190,7 @@ namespace sw
         queueSend( deliveryID, makeMessageJSON( {}, topic, message ), nowMs );
     }
 
-    void FcmPushProvider::queueSend( uint64 deliveryID, string&& bodyJSON, int64 nowMs )
+    void FcmPushProvider::queueSend( uint64 deliveryID, string&& bodyJSON, UnixMilliseconds nowMs )
     {
         vector<uint8>          bodyBytes = FcmPushProviderInternal::toBytes( bodyJSON );
         const UnixMilliseconds now{ nowMs }; // 서버 루프의 nowMs 는 유닉스 밀리초다 — 서명 토큰의 iat · exp 가 된다
@@ -206,7 +206,7 @@ namespace sw
             flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs ); // 서명하지 못했다 — 키가 틀렸다
     }
 
-    void FcmPushProvider::submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, int64 nowMs )
+    void FcmPushProvider::submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds nowMs )
     {
         HTTPClientRequest request;
         request._method    = HTTPMethod::Post;
@@ -215,10 +215,10 @@ namespace sw
         request._bodyBytes = bodyBytes;
         request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + _tokenSource.getToken() } );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
-        _mapRequestToDelivery[_pHTTPClient->submitRequest( request, nowMs )] = deliveryID;
+        _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }
 
-    void FcmPushProvider::flushWaiting( ServiceAccountTokenSource::Outcome outcome, int64 nowMs )
+    void FcmPushProvider::flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds nowMs )
     {
         vector<Waiting> listWaiting;
         listWaiting.swap( _listWaiting );
@@ -260,14 +260,14 @@ namespace sw
         result._retryAfterMs       = retryAfterMs;
     }
 
-    void FcmPushProvider::update( int64 nowMs )
+    void FcmPushProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, UnixMilliseconds{ nowMs } );
+            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, nowMs );
             if ( outcome != ServiceAccountTokenSource::Outcome::None )
             {
                 flushWaiting( outcome, nowMs );

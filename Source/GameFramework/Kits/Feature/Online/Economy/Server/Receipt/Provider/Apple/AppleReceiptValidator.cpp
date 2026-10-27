@@ -169,7 +169,7 @@ namespace sw
             request._bodyBytes = Internal::toBytes( body );
             request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
         }
-        _mapRequestToCall[_pHTTPClient->submitRequest( request, now.count() )] = call;
+        _mapRequestToCall[_pHTTPClient->submitRequest( request )] = call;
     }
 
     void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
@@ -350,7 +350,7 @@ namespace sw
     void AppleReceiptValidator::update( UnixMilliseconds now )
     {
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 잰다.
-        _pHTTPClient->update( now.count() );
+        _pHTTPClient->update();
         const bool bMayPoll = _bStopped == SW_FALSE && _bHistoryInFlight == SW_FALSE;
         if ( bMayPoll && now.count() >= _nextHistoryMs )
             startHistory( now );

@@ -79,7 +79,7 @@ namespace sw
                     return false;
                 }
                 // 여기부터 실패하면 세운 것을 스스로 내린다 — 초기화에 실패한 키트는 stop · shutdown 을 받지 않는다.
-                if ( createReceiptProviders( providersFile, trustFile, outError ) == false )
+                if ( createReceiptProviders( providersFile, trustFile, context._clock, outError ) == false )
                 {
                     _receiptRegistry.shutdown();
                     shutdown();
@@ -138,7 +138,7 @@ namespace sw
 
         private:
             /** @brief 설정 파일을 읽어 실제 영수증 제공자를 만들고 레지스트리에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createReceiptProviders( const string& providersFile, const string& trustFile, string& outError )
+            [[nodiscard]] bool createReceiptProviders( const string& providersFile, const string& trustFile, const IClock& clock, string& outError )
             {
                 if ( providersFile.empty() )
                 {
@@ -157,7 +157,7 @@ namespace sw
                     return false;
                 }
                 vector<ReceiptProviderConfig> listSettings;
-                if ( ReceiptProviderSet::readSettings( jsonText, listSettings, outError ) == false || _receiptProviders.initialize( listSettings, trustFile, outError ) == false )
+                if ( ReceiptProviderSet::readSettings( jsonText, listSettings, outError ) == false || _receiptProviders.initialize( listSettings, trustFile, clock, outError ) == false )
                     return false;
                 for ( int32 index = 0; index < _receiptProviders.getProviderCount(); ++index )
                 {

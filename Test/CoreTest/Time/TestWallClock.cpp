@@ -12,6 +12,6 @@ SW_TEST_CASE( WallClockTest, ReturnsUnixMilliseconds )
 {
     constexpr int64 kYear2020Ms = 1577836800000;
     constexpr int64 kYear2200Ms = 7258118400000;
-    const int64     nowMs       = sw::WallClock::nowUnixMilliseconds();
+    const int64     nowMs       = sw::WallClock::nowUnixMilliseconds().count();
     SW_EXPECT_TRUE( kYear2020Ms < nowMs && nowMs < kYear2200Ms );
 }

@@ -22,6 +22,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
@@ -118,19 +119,19 @@ namespace sw
         /** @brief 기다리던 캐시 요청을 취소합니다. 임대는 놓지 않으며 TTL 이 지나면 넘어갑니다. */
         void shutdown();
         /** @brief 임대, 서버 목록, 매처, 배정, 낸 티켓의 시한을 처리합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
-        void joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag );
+        void joinQueue( AccountID accountID, string_view modeID, string_view region, UnixMilliseconds nowMs, uint64 requestTag );
         void leaveQueue( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 포함된 티켓을 뺍니다. */
         void removeAccount( AccountID accountID );
         /** @brief 파티 멤버가 바뀌어 티켓이 깨졌을 때 부릅니다(`PartyLobbyService::drainBrokenTickets`). 이 서버의 티켓이면 빼고, 다른 서버의 티켓이면 권한 서버와 티켓을 낸 서버에 버스로 알립니다. */
         void cancelTicket( uint64 ticketID );
         /** @brief 시작한 로비를 전용 서버에 배정합니다. */
-        void placeLobby( const LobbySnapshot& lobby, int64 nowMs );
+        void placeLobby( const LobbySnapshot& lobby, UnixMilliseconds nowMs );
 
         /** @brief 바인딩이 구독한 주제로 온 버스 메시지를 처리합니다. */
-        void handleBusMessage( const ServerBusMessage& message, int64 nowMs );
+        void handleBusMessage( const ServerBusMessage& message, UnixMilliseconds nowMs );
         /** @brief 경기 중 빈 슬롯을 맡깁니다. 이 서버가 그 모드의 권한이면 매처에 바로 넣고, 아니면 버스로 권한 서버에 보냅니다. 같은 프로세스의 게임 서버와 테스트가 부릅니다. */
         void submitBackfill( const MatchBackfillRequest& request );
         void drainCompletions( vector<MatchQueueCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
@@ -178,21 +179,21 @@ namespace sw
 
         struct PendingJoin
         {
-            string    _modeID{};
-            string    _region{};
-            AccountID _accountID{ kInvalidAccountID };
-            uint64    _requestTag{ 0 };
-            int64     _nowMs{ 0 };
+            string           _modeID{};
+            string           _region{};
+            AccountID        _accountID{ kInvalidAccountID };
+            uint64           _requestTag{ 0 };
+            UnixMilliseconds _nowMs{ 0 };
         };
 
         void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
         void submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
         void               deliverBackfill( const MatchBackfilled& backfilled );
-        void               updateLease( const string& modeID, ModeState& state, int64 nowMs );
+        void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
-        void               placeMatches( ModeState& state, int64 nowMs );
-        [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, int64 nowMs );
+        void               placeMatches( ModeState& state, UnixMilliseconds nowMs );
+        [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, UnixMilliseconds nowMs );
         void               deliverToTicket( uint64 originServerID, const MatchAssignment& assignment );
         void               notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment );
         void               removeFromQueue( const string& modeID, uint64 ticketID );

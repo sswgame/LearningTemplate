@@ -28,6 +28,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -149,19 +150,19 @@ namespace sw
         void shutdown();
 
         /** @brief 쌓인 기록을 저장소에 씁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // 클라이언트 요청이다. 결과는 같은 요청 태그로 drainCompletions 에서 받는다
-        void joinChannel( AccountID accountID, string_view channelID, int64 nowMs, uint64 requestTag );
+        void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );
         void leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag );
-        void sendMessage( AccountID accountID, string_view channelID, string_view text, int64 nowMs, uint64 requestTag );
-        void sendWhisper( AccountID accountID, AccountID recipientID, string_view text, int64 nowMs, uint64 requestTag );
+        void sendMessage( AccountID accountID, string_view channelID, string_view text, UnixMilliseconds nowMs, uint64 requestTag );
+        void sendWhisper( AccountID accountID, AccountID recipientID, string_view text, UnixMilliseconds nowMs, uint64 requestTag );
         void readHistory( AccountID accountID, string_view channelID, string_view cursor, int32 maxCount, uint64 requestTag );
         /** @brief 메시지를 신고합니다. 읽을 수 있는 채널이어야 하고 계정마다 도배를 제한합니다. 신고 레코드는 `ServiceReportStore` 형식이며 GM 도구가 읽습니다. */
-        void reportMessage( AccountID accountID, const ChatReportRequest& request, int64 nowMs, uint64 requestTag );
+        void reportMessage( AccountID accountID, const ChatReportRequest& request, UnixMilliseconds nowMs, uint64 requestTag );
 
         // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
-        [[nodiscard]] ChatResult addMember( AccountID accountID, string_view channelID, int64 nowMs );
+        [[nodiscard]] ChatResult addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
         void                     removeMember( AccountID accountID, string_view channelID );
         /** @brief GM 이 제재를 바꿨을 때 부릅니다. 다음 말하기 전에 다시 읽습니다. */
         void refreshSanction( AccountID accountID );
@@ -181,7 +182,7 @@ namespace sw
         int32 getQueuedHistoryCount() const { return static_cast<int32>( _listHistoryQueue.size() ); }
 
         /** @brief 저장 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, int64 nowMs );
+        void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
         void applyHistoryRead( uint64 requestTag, ChatResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount );
         void applyReport( uint64 requestTag, ChatResult result );
@@ -189,11 +190,11 @@ namespace sw
     private:
         struct PendingSend
         {
-            string    _channelID{};
-            string    _text{};
-            uint64    _requestTag{ 0 };
-            int64     _nowMs{ 0 };
-            AccountID _recipientID{ kInvalidAccountID }; ///< 귓속말이면 받는 계정이다
+            string           _channelID{};
+            string           _text{};
+            uint64           _requestTag{ 0 };
+            UnixMilliseconds _nowMs{ 0 };
+            AccountID        _recipientID{ kInvalidAccountID }; ///< 귓속말이면 받는 계정이다
         };
 
         struct Member
@@ -213,11 +214,11 @@ namespace sw
         };
 
         void       onPresenceFound( const AccountPresenceResult& result );
-        Member*    ensureMember( AccountID accountID, int64 nowMs );
-        bool       isSanctionFresh( const Member& member, int64 nowMs ) const;
-        void       startSanctionRead( AccountID accountID, Member& member, int64 nowMs );
+        Member*    ensureMember( AccountID accountID, UnixMilliseconds nowMs );
+        bool       isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
+        void       startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );
         void       submitSend( AccountID accountID, PendingSend&& send );
-        ChatResult prepareText( AccountID accountID, Member& member, string_view text, int64 nowMs, string& outText, int64& outRetryAfterMs );
+        ChatResult prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs );
         void       processSend( AccountID accountID, Member& member, const PendingSend& send );
         void       publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message );
         void       deliverToChannel( const ChatMessage& message );

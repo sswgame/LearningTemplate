@@ -101,7 +101,7 @@ namespace sw
         (void)host.respondError( context._token, OnlineError::kInvalidRequest );
     }
 
-    void ChatServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void ChatServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         if ( _pService == nullptr )
             return;

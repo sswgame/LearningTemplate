@@ -62,7 +62,10 @@ namespace sw
     private:
         void refill( int64 nowMs )
         {
-            if ( nowMs <= _lastRefillMs )
+            // 서버 루프 시각은 벽시계라 NTP 보정으로 되감길 수 있다 — 기준을 따라 내려 두지 않으면 되감긴 만큼 보충이 멈춘다.
+            if ( nowMs < _lastRefillMs )
+                _lastRefillMs = nowMs;
+            if ( nowMs == _lastRefillMs )
                 return;
             const int64 addedCount = ( nowMs - _lastRefillMs ) / _refillIntervalMs;
             if ( addedCount <= 0 )

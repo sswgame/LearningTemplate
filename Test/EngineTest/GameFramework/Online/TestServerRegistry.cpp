@@ -58,7 +58,7 @@ namespace
         }
 
         /** @brief 읽기를 끝까지 돌립니다(메모리 앞은 맡기는 자리에서 실행하므로 pump 몇 번이면 끝난다). */
-        static void refreshFully( RegistryNode& node, ServerRegistryReader& reader, int64 nowMs )
+        static void refreshFully( RegistryNode& node, ServerRegistryReader& reader, UnixMilliseconds nowMs )
         {
             reader.requestRefresh();
             reader.update( nowMs );
@@ -74,7 +74,7 @@ namespace
         {
             IndexRecorder      recorder;
             const Subscription replyOwner = node._router.openReplyOwner();
-            (void)node._router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( "game" ), 0, 64 ),
+            (void)node._router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( "game" ), 0, 64 ), // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
                                        EphemeralStoreRouter::ReplyDelegate::create<&IndexRecorder::onReply>( &recorder ), replyOwner );
             (void)node._router.pump();
             SW_EXPECT_TRUE( recorder._bAnswered == SW_TRUE );
@@ -86,27 +86,27 @@ namespace
 SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatStops )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            gameNode( &database );
     RegistryNode            lobbyNode( &database );
     ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &gameNode._router, Internal::makeDescriptor( 1 ) ) );
     registration.setState( ServerState::Open );
-    registration.update( 0 );
+    registration.update( UnixMilliseconds{ 0 } );
     (void)gameNode._router.pump();
 
     ServerRegistryReader reader;
     reader.initialize( &lobbyNode._router, "game", 2000 );
-    Internal::refreshFully( lobbyNode, reader, 0 );
+    Internal::refreshFully( lobbyNode, reader, UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( reader.getSnapshot().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( reader.getSnapshot()[0]._descriptor._port, uint16( 7001 ) );
     SW_EXPECT_TRUE( reader.getSnapshot()[0]._state == ServerState::Open );
     SW_EXPECT_TRUE( reader.getSnapshot()[0]._descriptor._address == "127.0.0.1" );
 
-    registration.update( ServerRegistration::kHeartbeatPeriodMs - 1 ); // 주기 전 — 다시 쓰지 않는다
-    clock.advanceMilliseconds( ServerRegistration::kRecordTtlMs );     // 하트비트 없이 시한이 지났다
-    Internal::refreshFully( lobbyNode, reader, ServerRegistration::kRecordTtlMs );
+    registration.update( UnixMilliseconds{ ServerRegistration::kHeartbeatPeriodMs - 1 } ); // 주기 전 — 다시 쓰지 않는다
+    clock.advanceMilliseconds( ServerRegistration::kRecordTtlMs );                         // 하트비트 없이 시한이 지났다
+    Internal::refreshFully( lobbyNode, reader, UnixMilliseconds{ ServerRegistration::kRecordTtlMs } );
     SW_EXPECT_EQUAL( reader.getSnapshot().size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( Internal::countIndexMembers( lobbyNode ), size_t( 0 ) ); // 죽은 멤버를 색인에서 지웠다
     reader.shutdown();
@@ -115,7 +115,7 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
 SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAreWrittenAtOnce )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      registration;
@@ -123,13 +123,13 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
     registration.setState( ServerState::Open );
     ServerRegistryReader reader;
     reader.initialize( &node._router, "game", 2000 );
-    for ( int64 nowMs = 0; nowMs <= 3 * ServerRegistration::kRecordTtlMs; nowMs += 1000 )
+    for ( UnixMilliseconds nowMs = UnixMilliseconds{ 0 }; nowMs <= UnixMilliseconds{ 3 * ServerRegistration::kRecordTtlMs }; nowMs += 1000 )
     {
-        clock.setMilliseconds( nowMs );
+        clock.setMilliseconds( MonotonicMilliseconds{ nowMs.count() } );
         registration.update( nowMs );
         (void)node._router.pump();
     }
-    const int64 nowMs = 3 * ServerRegistration::kRecordTtlMs;
+    const UnixMilliseconds nowMs{ 3 * ServerRegistration::kRecordTtlMs };
     Internal::refreshFully( node, reader, nowMs );
     SW_ASSERT_EQUAL( reader.getSnapshot().size(), size_t( 1 ) ); // 시한 셋을 지나도 하트비트가 살렸다
 
@@ -147,7 +147,7 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
 SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLoad )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      first;
@@ -156,27 +156,27 @@ SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLo
     SW_ASSERT_TRUE( second.initialize( &node._router, Internal::makeDescriptor( 2 ) ) );
     first.setState( ServerState::Open );
     second.setState( ServerState::Open );
-    first.update( 0 );
-    second.update( 0 );
+    first.update( UnixMilliseconds{ 0 } );
+    second.update( UnixMilliseconds{ 0 } );
     (void)node._router.pump();
 
     ServerRegistryReader reader;
     reader.initialize( &node._router, "game", 2000 );
-    Internal::refreshFully( node, reader, 0 );
+    Internal::refreshFully( node, reader, UnixMilliseconds{ 0 } );
     ServerSelectionQuery query;
     query._kind      = "game";
     query._region    = "kr";
     query._seatCount = 6;
     ServerStatus picked;
-    SW_ASSERT_TRUE( reader.pickServer( query, 0, picked ) );
+    SW_ASSERT_TRUE( reader.pickServer( query, UnixMilliseconds{ 0 }, picked ) );
     SW_EXPECT_EQUAL( picked._descriptor._serverID, uint64( 1 ) );
-    SW_ASSERT_TRUE( reader.pickServer( query, 0, picked ) ); // 1 은 6/10 이 얹혀 2 가 덜 찼다
+    SW_ASSERT_TRUE( reader.pickServer( query, UnixMilliseconds{ 0 }, picked ) ); // 1 은 6/10 이 얹혀 2 가 덜 찼다
     SW_EXPECT_EQUAL( picked._descriptor._serverID, uint64( 2 ) );
-    SW_EXPECT_FALSE( reader.pickServer( query, 0, picked ) ); // 둘 다 6 + 6 > 10
+    SW_EXPECT_FALSE( reader.pickServer( query, UnixMilliseconds{ 0 }, picked ) ); // 둘 다 6 + 6 > 10
 
     first.shutdown();
     (void)node._router.pump();
-    Internal::refreshFully( node, reader, 1 );
+    Internal::refreshFully( node, reader, UnixMilliseconds{ 1 } );
     SW_ASSERT_EQUAL( reader.getSnapshot().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( reader.getSnapshot()[0]._descriptor._serverID, uint64( 2 ) );
     SW_EXPECT_EQUAL( reader.getSnapshot()[0]._load, 0 ); // 새 스냅숏 — 얹은 몫은 사라졌다
@@ -191,12 +191,12 @@ SW_TEST_CASE( ServerRegistryTest, ReaderShutDownBeforeTheRouterIsNeverCalledBack
     RegistryNode            node( &database );
     ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &node._router, Internal::makeDescriptor( 1 ) ) );
-    registration.update( 0 );
+    registration.update( UnixMilliseconds{ 0 } );
     (void)node._router.pump();
     {
         ServerRegistryReader reader;
         reader.initialize( &node._router, "game", 2000 );
-        reader.update( 0 );
+        reader.update( UnixMilliseconds{ 0 } );
         SW_EXPECT_TRUE( reader.isRefreshing() );
     } // 읽기가 끝나기 전에 내려간다
     SW_EXPECT_EQUAL( node._router.getPendingCount(), 0 ); // 색인 읽기를 취소했다

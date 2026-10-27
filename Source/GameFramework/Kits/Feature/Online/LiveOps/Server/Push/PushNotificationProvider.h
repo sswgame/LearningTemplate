@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
 
@@ -45,19 +46,19 @@ namespace sw
     class IPushNotificationProvider
     {
     public:
-        IPushNotificationProvider()                                                                                                                         = default;
-        IPushNotificationProvider( const IPushNotificationProvider& )                                                                                       = delete;
-        IPushNotificationProvider& operator=( const IPushNotificationProvider& )                                                                            = delete;
-        virtual ~IPushNotificationProvider()                                                                                                                = default;
-        virtual string_view getProviderID() const                                                                                                           = 0;
-        virtual void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs ) = 0;
+        IPushNotificationProvider()                                                                                                                                    = default;
+        IPushNotificationProvider( const IPushNotificationProvider& )                                                                                                  = delete;
+        IPushNotificationProvider& operator=( const IPushNotificationProvider& )                                                                                       = delete;
+        virtual ~IPushNotificationProvider()                                                                                                                           = default;
+        virtual string_view getProviderID() const                                                                                                                      = 0;
+        virtual void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs ) = 0;
         /** @brief 이 제공자가 토픽 발송(`sendToTopic`)을 하면 true 입니다. 발송기는 토픽 발송을 토픽을 아는 제공자에게만 맡깁니다. */
         virtual bool supportsTopics() const { return false; }
         /**
          * @brief 토픽을 구독한 모든 기기에 한 번에 보냅니다(전체 대상 알림 — 계정마다 보내지 않는다). 토픽 이름 규칙은 제공자가 정하며, 틀리면 `Rejected` 로 끝납니다.
          * @details `supportsTopics` 가 true 인 제공자만 구현한다. 결과는 `pollResults` 로 같은 배달 id 에 돌려준다(`InvalidToken` 은 토픽에 없다).
          */
-        virtual void sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+        virtual void sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
         {
             (void)deliveryID;
             (void)topic;
@@ -65,7 +66,7 @@ namespace sw
             (void)nowMs;
         }
         /** @brief 서비스 틱마다 한 번 불립니다. 제공자의 HTTP 전송과 인증 갱신을 돌립니다. */
-        virtual void update( int64 nowMs ) { (void)nowMs; }
+        virtual void update( UnixMilliseconds nowMs ) { (void)nowMs; }
         /** @brief 끝난 배달의 결과를 @p outListResult 뒤에 붙이고 붙인 개수를 반환합니다. */
         virtual int32 pollResults( vector<PushDeliveryResult>& outListResult ) = 0;
     };

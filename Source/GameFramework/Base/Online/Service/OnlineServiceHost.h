@@ -33,6 +33,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
@@ -58,7 +59,7 @@ namespace sw
         AccountID              _accountID{ kInvalidAccountID }; ///< 로그인한 연결이면(`bindAccount` 로 붙인 주체)
         uint64                 _remoteKey{ 0 };                 ///< 원격 주소 해시(로그인 전 도배 제한 단위)
         LogTraceID             _traceID{};                      ///< 요청 추적 id(요청 머리 — 없으면 요청 서버가 만든다)
-        int64                  _nowMs{ 0 };                     ///< 서버 벽시계(마지막 `tick` 의 시각)
+        UnixMilliseconds       _nowMs{ 0 };                     ///< 서버 벽시계(마지막 `tick` 의 시각)
         uint16                 _method{ 0 };
     };
 } // namespace sw
@@ -107,7 +108,7 @@ namespace sw
         /** @brief 요청 하나를 받습니다. 바로 `host.respond*` 로 답하거나, 토큰을 보관했다가 저장 일이 끝난 뒤 답합니다. 답은 한 번만 할 수 있습니다. */
         virtual void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) = 0;
         /** @brief 서비스 스레드의 틱입니다. 완료를 거두고 시한을 처리합니다. */
-        virtual void onServiceTick( OnlineServiceHost& host, int64 nowMs )
+        virtual void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
         {
             (void)host;
             (void)nowMs;
@@ -184,7 +185,7 @@ namespace sw
         /** @brief 서비스를 등록합니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 등록하지 않습니다. */
         [[nodiscard]] bool registerHostService( IOnlineHostService* pService );
         /** @brief 엔드포인트 pump, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // 답은 서비스가 부르며 한 번만 보낼 수 있다. 이미 답했거나 끝난 요청이면 false 를 반환한다.
         bool respondOk( const NetRequestToken& token, const BitWriter& body );
@@ -298,7 +299,7 @@ namespace sw
         vector<StreamConnectionHandle>                   _listHandleScratch;        ///< Hello 기한을 넘겨 닫을 연결(표를 돌며 닫지 않으려고 모은다)
         unique_ptr<ServerBus>                            _pServerBus;               ///< `_settings._pServerBusTransport` 의 앞이다
         unique_ptr<ListenerTransport>                    _listenerTransport;        ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
-        int64                                            _nowMs;
+        UnixMilliseconds                                 _nowMs;
         uint64                                           _nextBusSubscriptionID; ///< 다음 버스 구독 번호(0 은 쓰지 않는다)
         int64                                            _nextHelloSweepMs;      ///< 다음 Hello 기한 검사 시각
         uint64                                           _schemaHash;            ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다

@@ -244,7 +244,7 @@ namespace sw
         return true;
     }
 
-    bool SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, int64 nowMs, string& outError )
+    bool SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs, string& outError )
     {
         const SQLDialect& dialect = connection.getDialect();
         if ( connection.executeScript( SQLMigrationRunnerInternal::kCreateHistorySQL ) != SQLResult::Ok )
@@ -296,7 +296,7 @@ namespace sw
                 return false;
             }
             const SQLValue arrParam[] = { SQLValue::makeInt64( migration._version ), SQLValue::makeText( migration._name ), SQLValue::makeText( checksum ),
-                                          SQLValue::makeInt64( nowMs ) };
+                                          SQLValue::makeInt64( nowMs.count() ) };
             if ( connection.execute( SQLMigrationRunnerInternal::kInsertHistorySQL, arrParam, 4, nullptr ) != SQLResult::Ok )
             {
                 outError = string( "cannot record a migration: " ) + connection.getLastErrorText();

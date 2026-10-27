@@ -154,7 +154,7 @@ namespace
         RemoteConfig           _remoteConfig;
         unique_ptr<ServerSide> _server;
         vector<ClientSide*>    _listClient;
-        int64                  _nowMs;
+        UnixMilliseconds       _nowMs;
         bool                   _bSecure;
 
         explicit AccountRig( bool bSecure )
@@ -186,7 +186,7 @@ namespace
                 _nowMs += 20;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.update( _nowMs );
+                    pClient->_client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 }
                 if ( _server != nullptr )
                     _server->_host.update( _nowMs );
@@ -234,7 +234,7 @@ namespace
         NetHost                     _client{};
         float64                     _time{ 0.0 };
 
-        UDPPair( const LoginTicketAuthority& authority, const utf8* pServerID, int64 nowMs )
+        UDPPair( const LoginTicketAuthority& authority, const utf8* pServerID, UnixMilliseconds nowMs )
             : _authenticator{ &authority, hashed_string( pServerID ), kAdmitEveryAccount }
         {
             _authenticator.setNowMs( nowMs );
@@ -341,7 +341,7 @@ SW_TEST_CASE( AccountStreamTest, ForgedOrForeignTicketsAndBadTokensAreRefused )
     otherZone.run( 0.5 );
     SW_EXPECT_EQUAL( 0, otherZone._server.getConnectedCount() );
 
-    UDPPair expired{ rig._server->_loginService.getTicketAuthority(), "zone-1", ticket._ticket._expiresAtMs };
+    UDPPair expired{ rig._server->_loginService.getTicketAuthority(), "zone-1", UnixMilliseconds{ ticket._ticket._expiresAtMs } };
     SW_ASSERT_TRUE( expired._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
     expired.run( 0.5 );
     SW_EXPECT_EQUAL( 0, expired._server.getConnectedCount() );

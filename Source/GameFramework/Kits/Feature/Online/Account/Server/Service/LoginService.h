@@ -23,6 +23,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
@@ -102,39 +103,39 @@ namespace sw
         /** @brief 빌드 버전 확인에 쓸 원격 설정을 지정합니다. 빌려 쓰는 포인터이며, 없으면 확인하지 않습니다. */
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
         /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // 요청 함수들이다. 결과는 같은 @p requestTag 로 `drainCompletions` 에서 받는다. 시도 제한이나 빌드 버전에 걸리면 작업을 맡기지 않고 바로 완료를 쌓는다.
-        void registerAccount( const LoginCredential& credential, int64 nowMs, uint64 requestTag );
+        void registerAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 비밀번호로 로그인합니다. @p clientKey 는 시도 제한의 단위이며 원격 주소 해시로, 바인딩이 정합니다. */
-        void login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs, uint64 requestTag );
+        void login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 장치 비밀로 들어옵니다. 장치 비밀은 32 B 이며 클라이언트가 로컬에 봉인해 저장합니다. 그 장치의 게스트 계정이 없으면 만듭니다. */
-        void guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs,
+        void guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                          uint64 requestTag );
         /** @brief 외부 제공자 티켓(ID 토큰, 액세스 토큰)으로 들어옵니다. 없는 제공자는 `ProviderUnavailable` 입니다. */
-        void platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs, uint64 requestTag );
+        void platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 토큰으로 돌아옵니다. 같은 세션을 쓰고 비밀은 새로 받으며, 이전 토큰은 무효가 됩니다. */
-        void resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs, uint64 requestTag );
+        void resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 토큰을 확인합니다. 상태는 바꾸지 않습니다. */
-        void validateSession( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
-        void logout( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
+        void validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag );
+        void logout( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 게임 서버 @p serverID 로 가는 UDP 접속 티켓을 발급합니다. 세션이 살아 있어야 합니다. */
-        void issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, uint64 requestTag );
+        void issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 계정의 세션을 끊습니다. 운영, 제재, 게임 규칙에서 부릅니다. 이 프로세스에 접속해 있으면 `Revoked` 이벤트가 발생합니다. */
-        void revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs, uint64 requestTag );
-        void linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, uint64 requestTag );
-        void linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, int64 nowMs, uint64 requestTag );
-        void unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs, uint64 requestTag );
-        void listLinks( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
+        void revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, UnixMilliseconds nowMs, uint64 requestTag );
+        void linkCredential( const LoginSessionToken& token, const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag );
+        void linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, UnixMilliseconds nowMs, uint64 requestTag );
+        void unlinkPlatform( const LoginSessionToken& token, string_view provider, UnixMilliseconds nowMs, uint64 requestTag );
+        void listLinks( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 탈퇴를 예약합니다. 유예 시간이 지나면 계정을 지우고 세션을 끊습니다. 유예 안에 다시 로그인해 `cancelDeletion` 으로 취소할 수 있습니다. */
-        void requestDeletion( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
-        void cancelDeletion( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
+        void requestDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag );
+        void cancelDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 예약 시각이 지난 탈퇴 계정을 @p maxCount 개까지 지웁니다. 예약 작업이 분마다 부르며 완료는 없습니다. */
-        void purgeDueDeletions( int64 nowMs, int32 maxCount );
+        void purgeDueDeletions( UnixMilliseconds nowMs, int32 maxCount );
         /** @brief 세션의 연결이 끊겼을 때 부릅니다. 재접속 유예를 시작하며 완료는 없고 `Disconnected` 이벤트만 발생합니다. */
-        void markDisconnected( uint64 sessionID, int64 nowMs );
+        void markDisconnected( uint64 sessionID, UnixMilliseconds nowMs );
         /** @brief 접속해 있는 세션 @p maxCount 개를 돌아가며 다시 읽습니다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아냅니다. */
-        void refreshOnlineSessions( int64 nowMs, int32 maxCount );
+        void refreshOnlineSessions( UnixMilliseconds nowMs, int32 maxCount );
 
         void drainCompletions( vector<LoginCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainEvents( vector<LoginEvent>& outListEvent ) { _eventBuffer.drainTo( outListEvent ); }
@@ -159,7 +160,7 @@ namespace sw
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 부르며 바인딩과 게임은 부르지 않습니다. */
         void applyCompletion( LoginCompletion&& completion, const LoginStoreOutcome& outcome );
         /** @brief 철회 대기열을 읽은 작업의 `complete` 가 호출합니다. 읽은 항목의 비밀을 풀어 제공자에 철회를 맡깁니다. */
-        void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, int64 nowMs );
+        void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs );
         /** @brief 완료가 할 일이 없는 작업(대기열 항목 지우기)의 `complete` 가 호출합니다. */
         void noteStoreWorkDone() { --_pendingCount; }
 
@@ -173,7 +174,7 @@ namespace sw
             IPlatformLoginProvider* _pProvider{ nullptr };
             uint64                  _verificationID{ 0 };
             uint64                  _requestTag{ 0 };
-            int64                   _nowMs{ 0 };
+            UnixMilliseconds        _nowMs{ 0 };
             LoginOperation          _operation{ LoginOperation::PlatformLogin };
             uint8                   _bUpdateRecommended{ SW_FALSE };
         };
@@ -186,14 +187,14 @@ namespace sw
             uint64                  _revocationID{ 0 };
         };
 
-        [[nodiscard]] bool consumeAttempt( uint64 clientKey, int64 nowMs, int64& outRetryAfterMs );
+        [[nodiscard]] bool consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs );
         /** @brief 철회할 제공자가 있으면 주기마다 철회 대기열을 읽고, 끝난 철회의 항목을 지웁니다. `update` 가 부릅니다. */
-        void updateRevocations( int64 nowMs );
+        void updateRevocations( UnixMilliseconds nowMs );
         void pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant );
         /** @brief 빌드 버전을 확인합니다. 최소 버전 미만이면 `UpdateRequired` 이고 @p outGrant 에 상점 주소를 채웁니다. 권장 버전 미만이면 Ok 와 `_bUpdateRecommended` 를 반환합니다. */
         LoginResult evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
         void        beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
-                                       const LoginGrant& buildGrant, int64 nowMs, uint64 requestTag );
+                                       const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
         void        finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
         void        removeOfflineIdentities();
 
@@ -215,7 +216,7 @@ namespace sw
         ILoginCrypto*                            _pCrypto;
         const RemoteConfig*                      _pRemoteConfig;
         const LoginSecretVault*                  _pSecretVault;
-        int64                                    _nextRevocationScanMs;
+        UnixMilliseconds                         _nextRevocationScanMs;
         size_t                                   _refreshCursor;
         int32                                    _pendingCount;
         uint8                                    _bRevocationScanInFlight;

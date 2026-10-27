@@ -107,7 +107,7 @@ namespace sw
         SessionIDText buildSessionIDInternal()
         {
             const uint64 nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
-            const uint64 wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds() );
+            const uint64 wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds().count() );
             const uint64 mixed       = nowTicks ^ ( wallSeconds << 16 ) ^ SecureRandom::nextUint64();
 
             SessionIDText session{};

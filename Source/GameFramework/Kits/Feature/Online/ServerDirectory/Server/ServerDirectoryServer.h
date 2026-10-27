@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -34,7 +35,7 @@ namespace sw
         const OnlineProtocolEntry& getProtocol() const override;
         bool                       isAnonymousMethod( uint16 method ) const override;
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 

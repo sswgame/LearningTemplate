@@ -188,7 +188,7 @@ SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
     request._name           = "friday night";
     request._modeID         = "duo";
     request._maxMemberCount = 2;
-    node._service.createLobby( 10, request, 1000, 1 );
+    node._service.createLobby( 10, request, UnixMilliseconds{ 1000 }, 1 );
     node.step();
     SW_ASSERT_TRUE( node.last()._result == MatchmakingResult::Ok );
     const uint64 lobbyID = node.last()._lobby._lobbyID;
@@ -199,7 +199,7 @@ SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
     SW_EXPECT_STREQ( node.last()._listLobby[0]._name.c_str(), "friday night" );
 
     request._name = "";
-    node._service.createLobby( 10, request, 1000, 3 ); // 이름 없음
+    node._service.createLobby( 10, request, UnixMilliseconds{ 1000 }, 3 ); // 이름 없음
     node.step();
     SW_EXPECT_TRUE( node.last()._result == MatchmakingResult::Invalid );
 
@@ -237,7 +237,7 @@ SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
 
 SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
 {
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     LobbySnapshot           request;
@@ -248,7 +248,7 @@ SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
     setting._key   = "map";
     setting._value = "harbor";
     request._listSetting.push_back( setting );
-    node._service.createLobby( 10, request, 0, 1 );
+    node._service.createLobby( 10, request, UnixMilliseconds{ 0 }, 1 );
     node.step();
     const uint64 lobbyID = node.last()._lobby._lobbyID;
     SW_ASSERT_EQUAL( node.last()._lobby._listSetting.size(), size_t( 1 ) );
@@ -275,9 +275,9 @@ SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
     SW_EXPECT_TRUE( node.last()._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( node.last()._listLobby.empty() );
 
-    node._service.createLobby( 20, request, 0, 7 );
+    node._service.createLobby( 20, request, UnixMilliseconds{ 0 }, 7 );
     node.step();
-    node._service.createLobby( 21, request, 10, 8 );
+    node._service.createLobby( 21, request, UnixMilliseconds{ 10 }, 8 );
     node.step();
     const uint64 newerLobbyID = node.last()._lobby._lobbyID;
     node._service.joinLobby( 22, newerLobbyID, 9 ); // 바뀌면 만료가 연장된다
@@ -300,7 +300,7 @@ SW_TEST_CASE( PartyLobbyTest, RemoveAccountLeavesPartyAndLobby )
     request._name           = "room";
     request._modeID         = "duo";
     request._maxMemberCount = 2;
-    node._service.createLobby( 10, request, 0, 2 );
+    node._service.createLobby( 10, request, UnixMilliseconds{ 0 }, 2 );
     node.step();
     const uint64 lobbyID = node.last()._lobby._lobbyID;
     node._service.removeAccount( 10 ); // 끊김

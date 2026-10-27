@@ -395,7 +395,7 @@ namespace sw
         _pServiceConnectionGauge =
             _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
         _processMetrics = make_unique<ProcessMetrics>();
-        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
+        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
         OpsHTTPEndpointConfig opsSettings;

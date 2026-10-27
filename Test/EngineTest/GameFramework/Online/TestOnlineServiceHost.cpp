@@ -116,7 +116,7 @@ namespace
             }
         }
 
-        void onServiceTick( OnlineServiceHost& host, int64 nowMs ) override
+        void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override
         {
             (void)nowMs;
             if ( _bHoldLateAnswers )
@@ -262,7 +262,7 @@ namespace
         FakeOnlineService            _serviceB;
         OnlineServiceHost            _host;
         vector<ClientSide*>          _listClient;
-        int64                        _nowMs;
+        UnixMilliseconds             _nowMs;
 
         explicit HostRig( OnlineServiceHostConfig settings = makeSettings(), bool bAdminListener = false )
             : _network{ 13u }
@@ -300,7 +300,7 @@ namespace
                 _nowMs += 10;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.update( _nowMs );
+                    pClient->_client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 }
                 _host.update( _nowMs );
             }

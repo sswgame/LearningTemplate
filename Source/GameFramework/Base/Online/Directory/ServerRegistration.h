@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -33,7 +34,7 @@ namespace sw
         void shutdown();
 
         /** @brief 하트비트 주기가 됐거나 상태 · 부하가 바뀌었으면 다시 씁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         void setState( ServerState state );
         void setLoad( int32 load );
@@ -41,11 +42,11 @@ namespace sw
         const ServerStatus& getStatus() const { return _status; }
 
     private:
-        void writeRecord( int64 nowMs );
+        void writeRecord( UnixMilliseconds nowMs );
 
         ServerStatus          _status;
         EphemeralStoreRouter* _pRouter;
-        int64                 _lastWrittenMs;
+        UnixMilliseconds      _lastWrittenMs;
         uint8                 _bDirty;
     };
 } // namespace sw

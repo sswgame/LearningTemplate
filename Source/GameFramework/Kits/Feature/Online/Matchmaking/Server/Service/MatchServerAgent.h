@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
@@ -39,11 +40,11 @@ namespace sw
         void   initialize( const ServerDescriptor& descriptor );
         string getAssignTopic() const;
         /** @brief 배정 주제(`MatchQueueBus::kAssignTopic`)의 메시지를 처리합니다. 읽지 못했으면(읽기가 로그와 카운터를 남겼다) false 를 반환합니다. */
-        [[nodiscard]] bool handleAssign( const ServerBusMessage& message, int64 nowMs );
+        [[nodiscard]] bool handleAssign( const ServerBusMessage& message, UnixMilliseconds nowMs );
         /** @brief 경기 중 빈 슬롯를 권한 매처에 보냅니다(버스 `mm.backfill.<모드>`). 요청의 서버 id · 주소 · 포트 · 포트 수는 이 서버의 설명으로 채웁니다(포트 샤딩 — 매처가 채운 사람마다 샤드 포트를 고른다). 보내지 못했으면 false 이며 발행이 로그에 남겼습니다. */
         [[nodiscard]] bool requestBackfill( ServerBus& bus, const MatchBackfillRequest& request ) const;
         /** @brief 시한이 지난 접속 예정자를 지웁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         /** @brief 접속한 계정이 접속 예정자이면 경기 id 와 팀을 돌려줍니다. */
         [[nodiscard]] bool findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const;

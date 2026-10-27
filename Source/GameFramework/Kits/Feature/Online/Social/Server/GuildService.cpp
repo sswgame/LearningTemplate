@@ -319,12 +319,12 @@ namespace sw
                 info._guildID     = nextID;
                 info._name        = _request._text;
                 info._masterID    = _request._accountID;
-                info._createdMs   = _request._nowMs;
+                info._createdMs   = _request._nowMs.count();
                 info._memberCount = 1;
                 ServiceTransaction transaction;
                 transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, Internal::encodeID( nextID + 1 ), sequenceRecord._version );
                 transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( nextID ), Internal::encodeGuild( info ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextID, _request._accountID ), Internal::encodeMember( GuildRole::Master, _request._nowMs ),
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextID, _request._accountID ), Internal::encodeMember( GuildRole::Master, _request._nowMs.count() ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getNameTable(), nameKey, Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
@@ -366,7 +366,7 @@ namespace sw
                         continue; // 다시 낸 신청은 아래 put 이 덮어쓴다
                     int64      appliedMs = 0;
                     int64      expiresMs = 0;
-                    const bool bLive     = Internal::decodeApplication( record._bytes, appliedMs, expiresMs ) && _request._nowMs < expiresMs;
+                    const bool bLive     = Internal::decodeApplication( record._bytes, appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs;
                     if ( bLive )
                         ++liveCount;
                     else
@@ -374,7 +374,7 @@ namespace sw
                 }
                 if ( liveCount >= GuildLimit::kMaxApplication )
                     return fail( SocialResult::PendingLimit );
-                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs, _request._nowMs + GuildLimit::kApplicationLifetimeMs ) );
+                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), _request._nowMs.count() + GuildLimit::kApplicationLifetimeMs ) );
                 transaction.requireVersion( Internal::getGuildTable(), guildKey, guildRecord._version ); // 그사이 비공개로 바뀌면 다시 읽는다
                 return connection.commit( transaction );
             }
@@ -418,7 +418,7 @@ namespace sw
                                       Internal::decodeInviteExpiry( inviteRecord._bytes, expiresMs );
                 if ( bInvited == false )
                     return fail( SocialResult::NotFound );
-                if ( _request._nowMs >= expiresMs )
+                if ( _request._nowMs.count() >= expiresMs )
                     return fail( SocialResult::InviteExpired );
                 const bool bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
                                       Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
@@ -430,7 +430,7 @@ namespace sw
                 ServiceTransaction transaction;
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                 transaction.put( Internal::getMemberTable(), Internal::makePairKey( _request._guildID, _request._accountID ),
-                                 Internal::encodeMember( GuildRole::Member, _request._nowMs ), ServiceRecord::kAbsentVersion );
+                                 Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ), ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( _request._guildID ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.erase( Internal::getInviteTable(), inviteKey, inviteRecord._version );
@@ -541,7 +541,7 @@ namespace sw
                     return fail( SocialResult::AlreadyInGuild );
                 ServiceTransaction transaction;
                 transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetID, guildID ),
-                                 Internal::encodeInvite( _request._accountID, _request._nowMs + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮어쓴다
+                                 Internal::encodeInvite( _request._accountID, _request._nowMs.count() + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮어쓴다
                 _outcome._invitedID = _request._targetID;
                 return connection.commit( transaction );
             }
@@ -608,7 +608,7 @@ namespace sw
                     {
                         GuildApplication application;
                         int64            expiresMs = 0;
-                        const bool       bLive     = Internal::decodeApplication( record._bytes, application._appliedMs, expiresMs ) && _request._nowMs < expiresMs &&
+                        const bool       bLive     = Internal::decodeApplication( record._bytes, application._appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs &&
                                            ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), application._accountID );
                         if ( bLive )
                             _outcome._listApplication.push_back( application );
@@ -627,7 +627,7 @@ namespace sw
                 transaction.erase( Internal::getApplicationTable(), applicationKey, applicationRecord._version );
                 if ( _request._operation == GuildOperation::Reject )
                     return connection.commit( transaction );
-                if ( _request._nowMs >= expiresMs )
+                if ( _request._nowMs.count() >= expiresMs )
                     return fail( SocialResult::InviteExpired );
                 uint64                   targetGuildID = 0;
                 ServiceRecord            targetRecord;
@@ -641,7 +641,7 @@ namespace sw
                 ++inoutInfo._memberCount;
                 const string guildKey = ServiceKeyUtil::makeHex64( guildID );
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
-                transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._targetID ), Internal::encodeMember( GuildRole::Member, _request._nowMs ),
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._targetID ), Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), Internal::encodeID( guildID ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
@@ -732,7 +732,7 @@ namespace sw
                 transfer._journalKey = _request._journalKey;
                 transfer._reason     = bDeposit ? Internal::kDepositReason : Internal::kWithdrawReason;
                 transfer._pPolicy    = _pLedgerPolicy;
-                transfer._timeMs     = _request._nowMs;
+                transfer._timeMs     = _request._nowMs.count();
                 transfer._actorID    = _request._accountID;
                 transfer._actorKind  = LedgerActorKind::Player;
 
@@ -850,7 +850,7 @@ namespace sw
         _pStore->submit( sw::make_unique<GuildWork>( this, request, requestTag ) );
     }
 
-    void GuildService::attachAccount( AccountID accountID, int64 nowMs )
+    void GuildService::attachAccount( AccountID accountID, UnixMilliseconds nowMs )
     {
         GuildRequest request;
         request._operation = GuildOperation::Attach;
@@ -859,7 +859,7 @@ namespace sw
         submit( request, 0 );
     }
 
-    void GuildService::addExperience( uint64 guildID, int64 amount, int64 nowMs )
+    void GuildService::addExperience( uint64 guildID, int64 amount, UnixMilliseconds nowMs )
     {
         GuildRequest request;
         request._operation = GuildOperation::AddExperience;
@@ -934,7 +934,7 @@ namespace sw
         }
     }
 
-    void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs )
+    void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs )
     {
         if ( _onEvent.isBound() )
             _onEvent.get()( GuildEvent{ accountID, guildID, nowMs, kind } );

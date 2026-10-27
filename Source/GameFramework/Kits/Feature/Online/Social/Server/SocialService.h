@@ -21,6 +21,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -92,17 +93,17 @@ namespace sw
         /** @brief 기다리는 캐시 읽기를 취소하고 메모리를 비웁니다. 맡긴 저장소 작업은 호출하는 쪽이 먼저 회수해야 하며, 호스트와 저장소를 종료한 뒤에 합니다. */
         void shutdown();
         /** @brief 접속 상태의 시한을 연장합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // 관계 함수들은 비동기이며 완료는 요청 태그로 받는다
-        void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, int64 nowMs, uint64 requestTag );
+        void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 정식 계정의 표시 이름으로 친구 신청합니다. 완료의 `_otherID` 가 찾은 계정입니다. */
-        void requestFriendByName( AccountID accountID, string_view displayName, int64 nowMs, uint64 requestTag );
+        void requestFriendByName( AccountID accountID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 관계 목록을 저장소에서 읽습니다. 이 서버의 메모리도 그 결과로 바꿉니다. */
         void listLinks( AccountID accountID, uint64 requestTag );
 
         // 접속 상태
-        void setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag );
+        void setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, UnixMilliseconds nowMs, uint64 requestTag );
         void queryFriendPresence( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 오프라인을 알리고 캐시와 메모리에서 뺍니다. */
         void removeAccount( AccountID accountID );
@@ -147,7 +148,7 @@ namespace sw
         LocalAccount& ensureLocal( AccountID accountID );
         void          startLoad( AccountID accountID, uint64 requestTag );
         void          reloadIfLocal( AccountID accountID );
-        void          submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag );
+        void          submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
         void          publishPresence( AccountID accountID, const LocalAccount& local );
         void          notifyFriendsOfPresence( const SocialPresence& presence );
         /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */

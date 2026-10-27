@@ -367,7 +367,7 @@ namespace sw
         return true;
     }
 
-    void OnlineServiceHost::update( int64 nowMs )
+    void OnlineServiceHost::update( UnixMilliseconds nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -624,8 +624,8 @@ namespace sw
         }
         // 도배 제한 — 로그인했으면 계정마다, 아니면 주소마다.
         int64      retryAfterMs = 0;
-        const bool bAllowed     = connection._accountID != kInvalidAccountID ? _accountBucket.tryConsume( connection._accountID, _nowMs, retryAfterMs )
-                                                                             : _remoteBucket.tryConsume( connection._remoteKey, _nowMs, retryAfterMs );
+        const bool bAllowed     = connection._accountID != kInvalidAccountID ? _accountBucket.tryConsume( connection._accountID, _nowMs.count(), retryAfterMs )
+                                                                             : _remoteBucket.tryConsume( connection._remoteKey, _nowMs.count(), retryAfterMs );
         if ( bAllowed == false )
         {
             BitWriter detail;
@@ -636,7 +636,7 @@ namespace sw
         if ( method == OnlineHostMethod::kPing )
         {
             BitWriter body;
-            body.writeVarInt( _nowMs );
+            body.writeVarInt( _nowMs.count() );
             (void)respondOk( context._token, body );
             return;
         }
@@ -690,7 +690,7 @@ namespace sw
         connection._bHelloDone = SW_TRUE;
         BitWriter answer;
         answer.writeVarUint( _settings._pRemoteConfig != nullptr ? _settings._pRemoteConfig->getSnapshotHash() : 0 );
-        answer.writeVarInt( _nowMs );
+        answer.writeVarInt( _nowMs.count() );
         (void)respondOk( context._token, answer );
     }
 

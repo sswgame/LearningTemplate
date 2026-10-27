@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 
@@ -28,6 +29,6 @@ namespace sw
         IOfflinePushSender& operator=( const IOfflinePushSender& ) = delete;
 
         /** @brief @p accountID 의 모든 기기에 보냅니다. 계정마다 도배 제한에 걸리면 보내지 않고 false 입니다. @p deepLink 는 앱이 열 화면(예: "mailbox")입니다. */
-        virtual bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, int64 nowMs ) = 0;
+        virtual bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, UnixMilliseconds nowMs ) = 0;
     };
 } // namespace sw

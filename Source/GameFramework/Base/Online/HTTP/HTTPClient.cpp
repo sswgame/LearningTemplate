@@ -11,8 +11,9 @@ namespace sw
 
 namespace sw
 {
-    HTTPClient::HTTPClient()
-        : _mutex{}
+    HTTPClient::HTTPClient( const IClock& clock )
+        : _clock{ clock }
+        , _mutex{}
         , _mapCall{}
         , _mapHostToTLSContext{}
         , _listResolvingCall{}
@@ -76,7 +77,7 @@ namespace sw
         _mapHostToTLSContext[string( host )] = pTLSContext;
     }
 
-    uint64 HTTPClient::submitRequest( const HTTPClientRequest& request, int64 nowMs )
+    uint64 HTTPClient::submitRequest( const HTTPClientRequest& request )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const uint64            requestID = _requestIDAllocator.allocate();
@@ -109,7 +110,7 @@ namespace sw
         }
         unique_ptr<Call> call = make_unique<Call>();
         call->_requestID      = requestID;
-        call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
+        call->_deadline       = _clock.nowMilliseconds() + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
         call->_parser.reset( HTTPMessageKind::Response, _settings._maxResponseBodyBytes );
         HTTPWriteUtil::writeRequest( request, url, call->_requestBytes );
         if ( call->_link.initialize( pTLSContext ) == false )
@@ -146,12 +147,12 @@ namespace sw
         _mapCall[handle.packed()] = std::move( call );
     }
 
-    void HTTPClient::advanceResolvingLocked( int64 nowMs )
+    void HTTPClient::advanceResolvingLocked( MonotonicMilliseconds now )
     {
         for ( size_t index = 0; index < _listResolvingCall.size(); )
         {
             unique_ptr<Call>& call     = _listResolvingCall[index];
-            const bool        bExpired = nowMs >= call->_deadlineMs;
+            const bool        bExpired = now >= call->_deadline;
             if ( call->_resolveState == ResolveState::Pending && bExpired == false )
             {
                 ++index;
@@ -196,8 +197,9 @@ namespace sw
         }
     }
 
-    void HTTPClient::update( int64 nowMs )
+    void HTTPClient::update()
     {
+        const MonotonicMilliseconds now = _clock.nowMilliseconds();
         if ( _bInitialized == SW_FALSE )
             return;
         if ( _ioThreadCount == 0 )
@@ -205,10 +207,10 @@ namespace sw
         vector<StreamConnectionHandle> listExpired;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            advanceResolvingLocked( nowMs );
+            advanceResolvingLocked( now );
             for ( auto& [packed, call] : _mapCall )
             {
-                if ( nowMs >= call->_deadlineMs && call->_requestID != 0 )
+                if ( now >= call->_deadline && call->_requestID != 0 )
                 {
                     finishLocked( *call, "timed out" );
                     listExpired.push_back( StreamConnectionHandle::fromPacked( packed ) );

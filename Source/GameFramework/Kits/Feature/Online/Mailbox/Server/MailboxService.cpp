@@ -69,7 +69,7 @@ namespace sw
                 {
                     case MailboxMethod::kList:
                     {
-                        (void)MailboxStoreLogic::listMail( connection, accountID, _call._nowMs, _listCampaign, _call._request, _reply );
+                        (void)MailboxStoreLogic::listMail( connection, accountID, _call._nowMs.count(), _listCampaign, _call._request, _reply );
                         break;
                     }
                     case MailboxMethod::kMarkRead:
@@ -82,14 +82,14 @@ namespace sw
                         MailboxClaimInput input;
                         input._mailKey   = _call._request._mailKey;
                         input._accountID = accountID;
-                        input._nowMs     = _call._nowMs;
+                        input._nowMs     = _call._nowMs.count();
                         input._pPolicy   = _pPolicy;
                         _reply._result   = MailboxStoreLogic::claim( connection, input, _reply );
                         break;
                     }
                     case MailboxMethod::kClaimAll:
                     {
-                        (void)MailboxStoreLogic::claimAll( connection, accountID, _call._nowMs, _pPolicy, _reply );
+                        (void)MailboxStoreLogic::claimAll( connection, accountID, _call._nowMs.count(), _pPolicy, _reply );
                         break;
                     }
                     case MailboxMethod::kDelete:
@@ -120,7 +120,7 @@ namespace sw
         class MailboxSweepWork final : public IServiceStoreWork
         {
         public:
-            MailboxSweepWork( MailboxService* pService, int64 nowMs, int32 batchCount )
+            MailboxSweepWork( MailboxService* pService, UnixMilliseconds nowMs, int32 batchCount )
                 : _stats{}
                 , _pService{ pService }
                 , _nowMs{ nowMs }
@@ -128,13 +128,13 @@ namespace sw
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { MailboxStoreLogic::sweepExpired( connection, _nowMs, _batchCount, _stats ); }
+            void run( IServiceStoreConnection& connection ) override { MailboxStoreLogic::sweepExpired( connection, _nowMs.count(), _batchCount, _stats ); }
             void complete() override { _pService->completeSweep( _stats ); }
 
         private:
             MailboxSweepStats _stats;
             MailboxService*   _pService;
-            int64             _nowMs;
+            UnixMilliseconds  _nowMs;
             int32             _batchCount;
         };
 
@@ -248,7 +248,7 @@ namespace sw
         startCall( call, pending );
     }
 
-    void MailboxService::update( int64 nowMs )
+    void MailboxService::update( UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _pStore == nullptr )
@@ -354,7 +354,7 @@ namespace sw
         startCall( call, pending );
     }
 
-    void MailboxService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void MailboxService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _pHost = &host;
         update( nowMs );
@@ -437,7 +437,7 @@ namespace sw
         _listCampaign.clear();
         for ( ServiceMailCampaign& campaign : inoutListCampaign )
         {
-            if ( campaign.isActive( _nowMs ) || campaign._startMs > _nowMs )
+            if ( campaign.isActive( _nowMs.count() ) || campaign._startMs > _nowMs.count() )
                 _listCampaign.push_back( std::move( campaign ) );
         }
     }

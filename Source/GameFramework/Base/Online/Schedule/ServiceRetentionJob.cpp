@@ -111,7 +111,7 @@ namespace sw
         _run      = run;
         _bRunHeld = SW_TRUE;
         _bPending = SW_TRUE;
-        _pStore->submit( make_unique<SweepWork>( this, _listRule, run._occurrenceMs ) );
+        _pStore->submit( make_unique<SweepWork>( this, _listRule, run._occurrenceMs.count() ) );
     }
 
     void ServiceRetentionJob::onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount )

@@ -251,7 +251,7 @@ namespace sw
         _pool.shutdown();
     }
 
-    bool SQLServiceStore::initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, int64 nowMs, string& outError )
+    bool SQLServiceStore::initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs, string& outError )
     {
         ISQLDriver* pDriver = SQLDriverRegistry::findDriver( driverName, outError );
         if ( pDriver == nullptr )

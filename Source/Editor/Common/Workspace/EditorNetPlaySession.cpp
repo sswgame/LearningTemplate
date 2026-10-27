@@ -279,7 +279,7 @@ namespace sw::editor
         {
             _traceDirectory = settings._traceDirectory.empty()
                                 ? FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" ),
-                                                      "netplay_" + to_string( WallClock::nowUnixMilliseconds() ) )
+                                                      "netplay_" + to_string( WallClock::nowUnixMilliseconds().count() ) )
                                 : settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {

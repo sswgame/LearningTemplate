@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IServiceStore> ServiceStoreFactory::createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
+    unique_ptr<IServiceStore> ServiceStoreFactory::createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
                                                                        string& outError )
     {
         if ( driverName == OnlineStoreDriverTable::kMemoryDriverName )

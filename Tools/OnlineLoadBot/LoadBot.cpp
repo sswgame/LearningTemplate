@@ -187,7 +187,7 @@ namespace sw
             _bFinished = SW_TRUE; // 시나리오가 끊지 않았는데 끊겼다(로그아웃 뒤 · 서버가 닫음) — 더 돌 수 없다
     }
 
-    bool LoadBot::update( int64 nowMs )
+    bool LoadBot::update( MonotonicMilliseconds nowMs )
     {
         if ( _bFinished == SW_TRUE )
             return false;
@@ -268,7 +268,7 @@ namespace sw
         }
     }
 
-    void LoadBot::startStep( const LoadBotStep& step, int64 nowMs )
+    void LoadBot::startStep( const LoadBotStep& step, MonotonicMilliseconds nowMs )
     {
         _pendingAction  = step._action;
         _requestStartUs = _pRunner->getNowUs();
@@ -529,7 +529,7 @@ namespace sw
         }
     }
 
-    void LoadBot::pollMatchResult( int64 nowMs )
+    void LoadBot::pollMatchResult( MonotonicMilliseconds nowMs )
     {
         _listMatchAssignment.clear();
         _matchmakingClient.drainMatchResults( _matchmakingLease, _listMatchAssignment );

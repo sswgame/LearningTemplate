@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -39,7 +40,7 @@ namespace sw
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override;
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onAccountJoined( OnlineServiceHost& host, AccountID accountID ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 

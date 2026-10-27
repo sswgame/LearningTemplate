@@ -72,7 +72,7 @@ namespace sw::editor
                     return "none";
                 if ( untilMs == ServiceSanctionState::kPermanentMs )
                     return "permanent";
-                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds() ) / constant::kMillisecondsPerSecond;
+                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds().count() ) / constant::kMillisecondsPerSecond;
                 if ( remainingSeconds <= 0 )
                     return "expired";
                 StringBuilder<constant::kMaxBuffer64> text;

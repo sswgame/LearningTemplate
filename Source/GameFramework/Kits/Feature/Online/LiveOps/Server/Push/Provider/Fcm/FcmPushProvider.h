@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Base/Online/HTTP/ServiceAccountTokenSource.h"
@@ -52,10 +53,10 @@ namespace sw
         ~FcmPushProvider() override;
 
         string_view getProviderID() const override { return "fcm"; }
-        void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs ) override;
+        void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs ) override;
         bool        supportsTopics() const override { return true; }
-        void        sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs ) override;
-        void        update( int64 nowMs ) override;
+        void        sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
         int32       pollResults( vector<PushDeliveryResult>& outListResult ) override;
 
         /** @brief 메시지 본문(JSON)입니다. @p token 과 @p topic 중 하나만 채웁니다. 테스트가 봅니다. */
@@ -72,10 +73,10 @@ namespace sw
             uint64        _deliveryID{ 0 };
         };
 
-        void queueSend( uint64 deliveryID, string&& bodyJSON, int64 nowMs );
-        void submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, int64 nowMs );
+        void queueSend( uint64 deliveryID, string&& bodyJSON, UnixMilliseconds nowMs );
+        void submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds nowMs );
         /** @brief 토큰을 기다리던 배달을 새 토큰으로 보내거나(Granted) 결과로 끝냅니다. */
-        void flushWaiting( ServiceAccountTokenSource::Outcome outcome, int64 nowMs );
+        void flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds nowMs );
         void finishSend( uint64 deliveryID, const HTTPClientResponse& response );
         void complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 

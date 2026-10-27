@@ -203,7 +203,7 @@ namespace sw
         httpRequest._url       = makeQueryURL( request._payload );
         httpRequest._timeoutMs = _settings._requestTimeoutMs;
         httpRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest, now.count() )];
+        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest )];
         pending._request           = request;
         pending._orderID           = request._payload;
     }
@@ -259,7 +259,7 @@ namespace sw
     {
         using Internal = SteamReceiptValidatorInternal;
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 조회 주기 · 보고서 구간을 모두 잰다.
-        _pHTTPClient->update( now.count() );
+        _pHTTPClient->update();
         // 보고서 조회 — 처음에는 바로, 그 뒤로는 주기마다. 앞 요청이 끝나기 전에는 새로 보내지 않는다.
         const bool bMayReport = _bStopped == SW_FALSE && _reportRequestID == 0;
         if ( bMayReport && now.count() >= _nextReportMs )
@@ -269,7 +269,7 @@ namespace sw
             request._url       = makeReportURL( sinceMs );
             request._timeoutMs = _settings._requestTimeoutMs;
             request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-            _reportRequestID   = _pHTTPClient->submitRequest( request, now.count() );
+            _reportRequestID   = _pHTTPClient->submitRequest( request );
             _reportStartUnixMs = now.count();
             _nextReportMs      = now.count() + _settings._reportPollIntervalMs;
         }

@@ -52,7 +52,7 @@ namespace sw
              */
             static DispatchStatus dispatch( LoginService& loginService, const OnlineCallContext& context, const LoginSessionToken* pToken, uint64 tag, BitReader& body )
             {
-                const int64 nowMs = context._nowMs;
+                const UnixMilliseconds nowMs = context._nowMs;
                 switch ( context._method )
                 {
                     case AccountMethod::kRegister:
@@ -225,7 +225,7 @@ namespace sw
         _mapTagToCall[tag] = PendingCall{ context._token, context._connection, context._method };
     }
 
-    void AccountServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void AccountServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _bHostAttached == SW_FALSE )
@@ -287,7 +287,7 @@ namespace sw
         _pLoginService->noteRevokedElsewhere( notice._accountID, notice._sessionID, notice._reason );
     }
 
-    void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs )
+    void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs )
     {
         _mapAccountToReasonCode[accountID] = string( reasonCode );
         _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 짝이 되는 요청 태그가 없으므로 완료는 버리고 이벤트로 끊는다

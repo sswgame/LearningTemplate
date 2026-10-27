@@ -98,8 +98,8 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
     hidden._bClientVisible     = SW_FALSE;
     LiveEventDefinition future = makeEvent( "future_build", "preview" );
     future._minBuildVersion    = 200;
-    liveOps._service.putEvent( hidden, 0, "", 1000, 1 );
-    liveOps._service.putEvent( future, 0, "", 1000, 2 );
+    liveOps._service.putEvent( hidden, 0, "", UnixMilliseconds{ 1000 }, 1 );
+    liveOps._service.putEvent( future, 0, "", UnixMilliseconds{ 1000 }, 2 );
     test::updateAll( { &server }, clients, 1000 );
     (void)liveOpsClient.requestLiveState( "kr", 100, recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 1000 );
@@ -107,7 +107,7 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
     SW_EXPECT_TRUE( liveOpsClient.getActiveEvents().empty() ); // 숨긴 것 · 빌드 판이 낮아 대상 밖
     const uint64 revisionBefore = liveOpsClient.getRevision();
 
-    liveOps._service.putEvent( makeEvent( "halloween", "xp_boost" ), 0, "", 1000, 3 ); // 운영(GM 도구)
+    liveOps._service.putEvent( makeEvent( "halloween", "xp_boost" ), 0, "", UnixMilliseconds{ 1000 }, 3 ); // 운영(GM 도구)
     test::updateAll( { &server }, clients, 2000 );
     test::updateAll( { &server }, clients, 2000 );
     SW_EXPECT_TRUE( liveOpsClient.getRevision() > revisionBefore ); // 알림 → 스스로 다시 받음
@@ -158,7 +158,7 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == LiveOpsResult::Invalid ); // 규칙 밖은 저장소에 맡기기 전에 답한다
     SW_EXPECT_TRUE( recorder._listReply[1]._reply._result == LiveOpsResult::Ok );
 
-    SW_ASSERT_TRUE( dispatcher.notifyAccount( 5, PushNotificationMessage{}, 1000 ) ); // 우편 · 이벤트가 오프라인 계정에게
+    SW_ASSERT_TRUE( dispatcher.notifyAccount( 5, PushNotificationMessage{}, UnixMilliseconds{ 1000 } ) ); // 우편 · 이벤트가 오프라인 계정에게
     test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( provider.getSent().size(), size_t( 1 ) );
     SW_EXPECT_STREQ( provider.getSent()[0]._deviceToken.c_str(), "device-token" );

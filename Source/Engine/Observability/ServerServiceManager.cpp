@@ -64,7 +64,7 @@ namespace sw
         _bRunning = SW_FALSE;
     }
 
-    void ServerServiceManager::update( int64 nowMs )
+    void ServerServiceManager::update( UnixMilliseconds nowMs )
     {
         for ( RunningService& running : _listRunning )
         {

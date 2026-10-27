@@ -89,7 +89,7 @@ namespace sw
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
                 // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
-                const bool bAssembled = createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, outError ) && exposeAccount( context, entry, outError );
+                const bool bAssembled = createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, context._clock, outError ) && exposeAccount( context, entry, outError );
                 if ( bAssembled == false )
                     shutdown();
                 return bAssembled;
@@ -124,7 +124,7 @@ namespace sw
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
-            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, const string& linkSecretKeyEnvironment, string& outError )
+            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, const string& linkSecretKeyEnvironment, const IClock& clock, string& outError )
             {
                 if ( providersFile.empty() )
                 {
@@ -145,7 +145,7 @@ namespace sw
                 vector<PlatformLoginProviderConfig> listSettings;
                 if ( PlatformLoginProviderFactory::readSettings( jsonText, listSettings, outError ) == false )
                     return false;
-                if ( _platformProviders.initialize( listSettings, trustFile, outError ) == false )
+                if ( _platformProviders.initialize( listSettings, trustFile, clock, outError ) == false )
                     return false;
                 bool bNeedsSecretVault = false;
                 for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )

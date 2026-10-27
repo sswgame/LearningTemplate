@@ -131,7 +131,7 @@ namespace sw
         class EconomyRefundWork final : public IServiceStoreWork
         {
         public:
-            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotice&& notice, int64 nowMs )
+            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotice&& notice, UnixMilliseconds nowMs )
                 : _notice{ std::move( notice ) }
                 , _pService{ pService }
                 , _pCurrencies{ pCurrencies }
@@ -140,7 +140,7 @@ namespace sw
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs, _listChange ); }
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs.count(), _listChange ); }
             void complete() override { _pService->completeRefund( _result, _listChange ); }
 
         private:
@@ -148,7 +148,7 @@ namespace sw
             vector<EconomyBalanceChange> _listChange;
             EconomyService*              _pService;
             const CurrencyCatalog*       _pCurrencies;
-            int64                        _nowMs;
+            UnixMilliseconds             _nowMs;
             EconomyResult                _result;
         };
     } // namespace
@@ -291,20 +291,20 @@ namespace sw
         startCall( call, pending );
     }
 
-    void EconomyService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void EconomyService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _pHost = &host;
         (void)host;
         update( nowMs );
     }
 
-    void EconomyService::update( int64 nowMs )
+    void EconomyService::update( UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _pStore == nullptr )
             return;
         if ( _settings._pReceiptRegistry != nullptr )
-            _settings._pReceiptRegistry->update( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다(ServerApp 이 WallClock 으로 준다)
+            _settings._pReceiptRegistry->update( nowMs );
         pollReceipts();
         pollRefunds();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
@@ -335,7 +335,7 @@ namespace sw
         if ( call._method == EconomyMethod::kRedeemReceipt )
         {
             const uint64 ticket = _settings._pReceiptRegistry != nullptr
-                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, UnixMilliseconds{ call._nowMs } )
+                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, call._nowMs )
                                     : 0;
             if ( ticket == 0 )
             {
@@ -346,20 +346,20 @@ namespace sw
             _listPendingCall[pendingIndex]._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
-        const int64                    nowMs = call._nowMs;
+        const UnixMilliseconds         nowMs = call._nowMs;
         unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, pending._callID, pending._methodIndex );
         work->_accountID                     = call._accountID;
         work->_history                       = call._history;
         work->_purchase._offerID             = call._purchase._offerID;
         work->_purchase._count               = call._purchase._count;
         work->_purchase._accountID           = call._accountID;
-        work->_purchase._nowMs               = nowMs;
+        work->_purchase._nowMs               = nowMs.count();
         work->_purchase._journalKey          = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
                                                                                       call._idempotencyKey._low );
         work->_withdraw._storeName           = call._withdraw._storeName;
         work->_withdraw._transactionID       = call._withdraw._transactionID;
         work->_withdraw._accountID           = call._accountID;
-        work->_withdraw._nowMs               = nowMs;
+        work->_withdraw._nowMs               = nowMs.count();
         work->_withdraw._windowMs            = _settings._withdrawalWindowMs;
         _pStore->submit( std::move( work ) );
     }
@@ -381,7 +381,7 @@ namespace sw
                 work->_accountID                    = pending._accountID;
                 work->_redeem._receipt              = std::move( result );
                 work->_redeem._accountID            = pending._accountID;
-                work->_redeem._nowMs                = _nowMs;
+                work->_redeem._nowMs                = _nowMs.count();
                 work->_redeem._bAcceptSandbox       = _settings._bAcceptSandboxReceipts;
                 _pStore->submit( std::move( work ) );
                 break;

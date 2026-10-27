@@ -125,7 +125,7 @@ namespace sw
         pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ) );
     }
 
-    void OnlinePresence::update( int64 nowMs )
+    void OnlinePresence::update( UnixMilliseconds nowMs )
     {
         deliverDeferred();
         if ( _pHost == nullptr || nowMs < _nextRefreshMs )

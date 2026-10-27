@@ -165,7 +165,7 @@ namespace sw
         return true;
     }
 
-    void MatchQueueService::update( int64 nowMs )
+    void MatchQueueService::update( UnixMilliseconds nowMs )
     {
         if ( _dependencies._pRouter == nullptr )
             return;
@@ -181,7 +181,7 @@ namespace sw
         vector<uint64> listExpired;
         for ( const auto& [ticketID, ticket] : _mapLocalTicket )
         {
-            if ( nowMs > ticket._deadlineMs )
+            if ( nowMs.count() > ticket._deadlineMs )
                 listExpired.push_back( ticketID );
         }
         for ( const uint64 ticketID : listExpired )
@@ -194,18 +194,18 @@ namespace sw
         }
     }
 
-    void MatchQueueService::updateLease( const string& modeID, ModeState& state, int64 nowMs )
+    void MatchQueueService::updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs )
     {
         if ( state._leaseRequestID != 0 )
             return; // 응답을 기다린다
-        if ( state._bLeaseAttempted != SW_FALSE && nowMs - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
+        if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
             return;
         const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
                                                           ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTtlMs )
                                                           : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTtlMs, EphemeralCondition::IfAbsent );
         state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ), _replyOwner );
-        state._leaseAttemptMs                         = nowMs;
+        state._leaseAttemptMs                         = nowMs.count();
         state._bLeaseAttempted                        = SW_TRUE;
         _mapLeaseRequestToMode[state._leaseRequestID] = modeID;
     }
@@ -239,7 +239,7 @@ namespace sw
         SW_LOG_INFO( "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverID, bHold ? "took" : "lost", modeID );
     }
 
-    void MatchQueueService::joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag )
+    void MatchQueueService::joinQueue( AccountID accountID, string_view modeID, string_view region, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( hasMode( modeID ) == false )
         {
@@ -316,7 +316,7 @@ namespace sw
         ticket._region         = join._region;
         ticket._partyID        = partyID;
         ticket._originServerID = _dependencies._serverID;
-        ticket._enqueuedMs     = join._nowMs;
+        ticket._enqueuedMs     = join._nowMs.count();
         for ( const AccountID accountID : listAccount )
         {
             int32 rating = 0;
@@ -338,7 +338,7 @@ namespace sw
         local._modeID      = join._modeID;
         local._ticketID    = ticket._ticketID;
         local._partyID     = partyID;
-        local._deadlineMs  = join._nowMs + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
+        local._deadlineMs  = join._nowMs.count() + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
         for ( const AccountID accountID : listAccount )
         {
             _mapAccountToTicket[accountID] = ticket._ticketID;
@@ -358,17 +358,17 @@ namespace sw
         (void)MatchQueueBus::kQueueTopic.publish( *_dependencies._pBus, join._modeID, ticket ); // 쓰지 못했으면 발행이 로그에 남겼고, 티켓은 시한으로 끝난다
     }
 
-    void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
+    void MatchQueueService::placeMatches( ModeState& state, UnixMilliseconds nowMs )
     {
         vector<MatchBackfilled> listBackfilled;
-        state._maker.processBackfills( nowMs, listBackfilled ); // 경기 중 빈 슬롯을 새 경기보다 먼저 채운다
+        state._maker.processBackfills( nowMs.count(), listBackfilled ); // 경기 중 빈 슬롯을 새 경기보다 먼저 채운다
         for ( const MatchBackfilled& backfilled : listBackfilled )
         {
             deliverBackfill( backfilled );
         }
         vector<MatchFormed> listFormed;
         vector<MatchTicket> listTimedOut;
-        state._maker.process( nowMs, listFormed, listTimedOut );
+        state._maker.process( nowMs.count(), listFormed, listTimedOut );
         for ( const MatchTicket& ticket : listTimedOut )
         {
             MatchAssignment assignment;
@@ -379,12 +379,12 @@ namespace sw
         }
         for ( MatchFormed& match : listFormed )
         {
-            state._listUnplaced.push_back( UnplacedMatch{ std::move( match ), nowMs } );
+            state._listUnplaced.push_back( UnplacedMatch{ std::move( match ), nowMs.count() } );
         }
         for ( size_t index = 0; index < state._listUnplaced.size(); )
         {
             const UnplacedMatch& unplaced = state._listUnplaced[index];
-            const bool           bGiveUp  = nowMs - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
+            const bool           bGiveUp  = nowMs.count() - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
             // 배정할 서버가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
             if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueOutcome::NoServer : MatchQueueOutcome::Count, nowMs ) == false && bGiveUp == false )
             {
@@ -463,7 +463,7 @@ namespace sw
         }
     }
 
-    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, int64 nowMs )
+    bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, UnixMilliseconds nowMs )
     {
         const MatchModeDefinition& mode = _mapMode[match._modeID];
         ServerSelectionQuery       query;
@@ -505,7 +505,7 @@ namespace sw
         return bPlaced;
     }
 
-    void MatchQueueService::placeLobby( const LobbySnapshot& lobby, int64 nowMs )
+    void MatchQueueService::placeLobby( const LobbySnapshot& lobby, UnixMilliseconds nowMs )
     {
         ModeState*  pState = findModeState( lobby._modeID );
         MatchFormed match;
@@ -592,7 +592,7 @@ namespace sw
         (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다
     }
 
-    void MatchQueueService::handleBusMessage( const ServerBusMessage& message, int64 nowMs )
+    void MatchQueueService::handleBusMessage( const ServerBusMessage& message, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         if ( MatchQueueBus::kQueueTopic.matches( message ) )

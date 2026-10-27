@@ -27,7 +27,7 @@ namespace sw
         return MatchQueueService::makeAssignTopic( _descriptor._serverID );
     }
 
-    bool MatchServerAgent::handleAssign( const ServerBusMessage& message, int64 nowMs )
+    bool MatchServerAgent::handleAssign( const ServerBusMessage& message, UnixMilliseconds nowMs )
     {
         MatchFormed match;
         if ( MatchQueueBus::kAssignTopic.read( message, match ) != ServerBusReadResult::Read )
@@ -37,7 +37,7 @@ namespace sw
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )
             {
-                _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs + kExpectTtlMs, static_cast<int32>( team ) };
+                _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs.count() + kExpectTtlMs, static_cast<int32>( team ) };
             }
         }
         _newMatchBuffer.push( std::move( match ) );
@@ -54,12 +54,12 @@ namespace sw
         return MatchQueueBus::kBackfillTopic.publish( bus, sent._modeID, sent );
     }
 
-    void MatchServerAgent::update( int64 nowMs )
+    void MatchServerAgent::update( UnixMilliseconds nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         for ( auto expectedIt = _mapAccountToExpected.begin(); expectedIt != _mapAccountToExpected.end(); )
         {
-            if ( nowMs >= expectedIt->second._expiresMs )
+            if ( nowMs.count() >= expectedIt->second._expiresMs )
                 expectedIt = _mapAccountToExpected.erase( expectedIt );
             else
                 ++expectedIt;

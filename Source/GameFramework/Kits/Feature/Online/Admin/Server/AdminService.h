@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -67,17 +68,17 @@ namespace sw
         void shutdown();
 
         /** @brief 명령 하나를 처리합니다. @p adminID 는 로그인한 GM 계정이며 호스트 경로에서는 `OnlineCallContext::_accountID` 입니다. @p onReply 는 정확히 한 번 불립니다. */
-        void submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply );
+        void submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, ReplyDelegate onReply );
         /** @brief 서버 설정의 첫 관리자를 맡깁니다. 레코드가 없을 때만 넣으며 서버 조립 단계가 기동할 때 부릅니다. */
-        void seedRole( AccountID accountID, AdminRole role, int64 nowMs );
-        void update( int64 nowMs );
+        void seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
         /** @brief GM 리슨(서버 설정 `_adminServicePort`)이 있으면 그 연결만 받습니다 — 플레이어 포트에서는 없는 영역과 같은 답입니다. */
         OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::Admin; }
         void                  onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                  onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                  onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );
@@ -92,7 +93,7 @@ namespace sw
             OnlineServiceHost* _pHost{ nullptr };
             uint64             _callID{ 0 };
             int64              _receivedNanoseconds{ 0 };
-            int64              _nowMs{ 0 };
+            UnixMilliseconds   _nowMs{ 0 };
             AdminRequest       _request{}; ///< 점검과 공지 명령만 쓴다. 등급 확인 뒤 서버 디렉터리 키트에 넘긴다
             AccountID          _adminID{ kInvalidAccountID };
             AccountID          _targetID{ kInvalidAccountID };
@@ -100,7 +101,7 @@ namespace sw
             uint16             _method{ 0 };
         };
 
-        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
+        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, PendingCall pending );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
         [[nodiscard]] bool forwardDirectoryCall( const PendingCall& pending );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */

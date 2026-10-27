@@ -9,6 +9,7 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
@@ -30,9 +31,9 @@ namespace sw
         ProfileAPILoginProvider( const PlatformLoginProviderConfig& settings, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
+        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( int64 nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
 
         /** @brief JSON 에서 점 경로("response.id")의 값을 문자열로 찾습니다. 숫자는 십진 문자열로 바꿉니다. */
         [[nodiscard]] static bool findPathText( const JSONValue& root, string_view path, string& outText );

@@ -79,7 +79,7 @@ namespace sw
     class ServerDirectoryReloadWork final : public IServiceStoreWork
     {
     public:
-        ServerDirectoryReloadWork( ServerDirectoryService* pService, int64 nowMs )
+        ServerDirectoryReloadWork( ServerDirectoryService* pService, UnixMilliseconds nowMs )
             : _listMaintenance{}
             , _listNotice{}
             , _pService{ pService }
@@ -131,7 +131,7 @@ namespace sw
         vector<MaintenanceWindow> _listMaintenance;
         vector<ServiceNotice>     _listNotice;
         ServerDirectoryService*   _pService;
-        int64                     _nowMs;
+        UnixMilliseconds          _nowMs;
         uint8                     _bReadOk;
     };
 } // namespace sw
@@ -223,7 +223,7 @@ namespace sw
             reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
         }
         _bReloadRequested = SW_TRUE;
-        _lastVisibleHash  = computeVisibleHash( 0 ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
+        _lastVisibleHash  = computeVisibleHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
     }
 
     void ServerDirectoryService::shutdown()
@@ -237,7 +237,7 @@ namespace sw
         _dependencies._pBus    = nullptr;
     }
 
-    void ServerDirectoryService::update( int64 nowMs )
+    void ServerDirectoryService::update( UnixMilliseconds nowMs )
     {
         if ( _dependencies._pStore == nullptr || _dependencies._pRouter == nullptr )
             return;
@@ -251,7 +251,7 @@ namespace sw
         markStatusIfChanged( nowMs ); // 기간 경계(공지 시작과 끝, 점검 시작과 끝)는 다시 읽지 않아도 보이는 내용이 바뀐다
     }
 
-    void ServerDirectoryService::startReload( int64 nowMs )
+    void ServerDirectoryService::startReload( UnixMilliseconds nowMs )
     {
         _bReloadRequested = SW_FALSE;
         _bReloading       = SW_TRUE;
@@ -260,7 +260,7 @@ namespace sw
         _dependencies._pStore->submit( make_unique<ServerDirectoryReloadWork>( this, nowMs ) );
     }
 
-    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, int64 nowMs )
+    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         _bReloading = SW_FALSE;
@@ -284,13 +284,13 @@ namespace sw
         return bChanged;
     }
 
-    uint64 ServerDirectoryService::computeVisibleHash( int64 nowMs ) const
+    uint64 ServerDirectoryService::computeVisibleHash( UnixMilliseconds nowMs ) const
     {
         using Internal = ServerDirectoryServiceInternal;
         uint64 hash    = HashUtil::kFnvOffset64;
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            if ( window.isActive( nowMs ) == false )
+            if ( window.isActive( nowMs.count() ) == false )
                 continue;
             hash = Internal::combineText( hash, window._scope );
             hash = Internal::combineText( hash, window._messageKey );
@@ -298,7 +298,7 @@ namespace sw
         }
         for ( const ServiceNotice& notice : _listNotice )
         {
-            if ( notice.isActive( nowMs ) == false )
+            if ( notice.isActive( nowMs.count() ) == false )
                 continue;
             hash = HashUtil::combine( hash, notice._noticeID );
             hash = Internal::combineText( hash, notice._text );
@@ -307,7 +307,7 @@ namespace sw
         return hash;
     }
 
-    void ServerDirectoryService::markStatusIfChanged( int64 nowMs )
+    void ServerDirectoryService::markStatusIfChanged( UnixMilliseconds nowMs )
     {
         const uint64 hash = computeVisibleHash( nowMs );
         if ( hash == _lastVisibleHash )
@@ -317,28 +317,28 @@ namespace sw
         ++_statusRevision;
     }
 
-    ServerDirectoryStatus ServerDirectoryService::makeStatus( int64 nowMs ) const
+    ServerDirectoryStatus ServerDirectoryService::makeStatus( UnixMilliseconds nowMs ) const
     {
         ServerDirectoryStatus status;
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            if ( window.isActive( nowMs ) == false || static_cast<int32>( status._listMaintenance.size() ) >= ServerDirectoryLimit::kMaxWindowCount )
+            if ( window.isActive( nowMs.count() ) == false || static_cast<int32>( status._listMaintenance.size() ) >= ServerDirectoryLimit::kMaxWindowCount )
                 continue;
             status._listMaintenance.push_back( window.makeView() ); // 보이는 타입에는 허용 목록이 없다
         }
         for ( const ServiceNotice& notice : _listNotice )
         {
-            if ( notice.isActive( nowMs ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxNoticeCount )
+            if ( notice.isActive( nowMs.count() ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxNoticeCount )
                 status._listNotice.push_back( notice );
         }
         return status;
     }
 
-    bool ServerDirectoryService::isBlockedByMaintenance( string_view kind, AccountID accountID, int64 nowMs, MaintenanceWindow* pOutWindow ) const
+    bool ServerDirectoryService::isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow ) const
     {
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            const bool bBlocks = window.isActive( nowMs ) && window.appliesTo( kind ) && window.allowsAccount( accountID ) == false;
+            const bool bBlocks = window.isActive( nowMs.count() ) && window.appliesTo( kind ) && window.allowsAccount( accountID ) == false;
             if ( bBlocks == false )
                 continue;
             if ( pOutWindow != nullptr )
@@ -348,7 +348,7 @@ namespace sw
         return false;
     }
 
-    ServerAssignment ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, int64 nowMs )
+    ServerAssignment ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs )
     {
         ServerAssignment      assignment;
         ServerRegistryReader* pReader = findReader( request._kind );
@@ -369,7 +369,7 @@ namespace sw
         bool bAllowedDuringMaintenance = false;
         for ( const MaintenanceWindow& active : _listMaintenance )
         {
-            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs ) && active.appliesTo( request._kind ) );
+            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs.count() ) && active.appliesTo( request._kind ) );
         }
 
         ServerSelectionQuery query;
@@ -392,14 +392,14 @@ namespace sw
         return assignment;
     }
 
-    ServerDirectoryResult ServerDirectoryService::listServers( string_view kind, int64 nowMs, vector<ServerListEntry>& outListEntry ) const
+    ServerDirectoryResult ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
     {
         const ServerRegistryReader* pReader = findReader( kind );
         if ( pReader == nullptr )
             return ServerDirectoryResult::Invalid;
         for ( const ServerStatus& status : pReader->getSnapshot() )
         {
-            const bool bStale      = nowMs - status._heartbeatMs > _settings._staleMs;
+            const bool bStale      = nowMs.count() - status._heartbeatMs > _settings._staleMs;
             const bool bSkipServer = bStale || status._state == ServerState::Starting || static_cast<int32>( outListEntry.size() ) >= ServerDirectoryLimit::kMaxServerListCount;
             if ( bSkipServer )
                 continue;
@@ -426,7 +426,7 @@ namespace sw
         return nullptr;
     }
 
-    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidWindow( window ) == false )
@@ -446,12 +446,12 @@ namespace sw
         work->_auditEntry._action  = "sd.maintenance.set";
         work->_auditEntry._subject = "sd/" + window._scope;
         work->_auditEntry._memo    = string( memo );
-        work->_auditEntry._timeMs  = nowMs;
+        work->_auditEntry._timeMs  = nowMs.count();
         work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
@@ -466,12 +466,12 @@ namespace sw
         work->_auditEntry._action                 = "sd.maintenance.clear";
         work->_auditEntry._subject                = "sd/" + string( scope );
         work->_auditEntry._memo                   = string( memo );
-        work->_auditEntry._timeMs                 = nowMs;
+        work->_auditEntry._timeMs                 = nowMs.count();
         work->_requestTag                         = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidNotice( notice ) == false )
@@ -491,12 +491,12 @@ namespace sw
         work->_auditEntry._action  = "sd.notice.post";
         work->_auditEntry._subject = "sd/notice/" + work->_key;
         work->_auditEntry._after   = notice._text;
-        work->_auditEntry._timeMs  = nowMs;
+        work->_auditEntry._timeMs  = nowMs.count();
         work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal                            = ServerDirectoryServiceInternal;
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
@@ -505,12 +505,12 @@ namespace sw
         work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.notice.remove";
         work->_auditEntry._subject                = "sd/notice/" + work->_key;
-        work->_auditEntry._timeMs                 = nowMs;
+        work->_auditEntry._timeMs                 = nowMs.count();
         work->_requestTag                         = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         MaintenanceWindow window;
         window._listAllowedAccount = change._listAllowedAccount;
@@ -521,7 +521,7 @@ namespace sw
         setMaintenance( window, actorID, memo, nowMs, requestTag );
     }
 
-    void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         ServiceNotice notice;
         notice._text         = change._text;

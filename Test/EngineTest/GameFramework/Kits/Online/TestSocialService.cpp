@@ -101,7 +101,7 @@ namespace
             _service.initialize( dependencies );
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -123,7 +123,7 @@ namespace
         SocialResult getLastResult() const { return _listCompletion.empty() ? SocialResult::Count : _listCompletion.back()._result; }
 
         /** @brief @p accountID 의 관계 목록을 읽어 마지막 완료로 둡니다. */
-        const vector<SocialLink>& readLinks( AccountID accountID, uint64 requestTag, int64 nowMs )
+        const vector<SocialLink>& readLinks( AccountID accountID, uint64 requestTag, UnixMilliseconds nowMs )
         {
             _service.listLinks( accountID, requestTag );
             step( nowMs );
@@ -160,7 +160,7 @@ namespace
             if ( _bInterleaved == SW_FALSE )
             {
                 _bInterleaved = SW_TRUE;
-                _pRival->changeLink( SocialLinkOperation::Request, _rivalID, _targetID, 0, 99 ); // 메모리 앞은 그 자리에서 돈다 — 상대의 신청이 먼저 들어간다
+                _pRival->changeLink( SocialLinkOperation::Request, _rivalID, _targetID, UnixMilliseconds{ 0 }, 99 ); // 메모리 앞은 그 자리에서 돈다 — 상대의 신청이 먼저 들어간다
             }
             return _pDatabase->commit( transaction, pOutInfo );
         }
@@ -216,29 +216,29 @@ SW_TEST_CASE( SocialServiceTest, RequestAcceptAndList )
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              node( &database, &cacheDatabase, &hub, 1 );
-    node._service.changeLink( SocialLinkOperation::Request, 1, 2, 100, 1 );
-    node.step( 100 );
+    node._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 100 }, 1 );
+    node.step( UnixMilliseconds{ 100 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Ok );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node._listNotification[0]._recipientID, AccountID( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._kind == SocialNotificationKind::FriendRequested );
 
-    node._service.changeLink( SocialLinkOperation::Request, 1, 2, 150, 2 );
-    node.step( 150 );
+    node._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 150 }, 2 );
+    node.step( UnixMilliseconds{ 150 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::AlreadyRequested );
-    node._service.changeLink( SocialLinkOperation::Accept, 2, 1, 200, 3 );
-    node.step( 200 );
+    node._service.changeLink( SocialLinkOperation::Accept, 2, 1, UnixMilliseconds{ 200 }, 3 );
+    node.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Ok );
     SW_EXPECT_TRUE( node._listNotification.back()._kind == SocialNotificationKind::FriendAdded );
 
-    const vector<SocialLink>& listLink = node.readLinks( 1, 4, 200 );
+    const vector<SocialLink>& listLink = node.readLinks( 1, 4, UnixMilliseconds{ 200 } );
     SW_ASSERT_EQUAL( listLink.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listLink[0]._state == SocialLinkState::Friend );
     SW_EXPECT_EQUAL( listLink[0]._otherID, AccountID( 2 ) );
     SW_EXPECT_EQUAL( listLink[0]._sinceMs, int64( 200 ) );
 
-    node._service.changeLink( SocialLinkOperation::Request, 1, 1, 300, 5 ); // 자기 자신
-    node.step( 300 );
+    node._service.changeLink( SocialLinkOperation::Request, 1, 1, UnixMilliseconds{ 300 }, 5 ); // 자기 자신
+    node.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Invalid );
 }
 
@@ -254,25 +254,25 @@ SW_TEST_CASE( SocialServiceTest, ConcurrentMutualRequestsRetryIntoOneFriendship 
     SocialNode              node( &database, &cacheDatabase, &hub, 1, nullptr, &store );
 
     const uint64 commitBefore = database.getCommitCount();
-    node._service.changeLink( SocialLinkOperation::Request, 1, 2, 0, 1 ); // 첫 커밋 직전에 2 → 1 신청이 끼어든다 — 충돌 → 다시 읽으면 "받은 신청" → 친구
-    node.step( 0 );
-    rival.step( 0 );
+    node._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 0 }, 1 ); // 첫 커밋 직전에 2 → 1 신청이 끼어든다 — 충돌 → 다시 읽으면 "받은 신청" → 친구
+    node.step( UnixMilliseconds{ 0 } );
+    rival.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Ok );
     SW_EXPECT_TRUE( rival.getLastResult() == SocialResult::Ok );
     SW_EXPECT_EQUAL( database.getCommitCount(), commitBefore + 2 ); // 끼어든 신청 하나 + 다시 해서 수락 하나(충돌한 커밋은 세지 않는다)
 
-    const vector<SocialLink> listLinkOfFirst = node.readLinks( 1, 2, 0 );
+    const vector<SocialLink> listLinkOfFirst = node.readLinks( 1, 2, UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( listLinkOfFirst.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listLinkOfFirst[0]._state == SocialLinkState::Friend );
-    const vector<SocialLink> listLinkOfSecond = rival.readLinks( 2, 2, 0 );
+    const vector<SocialLink> listLinkOfSecond = rival.readLinks( 2, 2, UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( listLinkOfSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listLinkOfSecond[0]._state == SocialLinkState::Friend );
 
     // 개수도 맞다 — 받은 · 보낸 신청이 남지 않았으니 같은 둘이 다시 친구가 되어도 상한이 새지 않는다(셋째 계정이 1 에게 신청할 수 있다)
-    node._service.changeLink( SocialLinkOperation::Remove, 1, 2, 10, 3 );
-    node.step( 10 );
+    node._service.changeLink( SocialLinkOperation::Remove, 1, 2, UnixMilliseconds{ 10 }, 3 );
+    node.step( UnixMilliseconds{ 10 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Ok );
-    SW_EXPECT_EQUAL( node.readLinks( 1, 4, 10 ).size(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( node.readLinks( 1, 4, UnixMilliseconds{ 10 } ).size(), size_t( 0 ) );
 }
 
 SW_TEST_CASE( SocialServiceTest, RequestByNameFindsRegisteredAccountsOnly )
@@ -285,19 +285,19 @@ SW_TEST_CASE( SocialServiceTest, RequestByNameFindsRegisteredAccountsOnly )
     nameIndex.add( 2, "bob" );
     SocialNode node( &database, &cacheDatabase, &hub, 1, &nameIndex );
 
-    node._service.requestFriendByName( 1, "bob", 0, 1 );
-    node.step( 0 );
+    node._service.requestFriendByName( 1, "bob", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._result == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion[0]._otherID, AccountID( 2 ) );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node._listNotification[0]._recipientID, AccountID( 2 ) );
 
-    node._service.requestFriendByName( 1, "Guest-00abcd", 0, 2 ); // 게스트 이름은 색인에 없다 — 계정 id 로
-    node.step( 0 );
+    node._service.requestFriendByName( 1, "Guest-00abcd", UnixMilliseconds{ 0 }, 2 ); // 게스트 이름은 색인에 없다 — 계정 id 로
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::NotFound );
-    node._service.requestFriendByName( 2, "bob", 0, 3 ); // 자기 자신
-    node.step( 0 );
+    node._service.requestFriendByName( 2, "bob", UnixMilliseconds{ 0 }, 3 ); // 자기 자신
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Invalid );
 }
 
@@ -309,26 +309,26 @@ SW_TEST_CASE( SocialServiceTest, BlockIsVisibleLocallyAndHidesRequests )
     LocalServerBusHub       hub;
     SocialNode              first( &database, &cacheDatabase, &hub, 1 );
     SocialNode              second( &database, &cacheDatabase, &hub, 2 );
-    (void)second.readLinks( 2, 1, 0 ); // 계정 2 는 서버 2 에 붙어 있고 관계를 읽어 두었다
-    second._service.changeLink( SocialLinkOperation::Block, 2, 1, 100, 2 );
-    second.step( 100 );
+    (void)second.readLinks( 2, 1, UnixMilliseconds{ 0 } ); // 계정 2 는 서버 2 에 붙어 있고 관계를 읽어 두었다
+    second._service.changeLink( SocialLinkOperation::Block, 2, 1, UnixMilliseconds{ 100 }, 2 );
+    second.step( UnixMilliseconds{ 100 } );
     SW_EXPECT_TRUE( second.getLastResult() == SocialResult::Ok );
     SW_EXPECT_TRUE( second._service.isBlockedLocal( 2, 1 ) );
     SW_EXPECT_FALSE( second._service.isBlockedLocal( 1, 2 ) );
 
-    first._service.changeLink( SocialLinkOperation::Request, 1, 2, 200, 1 ); // 막힌 사람의 신청 — 조용히 Ok, 아무 데도 알림 없음
-    first.step( 200 );
-    second.step( 200 );
+    first._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 200 }, 1 ); // 막힌 사람의 신청 — 조용히 Ok, 아무 데도 알림 없음
+    first.step( UnixMilliseconds{ 200 } );
+    second.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_TRUE( first.getLastResult() == SocialResult::Ok );
     SW_EXPECT_EQUAL( first._listNotification.size(), size_t( 0 ) );
-    SW_EXPECT_EQUAL( first.readLinks( 1, 2, 200 ).size(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( first.readLinks( 1, 2, UnixMilliseconds{ 200 } ).size(), size_t( 0 ) );
 
-    second._service.changeLink( SocialLinkOperation::Request, 2, 1, 250, 3 ); // 내가 막은 사람에게
-    second.step( 250 );
+    second._service.changeLink( SocialLinkOperation::Request, 2, 1, UnixMilliseconds{ 250 }, 3 ); // 내가 막은 사람에게
+    second.step( UnixMilliseconds{ 250 } );
     SW_EXPECT_TRUE( second.getLastResult() == SocialResult::YouBlocked );
 
-    second._service.changeLink( SocialLinkOperation::Unblock, 2, 1, 300, 4 );
-    second.step( 300 );
+    second._service.changeLink( SocialLinkOperation::Unblock, 2, 1, UnixMilliseconds{ 300 }, 4 );
+    second.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_FALSE( second._service.isBlockedLocal( 2, 1 ) );
 }
 
@@ -340,38 +340,38 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriendsOnOtherServersAndQueryRea
     LocalServerBusHub       hub;
     SocialNode              first( &database, &cacheDatabase, &hub, 1 );
     SocialNode              second( &database, &cacheDatabase, &hub, 2 );
-    first._service.changeLink( SocialLinkOperation::Request, 1, 2, 0, 1 );
-    first.step( 0 );
-    second._service.changeLink( SocialLinkOperation::Accept, 2, 1, 0, 1 );
-    second.step( 0 );
-    (void)first.readLinks( 1, 2, 0 );  // 1 은 서버 1
-    (void)second.readLinks( 2, 2, 0 ); // 2 는 서버 2
+    first._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 0 }, 1 );
+    first.step( UnixMilliseconds{ 0 } );
+    second._service.changeLink( SocialLinkOperation::Accept, 2, 1, UnixMilliseconds{ 0 }, 1 );
+    second.step( UnixMilliseconds{ 0 } );
+    (void)first.readLinks( 1, 2, UnixMilliseconds{ 0 } );  // 1 은 서버 1
+    (void)second.readLinks( 2, 2, UnixMilliseconds{ 0 } ); // 2 는 서버 2
 
     first._listNotification.clear(); // 앞 단계의 신청 · 친구 알림
-    second._service.setPresence( 2, SocialPresenceStatus::InGame, "dungeon 3", 100, 3 );
-    second.step( 100 );
-    first.step( 100 );
+    second._service.setPresence( 2, SocialPresenceStatus::InGame, "dungeon 3", UnixMilliseconds{ 100 }, 3 );
+    second.step( UnixMilliseconds{ 100 } );
+    first.step( UnixMilliseconds{ 100 } );
     SW_ASSERT_EQUAL( first._listNotification.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( first._listNotification[0]._recipientID, AccountID( 1 ) );
     SW_EXPECT_TRUE( first._listNotification[0]._kind == SocialNotificationKind::PresenceChanged );
     SW_EXPECT_STREQ( first._listNotification[0]._presence._activity.c_str(), "dungeon 3" );
 
     first._service.queryFriendPresence( 1, 4 ); // 2 는 다른 서버 — 캐시를 읽는다
-    first.step( 100 );
+    first.step( UnixMilliseconds{ 100 } );
     SW_ASSERT_EQUAL( first._listCompletion.back()._listPresence.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( first._listCompletion.back()._listPresence[0]._status == SocialPresenceStatus::InGame );
 
     second._service.removeAccount( 2 ); // 떠남 — 오프라인 알림 · 캐시 지움
-    second.step( 200 );
-    first.step( 200 );
+    second.step( UnixMilliseconds{ 200 } );
+    first.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_TRUE( first._listNotification.back()._presence._status == SocialPresenceStatus::Offline );
     first._service.queryFriendPresence( 1, 5 );
-    first.step( 200 );
+    first.step( UnixMilliseconds{ 200 } );
     SW_ASSERT_EQUAL( first._listCompletion.back()._listPresence.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( first._listCompletion.back()._listPresence[0]._status == SocialPresenceStatus::Offline );
 
-    second._service.setPresence( 2, SocialPresenceStatus::Offline, "", 300, 6 ); // 오프라인은 떠나기로만
-    second.step( 300 );
+    second._service.setPresence( 2, SocialPresenceStatus::Offline, "", UnixMilliseconds{ 300 }, 6 ); // 오프라인은 떠나기로만
+    second.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_TRUE( second.getLastResult() == SocialResult::Invalid );
 }
 
@@ -384,8 +384,8 @@ SW_TEST_CASE( SocialServiceTest, StoreFailureWritesNothing )
     SocialNode              node( &database, &cacheDatabase, &hub, 1 );
     const uint64            hashBefore = database.computeContentHash();
     database.armFault( ServiceStoreFault::RejectCommit );
-    node._service.changeLink( SocialLinkOperation::Request, 1, 2, 0, 1 );
-    node.step( 0 );
+    node._service.changeLink( SocialLinkOperation::Request, 1, 2, UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
     SW_EXPECT_EQUAL( node._listNotification.size(), size_t( 0 ) );

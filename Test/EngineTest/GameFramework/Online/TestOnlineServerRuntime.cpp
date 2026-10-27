@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
@@ -37,11 +38,14 @@ namespace
 
         static void reset() { vector<string>{}.swap( getLog() ); }
 
+        /** @brief 런타임이 빌리는 단조 시계입니다. 상태가 없는 운영 시계라 테스트끼리 나눠도 된다(메모리 캐시 만료가 테스트 안에서 오지 않는다). */
+        static inline const SystemMonotonicClock kClock{};
+
         static OnlineServerRuntimeConfig makeSettings( std::initializer_list<const utf8*> listKitName )
         {
             OnlineServerRuntimeConfig settings;
             settings._bTLS                  = SW_FALSE;
-            settings._bManualCacheTime      = SW_TRUE;
+            settings._pClock                = &kClock;
             settings._config._ioThreadCount = 0;
             for ( const utf8* pName : listKitName )
             {
@@ -157,7 +161,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
         settings._listenAddress            = NetAddress::makeLoopback( 7451 );
         OnlineServerRuntime runtime;
         string              error;
-        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, 1000, error ), error.c_str() );
+        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
         SW_EXPECT_EQUAL( runtime.getListenPort(), uint16( 7451 ) );
         vector<string> listKitName;
         runtime.collectKitNames( listKitName );
@@ -166,7 +170,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
         SW_EXPECT_TRUE( runtime.getContext()._pBus != nullptr && runtime.getContext()._pRouter != nullptr );
         health.markTick( 10 );
         SW_EXPECT_TRUE( health.isReady( 10 ) ); // 조립이 끝나면 online_services 검사가 Ok
-        runtime.update( 1100 );
+        runtime.update( UnixMilliseconds{ 1100 } );
         runtime.shutdown();
         SW_EXPECT_FALSE( health.isReady( 10 ) ); // 내리면 다시 Failing
     }
@@ -195,7 +199,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
         settings._pTransport                                      = transport.get();
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
         SW_EXPECT_TRUE( error.find( "needs kit 'test.provider'" ) != string::npos ); // 필수 인터페이스를 내놓을 키트가 없으면 기동 오류다(빈 칸으로 돌지 않는다)
         runtime.shutdown();
     }
@@ -218,7 +222,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown )
         settings._pTransport                                      = transport.get();
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
         SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test init failure" ) != string::npos );
         runtime.shutdown();
     }
@@ -241,7 +245,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, UnknownKitStopsStartup )
     settings._pTransport                                      = transport.get();
     OnlineServerRuntime runtime;
     string              error;
-    SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+    SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
     SW_EXPECT_TRUE( error.find( "test.missing" ) != string::npos && error.find( "not in this build" ) != string::npos );
     runtime.shutdown(); // 반쯤 만든 것도 내린다(두 번 불러도 된다)
     runtime.shutdown();
@@ -264,7 +268,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
         settings._listenAddress                                   = NetAddress::makeLoopback( 7452 );
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
         SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test start failure" ) != string::npos );
         runtime.shutdown();
     }

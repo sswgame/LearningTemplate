@@ -33,9 +33,9 @@ namespace sw
         OidcLoginProvider( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
+        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( int64 nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
 
         const JwksKeyCache& getKeyCache() const { return _keyCache; }
         int32               getJwksFetchCount() const { return _jwksFetchCount; }
@@ -55,7 +55,7 @@ namespace sw
             NeedKey
         };
 
-        void startJwksFetch( int64 nowMs );
+        void startJwksFetch( UnixMilliseconds nowMs );
         /** @brief 토큰 하나를 확인합니다. @p now 는 `exp` · `iat` 와 견주는 유닉스 시각입니다(형식이 단조 시각을 막는다). */
         Decision evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification );
 
@@ -67,7 +67,7 @@ namespace sw
         HTTPClient*                       _pHTTPClient;
         IDAllocator<uint64>               _verificationIDAllocator;
         uint64                            _jwksRequestID;
-        int64                             _lastFetchStartMs;
+        UnixMilliseconds                  _lastFetchStartMs;
         uint32                            _fetchGeneration; ///< 끝난 받기의 횟수이다
         int32                             _jwksFetchCount;
         uint8                             _bLastFetchFailed;

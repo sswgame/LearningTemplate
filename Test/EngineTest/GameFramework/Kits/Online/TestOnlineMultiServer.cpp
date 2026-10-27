@@ -139,12 +139,12 @@ namespace
         ClientNode              _aliceOnA;
         ClientNode              _bobOnB;
         ClientNode              _aliceOnB;
-        int64                   _nowMs;
+        UnixMilliseconds        _nowMs;
 
         MultiServerRig()
             : _network{ 43u }
             , _database{}
-            , _cacheClock{ 800000 }
+            , _cacheClock{ MonotonicMilliseconds{ 800000 } }
             , _cacheDatabase{ _cacheClock }
             , _hub{}
             , _serverA{ _network, _database, _cacheDatabase, _hub, 1 }
@@ -161,10 +161,10 @@ namespace
             for ( int32 index = 0; index < count; ++index )
             {
                 _nowMs += 20;
-                _cacheClock.setMilliseconds( _nowMs ); // 캐시 만료를 서비스와 같은 시각으로 잰다
-                _aliceOnA._client.update( _nowMs );
-                _bobOnB._client.update( _nowMs );
-                _aliceOnB._client.update( _nowMs );
+                _cacheClock.setMilliseconds( MonotonicMilliseconds{ _nowMs.count() } ); // 캐시 만료를 서비스와 같은 시각으로 잰다
+                _aliceOnA._client.update( MonotonicMilliseconds{ _nowMs.count() } );
+                _bobOnB._client.update( MonotonicMilliseconds{ _nowMs.count() } );
+                _aliceOnB._client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 _serverA._host.update( _nowMs );
                 _serverB._host.update( _nowMs );
             }

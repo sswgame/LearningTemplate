@@ -55,7 +55,7 @@ namespace
             (void)_store.pollCompletions();
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -94,7 +94,7 @@ namespace
             (void)_store.pollCompletions();
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 3; ++round )
             {
@@ -116,9 +116,9 @@ namespace
 
 SW_TEST_CASE( LiveOpsStartPushTest, AFreshlyOpenedWindowIsAnnouncedOnceWithItsParameters )
 {
-    MemoryServiceDatabase database;
-    StartNode             node( &database );
-    const int64           nowMs = kMonday20261005 + kMinute;
+    MemoryServiceDatabase  database;
+    StartNode              node( &database );
+    const UnixMilliseconds nowMs{ kMonday20261005 + kMinute };
     node.step( nowMs );
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 0 ) );
 
@@ -142,13 +142,13 @@ SW_TEST_CASE( LiveOpsStartPushTest, AFreshlyOpenedWindowIsAnnouncedOnceWithItsPa
 
 SW_TEST_CASE( LiveOpsStartPushTest, OldWindowsAndEventsWithoutPushAreNotAnnounced )
 {
-    MemoryServiceDatabase database;
-    StartNode             node( &database );
-    const int64           nowMs = kMonday20261005 + kHour; // 이벤트는 한 시간 전에 열렸다 — 서버가 방금 떠서 처음 본 것이다
+    MemoryServiceDatabase  database;
+    StartNode              node( &database );
+    const UnixMilliseconds nowMs{ kMonday20261005 + kHour }; // 이벤트는 한 시간 전에 열렸다 — 서버가 방금 떠서 처음 본 것이다
     node._service.putEvent( makePushEvent( "old_event" ), 7, "", nowMs, 1 );
     LiveEventDefinition quiet = makePushEvent( "quiet_event" );
     quiet._listParameter.clear(); // 시작 푸시를 달지 않았다
-    quiet._startMs = nowMs - kMinute;
+    quiet._startMs = ( nowMs - kMinute ).count();
     node._service.putEvent( quiet, 7, "", nowMs, 2 );
     node.step( nowMs );
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 0 ) );
@@ -164,15 +164,15 @@ SW_TEST_CASE( LiveOpsStartPushTest, ARecurringEventIsAnnouncedAtEveryOccurrence 
     evening._activeMinuteOfDay    = 20 * 60;
     evening._activeDurationMs     = kHour;
     const int64 eveningMs         = kMonday20261005 + 20 * kHour;
-    node._service.putEvent( evening, 0, "", eveningMs - 2 * kMinute, 1 );
-    node.step( eveningMs - kMinute ); // 19:59 — 닫혀 있다
+    node._service.putEvent( evening, 0, "", UnixMilliseconds{ eveningMs - 2 * kMinute }, 1 );
+    node.step( UnixMilliseconds{ eveningMs - kMinute } ); // 19:59 — 닫혀 있다
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 0 ) );
-    node.step( eveningMs ); // 20:00 — 열림
+    node.step( UnixMilliseconds{ eveningMs } ); // 20:00 — 열림
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 1 ) );
-    node.step( eveningMs + kHour / 2 );
+    node.step( UnixMilliseconds{ eveningMs + kHour / 2 } );
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 0 ) );
-    node.step( eveningMs + kHour ); // 닫힘
-    node.step( eveningMs + kDay );  // 다음 날 20:00 — 다시 열림
+    node.step( UnixMilliseconds{ eveningMs + kHour } ); // 닫힘
+    node.step( UnixMilliseconds{ eveningMs + kDay } );  // 다음 날 20:00 — 다시 열림
     SW_EXPECT_EQUAL( node.takeStarts().size(), size_t( 1 ) );
 }
 
@@ -186,26 +186,26 @@ SW_TEST_CASE( PushDispatcherTopicTest, TopicGoesOnlyToProvidersThatKnowTopicsAnd
 {
     MemoryServiceDatabase database;
     PushNode              node( &database );
-    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.kr", makeMessage(), 0 ), 1 );
-    node.step( 0 );
+    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.kr", makeMessage(), UnixMilliseconds{ 0 } ), 1 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( node._provider.getSent().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node._provider.getSent()[0]._topic, string( "liveops.kr" ) );
     SW_EXPECT_TRUE( node._provider.getSent()[0]._deviceToken.empty() );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._deliveredCount, uint64( 1 ) );
 
     node._provider.scriptResult( "liveops.jp", PushDeliveryStatus::Transient, 1 );
-    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.jp", makeMessage(), 1000 ), 1 );
-    node.step( 1000 ); // 1 차 실패 → 1 초 뒤
-    node.step( 1999 );
+    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.jp", makeMessage(), UnixMilliseconds{ 1000 } ), 1 );
+    node.step( UnixMilliseconds{ 1000 } ); // 1 차 실패 → 1 초 뒤
+    node.step( UnixMilliseconds{ 1999 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 2 ) );
-    node.step( 2000 ); // 다시 보내 성공
+    node.step( UnixMilliseconds{ 2000 } ); // 다시 보내 성공
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 3 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getInFlightCount(), 0 );
 
     // 토픽에는 기기가 없다 — 무효 토큰 결과도 기기 해지를 부르지 않고 버려진다.
     node._provider.scriptResult( "liveops.us", PushDeliveryStatus::InvalidToken, 1 );
-    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.us", makeMessage(), 3000 ), 1 );
-    node.step( 3000 );
+    SW_EXPECT_EQUAL( node._dispatcher.notifyTopic( "liveops.us", makeMessage(), UnixMilliseconds{ 3000 } ), 1 );
+    node.step( UnixMilliseconds{ 3000 } );
     SW_EXPECT_EQUAL( node._dispatcher.getInFlightCount(), 0 );
     SW_EXPECT_EQUAL( node._dispatcher.getPendingWorkCount(), 0 );
 }
@@ -215,21 +215,21 @@ SW_TEST_CASE( PushDispatcherTopicTest, TheSameClaimKeySendsOnceAcrossServers )
     MemoryServiceDatabase database;
     PushNode              first( &database );
     PushNode              second( &database );
-    first._dispatcher.notifyTopicOnce( "halloween/00000000/0001", "liveops.kr", makeMessage(), 0 );
-    second._dispatcher.notifyTopicOnce( "halloween/00000000/0001", "liveops.kr", makeMessage(), 0 );
-    first.step( 0 );
-    second.step( 0 );
+    first._dispatcher.notifyTopicOnce( "halloween/00000000/0001", "liveops.kr", makeMessage(), UnixMilliseconds{ 0 } );
+    second._dispatcher.notifyTopicOnce( "halloween/00000000/0001", "liveops.kr", makeMessage(), UnixMilliseconds{ 0 } );
+    first.step( UnixMilliseconds{ 0 } );
+    second.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_EQUAL( first._provider.getSent().size() + second._provider.getSent().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( first._dispatcher.getStats()._topicClaimedCount + second._dispatcher.getStats()._topicClaimedCount, uint64( 1 ) );
     SW_EXPECT_EQUAL( first._dispatcher.getStats()._topicSkippedCount + second._dispatcher.getStats()._topicSkippedCount, uint64( 1 ) );
     SW_EXPECT_EQUAL( database.countRecords( hashed_string( "liveops_push" ) ), 1 );
 
-    first._dispatcher.notifyTopicOnce( "halloween/00000000/0002", "liveops.kr", makeMessage(), 100 ); // 다른 창(다른 키)은 다시 보낸다
-    first.step( 100 );
+    first._dispatcher.notifyTopicOnce( "halloween/00000000/0002", "liveops.kr", makeMessage(), UnixMilliseconds{ 100 } ); // 다른 창(다른 키)은 다시 보낸다
+    first.step( UnixMilliseconds{ 100 } );
     SW_EXPECT_EQUAL( first._provider.getSent().size() + second._provider.getSent().size(), size_t( 2 ) );
 
-    first._dispatcher.notifyTopicOnce( "Bad Key", "liveops.kr", makeMessage(), 200 ); // 키 규칙 밖은 보내지 않고 센다
-    first.step( 200 );
+    first._dispatcher.notifyTopicOnce( "Bad Key", "liveops.kr", makeMessage(), UnixMilliseconds{ 200 } ); // 키 규칙 밖은 보내지 않고 센다
+    first.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_EQUAL( first._provider.getSent().size() + second._provider.getSent().size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( first._dispatcher.getPendingWorkCount(), 0 );
 }

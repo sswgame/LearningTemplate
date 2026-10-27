@@ -148,7 +148,7 @@ namespace sw
         }
         else
             url = makeVoidedURL( ( _lastVoidedUnixMs != 0 ? _lastVoidedUnixMs : _voidedStartUnixMs ) - _settings._voidedLookbackMs );
-        _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ), now.count() )] = call;
+        _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ) )] = call;
     }
 
     void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
@@ -307,7 +307,7 @@ namespace sw
     void GoogleReceiptValidator::update( UnixMilliseconds now )
     {
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 만료 · 조회 주기 · 취소 목록 구간을 모두 잰다.
-        _pHTTPClient->update( now.count() );
+        _pHTTPClient->update();
         const bool bMayPoll = _bStopped == SW_FALSE && _bVoidedInFlight == SW_FALSE;
         if ( bMayPoll && now.count() >= _nextVoidedMs )
         {

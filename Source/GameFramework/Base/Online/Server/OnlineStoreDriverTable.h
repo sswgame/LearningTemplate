@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,7 +32,7 @@ namespace sw
     {
         /** @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 까닭입니다. @p secret 은 쓰고 나면 부른 쪽이 비웁니다. */
         using CreateServiceStoreFunction = unique_ptr<IServiceStore> ( * )( string_view driverName, string_view connection, string_view secret, int32 workerCount,
-                                                                            int64 nowMs, string& outError );
+                                                                            UnixMilliseconds nowMs, string& outError );
         /** @brief 캐시를 만들고 초기화합니다. 실패하면 nullptr 과 까닭입니다. */
         using CreateEphemeralStoreFunction = unique_ptr<IEphemeralStore> ( * )( string_view driverName, string_view endpoint, string_view secret, string& outError );
 

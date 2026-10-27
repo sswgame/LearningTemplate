@@ -34,7 +34,7 @@ namespace
             _closedStore.shutdown();
             SW_ASSERT_TRUE( _schema.isReady() );
             string error;
-            _store = ServiceStoreFactory::createServiceStore( "postgres", _schema.getConnection(), "", 2, 0, error );
+            _store = ServiceStoreFactory::createServiceStore( "postgres", _schema.getConnection(), "", 2, UnixMilliseconds{ 0 }, error );
             SW_EXPECT_TRUE_MSG( _store != nullptr, error.c_str() );
         }
 
@@ -67,7 +67,7 @@ SW_TEST_CASE( ServiceStorePostgresTest, MigrationsApplyOnceInTheTestSchema )
     string error;
     for ( int32 startIndex = 0; startIndex < 2; ++startIndex ) // 두 번째 기동은 적용된 마이그레이션의 체크섬만 본다
     {
-        unique_ptr<IServiceStore> store = ServiceStoreFactory::createServiceStore( "postgres", schema.getConnection(), "", 1, 0, error );
+        unique_ptr<IServiceStore> store = ServiceStoreFactory::createServiceStore( "postgres", schema.getConnection(), "", 1, UnixMilliseconds{ 0 }, error );
         SW_ASSERT_TRUE_MSG( store != nullptr, error.c_str() );
         store->shutdown();
     }

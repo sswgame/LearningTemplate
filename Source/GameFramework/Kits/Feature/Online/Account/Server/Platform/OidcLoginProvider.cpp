@@ -27,7 +27,7 @@ namespace sw
     {
     }
 
-    uint64 OidcLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 OidcLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         const string_view text( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
@@ -50,16 +50,16 @@ namespace sw
         return count;
     }
 
-    void OidcLoginProvider::update( int64 nowMs )
+    void OidcLoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
             if ( response._requestID != _jwksRequestID )
                 continue;
-            const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJwks( response.getBodyText(), nowMs );
+            const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJwks( response.getBodyText(), nowMs.count() );
             if ( bReplaced == false )
                 SW_LOG_WARNING( "JWKS fetch for '%#' failed: %#", _settings._name.c_str(), response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "bad response" );
             _bLastFetchFailed = bReplaced ? SW_FALSE : SW_TRUE;
@@ -67,7 +67,7 @@ namespace sw
             ++_fetchGeneration;
         }
 
-        const bool bStale     = _keyCache.hasKeys() && nowMs - _keyCache.getFetchedAtMs() >= _settings._jwksRefreshMs;
+        const bool bStale     = _keyCache.hasKeys() && nowMs.count() - _keyCache.getFetchedAtMs() >= _settings._jwksRefreshMs;
         const bool bMayFetch  = _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
         const bool bWantFirst = _keyCache.hasKeys() == false && _listPending.empty() == false;
         const bool bFetchKeys = _jwksRequestID == 0 && ( bStale || bWantFirst ) && bMayFetch;
@@ -85,7 +85,7 @@ namespace sw
             }
             PlatformLoginVerification verification;
             verification._verificationID = pending._verificationID;
-            if ( evaluate( pending, UnixMilliseconds{ nowMs }, verification ) == Decision::NeedKey ) // 서버 루프의 nowMs 는 유닉스 밀리초다
+            if ( evaluate( pending, nowMs, verification ) == Decision::NeedKey )
             {
                 const bool bAlreadyWaited = pending._waitedFetchGeneration != 0;
                 const bool bCanRefetch    = _jwksRequestID != 0 || _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
@@ -108,13 +108,13 @@ namespace sw
         }
     }
 
-    void OidcLoginProvider::startJwksFetch( int64 nowMs )
+    void OidcLoginProvider::startJwksFetch( UnixMilliseconds nowMs )
     {
         HTTPClientRequest request;
         request._url       = _settings._jwksURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _jwksRequestID    = _pHTTPClient->submitRequest( request, nowMs );
+        _jwksRequestID    = _pHTTPClient->submitRequest( request );
         _lastFetchStartMs = nowMs;
         ++_jwksFetchCount;
     }
@@ -150,7 +150,7 @@ namespace sw
         }
         outVerification._subject = subject;
         if ( _settings._displayNamePath.empty() == false )
-            (void)token->findText( _settings._displayNamePath, outVerification._displayName );
+            (void)token->findText( _settings._displayNamePath, outVerification._displayName ); // 선택 값이다 — 없으면 비워 둔다
         return Decision::Done;
     }
 } // namespace sw

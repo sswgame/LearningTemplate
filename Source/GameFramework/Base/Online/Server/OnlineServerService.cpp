@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -42,14 +43,15 @@ namespace sw
         public:
             [[nodiscard]] bool initialize( const ServerServiceContext& context, string& outError ) override;
             void               shutdown() override { _runtime.shutdown(); }
-            void               update( int64 nowMs ) override { _runtime.update( nowMs ); }
+            void               update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
             int32              getConnectionCount() const override { return _runtime.getConnectionCount(); }
 
         private:
             [[nodiscard]] static bool fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings,
                                                          string& outError );
 
-            OnlineServerRuntime _runtime;
+            SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
+            OnlineServerRuntime  _runtime;
         };
     } // namespace
 } // namespace sw
@@ -85,6 +87,7 @@ namespace sw
         settings._config          = *pOnlineConfig;
         settings._pMetricRegistry = context._pMetricRegistry;
         settings._pHealthRegistry = context._pHealthRegistry;
+        settings._pClock          = &_clock;
         settings._gamePort        = static_cast<uint16>( serverConfig._gamePort );
         // 연이은 포트 샤드면 배정이 계정마다 한 포트를 고른다. 한 포트를 나누면(`_bGamePortReuse`) 커널이 나누므로 알릴 포트는 하나다.
         settings._gamePortCount = static_cast<uint8>( serverConfig._bGamePortReuse ? 1 : serverConfig._gamePortShardCount );

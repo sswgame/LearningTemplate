@@ -85,7 +85,7 @@ namespace sw
 
             /** @brief 보상 우편 하나를 트랜잭션에 붙입니다. 재원을 발행하며 30일 보관하고 만료되면 첨부가 사라집니다. */
             static LedgerResult stageRewardMail( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, AccountID accountID, string_view assetID,
-                                                 int64 amount, string_view titleKey, string_view senderName, string idempotencyKey, int64 nowMs )
+                                                 int64 amount, string_view titleKey, string_view senderName, string idempotencyKey, UnixMilliseconds nowMs )
             {
                 ServiceMailMessage mail;
                 mail._listAttachment.push_back( ServiceMailAttachment{ string( assetID ), amount } );
@@ -94,8 +94,8 @@ namespace sw
                 mail._idempotencyKey     = std::move( idempotencyKey );
                 mail._fundingHolder      = LedgerHolder::makeMint();
                 mail._recipientAccountID = accountID;
-                mail._createdMs          = nowMs;
-                mail._expiresMs          = nowMs + ServiceMailConstant::kDefaultRetentionMs;
+                mail._createdMs          = nowMs.count();
+                mail._expiresMs          = nowMs.count() + ServiceMailConstant::kDefaultRetentionMs;
                 mail._expiryAction       = ServiceMail::getDefaultExpiryAction( mail._fundingHolder );
                 string mailKey;
                 bool   bReplayed = false;
@@ -213,7 +213,7 @@ namespace sw
             uint64               _periodID{ 0 };
             uint64               _requestTag{ 0 };
             int64                _value{ 0 };
-            int64                _nowMs{ 0 };
+            UnixMilliseconds     _nowMs{ 0 };
             int64                _finalValue{ 0 };
             LeaderboardUpdate    _update{ LeaderboardUpdate::Best };
             LeaderboardOrder     _order{ LeaderboardOrder::Descending };
@@ -240,7 +240,7 @@ namespace sw
                         return;
                     }
                     ServiceTransaction transaction;
-                    transaction.put( _table, _key, Internal::encodeScore( _finalValue, _nowMs, _displayName ), record._version );
+                    transaction.put( _table, _key, Internal::encodeScore( _finalValue, _nowMs.count(), _displayName ), record._version );
                     const ServiceStoreResult commitResult = connection.commit( transaction );
                     if ( commitResult == ServiceStoreResult::Ok )
                     {
@@ -345,7 +345,7 @@ namespace sw
         class AchievementUnlockWork final : public IServiceStoreWork
         {
         public:
-            AchievementUnlockWork( LeaderboardService* pService, const AchievementDefinition& definition, AccountID accountID, int64 nowMs )
+            AchievementUnlockWork( LeaderboardService* pService, const AchievementDefinition& definition, AccountID accountID, UnixMilliseconds nowMs )
                 : _definition{ definition }
                 , _pService{ pService }
                 , _accountID{ accountID }
@@ -362,7 +362,7 @@ namespace sw
                 if ( connection.readRecord( Internal::getAchievementTable(), key, existing ) != ServiceStoreResult::NotFound )
                     return; // 이미 달성했거나 저장소가 실패했다. 다음 통계 변화 때 다시 확인한다
                 ServiceTransaction transaction;
-                transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( _nowMs, _nowMs, string_view{} ), ServiceRecord::kAbsentVersion ); // 값은 달성 시각이다
+                transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( _nowMs.count(), _nowMs.count(), string_view{} ), ServiceRecord::kAbsentVersion ); // 값은 달성 시각이다
                 if ( _definition._rewardAssetID.empty() == false )
                 {
                     const string       idempotencyKey = string( "ach." ) + ServiceKeyUtil::makeHex64( _accountID ) + "." + _definition._achievementID;
@@ -376,14 +376,14 @@ namespace sw
 
             void complete() override
             {
-                _pService->applyAchievementUnlock( _accountID, AchievementState{ _definition._achievementID, _nowMs }, _bUnlocked == SW_TRUE );
+                _pService->applyAchievementUnlock( _accountID, AchievementState{ _definition._achievementID, _nowMs.count() }, _bUnlocked == SW_TRUE );
             }
 
         private:
             AchievementDefinition _definition;
             LeaderboardService*   _pService;
             AccountID             _accountID;
-            int64                 _nowMs;
+            UnixMilliseconds      _nowMs;
             uint8                 _bUnlocked;
         };
 
@@ -672,7 +672,7 @@ namespace sw
         {
         public:
             SeasonSettlementPageWork( LeaderboardService* pService, uint64 settlementID, const LeaderboardDefinition& board, const LeaderboardSeason& season,
-                                      vector<LeaderboardScoreRow> listPage, int32 firstRank, int64 nowMs )
+                                      vector<LeaderboardScoreRow> listPage, int32 firstRank, UnixMilliseconds nowMs )
                 : _listPage{ std::move( listPage ) }
                 , _board{ board }
                 , _season{ season }
@@ -741,7 +741,7 @@ namespace sw
             LeaderboardSeason           _season;
             LeaderboardService*         _pService;
             uint64                      _settlementID;
-            int64                       _nowMs;
+            UnixMilliseconds            _nowMs;
             int32                       _firstRank; ///< 페이지 첫 사람의 순위(1 부터)
             uint8                       _bCommitted;
         };
@@ -849,7 +849,7 @@ namespace sw
         return boardIt != _mapBoard.end() ? &boardIt->second : nullptr;
     }
 
-    uint64 LeaderboardService::computePeriodID( const LeaderboardDefinition& definition, int64 nowMs ) const
+    uint64 LeaderboardService::computePeriodID( const LeaderboardDefinition& definition, UnixMilliseconds nowMs ) const
     {
         ScheduleDefinition schedule;
         schedule._minuteOfDay = definition._resetMinuteOfDay;
@@ -859,18 +859,18 @@ namespace sw
             case LeaderboardReset::Daily:
             {
                 schedule._kind = ScheduleKind::Daily;
-                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs ) ) );
+                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
             }
             case LeaderboardReset::Weekly:
             {
                 schedule._kind = ScheduleKind::Weekly;
-                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs ) ) );
+                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
             }
             case LeaderboardReset::Season:
             {
                 for ( const LeaderboardSeason& season : definition._listSeason )
                 {
-                    if ( season._startMs <= nowMs && nowMs < season._endMs )
+                    if ( season._startMs <= nowMs.count() && nowMs.count() < season._endMs )
                         return season._seasonID;
                 }
                 return 0; // 시즌 밖이므로 제출은 NotRanked 로 끝난다
@@ -887,7 +887,7 @@ namespace sw
         return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID );
     }
 
-    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, int64 nowMs, uint64 requestTag )
+    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag )
     {
         const LeaderboardDefinition* pBoard = findBoard( boardID );
         if ( pBoard == nullptr )
@@ -926,7 +926,7 @@ namespace sw
         _dependencies._pStore->submit( std::move( work ) );
     }
 
-    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, int64 nowMs,
+    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs,
                                          uint64 requestTag )
     {
         const bool bValid = LeaderboardNameRule::isValidID( statName ) && update < LeaderboardUpdate::Count && accountID != kInvalidAccountID &&
@@ -954,7 +954,7 @@ namespace sw
     }
 
     void LeaderboardService::applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, int64 nowMs )
+                                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         if ( requestTag != 0 )
@@ -1003,7 +1003,7 @@ namespace sw
                                                                        vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ) );
     }
 
-    int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, int64 nowMs ) const
+    int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, UnixMilliseconds nowMs ) const
     {
         using Internal    = LeaderboardServiceInternal;
         int64 periodEndMs = 0;
@@ -1035,7 +1035,7 @@ namespace sw
         }
         if ( periodEndMs <= 0 )
             return 0;
-        return std::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs );
+        return std::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs.count() );
     }
 
     void LeaderboardService::submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore )
@@ -1046,7 +1046,7 @@ namespace sw
         _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ) );
     }
 
-    void LeaderboardService::readTop( string_view boardID, int32 offset, int32 count, int64 nowMs, uint64 requestTag )
+    void LeaderboardService::readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag )
     {
         PendingRead read;
         read._boardID                       = string( boardID );
@@ -1066,7 +1066,7 @@ namespace sw
         startRead( read );
     }
 
-    void LeaderboardService::readAround( string_view boardID, AccountID accountID, int32 radius, int64 nowMs, uint64 requestTag )
+    void LeaderboardService::readAround( string_view boardID, AccountID accountID, int32 radius, UnixMilliseconds nowMs, uint64 requestTag )
     {
         PendingRead read;
         read._boardID                       = string( boardID );
@@ -1413,7 +1413,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, int64 nowMs, uint64 requestTag )
+    void LeaderboardService::readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         const LeaderboardDefinition* pBoard = findBoard( boardID );
         if ( pBoard == nullptr )
@@ -1479,7 +1479,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::settleSeason( string_view boardID, uint32 seasonID, int64 nowMs, const SettlementDelegate& onDone )
+    void LeaderboardService::settleSeason( string_view boardID, uint32 seasonID, UnixMilliseconds nowMs, const SettlementDelegate& onDone )
     {
         const LeaderboardDefinition* pBoard  = findBoard( boardID );
         const LeaderboardSeason*     pSeason = nullptr;
@@ -1529,7 +1529,7 @@ namespace sw
         startSettlement( *pBoard, *pSeason, run._jobID, run._occurrenceMs, SettlementDelegate{} );
     }
 
-    void LeaderboardService::startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, int64 nowMs, const SettlementDelegate& onDone )
+    void LeaderboardService::startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone )
     {
         const uint64        settlementID = _settlementIDAllocator.allocate();
         SettlementProgress& progress     = _mapSettlement[settlementID];

@@ -37,7 +37,7 @@ namespace
 
         void onEvent( const GuildEvent& event ) { _listEvent.push_back( event ); }
 
-        SocialResult run( GuildOperation operation, AccountID accountID, int64 nowMs, AccountID targetID = kInvalidAccountID, uint64 guildID = 0,
+        SocialResult run( GuildOperation operation, AccountID accountID, UnixMilliseconds nowMs, AccountID targetID = kInvalidAccountID, uint64 guildID = 0,
                           string_view text = string_view{}, GuildRole role = GuildRole::Member )
         {
             GuildRequest request;
@@ -66,7 +66,7 @@ namespace
             request._accountID = accountID;
             request._assetID   = pAsset;
             request._amount    = amount;
-            request._nowMs     = 1000;
+            request._nowMs     = UnixMilliseconds{ 1000 };
             if ( keyLow != 0 )
                 request._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( accountID ), 1, keyLow );
             _service.submit( request, 1 );
@@ -100,63 +100,63 @@ SW_TEST_CASE( GuildServiceTest, CreateIsUniqueByNameAndOnePerAccount )
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Knights" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Knights" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
     SW_EXPECT_NOT_EQUAL( guildID, uint64( 0 ) );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, 0, kInvalidAccountID, 0, "KNIGHTS" ) == SocialResult::GuildNameTaken );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Other" ) == SocialResult::AlreadyInGuild );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, 0, kInvalidAccountID, 0, "" ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, 0, kInvalidAccountID, 0, " Lead" ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, 0, kInvalidAccountID, 0, "bad\x01name" ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, 0, kInvalidAccountID, 0, "\xEA\xB8\xB0\xEC\x82\xAC\xEB\x8B\xA8" ) == SocialResult::Ok ); // "기사단"
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "KNIGHTS" ) == SocialResult::GuildNameTaken );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Other" ) == SocialResult::AlreadyInGuild );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "" ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, " Lead" ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "bad\x01name" ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "\xEA\xB8\xB0\xEC\x82\xAC\xEB\x8B\xA8" ) == SocialResult::Ok ); // "기사단"
     SW_EXPECT_NOT_EQUAL( node.getLastGuildID(), guildID );
     SW_ASSERT_EQUAL( node._listEvent.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( node._listEvent[0]._kind == GuildEvent::Kind::Joined && node._listEvent[0]._guildID == guildID );
 
-    node._service.attachAccount( 1, 10 ); // 로그인한 회원 — 완료 없이 사건만
+    node._service.attachAccount( 1, UnixMilliseconds{ 10 } ); // 로그인한 회원 — 완료 없이 사건만
     (void)node._store.pollCompletions();
     vector<GuildCompletion> listCompletion;
     node._service.drainCompletions( listCompletion );
     SW_EXPECT_EQUAL( listCompletion.size(), size_t( 0 ) );
     SW_EXPECT_TRUE( node._listEvent.back()._kind == GuildEvent::Kind::MemberAttached && node._listEvent.back()._guildID == guildID );
-    SW_EXPECT_EQUAL( node._listEvent.back()._nowMs, int64( 10 ) ); // 길드 채널 멤버를 넣을 시각이다
+    SW_EXPECT_EQUAL( node._listEvent.back()._nowMs.count(), int64( 10 ) ); // 길드 채널 멤버를 넣을 시각이다
 }
 
 SW_TEST_CASE( GuildServiceTest, InviteAcceptRolesKickAndLeave )
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Knights" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Knights" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
 
-    SW_EXPECT_TRUE( node.run( GuildOperation::Invite, 1, 0, 2 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Invite, 1, UnixMilliseconds{ 0 }, 2 ) == SocialResult::Ok );
     SW_ASSERT_TRUE( node._listNotification.empty() == false );
     SW_EXPECT_TRUE( node._listNotification.back()._kind == SocialNotificationKind::GuildInvited && node._listNotification.back()._recipientID == AccountID( 2 ) );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, GuildLimit::kInviteLifetimeMs, kInvalidAccountID, guildID ) == SocialResult::InviteExpired );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, 100, kInvalidAccountID, guildID ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, 100, kInvalidAccountID, guildID ) == SocialResult::AlreadyInGuild );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Invite, 2, 200, 3 ) == SocialResult::NotAllowed ); // 회원은 초대 못 함
-    SW_EXPECT_TRUE( node.run( GuildOperation::SetNotice, 2, 200, kInvalidAccountID, 0, "hi" ) == SocialResult::NotAllowed );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, UnixMilliseconds{ GuildLimit::kInviteLifetimeMs }, kInvalidAccountID, guildID ) == SocialResult::InviteExpired );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, UnixMilliseconds{ 100 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 2, UnixMilliseconds{ 100 }, kInvalidAccountID, guildID ) == SocialResult::AlreadyInGuild );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Invite, 2, UnixMilliseconds{ 200 }, 3 ) == SocialResult::NotAllowed ); // 회원은 초대 못 함
+    SW_EXPECT_TRUE( node.run( GuildOperation::SetNotice, 2, UnixMilliseconds{ 200 }, kInvalidAccountID, 0, "hi" ) == SocialResult::NotAllowed );
 
     node._listNotification.clear();
-    SW_EXPECT_TRUE( node.run( GuildOperation::SetRole, 1, 300, 2, 0, string_view{}, GuildRole::Master ) == SocialResult::Ok ); // 길드장 넘기기
-    SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );                                                             // 바꾼 이 말고 회원 하나에게
+    SW_EXPECT_TRUE( node.run( GuildOperation::SetRole, 1, UnixMilliseconds{ 300 }, 2, 0, string_view{}, GuildRole::Master ) == SocialResult::Ok ); // 길드장 넘기기
+    SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );                                                                                 // 바꾼 이 말고 회원 하나에게
     SW_EXPECT_TRUE( node._listNotification[0]._kind == SocialNotificationKind::GuildChanged && node._listNotification[0]._recipientID == AccountID( 2 ) );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 2, 400 ) == SocialResult::NotAllowed );   // 새 길드장은 회원이 있어 못 떠남
-    SW_EXPECT_TRUE( node.run( GuildOperation::Kick, 1, 450, 2 ) == SocialResult::NotAllowed ); // 임원이 길드장을 내보내지 못함
-    SW_EXPECT_TRUE( node.run( GuildOperation::Kick, 2, 500, 1 ) == SocialResult::Ok );         // 길드장이 임원을 내보냄
+    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 2, UnixMilliseconds{ 400 } ) == SocialResult::NotAllowed );   // 새 길드장은 회원이 있어 못 떠남
+    SW_EXPECT_TRUE( node.run( GuildOperation::Kick, 1, UnixMilliseconds{ 450 }, 2 ) == SocialResult::NotAllowed ); // 임원이 길드장을 내보내지 못함
+    SW_EXPECT_TRUE( node.run( GuildOperation::Kick, 2, UnixMilliseconds{ 500 }, 1 ) == SocialResult::Ok );         // 길드장이 임원을 내보냄
     SW_EXPECT_TRUE( node._listEvent.back()._kind == GuildEvent::Kind::Left && node._listEvent.back()._accountID == AccountID( 1 ) );
     SW_EXPECT_TRUE( node._listNotification.back()._recipientID == AccountID( 1 ) ); // 내보내진 사람도 안다
 
-    SW_EXPECT_TRUE( node.run( GuildOperation::Get, 2, 600 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Get, 2, UnixMilliseconds{ 600 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._memberCount, 1 );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._masterID, AccountID( 2 ) );
     SW_ASSERT_EQUAL( node._listCompletion.back()._info._listMember.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( node._listCompletion.back()._info._listMember[0]._role == GuildRole::Master );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Get, 1, 600 ) == SocialResult::NotInGuild );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 2, 700 ) == SocialResult::Ok );                                    // 혼자 — 해산
-    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 3, 800, kInvalidAccountID, 0, "knights" ) == SocialResult::Ok );  // 이름이 다시 비었다
-    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 4, 800, kInvalidAccountID, guildID ) == SocialResult::NotFound ); // 초대 없음
+    SW_EXPECT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 600 } ) == SocialResult::NotInGuild );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 2, UnixMilliseconds{ 700 } ) == SocialResult::Ok );                                    // 혼자 — 해산
+    SW_EXPECT_TRUE( node.run( GuildOperation::Create, 3, UnixMilliseconds{ 800 }, kInvalidAccountID, 0, "knights" ) == SocialResult::Ok );  // 이름이 다시 비었다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 4, UnixMilliseconds{ 800 }, kInvalidAccountID, guildID ) == SocialResult::NotFound ); // 초대 없음
 }
 
 SW_TEST_CASE( GuildServiceTest, LevelFollowsExperienceAndTheLevelTable )
@@ -166,20 +166,20 @@ SW_TEST_CASE( GuildServiceTest, LevelFollowsExperienceAndTheLevelTable )
     SW_EXPECT_FALSE( node._service.setLevelTable( { 100, 100 } ) ); // 늘어나야 한다
     SW_EXPECT_FALSE( node._service.setLevelTable( { 0 } ) );
     SW_ASSERT_TRUE( node._service.setLevelTable( { 100, 300 } ) );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
-    node._service.addExperience( guildID, 150, 10 );
+    node._service.addExperience( guildID, 150, UnixMilliseconds{ 10 } );
     (void)node._store.pollCompletions();
-    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 20 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 20 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._experience, int64( 150 ) );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 2 );
-    node._service.addExperience( guildID, 1000, 30 );
+    node._service.addExperience( guildID, 1000, UnixMilliseconds{ 30 } );
     (void)node._store.pollCompletions();
-    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 40 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 40 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 3 ); // 표의 끝이다
     SW_ASSERT_TRUE( node._service.setLevelTable( { 2000 } ) );      // 표가 바뀌면 저장된 경험치는 그대로이고 레벨만 따라간다
-    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, 50 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 50 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
 }
 
@@ -187,55 +187,55 @@ SW_TEST_CASE( GuildServiceTest, OpenGuildTakesApplicationsThatOfficersApproveOrR
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 10, kInvalidAccountID, guildID ) == SocialResult::GuildClosed );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, UnixMilliseconds{ 10 }, kInvalidAccountID, guildID ) == SocialResult::GuildClosed );
 
     GuildRequest open;
     open._operation = GuildOperation::SetJoinPolicy;
     open._accountID = 1;
     open._bOpen     = SW_TRUE;
-    open._nowMs     = 20;
+    open._nowMs     = UnixMilliseconds{ 20 };
     node._service.submit( open, 1 );
     (void)node._store.pollCompletions();
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 30, kInvalidAccountID, guildID ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 3, 30, kInvalidAccountID, guildID ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, 40, kInvalidAccountID, guildID ) == SocialResult::Ok ); // 다시 내면 기한만 늘어난다
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 1, 40, kInvalidAccountID, guildID ) == SocialResult::AlreadyInGuild );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, UnixMilliseconds{ 30 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 3, UnixMilliseconds{ 30 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 2, UnixMilliseconds{ 40 }, kInvalidAccountID, guildID ) == SocialResult::Ok ); // 다시 내면 기한만 늘어난다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 1, UnixMilliseconds{ 40 }, kInvalidAccountID, guildID ) == SocialResult::AlreadyInGuild );
 
-    SW_EXPECT_TRUE( node.run( GuildOperation::ListApplications, 2, 50 ) == SocialResult::NotInGuild ); // 신청자는 멤버가 아니다
-    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, 50 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::ListApplications, 2, UnixMilliseconds{ 50 } ) == SocialResult::NotInGuild ); // 신청자는 멤버가 아니다
+    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, UnixMilliseconds{ 50 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._listApplication.size(), size_t( 2 ) );
 
-    SW_ASSERT_TRUE( node.run( GuildOperation::Approve, 1, 60, 2 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Approve, 1, UnixMilliseconds{ 60 }, 2 ) == SocialResult::Ok );
     SW_EXPECT_TRUE( node._listEvent.back()._kind == GuildEvent::Kind::Joined && node._listEvent.back()._accountID == AccountID( 2 ) );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, 60, 2 ) == SocialResult::NotFound );   // 신청은 지워졌다
-    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 2, 70, 3 ) == SocialResult::NotAllowed ); // 새 멤버는 임원이 아니다
-    SW_ASSERT_TRUE( node.run( GuildOperation::Reject, 1, 70, 3 ) == SocialResult::Ok );
-    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, 80 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, UnixMilliseconds{ 60 }, 2 ) == SocialResult::NotFound );   // 신청은 지워졌다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 2, UnixMilliseconds{ 70 }, 3 ) == SocialResult::NotAllowed ); // 새 멤버는 임원이 아니다
+    SW_ASSERT_TRUE( node.run( GuildOperation::Reject, 1, UnixMilliseconds{ 70 }, 3 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::ListApplications, 1, UnixMilliseconds{ 80 } ) == SocialResult::Ok );
     SW_EXPECT_TRUE( node._listCompletion.back()._listApplication.empty() );
 
-    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 4, 90, kInvalidAccountID, guildID ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, 90 + GuildLimit::kApplicationLifetimeMs, 4 ) == SocialResult::InviteExpired ); // 죽은 신청이다
+    SW_EXPECT_TRUE( node.run( GuildOperation::Apply, 4, UnixMilliseconds{ 90 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Approve, 1, UnixMilliseconds{ 90 + GuildLimit::kApplicationLifetimeMs }, 4 ) == SocialResult::InviteExpired ); // 죽은 신청이다
 }
 
 SW_TEST_CASE( GuildServiceTest, FullGuildAndStoreFailure )
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Big" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Big" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
     for ( AccountID member = 2; member <= static_cast<AccountID>( GuildLimit::kMaxMember ); ++member )
     {
-        SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, 0, member ) == SocialResult::Ok );
-        SW_ASSERT_TRUE( node.run( GuildOperation::Accept, member, 0, kInvalidAccountID, guildID ) == SocialResult::Ok );
+        SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, UnixMilliseconds{ 0 }, member ) == SocialResult::Ok );
+        SW_ASSERT_TRUE( node.run( GuildOperation::Accept, member, UnixMilliseconds{ 0 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
     }
-    SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, 0, 999 ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 999, 0, kInvalidAccountID, guildID ) == SocialResult::GuildFull );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, UnixMilliseconds{ 0 }, 999 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Accept, 999, UnixMilliseconds{ 0 }, kInvalidAccountID, guildID ) == SocialResult::GuildFull );
 
     const uint64 hashBefore = database.computeContentHash();
     database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( node.run( GuildOperation::SetNotice, 1, 0, kInvalidAccountID, 0, "hello" ) == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( node.run( GuildOperation::SetNotice, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "hello" ) == SocialResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
 }
 
@@ -243,11 +243,11 @@ SW_TEST_CASE( GuildServiceTest, StorageDepositWithdrawAndDissolveGuard )
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, 0, kInvalidAccountID, 0, "Vault" ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Vault" ) == SocialResult::Ok );
     const uint64       guildID = node.getLastGuildID();
     const LedgerHolder storage = LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, 0, 2 ) == SocialResult::Ok );
-    SW_ASSERT_TRUE( node.run( GuildOperation::Accept, 2, 0, kInvalidAccountID, guildID ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Invite, 1, UnixMilliseconds{ 0 }, 2 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Accept, 2, UnixMilliseconds{ 0 }, kInvalidAccountID, guildID ) == SocialResult::Ok );
     grant( database, 2, "cur.gold", 100 );
 
     SW_EXPECT_TRUE( node.runStorage( GuildOperation::Deposit, 2, "cur.gold", 40, 0 ) == SocialResult::Invalid ); // 분개 키 없음
@@ -270,9 +270,9 @@ SW_TEST_CASE( GuildServiceTest, StorageDepositWithdrawAndDissolveGuard )
     SW_EXPECT_TRUE( node._listCompletion.back()._listStorage[0]._assetID == "cur.gold" );
     SW_EXPECT_EQUAL( node._listCompletion.back()._listStorage[0]._amount, int64( 25 ) );
 
-    SW_ASSERT_TRUE( node.run( GuildOperation::Leave, 2, 0 ) == SocialResult::Ok );
+    SW_ASSERT_TRUE( node.run( GuildOperation::Leave, 2, UnixMilliseconds{ 0 } ) == SocialResult::Ok );
     SW_EXPECT_TRUE( node.runStorage( GuildOperation::Deposit, 2, "cur.gold", 1, 11 ) == SocialResult::NotInGuild );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 1, 0 ) == SocialResult::StorageNotEmpty ); // 혼자 남은 길드장 — 창고가 남아 해산 못 함
+    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 1, UnixMilliseconds{ 0 } ) == SocialResult::StorageNotEmpty ); // 혼자 남은 길드장 — 창고가 남아 해산 못 함
     SW_ASSERT_TRUE( node.runStorage( GuildOperation::Withdraw, 1, "cur.gold", 25, 12 ) == SocialResult::Ok );
-    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 1, 0 ) == SocialResult::Ok );
+    SW_EXPECT_TRUE( node.run( GuildOperation::Leave, 1, UnixMilliseconds{ 0 } ) == SocialResult::Ok );
 }

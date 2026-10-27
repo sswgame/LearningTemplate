@@ -188,7 +188,7 @@ namespace sw
             finished._endMs    = _nowMs;
             finished._state    = _bSucceeded == SW_TRUE ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
             ServiceTransaction transaction;
-            transaction.put( getTable(), ServiceSchedulerInternal::makeKey( _run._jobID, _run._occurrenceMs ), ServiceSchedulerInternal::encode( finished ), _run._runToken );
+            transaction.put( getTable(), ServiceSchedulerInternal::makeKey( _run._jobID, _run._occurrenceMs.count() ), ServiceSchedulerInternal::encode( finished ), _run._runToken );
             _result = connection.commit( transaction );
         }
 
@@ -251,7 +251,7 @@ namespace sw
         return true;
     }
 
-    void ServiceScheduler::update( int64 nowMs )
+    void ServiceScheduler::update( UnixMilliseconds nowMs )
     {
         if ( _pStore == nullptr )
             return;
@@ -261,15 +261,15 @@ namespace sw
             Job& job = _listJob[jobIndex];
             if ( job._bClaimPending == SW_TRUE )
                 continue;
-            const int64 occurrenceMs = computeLatestOccurrence( job._definition, nowMs );
+            const int64 occurrenceMs = computeLatestOccurrence( job._definition, nowMs.count() );
             if ( occurrenceMs < 0 || occurrenceMs <= job._handledOccurrenceMs )
                 continue;
-            const bool bWaitingRetry = job._retryOccurrenceMs == occurrenceMs && nowMs < job._retryAtMs;
+            const bool bWaitingRetry = job._retryOccurrenceMs == occurrenceMs && nowMs.count() < job._retryAtMs;
             if ( bWaitingRetry )
                 continue;
             job._bClaimPending = SW_TRUE;
             ++_pendingWorkCount;
-            _pStore->submit( sw::make_unique<ClaimWork>( this, jobIndex, job._definition._jobID, occurrenceMs, _serverID, nowMs, job._definition._leaseMs ) );
+            _pStore->submit( sw::make_unique<ClaimWork>( this, jobIndex, job._definition._jobID, occurrenceMs, _serverID, nowMs.count(), job._definition._leaseMs ) );
         }
     }
 
@@ -278,7 +278,7 @@ namespace sw
         if ( _pStore == nullptr )
             return;
         ++_pendingWorkCount;
-        _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverID, bSucceeded, _lastTickMs ) );
+        _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverID, bSucceeded, _lastTickMs.count() ) );
     }
 
     int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDefinition& definition, int64 nowMs )
@@ -365,7 +365,7 @@ namespace sw
                 job._handledOccurrenceMs = occurrenceMs;
                 ScheduledRun run;
                 run._jobID        = job._definition._jobID;
-                run._occurrenceMs = occurrenceMs;
+                run._occurrenceMs = UnixMilliseconds{ occurrenceMs }; // 회차는 `update` 가 받은 유닉스 시각에서 계산했다(`computeLatestOccurrence`)
                 run._runToken     = runToken;
                 job._pHandler->onScheduledRun( run );
                 break;

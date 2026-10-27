@@ -3,6 +3,7 @@
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -35,7 +36,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AdminToolSession::AdminToolSession()
-        : _fake{ WallClock::nowUnixMilliseconds() }
+        : _fake{ WallClock::nowUnixMilliseconds().count() }
         , _live{}
         , _pActive{ &_fake }
         , _connection{}
@@ -88,7 +89,7 @@ namespace sw::editor
 
     void AdminToolSession::updateConnection()
     {
-        _connection.update( WallClock::nowUnixMilliseconds() );
+        _connection.update( SystemMonotonicClock{}.nowMilliseconds() );
     }
 
     void AdminToolSession::requestLookup( AccountID accountID )
@@ -116,7 +117,7 @@ namespace sw::editor
         request._sanctionKind = kind;
         request._reasonCode   = string( reasonCode );
         request._memo         = string( memo );
-        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds() + durationSeconds * constant::kMillisecondsPerSecond : 0;
+        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds().count() + durationSeconds * constant::kMillisecondsPerSecond : 0;
         send( AdminMethod::kSetSanction, request, NetIdempotencyKey::makeRandom() );
     }
 
@@ -147,7 +148,7 @@ namespace sw::editor
 
     void AdminToolSession::requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo )
     {
-        const int64  nowMs = WallClock::nowUnixMilliseconds();
+        const int64  nowMs = WallClock::nowUnixMilliseconds().count();
         AdminRequest request;
         request._scope      = string( scope );
         request._messageKey = string( messageKey );
@@ -167,7 +168,7 @@ namespace sw::editor
 
     void AdminToolSession::requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo )
     {
-        const int64  nowMs = WallClock::nowUnixMilliseconds();
+        const int64  nowMs = WallClock::nowUnixMilliseconds().count();
         AdminRequest request;
         request._noticeID     = noticeID;
         request._body         = string( text );
@@ -211,7 +212,7 @@ namespace sw::editor
     void AdminToolSession::send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key )
     {
         ++_pendingCount;
-        _fake.setNowMs( WallClock::nowUnixMilliseconds() ); // 메모리 제공자는 시계를 읽지 않는다 — 도구의 뿌리인 세션이 명령마다 넣는다
+        _fake.setNowMs( WallClock::nowUnixMilliseconds().count() ); // 메모리 제공자는 시계를 읽지 않는다 — 도구의 뿌리인 세션이 명령마다 넣는다
         _pActive->sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&AdminToolSession::onReply>( this ) );
     }
 

@@ -23,6 +23,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
@@ -123,15 +124,15 @@ namespace sw
         [[nodiscard]] bool           registerBoard( const LeaderboardDefinition& definition );
         const LeaderboardDefinition* findBoard( string_view boardID ) const;
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
-        uint64 computePeriodID( const LeaderboardDefinition& definition, int64 nowMs ) const;
+        uint64 computePeriodID( const LeaderboardDefinition& definition, UnixMilliseconds nowMs ) const;
 
         /** @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다. */
-        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, int64 nowMs, uint64 requestTag );
-        void readTop( string_view boardID, int32 offset, int32 count, int64 nowMs, uint64 requestTag );
+        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag );
+        void readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 내 순위 주변을 조회합니다. 위아래로 @p radius 명씩이며 나를 포함합니다. 점수가 없으면 NotRanked 입니다. */
-        void readAround( string_view boardID, AccountID accountID, int32 radius, int64 nowMs, uint64 requestTag );
+        void readAround( string_view boardID, AccountID accountID, int32 radius, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
-        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, int64 nowMs, uint64 requestTag );
+        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
         /** @brief 접속한 계정의 통계를 읽어 메모리에 둡니다. 바인딩이 계정이 붙을 때 부릅니다. 읽기가 끝나기 전에는 `findStat` 이 NotLoaded 입니다. */
         void loadAccountStats( AccountID accountID );
@@ -152,11 +153,11 @@ namespace sw
          * @details 전체 순위가 아니라 목록 안의 순위입니다. 영속 점수(`lb_score`)를 계정마다 읽으므로 캐시를 잃어도 같은 결과입니다.
          *          같은 점수는 계정 id 오름차순입니다(정산과 같은 규칙). 목록이 비었거나 상한을 넘으면 Invalid 입니다.
          */
-        void readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, int64 nowMs, uint64 requestTag );
+        void readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 시즌 결과 하나를 조회합니다. 점수와 순위이며 완료의 항목 하나이고 기간 id 가 시즌입니다. 정산 전이거나 점수가 없었으면 NotRanked 입니다. */
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
         /** @brief 시즌 하나를 정산합니다. 예약 작업이 부르며 테스트와 운영은 직접 부릅니다. 끝나면 @p onDone 을 부르며 인자는 모두 정산했는지 여부입니다. */
-        void settleSeason( string_view boardID, uint32 seasonID, int64 nowMs, const SettlementDelegate& onDone );
+        void settleSeason( string_view boardID, uint32 seasonID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
         void drainAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.drainTo( outListUnlock ); }
         /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
@@ -172,14 +173,14 @@ namespace sw
          * @details 기간이 끝난 뒤 하루까지 남기고 캐시가 지운다(만료). 지난 기간의 순위는 읽지 않고, 시즌 결과는 영속 저장소(`lb_season_result`)가 원본이기 때문이다.
          *          기간마다 정렬 집합이 쌓여 캐시를 채우지 않게 하는 것이다(Redis 순위표의 기간 키 + EXPIRE 관례).
          */
-        int64 computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, int64 nowMs ) const;
+        int64 computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, UnixMilliseconds nowMs ) const;
         /** @brief 캐시 점수를 구합니다. 오름차순 보드는 부호를 뒤집으며 두 번 부르면 원래 값이 됩니다. */
         static int64  toCacheScore( LeaderboardOrder order, int64 score ) { return order == LeaderboardOrder::Ascending ? -score : score; }
         static string makeRankKey( string_view boardID, uint64 periodID );
 
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, int64 nowMs );
+                              LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
         void applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
@@ -200,7 +201,7 @@ namespace sw
             AccountID            _accountID{ kInvalidAccountID };
             uint64               _periodID{ 0 };
             uint64               _requestTag{ 0 };
-            int64                _nowMs{ 0 }; ///< 요청 시각 — 다시 채운 순위의 만료를 정한다
+            UnixMilliseconds     _nowMs{ 0 }; ///< 요청 시각 — 다시 채운 순위의 만료를 정한다
             int32                _offset{ 0 };
             int32                _count{ 0 };
             LeaderboardOperation _operation{ LeaderboardOperation::Top };
@@ -231,7 +232,7 @@ namespace sw
             LeaderboardSeason           _season{};
             string                      _jobID{}; ///< 예약 작업에서 왔으면 그 id, 직접 부른 정산이면 빈 글
             SettlementDelegate          _onDone{};
-            int64                       _nowMs{ 0 };
+            UnixMilliseconds            _nowMs{ 0 };
             size_t                      _nextIndex{ 0 }; ///< 다음 페이지의 첫 사람(0 부터, 순위 - 1)
         };
 
@@ -245,7 +246,7 @@ namespace sw
         void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardResult result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
         /** @brief 정산 하나를 시작합니다. 순위 읽기 일을 맡깁니다. */
-        void startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, int64 nowMs, const SettlementDelegate& onDone );
+        void startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
         /** @brief 다음 페이지를 맡기거나, 남은 사람이 없으면 성공으로 마칩니다. */
         void submitNextSettlementPage( uint64 settlementID );
         /** @brief 정산을 마치고 예약 작업과 완료 델리게이트에 알립니다. */

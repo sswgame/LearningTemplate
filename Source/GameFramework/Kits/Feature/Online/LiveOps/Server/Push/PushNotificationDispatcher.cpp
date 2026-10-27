@@ -46,7 +46,7 @@ namespace sw
     class PushDeviceReadWork final : public IServiceStoreWork
     {
     public:
-        PushDeviceReadWork( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, int64 nowMs )
+        PushDeviceReadWork( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
             : _listDevice{}
             , _message{ message }
             , _pDispatcher{ pDispatcher }
@@ -79,7 +79,7 @@ namespace sw
         PushNotificationMessage        _message;
         PushNotificationDispatcher*    _pDispatcher;
         AccountID                      _accountID;
-        int64                          _nowMs;
+        UnixMilliseconds               _nowMs;
     };
 } // namespace sw
 
@@ -89,7 +89,7 @@ namespace sw
     class PushTopicClaimWork final : public IServiceStoreWork
     {
     public:
-        PushTopicClaimWork( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, int64 nowMs )
+        PushTopicClaimWork( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
             : _claimKey{ std::move( claimKey ) }
             , _topic{ std::move( topic ) }
             , _message{ message }
@@ -113,7 +113,7 @@ namespace sw
         string                      _topic;
         PushNotificationMessage     _message;
         PushNotificationDispatcher* _pDispatcher;
-        int64                       _nowMs;
+        UnixMilliseconds            _nowMs;
         ServiceStoreResult          _result;
     };
 } // namespace sw
@@ -249,10 +249,10 @@ namespace sw
         return nullptr;
     }
 
-    bool PushNotificationDispatcher::notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs )
+    bool PushNotificationDispatcher::notifyAccount( AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         int64 retryAfterMs = 0;
-        if ( _pStore == nullptr || _accountBucketMap.tryConsume( accountID, nowMs, retryAfterMs ) == false )
+        if ( _pStore == nullptr || _accountBucketMap.tryConsume( accountID, nowMs.count(), retryAfterMs ) == false )
         {
             ++_stats._rateLimitedCount;
             return false;
@@ -262,7 +262,7 @@ namespace sw
         return true;
     }
 
-    int32 PushNotificationDispatcher::notifyTopic( string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    int32 PushNotificationDispatcher::notifyTopic( string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         int32 handedCount = 0;
         for ( IPushNotificationProvider* pProvider : _listProvider )
@@ -274,7 +274,7 @@ namespace sw
             delivery._message            = message;
             delivery._topic              = string( topic );
             delivery._device._providerID = string( pProvider->getProviderID() );
-            delivery._nextAttemptMs      = nowMs;
+            delivery._nextAttemptMs      = nowMs.count();
             delivery._bTopic             = SW_TRUE;
             sendDelivery( deliveryID, delivery, nowMs );
             ++handedCount;
@@ -282,7 +282,7 @@ namespace sw
         return handedCount;
     }
 
-    void PushNotificationDispatcher::notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    void PushNotificationDispatcher::notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         if ( _pStore == nullptr || ServiceTransaction::isValidKey( claimKey ) == false )
         {
@@ -293,7 +293,7 @@ namespace sw
         _pStore->submit( make_unique<PushTopicClaimWork>( this, string( claimKey ), string( topic ), message, nowMs ) );
     }
 
-    void PushNotificationDispatcher::applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, int64 nowMs )
+    void PushNotificationDispatcher::applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs )
     {
         --_pendingWorkCount;
         if ( result != ServiceStoreResult::Ok )
@@ -305,7 +305,7 @@ namespace sw
         (void)notifyTopic( topic, message, nowMs );
     }
 
-    void PushNotificationDispatcher::applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs )
+    void PushNotificationDispatcher::applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs )
     {
         --_pendingWorkCount;
         for ( PushDeviceRegistration& device : listDevice )
@@ -317,12 +317,12 @@ namespace sw
             delivery._message       = message;
             delivery._device        = std::move( device );
             delivery._accountID     = accountID;
-            delivery._nextAttemptMs = nowMs;
+            delivery._nextAttemptMs = nowMs.count();
             sendDelivery( deliveryID, delivery, nowMs );
         }
     }
 
-    void PushNotificationDispatcher::sendDelivery( uint64 deliveryID, Delivery& delivery, int64 nowMs )
+    void PushNotificationDispatcher::sendDelivery( uint64 deliveryID, Delivery& delivery, UnixMilliseconds nowMs )
     {
         delivery._bInFlight = SW_TRUE;
         ++_stats._sentCount;
@@ -333,7 +333,7 @@ namespace sw
             pProvider->send( deliveryID, delivery._device._token, delivery._device._locale, delivery._message, nowMs );
     }
 
-    void PushNotificationDispatcher::update( int64 nowMs )
+    void PushNotificationDispatcher::update( UnixMilliseconds nowMs )
     {
         for ( IPushNotificationProvider* pProvider : _listProvider )
         {
@@ -372,7 +372,7 @@ namespace sw
                             _mapDelivery.erase( deliveryIt );
                             break;
                         }
-                        delivery._nextAttemptMs = nowMs + std::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
+                        delivery._nextAttemptMs = nowMs.count() + std::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
                         break;
                     }
                     case PushDeliveryStatus::Rejected:
@@ -388,7 +388,7 @@ namespace sw
         }
         for ( auto& [deliveryID, delivery] : _mapDelivery ) // 백오프가 끝난 배달을 다시 보낸다
         {
-            if ( delivery._bInFlight == SW_FALSE && nowMs >= delivery._nextAttemptMs )
+            if ( delivery._bInFlight == SW_FALSE && nowMs.count() >= delivery._nextAttemptMs )
                 sendDelivery( deliveryID, delivery, nowMs );
         }
     }

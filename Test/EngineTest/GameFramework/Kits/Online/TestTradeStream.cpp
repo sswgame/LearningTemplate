@@ -43,7 +43,7 @@ namespace
         unique_ptr<IStreamTransport> _transport;
         OnlineServiceHost            _host;
 
-        TradeServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, RemoteConfig* pRemoteConfig, int64 nowMs )
+        TradeServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, RemoteConfig* pRemoteConfig, UnixMilliseconds nowMs )
             : _store{ &database }
             , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
@@ -127,7 +127,7 @@ namespace
         TradeClientSide             _bob;
         AccountID                   _aliceID;
         AccountID                   _bobID;
-        int64                       _nowMs;
+        UnixMilliseconds            _nowMs;
 
         TradeRig()
             : _network{ 41u }
@@ -154,8 +154,8 @@ namespace
             for ( int32 index = 0; index < count; ++index )
             {
                 _nowMs += 20;
-                _alice._client.update( _nowMs );
-                _bob._client.update( _nowMs );
+                _alice._client.update( MonotonicMilliseconds{ _nowMs.count() } );
+                _bob._client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 _server->_host.update( _nowMs );
             }
         }
@@ -309,7 +309,7 @@ SW_TEST_CASE( TradeStreamTest, ConfirmRetriedWithTheSameKeyAfterADroppedStreamSe
     const int32             side = seen.findSideIndex( rig._bobID );
     SW_ASSERT_TRUE( side >= 0 );
     (void)rig._bob._trade.confirmSeen( tradeID, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key );
-    rig._bob._client.update( rig._nowMs ); // 요청은 선에 올랐다
+    rig._bob._client.update( MonotonicMilliseconds{ rig._nowMs.count() } ); // 요청은 선에 올랐다
     rig._server->_host.update( rig._nowMs );
     rig._bob._transport->close( rig._bob._client.getConnection(), StreamCloseMode::Abort ); // 응답 전에 끊겼다
     rig.step( 2 );

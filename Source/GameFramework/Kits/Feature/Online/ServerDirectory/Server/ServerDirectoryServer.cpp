@@ -103,7 +103,7 @@ namespace sw
         }
     }
 
-    void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         if ( _pHost == nullptr )
             attachHost( host );

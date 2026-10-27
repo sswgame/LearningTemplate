@@ -101,7 +101,7 @@ SW_TEST_CASE( AccountNameIndexTest, FindsOfflineAccountsByNameAndID )
     LoginCredential credential;
     credential._loginName = "Hero_01";
     credential._password  = "password123";
-    rig._loginService.registerAccount( credential, 1000, rig._nextTag++ );
+    rig._loginService.registerAccount( credential, UnixMilliseconds{ 1000 }, rig._nextTag++ );
     const LoginCompletion registered = rig.settle();
     SW_ASSERT_TRUE( registered._result == LoginResult::Ok );
     const AccountID heroID = registered._identity._accountID;

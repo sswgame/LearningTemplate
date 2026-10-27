@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -102,7 +103,7 @@ namespace sw
         /** @brief 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수합니다. 이 객체는 그때까지 살아 있어야 합니다. */
         void shutdown();
         /** @brief 주기적인 다시 읽기와 경계 판정을 합니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 다른 서버가 바꿨음을 버스로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
         void notifyChanged() { _bReloadRequested = SW_TRUE; }
         /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
@@ -115,17 +116,17 @@ namespace sw
         void takeStartedEvents( vector<LiveEventStart>& outListStart );
 
         /** @brief 이 계정에 지금 열린 이벤트를 반환합니다. @p bClientOnly 이면 클라이언트에 보이는 것만 반환합니다. */
-        void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
-        bool isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs ) const;
+        void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
+        bool isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs ) const;
         /** @brief 매개변수 값을 반환합니다. 원격 설정까지 해석한 값이며 이벤트나 키가 없으면 false 를 반환합니다. */
         [[nodiscard]] bool findParameter( string_view eventID, string_view key, string& outValue ) const;
 
         // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
         // 같은 프로세스의 코드와 테스트는 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
-        void putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
-        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
+        void putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         // ILiveEventControl
-        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
+        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void collectEventJSON( vector<string>& outListJSON ) const override;
         void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
         void drainCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
@@ -134,7 +135,7 @@ namespace sw
         int32                              getPendingCount() const { return _pendingCount; }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, int64 nowMs );
+        void applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsResult result );
 
     private:
@@ -145,10 +146,10 @@ namespace sw
             int64  _windowEndMs{ 0 };
         };
 
-        void                       startReload( int64 nowMs );
-        void                       markIfChanged( int64 nowMs );
-        void                       collectStarts( int64 nowMs );
-        uint64                     computeOpenHash( int64 nowMs ) const;
+        void                       startReload( UnixMilliseconds nowMs );
+        void                       markIfChanged( UnixMilliseconds nowMs );
+        void                       collectStarts( UnixMilliseconds nowMs );
+        uint64                     computeOpenHash( UnixMilliseconds nowMs ) const;
         string                     resolveValue( const string& value ) const;
         bool                       isKillSwitchOff() const;
         const LiveEventDefinition* findEvent( string_view eventID ) const;
@@ -159,7 +160,7 @@ namespace sw
         vector<LiveEventStart>         _listStarted;
         EventBuffer<LiveOpsCompletion> _completionBuffer;
         LiveOpsDependencies            _dependencies;
-        int64                          _lastReloadMs;
+        UnixMilliseconds               _lastReloadMs;
         uint64                         _lastOpenHash;
         int32                          _pendingCount;
         uint8                          _bReloading;

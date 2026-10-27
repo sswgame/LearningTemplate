@@ -16,6 +16,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -58,7 +59,7 @@ namespace sw
          */
         [[nodiscard]] static bool collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError );
         /** @brief 아직 적용하지 않은 마이그레이션을 적용하고, 적용된 것은 체크섬을 확인합니다. 실패하면 아무것도 적용하지 않고 false 를 반환합니다. */
-        [[nodiscard]] static bool apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, int64 nowMs, string& outError );
+        [[nodiscard]] static bool apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs, string& outError );
         static string             substituteTokens( string_view sql, const SQLDialect& dialect );
         /** @brief FNV-1a 64비트 해시를 16진 문자열로 반환합니다. 대소문자를 구분합니다. */
         static string computeChecksum( string_view sql );

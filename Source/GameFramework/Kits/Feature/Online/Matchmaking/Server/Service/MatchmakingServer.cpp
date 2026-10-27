@@ -204,7 +204,7 @@ namespace sw
         _findOwner.reset(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 유예를 지금 끝낸다
         for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
         {
-            _mapAccountToGraceEnd[accountID] = _nowMs;
+            _mapAccountToGraceEnd[accountID] = _nowMs.count();
         }
         _mapPresenceRequestToAccount.clear();
         if ( _pPartyLobby != nullptr )
@@ -261,7 +261,7 @@ namespace sw
         MatchmakingServerInternal::dispatch( *_pPartyLobby, *_pQueue, context, request, _pendingTable.add( context._token ) );
     }
 
-    void MatchmakingServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void MatchmakingServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _pHost == nullptr )
@@ -362,14 +362,14 @@ namespace sw
             _pPartyLobby->removeAccount( accountID );
             return;
         }
-        _mapAccountToGraceEnd[accountID] = _nowMs + _reconnectGraceMs;
+        _mapAccountToGraceEnd[accountID] = _nowMs.count() + _reconnectGraceMs;
     }
 
-    void MatchmakingServer::expireGrace( int64 nowMs )
+    void MatchmakingServer::expireGrace( UnixMilliseconds nowMs )
     {
         for ( auto graceIt = _mapAccountToGraceEnd.begin(); graceIt != _mapAccountToGraceEnd.end(); )
         {
-            if ( nowMs < graceIt->second )
+            if ( nowMs.count() < graceIt->second )
             {
                 ++graceIt;
                 continue;

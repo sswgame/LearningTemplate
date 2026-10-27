@@ -36,7 +36,7 @@ namespace
             return mode;
         }
 
-        static void registerGameServer( EphemeralStoreRouter& router, ServerRegistration& registration, int64 nowMs )
+        static void registerGameServer( EphemeralStoreRouter& router, ServerRegistration& registration, UnixMilliseconds nowMs )
         {
             ServerDescriptor descriptor;
             descriptor._serverID = 50;
@@ -96,7 +96,7 @@ namespace
             _router.shutdown();
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 8; ++round )
             {
@@ -170,7 +170,7 @@ namespace
             _bus.subscribe( _agent.getAssignTopic() );
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             vector<ServerBusMessage> listMessage;
             (void)_bus.pollMessages( listMessage );
@@ -186,7 +186,7 @@ namespace
 SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseStatsAreNotLoaded )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     MemoryEphemeralStore    cache{ &cacheDatabase };
     EphemeralStoreRouter    router;
@@ -203,12 +203,12 @@ SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseSt
     dependencies._pStatSource = &stats;
     MatchQueueService service;
     SW_ASSERT_TRUE( service.initialize( dependencies, vector<MatchModeDefinition>{ rated } ) );
-    service.joinQueue( 1, "duo", "kr", 0, 11 );
-    service.joinQueue( 2, "duo", "kr", 0, 12 ); // 통계가 없으면 모드의 처음 실력이다
-    service.joinQueue( 3, "duo", "kr", 0, 13 ); // 아직 읽지 않았다
+    service.joinQueue( 1, "duo", "kr", UnixMilliseconds{ 0 }, 11 );
+    service.joinQueue( 2, "duo", "kr", UnixMilliseconds{ 0 }, 12 ); // 통계가 없으면 모드의 처음 실력이다
+    service.joinQueue( 3, "duo", "kr", UnixMilliseconds{ 0 }, 13 ); // 아직 읽지 않았다
     for ( int32 round = 0; round < 8; ++round )
     {
-        service.update( 0 );
+        service.update( UnixMilliseconds{ 0 } );
         (void)router.pump();
     }
     vector<MatchQueueCompletion> listCompletion;
@@ -238,31 +238,31 @@ SW_TEST_CASE( MatchQueueTest, AgentAdmitsOnlyAssignedAccounts )
     match._listTeam[0]._listMember.push_back( MatchMember{ 5, 1500 } );
     match._listTeam[1]._listMember.push_back( MatchMember{ 6, 1500 } );
     SW_ASSERT_TRUE( MatchQueueBus::kAssignTopic.publish( matcherBus, ServiceKeyUtil::makeHex64( 50 ), match ) );
-    gameServer.step( 1000 );
+    gameServer.step( UnixMilliseconds{ 1000 } );
     const IConnectAdmission& admission = gameServer._agent;
     SW_EXPECT_TRUE( admission.isAdmitted( 5 ) );
     SW_EXPECT_TRUE( admission.isAdmitted( 6 ) );
     SW_EXPECT_FALSE( admission.isAdmitted( 7 ) ); // 티켓이 맞아도 배정 밖이면 받지 않는다
-    gameServer.step( 1000 + MatchServerAgent::kExpectTtlMs );
+    gameServer.step( UnixMilliseconds{ 1000 + MatchServerAgent::kExpectTtlMs } );
     SW_EXPECT_FALSE( admission.isAdmitted( 5 ) ); // 오지 않은 사람은 시한 뒤 지운다
 }
 
 SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     ServerRegistration      gameServer;
-    Internal::registerGameServer( node._router, gameServer, 0 );
-    node.step( 0 );                                       // 서버 목록 읽기
+    Internal::registerGameServer( node._router, gameServer, UnixMilliseconds{ 0 } );
+    node.step( UnixMilliseconds{ 0 } );                   // 서버 목록 읽기
     SW_EXPECT_TRUE( node._service.isAuthority( "duo" ) ); // 버스 없음 — 늘 권한
 
     for ( AccountID accountID = 1; accountID <= 4; ++accountID )
     {
-        node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
+        node._service.joinQueue( accountID, "duo", "kr", UnixMilliseconds{ 0 }, accountID );
     }
-    node.step( 1000 );
+    node.step( UnixMilliseconds{ 1000 } );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
     for ( const MatchQueueNotification& notification : node._listNotification )
     {
@@ -275,19 +275,19 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
     SW_EXPECT_EQUAL( node._service.getQueuedTicketCount( "duo" ), 0 );
     SW_EXPECT_EQUAL( node._service.getLocalTicketCount(), 0 );
 
-    node._service.joinQueue( 9, "nope", "kr", 1000, 9 );
-    node._service.joinQueue( 10, "duo", "kr", 1000, 10 );
-    node.step( 1000 );
-    node._service.joinQueue( 10, "duo", "kr", 1000, 11 ); // 이미 줄 섰다
-    node._service.leaveQueue( 12, 12 );                   // 줄 서지 않았다
-    node.step( 1000 );
+    node._service.joinQueue( 9, "nope", "kr", UnixMilliseconds{ 1000 }, 9 );
+    node._service.joinQueue( 10, "duo", "kr", UnixMilliseconds{ 1000 }, 10 );
+    node.step( UnixMilliseconds{ 1000 } );
+    node._service.joinQueue( 10, "duo", "kr", UnixMilliseconds{ 1000 }, 11 ); // 이미 줄 섰다
+    node._service.leaveQueue( 12, 12 );                                       // 줄 서지 않았다
+    node.step( UnixMilliseconds{ 1000 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 8 ) );
     SW_EXPECT_TRUE( node._listCompletion[4]._result == MatchmakingResult::UnknownMode );
     SW_EXPECT_TRUE( node._listCompletion[5]._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( node._listCompletion[6]._result == MatchmakingResult::AlreadyQueued );
     SW_EXPECT_TRUE( node._listCompletion[7]._result == MatchmakingResult::NotQueued );
     node._service.leaveQueue( 10, 13 );
-    node.step( 1000 );
+    node.step( UnixMilliseconds{ 1000 } );
     SW_EXPECT_TRUE( node._listCompletion.back()._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( node._listNotification.back()._assignment._outcome == MatchQueueOutcome::Cancelled );
     SW_EXPECT_EQUAL( node._service.getQueuedTicketCount( "duo" ), 0 );
@@ -296,28 +296,28 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResultsComeBack )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     QueueNode               first( &cacheDatabase, &hub, 1 );
     QueueNode               second( &cacheDatabase, &hub, 2 );
     GameServerNode          gameServer( &hub, 50 );
     ServerRegistration      registration;
-    Internal::registerGameServer( first._router, registration, 0 );
-    first.step( 0 ); // 첫 서버가 임대를 잡는다
-    second.step( 0 );
+    Internal::registerGameServer( first._router, registration, UnixMilliseconds{ 0 } );
+    first.step( UnixMilliseconds{ 0 } ); // 첫 서버가 임대를 잡는다
+    second.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( first._service.isAuthority( "duo" ) );
     SW_EXPECT_FALSE( second._service.isAuthority( "duo" ) ); // 권한은 하나만
 
     for ( AccountID accountID = 1; accountID <= 4; ++accountID )
     {
-        second._service.joinQueue( accountID, "duo", "kr", 1000, accountID );
+        second._service.joinQueue( accountID, "duo", "kr", UnixMilliseconds{ 1000 }, accountID );
     }
-    second.step( 1000 ); // 표를 mm.queue.duo 로
+    second.step( UnixMilliseconds{ 1000 } ); // 표를 mm.queue.duo 로
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 0 );
-    first.step( 1000 ); // 매처 · 배정 → mm.assign.<50> · mm.result.<2>
-    second.step( 1000 );
-    gameServer.step( 1000 );
+    first.step( UnixMilliseconds{ 1000 } ); // 매처 · 배정 → mm.assign.<50> · mm.result.<2>
+    second.step( UnixMilliseconds{ 1000 } );
+    gameServer.step( UnixMilliseconds{ 1000 } );
 
     SW_EXPECT_TRUE( first._listNotification.empty() );
     SW_ASSERT_EQUAL( second._listNotification.size(), size_t( 4 ) );
@@ -332,48 +332,48 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
     SW_EXPECT_EQUAL( matchID, second._listNotification[0]._assignment._matchID );
     SW_EXPECT_FALSE( gameServer._agent.findExpected( 99, matchID, team ) );
     SW_EXPECT_EQUAL( gameServer._agent.getExpectedCount(), 4 );
-    gameServer.step( 1000 + MatchServerAgent::kExpectTtlMs ); // 오지 않은 사람은 지운다
+    gameServer.step( UnixMilliseconds{ 1000 + MatchServerAgent::kExpectTtlMs } ); // 오지 않은 사람은 지운다
     SW_EXPECT_EQUAL( gameServer._agent.getExpectedCount(), 0 );
 
-    first.step( 4000 ); // 권한은 연장(자기 값일 때만)으로 그대로
-    second.step( 4000 );
+    first.step( UnixMilliseconds{ 4000 } ); // 권한은 연장(자기 값일 때만)으로 그대로
+    second.step( UnixMilliseconds{ 4000 } );
     SW_EXPECT_TRUE( first._service.isAuthority( "duo" ) );
     SW_EXPECT_FALSE( second._service.isAuthority( "duo" ) );
 }
 
 SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtTheOrigin )
 {
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     const int64             maxWaitMs = 20000;
     QueueNode               first( &cacheDatabase, &hub, 1, maxWaitMs );
     QueueNode               second( &cacheDatabase, &hub, 2, maxWaitMs );
-    first.step( 0 );
-    second.step( 0 );
+    first.step( UnixMilliseconds{ 0 } );
+    second.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_TRUE( first._service.isAuthority( "duo" ) );
 
-    second._service.joinQueue( 1, "duo", "kr", 1000, 1 ); // 혼자 — 경기가 안 된다
-    second.step( 1000 );
-    first.step( 1000 );
+    second._service.joinQueue( 1, "duo", "kr", UnixMilliseconds{ 1000 }, 1 ); // 혼자 — 경기가 안 된다
+    second.step( UnixMilliseconds{ 1000 } );
+    first.step( UnixMilliseconds{ 1000 } );
     SW_EXPECT_EQUAL( first._service.getQueuedTicketCount( "duo" ), 1 );
 
     // 첫 서버가 멈춘다(더 돌리지 않는다). 임대 TTL 이 지나면 둘째가 잡는다.
     cacheClock.advanceMilliseconds( MatchQueueLimit::kLeaseTtlMs + 1000 );
-    second.step( 12000 );
+    second.step( UnixMilliseconds{ 12000 } );
     SW_EXPECT_TRUE( second._service.isAuthority( "duo" ) );
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 0 ); // 첫 서버의 표는 모른다
     SW_EXPECT_TRUE( second._listNotification.empty() );
 
     const int64 deadlineMs = 1000 + maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
-    second.step( deadlineMs );
+    second.step( UnixMilliseconds{ deadlineMs } );
     SW_EXPECT_TRUE( second._listNotification.empty() ); // 시한 전
-    second.step( deadlineMs + 1 );
+    second.step( UnixMilliseconds{ deadlineMs + 1 } );
     SW_ASSERT_EQUAL( second._listNotification.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( second._listNotification[0]._assignment._outcome == MatchQueueOutcome::Timeout );
     SW_EXPECT_EQUAL( second._listNotification[0]._recipientID, AccountID( 1 ) );
-    second._service.joinQueue( 1, "duo", "kr", deadlineMs + 1, 2 ); // 다시 줄 설 수 있다
-    second.step( deadlineMs + 1 );
+    second._service.joinQueue( 1, "duo", "kr", UnixMilliseconds{ deadlineMs + 1 }, 2 ); // 다시 줄 설 수 있다
+    second.step( UnixMilliseconds{ deadlineMs + 1 } );
     SW_EXPECT_TRUE( second._listCompletion.back()._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 1 );
 }
@@ -382,19 +382,19 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 {
     using Internal = MatchQueueTestInternal;
     {
-        ManualClock             cacheClock{ 0 };
+        ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
         MemoryEphemeralDatabase cacheDatabase{ cacheClock };
         QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
-            node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
+            node._service.joinQueue( accountID, "duo", "kr", UnixMilliseconds{ 0 }, accountID );
         }
-        node.step( 1000 );
+        node.step( UnixMilliseconds{ 1000 } );
         SW_EXPECT_TRUE( node._listNotification.empty() ); // 경기는 만들었지만 자리가 없다 — 기다림
 
         ServerRegistration gameServer;
-        Internal::registerGameServer( node._router, gameServer, 2000 );
-        node.step( 3500 ); // 목록 다시 읽기(2 초 주기) 뒤 배정
+        Internal::registerGameServer( node._router, gameServer, UnixMilliseconds{ 2000 } );
+        node.step( UnixMilliseconds{ 3500 } ); // 목록 다시 읽기(2 초 주기) 뒤 배정
         SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
         for ( const MatchQueueNotification& notification : node._listNotification )
         {
@@ -402,17 +402,17 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         }
     }
     {
-        ManualClock             cacheClock{ 0 };
+        ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
         MemoryEphemeralDatabase cacheDatabase{ cacheClock };
         QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
-            node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
+            node._service.joinQueue( accountID, "duo", "kr", UnixMilliseconds{ 0 }, accountID );
         }
-        node.step( 1000 );
-        node.step( 1000 + MatchQueueLimit::kNoServerGiveUpMs - 1 );
+        node.step( UnixMilliseconds{ 1000 } );
+        node.step( UnixMilliseconds{ 1000 + MatchQueueLimit::kNoServerGiveUpMs - 1 } );
         SW_EXPECT_TRUE( node._listNotification.empty() );
-        node.step( 1000 + MatchQueueLimit::kNoServerGiveUpMs ); // 끝내 서버가 없다
+        node.step( UnixMilliseconds{ 1000 + MatchQueueLimit::kNoServerGiveUpMs } ); // 끝내 서버가 없다
         SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
         for ( const MatchQueueNotification& notification : node._listNotification )
         {
@@ -425,15 +425,15 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     ServerRegistration      gameServer;
-    Internal::registerGameServer( node._router, gameServer, 0 );
+    Internal::registerGameServer( node._router, gameServer, UnixMilliseconds{ 0 } );
     node._partyLobby.createParty( 10, 1 );
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
     node._partyLobby.inviteToParty( 10, 11, 2 );
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
     // 파티 id 는 계정 색인에서 — 수락에 필요하다
     MemoryEphemeralStore probe{ &cacheDatabase };
     (void)probe.submit( EphemeralRequest::makeGet( PartyLobbyService::makeAccountPartyKey( 10 ) ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
@@ -442,21 +442,21 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
     uint64 partyID = 0;
     SW_ASSERT_TRUE( listReply.size() == 1 && MatchmakingProtocol::decodeID( listReply[0]._value, partyID ) );
     node._partyLobby.acceptPartyInvite( 11, partyID, 3 );
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
 
-    node._service.joinQueue( 11, "duo", "kr", 0, 20 ); // 장이 아니다
-    node.step( 0 );
+    node._service.joinQueue( 11, "duo", "kr", UnixMilliseconds{ 0 }, 20 ); // 장이 아니다
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node._listCompletion.back()._result == MatchmakingResult::NotPartyLeader );
-    node._service.joinQueue( 10, "duo", "kr", 0, 21 );
-    node.step( 0 );
+    node._service.joinQueue( 10, "duo", "kr", UnixMilliseconds{ 0 }, 21 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_TRUE( node._listCompletion.back()._result == MatchmakingResult::Ok );
-    node._service.joinQueue( 11, "duo", "kr", 0, 22 ); // 파티 표에 들어 있다
-    node.step( 0 );
+    node._service.joinQueue( 11, "duo", "kr", UnixMilliseconds{ 0 }, 22 ); // 파티 표에 들어 있다
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_TRUE( node._listCompletion.back()._result == MatchmakingResult::AlreadyQueued );
 
-    node._service.joinQueue( 12, "duo", "kr", 0, 23 );
-    node._service.joinQueue( 13, "duo", "kr", 0, 24 );
-    node.step( 1000 );
+    node._service.joinQueue( 12, "duo", "kr", UnixMilliseconds{ 0 }, 23 );
+    node._service.joinQueue( 13, "duo", "kr", UnixMilliseconds{ 0 }, 24 );
+    node.step( UnixMilliseconds{ 1000 } );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
     int32 leaderTeam = -1;
     int32 memberTeam = -2;
@@ -474,15 +474,15 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     LobbySnapshot           request;
     request._name           = "scrim";
     request._modeID         = "duo";
     request._maxMemberCount = 4;
-    node._partyLobby.createLobby( 10, request, 0, 1 );
-    node.step( 0 );
+    node._partyLobby.createLobby( 10, request, UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
     node._partyLobby.listLobbies( "duo", 2 );
     vector<PartyLobbyCompletion> listCompletion;
     for ( int32 round = 0; round < 8; ++round )
@@ -493,21 +493,21 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     SW_ASSERT_TRUE( listCompletion.size() == 1 && listCompletion[0]._listLobby.size() == 1 );
     const uint64 lobbyID = listCompletion[0]._listLobby[0]._lobbyID;
     node._partyLobby.joinLobby( 11, lobbyID, 3 );
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
     node._partyLobby.setLobbyReady( 11, lobbyID, true, 4 );
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
 
     node._partyLobby.startLobby( 10, lobbyID, 5 ); // 서버가 없다 — NoServer + 다시 Open
-    node.step( 0 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._assignment._outcome == MatchQueueOutcome::NoServer );
 
     ServerRegistration gameServer;
-    Internal::registerGameServer( node._router, gameServer, 3000 );
-    node.step( 3000 );
+    Internal::registerGameServer( node._router, gameServer, UnixMilliseconds{ 3000 } );
+    node.step( UnixMilliseconds{ 3000 } );
     node._listNotification.clear();
     node._partyLobby.startLobby( 10, lobbyID, 6 ); // 다시 열렸으니 다시 시작할 수 있다
-    node.step( 3000 );
+    node.step( UnixMilliseconds{ 3000 } );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._assignment._outcome == MatchQueueOutcome::Found );
     SW_EXPECT_NOT_EQUAL( node._listNotification[0]._assignment._team, node._listNotification[1]._assignment._team ); // 로비의 편 그대로(방장 0 · 들어온 이 1)

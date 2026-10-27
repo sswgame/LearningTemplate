@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -38,14 +39,14 @@ namespace sw
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override;
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
         void attachHost( OnlineServiceHost& host );
         /** @brief 새로 열린 이벤트 창의 시작 푸시를 지역 토픽으로 한 번 보냅니다(`LiveOpsPush`). 발송기가 없으면 버립니다. */
-        void announceStarts( int64 nowMs );
+        void announceStarts( UnixMilliseconds nowMs );
         void handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body );
         /** @brief 응답을 씁니다. 범위 밖 값이 있어 쓰지 못하면(로그가 남는다) `kInternal` 로 답합니다. */
         void respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply );

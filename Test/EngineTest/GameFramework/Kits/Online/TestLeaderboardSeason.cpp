@@ -61,7 +61,7 @@ namespace
         {
             for ( AccountID accountID = 1; accountID <= 30; ++accountID )
             {
-                _service.submitScore( "arena", accountID, "p", static_cast<int64>( 1000 - accountID ), 1500, accountID );
+                _service.submitScore( "arena", accountID, "p", static_cast<int64>( 1000 - accountID ), UnixMilliseconds{ 1500 }, accountID );
             }
             step();
         }
@@ -107,11 +107,11 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
     noTitle._mailTitleKey         = "";
     SW_EXPECT_FALSE( node._service.registerAchievement( noTitle ) ); // 보상 우편에는 제목이 있어야 한다
 
-    node._service.changeStat( 7, "p", "wins", 9, LeaderboardUpdate::Latest, 100, 1 );
+    node._service.changeStat( 7, "p", "wins", 9, LeaderboardUpdate::Latest, UnixMilliseconds{ 100 }, 1 );
     node.step();
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 0 );
-    node._service.changeStat( 7, "p", "wins", 10, LeaderboardUpdate::Latest, 200, 2 );
-    node._service.changeStat( 7, "p", "wins", 11, LeaderboardUpdate::Latest, 300, 3 ); // 다시 넘음 — 더 주지 않는다
+    node._service.changeStat( 7, "p", "wins", 10, LeaderboardUpdate::Latest, UnixMilliseconds{ 200 }, 2 );
+    node._service.changeStat( 7, "p", "wins", 11, LeaderboardUpdate::Latest, UnixMilliseconds{ 300 }, 3 ); // 다시 넘음 — 더 주지 않는다
     node.step();
     vector<AchievementUnlock> listUnlock;
     node._service.drainAchievementUnlocks( listUnlock );
@@ -145,7 +145,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementProgressShowsStatsAndHidesSecret
     SW_ASSERT_TRUE( node._service.registerAchievement( wins ) );
     SW_ASSERT_TRUE( node._service.registerAchievement( secret ) );
 
-    node._service.changeStat( 7, "p", "wins", 4, LeaderboardUpdate::Latest, 100, 1 );
+    node._service.changeStat( 7, "p", "wins", 4, LeaderboardUpdate::Latest, UnixMilliseconds{ 100 }, 1 );
     node.step();
     node._service.readAchievementProgress( 7, 2 );
     node.step();
@@ -160,7 +160,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementProgressShowsStatsAndHidesSecret
     SW_EXPECT_EQUAL( listBefore[1]._threshold, int64( 10 ) );
     SW_EXPECT_EQUAL( listBefore[1]._unlockedMs, int64( 0 ) );
 
-    node._service.changeStat( 7, "p", "rooms", 1, LeaderboardUpdate::Latest, 200, 3 );
+    node._service.changeStat( 7, "p", "rooms", 1, LeaderboardUpdate::Latest, UnixMilliseconds{ 200 }, 3 );
     node.step();
     node._service.readAchievementProgress( 7, 4 );
     node.step();
@@ -179,7 +179,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
-    node._service.submitScore( "arena", 1, "a", 50, 500, 1 ); // 시즌 전
+    node._service.submitScore( "arena", 1, "a", 50, UnixMilliseconds{ 500 }, 1 ); // 시즌 전
     node.step();
     SW_EXPECT_TRUE( node._listCompletion.back()._result == LeaderboardResult::NotRanked );
     node.submitThirtyPlayers();
@@ -190,7 +190,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
     SW_EXPECT_TRUE( node._listCompletion.back()._result == LeaderboardResult::NotRanked );
 
     SettleRecorder recorder;
-    node._service.settleSeason( "arena", 1, 2100, recorder.makeDelegate() );
+    node._service.settleSeason( "arena", 1, UnixMilliseconds{ 2100 }, recorder.makeDelegate() );
     node.step();
     SW_ASSERT_EQUAL( recorder._listSucceeded.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( recorder._listSucceeded[0] == SW_TRUE );
@@ -205,11 +205,11 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
     SW_EXPECT_EQUAL( node._listCompletion.back()._periodID, uint64( 1 ) );
 
     const uint64 hashAfter = database.computeContentHash();
-    node._service.settleSeason( "arena", 1, 2200, recorder.makeDelegate() ); // 다른 서버가 다시 돌았다
+    node._service.settleSeason( "arena", 1, UnixMilliseconds{ 2200 }, recorder.makeDelegate() ); // 다른 서버가 다시 돌았다
     node.step();
     SW_EXPECT_TRUE( recorder._listSucceeded.back() == SW_TRUE );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashAfter );
-    node._service.settleSeason( "arena", 9, 2200, recorder.makeDelegate() ); // 없는 시즌
+    node._service.settleSeason( "arena", 9, UnixMilliseconds{ 2200 }, recorder.makeDelegate() ); // 없는 시즌
     SW_EXPECT_TRUE( recorder._listSucceeded.back() == SW_FALSE );
 }
 
@@ -225,13 +225,13 @@ SW_TEST_CASE( LeaderboardSeasonTest, InterruptedSettlementResumesWithoutDuplicat
 
     database.armFault( ServiceStoreFault::RejectCommit, 1 ); // 첫 묶음(12 명)은 쓰고 둘째 묶음에서 실패
     SettleRecorder recorder;
-    node._service.settleSeason( "arena", 1, 2100, recorder.makeDelegate() );
+    node._service.settleSeason( "arena", 1, UnixMilliseconds{ 2100 }, recorder.makeDelegate() );
     node.step();
     SW_ASSERT_EQUAL( recorder._listSucceeded.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( recorder._listSucceeded.back() == SW_FALSE );
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 12 ); // 한 트랜잭션은 12 명이다(사람마다 쓰기 다섯)
 
-    node._service.settleSeason( "arena", 1, 2200, recorder.makeDelegate() );
+    node._service.settleSeason( "arena", 1, UnixMilliseconds{ 2200 }, recorder.makeDelegate() );
     node.step();
     SW_EXPECT_TRUE( recorder._listSucceeded.back() == SW_TRUE );
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 30 );
@@ -252,10 +252,10 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) ); // 다시 올려도 작업은 하나
     node.submitThirtyPlayers();
 
-    scheduler.update( 1900 ); // 창 전
+    scheduler.update( UnixMilliseconds{ 1900 } ); // 창 전
     node.step();
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 0 );
-    scheduler.update( 2100 ); // 창 안 — 차지 → 처리기 → 정산 → 회차 끝
+    scheduler.update( UnixMilliseconds{ 2100 } ); // 창 안 — 차지 → 처리기 → 정산 → 회차 끝
     node.step();
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 30 );
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 10 );
@@ -263,7 +263,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
 
     const uint64 hashAfter = database.computeContentHash();
-    scheduler.update( 2200 ); // 같은 회차는 다시 돌지 않는다
+    scheduler.update( UnixMilliseconds{ 2200 } ); // 같은 회차는 다시 돌지 않는다
     node.step();
     SW_EXPECT_EQUAL( database.computeContentHash(), hashAfter );
     node._service.shutdown();
@@ -282,12 +282,12 @@ SW_TEST_CASE( LeaderboardSeasonTest, LargeSettlementRunsInPagesWithContinuousRan
     constexpr AccountID kPlayerCount = 1250; // 600 + 600 + 50
     for ( AccountID accountID = 1; accountID <= kPlayerCount; ++accountID )
     {
-        node._service.submitScore( "arena", accountID, "p", static_cast<int64>( 100000 - accountID ), 1500, 0 );
+        node._service.submitScore( "arena", accountID, "p", static_cast<int64>( 100000 - accountID ), UnixMilliseconds{ 1500 }, 0 );
     }
     node.step();
 
     SettleRecorder recorder;
-    node._service.settleSeason( "arena", 1, 2100, recorder.makeDelegate() );
+    node._service.settleSeason( "arena", 1, UnixMilliseconds{ 2100 }, recorder.makeDelegate() );
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 1 ); // 정산 하나 — 페이지 수와 상관없이
     node.step();
     SW_ASSERT_EQUAL( recorder._listSucceeded.size(), size_t( 1 ) );
@@ -309,13 +309,13 @@ SW_TEST_CASE( LeaderboardSeasonTest, LargeSettlementRunsInPagesWithContinuousRan
 SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeriod )
 {
     // 주간 보드의 캐시 순위(정렬 집합)는 그 주가 끝나고 하루 뒤 캐시가 지운다 — 기간마다 쌓이지 않는다. 초기화 없는 보드는 지우지 않는다.
-    MemoryServiceDatabase   database;
-    ManualClock             cacheClock{ 1000000 };
-    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
-    constexpr int64         kNowMs  = 1767225600000; // 2026-01-01 00:00 UTC(목요일)
-    constexpr int64         kWeekMs = 604800000;
-    constexpr int64         kDayMs  = 86400000;
-    cacheClock.setMilliseconds( kNowMs );
+    MemoryServiceDatabase      database;
+    ManualClock                cacheClock{ MonotonicMilliseconds{ 1000000 } };
+    MemoryEphemeralDatabase    cacheDatabase{ cacheClock };
+    constexpr UnixMilliseconds kNowMs{ 1767225600000 }; // 2026-01-01 00:00 UTC(목요일)
+    constexpr int64            kWeekMs = 604800000;
+    constexpr int64            kDayMs  = 86400000;
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ kNowMs.count() } );
     SeasonNode            node( &database, &cacheDatabase );
     LeaderboardDefinition weekly;
     weekly._boardID = "weekly";
@@ -333,9 +333,9 @@ SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeri
     const string foreverKey = LeaderboardService::makeRankKey( "forever", 0 );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 
-    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 ); // 끝나고 하루 안 — 아직 있다
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 } ); // 끝나고 하루 안 — 아직 있다
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
-    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 );
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 } );
     SW_EXPECT_TRUE( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.empty() );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( foreverKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 }

@@ -15,7 +15,7 @@ namespace
 {
     struct OnlineStoreDriverTableTestInternal
     {
-        static unique_ptr<IServiceStore> createOldImageStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
+        static unique_ptr<IServiceStore> createOldImageStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
                                                               string& outError )
         {
             (void)driverName;
@@ -27,7 +27,7 @@ namespace
             return nullptr;
         }
 
-        static unique_ptr<IServiceStore> createNewImageStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
+        static unique_ptr<IServiceStore> createNewImageStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
                                                               string& outError )
         {
             (void)driverName;

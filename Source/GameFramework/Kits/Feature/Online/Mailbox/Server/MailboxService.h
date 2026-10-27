@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
@@ -61,7 +62,7 @@ namespace sw
     struct MailboxCall
     {
         /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
-        explicit MailboxCall( int64 nowMs )
+        explicit MailboxCall( UnixMilliseconds nowMs )
             : _nowMs{ nowMs }
         {
         }
@@ -69,7 +70,7 @@ namespace sw
         MailboxRequest    _request{};
         NetIdempotencyKey _idempotencyKey{};
         AccountID         _accountID{ kInvalidAccountID };
-        int64             _nowMs;
+        UnixMilliseconds  _nowMs;
         uint16            _method{ 0 };
     };
 } // namespace sw
@@ -95,14 +96,14 @@ namespace sw
 
         void submitCall( const MailboxCall& call, ReplyDelegate onReply );
         /** @brief 주기가 되면 만료 정리와 캠페인 다시 읽기 작업을 맡깁니다. 앞의 작업이 끝나지 않았으면 건너뜁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 예약 작업이 부르는 만료 정리 한 번입니다. 주기와 별개이며 다음 `tick` 에 맡기고, 이미 돌고 있으면 무시합니다. */
         void requestSweep();
 
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         // IScheduledJobHandler — 만료 정리 회차를 차지했다
         void                         onScheduledRun( const ScheduledRun& run ) override;
         static constexpr const utf8* kSweepJobID = "mail.sweep";
@@ -146,10 +147,10 @@ namespace sw
         OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
         MetricCounter*                        _arrExpiredCounter[3]; ///< discarded · returned · removed
         IDAllocator<uint64>                   _callIDAllocator;
-        int64                                 _nowMs;
-        int64                                 _nextSweepMs;
-        int64                                 _nextCampaignRefreshMs;
-        int64                                 _nextNoticeMs;
+        UnixMilliseconds                      _nowMs;
+        UnixMilliseconds                      _nextSweepMs;
+        UnixMilliseconds                      _nextCampaignRefreshMs;
+        UnixMilliseconds                      _nextNoticeMs;
         uint8                                 _bSweepPending;
         uint8                                 _bSweepRequested;
         uint8                                 _bCampaignRefreshPending;

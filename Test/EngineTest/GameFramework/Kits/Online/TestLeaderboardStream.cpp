@@ -113,7 +113,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     SW_EXPECT_EQUAL( recorder.getLast()._reply._score, int64( 42 ) );
 
     // 서버 로직이 다른 계정의 점수를 낸다 → 상위 · 내 둘레
-    leaderboard._service.submitScore( "casual", 2, "bob", 50, 30, 0 );
+    leaderboard._service.submitScore( "casual", 2, "bob", 50, UnixMilliseconds{ 30 }, 0 );
     test::updateAll( { &server }, clients, 30 );
     (void)leaderboardClient.requestTop( "casual", 0, 10, recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 40 );
@@ -127,7 +127,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._accountID, AccountID( 1 ) );
 
     // 통계가 업적 임계값을 넘음 → 그 계정의 연결에 알림, 조회에도 보인다
-    leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 60, 0 );
+    leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, UnixMilliseconds{ 60 }, 0 );
     test::updateAll( { &server }, clients, 60 );
     vector<AchievementState> listUnlock;
     leaderboardClient.drainAchievementUnlocks( unlockLease, listUnlock );
@@ -142,7 +142,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listStat[0]._value, int64( 1 ) );
 
     // 다른 서버에 붙은 계정의 업적 — 접속 상태 창구로
-    leaderboard._service.changeStat( 3, "carol", "wins", 1, LeaderboardUpdate::Sum, 90, 0 );
+    leaderboard._service.changeStat( 3, "carol", "wins", 1, LeaderboardUpdate::Sum, UnixMilliseconds{ 90 }, 0 );
     test::updateAll( { &server }, clients, 90 );
     SW_ASSERT_EQUAL( server._presence._listRemotePush.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountID, AccountID( 3 ) );
