@@ -182,8 +182,10 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
         return ExitCode.CheckInvalid
 
     # 실행 파일마다 `--test_list` 로 묻는다 — 엔진 서비스를 세우느라 하나에 수백 ms 라 동시에.
+    # 샤드 인자(`--test_shard=` · `--test_costs=`)는 묻는 쪽에서 뺀다: 필터 조각이 아무것도 못 고른다는 점검(아래)은 샤드 하나가 아니라 필터 전체의 일이다.
     listPassed = [argument for argument in listPassthrough if argument != "--"]
-    listSelection = list(mapConcurrent(lambda executable: (executable, listSelectedCases(executable, workingDir, args.pattern, listPassed)),
+    listForListing = [argument for argument in listPassed if not argument.startswith(("--test_shard=", "--test_costs="))]
+    listSelection = list(mapConcurrent(lambda executable: (executable, listSelectedCases(executable, workingDir, args.pattern, listForListing)),
                                        listExecutable, workerCount=len(listExecutable)))
     listSelection = sorted((item for item in listSelection if item[1]), key=lambda item: item[0].name)
     if not listSelection:
@@ -209,11 +211,14 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     if args.shuffle is not None:
         listExtra.append("--test_shuffle" if args.shuffle == "random" else f"--test_shuffle={args.shuffle}")
 
+    # 샤드 조각을 겹쳐 돌리는 호출자(verify-batch)가 있으므로 로그 이름에 조각 번호를 넣는다 — 같은 실행 파일의 조각이 한 로그 파일을 함께 쓰지 않게.
+    shardMatch = next((match for argument in listPassed if (match := re.fullmatch(r"--test_shard=(\d+)/(\d+)", argument))), None)
+    shardSuffix = f"-shard{shardMatch.group(1)}of{shardMatch.group(2)}" if shardMatch else ""
     listFailed: list[str] = []
     for executable, _ in listSelection:
         command = [str(executable), f"--test_filter={args.pattern}", *listExtra]
         print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
-        if runDigested(command, getProjectRoot(), executable.stem, bVerbose=args.bVerbose, cwd=workingDir).returnCode != 0:
+        if runDigested(command, getProjectRoot(), executable.stem + shardSuffix, bVerbose=args.bVerbose, cwd=workingDir).returnCode != 0:
             listFailed.append(executable.name)
 
     print()

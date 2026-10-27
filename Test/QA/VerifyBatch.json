@@ -1,5 +1,5 @@
 {
-  "_comment": "통합 검증 · 측정 항목의 정본(코드는 Scripts/common/VerifyManifest.py 의 형식과 Scripts/dev/RunVerifyBatch.py 의 실행기만 가진다). 돌리는 법: py -3 -m Scripts verify-batch --owner <이름> (--list · --check · --dry-run · --config · --only). 계획 문서의 대기 줄은 글 대신 `매니페스트 id` 와 항목 id 만 적는다 — plans --check 와 린트(CheckVerifyPending)가 없는 id 를 막고, pending 항목을 가리키는 줄이 없으면 항목을 지우게 한다. need_command 는 아직 한 명령으로 안 도는 확인이다(없는 명령을 지어내지 않고 이유를 적는다). kind: build · ctest · test · covered(덮개 항목이 도는 동안 같이 도는 시나리오 · 케이스) · cook · golden · measure. gpu: none · shared(GPU 공유 칸) · exclusive(GPU 와 빌드 칸을 혼자 — 측정). platform wsl 은 사용자가 요청할 때만 한다. args 의 {app} {bin} {preset} {work} 는 실행기가 풀어 준다.",
+  "_comment": "통합 검증 · 측정 항목의 정본(코드는 Scripts/common/VerifyManifest.py 의 형식과 Scripts/dev/RunVerifyBatch.py 의 실행기만 가진다). 돌리는 법: py -3 -m Scripts verify-batch --owner <이름> (--list · --check · --dry-run · --config · --only · --fail-fast · --measure · --measure-only). 기본 실행은 정합성 검증뿐이고 measure 항목은 functional(통과 · 실패를 판정하는 측정)이 아니면 --measure 가 있을 때만 돈다. requires: 선행 항목 id — 선행이 이번에 통과하지 못하면 이 항목은 건너뜀. shards: test 항목을 --test_shard=k/n 조각으로 나눠 겹쳐 돈다. 계획 문서의 대기 줄은 글 대신 `매니페스트 id` 와 항목 id 만 적는다 — plans --check 와 린트(CheckVerifyPending)가 없는 id 를 막고, pending 항목을 가리키는 줄이 없으면 항목을 지우게 한다. need_command 는 아직 한 명령으로 안 도는 확인이다(없는 명령을 지어내지 않고 이유를 적는다). kind: build · ctest · test · covered(덮개 항목이 도는 동안 같이 도는 시나리오 · 케이스) · cook · golden · measure. gpu: none · shared(GPU 공유 칸) · exclusive(GPU 와 빌드 칸을 혼자 — 측정). platform wsl 은 사용자가 요청할 때만 한다. args 의 {app} {bin} {preset} {work} 는 실행기가 풀어 준다.",
   "configs": [
     { "name": "Debug", "preset": "Ninja-Debug" },
     { "name": "Shipping", "preset": "Ninja-Shipping" },
@@ -13,7 +13,13 @@
     },
     {
       "id": "ctest-lint", "title": "ctest -L lint", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "lint",
-      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절",
+      "note": "빌드 뒤에 돈다 — 글롭 대조 게이트(CheckSourceGlob · CheckModuleTargets)가 구성된 빌드 폴더를 읽어, 빌드(재구성) 전에 돌리면 낡은 구성으로 판정한다. ctest 항목은 혼자 돈다: 다른 ctest -j 와 겹치면 CPU 경합으로 15 초 제한인 CheckTestSuites · CheckTextureFolders 가 시간 초과로 가짜로 졌다(2026-10-27 두 번, 혼자 돌면 통과)."
+    },
+    {
+      "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
+      "source": "docs/plans/ScriptsStructure.md 6절", "result_doc": "docs/plans/ScriptsStructure.md 6절",
+      "note": "ctest 항목은 싼 것부터 둔다(린트 → 파이썬 8 초 → nogpu 160 초 → race 140 초) — --fail-fast 가 싼 단계의 실패에서 긴 단계를 건너뛰게."
     },
     {
       "id": "ctest-nogpu", "title": "ctest -L nogpu", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 120, "label": "nogpu",
@@ -23,10 +29,6 @@
     {
       "id": "ctest-race", "title": "ctest -L race", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "race",
       "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
-    },
-    {
-      "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
-      "source": "docs/plans/ScriptsStructure.md 6절", "result_doc": "docs/plans/ScriptsStructure.md 6절"
     },
     {
       "id": "resource-data-schema-test", "title": "ResourceDataSchemaTest 필터(데이터 종류를 타입 .cpp 의 등록 줄로 옮긴 DK1 ~ DK5)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
@@ -221,16 +223,16 @@
     },
     {
       "id": "app-scenarios-release", "title": "AppScenarioTest 전부(네 백엔드 × 게임 · 에디터 시나리오, 녹화 재생)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 240,
-      "filter": "AppScenarioTest.*", "extra_args": ["--host_suites=all"],
+      "filter": "AppScenarioTest.*", "extra_args": ["--host_suites=all"], "shards": 4, "requires": ["cook-shaders-release"],
       "source": "docs/08_Verification.md 3절 실기동 확인은 시나리오로", "result_doc": "docs/plans/NEXT.md 0000절",
-      "note": "에디터 시나리오 사례는 한 체크아웃에서 하나씩 돈다(같은 프로세스 안에서 차례로 돈다). 진 뒤에는 git status 로 리소스 트리를 되돌린다."
+      "note": "네 조각(--test_shard=k/4, 비용표는 정책의 hostCaseCosts)으로 나눠 GPU 칸 수(gpuSlots 2)만큼 겹쳐 돈다. 한 조각이 전부 직렬로 돌던 때 Release 686 ~ 1129 초, 같은 케이스 시간(합 약 910 초)을 둘로 나누면 약 460 초로 줄 것으로 계산한다(측정값 아님 — 통합이 첫 실행의 timeline.log 로 확인). 에디터 시나리오 케이스는 백엔드마다 하나(네 개, 각각 60 개 시나리오를 한 프로세스에서 차례로)라 조각 하나에 둘 이상 모일 수 있다. 조각이 겹치려면 쓰기 위치가 케이스마다 달라야 한다 — 실행 쓰기 루트 build/<프리셋>/AppRuns/shard<k>of<n>/<케이스> 와 scratch/<이름>_p<pid> 가 그 일을 한다(HostGpuIsolation.md, TestPolicy.json 에 hostResourceLock 이 없을 때). 잠금이 남은 트리에서는 조각이 순서대로 돈다. 진 뒤에는 git status 로 리소스 트리를 되돌린다."
     },
     {
       "id": "render-pass-gpu-tests", "title": "렌더 패스 GPU 테스트(파티클 · 후처리 융합 · 모프 풀 · 2D 조명)와 셰이더 · 그래픽스 형식 테스트", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 120,
       "filter": "RenderPassGPUTest.ParticlesDrawInTheTransparentPass.*,RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage.*,RenderPassGPUTest.FusedPostChainMatchesStaged.*,RenderPassGPUTest.MorphPoolIdentityMatchesRest.*,RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend.*,ShaderBindingValidatorTest.*,VrmMaterialImporterTest.*,VrmRuntimeAssetsTest.*,RenderViewModeTest.*,Light2DTest.*,MeshAssetTest.*,ModelImporterTest.*,ShaderCookRequestTest.*",
-      "extra_args": ["--host_suites=all"],
+      "extra_args": ["--host_suites=all"], "requires": ["cook-shaders-release"],
       "source": "docs/plans/Vfx.md V4 남은 확인", "result_doc": "docs/plans/Vfx.md 상태를 끝으로",
-      "note": "Vfx(깊이 충돌 · 메시 입자 · GL R32 읽기 · DX11 RAW SRV)와 GraphicsFormatBundle 통합 목록이 같이 쓴다. 쿠킹 뒤에 돌아야 한다 — 같은 구성에서는 쿠킹 항목이 먼저 돈다."
+      "note": "Vfx(깊이 충돌 · 메시 입자 · GL R32 읽기 · DX11 RAW SRV)와 GraphicsFormatBundle 통합 목록이 같이 쓴다. 쿠킹 뒤에 돌아야 한다 — 같은 구성에서는 쿠킹 항목이 먼저 돌고, 쿠킹이 졌으면 이 항목은 돌지 않고 건너뛴다(requires)."
     },
     {
       "id": "vfx-preview-scenario", "title": "editor/vfxpreview 시나리오(네 백엔드, gv_vfxSimulation=CPU 와 같은 그림)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
@@ -977,7 +979,7 @@
     },
     {
       "id": "app-ui-msdf-glyphs", "title": "견본 화면을 MSDF 글리프로 그려도 SDF 와 같은 모양(AppUITest.MsdfGlyphsMatchSdfDemoScreen)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
-      "filter": "AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"],
+      "filter": "AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"], "requires": ["cook-shaders-release"],
       "source": "docs/plans/MsdfGlyphs.md M5", "result_doc": "docs/plans/MsdfGlyphs.md M5",
       "note": "canvas.hlsl 이 쿠킹된 뒤(cook-shaders-release)에 돈다. 큰 글자 모서리가 날카로운지는 Bin/Saved/Automation/engine.uidemo/ 의 uidemo_msdf_<백엔드>.ppm 을 uidemo_<백엔드>.ppm 과 눈으로 견준다."
     },

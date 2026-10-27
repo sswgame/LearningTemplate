@@ -17,6 +17,13 @@
 `need_command` 가 있는 항목은 아직 한 명령으로 돌지 않는 확인이다(없는 명령을 지어내지 않는다) — 실행기는 돌리지 않고 이유를 표에 적는다.
 `platform` 이 `wsl` 인 항목은 사용자가 요청할 때만 하므로 기본으로 돌리지 않는다. 필수 칸이 빠지거나 모르는 칸이 있으면 `VerifyManifestError` 로 멈춘다(기본값 없음).
 `gpu` 는 GPU 잠금 방식이다: `none` · `shared`(공유 칸) · `exclusive`(GPU 와 빌드 칸을 혼자 — 측정이 다른 빌드에 오염되지 않게).
+
+선택 칸 셋은 느린 검증을 구조로 줄인다(근거: 한 번에 약 80 분 걸리던 전체 실행의 로그):
+- `requires` : 선행 항목 id 목록. 같은 구성에서 **앞서 도는** 돌 수 있는 항목이어야 한다(읽을 때 막는다). 선행이 이번 실행에서 통과하지 못했으면(실패 · 막힘 · 건너뜀)
+  이 항목은 돌지 않고 `건너뜀 — 선행 …` 으로 표에 오른다(선행이 남긴 보고를 읽는 항목이 연쇄로 지는 것을 막는다). 선행을 이번에 고르지 않았으면 이전 실행의 결과를 쓴다고 보고 돈다.
+- `shards` : 2 이상의 정수, `test` 항목만. 같은 필터를 `--test_shard=<k>/<n>` 으로 n 개 프로세스에 나눠 돌리고(비용표는 정책의 케이스 비용) 결과 하나로 모은다. 겹쳐 돌지는
+  그 실행 파일의 정책(`Test/TestPolicy.json` 의 `hostResourceLock`)이 정한다 — 잠금이 있으면 같은 `Bin` 산출물을 나누는 것이라 샤드끼리도 순서대로 돈다.
+- `functional` : `measure` 종류인데 병합 검증의 통과 · 실패 판정인 항목(기본 실행에 든다). 칸이 없으면 측정이라 `--measure` 가 있을 때만 돈다.
 """
 
 from __future__ import annotations
@@ -40,6 +47,9 @@ kManifestRelPath = "Test/QA/VerifyBatch.json"
 kListKind: tuple[str, ...] = ("build", "cook", "ctest", "test", "covered", "golden", "measure")
 #: GPU 잠금 방식 — 실행 순서에서 이 순서로 모은다(없음 → 공유 → 독점).
 kListGpuMode: tuple[str, ...] = ("none", "shared", "exclusive")
+#: 병합 검증의 단계 — `--fail-fast` 가 단계 사이에서 멈춘다. 종류 순서와 같고 싼 것이 앞이다: 짓고(빌드) → 쿠킹 → ctest(린트 · 파이썬 · nogpu · race) → 테스트 필터 → 골든 → 측정.
+#: 린트(`ctest -L lint`)를 빌드 앞에 두지 않는다 — 린트의 글롭 대조(`CheckSourceGlob` · `CheckModuleTargets`)가 **구성된 빌드 폴더**를 읽어, 빌드(재구성)가 끝나기 전에 돌리면 낡은 구성으로 판정한다.
+kListStageKinds: tuple[tuple[str, ...], ...] = (("build",), ("cook",), ("ctest",), ("test", "covered"), ("golden",), ("measure",))
 kListPlatform: tuple[str, ...] = ("windows", "wsl")
 kListTool: tuple[str, ...] = ("scripts", "app")
 kListJudge: tuple[str, ...] = ("exit", "metrics")
@@ -61,6 +71,9 @@ _kIdListRe = re.compile(r"매니페스트 id\s*((?:`[a-z0-9][a-z0-9-]*`\s*[,·]?
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
 _kSuiteCaseRe = re.compile(r"^([A-Za-z]\w*)\.([\w*]+)$")
 _kWordRe = re.compile(r"\w+")
+#: 다른 항목이 남긴 시나리오 보고 폴더를 읽는 args — 이런 항목은 그 보고를 만드는 항목을 `requires` 로 적어야 한다.
+kReportFolderText = "{bin}/Saved/Automation"
+_kReportFolderRe = re.compile(re.escape(kReportFolderText))
 # 뒤따르는 낱말은 먼저 보기(lookahead)로만 읽어, `a, b, c` 에서 (a,b) 와 (b,c) 가 둘 다 잡힌다.
 _kWordCommaRe = re.compile(r"\b(\w+)\s*,\s*(?=(\w+))")
 
@@ -74,7 +87,9 @@ _kMapKindKeys: dict[str, tuple[str, ...]] = {
     "golden": ("tool", "args"),
     "measure": ("tool", "args", "limit", "judge"),
 }
-_kOptionalKeys: tuple[str, ...] = ("need_command", "note", "extra_args", "metrics", "timeout_minutes")
+_kOptionalKeys: tuple[str, ...] = ("need_command", "note", "extra_args", "metrics", "timeout_minutes", "requires", "shards", "functional")
+#: `shards` 의 상한 — 샤드마다 App 을 띄우는 프로세스라 코어 · GPU 칸(`gpuSlots`)을 넘게 쪼개는 것은 시작 비용만 더한다.
+kMaxShardCount = 16
 _kMetricKeys: tuple[str, ...] = ("name", "pattern", "unit", "max", "min")
 
 
@@ -128,6 +143,14 @@ class VerifyItem:
     listMetric: tuple[VerifyMetric, ...]
     listCovered: tuple[str, ...]
     coveredBy: str
+    listRequires: tuple[str, ...]
+    shardCount: int
+    bFunctional: bool
+
+    @property
+    def bIncludedByDefault(self) -> bool:
+        """병합 검증의 기본 실행에 드는가 — 측정(`measure`)은 `functional` 이 아니면 `--measure` 가 있을 때만 돈다(성능에 닿는 변경에서만 부른다)."""
+        return self.kind != "measure" or self.bFunctional
 
     @property
     def bCovered(self) -> bool:
@@ -229,6 +252,15 @@ def readItemInternal(entry: object, index: int, setConfig: set[str]) -> VerifyIt
         raise VerifyManifestError(f"{where}: `judge` 가 metrics 면 모든 지표에 `max` 나 `min` 이 있어야 합니다")
     if judge == "metrics" and not listMetric:
         raise VerifyManifestError(f"{where}: `judge` 가 metrics 면 `metrics` 가 비어 있을 수 없습니다")
+    shardCount = entry.get("shards", 1)
+    if "shards" in entry and (isinstance(shardCount, bool) or not isinstance(shardCount, int) or not 2 <= shardCount <= kMaxShardCount or kind != "test" or needCommand):
+        raise VerifyManifestError(f"{where}: `shards` 는 2 이상 {kMaxShardCount} 이하의 정수이고 한 명령으로 도는 `test` 항목에만 둡니다")
+    bFunctional = entry.get("functional", False)
+    if "functional" in entry and (not isinstance(bFunctional, bool) or kind != "measure"):
+        raise VerifyManifestError(f"{where}: `functional` 은 `measure` 항목의 true · false 입니다(통과 · 실패를 판정하는 측정 종류 항목이면 true)")
+    listRequires = requireTextListInternal(entry, "requires", where, bAllowEmpty=False) if "requires" in entry else ()
+    if listRequires and (kind == "covered" or needCommand or itemId in listRequires or len(set(listRequires)) != len(listRequires)):
+        raise VerifyManifestError(f"{where}: `requires` 는 겹치지 않는 다른 항목 id 의 목록이고 따로 도는 항목에만 둡니다(덮개 항목은 덮개 대상의 결과를 따른다)")
     return VerifyItem(
         itemId=itemId, title=requireTextInternal(entry, "title", where), kind=kind, config=config,
         platform=requireChoiceInternal(entry, "platform", where, kListPlatform), gpu=requireChoiceInternal(entry, "gpu", where, kListGpuMode),
@@ -241,7 +273,25 @@ def readItemInternal(entry: object, index: int, setConfig: set[str]) -> VerifyIt
         listArg=requireTextListInternal(entry, "args", where, bAllowEmpty=False) if "args" in entry else (),
         limit=requireTextInternal(entry, "limit", where) if "limit" in entry else "", judge=judge, listMetric=listMetric,
         listCovered=requireTextListInternal(entry, "covered", where, bAllowEmpty=False) if "covered" in entry else (),
-        coveredBy=requireTextInternal(entry, "covered_by", where) if "covered_by" in entry else "")
+        coveredBy=requireTextInternal(entry, "covered_by", where) if "covered_by" in entry else "",
+        listRequires=listRequires, shardCount=shardCount, bFunctional=bFunctional)
+
+
+def getRunOrderKey(item: VerifyItem) -> tuple[int, int, int]:
+    """한 구성 안의 돌 순서 키 — `orderItems` 가 정렬하는 (종류, GPU 방식, 파일 순서). 선행은 이 키가 더 작아야 한다."""
+    return (kListKind.index(item.kind), kListGpuMode.index(item.gpu), item.index)
+
+
+def checkRequiresInternal(item: VerifyItem, mapById: dict[str, VerifyItem], where: str) -> None:
+    """`requires` 가 같은 구성에서 앞서 도는, 돌 수 있는 항목만 가리키는지 — 뒤에 도는 항목을 선행으로 적으면 선행 결과가 정해지기 전에 판정하게 된다."""
+    for requiredId in item.listRequires:
+        required = mapById.get(requiredId)
+        if required is None:
+            raise VerifyManifestError(f"{where}: `requires` 의 `{requiredId}` 가 매니페스트에 없습니다")
+        if required.config != item.config or not required.bRunnable:
+            raise VerifyManifestError(f"{where}: `requires` 의 `{requiredId}` 는 같은 구성({item.config})에서 도는 항목이어야 합니다(덮개 · 명령 없음 · wsl 항목은 선행이 될 수 없다)")
+        if getRunOrderKey(required) >= getRunOrderKey(item):
+            raise VerifyManifestError(f"{where}: 선행 `{requiredId}` 가 이 항목보다 앞서 돌지 않습니다(종류 · GPU 방식 · 파일 순서) — 선행을 더 앞에 두거나 종류를 맞춘다")
 
 
 def checkCrossReferencesInternal(listItem: list[VerifyItem], listConfig: list[VerifyConfig]) -> None:
@@ -259,6 +309,7 @@ def checkCrossReferencesInternal(listItem: list[VerifyItem], listConfig: list[Ve
                 raise VerifyManifestError(f"{where}: `covered_by` `{item.coveredBy}` 는 `ctest` · `test` 항목의 id 여야 합니다")
             if (cover.config, cover.gpu) != (item.config, item.gpu):
                 raise VerifyManifestError(f"{where}: 구성 · gpu 가 덮개 항목 `{cover.itemId}` 와 같아야 합니다({cover.config} · {cover.gpu})")
+        checkRequiresInternal(item, mapById, where)
         for argument in item.listArg:
             for placeholder in _kPlaceholderRe.findall(argument):
                 if placeholder not in kListPlaceholder:
@@ -304,11 +355,19 @@ def orderItems(manifest: VerifyManifest, listItem: list[VerifyItem]) -> list[tup
     """`listItem` 을 구성 순서로 묶고, 구성 안에서는 (종류, GPU 방식, 파일 순서)로 늘어놓는다. 항목이 없는 구성은 뺀다."""
     listGroup: list[tuple[str, list[VerifyItem]]] = []
     for config in manifest.listConfig:
-        listInConfig = sorted((item for item in listItem if item.config == config.name),
-                              key=lambda item: (kListKind.index(item.kind), kListGpuMode.index(item.gpu), item.index))
+        listInConfig = sorted((item for item in listItem if item.config == config.name), key=getRunOrderKey)
         if listInConfig:
             listGroup.append((config.name, listInConfig))
     return listGroup
+
+
+def getStageIndex(item: VerifyItem) -> int:
+    """항목의 단계 번호(`kListStageKinds`) — `--fail-fast` 가 단계 사이에서 멈춘다."""
+    return next(index for index, listKind in enumerate(kListStageKinds) if item.kind in listKind)
+
+
+def getStageName(stageIndex: int) -> str:
+    return "·".join(kListStageKinds[stageIndex])
 
 
 def groupByGpuMode(listItem: list[VerifyItem]) -> list[tuple[str, list[VerifyItem]]]:
@@ -327,15 +386,18 @@ def expandArguments(listArg: tuple[str, ...], mapValue: dict[str, str]) -> list[
     return [_kPlaceholderRe.sub(lambda match: mapValue[match.group(1)], argument) for argument in listArg]
 
 
-def buildItemCommand(item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, workDir: Path) -> list[str]:
-    """항목을 돌리는 명령. App 이 필요한데 없으면(빌드 전) `VerifyManifestError`. `scenario` 같은 덮개 항목은 명령이 없다."""
+def buildItemCommand(item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, workDir: Path, listShardArg: tuple[str, ...] = ()) -> list[str]:
+    """항목을 돌리는 명령. App 이 필요한데 없으면(빌드 전) `VerifyManifestError`. `scenario` 같은 덮개 항목은 명령이 없다.
+
+    `listShardArg` 는 `test` 항목의 샤드 한 조각이 실행 파일에 더 넘기는 인자(`--test_shard=k/n` · `--test_costs=…`)다 — `makeShardArguments` 가 만든다.
+    """
     scripts = [sys.executable, "-m", "Scripts"]
     if item.kind == "build":
         return [*scripts, "full-build", "--owner", owner, "--preset", preset]
     if item.kind == "ctest":
         return ["ctest", "--test-dir", str(repositoryRoot / "build" / preset), "-L", item.label, "-j", "--output-on-failure"]
     if item.kind == "test":
-        return [*scripts, "test", item.testFilter, "--preset", preset, "--no-build", *item.listExtraArg]
+        return [*scripts, "test", item.testFilter, "--preset", preset, "--no-build", *item.listExtraArg, *listShardArg]
     if item.bCovered:
         raise VerifyManifestError(f"항목 `{item.itemId}`: 덮개 항목은 따로 돌지 않습니다")
     tree = BuildTree.fromPreset(preset, repositoryRoot)
@@ -441,6 +503,44 @@ def interpretOutcome(item: VerifyItem, returnCode: int, bLaunched: bool, bTimedO
     return makeResult(item.itemId, kStatusPassed, "", finishedAt, valueText=valueText, seconds=seconds, logPath=logPath)
 
 
+#: 돌리지 않고 건너뛴 이유의 머리말 — 실행기의 한 줄(`끝 <id>: 건너뜀 선행 …`)과 `--failed-from` 이 같은 글로 이 항목을 다시 고른다.
+kSkipRequiresMarker = "선행"
+kSkipFailFastMarker = "앞 단계"
+
+
+def makeRequiresSkipResult(item: VerifyItem, requiredId: str, requiredStatus: str, finishedAt: str) -> ItemResult:
+    """선행(`requires`)이 통과하지 못해 돌리지 않은 항목의 결과 — 선행이 남겼어야 할 보고를 읽다가 연쇄로 지는 것을 막고 이유를 표에 적는다."""
+    return makeResult(item.itemId, kStatusSkipped, f"{kSkipRequiresMarker} `{requiredId}` 가 {requiredStatus} — 이 항목은 그 결과를 읽는다", finishedAt)
+
+
+def makeFailFastSkipResult(item: VerifyItem, stageName: str, failedId: str, finishedAt: str) -> ItemResult:
+    """`--fail-fast` 가 앞 단계의 실패 때문에 돌리지 않은 항목의 결과."""
+    return makeResult(item.itemId, kStatusSkipped, f"{kSkipFailFastMarker} {stageName} 의 `{failedId}` 가 졌다 — --fail-fast 로 뒤를 돌리지 않음", finishedAt)
+
+
+def combineShardResults(item: VerifyItem, listShard: list[ItemResult], wallSeconds: float, finishedAt: str) -> ItemResult:
+    """샤드 조각들의 결과를 항목 결과 하나로 — 하나라도 졌으면 실패(조각 번호와 이유), 안 졌고 막힌 조각이 있으면 막힘, 전부 건너뛰었으면 건너뜀, 아니면 통과.
+
+    걸린 초는 조각들이 겹쳐 돈 벽시계 시간이다. 로그는 처음 진 조각의 것(없으면 첫 조각)이다.
+    """
+    count = len(listShard)
+    listFailed = [(index, result) for index, result in enumerate(listShard) if result.status == kStatusFailed]
+    listBlocked = [(index, result) for index, result in enumerate(listShard) if result.status == kStatusBlocked]
+    listSkipped = [result for result in listShard if result.status == kStatusSkipped]
+    listBad = listFailed or listBlocked
+    if listBad:
+        status = kStatusFailed if listFailed else kStatusBlocked
+        detail = " · ".join(f"샤드 {index + 1}/{count}: {result.detail}" for index, result in listBad)
+    elif len(listSkipped) == count:
+        status, detail = kStatusSkipped, listSkipped[0].detail
+    else:
+        status, detail = kStatusPassed, f"{count} 샤드" + (f"(건너뜀 {len(listSkipped)})" if listSkipped else "")
+    logPath = (listBad[0][1] if listBad else listShard[0]).logPath
+    result = makeResult(item.itemId, status, detail, finishedAt, seconds=wallSeconds, logPath=logPath)
+    result.startedAt = min((shard.startedAt for shard in listShard if shard.startedAt), default="")
+    return result
+
+
 def makeNotRunResult(item: VerifyItem, finishedAt: str) -> ItemResult:
     """돌리지 않는 항목(명령이 없다 · wsl)의 결과 — 이유를 표에 적는다."""
     if item.needCommand:
@@ -516,6 +616,14 @@ def findManifestProblems(repositoryRoot: Path, manifest: VerifyManifest) -> list
         for key, text in (("source", item.source), ("result_doc", item.resultDoc)):
             if not (repositoryRoot / text.split()[0]).is_file():
                 listProblem.append(f"{where}: `{key}` 의 첫 낱말 `{text.split()[0]}` 이 저장소 파일이 아닙니다(`경로 절` 모양으로 적는다)")
+        if item.shardCount > 1:
+            try:
+                planShards(repositoryRoot, item)
+            except VerifyManifestError as error:
+                listProblem.append(str(error))
+        if any(_kReportFolderRe.search(argument) for argument in item.listArg) and not item.listRequires:
+            listProblem.append(f"{where}: args 가 시나리오 보고 폴더({kReportFolderText})를 읽는데 `requires` 가 없습니다 — 그 보고를 만드는 항목을 선행으로 적는다"
+                               f"(안 적으면 만든 항목이 지거나 안 돌 때 이 항목이 연쇄로 진다)")
         listPattern = [name for name in (item.testFilter.split(",") if item.testFilter else []) if name]
         for name in (*item.listCovered, *listPattern):
             if name.endswith(".scenario.xml"):
@@ -546,16 +654,93 @@ def findTestCaseInternal(repositoryRoot: Path, name: str) -> bool:
 
 
 @lru_cache(maxsize=4)
+def readTestSourcesInternal(repositoryRoot: Path) -> tuple[tuple[str, str], ...]:
+    """Test/ 의 모든 .cpp 를 한 번만 읽어 (실행 파일 폴더 `Test/<이름>`, 본문) 목록으로 — 케이스 색인과 스위트 → 실행 파일 색인이 같이 쓴다. 프로세스 수명 동안만 유효하다."""
+    testRoot = repositoryRoot / "Test"
+    return tuple((path.relative_to(testRoot).parts[0], path.read_text(encoding="utf-8", errors="replace")) for path in sorted(testRoot.rglob("*.cpp")))
+
+
+@lru_cache(maxsize=4)
 def readTestIndexInternal(repositoryRoot: Path) -> tuple[frozenset[str], dict[str, frozenset[str]]]:
     """Test/ 의 모든 .cpp 를 한 글로 이어 한 번만 훑어 (낱말 집합, 낱말 -> 그 뒤 `,` 로 이어진 낱말 집합) 을 만든다.
 
     프로세스 수명 동안만 유효하다(게이트 · 일회성 도구 전용 — 파일이 바뀌는 상주 호출자가 생기면 `cache_clear()`).
     """
-    text = "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in sorted((repositoryRoot / "Test").rglob("*.cpp")))
+    text = "\n".join(source for _, source in readTestSourcesInternal(repositoryRoot))
     mapSuiteCase: dict[str, set[str]] = {}
     for found in _kWordCommaRe.finditer(text):
         mapSuiteCase.setdefault(found.group(1), set()).add(found.group(2))
     return frozenset(_kWordRe.findall(text)), {suite: frozenset(setCase) for suite, setCase in mapSuiteCase.items()}
+
+
+# ------------------------------------------------------------------------------
+# 샤드 — `shards` 가 있는 test 항목을 실행 파일의 `--test_shard=k/n` 조각 n 개로 나눈다
+# ------------------------------------------------------------------------------
+#: 테스트 정책 파일(저장소 기준) — 실행 파일의 비용표 · 호스트 잠금 · GPU 칸 수가 여기 있다.
+kPolicyRelPath = "Test/TestPolicy.json"
+#: 스위트를 선언하는 매크로(`SW_TEST_CASE( Suite,` · `SW_TEST_CASE_GENERATOR( Suite,` · `SW_TEST_CASE_PER_PARAMETER( Suite,` · `SW_TEST_REQUIRES_HOST( Suite,`).
+_kSuiteDeclarationRe = re.compile(r"SW_TEST_\w+\(\s*([A-Za-z]\w*)\s*,")
+
+
+@dataclass(frozen=True)
+class ShardPlan:
+    """샤드 나누기 계획 — 어느 실행 파일의 케이스인지, 샤드끼리 겹쳐 돌아도 되는지, 비용표 인자."""
+
+    executable: str
+    bMayOverlap: bool
+    costArgument: str
+
+
+@lru_cache(maxsize=4)
+def readSuiteExecutableIndex(repositoryRoot: Path) -> dict[str, frozenset[str]]:
+    """스위트 이름 -> 그 스위트가 선언된 실행 파일(폴더 `Test/<이름>`) 집합."""
+    mapSuite: dict[str, set[str]] = {}
+    for folder, source in readTestSourcesInternal(repositoryRoot):
+        for suite in set(_kSuiteDeclarationRe.findall(source)):
+            mapSuite.setdefault(suite, set()).add(folder)
+    return {suite: frozenset(setFolder) for suite, setFolder in mapSuite.items()}
+
+
+def readTestPolicy(repositoryRoot: Path) -> dict:
+    path = repositoryRoot / kPolicyRelPath
+    if not path.is_file():
+        raise VerifyManifestError(f"{kPolicyRelPath}: 파일이 없습니다")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as error:
+        raise VerifyManifestError(f"{kPolicyRelPath}: JSON 을 읽지 못했습니다: {error}") from error
+
+
+def readGpuSlots(repositoryRoot: Path) -> int:
+    """정책의 `gpuSlots` — GPU 를 동시에 받는 프로세스 수의 상한(샤드를 겹쳐 돌리는 수도 이를 넘지 않는다)."""
+    slots = readTestPolicy(repositoryRoot).get("gpuSlots")
+    if isinstance(slots, bool) or not isinstance(slots, int) or slots < 1:
+        raise VerifyManifestError(f"{kPolicyRelPath}: `gpuSlots` 가 1 이상의 정수가 아닙니다")
+    return slots
+
+
+def planShards(repositoryRoot: Path, item: VerifyItem) -> ShardPlan:
+    """`shards` 항목의 필터가 가리키는 스위트가 한 실행 파일에만 있는지 보고 그 실행 파일의 정책으로 계획을 세운다. 아니면 `VerifyManifestError`."""
+    where = f"{kManifestRelPath}: 항목 `{item.itemId}`"
+    listSuite = sorted({match.group(1) for name in item.testFilter.split(",") if (match := _kSuiteCaseRe.match(name.strip()))})
+    if not listSuite:
+        raise VerifyManifestError(f"{where}: `shards` 는 `Suite.Case` 모양의 필터가 있어야 어느 실행 파일을 나눌지 압니다")
+    mapIndex = readSuiteExecutableIndex(repositoryRoot)
+    setExecutable = {folder for suite in listSuite for folder in mapIndex.get(suite, frozenset())}
+    if len(setExecutable) != 1:
+        raise VerifyManifestError(f"{where}: `shards` 의 필터 스위트 {listSuite} 가 실행 파일 하나에 있어야 합니다(찾은 곳: {sorted(setExecutable) or '없음'})")
+    executable = next(iter(setExecutable))
+    entry = readTestPolicy(repositoryRoot).get("executables", {}).get(executable)
+    if not isinstance(entry, dict):
+        raise VerifyManifestError(f"{kPolicyRelPath}: executables 에 `{executable}` 줄이 없습니다")
+    mapCost: dict[str, object] = {**entry.get("caseCosts", {}), **entry.get("hostCaseCosts", {})}
+    costArgument = "--test_costs=" + ",".join(f"{name}={cost}" for name, cost in mapCost.items()) if mapCost else ""
+    return ShardPlan(executable, "hostResourceLock" not in entry, costArgument)
+
+
+def makeShardArguments(plan: ShardPlan, shardIndex: int, shardCount: int) -> tuple[str, ...]:
+    """샤드 한 조각의 실행 파일 인자 — `--test_shard=<k>/<n>`(0 부터)과 비용표. 같은 표 · 같은 비용이라 모든 조각이 같은 배정을 계산한다."""
+    return (f"--test_shard={shardIndex}/{shardCount}", *((plan.costArgument,) if plan.costArgument else ()))
 
 
 # ------------------------------------------------------------------------------
