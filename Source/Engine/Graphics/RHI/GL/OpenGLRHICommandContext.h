@@ -67,8 +67,8 @@ namespace sw
          * @details 메시 정점 버퍼가 설정되어 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,
          *          둘 이상이면 `glDrawArraysInstanced` 를 부릅니다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 분기입니다).
          */
-        void             drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex );
-        OpenGLRHIDevice* _pDevice;
+        void                   drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex );
+        OpenGLRHIDevice* const _pDevice; ///< 생성자에서 받는다
         /// @brief 이 컨텍스트가 갱신하는 기록 상태입니다.
         OpenGLRecordingState* _pState;
     };

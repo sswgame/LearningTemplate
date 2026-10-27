@@ -534,8 +534,8 @@ namespace sw
      */
     struct ScopedOpenGLContext
     {
-        OpenGLRHIDevice* _pDevice{ nullptr };
-        bool             _bNeedsUnbind{ false };
+        OpenGLRHIDevice* const _pDevice; ///< 생성자에서 받는다
+        bool                   _bNeedsUnbind{ false };
 
         explicit ScopedOpenGLContext( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice }
