@@ -27,4 +27,4 @@
 #   작은 목록 (새 모양)        | NetMessageRouter::registerHandler · PairedAnimationComponent · NetSimSampleGame · OwnedHTTPClient · UIDocumentLoader 조각 스택 · SkeletalAnimatorComponent::registerRootMotionModifier | 핸들러 범위 수(16 이하) · 역할 수 · 슬롯 수 · 신뢰 호스트 수 · `kMaxFragmentDepth` · 루트 모션 수정자(캐릭터 하나에 붙는 컴포넌트 종류 수. 지금은 MotionWarping 하나이고 등록 순서가 호출 순서라 vector 를 둔다)
 #   모델 · 설정 데이터 (새 모양) | ModelImportAnimation · ModelImportGeometry(모프 타깃 이름) · AutomationLogPolicy(허용 항목)       | 모프 타깃 수십 ~ 100, 허용 항목 수십. 임포트 · 로드 때 한 번
 [baseline]
-total = 70
+total = 69
