@@ -17,7 +17,7 @@ namespace sw
     {
     }
 
-    uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
+    uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds /*nowMs*/ )
     {
         const uint64      verificationID = _verificationIDAllocator.allocate();
         HTTPClientRequest request;
@@ -40,7 +40,7 @@ namespace sw
         return count;
     }
 
-    void ProfileAPILoginProvider::update( UnixMilliseconds nowMs )
+    void ProfileAPILoginProvider::update( UnixMilliseconds /*nowMs*/ )
     {
         _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;

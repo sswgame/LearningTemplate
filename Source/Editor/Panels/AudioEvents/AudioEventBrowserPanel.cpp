@@ -381,7 +381,6 @@ namespace sw::editor
         engine.getInstanceStatuses( _listInstanceStatus );
         const AudioEngineStats stats = engine.getStats();
 
-        const float32 dpi = EditorThemeUtil::getDpiScale();
         ImGui::BeginChild( "##AudioEventList", measureExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
         drawEventList();
         ImGui::EndChild();

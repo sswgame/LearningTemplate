@@ -346,11 +346,11 @@ namespace sw
         // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(창이 없는 호스트는 `initialize` 가 이 함수를 부르지 않는다 — UI 가 없다).
         if ( _bootstrap._data._titleScene.isSet() == false )
             return;
-        _returnToTitleRegistration = _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                                                      SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        _returnToTitleRegistration = ui.getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                                             SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
-    void GameInstanceBase::unregisterSessionCommands( UISystem& ui )
+    void GameInstanceBase::unregisterSessionCommands( UISystem& /*ui*/ )
     {
         _returnToTitleRegistration.reset(); // 핫 리로드의 새 인스턴스가 그 사이 교체했으면 그 등록은 지우지 않는다
     }
