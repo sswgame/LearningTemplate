@@ -219,7 +219,11 @@ namespace sw
         bool               isGPUClockReadCheap() const override { return false; }
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
-        VkQueryPool getTimestampPool() const { return _timestampPool; }
+        VkQueryPool getTimestampPool() const
+        {
+            _renderThread.assumeHeld();
+            return _timestampPool;
+        }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
         uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGPUTimestampSlot; }
 
@@ -649,12 +653,12 @@ namespace sw
          * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 한다. 그 슬롯의 GPU 작업이 이미
          *          끝났음이 보장된 유일한 지점이라, 측정하려고 파이프라인을 멈춰 세우지 않는다.
          */
-        VkQueryPool       _timestampPool;  ///< 없으면 VK_NULL_HANDLE 이다(이 헤더는 vulkan.h 를 include 하지 않는다).
-        VkQueryPool       _clockQueryPool; ///< GPU 시계 읽기(`readGPUClockNanos`)용 슬롯 하나다. 처음 읽을 때 만든다.
-        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
+        VkQueryPool _timestampPool SW_GUARDED_BY( _renderThread ); ///< 없으면 VK_NULL_HANDLE 이다(이 헤더는 vulkan.h 를 include 하지 않는다).
+        VkQueryPool                _clockQueryPool;                ///< GPU 시계 읽기(`readGPUClockNanos`)용 슬롯 하나다. 처음 읽을 때 만든다.
+        RHITimestampFrame          _timestampFrame;                ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
-        vector<VkCommandBuffer> _listCommandBuffer;
-        vector<VkFence>         _listInFlightFence;
+        vector<VkCommandBuffer>            _listCommandBuffer;
+        vector<VkFence> _listInFlightFence SW_GUARDED_BY( _renderThread );
         /// @brief 스왑체인 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 인플라이트 펜스입니다(소유하지 않는 사본).
         vector<VkFence> _listImagesInFlight;
         /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
@@ -688,8 +692,8 @@ namespace sw
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
         uint8         _bFrameAcquireWaitPending;
-        atomic<uint8> _bTimestampEnabled;                                       ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
-        uint8         _arrTimestampSubmitted[constant::kMaxFrameCountInFlight]; ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        atomic<uint8> _bTimestampEnabled;                                                                      ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        uint8         _arrTimestampSubmitted[constant::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 
         VkSampler _defaultSampler;
 
@@ -735,12 +739,12 @@ namespace sw
         /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음입니다. beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋합니다.
         VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::kMaxFrameCountInFlight];
         /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같으며(재사용 풀에 남고 shutdown 에서 파괴됩니다).
-        vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet;
-        VkImage                                     _bindlessDummyImage;
-        VkImageView                                 _bindlessDummyView;
-        VkDeviceMemory                              _bindlessDummyMemory;
-        VkBuffer                                    _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
-        VkDeviceMemory                              _dummyUBOMemory;
+        vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet SW_GUARDED_BY( _cmdListPoolMutex );
+        VkImage                                                                   _bindlessDummyImage;
+        VkImageView                                                               _bindlessDummyView;
+        VkDeviceMemory                                                            _bindlessDummyMemory;
+        VkBuffer                                                                  _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
+        VkDeviceMemory                                                            _dummyUBOMemory;
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;

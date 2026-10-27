@@ -61,6 +61,7 @@ namespace sw
 
     void D3D12RHISwapChain::shutdown()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         releaseBackBuffers();
         _swapChain.Reset();
         _pHWnd           = nullptr;
@@ -72,6 +73,7 @@ namespace sw
 
     void D3D12RHISwapChain::createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRtvHeap, uint32 rtvDescriptorSize )
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         const bool bCannotCreateBackBuffers = _swapChain == nullptr || pDevice == nullptr || pRtvHeap == nullptr;
         if ( bCannotCreateBackBuffers )
             return;
@@ -97,6 +99,7 @@ namespace sw
 
     void D3D12RHISwapChain::releaseBackBuffers()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         for ( Microsoft::WRL::ComPtr<ID3D12Resource>& backBuffer : _listBackBuffer )
         {
             backBuffer.Reset();
@@ -126,6 +129,7 @@ namespace sw
 
     void D3D12RHISwapChain::acquireNextImage()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _swapChain == nullptr )
             return;
         _backBufferIndex = _swapChain->GetCurrentBackBufferIndex();
@@ -141,6 +145,7 @@ namespace sw
 
     void D3D12RHISwapChain::transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter )
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( pCmdList == nullptr || isBackBufferReady() == false )
             return;
 
@@ -177,6 +182,7 @@ namespace sw
 
     ID3D12Resource* D3D12RHISwapChain::getCurrentBackBuffer() const
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( isBackBufferReady() == false )
             return nullptr;
         return _listBackBuffer[_backBufferIndex].Get();
@@ -184,6 +190,7 @@ namespace sw
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHISwapChain::getCurrentRtv() const
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _backBufferIndex >= _listBackBufferRtv.size() )
             return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
         return _listBackBufferRtv[_backBufferIndex];

@@ -100,6 +100,7 @@ namespace sw
 
     void AudioEngine::shutdown()
     {
+        _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
         if ( _bInitialized.exchange( false, std::memory_order_acq_rel ) == false )
             return;
         {
@@ -702,6 +703,7 @@ namespace sw
 
     void AudioEngine::applyCommands()
     {
+        _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
         {
             ScopedLock<mutex> lock{ _commandMutex };
             _listApplyingCommand.swap( _listPendingCommand );

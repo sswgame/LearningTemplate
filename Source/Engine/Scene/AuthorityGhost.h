@@ -88,16 +88,17 @@ namespace sw
         void startPoller();
         void runPoller();
 
-        mutable mutex                     _mutex;
-        string _latestText                SW_GUARDED_BY( _mutex ); ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
-        string _parsedText                SW_GUARDED_BY( _mutex ); ///< 마지막으로 파싱한 글(게임 스레드)
-        vector<AuthorityPose>             _listServerPose;         ///< 게임 스레드
-        vector<AuthorityDelta> _listDelta SW_GUARDED_BY( _mutex ); ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
-        sw::thread                        _thread;
-        atomic<uint32>                    _bStop;
-        uint8                             _bStarted  : 1;
-        uint8                             _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
-        [[maybe_unused]] uint8            _reserved  : 6;
+        mutable mutex                         _mutex;
+        string _latestText                    SW_GUARDED_BY( _mutex );        ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
+        string _parsedText                    SW_GUARDED_BY( _mutex );        ///< 마지막으로 파싱한 글(게임 스레드)
+        ThreadRole                            _updateThread;                  ///< update 스레드 역할 — 풀어 둔 서버 자세는 update 를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<AuthorityPose> _listServerPose SW_GUARDED_BY( _updateThread ); ///< 게임 스레드
+        vector<AuthorityDelta> _listDelta     SW_GUARDED_BY( _mutex );        ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
+        sw::thread                            _thread;
+        atomic<uint32>                        _bStop;
+        uint8                                 _bStarted  : 1;
+        uint8                                 _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
+        [[maybe_unused]] uint8                _reserved  : 6;
     };
 } // namespace sw
 

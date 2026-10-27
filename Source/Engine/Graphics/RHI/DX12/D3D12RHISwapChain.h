@@ -89,7 +89,11 @@ namespace sw
         bool isValid() const { return _swapChain != nullptr; }
 
         /** @brief 지금 그릴 수 있는 백버퍼가 준비돼 있는지 확인합니다. */
-        bool   isBackBufferReady() const { return _backBufferIndex < _listBackBuffer.size(); }
+        bool isBackBufferReady() const
+        {
+            _renderThread.assumeHeld();
+            return _backBufferIndex < _listBackBuffer.size();
+        }
         uint32 getBufferCount() const { return _bufferCount; }
         /** @brief 백버퍼 포맷입니다. DXGI 는 요청 포맷을 그대로 만듭니다(Vulkan 처럼 협상하지 않습니다). */
         RHIFormat getFormat() const { return _format; }
@@ -105,18 +109,19 @@ namespace sw
         D3D12_RESOURCE_STATES getState() const;
 
     private:
-        Microsoft::WRL::ComPtr<IDXGISwapChain3>        _swapChain;
-        vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer;
-        vector<D3D12_CPU_DESCRIPTOR_HANDLE>            _listBackBufferRtv;
+        Microsoft::WRL::ComPtr<IDXGISwapChain3>                        _swapChain;
+        ThreadRole                                                     _renderThread; ///< 렌더 스레드 역할 — 백 버퍼 목록 · 인덱스는 프레임 진행(렌더 스레드와 그 병렬 기록 태스크)만 만지고 인덱스는 기록 밖(acquireNextImage)에서만 바뀐다(잠금이 아니라 분석용 능력)
+        vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer SW_GUARDED_BY( _renderThread );
+        vector<D3D12_CPU_DESCRIPTOR_HANDLE>                            _listBackBufferRtv;
 
         /// @brief 소유하지 않는 감시자입니다(setBarrierWatcher 참고).
         const IRHIDevice* _pBarrierWatcher{ nullptr };
 
-        HWND   _pHWnd{ nullptr };
-        uint32 _width{ 0 };
-        uint32 _height{ 0 };
-        uint32 _bufferCount{ 2 };
-        uint32 _backBufferIndex{ 0 };
+        HWND                    _pHWnd{ nullptr };
+        uint32                  _width{ 0 };
+        uint32                  _height{ 0 };
+        uint32                  _bufferCount{ 2 };
+        uint32 _backBufferIndex SW_GUARDED_BY( _renderThread ){ 0 };
         /// @brief 백버퍼 포맷입니다(요청값 = 실제값).
         RHIFormat _format{ constant::kBackBufferFormat };
         /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.

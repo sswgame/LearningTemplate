@@ -150,6 +150,7 @@ namespace sw
 
     void CharacterControllerComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
+        _physicsStep.assumeHeld(); // 물리 스텝은 이 컴포넌트마다 한 번에 한 스레드가 돈다
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;

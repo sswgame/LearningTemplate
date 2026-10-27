@@ -27,6 +27,7 @@ namespace sw
 
     void DeferredDelegateQueue::drain()
     {
+        _drainThread.assumeHeld(); // drain 은 한 스레드(게임 스레드)만 부른다
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( _listPending.empty() )

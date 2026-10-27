@@ -326,6 +326,7 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 생성의 역순으로 놓는 해제 목록(GPU 유휴 대기 뒤)이라 나누지 않는다.
     void VulkanRHIDevice::shutdownInternal()
     {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _device )
         {
             // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `_releaseQueue.flushAll` 보다 먼저 놓는다.
@@ -412,12 +413,17 @@ namespace sw
             {
                 destroyDescriptorPoolSet( poolSet );
             }
-            for ( unique_ptr<VulkanDescriptorPoolSet>& pPoolSet : _listCmdListDescriptorPoolSet )
+            // 목록은 잠금 아래에서 꺼내고 장치 호출(풀 부수기)은 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).
+            vector<unique_ptr<VulkanDescriptorPoolSet>> listPoolSet;
+            {
+                ScopedLock<mutex> lock{ _cmdListPoolMutex };
+                listPoolSet.swap( _listCmdListDescriptorPoolSet );
+            }
+            for ( unique_ptr<VulkanDescriptorPoolSet>& pPoolSet : listPoolSet )
             {
                 if ( pPoolSet != nullptr )
                     destroyDescriptorPoolSet( *pPoolSet );
             }
-            _listCmdListDescriptorPoolSet.clear();
             if ( _dummyUBO )
             {
                 vkDestroyBuffer( _device, _dummyUBO, nullptr );
