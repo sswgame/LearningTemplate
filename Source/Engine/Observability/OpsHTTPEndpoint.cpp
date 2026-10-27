@@ -78,7 +78,7 @@ namespace sw
         : _listConnection{}
         , _settings{}
         , _mutex{}
-        , _pTransport{ nullptr }
+        , _pTransport{}
         , _pMetricRegistry{}
         , _pHealthRegistry{}
     {
@@ -86,7 +86,7 @@ namespace sw
 
     OpsHTTPEndpoint::~OpsHTTPEndpoint()
     {
-        SW_ASSERT( _pTransport == nullptr );
+        SW_ASSERT( _pTransport.get() == nullptr );
     }
 
     bool OpsHTTPEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const OpsHTTPEndpointConfig& settings,
@@ -103,7 +103,7 @@ namespace sw
             shutdown();
             return false;
         }
-        _pTransport = pTransport;
+        _pTransport.set( pTransport );
         if ( _pTransport->listen( settings._bindAddress ) == false )
         {
             SW_LOG_ERROR( "Ops HTTP endpoint could not listen on %#", settings._bindAddress.toString().c_str() );
@@ -118,9 +118,9 @@ namespace sw
 
     void OpsHTTPEndpoint::shutdown()
     {
-        if ( _pTransport != nullptr )
+        if ( _pTransport.get() != nullptr )
             _pTransport->shutdown();
-        _pTransport = nullptr;
+        _pTransport.reset();
         // 설정 · 레지스트리는 initialize 가 한 번 정한다 — 다시 시작할 수 있게 전송을 멈춘 뒤 비운다.
         _settings.reset();
         _pMetricRegistry.reset();
@@ -131,7 +131,7 @@ namespace sw
 
     uint16 OpsHTTPEndpoint::getListenPort() const
     {
-        return _pTransport != nullptr ? _pTransport->getListenPort() : 0;
+        return _pTransport.get() != nullptr ? _pTransport->getListenPort() : 0;
     }
 
     int32 OpsHTTPEndpoint::makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,

@@ -3,6 +3,7 @@
  * @brief ImGui Direct3D 11 렌더러 백엔드
  */
 #pragma once
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -59,7 +60,7 @@ namespace sw::editor
 
     private:
 #if defined( SW_PLATFORM_WINDOWS )
-        IRHIDevice*                                              _pRHIDevice{ nullptr };
+        OnceInit<IRHIDevice*>                                    _pRHIDevice;
         vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrv;
         ImGuiViewportSizeGuard                                   _viewportSizeGuard; ///< DXGI 창 크기 보정 — 초기화 성공 뒤 걸고 종료에서 푼다
 #endif

@@ -45,8 +45,8 @@ namespace sw::editor
     bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE( "Initialize start." );
-        _pRHIDevice = pRHIDevice;
-        if ( _pRHIDevice == nullptr )
+        _pRHIDevice.set( pRHIDevice );
+        if ( _pRHIDevice.get() == nullptr )
             return false;
 
         // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — D3D12 디바이스인지와 값이 있는지를 `queryNativeHandles` 한 곳에서 확인한다.
@@ -104,7 +104,7 @@ namespace sw::editor
     void ImGuiDX12RendererBackend::shutdown()
     {
         // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 반환을 모두 끝낸 뒤에 힙을 놓는다(GPU 가 아직 읽는 힙을 놓지 않는다).
-        flushDrawReleases( _pRHIDevice );
+        flushDrawReleases( _pRHIDevice.get() );
         _viewportSizeGuard.clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX12_Shutdown();
@@ -115,7 +115,7 @@ namespace sw::editor
             _listFreeDescriptor.clear();
         }
         _descriptorSize.reset();
-        _pRHIDevice = nullptr;
+        _pRHIDevice.reset();
     }
 
     void ImGuiDX12RendererBackend::newFrame()
@@ -166,7 +166,7 @@ namespace sw::editor
 
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle texture )
     {
-        const bool bCannotRegisterTexture = texture == 0 || _d3d12SrvHeap.get() == nullptr || _pRHIDevice == nullptr;
+        const bool bCannotRegisterTexture = texture == 0 || _d3d12SrvHeap.get() == nullptr || _pRHIDevice.get() == nullptr;
         if ( bCannotRegisterTexture )
             return nullptr;
 

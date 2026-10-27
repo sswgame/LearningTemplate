@@ -188,10 +188,10 @@ namespace sw::editor
 
     bool ImGuiOpenGLRendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
-        _pRHIDevice = ( pRHIDevice != nullptr && pRHIDevice->getBackendType() == RHIBackend::OpenGL ) ? pRHIDevice : nullptr;
+        _pRHIDevice.set( ( pRHIDevice != nullptr && pRHIDevice->getBackendType() == RHIBackend::OpenGL ) ? pRHIDevice : nullptr );
 
         // GL 디바이스는 늘 컨텍스트 스레드 바인딩 능력을 가진다. 디바이스가 없으면 붙일 것도 없다.
-        IRHIContextThreadBinding* pContextBinding = _pRHIDevice != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
+        IRHIContextThreadBinding* pContextBinding = _pRHIDevice.get() != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
         if ( pContextBinding != nullptr )
             (void)pContextBinding->bindGraphicsContext(); // 실패 로그는 디바이스가 남긴다
         const bool bResult = ImGui_ImplOpenGL3_Init( "#version 460" );
@@ -200,10 +200,10 @@ namespace sw::editor
 
 #if defined( SW_PLATFORM_WINDOWS )
         ImGuiIO& io = ImGui::GetIO();
-        // **검증을 거친 `_pRHIDevice` 를 쓴다.** 매개변수 `pRHIDevice` 를 그대로 역참조하면 `initialize( nullptr )` 에서
+        // **검증을 거친 `_pRHIDevice.get()` 를 쓴다.** 매개변수 `pRHIDevice` 를 그대로 역참조하면 `initialize( nullptr )` 에서
         // 널 역참조다 — 바로 위에서 널 · OpenGL 이 아닌 디바이스를 걸러 멤버를 nullptr 로 만들어 둔다. 멤버를 쓰면
         // "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 함께 맞는다(아래 Linux 분기와 같다).
-        if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
+        if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice.get() != nullptr )
         {
             // HGLRC 는 렌더 스레드가 보조 뷰포트를 그린 뒤 메인 창으로 되돌아갈 때(wglMakeCurrent) 쓰는 이름이다. 그 훅은 렌더 스레드에서만 돈다.
             // 종류 확인은 `withNativeContext` 가 하고, 값 확인은 지역 변수에서 한 뒤 정적 칸에 한 번만 쓴다.
@@ -224,7 +224,7 @@ namespace sw::editor
         }
 #elif defined( SW_PLATFORM_LINUX )
         ImGuiIO& io = ImGui::GetIO();
-        if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
+        if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice.get() != nullptr )
         {
             // GLX 디바이스의 디바이스 칸은 컨텍스트를 만든 Display* 다(GlxPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
             // 종류 확인과 값 확인은 `queryNativeHandles` 한 곳에서 한다(디바이스 칸이 비면 false).
@@ -255,15 +255,15 @@ namespace sw::editor
     void ImGuiOpenGLRendererBackend::shutdown()
     {
         // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
-        flushDrawReleases( _pRHIDevice );
-        IRHIContextThreadBinding* pContextBinding = _pRHIDevice != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
+        flushDrawReleases( _pRHIDevice.get() );
+        IRHIContextThreadBinding* pContextBinding = _pRHIDevice.get() != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
         if ( pContextBinding != nullptr )
             (void)pContextBinding->bindGraphicsContext(); // 실패 로그는 디바이스가 남긴다
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplOpenGL3_Shutdown();
         if ( pContextBinding != nullptr )
             pContextBinding->unbindGraphicsContext();
-        _pRHIDevice = nullptr;
+        _pRHIDevice.reset();
     }
 
     void ImGuiOpenGLRendererBackend::newFrame()
@@ -282,13 +282,13 @@ namespace sw::editor
     void ImGuiOpenGLRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
         (void)pRHIDevice;
-        if ( pDrawData != nullptr && _pRHIDevice != nullptr )
+        if ( pDrawData != nullptr && _pRHIDevice.get() != nullptr )
             ImGui_ImplOpenGL3_RenderDrawData( pDrawData );
     }
 
     void* ImGuiOpenGLRendererBackend::registerTexture( RHITextureHandle texture )
     {
-        if ( texture == 0 || _pRHIDevice == nullptr )
+        if ( texture == 0 || _pRHIDevice.get() == nullptr )
             return nullptr;
 
         // imgui_impl_opengl3 는 ImTextureID 를 GLuint 로 취급한다. GL 디바이스의 네이티브 텍스처 포인터가 그 이름을 포인터 폭으로 넓힌 값이다.

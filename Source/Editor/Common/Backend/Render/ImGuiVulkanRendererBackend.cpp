@@ -197,9 +197,9 @@ namespace sw::editor
         if ( pRHIDevice->queryNativeHandles( RHIBackend::Vulkan, vkNative ) == false )
             return false;
 
-        _pRHIDevice = pRHIDevice;
+        _pRHIDevice.set( pRHIDevice );
         _pDevice.set( static_cast<VkDevice>( vkNative._pDevice ) );
-        _pQueueMutex = static_cast<mutex*>( vkNative._pQueueMutex );
+        _pQueueMutex.set( static_cast<mutex*>( vkNative._pQueueMutex ) );
 
         // 장치 · 풀 · 샘플러는 여기서 한 번 정하고 shutdown 까지 바뀌지 않는다(텍스처 등록 · 미뤄 둔 해제가 잠금 없이 읽는다). 실패해도 shutdown 이 정리한다.
         VkDescriptorPool pImguiDescriptorPool = VK_NULL_HANDLE;
@@ -254,7 +254,7 @@ namespace sw::editor
     void ImGuiVulkanRendererBackend::shutdown()
     {
         // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 해제를 모두 끝낸 뒤에 풀을 부순다.
-        flushDrawReleases( _pRHIDevice );
+        flushDrawReleases( _pRHIDevice.get() );
 
         for ( pair<void* const, RHITextureHandle>& pair : _mapTextureID )
         {
@@ -266,7 +266,7 @@ namespace sw::editor
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
         {
             // 보조 뷰포트 창을 부수며 vkDeviceWaitIdle 을 부른다 — 큐 잠금 안에서.
-            const ScopedOptionalLock<mutex> queueLock{ _pQueueMutex };
+            const ScopedOptionalLock<mutex> queueLock{ _pQueueMutex.get() };
             ImGui_ImplVulkan_Shutdown();
         }
         ImGuiVulkanRendererBackendInternal::clearVulkanViewportGuards( _viewportGuard );
@@ -284,8 +284,8 @@ namespace sw::editor
         }
 
         _pDevice.reset();
-        _pRHIDevice  = nullptr;
-        _pQueueMutex = nullptr;
+        _pRHIDevice.reset();
+        _pQueueMutex.reset();
     }
 
     void ImGuiVulkanRendererBackend::newFrame()
@@ -298,14 +298,14 @@ namespace sw::editor
     {
         // 업로드는 큐에 제출하고 기다린다(큐 잠금). 글꼴 아틀라스 갱신도 같은 풀에서 세트를 잡고 놓는다(풀 잠금). 순서는 큐 → 풀이다 —
         // 렌더 스레드가 큐 잠금 안에서 미뤄 둔 해제(풀 잠금)를 부를 수 있다.
-        const ScopedOptionalLock<mutex> queueLock{ _pQueueMutex };
+        const ScopedOptionalLock<mutex> queueLock{ _pQueueMutex.get() };
         ScopedLock<mutex>               lock{ _descriptorPoolMutex };
         updatePendingTextures( &ImGui_ImplVulkan_UpdateTexture );
     }
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        const bool bNothingToRender = pDrawData == nullptr || pRHIDevice == nullptr || _pRHIDevice == nullptr;
+        const bool bNothingToRender = pDrawData == nullptr || pRHIDevice == nullptr || _pRHIDevice.get() == nullptr;
         if ( bNothingToRender )
             return;
         // 프레임 스트림의 열린 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 버퍼라 콜백 밖으로 들고 나가지 않는다.
@@ -320,7 +320,7 @@ namespace sw::editor
 
     void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )
     {
-        const bool bCannotRegisterTexture = texture == 0 || _pRHIDevice == nullptr || _pSampler.get() == nullptr;
+        const bool bCannotRegisterTexture = texture == 0 || _pRHIDevice.get() == nullptr || _pSampler.get() == nullptr;
         if ( bCannotRegisterTexture )
             return nullptr;
 
