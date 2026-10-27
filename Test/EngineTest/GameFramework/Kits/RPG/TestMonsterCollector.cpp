@@ -211,8 +211,11 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     GameRandom            randomB( 77 );
     const MonsterInstance pikachuA = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomA );
     const MonsterInstance pikachuB = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomB );
-    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 0, randomA )._speciesID.empty() ); // 범위 밖 레벨은 맞추지 않고 빈 개체로 거절한다
-    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), MonsterCollectorCatalog::kMaxLevel + 1, randomA )._speciesID.empty() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an out-of-range level is refused with a reason" );                                                // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 0, randomA )._speciesID.empty() ); // 범위 밖 레벨은 맞추지 않고 빈 개체로 거절한다
+        SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), MonsterCollectorCatalog::kMaxLevel + 1, randomA )._speciesID.empty() );
+    }
     bool bSameIv = true;
     for ( int32 index = 0; index < kMonsterStatCount; ++index )
     {
@@ -538,7 +541,10 @@ SW_TEST_CASE( MonsterCollectorTest, CaptureShakesPartyBoxAndEscape )
 
     MonsterStorage storage;
     SW_ASSERT_TRUE( storage.initialize( 2 ) );
-    SW_EXPECT_FALSE( storage.initialize( -1 ) ); // 음수 상자 크기는 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a negative box capacity is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( storage.initialize( -1 ) );                                   // 음수 상자 크기는 맞추지 않고 거절한다
+    }
     for ( int32 index = 0; index < MonsterStorage::kPartySize; ++index )
     {
         SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Party );

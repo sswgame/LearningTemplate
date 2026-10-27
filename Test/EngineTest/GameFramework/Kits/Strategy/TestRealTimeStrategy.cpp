@@ -161,14 +161,17 @@ SW_TEST_CASE( RealTimeStrategyTest, WorldRefusesOutOfRangeSettingsAndSizesInstea
     RTSWorld world;
     SW_ASSERT_TRUE( world.initialize( &catalog, 16, 16, RTSSettings{} ) );
 
-    RTSSettings zeroBucket;
-    zeroBucket._bucketSize = 0;
-    SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroBucket ) );
-    RTSSettings zeroStep;
-    zeroStep._fixedStep = 0.0f;
-    SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroStep ) );
-    SW_EXPECT_FALSE( world.initialize( &catalog, 0, 16, RTSSettings{} ) );
-    SW_EXPECT_FALSE( world.initialize( &catalog, 16, -3, RTSSettings{} ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range settings and sizes are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        RTSSettings zeroBucket;
+        zeroBucket._bucketSize = 0;
+        SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroBucket ) );
+        RTSSettings zeroStep;
+        zeroStep._fixedStep = 0.0f;
+        SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroStep ) );
+        SW_EXPECT_FALSE( world.initialize( &catalog, 0, 16, RTSSettings{} ) );
+        SW_EXPECT_FALSE( world.initialize( &catalog, 16, -3, RTSSettings{} ) );
+    }
 }
 
 SW_TEST_CASE( RealTimeStrategyTest, WorkersGatherReturnCargoAndMoveOnFromDepletedPatches )

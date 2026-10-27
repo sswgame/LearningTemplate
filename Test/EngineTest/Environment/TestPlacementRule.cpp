@@ -263,7 +263,10 @@ SW_TEST_CASE( PlacementRuleTest, ScatterOnTwoDimensionalTiles )
     }
     PlacementTileSurface surface;
     SW_ASSERT_TRUE( surface.setTiles( 8, 4, 2.0f, listTile ) );
-    SW_EXPECT_FALSE( surface.setTiles( 8, 5, 2.0f, listTile ) ); // 타일 수가 맞지 않으면 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a tile count that does not match the entries is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( surface.setTiles( 8, 5, 2.0f, listTile ) );                                        // 타일 수가 맞지 않으면 거절한다
+    }
 
     PlacementRule rule   = PlacementRuleTestUtil::makeRule();
     rule._density        = 3.0f;

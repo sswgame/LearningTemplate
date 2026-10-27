@@ -249,8 +249,11 @@ SW_TEST_CASE( CreatureLifeTest, VisitConditionMatchesThePhaseWeatherTable )
 SW_TEST_CASE( CreatureLifeTest, TownRefusesASizeBelowOneInsteadOfClampingIt )
 {
     CreatureTown town;
-    SW_EXPECT_FALSE( town.initialize( nullptr, SessionStateRefs{}, 0, 6, CreatureTownSettings{} ) );
-    SW_EXPECT_FALSE( town.initialize( nullptr, SessionStateRefs{}, 6, -1, CreatureTownSettings{} ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a town size below one is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( town.initialize( nullptr, SessionStateRefs{}, 0, 6, CreatureTownSettings{} ) );
+        SW_EXPECT_FALSE( town.initialize( nullptr, SessionStateRefs{}, 6, -1, CreatureTownSettings{} ) );
+    }
     SW_EXPECT_TRUE( town.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} ) );
 }
 

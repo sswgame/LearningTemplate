@@ -26,9 +26,12 @@ namespace
     {
         sw::GameObject*    pObject = manager.createGameObject( sw::hashed_string( pName ) );
         sw::MeshComponent* pMesh   = pObject->addComponent<sw::MeshComponent>();
-        pMesh->setMeshID( meshPath );
-        if ( materialPath.empty() == false )
-            pMesh->setMaterialPath( materialPath );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a mesh or material path with no file behind it is reported when it is set" ); // 이 목록 테스트의 경로는 파일이 없는 가짜라 없는 에셋을 알리는 로그가 남는다
+            pMesh->setMeshID( meshPath );
+            if ( materialPath.empty() == false )
+                pMesh->setMaterialPath( materialPath );
+        }
         return pObject;
     }
 } // namespace
@@ -115,7 +118,10 @@ SW_TEST_CASE( ScenePreloadListTest, SceneCookWritesTheListBesideTheScene )
     const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
     const sw::CookStore           store( test::makeTempDirectory( "preloadlist_cook_record" ), test::makeTempDirectory( "preloadlist_cook_ddc" ) );
     uint32                        failedCount = 0;
-    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) ); // 반환은 씬 수다 — 목록은 세지 않는다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the cook loads a scene whose mesh and material files do not exist and reports each" ); // 가짜 경로를 읽는 쿠킹이 없는 에셋을 알리는 로그를 남긴다
+        SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );             // 반환은 씬 수다 — 목록은 세지 않는다
+    }
     SW_EXPECT_EQUAL( 0u, failedCount );
 
     const sw::string listPath = sw::FileUtil::joinPath( cooked, "game/demo/maps/level.preload.json" );

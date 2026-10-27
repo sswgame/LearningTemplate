@@ -345,7 +345,10 @@ SW_TEST_CASE( ShaderCookerTest, SourceFingerprintFollowsOnlyTheListedHeaders )
 
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( headerB ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeSourceFingerprint( sourcePath, listAB ) ); // 헤더를 읽지 못하면 같은 지문이 나올 수 없다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a listed header that cannot be read is reported and the fingerprint is 0" ); // 없는 헤더를 읽으려는 오류가 이 확인이 보려는 것이다
+        SW_EXPECT_EQUAL( uint64( 0 ), sw::ShaderCooker::computeSourceFingerprint( sourcePath, listAB ) );      // 헤더를 읽지 못하면 같은 지문이 나올 수 없다
+    }
 }
 
 /**
@@ -363,7 +366,10 @@ SW_TEST_CASE( ShaderCookerTest, IncludeRecordIsCurrentOnlyWhileEveryHeaderIsUnch
     sw::ShaderCooker::invalidateSharedHeaderCache();
 
     sw::vector<sw::string> listRead;
-    SW_EXPECT_FALSE( sw::ShaderCooker::readIncludeRecord( recordPath, listRead ) ); // 기록이 없으면 맞지 않는다(캐시 미스)
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a missing include record is reported as unreadable" ); // 없는 기록을 읽으려는 오류가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( sw::ShaderCooker::readIncludeRecord( recordPath, listRead ) );  // 기록이 없으면 맞지 않는다(캐시 미스)
+    }
 
     SW_ASSERT_TRUE( sw::ShaderCooker::writeIncludeRecord( recordPath, sw::vector<sw::string>{ headerA, headerB } ) );
     SW_EXPECT_TRUE( sw::ShaderCooker::readIncludeRecord( recordPath, listRead ) );
@@ -380,7 +386,10 @@ SW_TEST_CASE( ShaderCookerTest, IncludeRecordIsCurrentOnlyWhileEveryHeaderIsUnch
 
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( headerA ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    SW_EXPECT_FALSE( sw::ShaderCooker::readIncludeRecord( recordPath, listRead ) ); // 헤더가 사라지면 맞지 않는다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a recorded header that was removed is reported as unreadable" ); // 사라진 헤더를 읽으려는 오류가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( sw::ShaderCooker::readIncludeRecord( recordPath, listRead ) );            // 헤더가 사라지면 맞지 않는다
+    }
 
     // 헤더를 열지 않은 셰이더의 기록은 비어 있고, 그것은 맞는 기록이다(캐시 적중).
     SW_ASSERT_TRUE( sw::ShaderCooker::writeIncludeRecord( recordPath, sw::vector<sw::string>{} ) );
@@ -958,7 +967,10 @@ SW_TEST_CASE( ShaderCookStampTest, OnlyHeadersTheShaderOpenedMakeItStale )
     // 소스가 연 헤더가 사라지면 낡음이다(읽지 못하는 헤더를 최신으로 보지 않는다).
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( headerB ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
-    SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, priority, binDir, usesBPath ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a header the shader opened that is gone is reported as unreadable" ); // 사라진 헤더를 읽으려는 오류가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, priority, binDir, usesBPath ) );
+    }
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, priority, binDir, usesAPath ) );
     SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/stampheaderb.hlsli", "#define SW_STAMP_B 1\n" ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();

@@ -320,18 +320,21 @@ SW_TEST_CASE( ActionAdventureTest, VitalsRefuseOutOfRangeSettingsInsteadOfClampi
     valid._startHeartCount = 5;
     SW_ASSERT_TRUE( vitals.initialize( valid ) );
 
-    AdventureVitalsSettings noHearts;
-    noHearts._startHeartCount = 0;
-    SW_EXPECT_FALSE( vitals.initialize( noHearts ) );
-    AdventureVitalsSettings startAboveMax;
-    startAboveMax._startHeartCount = 30;
-    SW_EXPECT_FALSE( vitals.initialize( startAboveMax ) );
-    AdventureVitalsSettings recoverAboveStamina;
-    recoverAboveStamina._staminaRecoverLevel = 150.0f;
-    SW_EXPECT_FALSE( vitals.initialize( recoverAboveStamina ) );
-    AdventureVitalsSettings noPieces;
-    noPieces._piecesPerHeart = 0;
-    SW_EXPECT_FALSE( vitals.initialize( noPieces ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range vitals settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        AdventureVitalsSettings noHearts;
+        noHearts._startHeartCount = 0;
+        SW_EXPECT_FALSE( vitals.initialize( noHearts ) );
+        AdventureVitalsSettings startAboveMax;
+        startAboveMax._startHeartCount = 30;
+        SW_EXPECT_FALSE( vitals.initialize( startAboveMax ) );
+        AdventureVitalsSettings recoverAboveStamina;
+        recoverAboveStamina._staminaRecoverLevel = 150.0f;
+        SW_EXPECT_FALSE( vitals.initialize( recoverAboveStamina ) );
+        AdventureVitalsSettings noPieces;
+        noPieces._piecesPerHeart = 0;
+        SW_EXPECT_FALSE( vitals.initialize( noPieces ) );
+    }
 
     SW_EXPECT_EQUAL( 5, vitals.getHeartCount() );
     SW_EXPECT_EQUAL( 20, vitals.getMaxHealthQuarters() );
@@ -345,17 +348,20 @@ SW_TEST_CASE( ActionAdventureTest, ElementGridRefusesOutOfRangeSettingsInsteadOf
     AdventureElementGrid grid;
     SW_ASSERT_TRUE( grid.initialize( 4, 3, AdventureElementSettings{} ) );
 
-    AdventureElementSettings zeroBurn;
-    zeroBurn._grassBurnSteps = 0;
-    SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroBurn ) );
-    AdventureElementSettings tooLongCharge;
-    tooLongCharge._chargeSteps = 256;
-    SW_EXPECT_FALSE( grid.initialize( 4, 3, tooLongCharge ) );
-    AdventureElementSettings zeroStep;
-    zeroStep._stepTime = 0.0f;
-    SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroStep ) );
-    SW_EXPECT_FALSE( grid.initialize( 0, 3, AdventureElementSettings{} ) );
-    SW_EXPECT_FALSE( grid.initialize( 4, -1, AdventureElementSettings{} ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range settings and sizes are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        AdventureElementSettings zeroBurn;
+        zeroBurn._grassBurnSteps = 0;
+        SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroBurn ) );
+        AdventureElementSettings tooLongCharge;
+        tooLongCharge._chargeSteps = 256;
+        SW_EXPECT_FALSE( grid.initialize( 4, 3, tooLongCharge ) );
+        AdventureElementSettings zeroStep;
+        zeroStep._stepTime = 0.0f;
+        SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroStep ) );
+        SW_EXPECT_FALSE( grid.initialize( 0, 3, AdventureElementSettings{} ) );
+        SW_EXPECT_FALSE( grid.initialize( 4, -1, AdventureElementSettings{} ) );
+    }
 }
 
 /**

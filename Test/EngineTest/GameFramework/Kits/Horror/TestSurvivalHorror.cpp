@@ -444,7 +444,10 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     listInvestigator[1]._strength = 4;
     HorrorEncounter sure;
     SW_ASSERT_TRUE( sure.initialize( *pZombie, listInvestigator, 5u, 1 ) );
-    SW_EXPECT_FALSE( sure.initialize( *pZombie, listInvestigator, 5u, 7 ) ); // 성공 눈이 1 ~ 6 밖이면 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a success face outside 1 to 6 is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( sure.initialize( *pZombie, listInvestigator, 5u, 7 ) );             // 성공 눈이 1 ~ 6 밖이면 맞추지 않고 거절한다
+    }
     for ( int32 guard = 0; guard < 10 && sure.getState() == HorrorEncounterState::Ongoing; ++guard )
     {
         (void)sure.playNextTurn();

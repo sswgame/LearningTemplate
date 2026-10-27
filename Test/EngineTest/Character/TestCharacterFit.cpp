@@ -396,7 +396,10 @@ SW_TEST_CASE( FitSolverTest, OperatorIsChosenByNameFromData )
     using Internal = CharacterFitTestInternal;
     FitSolver solver;
     SW_ASSERT_TRUE( solver.getOperatorRegistry().registerOperator( make_unique<Internal::InflateOperator>() ) );
-    SW_EXPECT_FALSE( solver.getOperatorRegistry().registerOperator( make_unique<Internal::InflateOperator>() ) ); // 같은 이름은 한 번
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "registering the same operator name twice keeps the first and says so" );            // 겹침을 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( solver.getOperatorRegistry().registerOperator( make_unique<Internal::InflateOperator>() ) ); // 같은 이름은 한 번
+    }
 
     FitTables tables;
     SW_ASSERT_TRUE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Rigid' operator='Inflate' args='amount=0.01'/>", tables ) );

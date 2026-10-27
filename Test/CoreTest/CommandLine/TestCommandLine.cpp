@@ -428,7 +428,10 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
         const_cast<utf8*>( "-gv_startupScene" ), //
         const_cast<utf8*>( "-gv_lightRadius" ),  //
     };
-    cmdManager.parse( 4, argv );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "Valueless non-boolean arguments are warned about and ignored" ); // 값 없는 인자는 경고하고 무시한다
+        cmdManager.parse( 4, argv );
+    }
 
     // 값이 없었으므로 **적히지 않은 것으로** 남고, 기본값이 그대로 읽힌다.
     int32 meshCount{ -1 };

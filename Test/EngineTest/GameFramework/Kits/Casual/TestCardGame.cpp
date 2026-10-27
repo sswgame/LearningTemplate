@@ -295,15 +295,18 @@ SW_TEST_CASE( CardGameTest, PokerTableRefusesOutOfRangeSettingsInsteadOfClamping
 {
     PokerTable    table;
     PokerSettings settings;
-    settings._smallBlind = 0;
-    SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range blinds and a negative stack are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        settings._smallBlind = 0;
+        SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
 
-    settings._smallBlind = 10;
-    settings._bigBlind   = 5; // 큰 블라인드가 작은 블라인드보다 작다
-    SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
+        settings._smallBlind = 10;
+        settings._bigBlind   = 5; // 큰 블라인드가 작은 블라인드보다 작다
+        SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
 
-    settings._bigBlind = 20;
-    SW_EXPECT_FALSE( table.initialize( settings, { 100, -1 } ) ); // 음수 칩
+        settings._bigBlind = 20;
+        SW_EXPECT_FALSE( table.initialize( settings, { 100, -1 } ) ); // 음수 칩
+    }
     SW_EXPECT_TRUE( table.initialize( settings, { 100, 100 } ) );
 }
 
@@ -501,32 +504,41 @@ SW_TEST_CASE( CardGameTest, MatgoRefusesOutOfRangeSettingsAndLayoutsInsteadOfCla
 {
     MatgoGame     game;
     MatgoSettings settings = MatgoSettings::makeMatgo();
-    settings._playerCount  = 1; // 예전에는 조용히 1 로 두었다
-    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        settings._playerCount = 1;                                                    // 예전에는 조용히 1 로 두었다
+        SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
 
-    settings           = MatgoSettings::makeGoStop();
-    settings._handSize = 15; // 3 x 15 + 6 >= 48
-    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+        settings           = MatgoSettings::makeGoStop();
+        settings._handSize = 15; // 3 x 15 + 6 >= 48
+        SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
 
-    settings              = MatgoSettings::makeMatgo();
-    settings._goThreshold = 0;
-    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+        settings              = MatgoSettings::makeMatgo();
+        settings._goThreshold = 0;
+        SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+    }
 
     SW_ASSERT_TRUE( game.initialize( MatgoSettings::makeMatgo(), 1 ) );
     SW_EXPECT_EQUAL( game.getPlayerCount(), 2 );
 
     MatgoLayout layout; // 손패 수가 인원과 다르다
     layout._listHand = { CardPile{} };
-    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a layout with the wrong hand count is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    }
     SW_EXPECT_EQUAL( game.getPlayerCount(), 2 ); // 거절하면 상태가 그대로이다
 
-    layout._listHand     = { CardPile{}, CardPile{} };
-    layout._listCaptured = { CardPile{} }; // 먹은 패 더미는 비우거나 인원만큼이어야 한다
-    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a wrong captured pile count and a first player outside the count are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        layout._listHand     = { CardPile{}, CardPile{} };
+        layout._listCaptured = { CardPile{} }; // 먹은 패 더미는 비우거나 인원만큼이어야 한다
+        SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
 
-    layout._listCaptured = {};
-    layout._firstPlayer  = 2; // 인원 밖
-    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+        layout._listCaptured = {};
+        layout._firstPlayer  = 2; // 인원 밖
+        SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    }
     layout._firstPlayer = 1;
     SW_EXPECT_TRUE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
 }
@@ -710,12 +722,15 @@ SW_TEST_CASE( CardGameTest, UnoRefusesOutOfRangeSettingsAndLayoutsInsteadOfClamp
 {
     UnoGame     game;
     UnoSettings settings;
-    settings._playerCount = 1; // 예전에는 조용히 2로 맞췄다
-    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        settings._playerCount = 1;                                                    // 예전에는 조용히 2로 맞췄다
+        SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
 
-    settings._playerCount = 10;
-    settings._handSize    = 11; // 10 x 11 + 1 > 108
-    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+        settings._playerCount = 10;
+        settings._handSize    = 11; // 10 x 11 + 1 > 108
+        SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+    }
 
     settings._handSize = 7;
     SW_EXPECT_TRUE( game.initialize( settings, 1 ) );
@@ -723,12 +738,18 @@ SW_TEST_CASE( CardGameTest, UnoRefusesOutOfRangeSettingsAndLayoutsInsteadOfClamp
 
     UnoLayout layout; // 손패 수가 인원과 다르다
     layout._listHand = { CardPile{}, CardPile{} };
-    SW_EXPECT_FALSE( game.initializeFromLayout( UnoSettings{}, layout ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a layout with the wrong hand count is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( game.initializeFromLayout( UnoSettings{}, layout ) );
+    }
     SW_EXPECT_EQUAL( game.getPlayerCount(), 10 ); // 거절하면 상태가 그대로이다
 
     layout._listHand    = { CardPile{}, CardPile{}, CardPile{}, CardPile{} };
     layout._firstPlayer = 4; // 인원 밖
-    SW_EXPECT_FALSE( game.initializeFromLayout( UnoSettings{}, layout ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a first player outside the player count is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( game.initializeFromLayout( UnoSettings{}, layout ) );
+    }
     layout._firstPlayer = 3;
     SW_EXPECT_TRUE( game.initializeFromLayout( UnoSettings{}, layout ) );
 }
@@ -834,6 +855,7 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
 
 SW_TEST_CASE( CardGameTest, UnoAndMatgoRefuseOutOfRangeSettingsInsteadOfClamping )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "out-of-range settings and layouts are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
     UnoSettings unoTooFew;
     unoTooFew._playerCount = 1;
     UnoGame uno;

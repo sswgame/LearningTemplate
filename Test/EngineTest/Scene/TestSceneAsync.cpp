@@ -621,9 +621,12 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
-    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
-    // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
-    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a scene built before its module's type arrives keeps the component as a missing one and says so" ); // 모르는 타입을 알리는 로그가 이 확인이 보려는 것이다
+        SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
+        // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    }
     sw::engine::getSubsystem<sw::TypeRegistry>().registerPendingTypes( "LateModule", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );
@@ -653,12 +656,17 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
-    sw::TaskFuture<sw::Scene*> first  = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
-    sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) ); // 같은 씬이 대기열로
-    SW_ASSERT_TRUE( first.isValid() );
-    SW_ASSERT_TRUE( second.isValid() );
-    // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
-    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::TaskFuture<sw::Scene*> first;
+    sw::TaskFuture<sw::Scene*> second;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a scene built before its module's type arrives keeps the component as a missing one and says so" ); // 모르는 타입을 알리는 로그가 이 확인이 보려는 것이다
+        first  = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
+        second = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) ); // 같은 씬이 대기열로
+        SW_ASSERT_TRUE( first.isValid() );
+        SW_ASSERT_TRUE( second.isValid() );
+        // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    }
     sw::engine::getSubsystem<sw::TypeRegistry>().registerPendingTypes( "LateModuleQueued", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );

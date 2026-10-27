@@ -216,7 +216,10 @@ SW_TEST_CASE( PairedAnimationReplicationTest, RefusesUnreplicableSessionsAndBadS
     const PairedAnimationSession* pSession = system.findSession( sessionID );
     SW_ASSERT_NOT_NULL( pSession );
     PairedAnimationNetState unused{};
-    SW_EXPECT_FALSE( server.makeSessionState( *pSession, unused ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a session whose asset has no resource path is not replicated and says why" ); // 복제하지 않는 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( server.makeSessionState( *pSession, unused ) );
+    }
 
     // 번호표에 없는 오브젝트 · 역할 수가 다른 상태.
     SW_TEST_DEFENSIVE_SCOPE( "unreplicable sessions and bad state are refused with a reason" ); // 거절마다 이유를 로그로 남기는 것이 이 테스트가 보려는 동작이다

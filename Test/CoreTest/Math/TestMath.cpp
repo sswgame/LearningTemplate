@@ -788,7 +788,10 @@ SW_TEST_CASE( MathTest, DeterministicRandomKeepsTheRecordedSequences )
     {
         const test::ScopedAssertCapture assertCapture;
         sw::DeterministicRandom32       rejected{ 5u };
-        rejected.setSeed( 0u );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "A zero seed is rejected with an assert log" ); // 씨앗 0 은 단언 로그를 남기고 거절한다
+            rejected.setSeed( 0u );
+        }
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
         SW_EXPECT_EQUAL( 5u, rejected.getState() ); // 고정점으로 바꾸지도, 다른 씨앗으로 대신하지도 않는다
     }

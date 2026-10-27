@@ -97,7 +97,10 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteClipRangeCarriesNotifies )
 
     SpriteClipPlayable playable;
     SW_ASSERT_TRUE( playable.configure( &loaded, 2, 4, true, 0.1f ) );
-    SW_EXPECT_FALSE( playable.configure( &loaded, -1, 2, true, 0.1f ) ); // 음수 첫 프레임은 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a negative first frame is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( playable.configure( &loaded, -1, 2, true, 0.1f ) );          // 음수 첫 프레임은 맞추지 않고 거절한다
+    }
     SW_ASSERT_NOT_NULL( playable.findNotifyTrack() );
     SW_EXPECT_TRUE( playable.findNotifyTrack()->getEvents()[0]._name == hashed_string( "Swing" ) );
     SW_ASSERT_TRUE( playable.configure( &loaded, 0, 2, true, 0.1f ) ); // 이름 붙은 구간이 아니다 — 알림 없음

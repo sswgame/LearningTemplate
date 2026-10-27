@@ -319,7 +319,10 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
     SW_ASSERT_TRUE( timeline.start( *pJab ) );
     MoveFrameData badMove = *pJab;
     badMove._startup      = 0;
-    SW_EXPECT_FALSE( timeline.start( badMove ) ); // 시작 프레임 0 은 올려 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "starting a move with startup 0 is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( timeline.start( badMove ) );                                         // 시작 프레임 0 은 올려 맞추지 않고 거절한다
+    }
     vector<MoveHitbox> listHitbox;
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Startup );
     SW_EXPECT_EQUAL( 0u, timeline.collectActiveHitboxes( listHitbox ) );
@@ -560,13 +563,16 @@ SW_TEST_CASE( CombatStateTest, VitalityRefusesOutOfRangeSettingsInsteadOfClampin
 
     VitalitySettings zeroHealth;
     zeroHealth._maxHealth = 0.0f;
-    SW_EXPECT_FALSE( vitality.initialize( zeroHealth ) );
     VitalitySettings negativeRegen;
     negativeRegen._healthRegenRate = -1.0f;
-    SW_EXPECT_FALSE( vitality.initialize( negativeRegen ) );
     VitalitySettings badRatio;
     badRatio._reviveHealthRatio = 1.5f;
-    SW_EXPECT_FALSE( vitality.initialize( badRatio ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range vitality settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 구간이 보려는 것이다
+        SW_EXPECT_FALSE( vitality.initialize( zeroHealth ) );
+        SW_EXPECT_FALSE( vitality.initialize( negativeRegen ) );
+        SW_EXPECT_FALSE( vitality.initialize( badRatio ) );
+    }
 
     // 거절된 호출은 이미 쌓인 상태를 건드리지 않는다.
     SW_EXPECT_NEAR_EQUAL( 40.0f, vitality.getSettings()._maxHealth, 1.0e-4f );
@@ -592,18 +598,21 @@ SW_TEST_CASE( CombatStateTest, ResourceGaugeRefusesOutOfRangeSettingsInsteadOfCl
 
     ResourceGaugeSettings zeroMax;
     zeroMax._max = 0.0f;
-    SW_EXPECT_FALSE( gauge.initialize( zeroMax ) );
     ResourceGaugeSettings negativeRegen;
     negativeRegen._regenRate = -5.0f;
-    SW_EXPECT_FALSE( gauge.initialize( negativeRegen ) );
     ResourceGaugeSettings thresholdAboveMax;
     thresholdAboveMax._max              = 30.0f;
     thresholdAboveMax._exhaustThreshold = 31.0f;
-    SW_EXPECT_FALSE( gauge.initialize( thresholdAboveMax ) );
     ResourceGaugeSettings recoverAboveMax;
     recoverAboveMax._max                  = 30.0f;
     recoverAboveMax._overheatRecoverLevel = 40.0f;
-    SW_EXPECT_FALSE( gauge.initialize( recoverAboveMax ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range gauge settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 구간이 보려는 것이다
+        SW_EXPECT_FALSE( gauge.initialize( zeroMax ) );
+        SW_EXPECT_FALSE( gauge.initialize( negativeRegen ) );
+        SW_EXPECT_FALSE( gauge.initialize( thresholdAboveMax ) );
+        SW_EXPECT_FALSE( gauge.initialize( recoverAboveMax ) );
+    }
 
     SW_EXPECT_NEAR_EQUAL( 50.0f, gauge.getSettings()._max, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, gauge.getValue(), 1.0e-4f );

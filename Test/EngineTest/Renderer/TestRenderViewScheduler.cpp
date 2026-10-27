@@ -463,7 +463,10 @@ SW_TEST_CASE( RenderViewCollectorTest, UnscaledViewKindsRejectResolutionScale )
     target._width        = 640;
     target._height       = 360;
     vector<RenderViewRequest> listHost;
-    RenderViewCollector::appendHostView( *stage._pMainCamera, target, RenderViewMode::Lit, listHost );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a resolution scale on a host target view is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        RenderViewCollector::appendHostView( *stage._pMainCamera, target, RenderViewMode::Lit, listHost );
+    }
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listHost.size() ) );
     mainOutput._resolutionScale = 1.0f;
     stage._pMainCamera->setRenderOutput( mainOutput );
@@ -477,8 +480,11 @@ SW_TEST_CASE( RenderViewCollectorTest, UnscaledViewKindsRejectResolutionScale )
     const float4x4            mainViewProj = stage._pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
     RenderViewScheduler       scheduler;
     vector<RenderViewRequest> listView;
-    RenderViewCollector::collectExtraViews( *stage._scene.getObjectManager(), stage._pMainCamera, mainViewProj, stage._pMainCamera->getCameraPosition(), 1280, 720, 1.0f, 0.0,
-                                            RenderViewBudget{}, scheduler, nullptr, listView );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a resolution scale on a render texture view is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        RenderViewCollector::collectExtraViews( *stage._scene.getObjectManager(), stage._pMainCamera, mainViewProj, stage._pMainCamera->getCameraPosition(), 1280, 720, 1.0f, 0.0,
+                                                RenderViewBudget{}, scheduler, nullptr, listView );
+    }
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listView.size() ) );
 }
 

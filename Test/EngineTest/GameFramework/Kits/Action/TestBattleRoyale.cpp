@@ -316,8 +316,11 @@ SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
     BrFlightPath untouched;
     BrFlightDef  slow = catalog.getFlightSettings();
     slow._speed       = 0.0f;
-    SW_EXPECT_FALSE( BrFlightPath::makeRandom( slow, 1000.0f, 42u, untouched ) );
-    SW_EXPECT_FALSE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 0.5f, 42u, untouched ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a zero speed and a map smaller than one are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( BrFlightPath::makeRandom( slow, 1000.0f, 42u, untouched ) );
+        SW_EXPECT_FALSE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 0.5f, 42u, untouched ) );
+    }
     SW_EXPECT_NEAR_EQUAL( untouched._speed, 100.0f, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( path._start._x, again._start._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( path._end._y, again._end._y, 0.0001f );

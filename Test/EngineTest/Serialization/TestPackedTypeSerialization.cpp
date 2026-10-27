@@ -249,17 +249,20 @@ SW_TEST_CASE( PackedValueSerializationTest, TextReadRejectsWrongCountOutOfRangeA
     const SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
     using Test                     = PackedSerializationTestInternal;
 
-    Test::expectTextRejected( context, "unorm8", unorm8::fromRaw( 9 ), "5" );
-    Test::expectTextRejected( context, "unorm8", unorm8::fromRaw( 9 ), "-0.5" );
-    Test::expectTextRejected( context, "snorm16", snorm16::fromRaw( 9 ), "1.5" );
-    Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "70000" );
-    Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "abc" );
-    Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "" );
-    Test::expectTextRejected( context, "half2", half2::fromFloat2( float2{ 1.0f, 2.0f } ), "0.5" );
-    Test::expectTextRejected( context, "half2", half2::fromFloat2( float2{ 1.0f, 2.0f } ), "0.5,1,2" );
-    Test::expectTextRejected( context, "unorm16x2", unorm16x2::fromFloat2( float2{ 0.25f, 0.5f } ), "0.5,2" );
-    Test::expectTextRejected( context, "OctahedralNormal", OctahedralNormal{}, "0.5,x" );
-    Test::expectTextRejected( context, "RGB10A2", RGB10A2::fromPacked( 77u ), "0,0,0" );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a packed value text with a wrong count, an out-of-range number or a non-number is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        Test::expectTextRejected( context, "unorm8", unorm8::fromRaw( 9 ), "5" );
+        Test::expectTextRejected( context, "unorm8", unorm8::fromRaw( 9 ), "-0.5" );
+        Test::expectTextRejected( context, "snorm16", snorm16::fromRaw( 9 ), "1.5" );
+        Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "70000" );
+        Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "abc" );
+        Test::expectTextRejected( context, "half", half::fromFloat( 1.0f ), "" );
+        Test::expectTextRejected( context, "half2", half2::fromFloat2( float2{ 1.0f, 2.0f } ), "0.5" );
+        Test::expectTextRejected( context, "half2", half2::fromFloat2( float2{ 1.0f, 2.0f } ), "0.5,1,2" );
+        Test::expectTextRejected( context, "unorm16x2", unorm16x2::fromFloat2( float2{ 0.25f, 0.5f } ), "0.5,2" );
+        Test::expectTextRejected( context, "OctahedralNormal", OctahedralNormal{}, "0.5,x" );
+        Test::expectTextRejected( context, "RGB10A2", RGB10A2::fromPacked( 77u ), "0,0,0" );
+    }
 
     // 경계 값과 앞뒤 공백은 받는다.
     const SerializeContext::TextReadFn* pReadUnorm = context.findTextReader( hashed_string( "unorm8" ) );

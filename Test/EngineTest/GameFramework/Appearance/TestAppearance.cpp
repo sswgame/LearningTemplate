@@ -132,7 +132,10 @@ SW_TEST_CASE( AppearanceTest, EquipConditionCycleIsALoadError )
   <Item id="c" slot="Back"><Requires set="NoSuchSet"/></Item>
 </ItemCatalog>)",
                                             "AppearanceTest.cycle" ) );
-    SW_EXPECT_FALSE( fixture._database.finishLoad( &cyclic ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "finishing a load with an equip-condition cycle and an unknown set fails with reasons" ); // 순환 · 모르는 세트를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( fixture._database.finishLoad( &cyclic ) );
+    }
     SW_EXPECT_TRUE_MSG( fixture._database.getReport().countWithID( "Appearance.EquipConditionCycle" ) == 1, fixture._database.getReport().joined().c_str() );
     SW_EXPECT_TRUE( fixture._database.getReport().countWithID( "Appearance.SetUnknown" ) == 1 );
 
@@ -151,11 +154,14 @@ SW_TEST_CASE( AppearanceTest, EqualPriorityRuleConflictIsALoadError )
     using Internal = AppearanceTestInternal;
     {
         Fixture fixture;
-        SW_EXPECT_FALSE( Internal::loadWithRules( R"(<AppearanceRuleTable>
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "two rules changing the same target differently at one priority fail with a conflict" ); // 충돌을 알리는 로그가 이 확인이 보려는 것이다
+            SW_EXPECT_FALSE( Internal::loadWithRules( R"(<AppearanceRuleTable>
   <Rule id="A" priority="3"><When tag="Hat"/><Variant target="Hair" name="UnderHat"/></Rule>
   <Rule id="B" priority="3"><When occupied="Back"/><Variant target="Hair" name="Lean"/></Rule>
 </AppearanceRuleTable>)",
-                                                  fixture ) );
+                                                      fixture ) );
+        }
         SW_EXPECT_TRUE_MSG( fixture._database.getReport().countWithID( "Appearance.RuleConflict" ) == 1,
                             fixture._database.getReport().joined().c_str() );
     }

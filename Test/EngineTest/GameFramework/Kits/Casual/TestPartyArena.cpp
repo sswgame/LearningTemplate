@@ -146,11 +146,14 @@ SW_TEST_CASE( PartyArenaTest, TimedBouncesBuildComboUpToTheCap )
     SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 1, 0.0f, 0, 1u ) );
     SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 5, 0.0f, 0, 1u ) );
     // 범위 밖 설정과 음수 제한은 맞춰 받지 않고 거절한다.
-    TrampolineSettings tinyRadius;
-    tinyRadius._arenaRadius = 0.5f;
-    SW_EXPECT_FALSE( arena.initialize( tinyRadius, 2, 0.0f, 0, 1u ) );
-    SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, -1.0f, 0, 1u ) );
-    SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, 0.0f, -3, 1u ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an out-of-range radius and a negative limit are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        TrampolineSettings tinyRadius;
+        tinyRadius._arenaRadius = 0.5f;
+        SW_EXPECT_FALSE( arena.initialize( tinyRadius, 2, 0.0f, 0, 1u ) );
+        SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, -1.0f, 0, 1u ) );
+        SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, 0.0f, -3, 1u ) );
+    }
     SW_ASSERT_TRUE( beginArena( arena ) );
     SW_EXPECT_NEAR_EQUAL( arena.computeBounceHeight( 2 ), 2.0f + 1.5f, 0.001f );
     SW_EXPECT_NEAR_EQUAL( arena.computeBounceHeight( 9 ), 2.0f + 3.0f, 0.001f ); // 상한 4
@@ -333,12 +336,15 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnerRefusesOutOfRangeIntervalsInsteadOfClam
 {
     PartyItemSpawner       spawner;
     PartyItemSpawnSettings settings;
-    settings._minInterval = -1.0f; // 예전에는 조용히 0으로 맞췄다
-    SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range spawn intervals are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        settings._minInterval = -1.0f;                                                       // 예전에는 조용히 0으로 맞췄다
+        SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
 
-    settings._minInterval = 5.0f;
-    settings._maxInterval = 2.0f; // 최대가 최소보다 작다
-    SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
+        settings._minInterval = 5.0f;
+        settings._maxInterval = 2.0f; // 최대가 최소보다 작다
+        SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
+    }
 
     settings._maxInterval = 5.0f;
     SW_EXPECT_TRUE( spawner.initialize( settings, 1u ) );
@@ -626,11 +632,14 @@ SW_TEST_CASE( PartyArenaTest, StateRoundTripContinuesTheSameArena )
     PartyItemSpawner badSpawner;
     SW_ASSERT_TRUE( badSpawner.loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
     PartyItemSpawnSettings badSettings = badSpawner.getSettings();
-    badSettings._minInterval           = -1.0f; // 범위 밖 규칙은 맞추지 않고 거절한다
-    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
-    badSettings._minInterval = 4.0f;
-    badSettings._maxInterval = 2.0f;
-    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range spawn intervals are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        badSettings._minInterval = -1.0f;                                                    // 범위 밖 규칙은 맞추지 않고 거절한다
+        SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+        badSettings._minInterval = 4.0f;
+        badSettings._maxInterval = 2.0f;
+        SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+    }
 
     // 같은 입력을 더 넣으면 같은 판 — 다음 아이템 자리(난수) · 부활 대기 · 점수까지 갈리지 않는다.
     runArenaScript( arena, 60 * 3, 60 * 3 );

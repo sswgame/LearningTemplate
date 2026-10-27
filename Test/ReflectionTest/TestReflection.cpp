@@ -554,8 +554,9 @@ SW_TEST_CASE( TypedComponentHandleTest, WrongTypeFailsTheLoadAndMissingTargetCle
         sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "MissingTargetFresh" ) );
         SW_ASSERT_NOT_NULL( pFresh );
         test::ScopedLogCollector logs;
-        sw::ObjectStateBatch     batch( sw::ObjectIDSpace::Saved );
-        sw::ObjectLoadContext    context{ sw::SerializePurpose::Authoring };
+        SW_TEST_DEFENSIVE_SCOPE( "typed handle points at a component that is gone and is cleared with a warning" ); // 비운 이유를 알리는 로그가 이 확인이 보려는 것이다
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
+        sw::ObjectLoadContext context{ sw::SerializePurpose::Authoring };
         context._pBatch  = &batch;
         context._savedID = 900002002;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, missingTarget, context ) );

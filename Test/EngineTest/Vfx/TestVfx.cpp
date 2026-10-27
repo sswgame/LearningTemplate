@@ -69,13 +69,13 @@ namespace sw
                 if ( _pVariable == nullptr )
                     return;
                 _previous = _pVariable->getValueAsString();
-                _bApplied = _pVariable->setValueAsString( pTarget );
+                _bApplied = _pVariable->setValueFromString( pTarget ); // 열거형 변수는 글을 열거자 이름으로 읽는다(`setValueAsString` 은 문자열 변수 전용이다)
             }
 
             ~ScopedVfxSimulationTarget()
             {
                 if ( _bApplied )
-                    (void)_pVariable->setValueAsString( _previous ); // 되돌리기 — 앞에서 같은 변수에 쓴 값이다
+                    (void)_pVariable->setValueFromString( _previous ); // 되돌리기 — 앞에서 같은 변수에서 읽은 값(열거 번호 글)이다
             }
 
             ScopedVfxSimulationTarget( const ScopedVfxSimulationTarget& )            = delete;

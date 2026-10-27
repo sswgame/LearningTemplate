@@ -1472,7 +1472,10 @@ SW_TEST_CASE( RenderPassTest, ModulePassRegistrationIsScopedAndCopiesConstants )
     {
         sw::ModuleRenderPassRegistration registration( registry, "Test.ModulePass" );
         SW_ASSERT_TRUE( registration.isRegistered() );
-        SW_EXPECT_FALSE( registry.registerPass( key ) ); // 두 모듈이 한 이름을 나눠 쓰지 않는다
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a second registration of one pass name is refused with an error" ); // 겹침을 알리는 로그가 이 확인이 보려는 것이다
+            SW_EXPECT_FALSE( registry.registerPass( key ) );                                              // 두 모듈이 한 이름을 나눠 쓰지 않는다
+        }
         SW_EXPECT_TRUE( registration.setConstant( "g_TestTint", sw::float4{ 1.0f, 0.5f, 0.25f, 1.0f } ) );
         SW_EXPECT_TRUE( registration.setConstant( "g_TestTint", sw::float4{ 0.0f, 0.5f, 0.25f, 1.0f } ) ); // 같은 이름은 덮어쓴다
         SW_ASSERT_TRUE( registry.copyConstants( key, listConstant ) );

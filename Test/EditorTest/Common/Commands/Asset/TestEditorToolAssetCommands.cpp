@@ -8,6 +8,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -74,7 +75,18 @@ namespace
                 if ( entry._caller != "EditorToolAssetCommands" )
                     return;
                 if ( entry._level == LogLevel::Error )
-                    _listError.push_back( entry._message );
+                {
+                    // 방어 구간이 붙인 표식은 문구의 일부가 아니다 — 모양 비교에서 뺀다.
+                    string message = entry._message;
+                    if ( StringUtil::startsWith( message, AutomationLogPolicy::kDefensivePrefix ) )
+                    {
+                        size_t prefixLength = std::char_traits<utf8>::length( AutomationLogPolicy::kDefensivePrefix );
+                        if ( prefixLength < message.size() && message[prefixLength] == ' ' )
+                            ++prefixLength;
+                        message = message.substr( prefixLength );
+                    }
+                    _listError.push_back( message );
+                }
                 else if ( entry._level == LogLevel::Warning )
                     _listWarning.push_back( entry._message );
             } ) );
@@ -376,7 +388,6 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
 {
-    SW_TEST_DEFENSIVE_SCOPE( "a failed save is reported with the path" ); // 거절 · 실패 로그가 이 테스트가 보려는 동작이다
     const string unwritable = makeUnwritablePath();
 
     struct SaveCase
@@ -390,7 +401,11 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
     const auto       runCase = [&listCase]( const utf8* pLabel, auto&& save )
     {
         ScopedLogMessageCollector collector;
-        const bool                bSaved = save();
+        bool                      bSaved = false;
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a failed save is reported with the path" ); // 저장 실패 로그가 이 확인이 보려는 동작이다
+            bSaved = save();
+        }
         listCase.push_back( SaveCase{ pLabel, bSaved, collector.getErrors().size(), collector.getErrors().empty() ? string{} : collector.getErrors()[0] } );
     };
     runCase( "animation graph", [&]()
@@ -414,7 +429,10 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
 
     // 경로도 기본 문서도 없으면 같은 문구로 경로가 없다고 말한다.
     ScopedLogMessageCollector collector;
-    SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( SequenceAsset{}, {} ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a save without any path is reported as a missing path" ); // 경로 없는 저장은 경로가 없다고 알린다
+        SW_EXPECT_FALSE( EditorToolAssetCommands::saveSequence( SequenceAsset{}, {} ) );
+    }
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), collector.getErrors().size() );
     SW_EXPECT_TRUE( StringUtil::startsWith( collector.getErrors()[0], "Failed to save the sequence - no file path" ) );
 }

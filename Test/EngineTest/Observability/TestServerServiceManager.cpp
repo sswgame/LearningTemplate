@@ -120,8 +120,11 @@ SW_TEST_CASE( ServerServiceManagerTest, RegistryKeepsOneFactoryPerNameAndForgets
         const ServerServiceRegistrar<FirstTestService> first{ FirstTestService::kName, 9000 };
         SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
         // 같은 이름의 두 번째 등록은 거절된다(오류 로그). 두 모듈이 같은 서비스를 올린 실수다.
-        const ServerServiceRegistrar<SecondTestService> duplicate{ FirstTestService::kName, 9001 };
-        SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a second registration of one service name is refused with an error" ); // 겹침을 알리는 로그가 이 확인이 보려는 것이다
+            const ServerServiceRegistrar<SecondTestService> duplicate{ FirstTestService::kName, 9001 };
+            SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
+        }
     }
     // 등록기가 사라지면(모듈 언로드) 팩토리도 빠진다.
     SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount );

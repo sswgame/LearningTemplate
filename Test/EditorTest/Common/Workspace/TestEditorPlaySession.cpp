@@ -335,13 +335,19 @@ SW_TEST_CASE( EditorPlaySessionTest, StateChangeResetsRefusedEditLogSuppression 
 
     test::ScopedLogCollector logs;
     EditorPlaySession::setState( *pData, PlaySessionState::Playing );
-    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
-    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "A refused scene edit leaves one Editor.SceneEditRefused warning per state" ); // 거절한 씬 편집은 상태마다 경고를 하나 남긴다
+        SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+        SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    }
     SW_EXPECT_EQUAL( uint32( 1 ), logs.countWithID( "Editor.SceneEditRefused" ) ); // 연속 거절은 한 번만
 
     EditorPlaySession::setState( *pData, PlaySessionState::Stopped );
     EditorPlaySession::setState( *pData, PlaySessionState::Playing );
-    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "The first refusal after a state change logs again" ); // 상태가 바뀐 뒤 첫 거절은 다시 남는다
+        SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    }
     SW_EXPECT_EQUAL( uint32( 2 ), logs.countWithID( "Editor.SceneEditRefused" ) ); // 상태가 바뀐 뒤 첫 거절은 다시 남는다
 }
 

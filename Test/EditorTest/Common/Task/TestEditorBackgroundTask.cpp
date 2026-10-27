@@ -189,7 +189,10 @@ SW_TEST_CASE( EditorBackgroundTaskTest, JobTrackerWaitsOnlyForTrackedJobs )
 
     // 올린 잡이 도는 동안은 시간이 다 되어 false 다.
     SW_EXPECT_EQUAL( 1u, tracker.getPendingCount() );
-    SW_EXPECT_FALSE( tracker.waitIdle( 20, "TestTracker" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "A tracked job that outlives the wait time makes waitIdle report an error and return false" ); // 시간 안에 안 끝난 잡은 오류를 남기고 false 를 돌려준다
+        SW_EXPECT_FALSE( tracker.waitIdle( 20, "TestTracker" ) );
+    }
 
     // 올린 잡이 끝나면, 올리지 않은 태스크가 아직 돌아도 true 다.
     pTrackedRelease->store( true );

@@ -57,6 +57,13 @@ namespace
             _workspace.setPlacedPrefabPath( *_pLamp, "game/prefabs/lamp.prefab.xml" );
         }
     };
+
+    /** @brief 참조가 막는 `adoptChildPrefabInstances` 호출입니다 — 거절 경고를 내는 그 호출만 방어 구간으로 감싼다. */
+    EditorInspectorCommands::AdoptResult adoptExpectingRefusal( GameObject* pRoot )
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "A scene object reference to a child makes the prefab adoption refuse with a warning" ); // 자식을 가리키는 참조가 있으면 경고하고 거절한다
+        return EditorInspectorCommands::adoptChildPrefabInstances( pRoot );
+    }
 } // namespace
 
 /**
@@ -71,9 +78,12 @@ SW_TEST_CASE( EditorInspectorCommandsTest, PrefabCommandsRefuseWithAReasonWhileS
     SW_ASSERT_FALSE( EditorPlaySession::areSceneEditsAllowed() );
 
     test::ScopedLogCollector logs;
-    SW_EXPECT_FALSE( EditorInspectorCommands::applyToPrefab( fixture._pLamp, sw::ResourceID{ "game/prefabs/lamp.prefab.xml" } ) );
-    SW_EXPECT_FALSE( EditorInspectorCommands::revertToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
-    SW_EXPECT_FALSE( EditorInspectorCommands::unlinkPrefab( fixture._pLamp ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "Each refused prefab command leaves one Editor.SceneEditRefused warning" ); // 거절한 명령마다 경고가 하나 남는다
+        SW_EXPECT_FALSE( EditorInspectorCommands::applyToPrefab( fixture._pLamp, sw::ResourceID{ "game/prefabs/lamp.prefab.xml" } ) );
+        SW_EXPECT_FALSE( EditorInspectorCommands::revertToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
+        SW_EXPECT_FALSE( EditorInspectorCommands::unlinkPrefab( fixture._pLamp ) );
+    }
     SW_EXPECT_EQUAL( uint32( 3 ), logs.countWithID( "Editor.SceneEditRefused" ) );
     SW_EXPECT_FALSE( fixture._workspace.getPlacedPrefabPath( *fixture._pLamp ).empty() ); // 연결이 그대로다
 }
@@ -83,6 +93,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, PrefabCommandsRefuseWithAReasonWhileS
  */
 SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRejectsWhenReferenceCheckIsImpossible )
 {
+    SW_TEST_DEFENSIVE_SCOPE( "A missing object makes the reference check refuse instead of skipping" ); // 오브젝트가 없으면 검사를 건너뛰지 않고 거절한다
     const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( nullptr );
     SW_EXPECT_TRUE( result.isRejected() );
     SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
@@ -112,7 +123,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenASceneReferencePoints
     SW_ASSERT_NOT_NULL( pProbe );
     SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_target ) );
 
-    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    const EditorInspectorCommands::AdoptResult result = adoptExpectingRefusal( fixture._pRoot );
     SW_EXPECT_TRUE( result.isRejected() );
     SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
     SW_EXPECT_TRUE( result._rejectReason.find( "Level/Holder." ) != string::npos );
@@ -140,7 +151,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAReferenceListElement
     pProbe->_listTarget.resize( 2 ); // 앞 원소는 비워 두고 뒤 원소만 가리킨다
     SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_listTarget[1] ) );
 
-    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    const EditorInspectorCommands::AdoptResult result = adoptExpectingRefusal( fixture._pRoot );
     SW_EXPECT_TRUE( result.isRejected() );
     SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
     SW_EXPECT_TRUE( result._rejectReason.find( "Level/Holder." ) != string::npos );
@@ -163,7 +174,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAStructFieldReference
     SW_ASSERT_NOT_NULL( pProbe );
     SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_box._inner ) );
 
-    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    const EditorInspectorCommands::AdoptResult result = adoptExpectingRefusal( fixture._pRoot );
     SW_EXPECT_TRUE( result.isRejected() );
     SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
     SW_EXPECT_TRUE( result._rejectReason.find( "._box" ) != string::npos );
@@ -190,7 +201,7 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAPreviewSceneReferenc
     SW_ASSERT_NOT_NULL( pProbe );
     SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_target ) );
 
-    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    const EditorInspectorCommands::AdoptResult result = adoptExpectingRefusal( fixture._pRoot );
     SW_EXPECT_TRUE( result.isRejected() );
     SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
     SW_EXPECT_TRUE( result._rejectReason.find( "PreviewHolder." ) != string::npos );

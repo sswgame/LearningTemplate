@@ -112,7 +112,10 @@ SW_TEST_CASE( VoxelTest, CatalogReadsFacesAndAssignsIndices )
 {
     VoxelTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 1, 1 ) );
-    SW_EXPECT_FALSE( scene.initialize( 0, 1 ) ); // 청크 수 1 미만은 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a chunk count below one is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( scene.initialize( 0, 1 ) );                                   // 청크 수 1 미만은 맞추지 않고 거절한다
+    }
     SW_EXPECT_EQUAL( static_cast<size_t>( 8 ), scene._catalog.getBlocks().size() );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( scene.findBlock( "grass" ) ) );
     SW_EXPECT_EQUAL( 5, static_cast<int32>( scene.findBlock( "water" ) ) );

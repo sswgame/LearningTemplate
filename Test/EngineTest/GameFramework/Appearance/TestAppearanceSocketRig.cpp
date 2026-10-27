@@ -263,7 +263,10 @@ SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
 
     SW_ASSERT_TRUE( writeVisuals( "Tail" ) );
     AppearanceDatabase unknown;
-    SW_EXPECT_FALSE( unknown.loadFromFolder( folder, nullptr ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "hiding a body region the fit tables lack fails with a reason" ); // 모르는 영역을 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( unknown.loadFromFolder( folder, nullptr ) );
+    }
     SW_EXPECT_TRUE( unknown.getReport().joined().find( "unknown body region 'Tail'" ) != string::npos );
 }
 

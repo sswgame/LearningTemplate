@@ -435,7 +435,10 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 200u, static_cast<uint32>( dds._bytes[1] ) );
 
         TextureImportConfig config;
-        SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "An unknown format name is rejected by the config loader" ); // 모르는 형식 이름은 설정 로드가 거절한다
+            SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
+        }
         SW_EXPECT_TRUE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"r8","srgb":false}]})" ) );
     }
 
@@ -1085,7 +1088,11 @@ namespace sw::editor
 
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromJSONString( R"({ "rules": [ { "name": "Any" } ] })" ) );
-        const AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
+        AssetImportSummary summary;
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "An HDR source under an 8-bit format rule is reported as a failure" ); // 8 비트 규칙에 걸린 HDR 원본은 실패로 보고한다
+            summary = TextureImporter::importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
+        }
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( 0u, summary._importedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );

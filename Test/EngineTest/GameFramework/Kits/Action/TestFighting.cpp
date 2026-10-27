@@ -901,12 +901,15 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     SW_EXPECT_EQUAL( 490, match.getFrame() );
 
     // 라운드 사이 대기와 라운드 시간 0 은 1 프레임으로 올려 받지 않고 거절한다(범위는 `FightingSettings` 의 선언).
-    FightingSettings zeroOver = settings;
-    zeroOver._roundOverFrames = 0;
-    SW_EXPECT_FALSE( match.initialize( tester, tester, zeroOver ) );
-    FightingSettings zeroRound = settings;
-    zeroRound._roundFrames     = 0;
-    SW_EXPECT_FALSE( match.initialize( tester, tester, zeroRound ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a zero intermission or round length is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        FightingSettings zeroOver = settings;
+        zeroOver._roundOverFrames = 0;
+        SW_EXPECT_FALSE( match.initialize( tester, tester, zeroOver ) );
+        FightingSettings zeroRound = settings;
+        zeroRound._roundFrames     = 0;
+        SW_EXPECT_FALSE( match.initialize( tester, tester, zeroRound ) );
+    }
 
     // 대기 1 프레임 — 무승부 라운드(같은 체력) 뒤 다음 프레임에 2 라운드.
     settings._roundOverFrames = 1;

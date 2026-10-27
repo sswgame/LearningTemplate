@@ -28,8 +28,11 @@ SW_TEST_CASE( ProgressionTest, ExperienceCurvesLevelUpAndStopAtMaxLevel )
     ExperienceCurve curve;
     SW_ASSERT_TRUE( curve.setFormula( 100.0f, 1.0f, 0.0f, 5 ) ); // 100 · 200 · 300 · 400
     ExperienceCurve badCurve;
-    SW_EXPECT_FALSE( badCurve.setFormula( -1.0f, 1.0f, 0.0f, 5 ) ); // 음수 기준 · 최대 레벨 1 미만은 맞추지 않고 거절한다
-    SW_EXPECT_FALSE( badCurve.setFormula( 100.0f, 1.0f, 0.0f, 0 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a negative base or a max level below 1 is refused with a reason" ); // 거절 이유를 알리는 로그가 이 구간이 보려는 것이다
+        SW_EXPECT_FALSE( badCurve.setFormula( -1.0f, 1.0f, 0.0f, 5 ) );                               // 음수 기준 · 최대 레벨 1 미만은 맞추지 않고 거절한다
+        SW_EXPECT_FALSE( badCurve.setFormula( 100.0f, 1.0f, 0.0f, 0 ) );
+    }
     SW_EXPECT_EQUAL( 100, static_cast<int32>( curve.getXpToNext( 1 ) ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( curve.getXpToNext( 5 ) ) );
     SW_EXPECT_EQUAL( 600, static_cast<int32>( curve.computeTotalXp( 4 ) ) );

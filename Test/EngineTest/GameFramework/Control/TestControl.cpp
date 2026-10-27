@@ -365,6 +365,7 @@ SW_TEST_CASE( ControlTest, PossessionMovesViewTargetAndInputLayer )
     // 걷기 바인딩은 걷는 폰의 레이어에 있다 — 레이어 스택이 비지 않으면 스택에 든 레이어(와 늘 켜진 레이어)만 읽힌다.
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, "OnFoot" );
     input.getInputMap().bind( "Jump", Key::Space );
+    input.getInputMap().bind( "Jump", Key::Space, ActionTrigger::Pressed, "Horse" ); // 말 레이어가 맵에 있어야 폰의 입력 레이어를 경고 없이 민다
     Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
@@ -473,10 +474,15 @@ SW_TEST_CASE( ControlTest, PossessingATakenPawnReleasesTheOtherController )
 SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
 {
     using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", Key::Space ); // 폰이 선언한 버튼 · 축 이름이 맵에 있어야 플레이어 조종자가 경고하지 않는다
+    Internal::ensurePawnActions( input.getInputMap() );
     GameObjectManager manager;
-    PawnComponent*    pHero   = Internal::spawnPawn( manager, "Hero", float3{} )->getComponent<PawnComponent>();
-    PawnComponent*    pGuard  = Internal::spawnPawn( manager, "Guard", float3{} )->getComponent<PawnComponent>();
-    PawnComponent*    pStatue = Internal::spawnPawn( manager, "Statue", float3{} )->getComponent<PawnComponent>();
+    ControlSystem::ensureFor( manager ).setInputManager( &input );
+    PawnComponent* pHero   = Internal::spawnPawn( manager, "Hero", float3{} )->getComponent<PawnComponent>();
+    PawnComponent* pGuard  = Internal::spawnPawn( manager, "Guard", float3{} )->getComponent<PawnComponent>();
+    PawnComponent* pStatue = Internal::spawnPawn( manager, "Statue", float3{} )->getComponent<PawnComponent>();
     pHero->setAutoPossess( PawnAutoPossess::Player0 );
     pGuard->setAutoPossess( PawnAutoPossess::AI );
 
@@ -497,6 +503,8 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
     // 한 번 쥐었으면 다시 세우지 않는다.
     manager.update( Internal::kDeltaTime );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getComponentRegistry().getAll<PlayerControllerComponent>().size() );
+    manager.endPlay();
+    input.shutdown();
 }
 
 /**
@@ -1054,6 +1062,8 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
     using Internal = ControlTestInternal;
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", Key::Space ); // 폰이 선언한 버튼 · 축 이름이 맵에 있어야 빙의가 경고하지 않는다 — 시나리오가 그 경고가 없음을 센다
+    Internal::ensurePawnActions( input.getInputMap() );
     {
         GameObjectManager manager;
         PawnComponent*    pHero   = Internal::spawnPawn( manager, "Hero", float3{} )->getComponent<PawnComponent>();
@@ -1061,22 +1071,14 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
-        {
-            // 입력 맵이 일부러 비어 있다(아래 시나리오가 Horse 의 경고를 센다) — 시나리오 밖의 이 첫 빙의가 내는 같은 경고는 준비 과정의 것이다.
-            SW_TEST_DEFENSIVE_SCOPE( "an empty InputMap makes the first possession warn about the pawn's actions" );
-            pPlayer->possess( *pHero );
-        }
+        pPlayer->possess( *pHero );
 
         AutomationRunner runner;
         runner.setObjectManager( &manager );
         SW_ASSERT_TRUE( runner.startFromText( "<Scenario name=\"control.possess\">"
                                               "<At frame=\"5\"><Possess controller=\"Player\" pawn=\"Horse\"/></At>"
                                               "<At frame=\"8\"><Possess controller=\"Player\"/></At>"
-                                              // 입력 맵이 빈 테스트라 Horse 에 빙의할 때 맵에 없는 액션마다 한 번 경고한다(버튼 Jump, 축 Move · Look) — 시나리오가 기대한 줄로 선언한다
-                                              "<At frame=\"10\"><ExpectLog contains=\"Pawn 'Horse' intent button 'Jump' has no InputMap action\" count=\"1\"/>"
-                                              "<ExpectLog contains=\"Pawn 'Horse' axis action\" count=\"2\"/>"
-                                              "<ExpectLog contains=\"has no InputMap action\" count=\"3\"/>"
-                                              "<ExpectLog id=\"Control.IntentButtonNotInInputMap\" atLeast=\"0\"/><ExpectLog id=\"Control.IntentAnalogNotInInputMap\" atLeast=\"0\"/><ExpectLog id=\"Control.AxisActionNotInInputMap\" atLeast=\"0\"/><Pass/></At>"
+                                              "<At frame=\"10\"><ExpectLog id=\"Control.IntentButtonNotInInputMap\" count=\"0\"/><ExpectLog id=\"Control.AxisActionNotInInputMap\" count=\"0\"/><Pass/></At>"
                                               "</Scenario>" ) );
         AutomationOutcome result = AutomationOutcome::Running;
         for ( uint32 frame = 0; frame < 30 && result == AutomationOutcome::Running; ++frame )

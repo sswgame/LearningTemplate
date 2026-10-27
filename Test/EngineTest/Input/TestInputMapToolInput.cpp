@@ -144,7 +144,10 @@ SW_TEST_CASE( InputMapToolInputTest, ModifierAttributeIsAShortcutAndRoundTrips )
     SW_ASSERT_TRUE( TestInputMapToolInputInternal::writeTempInputMap( "badmodifier.input.xml",
                                                                       "<InputMap><action name=\"Save\"><bind source=\"key\" modifier=\"Control\" code=\"S\"/></action></InputMap>", badID ) );
     sw::InputMap badMap;
-    SW_EXPECT_FALSE( badMap.loadFromResource( sw::ResourceID{ badID } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a modifier that is not a key shortcut fails the load with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( badMap.loadFromResource( sw::ResourceID{ badID } ) );
+    }
 }
 
 /**
@@ -178,22 +181,34 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
 
     sw::string sameActionID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameaction.input.xml", "<InputMap><action name=\"Save\" layer=\"Global\"><bind source=\"key\" code=\"F2\"/></action></InputMap>", sameActionID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameActionID } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "appending an action the map already has is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameActionID } ) );
+    }
 
     sw::string mapWideID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "mapwide.input.xml", "<InputMap doubleClickTime=\"0.5\"><action name=\"Other\" layer=\"Global\"><bind source=\"key\" code=\"F3\"/></action></InputMap>",
                                                  mapWideID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ mapWideID } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "appending a map-wide attribute is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ mapWideID } ) );
+    }
 
     sw::string relayerID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "relayer.input.xml", "<InputMap><layers><layer name=\"Global\" priority=\"9\"/></layers></InputMap>", relayerID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ relayerID } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "appending a layer the map already has is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ relayerID } ) );
+    }
 
     sw::string sameInputID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameinput.input.xml",
                                                  "<InputMap><layer name=\"Global\"><action name=\"SaveAgain\"><bind source=\"key\" modifier=\"Ctrl\" code=\"S\"/></action></layer></InputMap>",
                                                  sameInputID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameInputID } ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "appending the same input on the same layer is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameInputID } ) );
+    }
 }
 
 /**

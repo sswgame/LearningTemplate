@@ -270,7 +270,10 @@ SW_TEST_CASE( ShopTest, SellingFloodsThePriceAndItRecoversDaily )
     SW_ASSERT_TRUE( scene._shop.setPriceModifier( idCompany(), 1.0f, 0.3f ) );
     SW_EXPECT_EQUAL( 6, scene._shop.computeSellTotal( idCompany(), idScrap(), 1 ) );
     SW_ASSERT_TRUE( scene._shop.setPriceModifier( idGeneral(), 0.8f, 1.0f ) );
-    SW_EXPECT_FALSE( scene._shop.setPriceModifier( idGeneral(), -1.0f, 1.0f ) ); // 음수 배율은 맞추지 않고 거절한다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a negative price modifier is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( scene._shop.setPriceModifier( idGeneral(), -1.0f, 1.0f ) );     // 음수 배율은 맞추지 않고 거절한다
+    }
     SW_EXPECT_EQUAL( 16, scene._shop.computeBuyPrice( idGeneral(), idPotion() ) );
 }
 

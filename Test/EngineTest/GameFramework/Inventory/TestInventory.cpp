@@ -65,8 +65,11 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
     Inventory inventory;
     SW_ASSERT_TRUE( inventory.initialize( &catalog, 4, 20.0f ) );
     SW_EXPECT_EQUAL( 25, inventory.addItem( hashed_string( "herb" ), 25 ) ); // 10 + 10 + 5 — 세 칸
-    SW_EXPECT_FALSE( inventory.initialize( &catalog, -1 ) );                 // 음수 슬롯 수는 맞추지 않고 거절한다
-    SW_EXPECT_FALSE( inventory.setMaxWeight( -1.0f ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a negative slot count or max weight is refused with a reason" ); // 거절 이유를 알리는 로그가 이 구간이 보려는 것이다
+        SW_EXPECT_FALSE( inventory.initialize( &catalog, -1 ) );                                   // 음수 슬롯 수는 맞추지 않고 거절한다
+        SW_EXPECT_FALSE( inventory.setMaxWeight( -1.0f ) );
+    }
     SW_EXPECT_EQUAL( 1, inventory.countEmptySlots() );
     SW_EXPECT_EQUAL( 15, inventory.addItem( hashed_string( "herb" ), 20 ) ); // 셋째 칸의 나머지 5 + 빈 칸 10
     SW_EXPECT_TRUE( inventory.hasRoomFor( hashed_string( "herb" ), 1 ) == false );

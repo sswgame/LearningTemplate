@@ -72,7 +72,10 @@ SW_TEST_CASE( GlobalVariableTest, Registration )
     SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
 
     SW_EXPECT_EQUAL( 4u, fixture._manager.getVariableCount() );
-    SW_EXPECT_FALSE( fixture._manager.registerVariable( "gv_testInt", sw::GlobalVariableType::Int32, &fixture._intValue, int32{ 0 }, "duplicate" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "Registering an already registered name is refused with a warning" ); // 이미 등록된 이름은 경고하고 거절한다
+        SW_EXPECT_FALSE( fixture._manager.registerVariable( "gv_testInt", sw::GlobalVariableType::Int32, &fixture._intValue, int32{ 0 }, "duplicate" ) );
+    }
 }
 
 /**

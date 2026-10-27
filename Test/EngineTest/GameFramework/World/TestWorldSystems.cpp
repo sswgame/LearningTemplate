@@ -218,7 +218,10 @@ SW_TEST_CASE( WorldSystemsTest, FlagConditionsFollowPrecedenceParenthesesAndReje
 SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier )
 {
     AreaGraph graph;
-    SW_ASSERT_TRUE( graph.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a link to an unknown area is skipped and a link with a malformed condition stays locked, each with a reason" ); // 건너뜀 · 잠금 경고가 이 확인이 보려는 것이다
+        SW_ASSERT_TRUE( graph.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
+    }
     SW_EXPECT_EQUAL( 7, static_cast<int32>( graph.getAreas().size() ) );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( graph.getLinks().size() ) ); // 모르는 방으로 가는 연결은 빠진다
     const hashed_string hall( "hall" );

@@ -848,16 +848,19 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapRefusesOutOfRangeSettingsInsteadOfClampingT
     settings._listRule   = { fight };
     settings._floorCount = 1; // 예전에는 조용히 2로 맞췄다
     RunMap map;
-    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
-    SW_EXPECT_TRUE( map.getNodes().empty() ); // 거절하면 지도를 바꾸지 않는다
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range run map settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+        SW_EXPECT_TRUE( map.getNodes().empty() ); // 거절하면 지도를 바꾸지 않는다
 
-    settings._floorCount  = 4;
-    settings._columnCount = 0;
-    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+        settings._floorCount  = 4;
+        settings._columnCount = 0;
+        SW_EXPECT_FALSE( map.generate( settings, 1u ) );
 
-    settings._columnCount = 3;
-    settings._pathCount   = 0;
-    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+        settings._columnCount = 3;
+        settings._pathCount   = 0;
+        SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+    }
 
     settings._pathCount = 2;
     SW_EXPECT_TRUE( map.generate( settings, 1u ) );
@@ -949,10 +952,13 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapRefusesOutOfRangeSettingsInsteadOfClamping 
     settings._listRule   = { fight };
     settings._floorCount = 1; // Min 2
     RunMap map;
-    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
-    settings._floorCount = 6;
-    settings._pathCount  = 0; // Min 1
-    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range run map settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+        settings._floorCount = 6;
+        settings._pathCount  = 0; // Min 1
+        SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    }
     settings._pathCount = 3;
     SW_EXPECT_TRUE( map.generate( settings, 1 ) );
 }

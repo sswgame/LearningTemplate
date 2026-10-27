@@ -583,15 +583,18 @@ SW_TEST_CASE( MechArenaTest, InitializeRefusesOutOfRangeSettingsInsteadOfClampin
     fixture.initialize( world );
     SW_EXPECT_TRUE( world.addPilot( makePilot( { "striker" }, 0, float3{} ) ) >= 0 );
 
-    MechArenaSettings tinyArena;
-    tinyArena._arenaHalfSize = 0.5f;
-    SW_EXPECT_FALSE( world.initialize( tinyArena, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
-    MechArenaSettings zeroStep;
-    zeroStep._fixedStep = 0.0f;
-    SW_EXPECT_FALSE( world.initialize( zeroStep, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
-    MechArenaSettings negativeDelay;
-    negativeDelay._respawnDelay = -1.0f;
-    SW_EXPECT_FALSE( world.initialize( negativeDelay, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "out-of-range arena settings are refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        MechArenaSettings tinyArena;
+        tinyArena._arenaHalfSize = 0.5f;
+        SW_EXPECT_FALSE( world.initialize( tinyArena, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+        MechArenaSettings zeroStep;
+        zeroStep._fixedStep = 0.0f;
+        SW_EXPECT_FALSE( world.initialize( zeroStep, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+        MechArenaSettings negativeDelay;
+        negativeDelay._respawnDelay = -1.0f;
+        SW_EXPECT_FALSE( world.initialize( negativeDelay, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+    }
 
     // 거절된 호출은 판을 비우지 않는다 — 앞서 넣은 조종사가 남아 있다.
     SW_EXPECT_EQUAL( 1, world.getPilotCount() );

@@ -17,8 +17,11 @@ SW_TEST_CASE( AccountGmLoginTest, RefusesEmptyCredentialsAndWaitsForTheConnectio
     AccountGmLogin      login;
     SW_EXPECT_TRUE( login.getState() == AccountGmLoginState::Idle );
 
-    SW_EXPECT_FALSE( login.setCredentials( "", "password1" ) );
-    SW_EXPECT_FALSE( login.setCredentials( "gm_alpha", "" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an empty account name or password is refused with a reason" ); // 거절 이유를 알리는 로그가 이 확인이 보려는 것이다
+        SW_EXPECT_FALSE( login.setCredentials( "", "password1" ) );
+        SW_EXPECT_FALSE( login.setCredentials( "gm_alpha", "" ) );
+    }
 
     AccountClientInfo info;
     info._build    = "1.0.0";

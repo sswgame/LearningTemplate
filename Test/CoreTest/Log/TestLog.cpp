@@ -937,6 +937,7 @@ SW_TEST_CASE( LogTest, StderrChildRoleWritesMarkers )
     {
         [[maybe_unused]] test::ScopedAssertCapture capture;
         const bool                                 bLogAssertProbeHolds = false;
+        SW_TEST_DEFENSIVE_SCOPE( "A failed SW_LOG_ASSERT writes its Error line to standard error" ); // 실패한 SW_LOG_ASSERT 는 Error 줄을 stderr 에 쓴다
         SW_LOG_ASSERT( bLogAssertProbeHolds, "SW_ASSERT_PROBE message" );
     }
 }
