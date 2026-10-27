@@ -32,6 +32,8 @@
 	<At frame="123"><EditorClick mark="contentBrowser.asset.probe.material" state="up"/></At>
 	<At frame="135"><EditorKey key="F2"/></At>
 	<At frame="150"><EditorText value="probe_renamed"/></At>
+	<!-- 새 머티리얼을 만든 변경을 색인이 따라오기 전에 이름을 바꾸면 거절된다(아무것도 안 옮김) — 느린 백엔드(GL)에서 일어났다 -->
+	<At frame="157"><WaitUntil probe="Editor.ReferenceIndexReady" equals="1"/></At>
 	<At frame="160"><EditorKey key="Enter"/></At>
 	<!-- 이름 바꾸기가 고친 파일을 색인이 따라왔는지 기다린다. 시계 잡기(ContentBrowserReferenceIndex)는 콘텐츠가 보일 때만 잡아, 느린 백엔드(GL)에서는
 	     따라오기 전에 아래 단언이 "no value" 를 읽었다 -->
