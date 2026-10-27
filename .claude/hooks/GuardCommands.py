@@ -8,6 +8,8 @@ Claude Code PreToolUse 훅이 Bash · PowerShell 도구 호출마다 부른다(.
   ReadGuard 는 Read 도구만 막아서 셸로 읽으면 지나갔다. 절만 읽는 길은 `py -3 -m Scripts doc <파일> --section <제목>` 이다.
 - 인터프리터 heredoc 금지(2026-10-25): `python - <<EOF` 로 파일을 고치는 것. 규칙이 문서에만 있어 작업자가 계속 어겼고, 빈 본문의
   `python -` 가 표준 입력을 기다리며 CPU 를 돌았다. `find /`(디스크 전체 검색)도 같은 이유로 막는다.
+- 전경 장기 실행 금지(2026-10-27): `verify-batch` · `full-build` 등을 전경에서 돌리거나 20초 이상 `sleep` 으로 기다리는 것. 메시지는 받는 쪽의
+  다음 도구 호출에야 닿아서, 통합 담당이 수 시간 전경에 있는 동안 메인 · 사용자의 지시가 큐에 쌓였다. `run_in_background` 호출은 통과한다.
 - 링크가 든 폴더의 재귀 삭제 금지: 워크트리는 main 의 도구(`Tools/LLVM` 등)를 정션으로 나눠 쓴다. 링크를 끊지 않고 재귀로 지우면
   도구에 따라 링크 너머의 공유 도구까지 지워진다. 워크트리는 `py -3 -m Scripts worktree-remove <이름>` 으로 지운다.
 
@@ -39,6 +41,10 @@ kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-veri
 kInterpreterHeredocPattern = re.compile(
     r"(?i)(?:\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<|\b(?:cat|tee)\b[^\n|;&<]*>>?\s*[^\s<>|;&]+\s*<<)")
 kShellWrapperPattern = re.compile(r"(?i)(?:\b(?:bash|sh|zsh|dash|pwsh|powershell(?:\.exe)?)\b[^\n|;&]*\s-(?:\w*c|Command)\b|\beval\b|\bcmd(?:\.exe)?\s+/c\b)")
+kLongRunPattern = re.compile(r"(?i)-m\s+Scripts\s+(?:verify-batch|full-build|soak|load\s+(?:suite|run)|perf-compare)\b")
+kQuickFlagPattern = re.compile(r"(?i)\s(?:--dry-run|--list|--check|--help|-h)\b")
+kSleepPattern =re.compile(r"(?i)\bsleep\s+(\d+)\b")
+kMaxForegroundSleepSeconds = 20  # 이보다 짧은 sleep 은 재시도 간격 정도라 통과시킨다
 kRootFindPattern =re.compile(r"(?i)(?:^|[;&|('\"]|&&)\s*find\s+/(?:\s|$)")
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
 kWindowsPathPattern = re.compile(r"[A-Za-z]:[\\/][^\s\"'|;&<>]*")
@@ -117,6 +123,19 @@ def checkInterpreterHeredoc(command: str) -> str:
     return ""
 
 
+def checkForegroundLongRun(command: str, bBackground: bool) -> str:
+    """수 분 넘게 걸리는 검증 · 빌드를 전경에서 돌리거나 `sleep` 으로 기다리면 막을 이유를 돌려준다. 백그라운드 호출은 통과한다."""
+    if bBackground:
+        return ""
+    bare = stripQuoted(command)
+    if kLongRunPattern.search(bare) and kQuickFlagPattern.search(bare):
+        return ""  # 목록 · 점검 · 미리 보기는 바로 끝난다
+    if kLongRunPattern.search(bare) or any(int(seconds) >= kMaxForegroundSleepSeconds for seconds in kSleepPattern.findall(bare)):
+        return ("수 분 넘는 검증 · 빌드는 `run_in_background: true` 로 띄우고 끝 알림을 기다린다. 전경에서 돌리거나 `sleep` 폴링으로 기다리면 "
+                "그동안 도구 호출이 없어 메인 · 사용자의 메시지가 닿지 못한다(docs/12_Agents.md 2절).")
+    return ""
+
+
 def checkRootFind(command: str) -> str:
     scanned = command if kShellWrapperPattern.search(stripQuoted(command)) else stripQuoted(command)
     if kRootFindPattern.search(scanned):
@@ -189,9 +208,10 @@ def main() -> int:
         data = readInput()
         if data.get("tool_name") not in ("Bash", "PowerShell"):
             return 0
-        command = (data.get("tool_input") or {}).get("command") or ""
+        toolInput = data.get("tool_input") or {}
+        command = toolInput.get("command") or ""
         for reason in (checkNoVerify(command), checkInterpreterHeredoc(command), checkRootFind(command), checkRecursiveDelete(command),
-                       checkShellBigDocRead(command)):
+                       checkShellBigDocRead(command), checkForegroundLongRun(command, bool(toolInput.get("run_in_background")))):
             if reason:
                 # 콘솔 인코딩(cp949)이 아니라 UTF-8 바이트로 쓴다 - 모델이 받는 문구가 깨지지 않게 한다.
                 sys.stderr.buffer.write(("[GuardCommands] " + reason + "\n").encode("utf-8"))
