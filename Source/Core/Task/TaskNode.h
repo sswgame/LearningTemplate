@@ -364,8 +364,14 @@ namespace sw
         utf8 _arrName[kTaskDebugNameCapacity + 1]{};
 #endif
         InlineSuccessorList _successors;
-        TaskCallable        _callable;
-        StageNode*          _parentStage{ nullptr }; ///< 남은 태스크가 있는 동안만 유효하다. 그동안 스테이지가 스스로를 잡고 있다
+        /**
+         * @brief `whenAny` 트리거만 채우는 숨은 후속입니다(트리거가 후속의 의존 수를 직접 내리는 간선 — 후속 목록에 없다). 참조를 하나 잡는다.
+         * @details 완료 경로는 이 칸을 읽지 않는다. 사이클 검사(`runBefore` 의 `canReachThroughSuccessors`)만 의존 잠금 아래에서 따라가
+         *          "입력 → 트리거 → 후속 → 입력" 을 거부한다. 트리거를 목록에 걸기 전에 적고(그 `runBefore` 의 잠금이 공개한다), 노드가 풀로 돌아갈 때 놓는다.
+         */
+        TaskNode*    _pAnyOfSuccessor{ nullptr };
+        TaskCallable _callable;
+        StageNode*   _parentStage{ nullptr }; ///< 남은 태스크가 있는 동안만 유효하다. 그동안 스테이지가 스스로를 잡고 있다
 
         atomic<int32> _unresolvedDependencies{ 1 }; ///< 1 = 빌더 의존성(`submit` 이 해제한다) + 선행 태스크 수 + 병렬 그룹 1
 

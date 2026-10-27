@@ -89,9 +89,9 @@ SW_TEST_CASE( ReflectionValidationTest, ValidatorsRunOnPropertiesTypesAndNestedV
  */
 SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
 {
-    sw::ValidationIssueLog::get().clear();
-    sw::GameObjectManager manager;
-    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "SlowMover" ) );
+    sw::GameObjectManager   manager;
+    sw::ValidationIssueLog& issueLog = manager.getSubsystem<sw::SceneValidationIssues>().getLog();
+    sw::GameObject*         pObject  = manager.createGameObject( sw::hashed_string( "SlowMover" ) );
     SW_ASSERT_NOT_NULL( pObject );
     sw::ValidatedComponent* pComp = pObject->addComponent<sw::ValidatedComponent>();
     SW_ASSERT_NOT_NULL( pComp );
@@ -102,7 +102,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         SW_TEST_DEFENSIVE_SCOPE( "validation warning while saving a component with a negative speed" );
         const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pObject, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ); // 저장 — 결과를 남기고 저장은 한다
         SW_EXPECT_FALSE( state.empty() );
-        sw::ValidationIssueLog::get().collectIssues( listIssue );
+        issueLog.collectIssues( listIssue );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
         SW_EXPECT_EQUAL( pObject->getObjectID(), listIssue[0]._sourceID );
         SW_EXPECT_EQUAL( sw::string( "SlowMover" ), listIssue[0]._sourceLabel );
@@ -116,31 +116,32 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLoaded, state, context ) );
         SW_EXPECT_TRUE( batch.finish() );
-        sw::ValidationIssueLog::get().collectIssues( listIssue );
+        issueLog.collectIssues( listIssue );
         SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listIssue.size() ) );
     }
 
     // 고치고 다시 검증(인스펙터 편집 길) — 그 오브젝트의 결과만 사라진다
     pComp->_speed = 3.0f;
     SW_EXPECT_EQUAL( 0u, sw::ObjectValidation::reportGameObject( *pObject, false ) );
-    sw::ValidationIssueLog::get().collectIssues( listIssue );
+    issueLog.collectIssues( listIssue );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
     SW_EXPECT_TRUE( listIssue[0]._sourceID != pObject->getObjectID() );
-    sw::ValidationIssueLog::get().clear();
 }
 
 /**
- * @brief [ReflectionValidationTest] 오브젝트가 파괴되면 그 결과가 표에서 빠지고, 매니저(씬)가 내려가면 남은 오브젝트의 결과도 빠진다
+ * @brief [ReflectionValidationTest] 오브젝트가 파괴되면 그 결과가 자기 월드의 표에서 빠지고, 다른 월드(씬)의 표에는 결과가 섞이지 않으며, 씬을 비우면 표도 빈다
  * @details 결과는 오브젝트 ID 로 들어간다. 오브젝트가 사라진 뒤에도 남으면 맵 검사 패널이 없는 오브젝트의 줄을 보인다.
+ *          표는 월드마다 하나다(`SceneValidationIssues`) — 에디터 미리보기 창 · 씬 둘이 한 표를 나누면 결과가 섞인다.
  */
 SW_TEST_CASE( ReflectionValidationTest, DestroyedObjectLeavesTheIssueLog )
 {
-    sw::ValidationIssueLog::get().clear();
     sw::vector<sw::ValidationIssue> listIssue;
+    sw::GameObjectManager           otherWorld;
     {
-        sw::GameObjectManager manager;
-        sw::GameObject*       pDestroyed = manager.createGameObject( sw::hashed_string( "DestroyedMover" ) );
-        sw::GameObject*       pKept      = manager.createGameObject( sw::hashed_string( "KeptMover" ) );
+        sw::GameObjectManager   manager;
+        sw::ValidationIssueLog& issueLog   = manager.getSubsystem<sw::SceneValidationIssues>().getLog();
+        sw::GameObject*         pDestroyed = manager.createGameObject( sw::hashed_string( "DestroyedMover" ) );
+        sw::GameObject*         pKept      = manager.createGameObject( sw::hashed_string( "KeptMover" ) );
         SW_ASSERT_NOT_NULL( pDestroyed );
         SW_ASSERT_NOT_NULL( pKept );
         sw::ValidatedComponent* pDestroyedComp = pDestroyed->addComponent<sw::ValidatedComponent>();
@@ -151,15 +152,17 @@ SW_TEST_CASE( ReflectionValidationTest, DestroyedObjectLeavesTheIssueLog )
         pKeptComp->_speed      = -1.0f;
         SW_EXPECT_EQUAL( 1u, sw::ObjectValidation::reportGameObject( *pDestroyed, false ) );
         SW_EXPECT_EQUAL( 1u, sw::ObjectValidation::reportGameObject( *pKept, false ) );
-        SW_EXPECT_EQUAL( 2u, sw::ValidationIssueLog::get().getIssueCount() );
+        SW_EXPECT_EQUAL( 2u, issueLog.getIssueCount() );
 
         const uint64 keptID = pKept->getObjectID();
         manager.destroyObject( pDestroyed );
         manager.processDeferredDestruction();
-        sw::ValidationIssueLog::get().collectIssues( listIssue );
+        issueLog.collectIssues( listIssue );
         SW_ASSERT_TRUE_MSG( listIssue.size() == 1, "The result of the destroyed object remains in the table" );
         SW_EXPECT_EQUAL( keptID, listIssue[0]._sourceID );
+        SW_EXPECT_TRUE_MSG( otherWorld.getSubsystem<sw::SceneValidationIssues>().getLog().getIssueCount() == 0, "다른 월드의 결과가 이 월드의 표에 섞였습니다" );
+
+        manager.clear();
+        SW_EXPECT_TRUE_MSG( issueLog.getIssueCount() == 0, "씬을 비운 뒤에도 오브젝트의 결과가 표에 남았습니다" );
     }
-    SW_EXPECT_TRUE_MSG( sw::ValidationIssueLog::get().getIssueCount() == 0, "매니저가 내려간 뒤에도 그 오브젝트의 결과가 표에 남았습니다" );
-    sw::ValidationIssueLog::get().clear();
 }

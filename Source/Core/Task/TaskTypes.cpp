@@ -117,6 +117,9 @@ namespace sw
             {
                 listSuccessor.clear();
                 pNode->_successors.appendTo( listSuccessor );
+                // `whenAny` 트리거의 숨은 간선(트리거 → 후속)도 간선이다 — 목록에 없어도 기다림을 만든다.
+                if ( pNode->_pAnyOfSuccessor != nullptr )
+                    listSuccessor.push_back( pNode->_pAnyOfSuccessor );
                 for ( TaskNode* pSuccessor : listSuccessor )
                 {
                     if ( pSuccessor == pTarget )

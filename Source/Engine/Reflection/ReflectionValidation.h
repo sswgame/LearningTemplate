@@ -16,9 +16,6 @@
 namespace sw
 {
     struct TypeInfo;
-
-    template <class T>
-    class ScopeOwned;
 } // namespace sw
 
 namespace sw
@@ -100,18 +97,16 @@ namespace sw
 {
     /**
      * @brief 검증 결과를 출처(오브젝트)마다 모아 두는 표입니다. 같은 출처를 다시 검증하면 그 출처의 결과를 바꿉니다.
-     * @details 맵 검사 패널 · 쿠커 · 테스트가 읽습니다. 엔진 안에 하나라 모듈이 다시 올라와도 남고, 엔진 수명 범위가 닫히면(엔진 종료) 결과와 함께 소멸합니다.
-     *          출처의 결과는 출처와 함께 사라집니다 — `GameObject` 소멸자가 자기 ID 를 지우므로 오브젝트 파괴 · 씬 언로드 뒤에 남지 않습니다.
-     *          여러 스레드(로드 워커)에서 쓸 수 있습니다.
+     * @details 값 형식이다 — 월드(씬)가 하나씩 든다(`SceneValidationIssues`, `Engine/Object/GameObject/Serialization/ObjectValidation.h`). 월드가 둘이면
+     *          (에디터 미리보기 창 · 씬 둘) 결과가 한 표에 섞이지 않는다(언리얼 Map Check 의 월드별 메시지 로그와 같다). 맵 검사 패널은 활성 씬의 표를 읽는다.
+     *          출처의 결과는 출처와 함께 사라집니다 — `GameObject` 소멸자가 자기 매니저의 표에서 자기 ID 를 지운다. 여러 스레드(로드 워커)에서 쓸 수 있습니다.
      */
     class SW_API ValidationIssueLog
     {
-        friend class ScopeOwned<ValidationIssueLog>;
-
     public:
-        static ValidationIssueLog& get();
-        /** @brief 이미 만들어진 표입니다. 아직 없거나 엔진 수명 범위가 닫혔으면 nullptr 입니다(만들지 않습니다 — 파괴 경로가 부른다). */
-        static ValidationIssueLog* find();
+        ValidationIssueLog()                                       = default;
+        ValidationIssueLog( const ValidationIssueLog& )            = delete;
+        ValidationIssueLog& operator=( const ValidationIssueLog& ) = delete;
 
         /** @brief @p sourceID 의 결과를 @p listIssue 로 바꿉니다(비었으면 그 출처를 지운다). */
         void replaceIssues( uint64 sourceID, const vector<ValidationIssue>& listIssue );
@@ -130,8 +125,6 @@ namespace sw
         uint32 getRevision() const { return _revision.load( std::memory_order_acquire ); }
 
     private:
-        ValidationIssueLog() = default;
-
         mutable mutex                      _mutex;
         vector<ValidationIssue> _listIssue SW_GUARDED_BY( _mutex );
         atomic<uint32>                     _revision{ 0 };

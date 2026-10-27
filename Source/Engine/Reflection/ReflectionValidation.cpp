@@ -3,7 +3,6 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -15,9 +14,6 @@ namespace sw
     {
         struct ReflectionValidationInternal
         {
-            /** @brief 결과 표 본체입니다. 처음 쓸 때 만들어지고 엔진 수명 범위가 닫히면 소멸합니다. */
-            static inline ScopeOwned<ValidationIssueLog> s_validationIssueLog;
-
             /** @brief 값으로 든 반사 구조체의 타입입니다(내장 타입 · 열거형은 아니다). 없으면 nullptr 입니다. */
             static const TypeInfo* findNestedType( const hashed_string& typeName )
             {
@@ -183,21 +179,6 @@ namespace sw
         type._bHasValidator        = bHasValidator ? SW_TRUE : SW_FALSE;
         type._bValidatorCalculated = SW_TRUE;
         return bHasValidator;
-    }
-
-    ValidationIssueLog& ValidationIssueLog::get()
-    {
-        ValidationIssueLog* const pLog = ReflectionValidationInternal::s_validationIssueLog.getOrCreate();
-        if ( pLog != nullptr )
-            return *pLog;
-        // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 결과를 받지 않은 빈 표로 답한다.
-        static ValidationIssueLog s_closedFallback;
-        return s_closedFallback;
-    }
-
-    ValidationIssueLog* ValidationIssueLog::find()
-    {
-        return ReflectionValidationInternal::s_validationIssueLog.find();
     }
 
     void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )

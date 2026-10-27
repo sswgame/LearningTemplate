@@ -1029,6 +1029,42 @@ SW_TEST_CASE( TaskManagerTest, DependencyCycleIsRejectedAndDoesNotHangWaitAll )
 }
 
 /**
+ * @brief [TaskManagerTest] `whenAny` 가 돌려준 후속을 그 입력의 선행으로 거는 간선(입력 → 트리거 → 후속 → 입력)은 사이클로 거부되고 `waitAll` 이 멈추지 않는다.
+ * @details 트리거 → 후속은 후속 목록의 간선이 아니라 숨은 후속 칸(`TaskNode::_pAnyOfSuccessor`)이다 — 검사가 그 칸을 따라가지 않으면 이 간선이 걸리고 영영 돌지 않는다.
+ */
+SW_TEST_CASE( TaskManagerTest, WhenAnyContinuationCannotRunBeforeItsInput )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32>                sequence{ 0 };
+    sw::atomic<int32>                orderA{ 0 };
+    sw::atomic<int32>                orderB{ 0 };
+    sw::atomic<int32>                ranCount{ 0 };
+    sw::TaskHandle                   taskA = makeOrderedTask( manager, "A", sequence, orderA );
+    sw::TaskHandle                   taskB = makeOrderedTask( manager, "B", sequence, orderB );
+    const sw::vector<sw::TaskHandle> listInput{ taskA, taskB };
+    sw::TaskHandle                   any = manager.whenAny( listInput, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+                      { ranCount.fetch_add( 1 ); } ) );
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a whenAny continuation must not run before its input" );
+        SW_EXPECT_FALSE( any.runBefore( taskA ) );
+        SW_EXPECT_FALSE( taskB.runAfter( any ) );
+    }
+    SW_EXPECT_EQUAL( 2u, logs.countWithID( "Task.DependencyCycle" ) );
+
+    any.submit();
+    taskA.submit();
+    taskB.submit();
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "거부된 whenAny 사이클 간선이 waitAll 을 막았습니다" );
+    SW_EXPECT_EQUAL( 1, ranCount.load() );
+
+    manager.shutdown();
+}
+
+/**
  * @brief [TaskManagerTest] 다이아몬드(A→B,C→D)는 사이클이 아니고, 사이클을 거부한 뒤에도 정상 그래프는 순서대로 돈다.
  */
 SW_TEST_CASE( TaskManagerTest, DiamondIsNotACycleAndSurvivesARejectedEdge )

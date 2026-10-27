@@ -47,25 +47,50 @@ namespace sw::editor
             /** @brief 상태줄 항목이 프레임 사이에 기억하는 값입니다. 패널이 닫혀도 상태줄은 그려지므로 패널 멤버가 아니라 에디터 범위의 상태 저장소가 소유한다. */
             struct State
             {
-                MapCheckCounts _statusCounts{}; ///< 상태줄 맵 검사 수 - 결과 번호가 바뀔 때만 다시 센다
-                uint32         _statusRevision{ 0 };
+                MapCheckCounts _statusCounts{};         ///< 상태줄 맵 검사 수 - 결과 번호가 바뀔 때만 다시 센다
+                uint64         _statusRevisionKey{ 0 }; ///< `makeRevisionKey` — 씬이 바뀌어도 다시 센다
                 bool           _bStatusCounted{ false };
                 uint64         _toastSceneGeneration{ 0 }; ///< 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬이다(이름이 바뀌면 새 씬이다)
             };
 
             static State& getState() { return getEditorState<State>(); }
 
+            /** @brief 활성 씬의 검증 결과 표입니다(표는 월드마다 하나 — `SceneValidationIssues`). 씬이 없으면 nullptr 입니다. */
+            static const ValidationIssueLog* findActiveIssueLog()
+            {
+                const GameObjectManager* pManager = editor::getActiveObjectManager();
+                return pManager != nullptr ? &pManager->getSubsystem<SceneValidationIssues>().getLog() : nullptr;
+            }
+
+            /** @brief 표의 결과 번호에 활성 씬 세대를 붙인 열쇠입니다 — 씬이 바뀌면 새 표라 번호가 같아도 다시 모은다. 씬이 없으면 0 입니다. */
+            static uint64 makeRevisionKey( const ValidationIssueLog* pLog )
+            {
+                if ( pLog == nullptr )
+                    return 0;
+                const uint64 generation = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                return ( generation << 32u ) ^ ( static_cast<uint64>( pLog->getRevision() ) + 1u );
+            }
+
+            /** @brief 활성 씬 표의 결과를 모읍니다. 씬이 없으면 비웁니다. */
+            static void collectActiveIssues( const ValidationIssueLog* pLog, vector<ValidationIssue>& outListIssue )
+            {
+                outListIssue.clear();
+                if ( pLog != nullptr )
+                    pLog->collectIssues( outListIssue );
+            }
+
             /** @brief 결과 번호가 바뀌었으면 무게별 수를 다시 셉니다. */
             static const MapCheckCounts& syncStatusCounts()
             {
-                const uint32 revision = ValidationIssueLog::get().getRevision();
-                if ( getState()._bStatusCounted && revision == getState()._statusRevision )
+                const ValidationIssueLog* pLog        = findActiveIssueLog();
+                const uint64              revisionKey = makeRevisionKey( pLog );
+                if ( getState()._bStatusCounted && revisionKey == getState()._statusRevisionKey )
                     return getState()._statusCounts;
                 vector<ValidationIssue> listIssue;
-                ValidationIssueLog::get().collectIssues( listIssue );
-                getState()._statusCounts   = MapCheckRows::countIssues( listIssue );
-                getState()._statusRevision = revision;
-                getState()._bStatusCounted = true;
+                collectActiveIssues( pLog, listIssue );
+                getState()._statusCounts      = MapCheckRows::countIssues( listIssue );
+                getState()._statusRevisionKey = revisionKey;
+                getState()._bStatusCounted    = true;
                 return getState()._statusCounts;
             }
 
@@ -128,7 +153,7 @@ namespace sw::editor
         , _searchBuffer{}
         , _builtSearch{}
         , _counts{}
-        , _builtRevision{ 0 }
+        , _builtRevisionKey{ 0 }
         , _bShowErrors{ SW_TRUE }
         , _bShowWarnings{ SW_TRUE }
         , _bRowsDirty{ SW_TRUE }
@@ -146,7 +171,7 @@ namespace sw::editor
         pManager->getAllGameObjects( listObject );
         for ( const GameObject* pObject : listObject )
         {
-            (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 ValidationIssueLog 에 남고 테이블이 읽는다
+            (void)ObjectValidation::reportGameObject( *pObject, false ); // 결과는 그 씬의 표(SceneValidationIssues)에 남고 테이블이 읽는다
         }
         SW_LOG_INFO( "Map Check: %# object(s) checked in %# ms", listObject.size(), stopwatch.getElapsedMilliseconds() );
         return static_cast<uint32>( listObject.size() );
@@ -165,20 +190,21 @@ namespace sw::editor
 
     void MapCheckPanel::syncRows()
     {
-        const uint32 revision = ValidationIssueLog::get().getRevision();
-        const bool   bChanged = revision != _builtRevision || _builtSearch != _searchBuffer.c_str();
+        const ValidationIssueLog* pLog        = MapCheckPanelInternal::findActiveIssueLog();
+        const uint64              revisionKey = MapCheckPanelInternal::makeRevisionKey( pLog );
+        const bool                bChanged    = revisionKey != _builtRevisionKey || _builtSearch != _searchBuffer.c_str();
         if ( bChanged == false && _bRowsDirty == SW_FALSE )
             return;
         vector<ValidationIssue> listIssue;
-        ValidationIssueLog::get().collectIssues( listIssue );
+        MapCheckPanelInternal::collectActiveIssues( pLog, listIssue );
         MapCheckFilter filter{};
         filter._search        = _searchBuffer.c_str();
         filter._bShowErrors   = _bShowErrors == SW_TRUE;
         filter._bShowWarnings = _bShowWarnings == SW_TRUE;
         MapCheckRows::populate( listIssue, filter, _listRow, _counts );
-        _builtRevision = revision;
-        _builtSearch   = _searchBuffer.c_str();
-        _bRowsDirty    = SW_FALSE;
+        _builtRevisionKey = revisionKey;
+        _builtSearch      = _searchBuffer.c_str();
+        _bRowsDirty       = SW_FALSE;
     }
 
     void MapCheckPanel::drawContent()

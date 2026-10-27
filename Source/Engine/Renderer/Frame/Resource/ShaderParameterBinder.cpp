@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
+#include "Core/Container/span.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -146,10 +147,7 @@ namespace sw
                                                     const PassConstantValues& values, const EngineConstantBufferSlot& engineCb,
                                                     const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
-                // 드로우마다 힙에서 새로 잡지 않는다. 병렬 패스 기록이 여러 스레드에서 이 함수를
-                // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.
-                thread_local vector<uint8> s_cbBytes;
-                const uint32               alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
+                const uint32 alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
                 // 슬롯은 PassConstantRing::kSlotBytes 로 만들었다 — 레이아웃이 더 크면 슬롯 뒤를 쓰게 되므로 올리지 않고 알린다(GL 은 GL_INVALID_VALUE, 다른 백엔드는 조용히 넘쳤다).
                 if ( alignedSize > PassConstantRing::kSlotBytes )
                 {
@@ -158,7 +156,10 @@ namespace sw
                         SW_LOG_ERROR( "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
                     return;
                 }
-                s_cbBytes.assign( alignedSize, 0 );
+                // 버퍼는 슬롯 크기(위에서 막았다)를 넘지 않는 스택 배열이다 — 드로우마다 힙을 잡지 않고, 병렬 패스 기록의 스레드마다 따로이며,
+                // 스레드 지역 힙 버퍼처럼 기준선 뒤에 자라 종료 누수 보고에 남지 않는다.
+                alignas( 16 ) uint8 arrCbBytes[PassConstantRing::kSlotBytes]{};
+                const span<uint8>   cbBytes{ arrCbBytes, alignedSize };
 
                 for ( const ShaderEngineCbMember& member : layout.getEngineCbMembers() )
                 {
@@ -188,11 +189,11 @@ namespace sw
                     if ( pValue == nullptr || valueSize == 0 )
                         continue;
                     const uint32 writeSize = MathUtil::min( valueSize, member._size );
-                    if ( member._offset + writeSize <= s_cbBytes.size() )
-                        Memory::copy( s_cbBytes.data() + member._offset, pValue, writeSize );
+                    if ( member._offset + writeSize <= cbBytes.size() )
+                        Memory::copy( cbBytes.data() + member._offset, pValue, writeSize );
                 }
 
-                cmd.updateConstantBuffer( engineCb._buffer, s_cbBytes.data(), static_cast<uint32>( s_cbBytes.size() ) );
+                cmd.updateConstantBuffer( engineCb._buffer, cbBytes.data(), static_cast<uint32>( cbBytes.size() ) );
             }
 
             /**

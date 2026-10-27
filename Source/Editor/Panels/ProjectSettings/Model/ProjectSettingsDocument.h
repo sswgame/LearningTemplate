@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Reflection/ReflectedInstance.h"
 
 namespace sw
 {
@@ -53,7 +54,7 @@ namespace sw::editor
         [[nodiscard]] bool save();
 
         /** @brief 열려 있으면 true 입니다(인스턴스가 있다). */
-        [[nodiscard]] bool isOpen() const { return _pCurrent != nullptr; }
+        [[nodiscard]] bool isOpen() const { return _current.isValid(); }
         /** @brief 마지막으로 읽거나 저장한 글과 지금 값의 차이 글이 다르면 true 입니다. */
         [[nodiscard]] bool isModified() const;
         /** @brief 읽지 못해(`Invalid`) 저장을 막고 있으면 true 입니다. */
@@ -73,16 +74,13 @@ namespace sw::editor
         static constexpr const utf8* kBaseLayerMeta = "ConfigBaseLayer"; ///< 바탕 층 표시 메타
 
         /** @brief 편집할 현재 값입니다. 그리드가 직접 고친다. 열려 있지 않으면 nullptr 입니다. */
-        void* getInstance() { return _pCurrent; }
+        void* getInstance() { return _current.get(); }
         /** @brief 기본값 인스턴스입니다. 없으면 nullptr 입니다. */
-        const void*     getDefaultInstance() const { return _pDefault; }
+        const void*     getDefaultInstance() const { return _default.get(); }
         const TypeInfo* getType() const { return _pType; }
         const string&   getPath() const { return _path; }
 
     private:
-        /** @brief @p pType 의 기본 생성자로 인스턴스를 만듭니다. 만들 수 없으면 nullptr 입니다. */
-        static void* createInstance( const TypeInfo& type );
-        static void  destroyInstance( const TypeInfo& type, void* pInstance );
         /** @brief 파일 글 @p fileText 를 @p pInstance 에 엄격하게 읽습니다(JSON 은 파일 전체, 요소 모드는 그 요소). 요소가 없으면 `Missing` 입니다. */
         [[nodiscard]] ConfigReadResult readInto( void* pInstance, string_view fileText ) const;
         [[nodiscard]] string           makeDifferenceJSON() const;
@@ -91,11 +89,11 @@ namespace sw::editor
         [[nodiscard]] bool saveElement( const string& elementText ) const;
 
     private:
-        const TypeInfo* _pType;
-        void*           _pCurrent;
-        void*           _pDefault;
-        string          _path;
-        string          _elementName; ///< 비면 파일 전체(JSON), 있으면 XML 파일 안의 그 요소
+        const TypeInfo*   _pType;
+        ReflectedInstance _current; ///< 편집할 현재 값(타입의 기본 생성자로 만든다)
+        ReflectedInstance _default; ///< 기본값
+        string            _path;
+        string            _elementName; ///< 비면 파일 전체(JSON), 있으면 XML 파일 안의 그 요소
 
         string           _savedText; ///< 마지막으로 읽거나 저장한 차이 글
         ConfigReadResult _readResult;

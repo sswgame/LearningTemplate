@@ -171,12 +171,11 @@
 "Source/Engine/Profiling/ProfilerTraceExport.cpp" = 2
 # Source/Engine/Reflection — 이전 대기
 "Source/Engine/Reflection/ReflectionCore.cpp" = 4
-"Source/Engine/Reflection/ReflectionValidation.cpp" = 2
 # Source/Engine/Renderer — 이전 대기
 "Source/Engine/Renderer/Capture/RenderDocCapture.cpp" = 2
 "Source/Engine/Renderer/Frame/FrameRenderer.cpp" = 1
 "Source/Engine/Renderer/Frame/FrameRendererFog.cpp" = 1
-"Source/Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp" = 2
+"Source/Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp" = 1
 "Source/Engine/Renderer/Frame/Timeline/GPUPassTimeline.cpp" = 2
 "Source/Engine/Renderer/Graph/RenderGraph.cpp" = 1
 # Source/Engine/Resource — 이전 대기

@@ -10,8 +10,8 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -123,9 +123,10 @@ namespace sw
         SW_ASSERT( _listComponent.empty() );
 
         // 검증 결과는 이 오브젝트가 출처다. 오브젝트와 함께 사라진다(파괴 · 씬 언로드 · 매니저 소멸이 모두 여기를 지난다).
-        ValidationIssueLog* const pIssueLog = ValidationIssueLog::find();
-        if ( pIssueLog != nullptr )
-            pIssueLog->removeSource( _objectID );
+        // 표는 자기 월드의 것이다 — 매니저가 소멸하는 중이어도 서비스는 오브젝트보다 늦게 내려가므로(저장소를 먼저 비운다) 아직 있다.
+        SceneValidationIssues* const pIssues = _pOwnerManager != nullptr ? _pOwnerManager->getSceneScope().find<SceneValidationIssues>() : nullptr;
+        if ( pIssues != nullptr )
+            pIssues->getLog().removeSource( _objectID );
     }
 
     const TypeInfo* GameObject::getTypeInfo() const
