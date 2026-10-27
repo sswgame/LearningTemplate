@@ -27,10 +27,11 @@ from common.AppBinary import runHeadlessTask  # noqa: E402
 from common.AppRun import runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Timeline import kTimelineEnvName, kTimelineItemEnvName, summarizeAppArguments  # noqa: E402
-from common.VerifyManifest import (ItemResult, VerifyItem, VerifyManifestError, buildItemCommand, checkVerifyPending, extractMetricValues, findPendingLineViolations,  # noqa: E402
-                                   findReferencedIds, formatResultTable, groupByGpuMode, interpretOutcome, judgeMetrics, kStatusBlocked,
-                                   kStatusFailed, kStatusPassed, kStatusSkipped, makeNotRunResult, makeResult, orderItems, parseManifest,
-                                   readManifest, resolveCoveredResult, summarizeBenchRows)
+from common.VerifyManifest import (ItemResult, ShardPlan, VerifyItem, VerifyManifest, VerifyManifestError, buildItemCommand, checkVerifyPending, combineShardResults,  # noqa: E402
+                                   extractMetricValues, findManifestProblems, findPendingLineViolations, findReferencedIds, formatResultTable, getStageIndex,
+                                   groupByGpuMode, interpretOutcome, judgeMetrics, kStatusBlocked, kStatusFailed, kStatusPassed, kStatusSkipped,
+                                   makeNotRunResult, makeResult, makeShardArguments, orderItems, parseManifest, planShards, readGpuSlots, readManifest,
+                                   resolveCoveredResult, summarizeBenchRows)
 from common.Paths import getProjectRoot  # noqa: E402
 from dev import RunVerifyBatch  # noqa: E402
 
@@ -365,23 +366,28 @@ class PendingLineTest(unittest.TestCase):
 
 
 class FakeItemRunner:
-    """`runItemInternal` 대신 자는 가짜 — 항목마다 `(시작, 끝)` 을 적고 `setFail` 의 id 는 진다."""
+    """`runItemInternal` 대신 자는 가짜 — 항목마다 `(시작, 끝)` 을 적고 `setFail` 의 id 는 진다. 샤드 조각은 `id#조각번호`(0 부터)로 적는다."""
 
     def __init__(self, mapSeconds: dict[str, float], setFail: frozenset[str] = frozenset()) -> None:
         self.mapSeconds = mapSeconds
         self.setFail = setFail
         self.mapSpan: dict[str, tuple[float, float]] = {}
         self.listStarted: list[str] = []
+        self.mapShardArg: dict[str, tuple[str, ...]] = {}
         self.lock = threading.Lock()
 
-    def __call__(self, item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, outputDir: Path) -> ItemResult:
+    def __call__(self, item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, outputDir: Path, shardIndex: int | None = None,
+                 listShardArg: tuple[str, ...] = ()) -> ItemResult:
+        key = item.itemId if shardIndex is None else f"{item.itemId}#{shardIndex}"
         start = time.monotonic()
         with self.lock:
-            self.listStarted.append(item.itemId)
-        time.sleep(self.mapSeconds.get(item.itemId, 0.1))
+            self.listStarted.append(key)
+            self.mapShardArg[key] = listShardArg
+        time.sleep(self.mapSeconds.get(key, self.mapSeconds.get(item.itemId, 0.1)))
         with self.lock:
-            self.mapSpan[item.itemId] = (start, time.monotonic())
-        return makeResult(item.itemId, kStatusFailed if item.itemId in self.setFail else kStatusPassed, "", "d")
+            self.mapSpan[key] = (start, time.monotonic())
+        bFail = key in self.setFail or item.itemId in self.setFail
+        return makeResult(item.itemId, kStatusFailed if bFail else kStatusPassed, "boom" if bFail else "", "d", logPath=f"logs/{key}.log")
 
     def isOverlapped(self, first: str, second: str) -> bool:
         (firstStart, firstEnd), (secondStart, secondEnd) = self.mapSpan[first], self.mapSpan[second]
@@ -409,32 +415,33 @@ class ParallelBatchTest(unittest.TestCase):
         self.manifest = parseManifest(makeData(*listManifestItem))
         self.listItem = list(self.manifest.listItem)
 
-    def runWith(self, jobs: int, runner: FakeItemRunner) -> list[ItemResult]:
+    def runWith(self, jobs: int, runner: FakeItemRunner, bFailFast: bool = False) -> list[ItemResult]:
         with mock.patch.object(RunVerifyBatch, "runItemInternal", runner), mock.patch.object(RunVerifyBatch, "holdLocksInternal", fakeHoldLocks), \
                 mock.patch.object(RunVerifyBatch, "findMainRoot", lambda root: root):
-            return RunVerifyBatch.runBatch(self.manifest, self.listItem, Path("."), "o", 1, Path("."), jobs)
+            return RunVerifyBatch.runBatch(self.manifest, self.listItem, Path("."), "o", 1, Path("."), jobs, bFailFast=bFailFast)
 
     def testPlanSplitsLockFreeItemsAndKeepsLockGroupsWhole(self) -> None:
         listRun = [item for item in orderItems(self.manifest, self.listItem)[0][1] if item.bRunnable]
         listUnit = RunVerifyBatch.planUnits("Debug", listRun)
         self.assertEqual([("none", ["b"]), ("none", ["a"]), ("shared", ["cs"]), ("none", ["tn"]), ("shared", ["ts"]), ("exclusive", ["m"])],
                          [(unit.gpuMode, [item.itemId for item in unit.listItem]) for unit in listUnit])
-        self.assertEqual([True, False, False, False, False, True], [unit.bAlone for unit in listUnit])
+        self.assertEqual([True, True, True, False, False, True], [unit.bAlone for unit in listUnit])   # 빌드 · ctest · 측정은 혼자
         self.assertTrue(RunVerifyBatch.hasConflict(listUnit[2], listUnit[4]))        # 같은 gpu 잠금 자원
-        self.assertFalse(RunVerifyBatch.hasConflict(listUnit[1], listUnit[2]))       # 잠금 없는 것과 공유
+        self.assertFalse(RunVerifyBatch.hasConflict(listUnit[3], listUnit[4]))       # 잠금 없는 test 와 공유 test
         self.assertTrue(RunVerifyBatch.hasConflict(listUnit[0], listUnit[1]))        # 빌드는 혼자
+        self.assertTrue(RunVerifyBatch.hasConflict(listUnit[1], listUnit[3]))        # ctest 는 혼자 — 둘이 겹치면 CPU 경합으로 린트 제한 시간이 가짜로 진다
 
     def testConflictingUnitsAreSerialAndOthersOverlap(self) -> None:
-        runner = FakeItemRunner({"cs": 0.4})
+        runner = FakeItemRunner({"tn": 0.4})
         listResult = self.runWith(2, runner)
         for other in ("a", "cs", "tn", "ts", "m"):
             self.assertFalse(runner.isOverlapped("b", other), f"빌드가 {other} 와 겹쳤다")
         for other in ("a", "cs", "tn", "ts"):
             self.assertFalse(runner.isOverlapped("m", other), f"측정이 {other} 와 겹쳤다")
-        self.assertFalse(runner.isOverlapped("cs", "ts"))                            # 같은 gpu 잠금
-        self.assertTrue(runner.isOverlapped("a", "cs"))                              # 잠금 없는 것과 공유는 겹친다
-        self.assertTrue(runner.isOverlapped("tn", "cs"))
-        self.assertLess(runner.mapSpan["cs"][1], runner.mapSpan["ts"][0] + 0.001)
+        for other in ("tn", "ts", "cs"):
+            self.assertFalse(runner.isOverlapped("a", other), f"ctest 가 {other} 와 겹쳤다")
+        self.assertFalse(runner.isOverlapped("cs", "ts"))                            # 같은 gpu 잠금(그리고 ctest 는 혼자)
+        self.assertTrue(runner.isOverlapped("tn", "ts"))                             # 잠금 없는 test 와 공유 test 는 겹친다
         self.assertEqual([item.itemId for item in self.listItem], [result.itemId for result in listResult])   # 보고는 매니페스트 순서
         self.assertEqual(kStatusSkipped, listResult[-1].status)
         self.assertEqual({kStatusPassed}, {result.status for result in listResult[:-1]})
@@ -456,6 +463,282 @@ class ParallelBatchTest(unittest.TestCase):
         mapStatus = {result.itemId: result.status for result in self.runWith(2, runner)}
         self.assertEqual(["b"], runner.listStarted)
         self.assertEqual([kStatusFailed] + [kStatusBlocked] * 5, [mapStatus[itemId] for itemId in ("b", "a", "cs", "tn", "ts", "m")])
+
+    def testFailFastStopsAfterTheFailingStageAndKeepsAllInTheTable(self) -> None:
+        runner = FakeItemRunner({}, frozenset({"a"}))      # ctest(2 단계)가 진다
+        listResult = self.runWith(2, runner, bFailFast=True)
+        mapResult = {result.itemId: result for result in listResult}
+        self.assertEqual(["b", "a", "cs"], runner.listStarted)                           # 같은 단계의 cs 는 끝까지 돌고, 뒤 단계(test · measure)는 돌지 않는다
+        self.assertEqual([kStatusPassed, kStatusFailed, kStatusPassed], [mapResult[itemId].status for itemId in ("b", "a", "cs")])
+        for itemId in ("tn", "ts", "m"):
+            self.assertEqual(kStatusSkipped, mapResult[itemId].status)
+            self.assertIn(f"{RunVerifyBatch.kSkipFailFastMarker} ctest", mapResult[itemId].detail)
+            self.assertIn("`a`", mapResult[itemId].detail)
+        self.assertEqual(7, len(listResult))
+        runner = FakeItemRunner({})
+        self.runWith(1, runner, bFailFast=True)
+        self.assertEqual(["b", "a", "cs", "tn", "ts", "m"], runner.listStarted)          # 지지 않으면 전부 돈다
+
+    def testStagesFollowTheKindOrder(self) -> None:
+        manifest = parseManifest(makeData(*copy.deepcopy(kGoodItems)))
+        self.assertEqual([0, 1, 2, 3, 3, 5], [getStageIndex(manifest.findItem(itemId)) for itemId in ("full-build", "cook-shaders", "ctest-nogpu", "some-test", "a-scenario", "perf-frame")])
+
+
+kMeasureExtra = {"tool": "scripts", "args": ["perf"], "limit": "l", "judge": "exit"}
+
+
+class RequiresTest(unittest.TestCase):
+    """`requires` — 읽을 때 막는 규칙, 선행이 통과하지 못하면 건너뛰는 실행, 선행과 겹치지 않는 일정, `--failed-from` 이 읽는 줄."""
+
+    def parse(self, *listItem: dict) -> VerifyManifest:
+        return parseManifest(makeData(*listItem))
+
+    def testRequiresMustPointAtAnEarlierRunnableItemOfTheSameConfig(self) -> None:
+        cook = makeItem("ck", "cook", "Release", "none", tool="app", args=["--c"])
+        manifest = self.parse(cook, makeItem("dep", "test", "Release", "shared", filter="T.*", requires=["ck"]))
+        self.assertEqual(("ck",), manifest.findItem("dep").listRequires)
+        for bad, message in ((["nope"], "매니페스트에 없습니다"), (["dep"], "겹치지 않는 다른 항목"), (["ck", "ck"], "겹치지 않는 다른 항목"), (["later"], "앞서 돌지 않습니다")):
+            with self.assertRaisesRegex(VerifyManifestError, message):
+                self.parse(cook, makeItem("dep", "test", "Release", "shared", filter="T.*", requires=bad), makeItem("later", "measure", "Release", "exclusive", **kMeasureExtra))
+        with self.assertRaisesRegex(VerifyManifestError, "같은 구성"):
+            self.parse(makeItem("dbg", "test", "Debug", "none", filter="T.*"), makeItem("dep", "test", "Release", "none", filter="T.*", requires=["dbg"]))
+        with self.assertRaisesRegex(VerifyManifestError, "같은 구성"):                      # 덮개 · 명령 없음 항목은 선행이 될 수 없다
+            self.parse(makeItem("nc", "test", "Release", "none", filter="T.*", need_command="이유"), makeItem("dep", "test", "Release", "none", filter="T.*", requires=["nc"]))
+        with self.assertRaisesRegex(VerifyManifestError, "requires"):
+            self.parse(makeItem("run", "test", "Release", "shared", filter="T.*"),
+                       makeItem("cov", "covered", "Release", "shared", covered=["x.scenario.xml"], covered_by="run", requires=["run"]))
+
+    def runBatchWith(self, listItem: list[VerifyItem], manifest: VerifyManifest, runner: FakeItemRunner, jobs: int = 2) -> dict[str, ItemResult]:
+        with mock.patch.object(RunVerifyBatch, "runItemInternal", runner), mock.patch.object(RunVerifyBatch, "holdLocksInternal", fakeHoldLocks), \
+                mock.patch.object(RunVerifyBatch, "findMainRoot", lambda root: root):
+            return {result.itemId: result for result in RunVerifyBatch.runBatch(manifest, listItem, Path("."), "o", 1, Path("."), jobs)}
+
+    def testDependentIsSkippedWhenThePrerequisiteDidNotPass(self) -> None:
+        manifest = self.parse(makeItem("ck", "cook", "Release", "none", tool="app", args=["--c"]),
+                              makeItem("dep", "test", "Release", "none", filter="T.*", requires=["ck"]),
+                              makeItem("free", "test", "Release", "none", filter="T.*"))
+        runner = FakeItemRunner({}, frozenset({"ck"}))
+        mapResult = self.runBatchWith(list(manifest.listItem), manifest, runner)
+        self.assertEqual(kStatusFailed, mapResult["ck"].status)
+        self.assertEqual(kStatusSkipped, mapResult["dep"].status)
+        self.assertIn(f"{RunVerifyBatch.kSkipRequiresMarker} `ck` 가 {kStatusFailed}", mapResult["dep"].detail)
+        self.assertEqual(kStatusPassed, mapResult["free"].status)                    # 선행이 없는 항목은 그대로 돈다
+        self.assertNotIn("dep", runner.listStarted)
+        runner = FakeItemRunner({})
+        mapResult = self.runBatchWith(list(manifest.listItem), manifest, runner)
+        self.assertEqual({kStatusPassed}, {result.status for result in mapResult.values()})
+
+    def testPrerequisiteThatIsNotSelectedIsNotChecked(self) -> None:
+        manifest = self.parse(makeItem("ck", "cook", "Release", "none", tool="app", args=["--c"]), makeItem("dep", "test", "Release", "none", filter="T.*", requires=["ck"]))
+        runner = FakeItemRunner({})
+        mapResult = self.runBatchWith([manifest.findItem("dep")], manifest, runner)      # `--only dep` — 이전 실행의 결과를 쓴다고 보고 돈다
+        self.assertEqual(kStatusPassed, mapResult["dep"].status)
+
+    def testDependentNeverOverlapsItsPrerequisite(self) -> None:
+        manifest = self.parse(makeItem("first", "test", "Release", "none", filter="T.*"), makeItem("second", "test", "Release", "none", filter="T.*", requires=["first"]),
+                              makeItem("third", "test", "Release", "none", filter="T.*"))
+        runner = FakeItemRunner({"first": 0.3})
+        self.runBatchWith(list(manifest.listItem), manifest, runner, jobs=3)
+        self.assertFalse(runner.isOverlapped("first", "second"))
+        self.assertTrue(runner.isOverlapped("first", "third"))                      # 선행이 없는 항목끼리는 겹친다
+
+    def testFailedFromAlsoPicksTheItemsSkippedBecauseOfAFailure(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "vb.txt"
+            log.write_text("\n".join([
+                "[VerifyBatch] 끝 a: 실패 종료 코드 1 (3 초)",
+                "[VerifyBatch] 끝 b: 건너뜀 선행 `a` 가 실패 — 이 항목은 그 결과를 읽는다",
+                "[VerifyBatch] 끝 c 샤드 1/4: 실패 종료 코드 1 (3 초)",
+                "[VerifyBatch] 끝 d: 통과  (1 초)",
+                "[VerifyBatch] 끝 e: 건너뜀 앞 단계 ctest 의 `a` 가 졌다 — --fail-fast 로 뒤를 돌리지 않음",
+                "[VerifyBatch] 끝 f: 막힘 Debug 빌드가 졌다",
+                "[VerifyBatch] 끝 g: 건너뜀 도구가 판정을 건너뜀(77)"]), encoding="utf-8")
+            self.assertEqual(["a", "b", "e", "f"], RunVerifyBatch.readFailedIds(log))         # 샤드 조각 줄(`c 샤드 1/4`)과 다른 건너뜀은 다시 고르지 않는다
+
+    def testItemThatReadsScenarioReportsNeedsItsProducerAsPrerequisite(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "docs" / "plans").mkdir(parents=True)
+            (root / "docs" / "plans" / "A.md").write_text("# 계획\n", encoding="utf-8")
+            reader = makeItem("reader", "measure", "Release", "none", tool="scripts", args=["scenario-waits", "--measured-dir", "build/{preset}/AppRuns"], limit="l", judge="exit")
+            producer = makeItem("producer", "test", "Release", "shared", filter="T.*")
+            (root / "Test" / "QA").mkdir(parents=True)
+            (root / "Test" / "TestT.cpp").write_text("SW_TEST_CASE( T, X )\n", encoding="utf-8")
+            problems = findManifestProblems(root, parseManifest(makeData(producer, reader)))
+            self.assertEqual(1, len(problems))
+            self.assertIn("requires", problems[0])
+            self.assertEqual([], findManifestProblems(root, parseManifest(makeData(producer, {**reader, "requires": ["producer"]}))))
+
+
+class ShardTest(unittest.TestCase):
+    """`shards` — 항목 읽기 규칙, 정책에서 읽는 계획, 조각 단위의 겹침, 조각 결과를 하나로 합치기."""
+
+    def makeRoot(self, mapExecutable: dict, mapSuiteFolder: dict[str, str], gpuSlots: int = 2) -> Path:
+        root = Path(tempfile.mkdtemp()).resolve()
+        (root / "Test").mkdir()
+        for suite, folder in mapSuiteFolder.items():
+            (root / "Test" / folder).mkdir(parents=True, exist_ok=True)
+            (root / "Test" / folder / f"Test{suite}.cpp").write_text(f"SW_TEST_CASE( {suite}, Works )\n", encoding="utf-8")
+        (root / "Test" / "TestPolicy.json").write_text(json.dumps({"gpuSlots": gpuSlots, "executables": mapExecutable}), encoding="utf-8")
+        return root
+
+    def shardItem(self, filterText: str = "ShardATest.*", count: int = 3, gpu: str = "shared") -> VerifyItem:
+        return parseManifest(makeData(makeItem("sh", "test", "Release", gpu, filter=filterText, shards=count))).listItem[0]
+
+    def testShardsKeyRules(self) -> None:
+        for bad in (1, 17, True, "3", 2.5):
+            with self.assertRaisesRegex(VerifyManifestError, "shards"):
+                parseManifest(makeData(makeItem("sh", "test", "Release", "shared", filter="T.*", shards=bad)))
+        with self.assertRaisesRegex(VerifyManifestError, "shards"):
+            parseManifest(makeData(makeItem("sh", "ctest", "Release", "none", label="x", shards=2)))
+        with self.assertRaisesRegex(VerifyManifestError, "shards"):
+            parseManifest(makeData(makeItem("sh", "test", "Release", "none", filter="T.*", need_command="이유", shards=2)))
+        self.assertEqual(4, parseManifest(makeData(makeItem("sh", "test", "Release", "shared", filter="T.*", shards=4))).listItem[0].shardCount)
+
+    def testPlanReadsTheExecutablePolicyAndCostTables(self) -> None:
+        root = self.makeRoot({"ExeA": {"caseCosts": {"ShardATest.Slow": 30}, "hostCaseCosts": {"ShardATest.Host": 90}}}, {"ShardATest": "ExeA"})
+        plan = planShards(root, self.shardItem())
+        self.assertEqual(("ExeA", True), (plan.executable, plan.bMayOverlap))
+        self.assertEqual("--test_costs=ShardATest.Slow=30,ShardATest.Host=90", plan.costArgument)
+        self.assertEqual(("--test_shard=1/3", plan.costArgument), makeShardArguments(plan, 1, 3))
+        self.assertEqual(("--test_shard=0/2",), makeShardArguments(ShardPlan("X", True, ""), 0, 2))
+        self.assertEqual(2, readGpuSlots(root))
+
+    def testHostResourceLockMakesTheShardsRunInOrder(self) -> None:
+        root = self.makeRoot({"ExeA": {"hostResourceLock": "AppBin"}}, {"ShardATest": "ExeA"})
+        self.assertFalse(planShards(root, self.shardItem()).bMayOverlap)
+
+    def testSuitesMustLiveInOneExecutable(self) -> None:
+        root = self.makeRoot({"ExeA": {}, "ExeB": {}}, {"ShardATest": "ExeA", "ShardBTest": "ExeB"})
+        with self.assertRaisesRegex(VerifyManifestError, "실행 파일 하나"):
+            planShards(root, self.shardItem("ShardATest.*,ShardBTest.*"))
+        with self.assertRaisesRegex(VerifyManifestError, "실행 파일 하나"):
+            planShards(root, self.shardItem("NoSuchTest.*"))
+        with self.assertRaisesRegex(VerifyManifestError, "Suite.Case"):
+            planShards(root, self.shardItem("*"))
+        self.assertTrue(any("실행 파일 하나" in problem for problem in findManifestProblemsOfShards(root, "NoSuchTest.*")))
+
+    def testPolicyWithoutGpuSlotsStops(self) -> None:
+        root = self.makeRoot({}, {})
+        (root / "Test" / "TestPolicy.json").write_text("{}", encoding="utf-8")
+        with self.assertRaisesRegex(VerifyManifestError, "gpuSlots"):
+            readGpuSlots(root)
+
+    def testShardUnitsOverlapOnlyWithTheirOwnSiblingsAndOnlyWhenThePolicyAllows(self) -> None:
+        item = self.shardItem(count=3)
+        other = parseManifest(makeData(makeItem("other", "test", "Release", "shared", filter="O.*"))).listItem[0]
+        for bMayOverlap in (True, False):
+            plan = ShardPlan("ExeA", bMayOverlap, "")
+            listUnit = RunVerifyBatch.planUnits("Release", [item, other], {"sh": plan})
+            self.assertEqual([("sh", 0), ("sh", 1), ("sh", 2), ("other", None)], [(unit.listItem[0].itemId, unit.shardIndex) for unit in listUnit])
+            self.assertEqual(not bMayOverlap, RunVerifyBatch.hasConflict(listUnit[0], listUnit[1]))     # 형제 조각
+            self.assertTrue(RunVerifyBatch.hasConflict(listUnit[2], listUnit[3]))                       # 다른 공유 항목과는 늘 순서대로
+            self.assertFalse(listUnit[0].bAlone)
+
+    def testCommandCarriesTheShardArguments(self) -> None:
+        item = self.shardItem()
+        command = buildItemCommand(item, "Ninja-Release", Path("."), "o", Path("."), ("--test_shard=2/3", "--test_costs=a=1"))
+        self.assertEqual(["test", "ShardATest.*", "--preset", "Ninja-Release", "--no-build", "--test_shard=2/3", "--test_costs=a=1"], command[3:])
+
+    def runShards(self, plan: ShardPlan, runner: FakeItemRunner, gpuSlots: int = 2, jobs: int = 4) -> list[ItemResult]:
+        item = self.shardItem(count=4)
+        manifest = parseManifest(makeData(makeItem("sh", "test", "Release", "shared", filter="ShardATest.*", shards=4)))
+        with mock.patch.object(RunVerifyBatch, "runItemInternal", runner), mock.patch.object(RunVerifyBatch, "holdLocksInternal", fakeHoldLocks), \
+                mock.patch.object(RunVerifyBatch, "findMainRoot", lambda root: root):
+            return RunVerifyBatch.runBatch(manifest, [item], Path("."), "o", 1, Path("."), jobs, mapShardPlan={"sh": plan}, gpuSlots=gpuSlots)
+
+    @staticmethod
+    def peakOverlap(runner: FakeItemRunner) -> int:
+        listEdge = sorted([(start, 1) for start, _ in runner.mapSpan.values()] + [(end, -1) for _, end in runner.mapSpan.values()])
+        running = peak = 0
+        for _, delta in listEdge:
+            running += delta
+            peak = max(peak, running)
+        return peak
+
+    def testShardsRunAsOneItemWithTheirArgumentsAndGpuSlotLimit(self) -> None:
+        runner = FakeItemRunner({"sh": 0.15})
+        listResult = self.runShards(ShardPlan("ExeA", True, "--test_costs=a=1"), runner)
+        self.assertEqual(1, len(listResult))
+        self.assertEqual((kStatusPassed, "4 샤드"), (listResult[0].status, listResult[0].detail))
+        self.assertEqual({f"sh#{index}" for index in range(4)}, set(runner.listStarted))
+        self.assertEqual({("--test_shard=%d/4" % index, "--test_costs=a=1") for index in range(4)}, set(runner.mapShardArg.values()))
+        self.assertEqual(2, self.peakOverlap(runner))                               # gpuSlots 2 — 조각 넷이 있어도 둘까지만 겹친다
+
+    def testShardsRunInOrderWhenThePolicyKeepsAHostLock(self) -> None:
+        runner = FakeItemRunner({"sh": 0.1})
+        self.runShards(ShardPlan("ExeA", False, ""), runner)
+        self.assertEqual(1, self.peakOverlap(runner))
+        self.assertEqual(["sh#0", "sh#1", "sh#2", "sh#3"], runner.listStarted)
+
+    def testAFailedShardFailsTheItemAndNamesTheShard(self) -> None:
+        runner = FakeItemRunner({}, frozenset({"sh#1"}))
+        listResult = self.runShards(ShardPlan("ExeA", True, ""), runner)
+        self.assertEqual(kStatusFailed, listResult[0].status)
+        self.assertEqual("샤드 2/4: boom", listResult[0].detail)
+        self.assertEqual("logs/sh#1.log", listResult[0].logPath)                    # 처음 진 조각의 로그
+
+    def testCombineShardResults(self) -> None:
+        item = self.shardItem(count=3)
+
+        def part(status: str, detail: str = "", startedAt: str = "") -> ItemResult:
+            result = makeResult("sh", status, detail, "d", logPath=detail or "log")
+            result.startedAt = startedAt
+            return result
+
+        combined = combineShardResults(item, [part(kStatusPassed, startedAt="2026-10-27T10:00:05"), part(kStatusPassed, startedAt="2026-10-27T10:00:01"), part(kStatusSkipped, "x")], 12.0, "d")
+        self.assertEqual((kStatusPassed, "3 샤드(건너뜀 1)", "2026-10-27T10:00:01", 12.0), (combined.status, combined.detail, combined.startedAt, combined.seconds))
+        self.assertEqual(kStatusSkipped, combineShardResults(item, [part(kStatusSkipped, "s")] * 3, 1.0, "d").status)
+        self.assertEqual(kStatusBlocked, combineShardResults(item, [part(kStatusPassed), part(kStatusBlocked, "잠금"), part(kStatusPassed)], 1.0, "d").status)
+        failed = combineShardResults(item, [part(kStatusPassed), part(kStatusFailed, "a"), part(kStatusBlocked, "b")], 1.0, "d")
+        self.assertEqual((kStatusFailed, "샤드 2/3: a"), (failed.status, failed.detail))
+
+
+def findManifestProblemsOfShards(root: Path, filterText: str) -> list[str]:
+    """`shards` 항목 하나가 든 매니페스트를 `findManifestProblems` 로 점검한다(소스 · 결과 문서는 이 임시 저장소에 만든다)."""
+    (root / "docs" / "plans").mkdir(parents=True, exist_ok=True)
+    (root / "docs" / "plans" / "A.md").write_text("# 계획\n", encoding="utf-8")
+    manifest = parseManifest(makeData(makeItem("sh", "test", "Release", "shared", filter=filterText, shards=3)))
+    return findManifestProblems(root, manifest)
+
+
+class ProfileTest(unittest.TestCase):
+    """기본 실행(정합성 검증)과 측정 프로필 — 측정은 `--measure` · `--measure-only` 로만 들고, 이름으로 부른 항목은 거르지 않는다."""
+
+    def setUp(self) -> None:
+        self.manifest = parseManifest(makeData(
+            makeItem("build", "build", "Release", "none"),
+            makeItem("cook", "cook", "Release", "none", tool="app", args=["--c"]),
+            makeItem("unit", "test", "Release", "none", filter="T.*"),
+            makeItem("bench", "measure", "Release", "exclusive", **kMeasureExtra),
+            makeItem("check", "measure", "Release", "exclusive", functional=True, **kMeasureExtra),
+            makeItem("debug-only", "test", "Debug", "none", filter="T.*")))
+
+    def select(self, **kwargs: object) -> list[str]:
+        options = {"bExplicitSelection": False, "bMeasure": False, "bMeasureOnly": False, **kwargs}
+        return [item.itemId for item in RunVerifyBatch.selectProfileItems(self.manifest, list(self.manifest.listItem), **options)]
+
+    def testDefaultLeavesOutPlainMeasureButKeepsFunctionalOnes(self) -> None:
+        self.assertEqual(["build", "cook", "unit", "check", "debug-only"], self.select())
+        self.assertEqual(["build", "cook", "unit", "bench", "check", "debug-only"], self.select(bMeasure=True))
+        self.assertEqual(6, len(self.select(bExplicitSelection=True)))                # 이름으로 부른 항목은 거르지 않는다
+
+    def testMeasureOnlyKeepsMeasureItemsPlusTheirBuildAndCook(self) -> None:
+        self.assertEqual(["build", "cook", "bench", "check"], self.select(bMeasureOnly=True))
+
+    def testFunctionalIsForMeasureItemsOnly(self) -> None:
+        with self.assertRaisesRegex(VerifyManifestError, "functional"):
+            parseManifest(makeData(makeItem("x", "test", "Release", "none", filter="T.*", functional=True)))
+        with self.assertRaisesRegex(VerifyManifestError, "functional"):
+            parseManifest(makeData(makeItem("x", "measure", "Release", "exclusive", functional="yes", **kMeasureExtra)))
+        self.assertTrue(self.manifest.findItem("check").bIncludedByDefault)
+        self.assertFalse(self.manifest.findItem("bench").bIncludedByDefault)
+
+    def testRepositoryDefaultRunLeavesAllRunnableMeasureOut(self) -> None:
+        manifest = readManifest(getProjectRoot())
+        listDefault = RunVerifyBatch.selectProfileItems(manifest, list(manifest.listItem), bExplicitSelection=False, bMeasure=False, bMeasureOnly=False)
+        self.assertEqual([], [item.itemId for item in listDefault if item.kind == "measure" and not item.bFunctional])
+        self.assertTrue(any(item.kind == "measure" for item in manifest.listItem))   # 매니페스트에는 측정이 있고 기본 실행만 거른다
 
 
 class ConflictScheduleTest(unittest.TestCase):

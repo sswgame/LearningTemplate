@@ -4,7 +4,7 @@
 어림값 문턱(`<ExpectImage provisional="…">`)을 잰 값(`measured="날짜 백엔드:값 …"`)으로 승격하는 도구 — 숫자는 보고의 `metrics[]` 에서만 가져오고 이 도구가 정하지 않는다.
 
     py -3 -m Scripts scenario-thresholds --list                                                  # 어림값 단언 목록(측정 전에도 본다)
-    py -3 -m Scripts scenario-thresholds --reports build/Ninja-Release/Bin/Saved/Automation      # 제안 표만 낸다(아무것도 쓰지 않는다)
+    py -3 -m Scripts scenario-thresholds --reports build/Ninja-Release/AppRuns      # 제안 표만 낸다(아무것도 쓰지 않는다)
     py -3 -m Scripts scenario-thresholds --reports <폴더> [<폴더> …] --backends dx12 vk --apply   # 승격할 수 있는 단언만 시나리오 파일에 쓴다
 
 입력 형식: 시나리오를 백엔드마다 돌려 얻은 보고 JSON(`<줄기>_<백엔드>.json`, 체인 단계는 `<줄기>_<백엔드>.<n>.json`)이다. 보고의 `metrics[]` 줄은 `metric(region) 파일 = 값` 이고
@@ -274,7 +274,7 @@ def formatProposals(listProposal: list[Proposal]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="어림값 문턱(provisional)을 보고의 잰 값(measured)으로 승격하는 제안을 만들고, 승격할 수 있는 것만 시나리오에 쓴다.")
-    parser.add_argument("--reports", type=Path, nargs="*", default=[], help="시나리오 보고 JSON 이 있는 폴더들(`build/<프리셋>/Bin/Saved/Automation`)")
+    parser.add_argument("--reports", type=Path, nargs="*", default=[], help="시나리오 보고 JSON 이 있는 폴더들(`build/<프리셋>/AppRuns`)")
     parser.add_argument("--backends", nargs="+", default=list(kBackendSwitch), choices=list(kBackendSwitch), help="잰 값이 모두 있어야 하는 백엔드(기본 넷)")
     parser.add_argument("--list", action="store_true", help="어림값 단언 목록만 보인다(보고 없이)")
     parser.add_argument("--apply", action="store_true", help="승격할 수 있는 단언을 시나리오 파일에 쓴다(기본은 표만)")

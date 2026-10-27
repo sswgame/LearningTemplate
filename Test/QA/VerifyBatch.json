@@ -1,5 +1,5 @@
 {
-  "_comment": "통합 검증 · 측정 항목의 정본(코드는 Scripts/common/VerifyManifest.py 의 형식과 Scripts/dev/RunVerifyBatch.py 의 실행기만 가진다). 돌리는 법: py -3 -m Scripts verify-batch --owner <이름> (--list · --check · --dry-run · --config · --only). 계획 문서의 대기 줄은 글 대신 `매니페스트 id` 와 항목 id 만 적는다 — plans --check 와 린트(CheckVerifyPending)가 없는 id 를 막고, pending 항목을 가리키는 줄이 없으면 항목을 지우게 한다. 명령 없는 항목은 둘로 가른다: manual 은 사람 눈 · 귀 · 장비 · 외부 에셋이 있어야 하는 확인이고, need_command 는 사람이 필요 없는데 아직 명령이 없는 확인(없는 명령을 지어내지 않고 이유를 적는다)이다. 일회성(pending) 항목은 명령이 있거나 manual 이어야 한다(need_command 면 pending 은 false — 읽을 때 막는다). 명령 없는 항목은 어느 문서(후보 문서 포함)의 `매니페스트 id` 줄이 가리켜야 한다. kind: build · ctest · test · covered(덮개 항목이 도는 동안 같이 도는 시나리오 · 케이스) · cook · check(App 헤드리스 검사) · golden · measure. gpu: none · shared(GPU 공유 칸) · exclusive(GPU 와 빌드 칸을 혼자 — 측정). platform wsl 은 사용자가 요청할 때만 한다. args 의 {app} {bin} {preset} {work} 는 실행기가 풀어 준다.",
+  "_comment": "통합 검증 · 측정 항목의 정본(코드는 Scripts/common/VerifyManifest.py 의 형식과 Scripts/dev/RunVerifyBatch.py 의 실행기만 가진다). 돌리는 법: py -3 -m Scripts verify-batch --owner <이름> (--list · --check · --dry-run · --config · --only · --fail-fast · --measure · --measure-only). 기본 실행은 정합성 검증뿐이고 measure 항목은 functional(통과 · 실패를 판정하는 측정)이 아니면 --measure 가 있을 때만 돈다. requires: 선행 항목 id — 선행이 이번에 통과하지 못하면 이 항목은 건너뜀. shards: test 항목을 --test_shard=k/n 조각으로 나눠 겹쳐 돈다(시나리오 전부는 ctest -L hostgpu 의 샤드로 돈다). 계획 문서의 대기 줄은 글 대신 `매니페스트 id` 와 항목 id 만 적는다 — plans --check 와 린트(CheckVerifyPending)가 없는 id 를 막고, pending 항목을 가리키는 줄이 없으면 항목을 지우게 한다. 명령 없는 항목은 둘로 가른다: manual 은 사람 눈 · 귀 · 장비 · 외부 에셋이 있어야 하는 확인이고, need_command 는 사람이 필요 없는데 아직 명령이 없는 확인(없는 명령을 지어내지 않고 이유를 적는다)이다. 일회성(pending) 항목은 명령이 있거나 manual 이어야 한다(need_command 면 pending 은 false — 읽을 때 막는다). 명령 없는 항목은 어느 문서(후보 문서 포함)의 `매니페스트 id` 줄이 가리켜야 한다. kind: build · ctest · test · covered(덮개 항목이 도는 동안 같이 도는 시나리오 · 케이스) · cook · check(App 헤드리스 검사) · golden · measure. gpu: none · shared(GPU 공유 칸) · exclusive(GPU 와 빌드 칸을 혼자 — 측정). platform wsl 은 사용자가 요청할 때만 한다. args 의 {app} {bin} {preset} {work} 는 실행기가 풀어 준다.",
   "configs": [
     { "name": "Debug", "preset": "Ninja-Debug" },
     { "name": "Shipping", "preset": "Ninja-Shipping" },
@@ -13,7 +13,13 @@
     },
     {
       "id": "ctest-lint", "title": "ctest -L lint", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "lint",
-      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절"
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절",
+      "note": "빌드 뒤에 돈다 — 글롭 대조 게이트(CheckSourceGlob · CheckModuleTargets)가 구성된 빌드 폴더를 읽어, 빌드(재구성) 전에 돌리면 낡은 구성으로 판정한다. ctest 항목은 혼자 돈다: 다른 ctest -j 와 겹치면 CPU 경합으로 15 초 제한인 CheckTestSuites · CheckTextureFolders 가 시간 초과로 가짜로 졌다(2026-10-27 두 번, 혼자 돌면 통과)."
+    },
+    {
+      "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절",
+      "note": "ctest 항목은 싼 것부터 둔다(린트 → 파이썬 8 초 → nogpu 160 초 → race 140 초) — --fail-fast 가 싼 단계의 실패에서 긴 단계를 건너뛰게."
     },
     {
       "id": "ctest-nogpu", "title": "ctest -L nogpu", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 120, "label": "nogpu",
@@ -22,10 +28,6 @@
     },
     {
       "id": "ctest-race", "title": "ctest -L race", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "race",
-      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절"
-    },
-    {
-      "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
       "source": "docs/11_Workflow.md 3절", "result_doc": "docs/11_Workflow.md 3절"
     },
     {
@@ -98,8 +100,9 @@
     },
     {
       "id": "app-scenarios-release", "title": "AppScenarioTest 전부(네 백엔드 × 게임 · 에디터 시나리오, 녹화 재생) — ctest 샤드", "kind": "ctest", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 240, "label": "hostgpu",
+      "requires": ["cook-shaders-release"],
       "source": "docs/08_Verification.md 3절 실기동 확인은 시나리오로", "result_doc": "docs/08_Verification.md 3절 실기동 확인은 시나리오로",
-      "note": "`Scripts test AppScenarioTest.*` 는 샤드 1개(shard0of1)로 전부 직렬이라 686~1129초였다. 시나리오 × 백엔드 케이스 분할(scnsplit)과 비용표 샤드(AppTest_HostOnly_Shard1~5)를 쓰려고 ctest -L hostgpu 로 돈다. 진 뒤에는 git status 로 리소스 트리를 되돌린다."
+      "note": "`Scripts test AppScenarioTest.*` 는 샤드 1개(shard0of1)로 전부 직렬이라 686~1129초였다. 시나리오 × 백엔드 케이스 분할(scnsplit)과 비용표 샤드(AppTest_HostOnly_Shard1~5)를 쓰려고 ctest -L hostgpu 로 돈다. 시나리오 보고는 케이스마다 build/<프리셋>/AppRuns/shard<k>of<n>/<케이스>/Saved/Automation 아래에 남는다(scenario-timeline-measure · scenario-thresholds-promote 가 읽는다). 쿠킹이 졌으면 돌지 않고 건너뛴다(requires). 진 뒤에는 git status 로 리소스 트리를 되돌린다."
     },
     {
       "id": "graphics-format-visual-checks", "title": "그래픽스 형식 묶음의 화면 확인(G2 VRM UV 방향 · G5 선 z-fighting · G6 2D 조명 쇼케이스)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
@@ -162,7 +165,7 @@
     },
     {
       "id": "shooter3d-keyrebind-restart", "title": "shooter3d 키 다시 잡기 두 번 기동(rebindsave → rebindrestart, 같은 사용자 설정 파일)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 20,
-      "tool": "scripts", "args": ["scenario-seq", "game/shooter3d/automation/sequence/rebindsave", "game/shooter3d/automation/sequence/rebindrestart", "--app", "{app}", "--backend", "dx12"], "limit": "두 번째 기동의 점프 키가 J 로 남았다(종료 코드 0)", "judge": "exit",
+      "tool": "scripts", "args": ["scenario-seq", "game/shooter3d/automation/sequence/rebindsave", "game/shooter3d/automation/sequence/rebindrestart", "--app", "{app}", "--backend", "dx12"], "functional": true, "limit": "두 번째 기동의 점프 키가 J 로 남았다(종료 코드 0)", "judge": "exit",
       "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/Candidates-ui.md",
       "note": "sequence/ 폴더는 AppScenarioTest 가 돌지 않는다(혼자 돌면 앞 기동이 없어 진다). 개발 명령이 없는 구성은 건너뛴다."
     },
@@ -666,9 +669,9 @@
     },
     {
       "id": "app-ui-msdf-glyphs", "title": "견본 화면을 MSDF 글리프로 그려도 SDF 와 같은 모양(AppUITest.MsdfGlyphsMatchSdfDemoScreen)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
-      "filter": "AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"],
+      "filter": "AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"], "requires": ["cook-shaders-release"],
       "source": "docs/plans/MsdfGlyphs.md M5", "result_doc": "docs/plans/MsdfGlyphs.md M5",
-      "note": "canvas.hlsl 이 쿠킹된 뒤(cook-shaders-release)에 돈다. 큰 글자 모서리가 날카로운지는 Bin/Saved/Automation/engine.uidemo/ 의 uidemo_msdf_<백엔드>.ppm 을 uidemo_<백엔드>.ppm 과 눈으로 견준다."
+      "note": "canvas.hlsl 이 쿠킹된 뒤(cook-shaders-release)에 돈다. 큰 글자 모서리가 날카로운지는 AppRuns/shard*/…/Saved/Automation/engine.uidemo/ 의 uidemo_msdf_<백엔드>.ppm 을 uidemo_<백엔드>.ppm 과 눈으로 견준다."
     },
     {
       "id": "glyph-bench-msdf", "title": "새 한글 글리프 400 개의 CPU 비용 — MSDF 대 SDF(GlyphBenchTest)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 20,
@@ -699,12 +702,12 @@
     },
     {
       "id": "scenario-timeline-measure", "title": "시나리오 보고의 timeline 으로 고정 대기 · 조건 대기 · 기동 몫 재기(app-scenarios-release 뒤)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
-      "tool": "scripts", "args": ["scenario-waits", "--measured-dir", "{bin}/Saved/Automation", "--top", "20"], "limit": "보고만 — 어림 프레임 대 잰 초, 시작 전 · 고정 대기 · 조건 대기 · 단계 몫", "judge": "exit",
+      "tool": "scripts", "args": ["scenario-waits", "--measured-dir", "build/{preset}/AppRuns", "--top", "20"], "requires": ["app-scenarios-release"], "limit": "보고만 — 어림 프레임 대 잰 초, 시작 전 · 고정 대기 · 조건 대기 · 단계 몫", "judge": "exit",
       "source": "docs/plans/AutomationSplit.md 7절", "result_doc": "docs/plans/AutomationSplit.md 7절"
     },
     {
       "id": "scenario-thresholds-promote", "title": "어림값 문턱 38 개를 잰 값으로 승격하는 제안 표(네 백엔드 보고)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
-      "tool": "scripts", "args": ["scenario-thresholds", "--reports", "{bin}/Saved/Automation"], "limit": "보고만 — 승격 가능 · 결함 의심 · 사람이 정함을 나눠 보인다(--apply 는 표를 보고 사람이 따로 돌린다)", "judge": "exit",
+      "tool": "scripts", "args": ["scenario-thresholds", "--reports", "build/{preset}/AppRuns"], "requires": ["app-scenarios-release"], "limit": "보고만 — 승격 가능 · 결함 의심 · 사람이 정함을 나눠 보인다(--apply 는 표를 보고 사람이 따로 돌린다)", "judge": "exit",
       "source": "docs/plans/GpuVerification.md 3절", "result_doc": "docs/plans/GpuVerification.md 3절"
     },
     {

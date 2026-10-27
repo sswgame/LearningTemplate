@@ -7,7 +7,7 @@
     py -3 -m Scripts scenario-waits --top 40 --gaps 5    # 상위 40 개, 시나리오마다 가장 긴 고정 대기 5 곳
     py -3 -m Scripts scenario-waits --candidates         # 조건 대기(WaitUntil)로 바꿀 후보: 긴 고정 대기 뒤에 상태를 단언하는 곳
     py -3 -m Scripts scenario-waits --json out.json      # 시나리오마다 값을 JSON 으로 남긴다(샤드 비용표 제안의 입력)
-    py -3 -m Scripts scenario-waits --measured-dir build/Ninja-Release/Bin/Saved/Automation   # 보고의 timeline 으로 어림을 견준다
+    py -3 -m Scripts scenario-waits --measured-dir build/Ninja-Release/AppRuns   # 보고의 timeline 으로 어림을 견준다
 
 프레임 셈은 C++ `AutomationScenario::readAtFrame` 와 같다: `<At>` 은 `frame`(절대) · `time`(초 → `fixedDelta` 로 반올림) · `after`(앞 `<At>` 에서) · `afterSeconds` 중 하나이고,
 고정 대기란 이어진 두 `<At>` 의 프레임 차이다. `<WaitUntil>` 이 붙잡는 프레임은 시나리오 프레임에 세지 않으므로 파일만으로는 알 수 없고 그 개수만 센다(보고의 `timeline.heldFrames` 가 잰 값이다).
