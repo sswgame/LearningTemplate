@@ -4,6 +4,8 @@
 
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -51,6 +53,9 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::Text( "tick %u  input focus: world %d", _session.getHarness()->getTick(), _session.getInputFocus() );
             (void)_session.update( static_cast<float64>( ImGui::GetIO().DeltaTime ) );
+            // 재생 중인 이 창이 포커스면 키보드는 초점 월드(게임)가 받는다 — 게임 뷰 패널과 같다. 알리지 않으면 에디터가 키를 가져가 월드가 움직이지 않는다.
+            if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) )
+                editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().noteGameInputSurfaceFocused();
             drawWorlds();
         }
 

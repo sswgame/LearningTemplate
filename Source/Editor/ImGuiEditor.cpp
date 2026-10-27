@@ -801,8 +801,7 @@ namespace sw::editor
         if ( EditorPreferencesStore::hasNewSections() )
             (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
 #endif
-        _editorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
-        _editorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
+        _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }
 

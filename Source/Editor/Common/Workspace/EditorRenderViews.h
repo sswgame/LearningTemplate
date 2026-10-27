@@ -80,6 +80,25 @@ namespace sw::editor
         void setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
         bool isGameViewHovered() const { return _bGameViewHovered == SW_TRUE; }
         bool isGameViewFocused() const { return _bGameViewFocused == SW_TRUE; }
+        /**
+         * @brief 게임 입력을 받는 다른 면(한 프로세스 재생의 월드 뷰포트 등)이 이번 프레임에 포커스를 가졌음을 알립니다. 패널이 그리는 동안 부릅니다.
+         * @details 게임 뷰 패널처럼 그 창이 포커스면 키보드를 도구(에디터)가 아니라 게임 쪽에 둔다(`EditorInputActions::syncKeyboardOwner`).
+         */
+        void noteGameInputSurfaceFocused() { _bGameInputSurfaceFocused = SW_TRUE; }
+        /**
+         * @brief 프레임 앞 정리 — 지난 프레임에 패널이 알린 포커스를 "지난 프레임 값" 으로 옮기고 이번 프레임 값을 비웁니다.
+         * @details 키보드 주인 판정(`EditorInputActions::processFrame`)은 패널을 그리기 **전에** 돈다. 비운 값을 읽으면 게임 뷰 포커스가 늘 거짓이라
+         *          게임이 키를 받지 못한다 — 그래서 판정은 지난 프레임 값(`wasGameInputFocusedLastFrame`)을 읽는다.
+         */
+        void beginFrameFocus()
+        {
+            _bGameInputFocusedLastFrame = ( _bGameViewFocused == SW_TRUE || _bGameInputSurfaceFocused == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+            _bGameViewFocused           = SW_FALSE;
+            _bGameViewHovered           = SW_FALSE;
+            _bGameInputSurfaceFocused   = SW_FALSE;
+        }
+        /** @brief 지난 프레임에 게임 뷰 또는 게임 입력 면이 포커스였는지입니다(키보드 주인 판정용). */
+        bool wasGameInputFocusedLastFrame() const { return _bGameInputFocusedLastFrame == SW_TRUE; }
 
         /** @brief 뷰 RT 하나입니다. */
         const EditorViewTarget& getViewTarget( EditorViewKind kind ) const { return _arrViewTarget[static_cast<uint32>( kind )]; }
@@ -137,8 +156,10 @@ namespace sw::editor
         EditorViewTarget                _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
         vector<EditorPreviewViewTarget> _listPreviewTarget{}; ///< 툴 창의 미리보기 타깃(`allocatePreviewTarget`)
         IDAllocator<uint32>             _previewTargetIDAllocator;
-        uint8                           _bGameViewHovered{ SW_FALSE };    ///< 게임 뷰 창 위에 마우스가 있다
-        uint8                           _bGameViewFocused{ SW_FALSE };    ///< 게임 뷰 창이 포커스를 가졌다
-        uint8                           _bAnimationRequested{ SW_FALSE }; ///< 이번 프레임에 연속 프레임 요청이 있었다(`requestAnimationFrame`)
+        uint8                           _bGameViewHovered{ SW_FALSE };           ///< 게임 뷰 창 위에 마우스가 있다
+        uint8                           _bGameViewFocused{ SW_FALSE };           ///< 게임 뷰 창이 포커스를 가졌다
+        uint8                           _bGameInputSurfaceFocused{ SW_FALSE };   ///< 게임 입력을 받는 다른 면이 이번 프레임 포커스를 가졌다
+        uint8                           _bGameInputFocusedLastFrame{ SW_FALSE }; ///< 지난 프레임에 게임 뷰 · 게임 입력 면이 포커스였다
+        uint8                           _bAnimationRequested{ SW_FALSE };        ///< 이번 프레임에 연속 프레임 요청이 있었다(`requestAnimationFrame`)
     };
 } // namespace sw::editor

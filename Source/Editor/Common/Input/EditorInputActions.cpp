@@ -215,7 +215,8 @@ namespace sw::editor
 
     bool EditorInputActions::syncKeyboardOwner()
     {
-        const bool               bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().isGameViewFocused();
+        // 패널을 그리기 전이라 이번 프레임 포커스는 아직 없다 — 지난 프레임에 게임 뷰 · 게임 입력 면(한 프로세스 재생 뷰포트)이 포커스였는지를 본다.
+        const bool               bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().wasGameInputFocusedLastFrame();
         const bool               bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
         InputManager&            input            = editor::getSubsystem<InputManager>();
         const InputKeyboardFocus current          = input.getKeyboardFocus();
