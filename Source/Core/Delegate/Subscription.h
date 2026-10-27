@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/SpinLock.h"
 
 namespace sw
@@ -115,7 +116,7 @@ namespace sw
             subscription._pSource = this;
             subscription._id      = id;
             {
-                std::scoped_lock<SpinLock> lock{ _listLock };
+                ScopedLock<SpinLock> lock{ _listLock };
                 subscription._pNext = _pHead;
                 if ( _pHead != nullptr )
                     _pHead->_pPrev = &subscription;
@@ -137,8 +138,8 @@ namespace sw
         /** @brief 살아 있는 구독을 모두 무효화합니다. 등록은 파생 클래스가 따로 지웁니다(전체 비우기 · 출처 소멸). */
         void detachAllSubscriptions() noexcept
         {
-            std::scoped_lock<SpinLock> lock{ _listLock };
-            Subscription*              pCurrent = _pHead;
+            ScopedLock<SpinLock> lock{ _listLock };
+            Subscription*        pCurrent = _pHead;
             while ( pCurrent != nullptr )
             {
                 Subscription* const pNext = pCurrent->_pNext;
@@ -169,7 +170,7 @@ namespace sw
         /** @brief @p other 의 구독을 모두 이 객체로 옮깁니다. 이 객체의 목록은 비어 있어야 합니다. */
         void takeSubscriptionsFrom( SubscriptionSource& other ) noexcept
         {
-            std::scoped_lock<SpinLock, SpinLock> lock{ _listLock, other._listLock };
+            ScopedLockPair<SpinLock> lock{ _listLock, other._listLock };
             _pHead       = other._pHead;
             other._pHead = nullptr;
             for ( Subscription* pCurrent = _pHead; pCurrent != nullptr; pCurrent = pCurrent->_pNext )
@@ -188,7 +189,7 @@ namespace sw
         if ( pSource == nullptr )
             return;
         {
-            std::scoped_lock<SpinLock> lock{ pSource->_listLock };
+            ScopedLock<SpinLock> lock{ pSource->_listLock };
             if ( _pSource == nullptr )
                 return; // 잠금을 기다리는 사이 출처가 전체를 비웠다
             pSource->unlinkLocked( *this );
@@ -204,7 +205,7 @@ namespace sw
         SubscriptionSource* const pSource = other._pSource;
         if ( pSource == nullptr )
             return;
-        std::scoped_lock<SpinLock> lock{ pSource->_listLock };
+        ScopedLock<SpinLock> lock{ pSource->_listLock };
         _pSource = other._pSource;
         _pPrev   = other._pPrev;
         _pNext   = other._pNext;

@@ -50,7 +50,7 @@ namespace sw
         }
         {
             // 아직 지연 중인 보내기는 버린다 — 전송을 내리면 연결이 모두 닫힌다.
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listItem.clear();
         }
         if ( _pInner != nullptr )
@@ -65,7 +65,7 @@ namespace sw
         item._dueNanoseconds = MonotonicClock::nowNanoseconds() + _delayNanoseconds;
         item._handle         = handle;
         item._bytes.assign( pData, pData + size );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listItem.push_back( std::move( item ) );
         return StreamSendResult::Queued; // 한계: 안쪽 줄의 물금 · 가득 참은 지연이 끝난 뒤에야 안다(머리말)
     }
@@ -78,7 +78,7 @@ namespace sw
         item._handle         = handle;
         item._closeMode      = mode;
         item._bClose         = SW_TRUE;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listItem.push_back( std::move( item ) );
     }
 
@@ -99,7 +99,7 @@ namespace sw
         {
             DelayedItem item;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _listItem.empty() || _listItem.front()._dueNanoseconds > nowNanoseconds )
                     break;
                 item = std::move( _listItem.front() );

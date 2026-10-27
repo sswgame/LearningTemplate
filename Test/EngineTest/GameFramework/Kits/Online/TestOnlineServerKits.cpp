@@ -103,9 +103,13 @@ SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndepende
     for ( const uint8 bReverse : { SW_FALSE, SW_TRUE } )
     {
         LoopbackStreamNetwork        network;
-        unique_ptr<IStreamTransport> transport = network.createTransport();
-        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7466 );
-        settings._bReverseIndependentKitOrder  = bReverse;
+        unique_ptr<IStreamTransport> transport      = network.createTransport();
+        OnlineServerRuntimeConfig    settings       = Internal::makeSettings( transport.get(), 7466 );
+        settings._bReverseIndependentKitOrder       = bReverse;
+        unique_ptr<IStreamTransport> adminTransport = network.createTransport(); // GM 키트는 GM 리슨이 있어야 오른다
+        settings._bAdminListener                    = SW_TRUE;
+        settings._pAdminTransport                   = adminTransport.get();
+        settings._adminListenAddress                = NetAddress::makeLoopback( 7566 );
         Internal::addOption( Internal::addKit( settings, "account" ), "lightPasswordHash", "1" );
         (void)Internal::addKit( settings, "social" );
         Internal::addOption( Internal::addKit( settings, "chat" ), "bannedWords", "none" );

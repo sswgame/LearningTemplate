@@ -67,16 +67,16 @@ SW_TEST_CASE( SceneStateHashTest, RotationChangesTheHash )
 }
 
 /**
- * @brief [SceneStateHashTest] 이름이 같은 오브젝트가 NaN 위치를 가져도 만든 순서와 무관하게 같은 해시다(정렬은 정수 해시로 한다)
+ * @brief [SceneStateHashTest] NaN 위치의 오브젝트가 있어도 만든 순서와 무관하게 같은 해시다(이름은 만들 때 유일해지므로 정렬은 이름으로 정해지고 실수 비교가 끼지 않는다)
  */
-SW_TEST_CASE( SceneStateHashTest, SameNamedObjectsWithNanSortByHash )
+SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
 {
     const float32     nan = std::numeric_limits<float32>::quiet_NaN();
     GameObjectManager first;
-    addStateHashTestObject( first, "Crate", float3{ 1.0f, 0.0f, 0.0f } );
-    addStateHashTestObject( first, "Crate", float3{ nan, 0.0f, 0.0f } );
+    addStateHashTestObject( first, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );
+    addStateHashTestObject( first, "CrateB", float3{ nan, 0.0f, 0.0f } );
     GameObjectManager second;
-    addStateHashTestObject( second, "Crate", float3{ nan, 0.0f, 0.0f } );
-    addStateHashTestObject( second, "Crate", float3{ 1.0f, 0.0f, 0.0f } );
+    addStateHashTestObject( second, "CrateB", float3{ nan, 0.0f, 0.0f } );
+    addStateHashTestObject( second, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );
     SW_EXPECT_EQUAL( SceneStateHash::compute( first ), SceneStateHash::compute( second ) );
 }

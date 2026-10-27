@@ -360,7 +360,9 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
 {
     sw::shared_ptr<sw::Mesh> sprite = sw::MeshUtil::createPrimitive( "Sprite" );
     SW_ASSERT_NOT_NULL( sprite.get() );
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "sprite" ) == sw::MeshUtil::acquirePrimitive( "Sprite" ) );
+    sw::shared_ptr<sw::Mesh> sharedSprite = sw::MeshUtil::acquirePrimitive( "Sprite" );
+    SW_EXPECT_TRUE( sharedSprite != nullptr && sharedSprite == sw::MeshUtil::acquirePrimitive( "Sprite" ) );
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "sprite" ) == nullptr ); // 철자는 정확히 맞춘다 — 소문자는 다른 이름이다
     const sw::vector<sw::RHIVertex>& listVertex = sprite->getVertices();
     SW_ASSERT_EQUAL( 12u, static_cast<uint32>( listVertex.size() ) );
 

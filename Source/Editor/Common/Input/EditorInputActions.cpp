@@ -33,6 +33,11 @@ namespace sw::editor
         : _map{}
         , _listQueuedCommand{}
         , _focusedPanelLayer{}
+        , _arrForwardedKey{}
+        , _focusBeforeTool{ InputKeyboardFocus::Game }
+        , _syncedMapGeneration{ invalid_index::kUint32 }
+        , _bToolOwnsKeyboard{ false }
+        , _bCommandsSuspended{ false }
     {
     }
 

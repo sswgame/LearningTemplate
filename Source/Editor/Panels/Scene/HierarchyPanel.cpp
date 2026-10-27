@@ -632,7 +632,7 @@ namespace sw::editor
             }
 
             /** @brief 씬 컴포넌트가 아닌 컴포넌트 한 줄을 그립니다. */
-            static void drawPlainComponentRow( EditorContext* pContext, GameObject* pObj, Component* pComp, GameObjectManager* pManager )
+            static void drawPlainComponentRow( EditorContext* pContext, GameObject* pObj, Component* pComp, GameObjectManager* /*pManager*/ )
             {
                 ImGui::PushID( static_cast<int32>( pComp->getComponentID() ) );
 

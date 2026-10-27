@@ -111,6 +111,8 @@ namespace sw::editor
         , _listBusStatus{}
         , _listHeldPeak{}
         , _listEventName{}
+        , _pEventNameEngine{ nullptr }
+        , _eventNameGeneration{ 0 }
         , _selectedEvent{ 0 }
         , _clipPath{}
     {

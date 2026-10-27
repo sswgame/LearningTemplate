@@ -197,6 +197,11 @@ namespace sw::editor
         , _uniquePinnedVar{}
         , _presetJob{}
         , _listPresetFile{}
+        , _listFilteredVariable{}
+        , _listFilterText{}
+        , _listGeneration{ 0 }
+        , _totalVariableCount{ 0 }
+        , _listRebuildCount{ 0 }
         , _searchFilter{}
         , _presetNameBuf{}
         , _bGroupByModule{ SW_TRUE }

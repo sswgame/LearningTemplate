@@ -40,8 +40,6 @@ from lint.SourceScan import SourceFile  # noqa: E402
 
 _kScanRoot = ("Source/Editor", "Source/GameFramework/PlugIn/Editor")
 _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")
-#: 크기를 ImGui 로 넘기는 구현 파일(칸 · 줄 수를 픽셀로 바꾸는 곳)과 테스트가 만드는 가짜 창(재현성을 위해 픽셀 고정) — 이 앞머리는 보지 않는다.
-_kExemptPrefix = ("Source/Editor/Common/GUI/EditorChrome.", "Source/Editor/Common/GUI/EditorTextExtentImGui.", "Source/Editor/SelfTest/")
 _kNumberRe = re.compile(r"(?<![\w.])(?:\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[fFuUlL]*|\.\d+[fF]?)(?![\w.])")
 _kFontBasisRe = re.compile(r"measureExtent|GetFontSize|CalcTextSize|GetFrameHeight|GetTextLineHeight|GetContentRegionAvail|GetStyle|GetWindowWidth|GetWindowHeight")
 #: (이름, 머리 정규식, 크기 인자 위치) — 위치가 None 이면 호출 자체가 위반이다(SetNextWindowSize).
@@ -146,8 +144,10 @@ class CheckEditorSizeLiteralsGate(BaselineSourceGate):
     ]
 
     def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
-        if source.relative.startswith(_kExemptPrefix):
-            return None
+        for prefix in self.mapExemption:
+            if source.relative.startswith(prefix):
+                self.useExemption(prefix)
+                return None
         listLine = source.text.split("\n")
         return [CountedFinding("total", source.relative, literal.firstLine, literal.lastLine,
                                f"{literal.kind} 에 픽셀 리터럴 — 글자 칸 · 줄 수(EditorTextExtent)로 적는다", listLine[literal.firstLine - 1].strip())

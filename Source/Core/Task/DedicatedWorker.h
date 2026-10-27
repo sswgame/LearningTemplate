@@ -60,7 +60,7 @@ namespace sw
             _process     = process;
             _pThreadName = pThreadName;
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _bAccepting = SW_TRUE;
             }
             _thread = sw::thread( &DedicatedWorker::run, this );
@@ -72,7 +72,7 @@ namespace sw
         [[nodiscard]] bool submit( TJob&& job )
         {
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 if ( _bAccepting == SW_FALSE )
                     return false;
                 _listQueuedJob.push_back( std::move( job ) );
@@ -85,7 +85,7 @@ namespace sw
         void stop()
         {
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _bAccepting = SW_FALSE;
             }
             _jobReady.notify_all();
@@ -99,7 +99,7 @@ namespace sw
         /** @brief 큐에서 기다리는 일의 수입니다(처리 중인 일은 세지 않는다). */
         uint32 getQueuedCount() const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             return static_cast<uint32>( _listQueuedJob.size() );
         }
 
@@ -113,7 +113,7 @@ namespace sw
                 TJob job;
                 bool bStopping = false;
                 {
-                    std::unique_lock<mutex> lock{ _mutex };
+                    UniqueLock<mutex> lock{ _mutex };
                     while ( _listQueuedJob.empty() && _bAccepting == SW_TRUE )
                     {
                         _jobReady.wait( lock );

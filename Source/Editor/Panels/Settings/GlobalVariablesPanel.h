@@ -75,10 +75,10 @@ namespace sw::editor
         vector<string>        _listPresetFile;
         /** @brief 보일 변수입니다. 등록 세대(`GlobalVariableManager::getRegistrationGeneration`)나 검색 글이 바뀐 프레임에만 다시 채운다. */
         vector<GlobalVariableInfo*>           _listFilteredVariable;
-        string                                _listFilterText;          ///< 목록을 지은 때의 검색 글
-        uint64                                _listGeneration{ 0 };     ///< 목록을 지은 때의 등록 세대(0 이면 아직 짓지 않았다 — 세대는 1 부터)
-        uint32                                _totalVariableCount{ 0 }; ///< 테스트용을 뺀 변수 수(필터 전)
-        uint32                                _listRebuildCount{ 0 };
+        string                                _listFilterText;     ///< 목록을 지은 때의 검색 글
+        uint64                                _listGeneration;     ///< 목록을 지은 때의 등록 세대(0 이면 아직 짓지 않았다 — 세대는 1 부터)
+        uint32                                _totalVariableCount; ///< 테스트용을 뺀 변수 수(필터 전)
+        uint32                                _listRebuildCount;
         fixed_string<constant::kMaxBuffer128> _searchFilter;
         fixed_string<constant::kMaxBuffer64>  _presetNameBuf;
         uint8                                 _bGroupByModule   : 1;

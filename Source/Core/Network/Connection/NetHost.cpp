@@ -10,6 +10,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
 
 #include <chrono>
 #include <cstring>
@@ -24,6 +25,20 @@ namespace sw
         {
             static constexpr int32 kTypeBits   = 3;
             static constexpr int32 kHeaderSize = 8; ///< 프로토콜 ID 4바이트와 체크섬 4바이트.
+
+            /**
+             * @brief 채널 상한을 넘는 메시지면 `NetConnection` 과 같은 오류를 남기고 true 입니다. 호스트 잠금을 잡기 전에 부른다 —
+             *        연결의 같은 로그는 호스트 잠금 안에서 남게 되어 잎 잠금 규칙(`mutex`)에 어긋난다.
+             */
+            [[nodiscard]] static bool reportOversizeMessage( NetChannelType channel, const uint8* pData, int32 size )
+            {
+                const bool bCheckable = size > 0 && pData != nullptr && channel != NetChannelType::Count;
+                if ( bCheckable == false || size <= NetConnection::getMaxMessageSize( channel ) )
+                    return false;
+                SW_LOG_ERROR_ID( "Net.MessageTooLarge", "NetConnection: a %# byte message exceeds the %# byte limit of channel %# - not sent", size,
+                                 NetConnection::getMaxMessageSize( channel ), static_cast<int32>( channel ) );
+                return true;
+            }
 
             /** @brief `sendControl` 이 쓴 순서(아래 32비트 먼저)로 64비트 값을 읽습니다. 두 번의 읽기를 한 식에 두면 순서가 정해지지 않아 문장으로 나눈다. */
             static uint64 readLowFirstUint64( BitReader& reader )
@@ -623,6 +638,7 @@ namespace sw
                 receivedCount += gotCount;
             }
             // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
+            vector<string> listWarning;
             {
                 ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
@@ -633,6 +649,11 @@ namespace sw
                 }
                 updateSlots( nowSeconds );
                 takePending( _flushBatch, _listDeliver );
+                listWarning.swap( _listDeferredWarning );
+            }
+            for ( const string& warning : listWarning ) // 잠금을 놓은 뒤에 쓴다 — 잠금은 잎이다
+            {
+                SW_LOG_WARNING( "%#", warning.c_str() );
             }
             // 3) 보내기와 비동기 연결 결과 전달(잠금 밖).
             sendBatch( pTransport, _flushBatch );
@@ -836,8 +857,12 @@ namespace sw
                     return; // 이 요청에 대한 거절이 아니다(옛 요청이나 위조).
                 const NetDisconnectReason reason = NetHostInternal::readDeniedReason( packet._valueA );
                 if ( reason != NetDisconnectReason::ServerFull )
-                    SW_LOG_WARNING( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
-                                    packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
+                {
+                    StringBuilder<constant::kMaxBuffer512> text;
+                    text.appendFormat( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
+                                       packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
+                    _listDeferredWarning.push_back( string( text.c_str() ) ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
+                }
                 closeSlot( slotIndex, reason, false );
                 return;
             }
@@ -872,8 +897,12 @@ namespace sw
             }
             ++_mismatchLogCount;
             if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
-                SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
-                                packet._from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID, _mismatchLogCount );
+            {
+                StringBuilder<constant::kMaxBuffer512> text;
+                text.appendFormat( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
+                                   packet._from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID, _mismatchLogCount );
+                _listDeferredWarning.push_back( string( text.c_str() ) ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
+            }
             sendDenied( packet._from, reason, packet._valueA );
             return;
         }
@@ -1039,6 +1068,8 @@ namespace sw
 
     bool NetHost::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
+        if ( NetHostInternal::reportOversizeMessage( channel, pData, size ) )
+            return false;
         ScopedLock<mutex> lock{ _mutex };
         return sendMessageLocked( connectionID, channel, pData, size );
     }
@@ -1070,6 +1101,8 @@ namespace sw
 
     int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
+        if ( NetHostInternal::reportOversizeMessage( channel, pData, size ) )
+            return 0;
         ScopedLock<mutex> lock{ _mutex };
         int32             sentCount = 0;
         const int32       slotCount = _slotTable.getCount();

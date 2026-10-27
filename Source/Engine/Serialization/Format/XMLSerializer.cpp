@@ -615,8 +615,8 @@ namespace sw
                 }
             }
 
-            [[nodiscard]] static bool tryAppendUnknownXMLChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
-                                                                       const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool tryAppendUnknownXMLChildOrphans( string_view xmlStr, const TypeInfo&                             typeInfo,
+                                                                       const SerializeContext& /*context*/, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 if ( xmlStr.empty() || pOutListOrphan == nullptr )
                     return false;

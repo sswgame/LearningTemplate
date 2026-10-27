@@ -417,7 +417,7 @@ namespace sw
             }
 
             /** @brief 객체 경로가 가리키는 대상입니다. 루트나 지금 있는 노드가 아니면 false(사라진 위젯). */
-            bool resolve( const utf8* pPath, AtSpiInternal::Target& outTarget )
+            [[nodiscard]] bool resolve( const utf8* pPath, AtSpiInternal::Target& outTarget )
             {
                 if ( string( pPath ) == AtSpiInternal::kRootPath )
                 {

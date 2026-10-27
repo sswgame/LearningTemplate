@@ -744,8 +744,14 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr )
             return;
-        const JPH::EActivation activation = pRecord->_type == PhysicsBodyType::Static ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
-        _system.GetBodyInterface().SetPositionAndRotation( pRecord->_bodyID, JoltUtil::toJolt( position ), JoltUtil::toJolt( rotation ), activation );
+        const bool             bStatic    = pRecord->_type == PhysicsBodyType::Static;
+        const JPH::EActivation activation = bStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
+        JPH::BodyInterface&    bodies     = _system.GetBodyInterface();
+        // 정적 바디를 옮기면 옛 자리 위에서 자던 바디가 받침을 잃는다 — Jolt 는 정적 바디 이동으로 이웃을 깨우지 않으므로 옛 자리의 경계 안 바디를 깨운다.
+        const JPH::AABox oldBounds = bStatic ? bodies.GetTransformedShape( pRecord->_bodyID ).GetWorldSpaceBounds() : JPH::AABox{};
+        bodies.SetPositionAndRotation( pRecord->_bodyID, JoltUtil::toJolt( position ), JoltUtil::toJolt( rotation ), activation );
+        if ( bStatic )
+            bodies.ActivateBodiesInAABox( oldBounds, JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{} );
     }
 
     void JoltPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime )

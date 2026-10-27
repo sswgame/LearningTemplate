@@ -213,9 +213,9 @@ SW_TEST_CASE( ShaderCookerTest, BinaryFileNameGenerationAndStageTags )
     SW_EXPECT_EQUAL( sw::string( "forwardlit_customentry.dxil" ),
                      sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "CustomEntry", 0ull, ".dxil" ) );
 
-    // 3) 기본 진입점 대소문자 무시 (vsmain -> vs)
+    // 3) 기본 진입점은 철자 그대로만 알아본다(VSMain -> vs) — 소문자 vsmain 은 사용자 진입점 이름이다
     SW_EXPECT_EQUAL( sw::string( "forwardlit_vs.dxil" ),
-                     sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "vsmain", 0ull, ".dxil" ) );
+                     sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0ull, ".dxil" ) );
 
     // 4) 순열 해시 접미사 (_%08x)
     const sw::string fileNameWithHash = sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Vertex, "VSMain", 0x1234ABCDull, ".dxil" );
@@ -778,8 +778,8 @@ SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
         SW_EXPECT_TRUE_MSG( sw::FrameRendererUtil::parseAttachmentFormat( pName ) == format, pName );
     }
 
-    // 대소문자는 가리지 않는다(XML 을 손으로 쓴다). 모르는 이름은 정해진 폴백이다 — 오류는 로드 검증이 낸다.
-    SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "r32_float" ) == sw::RHIFormat::R32_FLOAT );
+    // 이름은 철자 그대로만 읽는다(별칭 없음). 모르는 이름은 정해진 폴백이다 — 오류는 로드 검증이 낸다.
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "R32_FLOAT" ) == sw::RHIFormat::R32_FLOAT );
     SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "NoSuchFormat" ) == sw::RHIFormat::R8G8B8A8_UNORM );
 }
 

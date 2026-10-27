@@ -32,6 +32,22 @@ SW_TEST_CASE( HexUtilTest, AppendsFixedWidthIntegers )
     SW_EXPECT_EQUAL( string( "2345" ), text );
 }
 
+SW_TEST_CASE( HexUtilTest, AppendsMinimalWidthIntegers )
+{
+    string text;
+    HexUtil::appendUint64Minimal( text, 0ull );
+    SW_EXPECT_EQUAL( string( "0" ), text );
+    text.clear();
+    HexUtil::appendUint64Minimal( text, 0x2Aull, 1, HexCase::Upper );
+    SW_EXPECT_EQUAL( string( "2A" ), text );
+    text.clear();
+    HexUtil::appendUint64Minimal( text, 0x2Aull, 4, HexCase::Upper );
+    SW_EXPECT_EQUAL( string( "002A" ), text );
+    text.clear();
+    HexUtil::appendUint64Minimal( text, 0x123456789ull );
+    SW_EXPECT_EQUAL( string( "123456789" ), text );
+}
+
 SW_TEST_CASE( HexUtilTest, DecodesAnyCaseAndRejectsMalformedText )
 {
     vector<uint8> listByte;
