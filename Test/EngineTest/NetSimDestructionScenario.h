@@ -545,7 +545,7 @@ namespace test
 
     [[nodiscard]] inline bool loadShowcase( SceneDocument& outDocument )
     {
-        return ResourcePaths::initialize() && outDocument.loadXML( "game/empty/maps/destructionshowcase.scene.xml" );
+        return ResourcePaths::initialize() && outDocument.loadXML( sw::ResourceID{ "game/empty/maps/destructionshowcase.scene.xml" } );
     }
 
     inline NetEmulationConditions makeConditions( float64 latency, float64 jitter, float32 loss, float32 duplicate, float32 reorder )

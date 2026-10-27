@@ -237,7 +237,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) && scenario.getInputMode() == sw::VirtualInputMode::Mixed;
+            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) && scenario.getInputMode() == sw::VirtualInputMode::Mixed;
         }
 
         /**

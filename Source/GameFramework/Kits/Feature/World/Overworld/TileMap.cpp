@@ -24,7 +24,7 @@ namespace sw
         _data._sourcePath = assetRelativePath;
 
         TileMapXMLData xmlData{};
-        if ( xmlData.load( assetRelativePath ) == false )
+        if ( xmlData.load( ResourceID{ assetRelativePath } ) == false )
             return false;
         if ( xmlData._tileSetPath.empty() )
         {

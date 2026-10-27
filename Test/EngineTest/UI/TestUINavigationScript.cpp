@@ -284,8 +284,8 @@ SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
         const sw::string    documentPath = "engine/ui/" + fileName;
         UINavigationFixture fixture;
         // 디버그 HUD 문서는 엔진의 디버그 HUD 설정(`debug.hud` …)에 묶여 있다 - 그 스키마를 실제 파일에서 올려 묶음이 풀리게 한다(Dev 만 읽는 스키마라 있을 때만).
-        if ( fileName == "debughud.ui.xml" && sw::ResourceIO::hasResource( kDebugHUDSchemaPath ) )
-            SW_ASSERT_TRUE( fixture._settings.loadSchema( kDebugHUDSchemaPath ) );
+        if ( fileName == "debughud.ui.xml" && sw::ResourceIO::hasResource( sw::ResourceID{ kDebugHUDSchemaPath } ) )
+            SW_ASSERT_TRUE( fixture._settings.loadSchema( sw::ResourceID{ kDebugHUDSchemaPath } ) );
         if ( documentPath == ::test::getEngineDefaultAssets()._uiOptionsMenu.c_str() )
         {
             const sw::UIScreenHandle handle = sw::OptionsMenuScreen::open( fixture._ui );
