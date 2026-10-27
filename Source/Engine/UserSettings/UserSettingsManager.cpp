@@ -1051,7 +1051,12 @@ namespace sw
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
         const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         setUserFilePath( gv_userSettingsFile.empty() ? makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
-        if ( loadUserFile( getUserFilePath() ) == false )
+        // 사양으로 품질 프리셋을 고르는 것은 사람이 처음 켠 실행만이다. 무인 실행(-unattended · -scenario)은 기계마다 다른 프리셋을 고르면 같은 시나리오의
+        // 그림 · 시야 거리가 기계에 따라 달라진다(약한 GPU 의 low 가 지형 원경을 잘라 칠하기 비교가 0 이 됐다). 스키마 기본값 그대로 둔다 — 시나리오가
+        // 품질을 보려면 <Launch> 로 정한다.
+        const CommandLineManager& commandLine   = *targets._pCommandLineManager;
+        const bool                bAutomatedRun = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO );
+        if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )
             (void)applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
         reapplyAll();
         return SubsystemInitResult::Succeeded;
