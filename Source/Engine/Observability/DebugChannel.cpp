@@ -49,13 +49,13 @@ namespace sw
         , _settings{}
         , _execute{}
         , _mutex{}
-        , _pTransport{ nullptr }
+        , _pTransport{}
     {
     }
 
     DebugChannel::~DebugChannel()
     {
-        SW_ASSERT( _pTransport == nullptr );
+        SW_ASSERT( _pTransport.get() == nullptr );
     }
 
     bool DebugChannel::initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const DebugChannelConfig& settings,
@@ -73,14 +73,16 @@ namespace sw
             SW_LOG_ERROR( "Debug channel binds to the loopback address only (got %#) - not started", settings._bindAddress.toString().c_str() );
             return false;
         }
-        _settings = settings;
-        _execute  = execute;
+        _settings.set( settings );
+        _execute.set( execute );
         if ( pTransport->initialize( this, transportSettings ) == false )
         {
             SW_LOG_ERROR( "Debug channel could not start its stream transport" );
+            _settings.reset();
+            _execute.reset();
             return false;
         }
-        _pTransport = pTransport;
+        _pTransport.set( pTransport );
         if ( _pTransport->listen( settings._bindAddress ) == false )
         {
             SW_LOG_ERROR( "Debug channel could not listen on %#", settings._bindAddress.toString().c_str() );
@@ -93,9 +95,11 @@ namespace sw
 
     void DebugChannel::shutdown()
     {
-        if ( _pTransport != nullptr )
+        if ( _pTransport.get() != nullptr )
             _pTransport->shutdown();
-        _pTransport = nullptr;
+        _pTransport.reset();
+        _settings.reset(); // initialize 가 한 번 정한다 — 다시 시작할 수 있게 비운다
+        _execute.reset();
         ScopedLock<mutex> lock{ _mutex };
         _listConnection.clear();
         _listRequest.clear();
@@ -103,7 +107,7 @@ namespace sw
 
     uint16 DebugChannel::getListenPort() const
     {
-        return _pTransport != nullptr ? _pTransport->getListenPort() : 0;
+        return _pTransport.get() != nullptr ? _pTransport->getListenPort() : 0;
     }
 
     void DebugChannel::sendReply( uint64 packedHandle, bool bOk, string_view body ) const
@@ -125,7 +129,7 @@ namespace sw
         for ( const Request& request : listRequest )
         {
             string     reply;
-            const bool bOk = _execute( request._command, reply );
+            const bool bOk = _execute.get()( request._command, reply );
             sendReply( request._packedHandle, bOk, reply );
         }
         return static_cast<uint32>( listRequest.size() );
@@ -162,16 +166,16 @@ namespace sw
                 const size_t lineEnd = pConnection->_buffer.find( '\n' );
                 if ( lineEnd == string::npos )
                 {
-                    bTooLong = static_cast<int32>( pConnection->_buffer.size() ) > _settings._maxLineBytes;
+                    bTooLong = static_cast<int32>( pConnection->_buffer.size() ) > _settings->_maxLineBytes;
                     bReject  = bTooLong;
                     break;
                 }
                 const string_view line  = StringUtil::trim( string_view( pConnection->_buffer ).substr( 0, lineEnd ) );
                 const size_t      space = line.find( ' ' );
                 const string_view token = space == string_view::npos ? line : line.substr( 0, space );
-                if ( DebugChannelInternal::equalsConstantTime( token, _settings._token ) == false )
+                if ( DebugChannelInternal::equalsConstantTime( token, _settings->_token ) == false )
                     bReject = true;
-                else if ( static_cast<int32>( _listRequest.size() ) >= _settings._maxQueuedLines )
+                else if ( static_cast<int32>( _listRequest.size() ) >= _settings->_maxQueuedLines )
                     bTooBusy = true;
                 else if ( space != string_view::npos )
                 {
