@@ -91,6 +91,23 @@ kListCase: tuple[PerfCase, ...] = (
              listScope=("GT.UI.Paint", "GT.UI.Layout")),
     PerfCase("uiDrawOpacityPulse", "app", "single", "런타임 UI 그리기 — 위젯 1 만, 조상 불투명도가 계속 변함(그림 캐시의 변환 곱하기)", ("-gv_benchUiWidgets=10000", "-gv_benchUiOpacityPulse=true"),
              listScope=("GT.UI.Paint", "GT.UI.Layout")),
+    # 애니메이션 군중 공유(AnimationLodAndCrowd): 벤치 KayKit 기사 30 명 — 캐릭터마다 사본(A) 대 같은 상태끼리 포즈 공유 + 먼 캐릭터 VAT(B).
+    PerfCase("crowdShare", "app", "switch", "애니메이션 군중 포즈 공유 — 벤치 기사 30 명, 공유 끔(A) 대 켬(B). GT.Animation.evaluate 가 줄어야 한다",
+             ("-gv_benchCharacters=30", "-gv_benchCharacterColumns=6"), ("-gv_benchCrowdShare=0",), ("-gv_benchCrowdShare=1",),
+             ("GT.Frame", "GT.Animation.evaluate", "RT.Frame")),
+    # 연결 성분 평가(AnimationComponentChain): 몸 하나에 리더 포즈 부품 K 개(B)와 같은 총 유닛 수를 독립 캐릭터로 채운 대조군(A). 차이가 성분 안 직렬화의 비용이다.
+    *(PerfCase(f"chainFollowers{followerCount}", "app", "switch",
+               f"애니메이션 연결 성분 — 기사 50 명 × 부품 {followerCount} 개(B) 대 독립 캐릭터 {50 * (1 + followerCount)} 명(A, 같은 총 유닛 수)",
+               ("-gv_benchCharacterColumns=10",), (f"-gv_benchCharacters={50 * (1 + followerCount)}",), ("-gv_benchCharacters=50", f"-gv_benchCharacterFollowers={followerCount}"),
+               ("GT.Frame", "GT.Animation.evaluate", "GT.Animation.phasePose"), ("GT.Animation.componentCount", "GT.Animation.maxComponentSize"))
+      for followerCount in (2, 4)),
+    # KayKit 머티리얼 뒤 GT.Animation 기준(KayKitMaterials K2): 같은 인자의 벤치 세 장면. 기준값(B 만)이고 값은 08_Verification 의 애니메이션 측정 절 기준과 견준다.
+    PerfCase("kaykitCharactersBaseline", "app", "single", "KayKit 기사 100 명 줄 — 머티리얼이 입혀진 뒤의 GT.Animation 기준", ("-gv_benchCharacters=100", "-gv_benchCharacterColumns=10"),
+             listScope=("GT.Frame", "GT.Animation.evaluate")),
+    PerfCase("kaykitRigBaseline", "app", "single", "KayKit 후처리 리그 기사 20 명 — 머티리얼이 입혀진 뒤의 GT.Animation 기준", ("-gv_benchRig=20",),
+             listScope=("GT.Frame", "GT.Animation.evaluate")),
+    PerfCase("kaykitCombatBaseline", "app", "single", "KayKit 전투 연출 — 머티리얼이 입혀진 뒤의 GT.Animation 기준", ("-gv_benchCombat=1",),
+             listScope=("GT.Frame", "GT.Animation.evaluate")),
     PerfCase("deferredBloom", "app", "binary", "디퍼드 블룸의 밝은 부분을 반해상도 패스로(ee6fff232) — 큐브 2000. 전 GPU.PostBloom 대 후 GPU.BloomDownsample + GPU.PostBloom. 전 바이너리는 ee6fff232^ 의 Release 빌드",
              ("-gv_deferred=1", "-gv_benchMeshes=2000"), listScope=("GPU.Frame", "GPU.PostBloom", "GPU.BloomDownsample")),
     PerfCase("shadowPassShare", "app", "single", "그림자 패스의 몫(기준값, GraphicsMeasurements M3) — 큐브 4000. GPU.Shadow 가 GPU.Frame 의 한 자리 퍼센트면 캐스케이드별 컬링은 이득이 없다",

@@ -54,7 +54,8 @@
 			<LaunchVelocityComponent _componentName="LaunchVelocityComponent"
 			                         _bActive="true"
 			                         _speed="30"
-			                         _localDirection="0,0,1" />
+			                         _localDirection="0,0,1"
+			                         _alignGain="8" />
 		</_listComponent>
 	</GameObject>
 </Prefab>
