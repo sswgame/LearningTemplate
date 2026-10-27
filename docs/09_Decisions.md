@@ -75,48 +75,48 @@
 
 ### 5-1. 문서와 저장소
 
-[5-1_DocsRepo.md](decisions/5-1_DocsRepo.md) — 7 KB.
+[5-1_DocsRepo.md](decisions/5-1_DocsRepo.md)
 
 ### 5-2. 빌드, 스크립트, CI
 
-[5-2_Build.md](decisions/5-2_Build.md) — 48 KB.
+[5-2_Build.md](decisions/5-2_Build.md)
 
 ### 5-3. Core 와 플랫폼
 
-[5-3_CorePlatform.md](decisions/5-3_CorePlatform.md) — 20 KB.
+[5-3_CorePlatform.md](decisions/5-3_CorePlatform.md)
 
 ### 5-4. 데이터, 직렬화, 설정
 
-[5-4_DataConfig.md](decisions/5-4_DataConfig.md) — 22 KB.
+[5-4_DataConfig.md](decisions/5-4_DataConfig.md)
 
 ### 5-5. 그래픽스와 RHI
 
-[5-5_GraphicsRHI.md](decisions/5-5_GraphicsRHI.md) — 38 KB.
+[5-5_GraphicsRHI.md](decisions/5-5_GraphicsRHI.md)
 
 ### 5-6. 오브젝트, 조종, 입력
 
-[5-6_ObjectsInput.md](decisions/5-6_ObjectsInput.md) — 13 KB.
+[5-6_ObjectsInput.md](decisions/5-6_ObjectsInput.md)
 
 ### 5-7. 런타임 UI 와 글자
 
-[5-7_RuntimeUI.md](decisions/5-7_RuntimeUI.md) — 12 KB.
+[5-7_RuntimeUI.md](decisions/5-7_RuntimeUI.md)
 
 ### 5-8. 게임프레임워크와 키트
 
-[5-8_GameFramework.md](decisions/5-8_GameFramework.md) — 13 KB.
+[5-8_GameFramework.md](decisions/5-8_GameFramework.md)
 
 ### 5-9. 온라인 서비스, 네트워크, 보안
 
-[5-9_OnlineNet.md](decisions/5-9_OnlineNet.md) — 21 KB.
+[5-9_OnlineNet.md](decisions/5-9_OnlineNet.md)
 
 ### 5-10. 전용 서버
 
-[5-10_Server.md](decisions/5-10_Server.md) — 10 KB.
+[5-10_Server.md](decisions/5-10_Server.md)
 
 ### 5-11. 에디터와 외부 공개
 
-[5-11_Editor.md](decisions/5-11_Editor.md) — 45 KB.
+[5-11_Editor.md](decisions/5-11_Editor.md)
 
 ### 5-12. 기능 대기열 결정 (2026-10-17)
 
-[5-12_FeatureQueue.md](decisions/5-12_FeatureQueue.md) — 17 KB.
+[5-12_FeatureQueue.md](decisions/5-12_FeatureQueue.md)

@@ -168,7 +168,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 **측정.** M0 은 착수 전입니다. `wt/profscopes` 병합 뒤 Release 에서 혼자(GPU 독점) 네 스코프의 호출 수와 ms 분포, RT · GT 프레임의 p99 와 최악 프레임을 잽니다. 시나리오는 게임 시작, 씬 로드, 새 머티리얼 스폰, 뷰 모드 전환, 글자 많은 UI 변경이고 설정은 LowEnd 포함. M0 에서 W2 의 합이 작거나 Vulkan 이 아닌 백엔드에서 W1 · W3 이 작으면 U10 · U12 의 우선순위를 낮춥니다. M1 은 B0 병합 뒤와 마지막 단위 뒤에 같은 시나리오로 다시 잽니다. 결과는 [검증과 측정](../08_Verification.md) 에 적습니다.
 
-**B0 측정 질문 넷**(매니페스트 id `rhi-transfer-b0-measure`, 아직 한 명령으로 안 돕니다 — 세는 스코프가 없음).
+**B0 측정 질문 넷**(세는 스코프 `RT.Transfer.*` 가 생긴 뒤 perf-compare 케이스와 함께 검증 묶음 항목으로 올립니다).
 1. 제출에서 `Complete` 까지 몇 프레임인가(같은 프레임: DX11 · GL · Vulkan B0, 한 프레임 이상: DX12 · 이후 Vulkan). U8 의 `finishUpload` 가 생기면 제출 프레임과 처음 `Complete` 를 본 프레임의 차로 셉니다.
 2. `pollTransfer` 한 번의 비용(DX11 즉시 컨텍스트 락 + `GetData`, DX12 `_uploadSlotMutex` 공유 + 전송 펜스 읽기, GL 원자 읽기 + 필요할 때 `glClientWaitSync`). 프레임당 폴링 수가 늘 때 락 경합이 생기는가.
 3. U2(Vulkan 대기 범위 축소)와 U6(비동기화)의 이득 — `RT.Upload.waitIdle` 합계와 RT 프레임 p99 전후.
