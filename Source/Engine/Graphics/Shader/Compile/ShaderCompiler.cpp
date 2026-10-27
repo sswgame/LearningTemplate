@@ -425,7 +425,10 @@ namespace sw
                 atomic<uint32>                _refCount;
             };
 
-            /** @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다. */
+            /**
+             * @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다.
+             * @details 핸들은 일부러 내리지 않는다 — 만든 DXC 객체(COM)가 프로세스 끝까지 쓰일 수 있고 함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
+             */
             static DxcCreateInstanceProc findDxcCreateInstance()
             {
                 static auto s_getDxCompilerHandle = []() -> void*

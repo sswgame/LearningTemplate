@@ -68,7 +68,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 로드, 심볼, 언로드(OS 로더). 등록을 해제하지 않는다. 엔진 코드를 가리킬 수 있는 모듈은 4)의 함수로 언로드한다.
         // ------------------------------------------------------------------------------
-        /** @brief 동적 라이브러리를 로드합니다. */
+        /**
+         * @brief 동적 라이브러리를 로드합니다.
+         * @details **연 쪽이 핸들을 소유하고 내린다**(`LiveReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈 · ALSA 백엔드). 프로세스 끝까지 두는 곳은 그 자리에
+         *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleImage` 가 고정하는 의존 이미지도 같은 규칙의 예외다 — 결정 기록 5-3.
+         */
         static void* loadDynamicLibrary( string_view libraryName );
         /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
         static void* getDynamicSymbol( void* pHandle, string_view symbolName );
