@@ -579,8 +579,8 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
             const bool bHasInputContract = info.hasFlag( sw::RenderPassTraitFlag::kHasInputContract );
             SW_EXPECT_TRUE_MSG( bDrawsSceneMeshes != bHasInputContract, ( "입력을 정하는 쪽이 하나가 아닌 패스 타입 " + label ).c_str() );
         }
-        // 후처리를 끈 뷰에서 건너뛰는 효과는 일반 풀스크린 실행만 다룬다.
-        if ( info.hasFlag( sw::RenderPassTraitFlag::kSkipsWithoutPostProcess ) )
+        // 후처리를 끈 뷰에서 건너뛰는 효과는 일반 풀스크린 실행만 다룬다(TAA 만 자기 실행기).
+        if ( info.hasFlag( sw::RenderPassTraitFlag::kSkipsWithoutPostProcess ) && type != sw::RenderPassType::TAA ) // TAA 는 자기 실행기(executeTaaPass)가 있다
             SW_EXPECT_TRUE_MSG( info.hasFlag( sw::RenderPassTraitFlag::kGenericFullscreen ), ( "건너뛰는 효과가 일반 풀스크린이 아닌 패스 타입 " + label ).c_str() );
     }
 
@@ -1360,11 +1360,11 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         SW_EXPECT_TRUE( static_cast<sw::RenderPassInputRole>( lighting._listResolvedInput[4]._role ) == sw::RenderPassInputRole::ShadowMap );
     }
     // 모르는 역할 글은 오류다 — 조용히 이름 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다. 이름 규칙으로 떨어진 알베도는 SourceColor 라
-    // Lighting 계약도 함께 깨진다(읽지 않는 SourceColor · 필수 GBufferAlbedo 없음) — 셋이다.
+    // Lighting 계약도 함께 깨진다(읽지 않는 SourceColor · SourceColor 와 ShadowMap 의 에뮬레이션 슬롯 충돌 · 필수 GBufferAlbedo 없음) — 넷이다.
     {
         sw::RenderPipelineAsset res;
         makeDeferred( res, "Albedo" );
-        SW_EXPECT_EQUAL( 3u, res.validate( "unit-test" ) );
+        SW_EXPECT_EQUAL( 4u, res.validate( "unit-test" ) );
     }
 }
 
