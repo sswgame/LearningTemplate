@@ -26,7 +26,6 @@ namespace sw
                 : _service{}
                 , _server{}
                 , _settings{}
-                , _bStarted{ false }
             {
             }
 
@@ -39,10 +38,8 @@ namespace sw
                     return false;
                 if ( _settings._listServerKind.empty() )
                     _settings._listServerKind.push_back( "game" );
-                if ( registerHostService( context, entry, &_server, outError ) == false )
-                    return false;
-                context._pDirectoryControl = &_service; // GM 키트가 `start` 에서 읽는다. 이 키트의 `start` 가 먼저 돈다(순서 kDirectory)
-                return true;
+                // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
+                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IServerDirectoryControl>( context, entry, _service, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -58,29 +55,26 @@ namespace sw
                 dependencies._pBus    = context._pBus;
                 _service.initialize( dependencies, _settings );
                 _server.initialize( &_service );
-                _bStarted = true;
                 return true;
             }
 
             void stop() override
             {
-                if ( _bStarted == false )
+                if ( isStarted() == false )
                     return;
                 _server.shutdown();
                 _service.shutdown();
-                _bStarted = false;
             }
 
         private:
             ServerDirectoryService       _service;
             ServerDirectoryServer        _server;
             ServerDirectoryServiceConfig _settings;
-            bool                         _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( ServerDirectoryOnlineServerKit, "directory", OnlineServerKitOrder::kDirectory );
+    SW_REGISTER_ONLINE_SERVER_KIT( ServerDirectoryOnlineServerKit, OnlineServerKitName::kDirectory );
 } // namespace sw

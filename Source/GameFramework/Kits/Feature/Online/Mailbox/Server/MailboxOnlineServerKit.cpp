@@ -23,7 +23,6 @@ namespace sw
             MailboxOnlineServerKit()
                 : _service{}
                 , _settings{}
-                , _bStarted{ false }
             {
             }
 
@@ -43,38 +42,41 @@ namespace sw
 
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
-                _settings._pPolicy         = context._pLedgerPolicy; // 경제 키트가 없으면 원장 상한만 적용된다
+                _settings._pPolicy         = context._kits.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
                 _settings._pMetricRegistry = context._pMetricRegistry;
-                _settings._pPresence       = context._pPresence;      // 계정 키트(다른 서버에 붙은 계정)
-                _settings._pBalanceNotice  = context._pBalanceNotice; // 경제 키트(만료 반환의 잔액 변경 알림)
-                _settings._pOfflinePush    = context._pOfflinePush;   // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
-                _settings._pScheduler      = context._pScheduler;     // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+                _settings._pPresence       = context._kits.find<IAccountPresence>();   // 계정 키트(다른 서버에 붙은 계정)
+                _settings._pBalanceNotice  = context._kits.find<IBalanceNotice>();     // 경제 키트(만료 반환의 잔액 변경 알림)
+                _settings._pOfflinePush    = context._kits.find<IOfflinePushSender>(); // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
+                _settings._pScheduler      = context._pScheduler;                      // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
                 {
                     outError = "the mailbox service needs a store and a sweep interval of at least a minute";
                     return false;
                 }
-                _bStarted = true;
                 return true;
             }
 
             void stop() override
             {
                 // 맡긴 요청 · 만료 정리 · 캠페인 읽기를 회수한다 — 저장소를 종료하기 전.
-                if ( _bStarted )
+                if ( isStarted() )
                     _service.shutdown();
-                _bStarted = false;
+            }
+
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kEconomy, OnlineServerKitName::kLiveOps };
+                return kArrKit;
             }
 
         private:
             MailboxService       _service;
             MailboxServiceConfig _settings;
-            bool                 _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( MailboxOnlineServerKit, "mailbox", OnlineServerKitOrder::kMailbox );
+    SW_REGISTER_ONLINE_SERVER_KIT( MailboxOnlineServerKit, OnlineServerKitName::kMailbox );
 } // namespace sw

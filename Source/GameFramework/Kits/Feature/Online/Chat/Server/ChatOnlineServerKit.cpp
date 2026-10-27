@@ -89,7 +89,6 @@ namespace sw
                 , _groupChannels{}
                 , _policy{}
                 , _settings{}
-                , _bStarted{ false }
             {
             }
 
@@ -103,26 +102,20 @@ namespace sw
                     return false;
                 if ( bannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
                     _settings._bannedWordsPath = bannedWords;
-                if ( registerHostService( context, entry, &_server, outError ) == false )
-                    return false;
-                context._pGroupChannels = &_groupChannels; // 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다
-                return true;
+                // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
+                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
-                if ( context._pAccountDirectory == nullptr )
-                {
-                    outError = "chat needs the account kit (display names and who is online)";
-                    return false;
-                }
-                if ( context._pBlockList != nullptr )
-                    _policy = make_unique<ChatBlockPolicy>( context._pBlockList );
+                const IAccountBlockList* pBlockList = context._kits.find<const IAccountBlockList>();
+                if ( pBlockList != nullptr )
+                    _policy = make_unique<ChatBlockPolicy>( pBlockList );
                 ChatServiceDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pBus       = context._pBus;
-                dependencies._pPresence  = context._pPresence;
-                dependencies._pDirectory = context._pAccountDirectory;
+                dependencies._pPresence  = context._kits.find<IAccountPresence>();
+                dependencies._pDirectory = &context._kits.get<IAccountDirectory>(); // 필수 키트라 정렬이 없으면 기동 오류로 막았다
                 dependencies._pPolicy    = _policy.get();
                 dependencies._serverID   = context._serverID;
                 if ( _service.initialize( dependencies, _settings ) == false )
@@ -132,18 +125,27 @@ namespace sw
                 }
                 _server.initialize( &_service );
                 _groupChannels.setService( &_service );
-                _bStarted = true;
                 return true;
             }
 
             void stop() override
             {
-                if ( _bStarted == false )
+                if ( isStarted() == false )
                     return;
                 _groupChannels.setService( nullptr );
                 _server.shutdown();
                 _service.shutdown();
-                _bStarted = false;
+            }
+
+            span<const utf8* const> getRequiredKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 표시 이름과 접속 여부
+                return kArrKit;
+            }
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kSocial }; // 차단 목록
+                return kArrKit;
             }
 
         private:
@@ -152,12 +154,11 @@ namespace sw
             ChatGroupChannels           _groupChannels;
             unique_ptr<ChatBlockPolicy> _policy;
             ChatServiceConfig           _settings;
-            bool                        _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( ChatOnlineServerKit, "chat", OnlineServerKitOrder::kChat );
+    SW_REGISTER_ONLINE_SERVER_KIT( ChatOnlineServerKit, OnlineServerKitName::kChat );
 } // namespace sw

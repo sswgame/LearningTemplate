@@ -60,7 +60,6 @@ namespace sw
                 , _offlinePush{ &_dispatcher }
                 , _fakeProvider{}
                 , _providerSet{}
-                , _bStarted{ false }
             {
             }
 
@@ -77,26 +76,11 @@ namespace sw
                                         outError ) == false )
                     return false;
                 _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
-                if ( createPushProviders( providersFile, trustFile, outError ) == false )
-                    return false;
-                if ( bFakePush )
-                {
-#if defined( SW_SHIPPING )
-                    outError = "fakePush is a development option and is refused in Shipping";
-                    return false;
-#else
-                    if ( _dispatcher.registerProvider( &_fakeProvider ) == false )
-                    {
-                        outError = "the fake push provider could not be registered";
-                        return false;
-                    }
-#endif
-                }
-                if ( registerHostService( context, entry, &_server, outError ) == false )
-                    return false;
-                context._pOfflinePush      = &_offlinePush; // 우편함 키트가 접속하지 않은 계정의 새 우편에 쓴다
-                context._pLiveEventControl = &_service;     // GM 키트의 이벤트 운영이 쓴다. 부르는 것은 모든 키트가 시작한 뒤다
-                return true;
+                // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
+                const bool bAssembled = createPushProviders( providersFile, trustFile, outError ) && registerFakePush( bFakePush, outError ) && registerHostService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
+                if ( bAssembled == false )
+                    shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
+                return bAssembled;
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -108,17 +92,15 @@ namespace sw
                 dependencies._pRemoteConfig = context._pRemoteConfig;
                 _service.initialize( dependencies );
                 _server.initialize( &_service, &_dispatcher );
-                _bStarted = true;
                 return true;
             }
 
             void stop() override
             {
-                if ( _bStarted == false )
+                if ( isStarted() == false )
                     return;
                 _server.shutdown();
                 _service.shutdown();
-                _bStarted = false;
             }
 
             void shutdown() override
@@ -128,6 +110,22 @@ namespace sw
             }
 
         private:
+            /** @brief 옵션 `fakePush` 이면 가짜 제공자를 발송기에 올립니다(Dev 만 — Shipping 은 거절한다). */
+            [[nodiscard]] bool registerFakePush( bool bFakePush, string& outError )
+            {
+                if ( bFakePush == false )
+                    return true;
+#if defined( SW_SHIPPING )
+                outError = "fakePush is a development option and is refused in Shipping";
+                return false;
+#else
+                if ( _dispatcher.registerProvider( &_fakeProvider ) )
+                    return true;
+                outError = "the fake push provider could not be registered";
+                return false;
+#endif
+            }
+
             /** @brief 설정 파일을 읽어 실제 푸시 제공자를 만들고 발송기에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
             [[nodiscard]] bool createPushProviders( const string& providersFile, const string& trustFile, string& outError )
             {
@@ -167,12 +165,11 @@ namespace sw
             LiveOpsOfflinePush         _offlinePush; ///< 발송기를 빌려 쓰므로 뒤에 선언한다
             FakePushProvider           _fakeProvider;
             PushProviderSet            _providerSet;
-            bool                       _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, "liveops", OnlineServerKitOrder::kLiveOps );
+    SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, OnlineServerKitName::kLiveOps );
 } // namespace sw

@@ -41,7 +41,6 @@ namespace sw
                 , _receiptProviders{}
                 , _receiptRegistry{}
                 , _service{}
-                , _bServiceStarted{ false }
             {
             }
 
@@ -79,27 +78,36 @@ namespace sw
                     outError = "the fake receipt validator could not be registered";
                     return false;
                 }
+                // 여기부터 실패하면 세운 것을 스스로 내린다 — 초기화에 실패한 키트는 stop · shutdown 을 받지 않는다.
                 if ( createReceiptProviders( providersFile, trustFile, outError ) == false )
+                {
+                    _receiptRegistry.shutdown();
+                    shutdown();
                     return false;
+                }
                 EconomyServiceConfig settings;
                 settings._pCurrencyCatalog       = &_currencyCatalog;
                 settings._pOfferCatalog          = &_offerCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
-                settings._pScheduler             = context._pScheduler; // 원장 보존 검사를 매일 서버 하나가 돌린다
-                settings._pPresence              = context._pPresence;  // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계)
+                settings._pScheduler             = context._pScheduler;                    // 원장 보존 검사를 매일 서버 하나가 돌린다
+                settings._pPresence              = context._kits.find<IAccountPresence>(); // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
                 settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     outError = "the economy service refused its settings (see the error above)";
+                    _receiptRegistry.shutdown();
+                    shutdown();
                     return false;
                 }
-                _bServiceStarted = true;
-                if ( registerHostService( context, entry, &_service, outError ) == false )
-                    return false;
-                context._pLedgerPolicy  = &_currencyCatalog;
-                context._pBalanceNotice = &_service; // GM 키트가 지급 · 회수 뒤에 부른다
-                return true;
+                // 원장 정책은 우편함 · GM · 거래가, 잔액 변경 알림은 GM 키트가 지급 · 회수 뒤에 쓴다.
+                const bool bExposed = registerHostService( context, entry, &_service, outError ) && exposeInterface<ILedgerPolicy>( context, entry, _currencyCatalog, outError ) && exposeInterface<IBalanceNotice>( context, entry, _service, outError );
+                if ( bExposed == false )
+                {
+                    stop();
+                    shutdown();
+                }
+                return bExposed;
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -112,9 +120,7 @@ namespace sw
             void stop() override
             {
                 // 맡긴 저장 일과 영수증 검증을 회수한다 — 저장소를 종료하기 전.
-                if ( _bServiceStarted )
-                    _service.shutdown();
-                _bServiceStarted = false;
+                _service.shutdown(); // `initialize` 에서 섰다
                 _receiptRegistry.shutdown();
             }
 
@@ -122,6 +128,12 @@ namespace sw
             {
                 // 저장소를 종료하고 남은 완료를 돌린 뒤다 — 레지스트리가 빌려 쓰던 제공자를 내린다.
                 _receiptProviders.shutdown();
+            }
+
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 접속 상태(`initialize` 에서 받는다)
+                return kArrKit;
             }
 
         private:
@@ -164,12 +176,11 @@ namespace sw
             ReceiptProviderSet       _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
             ReceiptValidatorRegistry _receiptRegistry;
             EconomyService           _service;
-            bool                     _bServiceStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( EconomyOnlineServerKit, "economy", OnlineServerKitOrder::kEconomy );
+    SW_REGISTER_ONLINE_SERVER_KIT( EconomyOnlineServerKit, OnlineServerKitName::kEconomy );
 } // namespace sw

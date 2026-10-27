@@ -33,6 +33,11 @@ namespace sw
         return false;
     }
 
+    void IOnlineServerKit::reportInterfaceTaken( const OnlineServerKitEntry& entry, string& outError )
+    {
+        outError = "kit '" + entry._name + "' exposes an interface another kit already exposed";
+    }
+
     void OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )

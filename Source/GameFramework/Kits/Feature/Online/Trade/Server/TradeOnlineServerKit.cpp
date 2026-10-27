@@ -57,7 +57,6 @@ namespace sw
                 : _policy{}
                 , _service{}
                 , _server{}
-                , _bStarted{ false }
             {
             }
 
@@ -81,41 +80,46 @@ namespace sw
 
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
-                if ( context._pAccountDirectory == nullptr )
-                {
-                    outError = "trade needs the account kit (finding the other trader)";
-                    return false;
-                }
-                _service.initialize( context._pStore, &_policy, context._pLedgerPolicy, context._serverID, TradeServiceConfig{} );
-                _server.initialize( &_service, context._pAccountDirectory, context._pPresence );
-                _bStarted = true;
+                (void)outError;
+                _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
+                // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
+                _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>() );
                 return true;
             }
 
             void stop() override
             {
-                if ( _bStarted )
+                if ( isStarted() )
                     _server.shutdown();
             }
 
             void shutdown() override
             {
                 // 거래 로직은 맡긴 정산 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 정산 중 거래는 재시작 복구가 마무리한다.
-                if ( _bStarted )
+                if ( isStarted() )
                     _service.shutdown();
-                _bStarted = false;
+            }
+
+            span<const utf8* const> getRequiredKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 상대 찾기
+                return kArrKit;
+            }
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kEconomy }; // 원장 정책
+                return kArrKit;
             }
 
         private:
             PrefixTradePolicy _policy;
             TradeService      _service;
             TradeServer       _server;
-            bool              _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( TradeOnlineServerKit, "trade", OnlineServerKitOrder::kTrade );
+    SW_REGISTER_ONLINE_SERVER_KIT( TradeOnlineServerKit, OnlineServerKitName::kTrade );
 } // namespace sw

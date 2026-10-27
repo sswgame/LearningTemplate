@@ -50,7 +50,6 @@ namespace sw
                 , _loginService{}
                 , _accountServer{}
                 , _nameIndex{}
-                , _bLoginStarted{ false }
             {
             }
 
@@ -89,18 +88,11 @@ namespace sw
                     return false;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
-                _bLoginStarted = true;
-                if ( createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, outError ) == false )
-                    return false;
-                _loginService.setRemoteConfig( context._pRemoteConfig );
-                _accountServer.initialize( &_loginService, AccountServerConfig{} );
-                if ( registerHostService( context, entry, &_accountServer, outError ) == false )
-                    return false;
-                context._pAccountDirectory = &_loginService;
-                context._pPresence         = _accountServer.getPresence();
-                context._pSessionControl   = &_accountServer;
-                context._pNameIndex        = &_nameIndex;
-                return true;
+                // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
+                const bool bAssembled = createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, outError ) && exposeAccount( context, entry, outError );
+                if ( bAssembled == false )
+                    shutdown();
+                return bAssembled;
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -117,14 +109,20 @@ namespace sw
             {
                 // 저장소를 종료하고 남은 완료를 돌린 뒤다 — 로그인 계약의 종료 순서(저장소 → 완료 → 서비스).
                 _accountServer.shutdown();
-                if ( _bLoginStarted )
-                    _loginService.shutdown();
-                _bLoginStarted = false;
+                _loginService.shutdown();
                 _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 종료한다
                 _secretVault.shutdown();       // 로그인 서비스가 빌려 쓰던 연동 비밀 도구다
             }
 
         private:
+            /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 겁니다. */
+            [[nodiscard]] bool exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError )
+            {
+                _loginService.setRemoteConfig( context._pRemoteConfig );
+                _accountServer.initialize( &_loginService, AccountServerConfig{} );
+                return registerHostService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer, outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError );
+            }
+
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
             [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, const string& linkSecretKeyEnvironment, string& outError )
             {
@@ -182,12 +180,11 @@ namespace sw
             LoginService             _loginService;
             AccountServer            _accountServer;
             AccountNameIndex         _nameIndex;
-            bool                     _bLoginStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( AccountOnlineServerKit, "account", OnlineServerKitOrder::kIdentity );
+    SW_REGISTER_ONLINE_SERVER_KIT( AccountOnlineServerKit, OnlineServerKitName::kAccount );
 } // namespace sw

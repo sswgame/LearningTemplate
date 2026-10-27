@@ -2,6 +2,11 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Server/OnlineServerRuntime.h"
@@ -69,9 +74,10 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     string              error;
     SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
     const OnlineServerKitContext& context = runtime.getContext();
-    SW_EXPECT_TRUE( context._pAccountDirectory != nullptr ); // 계정 키트가 내놓았다
-    SW_EXPECT_TRUE( context._pPresence != nullptr && context._pSessionControl != nullptr && context._pNameIndex != nullptr );
-    SW_EXPECT_TRUE( context._pLedgerPolicy == nullptr ); // 경제 키트를 올리지 않았다
+    SW_EXPECT_TRUE( context._kits.find<IAccountDirectory>() != nullptr ); // 계정 키트가 내놓았다
+    const bool bAccountExposed = context._kits.find<IAccountPresence>() != nullptr && context._kits.find<IAccountSessionControl>() != nullptr && context._kits.find<const IAccountNameIndex>() != nullptr;
+    SW_EXPECT_TRUE( bAccountExposed );
+    SW_EXPECT_TRUE( context._kits.find<const ILedgerPolicy>() == nullptr ); // 경제 키트를 올리지 않았다
     vector<string> listKitName;
     runtime.collectKitNames( listKitName );
     SW_ASSERT_EQUAL( listKitName.size(), size_t( 4 ) );
@@ -81,6 +87,44 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
         runtime.update( Internal::kStartMs + tickIndex * 100 );
     }
     runtime.shutdown();
+}
+
+SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndependentKits )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
+#endif
+    // 의존이 없는 키트끼리는 이름 순으로 서는데, 그 순서에 기댄 조립(적지 않은 의존)은 이름 역순으로 세우면 드러난다. 두 순서 모두 서고 내려가야 한다.
+    using Internal = OnlineServerKitsTestInternal;
+    for ( const uint8 bReverse : { SW_FALSE, SW_TRUE } )
+    {
+        LoopbackStreamNetwork        network;
+        unique_ptr<IStreamTransport> transport = network.createTransport();
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7466 );
+        settings._bReverseIndependentKitOrder  = bReverse;
+        Internal::addOption( Internal::addKit( settings, "account" ), "lightPasswordHash", "1" );
+        (void)Internal::addKit( settings, "social" );
+        Internal::addOption( Internal::addKit( settings, "chat" ), "bannedWords", "none" );
+        (void)Internal::addKit( settings, "directory" );
+        (void)Internal::addKit( settings, "liveops" );
+        (void)Internal::addKit( settings, "mailbox" );
+        Internal::addOption( Internal::addKit( settings, "trade" ), "tradable", "cur.gold" );
+        (void)Internal::addKit( settings, "admin" );
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
+        vector<string> listKitName;
+        runtime.collectKitNames( listKitName );
+        SW_ASSERT_EQUAL( listKitName.size(), size_t( 8 ) );
+        // 이름 순이면 GM 키트가 앞쪽, 역순이면 뒤쪽이다 — 두 순서가 실제로 달랐는지 본다.
+        const bool bAdminBeforeTrade = std::find( listKitName.begin(), listKitName.end(), "admin" ) < std::find( listKitName.begin(), listKitName.end(), "trade" );
+        SW_EXPECT_TRUE( bAdminBeforeTrade == ( bReverse == SW_FALSE ) );
+        for ( int32 tickIndex = 0; tickIndex < 3; ++tickIndex )
+        {
+            runtime.update( Internal::kStartMs + tickIndex * 100 );
+        }
+        runtime.shutdown();
+    }
 }
 
 SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDependencies )
@@ -104,7 +148,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         OnlineServerRuntime runtime;
         string              error;
         SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) );
-        SW_EXPECT_TRUE( error.find( "account kit" ) != string::npos );
+        SW_EXPECT_TRUE( error.find( "needs kit 'account'" ) != string::npos );
     }
     {
         LoopbackStreamNetwork        network;

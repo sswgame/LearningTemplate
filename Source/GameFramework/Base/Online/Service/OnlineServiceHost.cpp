@@ -486,7 +486,7 @@ namespace sw
         // 버스가 없을 때 조용히 넘기면 `initialize` 전에 부른 구독이 소리 없이 사라진다 — 서버 한 대인지는 부르는 쪽이 가른다.
         if ( _settings._pServerBusTransport == nullptr || _bInitialized == SW_FALSE )
         {
-            SW_LOG_ERROR( "OnlineServiceHost: subscribeServerBus('%#') without a server bus - check getServerBus() first (single server, or called before initialize)", topic );
+            SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeWithoutTransport", "OnlineServiceHost: subscribeServerBus('%#') without a server bus - check getServerBus() first (single server, or called before initialize)", topic );
             return Subscription{};
         }
         if ( pService == nullptr )

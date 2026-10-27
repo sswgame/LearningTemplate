@@ -212,7 +212,7 @@
 "Source/GameFramework/Base/Online/Local/LocalStoreFactory.cpp" = 1
 "Source/GameFramework/Base/Online/Security/NetSecurity.cpp" = 1
 "Source/GameFramework/Base/Online/Server/OnlineServerKit.cpp" = 1
-"Source/GameFramework/Base/Online/Server/OnlineStoreDriverTable.cpp" = 2
+"Source/GameFramework/Base/Online/Server/OnlineStoreDriverTable.cpp" = 1
 "Source/GameFramework/Base/Online/Service/OnlineProtocolRegistry.cpp" = 1
 # Source/GameFramework/Kits — 이전 대기
 "Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.cpp" = 1
