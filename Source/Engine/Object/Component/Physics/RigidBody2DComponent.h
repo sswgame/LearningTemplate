@@ -144,22 +144,22 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        PhysicsBodyHandle                      _body;
-        PhysicsBodyCommand<PhysicsDimension2D> _command;
-        mutable SpinLock                       _commandLock;
-        float2                                 _previousPosition;
-        float2                                 _currentPosition;
-        float2                                 _kinematicStartPosition;
-        float2                                 _kinematicTargetPosition;
-        float2                                 _lastLinearVelocity;
-        float3                                 _writtenPosition; ///< 쓴 월드 자리(Z 포함) — 바깥 변화 비교용
-        quaternion                             _writtenRotation;
-        float32                                _previousAngle;
-        float32                                _currentAngle;
-        float32                                _kinematicStartAngle;
-        float32                                _kinematicTargetAngle;
-        float32                                _lastAngularVelocity;
-        PhysicsBodyType                        _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                   _bHasWritten;     ///< `_written*` 이 유효한지
+        PhysicsBodyHandle                               _body;
+        PhysicsBodyCommand<PhysicsDimension2D> _command SW_GUARDED_BY( _commandLock );
+        mutable SpinLock                                _commandLock;
+        float2                                          _previousPosition;
+        float2                                          _currentPosition;
+        float2                                          _kinematicStartPosition;
+        float2                                          _kinematicTargetPosition;
+        float2                                          _lastLinearVelocity;
+        float3                                          _writtenPosition; ///< 쓴 월드 자리(Z 포함) — 바깥 변화 비교용
+        quaternion                                      _writtenRotation;
+        float32                                         _previousAngle;
+        float32                                         _currentAngle;
+        float32                                         _kinematicStartAngle;
+        float32                                         _kinematicTargetAngle;
+        float32                                         _lastAngularVelocity;
+        PhysicsBodyType                                 _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                            _bHasWritten;     ///< `_written*` 이 유효한지
     };
 } // namespace sw

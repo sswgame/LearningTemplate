@@ -504,7 +504,7 @@ namespace sw
     {
         if ( pObj == nullptr || pObj->_bTickDirty.exchange( SW_TRUE, std::memory_order_acq_rel ) != SW_FALSE )
             return;
-        std::scoped_lock<mutex> lock{ _dirtyMutex };
+        ScopedLock<mutex> lock{ _dirtyMutex };
         _listDirtyObjectID.push_back( pObj->getObjectID() );
     }
 
@@ -524,7 +524,7 @@ namespace sw
         }
         const bool bAll = _bAllDirty.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE;
         {
-            std::scoped_lock<mutex> lock{ _dirtyMutex };
+            ScopedLock<mutex> lock{ _dirtyMutex };
             _listProcessingObjectID.swap( _listDirtyObjectID );
         }
         bool bRefreshedAny = false;
@@ -951,7 +951,7 @@ namespace sw
             listBatch.clear();
         }
         {
-            std::scoped_lock<mutex> lock{ _dirtyMutex };
+            ScopedLock<mutex> lock{ _dirtyMutex };
             _listDirtyObjectID.clear();
         }
         _listProcessingObjectID.clear();

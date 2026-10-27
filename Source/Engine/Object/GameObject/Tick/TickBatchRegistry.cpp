@@ -38,7 +38,7 @@ namespace sw
         if ( entry._pStaticType == nullptr || entry._pFunction == nullptr )
             return;
         {
-            std::scoped_lock<mutex> lock{ s_state._mutex };
+            ScopedLock<mutex> lock{ s_state._mutex };
             entry._pNext   = s_state._pHead;
             s_state._pHead = &entry;
             ++s_state._count;
@@ -50,7 +50,7 @@ namespace sw
     {
         bool bRemoved = false;
         {
-            std::scoped_lock<mutex> lock{ s_state._mutex };
+            ScopedLock<mutex> lock{ s_state._mutex };
             for ( Entry** ppLink = &s_state._pHead; *ppLink != nullptr; ppLink = &( *ppLink )->_pNext )
             {
                 if ( *ppLink != &entry )
@@ -70,7 +70,7 @@ namespace sw
     {
         if ( pType == nullptr )
             return nullptr;
-        std::scoped_lock<mutex> lock{ s_state._mutex };
+        ScopedLock<mutex> lock{ s_state._mutex };
         for ( const Entry* pEntry = s_state._pHead; pEntry != nullptr; pEntry = pEntry->_pNext )
         {
             // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
@@ -87,7 +87,7 @@ namespace sw
 
     uint32 TickBatchRegistry::getRegisteredCount()
     {
-        std::scoped_lock<mutex> lock{ s_state._mutex };
+        ScopedLock<mutex> lock{ s_state._mutex };
         return s_state._count;
     }
 } // namespace sw

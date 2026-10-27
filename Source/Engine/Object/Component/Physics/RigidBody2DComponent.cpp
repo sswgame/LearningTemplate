@@ -139,39 +139,39 @@ namespace sw
 
     void RigidBody2DComponent::addForce( const float2& force )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._force += force;
     }
 
     void RigidBody2DComponent::addImpulse( const float2& impulse )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._impulse += impulse;
     }
 
     void RigidBody2DComponent::addTorque( float32 torque )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._torque += torque;
     }
 
     void RigidBody2DComponent::setLinearVelocity( const float2& velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._linearVelocity     = velocity;
         _command._bSetLinearVelocity = true;
     }
 
     void RigidBody2DComponent::setAngularVelocity( float32 velocity )
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._angularVelocity     = velocity;
         _command._bSetAngularVelocity = true;
     }
 
     void RigidBody2DComponent::wake()
     {
-        std::scoped_lock<SpinLock> lock{ _commandLock };
+        ScopedLock<SpinLock> lock{ _commandLock };
         _command._bWake = true;
     }
 
@@ -282,7 +282,7 @@ namespace sw
 
         PhysicsBodyCommand<PhysicsDimension2D> command;
         {
-            std::scoped_lock<SpinLock> lock{ _commandLock };
+            ScopedLock<SpinLock> lock{ _commandLock };
             command                       = _command;
             _command._impulse             = float2{};
             _command._bSetLinearVelocity  = false;
@@ -317,7 +317,7 @@ namespace sw
         float2  force{};
         float32 torque = 0.0f;
         {
-            std::scoped_lock<SpinLock> lock{ _commandLock };
+            ScopedLock<SpinLock> lock{ _commandLock };
             force  = _command._force;
             torque = _command._torque;
         }
@@ -343,7 +343,7 @@ namespace sw
     {
         (void)physics;
         {
-            std::scoped_lock<SpinLock> lock{ _commandLock };
+            ScopedLock<SpinLock> lock{ _commandLock };
             _command._force  = float2{};
             _command._torque = 0.0f;
         }

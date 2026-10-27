@@ -160,7 +160,7 @@ namespace sw
         if ( _bLoadAttempted.load( std::memory_order_acquire ) )
             return;
 
-        std::scoped_lock<mutex> lock{ _defaultsMutex };
+        ScopedLock<mutex> lock{ _defaultsMutex };
         if ( _bLoadAttempted.load( std::memory_order_relaxed ) )
             return;
 
@@ -211,7 +211,7 @@ namespace sw
         // 세대가 같은 동안만 쓴다. 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
         const uint32 generation = TypeRegistry::getGeneration();
         {
-            std::shared_lock<shared_mutex> readLock{ _resolvedMutex };
+            ScopedSharedLock<shared_mutex> readLock{ _resolvedMutex };
             const auto                     it = _mapResolved.find( &typeInfo );
             if ( it != _mapResolved.end() && it->second->_generation == generation )
                 return *it->second;
@@ -241,7 +241,7 @@ namespace sw
             resolveNodeToPatches( *pLevelType, levelNode, pResolved->_listPatch );
         }
 
-        std::unique_lock<shared_mutex> writeLock{ _resolvedMutex };
+        UniqueLock<shared_mutex> writeLock{ _resolvedMutex };
         // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼우되 **버리지 않는다** —
         // 다른 스레드가 잠금 밖에서 아직 그 패치를 돌고 있을 수 있다. 제자리에 이동 대입하면 그 순회가 풀린 목록을 읽는다.
         auto it = _mapResolved.find( &typeInfo );
@@ -257,7 +257,7 @@ namespace sw
 
     const void* ComponentDefaults::findResolvedAddress( const TypeInfo& typeInfo ) const
     {
-        std::shared_lock<shared_mutex> readLock{ _resolvedMutex };
+        ScopedSharedLock<shared_mutex> readLock{ _resolvedMutex };
         const auto                     it = _mapResolved.find( &typeInfo );
         return ( it != _mapResolved.end() ) ? it->second.get() : nullptr;
     }
@@ -325,7 +325,7 @@ namespace sw
 
     void ComponentDefaults::setPath( string_view path )
     {
-        std::scoped_lock<mutex> lock{ _defaultsMutex };
+        ScopedLock<mutex> lock{ _defaultsMutex };
         _customDefaultsPath = path;
         _bDefaultsLoaded.store( false, std::memory_order_release );
         _bLoadAttempted.store( false, std::memory_order_release );
@@ -336,13 +336,13 @@ namespace sw
     {
         // **값으로 반환한다.** `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
         // `setPath` 가 문자열을 갈아 끼우면 사라진 버퍼를 가리킨다.
-        std::scoped_lock<mutex> lock{ _defaultsMutex };
+        ScopedLock<mutex> lock{ _defaultsMutex };
         return _customDefaultsPath;
     }
 
     void ComponentDefaults::reload()
     {
-        std::scoped_lock<mutex> lock{ _defaultsMutex };
+        ScopedLock<mutex> lock{ _defaultsMutex };
         _bDefaultsLoaded.store( false, std::memory_order_release );
         _bLoadAttempted.store( false, std::memory_order_release );
         clearResolvedCache();
@@ -351,7 +351,7 @@ namespace sw
     void ComponentDefaults::clearResolvedCache()
     {
         // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
-        std::unique_lock<shared_mutex> writeLock{ _resolvedMutex };
+        UniqueLock<shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
         _listReplacedResolved.clear();
     }

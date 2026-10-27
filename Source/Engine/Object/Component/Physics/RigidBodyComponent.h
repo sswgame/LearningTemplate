@@ -169,23 +169,23 @@ namespace sw
         PROPERTY( Category = "Body", Tooltip = "Draw the pose interpolated between the last two physics steps" )
         bool _bInterpolate;
 
-        RigidBodySocketPhysics                 _socketPhysics;
-        PhysicsBodyHandle                      _body;
-        PhysicsBodyCommand<PhysicsDimension3D> _command;
-        mutable SpinLock                       _commandLock;
-        float3                                 _previousPosition;
-        float3                                 _currentPosition;
-        float3                                 _writtenPosition;
-        float3                                 _kinematicStartPosition;
-        float3                                 _kinematicTargetPosition;
-        float3                                 _lastLinearVelocity;
-        float3                                 _lastAngularVelocity;
-        quaternion                             _previousRotation;
-        quaternion                             _currentRotation;
-        quaternion                             _writtenRotation;
-        quaternion                             _kinematicStartRotation;
-        quaternion                             _kinematicTargetRotation;
-        PhysicsBodyType                        _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                   _bHasWritten;     ///< `_written*` 이 유효한지
+        RigidBodySocketPhysics                          _socketPhysics;
+        PhysicsBodyHandle                               _body;
+        PhysicsBodyCommand<PhysicsDimension3D> _command SW_GUARDED_BY( _commandLock );
+        mutable SpinLock                                _commandLock;
+        float3                                          _previousPosition;
+        float3                                          _currentPosition;
+        float3                                          _writtenPosition;
+        float3                                          _kinematicStartPosition;
+        float3                                          _kinematicTargetPosition;
+        float3                                          _lastLinearVelocity;
+        float3                                          _lastAngularVelocity;
+        quaternion                                      _previousRotation;
+        quaternion                                      _currentRotation;
+        quaternion                                      _writtenRotation;
+        quaternion                                      _kinematicStartRotation;
+        quaternion                                      _kinematicTargetRotation;
+        PhysicsBodyType                                 _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                            _bHasWritten;     ///< `_written*` 이 유효한지
     };
 } // namespace sw

@@ -86,19 +86,19 @@ namespace sw
 
     void SceneAudio::addListener( AudioListenerComponent* pListener )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_listener.addLogged( pListener, "Audio listener" );
     }
 
     void SceneAudio::removeListener( AudioListenerComponent* pListener )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_listener.remove( pListener ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
     void SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( pEmitter == nullptr )
         {
             reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
@@ -110,7 +110,7 @@ namespace sw
     void SceneAudio::removeEmitter( AudioEmitterComponent* pEmitter )
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             (void)_emitter.remove( pEmitter ); // 등록돼 있지 않았으면 할 일이 없다
         }
         AudioEngine* pEngine = findAudioEngine();
@@ -120,13 +120,13 @@ namespace sw
 
     void SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_zone.addLogged( pZone, "Audio reverb zone" );
     }
 
     void SceneAudio::removeReverbZone( AudioReverbZoneComponent* pZone )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_zone.remove( pZone ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
@@ -135,7 +135,7 @@ namespace sw
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         updateListeners( *pEngine, deltaSeconds, pCamera );
         updateEmitters( *pEngine, deltaSeconds );
         updateOcclusion( *pEngine, pScene3D, pScene2D );

@@ -16,7 +16,7 @@ namespace sw
 {
     void CameraRegistry::add( CameraComponent* pCamera )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // nullptr · 이미 등록된 카메라는 목록이 거절한다(멱등).
         if ( _registeredCamera.addLogged( pCamera, "Camera" ) == RegistrationResult::Added )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
@@ -25,7 +25,7 @@ namespace sw
     void CameraRegistry::remove( CameraComponent* pCamera )
     {
         // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _registeredCamera.remove( pCamera ) ) // 두 번 빼도 된다 — 없으면 할 일이 없다
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
         if ( _pCutCamera == pCamera )
@@ -34,13 +34,13 @@ namespace sw
 
     void CameraRegistry::setCutCamera( CameraComponent* pCamera )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _pCutCamera = pCamera;
     }
 
     CameraComponent* CameraRegistry::getCutCamera() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _pCutCamera;
     }
 

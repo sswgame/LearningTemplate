@@ -81,16 +81,16 @@ namespace sw
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
 
-        PhysicsCharacterHandle  _character;
-        PhysicsCharacterState2D _state;
-        mutable SpinLock        _commandLock;
-        float2                  _previousPosition;
-        float32                 _moveVelocity; ///< 요청된 수평 속도(`_commandLock`)
-        float3                  _writtenPosition;
-        quaternion              _writtenRotation;
-        float32                 _verticalSpeed;
-        float32                 _pendingJumpSpeed; ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
-        float32                 _airVelocity;      ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
-        bool                    _bHasWritten;
+        PhysicsCharacterHandle    _character;
+        PhysicsCharacterState2D   _state;
+        mutable SpinLock          _commandLock;
+        float2                    _previousPosition;
+        float32 _moveVelocity     SW_GUARDED_BY( _commandLock ); ///< 요청된 수평 속도(`_commandLock`)
+        float3                    _writtenPosition;
+        quaternion                _writtenRotation;
+        float32                   _verticalSpeed;
+        float32 _pendingJumpSpeed SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
+        float32                   _airVelocity;                  ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        bool                      _bHasWritten;
     };
 } // namespace sw

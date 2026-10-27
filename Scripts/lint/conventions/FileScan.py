@@ -216,7 +216,8 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 isFnSig = True
             elif fnMatch := _kFunctionSignatureRe.search(codeWithoutStrings):
                 fnName = fnMatch.group(1)
-                if fnName not in ("if", "while", "for", "switch", "catch", "sizeof", "decltype", "alignas", "return"):
+                # 멤버 이름 뒤의 잠금 계약 주석(`SW_GUARDED_BY( _mutex )`)은 함수 서명이 아니다 — 서명으로 읽으면 뒤 멤버가 지역 변수로 걸린다.
+                if fnName not in ("if", "while", "for", "switch", "catch", "sizeof", "decltype", "alignas", "return", "SW_GUARDED_BY", "SW_ACQUIRED_AFTER"):
                     sigParamStr = fnMatch.group(2)
                     isFnSig = True
             elif ctorSigMatch := _kConstructorSignatureRe.search(codeWithoutStrings):
