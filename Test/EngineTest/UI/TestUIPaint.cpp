@@ -633,7 +633,7 @@ SW_TEST_CASE( UIPaintTest, SliderTakesLeftRightActions )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::UISystem ui;
-    SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
     sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();
     root->setOrientation( sw::UIOrientation::Vertical );
     sw::SliderWidget* pSlider = static_cast<sw::SliderWidget*>( root->addChild( sw::make_unique<sw::SliderWidget>() ) );
@@ -778,7 +778,7 @@ SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::UISystem ui;
-    SW_ASSERT_TRUE( ui.initialize( input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
     sw::unique_ptr<sw::BoxPanel> root   = sw::make_unique<sw::BoxPanel>();
     sw::TextInputWidget*         pField = static_cast<sw::TextInputWidget*>( root->addChild( sw::make_unique<sw::TextInputWidget>() ) );
     sw::string                   committed;

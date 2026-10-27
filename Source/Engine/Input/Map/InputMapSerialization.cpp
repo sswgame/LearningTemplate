@@ -1242,9 +1242,9 @@ namespace sw
         return loadDefinition( ResourceID{ relativePath }, false );
     }
 
-    bool InputMap::appendFromResource( string_view relativePath )
+    bool InputMap::appendFromResource( const ResourceID& resourceID )
     {
-        return loadDefinition( ResourceID{ relativePath }, true );
+        return loadDefinition( resourceID, true );
     }
 
     bool InputMap::loadDefinition( const ResourceID& resourceID, bool bAppend )

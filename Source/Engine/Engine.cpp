@@ -939,9 +939,9 @@ namespace sw
         _shellActions.update( *_pInputManager, deltaTime );
     }
 
-    unique_ptr<InputMap> Engine::createShellInputMap( string_view inputMapPath )
+    unique_ptr<InputMap> Engine::createShellInputMap( const ResourceID& resourceID )
     {
-        return ShellInputActions::createInputMap( ResourceID{ inputMapPath } );
+        return ShellInputActions::createInputMap( resourceID );
     }
 
     void Engine::pollShaderReloadHotkey()

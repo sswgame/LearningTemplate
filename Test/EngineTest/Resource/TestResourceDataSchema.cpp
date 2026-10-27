@@ -167,7 +167,7 @@ namespace
         {
             const sw::string& resourceID = id.str();
             sw::SceneDocument doc;
-            if ( doc.loadXML( resourceID ) == false )
+            if ( doc.loadXML( sw::ResourceID{ resourceID } ) == false )
                 return false;
             sw::Scene scene{ "ResourceDataSchemaScene" };
             return scene.instantiate( doc );

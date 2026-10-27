@@ -116,10 +116,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 데이터
     // ------------------------------------------------------------------------------
-    bool LocalizationManager::loadCultureTable( string_view resourcePath )
+    bool LocalizationManager::loadCultureTable( const ResourceID& resourceID )
     {
-        string text;
-        if ( LocalizationManagerInternal::readLocalizationFile( ResourceID{ resourcePath }, text ) == false )
+        const string_view resourcePath = resourceID.view();
+        string            text;
+        if ( LocalizationManagerInternal::readLocalizationFile( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;
@@ -155,11 +156,12 @@ namespace sw
         return pCulture != nullptr ? *pCulture : CultureInfo{};
     }
 
-    bool LocalizationManager::readProject( string_view projectPath, MountedProject& outProject )
+    bool LocalizationManager::readProject( const ResourceID& resourceID, MountedProject& outProject )
     {
-        string text;
-        string error;
-        if ( LocalizationManagerInternal::readLocalizationFile( ResourceID{ projectPath }, text ) == false )
+        const string_view projectPath = resourceID.view();
+        string            text;
+        string            error;
+        if ( LocalizationManagerInternal::readLocalizationFile( resourceID, text ) == false )
         {
             SW_LOG_ERROR( "Localization project '%#' cannot be read", projectPath );
             return false;
@@ -231,11 +233,12 @@ namespace sw
         return bAllRead;
     }
 
-    bool LocalizationManager::mountProject( string_view projectPath, LocalizationScope scope )
+    bool LocalizationManager::mountProject( const ResourceID& resourceID, LocalizationScope scope )
     {
-        MountedProject mounted;
+        const string_view projectPath = resourceID.view();
+        MountedProject    mounted;
         mounted._scope       = scope;
-        const bool bComplete = readProject( projectPath, mounted );
+        const bool bComplete = readProject( resourceID, mounted );
         if ( mounted._project._name.empty() )
             return false;
 
@@ -354,7 +357,7 @@ namespace sw
         // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
         MountedProject reloaded;
         reloaded._scope = scope;
-        if ( readProject( projectPath, reloaded ) == false )
+        if ( readProject( ResourceID{ projectPath }, reloaded ) == false )
         {
             SW_LOG_ERROR( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
             return ReloadOutcome::Failed;
@@ -531,13 +534,14 @@ namespace sw
         return true;
     }
 
-    bool LocalizationManager::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
+    bool LocalizationManager::initialize( const ResourceID& resourceID, string_view defaultLanguage, string_view fallbackLanguage )
     {
+        const string_view projectPath = resourceID.view();
         if ( projectPath.empty() )
             return false;
         unmountProjects( LocalizationScope::Game );
         setFallbackLanguage( fallbackLanguage.empty() ? string_view( constant::kDefaultLanguage ) : fallbackLanguage );
-        if ( mountProject( projectPath, LocalizationScope::Game ) == false )
+        if ( mountProject( resourceID, LocalizationScope::Game ) == false )
         {
             SW_LOG_WARNING( "Localization project '%#' is not (fully) loaded.", projectPath );
             if ( getMountedProjectNames().empty() )

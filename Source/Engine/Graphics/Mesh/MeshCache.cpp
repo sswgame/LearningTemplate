@@ -89,11 +89,14 @@ namespace sw
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
+            /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 리소스 id 만 담는다. */
+            [[nodiscard]] static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
+
             /** @brief 물리 셰이프 캐시의 읽기 함수입니다. `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
-            [[nodiscard]] static bool loadTrianglePositions( string_view path, vector<float3>& outListPosition )
+            [[nodiscard]] static bool loadTrianglePositions( const ResourceID& resourceID, vector<float3>& outListPosition )
             {
                 vector<RHIVertex> listVertex;
-                if ( MeshAssetFormat::loadFromResource( ResourceID{ path }, listVertex ) == false )
+                if ( MeshAssetFormat::loadFromResource( resourceID, listVertex ) == false )
                     return false;
                 outListPosition.clear();
                 outListPosition.reserve( listVertex.size() );
@@ -124,7 +127,7 @@ namespace sw
         // 읽기는 잠금 밖에서 한다(파일 IO). 다른 길(`reloadShared` 뒤의 새 요청)이 먼저 넣었으면 그것을 받는다.
         MeshAssetData  data{};
         AssetLoadScope loadScope( "Mesh", path );
-        bool           bLoaded = MeshAssetFormat::loadFromResource( ResourceID{ path }, data );
+        bool           bLoaded = MeshAssetFormat::loadFromResource( MeshCacheInternal::toResourceID( path ), data );
         if ( bLoaded )
         {
             loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
@@ -227,7 +230,7 @@ namespace sw
 
         // 읽기에 실패하면 이전 정점을 유지한다. 저장 중이라 반쯤 쓰인 파일을 읽은 경우이며, 다음 감시 이벤트가 다시 읽는다.
         MeshAssetData data{};
-        if ( MeshAssetFormat::loadFromResource( ResourceID{ path }, data ) == false )
+        if ( MeshAssetFormat::loadFromResource( MeshCacheInternal::toResourceID( path ), data ) == false )
         {
             SW_LOG_ERROR( "Hot-Reload failed for Mesh %#", path );
             return false;
@@ -247,8 +250,9 @@ namespace sw
         return MeshCacheInternal::findLive( relativePath ) != nullptr;
     }
 
-    void MeshCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    void MeshCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
     {
+        const string_view relativePath = resourceID.view();
         (void)reloadShared( relativePath, pDevice ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
         PhysicsMeshShapeCache::clear();              // 물리 캐시는 렌더 메시와 따로 보관한다. 이미 만든 바디는 이전 기하 그대로다
     }

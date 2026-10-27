@@ -32,12 +32,12 @@ namespace sw
         }
         // 문화권 표 · 엔진 문자열은 필수 칸이다 — 못 읽으면 숫자 · 날짜 형식과 설정 메뉴 글이 없으므로 기동을 멈춘다(이유는 각 읽기가 남긴다).
         LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
-        if ( localization.loadCultureTable( defaultAssets._cultureTable.get() ) == false )
+        if ( localization.loadCultureTable( ResourceID{ defaultAssets._cultureTable.get() } ) == false )
         {
             SW_LOG_ERROR( "Engine culture table '%#' could not be read - stopping startup", defaultAssets._cultureTable.c_str() );
             return SubsystemInitResult::Failed;
         }
-        if ( localization.mountProject( defaultAssets._localizationProject.get(), LocalizationScope::Engine ) == false )
+        if ( localization.mountProject( ResourceID{ defaultAssets._localizationProject.get() }, LocalizationScope::Engine ) == false )
         {
             SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded - stopping startup", defaultAssets._localizationProject.c_str() );
             return SubsystemInitResult::Failed;

@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -30,7 +31,7 @@ namespace sw
         /** @brief 그 경로가 지금 쓰는 믹서 그래프나 이벤트 라이브러리의 파일이면 true 입니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 그 파일을 다시 읽어 바꿉니다(`IAudioService::reloadDataFile`). 실패하면 지금 것을 그대로 씁니다. 디바이스는 쓰지 않습니다. */
-        void reload( string_view relativePath, IRHIDevice* pDevice ) override;
+        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
         /** @brief 서비스가 들고 있는 데이터 파일 수의 하한(믹서 그래프가 파일이면 1)입니다. */
         size_t getCachedCount() const override;
         /** @brief 아무것도 하지 않습니다(위 설명). */

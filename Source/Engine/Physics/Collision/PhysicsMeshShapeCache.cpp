@@ -23,6 +23,9 @@ namespace sw
             /** @brief 물리 셰이프 캐시의 계측 칸 이름입니다(`CacheStats`). `IAssetCache` 가 아니라 레지스트리에 종류 이름이 없어 이 이름으로 올린다. */
             static constexpr const utf8* kStatsName = "PhysicsMeshShape";
 
+            /** @brief 셰이프 캐시 키(메시 리소스 id 의 글)를 읽기 함수에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
+            [[nodiscard]] static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
+
             /** @brief 물리 셰이프 캐시의 계측 칸입니다. 표는 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */
             static const CacheStatsHandle& getStats()
             {
@@ -110,7 +113,7 @@ namespace sw
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
         const LoadTriangleListFunction pfnLoad = table._pfnLoad.load( std::memory_order_acquire );
         vector<float3>                 listPosition;
-        const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( path, listPosition ) && listPosition.size() >= 3;
+        const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( PhysicsMeshShapeCacheInternal::toResourceID( path ), listPosition ) && listPosition.size() >= 3;
         if ( bLoaded == false )
         {
             bool bFirstFailure = false;

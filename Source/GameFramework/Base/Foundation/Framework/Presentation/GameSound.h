@@ -27,9 +27,9 @@ namespace sw
     struct SW_GF_API GameSound
     {
         /** @brief 효과음 클립 하나를 비동기로 냅니다. 리소스 경로는 `game/<게임>/sounds/x.ogg` 형식이며, 버스가 비면 sfx 입니다. */
-        static bool play( string_view path, const hashed_string& bus = hashed_string{} );
+        static bool play( const ResourceID& resourceID, const hashed_string& bus = hashed_string{} );
         /** @brief 배경 음악을 바꿉니다. */
-        static bool playMusic( string_view path );
+        static bool playMusic( const ResourceID& resourceID );
 
         /**
          * @brief 이벤트 라이브러리를 올립니다. 이름은 경로이며, 같은 경로면 바꿉니다. 게임 초기화에서 부릅니다.

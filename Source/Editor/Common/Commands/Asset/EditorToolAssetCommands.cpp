@@ -352,9 +352,9 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, string_view prefabPath )
+    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, const ResourceID& resourceID )
     {
-        return EditorInspectorCommands::applyToPrefab( pInstance, prefabPath );
+        return EditorInspectorCommands::applyToPrefab( pInstance, resourceID );
     }
 
     bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance, string_view prefabPath )

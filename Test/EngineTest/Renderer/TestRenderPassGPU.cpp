@@ -2583,7 +2583,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RendererSurvivesDeviceRecreate, t
     device.shutdownDevice();
 
     SW_ASSERT_TRUE( device.recreateDevice() );
-    SW_ASSERT_TRUE( material->initialize( device.get(), kGlassMaterial ) );
+    SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ kGlassMaterial } ) );
 
     // 같은 렌더러 객체를 새 디바이스로 다시 세운다 — 앱이 하는 그대로.
     SW_ASSERT_TRUE( renderer.initialize( device.get() ) );
@@ -3909,7 +3909,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMateri
         {
             // 텍스처가 붙은 실제 에셋이어야 한다 — 손으로 지은 XML 은 퍼뮤테이션을 빠뜨리기 쉽다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
 
             const size_t firstCount = material->getMaterialTextureSrvs().size();
             SW_ASSERT_TRUE( firstCount > 0 );
@@ -3988,7 +3988,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
     {
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
-            SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
             SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
             const sw::RHIDescriptorIndex before = material->getMaterialTextureSrvs()[0];
 
@@ -4007,7 +4007,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMateria
             SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
 
             sw::TextureCache& textures = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
-            textures.reload( kTexturePath, device.get() );
+            textures.reload( sw::ResourceID{ kTexturePath }, device.get() );
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
             const sw::RHIDescriptorIndex after = pTexture->getSrv();
@@ -4062,7 +4062,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceConstantBufferIsRecreated
     {
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
 
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
@@ -4138,7 +4138,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheSha
 
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultMaterial.c_str() } ) );
             SW_ASSERT_TRUE( parent->ensureShaderLayout( device.get() ) );
             SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
@@ -4659,7 +4659,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEve
         {
             // 부모는 albedoMap 에 checker.dds 를 빌린다(슬롯 0). 인스턴스는 roughness 와 albedoMap 을 덮어쓴다.
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
-            SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+            SW_ASSERT_TRUE( parent->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.125f );
             instance->setTextureParameter( sw::hashed_string( "_albedoMap" ), kOverrideTexture );
@@ -4716,7 +4716,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEve
             expectTextureReachesShader( pOverride->getSrv(), "처음" );
 
             // 텍스처를 다시 올리면 같은 객체에 새 SRV 가 붙는다 — 다음 업로드가 새 것을 넣는다.
-            textures.reload( kOverrideTexture, device.get() );
+            textures.reload( sw::ResourceID{ kOverrideTexture }, device.get() );
             SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
             expectTextureReachesShader( pOverride->getSrv(), "다시 올린 뒤" );
 
@@ -4758,7 +4758,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, 
         sw::TextureCache&            textures    = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
-        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
         SW_ASSERT_TRUE( material->loadFromXML( xml ) ); // albedoMap 만 없는 파일을 가리킨다
         material->releaseTextureAssets( device.get() );
         {
@@ -5785,7 +5785,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
-        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->initialize( device.get(), sw::ResourceID{ "engine/materials/benchtextured.material" } ) );
         SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
         sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
         SW_ASSERT_NOT_NULL( quad.get() );
@@ -6917,7 +6917,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredTo
         const sw::string                     label   = sw::string( device->getBackendName() ) + ": ";
         sw::shared_ptr<sw::Material>         grid    = sw::Material::create();
         sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "Plane", sw::PrimitiveVertexColor::White );
-        bool                                 bOk     = grid->initialize( device.get(), "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
+        bool                                 bOk     = grid->initialize( device.get(), sw::ResourceID{ "engine/materials/prototypegrid_light.material" } ) && plane != nullptr;
         sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
         bOk                                          = checker != nullptr;
         if ( bOk )
@@ -8521,7 +8521,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed, 
     for ( test::RHITestDevice& device : sweep )
     {
         const sw::shared_ptr<sw::Material> water = sw::Material::create();
-        SW_ASSERT_TRUE( water->initialize( device.get(), test::getEngineDefaultAssets()._waterMaterial.get() ) );
+        SW_ASSERT_TRUE( water->initialize( device.get(), sw::ResourceID{ test::getEngineDefaultAssets()._waterMaterial.get() } ) );
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
         // water.hlsl 의 MaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
         SW_EXPECT_EQUAL( 144u, water->getElementStride() );

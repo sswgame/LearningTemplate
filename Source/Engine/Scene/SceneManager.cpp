@@ -351,7 +351,7 @@ namespace sw
         bool          ok = false;
         {
             ScopedTimer parseTimer{ "Scene.load.parse" };
-            ok = doc.load( pathStr );
+            ok = doc.load( ResourceID{ pathStr } );
         }
 
         sw::unique_ptr<Scene> newScene;

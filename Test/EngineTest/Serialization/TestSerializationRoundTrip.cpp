@@ -68,7 +68,7 @@ namespace
             if ( isScene( resourceID ) )
             {
                 sw::SceneDocument doc;
-                if ( doc.loadXML( resourceID ) == false )
+                if ( doc.loadXML( sw::ResourceID{ resourceID } ) == false )
                     return false;
                 outLoaded._scene = sw::make_unique<sw::Scene>( "SerializationRoundTripScene" );
                 if ( outLoaded._scene->instantiate( doc ) == false )

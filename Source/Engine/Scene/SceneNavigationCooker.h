@@ -10,6 +10,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Resource/ResourceID.h"
+
 namespace sw
 {
     struct CookJobDesc;
@@ -26,7 +28,7 @@ namespace sw
          * @param services 쿠킹용 씬을 지을 엔진 서비스 묶음입니다. 런타임 씬과 같은 묶음을 받고, 전역 표를 다시 찾지 않습니다(`SceneCooker` 와 같음).
          * @return 씬을 읽지 못했거나 어느 종류를 베이크하지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool cookScene( const SceneEngineServices& services, string_view sceneResourcePath, NavMeshAsset& outAsset );
+        [[nodiscard]] static bool cookScene( const SceneEngineServices& services, const ResourceID& resourceID, NavMeshAsset& outAsset );
         /**
          * @brief @p resourceRoot 아래의 모든 씬(`*.scene.xml`) 가운데 표면이 있는 것을 `<cookedDir>/<씬 경로의 .navmesh>` 로 씁니다. 활성 게임이 아닌
          *        게임 팩의 씬은 건너뜁니다(배포본은 활성 게임의 팩만 연다).

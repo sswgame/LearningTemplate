@@ -185,7 +185,7 @@ SW_TEST_CASE( FontServiceTest, LanguageChangeRebuildsChain )
     LocalizationTestUtil::writeTranslation( folder, "ar", R"("ui.title": { "text": "عنوان" })" );
     sw::LocalizationManager localization;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
-    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( localization.mountProject( sw::ResourceID{ ::test::makeTempResourceID( projectPath ) }, sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
 
     // 문화권 표의 대체 가족 이름(ko: Noto Sans KR · ar: Noto Sans Arabic)을 저장소 가족으로 둔다 — 시스템 글꼴 없이 사슬만 본다.
@@ -230,7 +230,7 @@ SW_TEST_CASE( FontServiceTest, SystemFallbackCoversHangulWhenInstalled )
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "제목" })" );
     sw::LocalizationManager localization;
     SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
-    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( localization.mountProject( sw::ResourceID{ ::test::makeTempResourceID( projectPath ) }, sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
 
     sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );

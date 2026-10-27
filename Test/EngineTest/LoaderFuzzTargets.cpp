@@ -173,7 +173,7 @@ namespace test
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadXML( ::test::makeTempResourceID( path ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)document.loadXML( sw::ResourceID{ ::test::makeTempResourceID( path ) } ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSceneBinary( const uint8* pData, size_t size )
             {
@@ -693,7 +693,7 @@ namespace test
                     const string  binPath = makeScratchPath( "seed.scene.bin" );
                     SceneDocument document;
                     vector<uint8> bytes;
-                    const bool    bSeedBuilt = FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( ::test::makeTempResourceID( xmlPath ) ) && document.saveBinary( binPath ) &&
+                    const bool    bSeedBuilt = FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) && document.saveBinary( binPath ) &&
                                             FileUtil::readFile( binPath, bytes );
                     if ( bSeedBuilt )
                         outListSeed.push_back( std::move( bytes ) );

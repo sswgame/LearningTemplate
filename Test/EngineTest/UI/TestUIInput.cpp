@@ -62,7 +62,7 @@ namespace
             gameMap.bind( "Fire", sw::MouseButton::Left );
             gameMap.bind( "MoveForward", sw::Key::W, sw::ActionTrigger::Down );
             gameMap.bindGamepadStick2D( "Move" );
-            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, ::test::getEngineDefaultAssets()._uiInputMap.c_str() ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, sw::ResourceID{ ::test::getEngineDefaultAssets()._uiInputMap.c_str() } ) );
             SW_EXPECT_NOT_NULL( _ui.getInputRouter().getUIInputMap() );
         }
 

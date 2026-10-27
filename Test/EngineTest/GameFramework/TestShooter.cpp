@@ -423,7 +423,7 @@ SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
     SW_ASSERT_TRUE( inputMap.loadFromResource( sw::ResourceID{ "game/shooter3d/data/shooter.input.xml" } ) );
 
     SceneDocument document;
-    SW_ASSERT_TRUE( document.loadXML( "game/shooter3d/maps/arena.scene.xml" ) );
+    SW_ASSERT_TRUE( document.loadXML( sw::ResourceID{ "game/shooter3d/maps/arena.scene.xml" } ) );
     Scene scene{ "ShooterPawnSchema" };
     SW_ASSERT_TRUE( scene.instantiate( document ) );
     const PawnComponent* pPlayerPawn = nullptr;

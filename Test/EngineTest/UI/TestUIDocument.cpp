@@ -436,7 +436,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     SW_EXPECT_EQUAL( 300.0f, pScroll->getScrollOffset()._y );
 
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, UIReloadTestUtil::makeReloadDocument( true, "New" ) ) );
-    fixture._ui.getDocumentCache().reload( ::test::makeTempResourceID( path ), nullptr );
+    fixture._ui.getDocumentCache().reload( sw::ResourceID{ ::test::makeTempResourceID( path ) }, nullptr );
     SW_ASSERT_TRUE( fixture._ui.findScreen( handle ) == pScreen ); // 같은 화면 · 새 트리
     const sw::ButtonWidget* pNewB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
     SW_ASSERT_NOT_NULL( pNewB );
@@ -461,7 +461,7 @@ SW_TEST_CASE( UIDocumentTest, FailedReloadKeepsOldTree )
     cache.registerMemoryDocument( "test/fail.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<BoxPanel _bogus=\"1\" />\n</UIDocument>\n" );
     {
         test::ScopedLogCollector logs; // 다시 읽기 실패 오류는 기대한 것이다
-        cache.reload( "test/fail.ui.xml", nullptr );
+        cache.reload( sw::ResourceID{ "test/fail.ui.xml" }, nullptr );
         SW_EXPECT_TRUE_MSG( logs.joined().find( "keeping the old one" ) != sw::string::npos, logs.joined().c_str() );
     }
     SW_EXPECT_EQUAL( oldID, pScreen->getTree().findWidgetByName( "B" )->getID() );
@@ -492,7 +492,7 @@ SW_TEST_CASE( UIDocumentTest, StyleReloadRestylesOnly )
     fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UIStyleSheet _schemaVersion=\"1\">\n"
                                                                                      "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"0,1,0,1\" />\n"
                                                                                      "</UIStyleSheet>\n" );
-    fixture._ui.getStyleSheetCache().reload( "test/reload.uistyle.xml", nullptr );
+    fixture._ui.getStyleSheetCache().reload( sw::ResourceID{ "test/reload.uistyle.xml" }, nullptr );
     Util::runFrame( fixture._input, fixture._ui );
     const sw::Widget* pSame = pScreen->getTree().findWidgetByName( "Go" );
     SW_ASSERT_NOT_NULL( pSame );
@@ -519,7 +519,7 @@ SW_TEST_CASE( UIDocumentTest, UserWidgetChangeReloadsParents )
     const sw::WidgetID otherID = pOther->getTree().findWidgetByName( "Other" )->getID();
 
     cache.registerMemoryDocument( "test/part.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"New\" />\n</UIDocument>\n" );
-    cache.reload( "test/part.ui.xml", nullptr );
+    cache.reload( sw::ResourceID{ "test/part.ui.xml" }, nullptr );
     const sw::TextWidget* pLabel = pParent->getTree().findWidget<sw::TextWidget>( "Part.Label" );
     SW_ASSERT_NOT_NULL( pLabel );
     SW_EXPECT_STREQ( "New", pLabel->getText().c_str() );
@@ -558,7 +558,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
 
     const sw::WidgetID oldID = pScreen->getTree().findWidgetByName( "B" )->getID();
     cache.registerMemoryDocument( "test/offscreen.ui.xml", UIReloadTestUtil::makeReloadDocument( true, "New" ) );
-    cache.reload( "test/offscreen.ui.xml", nullptr );
+    cache.reload( sw::ResourceID{ "test/offscreen.ui.xml" }, nullptr );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "B" )->getID() != oldID );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
     fixture._ui.getOffscreenScreens().remove( handle );

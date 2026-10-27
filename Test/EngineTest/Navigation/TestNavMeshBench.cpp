@@ -43,17 +43,18 @@ namespace
             sw::float3 nextPoint( float32 halfSize ) { return sw::float3{ ( nextUnit() * 2.0f - 1.0f ) * halfSize, 0.0f, ( nextUnit() * 2.0f - 1.0f ) * halfSize }; }
         };
 
-        [[nodiscard]] static bool instantiate( sw::Scene& scene, const utf8* pPath )
+        [[nodiscard]] static bool instantiate( sw::Scene& scene, const sw::ResourceID& resourceID )
         {
             sw::SceneDocument document;
-            return document.loadXML( pPath ) && scene.instantiate( document );
+            return document.loadXML( resourceID ) && scene.instantiate( document );
         }
 
         /** @brief 씬 기하를 한 번 모으고 새 내비메시에 @p kBakeRound 번 베이크해 판마다 걸린 시간(us)을 모읍니다. */
-        static bool measureBake( const utf8* pPath, sw::vector<int64>& outListSample, sw::NavMeshBakeStats& outStats )
+        static bool measureBake( const sw::ResourceID& resourceID, sw::vector<int64>& outListSample, sw::NavMeshBakeStats& outStats )
         {
-            sw::Scene scene{ "NavBench" };
-            if ( instantiate( scene, pPath ) == false )
+            const utf8* pPath = resourceID.c_str();
+            sw::Scene   scene{ "NavBench" };
+            if ( instantiate( scene, resourceID ) == false )
                 return false;
             sw::SceneNavigation&       navigation = scene.getObjectManager()->getSubsystem<sw::SceneNavigation>();
             const sw::NavMeshSettings& settings   = navigation.getSettings();
@@ -89,10 +90,10 @@ SW_TEST_CASE( NavMeshBenchTest, FullBakeOfTheShowcaseAndTheShooterArena )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<int64>    listSample;
     sw::NavMeshBakeStats stats;
-    SW_ASSERT_TRUE( Internal::measureBake( Internal::kShowcasePath, listSample, stats ) );
+    SW_ASSERT_TRUE( Internal::measureBake( sw::ResourceID{ Internal::kShowcasePath }, listSample, stats ) );
     SW_EXPECT_TRUE( stats._polygonCount > 0 );
     test::logBenchSamples( "NavMesh bake  destruction showcase (us)", listSample );
-    SW_ASSERT_TRUE( Internal::measureBake( Internal::kArenaPath, listSample, stats ) );
+    SW_ASSERT_TRUE( Internal::measureBake( sw::ResourceID{ Internal::kArenaPath }, listSample, stats ) );
     SW_EXPECT_TRUE( stats._polygonCount > 0 );
     test::logBenchSamples( "NavMesh bake  Shooter3D arena (us)", listSample );
 }
@@ -105,7 +106,7 @@ SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
     using Internal = NavMeshBenchTestInternal;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchQuery" };
-    SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
+    SW_ASSERT_TRUE( Internal::instantiate( scene, sw::ResourceID{ Internal::kArenaPath } ) );
     sw::SceneNavigation& navigation = scene.getObjectManager()->getSubsystem<sw::SceneNavigation>();
     const sw::INavMesh*  pNavMesh   = navigation.ensureNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
@@ -159,7 +160,7 @@ SW_TEST_CASE( NavMeshBenchTest, CrowdUpdateWithHundredAndFiveHundredAgents )
     using Internal = NavMeshBenchTestInternal;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchCrowd" };
-    SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
+    SW_ASSERT_TRUE( Internal::instantiate( scene, sw::ResourceID{ Internal::kArenaPath } ) );
     sw::INavMesh* pNavMesh = scene.getObjectManager()->getSubsystem<sw::SceneNavigation>().ensureNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
     for ( const uint32 agentCount : { 100u, 500u } )

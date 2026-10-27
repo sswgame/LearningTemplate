@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -29,7 +30,7 @@ namespace sw
         /** @brief 그 경로가 로드한 프로젝트의 파일이면 true 입니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 그 파일이 든 프로젝트를 다시 읽습니다(`LocalizationManager::reloadChangedFile`). 디바이스는 쓰지 않습니다. */
-        void reload( string_view relativePath, IRHIDevice* pDevice ) override;
+        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
         /** @brief 로드한 프로젝트 개수입니다. */
         size_t getCachedCount() const override;
         /** @brief 아무것도 하지 않습니다(위 설명). */

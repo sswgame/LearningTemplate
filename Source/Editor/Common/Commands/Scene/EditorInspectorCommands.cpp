@@ -28,8 +28,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorInspectorCommands" );
 
-    bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, string_view prefabPath )
+    bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, const ResourceID& resourceID )
     {
+        const string_view prefabPath = resourceID.view();
         if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
@@ -65,7 +66,7 @@ namespace sw::editor
             return true;
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
         PrefabCache& prefabCache = *pPrefabCache;
-        prefabCache.reload( prefabPath, nullptr );
+        prefabCache.reload( resourceID, nullptr );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
         // 인스턴스는 두 종류다. 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와 다른 프리팹 인스턴스가 스폰한 중첩 부품이다.
@@ -94,7 +95,7 @@ namespace sw::editor
                 if ( FileUtil::writeTextFile( filePath, text ) == false )
                     SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
                 // 이 되돌리기 · 다시 하기는 위에서 에셋 관리자가 있을 때(`pPrefabCache`)만 등록된다 - 여기서는 필수다.
-                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( savedPath, nullptr );
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( ResourceID{ savedPath }, nullptr );
             };
             EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePrefabFile, oldFileText]()
             { writePrefabFile( oldFileText ); } ),
@@ -195,7 +196,7 @@ namespace sw::editor
             SW_LOG_WARNING( "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
             return false;
         }
-        return applyToPrefab( pOuter, outerPath );
+        return applyToPrefab( pOuter, ResourceID{ outerPath } );
     }
 
     EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )

@@ -142,7 +142,7 @@ namespace sw
         shutdown();
     }
 
-    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath )
+    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, const ResourceID& resourceID )
     {
         _pFontService                   = pFontService;
         _actionGlyphs._pInput           = &inputManager;
@@ -150,7 +150,7 @@ namespace sw
         _documentReloadedSubscription   = _documentCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = _styleSheetCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
-        if ( _input.initialize( inputManager, ResourceID{ uiInputMapPath } ) == false )
+        if ( _input.initialize( inputManager, resourceID ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
         _input.syncInputLayers( getActiveScreen(), _pauseMenuDocument.empty() == false );
@@ -206,7 +206,7 @@ namespace sw
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), defaultAssets._uiInputMap.get() ) == false )
+        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), ResourceID{ defaultAssets._uiInputMap.get() } ) == false )
             return SubsystemInitResult::Failed;
         // 문화권 · 설정 출처는 기동 때 한 번 받아 든다(언리얼 `InitializeDependency`) — 프레임마다 전역 표로 물러나 찾지 않는다.
         UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();

@@ -1034,8 +1034,9 @@ namespace sw
         { return node.isResolved(); } );
     }
 
-    void PrefabCache::reload( string_view assetRelativePath, IRHIDevice* )
+    void PrefabCache::reload( const ResourceID& resourceID, IRHIDevice* )
     {
+        const string_view assetRelativePath = resourceID.view();
         if ( assetRelativePath.empty() )
             return;
 

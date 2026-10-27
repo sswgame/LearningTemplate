@@ -1465,7 +1465,7 @@ SW_TEST_CASE( InputMapTest, IntegratedMapIsUpdatedByTheInputFrame )
  */
 SW_TEST_CASE( InputMapTest, ShellInputMapComesFromTheEngineInputMap )
 {
-    const sw::unique_ptr<sw::InputMap> pMap = sw::Engine::createShellInputMap( ::test::getEngineDefaultAssets()._shellInputMap.c_str() );
+    const sw::unique_ptr<sw::InputMap> pMap = sw::Engine::createShellInputMap( sw::ResourceID{ ::test::getEngineDefaultAssets()._shellInputMap.c_str() } );
     SW_ASSERT_NOT_NULL( pMap.get() );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadEditor" ) );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadGame" ) );
@@ -1484,8 +1484,8 @@ SW_TEST_CASE( InputMapTest, MissingShellInputMapLeavesNoBindings )
     sw::unique_ptr<sw::InputMap> pEmptyPath;
     {
         SW_TEST_DEFENSIVE_SCOPE( "shell input map that does not exist" );
-        pMissing   = sw::Engine::createShellInputMap( "engine/input/does_not_exist.input.xml" );
-        pEmptyPath = sw::Engine::createShellInputMap( "" );
+        pMissing   = sw::Engine::createShellInputMap( sw::ResourceID{ "engine/input/does_not_exist.input.xml" } );
+        pEmptyPath = sw::Engine::createShellInputMap( sw::ResourceID{ "" } );
     }
     SW_ASSERT_NOT_NULL( pMissing.get() );
     SW_ASSERT_NOT_NULL( pEmptyPath.get() );

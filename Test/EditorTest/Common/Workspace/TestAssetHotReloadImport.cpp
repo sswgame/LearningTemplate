@@ -165,7 +165,7 @@ namespace
 
         const utf8* getAssetKindName() const override { return "ThreadProbe"; }
         bool        isCached( sw::string_view relativePath ) const override { return relativePath == "data/held.interactions.xml"; }
-        void        reload( sw::string_view, sw::IRHIDevice* ) override
+        void        reload( const sw::ResourceID&, sw::IRHIDevice* ) override
         {
             ++_reloadCount;
             _reloadThreadHash = hashCurrentThread();

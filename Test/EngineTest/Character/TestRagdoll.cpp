@@ -304,7 +304,7 @@ SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
     SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, pThreeBodies ) );
     SharedAssetCache<PhysicsAsset> cache;
     SW_ASSERT_TRUE( cache.isCached( path ) );
-    cache.reload( path, nullptr );
+    cache.reload( sw::ResourceID{ path }, nullptr );
     test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( size_t( 3 ), pRagdoll->getRagdoll()._listBody.size() );
     manager.endPlay();

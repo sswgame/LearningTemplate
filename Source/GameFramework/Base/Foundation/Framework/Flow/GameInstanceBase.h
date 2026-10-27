@@ -249,7 +249,7 @@ namespace sw
                 return false;
             if ( load( static_cast<const string&>( path ) ) )
                 return true;
-            reportRequiredDataFailure( kindLabel, path );
+            reportRequiredDataFailure( kindLabel, ResourceID{ path } );
             return false;
         }
         /** @brief 카탈로그(종류 `TCatalog::kDataKind`)를 `loadFromResource` 로 읽고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다. */

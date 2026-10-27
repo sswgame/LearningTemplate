@@ -294,7 +294,7 @@ namespace sw
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
          * @param pDevice 쓰지 않습니다. 프리팹은 GPU 리소스를 가지지 않습니다(`IAssetCache` 계약).
          */
-        void reload( string_view assetRelativePath, IRHIDevice* pDevice = nullptr ) override;
+        void reload( const ResourceID& resourceID, IRHIDevice* pDevice = nullptr ) override;
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";

@@ -248,7 +248,7 @@ namespace sw
                 SW_LOG_ERROR( "GameSettings localization project '%#' needs the engine service LocalizationManager, which is not bound to the game services",
                               settings._localizationProject.c_str() );
             }
-            else if ( pLocalization->initialize( settings._localizationProject.get(), settings._defaultLanguage, settings._fallbackLanguage ) == false )
+            else if ( pLocalization->initialize( ResourceID{ settings._localizationProject.get() }, settings._defaultLanguage, settings._fallbackLanguage ) == false )
             {
                 SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
             }

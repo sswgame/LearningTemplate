@@ -75,7 +75,7 @@ namespace sw
             event._position = pOwner->getPrimarySceneComponent()->getWorldPosition();
         GameEventUtil::send( event );
         if ( _sound.empty() == false )
-            (void)GameSound::play( _sound );
+            (void)GameSound::play( ResourceID{ _sound } );
     }
 
     void ScareTriggerComponent::onTick( float32 deltaTime )

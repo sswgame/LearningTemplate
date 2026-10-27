@@ -16,6 +16,9 @@
 
 namespace sw
 {
+    class AssetLoadScope;
+    class XMLDocument;
+
     // ------------------------------------------------------------------------------
     // SceneDocument: 씬 메타데이터와 엔티티 노드 목록
     // ------------------------------------------------------------------------------
@@ -81,9 +84,9 @@ namespace sw
         bool                    _bValid{ false };
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
-        [[nodiscard]] SW_API bool load( string_view path );
+        [[nodiscard]] SW_API bool load( const ResourceID& resourceID );
         /** @brief 리소스 id 의 XML 을 로드합니다. OS 경로는 받지 않습니다(디스크 파일은 `loadXMLFromDiskFile`). */
-        [[nodiscard]] SW_API bool loadXML( string_view path );
+        [[nodiscard]] SW_API bool loadXML( const ResourceID& resourceID );
         /**
          * @brief **디스크 파일**에서 XML 을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — OS 경로를 `loadXML` 에 넣으면 모든 구성에서 오류로 거절합니다.
@@ -100,15 +103,11 @@ namespace sw
         SW_API size_t computeTotalEntityCount() const;
 
     private:
-        /** @brief 본문을 어디서 읽는지입니다. 리소스 id(낱개 파일 정책 · 팩) 또는 디스크 파일. */
-        enum class ReadSource : uint8
-        {
-            Resource,
-            DiskFile,
-        };
-
-        /** @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)의 본문입니다. */
-        [[nodiscard]] bool loadXMLSource( const ResourceID& resourceID, ReadSource source );
+        /**
+         * @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)이 읽은 문서를 풉니다.
+         * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 글이 어느 쪽으로도 흘러간다.
+         */
+        [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, AssetLoadScope& loadScope );
     };
 
 } // namespace sw

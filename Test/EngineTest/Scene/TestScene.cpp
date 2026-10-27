@@ -553,7 +553,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
         sw::engine::getSubsystem<sw::AssetManager>().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
 
     sw::SceneDocument loadedDoc{};
-    SW_ASSERT_TRUE( loadedDoc.loadXML( ::test::makeTempResourceID( tempSceneXML ) ) );
+    SW_ASSERT_TRUE( loadedDoc.loadXML( sw::ResourceID{ ::test::makeTempResourceID( tempSceneXML ) } ) );
     SW_ASSERT_FALSE( loadedDoc._listSceneObjectNode.empty() );
     SW_EXPECT_STREQ( "HeroInstance", loadedDoc._listSceneObjectNode[0]._name.c_str() );
     SW_EXPECT_STREQ( heroGuid.toString().c_str(), loadedDoc._listSceneObjectNode[0]._prefabGuid.c_str() );
@@ -581,7 +581,7 @@ SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc{};
-    SW_ASSERT_TRUE( doc.load( "game/empty/maps/editortest.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.load( sw::ResourceID{ "game/empty/maps/editortest.scene.xml" } ) );
 
     bool bFound = false;
     for ( const sw::SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
@@ -967,7 +967,7 @@ SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIDIsRejected )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( zeroIDPath, zeroID ) );
 
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( ::test::makeTempResourceID( withIDPath ) ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ ::test::makeTempResourceID( withIDPath ) } ) );
     SW_ASSERT_EQUAL( size_t( 1 ), doc._listSceneObjectNode.size() );
     SW_EXPECT_EQUAL( uint64( 1 ), doc._listSceneObjectNode[0]._fileID );
 
@@ -975,11 +975,11 @@ SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIDIsRejected )
     noIDEntity._name = "NoId";
     {
         SW_TEST_DEFENSIVE_SCOPE( "a scene entity without an id" );
-        SW_EXPECT_FALSE( doc.loadXML( ::test::makeTempResourceID( noIDPath ) ) );
+        SW_EXPECT_FALSE( doc.loadXML( sw::ResourceID{ ::test::makeTempResourceID( noIDPath ) } ) );
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() ); // 반쯤 읽은 문서를 남기지 않는다
-        SW_EXPECT_FALSE( doc.loadXML( ::test::makeTempResourceID( zeroIDPath ) ) );
+        SW_EXPECT_FALSE( doc.loadXML( sw::ResourceID{ ::test::makeTempResourceID( zeroIDPath ) } ) );
 
-        SW_ASSERT_TRUE( doc.loadXML( ::test::makeTempResourceID( withIDPath ) ) );
+        SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ ::test::makeTempResourceID( withIDPath ) } ) );
         doc._listSceneObjectNode.push_back( noIDEntity );
         SW_EXPECT_FALSE( doc.saveXML( test::makeTempPath( "no_id_written.scene.xml" ) ) );
         SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( sw::SceneEngineServices::makeFromBoundEngine(), doc ) );
@@ -1356,7 +1356,7 @@ SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
     const sw::string scenePath = test::makeTempPath( "line_breaks.scene.xml" );
     SW_ASSERT_TRUE( saved.saveXML( scenePath ) );
     sw::SceneDocument fromFile{};
-    SW_ASSERT_TRUE( fromFile.loadXML( ::test::makeTempResourceID( scenePath ) ) );
+    SW_ASSERT_TRUE( fromFile.loadXML( sw::ResourceID{ ::test::makeTempResourceID( scenePath ) } ) );
 
     sw::Scene* pReloaded = manager.createScene( "LineBreakWorldReloaded" );
     SW_ASSERT_NOT_NULL( pReloaded );
@@ -1399,7 +1399,7 @@ SW_TEST_CASE( SceneTest, FileIDsStayTheSameAcrossSaveAndReload )
     const sw::string scenePath = test::makeTempPath( "stable_ids.scene.xml" );
     SW_ASSERT_TRUE( first.saveXML( scenePath ) );
     sw::SceneDocument fromFile{};
-    SW_ASSERT_TRUE( fromFile.loadXML( ::test::makeTempResourceID( scenePath ) ) );
+    SW_ASSERT_TRUE( fromFile.loadXML( sw::ResourceID{ ::test::makeTempResourceID( scenePath ) } ) );
 
     sw::Scene* pReloaded = manager.createScene( "StableIdWorldReloaded" );
     SW_ASSERT_NOT_NULL( pReloaded );
@@ -1803,7 +1803,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
     {
         test::ScopedDefensiveTestLog expected( "a scene file with a syntax error" );
         sw::SceneDocument            document;
-        SW_EXPECT_FALSE( document.loadXML( ::test::makeTempResourceID( path ) ) );
+        SW_EXPECT_FALSE( document.loadXML( sw::ResourceID{ ::test::makeTempResourceID( path ) } ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileUnreadable" ) > 0, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileNotFound" ) == 0, logs.joined().c_str() );
@@ -1812,7 +1812,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
     {
         test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
         sw::SceneDocument            document;
-        SW_EXPECT_FALSE( document.loadXML( test::makeTempResourceID( test::makeTempPath( "missing.scene.xml" ) ) ) );
+        SW_EXPECT_FALSE( document.loadXML( sw::ResourceID{ test::makeTempResourceID( test::makeTempPath( "missing.scene.xml" ) ) } ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileNotFound" ) == 1, logs.joined().c_str() );
 }
@@ -1843,7 +1843,7 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
     {
         sw::SceneDocument document;
-        SW_EXPECT_TRUE( document.loadXML( ::test::makeTempResourceID( scenePath ) ) );
+        SW_EXPECT_TRUE( document.loadXML( sw::ResourceID{ ::test::makeTempResourceID( scenePath ) } ) );
         SW_EXPECT_EQUAL( sw::string( "Standalone" ), document._name );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listSceneObjectNode.size() );
         SW_EXPECT_EQUAL( sw::string( "game/demo/prefabs/crate.prefab.xml" ), document._listSceneObjectNode[0]._prefab );
@@ -1855,12 +1855,12 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
         {
             test::ScopedDefensiveTestLog expected( "a scene file newer than this build" );
             sw::SceneDocument            futureDocument;
-            SW_EXPECT_FALSE( futureDocument.loadXML( ::test::makeTempResourceID( futureScenePath ) ) );
+            SW_EXPECT_FALSE( futureDocument.loadXML( sw::ResourceID{ ::test::makeTempResourceID( futureScenePath ) } ) );
         }
         {
             test::ScopedDefensiveTestLog expected( "a scene file of a version no migrator upgrades" );
             sw::SceneDocument            oldDocument;
-            SW_EXPECT_FALSE( oldDocument.loadXML( ::test::makeTempResourceID( oldScenePath ) ) );
+            SW_EXPECT_FALSE( oldDocument.loadXML( sw::ResourceID{ ::test::makeTempResourceID( oldScenePath ) } ) );
         }
 
         sw::PrefabAsset prefab;
@@ -1917,7 +1917,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_TRUE( saved.saveXML( xmlPath ) );
 
     sw::SceneDocument fromXML;
-    SW_ASSERT_TRUE( fromXML.loadXML( ::test::makeTempResourceID( xmlPath ) ) );
+    SW_ASSERT_TRUE( fromXML.loadXML( sw::ResourceID{ ::test::makeTempResourceID( xmlPath ) } ) );
     sw::Scene* pFromXML = manager.createScene( "NamedComponentWorldXml" );
     SW_ASSERT_TRUE( pFromXML->instantiate( fromXML ) );
     Check::run( pFromXML, "xml" );
@@ -1974,7 +1974,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
             const sw::string savedPath = test::makeTempPath( tempTag + ".scene.xml" );
             SW_ASSERT_TRUE( saved.saveXML( savedPath ) );
             sw::SceneDocument reread;
-            SW_ASSERT_TRUE( reread.loadXML( ::test::makeTempResourceID( savedPath ) ) );
+            SW_ASSERT_TRUE( reread.loadXML( sw::ResourceID{ ::test::makeTempResourceID( savedPath ) } ) );
             sw::Scene* pReopened = manager.createScene( "RepositorySceneReopened" );
             SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
             SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::collectComponentNames( pReopened->getObjectManager() ) == listExpected, path.c_str() );
@@ -2022,7 +2022,7 @@ SW_TEST_CASE( SceneTest, SceneDocumentReadsValuesOnlyFromAttributes )
                                                             "  </entities>\n"
                                                             "</Scene>\n" ) );
     sw::SceneDocument document;
-    SW_ASSERT_TRUE( document.loadXML( ::test::makeTempResourceID( scenePath ) ) );
+    SW_ASSERT_TRUE( document.loadXML( sw::ResourceID{ ::test::makeTempResourceID( scenePath ) } ) );
     SW_EXPECT_STREQ( "childtext.scene", document._name.c_str() ); // 이름 속성이 없으면 파일 이름이다
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listSceneObjectNode.size() );
     SW_EXPECT_STREQ( "Entity", document._listSceneObjectNode[0]._name.c_str() );

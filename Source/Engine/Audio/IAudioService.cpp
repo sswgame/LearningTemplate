@@ -309,12 +309,13 @@ namespace sw
         }
     }
 
-    bool IAudioService::play( string_view path, const hashed_string& bus )
+    bool IAudioService::play( const ResourceID& resourceID, const hashed_string& bus )
     {
+        const string_view path = resourceID.view();
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( ResourceIO::hasResource( ResourceID{ path } ) == false )
+        if ( ResourceIO::hasResource( resourceID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
@@ -330,14 +331,15 @@ namespace sw
         return _pEngine->getClipStore().loadClip( hashed_string( path ) ) != nullptr;
     }
 
-    bool IAudioService::playMusic( string_view path )
+    bool IAudioService::playMusic( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         if ( _bInitialized == false || path.empty() )
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
-        if ( ResourceIO::hasResource( ResourceID{ path } ) == false )
+        if ( ResourceIO::hasResource( resourceID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
@@ -357,14 +359,15 @@ namespace sw
         return _musicPlayingID != 0;
     }
 
-    bool IAudioService::playAdaptiveMusic( string_view path )
+    bool IAudioService::playAdaptiveMusic( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         if ( _bInitialized == false || path.empty() )
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
-        if ( pMusic->loadFromResource( ResourceID{ path } ) == false )
+        if ( pMusic->loadFromResource( resourceID ) == false )
             return false;
         if ( _musicPlayingID != 0 )
             _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
@@ -394,10 +397,11 @@ namespace sw
             _pEngine->setPaused( _musicPlayingID, false );
     }
 
-    bool IAudioService::loadMixer( string_view resourcePath )
+    bool IAudioService::loadMixer( const ResourceID& resourceID )
     {
-        AudioMixerDesc mixerDesc;
-        if ( mixerDesc.loadFromResource( ResourceID{ resourcePath } ) == false )
+        const string_view resourcePath = resourceID.view();
+        AudioMixerDesc    mixerDesc;
+        if ( mixerDesc.loadFromResource( resourceID ) == false )
             return false;
         if ( _pEngine->loadMixer( mixerDesc ) == false )
             return false;
@@ -423,8 +427,9 @@ namespace sw
         return StringUtil::endsWith( resourcePath, AudioGraphDef::kExtension, true ) && _pEngine->getClipStore().findReadyPath( resourcePath, outGraphPath );
     }
 
-    bool IAudioService::reloadDataFile( string_view resourcePath )
+    bool IAudioService::reloadDataFile( const ResourceID& resourceID )
     {
+        const string_view resourcePath = resourceID.view();
         if ( _bInitialized == false || resourcePath.empty() )
             return false;
         const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
@@ -441,13 +446,13 @@ namespace sw
             return false;
         if ( bMixer )
         {
-            const bool bReloaded = loadMixer( _mixerPath );
+            const bool bReloaded = loadMixer( ResourceID{ _mixerPath } );
             if ( bReloaded )
                 SW_LOG_INFO( "Mixer graph reloaded: %#", resourcePath );
             return bReloaded;
         }
         AudioEventLibrary library;
-        if ( library.loadFromResource( ResourceID{ resourcePath } ) == false )
+        if ( library.loadFromResource( resourceID ) == false )
             return false;
         // 이름은 라이브러리를 처음 올린 이름 그대로여야 같은 라이브러리를 바꾼다.
         if ( _pEngine->loadEventLibrary( libraryName, library ) == false )

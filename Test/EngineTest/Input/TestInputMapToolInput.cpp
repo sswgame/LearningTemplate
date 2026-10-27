@@ -170,7 +170,7 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
                                                  "<layer name=\"Global\"><action name=\"Park.Open\"><bind source=\"key\" modifier=\"Ctrl+Alt\" code=\"P\"/></action></layer>"
                                                  "</InputMap>",
                                                  addID ) );
-    SW_ASSERT_TRUE( inputMap.appendFromResource( addID ) );
+    SW_ASSERT_TRUE( inputMap.appendFromResource( sw::ResourceID{ addID } ) );
     SW_EXPECT_TRUE( inputMap.hasAction( "Save" ) );
     SW_EXPECT_TRUE( inputMap.hasAction( "Park.Reload" ) ); // 다른 레이어의 같은 Ctrl+S 는 된다(패널마다 같은 키)
     SW_EXPECT_TRUE( inputMap.hasAction( "Park.Open" ) );
@@ -178,22 +178,22 @@ SW_TEST_CASE( InputMapToolInputTest, AppendAddsActionsAndRejectsCollisions )
 
     sw::string sameActionID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameaction.input.xml", "<InputMap><action name=\"Save\" layer=\"Global\"><bind source=\"key\" code=\"F2\"/></action></InputMap>", sameActionID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sameActionID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameActionID } ) );
 
     sw::string mapWideID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "mapwide.input.xml", "<InputMap doubleClickTime=\"0.5\"><action name=\"Other\" layer=\"Global\"><bind source=\"key\" code=\"F3\"/></action></InputMap>",
                                                  mapWideID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( mapWideID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ mapWideID } ) );
 
     sw::string relayerID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "relayer.input.xml", "<InputMap><layers><layer name=\"Global\" priority=\"9\"/></layers></InputMap>", relayerID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( relayerID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ relayerID } ) );
 
     sw::string sameInputID;
     SW_ASSERT_TRUE( Internal::writeTempInputMap( "sameinput.input.xml",
                                                  "<InputMap><layer name=\"Global\"><action name=\"SaveAgain\"><bind source=\"key\" modifier=\"Ctrl\" code=\"S\"/></action></layer></InputMap>",
                                                  sameInputID ) );
-    SW_EXPECT_FALSE( inputMap.appendFromResource( sameInputID ) );
+    SW_EXPECT_FALSE( inputMap.appendFromResource( sw::ResourceID{ sameInputID } ) );
 }
 
 /**

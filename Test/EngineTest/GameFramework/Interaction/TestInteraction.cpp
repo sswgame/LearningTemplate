@@ -731,7 +731,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="5"/></Interactions>)" ) );
     const bool bCached = pCache != nullptr && pCache->isCached( ::test::makeTempResourceID( path ) );
     if ( pCache != nullptr )
-        pCache->reload( ::test::makeTempResourceID( path ), nullptr );
+        pCache->reload( sw::ResourceID{ ::test::makeTempResourceID( path ) }, nullptr );
     if ( pInteractable != nullptr )
         pInteractable->onTick( 0.0f );
     const InteractionDef* pAfter = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
@@ -778,7 +778,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
             path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/><Slot id="Right" offset="0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
         IAssetCache* pCache = resources.findAssetCache( "InteractionCatalog" );
         if ( pCache != nullptr )
-            pCache->reload( ::test::makeTempResourceID( path ), nullptr );
+            pCache->reload( sw::ResourceID{ ::test::makeTempResourceID( path ) }, nullptr );
         pSmart->onTick( 0.0f );
         after = pSmart->getSlotCount();
         bKept = pSmart->findSlotOf( *pSitter ) == 0;

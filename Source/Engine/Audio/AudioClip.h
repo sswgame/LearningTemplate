@@ -18,6 +18,7 @@
 
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Resource/AssetHandle.h"
+#include "Engine/Resource/ResourceID.h"
 
 #include <optional>
 
@@ -78,7 +79,7 @@ namespace sw
 namespace sw
 {
     /** @brief 공통 디코더가 다루지 않는 형식(MP3 등)을 디코드하는 백엔드 함수입니다. @p path 는 리소스 상대 경로이거나 절대 경로입니다. */
-    using AudioFallbackDecodeFunction = bool ( * )( string_view path, AudioPcm& outPcm );
+    using AudioFallbackDecodeFunction = bool ( * )( const ResourceID& resourceID, AudioPcm& outPcm );
 
     /**
      * @class AudioClipCache

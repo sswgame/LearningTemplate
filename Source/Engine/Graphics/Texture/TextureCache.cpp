@@ -627,8 +627,9 @@ namespace sw
         return bReady;
     }
 
-    void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    void TextureCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
     {
+        const string_view relativePath = resourceID.view();
         SW_MEMORY_SCOPE( Texture );
         // 렌더 텍스처 · CPU 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
         const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );

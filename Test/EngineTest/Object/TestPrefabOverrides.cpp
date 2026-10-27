@@ -54,7 +54,7 @@ namespace sw
             {
                 if ( asset.saveToXMLFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;
-                engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( ::test::makeTempResourceID( path ) );
+                engine::getSubsystem<AssetManager>().getAssetCache<sw::PrefabCache>().reload( sw::ResourceID{ ::test::makeTempResourceID( path ) } );
                 return true;
             }
 
@@ -180,7 +180,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     };
 
     sw::SceneDocument reopened;
-    SW_ASSERT_TRUE( reopened.loadXML( scenePath ) );
+    SW_ASSERT_TRUE( reopened.loadXML( sw::ResourceID{ scenePath } ) );
     sw::Scene* pReopened = manager.createScene( "PrefabEditWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reopened ) );
     Check::run( pReopened, "xml" );
@@ -238,7 +238,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::SceneDocument legacy;
-    SW_ASSERT_TRUE( legacy.loadXML( legacyPath ) );
+    SW_ASSERT_TRUE( legacy.loadXML( sw::ResourceID{ legacyPath } ) );
     sw::Scene* pOpened = manager.createScene( "LegacyWorld" );
     SW_ASSERT_TRUE( pOpened->instantiate( legacy ) );
     sw::GameObject* pOld = pOpened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
@@ -261,7 +261,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_EXPECT_TRUE_MSG( resavedText.find( "formatVersion=\"2\"" ) != sw::string::npos, resavedText.c_str() );
 
     sw::SceneDocument reread;
-    SW_ASSERT_TRUE( reread.loadXML( resavedPath ) );
+    SW_ASSERT_TRUE( reread.loadXML( sw::ResourceID{ resavedPath } ) );
     sw::Scene* pReopened = manager.createScene( "LegacyWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
     sw::GameObject* pReopenedOld = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );

@@ -33,7 +33,7 @@ SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
     constexpr uint32 kFrameCount = 600;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/envshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/envshowcase.scene.xml" } ) );
     sw::Scene scene{ "TerrainBench" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObject* pObject = scene.getObjectManager()->findGameObjectByName( "Terrain" );

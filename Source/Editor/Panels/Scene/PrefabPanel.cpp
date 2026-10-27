@@ -119,7 +119,7 @@ namespace sw::editor
 
         if ( ImGui::Button( "Apply All Overrides to Template" ) )
         {
-            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), ResourceID{ _selectedPrefabPath } ) )
                 SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
             else
                 SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );

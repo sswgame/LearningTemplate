@@ -195,29 +195,30 @@ namespace sw
 
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
 
-    bool SceneDocument::loadXML( string_view path )
+    bool SceneDocument::loadXML( const ResourceID& resourceID )
     {
-        return loadXMLSource( ResourceID{ path }, ReadSource::Resource );
+        *this       = {};
+        _sourcePath = resourceID.str();
+        AssetLoadScope loadScope( "Scene", resourceID.view() );
+        XMLDocument    doc;
+        string         absPath;
+        const bool     bRead = doc.loadResource( resourceID, &absPath );
+        return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
     {
-        return loadXMLSource( ResourceID{ diskPath }, ReadSource::DiskFile );
+        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        *this       = {};
+        _sourcePath = diskPath;
+        AssetLoadScope loadScope( "Scene", diskPath );
+        XMLDocument    doc;
+        const bool     bRead = doc.loadFile( diskPath );
+        return readXMLSource( doc, bRead, string( diskPath ), loadScope );
     }
 
-    bool SceneDocument::loadXMLSource( const ResourceID& resourceID, ReadSource source )
+    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope )
     {
-        const string_view path = resourceID.view();
-        *this                  = {};
-        _sourcePath            = path;
-
-        AssetLoadScope loadScope( "Scene", path );
-        XMLDocument    doc;
-        string         absPath;
-        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        const bool bRead = source == ReadSource::DiskFile ? doc.loadFile( path ) : doc.loadResource( resourceID, &absPath );
-        if ( source == ReadSource::DiskFile )
-            absPath = string( path );
         if ( bRead == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
@@ -511,8 +512,9 @@ namespace sw
         return count;
     }
 
-    bool SceneDocument::load( string_view path )
+    bool SceneDocument::load( const ResourceID& resourceID )
     {
+        const string_view path = resourceID.view();
         // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 쿠킹하지 않는다.
         const string binPath = AssetCookPath::toCookedPath( path );
 
@@ -523,13 +525,13 @@ namespace sw
         return false;
 #else
         if ( FileUtil::hasExtension( path, ".bin" ) )
-            return loadBinary( ResourceID{ path } );
+            return loadBinary( resourceID );
 
         const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( ResourceID{ binPath } );
         if ( bBinaryLoaded )
             return true;
 
-        return loadXML( path );
+        return loadXML( ResourceID{ path } );
 #endif
     }
 

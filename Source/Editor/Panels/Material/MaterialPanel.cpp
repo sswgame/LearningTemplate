@@ -507,7 +507,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( ResourceID{ getLoadedAssetPath() }, editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();

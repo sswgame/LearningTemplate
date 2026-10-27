@@ -12,12 +12,15 @@
 - 리소스 id 입구가 OS 절대 경로도 받습니다(`ResourceIO.cpp` 찾는 순서 0단계 — 임시 파일 · 외부 세이브용). 디스크 경로와 리소스 id 가 같은 `string_view` 로 들어옵니다.
 - 리소스 루트 **안**의 절대 경로를 거절하는 규칙이 구성마다 다릅니다(`isLooseFileAllowed` 가 거짓일 때만). Dev 는 받고 Shipping 만 거절하므로 잘못 넣은 호출이 Dev 테스트를 지나 배포 구성에서야 드러납니다.
 
-같은 모양이 남을 수 있는 곳: 글 인자를 받아 안에서 `ResourceID{ … }` 로 감싸는 함수. 셋째 단계에서 에셋 · 서비스 보조 입구 40여 개(`loadFromFile` 류 · `EngineDefaultAssets::load` · `InputMap::loadDefinition` · `SceneDocument::loadXMLSource` / `loadBinary` · `ScenePreloadList::read` · `loadSchema` 둘 · `initialize`(물리 · 폰트 · UI 입력) 등)를 올렸다. 남긴 것과 이유:
-- `IAudioService::play` · `playMusic` · `playAdaptiveMusic` · `loadMixer` · `reloadDataFile`: 백엔드가 재정의하는 가상 인터페이스이고 `loadMixer` 는 desc 오버로드가 있다. 이름이 흔해(`play(` 호출 120여 곳) 오디오 단위로 따로 올린다.
-- 공유 캐시의 로더 어댑터(`AnimationAssetCache` · `CharacterDataCache` · `FractureAssetCache` 의 `load`, `MeshCache::reloadShared`, `GameDataCache::find` / `reload`, `AssetStreamingQueue` 의 요청 경로): 키가 캐시가 든 `hashed_string` 이라 감싸는 자리가 캐시 한 곳이다.
-- 함수 포인터 형식을 공유하는 콜백(`loadTrianglePositions`, `decodeWithMediaFoundation`): 다른 구현과 같은 형식이라 형식째 바꿔야 한다.
+같은 모양이 남을 수 있는 곳: 글 인자를 받아 안에서 `ResourceID{ … }` 로 감싸는 함수. 셋째 단계에서 에셋 · 서비스 보조 입구 40여 개(`loadFromFile` 류 · `EngineDefaultAssets::load` · `InputMap::loadDefinition` · `SceneDocument::loadXMLSource` / `loadBinary` · `ScenePreloadList::read` · `loadSchema` 둘 · `initialize`(물리 · 폰트 · UI 입력) 등)를 올렸다. 넷째 단계에서 나머지도 올렸다.
+- 오디오: `IAudioService::play` · `playMusic` · `playAdaptiveMusic` · `loadMixer` · `reloadDataFile`, `GameSound::play` · `playMusic`. 대체 디코더 형식 `AudioFallbackDecodeFunction` 도 `ResourceID` 를 받는다.
+- 핫 리로드: `IAssetCache::reload` 와 모든 재정의가 `ResourceID` 를 받는다. 파일 감시 경로를 id 로 바꾸는 자리는 `AssetHotReloadInternal::toResourceID` 한 곳이다.
+- 공유 캐시: `SharedAssetTable::LoadFunction` · 캐시 특성의 `load` 가 `ResourceID` 를 받고, 키에서 id 로 바꾸는 자리는 캐시마다 이름 붙인 `toResourceID` 한 곳이다(`SharedAssetTable` · `MeshCache` · `GameDataCache` · `UITextAssetCache` · `PhysicsMeshShapeCache` · `AssetStreamingQueue`). 물리 셰이프의 읽기 함수 형식 `LoadTriangleListFunction` 도 바꿨다.
+- 씬: `SceneDocument::loadXML` 과 디스크 판을 `PrefabAsset` 처럼 입구 함수가 형식대로 읽게 갈랐다(`ReadSource` 삭제).
 
-리소스 · 디스크를 열거형 하나로 고르던 안쪽 함수(`ReflectedXMLFile` · `PrefabAsset` 의 `ReadSource`)는 입구 함수가 형식으로 고르게 바꿨다.
+남은 것은 하나다. `test::HostTargetTestUtil::isLeftOutOfServerPackage` 는 로더가 아니라 테스트 조건 판정이라 글을 받는다(코드 주석). 글 인자를 받아 본문에서 `ResourceID{ 인자 }` 로 감싸는 함수를 다시 세면, 이 하나와 위의 이름 붙인 `toResourceID` 일곱 곳만 남는다.
+
+리소스 · 디스크를 열거형 하나로 고르던 안쪽 함수(`ReflectedXMLFile` · `PrefabAsset` · `SceneDocument` 의 `ReadSource`)는 입구 함수가 형식으로 고르게 바꿨다.
 
 ## 2. 안과 결정
 

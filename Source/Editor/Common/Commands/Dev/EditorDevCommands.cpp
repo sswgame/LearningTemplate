@@ -454,7 +454,7 @@ namespace sw::editor
                     return false;
                 }
                 // 같은 경로를 다시 만들면 캐시의 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽게 한다.
-                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( prefabID, nullptr );
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( ResourceID{ prefabID }, nullptr );
                 pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pObject, prefabID );
                 pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
                 outReply = "created prefab " + absolutePath + " from " + pObject->getName().c_str();

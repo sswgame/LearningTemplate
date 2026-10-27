@@ -283,7 +283,7 @@ SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/gimmickshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ "game/empty/maps/gimmickshowcase.scene.xml" } ) );
     Scene scene{ "GimmickShowcase" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     GameObjectManager& manager = *scene.getObjectManager();

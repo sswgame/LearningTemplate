@@ -13,10 +13,10 @@ namespace sw
         return engine::areEngineServicesBound() && engine::getSubsystem<IAudioService>().isDataFile( relativePath );
     }
 
-    void AudioReloadCache::reload( string_view relativePath, IRHIDevice* /*pDevice*/ )
+    void AudioReloadCache::reload( const ResourceID& resourceID, IRHIDevice* /*pDevice*/ )
     {
         if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<IAudioService>().reloadDataFile( relativePath ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
+            (void)engine::getSubsystem<IAudioService>().reloadDataFile( resourceID ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
     }
 
     size_t AudioReloadCache::getCachedCount() const

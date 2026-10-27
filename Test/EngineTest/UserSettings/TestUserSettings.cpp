@@ -867,8 +867,8 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "p.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="MENU_START" source="Start" /></entries></SourceStringTable>)" ) );
 
     sw::LocalizationManager localization;
-    SW_ASSERT_TRUE( localization.loadCultureTable( ::test::getEngineDefaultAssets()._cultureTable.c_str() ) );
-    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( localization.loadCultureTable( sw::ResourceID{ ::test::getEngineDefaultAssets()._cultureTable.c_str() } ) );
+    SW_ASSERT_TRUE( localization.mountProject( sw::ResourceID{ ::test::makeTempResourceID( projectPath ) }, sw::LocalizationScope::Game ) );
 
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;

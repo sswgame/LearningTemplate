@@ -329,7 +329,7 @@ namespace sw::editor
                     SW_LOG_WARNING( "Apply Overrides needs a selected prefab instance - nothing was written" );
                     return;
                 }
-                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path ) == false )
+                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, ResourceID{ path } ) == false )
                     SW_LOG_ERROR( "Apply Overrides could not write '%#'", path.c_str() );
             }
 

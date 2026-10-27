@@ -100,11 +100,11 @@ namespace
         }
 
         /** @brief 시나리오가 `<Record>` 단계를 가졌으면 true 입니다(백엔드끼리 기록 줄을 견주는 시나리오). 못 읽으면 false — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
-        static bool declaresRecord( const sw::string& scenarioPath )
+        static bool declaresRecord( const sw::ResourceID& resourceID )
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            if ( scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) == false )
+            if ( scenario.loadFromPath( resourceID, error ) == false )
                 return false;
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
@@ -115,19 +115,19 @@ namespace
         }
 
         /** @brief 시나리오가 루트에 `editor="true"` 를 적었으면 true 입니다. 못 읽으면 false — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
-        static bool requiresEditor( const sw::string& scenarioPath )
+        static bool requiresEditor( const sw::ResourceID& resourceID )
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) && scenario.getTestOptions()._bRequiresEditor;
+            return scenario.loadFromPath( resourceID, error ) && scenario.getTestOptions()._bRequiresEditor;
         }
 
         /** @brief 시나리오가 `<Launch>` 로 선언한 기동 인자(`-gv_firstScene=…`)입니다. 못 읽으면 빈 글 — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
-        static sw::string readLaunchArguments( const sw::string& scenarioPath )
+        static sw::string readLaunchArguments( const sw::ResourceID& resourceID )
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
+            return scenario.loadFromPath( resourceID, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
         /** @brief 실행 쓰기 루트(`AppTestUtil::getRunFolder`) 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AutomationScenario.h` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
@@ -159,22 +159,23 @@ namespace
          * @brief 시나리오 하나를 백엔드 하나(@p pSwitch)로 돌려 판정합니다 — 케이스 하나의 본문입니다. 실패는 `runScenario` 가 시나리오 · 백엔드 · 종료 코드와 뜻 · 보고의
          *        `failures[]` · `unhandledLogs[]` 줄과 함께 기록한다. 루트에 `editor="true"` 를 적은 시나리오는 에디터를 켜고 돕니다.
          */
-        static test::AppRunOutcome runScenarioOnBackend( const sw::string& scenarioPath, const utf8* pSwitch, sw::string_view extraArguments )
+        static test::AppRunOutcome runScenarioOnBackend( const sw::ResourceID& resourceID, const utf8* pSwitch, sw::string_view extraArguments )
         {
-            sw::string       scenarioArguments{ extraArguments };
-            const sw::string launchArguments = readLaunchArguments( scenarioPath );
+            const sw::string& scenarioPath = resourceID.str();
+            sw::string        scenarioArguments{ extraArguments };
+            const sw::string  launchArguments = readLaunchArguments( resourceID );
             if ( launchArguments.empty() == false )
                 scenarioArguments += " " + launchArguments;
-            if ( requiresEditor( scenarioPath ) )
+            if ( requiresEditor( resourceID ) )
                 scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
             sw::string scenarioLines;
             return test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
         }
 
         /** @brief 케이스 `AppScenarioTest.[<게임>.]<시나리오>.<백엔드>` 의 본문입니다. 이 기계에서 돌지 못했으면(건너뜀 · 요구하지 않은 백엔드가 못 섬) 케이스를 건너뜁니다. */
-        static void runScenarioCase( const sw::string& scenarioPath, const utf8* pSwitch, const sw::string& extraArguments )
+        static void runScenarioCase( const sw::ResourceID& resourceID, const utf8* pSwitch, const sw::string& extraArguments )
         {
-            const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, extraArguments );
+            const test::AppRunOutcome outcome = runScenarioOnBackend( resourceID, pSwitch, extraArguments );
             if ( test::hasRunHere( outcome ) == false )
                 SW_TEST_SKIP( outcome == test::AppRunOutcome::BackendUnusable ? "the backend cannot stand up on this machine and is not required (--required_backends)" : "the scenario skipped itself or needs a development build" );
         }
@@ -216,7 +217,7 @@ namespace
                 {
                     catalog.addCase( "AppScenarioTest", ( namePrefix + label + "." + getBackendName( pSwitch ) ).c_str(), [scenarioPath, pSwitch, extraArguments]()
                     {
-                        runScenarioCase( scenarioPath, pSwitch, extraArguments );
+                        runScenarioCase( sw::ResourceID{ scenarioPath }, pSwitch, extraArguments );
                     }, caseSeconds );
                 }
             }
@@ -288,7 +289,7 @@ namespace
                 const utf8*            pFirstSwitch = nullptr;
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
-                    const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, extraArguments );
+                    const test::AppRunOutcome outcome = runScenarioOnBackend( sw::ResourceID{ scenarioPath }, pSwitch, extraArguments );
                     if ( test::hasRunHere( outcome ) == false )
                         continue;
                     ++ranCount;
@@ -375,11 +376,11 @@ namespace
         }
 
         /** @brief 시나리오가 루트에 `isolated="true"` 를 적었으면 true 입니다(새 프로세스에서만 돈다). 못 읽으면 격리로 봐 그 시나리오가 제 프로세스에서 읽기 오류를 내게 한다. */
-        static bool isIsolated( const sw::string& scenarioPath )
+        static bool isIsolated( const sw::ResourceID& resourceID )
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( sw::ResourceID{ scenarioPath }, error ) == false || scenario.getTestOptions()._bIsolated;
+            return scenario.loadFromPath( resourceID, error ) == false || scenario.getTestOptions()._bIsolated;
         }
 
         /**
@@ -420,7 +421,7 @@ namespace
             sw::vector<sw::string> listSeparate;
             for ( const sw::string& scenarioPath : listScenario )
             {
-                if ( isNumberedGroupMember( scenarioPath ) || isIsolated( scenarioPath ) )
+                if ( isNumberedGroupMember( scenarioPath ) || isIsolated( sw::ResourceID{ scenarioPath } ) )
                     listSeparate.push_back( scenarioPath );
                 else
                     listChained.push_back( scenarioPath );
@@ -496,7 +497,7 @@ SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
     sw::vector<sw::string> listRecordScenario;
     for ( const sw::string& scenarioPath : AppScenarioTestInternal::collectGameScenarioPaths() )
     {
-        if ( AppScenarioTestInternal::declaresRecord( scenarioPath ) )
+        if ( AppScenarioTestInternal::declaresRecord( sw::ResourceID{ scenarioPath } ) )
             listRecordScenario.push_back( scenarioPath );
     }
     uint32 ranCount      = listRecordScenario.empty() ? 0 : AppScenarioTestInternal::runEveryBackend( listRecordScenario, {} );
@@ -515,7 +516,7 @@ SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
             sw::vector<sw::string> listPackRecord;
             for ( const sw::string& scenarioPath : AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } ) )
             {
-                if ( AppScenarioTestInternal::declaresRecord( scenarioPath ) )
+                if ( AppScenarioTestInternal::declaresRecord( sw::ResourceID{ scenarioPath } ) )
                     listPackRecord.push_back( scenarioPath );
             }
             scenarioCount += static_cast<uint32>( listPackRecord.size() );

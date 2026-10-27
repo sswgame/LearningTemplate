@@ -106,6 +106,6 @@ namespace sw::test
         }
 
         /** @brief 엔진 문화권 표를 읽은 매니저를 준비합니다. */
-        [[nodiscard]] static bool loadEngineCultures( LocalizationManager& localization ) { return localization.loadCultureTable( kCultureTable ); }
+        [[nodiscard]] static bool loadEngineCultures( LocalizationManager& localization ) { return localization.loadCultureTable( sw::ResourceID{ kCultureTable } ); }
     };
 } // namespace sw::test

@@ -1058,12 +1058,13 @@ namespace sw
     // 로그 리스너 해제는 `_logCapture` 의 소멸자가 맡는다.
     AutomationRunner::~AutomationRunner() = default;
 
-    void AutomationRunner::startFromPath( string_view scenarioPath, string_view reportPath )
+    void AutomationRunner::startFromPath( const ResourceID& resourceID, string_view reportPath )
     {
+        const string_view scenarioPath = resourceID.view();
         markWallStart();
         _reportWriter.setReportPath( reportPath );
         string error;
-        if ( _scenario.loadFromPath( ResourceID{ scenarioPath }, error ) == false )
+        if ( _scenario.loadFromPath( resourceID, error ) == false )
         {
             SW_LOG_ERROR( "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
             finish( AutomationOutcome::LoadError, error );

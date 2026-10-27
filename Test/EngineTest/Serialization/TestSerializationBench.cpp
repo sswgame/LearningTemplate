@@ -49,14 +49,14 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     {
         const sw::Stopwatch stopwatch;
         sw::SceneDocument   doc;
-        SW_ASSERT_TRUE( doc.loadXML( SerializationBenchInternal::kSceneID ) );
+        SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ SerializationBenchInternal::kSceneID } ) );
         sw::Scene scene{ "SerializationBenchScene" };
         SW_ASSERT_TRUE( scene.instantiate( doc ) );
         listLoadMicro.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( SerializationBenchInternal::kSceneID ) );
+    SW_ASSERT_TRUE( doc.loadXML( sw::ResourceID{ SerializationBenchInternal::kSceneID } ) );
     sw::Scene scene{ "SerializationBenchScene" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::vector<sw::GameObject*> listObject;

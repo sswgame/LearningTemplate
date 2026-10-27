@@ -12,6 +12,7 @@
 
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternTable.h"
+#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -58,8 +59,9 @@ namespace sw
             return false;
         }
         /** @brief 다시 읽을 파일이 없습니다. */
-        void reload( string_view relativePath, IRHIDevice* pDevice ) override
+        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override
         {
+            const string_view relativePath = resourceID.view();
             (void)relativePath;
             (void)pDevice;
         }

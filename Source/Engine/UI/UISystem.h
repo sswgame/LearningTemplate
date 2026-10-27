@@ -17,6 +17,7 @@
 
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Resource/ResourceID.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Base/WidgetTypes.h"
@@ -98,7 +99,7 @@ namespace sw
          * @param uiInputMapPath UI 액션 맵 리소스(`engine/input/ui.input.xml`)입니다. 비우면 UI 액션이 없습니다(포인터만 동작).
          * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath = {} );
+        [[nodiscard]] bool initialize( InputManager& inputManager, FontService* pFontService, const ResourceID& resourceID = {} );
         /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }

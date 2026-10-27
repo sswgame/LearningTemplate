@@ -833,7 +833,7 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
 
     // 원본(바퀴)만 고친다 — 수레 파일은 그대로다.
     SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 3.0f ), wheelPathDisk ) );
-    prefabs.reload( wheelPath );
+    prefabs.reload( sw::ResourceID{ wheelPath } );
     sw::GameObject* pCartAgain = prefabs.spawn( &objects, ::test::makeTempResourceID( cartPath ), "CartAgain" );
     SW_ASSERT_NOT_NULL( pCartAgain );
     sw::GameObject* pLeftAgain  = sw::findChildByNamePrefix( pCartAgain, "WheelL" );

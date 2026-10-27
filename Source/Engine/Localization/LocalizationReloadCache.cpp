@@ -13,8 +13,9 @@ namespace sw
         return engine::areEngineServicesBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
     }
 
-    void LocalizationReloadCache::reload( string_view relativePath, IRHIDevice* /*pDevice*/ )
+    void LocalizationReloadCache::reload( const ResourceID& resourceID, IRHIDevice* /*pDevice*/ )
     {
+        const string_view relativePath = resourceID.view();
         if ( engine::areEngineServicesBound() )
             (void)engine::getSubsystem<LocalizationManager>().reloadChangedFile( relativePath ); // Failed 는 관리자가 오류로 남겼다 — 캐시 `reload` 는 결과를 돌려주지 않는다
     }

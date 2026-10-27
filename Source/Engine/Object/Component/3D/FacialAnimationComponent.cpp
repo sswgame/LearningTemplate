@@ -332,7 +332,7 @@ namespace sw
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
         IAudioService*           pAudio   = pManager != nullptr ? pManager->getSceneEngineServices()._pAudioService : nullptr;
         if ( pAudio != nullptr && pAudio->isInitialized() )
-            (void)pAudio->play( audioPath );
+            (void)pAudio->play( resourceID );
         return true;
     }
 
