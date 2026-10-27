@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
@@ -84,10 +85,10 @@ namespace sw
         vector<sw::thread>                         _listWorker;
         deque<unique_ptr<ISQLJob>> _listQueuedJob  SW_GUARDED_BY( _mutex );
         vector<unique_ptr<ISQLJob>> _listCompleted SW_GUARDED_BY( _mutex );
-        SQLConnectionPoolConfig                    _settings;
+        OnceInit<SQLConnectionPoolConfig>          _settings;
         mutable mutex                              _mutex;
         std::condition_variable_any                _jobReady;
-        ISQLDriver*                                _pDriver;
+        OnceInit<ISQLDriver*>                      _pDriver;
         int32 _pendingCount                        SW_GUARDED_BY( _mutex );
         uint8                                      _bStopping;
     };
