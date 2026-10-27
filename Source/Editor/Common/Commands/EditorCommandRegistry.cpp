@@ -66,8 +66,8 @@ namespace sw::editor
             }
 
             /** @brief 두 커맨드가 같은 조합을 처리하면 그 조합을 outChord 에 담고 true입니다. */
-            static bool findSharedChord( const EditorCommandDesc& lhs, const EditorCommandDesc& rhs,
-                                         EditorCommandShortcut& outChord )
+            [[nodiscard]] static bool findSharedChord( const EditorCommandDesc& lhs, const EditorCommandDesc& rhs,
+                                                       EditorCommandShortcut& outChord )
             {
                 const EditorCommandShortcut arrLhsChord[] = { lhs._shortcut, lhs._altShortcut };
                 const EditorCommandShortcut arrRhsChord[] = { rhs._shortcut, rhs._altShortcut };

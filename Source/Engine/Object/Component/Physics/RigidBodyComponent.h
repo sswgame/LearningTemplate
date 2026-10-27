@@ -34,9 +34,9 @@ namespace sw
     public:
         explicit RigidBodySocketPhysics( RigidBodyComponent& owner );
 
-        void beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override;
-        void endPhysics() override;
-        bool findBodyWorldTransform( float4x4& outWorldTransform ) const override;
+        void               beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override;
+        void               endPhysics() override;
+        [[nodiscard]] bool findBodyWorldTransform( float4x4& outWorldTransform ) const override;
 
     private:
         RigidBodyComponent& _owner;

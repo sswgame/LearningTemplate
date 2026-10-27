@@ -32,7 +32,7 @@ namespace
     };
 
     /** @brief `-<name>` 하나만 준 명령줄이 고르는 백엔드입니다. 고르지 않으면 false 입니다. */
-    bool findBackendForFlag( string_view name, RHIBackend& outBackend )
+    [[nodiscard]] bool findBackendForFlag( string_view name, RHIBackend& outBackend )
     {
         CommandLineManager commandLineManager;
         commandLineManager.initialize();

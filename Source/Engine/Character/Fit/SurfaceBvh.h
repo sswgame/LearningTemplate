@@ -35,14 +35,14 @@ namespace sw
         void build();
 
         /** @brief 가장 가까운 교차를 찾습니다. @p partFilter 가 `kNoPart` 가 아니면 그 표면만 봅니다. */
-        bool findNearestHit( const float3& origin, const float3& direction, float32 maxDistance, GeometryRayHit& outHit,
-                             uint16 partFilter = CharacterGeometryConstant::kNoPart ) const;
+        [[nodiscard]] bool findNearestHit( const float3& origin, const float3& direction, float32 maxDistance, GeometryRayHit& outHit,
+                                           uint16 partFilter = CharacterGeometryConstant::kNoPart ) const;
         /** @brief 모든 교차를 거리 순으로 채웁니다(비우고 채움). */
         void collectHits( const float3& origin, const float3& direction, float32 maxDistance, vector<GeometryRayHit>& outListHit,
                           uint16 partFilter = CharacterGeometryConstant::kNoPart ) const;
         /** @brief @p maxDistance 안에서 가장 가까운 표면 점을 찾습니다. */
-        bool findClosestPoint( const float3& point, float32 maxDistance, GeometryClosestPoint& outClosest,
-                               uint16 partFilter = CharacterGeometryConstant::kNoPart ) const;
+        [[nodiscard]] bool findClosestPoint( const float3& point, float32 maxDistance, GeometryClosestPoint& outClosest,
+                                             uint16 partFilter = CharacterGeometryConstant::kNoPart ) const;
 
         /** @brief 만든 삼각형 수를 반환합니다. */
         uint32 getTriangleCount() const { return static_cast<uint32>( _listTriangleSurface.size() ); }

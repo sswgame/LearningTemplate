@@ -81,7 +81,7 @@ namespace sw
              *          빌드한다. 그 비트 하나만 다르면 받아들인다. 그 설정은 부동소수 예외를 켜고 끄는 스택 위의 가드(`FPException.h`)만 바꾸고
              *          구조체 레이아웃은 바꾸지 않는다. 다른 비트(단언, 정밀도, 디버그 렌더러, 프로파일러, 레이어 비트)가 다르면 거부한다.
              */
-            static bool findLibraryVersionID( uint64& outVersionID )
+            [[nodiscard]] static bool findLibraryVersionID( uint64& outVersionID )
             {
                 constexpr uint64 kFloatingPointExceptionBit = static_cast<uint64>( 1 ) << ( 24 + 2 );
                 const uint64     arrCandidate[2]            = { JPH_VERSION_ID, JPH_VERSION_ID ^ kFloatingPointExceptionBit };

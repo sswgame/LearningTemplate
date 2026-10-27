@@ -308,7 +308,7 @@ SW_TEST_CASE( NetTurnRelayTest, RejoinCatchesUpBeyondReliableWindow )
     constexpr int32 kActionCount = 300;
     for ( int32 index = 0; index < kActionCount; ++index )
     {
-        (void)clientA.submitAction( vector<uint8>{ static_cast<uint8>( index & 0xFF ), static_cast<uint8>( index >> 8 ) } );
+        (void)clientA.submitAction( vector<uint8>{ static_cast<uint8>( index & 0xFF ), static_cast<uint8>( index >> 8 ) } ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
         if ( index % 5 == 4 )
             harness.stepTicks( 1 );
     }

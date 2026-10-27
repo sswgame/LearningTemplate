@@ -62,7 +62,7 @@ namespace sw::editor
         EditorPreviewViewport& operator=( const EditorPreviewViewport& ) = delete;
 
         /** @brief 미리보기 씬과 렌더 타깃 슬롯을 만들고 환경을 스폰합니다. 이미 있으면 true 를 바로 반환합니다. 씬 매니저가 없으면 false 입니다. */
-        bool initialize( string_view sceneName, const ScenePreviewPolicy& policy, const EditorPreviewEnvironment& environment );
+        [[nodiscard]] bool initialize( string_view sceneName, const ScenePreviewPolicy& policy, const EditorPreviewEnvironment& environment );
         /**
          * @brief 다른 쪽이 가진 미리보기 씬 @p scene 을 이 뷰포트로 그립니다(씬은 만들지도 내리지도 않는다 — 렌더 타깃만 잡는다). 이미 씬이 있으면 false 입니다.
          * @details 한 프로세스 재생(`EditorNetSimSession`)이 하니스 월드의 씬(`NetSimPreviewSceneSource` 가 만든 것)을 창마다 붙인다.

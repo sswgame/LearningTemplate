@@ -97,8 +97,6 @@ namespace sw
         , _listUavFree{}
         , _pipelineStates{}
         , _renderPassLedger{}
-        , _depthEnabledState{ nullptr }
-        , _depthDisabledState{ nullptr }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
@@ -207,7 +205,7 @@ namespace sw
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
-        if ( FAILED( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ) ) )
+        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ), "CreateBuffer" ) == false )
         {
             SW_LOG_ERROR( "Failed to create root-constant cbuffer." );
             return false;
@@ -285,9 +283,10 @@ namespace sw
 
     RHIBufferHandle D3D11RHIDevice::storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
     {
+        // 뷰를 만들지 못한 버퍼는 등록하지 않는다 — 뷰 없이 등록하면 셰이더가 그 버퍼를 조용히 0 으로 읽는다.
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
-        if ( buffer != nullptr )
-            _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() );
+        if ( buffer == nullptr || isHrSuccess( _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() ), "CreateShaderResourceView (buffer)" ) == false )
+            return 0;
         return storeBuffer( std::move( buffer ), std::move( srv ) );
     }
 

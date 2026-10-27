@@ -33,7 +33,7 @@ namespace sw
          * @brief 작업 디렉터리에서 위로 올라가며 `Resource/` 를 찾고, 도메인 루트와 검색 루트를 채웁니다.
          * @return 프로젝트 루트를 찾으면 true 입니다. 못 찾으면 false 를 반환하고 단언도 실패합니다.
          */
-        static bool initialize();
+        [[nodiscard]] static bool initialize();
 
         /**
          * @brief 상대 리소스 경로를 **디스크의 낱개 파일**로 풉니다(파일이 있을 때만). 팩은 보지 않습니다.

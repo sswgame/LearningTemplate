@@ -184,7 +184,7 @@ namespace sw
         /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
         bool skipIfStepsAreMissingFromThisBuild();
         /** @brief 시나리오가 선언한 사본 폴더(`<Scratch>`)를 새로 만듭니다. 하나라도 실패하면 읽기 오류(LoadError)로 끝내고 false 입니다 — 원본에 쓰며 돌지 않는다. */
-        bool prepareScratchFolders();
+        [[nodiscard]] bool prepareScratchFolders();
         /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
         [[nodiscard]] bool prepare( string& outError );
         void               runExpect( const AutomationStep& step );

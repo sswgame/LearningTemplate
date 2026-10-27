@@ -37,7 +37,7 @@ namespace sw
         struct RHIBackendSwitcherAutomationInternal
         {
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
-            static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
+            [[nodiscard]] static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 if ( pSwitcher == nullptr || pSwitcher->recordStartBackend() == false )

@@ -85,7 +85,7 @@ namespace sw::engine
             parts._pMemoryBudget = &bootstrap.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *parts._pCrashHandler ) );
         // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
         (void)bootstrap.bind( parts._pCommandLine->findCommandLine() );
-        (void)bootstrap.bind( parts._pCommandLine->findGlobalVariables() );
+        (void)bootstrap.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
         return parts;
     }
 

@@ -36,7 +36,7 @@ namespace
 </AudioEventLibrary>)";
 
         /** @brief 기본 데이터 그래프(리미터 · 리버브 리턴 · 센드 · 스냅샷)를 읽고 실제 보이스 상한을 정합니다. */
-        static bool initializeEngine( sw::AudioEngine& engine, uint32 realVoiceCount )
+        [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine, uint32 realVoiceCount )
         {
             sw::AudioMixerDesc mixerDesc;
             if ( mixerDesc.loadFromResource( "engine/audio/default.audiomixer.xml" ) == false )

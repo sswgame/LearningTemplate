@@ -99,7 +99,7 @@ namespace sw
 
             ~LoopbackStreamTransport() override { shutdown(); }
 
-            bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
+            [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
             {
                 if ( pHandler == nullptr || settings._ioThreadCount != 0 )
                 {

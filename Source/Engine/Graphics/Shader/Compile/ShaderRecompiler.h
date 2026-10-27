@@ -41,7 +41,7 @@ namespace sw
         ShaderRecompiler& operator=( ShaderRecompiler&& ) = delete;
 
         /** @brief 라벨을 기억하고 초기화된 것으로 표시합니다. */
-        bool initialize( string_view label = "Shaders" );
+        [[nodiscard]] bool initialize( string_view label = "Shaders" );
 
         /** @brief 어떤 셰이더든 다시 컴파일되면 부르는 전역 콜백을 설정합니다(PSO 바인딩 레이아웃 무효화용). */
         void setOnAnyShaderRecompiled( const ShaderRecompiledDelegate& onAnyRecompiled ) { _onAnyRecompiled = onAnyRecompiled; }

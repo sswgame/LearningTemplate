@@ -133,9 +133,9 @@ namespace sw
 
     private:
         /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 경로 거리를 찾습니다. 띠 밖이면 false 를 반환합니다. */
-        bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
+        [[nodiscard]] bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
-        bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
+        [[nodiscard]] bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief 호수 격자 정점을 만듭니다(깊이는 @p pTerrain 에서). */
         void makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 강 띠 정점을 만듭니다. */

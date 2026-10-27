@@ -88,7 +88,7 @@ namespace sw::test
 
         void unloadFace( FontFaceID face ) override { _mapFace.erase( face ); }
 
-        bool findFaceMetrics( FontFaceID face, FontFaceMetrics& outMetrics ) const override
+        [[nodiscard]] bool findFaceMetrics( FontFaceID face, FontFaceMetrics& outMetrics ) const override
         {
             const auto iter = _mapFace.find( face );
             if ( iter == _mapFace.end() )
@@ -108,7 +108,7 @@ namespace sw::test
             return codepoint;
         }
 
-        bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
+        [[nodiscard]] bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
         {
             if ( _mapFace.find( face ) == _mapFace.end() )
                 return false;

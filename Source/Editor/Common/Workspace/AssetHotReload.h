@@ -62,7 +62,7 @@ namespace sw::editor
          * @brief 파일 감시를 시작하고 `Resource/` 워치를 등록합니다.
          * @return 감시자를 만들었으면 true 입니다. 리소스 루트가 없으면(팩만 있는 실행) false 입니다.
          */
-        bool initialize();
+        [[nodiscard]] bool initialize();
 
         /** @brief 워치를 해제하고 감시 스레드를 멈춥니다. */
         void shutdown();

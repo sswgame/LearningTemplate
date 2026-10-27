@@ -92,8 +92,10 @@ namespace sw
         {
             VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
             void*                                pMapped{ nullptr };
-            const bool                           bCanMapBufferMemory = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
-                                             vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS;
+            // Map 실패는 오류로 남긴다(isVkSuccess) — 조용히 건너뛰면 옛 상수로 그린다.
+            const bool bCanMapBufferMemory = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
+                                             isVkSuccess( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ), "vkMapMemory (constant buffer)" ) &&
+                                             pMapped != nullptr;
             if ( bCanMapBufferMemory )
             {
                 Memory::copy( pMapped, pData, size );
@@ -525,7 +527,12 @@ namespace sw
             return 0;
         }
 
-        vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 );
+        if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
+        {
+            vkDestroyImage( _pDevice->_device, record._image, nullptr );
+            vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+            return 0;
+        }
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         if ( desc._bIsDepthStencil != SW_FALSE )

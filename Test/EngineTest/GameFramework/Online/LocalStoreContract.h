@@ -283,7 +283,7 @@ namespace test
             ILocalStore& store = fixture.getStore();
             for ( int32 index = 0; index < 20; ++index )
             {
-                (void)store.submitWrite( "flush", vector<uint8>{ static_cast<uint8>( index ) }, LocalStoreWriteOptions{} );
+                (void)store.submitWrite( "flush", vector<uint8>{ static_cast<uint8>( index ) }, LocalStoreWriteOptions{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             }
             store.shutdown(); // 남은 쓰기를 끝까지
             vector<LocalStoreCompletion> listCompletion;

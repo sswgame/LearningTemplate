@@ -90,7 +90,7 @@ namespace
         MonsterCollectorCatalog _catalog;
         ElementChart            _chart;
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             return _chart.loadFromXMLText( kMonsterChartXML, "MonsterCollectorTest" ) && _catalog.loadFromXMLText( kMonsterCatalogXML, "MonsterCollectorTest" );
         }

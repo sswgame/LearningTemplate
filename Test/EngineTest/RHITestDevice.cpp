@@ -15,7 +15,7 @@ namespace test
     namespace
     {
         /** @brief 지금 케이스의 매개변수(`-dx12` …)가 백엔드 스위치면 그 백엔드를 @p outBackend 에 담고 true 를 돌려줍니다. 매개변수 케이스가 아니면 false 입니다. */
-        bool findCaseBackend( sw::RHIBackend& outBackend )
+        [[nodiscard]] bool findCaseBackend( sw::RHIBackend& outBackend )
         {
             const sw::string parameter = getCurrentCaseParameter();
             for ( const sw::RHIBackend backend : kArrAllRHIBackend )
@@ -61,7 +61,7 @@ namespace test
 
     RHITestDevice::RHITestDevice( sw::RHIBackend backend )
     {
-        initialize( backend );
+        (void)initialize( backend ); // 서지 못한 백엔드는 케이스가 장치 상태로 묻는다 — 요구한 백엔드의 실패는 initialize 가 기록한다
     }
 
     RHITestDevice::RHITestDevice( std::initializer_list<sw::RHIBackend> listBackend )

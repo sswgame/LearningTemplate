@@ -223,7 +223,8 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
-                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - later draws use the previous slot table.",
+                // 실제 동작은 건너뛰기다 — flushSlotTables 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
+                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
                               kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
             return UINT32_MAX;
@@ -323,11 +324,12 @@ namespace sw
 
         const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
         const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
-        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                       IID_PPV_ARGS( outBuffer.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource (mapped upload buffer)" ) == false )
             return false;
 
-        if ( FAILED( outBuffer->Map( 0, nullptr, &pOutMapped ) ) || pOutMapped == nullptr )
+        if ( isHrSuccess( outBuffer->Map( 0, nullptr, &pOutMapped ), "ID3D12Resource::Map (mapped upload buffer)" ) == false || pOutMapped == nullptr )
         {
             pOutMapped = nullptr;
             outBuffer.Reset();

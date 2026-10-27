@@ -326,7 +326,7 @@ namespace sw
         }
         // 발 높이는 모델 공간(오브젝트 루트 기준)이다. 빈 이름은 계약상 오브젝트 루트 변환을 준다(그래서 false 를 버린다).
         float4x4 rootWorld;
-        (void)findSocketWorldTransform( hashed_string{}, rootWorld );
+        (void)findSocketWorldTransform( hashed_string{}, rootWorld ); // 빈 이름은 오브젝트 루트 변환을 준다(위 설명)
         const float4x4 modelFromWorld = rootWorld.invert();
         for ( size_t footIndex = 0; footIndex < listDef.size(); ++footIndex )
         {
@@ -374,7 +374,7 @@ namespace sw
     float3 AnimationNotifyComponent::findSocketWorldPosition( const hashed_string& socketName ) const
     {
         float4x4 world;
-        (void)findSocketWorldTransform( socketName, world );
+        (void)findSocketWorldTransform( socketName, world ); // 빈 이름은 오브젝트 루트 변환을 준다(위 설명)
         return world.getTranslation();
     }
 

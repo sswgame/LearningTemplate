@@ -336,12 +336,12 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
-        const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false;
+        // 패스 PSO 가 없으면(셋업이 만들지 못하고 알렸다) 앞서 묶인 파이프라인으로 대신 그리지 않는다.
+        const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false || pso == 0;
         if ( bCannotDraw )
             return;
 
-        if ( pso != 0 )
-            context._pCmd->setPipelineState( pso );
+        context._pCmd->setPipelineState( pso );
 
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
@@ -577,7 +577,8 @@ namespace sw
             _pCmd->setViewport( viewport );
             context._resourceRegistry.reset();
             context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pTexture->getHandle(), draw._pTexture->getSrv() );
-            acquirePassCb( context );
+            if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 쿠키 칸은 그리지 않는다
+                continue;
             drawFullscreen( context, pso );
         }
         _pCmd->endRenderPass();
@@ -587,14 +588,14 @@ namespace sw
 
     void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
     {
-        if ( context._pCmd == nullptr )
+        // PSO 가 없으면 그리지 않는다 — 앞서 묶인 파이프라인이나 백엔드 기본 파이프라인으로 대신 그리지 않는다(없는 이유는 셋업이 알렸다).
+        if ( context._pCmd == nullptr || pso == 0 )
             return;
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
         context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
         context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
-        if ( pso != 0 )
-            context._pCmd->setPipelineState( pso );
+        context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
     }

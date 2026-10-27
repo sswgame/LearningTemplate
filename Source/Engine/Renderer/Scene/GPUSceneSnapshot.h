@@ -108,7 +108,13 @@ namespace sw
          * @brief 정점 애니메이션(VAT) 테이블에서 이 배치 메시의 첫 원소입니다. 0xFFFFFFFF 이면 VAT 가 없습니다.
          * @details RT 가 `GPUScene::assignVertexAnimationBases` 로 채운다. 모프 시작과 같은 경로이며 배치 테이블 `GPUBatchInfo` 에 실린다.
          */
-        uint32       _vertexAnimationBase{ 0xFFFFFFFFu };
+        uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
+        /**
+         * @brief 변형(모프 · 스킨 · VAT)이 필요한 메시인데 풀이 받지 못했습니다(상한 초과 · 버퍼 생성 실패). 이 배치는 그리지 않습니다.
+         * @details RT 가 `GPUScene::assignMorphBases` · `assignVertexAnimationBases` 로 채우고 `FrameRenderer::drawsBatchInPass` 가 거른다.
+         *          바인드 · 레스트 포즈로 대신 그리지 않는다 — 풀이 이유를 오류로 남겼다. 백엔드가 GPU 변형을 못 하는 경우(능력 질의)는 풀을 쓰지 않는 것이라 여기 해당하지 않는다.
+         */
+        uint8        _bDeformRefused{ SW_FALSE };
         RHIBlendMode _blendMode = RHIBlendMode::Opaque;
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).

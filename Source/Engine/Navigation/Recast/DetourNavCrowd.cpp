@@ -164,7 +164,7 @@ namespace sw
         _listTarget[static_cast<size_t>( agentID )] = target;
         dtPolyRef targetRef                         = 0;
         float32   arrNearest[3]{};
-        (void)_pQuery->findNearestPoly( &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &targetRef, arrNearest );
+        (void)_pQuery->findNearestPoly( &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &targetRef, arrNearest ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
         if ( targetRef == 0 )
         {
             _pCrowd->resetMoveTarget( agentID );
@@ -191,7 +191,7 @@ namespace sw
         dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentID );
         dtPolyRef     polyRef = 0;
         float32       arrNearest[3]{ position._x, position._y, position._z };
-        (void)_pQuery->findNearestPoly( &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &polyRef, arrNearest );
+        (void)_pQuery->findNearestPoly( &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &polyRef, arrNearest ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
         pAgent->corridor.reset( polyRef, arrNearest );
         pAgent->boundary.reset();
         pAgent->partial          = false;

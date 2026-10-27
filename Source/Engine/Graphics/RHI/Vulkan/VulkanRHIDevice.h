@@ -37,13 +37,12 @@ namespace sw
      *          락이 걸려 레벨 병렬 기록이 직렬화된다.
      *          그래서 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 가지고 다니고, 그 버퍼가 GPU 펜스를 통과해
      *          재사용 풀로 돌아온 뒤에야 통째로 리셋된다. 락이 없다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 쓴다.
-     *          풀 하나가 차면 다음 풀을 만든다(kMaxPoolsPerDescriptorPoolSet 까지).
+     *          풀 하나가 차면 다음 풀을 만든다(상한 없음 — 한 번의 기록이 쓴 세트 수만큼 자란다. 만들지 못하면 멈춘다).
      */
     struct VulkanDescriptorPoolSet
     {
         vector<VkDescriptorPool> _listPool;
-        uint32                   _cursor{ 0 };                  ///< 지금 할당 중인 풀
-        uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한에 도달했다는 로그를 한 번만 남긴다.
+        uint32                   _cursor{ 0 }; ///< 지금 할당 중인 풀
     };
 } // namespace sw
 
@@ -115,11 +114,8 @@ namespace sw
         /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
-        uint8 _bTextureSetBound : 1;
-        /// @brief 지금 열려 있는 렌더 패스가 스왑체인(백버퍼) 렌더 패스인지 여부입니다. PSO 가 등록되어 있지 않을 때
-        ///        폴백 파이프라인을 고르는 기준입니다. 렌더 패스 호환성 때문에 백버퍼용과 오프스크린용이 다릅니다.
-        uint8                  _bActiveSwapchainRT : 1;
-        [[maybe_unused]] uint8 _reserved           : 5;
+        uint8                  _bTextureSetBound : 1;
+        [[maybe_unused]] uint8 _reserved         : 6;
         RHIBufferHandle        _boundIndexBuffer;
         uint32                 _boundIndexStride;
         uint32                 _boundIndexOffset;
@@ -137,7 +133,6 @@ namespace sw
             , _boundInstanceSlotOffset{ 0 }
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
-            , _bActiveSwapchainRT{ SW_FALSE }
             , _reserved{ 0 }
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
@@ -169,7 +164,7 @@ namespace sw
         virtual ~VulkanRHIDevice() override;
 
         /** @brief Vulkan 인스턴스, 서피스, 디바이스, 스왑체인, 커맨드 풀, 동기화 객체를 만듭니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief Vulkan 파이프라인과 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -388,14 +383,14 @@ namespace sw
         void reportDeviceFault();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
-        bool initializePipelineCache();
+        [[nodiscard]] bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다. */
         void savePipelineCache();
 
         /**
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
-        bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
+        [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
         struct VulkanBufferRecord;
         struct VulkanTextureRecord;
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
@@ -418,8 +413,6 @@ namespace sw
         static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
         /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
-        /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그를 남기고 직전 세트로 그립니다. */
-        static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
 
         /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
@@ -494,7 +487,7 @@ namespace sw
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
         /**
-         * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만듭니다(kMaxPoolsPerDescriptorPoolSet 까지).
+         * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만듭니다(상한 없음). 풀 · 세트를 만들지 못하면(장치 메모리 부족) 멈춥니다 — 앞 세트로 그리지 않습니다.
          * @details 락이 없다. 풀 묶음은 커맨드 버퍼 하나(기록 스레드 하나)의 것이다.
          */
         VkDescriptorSet allocateSlotSet( VulkanDescriptorPoolSet& poolSet );
@@ -696,9 +689,7 @@ namespace sw
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
-        VkPipeline       _pipeline;
-        VkPipeline       _offscreenPipeline; ///< `_pipeline` 과 같은 셰이더를 `_offscreenRenderPass` 에 맞춘 것
-        VkBuffer         _vertexBuffer;      ///< 풀스크린 삼각형(정점 3개)
+        VkBuffer         _vertexBuffer;                                      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;

@@ -107,7 +107,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     test::updateAll( { &server }, clients, 10 );
     SW_EXPECT_EQUAL( recorder.getLast()._errorCode, OnlineError::kOk );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == LeaderboardResult::NotAllowed );
-    (void)leaderboardClient.submitScore( "casual", 42, recorder.makeDelegate() );
+    (void)leaderboardClient.submitScore( "casual", 42, recorder.makeDelegate() ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     test::updateAll( { &server }, clients, 20 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == LeaderboardResult::Ok );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._score, int64( 42 ) );

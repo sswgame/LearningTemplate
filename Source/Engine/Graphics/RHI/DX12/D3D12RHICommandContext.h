@@ -109,14 +109,14 @@ namespace sw
         /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌립니다. */
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
         /** @brief 설정해 둔 메시 정점 버퍼를 바인딩합니다. 핸들로 대상을 찾지 못하면(이미 파괴됨) 아무것도 바인딩하지 않고 false 를 반환합니다. */
-        bool bindMeshVertexBuffer();
+        [[nodiscard]] bool bindMeshVertexBuffer();
         /** @brief 메시 정점 버퍼가 설정되어 있으면 그것을, 없으면 풀스크린 버퍼를 바인딩합니다. 설정한 메시 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 바인딩합니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
-        bool bindActiveGraphicsPSO();
-        void bindFullscreenVertexBuffer();
-        void bindBoundIndexBuffer();
-        void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        [[nodiscard]] bool bindActiveGraphicsPSO();
+        void               bindFullscreenVertexBuffer();
+        void               bindBoundIndexBuffer();
+        void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
 
         D3D12RHIDevice*            _pDevice;
         ID3D12GraphicsCommandList* _pCmdList;

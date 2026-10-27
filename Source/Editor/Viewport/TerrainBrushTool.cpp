@@ -113,7 +113,7 @@ namespace sw::editor
             static State& getState() { return getEditorState<State>(); }
 
             /** @brief 레이 위 점 @p t 가 지형 위로 얼마나 떠 있는지 봅니다. 지형 밖이면 false 입니다. */
-            static bool findSignedHeight( const GameObjectManager& manager, const EditorPickRay& ray, float32 t, float32& outAbove )
+            [[nodiscard]] static bool findSignedHeight( const GameObjectManager& manager, const EditorPickRay& ray, float32 t, float32& outAbove )
             {
                 const float3      point    = ray._origin + ray._direction * t;
                 TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, point._x, point._z );

@@ -516,7 +516,7 @@ namespace sw
         // Dev 는 개발 콘솔과 같은 명령(개발 명령과 gv_* 전역 변수)을 받는다. 응답과 실패는 DevConsole 이 로그에 남긴다. Shipping 서버는 위의 네 가지만 받는다.
         if ( _devConsole != nullptr )
         {
-            (void)_devConsole->submit( command );
+            (void)_devConsole->submit( command ); // 응답과 실패는 DevConsole 이 로그에 남긴다(위 설명)
             return;
         }
 #endif

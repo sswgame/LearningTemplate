@@ -118,7 +118,7 @@ namespace sw
         void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
         bool isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs ) const;
         /** @brief 매개변수 값을 반환합니다. 원격 설정까지 해석한 값이며 이벤트나 키가 없으면 false 를 반환합니다. */
-        bool findParameter( string_view eventID, string_view key, string& outValue ) const;
+        [[nodiscard]] bool findParameter( string_view eventID, string_view key, string& outValue ) const;
 
         // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
         // 같은 프로세스의 코드와 테스트는 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.

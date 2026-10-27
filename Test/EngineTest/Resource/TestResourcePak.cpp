@@ -62,7 +62,7 @@ namespace sw
                 packManager.unmountAll();
                 packManager.setAllowLooseFiles( true );
                 ResourcePaths::setSearchPriority( _listSearchPriority );
-                engine::getSubsystem<AssetManager>().mountStartupPacks();
+                (void)engine::getSubsystem<AssetManager>().mountStartupPacks(); // 팩이 없는 개발 실행이면 false 가 맞다 — 되돌릴 시작 상태가 그것이다
                 engine::getSubsystem<AssetManager>().loadAssetRegistries();
             }
 

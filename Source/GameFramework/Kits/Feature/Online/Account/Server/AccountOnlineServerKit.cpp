@@ -54,7 +54,7 @@ namespace sw
             {
             }
 
-            bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 using Internal [[maybe_unused]] = AccountOnlineServerKitInternal;
                 LoginServiceConfig loginSettings;

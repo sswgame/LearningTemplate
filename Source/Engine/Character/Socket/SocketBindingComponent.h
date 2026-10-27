@@ -77,7 +77,7 @@ namespace sw
          * @param socketInHolder holder 루트 기준 소켓 변환입니다(해석된 소켓 테이블이 holder 의 본으로 계산한 값입니다).
          * @return 주인이나 holder 에 씬 컴포넌트가 없거나 붙일 수 없으면 false 를 반환합니다.
          */
-        bool bindToSocket( GameObject* pHolder, const hashed_string& socketName, const float4x4& socketInHolder );
+        [[nodiscard]] bool bindToSocket( GameObject* pHolder, const hashed_string& socketName, const float4x4& socketInHolder );
         /**
          * @brief 소켓 변환이 바뀌었습니다(holder 의 본이 움직임). 붙어 있으면 로컬을 바꾸고, 되돌아가는 중이면 목표를 바꿉니다. 같은 값이면 아무것도 안 합니다.
          */

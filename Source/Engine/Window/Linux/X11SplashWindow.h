@@ -17,10 +17,10 @@ namespace sw
         X11SplashWindow();
         virtual ~X11SplashWindow() override;
 
-        bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
-        void updateStatus( const utf8* pStatus, float32 progress = -1.0f ) override;
-        void setProgress( float32 progress ) override;
-        void dismiss() override;
+        [[nodiscard]] bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
+        void               updateStatus( const utf8* pStatus, float32 progress = -1.0f ) override;
+        void               setProgress( float32 progress ) override;
+        void               dismiss() override;
 
     private:
         /**

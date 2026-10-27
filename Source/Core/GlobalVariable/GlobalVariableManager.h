@@ -209,7 +209,7 @@ namespace sw
         [[nodiscard]] bool applyPendingEnumText();
 
         /** @brief 새 전역 변수를 등록합니다. @p bTestOnly 는 테스트용 매크로로 선언한 변수면 true 입니다. */
-        bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4, bool bTestOnly = false );
+        [[nodiscard]] bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4, bool bTestOnly = false );
 
         /** @brief pHead 로 시작하는 연결 리스트(한 모듈의 변수들)를 등록합니다. */
         void registerPendingVariables( string_view moduleName, const struct GlobalVariableRegistrar* pHead );

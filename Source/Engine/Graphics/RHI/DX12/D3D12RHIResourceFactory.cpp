@@ -66,7 +66,7 @@ namespace sw
         const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ), "CreateCommittedResource" ) == false )
             return 0;
 
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
@@ -106,7 +106,7 @@ namespace sw
 
         if ( slot._copyAllocator == nullptr )
         {
-            if ( FAILED( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ) ) )
+            if ( isHrSuccess( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
             {
                 SW_LOG_ERROR( "openUploadSlot: failed to create copy command allocator" );
                 return false;
@@ -129,7 +129,7 @@ namespace sw
                               slotIndex, slot._resetFence );
                 return false;
             }
-            if ( FAILED( slot._copyAllocator->Reset() ) )
+            if ( isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
             {
                 SW_LOG_ERROR( "openUploadSlot: copy allocator Reset failed" );
                 return false;
@@ -141,13 +141,13 @@ namespace sw
 
         if ( slot._copyCommandList == nullptr )
         {
-            if ( FAILED( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ) ) )
+            if ( isHrSuccess( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
             {
                 SW_LOG_ERROR( "openUploadSlot: failed to create copy command list" );
                 return false;
             }
         }
-        else if ( FAILED( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ) ) )
+        else if ( isHrSuccess( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ), "Reset" ) == false )
         {
             SW_LOG_ERROR( "openUploadSlot: copy command list Reset failed" );
             return false;
@@ -540,7 +540,7 @@ namespace sw
         }
 
         void* pMapped{ nullptr };
-        if ( FAILED( record._readback->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+        if ( isHrSuccess( record._readback->Map( 0, nullptr, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR( "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
             return false;
@@ -627,8 +627,9 @@ namespace sw
         const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
         const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                                                                 D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                                      D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ),
+                          "CreateCommittedResource" ) == false )
         {
             SW_LOG_ERROR( "submitTextureReadback: failed to create the readback buffer (%# bytes)", totalBytes );
             return RHITransferSubmit::rejected();
@@ -709,7 +710,7 @@ namespace sw
         const uint64      bufferBytes = pDest->GetDesc().Width;
         const D3D12_RANGE noRead{ 0, 0 };
         void*             pMapped{ nullptr };
-        if ( FAILED( pDest->Map( 0, &noRead, &pMapped ) ) || pMapped == nullptr )
+        if ( isHrSuccess( pDest->Map( 0, &noRead, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR( "updateVertexBufferRegions: failed to map the vertex buffer" );
             return;
@@ -807,8 +808,9 @@ namespace sw
         const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
         const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                                 IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                                      IID_PPV_ARGS( readback.GetAddressOf() ) ),
+                          "CreateCommittedResource" ) == false )
             return 0;
         // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`_mapStructuredBufferState`)에 올리지 않는다.
         return _pDevice->storeBuffer( readback );
@@ -837,7 +839,7 @@ namespace sw
         }
         void*             pMapped{ nullptr };
         const D3D12_RANGE readRange{ 0, sizeBytes };
-        if ( FAILED( pResource->Map( 0, &readRange, &pMapped ) ) || pMapped == nullptr )
+        if ( isHrSuccess( pResource->Map( 0, &readRange, &pMapped ), "ID3D12Resource::Map (readback buffer)" ) == false || pMapped == nullptr )
             return false;
         Memory::copy( pDestination, pMapped, sizeBytes );
         const D3D12_RANGE noWrite{ 0, 0 };
@@ -904,8 +906,9 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D12Resource> texture;
-        if ( FAILED( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                                                 D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                                                      D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ),
+                          "CreateCommittedResource" ) == false )
             return 0;
 
         const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryLedger::classifyTexture( desc ) );

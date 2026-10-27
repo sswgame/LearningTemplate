@@ -102,7 +102,7 @@ namespace
         BrMatch         _match;
         vector<BrEvent> _listEvent;
 
-        bool initialize( uint32 seed )
+        [[nodiscard]] bool initialize( uint32 seed )
         {
             const bool bCatalogLoadFailed = _catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) == false || _itemCatalog.loadFromXMLText( kBrItemXML, "BattleRoyaleTest" ) == false ||
                                             _lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) == false;

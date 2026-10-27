@@ -89,8 +89,6 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _pipeline{ nullptr }
-        , _offscreenPipeline{ nullptr }
         , _vertexBuffer{ nullptr }
         , _listBindlessFree{}
         , _gpuBuffers{}
@@ -288,7 +286,7 @@ namespace sw
                 SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
         }
 
-        initializePipelineCache();
+        (void)initializePipelineCache(); // 캐시가 없으면 파이프라인을 처음부터 만들 뿐이다 — 실패는 initializePipelineCache 가 경고로 남긴다
         _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
         SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );
@@ -305,7 +303,8 @@ namespace sw
         const uint32 slotSize  = slotIt->second;
         const uint32 copyBytes = MathUtil::min( size, slotSize );
         void*        pMapped{ nullptr };
-        if ( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ) != VK_SUCCESS )
+        // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
+        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false || pMapped == nullptr )
             return;
         Memory::copy( pMapped, pData, copyBytes );
         vkUnmapMemory( _device, pRecord->_memory );
@@ -484,13 +483,6 @@ namespace sw
 
             // _vertexBuffer 는 _gpuBuffers 가 소유한다(풀스크린 삼각형 리소스). 두 번 부수지 않는다.
             _vertexBuffer = VK_NULL_HANDLE;
-            if ( _pipeline )
-                vkDestroyPipeline( _device, _pipeline, nullptr );
-            if ( _offscreenPipeline )
-            {
-                vkDestroyPipeline( _device, _offscreenPipeline, nullptr );
-                _offscreenPipeline = nullptr;
-            }
             if ( _pipelineLayout )
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
             if ( _descriptorPool )
@@ -656,16 +648,23 @@ namespace sw
             return 0;
         }
 
-        vkBindBufferMemory( _device, buffer, memory, 0 );
-
-        if ( pInitialData != nullptr )
+        // 메모리를 붙이지 못한 버퍼 · 초기 값을 쓰지 못한 버퍼는 돌려주지 않는다 — 빈 버퍼로 그리면 조용히 0 을 읽는다.
+        bool bReady = isVkSuccess( vkBindBufferMemory( _device, buffer, memory, 0 ), "vkBindBufferMemory" );
+        if ( bReady && pInitialData != nullptr )
         {
             void* pMapped{ nullptr };
-            if ( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
+            bReady = isVkSuccess( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ), "vkMapMemory (initial data)" ) && pMapped != nullptr;
+            if ( bReady )
             {
                 Memory::copy( pMapped, pInitialData, sizeBytes );
                 vkUnmapMemory( _device, memory );
             }
+        }
+        if ( bReady == false )
+        {
+            vkDestroyBuffer( _device, buffer, nullptr );
+            vkFreeMemory( _device, memory, nullptr );
+            return 0;
         }
 
         VulkanBufferRecord record{};

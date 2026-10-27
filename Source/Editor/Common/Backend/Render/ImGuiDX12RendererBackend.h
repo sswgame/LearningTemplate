@@ -34,7 +34,7 @@ namespace sw::editor
         virtual ~ImGuiDX12RendererBackend() override = default;
 
         /** @brief D3D12 ImGui 렌더러와 SRV 힙을 초기화합니다. */
-        bool initialize( IRHIDevice* pRHIDevice ) override;
+        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice ) override;
         /** @brief D3D12 ImGui 렌더러를 종료합니다. */
         void shutdown() override;
 

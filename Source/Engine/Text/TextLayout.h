@@ -169,7 +169,7 @@ namespace sw
         /** @brief 글의 한 구간(같은 스타일)을 셰이핑해 스크래치 뒤에 붙입니다. */
         void shapeSegment( string_view text, size_t segmentStart, size_t segmentEnd, const TextLayoutStyle& style, const FontFaceChain& chain, const RichTextSpan* pSpan );
         /** @brief 텍스트의 양방향 수준을 정해 글리프마다 옮깁니다(`TextBidi`). 모든 수준이 0 이면 false 이며, 줄 안 재배열을 건너뜁니다. */
-        bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
+        [[nodiscard]] bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
         FontService&            _fontService;
         unique_ptr<ITextShaper> _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)

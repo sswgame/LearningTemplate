@@ -34,7 +34,7 @@ namespace
         return settings;
     }
 
-    bool findAvatarPosition( NetSimWorld& world, uint32 entityID, float3& outPosition )
+    [[nodiscard]] bool findAvatarPosition( NetSimWorld& world, uint32 entityID, float3& outPosition )
     {
         GameObject* pAvatar = NetSimSampleGame::findAvatar( world, entityID );
         if ( pAvatar == nullptr || pAvatar->getPrimarySceneComponent() == nullptr )

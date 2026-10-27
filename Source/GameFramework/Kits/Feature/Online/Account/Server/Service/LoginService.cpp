@@ -780,7 +780,7 @@ namespace sw
             return LoginResult::Ok; // 플랫폼을 모르면 빌드 버전을 확인할 수 없다. 온라인 스키마 해시(Hello)가 따로 막는다
         string minimumBuild;
         string recommendedBuild;
-        (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreURLKey, clientInfo._platform ), outGrant._storeURL );
+        (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreURLKey, clientInfo._platform ), outGrant._storeURL ); // 선택 값이다 — 없으면 비워 둔다
         const bool bMinimum     = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kMinimumBuildKey, clientInfo._platform ), minimumBuild );
         const bool bRecommended = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kRecommendedBuildKey, clientInfo._platform ),
                                                             recommendedBuild );

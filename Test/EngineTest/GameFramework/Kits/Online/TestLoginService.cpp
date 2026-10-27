@@ -333,11 +333,11 @@ namespace
             return settle()._result;
         }
 
-        bool  isAccountOnline( uint64 accountID ) const { return _service->isAccountOnline( accountID ); }
-        int32 getOnlineCount() const { return _service->getOnlineCount(); }
-        void  drainEvents( vector<LoginEvent>& outListEvent ) { _service->drainEvents( outListEvent ); }
-        bool  findIdentityByDisplayName( string_view name, AccountIdentity& outIdentity ) const { return _service->findIdentityByDisplayName( name, outIdentity ); }
-        bool  findIdentity( uint64 accountID, AccountIdentity& outIdentity ) const { return _service->findIdentity( accountID, outIdentity ); }
+        bool               isAccountOnline( uint64 accountID ) const { return _service->isAccountOnline( accountID ); }
+        int32              getOnlineCount() const { return _service->getOnlineCount(); }
+        void               drainEvents( vector<LoginEvent>& outListEvent ) { _service->drainEvents( outListEvent ); }
+        [[nodiscard]] bool findIdentityByDisplayName( string_view name, AccountIdentity& outIdentity ) const { return _service->findIdentityByDisplayName( name, outIdentity ); }
+        [[nodiscard]] bool findIdentity( uint64 accountID, AccountIdentity& outIdentity ) const { return _service->findIdentity( accountID, outIdentity ); }
     };
 
     /** @brief 데이터 하나 + 서버 한 대(재시작은 서비스만 새로 만든다). */

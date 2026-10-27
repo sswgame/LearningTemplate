@@ -62,7 +62,7 @@ namespace sw::editor
         /** @brief 걸러 낸 결과 줄을 그립니다. 줄을 눌렀으면 그 줄을 고르고 true 를 반환합니다. 목록이 비면 색인 중인지에 따라 안내를 그립니다. */
         bool drawResults( const vector<const QuickLauncherItem*>& listFiltered, bool bIndexOutstanding );
         /** @brief 목록이 오기 전에 누른 Enter 를 기억했다가 목록이 오면 실행으로 바꿉니다. @p bExecute 에 이번 프레임의 실행 요청을 받아 최종 값을 반환합니다. */
-        bool resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute );
+        [[nodiscard]] bool resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute );
 
     private:
         vector<QuickLauncherItem>             _listAllItem;

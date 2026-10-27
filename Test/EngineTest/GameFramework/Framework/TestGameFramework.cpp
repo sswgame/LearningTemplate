@@ -371,10 +371,10 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameSlotRoundTrip )
     const ScheduleNpcSaveState source = makeSaveSlotProbe( "blacksmith", 480 );
     vector<uint8>              bytes;
     SW_ASSERT_TRUE( SaveGameSerializer::writeBytes( source, bytes ) );
-    (void)store.submitWrite( "save/probe", bytes, LocalStoreWriteOptions{} );
+    (void)store.submitWrite( "save/probe", bytes, LocalStoreWriteOptions{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
 
-    (void)store.submitRead( "save/probe" );
+    (void)store.submitRead( "save/probe" ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     const LocalStoreCompletion read = takeOnlyCompletion( store );
     SW_ASSERT_TRUE( read._result == LocalStoreResult::Ok );
     ScheduleNpcSaveState loaded{};
@@ -402,13 +402,13 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameSlotTamperingIsCorrupt )
     const ScheduleNpcSaveState source = makeSaveSlotProbe( "guard", 1320 );
     vector<uint8>              bytes;
     SW_ASSERT_TRUE( SaveGameSerializer::writeBytes( source, bytes ) );
-    (void)store.submitWrite( "save/guard", bytes, LocalStoreWriteOptions{} );
+    (void)store.submitWrite( "save/guard", bytes, LocalStoreWriteOptions{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
 
     vector<uint8> envelopeBytes;
     SW_ASSERT_TRUE( database.findEnvelope( "save/guard", envelopeBytes ) );
     SW_ASSERT_TRUE( database.modifyEnvelopeByte( "save/guard", envelopeBytes.size() / 2, 0xFF ) ); // 몸 가운데
-    (void)store.submitRead( "save/guard" );
+    (void)store.submitRead( "save/guard" );                                                        // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Corrupt );
 }
 
@@ -426,7 +426,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameBytesCarryNoHeaderOfTheirOwn )
 
     MemoryLocalDatabase database;
     MemoryLocalStore    store( &database, LocalSealContext{} );
-    (void)store.submitWrite( "envelope", bytes, LocalStoreWriteOptions{} );
+    (void)store.submitWrite( "envelope", bytes, LocalStoreWriteOptions{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
     vector<uint8> envelopeBytes;
     SW_ASSERT_TRUE( database.findEnvelope( "envelope", envelopeBytes ) );
@@ -445,7 +445,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameUserFileRoundTripsThroughASlot )
     SW_ASSERT_TRUE( presets.saveToSlot( store, "user/presets", LocalStoreWriteOptions{} ) != 0 );
     SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
 
-    (void)store.submitRead( "user/presets" );
+    (void)store.submitRead( "user/presets" ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     LocalStoreCompletion      read = takeOnlyCompletion( store );
     UserAppearancePresetStore loaded;
     SW_ASSERT_TRUE( loaded.loadFromCompletion( read ) );
@@ -2009,7 +2009,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
 {
     InputManager input;
-    input.initialize();
+    SW_EXPECT_TRUE( input.initialize() );
     InputMap map;
     map.setInputManager( &input );
 
@@ -2049,7 +2049,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DelegateAnd2DVector )
 {
     InputManager input;
-    input.initialize();
+    SW_EXPECT_TRUE( input.initialize() );
     InputMap map;
     map.setInputManager( &input );
 
@@ -2081,7 +2081,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DelegateAnd2DVector )
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_Axis1DAndAnyInput )
 {
     InputManager input;
-    input.initialize();
+    SW_EXPECT_TRUE( input.initialize() );
     InputMap map;
     map.setInputManager( &input );
 
@@ -2182,7 +2182,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
     SW_EXPECT_TRUE( inputMap.isActionDown( "FireMissile" ) );
 
     // 4) 키보드 키로 슬롯 런타임 리매핑 검증
-    inputMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) );
+    SW_EXPECT_TRUE( inputMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) ) );
     pStickRaw->setTrigger( true ); // 커스텀 장치는 무시되어야 함
     inputManager.beginFrame( 0.016f );
     SW_EXPECT_FALSE( inputMap.isActionDown( "FireMissile" ) );

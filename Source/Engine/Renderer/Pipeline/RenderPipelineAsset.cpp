@@ -203,9 +203,17 @@ namespace sw
                 }
                 for ( const string& outputName : pass._listOutput )
                 {
-                    // 스왑체인은 파이프라인이 선언하는 첨부가 아니라 디바이스가 주는 백버퍼다.
+                    // 스왑체인은 파이프라인이 선언하는 첨부가 아니라 디바이스가 주는 백버퍼다. 포맷이 대상마다 달라 PSO 를 대상 포맷마다 만드는
+                    // 출력 패스(kOutputPass)만 쓸 수 있다 — 다른 패스가 쓰면 PSO 의 렌더 타깃 포맷을 정할 근거가 없다(짐작하지 않는다).
                     if ( outputName == kSwapchainOutputName )
+                    {
+                        if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
+                        {
+                            SW_LOG_ERROR( "[%#] pass '%#': only output passes (Present, Canvas) can write the Swapchain (type '%#')", sourcePath, pass._name, pass._type );
+                            ++issueCount;
+                        }
                         continue;
+                    }
                     if ( findAttachment( desc, outputName ) == nullptr )
                     {
                         SW_LOG_ERROR( "[%#] pass '%#': output '%#' is not in _attachments", sourcePath, pass._name, outputName );
@@ -395,11 +403,27 @@ namespace sw
                         continue;
 
                     uint32 sourceColorCount{ 0 };
+                    // 에뮬 백엔드(DX11 · GL)는 한 슬롯을 여러 역할이 나눠 쓴다(getEmulatedTextureSlot). 같은 슬롯의 두 역할을 함께 읽으면 실행이 하나만 걸어
+                    // 다른 하나가 조용히 빠지므로 로드에서 거절한다.
+                    RenderPassInputRole arrSlotRole[static_cast<uint32>( EmulatedTextureSlot::None )]{};
                     for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                     {
                         const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
                         if ( role == RenderPassInputRole::SourceColor )
                             ++sourceColorCount;
+                        const EmulatedTextureSlot slot = getEmulatedTextureSlot( role );
+                        if ( slot != EmulatedTextureSlot::None )
+                        {
+                            RenderPassInputRole& slotRole = arrSlotRole[static_cast<uint32>( slot )];
+                            if ( slotRole != RenderPassInputRole::Invalid && slotRole != role )
+                            {
+                                SW_LOG_ERROR( "[%#] pass '%#' (%#): inputs with roles %# and %# share emulated texture slot %# (DX11 · GL) - only one can be bound",
+                                              sourcePath, pass._name, pass._type, getRenderPassInputRoleName( slotRole ), getRenderPassInputRoleName( role ),
+                                              static_cast<uint32>( slot ) );
+                                ++issueCount;
+                            }
+                            slotRole = role;
+                        }
                         if ( pContract->reads( role ) )
                             continue;
                         SW_LOG_ERROR( "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",

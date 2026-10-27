@@ -118,6 +118,6 @@ namespace sw
          * @details 간선은 "A 의 조건을 B 가 채울 수 있다" 는 뜻이다. A 가 요구하는 세트의 조각이나 A 가 요구하는 태그를 가진 아이템이 B 가 된다.
          *          조건이 없는 아이템은 경로를 연결하지 않는다. 그냥 끼면 되기 때문이다. 자기 자신으로 가는 간선은 세지 않는다. 조건은 자기를 낀 상태로 판정하기 때문이다.
          */
-        static bool findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle );
+        [[nodiscard]] static bool findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle );
     };
 } // namespace sw

@@ -46,7 +46,7 @@ namespace sw
          * @brief 워커 없이 디바이스와 렌더러를 붙입니다(GT 에서 바로 실행합니다).
          * @details submit() 이 부르는 스레드에서 executePacket 합니다.
          */
-        bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+        [[nodiscard]] bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
         /**
          * @brief 전용 워커를 띄웁니다. bindGraphicsContext 는 그 스레드에서 실행됩니다.
          */
@@ -149,7 +149,7 @@ namespace sw
          * @details 남은 본문은 프레임 단계의 순서(컨텍스트 → beginFrame → 게임 뷰 → 미리보기 → 백버퍼 → 훅 → Present → 촬영)가 곧 의미라 더 나누지 않는다.
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
-        bool executeFrameBody( RenderFramePacket& packet );
+        [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet );
         /** @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다. */
         void drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream );
         /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 자리 잡음 · 간격 · 장 수)면 화면이나 지정 첨부를 파일로 씁니다. `endFrame` 뒤에 부릅니다. */

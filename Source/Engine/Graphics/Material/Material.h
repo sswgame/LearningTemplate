@@ -79,7 +79,7 @@ namespace sw
         Material& operator=( Material&& ) = delete;
 
         /** @brief 머티리얼 에셋을 로드하고 GPU 자원(상수 버퍼, 텍스처)을 올립니다. */
-        bool initialize( IRHIDevice* pRHI, string_view assetRelativePath );
+        [[nodiscard]] bool initialize( IRHIDevice* pRHI, string_view assetRelativePath );
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 GPU 자원을 반환합니다. */
         void releaseRHI( IRHIDevice* pRHI ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */

@@ -83,15 +83,15 @@ namespace sw
 
         if ( ticket >= static_cast<uint32>( _listSlot.size() ) )
         {
-            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 그 프레임은 배치 상수가 섞인다. 0번으로 되돌리면 안 된다 —
-            // 0번은 프레임 시드 전용이라(beginFrame 참고) 시드까지 덮어써 더 크게 망가진다.
-            // 경고는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
+            // 슬롯이 모자라면 빌려주지 않는다 — 앞 슬롯을 공유하면 그 프레임의 배치 상수가 조용히 섞인다. 부르는 쪽은 그 패스 · 타일을 그리지 않는다.
+            // 병렬 기록 중이라 여기서 늘릴 수 없다. 다음 프레임은 _highWater 로 키운다(ensurePassCbCapacityForFrame).
+            // 오류는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
             if ( _bExhaustedLogged.exchange( SW_TRUE ) == SW_FALSE )
             {
-                SW_LOG_WARNING( "Out of constant buffer slots (%#) - the remaining draws of this frame share the last slot and their per-batch constants get mixed.",
-                                static_cast<uint32>( _listSlot.size() ) );
+                SW_LOG_ERROR( "Out of constant buffer slots (%#) - the remaining passes of this frame that need a slot are not drawn; the next frame grows the ring",
+                              static_cast<uint32>( _listSlot.size() ) );
             }
-            ticket = static_cast<uint32>( _listSlot.size() ) - 1;
+            return false;
         }
 
         // 분배는 위의 atomic 커서가 하므로 락이 필요 없다. 다만 **const 로 읽어야** 한다. 비-const 접근은

@@ -120,7 +120,7 @@ namespace sw
                     ServiceStoreResult result = applyWrites( transaction, info );
                     if ( result != ServiceStoreResult::Ok )
                     {
-                        (void)_connection.executeScript( "ROLLBACK" );
+                        (void)_connection.executeScript( "ROLLBACK" ); // 이미 실패한 트랜잭션의 정리다 — 원래 오류를 돌려준다
                         if ( pOutInfo != nullptr )
                             *pOutInfo = info;
                         return result;

@@ -96,11 +96,11 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        bool  findShape( const hashed_string& itemID, GridItemShape& outShape ) const;
-        int32 findItemIndex( int32 instanceID ) const;
-        void  computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const;
-        void  stampItem( const GridItem& item, int32 value );
-        void  eraseItemAt( size_t itemIndex );
+        [[nodiscard]] bool findShape( const hashed_string& itemID, GridItemShape& outShape ) const;
+        int32              findItemIndex( int32 instanceID ) const;
+        void               computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const;
+        void               stampItem( const GridItem& item, int32 value );
+        void               eraseItemAt( size_t itemIndex );
 
         vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열
         vector<GridItem> _listItem; ///< 놓은 순서

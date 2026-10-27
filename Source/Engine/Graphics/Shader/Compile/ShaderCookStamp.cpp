@@ -508,7 +508,7 @@ namespace sw
                     appendProblem( outListProblem, "%#/shaders: the resource priority list is missing a shader include root domain (engine, common)", domain );
                     return;
                 }
-                (void)findShadowedInDir( resourceRoot, listPriority, shadersDir, outListProblem );
+                (void)findShadowedInDir( resourceRoot, listPriority, shadersDir, outListProblem ); // 가려진 헤더는 outListProblem 에 문제로 적힌다
                 vector<StampedSource> listSource;
                 if ( collectStampedSources( shadersDir, listSource ) == false )
                 {

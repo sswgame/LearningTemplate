@@ -27,7 +27,7 @@ namespace sw
             {
             }
 
-            bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 int32 sweepIntervalMs = static_cast<int32>( _settings._sweepIntervalMs );
                 if ( entry.readOptions( {

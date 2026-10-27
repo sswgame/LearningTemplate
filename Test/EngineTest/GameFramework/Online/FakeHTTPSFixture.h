@@ -62,8 +62,8 @@ namespace test
             transportSettings._ioThreadCount = 0;
             sw::HTTPServerConfig serverSettings;
             serverSettings._pTLSContext = _serverContext.get();
-            (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, pHandler );
-            (void)_client.initialize( _network.createTransport(), transportSettings, sw::HTTPClientConfig{} );
+            (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, pHandler ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_client.initialize( _network.createTransport(), transportSettings, sw::HTTPClientConfig{} );   // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
@@ -73,7 +73,7 @@ namespace test
             sw::unique_ptr<sw::HTTPClient> client = sw::make_unique<sw::HTTPClient>();
             sw::StreamTransportConfig      transportSettings;
             transportSettings._ioThreadCount = 0;
-            (void)client->initialize( _network.createTransport(), transportSettings, sw::HTTPClientConfig{} );
+            (void)client->initialize( _network.createTransport(), transportSettings, sw::HTTPClientConfig{} ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             client->registerTLSContext( "localhost", _clientContext.get() );
             return client;
         }

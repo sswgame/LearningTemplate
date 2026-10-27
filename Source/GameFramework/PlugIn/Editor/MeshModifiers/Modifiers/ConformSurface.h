@@ -66,7 +66,7 @@ namespace sw::editor
          * @brief 가장 가까운 교차를 찾습니다(양면). @p inoutListScratch 는 부르는 스레드가 가진 후보 버퍼입니다.
          * @details `SurfaceBvh::findNearestHit` 와 같은 규칙이다. 상태를 바꾸지 않으므로 스크래치만 다르면 여러 스레드가 동시에 물어도 된다.
          */
-        bool findNearestHit( const float3& origin, const float3& direction, float32 maxDistance, vector<SlotHandle>& inoutListScratch, GeometryRayHit& outHit ) const
+        [[nodiscard]] bool findNearestHit( const float3& origin, const float3& direction, float32 maxDistance, vector<SlotHandle>& inoutListScratch, GeometryRayHit& outHit ) const
         {
             const float3 unitDirection = CharacterGeometryUtil::makeUnitOr( direction, float3::Zero );
             if ( unitDirection == float3::Zero )
@@ -101,7 +101,7 @@ namespace sw::editor
         }
 
         /** @brief @p maxDistance 안에서 가장 가까운 표면 점을 찾습니다. 스크래치 규칙은 `findNearestHit` 와 같습니다. */
-        bool findClosestPoint( const float3& point, float32 maxDistance, vector<SlotHandle>& inoutListScratch, GeometryClosestPoint& outClosest ) const
+        [[nodiscard]] bool findClosestPoint( const float3& point, float32 maxDistance, vector<SlotHandle>& inoutListScratch, GeometryClosestPoint& outClosest ) const
         {
             _tree.querySphere( point, maxDistance, inoutListScratch );
             bool    bFound              = false;

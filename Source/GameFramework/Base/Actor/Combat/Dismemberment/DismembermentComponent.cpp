@@ -276,7 +276,7 @@ namespace sw
         const PhysicsAsset*     pAsset    = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
         int32                   bodyIndex = hit._bodyIndex;
         if ( bodyIndex < 0 && pRagdoll != nullptr )
-            (void)pRagdoll->findHitZone( hit._body, bodyIndex );
+            (void)pRagdoll->findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
         const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= pAsset->_listBody.size();
         if ( bInvalidBodyRegion )
             return;

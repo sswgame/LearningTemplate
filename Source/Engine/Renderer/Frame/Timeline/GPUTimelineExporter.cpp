@@ -12,7 +12,7 @@ namespace sw
     namespace
     {
         /** @brief 슬롯 하나의 값을 GPU 시계 나노초로 바꿉니다. 음수(기록되지 않은 슬롯)면 false 입니다. */
-        bool findSlotNanos( const RHITimestampFrame& frame, uint32 slot, int64& outNanos )
+        [[nodiscard]] bool findSlotNanos( const RHITimestampFrame& frame, uint32 slot, int64& outNanos )
         {
             if ( slot >= frame._listMicro.size() )
                 return false;

@@ -31,6 +31,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
@@ -92,7 +93,7 @@ SW_TEST_CASE( RenderPassTest, UnitCubeMeshComponent )
 SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
 {
     sw::Scene scene( "CameraTestScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::CameraComponent* gameCam = scene.getActiveGameCamera();
     SW_EXPECT_TRUE( gameCam != nullptr );
@@ -512,6 +513,39 @@ SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
 }
 
 /**
+ * @brief [RenderPassTest] 입력 계약은 에뮬 백엔드(DX11 · GL)의 같은 텍스처 슬롯을 나눠 쓰는 두 역할을 함께 읽지 않는다
+ * @details 슬롯 표는 getEmulatedTextureSlot 하나다. 계약이 같은 슬롯의 두 역할을 허락하면 그 패스는 실행이 하나만 걸어 다른 하나가
+ *          조용히 빠진다(파이프라인 로드도 같은 규칙으로 거절하지만, 계약 표 자체가 그 조합을 허락하지 않아야 XML 로 쓸 길이 없다).
+ */
+SW_TEST_CASE( RenderPassTest, InputContractsNeverShareAnEmulatedTextureSlot )
+{
+    for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
+    {
+        const sw::RenderPassInputSignature* pContract = sw::findRenderPassInputSignature( static_cast<sw::RenderPassType>( typeIndex ) );
+        if ( pContract == nullptr )
+            continue;
+        sw::vector<sw::RenderPassInputRole> listRole;
+        for ( uint32 index = 0; index < pContract->_requiredCount; ++index )
+        {
+            listRole.push_back( pContract->_arrRequired[index] );
+        }
+        for ( uint32 index = 0; index < pContract->_optionalCount; ++index )
+        {
+            listRole.push_back( pContract->_arrOptional[index] );
+        }
+        for ( size_t first = 0; first < listRole.size(); ++first )
+        {
+            for ( size_t second = first + 1; second < listRole.size(); ++second )
+            {
+                const bool bShared = listRole[first] != listRole[second] &&
+                                     sw::getEmulatedTextureSlot( listRole[first] ) == sw::getEmulatedTextureSlot( listRole[second] );
+                SW_EXPECT_FALSE_MSG( bShared, ( "같은 에뮬 슬롯의 두 역할을 읽는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
+            }
+        }
+    }
+}
+
+/**
  * @brief [RenderPassTest] 패스 종류 표(RenderPassTypeInfo)는 RenderPassType 열거자마다 한 줄이고, 줄 순서가 값 순서다
  * @details 표의 크기(`kRenderPassTypeCount`)는 마지막 열거자로 정한다. 그 뒤에 열거자를 더하고 상수를 안 고치면 새 타입이
  *          Invalid 줄로 읽혀 PSO 도 실행도 조용히 빠진다 — 리플렉션이 아는 열거자 수와 대조해 막는다.
@@ -670,6 +704,20 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         pass._listOutput.push_back( "Swapchain" );
         res.getDesc()._listPass.push_back( pass );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    // 3-1-1) 출력 패스(kOutputPass)가 아닌 패스는 Swapchain 을 쓸 수 없다 — PSO 의 렌더 타깃 포맷을 정할 근거가 없다(RGBA8 로 짐작하지 않는다)
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment source{};
+        source._name = "SceneColor";
+        res.getDesc()._listAttachment.push_back( source );
+        sw::RenderGraphPassDesc pass{};
+        pass._name = "SkyToScreen";
+        pass._type = "Sky";
+        pass._listInput.push_back( "SceneColor" );
+        pass._listOutput.push_back( "Swapchain" );
+        res.getDesc()._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
     }
     // 3-2) 컬러를 그리는 패스(외곽선 껍질 · TAA · 일반 풀스크린)도 컬러 출력 선언이 없으면 오류다
     for ( const utf8* pType : { "MeshOutline", "TAA", "Tonemap" } )

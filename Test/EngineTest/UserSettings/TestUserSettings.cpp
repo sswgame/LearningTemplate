@@ -83,7 +83,7 @@ namespace
 </UserSettingsSchema>)";
 
         /** @brief 엔진 대상(전역 변수 표 · 오디오)을 걸고 테스트 스키마를 읽은 매니저를 세웁니다. */
-        static bool initializeWithSchema( sw::UserSettingsManager& outSettings, sw::IAudioService* pAudioService = nullptr )
+        [[nodiscard]] static bool initializeWithSchema( sw::UserSettingsManager& outSettings, sw::IAudioService* pAudioService = nullptr )
         {
             resetTestVariables();
             sw::UserSettingsTargets targets;

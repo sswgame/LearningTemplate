@@ -198,8 +198,8 @@ SW_TEST_CASE( NavMeshBakeTest, CookedAssetRoundTripsTilesByteForByte )
     SW_EXPECT_EQUAL( pFirst->getPolygonCount(), pLoaded->getPolygonCount() );
     sw::NavPath original;
     sw::NavPath loaded;
-    (void)pFirst->findPath( sw::float3{ 4.0f, 0.0f, 4.0f }, sw::float3{ 14.0f, 0.0f, 4.0f }, navtest::makeExtent(), filter, original );
-    (void)pLoaded->findPath( sw::float3{ 4.0f, 0.0f, 4.0f }, sw::float3{ 14.0f, 0.0f, 4.0f }, navtest::makeExtent(), filter, loaded );
+    (void)pFirst->findPath( sw::float3{ 4.0f, 0.0f, 4.0f }, sw::float3{ 14.0f, 0.0f, 4.0f }, navtest::makeExtent(), filter, original ); // 두 결과가 같은지 아래에서 비교한다
+    (void)pLoaded->findPath( sw::float3{ 4.0f, 0.0f, 4.0f }, sw::float3{ 14.0f, 0.0f, 4.0f }, navtest::makeExtent(), filter, loaded );  // 두 결과가 같은지 아래에서 비교한다
     SW_ASSERT_EQUAL( original._listPoint.size(), loaded._listPoint.size() );
     SW_EXPECT_NEAR_EQUAL( original.computeLength(), loaded.computeLength(), 1.0e-4f );
 

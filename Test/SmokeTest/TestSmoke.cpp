@@ -202,7 +202,7 @@ namespace sw
         class HandlerOnlyWindow final : public sw::IWindow
         {
         public:
-            bool                  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
+            [[nodiscard]] bool    initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
             void                  destroy() override {}
             bool                  processMessages() override { return true; }
             void                  waitForMessages( uint32 ) override {}                                    // 메시지가 오지 않는 창 — 기다릴 것이 없다

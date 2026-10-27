@@ -38,7 +38,7 @@ namespace sw
         void beginCommandList() override
         {
             if ( _pDevice != nullptr )
-                _pDevice->bindGraphicsContext();
+                (void)_pDevice->bindGraphicsContext(); // 못 잡으면 디바이스가 시한이 지난 뒤 오류로 남긴다(acquireGraphicsContextBlocking)
         }
         void endCommandList() override {}
         void writeTimestamp( uint32 slotIndex ) override

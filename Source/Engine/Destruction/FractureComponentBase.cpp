@@ -381,7 +381,7 @@ namespace sw
             }
 
         protected:
-            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); }
+            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); } // 모양을 있게만 한다 — 쓰는 쪽이 다시 찾는다
 
         private:
             PhysicsShapeHandle findLeafShape( uint32 leaf )
@@ -549,7 +549,7 @@ namespace sw
             }
 
         protected:
-            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); }
+            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); } // 모양을 있게만 한다 — 쓰는 쪽이 다시 찾는다
 
         private:
             PhysicsShapeHandle findLeafShape( uint32 leaf )

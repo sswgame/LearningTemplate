@@ -121,14 +121,14 @@ namespace
      * @param recordCb · pRecordData · recordSize 주면 리스트를 연 뒤 드로우 전에 `IRHICommandList::updateConstantBuffer` 로 그 상수버퍼를 갱신한다.
      * @return 성공 시 true. pso==0 이면 false.
      */
-    bool executeOffscreenPipelineSmoke( sw::IRHIDevice& device, sw::RHIPipelineStateHandle pso,
-                                        sw::RHIDescriptorIndex materialCb = sw::kInvalidDescriptorIndex,
-                                        uint32 width = 64, uint32 height = 64,
-                                        sw::vector<uint8>*     pOutPixels  = nullptr,
-                                        sw::RHITextureMipSpan* pOutLayout  = nullptr,
-                                        sw::RHIBufferHandle    recordCb    = 0,
-                                        const void*            pRecordData = nullptr,
-                                        uint32                 recordSize  = 0 )
+    [[nodiscard]] bool executeOffscreenPipelineSmoke( sw::IRHIDevice& device, sw::RHIPipelineStateHandle pso,
+                                                      sw::RHIDescriptorIndex materialCb = sw::kInvalidDescriptorIndex,
+                                                      uint32 width = 64, uint32 height = 64,
+                                                      sw::vector<uint8>*     pOutPixels  = nullptr,
+                                                      sw::RHITextureMipSpan* pOutLayout  = nullptr,
+                                                      sw::RHIBufferHandle    recordCb    = 0,
+                                                      const void*            pRecordData = nullptr,
+                                                      uint32                 recordSize  = 0 )
     {
         const bool bInvalidDrawArguments = pso == 0 || width == 0 || height == 0;
         if ( bInvalidDrawArguments )
@@ -201,7 +201,7 @@ namespace
         sw::RHIBufferHandle      _cb{ 0 };
         sw::RHIDescriptorIndex   _cbIndex{ sw::kInvalidDescriptorIndex };
 
-        bool initialize( sw::IRHIDevice& device, const float32 ( &arrColor )[4] )
+        [[nodiscard]] bool initialize( sw::IRHIDevice& device, const float32 ( &arrColor )[4] )
         {
             _pDevice   = &device;
             _pResource = device.getResourceFactory();

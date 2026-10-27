@@ -142,7 +142,7 @@ namespace sw
         if ( field.moveUnit( unitIndex, plan._moveCell ) && plan._bAttack == SW_TRUE )
         {
             SRPGCombatResult result;
-            (void)SRPGCombat::executeAttack( field, unitIndex, plan._weapon, plan._target, result );
+            (void)SRPGCombat::executeAttack( field, unitIndex, plan._weapon, plan._target, result ); // 결과는 result 로 넘긴다
             if ( pOutResult != nullptr )
                 *pOutResult = result;
         }

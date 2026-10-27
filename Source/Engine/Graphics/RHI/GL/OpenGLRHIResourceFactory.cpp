@@ -144,16 +144,9 @@ namespace sw
             static void* toPixelOffset( uint64 offsetBytes ) { return reinterpret_cast<void*>( static_cast<uintptr_t>( offsetBytes ) ); }
         };
 
-        /** @brief 텍스처 GL 이름과 면 FBO 이름들을 지웁니다. 0 인 이름은 건너뜁니다. 해제 큐에서 GL 컨텍스트가 있는 쪽에서 부릅니다. */
-        void deleteTextureNames( GLuint fboName, GLuint texName, const vector<uint32>& listSliceFbo )
+        /** @brief 텍스처 GL 이름과 복사용 FBO 이름을 지웁니다. 0 인 이름은 건너뜁니다. 해제 큐에서 GL 컨텍스트가 있는 쪽에서 부릅니다. */
+        void deleteTextureNames( GLuint fboName, GLuint texName )
         {
-            // 면 FBO 의 0 번은 `_fbo` 와 같다 — 1 번부터 지운다.
-            for ( size_t slice = 1; slice < listSliceFbo.size(); ++slice )
-            {
-                GLuint name = listSliceFbo[slice];
-                if ( name != 0 )
-                    glDeleteFramebuffers( 1, &name );
-            }
             if ( fboName != 0 )
             {
                 GLuint name = fboName;
@@ -785,37 +778,23 @@ namespace sw
         record._bUAV           = desc._bIsUnorderedAccess ? 1 : 0;
         record._reserved       = 0;
 
-        // 단일 타깃 FBO — 면마다 하나(면이 하나면 `_fbo` 하나).
-        const uint32 fboCount = ( desc._bIsRenderTarget || bDepth ) ? desc._arraySize : 0u;
-        for ( uint32 slice = 0; slice < fboCount; ++slice )
+        // 복사 · 블릿 원본/대상용 FBO — 컬러 렌더 타깃의 0 번 면 하나(copyTexture · blitToBackBuffer 가 읽는다). 렌더 패스는
+        // 합성 FBO(ensureCompositeFboMrt)만 쓰므로 면마다 · 깊이용 FBO 는 만들지 않는다.
+        if ( desc._bIsRenderTarget && bDepth == false )
         {
             GLuint fbo{ 0 };
             glGenFramebuffers( 1, &fbo );
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-            if ( bDepth )
-            {
-                const GLenum depthAttachment = ( desc._format == RHIFormat::D24_UNORM_S8_UINT )
-                                                 ? GL_DEPTH_STENCIL_ATTACHMENT
-                                                 : GL_DEPTH_ATTACHMENT;
-                OpenGLRHIDevice::attachTextureToFramebuffer( depthAttachment, record, slice );
-                glDrawBuffer( GL_NONE );
-                glReadBuffer( GL_NONE );
-            }
-            else
-                OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, slice );
+            OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, 0 );
             const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );
             if ( status != GL_FRAMEBUFFER_COMPLETE )
             {
-                SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#, slice %#) — texture kept without FBO.",
-                                static_cast<uint32>( status ), slice );
+                SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#) — texture kept without a copy FBO.", static_cast<uint32>( status ) );
                 glDeleteFramebuffers( 1, &fbo );
                 fbo = 0;
             }
-            if ( slice == 0 )
-                record._fbo = fbo;
-            if ( desc._dimension != RHITextureDimension::Texture2D )
-                record._listSliceFbo.push_back( fbo );
+            record._fbo = fbo;
         }
 
         // GPU 메모리 장부에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
@@ -854,9 +833,8 @@ namespace sw
                 ++compIt;
         }
 
-        const GLuint   fboName = owned._fbo;
-        const GLuint   texName = owned._texture;
-        vector<uint32> listSliceFbo{ owned._listSliceFbo };
+        const GLuint fboName = owned._fbo;
+        const GLuint texName = owned._texture;
 
         for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
         {
@@ -867,9 +845,9 @@ namespace sw
         }
 
         RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
-        auto             releaseCb = [fboName, texName, listSliceFbo, pLedger, texture]()
+        auto             releaseCb = [fboName, texName, pLedger, texture]()
         {
-            deleteTextureNames( fboName, texName, listSliceFbo );
+            deleteTextureNames( fboName, texName );
             // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
             pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };

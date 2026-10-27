@@ -435,7 +435,7 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
         ItemStackList runDrops;
         for ( int32 spawnIndex = 0; spawnIndex < 20; ++spawnIndex )
         {
-            (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops );
+            (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops ); // 드롭 목록만 본다
         }
         arrShard[runIndex] = runDrops.getItemCount( "shard" );
         SW_EXPECT_EQUAL( 100, geoOf( runWallet ) );

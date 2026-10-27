@@ -39,7 +39,7 @@ namespace
                 _bRunning = false;
                 ++_endCount;
             }
-            bool findBodyWorldTransform( float4x4& outWorldTransform ) const override
+            [[nodiscard]] bool findBodyWorldTransform( float4x4& outWorldTransform ) const override
             {
                 if ( _bRunning == false )
                     return false;

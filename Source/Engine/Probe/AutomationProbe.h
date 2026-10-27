@@ -128,8 +128,8 @@ namespace sw
     {
     public:
         /** @brief 등록합니다. 같은 이름이 이미 있으면 false 이고 등록하지 않습니다. */
-        static bool registerProbe( const AutomationProbeRegistration* pRegistration );
-        static void unregisterProbe( const AutomationProbeRegistration* pRegistration );
+        [[nodiscard]] static bool registerProbe( const AutomationProbeRegistration* pRegistration );
+        static void               unregisterProbe( const AutomationProbeRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationProbeRegistration* find( string_view name );
         /** @brief 탐침 하나를 읽습니다. 씬 탐침은 `_pManager` 만 쓰고 수를 냅니다. 값이 없으면 false 입니다. */

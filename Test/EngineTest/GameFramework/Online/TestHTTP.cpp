@@ -62,7 +62,7 @@ namespace
         {
         }
 
-        bool initialize( ITLSContext* pServerContext, int32 maxBodyBytes = HTTPConstant::kDefaultMaxBodyBytes )
+        [[nodiscard]] bool initialize( ITLSContext* pServerContext, int32 maxBodyBytes = HTTPConstant::kDefaultMaxBodyBytes )
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;

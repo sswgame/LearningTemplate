@@ -68,7 +68,7 @@ namespace sw
         FitOperatorRegistry& operator=( const FitOperatorRegistry& ) = delete;
 
         /** @brief 연산을 올립니다. 같은 이름이 이미 있으면 올리지 않고 false 입니다. */
-        bool registerOperator( unique_ptr<IFitOperator> fitOperator );
+        [[nodiscard]] bool registerOperator( unique_ptr<IFitOperator> fitOperator );
         /** @brief 이름의 연산입니다. 없으면 nullptr 입니다. */
         const IFitOperator* findOperator( const hashed_string& name ) const;
         /** @brief 기본 연산 넷(`Shrink`, `Push`, `Cut`, `Report`)을 등록합니다. */

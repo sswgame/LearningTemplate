@@ -42,9 +42,9 @@ SW_TEST_CASE( EphemeralStoreRouterTest, RepliesGoOnlyToTheirOwnDelegate )
     RouterRecorder     first;
     RouterRecorder     second;
     const Subscription owner = router.openReplyOwner();
-    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ), owner );
-    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ), owner );
-    router.submit( EphemeralRequest::makeErase( "nothing" ) ); // 답을 보지 않는 쓰기 — 기다리는 답에 들지 않는다
+    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ), owner ); // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
+    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ), owner );                       // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
+    router.submit( EphemeralRequest::makeErase( "nothing" ) );                                                                                                               // 답을 보지 않는 쓰기 — 기다리는 답에 들지 않는다
     SW_EXPECT_EQUAL( router.getPendingCount(), 2 );
 
     (void)router.pump();
@@ -71,12 +71,12 @@ SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeave
     const Subscription secondSubscription = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &second ) );
     second._pSubscriptionToDrop           = &firstSubscription; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
 
-    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) );
+    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     (void)router.pump();
     SW_EXPECT_EQUAL( first._listMessage.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( second._listMessage.size(), size_t( 1 ) );
 
-    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 8 } ) );
+    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 8 } ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     (void)router.pump();
     SW_EXPECT_EQUAL( first._listMessage.size(), size_t( 1 ) );  // 빠졌다
     SW_EXPECT_EQUAL( second._listMessage.size(), size_t( 2 ) ); // 채널은 아직 열려 있다 — 앞에는 한 번만 구독했다
@@ -92,7 +92,7 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
         EphemeralStoreRouter router;
         router.initialize( &store );
         const Subscription owner = router.openReplyOwner();
-        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), owner );
+        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), owner ); // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
         router.shutdown();
         router.shutdown();
     }
@@ -111,15 +111,15 @@ SW_TEST_CASE( EphemeralStoreRouterTest, RequestsOfAReleasedOwnerAreNeverAnswered
     const Subscription keptOwner    = router.openReplyOwner();
     Subscription       droppedOwner = router.openReplyOwner();
     const uint64       answeredID   = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), keptOwner );
-    (void)router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), droppedOwner );
-    droppedOwner.reset(); // 그 몫으로 맡긴 답만 지워진다
+    (void)router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), droppedOwner ); // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
+    droppedOwner.reset();                                                                                                                                      // 그 몫으로 맡긴 답만 지워진다
     (void)router.pump();
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listReply[0]._requestID, answeredID );
 
     {
         const Subscription lateOwner = router.openReplyOwner();
-        (void)router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), lateOwner );
+        (void)router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), lateOwner ); // 요청 id 는 쓰지 않는다 — 답은 recorder 가 본다
     } // 주인이 먼저 내려간다
     router.shutdown();
     SW_EXPECT_EQUAL( recorder._listReply.size(), size_t( 1 ) ); // 내릴 때의 Unavailable 도 오지 않는다

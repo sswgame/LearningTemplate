@@ -379,7 +379,7 @@ namespace sw
         {
             (void)load._load.wait();
         }
-        (void)finishClipLoadsIfComplete();
+        (void)finishClipLoadsIfComplete(); // 위에서 모든 읽기를 기다렸다 — 끝났는지 다시 묻지 않는다
     }
 
     void SkeletalAnimatorComponent::onEndPlay()

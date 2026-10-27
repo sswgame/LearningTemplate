@@ -68,7 +68,7 @@ namespace test
              * @brief 명령줄 @p arguments 가 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl` 토큰)입니다. 스위치가 없으면(빌드 기본 · 배포본) false 다.
              * @details 스위치 철자는 쿠킹 표의 명령줄 이름이다(`TestRunOptions::getBackendName`).
              */
-            static bool findBackendSwitch( sw::string_view arguments, sw::RHIBackend& outBackend )
+            [[nodiscard]] static bool findBackendSwitch( sw::string_view arguments, sw::RHIBackend& outBackend )
             {
                 for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } )
                 {
@@ -476,8 +476,8 @@ namespace test
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = makeRunPath( sw::string( sw::kAutomationOutputFolder ) + "/" + outputStem + "_" + backend );
         if ( outputBase.empty() )
-            return AppRunOutcome::Failed; // 실행 쓰기 루트를 얻지 못한 이유는 `getRunFolder` 가 기록했다
-        (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::getDirectoryPart( outputBase ) );
+            return AppRunOutcome::Failed;                                                          // 실행 쓰기 루트를 얻지 못한 이유는 `getRunFolder` 가 기록했다
+        (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::getDirectoryPart( outputBase ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
         // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다(체인은 단계마다 보고가 있다).
         const sw::vector<sw::string> listStagePath = AppTestUtilInternal::splitScenarioArgument( scenarioArgument );
         (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 지난 실행이 없으면 지울 것이 없다 — 없는 것이 정상이라 실패를 따지지 않는다

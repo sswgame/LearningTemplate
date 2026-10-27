@@ -73,7 +73,7 @@ namespace sw
             }
 
             /** @brief ELF64 LE 인지 보고, 동적 섹션과 문자열 표의 파일 위치를 찾습니다. */
-            static bool findDynamic( const vector<uint8>& bytes, DynamicView& outView )
+            [[nodiscard]] static bool findDynamic( const vector<uint8>& bytes, DynamicView& outView )
             {
                 if ( bytes.size() < kElfHeaderSize )
                     return false;
@@ -165,7 +165,7 @@ namespace sw
             };
 
             /** @brief PE32+ 인지 보고, 섹션 표와 두 import 디렉터리의 RVA 를 찾습니다. */
-            static bool findPe( const vector<uint8>& bytes, PeView& outView )
+            [[nodiscard]] static bool findPe( const vector<uint8>& bytes, PeView& outView )
             {
                 const bool bNotPeImage = bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z';
                 if ( bNotPeImage )

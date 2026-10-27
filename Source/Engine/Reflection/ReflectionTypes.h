@@ -279,7 +279,7 @@ namespace sw
          * @param pSetBit   그 비트만 세우는 함수
          * @return 바이트 하나의 비트 하나를 찾았으면 true 입니다. 못 찾으면 오류를 남기고, 읽으면 false 이고 쓰면 무시되는 비트필드로 둡니다. 엉뚱한 바이트를 건드리지 않기 위해서입니다.
          */
-        bool resolveBitField( size_t ownerSize, SetBitFunction pSetBit );
+        [[nodiscard]] bool resolveBitField( size_t ownerSize, SetBitFunction pSetBit );
 
         /** @brief 인스턴스의 프로퍼티 값을 읽습니다(비트필드 지원). */
         template <typename T, typename ObjectType>

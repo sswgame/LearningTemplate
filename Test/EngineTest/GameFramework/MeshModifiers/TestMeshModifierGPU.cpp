@@ -296,7 +296,7 @@ SW_TEST_CASE( MeshModifierGPUTest, ProgramMatchesCPU )
 
         Scene gpuScene( "MeshModifierGPUScene" );
         Scene cpuScene( "MeshModifierCPUScene" );
-        bOk = bOk && gpuScene.ensureDefaultCameras() && cpuScene.ensureDefaultCameras();
+        bOk = bOk && gpuScene.pickActiveGameCamera() && cpuScene.pickActiveGameCamera();
         // 빛은 씬 데이터로 둔다 — 라이트가 없으면 앰비언트만 남아(키 라이트 폴백 없음, D2-13) 노멀만 바꾸는 변형(crumple)이 그림에 안 보인다.
         bOk                     = bOk && Internal::addKeyLight( gpuScene ) && Internal::addKeyLight( cpuScene );
         MeshComponent* pGPUMesh = bOk ? Internal::addMeshObject( gpuScene, "GPUModified" ) : nullptr;

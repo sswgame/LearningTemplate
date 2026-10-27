@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
@@ -51,7 +53,7 @@ namespace sw
         scDesc.Flags            = _swapChainFlags;
 
         Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain1;
-        if ( FAILED( pFactory->CreateSwapChainForHwnd( pQueue, _pHWnd, &scDesc, nullptr, nullptr, swapChain1.GetAddressOf() ) ) )
+        if ( isHrSuccess( pFactory->CreateSwapChainForHwnd( pQueue, _pHWnd, &scDesc, nullptr, nullptr, swapChain1.GetAddressOf() ), "CreateSwapChainForHwnd" ) == false )
             return false;
 
         swapChain1.As( &_swapChain );

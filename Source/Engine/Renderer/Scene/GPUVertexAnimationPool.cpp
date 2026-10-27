@@ -49,7 +49,8 @@ namespace sw
             const size_t needed = 1u + pAnimation->_listFrameVertex.size();
             if ( listElement.size() + needed > kMaxElementCount )
             {
-                SW_LOG_WARNING( "Vertex animation pool is full (%# elements) - remaining crowds draw in bind pose", kMaxElementCount );
+                // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다, GPUMeshBatch::_bDeformRefused).
+                SW_LOG_ERROR( "Vertex animation pool limit exceeded (%# elements, table needs %#) - that mesh is not drawn", kMaxElementCount, static_cast<uint32>( needed ) );
                 continue;
             }
             const uint32 base = static_cast<uint32>( listElement.size() );
@@ -68,8 +69,19 @@ namespace sw
         }
         constexpr RHIBufferUsage kUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             kStride = static_cast<uint32>( sizeof( float4 ) );
-        if ( _table.ensureCapacity( pDevice, kStride, _elementCount, kUsage, true, false, listElement.data() ) )
-            _table.upload( pDevice, listElement.data(), _elementCount * kStride );
+        // 풀은 집합이 바뀔 때마다 필요한 크기로 다시 만든다(ensureCapacity 가 키우고 옛 버퍼는 프레임 지연으로 놓는다). 못 만들면(장치 메모리 부족)
+        // 테이블 없이 번호만 나가지 않게 모든 메시를 풀에서 빼고 오류를 남긴다 — 그 배치들은 그리지 않는다. 다음 프레임에 다시 시도한다.
+        if ( _table.ensureCapacity( pDevice, kStride, _elementCount, kUsage, true, false, listElement.data() ) == false )
+        {
+            SW_LOG_ERROR( "Could not create the vertex animation table (%# elements) - meshes with vertex animation are not drawn", _elementCount );
+            _mapBase.clear();
+            _mapBaseByAnimation.clear();
+            _listBuilt.clear();
+            _listBuiltContentID.clear();
+            _elementCount = 0;
+            return;
+        }
+        _table.upload( pDevice, listElement.data(), _elementCount * kStride );
     }
 
     uint32 GPUVertexAnimationPool::baseOf( const Mesh* pMesh ) const

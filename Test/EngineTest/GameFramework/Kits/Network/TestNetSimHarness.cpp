@@ -267,7 +267,7 @@ namespace
             (void)deltaTime;
             if ( _bStarted == false )
                 return;
-            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
+            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } ); // 예약이 찼으면 이 틱의 입력만 빠진다 — 테스트는 양쪽이 같은 입력을 받는지만 본다
             vector<vector<uint8>> listInput;
             while ( _session.tryAdvance( listInput ) )
             {

@@ -57,7 +57,7 @@ namespace
             request._reason     = "test.grant";
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
             LedgerTransferOutcome outcome;
-            (void)Ledger::executeTransfer( _database, request, outcome );
+            (void)Ledger::executeTransfer( _database, request, outcome ); // 테스트 준비 — 결과는 outcome 에 남고 뒤 단언이 잔액으로 드러낸다
         }
 
         int64 gold( uint64 accountID )

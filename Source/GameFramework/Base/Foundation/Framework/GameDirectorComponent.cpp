@@ -104,7 +104,7 @@ namespace sw
             SW_LOG_WARNING( "GameDirector: _tickAfter does not point at another director - the rules stay on the main tick" );
             return;
         }
-        (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick );
+        (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick ); // 핸들은 쓰지 않는다 — id 로 다룬다
         (void)addSubTickPrerequisite( kRuleSubTick, pBefore->getRuleTickHandle() );
         _bRuleOnSubTick = SW_TRUE;
     }

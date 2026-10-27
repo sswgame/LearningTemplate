@@ -68,7 +68,7 @@ namespace sw
         static const utf8* getImageMarker();
 
         /** @brief 명령을 올립니다. 이름이 비었거나 이미 있으면 false 입니다. */
-        bool registerCommand( const DevCommandRegistration* pRegistration );
+        [[nodiscard]] bool registerCommand( const DevCommandRegistration* pRegistration );
         /** @brief 명령을 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterCommand( const DevCommandRegistration* pRegistration );
         /** @brief 이름(대소문자 무시)으로 명령을 찾습니다. */

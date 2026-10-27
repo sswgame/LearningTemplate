@@ -145,7 +145,7 @@ namespace sw
         /** @brief SetByCaller 수를 찾습니다. 넣지 않은 이름이면 비어 있습니다(부르는 쪽이 없음을 정한다). */
         [[nodiscard]] std::optional<float32> getSetByCallerMagnitude( const hashed_string& name ) const;
         /** @brief 쏜 쪽 어트리뷰트 스냅샷을 찾습니다. 없으면 false 를 반환하고 @p outValue 는 바뀌지 않습니다. */
-        bool findSourceAttribute( const hashed_string& name, float32& outValue ) const;
+        [[nodiscard]] bool findSourceAttribute( const hashed_string& name, float32& outValue ) const;
     };
 } // namespace sw
 

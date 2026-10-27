@@ -147,7 +147,7 @@ namespace sw
             inline static vector<MountedDiskDomain> _s_listDiskDomain{};
 
             /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키를 줍니다. */
-            static bool findMountedDiskDomain( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            [[nodiscard]] static bool findMountedDiskDomain( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
             {
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash == string_view::npos || firstSlash == 0 )
@@ -167,7 +167,7 @@ namespace sw
             }
 
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
-            static bool findDiskDomainID( const string& absolutePath, string& outID )
+            [[nodiscard]] static bool findDiskDomainID( const string& absolutePath, string& outID )
             {
                 const string            path = FileUtil::normalizePath( absolutePath );
                 std::scoped_lock<mutex> lock( _s_diskDomainMutex );

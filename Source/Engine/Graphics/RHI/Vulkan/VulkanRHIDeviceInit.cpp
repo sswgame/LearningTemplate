@@ -95,15 +95,15 @@ namespace sw
 
     bool VulkanRHIDevice::supportsValidationLayer()
     {
-        uint32 layerCount{ 0 };
-        vkEnumerateInstanceLayerProperties( &layerCount, nullptr );
-        vector<VkLayerProperties> availableLayers( layerCount );
-        vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
+        vector<VkLayerProperties> listAvailableLayer;
+        if ( enumerateVk( listAvailableLayer, "vkEnumerateInstanceLayerProperties", []( uint32* pCount, VkLayerProperties* pData )
+        { return vkEnumerateInstanceLayerProperties( pCount, pData ); } ) == false )
+            return false;
 
         for ( const utf8* pLayerName : s_listValidationLayers )
         {
             bool layerFound{ false };
-            for ( const VkLayerProperties& layerProperties : availableLayers )
+            for ( const VkLayerProperties& layerProperties : listAvailableLayer )
             {
                 if ( StringUtil::equals( pLayerName, layerProperties.layerName ) )
                 {
@@ -135,11 +135,10 @@ namespace sw
         vector<const utf8*> listExtension;
         listExtension.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
 
-        uint32 availableExtCount{ 0 };
-        vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, nullptr );
-        vector<VkExtensionProperties> listAvailableExt( availableExtCount );
-        if ( availableExtCount > 0 )
-            vkEnumerateInstanceExtensionProperties( nullptr, &availableExtCount, listAvailableExt.data() );
+        vector<VkExtensionProperties> listAvailableExt;
+        if ( enumerateVk( listAvailableExt, "vkEnumerateInstanceExtensionProperties", []( uint32* pCount, VkExtensionProperties* pData )
+        { return vkEnumerateInstanceExtensionProperties( nullptr, pCount, pData ); } ) == false )
+            return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
         if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
@@ -233,19 +232,20 @@ namespace sw
         createInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
 
-        CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger );
+        // 검증 메시지 수신은 진단용이라 실패해도 장치는 이어 간다 — 오류로 남기고 핸들을 비운다(파괴 쪽이 빈 핸들을 건너뛴다).
+        if ( isVkSuccess( CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger ), "vkCreateDebugUtilsMessengerEXT" ) == false )
+            _debugMessenger = VK_NULL_HANDLE;
     }
 
     bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter )
     {
-        uint32 deviceCount{ 0 };
-        vkEnumeratePhysicalDevices( _instance, &deviceCount, nullptr );
-        if ( deviceCount == 0 )
+        vector<VkPhysicalDevice> listDevice;
+        const bool               bEnumerated = enumerateVk( listDevice, "vkEnumeratePhysicalDevices", [this]( uint32* pCount, VkPhysicalDevice* pData )
+                      { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
+        if ( bEnumerated == false || listDevice.empty() )
             return false;
-        vector<VkPhysicalDevice> devices( deviceCount );
-        vkEnumeratePhysicalDevices( _instance, &deviceCount, devices.data() );
 
-        for ( const VkPhysicalDevice& device : devices )
+        for ( const VkPhysicalDevice& device : listDevice )
         {
             // 셰이더는 요구 판(VulkanRHIRequiredVersion) 타깃의 SPIR-V 로 쿠킹한다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
             VkPhysicalDeviceProperties candidateProperties{};
@@ -273,9 +273,10 @@ namespace sw
             {
                 if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
                 {
-                    VkBool32 presentSupport{ false };
-                    vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport );
-                    if ( presentSupport )
+                    VkBool32   presentSupport{ false };
+                    const bool bQueried = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport ),
+                                                       "vkGetPhysicalDeviceSurfaceSupportKHR" );
+                    if ( bQueried && presentSupport )
                     {
                         _graphicsQueueFamilyIndex = queueFamilyIndex;
                         _physicalDevice           = device;
@@ -437,11 +438,9 @@ namespace sw
         vector<const utf8*>           listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
         vector<VkExtensionProperties> listAvailableExt;
         {
-            uint32 availableExtCount{ 0 };
-            vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, nullptr );
-            listAvailableExt.resize( availableExtCount );
-            if ( availableExtCount > 0 )
-                vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, listAvailableExt.data() );
+            if ( enumerateVk( listAvailableExt, "vkEnumerateDeviceExtensionProperties", [this]( uint32* pCount, VkExtensionProperties* pData )
+            { return vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, pCount, pData ); } ) == false )
+                return false;
             _bMemoryBudget = VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
             if ( _bMemoryBudget == SW_TRUE )
                 listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
@@ -650,9 +649,10 @@ namespace sw
         if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
             return false;
         // 새 서피스를 이 큐가 프레젠트할 수 있는지 — 고를 때(pickPhysicalDevice) 본 것은 옛 서피스다.
-        VkBool32 bPresentSupported = VK_FALSE;
-        vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, _swapChain.getSurface(), &bPresentSupported );
-        if ( bPresentSupported == VK_FALSE )
+        VkBool32   bPresentSupported = VK_FALSE;
+        const bool bQueried          = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, _swapChain.getSurface(), &bPresentSupported ),
+                                                    "vkGetPhysicalDeviceSurfaceSupportKHR (recreated surface)" );
+        if ( bQueried == false || bPresentSupported == VK_FALSE )
         {
             SW_LOG_ERROR( "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
             return false;
@@ -685,7 +685,8 @@ namespace sw
             SW_LOG_WARNING( "Failed to create pipeline cache with saved data; falling back to empty cache." );
             createInfo.initialDataSize = 0;
             createInfo.pInitialData    = nullptr;
-            vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache );
+            if ( isVkSuccess( vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache ), "vkCreatePipelineCache (empty)" ) == false )
+                _pipelineCache = VK_NULL_HANDLE;
         }
         else if ( listCacheData.empty() == false )
         {
@@ -700,10 +701,11 @@ namespace sw
             return;
 
         size_t dataSize{ 0 };
-        if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ) == VK_SUCCESS && dataSize > 0 )
+        // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
         {
             vector<uint8> listCacheData( dataSize );
-            if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
+            if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
             {
                 const string cachePath = getVulkanPipelineCachePath();
                 if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&

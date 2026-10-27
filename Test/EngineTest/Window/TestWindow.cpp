@@ -94,7 +94,7 @@ SW_TEST_CASE( WindowTest, MainWindowSubsystemOwnsTheWindow )
 {
     test::ScopedEngineServiceOverride scope;
     sw::MainWindowSubsystem&          windowHost = scope.add( sw::make_unique<sw::MainWindowSubsystem>() );
-    (void)scope.bind();
+    (void)scope.bind(); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
     SW_EXPECT_TRUE( windowHost.getWindow() == nullptr );
 
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
@@ -261,7 +261,7 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
 
     test::ScopedEngineServiceOverride scope;
     sw::MainWindowSubsystem&          windowHost = scope.add( sw::make_unique<sw::MainWindowSubsystem>() );
-    (void)scope.bind();
+    (void)scope.bind(); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
 
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );

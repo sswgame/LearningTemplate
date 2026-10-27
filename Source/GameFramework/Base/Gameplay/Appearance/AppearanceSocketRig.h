@@ -107,8 +107,8 @@ namespace sw
          * @brief 이름(접두어 포함)의 소켓 월드 변환입니다. 몸은 @p bodyBones 와 @p listUnitWorld[0] 으로, 부품은 그 유닛의 월드 행렬로 계산합니다.
          * @param listUnitWorld 유닛 번호 순서의 월드 행렬입니다. 빠진 유닛의 소켓은 찾지 못합니다.
          */
-        bool findSocketWorldTransform( const hashed_string& fullName, const CharacterBoneArray& bodyBones, vector_reference<const float4x4> listUnitWorld,
-                                       float4x4& outWorldTransform ) const;
+        [[nodiscard]] bool findSocketWorldTransform( const hashed_string& fullName, const CharacterBoneArray& bodyBones, vector_reference<const float4x4> listUnitWorld,
+                                                     float4x4& outWorldTransform ) const;
 
         /** @brief 해석된 소켓 테이블입니다. */
         const ResolvedSocketTable& getTable() const { return _table; }

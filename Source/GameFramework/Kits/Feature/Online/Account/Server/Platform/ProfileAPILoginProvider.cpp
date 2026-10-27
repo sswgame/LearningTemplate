@@ -72,7 +72,7 @@ namespace sw
                 continue;
             }
             if ( _settings._displayNamePath.empty() == false )
-                (void)findPathText( document.getRoot(), _settings._displayNamePath, verification._displayName );
+                (void)findPathText( document.getRoot(), _settings._displayNamePath, verification._displayName ); // 선택 값이다 — 없으면 비워 둔다
         }
     }
 

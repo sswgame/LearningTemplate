@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -26,7 +28,12 @@ namespace sw
             return;
 
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
-        _passCbRing.initialize( _pDevice );
+        if ( _passCbRing.initialize( _pDevice ) == false )
+        {
+            // 준비 깃발을 세우지 않아 다음 프레임에 다시 시도한다 — 같은 실패를 프레임마다 남기지 않게 한 번만 알린다.
+            SW_LOG_ERROR_ONCE( "Pass constant buffer slots could not be created - passes stay unprepared" );
+            return;
+        }
         // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
         _passCbRing.getSeedSlot( _frameContext._passCb, _frameContext._passCbIndex );
 
@@ -54,6 +61,12 @@ namespace sw
             // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
                 continue;
+            // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 createOutputPSOVariants 가 만든다.
+            if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
+                continue;
+            // 컬러 포맷을 정할 근거(표의 고정 포맷 · 파이프라인의 출력 선언)가 없는 그래픽스 패스는 이 파이프라인에서 실행되지 않는다 — RGBA8 로 짐작해 만들지 않는다.
+            if ( info.hasFlag( RenderPassTraitFlag::kCompute ) == false && hasRenderTargetFormatSource( passType ) == false )
+                continue;
 
             RHIPipelineStateHandle pso{ 0 };
             if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
@@ -61,15 +74,22 @@ namespace sw
                 // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGPUCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGPUCulling 이 0 이지만 _bCompute 는 1 이다.
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) ? caps._bGPUCulling != SW_FALSE : caps._bCompute != SW_FALSE;
-                if ( bCapable )
-                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                if ( bCapable == false )
+                    continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
+                pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
             }
             else
             {
                 pso = createPSOForPassType( passType );
             }
-            if ( pso != 0 )
-                _pPSOCache->setEnginePSO( passType, pso );
+            // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고(drawFullscreen 은 PSO 없이 그리지 않는다) 여기서 이유를 한 번 남긴다.
+            if ( pso == 0 )
+            {
+                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
+                              ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                continue;
+            }
+            _pPSOCache->setEnginePSO( passType, pso );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
@@ -180,10 +200,11 @@ namespace sw
         _passCbRing.getSeedSlot( _frameContext._passCb, _frameContext._passCbIndex );
     }
 
-    void FrameRenderer::acquirePassCb( FramePassContext& context )
+    bool FrameRenderer::acquirePassCb( FramePassContext& context )
     {
         // 슬롯 하나를 잡는다. 패스 진입 때 한 번 부르고, 한 패스 안에서 상수가 바뀌는 반복(그림자 타일)은 반복마다 다시 부른다.
-        _passCbRing.acquire( context._passCb, context._passCbIndex );
+        // 못 잡으면(링 고갈) false — 부르는 쪽은 그 패스 · 타일을 그리지 않는다. 앞 슬롯으로 그리면 상수가 섞인다(링이 이유를 남겼다).
+        return _passCbRing.acquire( context._passCb, context._passCbIndex );
         // 값은 드로우 직전 ShaderParameterBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
         // (context._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
     }
@@ -200,15 +221,6 @@ namespace sw
     RHIPipelineStateHandle FrameRenderer::getEnginePSO( RenderPassType passType ) const
     {
         return _pPSOCache->findEnginePSO( passType );
-    }
-
-    RHIPipelineStateHandle FrameRenderer::findPassPSO( RenderPassType passType ) const
-    {
-        const RHIPipelineStateHandle pso = _pPSOCache->findEnginePSO( passType );
-        if ( pso != 0 )
-            return pso;
-        const RenderPassType fallbackType = getRenderPassTypeInfo( passType )._psoFallbackType;
-        return fallbackType != RenderPassType::Invalid ? _pPSOCache->findEnginePSO( fallbackType ) : 0;
     }
 
     void FrameRenderer::ensureMaterialFallbackBuffers()
@@ -272,10 +284,13 @@ namespace sw
 
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
-        const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas, RenderPassType::UpscaleRcas };
-        const RHIFormat      arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
-        for ( const RenderPassType passType : arrPassType )
+        // 출력 패스는 표의 kOutputPass 가 정한다.
+        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
+        for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
+            const RenderPassType passType = static_cast<RenderPassType>( typeIndex );
+            if ( getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
+                continue;
             for ( const RHIFormat format : arrTargetFormat )
             {
                 RHIPipelineStateHandle existing{ 0 };
@@ -283,7 +298,9 @@ namespace sw
                     continue;
                 const RHIFormat              arrRtvFormat[] = { format };
                 const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRtvFormat );
-                // 실패해도 기록한다. 0 이면 부르는 쪽이 폴백으로 간다(Present 는 blit, Canvas 는 그리지 않는다).
+                // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
+                if ( pso == 0 )
+                    SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );
                 _pPSOCache->setOutputPSO( passType, format, pso );
             }
         }
@@ -295,17 +312,11 @@ namespace sw
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 createOutputPSOVariants 가 셋업에서 만든다.
-        if ( targetFormat == RHIFormat::Unknown )
-            return getEnginePSO( passType );
+        // 셋업에 없는 포맷(장치가 알리지 않은 Unknown 포함)의 대상은 설정 결함이다 — 다른 포맷의 PSO · 복사로 대신 그리지 않고 멈춘다(createOutputPSOVariants 의 목록에 더한다).
         RHIPipelineStateHandle pso{ 0 };
-        if ( _pPSOCache->findOutputPSO( passType, targetFormat, pso ) )
-            return pso;
-
-        if ( _bOutputPSOMissingLogged.exchange( 1 ) == 0 )
-        {
-            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType,
-                          static_cast<uint32>( targetFormat ) );
-        }
-        return getEnginePSO( passType );
+        const bool             bFound = _pPSOCache->findOutputPSO( passType, targetFormat, pso ) && pso != 0;
+        if ( bFound == false )
+            SW_FATAL( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType, static_cast<uint32>( targetFormat ) );
+        return pso;
     }
 } // namespace sw

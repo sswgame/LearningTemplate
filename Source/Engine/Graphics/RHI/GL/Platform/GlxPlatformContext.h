@@ -20,8 +20,8 @@ namespace sw
         GlxPlatformContext();
         ~GlxPlatformContext() override;
 
-        bool initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles ) override;
-        void destroy() override;
+        [[nodiscard]] bool initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles ) override;
+        void               destroy() override;
 
         bool makeCurrent() override;
         bool isCurrent() const override;

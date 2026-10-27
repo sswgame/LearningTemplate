@@ -151,7 +151,7 @@ namespace sw
         }
 
         // 놀고 있던 작업은 전송 펜스를 지난 것만 돌아온다 — 얼로케이터를 곧바로 Reset 해도 GPU 가 읽지 않는다.
-        const HRESULT resetHr = FAILED( outJob._allocator->Reset() ) ? E_FAIL : outJob._list->Reset( outJob._allocator.Get(), nullptr );
+        const HRESULT resetHr = isHrSuccess( outJob._allocator->Reset(), "Reset" ) == false ? E_FAIL : outJob._list->Reset( outJob._allocator.Get(), nullptr );
         if ( FAILED( resetHr ) )
         {
             SW_LOG_ERROR( "Failed to reset a pooled D3D12 transfer command allocator or list (DeviceRemoved=0x%#)", static_cast<uint32>( _device->GetDeviceRemovedReason() ) );

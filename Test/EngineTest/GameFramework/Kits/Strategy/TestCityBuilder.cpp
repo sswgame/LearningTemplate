@@ -46,7 +46,7 @@ namespace
         Wallet         _wallet;     ///< 도시가 빌린 금고
         int32          _monthIndex{ 0 };
 
-        bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
+        [[nodiscard]] bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
         {
             if ( _catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) == false )
                 return false;

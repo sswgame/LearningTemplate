@@ -231,17 +231,17 @@ namespace sw
         void             executeRun();
         void             switchTo( int32 side, int32 partyIndex );
         /** @brief 행동 전 상태이상(수면, 얼음, 마비)을 처리합니다. 행동할 수 있으면 true 를 반환합니다. */
-        bool    resolveStatusBeforeAct( int32 side );
-        void    applyStatus( int32 targetSide, MonsterStatus status );
-        void    applyStatChange( int32 targetSide, MonsterStat stat, int32 stages );
-        void    applyDamage( int32 side, int32 amount, MonsterBattleEvent::Kind kind, const hashed_string& id );
-        void    handleFaint( int32 side );
-        void    awardExp( const MonsterInstance& defeated );
-        void    applyEndOfRound();
-        int32   computeStatWithStage( int32 side, const MonsterInstance& monster, MonsterStat stat, bool bCritical, bool bAttacker ) const;
-        float32 computeWeatherMultiplier( const hashed_string& moveType ) const;
-        int32   findFirstUsable( int32 side ) const;
-        void    setOutcome( MonsterBattleOutcome outcome );
+        [[nodiscard]] bool resolveStatusBeforeAct( int32 side );
+        void               applyStatus( int32 targetSide, MonsterStatus status );
+        void               applyStatChange( int32 targetSide, MonsterStat stat, int32 stages );
+        void               applyDamage( int32 side, int32 amount, MonsterBattleEvent::Kind kind, const hashed_string& id );
+        void               handleFaint( int32 side );
+        void               awardExp( const MonsterInstance& defeated );
+        void               applyEndOfRound();
+        int32              computeStatWithStage( int32 side, const MonsterInstance& monster, MonsterStat stat, bool bCritical, bool bAttacker ) const;
+        float32            computeWeatherMultiplier( const hashed_string& moveType ) const;
+        int32              findFirstUsable( int32 side ) const;
+        void               setOutcome( MonsterBattleOutcome outcome );
 
         Side                            _arrSide[kSideCount];
         EventBuffer<MonsterBattleEvent> _eventBuffer;

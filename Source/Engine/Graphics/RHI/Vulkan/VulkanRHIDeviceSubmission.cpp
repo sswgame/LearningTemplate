@@ -403,12 +403,13 @@ namespace sw
             reportQueueResult( static_cast<int32>( vkWaitForFences( _device, 1, &_listImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX ) ), "beginFrame: vkWaitForFences (image in flight)" );
         _listImagesInFlight[imageIndex] = _listInFlightFence[_currentFrame];
 
-        vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] );
-        vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 );
+        // 이 셋은 메모리 부족으로만 실패한다(장치 분실은 돌려주지 않는다). 실패한 버퍼에 기록하면 제출이 검증 오류 · 크래시라 멈춘다.
+        requireVk( vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] ), "beginFrame: vkResetFences" );
+        requireVk( vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 ), "beginFrame: vkResetCommandBuffer" );
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
+        requireVk( vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
         // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGPUTimestampSlot );
@@ -465,7 +466,7 @@ namespace sw
             vkCmdEndRenderPass( _activeFrameBuffer );
             _recordingState._bRenderPassActive = SW_FALSE;
         }
-        vkEndCommandBuffer( _activeFrameBuffer );
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "endFrame: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
 
         VkSubmitInfo submitInfo{};
@@ -656,10 +657,10 @@ namespace sw
         ++_frameSegmentCursor;
 
         // 이 프레임 슬롯의 펜스를 beginFrame 에서 이미 기다렸으므로 곧바로 Reset 해도 안전하다.
-        vkResetCommandBuffer( segment, 0 );
+        requireVk( vkResetCommandBuffer( segment, 0 ), "frame segment: vkResetCommandBuffer" );
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        vkBeginCommandBuffer( segment, &beginInfo );
+        requireVk( vkBeginCommandBuffer( segment, &beginInfo ), "frame segment: vkBeginCommandBuffer" );
         return segment;
     }
 
@@ -717,7 +718,7 @@ namespace sw
             vkCmdEndRenderPass( _activeFrameBuffer );
             _recordingState._bRenderPassActive = SW_FALSE;
         }
-        vkEndCommandBuffer( _activeFrameBuffer );
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "executeCommandList: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );
         noteSubmittedEventMarker( pList->getLastEventMarker() );

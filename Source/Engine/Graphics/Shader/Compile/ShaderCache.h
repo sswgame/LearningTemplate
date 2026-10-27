@@ -80,7 +80,7 @@ namespace sw
         ShaderCache& operator=( const ShaderCache& ) = delete;
 
         /** @brief 셰이더 캐시를 초기화합니다. */
-        bool initialize();
+        [[nodiscard]] bool initialize();
         /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
 

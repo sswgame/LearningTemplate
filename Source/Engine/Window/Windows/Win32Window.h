@@ -39,7 +39,7 @@ namespace sw
         virtual ~Win32Window() override;
 
         /** @brief Win32 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
-        bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
+        [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
 
         /** @brief 만든 창(HWND)을 파괴합니다. */
         void destroy() override;

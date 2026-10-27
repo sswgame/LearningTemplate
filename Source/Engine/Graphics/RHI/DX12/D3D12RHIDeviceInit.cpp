@@ -124,7 +124,7 @@ namespace sw
         D3D12_COMMAND_QUEUE_DESC queueDesc{};
         queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        if ( FAILED( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ), "CreateCommandQueue" ) == false )
             return false;
 
         _swapChain.setBarrierWatcher( this );
@@ -140,7 +140,7 @@ namespace sw
         rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRtvs;
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if ( FAILED( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
@@ -149,14 +149,14 @@ namespace sw
         dsvHeapDesc.NumDescriptors = kMaxOffscreenDsvs;
         dsvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if ( FAILED( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
         cbvHeapDesc.NumDescriptors = kMaxShaderVisibleDescriptors;
         cbvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         cbvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        if ( FAILED( _device->CreateDescriptorHeap( &cbvHeapDesc, IID_PPV_ARGS( _cbvHeap.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &cbvHeapDesc, IID_PPV_ARGS( _cbvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
@@ -170,7 +170,7 @@ namespace sw
         offlineHeapDesc.NumDescriptors = kOfflineDescriptorCount;
         offlineHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         offlineHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if ( FAILED( _device->CreateDescriptorHeap( &offlineHeapDesc, IID_PPV_ARGS( _offlineViewHeap.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &offlineHeapDesc, IID_PPV_ARGS( _offlineViewHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
         {
             D3D12_SHADER_RESOURCE_VIEW_DESC nullSrv{};
@@ -213,7 +213,7 @@ namespace sw
 
         for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
         {
-            if ( FAILED( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ) ) )
+            if ( isHrSuccess( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
                 return false;
             // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다. 이름이 없으면
             // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
@@ -222,20 +222,22 @@ namespace sw
             _arrCommandAllocator[frameIndex]->SetName( arrName );
         }
 
-        if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
             return false;
 
-        _commandList->Close();
+        // 갓 만든 리스트는 열린 채라 닫아 둔다(첫 프레임이 Reset 으로 연다). 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다.
+        if ( isHrSuccess( _commandList->Close(), "ID3D12GraphicsCommandList::Close (initial)" ) == false )
+            return false;
         _frameStreamState._bRecording = SW_FALSE;
         _frameRing.reset();
 
         _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
 
-        if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _fenceValue = 1;
         // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
-        if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _transferFenceValue = 0;
         if ( initializeTransfers( desc ) == false )
@@ -327,7 +329,7 @@ namespace sw
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
-            _commandList->Close();
+            requireHr( _commandList->Close(), "ID3D12GraphicsCommandList::Close (resize)" );
             ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
             if ( _commandQueue != nullptr )
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );

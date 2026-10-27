@@ -28,6 +28,6 @@ namespace sw
         /** @brief 바디를 멈추고 시뮬레이션에서 뺍니다(트랜스폼을 따르게 돌린다). */
         virtual void endPhysics() = 0;
         /** @brief 지금 바디의 월드 변환입니다. 바디가 없으면 false 입니다. */
-        virtual bool findBodyWorldTransform( float4x4& outWorldTransform ) const = 0;
+        [[nodiscard]] virtual bool findBodyWorldTransform( float4x4& outWorldTransform ) const = 0;
     };
 } // namespace sw

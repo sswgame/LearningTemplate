@@ -49,7 +49,7 @@ namespace sw::editor
         ConfigHotReload& operator=( const ConfigHotReload& ) = delete;
 
         /** @brief 프로젝트의 `Config/` 를 감시하기 시작합니다. 폴더가 없으면 false 입니다. */
-        bool initialize();
+        [[nodiscard]] bool initialize();
         /** @brief 감시를 멈춥니다. */
         void shutdown();
         /** @brief 에디터 프레임마다 부릅니다(바뀐 파일을 다시 읽습니다). */

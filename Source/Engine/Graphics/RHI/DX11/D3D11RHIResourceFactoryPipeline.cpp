@@ -36,9 +36,9 @@ namespace sw
             ShaderCompileResult vsResult{};
             ShaderCompileResult psResult{};
             const bool          bShaderCreationFailed = RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||
-                                               FAILED( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ) ) ||
+                                               isHrSuccess( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ), "CreateVertexShader" ) == false ||
                                                ( request._bHasPixelShader != SW_FALSE &&
-                                                 FAILED( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ) ) );
+                                                 isHrSuccess( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ), "CreatePixelShader" ) == false );
             if ( bShaderCreationFailed )
             {
                 SW_LOG_WARNING( "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
@@ -57,7 +57,11 @@ namespace sw
                 arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
                 arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
             }
-            _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() );
+            if ( isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
+            {
+                SW_LOG_ERROR( "createPipelineState: CreateInputLayout failed '%#'", desc._vertexShaderPath.c_str() );
+                return 0;
+            }
         }
         if ( desc._computeShaderPath.empty() == false )
         {
@@ -71,8 +75,11 @@ namespace sw
                 csDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
             }
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess )
-                _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() );
+            if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
+            {
+                SW_LOG_ERROR( "createPipelineState: compute shader compile/create failed '%#'", desc._computeShaderPath.c_str() );
+                return 0;
+            }
         }
 
         D3D11_RASTERIZER_DESC rasterizerDesc{};
@@ -85,10 +92,13 @@ namespace sw
         // 가위는 항상 켠다. 뷰포트를 바인딩하는 곳(setViewport, beginRenderPass, beginFrame)이 가위도 뷰포트 전체로 함께 바인딩하므로
         // setScissorRect 를 부르지 않은 드로우는 지금과 같다(언리얼 D3D11 래스터라이저 상태와 같은 방식).
         rasterizerDesc.ScissorEnable = TRUE;
-        if ( _pDevice != nullptr )
-            _pDevice->_device->CreateRasterizerState( &rasterizerDesc, pso._rasterizerState.GetAddressOf() );
+        // 상태 객체를 못 만들면 PSO 를 만들지 않는다(핸들 0). 빈 상태로 등록하면 앞 드로우의 래스터 · 블렌드 · 깊이 상태가 남아 그 상태로 그린다.
+        if ( isHrSuccess( _pDevice->_device->CreateRasterizerState( &rasterizerDesc, pso._rasterizerState.GetAddressOf() ), "CreateRasterizerState" ) == false )
+        {
+            SW_LOG_ERROR( "createPipelineState: CreateRasterizerState failed '%#'", desc._vertexShaderPath.c_str() );
+            return 0;
+        }
 
-        if ( _pDevice != nullptr )
         {
             D3D11_BLEND_DESC blendDesc{};
             blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
@@ -102,13 +112,17 @@ namespace sw
                 blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
                 blendDesc.RenderTarget[0].BlendOpAlpha   = D3D11_BLEND_OP_ADD;
             }
-            _pDevice->_device->CreateBlendState( &blendDesc, pso._blendState.GetAddressOf() );
-
             D3D11_DEPTH_STENCIL_DESC dsDesc{};
-            dsDesc.DepthEnable    = ( desc._bEnableDepthTest != 0 ) ? TRUE : FALSE;
-            dsDesc.DepthWriteMask = ( desc._bEnableDepthWrite != 0 ) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
-            dsDesc.DepthFunc      = D3D11_COMPARISON_LESS_EQUAL;
-            _pDevice->_device->CreateDepthStencilState( &dsDesc, pso._depthStencilState.GetAddressOf() );
+            dsDesc.DepthEnable      = ( desc._bEnableDepthTest != 0 ) ? TRUE : FALSE;
+            dsDesc.DepthWriteMask   = ( desc._bEnableDepthWrite != 0 ) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+            dsDesc.DepthFunc        = D3D11_COMPARISON_LESS_EQUAL;
+            const bool bStateFailed = isHrSuccess( _pDevice->_device->CreateBlendState( &blendDesc, pso._blendState.GetAddressOf() ), "CreateBlendState" ) == false ||
+                                      isHrSuccess( _pDevice->_device->CreateDepthStencilState( &dsDesc, pso._depthStencilState.GetAddressOf() ), "CreateDepthStencilState" ) == false;
+            if ( bStateFailed )
+            {
+                SW_LOG_ERROR( "createPipelineState: CreateBlendState/CreateDepthStencilState failed '%#'", desc._vertexShaderPath.c_str() );
+                return 0;
+            }
         }
 
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
@@ -117,7 +131,8 @@ namespace sw
     RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint )
     {
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
-        if ( shaderPath.empty() == false )
+        if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(다른 백엔드와 같다)
+            return 0;
         {
             ShaderCompileDesc csDesc{};
             csDesc._filePath        = shaderPath;
@@ -125,7 +140,7 @@ namespace sw
             csDesc._stage           = ShaderStage::Compute;
             csDesc._targetFormat    = ShaderTargetFormat::DXBC_D3D11;
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
-            if ( res._bSuccess == false || FAILED( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ) ) )
+            if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
                 return 0;
         }
         return _pDevice->_pipelineStates.insert( std::move( pso ) );

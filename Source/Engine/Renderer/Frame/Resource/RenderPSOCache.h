@@ -68,7 +68,7 @@ namespace sw
          * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 방법입니다. 픽셀로는 안 보이는
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
-        bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        [[nodiscard]] bool findDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 셰이더 핫 리로드: 그 경로로 만든 레이아웃 캐시를 버립니다(PSO 는 부르는 쪽이 다시 만듭니다). */
         void invalidateLayoutsByShaderPath( string_view shaderPath );
         /** @brief 등록된 (PSO, 레이아웃) 모두를 복사해 반환합니다. 셋업에서 폴백 버퍼 stride 를 모을 때 씁니다. */
@@ -87,12 +87,12 @@ namespace sw
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
         void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
+        [[nodiscard]] bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /** @brief 모듈 패스(`RenderPassType::Module`) 하나의 PSO 를 패스의 모듈 이름으로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
         void setModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle pso );
         /** @brief 모듈 패스의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        bool findModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle& outPipelineState ) const;
+        [[nodiscard]] bool findModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 머티리얼 퍼뮤테이션 변형: 키는 (패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 컬 반전)

@@ -115,6 +115,10 @@ namespace sw
             }
         }
 
+        // 컴파일 · 생성에 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 레코드를 등록하면 부르는 쪽은 PSO 가
+        // 있는 줄 알고 그리다가 드로우 계약(PSO 없는 드로우는 멈춤)에 걸린다 — 0 이면 렌더러가 그 패스를 건너뛴다.
+        if ( pso == nullptr )
+            return 0;
         return _pDevice->_pipelineStates.insert( { pso } );
     }
 
@@ -146,6 +150,8 @@ namespace sw
             else
                 return 0;
         }
+        if ( pso == nullptr ) // 셰이더 경로가 비었다 — 빈 레코드를 등록하지 않는다
+            return 0;
         return _pDevice->_pipelineStates.insert( { pso } );
     }
 

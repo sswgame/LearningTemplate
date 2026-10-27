@@ -15,7 +15,7 @@ namespace sw
 
     void LedgerTransferWork::run( IServiceStoreConnection& connection )
     {
-        (void)Ledger::executeTransfer( connection, _request, _outcome );
+        (void)Ledger::executeTransfer( connection, _request, _outcome ); // 결과는 _outcome 에 담겨 complete 가 돌려준다
     }
 
     void LedgerTransferWork::complete()

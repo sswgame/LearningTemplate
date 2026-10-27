@@ -62,7 +62,7 @@ namespace sw
             }
 
             /** @brief 컨텍스트 파일 이름이면 세션 id 를 꺼냅니다(`crash_<세션>.txt` — `.stack.txt` · `.breadcrumbs.txt` 는 아니다). */
-            static bool findSessionOfContextFile( string_view fileName, string& outSessionID )
+            [[nodiscard]] static bool findSessionOfContextFile( string_view fileName, string& outSessionID )
             {
                 const bool bPrefix  = StringUtil::startsWith( fileName, CrashReportService::kBundlePrefix );
                 const bool bContext = StringUtil::endsWith( fileName, ".txt" ) && StringUtil::endsWith( fileName, ".stack.txt" ) == false &&

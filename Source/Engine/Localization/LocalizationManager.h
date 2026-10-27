@@ -142,7 +142,7 @@ namespace sw
          * @return 프로젝트를 로드했으면 true 입니다.
          * @details 언어 기본값은 코드에 두지 않는다 — 게임은 `GameSettings` 의 기본 · 폴백 언어를 넘긴다.
          */
-        bool initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage );
+        [[nodiscard]] bool initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage );
 
         // ------------------------------------------------------------------------------
         // 3) 언어 설정 및 조회

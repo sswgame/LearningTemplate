@@ -27,7 +27,7 @@ namespace sw
         /**
          * @brief 스플래시 창을 만들어 화면 가운데에 바로 띄웁니다.
          */
-        virtual bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) = 0;
+        [[nodiscard]] virtual bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) = 0;
 
         /** @brief 현재 진행 상황 텍스트와 진행률(0.0f ~ 1.0f)을 갱신하고 화면을 바로 다시 그립니다. */
         virtual void updateStatus( const utf8* pStatus, float32 progress = -1.0f ) = 0;

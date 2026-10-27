@@ -41,7 +41,7 @@ namespace sw::editor
             static constexpr float32 kDiameter = 26.0f; ///< 배지 지름(배율 1)
 
             /** @brief 컴포넌트의 월드 위치입니다. 씬 컴포넌트면 그것, 아니면 오브젝트의 주 씬 컴포넌트입니다. */
-            static bool findWorldPosition( GameObject& object, Component& component, float3& outPosition )
+            [[nodiscard]] static bool findWorldPosition( GameObject& object, Component& component, float3& outPosition )
             {
                 const SceneComponent* pScene = isA<SceneComponent>( &component ) ? static_cast<const SceneComponent*>( &component ) : object.getPrimarySceneComponent();
                 if ( pScene == nullptr )

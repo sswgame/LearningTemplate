@@ -150,9 +150,9 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     registration._providerID = "fake";
     registration._token      = "device-token";
     registration._locale     = "ko-KR";
-    (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
+    (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     registration._providerID = "Not Valid";
-    (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
+    (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == LiveOpsResult::Invalid ); // 규칙 밖은 저장소에 맡기기 전에 답한다

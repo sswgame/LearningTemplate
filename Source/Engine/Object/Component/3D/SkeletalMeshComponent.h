@@ -32,7 +32,7 @@ namespace sw
     public:
         explicit SkeletalMeshLODClient( SkeletalMeshComponent& owner );
 
-        bool                   findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
+        [[nodiscard]] bool     findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
         bool                   isRendered() const override;
         const SkeletonBoneLOD* findBoneLOD() const override;
         int32                  findMeshLODIndex() const override;
@@ -101,7 +101,7 @@ namespace sw
         /** @brief 스킨 팔레트(역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
         const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
         /** @brief 이름이 일치하는 본의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
-        bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
+        [[nodiscard]] bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
         /** @brief 포즈를 다시 만들게 합니다(쉬던 유닛도 다음 프레임에 한 번 처리합니다). */
         void markPoseDirty() { _bPoseDirty = SW_TRUE; }
         /**

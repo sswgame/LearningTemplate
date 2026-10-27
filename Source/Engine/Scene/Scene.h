@@ -39,7 +39,7 @@ namespace sw
          * @brief 기본 머티리얼을 얻고 기본 카메라 · 메시 기본값을 겁니다.
          * @details 매니저가 받는 씬은 받아들이는 길(`SceneManager::adoptScene`)이 부릅니다 — 매니저 밖에서 부르는 것은 단위 테스트뿐입니다.
          */
-        bool initialize( IRHIDevice* pRHIDevice );
+        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice );
 
         /**
          * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
@@ -95,8 +95,9 @@ namespace sw
          *          살아 있고 켜져 있으면 그것이, 아니면 레지스트리의 규칙(`CameraRegistry::selectCamera`, 역할 Game · 우선순위)이 고릅니다.
          *          매 프레임 다시 고르므로 나중에 생긴 더 높은 우선순위의 카메라 · 꺼진 카메라 · 역할이 바뀐 카메라를 따라갑니다. 이미 있는
          *          "GameCamera" 의 위치 · 렌즈는 건드리지 않습니다(만들 때만 기본값을 씁니다).
+         * @return 고른 카메라가 있으면 true 입니다(오브젝트 관리자가 없으면 false). 실패가 아니라 "골랐나" 이므로 버려도 됩니다 — 렌더 경로가 `getActiveGameCamera` 로 다시 봅니다.
          */
-        [[nodiscard]] bool ensureDefaultCameras();
+        bool pickActiveGameCamera();
 
         /** @brief 씬 이름을 설정합니다. */
         void setName( string_view name ) { _name = name; }
@@ -188,7 +189,7 @@ namespace sw
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
         vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        TComponentHandle<CameraComponent>      _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _activeGameCamera;     ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
         TComponentHandle<CameraComponent>      _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
         bool                                   _bAudioUpdateEnabled;  ///< `setAudioUpdateEnabled`
     };

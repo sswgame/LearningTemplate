@@ -397,17 +397,17 @@ namespace sw
         void      killUnit( RTSUnit& unit, RTSUnitID killerID );
         void      placeFootprint( const RTSUnit& unit, bool bBlocked );
         /** @brief 땅 격자를 지형, 남이 막은 땅, 서 있는 건물과 자원의 발자국으로 다시 칠합니다. */
-        void             repaintGrid();
-        void             startConstruction( RTSUnit& worker, RTSOrder& order );
-        void             completeProduction( RTSUnit& building );
-        bool             findSpawnPosition( const RTSUnit& building, float3& outPosition ) const;
-        RTSCommandResult evaluateCost( int32 player, const RTSUnitDef& def ) const;
-        void             payCost( RTSPlayer& player, const RTSUnitDef& def );
-        void             refundCost( RTSPlayer& player, const RTSUnitDef& def );
-        void             pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
-        FlowField*       acquireFlowField( const int2& goal );
-        void             releaseFlowField( const FlowField* pField );
-        int32            computeBucketIndex( const float3& position ) const;
+        void               repaintGrid();
+        void               startConstruction( RTSUnit& worker, RTSOrder& order );
+        void               completeProduction( RTSUnit& building );
+        [[nodiscard]] bool findSpawnPosition( const RTSUnit& building, float3& outPosition ) const;
+        RTSCommandResult   evaluateCost( int32 player, const RTSUnitDef& def ) const;
+        void               payCost( RTSPlayer& player, const RTSUnitDef& def );
+        void               refundCost( RTSPlayer& player, const RTSUnitDef& def );
+        void               pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
+        FlowField*         acquireFlowField( const int2& goal );
+        void               releaseFlowField( const FlowField* pField );
+        int32              computeBucketIndex( const float3& position ) const;
 
         NavGrid               _grid;
         NavGrid               _airGrid; ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다

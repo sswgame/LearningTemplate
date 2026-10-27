@@ -256,8 +256,8 @@ namespace
             transportSettings._ioThreadCount = 0;
             HTTPServerConfig serverSettings;
             serverSettings._pTLSContext = _serverContext.get();
-            (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler );
-            (void)_client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} );
+            (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} );        // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
@@ -498,10 +498,10 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     HTTPClient&       browserClient = fixture._client;
     HTTPClientRequest forged;
     forged._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=forged";
-    (void)browserClient.submitRequest( forged, kNowMs );
+    (void)browserClient.submitRequest( forged, kNowMs ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     HTTPClientRequest redirect;
     redirect._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=" + HTTPUtil::encodePercent( state );
-    (void)browserClient.submitRequest( redirect, kNowMs );
+    (void)browserClient.submitRequest( redirect, kNowMs ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     vector<PlatformLoginClientResult> listResult;
     vector<HTTPClientResponse>        listPage;
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
@@ -531,7 +531,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     const string      secondState = Internal::findQuery( browser._lastURL, "state" );
     HTTPClientRequest denied;
     denied._url = redirectUri + "?error=access_denied&state=" + HTTPUtil::encodePercent( secondState );
-    (void)browserClient.submitRequest( denied, kNowMs );
+    (void)browserClient.submitRequest( denied, kNowMs ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     listResult.clear();
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {

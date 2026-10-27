@@ -55,7 +55,7 @@ namespace sw
         static X11Window* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::X11 ? static_cast<X11Window*>( pWindow ) : nullptr; }
 
         /** @brief X11 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
-        bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
+        [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         /** @brief X11 창을 파괴합니다. */
         void destroy() override;
         /** @brief X11 이벤트를 처리합니다. 종료 요청이 있으면 false 를 반환합니다. */

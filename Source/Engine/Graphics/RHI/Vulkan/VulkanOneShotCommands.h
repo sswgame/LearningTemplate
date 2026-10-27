@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <vulkan/vulkan.h>
@@ -53,7 +54,12 @@ namespace sw
             VkCommandBufferBeginInfo beginInfo{};
             beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            vkBeginCommandBuffer( _commandBuffer, &beginInfo );
+            // 시작하지 못한 버퍼에 기록하면 검증 오류 · 드라이버 크래시다 — 풀에 돌려주고 무효로 둔다(부르는 쪽은 isValid 로 거른다).
+            if ( isVkSuccess( vkBeginCommandBuffer( _commandBuffer, &beginInfo ), "vkBeginCommandBuffer (one-shot)" ) == false )
+            {
+                vkFreeCommandBuffers( _device, _commandPool, 1, &_commandBuffer );
+                _commandBuffer = VK_NULL_HANDLE;
+            }
         }
 
         ~VulkanOneShotCommands()
@@ -84,7 +90,9 @@ namespace sw
 
             // 프레임 밖 버퍼 갱신 · 시계 읽기가 제출을 기다리는 지점이다(대기 계측). 제출 락 대기와 펜스 대기를 함께 잰다.
             SW_PROFILE_SCOPE( "RT.Upload.waitIdle" );
-            vkEndCommandBuffer( _commandBuffer );
+            _lastResult = vkEndCommandBuffer( _commandBuffer );
+            if ( isVkSuccess( _lastResult, "vkEndCommandBuffer (one-shot)" ) == false )
+                return false;
 
             VkFenceCreateInfo fenceInfo{};
             fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

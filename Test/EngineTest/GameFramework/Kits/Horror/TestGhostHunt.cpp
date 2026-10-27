@@ -106,7 +106,7 @@ namespace
         Wallet       _wallet; ///< 지갑(동전)
         GhostMansion _mansion;
 
-        bool initialize( uint32 seed )
+        [[nodiscard]] bool initialize( uint32 seed )
         {
             const bool bCatalogLoadFailed = _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) == false || _loot.loadFromXMLText( kGhostLootXML, "GhostHuntTest" ) == false ||
                                             _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false;

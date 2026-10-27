@@ -25,7 +25,7 @@ namespace sw
             }
 
             /** @brief 의존 이름을 노드 자리로 풉니다. 모르는 이름이면 false 입니다. */
-            static bool resolveDependencies( const vector<SubsystemNode>& listNode, uint32 nodeIndex, vector<uint32>& outListDependency, string& outError )
+            [[nodiscard]] static bool resolveDependencies( const vector<SubsystemNode>& listNode, uint32 nodeIndex, vector<uint32>& outListDependency, string& outError )
             {
                 for ( const utf8* const pDependencyName : listNode[nodeIndex]._listDependency )
                 {

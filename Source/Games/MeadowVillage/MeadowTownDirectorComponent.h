@@ -52,9 +52,9 @@ namespace sw
 
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다. 카탈로그가 없으면 false 입니다. */
-        static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state );
-        void        spawnTown( GameObjectManager& manager );
-        void        spawnCube( GameObjectManager& manager, const float3& position, const float4& color );
+        [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state );
+        void                      spawnTown( GameObjectManager& manager );
+        void                      spawnCube( GameObjectManager& manager, const float3& position, const float4& color );
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One object or creature view (a cube)" )

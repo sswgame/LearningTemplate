@@ -30,8 +30,8 @@ namespace sw
         static WaylandWindow* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland ? static_cast<WaylandWindow*>( pWindow ) : nullptr; }
 
         /** @brief 컴포지터에 붙어 최상위 창을 만듭니다. 컴포지터가 없거나 xdg-shell · 합성기가 없으면 오류를 남기고 false 입니다. */
-        bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
-        void destroy() override;
+        [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
+        void               destroy() override;
         /** @brief 쌓인 Wayland 이벤트를 처리합니다(막지 않는다). 종료 요청이면 false 입니다. */
         bool processMessages() override;
         /** @brief 보낼 요청을 내보내고 컴포지터 연결 소켓을 `poll` 로 기다립니다. */

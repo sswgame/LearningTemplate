@@ -36,7 +36,7 @@ namespace sw
             {
             }
 
-            bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 string catalogPath;
                 if ( entry.readOptions( {

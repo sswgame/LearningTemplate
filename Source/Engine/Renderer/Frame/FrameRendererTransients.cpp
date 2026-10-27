@@ -190,7 +190,7 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
-        if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
+        if ( updateViewTransients( _mainView, poolWidth, poolHeight ) )
         {
             publishRenderTargets();
             reportRenderTargetMemory();
@@ -202,7 +202,7 @@ namespace sw
         _capture.ensurePresent( _outputWidth, _outputHeight );
     }
 
-    bool FrameRenderer::ensureViewTransients( ViewTarget& view, uint32 width, uint32 height )
+    bool FrameRenderer::updateViewTransients( ViewTarget& view, uint32 width, uint32 height )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = getShadowMapResolution();

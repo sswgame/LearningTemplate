@@ -58,8 +58,13 @@ namespace sw
         vsInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vsInfo.codeSize = vsResult._bytecode.size();
         vsInfo.pCode    = reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
+        // 모듈을 못 만들면 PSO 도 만들지 않는다(핸들 0). 결과를 보지 않으면 빈 모듈로 파이프라인을 만들려다 검증 오류 · 드라이버 크래시가 된다.
         VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
-        vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule );
+        if ( vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS || vertShaderModule == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the vertex shader '%#'", desc._vertexShaderPath );
+            return 0;
+        }
 
         VkShaderModule fragShaderModule{ VK_NULL_HANDLE };
         if ( bHasPixelShader )
@@ -68,7 +73,12 @@ namespace sw
             psInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             psInfo.codeSize = psResult._bytecode.size();
             psInfo.pCode    = reinterpret_cast<const uint32*>( psResult._bytecode.data() );
-            vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule );
+            if ( vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS || fragShaderModule == VK_NULL_HANDLE )
+            {
+                vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
+                SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the pixel shader '%#'", desc._pixelShaderPath );
+                return 0;
+            }
         }
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
@@ -218,13 +228,19 @@ namespace sw
         pipelineInfo.subpass             = 0;
         pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
-        VkPipeline newPipeline;
-        if ( vkCreateGraphicsPipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline ) != VK_SUCCESS )
-            newPipeline = _pDevice->_pipeline;
+        VkPipeline     newPipeline{ VK_NULL_HANDLE };
+        const VkResult createResult = vkCreateGraphicsPipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline );
 
         vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
         if ( fragShaderModule != VK_NULL_HANDLE )
             vkDestroyShaderModule( _pDevice->_device, fragShaderModule, nullptr );
+
+        // 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 파이프라인을 등록해 두면 드로우가 다른 것으로 대신 그려진다.
+        if ( createResult != VK_SUCCESS || newPipeline == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: vkCreateGraphicsPipelines failed (%#) '%#'", static_cast<int32>( createResult ), desc._vertexShaderPath );
+            return 0;
+        }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         record._pipeline = newPipeline;
@@ -242,8 +258,8 @@ namespace sw
 
         if ( csResult._bSuccess == false )
         {
-            VulkanRHIDevice::VulkanPipelineStateRecord record{};
-            return _pDevice->_pipelineStates.insert( record );
+            SW_LOG_ERROR( "createComputePipelineState: shader compile failed '%#'", shaderPath );
+            return 0;
         }
 
         VkShaderModuleCreateInfo csInfo{};
@@ -270,11 +286,16 @@ namespace sw
         pipelineInfo.layout = _pDevice->_pipelineLayout;
         pipelineInfo.stage  = compShaderStageInfo;
 
-        VkPipeline newPipeline;
+        VkPipeline newPipeline{ VK_NULL_HANDLE };
         if ( vkCreateComputePipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline ) != VK_SUCCESS )
             newPipeline = VK_NULL_HANDLE;
 
         vkDestroyShaderModule( _pDevice->_device, compShaderModule, nullptr );
+        if ( newPipeline == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createComputePipelineState: vkCreateComputePipelines failed '%#'", shaderPath );
+            return 0;
+        }
 
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         record._pipeline = newPipeline;
@@ -286,7 +307,7 @@ namespace sw
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return;
-        if ( record._pipeline != VK_NULL_HANDLE && record._pipeline != _pDevice->_pipeline )
+        if ( record._pipeline != VK_NULL_HANDLE )
         {
             VkDevice   dev  = _pDevice->_device;
             VkPipeline pipe = record._pipeline;

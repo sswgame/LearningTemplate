@@ -435,11 +435,6 @@ namespace sw
             glDeleteTextures( 1, &_defaultTexture );
             _defaultTexture = 0;
         }
-        if ( _shaderProgram )
-        {
-            glDeleteProgram( _shaderProgram );
-            _shaderProgram = 0;
-        }
         if ( _vao )
         {
             glDeleteVertexArrays( 1, &_vao );
@@ -506,13 +501,6 @@ namespace sw
                 glDeleteTextures( 1, &record._texture );
                 record._texture = 0;
             }
-            for ( size_t slice = 1; slice < record._listSliceFbo.size(); ++slice )
-            {
-                GLuint name = record._listSliceFbo[slice];
-                if ( name != 0 )
-                    glDeleteFramebuffers( 1, &name );
-            }
-            record._listSliceFbo.clear();
             if ( record._fbo != 0 )
             {
                 glDeleteFramebuffers( 1, &record._fbo );
@@ -545,11 +533,6 @@ namespace sw
         {
             glDeleteVertexArrays( 1, &_meshVao );
             _meshVao = 0;
-        }
-        if ( _shaderProgram != 0 )
-        {
-            glDeleteProgram( _shaderProgram );
-            _shaderProgram = 0;
         }
         if ( _defaultSampler != 0 )
         {

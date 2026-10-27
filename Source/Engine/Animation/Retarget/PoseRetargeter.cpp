@@ -20,7 +20,7 @@ namespace sw
             /** @brief 파일 베이크의 샘플율(Hz)입니다. 임포트 규칙의 기본과 같습니다. */
             static constexpr float32 kBakeSampleRate = 30.0f;
 
-            static bool findBone( const Skeleton& skeleton, const hashed_string& name, const utf8* pSide, uint32& outBone )
+            [[nodiscard]] static bool findBone( const Skeleton& skeleton, const hashed_string& name, const utf8* pSide, uint32& outBone )
             {
                 const int32 boneIndex = skeleton.findBoneIndex( name );
                 if ( boneIndex < 0 )

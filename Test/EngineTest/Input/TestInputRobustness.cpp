@@ -347,7 +347,7 @@ SW_TEST_CASE( InputStressTest, InputMapBulkConflictResolutionStress )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
         sbName.append( "StressAction_" ).append( index );
         const sw::string actionName( sbName.view() );
-        inputMap.rebindWithResolution( sw::hashed_string( actionName ), sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
+        SW_EXPECT_TRUE( inputMap.rebindWithResolution( sw::hashed_string( actionName ), sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override ) );
     }
 
     SW_EXPECT_TRUE( inputMap.hasAction( "StressAction_0" ) );

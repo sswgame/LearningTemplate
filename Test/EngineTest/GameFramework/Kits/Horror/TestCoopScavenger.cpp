@@ -86,7 +86,7 @@ namespace
         WeatherSystem    _weather;     ///< 공유 날씨(원정이 빌린다)
         GameFlags        _flags;       ///< 공유 플래그(시설 문 잠금)
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             return _catalog.loadFromXMLText( kScavengerCatalogXML, "CoopScavengerTest" ) && _weatherCatalog.loadFromXMLText( kScavengerWeatherXML, "CoopScavengerTest" ) &&
                    _threatTable.loadFromXMLText( kScavengerThreatXML, "CoopScavengerTest" ) && _itemCatalog.loadFromXMLText( kScavengerItemXML, "CoopScavengerTest" ) &&

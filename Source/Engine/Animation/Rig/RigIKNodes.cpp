@@ -81,8 +81,8 @@ namespace sw
             }
 
             /** @brief 제한 이름을 사슬 인덱스로 옮기고, 레퍼런스 회전과 본 축(본에서 다음 사슬 본으로 가는 방향, 본 자기 공간)을 채웁니다. */
-            static bool bindLimits( const RigBindContext& context, const vector<LimitSpec>& listSpec, const vector<uint32>& listChainBone,
-                                    vector<RigJointLimit>& outListLimit )
+            [[nodiscard]] static bool bindLimits( const RigBindContext& context, const vector<LimitSpec>& listSpec, const vector<uint32>& listChainBone,
+                                                  vector<RigJointLimit>& outListLimit )
             {
                 outListLimit.assign( listChainBone.size(), RigJointLimit{} );
                 if ( listSpec.empty() )
@@ -140,7 +140,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 vector<uint32> listBone;
                 if ( context.findBones( { _rootName, _midName, _endName }, listBone, true ) == false || context.findTarget( _targetName, _target ) == false )
@@ -226,7 +226,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 return context.findBones( _listBoneName, _listBone, true ) && context.findTarget( _targetName, _target ) &&
                        RigIKNodesInternal::bindLimits( context, _listLimitSpec, _listBone, _listLimit );
@@ -295,7 +295,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _boneName, _bone ) == false || context.findTarget( _targetName, _target ) == false )
                     return false;
@@ -406,7 +406,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _pelvisName, _pelvis ) == false )
                     return false;
@@ -581,7 +581,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _pelvisName, _pelvis ) == false )
                     return false;
@@ -748,7 +748,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _pelvisName, _pelvis ) == false )
                     return false;

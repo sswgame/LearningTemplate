@@ -565,15 +565,16 @@ namespace sw
         const GlobalVariableRegistrar* pCurrent = pHead;
         while ( pCurrent != nullptr )
         {
-            registerVariable( pCurrent->_name,
-                              pCurrent->_type,
-                              pCurrent->_pData,
-                              pCurrent->_defaultValue,
-                              pCurrent->_description,
-                              pCurrent->_enumType,
-                              moduleName,
-                              pCurrent->_typeSize,
-                              pCurrent->_bTestOnly );
+            // 이름 중복 · 모르는 형식은 registerVariable 이 경고로 남긴다 — 나머지 변수는 이어서 등록한다.
+            (void)registerVariable( pCurrent->_name,
+                                    pCurrent->_type,
+                                    pCurrent->_pData,
+                                    pCurrent->_defaultValue,
+                                    pCurrent->_description,
+                                    pCurrent->_enumType,
+                                    moduleName,
+                                    pCurrent->_typeSize,
+                                    pCurrent->_bTestOnly );
             pCurrent = pCurrent->_pNext;
         }
     }

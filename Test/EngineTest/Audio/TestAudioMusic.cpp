@@ -39,7 +39,7 @@ namespace
 </AudioMusicDesc>)";
 
         /** @brief 기본 그래프(music 버스, 이펙트 없음)와 직류 클립을 올린 엔진입니다. */
-        static bool initializeEngine( sw::AudioEngine& engine )
+        [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine )
         {
             if ( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Stereo ) == false )
                 return false;

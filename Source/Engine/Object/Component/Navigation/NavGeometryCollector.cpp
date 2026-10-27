@@ -145,7 +145,7 @@ namespace sw
             }
 
             /** @brief 표면의 경계 상자입니다. 정하지 않았으면 false 입니다. */
-            static bool findSurfaceBox( const NavMeshSurfaceComponent* pSurface, AABB& outBox )
+            [[nodiscard]] static bool findSurfaceBox( const NavMeshSurfaceComponent* pSurface, AABB& outBox )
             {
                 if ( pSurface == nullptr )
                     return false;

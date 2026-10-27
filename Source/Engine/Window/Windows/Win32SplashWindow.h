@@ -32,10 +32,10 @@ namespace sw
         Win32SplashWindow();
         virtual ~Win32SplashWindow() override;
 
-        bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
-        void updateStatus( const utf8* pStatus, float32 progress = -1.0f ) override;
-        void setProgress( float32 progress ) override;
-        void dismiss() override;
+        [[nodiscard]] bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height ) override;
+        void               updateStatus( const utf8* pStatus, float32 progress = -1.0f ) override;
+        void               setProgress( float32 progress ) override;
+        void               dismiss() override;
 #if defined( SW_PLATFORM_WINDOWS )
         /**
          * @brief `WM_PAINT` 한 번을 그립니다. 창 프로시저가 `BeginPaint` 와 `EndPaint` 사이에서 부릅니다.

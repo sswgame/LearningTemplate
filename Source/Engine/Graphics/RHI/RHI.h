@@ -43,7 +43,7 @@ namespace sw
          * @param outBackend 명시했을 때만 채워집니다
          * @return 커맨드라인이 백엔드를 명시했으면 true
          */
-        static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
+        [[nodiscard]] static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
     };
 } // namespace sw
 
@@ -78,7 +78,7 @@ namespace sw
          * @param pSurface 스왑체인을 붙일 표면(보통 활성 `IWindow`)입니다. RHI 는 창 시스템을 모르므로 부르는 쪽이 넘깁니다.
          *                 백엔드 교체(`recreateDevice`)도 같은 표면을 다시 씁니다.
          */
-        bool initialize( IRenderSurface* pSurface );
+        [[nodiscard]] bool initialize( IRenderSurface* pSurface );
         /** @brief CLI 에 -vsync 가 없을 때 쓸 스왑체인 VSync 를 정합니다. initialize 전에 부릅니다. */
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync ? SW_TRUE : SW_FALSE; }
         /** @brief 디바이스를 종료하고 모듈을 언로드합니다. */

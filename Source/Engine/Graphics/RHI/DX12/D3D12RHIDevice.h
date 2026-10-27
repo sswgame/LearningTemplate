@@ -12,6 +12,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -158,7 +159,7 @@ namespace sw
         virtual ~D3D12RHIDevice() override;
 
         /** @brief Direct3D 12 디바이스, 커맨드 큐, DXGI 스왑체인, 힙 리소스를 초기화합니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;

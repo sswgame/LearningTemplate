@@ -134,7 +134,7 @@ namespace sw
         /** @brief 애니메이션 @p animation 의 재생 상태를 만듭니다(트랙을 해석한다). 시작 시각은 방향의 처음입니다. */
         ActiveAnimation makeActive( const UIAnimation& animation, float32 speed, uint32 loopCount, bool bReverse ) const;
         /** @brief 트랙을 위젯과 경로로 해석합니다(해석하지 못하면 경고하고 false). */
-        bool resolveTrack( const UIAnimation& animation, const UIAnimationTrack& track, ResolvedTrack& outTrack ) const;
+        [[nodiscard]] bool resolveTrack( const UIAnimation& animation, const UIAnimationTrack& track, ResolvedTrack& outTrack ) const;
         /** @brief 재생 하나를 @p deltaSeconds 만큼 진행합니다(이벤트 포함). 끝났으면 true 입니다. */
         bool advance( ActiveAnimation& active, float32 deltaSeconds );
         /** @brief 재생 하나의 지금 시각 값을 위젯에 씁니다. */

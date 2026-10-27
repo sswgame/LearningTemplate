@@ -90,9 +90,9 @@ namespace sw
          *          "이 델리게이트나 함수 포인터가 언로드하려는 모듈의 코드를 가리키는가"를 판단하는 데 쓴다.
          * @return 찾지 못하면 false 를 반환합니다(그 밖의 플랫폼 포함).
          */
-        static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
+        [[nodiscard]] static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
         /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같습니다). */
-        static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
+        [[nodiscard]] static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
         /**
          * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 **어느 이미지에 바인딩했는지** import 테이블에서 읽습니다.
          * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 이미지다(모듈 이미지에는 지연 import 가 없다.

@@ -109,7 +109,7 @@ namespace
         {
             TerrainHeightfield field;
             const float32      extent = static_cast<float32>( resolution - 1 );
-            (void)field.initialize( makeData( resolution, &TerrainTestUtil::wave ), float3{}, float2{ extent, extent }, kHeightMin, kHeightMax );
+            (void)field.initialize( makeData( resolution, &TerrainTestUtil::wave ), float3{}, float2{ extent, extent }, kHeightMin, kHeightMax ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             return field;
         }
 
@@ -421,7 +421,7 @@ SW_TEST_CASE( TerrainTest, ChunksLeaveTheGPUSceneWhenTheComponentOrOwnerIsOff )
     SW_ASSERT_TRUE( data.saveToFile( path ) );
 
     Scene scene( "TerrainToggle" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     GameObject*       pObject  = scene.getObjectManager()->createGameObject( hashed_string( "Terrain" ) );
     TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );

@@ -74,7 +74,7 @@ namespace sw
         static void arrange( Widget& widget, const UILayoutContext& context, const WidgetGeometry& parentGeometry, const float2& slotPosition,
                              const float2& slotSize );
         /** @brief 흐름 방향 @p flowDirection 을 부모의 방향(@p bParentRightToLeft, 루트면 문화권)에 맞춰 해석합니다. */
-        static bool resolveRightToLeft( UIFlowDirection flowDirection, bool bParentRightToLeft )
+        [[nodiscard]] static bool resolveRightToLeft( UIFlowDirection flowDirection, bool bParentRightToLeft )
         {
             return flowDirection == UIFlowDirection::Inherit ? bParentRightToLeft : flowDirection == UIFlowDirection::RightToLeft;
         }

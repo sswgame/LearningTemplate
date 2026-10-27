@@ -307,18 +307,12 @@ namespace sw
             return;
 
         // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스가 건 t/u 슬롯이 다음 세트로 새지 않게 한다(언리얼의 파이프라인별 상태).
-        _pState->_arrSlotState[0]                                 = VulkanSlotState{};
-        _pState->_activeGraphicsPSO                               = pso;
-        VkPipeline                                        pipe    = _pDevice->_pipeline;
+        _pState->_arrSlotState[0]   = VulkanSlotState{};
+        _pState->_activeGraphicsPSO = pso;
+        // 등록되지 않은 핸들은 걸지 않는다. 그 뒤의 드로우가 bindActiveGraphicsPipeline 에서 멈춘다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-        if ( pRecord != nullptr )
-        {
-            if ( pRecord->_pipeline != VK_NULL_HANDLE )
-                pipe = pRecord->_pipeline;
-        }
-
-        if ( pipe != VK_NULL_HANDLE )
-            vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe );
+        if ( pRecord != nullptr && pRecord->_pipeline != VK_NULL_HANDLE )
+            vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pRecord->_pipeline );
     }
 
     void VulkanRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
@@ -414,10 +408,9 @@ namespace sw
             if ( _pDevice->ensureCompositeFramebuffer( key, composite ) == false )
                 return;
 
-            renderPass                   = composite._renderPass;
-            framebuffer                  = composite._framebuffer;
-            extent                       = { composite._width, composite._height };
-            _pState->_bActiveSwapchainRT = SW_FALSE;
+            renderPass  = composite._renderPass;
+            framebuffer = composite._framebuffer;
+            extent      = { composite._width, composite._height };
 
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
@@ -443,18 +436,16 @@ namespace sw
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
-                renderPass                   = pTex->_renderPass;
-                framebuffer                  = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] );
-                extent                       = { pTex->_width, pTex->_height };
-                _pState->_bActiveSwapchainRT = SW_FALSE;
+                renderPass  = pTex->_renderPass;
+                framebuffer = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] );
+                extent      = { pTex->_width, pTex->_height };
             }
             else
             {
                 if ( _pDevice->_renderPass == VK_NULL_HANDLE || _pDevice->_swapChain.getCurrentFramebuffer() == VK_NULL_HANDLE )
                     return;
-                framebuffer                  = _pDevice->_swapChain.getCurrentFramebuffer();
-                extent                       = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
-                _pState->_bActiveSwapchainRT = SW_TRUE;
+                framebuffer = _pDevice->_swapChain.getCurrentFramebuffer();
+                extent      = { _pDevice->_swapChain.getExtentWidth(), _pDevice->_swapChain.getExtentHeight() };
                 // 스왑체인 렌더패스는 loadOp 이 렌더패스 객체에 박혀 있어 begin 시점에 못 고른다.
                 // 요청된 loadOp 에 맞는 변종을 고른다. Load 인데 CLEAR 변종을 쓰면 앞 패스가 백버퍼에
                 // 그린 내용이 지워진다.
@@ -799,25 +790,13 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE || _pState->_bRenderPassActive == SW_FALSE )
             return false;
 
-        VkPipeline                                        pipeline = _pDevice->_pipeline;
-        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        if ( pRecord != nullptr )
-        {
-            if ( pRecord->_pipeline != VK_NULL_HANDLE )
-                pipeline = pRecord->_pipeline;
-        }
-        else if ( _pState->_bActiveSwapchainRT == SW_FALSE && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
-        {
-            // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가" 여야 한다.
-            // 주의: "마지막으로 건 컬러 타깃" 으로 판단하면, 깊이 전용 패스처럼 컬러 타깃을 갱신하지 않는 패스에서
-            // 그 값이 직전 패스의 것이라 엉뚱한 파이프라인을 고른다.
-            pipeline = _pDevice->_offscreenPipeline;
-        }
+        // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 파이프라인으로 대신 그리지 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        if ( pRecord == nullptr || pRecord->_pipeline == VK_NULL_HANDLE )
+            SW_FATAL( "Vulkan draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO );
 
-        if ( pipeline == VK_NULL_HANDLE )
-            return false;
-
-        vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
+        vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pRecord->_pipeline );
         // 슬롯 세트(set 0)는 여기서 굳힌다. 드로우 진입점 모두가 이 함수를 거치므로 각자 다시 부를 일이 없다.
         // (세트를 굳히지 않은 드로우는 세트 없이 나가 Vulkan 에서 아무것도 그리지 않는다.)
         flushSlotSet( false );

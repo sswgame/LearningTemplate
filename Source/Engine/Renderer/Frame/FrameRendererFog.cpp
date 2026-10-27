@@ -64,7 +64,7 @@ namespace sw
         // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
         // 출력이 곧 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다 — 일반 풀스크린 패스의 복사 · 지우기 길을 타면 장면이 지워진다.
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle pso          = findPassPSO( RenderPassType::Fog );
+        const RHIPipelineStateHandle pso          = getEnginePSO( RenderPassType::Fog );
         const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bDraws       = _bHasFrameFog == SW_TRUE && pso != 0 && bShowsScene;
         if ( bDraws == false )

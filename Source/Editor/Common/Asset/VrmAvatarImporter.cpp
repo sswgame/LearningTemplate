@@ -227,7 +227,7 @@ namespace sw::editor
             }
 
             /** @brief 노드 번호를 본 이름으로 풉니다. 번호가 아니거나 범위 밖이면 false 와 이유입니다. */
-            static bool resolveNode( const VrmGltfNames& names, const JSONValue& value, string_view context, string& outName, string& outError )
+            [[nodiscard]] static bool resolveNode( const VrmGltfNames& names, const JSONValue& value, string_view context, string& outName, string& outError )
             {
                 uint32 node{ 0 };
                 if ( readIndex( value, names._listNodeName.size(), context, "node", "is not a node of the model", node, outError ) == false )
@@ -248,7 +248,7 @@ namespace sw::editor
             }
 
             /** @brief 메시 번호 · 타깃 번호를 모프 타깃 이름으로 풉니다. 번호가 아니거나 범위 밖이면 false 와 이유입니다. */
-            static bool resolveMorphTarget( const VrmGltfNames& names, uint32 mesh, const JSONValue& indexValue, string_view context, string& outName, string& outError )
+            [[nodiscard]] static bool resolveMorphTarget( const VrmGltfNames& names, uint32 mesh, const JSONValue& indexValue, string_view context, string& outName, string& outError )
             {
                 if ( mesh >= names._listMeshMorphName.size() )
                 {

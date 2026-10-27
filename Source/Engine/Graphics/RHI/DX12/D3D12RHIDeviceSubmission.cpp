@@ -64,7 +64,7 @@ namespace sw
             return nullptr;
 
         // 풀에서 나온 쌍은 이미 펜스를 통과했으므로 곧바로 Reset 해도 된다.
-        if ( FAILED( entry._allocator->Reset() ) || FAILED( entry._list->Reset( entry._allocator.Get(), nullptr ) ) )
+        if ( isHrSuccess( entry._allocator->Reset(), "Reset" ) == false || isHrSuccess( entry._list->Reset( entry._allocator.Get(), nullptr ), "Reset" ) == false )
             return nullptr;
 
         bindBindlessRootState( entry._list.Get() );
@@ -120,7 +120,8 @@ namespace sw
             return;
         }
 
-        _pActiveFrameList->Close();
+        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 제출하면 장치가 제거되므로 이유와 함께 멈춘다(아래 Close 도 같다).
+        requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment)" );
         releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
@@ -172,7 +173,7 @@ namespace sw
         {
             if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
                 continue;
-            slot._copyCommandList->Close();
+            requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
             slot._bListOpen = SW_FALSE;
             // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
             // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
@@ -398,7 +399,9 @@ namespace sw
         entry._allocator->SetName( arrName );
         swprintf_s( arrName, L"PoolList%u", entryIndex );
         entry._list->SetName( arrName );
-        entry._list->Close();
+        // 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다 — 빈 쌍을 돌려줘 부르는 쪽이 생성 실패로 다룬다.
+        if ( isHrSuccess( entry._list->Close(), "ID3D12GraphicsCommandList::Close (pool entry)" ) == false )
+            entry = D3D12CommandListEntry{};
         return entry;
     }
 
@@ -464,7 +467,7 @@ namespace sw
         D3D12_QUERY_HEAP_DESC heapDesc{};
         heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
         heapDesc.Count = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
-        if ( FAILED( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ) ) )
+        if ( isHrSuccess( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ), "CreateQueryHeap" ) == false )
             return;
 
         // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다. 슬롯마다 구간이 겹치지 않는다.
@@ -478,9 +481,10 @@ namespace sw
         bufferDesc.MipLevels        = 1;
         bufferDesc.SampleDesc.Count = 1;
         bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                                                       D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                       IID_PPV_ARGS( &_timestampReadback ) ) ) )
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( &_timestampReadback ) ),
+                          "CreateCommittedResource" ) == false )
         {
             _timestampHeap.Reset();
             return;
@@ -502,7 +506,7 @@ namespace sw
         D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGPUTimestampSlot };
 
         void* pMapped{ nullptr };
-        if ( FAILED( _timestampReadback->Map( 0, &range, &pMapped ) ) || pMapped == nullptr )
+        if ( isHrSuccess( _timestampReadback->Map( 0, &range, &pMapped ), "ID3D12Resource::Map (timestamp readback)" ) == false || pMapped == nullptr )
             return;
 
         // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
@@ -536,7 +540,7 @@ namespace sw
             // 디바이스가 제거된 상태에서는 Reset() 이 실패해 커맨드 리스트가 여전히 closed 로 남는다.
             // 그것을 무시하고 _bRecording=1 로 넘어가면 이후의 모든 커맨드 리스트 호출이 "closed command
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
-            if ( FAILED( pAllocator->Reset() ) || FAILED( _commandList->Reset( pAllocator, nullptr ) ) )
+            if ( isHrSuccess( pAllocator->Reset(), "Reset" ) == false || isHrSuccess( _commandList->Reset( pAllocator, nullptr ), "Reset" ) == false )
                 return;
             _frameStreamState._bRecording      = SW_TRUE;
             _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
@@ -617,7 +621,7 @@ namespace sw
                                                              _timestampReadback.Get(), sizeof( uint64 ) * ( base + runStart ) );
                     }
                 }
-                _pActiveFrameList->Close();
+                requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (end frame)" );
                 _listPendingSubmit.push_back( _pActiveFrameList );
                 _frameStreamState._bRecording = SW_FALSE;
                 releaseOnlineBlocksDeferred( _frameStreamState );

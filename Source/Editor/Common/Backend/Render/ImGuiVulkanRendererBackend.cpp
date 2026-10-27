@@ -8,6 +8,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 
 #include <imgui.h>
 #include <imgui_impl_vulkan.h>
@@ -364,7 +365,7 @@ namespace sw::editor
         {
             std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
             if ( _pDevice != nullptr && _pImguiDescriptorPool != nullptr )
-                vkFreeDescriptorSets( _pDevice, _pImguiDescriptorPool, 1, &set );
+                requireVk( vkFreeDescriptorSets( _pDevice, _pImguiDescriptorPool, 1, &set ), "vkFreeDescriptorSets (ImGui)" ); // 사양상 늘 VK_SUCCESS — 어기면 드라이버 결함
         } ) );
     }
 } // namespace sw::editor

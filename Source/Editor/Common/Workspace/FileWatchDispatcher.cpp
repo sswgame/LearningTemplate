@@ -321,21 +321,21 @@ namespace sw
     {
         for ( const WatchEntry& entry : _listWatch )
         {
-            if ( FileUtil::exists( entry._pathPrefix ) == false &&
-                 FileUtil::isDirectory( entry._pathPrefix ) == false )
+            // 파일 하나를 지켜보면 그 파일을, 폴더면 그 아래 파일을 본다. 예전에는 `exists` 로 갈라 폴더도 파일 분기로 가서 폴더 아래 분기에 닿지 못했다.
+            if ( FileUtil::isRegularFile( entry._pathPrefix ) )
+            {
+                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
+                continue;
+            }
+            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
                 continue;
 
-            if ( FileUtil::exists( entry._pathPrefix ) )
-                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
-            else
+            vector<string> listFile;
+            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not polled", entry._pathPrefix );
+            for ( const string& filePath : listFile )
             {
-                vector<string> listFile;
-                if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
-                    SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not polled", entry._pathPrefix );
-                for ( const string& filePath : listFile )
-                {
-                    pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
-                }
+                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
             }
         }
     }

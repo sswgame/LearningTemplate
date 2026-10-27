@@ -83,9 +83,9 @@ namespace sw
          * @brief @p object 유닛의 현재 위치(메시의 월드 위치)를 반환합니다. 스냅샷에 없으면 false 를 반환합니다.
          * @details 틱 밖(조종자의 판단, 게임 스레드)에서 부른다. 스냅샷의 위치는 지난 PrePhysics 의 틱 전 위치라 한 프레임 늦다.
          */
-        bool findUnitPosition( GameObjectHandle object, float3& outPosition ) const;
+        [[nodiscard]] bool findUnitPosition( GameObjectHandle object, float3& outPosition ) const;
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 현재 위치를 반환합니다. 없으면 false 입니다(틱 밖에서 부릅니다). */
-        bool findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const;
+        [[nodiscard]] bool findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const;
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 어빌리티 시스템을 반환합니다(어빌리티가 대상을 찾을 때 씁니다). */
         AbilitySystemComponent* findNearestHostile( const AbilitySystemComponent& from, float32 maxRange ) const;
         /**

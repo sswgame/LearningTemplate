@@ -878,7 +878,7 @@ namespace sw
             if ( bSameSocketBinding )
                 pBinding->updateSocketTransform( inUnit );
             else
-                (void)pBinding->bindToSocket( pHolder, socketName, inUnit );
+                (void)pBinding->bindToSocket( pHolder, socketName, inUnit ); // 못 붙이면 바인딩이 그대로이고 다음 갱신이 다시 붙인다
         }
     }
 

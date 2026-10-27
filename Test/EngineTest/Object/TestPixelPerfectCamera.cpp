@@ -77,7 +77,7 @@ SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapU
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "PixelPerfectScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pManager = scene.getObjectManager();
     sw::CameraComponent*   pCamera  = scene.getActiveGameCamera();
     SW_ASSERT_NOT_NULL( pCamera );
@@ -142,7 +142,7 @@ SW_TEST_CASE( PixelPerfectCameraTest, UpscaleRenderTextureSetsTheCameraZoomAndSn
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "PixelPerfectUpscaleScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pManager = scene.getObjectManager();
     sw::CameraComponent*   pCamera  = scene.getActiveGameCamera();
     SW_ASSERT_NOT_NULL( pCamera );

@@ -161,7 +161,7 @@ namespace sw
         };
 
         /** @brief 칸을 더합니다. 같은 타입이 이미 있으면 false 입니다. */
-        bool registerEntry( uint64 typeHash, void* pObject, bool bOwned );
+        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned );
         /** @brief 빌려 건 칸 하나를 지웁니다. */
         void unregisterBorrowed( uint64 typeHash );
         /** @brief @p typeHash 칸이 소유한 서브시스템이면 true 입니다. */

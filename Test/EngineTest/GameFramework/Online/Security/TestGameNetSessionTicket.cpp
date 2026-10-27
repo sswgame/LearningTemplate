@@ -28,7 +28,7 @@ namespace
     class TicketAuthenticator final : public INetConnectAuthenticator
     {
     public:
-        bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override
+        [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override
         {
             if ( tokenSize != 6 || std::memcmp( pToken, "ticket", 6 ) != 0 )
                 return false;

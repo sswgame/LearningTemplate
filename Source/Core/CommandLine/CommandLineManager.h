@@ -189,7 +189,7 @@ namespace sw
          *          값은 파싱 시점에 갈 곳이 없습니다. 버리는 대신 여기에 남겨 두고, 모듈이 나중에 등록할 때
          *          `GlobalVariableManager` 가 꺼내 씁니다.
          */
-        bool findPendingGlobalValue( string_view name, string& outValue ) const;
+        [[nodiscard]] bool findPendingGlobalValue( string_view name, string& outValue ) const;
 
         /**
          * @brief 그 전역 변수를 **명령줄이 실제로 줬는지** 반환합니다.

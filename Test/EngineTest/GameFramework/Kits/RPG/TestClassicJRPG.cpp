@@ -69,7 +69,7 @@ namespace
     class ScriptedTiming final : public IJRPGTimingInput
     {
     public:
-        bool findPressOffset( JRPGTimingKind kind, int32 memberIndex, float32& outOffset ) const override
+        [[nodiscard]] bool findPressOffset( JRPGTimingKind kind, int32 memberIndex, float32& outOffset ) const override
         {
             if ( _onlyMember >= 0 && memberIndex != _onlyMember )
                 return false;
@@ -94,7 +94,7 @@ namespace
         Inventory   _inventory; ///< 플레이어 가방(파티가 빌린다)
         Wallet      _wallet;    ///< 지갑(파티가 빌린다)
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             vector<TimingWindow> listWindow;
             TimingWindow         window;

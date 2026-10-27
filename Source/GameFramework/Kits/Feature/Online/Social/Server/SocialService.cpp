@@ -177,7 +177,7 @@ namespace sw
 
         private:
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
-            bool resolveName( IServiceStoreConnection& connection )
+            [[nodiscard]] bool resolveName( IServiceStoreConnection& connection )
             {
                 AccountIdentity          identity;
                 const ServiceStoreResult found = _pNameIndex != nullptr ? _pNameIndex->readIdentityByDisplayName( connection, _displayName, identity )

@@ -98,7 +98,7 @@ namespace
         ItemCatalog    _itemCatalog;
         RecipeCatalog  _recipeCatalog;
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             return _catalog.loadFromXMLText( kWitcherTestXML, "WitcherRPGTest" ) && _chart.loadFromXMLText( kElementXML, "WitcherRPGTest" ) &&
                    _itemCatalog.loadFromXMLText( kWitcherRPGItemXML, "WitcherRPGTest" ) && _recipeCatalog.loadFromXMLText( kRecipeXML, "WitcherRPGTest" );

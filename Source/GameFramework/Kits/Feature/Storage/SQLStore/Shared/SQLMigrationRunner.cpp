@@ -75,7 +75,7 @@ namespace sw
                 inoutText.swap( text );
             }
 
-            static void rollback( ISQLConnection& connection ) { (void)connection.executeScript( "ROLLBACK" ); }
+            static void rollback( ISQLConnection& connection ) { (void)connection.executeScript( "ROLLBACK" ); } // 이미 실패한 트랜잭션의 정리다 — 원래 오류를 돌려준다
 
             static string makeText( string_view prefix, int32 version, string_view middle, string_view suffix )
             {

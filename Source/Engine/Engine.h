@@ -86,7 +86,7 @@ namespace sw
          * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleTypes` · `ModuleImages` 단계가 여기서 `IModuleImageHost` 를 찾습니다.
          *                   호스트가 엔진보다 오래 살아야 합니다(`shutdown` 이 끝난 뒤에 내립니다). nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
          */
-        bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );
+        [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );
         /** @brief 매니저들을 종료하고 정리합니다. */
         void shutdown();
 

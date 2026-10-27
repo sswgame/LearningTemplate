@@ -347,7 +347,7 @@ namespace sw
          *          [Error] 를 남기지 않는다.
          * @return 찾으면 true 이고 @p outResolvedPath 에 실제 경로가 담깁니다.
          */
-        bool resolveConfigPath( const string& filePath, string& outResolvedPath ) const
+        [[nodiscard]] bool resolveConfigPath( const string& filePath, string& outResolvedPath ) const
         {
             if ( filePath.empty() )
                 return false;

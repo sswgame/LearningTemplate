@@ -31,7 +31,7 @@ namespace sw
             }
 
             /** @brief 본 하나의 유닛 공간 행렬입니다(유닛이 없거나 본이 없으면 false). */
-            static bool findBone( const SkeletalMeshComponent* pUnit, const hashed_string& boneName, float4x4& outTransform )
+            [[nodiscard]] static bool findBone( const SkeletalMeshComponent* pUnit, const hashed_string& boneName, float4x4& outTransform )
             {
                 return pUnit != nullptr && pUnit->findBoneModelTransform( boneName, outTransform );
             }

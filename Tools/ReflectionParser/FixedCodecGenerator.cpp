@@ -267,7 +267,7 @@ namespace sw
              * @brief `Min` 또는 `Max` 글을 항마다 풉니다.
              * @return 생성 오류이거나 이름을 찾지 못했으면 false 입니다. 이름을 못 찾은 것은 `state._unresolvedName` 에 남습니다.
              */
-            static bool resolveBounds( EmitState& state, const ParsedPropertyInfo& prop, const string& text, const bool bInteger, vector<Bound>& outListBound )
+            [[nodiscard]] static bool resolveBounds( EmitState& state, const ParsedPropertyInfo& prop, const string& text, const bool bInteger, vector<Bound>& outListBound )
             {
                 outListBound.clear();
                 if ( text.empty() )

@@ -64,7 +64,7 @@ namespace test
         RHITestDevice& operator=( RHITestDevice&& )      = delete;
 
         /** @brief 이 백엔드로 창과 디바이스를 세운다. 이미 서 있던 것은 먼저 내린다. 실패하면 아무것도 남기지 않는다. */
-        bool initialize( sw::RHIBackend backend );
+        [[nodiscard]] bool initialize( sw::RHIBackend backend );
         /** @brief 디바이스와 창을 지금 내린다(소멸자도 부른다). 두 번 불러도 된다. */
         void shutdown();
 

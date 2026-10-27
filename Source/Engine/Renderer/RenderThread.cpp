@@ -246,7 +246,8 @@ namespace sw
             {
                 waitIdle();
                 stop();
-                bind( pSavedDevice, pSavedFrameRenderer );
+                if ( bind( pSavedDevice, pSavedFrameRenderer ) == false )
+                    SW_LOG_ERROR( "Render thread could not go back to inline submit - no device is bound" );
             }
         }
 

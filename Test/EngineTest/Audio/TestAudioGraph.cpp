@@ -73,7 +73,7 @@ namespace
 </AudioGraphDef>)";
 
         /** @brief 엔진을 기본 그래프 · 테스트 라이브러리로 만들고 그래프 클립을 넣습니다. */
-        static bool initializeEngine( sw::AudioEngine& engine )
+        [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine )
         {
             if ( engine.initialize( sw::AudioMixerDesc::makeDefault(), sw::AudioChannelLayout::Stereo ) == false )
                 return false;

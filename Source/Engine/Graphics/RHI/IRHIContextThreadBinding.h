@@ -21,7 +21,7 @@ namespace sw
          * @details OpenGL 은 wglMakeCurrent, glXMakeCurrent 를 부른다. DX11 은 MakeCurrent 가 없어 즉시 컨텍스트가 있는지만 답한다.
          *          다른 스레드에서 부르지 않는 것이 곧 배타성이다.
          */
-        virtual bool bindGraphicsContext() = 0;
+        [[nodiscard]] virtual bool bindGraphicsContext() = 0;
 
         /** @brief 스레드 바인딩을 해제합니다(OpenGL 은 MakeCurrent(null)). */
         virtual void unbindGraphicsContext() = 0;

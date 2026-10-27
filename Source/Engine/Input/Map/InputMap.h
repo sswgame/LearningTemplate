@@ -482,9 +482,9 @@ namespace sw
          *          단일 키로 바꿔 버리면 에디터에서 `Ctrl+S` 를 다시 잡을 때 수식 키가, A/D 축을 다시 잡을 때 축이 사라지기 때문이다.
          *          가상 커서가 마우스로 바꾸는 패드 버튼으로 바꾸려 해도 거절한다(맵 읽기와 같은 검사, `reportVirtualCursorConflict`).
          */
-        bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
-        bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
-        bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );
+        [[nodiscard]] bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
+        [[nodiscard]] bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
+        [[nodiscard]] bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );
         /**
          * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 현재 키를 반환합니다.
          * @return 액션이나 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.

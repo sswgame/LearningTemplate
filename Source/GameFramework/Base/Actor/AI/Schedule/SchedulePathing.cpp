@@ -113,7 +113,7 @@ namespace sw
 
     void NavGridSchedulePathing::makeRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<float3>& outListPoint ) const
     {
-        (void)findRoute( from, to, &outListPoint );
+        (void)findRoute( from, to, &outListPoint ); // 못 찾으면 경로가 빈 채로 남고 부르는 쪽이 빈 경로를 본다
     }
 
     float3 NavGridSchedulePathing::offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const

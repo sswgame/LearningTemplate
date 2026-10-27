@@ -26,7 +26,7 @@ namespace sw
         RenderPipelineAssetCache& operator=( const RenderPipelineAssetCache& ) = delete;
 
         /** @brief 매니저를 초기화합니다. */
-        bool initialize();
+        [[nodiscard]] bool initialize();
         /** @brief 캐시를 비우고 종료합니다. */
         void shutdown();
 

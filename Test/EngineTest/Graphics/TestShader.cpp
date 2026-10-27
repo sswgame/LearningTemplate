@@ -747,11 +747,19 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
     barePass._resolvedType = sw::RenderPassType::ForwardOpaque;
     SW_EXPECT_TRUE( sw::FrameRendererUtil::hasPixelStage( barePass, listAttachment ) );
 
-    // 선언은 있는데 어태치먼트를 못 찾으면 알 수 없으므로 물러난 값이다.
+    // 선언은 있는데 어태치먼트를 못 찾으면 세지 않는다 — 넘긴 수로 물러나지 않는다(못 찾은 이름은 파이프라인 검증이 오류로 잡는다).
     sw::RenderGraphPassDesc unknownPass;
     unknownPass._resolvedType = sw::RenderPassType::ForwardOpaque;
     unknownPass._listOutput   = { "NoSuchAttachment" };
-    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::collectColorOutputFormats( unknownPass, listAttachment, nullptr, sw::kMaxColorAttachments, 1 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::collectColorOutputFormats( unknownPass, listAttachment, nullptr, sw::kMaxColorAttachments, 1 ) );
+
+    // 주 출력(Swapchain)은 컬러 하나로 세고 포맷은 정하지 않는다(Unknown) — 대상 포맷마다 PSO 를 만드는 출력 패스의 몫이다.
+    sw::RenderGraphPassDesc swapchainPass;
+    swapchainPass._resolvedType = sw::RenderPassType::Present;
+    swapchainPass._listOutput   = { "Swapchain" };
+    sw::RHIFormat arrSwapchainFormat[sw::kMaxColorAttachments]{};
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::collectColorOutputFormats( swapchainPass, listAttachment, arrSwapchainFormat, sw::kMaxColorAttachments, 1 ) );
+    SW_EXPECT_TRUE( arrSwapchainFormat[0] == sw::RHIFormat::Unknown );
 }
 
 /**

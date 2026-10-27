@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 
-#include "Core/Common/EnumUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -31,22 +31,15 @@ namespace sw
         desc._usage        = usage;
         desc._pInitialData = pInitialData;
 
+        // 한 번만 만든다 — UAV 를 뺀 버퍼나 다른 생성 함수로 대신 만들지 않는다. 컴퓨트(UAV)를 못 쓰는 백엔드는 부르는 쪽이 능력(`RHICapabilities::_bCompute`)으로 가린다.
         _buffer = pDevice->getResourceFactory()->createBuffer( desc );
-        if ( _buffer == 0 && bNeedsUav )
-        {
-            // UAV 를 거절하는 백엔드나 드라이버가 있다. 그리기는 살리고 컴퓨트 경로만 포기한다.
-            desc._usage = EnumUtil::clearFlag( usage, RHIBufferUsage::UnorderedAccess );
-            _buffer     = pDevice->getResourceFactory()->createBuffer( desc );
-            bNeedsUav   = false;
-        }
         if ( _buffer == 0 )
         {
-            _buffer = pDevice->getResourceFactory()->createStructuredBuffer( elementSize, elementCount );
-            if ( _buffer != 0 && pInitialData != nullptr )
-                pDevice->getResourceFactory()->updateStructuredBuffer( _buffer, pInitialData, desc._sizeBytes );
-        }
-        if ( _buffer == 0 )
+            // 프레임마다 다시 묻는 슬롯(GPUScene)이 있어 한 번만 남긴다 — 어느 슬롯인지는 부르는 쪽이 알린다.
+            SW_LOG_ERROR_ONCE( "Failed to create a structured buffer (%# elements x %# bytes, usage %#) - the slot stays empty", elementCount, elementSize,
+                               static_cast<uint32>( usage ) );
             return false;
+        }
 
         if ( bNeedsSrv )
             _srv = pDevice->getResourceFactory()->registerBindlessBufferSrv( _buffer );

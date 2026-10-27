@@ -13,7 +13,7 @@ namespace sw
         struct AdventureElementGridInternal
         {
             /** @brief 알림 이름을 열거형으로 바꿉니다. 테이블의 알림 이름은 열거자 이름과 같습니다. */
-            static bool findEventType( const hashed_string& name, AdventureElementEventType& outType )
+            [[nodiscard]] static bool findEventType( const hashed_string& name, AdventureElementEventType& outType )
             {
                 struct NameType
                 {

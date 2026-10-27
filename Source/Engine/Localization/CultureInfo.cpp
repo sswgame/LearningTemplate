@@ -205,7 +205,7 @@ namespace sw
             }
 
             /** @brief 문화권 요소에서 알려지지 않은 첫 속성 · 자식 이름을 @p outName 에 적고 true 를 반환합니다. 모두 알려져 있으면 false 입니다. */
-            static bool findUnknownName( const XMLNode& entry, string& outName )
+            [[nodiscard]] static bool findUnknownName( const XMLNode& entry, string& outName )
             {
                 for ( XMLAttribute attribute = entry.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {

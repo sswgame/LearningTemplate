@@ -87,7 +87,7 @@ namespace sw
         virtual ~OpenGLRHIDevice() override;
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)를 만들고 glad 로 GL 함수를 불러옵니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
         void shutdownInternal() override;
@@ -178,7 +178,7 @@ namespace sw
          * @details 렌더 워커와 자원 생성 가드(ScopedOpenGLContext)가 같은 규칙을 쓴다. 한 번만 시도하면 자원 생성 가드가 잡은 짧은 순간에 렌더 스레드가
          *          `[Error]` 를 남기고 그 프레임의 GL 호출을 모두 잃는다.
          */
-        bool bindGraphicsContext() override;
+        [[nodiscard]] bool bindGraphicsContext() override;
         /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지 묻습니다. ScopedOpenGLContext 가 남의 바인딩을 해제하지 않게 하는 근거입니다. */
         bool isGraphicsContextCurrent() const;
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
@@ -335,7 +335,7 @@ namespace sw
         struct OpenGLTextureRecord
         {
             uint32              _texture{ 0 };
-            uint32              _fbo{ 0 };
+            uint32              _fbo{ 0 }; ///< 복사 · 블릿용 FBO(컬러 렌더 타깃의 0 번 면). 렌더 패스는 합성 FBO 를 쓴다.
             uint32              _width{ 0 };
             uint32              _height{ 0 };
             uint32              _mipLevels{ 1 };
@@ -349,16 +349,6 @@ namespace sw
             uint8          _bDepthStencil : 1;
             uint8          _bUAV          : 1;
             uint8          _reserved      : 6;
-            /// @brief 면이 여럿일 때 면 하나를 첨부한 FBO 들입니다(0번은 `_fbo`). 면이 하나면 비어 있습니다.
-            vector<uint32> _listSliceFbo;
-
-            /** @brief 면 `slice` 를 첨부한 단일 타깃 FBO 입니다. 없으면 0 입니다. */
-            uint32 findSliceFbo( uint32 slice ) const
-            {
-                if ( _listSliceFbo.empty() )
-                    return slice == 0 ? _fbo : 0u;
-                return slice < _listSliceFbo.size() ? _listSliceFbo[slice] : 0u;
-            }
         };
 
         /// @brief MRT FBO 캐시 키입니다.
@@ -437,7 +427,6 @@ namespace sw
         void*  _pHRC;
         uint32 _width;
         uint32 _height;
-        uint32 _shaderProgram;
         uint32 _vao;
         uint32 _vbo;             ///< 풀스크린 삼각형(정점 3개)
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO

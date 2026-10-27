@@ -16,7 +16,7 @@ namespace
     class FailingListenTransport final : public IStreamTransport
     {
     public:
-        bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
+        [[nodiscard]] bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
         {
             (void)pHandler;
             (void)settings;

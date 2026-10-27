@@ -125,10 +125,10 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /** @brief 디바이스와 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
         /** @brief 디바이스, TaskManager, 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                         string_view pipelineXMLPath = {} );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
+                                       string_view pipelineXMLPath = {} );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
@@ -141,15 +141,15 @@ namespace sw
         [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
         /**
          * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
-         * @details 주 시점은 scene 의 게임 카메라(`Scene::ensureDefaultCameras`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
+         * @details 주 시점은 scene 의 게임 카메라(`Scene::pickActiveGameCamera`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
          */
-        bool execute( IRHIDevice* pDevice, Scene& scene );
+        [[nodiscard]] bool execute( IRHIDevice* pDevice, Scene& scene );
         /**
          * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
          * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
          *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
          */
-        bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
          * @brief 미리보기 씬 패킷(`RenderFramePacket::_listScenePreview` 의 하나)을 그 씬 키의 렌더러로 그립니다. 렌더 스레드에서 주 패킷 뒤에 부릅니다.
          * @details **씬마다 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
@@ -157,7 +157,7 @@ namespace sw
          *          미리보기 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처를 하지 않는다(주 렌더러의 것을 덮지 않게).
          *          출력은 패킷의 `_outputRenderTarget` 이고, 그 타깃의 상태 전환(렌더 타깃 → 셰이더 읽기)은 부르는 쪽(`RenderThread`)이 한다.
          */
-        bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        [[nodiscard]] bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
         void retireScenePreviews( const RenderFramePacket& mainPacket );
         /**
@@ -279,7 +279,7 @@ namespace sw
          * @details 어떤 퍼뮤테이션이 실제로 적용되었는지 밖에서 확인할 수 있는 유일한 방법이다.
          *          픽셀로는 드러나지 않는 차이(알파 경로가 컴파일되었는가 등)를 테스트가 여기서 확인한다.
          */
-        bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
@@ -429,7 +429,7 @@ namespace sw
             float4x4 _prevViewProj{};
             /**
              * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT)과 그 SRV 입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
-             * @details 풀과 수명이 같다 — `ensureViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
+             * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
              */
             RHITextureHandle   _arrAutoExposure[2]{};
             RHIDescriptorIndex _arrAutoExposureSrv[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
@@ -451,7 +451,7 @@ namespace sw
             uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
             /**
              * @brief 지금 풀로 이 뷰를 한 번 이상 그렸다 — 시간 누적 기록(TAA 히스토리 · `_prevViewProj` · 자동 노출 EV)에 지난 프레임 값이 있다.
-             * @details 풀을 새로 만들면(`ensureViewTransients`) 기록도 새것이라 내린다.
+             * @details 풀을 새로 만들면(`updateViewTransients`) 기록도 새것이라 내린다.
              */
             uint8 _bHasHistory{ SW_FALSE };
             /**
@@ -522,15 +522,15 @@ namespace sw
          * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 골라 context 에 붙입니다.
          * @details 커맨드 기록은 지연되고 상수 버퍼 쓰기는 즉시 일어난다. 그래서 패스마다 별도 버퍼를
          *          써야 재생 시점에 각 패스의 상수가 남는다. 커서는 원자적이라
-         *          병렬 기록에서도 안전하다. 슬롯이 모자라면 마지막 슬롯을 공유한다.
+         *          병렬 기록에서도 안전하다. 슬롯이 모자라면 false 이고 부르는 쪽은 그리지 않는다(앞 슬롯을 공유하지 않는다).
          */
-        void acquirePassCb( FramePassContext& context );
+        [[nodiscard]] bool acquirePassCb( FramePassContext& context );
         /** @brief 프레임을 시작할 때마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다시 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
+        bool updateViewTransients( ViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( ViewTarget& view );
         /**
@@ -914,13 +914,13 @@ namespace sw
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          * @return 성공하면 true 입니다. false 면 호출자가 바로 반환해야 합니다.
          */
-        bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
+        [[nodiscard]] bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
 
         /**
          * @brief execute() 와 executePacket() 이 공통으로 쓰는 함수입니다. graph 를 실행하고 commandList 를 제출합니다.
          * @return graph.execute() 의 결과
          */
-        bool submitGraph( IRHIDevice* pDevice );
+        [[nodiscard]] bool submitGraph( IRHIDevice* pDevice );
         /** @brief 이번 프레임에 그릴 추가 뷰 가운데 출력 종류가 @p outputKind 인 것을 그리고 그린 수를 돌려줍니다. */
         uint32 renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind );
         /** @brief 주 시점의 그래프를 실행합니다. 병렬 기록이 되면 레벨마다 여러 리스트로, 아니면 주 리스트 하나로 직렬 기록해 제출합니다. */
@@ -931,7 +931,7 @@ namespace sw
          * @details 두 진입점이 이 단계를 각자 가지면 한쪽만 빠지기 쉽다. 예를 들어 시드를 채우는 순서가 갈리면 한쪽만 상수가 빠진다. 그래서 한 함수로 둔다.
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          */
-        bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
+        [[nodiscard]] bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
          * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
@@ -997,8 +997,6 @@ namespace sw
          * @details 등록되지 않은 이름 · PSO 가 없는 패스는 오류를 한 번 남기고 그리지 않습니다(다른 셰이더로 대신 그리지 않는다).
          */
         void executeModulePass( FramePassContext& context, const RenderGraphPassDesc& passDesc, const hashed_string& target, const float4& targetClear );
-        /** @brief 패스의 엔진 PSO 를 찾습니다. 없으면 테이블이 정한 대체 패스(`_psoFallbackType`)의 PSO 를 반환합니다. */
-        RHIPipelineStateHandle findPassPSO( RenderPassType passType ) const;
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
@@ -1049,10 +1047,11 @@ namespace sw
          *          다르면 Vulkan 은 렌더 패스 비호환으로 판단해 검증 레이어가 매 프레임 오류를 낸다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같은 방식이다.
          *          주 출력에 그리는 패스만 포맷이 키이므로 (패스, 포맷) 맵 하나로 충분하다.
-         *          **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 없으면 엔진 PSO 로 대체하고 한 번 알린다.
+         *          **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
+         *          돌려준 PSO 는 0 이 아니다. 포맷을 모르는 대상(`RHIFormat::Unknown`)은 셋업이 만든 그 패스의 엔진 PSO 다.
          */
         RHIPipelineStateHandle findOutputPSO( RenderPassType passType, RHIFormat targetFormat );
-        /** @brief 주 출력에 그리는 패스(Present, Canvas)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. */
+        /** @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. 하나라도 못 만들면 멈춥니다. */
         void createOutputPSOVariants();
 
     private:
@@ -1119,8 +1118,13 @@ namespace sw
         /** @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. @return 새로 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
                                                      bool bReverseCulling, RenderViewMode viewMode );
-        /** @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를, 둘 다 없으면 RGBA8 을 씁니다. */
-        void fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
+        /**
+         * @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를 씁니다.
+         * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나(둘 다 없음) 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.
+         */
+        [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
+        /** @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · 파이프라인의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다. */
+        bool hasRenderTargetFormatSource( RenderPassType passType ) const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스와 드로우별 상수 버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 가져갑니다.
@@ -1352,8 +1356,6 @@ namespace sw
         atomic<uint8> _viewMode;
         /** @brief 에디터 씬 뷰의 보기 모드(`RenderViewMode`)입니다. UI 스레드가 쓰고, 게임 스레드가 패킷을 만들 때 읽습니다. */
         atomic<uint8> _sceneViewMode;
-        /// @brief 셋업에 없는 출력 대상 포맷(Present, Canvas)을 만났을 때 한 번만 알리기 위한 래치입니다.
-        atomic<uint8> _bOutputPSOMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다는 것을 한 번만 알리기 위한 래치입니다. 드로우 경로이므로 프레임마다 로그를 찍으면 안 됩니다.
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다는 것을 한 번만 알리기 위한 래치입니다. 패스 경로이므로 프레임마다 로그를 찍으면 안 됩니다.

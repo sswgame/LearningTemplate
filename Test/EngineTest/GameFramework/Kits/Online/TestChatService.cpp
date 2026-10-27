@@ -30,7 +30,7 @@ namespace
     public:
         unordered_map<AccountID, string> _mapOnline{};
 
-        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
             const auto onlineIt = _mapOnline.find( accountID );
             if ( onlineIt == _mapOnline.end() )
@@ -40,7 +40,7 @@ namespace
             return true;
         }
 
-        bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
         {
             (void)displayName;
             (void)outIdentity;

@@ -144,7 +144,6 @@ namespace sw
         , _bFogVolumeActive{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bOutputPSOMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
@@ -556,7 +555,7 @@ namespace sw
             return false;
 
         // 주 시점은 씬의 게임 카메라다. 없으면 기본 카메라로 대신 그리지 않고 멈춘다 — 카메라가 없다는 씬 데이터의 결함이 화면으로 가려진다.
-        CameraComponent* pMainCamera = scene.ensureDefaultCameras() ? scene.getActiveGameCamera() : nullptr;
+        CameraComponent* pMainCamera = scene.pickActiveGameCamera() ? scene.getActiveGameCamera() : nullptr;
         if ( pMainCamera == nullptr )
         {
             SW_LOG_ERROR( "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );

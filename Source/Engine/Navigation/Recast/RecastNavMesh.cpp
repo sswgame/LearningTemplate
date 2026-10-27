@@ -800,8 +800,8 @@ namespace sw
         dtPolyRef endRef   = 0;
         float32   arrStart[3]{};
         float32   arrEnd[3]{};
-        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart );
-        (void)pQuery->findNearestPoly( &end._x, &searchExtent._x, &detourFilter, &endRef, arrEnd );
+        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
+        (void)pQuery->findNearestPoly( &end._x, &searchExtent._x, &detourFilter, &endRef, arrEnd );       // 결과는 ref 로 본다 — 못 찾으면 0 이다
         if ( startRef == 0 || endRef == 0 )
         {
             releaseQuery( bLocked );
@@ -861,7 +861,7 @@ namespace sw
         applyQueryFilter( filter, detourFilter );
         dtPolyRef startRef = 0;
         float32   arrStart[3]{};
-        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart );
+        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
         if ( startRef == 0 )
         {
             releaseQuery( bLocked );
