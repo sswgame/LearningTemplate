@@ -62,6 +62,8 @@ namespace sw
         uint32 ( *getSceneViews )( EditorHandle editor, HostSceneView* pOutView, uint32 capacity ){ nullptr };
         /** @brief 이번 프레임의 다시 그릴 까닭(`EditorRedrawReason` 비트 묶음)입니다. `updateUI` 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */
         uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
+        /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`drainRenderWorkers`) 앞에서 한 번 부릅니다. */
+        void ( *requestBackgroundStop )( EditorHandle editor ){ nullptr };
     };
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */

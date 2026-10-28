@@ -99,11 +99,14 @@ namespace sw::editor
                 const string* const*          _ppTextID{ nullptr };      ///< 텍스트 에셋 id 들(`_listSortedKnownID` 의 원소를 가리킨다)
                 vector<EditorAssetReference>* _pArrReference{ nullptr }; ///< 파일마다 하나인 결과 칸
                 uint8*                        _pArrScanned{ nullptr };   ///< 파일마다 하나인 "읽었다" 표시
+                const atomic<bool>*           _pStop{ nullptr };         ///< 종료 신호(올라가면 남은 파일을 읽지 않는다). nullptr 이면 끝까지 읽는다
 
                 void run( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
+                        if ( _pStop != nullptr && _pStop->load( std::memory_order_acquire ) )
+                            return; // 읽은 표시가 없는 칸은 합칠 때 건너뛴다 — 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
                         if ( scanFile( _resourceRoot, *_ppTextID[index], *_pListSortedKnownID, _pArrReference[index] ) )
                             _pArrScanned[index] = SW_TRUE;
                     }
@@ -195,7 +198,7 @@ namespace sw::editor
         }
     }
 
-    void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData, TaskManager* pTaskManager )
+    void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData, TaskManager* pTaskManager, const atomic<bool>* pStop )
     {
         const Stopwatch stopwatch;
         outData = EditorReferenceIndexData{};
@@ -229,6 +232,7 @@ namespace sw::editor
         job._ppTextID           = listTextID.data();
         job._pArrReference      = listFileReference.data();
         job._pArrScanned        = listScanned.data();
+        job._pStop              = pStop;
         if ( pTaskManager != nullptr )
         {
             // 호출 스레드가 워커여도 된다: `runParallel` 은 호출 스레드가 첫 청크부터 직접 돌고, 합류를 기다리는 동안 다른 일을 돕는다.

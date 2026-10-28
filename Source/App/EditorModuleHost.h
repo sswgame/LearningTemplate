@@ -133,6 +133,8 @@ namespace sw
          *          shutdown 이 waitForDrawSnapshotIdle 에서 영원히 돌아오지 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다.
          */
         void onRenderWorkersDrained() override;
+        /** @brief 종료의 비우기 앞에서 에디터의 백그라운드 잡에 중단 신호를 올립니다. */
+        void onBeforeDrainWorkers( DrainReason reason ) override;
 
     private:
         /** @brief 에디터 모듈 이미지의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleHostHeadless.cpp`)가 같이 씁니다. */

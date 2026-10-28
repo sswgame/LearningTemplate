@@ -66,6 +66,8 @@ namespace sw::editor
         void stopSimulation() override;
         /** @brief 월드 틱 뒤에 Step 을 소비합니다. */
         void onHostFrameEnd() override;
+        /** @brief 에디터 백그라운드 잡에게 종료 신호를 올립니다(`requestEditorBackgroundStop`). */
+        void requestBackgroundStop() override;
 
     private:
         // ------------------------------------------------------------------------------

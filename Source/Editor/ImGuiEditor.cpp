@@ -32,6 +32,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/EditorUIContext.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -1043,6 +1044,11 @@ namespace sw::editor
     void ImGuiEditor::stopSimulation()
     {
         EditorPlaySession::stop();
+    }
+
+    void ImGuiEditor::requestBackgroundStop()
+    {
+        requestEditorBackgroundStop();
     }
 
     void ImGuiEditor::onHostFrameEnd()

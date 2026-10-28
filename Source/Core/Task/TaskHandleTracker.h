@@ -42,6 +42,16 @@ namespace sw
          */
         [[nodiscard]] bool waitIdle( uint32 timeoutMs, string_view owner );
 
+        /**
+         * @brief 낸 태스크에게 "그만 하라"는 협조 신호를 올립니다(종료가 시작됐다). 태스크 본문이 `getStopSignal` 로 받은 신호를 훑는 곳에서 멈춘다.
+         * @details 강제 취소가 아니다 — 도는 태스크를 끊지 않고, 신호를 읽는 본문이 스스로 일찍 끝난다. 한 번 올리면 내리지 않는다(소유자가 끝나는 중이라는 뜻).
+         *          상용 엔진 비교: C# `CancellationTokenSource` · 언리얼 `FRunnable::Stop` 과 같은 협조 취소다.
+         */
+        void requestStop() { _pStop->store( true, std::memory_order_release ); }
+
+        /** @brief 이 소유자의 중단 신호입니다. 태스크를 낼 때 잡아 두면 소유자(추적기)가 먼저 사라져도 읽을 수 있다. */
+        [[nodiscard]] shared_ptr<const atomic<bool>> getStopSignal() const { return _pStop; }
+
         /** @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). 진단 로그용입니다. */
         [[nodiscard]] string describeFirstPending() const;
 
@@ -49,6 +59,7 @@ namespace sw
         /** @brief 아직 끝나지 않은 태스크를 낸 매니저입니다(없거나 매니저가 사라졌으면 nullptr). 메인 스레드가 기다릴 때 메인 큐를 돕는 데 씁니다. */
         [[nodiscard]] TaskManager* findPendingOwner() const;
 
+        shared_ptr<atomic<bool>>       _pStop{ sw::make_shared<atomic<bool>>( false ) }; ///< `requestStop` 이 올리는 협조 중단 신호
         mutable mutex                  _mutex;
         vector<TaskHandle> _listHandle SW_GUARDED_BY( _mutex );
         size_t _pruneThreshold         SW_GUARDED_BY( _mutex ){ 64 };

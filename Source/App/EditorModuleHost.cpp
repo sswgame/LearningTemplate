@@ -307,6 +307,13 @@ namespace sw
         destroyEditorInstance( bReleaseAPITable );
     }
 
+    void EditorModuleHost::onBeforeDrainWorkers( DrainReason reason )
+    {
+        const bool bStopJobs = reason == DrainReason::Shutdown && hasEditor() && _editorAPI.requestBackgroundStop != nullptr;
+        if ( bStopJobs )
+            _editorAPI.requestBackgroundStop( _editor );
+    }
+
     void EditorModuleHost::onRenderWorkersDrained()
     {
         // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다

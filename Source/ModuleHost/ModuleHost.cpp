@@ -356,6 +356,8 @@ namespace sw
 
     void ModuleHost::drainRenderWorkers( DrainReason reason )
     {
+        // 종료의 비우기는 호스트 모듈(에디터)을 내리기 앞이라 에디터의 배경 일이 아직 돈다 — 기다리기 전에 그만 하라고 알린다(`Task fencing timeout` 의 원인이었다).
+        onBeforeDrainWorkers( reason );
         // 비우는 까닭(`DrainReason`)이 곧 장치 대기의 이유다.
         const RHIWaitIdleReason waitReason = reason == DrainReason::BackendSwap ? RHIWaitIdleReason::BackendSwap
                                                                                 : ( reason == DrainReason::Shutdown ? RHIWaitIdleReason::Shutdown : RHIWaitIdleReason::HotReload );

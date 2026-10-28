@@ -25,6 +25,14 @@ namespace sw::editor
      * @details 작업 시스템은 부르는 스레드(에디터 서비스 범위를 등록한 스레드)에서 찾는다 — 워커 본문은 범위를 찾지 않는다(`findEditorScope`).
      */
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
+    /**
+     * @brief 에디터가 낸 모든 잡에게 "종료가 시작됐다"는 협조 신호를 올립니다. 잡 본문(긴 스캔 · 파싱)이 `readStopSignal` 로 받은 신호를 읽고 일찍 끝낸다.
+     * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`ModuleHost::drainRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
+     *          끝까지 돌아 다른 GPU · 빌드 작업과 겹칠 때 그 대기 시한을 넘겼다(`Task fencing timeout`). 에디터 컨텍스트가 없으면(테스트) 아무것도 하지 않는다.
+     */
+    void requestEditorBackgroundStop();
+    /** @brief 에디터 잡 하나가 제출 때 잡아 둔 중단 신호입니다(`beginRequest` 가 채운다). 에디터 컨텍스트가 없으면 nullptr — 멈출 일이 없다. */
+    [[nodiscard]] shared_ptr<const atomic<bool>> acquireEditorBackgroundStopSignal();
     // 낸 잡은 에디터 범위의 `TaskHandleTracker`(`getEditorState`)에 올라가고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
 } // namespace sw::editor
 
@@ -105,13 +113,14 @@ namespace sw::editor
         /** @brief 게임 스레드와 워커가 함께 보는 상태입니다. */
         struct State
         {
-            mutable mutex          _mutex{};
-            TInput                 _input{};
-            TResult                _result{};
-            uint32                 _generation{ 0 };
-            uint8                  _bPending : 1;
-            uint8                  _bReady   : 1;
-            [[maybe_unused]] uint8 _reserved : 6;
+            mutable mutex                  _mutex{};
+            TInput                         _input{};
+            TResult                        _result{};
+            uint32                         _generation{ 0 };
+            shared_ptr<const atomic<bool>> _pStop{}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). nullptr 이면 멈출 일이 없다
+            uint8                          _bPending : 1;
+            uint8                          _bReady   : 1;
+            [[maybe_unused]] uint8         _reserved : 6;
 
             State()
                 : _mutex{}
@@ -135,6 +144,7 @@ namespace sw::editor
             ++_pState->_generation;
             _pState->_input    = std::move( input );
             _pState->_result   = TResult{};
+            _pState->_pStop    = acquireEditorBackgroundStopSignal();
             _pState->_bPending = SW_TRUE;
             _pState->_bReady   = SW_FALSE;
             return _pState->_generation;
@@ -152,6 +162,15 @@ namespace sw::editor
 
             outInput = pState->_input;
             return true;
+        }
+
+        /** @brief 워커에서 호출합니다. 이 잡이 잡아 둔 중단 신호의 사본입니다(새 요청이 칸을 덮어써도 이 사본은 유효하다). 긴 일에 신호 포인터로 넘긴다. */
+        [[nodiscard]] static shared_ptr<const atomic<bool>> readStopSignal( const shared_ptr<State>& pState )
+        {
+            if ( pState == nullptr )
+                return nullptr;
+            ScopedLock<mutex> lock{ pState->_mutex };
+            return pState->_pStop;
         }
 
         /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시하며, 오래된 세대면 버립니다. */

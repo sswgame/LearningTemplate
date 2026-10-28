@@ -249,6 +249,8 @@ namespace sw
         virtual void onBeforeSuspendModules() {}
         /** @brief `ModuleScope::Editor` 와 `Both` 를 종료할 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
         virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
+        /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`DrainReason::Shutdown` 일 때만 뜻이 있다). */
+        virtual void onBeforeDrainWorkers( DrainReason reason ) { (void)reason; }
         /** @brief 렌더 워커와 GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시를 버립니다). */
         virtual void onRenderWorkersDrained() {}
 

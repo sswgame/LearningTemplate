@@ -79,7 +79,8 @@ namespace sw
         pOutAPI->endFrame       = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::onHostFrameEnd ); };                                             \
         pOutAPI->getSceneViews  = []( sw::EditorHandle editorHandle, sw::HostSceneView* pOutView, uint32 capacity ) -> uint32                                                                                      \
         { return sw::ModuleForwardUtil::callOr<EditorClass, uint32>( editorHandle, 0u, &EditorClass::getSceneViews, pOutView, capacity ); };                                                                       \
-        pOutAPI->getRedrawReasons = []( sw::EditorHandle editorHandle ) -> uint32                                                                                                                                  \
+        pOutAPI->requestBackgroundStop = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::requestBackgroundStop ); };                               \
+        pOutAPI->getRedrawReasons      = []( sw::EditorHandle editorHandle ) -> uint32                                                                                                                             \
         { return editorHandle != nullptr ? sw::editor::EditorRedrawUtil::collectReasons() : 0u; };                                                                                                                 \
         return true;                                                                                                                                                                                               \
     }

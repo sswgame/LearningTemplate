@@ -175,8 +175,11 @@ namespace sw::editor
         if ( readInput( pState, generation, resourceRoot ) == false )
             return;
 
-        EditorReferenceIndexData data{};
-        EditorReferenceIndex::scan( resourceRoot, data, pTasks );
+        EditorReferenceIndexData             data{};
+        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
+        EditorReferenceIndex::scan( resourceRoot, data, pTasks, pStop.get() );
+        if ( pStop != nullptr && pStop->load( std::memory_order_acquire ) )
+            return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인을 싣지 않는다
 
         publish( pState, generation, std::move( data ) );
     }

@@ -74,5 +74,7 @@ namespace sw
         virtual void stopSimulation() = 0;
         /** @brief 월드 틱 뒤에 한 프레임짜리 Step 을 소비합니다. */
         virtual void onHostFrameEnd() = 0;
+        /** @brief 앱이 끝나는 중입니다. 에디터의 백그라운드 잡에게 일찍 끝내라는 협조 신호를 올립니다(종료 대기 앞에서 한 번). */
+        virtual void requestBackgroundStop() = 0;
     };
 } // namespace sw

@@ -26,4 +26,16 @@ namespace sw::editor
             pStore->get<TaskHandleTracker>().track( handle );
         handle.submit();
     }
+
+    void requestEditorBackgroundStop()
+    {
+        if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
+            pStore->get<TaskHandleTracker>().requestStop();
+    }
+
+    shared_ptr<const atomic<bool>> acquireEditorBackgroundStopSignal()
+    {
+        EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
+        return pStore != nullptr ? pStore->get<TaskHandleTracker>().getStopSignal() : nullptr;
+    }
 } // namespace sw::editor
