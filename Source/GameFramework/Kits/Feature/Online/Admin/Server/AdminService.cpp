@@ -61,7 +61,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountID, _role, _nowMs.count() ); }
-            void complete() override { _pService->completeSeed( _result, isCancelled() ); }
+            void complete() override { _pService->completeSeed( _result, getCompletion() ); }
 
         private:
             AdminService*    _pService;
@@ -392,10 +392,10 @@ namespace sw
         }
     }
 
-    void AdminService::completeSeed( AdminResult result, bool bCancelled )
+    void AdminService::completeSeed( AdminResult result, ServiceStoreCompletion completion )
     {
         --_pendingSeedCount;
-        if ( result != AdminResult::Ok && bCancelled == false ) // 종료 때문에 취소된 일은 오류가 아니다
+        if ( result != AdminResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류가 아니다
             SW_LOG_ERROR( "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
     }
 

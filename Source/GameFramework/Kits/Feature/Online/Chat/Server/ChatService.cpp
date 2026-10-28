@@ -120,7 +120,7 @@ namespace sw
                 }
             }
 
-            void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) - _rejectedCount, _rejectedCount, isCancelled() ); }
+            void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) - _rejectedCount, _rejectedCount, getCompletion() ); }
 
         private:
             void trimChannel( IServiceStoreConnection& connection, const string& channelID ) const
@@ -752,11 +752,11 @@ namespace sw
         _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteWork>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs.count() - _settings._historyRetentionMs ) );
     }
 
-    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, bool bCancelled )
+    void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion )
     {
         --_pendingStoreCount;
         _bHistoryWriting = SW_FALSE;
-        if ( bCommitted == false && bCancelled == false ) // 종료 때문에 취소된 쓰기는 경고하지 않는다(기록은 어느 쪽이든 버려진다)
+        if ( bCommitted == false && completion.isCancelled() == false ) // 종료 때문에 취소된 쓰기는 경고하지 않는다(기록은 어느 쪽이든 버려진다)
             SW_LOG_WARNING( "ChatService: %# chat history records were not stored (store unavailable) - they are dropped", messageCount );
         if ( rejectedCount > 0 )
             SW_LOG_ERROR( "ChatService: %# chat history records could not be written - they are dropped", rejectedCount );

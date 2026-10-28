@@ -129,7 +129,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { MailboxStoreLogic::sweepExpired( connection, _nowMs.count(), _batchCount, _stats ); }
-            void complete() override { _pService->completeSweep( _stats, isCancelled() ); }
+            void complete() override { _pService->completeSweep( _stats, getCompletion() ); }
 
         private:
             MailboxSweepStats _stats;
@@ -150,7 +150,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { _result = ServiceMailCampaignTable::listCampaigns( connection, _listCampaign ); }
-            void complete() override { _pService->completeCampaignRefresh( _result, _listCampaign, isCancelled() ); }
+            void complete() override { _pService->completeCampaignRefresh( _result, _listCampaign, getCompletion() ); }
 
         private:
             vector<ServiceMailCampaign> _listCampaign;
@@ -398,7 +398,7 @@ namespace sw
         SW_LOG_WARNING( "MailboxService completed an unknown call %#", callID );
     }
 
-    void MailboxService::completeSweep( const MailboxSweepStats& stats, bool bCancelled )
+    void MailboxService::completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
     {
         _bSweepPending         = SW_FALSE;
         const int32 arrCount[] = { stats._discardedCount, stats._returnedCount, stats._removedCount };
@@ -414,7 +414,7 @@ namespace sw
                 _settings._pBalanceNotice->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
             }
         }
-        if ( stats._failedCount > 0 && bCancelled == false ) // 종료 때문에 취소된 정리는 경고하지 않는다
+        if ( stats._failedCount > 0 && completion.isCancelled() == false ) // 종료 때문에 취소된 정리는 경고하지 않는다
             SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
         {
@@ -426,12 +426,12 @@ namespace sw
         _bSweepRunHeld = SW_FALSE;
     }
 
-    void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, bool bCancelled )
+    void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion )
     {
         _bCampaignRefreshPending = SW_FALSE;
         if ( result != ServiceStoreResult::Ok )
         {
-            if ( bCancelled == false ) // 종료 때문에 취소된 읽기는 경고하지 않고 캐시를 그대로 둔다
+            if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않고 캐시를 그대로 둔다
                 SW_LOG_WARNING( "Mail campaigns could not be read - keeping the cached list" );
             return;
         }

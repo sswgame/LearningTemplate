@@ -122,7 +122,7 @@ namespace sw
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
         void requestLedgerAudit();
         /** @brief 보존 검사 작업의 `complete` 입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
-        void                         completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, bool bCancelled );
+        void                         completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
         static constexpr const utf8* kAuditJobID = "ledger.audit";
         /** @brief 마지막 보존 검사가 맞았으면 true 입니다(검사 전에는 false). */
         bool wasLastAuditBalanced() const { return _bLastAuditBalanced == SW_TRUE; }
@@ -130,7 +130,7 @@ namespace sw
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
         void completeCall( uint64 callID, const EconomyReply& reply );
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. */
-        void  completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange, bool bCancelled );
+        void  completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:

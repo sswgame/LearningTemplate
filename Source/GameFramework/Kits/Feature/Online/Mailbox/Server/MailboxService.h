@@ -20,6 +20,7 @@
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxProtocol.h"
@@ -111,11 +112,11 @@ namespace sw
         /** @brief 작업의 `complete` 가 호출합니다. */
         void completeCall( uint64 callID, const MailboxReply& reply );
         /** @brief 만료 정리 작업의 `complete` 입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
-        void completeSweep( const MailboxSweepStats& stats, bool bCancelled );
+        void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
         /** @brief 새 우편 알림 작업의 `complete` 입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
         void completeNotices( ServiceStoreResult result, vector<ServiceMailNotice>& inoutListNotice );
         /** @brief 캠페인 작업의 `complete` 입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
-        void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, bool bCancelled );
+        void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
 
         const vector<ServiceMailCampaign>& getCampaigns() const { return _listCampaign; }
         int32                              getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
