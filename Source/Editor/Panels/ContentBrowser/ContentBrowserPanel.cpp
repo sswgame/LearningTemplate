@@ -1106,12 +1106,12 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TypeFilter" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Tiles" ) );
         if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
             _viewMode = ViewMode::Tiles;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TilesView" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "List" ) );
         if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
             _viewMode = ViewMode::List;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ListView" ) );
@@ -1155,8 +1155,8 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
 
-        ImGui::SameLine();
         bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All packs" ) );
         if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
             setShowAllPacks( bShowAllPacks );
         EditorSelfTestMarks::note( "contentBrowser.allPacks" );

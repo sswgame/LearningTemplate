@@ -81,6 +81,11 @@ namespace sw
     {
         if ( scenario.getInputMode() == VirtualInputMode::Mixed )
             return true;
+        if ( scenario.getTestOptions()._bRequiresForeground )
+        {
+            outError = "requireForeground=\"true\" takes the OS foreground (desktop-global state), so the scenario must declare input=\"mixed\" and run alone in the Desktop suite";
+            return false;
+        }
         for ( const AutomationStep& step : scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );

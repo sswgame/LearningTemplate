@@ -231,8 +231,8 @@ namespace sw::editor
             _bSkipBuild = bSkipBuild ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "packaging.skipBuild" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipBuild" ) );
-        ImGui::SameLine();
         bool bSkipCook = _bSkipCook == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Skip cook" ) );
         if ( ImGui::Checkbox( "Skip cook", &bSkipCook ) )
             _bSkipCook = bSkipCook ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "packaging.skipCook" );

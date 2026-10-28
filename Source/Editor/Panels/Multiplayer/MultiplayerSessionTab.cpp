@@ -156,7 +156,7 @@ namespace sw::editor
     {
         EditorNetPlaySettings& settings = session.getSettings();
         (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Record traces" ) );
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "RecordTraces" ) );
@@ -275,7 +275,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "LogSource" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Follow" ) );
         ImGui::Checkbox( "Follow", &_bFollowLog );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "FollowLog" ) );
         if ( ImGui::BeginChild( "##NetPlayLog", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )

@@ -467,6 +467,17 @@ SW_TEST_CASE( AutomationScenarioTest, DesktopStepsNeedMixedInput )
 
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="exclusive"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
     SW_EXPECT_TRUE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+
+    // 화면 복사(`CaptureWindow`)와 전경 요구도 데스크톱 전역 상태다 — 에디터 UI 는 창 단위 캡처(`CaptureEditorUI`)로 찍는다.
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="exclusive"><At frame="0"><CaptureWindow file="a.png"/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="mixed"><At frame="0"><CaptureWindow file="a.png"/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" requireForeground="true" input="exclusive"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+    SW_EXPECT_TRUE_MSG( reason.find( "requireForeground" ) != sw::string::npos, reason.c_str() );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" requireForeground="true" input="mixed"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
 }
 
 /**

@@ -211,7 +211,7 @@ namespace sw::editor
             syncDirty(); // 검증 결과 탐침(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
         }
         EditorSelfTestMarks::note( "catalog.validate" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw text" ) );
         ImGui::Checkbox( "Raw text", &_bRawMode );
         ImGui::EndDisabled();
     }

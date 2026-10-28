@@ -1116,9 +1116,9 @@ namespace sw::editor
             lattice.resetToIdentity();
             session.markDirty();
         }
-        ImGui::SameLine();
         // 고른 점 · 대칭은 세션 상태다 — 뷰포트에서 점을 고르면 이 칸이 따라가고, 대칭 설정은 뷰포트 끌기에도 걸린다
         bool bMirror = session.isMirrorEditing();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdMeshModifiers", "Mirror" ) ) );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "Mirror" ), &bMirror ) )
             session.setMirrorEditing( bMirror );
         if ( session.isMirrorEditing() )
@@ -1182,8 +1182,8 @@ namespace sw::editor
         if ( ImGui::DragFloat( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ), &time, 0.01f, 0.0f, MeshModifierSession::kMaxPreviewTimeSeconds ) )
             session.setPreviewTime( time );
         // 재생하면 시간만 바뀌는 애니메이션 모디파이어(Waving · Ripple · Vertex Anim …)가 칸을 끌지 않아도 움직인다
-        ImGui::SameLine();
         bool bPlaying = session.isPreviewPlaying();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdMeshModifiers", "PlayPreviewTime" ) ) );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "PlayPreviewTime" ), &bPlaying ) )
             session.setPreviewPlaying( bPlaying );
         EditorSelfTestMarks::note( "meshmodifiers.playPreviewTime" );

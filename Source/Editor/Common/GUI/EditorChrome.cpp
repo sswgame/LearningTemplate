@@ -178,6 +178,17 @@ namespace sw::editor
         return ImGui::CalcTextSize( pLabel, nullptr, true ).x + ImGui::GetStyle().FramePadding.x * 2.0f; // "##" 뒤 글자는 그려지지 않는다
     }
 
+    float32 EditorChrome::measureArrowButton()
+    {
+        return ImGui::GetFrameHeight();
+    }
+
+    float32 EditorChrome::measureCheckbox( const utf8* pLabel )
+    {
+        const float32 textWidth = ImGui::CalcTextSize( pLabel, nullptr, true ).x; // "##" 뒤 글자는 그려지지 않는다
+        return ImGui::GetFrameHeight() + ( textWidth > 0.0f ? ImGui::GetStyle().ItemInnerSpacing.x + textWidth : 0.0f );
+    }
+
     void EditorChrome::sameLineIfFits( float32 itemWidth )
     {
         const ImGuiStyle& style = ImGui::GetStyle();

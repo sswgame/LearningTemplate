@@ -481,8 +481,8 @@ namespace sw::editor
                 loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 
-            ImGui::SameLine();
             bool bRaw = _bGameDataRaw == SW_TRUE;
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw XML" ) );
             if ( ImGui::Checkbox( "Raw XML", &bRaw ) )
                 _bGameDataRaw = bRaw ? SW_TRUE : SW_FALSE;
             EditorWidgets::drawTooltip( "Table edits keep comments and indentation. Nested elements are edited in the raw text view." );

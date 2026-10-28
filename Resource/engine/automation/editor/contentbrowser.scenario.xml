@@ -2,10 +2,10 @@
 <!--
   에디터 시나리오 — 콘텐츠 브라우저(A1): 게임 루트는 활성 팩 하나이고, All packs 를 켜면 game/ 의 팩이 모두 루트가 된다.
   참조 역색인이 다 만들어지면 활성 팩의 crate_medium.mesh 를 오른쪽 클릭해 Find References 를 누르고, 그 메시를 쓰는 씬이 결과에 나오는지 본다.
-  CaptureWindow 의 PNG(Saved/Automation/editor.contentbrowser/)는 결과 창까지 든 화면이다.
+  CaptureEditorUI 의 PNG(Saved/Automation/editor.contentbrowser/)는 결과 창까지 든 화면이다.
   실행: py -3 -m Scripts scenario contentbrowser
 -->
-<Scenario name="editor.contentbrowser" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.contentbrowser" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="40"><DevCommand line="panel.focus content_browser"/></At>
 	<At frame="60"><Expect probe="Editor.ContentGameRootCount" equals="1"/></At>
@@ -28,7 +28,7 @@
 	<At frame="163"><EditorClick mark="menu.asset.findReferences" state="up"/></At>
 	<At frame="180">
 		<Expect probe="Editor.ReferenceResultCount" atLeast="1"/>
-		<CaptureWindow file="references.png"/>
+		<CaptureEditorUI file="references.png"/>
 	</At>
 	<At frame="195"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

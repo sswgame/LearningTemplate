@@ -231,9 +231,9 @@ namespace sw::editor
             EditorSelfTestMarks::note( "gameView.aspect" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewAspect" ) );
 
-            ImGui::SameLine();
             // 유니티 게임 뷰의 Maximize On Play 에 해당 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
             EditorPlayPreferences& playPreferences = editPreferences<EditorPlayPreferences>();
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Max" ) );
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_WARNING( "Editor preferences could not be saved" );
             EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );

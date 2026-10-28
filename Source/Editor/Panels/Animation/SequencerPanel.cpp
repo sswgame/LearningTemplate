@@ -421,8 +421,8 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteKeyTip" ) );
-        ImGui::SameLine();
         track.collectKeyFrames( _listKeyFrame );
+        EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##previousKey", ImGuiDir_Left ) )
         {
             for ( auto it = _listKeyFrame.rbegin(); it != _listKeyFrame.rend(); ++it )
@@ -436,7 +436,7 @@ namespace sw::editor
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PreviousKeyTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##nextKey", ImGuiDir_Right ) )
         {
             for ( const float32 keyFrame : _listKeyFrame )
