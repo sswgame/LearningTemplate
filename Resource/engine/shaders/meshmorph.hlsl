@@ -1,4 +1,5 @@
 #include "common.hlsli"
+#include "gpuassert.hlsli"
 
 /**
  * meshmorph.hlsl — GPU 메시 모프 (컴퓨트).
@@ -35,14 +36,25 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
 
 #include "meshmodifier.hlsli"
 
+/// assert 의 범위 검사가 쓰는 레스트 버퍼 원소 수입니다(assert 변형에서만 평가된다).
+uint getRestVertexElementCount()
+{
+    uint count  = 0u;
+    uint stride = 0u;
+    g_RestVertices.GetDimensions( count, stride );
+    return count;
+}
+
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
+    SW_GPU_ASSERT_THREAD( dispatchThreadId.x );
     const uint vertexIndex = dispatchThreadId.x;
     if ( vertexIndex >= g_MorphVertexCount )
         return;
 
-    const uint   element             = vertexIndex * SW_MORPH_FLOAT4_PER_VERTEX;
+    const uint element = vertexIndex * SW_MORPH_FLOAT4_PER_VERTEX;
+    SW_GPU_ASSERT( element + 1u < getRestVertexElementCount(), SW_GPU_ASSERT_ID_MORPH_VERTEX_RANGE, element );
     const float4 restPositionElement = g_RestVertices[element];
     const float4 restNormalElement   = g_RestVertices[element + 1u];
 
@@ -69,7 +81,8 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     float3 normal   = normalize( restNormal - tangentialGradient );
 
     // 변형 프로그램이 있는 메시 — 물결 대신 프로그램 결과를 쓴다(한 출구, early return 없음)
-    const uint  slot         = (uint)max( restNormalElement.w - 1.0f, 0.0f );
+    const uint slot = (uint)max( restNormalElement.w - 1.0f, 0.0f );
+    SW_GPU_ASSERT( restNormalElement.w <= 0.5f || slot < MeshDeform::countProgramElements(), SW_GPU_ASSERT_ID_MORPH_PROGRAM_SLOT, slot );
     const float programStart = restNormalElement.w > 0.5f ? g_DeformPrograms[slot].x : -1.0f;
     if ( programStart >= 0.0f )
     {

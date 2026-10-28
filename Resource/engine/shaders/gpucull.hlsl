@@ -1,5 +1,6 @@
 #include "common.hlsli"
 #include "batchdata.hlsli"
+#include "gpuassert.hlsli"
 
 /**
  * gpucull.hlsl — GPU 컬링 + **드로우 커맨드 생성** (언리얼 FInstanceCullingContext 와 같은 자리).
@@ -159,6 +160,8 @@ bool isOccluded( float3 center, float radius )
  */
 void appendVisible( uint batchIndex, uint entry )
 {
+    // 배치 번호가 표 밖이면 아래 g_BatchInfo · g_IndirectArgs 가 범위 밖을 읽고 쓴다 — 여기서 알린다(막지는 않는다, 백엔드가 범위 밖을 다르게 다룬다).
+    SW_GPU_ASSERT( batchIndex < g_BatchCount, SW_GPU_ASSERT_ID_CULL_BATCH_RANGE, batchIndex );
     uint slot = 0;
 #if defined( DX11 )
     // SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
@@ -190,6 +193,8 @@ void appendVisible( uint batchIndex, uint entry )
 #endif
 
     const uint writeAt = g_BatchInfo[batchIndex]._visibleBase + slot;
+    // 가시 구간은 배치의 개수만큼 잡혀 있어야 한다 — 넘으면 항목을 버린 것이다(그 인스턴스가 이번 프레임에 안 그려진다).
+    SW_GPU_ASSERT( writeAt < g_VisibleSlotCount, SW_GPU_ASSERT_ID_CULL_VISIBLE_RANGE, writeAt );
     if ( writeAt < g_VisibleSlotCount )
         g_VisibleInstanceIDs[writeAt] = entry;
 }
@@ -248,9 +253,11 @@ void advanceLodFade( uint instanceId, uint headBatch, uint levelCount, float scr
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
+    SW_GPU_ASSERT_THREAD( dispatchThreadId.x );
     const uint instanceId = dispatchThreadId.x;
     if ( instanceId >= g_InstanceCount )
         return;
+    SW_GPU_ASSERT( instanceId <= kVisibleEntryIdMask, SW_GPU_ASSERT_ID_CULL_INSTANCE_ID, instanceId );
 
     const InstanceData instance  = g_Instances[instanceId];
     const uint         headBatch = instance._meshBatchIndex;
@@ -289,6 +296,11 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     uint previous  = 0u;
     uint fadeLevel = 16u;
     advanceLodFade( instanceId, headBatch, headInfo._lodLevelCount, computeLodScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous, fadeLevel );
+    // LOD 단계 번호 — 그룹의 단계 수 안이어야 하고(배치 표의 머리 + 단계 행), 가시 항목의 3 비트 칸 · 크로스페이드 4 비트 칸에 들어가야 한다.
+    SW_GPU_ASSERT( level < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );
+    SW_GPU_ASSERT( previous < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_PREVIOUS, previous );
+    SW_GPU_ASSERT( level <= kVisibleEntryLevelMask && previous <= kVisibleEntryLevelMask, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL_BITS, max( level, previous ) );
+    SW_GPU_ASSERT( fadeLevel <= 16u, SW_GPU_ASSERT_ID_CULL_FADE_LEVEL, fadeLevel );
     if ( fadeLevel >= 16u )
     {
         appendVisible( headBatch + level, instanceId | ( level << kVisibleEntryLevelShift ) );

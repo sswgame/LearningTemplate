@@ -1,6 +1,7 @@
 #include "common.hlsli"
 #include "canvasquad.hlsli"
 #include "instancedata.hlsli"
+#include "gpuassert.hlsli"
 
 /**
  * canvasmarker.hlsl — 화면 마커(이름표 · HP 바 · 목표 표시)의 투영 컴퓨트(RenderPassType::CanvasMarker, docs/plans UI 후보 MarkerComputeProjection 의 구현).
@@ -34,19 +35,38 @@ static const uint kMarkerFlagActive = 0x80000000u;
 
 static const float kBigReach = 3.402823e38f;
 
+/// assert 의 범위 검사가 쓰는 버퍼 원소 수입니다(assert 변형에서만 평가된다).
+uint getMarkerRowCount()
+{
+    uint count  = 0u;
+    uint stride = 0u;
+    g_MarkerRows.GetDimensions( count, stride );
+    return count;
+}
+
+uint getMarkerInstanceCount()
+{
+    uint count  = 0u;
+    uint stride = 0u;
+    g_MarkerInstances.GetDimensions( count, stride );
+    return count;
+}
+
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 {
+    SW_GPU_ASSERT_THREAD( dispatchId.x );
     const float4 cameraRow   = g_MarkerRows[kRowCamera];
     const uint   markerCount = asuint( cameraRow.w );
     const uint   index       = dispatchId.x;
     if ( index >= markerCount )
         return;
-    const uint   rowAt = kRowFirstMarker + index * kMarkerRowCount;
-    const float4 rowA  = g_MarkerRows[rowAt];
-    const float4 rowB  = g_MarkerRows[rowAt + 1u];
-    const uint   bits  = asuint( rowB.w );
-    const float4 rowC  = g_MarkerRows[rowAt + 2u];
+    const uint rowAt = kRowFirstMarker + index * kMarkerRowCount;
+    SW_GPU_ASSERT( rowAt + kMarkerRowCount <= getMarkerRowCount(), SW_GPU_ASSERT_ID_MARKER_ROW_RANGE, rowAt );
+    const float4 rowA = g_MarkerRows[rowAt];
+    const float4 rowB = g_MarkerRows[rowAt + 1u];
+    const uint   bits = asuint( rowB.w );
+    const float4 rowC = g_MarkerRows[rowAt + 2u];
     if ( ( bits & kMarkerFlagActive ) == 0u )
         return;
 
@@ -57,11 +77,13 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     const float  margin   = viewport.w;
 
     // 인스턴스 칸이 있으면 GPUScene 인스턴스 변환의 위치(행 벡터 행렬의 4 번째 행) + 월드 오프셋이다 — GPU 가 옮기는 인스턴스도 따라간다. 없으면 게임 스레드가 보낸 월드 점이다.
-    const uint   instanceSlot = asuint( rowC.w );
-    const float3 world        = instanceSlot != kNoInstance ? g_MarkerInstances[instanceSlot]._world[3].xyz + rowC.xyz : rowA.xyz;
-    const float  dist         = length( cameraRow.xyz - world );
-    float4       rect         = float4( 0.0f, 0.0f, 0.0f, 0.0f ); // 배율 0 = 접힘(그려지지 않는다)
-    const bool   bTooFar      = rowA.w > 0.0f && dist > rowA.w;
+    const uint instanceSlot = asuint( rowC.w );
+    SW_GPU_ASSERT( instanceSlot == kNoInstance || instanceSlot < getMarkerInstanceCount(), SW_GPU_ASSERT_ID_MARKER_INSTANCE_RANGE, instanceSlot );
+    const float3 world = instanceSlot != kNoInstance ? g_MarkerInstances[instanceSlot]._world[3].xyz + rowC.xyz : rowA.xyz;
+    SW_GPU_ASSERT( GpuAssert::isFinite( world ), SW_GPU_ASSERT_ID_MARKER_WORLD_NAN, world.x );
+    const float dist    = length( cameraRow.xyz - world );
+    float4      rect    = float4( 0.0f, 0.0f, 0.0f, 0.0f ); // 배율 0 = 접힘(그려지지 않는다)
+    const bool  bTooFar = rowA.w > 0.0f && dist > rowA.w;
     if ( bTooFar == false )
     {
         float scale = 1.0f;
@@ -71,6 +93,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
         const float4 world4 = float4( world, 1.0f );
         const float4 clip   = world4.x * g_MarkerRows[kRowViewProjection] + world4.y * g_MarkerRows[kRowViewProjection + 1u] + world4.z * g_MarkerRows[kRowViewProjection + 2u] +
                             world4.w * g_MarkerRows[kRowViewProjection + 3u];
+        SW_GPU_ASSERT( GpuAssert::isFinite( clip ), SW_GPU_ASSERT_ID_MARKER_CLIP_NAN, clip.w );
         const bool   bBehind = clip.w < limits.x;
         const float2 center  = viewSize * 0.5f;
         float2       screen  = float2( 0.0f, 0.0f );

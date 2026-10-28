@@ -189,11 +189,21 @@ struct MeshDeform
     static float pointBoxDistanceSq( float3 pos, float3 boxMin, float3 boxMax );
     static bool rayHitsBox( float3 origin, float3 direction, float3 boxMin, float3 boxMax, float maxDistance );
     static float3 conform( float3 location, float3 surfaceNormal, ModifierContext context );
+    static uint countProgramElements();
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
     static float3 transformVector( float3 direction, uint row );
     static void applyProgram( uint programBase, uint vertexIndex, inout float3 inoutPosition, inout float3 inoutNormal );
 };
+
+/** @brief 프로그램 표(g_DeformPrograms)의 원소 수입니다 — assert 의 범위 검사가 쓴다(assert 변형에서만 평가된다). */
+static uint MeshDeform::countProgramElements()
+{
+    uint count  = 0u;
+    uint stride = 0u;
+    g_DeformPrograms.GetDimensions( count, stride );
+    return count;
+}
 
 float ModifierContext::param( uint index )
 {
@@ -223,6 +233,7 @@ float ModifierContext::curve( uint index, float x )
 /** 매개변수 영역의 float4 하나(index 는 float4 단위) — 외부 입력 블록을 읽는 길이다 */
 float4 ModifierContext::raw( uint index )
 {
+    SW_GPU_ASSERT( _paramBase + index < MeshDeform::countProgramElements(), SW_GPU_ASSERT_ID_MODIFIER_RAW_RANGE, _paramBase + index );
     return g_DeformPrograms[_paramBase + index];
 }
 
@@ -1574,16 +1585,18 @@ static float3 MeshDeform::conform( float3 location, float3 surfaceNormal, Modifi
         while ( stackSize > 0u )
         {
             stackSize -= 1u;
-            const uint   nodeIndex = stack[stackSize];
-            const float4 nodeA     = context.raw( nodeBase + nodeIndex * 2u );
-            const float4 nodeB     = context.raw( nodeBase + nodeIndex * 2u + 1u );
-            const bool   bVisit    = mode == 0 ? MeshDeform::pointBoxDistanceSq( location, nodeA.xyz, nodeB.xyz ) <= bestDistance * bestDistance
-                                               : MeshDeform::rayHitsBox( location, rayDirection, nodeA.xyz, nodeB.xyz, bestDistance );
-            const uint   first     = (uint)( nodeA.w + 0.5f );
-            const uint   count     = (uint)( nodeB.w + 0.5f );
+            const uint nodeIndex = stack[stackSize];
+            SW_GPU_ASSERT( nodeIndex < (uint)( header.z + 0.5f ), SW_GPU_ASSERT_ID_MODIFIER_NODE_RANGE, nodeIndex );
+            const float4 nodeA  = context.raw( nodeBase + nodeIndex * 2u );
+            const float4 nodeB  = context.raw( nodeBase + nodeIndex * 2u + 1u );
+            const bool   bVisit = mode == 0 ? MeshDeform::pointBoxDistanceSq( location, nodeA.xyz, nodeB.xyz ) <= bestDistance * bestDistance
+                                            : MeshDeform::rayHitsBox( location, rayDirection, nodeA.xyz, nodeB.xyz, bestDistance );
+            const uint   first  = (uint)( nodeA.w + 0.5f );
+            const uint   count  = (uint)( nodeB.w + 0.5f );
             if ( bVisit && count == 0u )
             {
                 // 안쪽 노드 - 둘째 자식을 쌓고 첫째 자식을 먼저 본다(스택 깊이는 트리 깊이 정도다)
+                SW_GPU_ASSERT( stackSize + 2u <= 32u, SW_GPU_ASSERT_ID_MODIFIER_STACK_OVERFLOW, stackSize );
                 stack[stackSize]      = first + 1u;
                 stack[stackSize + 1u] = first;
                 stackSize += 2u;
@@ -1592,7 +1605,9 @@ static float3 MeshDeform::conform( float3 location, float3 surfaceNormal, Modifi
             {
                 for ( uint leafIndex = 0u; leafIndex < count; ++leafIndex )
                 {
-                    const uint   at        = triangleBase + ( first + leafIndex ) * 3u;
+                    const uint at = triangleBase + ( first + leafIndex ) * 3u;
+                    SW_GPU_ASSERT( first + leafIndex < (uint)( header.y + 0.5f ) && at + 2u < MeshDeform::countProgramElements() - context._paramBase,
+                                   SW_GPU_ASSERT_ID_MODIFIER_TRIANGLE_RANGE, at );
                     const float3 a         = context.raw( at ).xyz;
                     const float3 b         = context.raw( at + 1u ).xyz;
                     const float3 c         = context.raw( at + 2u ).xyz;
@@ -1645,6 +1660,7 @@ static float3 MeshDeform::transformVector( float3 direction, uint row )
  */
 static void MeshDeform::applyProgram( uint programBase, uint vertexIndex, inout float3 inoutPosition, inout float3 inoutNormal )
 {
+    SW_GPU_ASSERT( programBase < MeshDeform::countProgramElements(), SW_GPU_ASSERT_ID_MODIFIER_PROGRAM_RANGE, programBase );
     const float4 header = g_DeformPrograms[programBase];
     const uint   count  = (uint)header.x;
     uint         cursor = programBase + 1u;
@@ -1652,11 +1668,15 @@ static void MeshDeform::applyProgram( uint programBase, uint vertexIndex, inout 
     float2 vertexUV = float2( 0.0f, 0.0f );
     if ( header.z > 0.5f && vertexIndex < (uint)header.w )
     {
+        SW_GPU_ASSERT( programBase + (uint)header.z + vertexIndex / 2u < MeshDeform::countProgramElements(), SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE,
+                       programBase + (uint)header.z + vertexIndex / 2u );
         const float4 uvPair = g_DeformPrograms[programBase + (uint)header.z + vertexIndex / 2u];
         vertexUV            = ( vertexIndex & 1u ) != 0u ? uvPair.zw : uvPair.xy;
     }
     for ( uint modifierIndex = 0u; modifierIndex < count; ++modifierIndex )
     {
+        // 기록 하나(머리 + 변환 행렬 · 상자)가 표 안에 통째로 있어야 한다 — 프로그램 머리의 수와 실제 기록이 어긋나면 여기서 알린다.
+        SW_GPU_ASSERT( cursor + SW_MODIFIER_RECORD_FLOAT4 <= MeshDeform::countProgramElements(), SW_GPU_ASSERT_ID_MODIFIER_RECORD_RANGE, cursor );
         const float4    record    = g_DeformPrograms[cursor];
         const float4    boundsMin = g_DeformPrograms[cursor + 1u];
         ModifierContext context;
