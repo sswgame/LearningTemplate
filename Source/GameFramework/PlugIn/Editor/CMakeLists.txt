@@ -5,6 +5,7 @@
 
 add_subdirectory(Base)
 add_subdirectory(Admin)
+add_subdirectory(AdminLogin)
 add_subdirectory(ThemePark)
 add_subdirectory(MeshModifiers)
 add_subdirectory(CameraPresets)

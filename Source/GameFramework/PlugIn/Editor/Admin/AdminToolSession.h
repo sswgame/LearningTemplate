@@ -55,6 +55,11 @@ namespace sw::editor
         /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */
         void disconnectLive();
 
+        /** @brief 프레임마다 `updateConnection` 끝에서 부르는 처리기입니다(로그인을 맡은 쪽이 응답을 꺼내는 자리). */
+        using FrameHook = Delegate<void()>;
+        /** @brief 프레임 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) - 구독이 풀리면 빈다. 에디터 확장이 inline 으로 부르므로 이 함수는 헤더에 둔다. */
+        [[nodiscard]] Subscription bindFrameHook( FrameHook hook ) { return _onFrame.bind( std::move( hook ) ); }
+
         /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGmLogin::setCredentials` 가 그 모양이다). */
         using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
         /**
@@ -127,6 +132,7 @@ namespace sw::editor
         IAdminCommandProvider*           _pActive;
         AdminToolConnection              _connection;
         DelegateSlot<CredentialsHandler> _onCredentials;
+        DelegateSlot<FrameHook>          _onFrame;
         AdminReply                       _lookup;
         AdminReply                       _lookupAudit;
         AdminReply                       _reports;

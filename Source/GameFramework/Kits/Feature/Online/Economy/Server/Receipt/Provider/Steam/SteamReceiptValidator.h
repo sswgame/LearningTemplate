@@ -19,6 +19,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Base/Online/Platform/PlatformServices.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 
@@ -56,7 +57,7 @@ namespace sw
         SteamReceiptValidator( SteamReceiptSettings settings, HTTPClient* pHTTPClient );
         ~SteamReceiptValidator() override;
 
-        const utf8* getStoreName() const override { return "steam"; }
+        const utf8* getStoreName() const override { return PlatformStoreName::kSteam; }
         void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불 보고서를 조회하고, 끝난 응답을 처리합니다. */
         void update( UnixMilliseconds now ) override;

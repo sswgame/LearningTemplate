@@ -41,6 +41,7 @@ namespace sw::editor
         , _pActive{ &_fake }
         , _connection{}
         , _onCredentials{}
+        , _onFrame{}
         , _lookup{}
         , _lookupAudit{}
         , _reports{}
@@ -108,6 +109,8 @@ namespace sw::editor
     void AdminToolSession::updateConnection()
     {
         _connection.update( SystemMonotonicClock{}.nowMilliseconds() );
+        if ( _onFrame.isBound() )
+            _onFrame.get()();
     }
 
     void AdminToolSession::requestLookup( AccountID accountID )

@@ -104,7 +104,7 @@ FCM HTTP v1(`Provider/Fcm/FcmPushProvider`, 서비스 계정 OAuth 는 `ServiceA
 - 노출 면은 서비스의 형식이다: `IOnlineHostService::getExposure()`(`Player` 기본 · `Admin` · `PlayerAndAdmin`). 리슨과 노출이 맞지 않는 요청은 "없는 메서드" 와 같은 `kInvalidRequest` 로 답한다(영역이 있는지 숨김).
 - `_adminServicePort` 0 이면 GM 리슨이 없고 GM 키트를 켠 서버는 기동하지 못한다(플레이어 포트로 받는 폴백 없음). `_adminListenAddress` 기본은 `127.0.0.1`.
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동은 확인하지 않았다.
-- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 건다. 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `bindLoginHook` 에 `AccountGmLogin` 을 끼워야 하고, 없으면 서버가 `NotLoggedIn` 으로 거절한다. 이 조립을 하는 도구 실행 파일은 아직 없다. 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 쓴다.
+- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 건다. 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `bindLoginHook` 에 `AccountGmLogin` 을 끼워야 하고, 없으면 서버가 `NotLoggedIn` 으로 거절한다. 이 조립은 새 에디터 확장 `GF_EditorPlugIn_AdminLogin`(`AdminLoginBridge` 서브시스템 — GM 키트 · 계정 키트 두 의존)이 한다: 패널 처리기에 `AccountGmLogin::setCredentials`, 연결 로그인 훅에 `onReady`, 세션 프레임 훅(`AdminToolSession::bindFrameHook`)에 `update` 를 건다(빌드 확인, 서버 로그인 확인은 남음). 계정 클라이언트 정보는 플랫폼 `editor` · 빌드 `1.0.0`. 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 쓴다.
 
 ### U1 — 클라이언트 UI 위젯
 
