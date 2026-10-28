@@ -1,0 +1,25 @@
+{
+    "_name": "GF_EditorPlugIn_CameraPresets",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "카메라 프리셋(.cameras.xml) 미리보기 확장 — 프리셋을 골라 미리보기 씬 대상에서 본 시점(Fixed · Follow · Orbit · Dolly …)을 자유 카메라로 본다(보기 전용)",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}
