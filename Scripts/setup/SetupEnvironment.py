@@ -185,12 +185,10 @@ class EnvironmentSetupManager:
 
     def installPreCommitHookInternal(self) -> None:
         # 훅 설치 실패를 경고로 넘기면 커밋 검사 없이 커밋하게 된다 — 멈춘다.
-        from setup.InstallGitHooks import installPreCommitHook, installPrePushHook
+        from setup.InstallGitHooks import installPreCommitHook
 
         if installPreCommitHook(self.project_root):
             self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
-        if installPrePushHook(self.project_root):
-            self.logger.info("[SetupEnvironment] Installed git pre-push hook (Scripts/dev/RunFullBuild.py check-push).")
 
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()

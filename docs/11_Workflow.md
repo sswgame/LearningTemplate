@@ -69,7 +69,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 **검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 슬롯을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역이 쓰는 헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다. "검증했다" 고 보고하는 빌드는 통합 담당이 병합 결과에서 한 번 돌린 `full-build` 입니다.
 
 - `full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋의 빌드 입력(마크다운 · `.claude/` 등 빌드가 쓰지 않는 파일을 뺀 트리)의 증거를 공통 `.git` 에 남깁니다. 문서만 바꾼 커밋은 직전 증거가 맞습니다.
-- **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**(`Scripts/setup/InstallGitHooks.py` 로 설치). `full-build` · `py -3 -m Scripts test` 는 로그를 `.git/sw-build-logs/` 에 쓰고 요약만 보이며 전부 보려면 `--verbose` 입니다.
+- main 으로의 push 에 전체 빌드 증거를 요구하던 pre-push 훅은 지웠습니다(2026-10-28, 사용자 지시). `full-build` · `py -3 -m Scripts test` 는 로그를 `.git/sw-build-logs/` 에 쓰고 요약만 보이며 전부 보려면 `--verbose` 입니다.
 
 검증은 통합 워크트리에서 구성별로 한 번씩 돕니다: Debug → Shipping → Release → push 뒤 CI(리눅스). 같은 구성이 필요한 일은 그 구성에서 이어서 하고, 실패하면 그 단계부터 다시 합니다. 확인 · 측정 후보마다 따로 돌리지 않으며 측정 질문은 Release 단계에 한 줄로 더합니다. 이번 묶음의 실제 표는 [NEXT](plans/NEXT.md)에 있습니다.
 
