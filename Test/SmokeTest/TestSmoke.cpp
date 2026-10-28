@@ -1133,7 +1133,7 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
  * @brief [ArchitectureTest] 빌드한 엔진 · 모듈 · 실행 이미지에는 지연 import 가 하나도 없다
  * @details lld 20 의 x64 지연 로드 썽크는 xmm0~3 을 `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가
  *          망가진다(CI 의 액션 키트 테스트가 `DamageMath::applyArmor` 의 damage 로 0 을 받았다). 미리 묶기로 버티던 것을 걷고 지연 로드를
- *          아예 쓰지 않으므로, 썽크가 도는 자리가 남지 않았는지 산출물에서 본다(빌드 쪽 가드는 `CheckNoDelayLoad`).
+ *          아예 쓰지 않으므로, 썽크가 도는 자리가 남지 않았는지 산출물에서 본다(이 테스트가 그 가드다).
  *          보는 것: `Bin` 의 Engine · GameFramework · 실행 파일, `Bin/Modules` 의 모든 DLL(모듈만 있다), 이 실행 파일 폴더의 실행 파일.
  */
 SW_TEST_CASE( ArchitectureTest, NoBuiltImageHasDelayLoadedImports )
@@ -1179,7 +1179,7 @@ SW_TEST_CASE( ArchitectureTest, NoBuiltImageHasDelayLoadedImports )
 
 /**
  * @brief [ArchitectureTest] 지연 import 가 있는 모듈 이미지는 올리지 않는다 — 원인을 남기고 등록이 실패한다(Debug 는 단언)
- * @details 이 저장소는 지연 로드를 쓰지 않지만(`CheckNoDelayLoad`), 규칙을 어긴 이미지가 들어오면 그 첫 float 인자 호출이 조용히 쓰레기를 받는다.
+ * @details 이 저장소는 지연 로드를 쓰지 않지만(`NoBuiltImageHasDelayLoadedImports` 가 산출물을 본다), 규칙을 어긴 이미지가 들어오면 그 첫 float 인자 호출이 조용히 쓰레기를 받는다.
  *          그래서 `LiveReloadManager` 가 정적 초기화가 돌기 **전에** 파일 바이트에서 지연 import 표를 보고 거절한다. 실제 키트의 바이트에
  *          지연 import 디렉터리를 하나 붙인 사본으로 그 길을 지난다(엔진 ABI 스탬프는 그대로라 앞 검사는 통과한다).
  */
