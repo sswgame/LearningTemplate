@@ -377,6 +377,19 @@ namespace sw
             NetConnectResult              _result{};
         };
 
+        /** @brief 잠금 안에서 모은 경고의 종류 — 로그 id 는 소스에 글자로 있어야 하므로(`SW_LOG_WARNING_ID`) 종류마다 `update` 가 id 를 붙여 쓴다. */
+        enum class DeferredWarningKind : uint8
+        {
+            ConnectionRefused, ///< 서버가 맞지 않는 프로토콜의 요청을 거절했다
+            ServerRefused,     ///< 클라이언트가 서버의 거절을 받았다
+        };
+
+        struct DeferredWarning
+        {
+            DeferredWarningKind _kind{ DeferredWarningKind::ConnectionRefused };
+            string              _text{};
+        };
+
         /** @brief 데이터 패킷이 아닌 제어 패킷 하나에서 읽은 값입니다(값 둘의 뜻은 종류마다 다르다). */
         struct ControlPacket
         {
@@ -455,7 +468,7 @@ namespace sw
         vector<FinishedConnect> _listDeliver          SW_GUARDED_BY( _updateThread ); ///< `update` 스레드 전용.
         BitWriter _plainWriter                        SW_GUARDED_BY( _mutex );        ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex );        ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
-        vector<string> _listDeferredWarning           SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
+        vector<DeferredWarning> _listDeferredWarning  SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
         NetHostConfig _settings                       SW_GUARDED_BY( _mutex );
         NetMessageKindTallyTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );

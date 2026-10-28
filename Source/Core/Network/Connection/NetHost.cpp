@@ -640,7 +640,7 @@ namespace sw
                 receivedCount += gotCount;
             }
             // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
-            vector<string> listWarning;
+            vector<DeferredWarning> listWarning;
             {
                 ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
@@ -653,9 +653,21 @@ namespace sw
                 takePending( _flushBatch, _listDeliver );
                 listWarning.swap( _listDeferredWarning );
             }
-            for ( const string& warning : listWarning ) // 잠금을 놓은 뒤에 쓴다 — 잠금은 잎이다
+            for ( const DeferredWarning& warning : listWarning ) // 잠금을 놓은 뒤에 쓴다 — 잠금은 잎이다
             {
-                SW_LOG_WARNING( "%#", warning.c_str() );
+                switch ( warning._kind )
+                {
+                    case DeferredWarningKind::ConnectionRefused:
+                    {
+                        SW_LOG_WARNING_ID( "Net.ConnectionRefused", "%#", warning._text.c_str() );
+                        break;
+                    }
+                    case DeferredWarningKind::ServerRefused:
+                    {
+                        SW_LOG_WARNING_ID( "Net.ServerRefused", "%#", warning._text.c_str() );
+                        break;
+                    }
+                }
             }
             // 3) 보내기와 비동기 연결 결과 전달(잠금 밖).
             sendBatch( pTransport, _flushBatch );
@@ -863,7 +875,7 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer512> text;
                     text.appendFormat( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
                                        packet._from.toString().c_str(), toString( reason ), static_cast<uint32>( packet._valueA >> 32 ), _protocolID, _settings._gameID );
-                    _listDeferredWarning.push_back( string( text.c_str() ) ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
+                    _listDeferredWarning.push_back( DeferredWarning{ DeferredWarningKind::ServerRefused, string( text.c_str() ) } ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
                 }
                 closeSlot( slotIndex, reason, false );
                 return;
@@ -903,7 +915,7 @@ namespace sw
                 StringBuilder<constant::kMaxBuffer512> text;
                 text.appendFormat( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
                                    packet._from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID, _mismatchLogCount );
-                _listDeferredWarning.push_back( string( text.c_str() ) ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
+                _listDeferredWarning.push_back( DeferredWarning{ DeferredWarningKind::ConnectionRefused, string( text.c_str() ) } ); // 호스트 잠금 안이다 — 로그는 `update` 가 잠금을 놓은 뒤에 쓴다
             }
             sendDenied( packet._from, reason, packet._valueA );
             return;

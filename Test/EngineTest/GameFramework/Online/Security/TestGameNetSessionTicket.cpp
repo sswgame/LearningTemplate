@@ -125,6 +125,8 @@ SW_TEST_CASE( GameNetSessionTicketTest, ClientWithTheRightTicketConnects )
  */
 SW_TEST_CASE( GameNetSessionTicketTest, ARefusedTicketIsDroppedAndNeedsANewOne )
 {
+    // 범위는 두 세션의 네트워크 스레드보다 먼저 서서 나중에 내려간다 — 서버 스레드는 요청이 닿는 즉시(클라이언트 `initialize` 가 돌아오기 전에도) 거절 로그를 쓰고, 서버는 범위 안에서 소멸한다.
+    SW_TEST_DEFENSIVE_SCOPE( "the server and the client log the refused connection" );
     TicketServer server;
     SW_ASSERT_TRUE( server._bOpened );
     GameNetSession client;
@@ -132,13 +134,10 @@ SW_TEST_CASE( GameNetSessionTicketTest, ARefusedTicketIsDroppedAndNeedsANewOne )
     GameNetSessionParams params;
     SW_ASSERT_TRUE( client.makeTicketClientParams( NetAddress::makeLoopback( server._session.getListenPort() ), makeTicket( 0x11 ), params ) );
     SW_ASSERT_TRUE( client.initialize( params ) );
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "the server and the client log the refused connection" );
-        pump( server._session, client, 1500, &neverDone );
-        SW_EXPECT_EQUAL( 0, server._session.getConnectedCount() );
-        SW_EXPECT_EQUAL( 0, client.getConnectedCount() );
-        SW_EXPECT_FALSE( client.reconnect() ); // 거절된 티켓을 지웠다 — 새 티켓 없이 자격 없는 연결로 대신 붙지 않는다
-    }
+    pump( server._session, client, 1500, &neverDone );
+    SW_EXPECT_EQUAL( 0, server._session.getConnectedCount() );
+    SW_EXPECT_EQUAL( 0, client.getConnectedCount() );
+    SW_EXPECT_FALSE( client.reconnect() ); // 거절된 티켓을 지웠다 — 새 티켓 없이 자격 없는 연결로 대신 붙지 않는다
     client.shutdown();
 }
 
@@ -147,6 +146,8 @@ SW_TEST_CASE( GameNetSessionTicketTest, ARefusedTicketIsDroppedAndNeedsANewOne )
  */
 SW_TEST_CASE( GameNetSessionTicketTest, AClientWithoutCredentialsIsRefusedByATicketServer )
 {
+    // 범위는 두 세션의 네트워크 스레드보다 먼저 서서 나중에 내려간다 — 서버 스레드는 요청이 닿는 즉시(클라이언트 `initialize` 가 돌아오기 전에도) `SecurityMismatch` 거절 로그를 쓴다.
+    SW_TEST_DEFENSIVE_SCOPE( "the server and the client log the refused protocol" );
     TicketServer server;
     SW_ASSERT_TRUE( server._bOpened );
     GameNetSessionParams params;
@@ -154,10 +155,7 @@ SW_TEST_CASE( GameNetSessionTicketTest, AClientWithoutCredentialsIsRefusedByATic
     params._serverAddress = NetAddress::makeLoopback( server._session.getListenPort() );
     GameNetSession client;
     SW_ASSERT_TRUE( client.initialize( params ) );
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "the client logs the refused protocol" );
-        pump( server._session, client, 1500, &neverDone );
-    }
+    pump( server._session, client, 1500, &neverDone );
     SW_EXPECT_EQUAL( 0, server._session.getConnectedCount() );
     SW_EXPECT_EQUAL( 0, client.getConnectedCount() );
     client.shutdown();
