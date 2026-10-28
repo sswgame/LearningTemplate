@@ -51,8 +51,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Min = 0.001, Max = 1.0 )
         float32 _fixedStep{ 1.0f / 60.0f }; ///< 근접 기술의 프레임 하나가 한 걸음이다
-        PROPERTY()
-        float32 _gravity{ 25.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _gravity{ 25.0f }; ///< 아래 방향 가속(양수). 음수면 기체가 위로 떠 오른다
         PROPERTY( Min = 1.0, Max = 100000.0 )
         float32 _arenaHalfSize{ 200.0f }; ///< 위치는 이 범위 안으로 자른다(직렬화 양자화 범위)
         PROPERTY( Min = 1.0, Max = 100000.0 )

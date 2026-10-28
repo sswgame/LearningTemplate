@@ -8,21 +8,11 @@
 
 | 절 | 한 줄 설명 | 착수 조건 유형 |
 |---|---|---|
-| ConfigRangeRejectRemaining | 설정 범위 밖 값을 조용히 맞추는 곳 | 새 설정 구조체가 생길 때 |
 | DestructionNetSessionScene | 파괴 복제 실제 세션 해시 맞대기(스크립트 끝, 에셋 필요) | 에셋을 만든 뒤 |
 | NetworkExtensionIdeas | 물리 예측 · 음성 · 치팅 방어 · 오케스트레이션 | 요구하는 게임이 생길 때 |
 | StoreProviderIntegration | Steam · Epic 연동의 SDK 쪽 | 출시 플랫폼 결정 |
 | PackPatchSigning | 패치 서명의 배포 경로 · 키 교체 | 스팀 밖 채널이 생길 때 |
 | OperationsAndDeployment | 서버 운영 · 배포 | 보류(사용자 결정) |
-
-## 정리
-
-### ConfigRangeRejectRemaining
-제목: 설정이 범위 밖 값을 조용히 맞추는 남은 곳
-왜 필요한가: 넷 키트 · `MatchMaker` · `ScheduleSystem` · 카드 · 전술 · 도시 · 배틀로얄 등 설정 구조체 대부분은 "선언된 범위 + 받을 때 거절"(`Base/Foundation/Utility/ConfigRangeUtil.h`)로 옮겼다(빌드 전). 같은 모양의 `initialize` 안 클램프는 더 찾지 못했다.
-착수 조건: 새 설정 구조체가 생길 때.
-남은 첫 일: 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 만들고 `initialize` 가 `ConfigRangeUtil` 로 거절한다. 받는 쪽에서 손으로 맞추지 않는다. 통합 검증의 필터에 각 스위트의 `*Refuses*` 케이스를 넣는다.
-함정: 목록 필드나 함수 호출 기본값 때문에 `REFLECT` 를 못 쓰는 설정(`RhythmPlaySettings` · `InteractionConfig` · `CoasterPhysicsParams` · `AutosaveSettings`)은 `initialize` 안에서 손으로 보고 거절한다.
 
 ## 기능
 

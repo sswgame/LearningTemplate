@@ -54,7 +54,7 @@ namespace sw
         float32 _lifetime{ 10.0f }; ///< 0 이면 주울 때까지 남는다
         PROPERTY( Name = "radius", Min = 0.0 )
         float32 _spawnRadius{ 6.0f }; ///< 가운데에서 이 반지름의 원판 안에 고르게 나온다
-        PROPERTY()
+        PROPERTY( Min = 0.0 )
         float32 _height{ 1.5f }; ///< 아이템이 놓이는 높이
         PROPERTY( Min = 1 )
         int32 _maxActive{ 2 };

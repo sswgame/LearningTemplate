@@ -88,7 +88,7 @@ namespace sw
         float32 _poundHitHeight{ 1.0f }; ///< 이보다 낮은 상대만 내려찍기에 밀린다
         PROPERTY( Min = 0.0 )
         float32 _creditWindow{ 3.0f };
-        PROPERTY()
+        PROPERTY( Max = 0.0 )
         float32 _fallDepth{ -4.0f }; ///< 밖으로 떨어져 이 높이 아래가 되면 탈락한다
         PROPERTY( Min = 0.0 )
         float32 _respawnDelay{ 2.0f };
@@ -98,9 +98,9 @@ namespace sw
         float32 _pickupRadius{ 1.0f };
         PROPERTY( Min = 0 )
         int32 _maxCombo{ 4 };
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _ringOutScore{ 1 };
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _selfOutPenalty{ 0 }; ///< 아무도 밀지 않았는데 떨어지면 깎는 점수
     };
 } // namespace sw
