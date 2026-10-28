@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/LogSink/ConsoleLogOutput.h"
+#include "Core/Log/Sink/ConsoleLogOutput.h"
 
 #include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"

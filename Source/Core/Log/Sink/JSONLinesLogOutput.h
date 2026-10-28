@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/LogTypes.h"
-#include "Core/LogSink/ILogOutput.h"
+#include "Core/Log/Sink/ILogOutput.h"
 
 namespace sw
 {

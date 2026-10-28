@@ -15,7 +15,8 @@ Delegate = 4
 UUID = 4
 Serialization = 4   # 바이트 · 비트 직렬화(ByteReader · ByteWriter · BitStream) — 파일 형식과 네트워크가 함께 쓴다
 Subsystem = 4       # 서브시스템 계약(ISubsystem)과 의존 순서 목록(SubsystemCollection) — 로그를 남기지 않아 Log 아래에 선다
-Log = 5             # 로그 매크로와 전역 창구(Logger) — 기본 싱크는 LogSink
+Log = 5             # 로그 매크로와 전역 창구(Logger) · 싱크 포트(ILogSink). 하위 Log/Sink(기본 싱크 AsyncLogSink 와 출력 장치)는 맨 위 층이다 —
+                    # 파일 · 프로세스 · 진단을 쓰므로 Diagnostics 보다 위에 선다(포트는 아래, 구현은 위 — 언리얼 Logging · OutputDevice).
 CommandLine = 6
 Compression = 6
 Process = 6         # 프로세스 · 종료 신호 · 스레드 크래시 스택
@@ -30,7 +31,6 @@ Network = 8         # 다른 Core 폴더는 Network 를 include 하지 않는다
 Module = 9
 Diagnostics = 10    # 호출 스택 · 크래시 보고 · 메모리 프로파일러 · 교착 검출기 · 경합 보고기
 Event = 10
-LogSink = 11        # 기본 로그 싱크(AsyncLogSink)와 출력 장치
 
 # Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 지금은 없다 — 아래 티어는 `SW_LOW_LEVEL_REPORT` · `SW_LOW_LEVEL_ASSERT`
 # (`Core/Common/Macros.h`, 로그가 기동 때 보고자를 건다)로 보고한다. 새로 늘리지 않는다.

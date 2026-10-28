@@ -13,7 +13,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/LogSink/ConsoleLogOutput.h"
+#include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"

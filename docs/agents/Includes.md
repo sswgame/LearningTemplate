@@ -17,7 +17,7 @@
 
 ### Core tiers
 
-Core folders are tiers: `Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `LogSink`. A file includes only its own folder or a lower tier.
+Core folders are tiers: `Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (the sink sub-folder implements the `ILogSink` port that `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
 
 - A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
 - Tiers below `Log` get **no `Logger.h`**: their `.cpp` files build with `Core/pchLow.h`, so `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile. Report with `SW_LOW_LEVEL_*`.

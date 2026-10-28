@@ -2,7 +2,7 @@
 
 #include "Engine/Bootstrap/LoggerSubsystem.h"
 
-#include "Core/LogSink/AsyncLogSink.h"
+#include "Core/Log/Sink/AsyncLogSink.h"
 
 #include "Engine/Bootstrap/NamePoolSubsystem.h"
 

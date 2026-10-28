@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/LogSink/JSONLinesLogOutput.h"
+#include "Core/Log/Sink/JSONLinesLogOutput.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
