@@ -1,6 +1,6 @@
 # 품질 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: quality · 옛번호: B-5, B-7, B-15, C-28, C-33, E-4, E-10 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: quality · 옛번호: B-5, B-7, B-15, C-33, E-4, E-10 · 진행: 해당없음
 
 테스트 틀, CI, 린트 스크립트, 부하 검증, 쿠킹, 간헐 실패 관찰 가운데 아직 착수하지 않은 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다.
 이미 계획 문서가 있는 일은 [BuildSpeed](BuildSpeed.md) · [GpuVerification](GpuVerification.md) · [결정 기록 5-11](../decisions/5-11_Editor.md) · [결정 기록 5-2](../decisions/5-2_Build.md) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md) 에 있습니다.
@@ -8,11 +8,11 @@
 ## 확인 대기
 
 ### LinuxManualChecks
-제목: 리눅스에서 자동으로 안 도는 것
+제목: 리눅스 X11 입력의 자동 테스트
 옛번호: B-7
 왜 필요한가: X11 입력(좌표 · `XkbSetDetectableAutoRepeat`)이 자동으로 돌지 않는다.
-왜 지금 못 하는가: CI 에 xvfb 는 있지만 입력을 넣을 XTest(`libxtst`)와 그것을 쓰는 호스트 테스트가 없다(별도 설계가 필요). 자동 반복은 서버가 키를 누르고 있는 동안 만드는 이벤트라 `XSendEvent` 로는 흉내 낼 수 없다.
-풀리는 조건: 사용자가 WSL 확인을 요청할 때(2026-10-10 결정, WSLg 의 `DISPLAY=:0` 으로 손으로 한 번), 또는 XTest 입력 테스트를 계획 문서로 올릴 때.
+왜 지금 못 하는가: CI 에 xvfb 는 있지만 입력을 넣을 XTest(`libxtst`)와 그것을 쓰는 호스트 테스트가 없다(별도 설계가 필요). 자동 반복은 서버가 키를 누르고 있는 동안 만드는 이벤트라 `XSendEvent` 로는 흉내 낼 수 없다. WSL 에서 손으로 보는 확인은 하지 않는다(2026-10-28 지움).
+풀리는 조건: XTest 입력 테스트를 계획 문서로 올릴 때.
 
 ### ImageIntakeChecks
 제목: 이미지 도입의 확인
@@ -27,12 +27,6 @@
 함정: 옛 `Bin/Saved/Automation` 의 보고는 더 갱신되지 않는다 — `scenario-logs` 가 낡은 보고를 읽지 않게 통합이 한 번 지운다. `packaging` 시나리오는 `Bin` 을 쓰기 루트 아래 `Saved/Packages/` 로 복사하므로 경로가 260 자를 넘는지 본다. 빌드 뒤 `-L nogpu`(`AutomationScratchTest.ScratchIDsBindToThisProcess` — 작업자 문법 검사 도구가 이 파일을 "command line is too long" 으로 못 봤다)와 `-L lint` 도 본다.
 
 ## 정리
-
-### TestFrameworkRemainders
-제목: 테스트 틀 개편의 남은 것
-옛번호: C-28
-왜 필요한가: 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝).
-남은 것: 벤치 스위트를 부하 스위트로 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다(통합 담당). `NetSimDestructionMatrixTest` 는 정확성 테스트라 nogpu, 호스트 벤치(`NetUDPBenchTest` · `GlyphBenchTest`)는 호스트에 남겼다. 자료: 2026-10-23 Debug `ctest -L nogpu`(`-j` 전체 겹침) 한 바퀴에서 `EngineTest_NoGPU` 조각 다섯이 103 ~ 128 s, `CoreTest` 32 s 였다 — `EngineTest` `seconds`(130)로 계산한 조각당 약 26 s 의 네 배라 `timeoutScale` 2 를 곱한 한도(208 s) 대비 절반을 넘는다(`_timeoutScaleReason` 의 "절반을 넘으면 다시 잰다"). 겹친 실행의 값이라 단독 실행 값과 둘 다 재서 `seconds` 의 정의(부하 걸린 PC 의 한 실행)를 지키는 쪽으로 맞춘다.
 
 ### LogGateRemainders
 제목: 로그 게이트의 남은 것

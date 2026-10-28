@@ -121,16 +121,6 @@
       "source": "docs/plans/Candidates-graphics.md IndirectLightingScreenChecks", "result_doc": "docs/plans/Candidates-graphics.md IndirectLightingScreenChecks"
     },
     {
-      "id": "cloth-vertex-pool-time", "title": "천 C2 RT.GPUScene.vertexPool 시간과 풀 다시 채우기 수", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
-      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "clothShowcase", "--runs", "3"], "limit": "보고만 — RT.GPUScene.vertexPool 시간. 정상 상태에서도 풀 다시 채우기가 매 프레임이면 천 동적 메시 전용 고정 구간 후보를 올린다", "judge": "exit",
-      "source": "docs/plans/Candidates-engine.md ClothDynamicMeshFixedSpan", "result_doc": "docs/plans/Candidates-engine.md ClothDynamicMeshFixedSpan"
-    },
-    {
-      "id": "cloth-skinned-cape-scene", "title": "천 C3 스킨 망토 캐릭터 씬(Jolt 행렬 방향 · 질량 중심 뼈 행렬)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "manual": "스킨 망토를 단 캐릭터 씬이 없고 윗변 위치를 읽는 탐침도 없어 사람이 화면으로 윗변이 뼈를 따르는지 본다",
-      "source": "docs/plans/Candidates-engine.md ClothSkinnedCapeScreen", "result_doc": "docs/plans/Candidates-engine.md ClothSkinnedCapeScreen"
-    },
-    {
       "id": "foliage-navmesh-tests", "title": "막는 식생 · 장애물 캐시 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "FoliageTest.BlockingLayerAddsNavObstaclePerInstance,NavMeshTileCacheTest.*",
       "source": "docs/decisions/5-6_ObjectsInput.md 3D 내비메시 확장의 실행 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
@@ -292,19 +282,9 @@
       "source": "docs/plans/Candidates-graphics.md HalfResolutionBloomMeasurement", "result_doc": "docs/plans/Candidates-graphics.md HalfResolutionBloomMeasurement 절을 지운다"
     },
     {
-      "id": "spin-and-hot-pool-heavy-frame", "title": "스핀 늘리기(2 → 50 us) · hot pool 을 무거운 프레임(8 ms 이상)에서 다시 재기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
-      "manual": "스핀 상수(2 → 50 us)와 hot pool 은 상수를 바꾼 전 · 후 바이너리 A/B 이고 무거운 프레임(8 ms 이상)을 만드는 장면이 없다 — 사람이 상수를 바꿔 지어 잰다",
-      "source": "docs/plans/Candidates-project.md DecisionMeasurementColumn", "result_doc": "docs/09_Decisions.md 3절 해당 줄"
-    },
-    {
       "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "manual": "Tracy 로 그 프레임을 사람이 본다(gv_profileTracePath 트레이스를 사람이 연다) — 표로 판정할 값이 없다",
       "source": "docs/plans/RuntimeQualityAdjust.md 3절", "result_doc": "docs/plans/RuntimeQualityAdjust.md 3절"
-    },
-    {
-      "id": "vector-bulk-fill-bench", "title": "ContainerBenchTest.VectorBulkFillAndCompare 전후 바이너리 번갈아 3 판(vector 채우기 · 비교 포인터 지역 뜨기)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
-      "manual": "vector.h 변경 앞 커밋과 뒤 커밋의 CoreTest 두 벌을 번갈아 도는 바이너리 A/B 라 한 명령에 전 바이너리를 줄 길이 없다",
-      "source": "docs/plans/Candidates-engine.md VectorAliasLoopsBench", "result_doc": "docs/plans/Candidates-engine.md VectorAliasLoopsBench"
     },
     {
       "id": "module-pass-scenario", "title": "game/empty/modulepass 시나리오(모듈 패스가 붉은 틴트를 낸다, 네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
@@ -337,7 +317,6 @@
       "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "vfxGpuLights", "--runs", "3"], "limit": "보고만 — vfxgpulights 씬의 RT.Vfx.Simulate. 0.2 ms 를 넘으면 슬롯 스윕 후보를 올린다", "judge": "exit",
       "source": "docs/plans/Candidates-graphics.md VfxGpuLightSlotSweep", "result_doc": "docs/plans/Candidates-graphics.md VfxGpuLightSlotSweep"
     },
-    {"id": "animation-cost-curve", "title": "합성 리그 벤치 비용 곡선(own+fullbody 모드, 코덱 디코드 비용)과 단계별 구간(GT.Animation.basePose · attachment · postProcess · skinPalette) · 가장 느린 프레임 번호", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60, "filter": "SyntheticRigBenchTest.*", "extra_args": ["--load_suites=only"], "source": "docs/plans/Candidates-engine.md AnimationUpdateAnomalies", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"},
     {"id": "shooter-stride-warping-scenario", "title": "Shooter3D stridewarping 시나리오(서 있을 때 배율 1, 뒷걸음 달리기 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/stridewarping.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
     {"id": "shooter-body-views-scenario", "title": "Shooter3D bodyviews 시나리오(1인칭 몸 · 3인칭 · 무기마다 왼손 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/bodyviews.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
     {"id": "shooter-enemy-death-scenario", "title": "Shooter3D enemydeath 시나리오(래그돌 · 떨어진 무기 · 시체 걷힘 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/enemydeath.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
@@ -451,11 +430,6 @@
       "source": "docs/plans/BuildSpeed.md 13절", "result_doc": "docs/plans/BuildSpeed.md 13절"
     },
     {
-      "id": "container-hash-tag-bench", "title": "구조 최적화 B ③ — 해시 태그 전 · 후(ContainerBenchTest.*) 번갈아 3 ~ 5회", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": false,
-      "manual": "벤치 커밋과 해시 태그 커밋을 번갈아 지은 CoreTest 두 벌이 있어야 도는 바이너리 A/B 라 한 명령에 전 바이너리를 줄 길이 없다",
-      "source": "docs/plans/Candidates-engine.md StructuralOptimizationBinaryAB", "result_doc": "docs/plans/Candidates-engine.md StructuralOptimizationBinaryAB"
-    },
-    {
       "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 복호기(허프만 포함)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "HTTP2Test.*",
       "source": "docs/plans/OnlineKits.md G4", "result_doc": "docs/plans/OnlineKits.md G4"
@@ -469,16 +443,6 @@
       "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절, 한 줄 답 상한(DebugReplyLine)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "NetStatsReportTest.*,DebugReplyLineTest.*",
       "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
-    },
-    {
-      "id": "world-streaming-hitch-measure", "title": "WildWest 초원 스트리밍 히치(셀이 오르내리는 프레임의 GT.Scene.tick.destroyPost 최대값, 정점 풀 repack 0)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
-      "manual": "셀을 가로질러 걷는 WildWest 시나리오와 perf-compare 케이스가 없고 Release 에서 GPU 를 혼자 써야 한다 — 걷는 장면을 만든 뒤 명령을 단다",
-      "source": "docs/plans/Candidates-engine.md WorldStreamingChecks", "result_doc": "docs/plans/Candidates-engine.md WorldStreamingChecks"
-    },
-    {
-      "id": "world-cells-panel-capture", "title": "World Cells 창 캡처(ux-reviewer)와 uiaudit 시나리오에 창이 잡히는지, 문구 열 개 --check-text", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "manual": "ux-reviewer(사람 눈)가 World Cells 창 캡처를 본다 — uiaudit 시나리오에 창을 더하는 일과 --check-text 는 한 명령으로 묶이지 않았다",
-      "source": "docs/plans/Candidates-engine.md WorldStreamingChecks", "result_doc": "docs/plans/Candidates-engine.md WorldStreamingChecks"
     },
     {
       "id": "host-write-snapshot-editor", "title": "HostGpuIsolation H1 — 에디터 시나리오를 -gv_editorStateDir 없이 띄운 App 의 쓰기 위치 스냅샷", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
@@ -514,21 +478,6 @@
       "id": "audio-alsa-real-device", "title": "리눅스 ALSA 출력의 실기 재생을 확인한다", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "manual": "소리 장치가 있는 리눅스 기계가 필요하다 — libasound.so.2 가 있는 기계의 스테레오 · 5.1 재생과 없는 기계의 오프라인 렌더",
       "source": "docs/plans/Candidates-audio-ai-localization.md AudioAlsaRealDevice", "result_doc": "docs/plans/Candidates-audio-ai-localization.md AudioAlsaRealDevice"
-    },
-    {
-      "id": "physics-cloth-character-scene", "title": "천 옆을 속 바디를 켠 캐릭터가 지나갈 때 천이 밀리는지(화면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "manual": "천과 캐릭터가 함께 있는 장면이 없고 속 바디 캐릭터가 지날 때 천이 밀리는지는 눈 확인이다",
-      "source": "docs/plans/Candidates-engine.md PhysicsExtensionsScreens", "result_doc": "docs/plans/Candidates-engine.md PhysicsExtensionsScreens"
-    },
-    {
-      "id": "physics-powered-ragdoll-scene", "title": "_poweredMaxTorque 를 올린 래그돌이 팔다리를 애니메이션 자세로 끄는지, 일어서기에서 모터가 꺼지는지(화면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "manual": "파워드 래그돌 장면이 없고 쓰러지며 팔다리를 끄는지 · 일어서기에서 모터가 꺼지는지는 눈 확인이다",
-      "source": "docs/plans/Candidates-engine.md PhysicsExtensionsScreens", "result_doc": "docs/plans/Candidates-engine.md PhysicsExtensionsScreens"
-    },
-    {
-      "id": "engine-partition-e3-cube-bench", "title": "큐브 20,000 개 벤치의 GT.Frame p50 · p99 전후 비교(E3 의 ScenePrimitive 기반, Release · VSync 끔 · 3 ~ 5 판)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
-      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "cubeBench20k", "--runs", "3"], "limit": "보고만 — 첫 측정값을 08_Verification 2절에 적고 이후 p50 +15 %, p99 +35 % 를 넘으면 원인 변경을 되돌리거나 고친다", "judge": "exit",
-      "source": "docs/plans/Candidates-engine.md EnginePartitionCubeBench", "result_doc": "docs/plans/Candidates-engine.md EnginePartitionCubeBench"
     },
     {
       "id": "physics-unknown-material-3d-test", "title": "PhysicsScene3DTest.UnknownMaterialNameRejectsTheBody(적은 재질 이름이 틀리면 다른 재질로 만들지 않고 바디 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
