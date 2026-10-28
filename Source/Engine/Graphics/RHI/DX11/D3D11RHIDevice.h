@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIRenderPassLedger.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingBudget.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -262,7 +263,7 @@ namespace sw
 
         /**
          * @class UploadStaging
-         * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBytesInFlight`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
+         * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBudget`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
          * @details 전송 큐 항목(`TransferProbe`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 장부(Staging)를 돌려준다. 제출 도중의 이른 반환도
          *          같은 소멸자로 돌려주므로 예산이 새는 길이 없다.
          */
@@ -308,6 +309,7 @@ namespace sw
          * @brief 업로드 스테이징 예산에서 @p bytes 를 잡습니다. 모자라면 끝난 전송을 한 번 모은 뒤(즉시 컨텍스트 잠금을 잠깐 잡는다) 다시 잡습니다.
          * @details 예산보다 큰 @p bytes 는 예산 전부를 잡는다 — 복사 중인 다른 업로드가 하나도 없을 때만 들어가고, 들어간 동안 다른 업로드는 `Busy` 다.
          *          그래서 한 장의 크기에 상한이 없고(예전 `UpdateSubresource` 가 받던 크기를 그대로 받는다) 메모리 최고점은 max(예산, 가장 큰 업로드 하나)다.
+         *          못 받은 그런 업로드는 예약을 남겨 작은 업로드가 잠깐 `Busy` 가 되어 굶지 않는다(`RHIStagingBudget::tryReserve`, GL · Vulkan 의 단독 구간과 같은 규칙).
          * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다.
          */
         [[nodiscard]] UploadStaging allocateUploadStaging( uint64 bytes );
@@ -569,10 +571,9 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
-        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합입니다(`UploadStaging` 이 잡고 놓습니다). `_uploadStagingBudgetBytes` 를 넘지 않습니다.
-        atomic<uint64> _uploadStagingBytesInFlight;
-        /// @brief 업로드 스테이징 예산(바이트, `RHISwapChainDesc::_stagingRingBytes`)입니다. 이보다 큰 업로드 하나는 예산 전부를 잡고 혼자 들어갑니다(`allocateUploadStaging`).
-        uint64 _uploadStagingBudgetBytes;
+        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합과 그 예산(`RHISwapChainDesc::_stagingRingBytes`)입니다. `UploadStaging` 이 잡고 놓습니다.
+        ///        이보다 큰 업로드 하나는 예산 전부를 잡고 혼자 들어갑니다(`allocateUploadStaging`).
+        RHIStagingBudget _uploadStagingBudget;
         /// @brief 이 크기(바이트, `RHISwapChainDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
         uint64 _directUploadMaxBytes;
 

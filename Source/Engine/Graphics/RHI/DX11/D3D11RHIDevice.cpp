@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
@@ -104,8 +104,7 @@ namespace sw
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
         , _readbackTable{}
-        , _uploadStagingBytesInFlight{ 0 }
-        , _uploadStagingBudgetBytes{ 0 }
+        , _uploadStagingBudget{}
         , _directUploadMaxBytes{ 0 }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -367,7 +366,7 @@ namespace sw
             _pDevice->getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _texture.Get() ) );
             _texture.Reset();
         }
-        _pDevice->_uploadStagingBytesInFlight.fetch_sub( _bytes, std::memory_order_acq_rel );
+        _pDevice->_uploadStagingBudget.release( _bytes );
         _pDevice = nullptr;
         _bytes   = 0;
     }
@@ -376,7 +375,7 @@ namespace sw
     {
         // 예산보다 큰 업로드 하나는 예산 전부를 잡는다 — 복사 중인 것이 없을 때만 들어가고, 그동안 다른 업로드는 Busy 다.
         // 한 장을 쪼개 여러 번 내면 앞 조각의 GPU 완료를 제출 안에서 기다려야 해서(계약: 제출은 기다리지 않는다) 혼자 들어가는 쪽을 골랐다.
-        const uint64 reservedBytes = MathUtil::min( bytes, _uploadStagingBudgetBytes );
+        // 예산 전부를 잡아야 하는 업로드가 못 받으면 예산이 예약을 남겨 작은 업로드가 끊이지 않아 굶는 일을 막는다(RHIStagingBudget).
         // 두 번째 시도는 끝난 전송을 모은 뒤다. 모으는 일은 즉시 컨텍스트 잠금이 필요해 예산이 찼을 때만 한다.
         for ( uint32 attempt = 0; attempt < 2; ++attempt )
         {
@@ -385,12 +384,9 @@ namespace sw
                 const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
                 retireFinishedTransfers( context );
             }
-            uint64 inFlightBytes = _uploadStagingBytesInFlight.load( std::memory_order_acquire );
-            while ( reservedBytes <= _uploadStagingBudgetBytes - inFlightBytes )
-            {
-                if ( _uploadStagingBytesInFlight.compare_exchange_weak( inFlightBytes, inFlightBytes + reservedBytes, std::memory_order_acq_rel, std::memory_order_acquire ) )
-                    return UploadStaging{ *this, reservedBytes };
-            }
+            uint64 reservedBytes{ 0 };
+            if ( _uploadStagingBudget.tryReserve( bytes, MonotonicClock::nowMicroseconds(), reservedBytes ) )
+                return UploadStaging{ *this, reservedBytes };
         }
         return UploadStaging{};
     }
