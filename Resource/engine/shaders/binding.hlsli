@@ -31,6 +31,8 @@
  *   컴퓨트 RW    Bindless::storeRwTexture2D · loadRwTexture2D
  *   함수는 구조체의 static 멤버로 묶는다 — FXC(DX11)에 네임스페이스가 없어 구조체가 그 자리를 맡는다. 묶음의 선언은 아래 0-1 절이다.
  *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwSlot#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
+ *   예외 셋: `autoexposure.hlsl` · `depthhistory.hlsl` · `fsr1.hlsl` 이 Load · GetDimensions · Gather 를 배열과 슬롯에 직접 읽는다(진입 함수에 Load · 크기 · 게더가 아직 없다).
+ *   진입 함수로 옮기는 일은 네 백엔드 셰이더 컴파일로 확인하며 한다 — 새 패스가 이 분기를 따라 쓰지 않는다.
  *   셰이더 파일(.hlsl)에 이 분기를 들이지 않는다 — 새 읽기 방식이 필요하면 여기에 진입 함수를 더한다.
  *
  * 백엔드 차이
