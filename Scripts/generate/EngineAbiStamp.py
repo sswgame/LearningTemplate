@@ -31,7 +31,6 @@ from common.ExitCode import ExitCode  # noqa: E402
 kHeaderRoots = ("Source/Core", "Source/Engine", "Source/ModuleAPI", "Source/GameFramework")
 kExcludedRoots = ("Source/GameFramework/Kits",)
 kHeaderExtensions = (".h", ".hpp", ".inl", ".xxx")
-kStampMarker = "swEngineAbiStamp:"
 
 
 def collectHeaderPathsInternal(repositoryRoot: Path) -> list[str]:
@@ -67,7 +66,8 @@ def makeHeaderTextInternal(stamp: str) -> str:
         "// 생성 파일 - Scripts/generate/EngineAbiStamp.py. 고치지 마십시오.\n"
         "// Core · Engine 헤더 내용의 지문입니다. Engine 과 모듈이 같은 값을 박고, 핫 리로드가 올리기 전에 대조합니다.\n"
         "#pragma once\n"
-        "#define SW_ENGINE_ABI_STAMP \"" + kStampMarker + stamp + "\"\n"
+        "// 머리(swEngineABIStamp:)는 C++ 한 곳(Engine/Module/EngineABIStampMarker.h)이 정한다 — 생성기는 지문만 낸다.\n"
+        "#define SW_ENGINE_ABI_STAMP_DIGEST \"" + stamp + "\"\n"
     )
 
 

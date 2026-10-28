@@ -77,6 +77,7 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 // 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조하고,
 // 리눅스에서는 이 상수의 주소로 의존 모듈이 어느 이미지에 묶였는지 가립니다.
 #include \"@SW_ENGINE_ABI_STAMP_HEADER@\"
+#include \"Engine/Module/EngineABIStampMarker.h\"
 
 #if defined( SW_PLATFORM_WINDOWS ) // 플랫폼은 CMake 의 SW_PLATFORM_* 로 묻는다 (Core/Foundation/TargetMacroCheck.h)
     #define SW_MODULE_ENGINE_STAMP_EXPORT __declspec( dllexport )
@@ -85,7 +86,7 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 #endif
 
 extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[];
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[] = SW_ENGINE_ABI_STAMP;
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineABIStamp_@swStampModuleName@[] = SW_ENGINE_ABI_STAMP_MARKER SW_ENGINE_ABI_STAMP_DIGEST;
 " @ONLY)
 
 	target_sources(${TARGET_NAME} PRIVATE "${swStampSource}")

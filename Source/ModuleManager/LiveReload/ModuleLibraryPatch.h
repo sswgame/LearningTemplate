@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Module/EngineABIStampMarker.h"
+
 namespace sw
 {
     /**
@@ -34,8 +36,8 @@ namespace sw
             Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT). 로더가 로드할 때 바인딩한다
             Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT). 첫 호출이 썽크를 지나 바인딩한다
         };
-        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`EngineABIStamp.py` 와 같아야 한다). */
-        static constexpr const utf8* kEngineABIStampMarker = "swEngineABIStamp:";
+        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(정본 `EngineABIStampMarker.h`). */
+        static constexpr const utf8* kEngineABIStampMarker = SW_ENGINE_ABI_STAMP_MARKER;
         static constexpr uint32      kEngineABIStampDigits = 40;
 
         /** @brief 동적 섹션의 DT_SONAME 을 읽습니다. ELF64 LE 가 아니거나 SONAME 이 없으면 false 입니다. */
