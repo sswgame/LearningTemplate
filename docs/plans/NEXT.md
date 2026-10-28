@@ -4,67 +4,61 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 S(브랜치 60여 개)가 main 에 들어가 push 됐다. 아직 병합하지 않은 브랜치 7 개(아래 3절)를 정해진 순서로 병합하는 것이 첫 일이고, 그 전에 작업 구조를 한 에이전트 단계별 진행으로 바꾸는 문서 개정(3절 맨 아래)이 있다. 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
+> 결론: 통합 V(작업자 브랜치 14 개)를 `wt/integ-v`(`D:/w/integ-v`)에 모두 병합했으나 병합 뒤 빌드 · 검증은 아직이다. 첫 일은 그 워크트리에서 빌드하고 검증해 main 에 넣고 push 하는 것이다(아래 1절). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
 
 이 문서는 지금 상태 한 장만 둔다. 순서는 [Roadmap](Roadmap.md), 설계는 계획 문서(`py -3 -m Scripts plans`), 결정은 [결정 기록](../09_Decisions.md), 작업 방식은 [11 작업 방식](../11_Workflow.md)이다.
 
-## 1. 마지막 통합 — 통합 S (2026-10-27)
+## 1. 지금 상태 — 통합 V (2026-10-28, 진행 중)
 
-`wt/integ-s` 에 구독 · 잠금 · 오류 · 입력 계층 · 그래픽스 · 결정성 · 에디터 성능 · 네트워크 보안 등 작업자 브랜치를 병합하고, 병합 뒤 결함을 원인별로 고쳐 main 에 fast-forward 했다(내용은 `git log origin/main` 의 최근 커밋; 사용자 영향은 아래 3절 끝).
+`wt/integ-v` 에 1 차(net-load · gfx-baseline · cand-sweep · old-defects · scratch-gate · vtools · keep-assets)와 2 차(wpath · svc-cancel · parse-core · ui-wrap · py-compat · rhi-leftovers · pair-scene)를 병합했다. main 에는 아직 없고 push 도 안 했다. main 에는 CI 수정 커밋 01e3e4e06(Vulkan 확장 개수 · Python 3.12 `read_text` · 없는 sysfs 카드 조사)이 push 전으로 있다.
 
 | 단계 | 결과 |
 |---|---|
-| `verify-batch` Release 전체(첫 판, 606a0c07a) | 통과 94 · 실패 40 · 건너뜀 67. 실패 40 중 32 개는 `app-scenarios-release` 가 덮는 `covered` 항목 |
-| 실패 원인 고침 | 에디터 인스턴스 파괴 뒤 프레임 상태의 뷰 RT 해제(A) · 간접 드로우 테스트의 PSO(C) · GL 간접 디스패치의 컴퓨트 프로그램(E) · 텍스처 리로드 테스트(F) · 무인 실행의 사양 품질 프리셋(`flowterrain` · `terrainbrush`) · 키보드 주인 판정(`netsim`) · UI 미리보기 도구 줄(`uipreview`) · `assetmanage` GL 색인 대기 · 새 에디터 인스턴스 첫 UI 프레임의 병렬 기록 경합 · 서버의 지난 크래시 묶기 경고 · 데스크톱 전역 상태 케이스의 `SuiteKind::Desktop` 분리 |
-| `app-scenarios-release`(이제 `ctest -L hostgpu` 샤드 + `*_Desktop`) | 통과, 1300 s(c62f76b26). 시나리오 Warning/Error 0 |
-| 건너뛴 것 | `load-baseline-suite` 실패(기준 낡음 의심, 남은 일 1) · `scenario-thresholds-promote` 실패(낡은 인자, 남은 일 2) · `load-auto-render-scale` 은 통과했으나 첫 측정이 예산의 1/10 이라 전환 확인 못 함. Debug `ctest-lint` · `ctest-race` · `app-hang-watch` 는 통과. Release 첫 판의 나머지 `covered` 32 개는 `app-scenarios-release` 통과로 덮인다 |
+| 1 차 병합 뒤 재검증(`verify-batch --only …`) | Debug `ctest-hostgpu-debug` 통과(3677 s) · Shipping `ctest-hostgpu-shipping` 통과 · Release `app-scenarios-release` 11 중 10 통과 |
+| Release 의 남은 실패 | `AppScenarioTest.RecordsMatchAcrossBackends` — crowd 시나리오가 frame 303 의 `CrowdSoloUnits` · `ActiveUnits` 를 dx11 과 dx12/vk 에서 다르게 기록. `WaitUntil` 이 시계를 붙잡는 동안 실제 프레임이 흘러 전투가 진행되므로 풀린 다음 프레임 값이 백엔드마다 다르다. 3a8dd4e51 이 두 기록을 지웠고 실행으로 확인하지 못했다 |
+| `shooter3d-keyrebind-restart`(Release) | 재검증 때 돌던 중 — 결과를 확인하지 못했다. 앞선 실패는 Release 가 `Empty` 만 지어서였고 469f21b85 가 `Ninja-Release` 에 `SW_GAMES=ALL` 을 줬다 |
+| 2 차 병합 뒤 | 파이썬 단위 테스트 · `verify-batch --check` · `plans --check` 통과. **빌드 · 실행은 안 했다**(컴파일 확인 필요: `FileUtil.h` · `ServiceStore.h` · `NetHost.h` · `RHIStagingBudget` · `Process.h` 환경 변수 · `PosixProcess.cpp`(Linux 전용)) |
 
-검증 도구도 이번에 바뀌었다: `verify-batch --failed-from <결과 폴더> --skip-kind <종류>`(실패 항목과 그 빌드만), 가드 훅이 전경 `verify-batch` · 20 초 넘는 `sleep` 을 막는다(긴 검증은 `run_in_background`, [12 에이전트와 토큰](../12_Agents.md) 2절).
+**첫 일(순서)**: ① `D:/w/integ-v` 에서 Debug · Shipping · Release 빌드(컴파일 오류부터 원인별로) ② `py -3 -m Scripts verify-batch --owner <이름>` 을 `run_in_background` 로(`--owner` 가 필수, `--failed-from` 은 폴더가 아니라 요약 파일을 받는다) ③ 아래 확인 목록 ④ 통과하면 main 에 fast-forward 하고 force 없이 push, push 뒤 `ci-jobs --summary` 한 번(남은 일 17).
+
+**병합 뒤 확인 목록**
+- 에디터 줄바꿈 변경(`ui-wrap`, `cand-sweep`)이 마크 클릭을 깨지 않는지 — `panels.toolWindowsOpenAtAUsableSize` 와 Console · Sequencer · AnimationGraph · ContentBrowser · MapCheck · Profiler · RenderTarget · UIPreview · Multiplayer · InputMap · Packaging · DataTable · GlobalVariables · GameView · GimmickGraph · MeshModifiers · CharacterEditor 시나리오. 시나리오 11 개가 `CaptureWindow` 대신 `CaptureEditorUI` 로 바뀌었으니 PNG 가 결과 창 · 팝업을 담는지, `toastreveal` · `lightprobebakecancel` 이 `requireForeground` 없이 통과하는지.
+- 쓰기 게이트(`FileUtil::isWriteAllowed`)가 켜진 채 원본에 쓰는 시나리오가 없는지(있으면 오류로 드러난다 — scratch 사본으로).
+- 컴퓨트 디스패치가 PSO 없이 불리면 `SW_FATAL` 이다 — 컴퓨트를 쓰는 GPU 테스트(Compute* · 컬링 · 모프 · 스킨 · 안개 · VFX)가 네 백엔드에서 도는지. Release 의 `requireRegistryMutableNow` 승격이 가린 위반을 드러내지 않는지.
+- 종료 때 서비스 경고가 나는지(`ServerRuntimeOpensTheSQLiteStore…` 의 방어 범위 표시를 지웠다 — 코드 경로만 근거).
+- `RHIStagingRingGPUTest.DirectX11TransferLargerThanTheBudgetIsAcceptedAlone`(새 DX11 케이스) · `UploadBudget*` 세 케이스.
+- `py -3 -m Scripts paired-net-pair --preset Ninja-Release` 첫 실행 — `ClipLengthMismatch` · 헤드리스 서버의 SkeletalMesh · 파괴 러너가 새로 보는 `[Error]` 판정의 오탐. 클라이언트의 `ParticipantNotReady` 는 보관 뒤 300 프레임까지 재시도한다.
+- 지운 일회성 시나리오 7 묶음이 `app-scenarios-release` 에서 실제로 통과하는지(`GpuVerification.md` 6절).
+- 골든 16 개(`quality: high`)를 다시 기록했다 — 로그에 `Graphics preset 'low' picked` 가 없는지. perf 기준 `Test/QA/Perf/Empty.json` · Load 기준선 `Test/Load/Baselines.json` 은 `quality` 가 없어 다시 뜰 때까지 거절된다(의도).
 
 ## 2. 남은 일
 
 | 무엇 | 첫 일 한 줄 | 계획 문서 |
 |---|---|---|
-| 1. 렌더 기준 낡음(`perf-frame` · `load-baseline-suite` · `load-auto-render-scale`) | DoF · 모션 블러가 렌즈 없는 카메라(조리개 0)에서도 전 화면 한 번 돈다(Empty `GPU.Frame` 468 → 1089 us) — 꺼진 카메라에서 건너뛰는 단위를 내고, GPU 메모리 56.8 → 176.9 MB 를 `RenderTargetRegistry` 로 나눈 뒤 기준을 다시 뜬다(숨기기 위한 재기록 금지). 벤치 골든 8 장은 사양 프리셋 `low` 때문에 잘못 갱신했다가 되돌렸다(862ad03f3) — 같은 일이 다른 골든 · 기준에 있는지 본다 | [Candidates-graphics](Candidates-graphics.md) |
-| 2. `scenario-thresholds-promote` 인자 | 인자가 낡은 `{bin}/Saved/Automation` 을 가리킨다 — 시나리오 보고는 `build/<preset>/AppRuns/shard<k>of<n>/<케이스>/Saved/Automation` 아래다. 인자를 `AppRuns` 로 고치고 `requires` 를 단다 | [AutomationSplit](AutomationSplit.md) |
-| 3. OnlineLoadBot 접속 부하 | 봇이 "online kit 'matchmaking' could not initialize" 로 멈춘다(봇 프로세스에 엔진 서비스 · 타입 레지스트리가 없다) — `Tools/OnlineLoadBot/Main.cpp` 의 `ToolProcessScope` 를 `ServerApp` 같은 호스트 범위 + `Engine`(DedicatedServer)으로 | [ServerDebug](ServerDebug.md) |
-| 4. 명령 없는 검증 항목 | `verify-batch --list` 의 "명령이 없어 돌지 않은 항목" 에 실행 명령을 달거나 사람 눈이 꼭 필요한 것은 사유와 분리하고, `plans --check` 가 "명령 없는 측정대기" 를 막게 구조로 닫는다(`wt/verifycmd` 병합 뒤 이어서) | [GpuVerification](GpuVerification.md) |
-| 5. 통과한 일회성 항목의 문서 대기 글 | `Test/QA/VerifyBatch.json` 의 `result_doc` 열을 따라 "측정대기 · 남은 확인" 글을 지우고 상태를 올린다. `result_doc` "docs/plans/NEXT.md 0000절"(232 곳)은 없는 절을 가리키므로 실제 고칠 문서로 일괄 정리하고 `verify-batch --check` 로 본다 | 각 `result_doc` |
-| 6. 같은 결함 후보(이번 통합에서 드러남) | ① 기계 사양 · 사용자 설정에 따라 결과가 갈리는 다른 무인 경로(자동 렌더 배율 · 품질 조정기) ② 패널을 그리기 전에 이번 프레임 플래그(hovered 등)를 읽는 패턴 ③ 도구 줄이 넘치는 패널(`EditorChrome::sameLineIfFits` 로) ④ "기다릴 지난 상태가 없는 첫 프레임" — 게임 모듈 리로드 직후 · 미리보기 창이 처음 열리는 프레임 ⑤ 실행 파일 옆 `Saved` 를 공유해 앞선 실행 잔재가 판정을 바꾸는 경로(로그 폴더 · 텔레메트리 스풀; 실행마다 로그 폴더 격리가 근본책) ⑥ 컴퓨트 디스패치의 PSO 계약 통일(DX11 · DX12 · Vulkan 은 PSO 없이 디스패치, GL 은 조용히 건너뜀 — 드로우처럼 PSO 없으면 멈추게 할지 정한다) ⑦ 프레임 상태 핸들 수명 | — |
-| 7. 데스크톱 전역 상태 단계 | `ExpectCursorClip` 같은 단계가 `input="mixed"` 없이 쓰이면 단계 검증이 거절하게 한다. 클립보드 등 다른 전역 자원을 쓰는 스위트가 더 있는지 훑는다 | — |
-| 8. 도구 | `Scripts syntax-check` 가 `--build-dir` 를 줘도 에디터 계층 스텁 경로로 컴파일해 `EditorInputActions.cpp` 가 거짓 실패한다 | — |
-| 9. 조립 문장 Warning 에 id | explog 뒤 id 없는 Warning 은 본문 전체 일치로만 선언된다 — 조립 문장(`%#`)인 Warning/Error 를 소스에서 찾아 `SW_LOG_WARNING_ID` 로 올린다 | [GpuVerification](GpuVerification.md) 4절 |
-| 10. 에디터 자체 테스트의 `find` | `Source/Editor/SelfTest` 약 20 곳이 여전히 `findSubsystem` — 컨텍스트가 늘 있는 경로만 `getSubsystem` 으로 | — |
-| 11. RHI 등록 단언 승격 | `assertRegistryMutableNow` 가 한 번도 걸리지 않았다 — 다른 백엔드 등록 · 해제 경로를 `requireRegistryMutableNow`(모든 구성 abort)로 올릴지 정한다 | [결정 기록](../09_Decisions.md) 5-5 |
-| 12. 샤드 비용표 | 시나리오 케이스 예상 비용을 실제 케이스 시간으로 보정한다 — `ctest -L hostgpu` 한 바퀴의 `AppTest_HostOnly_Shard*` 시간을 재 `Test/TestPolicy.json` 에 적고, 샤드 둘이 겹쳐 시간이 실제로 줄었는지(`hostResourceLock` 이 사라진 뒤) 비교한다 | — |
-| 13. 선호 백엔드 목록 케이스 | `TestRHIDevice` 8 · `TestRenderPassGPU` 18 곳은 아직 "처음 서는 백엔드 하나" 로 돈다 — 선호 순서가 필요 없으면 `SW_TEST_CASE_PER_PARAMETER` 한 줄씩 | — |
-| 14. 자동화 개선 후보 | 어림값 문턱 승격 도구(provisional 38 개) · 비에디터 게임 시나리오 묶음 실행 · 고정 프레임 대기 계측 · 교착 시나리오를 `VerifyBatch.json` 항목으로 | [AutomationSplit](AutomationSplit.md) |
-| 15. 린트 후속 | `GenerateLintTargets` 에 `SKIP_RETURN_CODE 77`, `CheckNameReferences` 의 다른 걷기들이 건너뜀을 통과로 내는지 | — |
-| 16. 오래된 결함 후보 | 셰이더 쿠커가 옛 퍼뮤테이션 바이너리를 안 지움 · `--cook-shaders` 실패에도 0 · 손 불리언 파서 · 이름 거절 레지스트리 · `ResourceDataKindRegistry` 단일체 · 누수 탐지 2~4 단계 · 야간 Linux Load 실패 원인 · crowd `CrowdSharedUnits` 가설 · RHI 파일 후보 | [LeakDetection](LeakDetection.md) · [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · `Candidates-*.md` |
-| 17. CI 원인 재확인 | push 뒤 `ci-jobs --summary` 한 번 — Wayland 잡 · `CheckSourceGlob` 위반 · `MeshAssetTest.MeshComponentResolvesMeshAssetPath` | — |
-| 18. 추적되는 컴파일 셰이더 | `Resource/engine/shaders` 의 `.spv` · `.dxil` · `.dxbc` 약 1만 3천 개(팩 770 MB)를 git 에 두는 근거를 `docs/decisions/` 에서 찾고, 없으면 생성물로 뺄지 정한다(되돌리기 어려운 삭제라 사용자 확인 뒤) | [결정 기록](../09_Decisions.md) |
-| 19. 사용자 결정 대기 | 말 모델(WildWestHorseMount W3)을 사용자가 받아 `models_raw/` 에 넣으면 CC0 · 라이선스 확인. Steam/Epic SDK · H-3 운영 문서는 보류 | — |
-| 20. 통합 에이전트 모델 | `.claude/agents/integrator.md` 의 `model: opus` 고정을 [에이전트와 토큰](../12_Agents.md) 1절 표에 맞춰 확정한다 | [12 에이전트와 토큰](../12_Agents.md) |
+| 1. 렌더 기준 재측정 | DoF · 모션 블러 건너뛰기는 이미 코드에 있다(`kSkipsWithoutPostProcess` 등). 통합 빌드로 `perf-frame` · `load-baseline-suite` · `load-auto-render-scale` 를 `quality` 를 적어 다시 뜨고 Empty `GPU.Frame` 468 → 1089 us 와 GPU 메모리 56.8 → 176.9 MB 가 줄었는지 숫자로 본다(숨기기 위한 재기록 금지) | [Candidates-graphics](Candidates-graphics.md) |
+| 2. 누수 탐지 L2~L4 | L2 는 Release 측정, L3 는 실행 테스트, L4 는 L2 결과로 값을 정한다 — L2 부터 | [LeakDetection](LeakDetection.md) |
+| 3. 비에디터 게임 시나리오 묶음 실행 | `AppTestUtil::runScenario` 가 시나리오마다 App 을 새로 띄우고 App 은 `-scenario` 하나만 받는다 — 다중 시나리오(씬 · 모듈 상태 초기화 경계) 설계가 첫 단계, C++ 변경 | [AutomationSplit](AutomationSplit.md) |
+| 4. 야간 Linux Load 실패 | 4d3249e 야간은 `availableExtCount` 컴파일 오류로 졌고 01e3e4e06 이 고쳤다. 그 전 실행의 connect × Mid `solo:2x1` 거절은 `parseCompactMode` 가 이유를 돌려주게 했으니 다음 야간 문구로 원인을 본다 | `Candidates-*.md` |
+| 5. 샤드 비용표 실측 | `py -3 -m Scripts test-costs` 가 준비됐다 — `ctest -L hostgpu` 한 바퀴 뒤 `--apply` 로 `Test/TestPolicy.json` 을 고치고 샤드 겹침이 줄었는지 본다 | [AutomationSplit](AutomationSplit.md) 7절 |
+| 6. 선호 백엔드 목록 케이스 | 이미 `SW_TEST_CASE_PER_PARAMETER` 안에 있다. 남은 일반 케이스 7 개는 백엔드끼리 견주거나 고정한 것이라 취지 밖 | — |
+| 7. 사용자 몫 | 말 모델(WildWestHorseMount W3): BlendSwap "Horse Rigged All Gaits"(CC0 표기)를 `Resource/game/wildwest/models_raw/` 에 넣으면 `credits.md` · `ModelImportConfig.json` 규칙으로 가져온다. Steam/Epic SDK · H-3 운영 문서는 보류. 컴파일 셰이더 git 보관은 유지로 확정(2026-10-28, `docs/decisions/5-12_FeatureQueue.md`) | [WildWestHorseMount](WildWestHorseMount.md) |
+| 8. 통합 에이전트 모델 | `.claude/agents/integrator.md` 의 `model: opus` 고정을 [에이전트와 토큰](../12_Agents.md) 1절 표에 맞춰 확정한다(아직 확인 안 함) | [12 에이전트와 토큰](../12_Agents.md) |
+| 9. 작업 구조 문서 | 한 에이전트 단계별 진행(11 머리에 반영)에 `/integrate` · `/worker-brief` 스킬과 11 의 "작업자" 절을 맞춘다 | [11 작업 방식](../11_Workflow.md) |
 
-`D:/w` 바로 아래 작업자 산출물(`e.py` · `kh_*.log` · `vb.bak` 등)은 지워도 된다(사용자 허락).
+`D:/w` 에 작업자 워크트리와 산출물이 남아 있다. 통합이 main 에 들어간 뒤 `Scripts/dev` 정리 스크립트로 지운다(워크트리 기준 4 개).
 
-## 3. 따로 병합할 브랜치와 확인할 것
+## 3. 남은 후보 (이번 통합에서 드러남, 아직 안 한 것)
 
-Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에서 졌고 수정 뒤 Debug 빌드로 다시 돌려 모두 통과했다(38 · 114 · 12 초).
+- 쓰기 게이트는 `Resource` 루트 아래만 지킨다 — `docs/` · `Config/` 같은 루트 밖 추적 파일을 자동화가 쓰는 길과 `fopen` · `ofstream` 직접 쓰기는 못 막는다. `FileUtil::writeTextFile` 은 빈 글도 쓴다(저장 입구마다 거절).
+- `RemoteConfig` 밖 서비스는 `ServiceStoreCompletion` 으로 취소를 가르지만 저장소 스레드의 `run` 안 로그는 린트 밖이다(`ServiceRetentionJob` 한 곳은 손으로).
+- 이유가 사라지는 파서 조사를 못 한 곳: `Source/Server` · `Source/App` · `Source/ModuleHost` · `Tools`(`ReflectionParser` 등), 상태 아카이브 읽기 40 여 곳, `(void)load…` 40 여 곳(안쪽 로그가 이유를 남긴다고 주석).
+- `ArrowButton` · 체크박스 앞 `SameLine` 은 게이트가 보게 넓혔으나 `InspectorPanel` 의 "Active" · `TileMapPanel` 의 "Erase" 는 `{ }` 가 끼어 게이트도 못 본다. 콤보 · 입력 칸 앞은 폭을 따로 정해 안 봤다.
+- `uavBarrier` · `copyBufferToReadback` 선행 상태의 백엔드별 매핑 대조(표는 `transitionBuffer` 만 있다). Vulkan 프레임 밖 펜스 대기는 `RhiAsyncUploads` 계획이 맡는다(M1 측정에서 `RT.Upload.waitIdle` 가 보이면).
+- `PairedAnimationSystem::startMatchingSession` · `InteractorComponent::startPairedAnimation` 의 `ParticipantNotReady` 처리. DX11 굶음 방지 두 스레드 GPU 케이스(방법만 `Candidates-graphics.md` 에 있다).
+- `runApp` 을 우회하는 `subprocess` 직접 실행은 정규식 근사로 막는다(이름을 바꿔 피하면 리뷰 몫). 시나리오 XML 을 읽는 `qa/ScenarioWaitCost` · `qa/ScenarioThresholds` · `qa/Load` 는 공통 입구를 안 쓴다. `Scripts` 의 Python 이 사용자 폴더를 직접 읽는 곳은 안 훑었다.
+- crowd 기록의 뒤쪽(+240 · +300 프레임) 두 기록도 `WaitUntil` 이 붙잡은 길이에 따라 상태가 갈릴 수 있어 같은 종류의 흔들림이 남았다.
+- `CheckPythonMinimumVersion` 의 새 기능 표는 표에 있는 이름만 잡는다. 저장소 기준 최소 버전은 3.10(`Constants.py`) 이고 CI 의 리눅스 러너는 3.12 쯤이다.
 
-**통합 T(2026-10-28, 끝)**: `cand-quality` → `cand-engine` → `cand-gameplay` → `resid` 를 병합하고 병합 뒤 결함을 고쳐 main 에 넣고 push 했다. 검증: Debug(린트 · nogpu · race) · Shipping(nogpu · hostgpu) · Release 전체(통과 57 · 실패 0) 통과. `animgraphedit` 은 병렬 조각의 동시 저장 경합이어서 시나리오가 실행마다 새 사본에 쓰게 고쳤고, `assetmanage` 는 이름 바꾸기 직전마다 참조 색인을 기다리게 했다.
+사용자 결정(2026-10-27 · 28): 장르 키트 21 개(232 파일) 유지, 컴파일 셰이더 git 보관 유지, 평문 UDP 정책 병합 승인.
 
-고친 것(이번 통합): resid 뒤 문자열 호출 · 단위 철자 · 중복 `toResourceID` 래퍼 · 선언 없는 Error/Warning 으로 지던 테스트 약 90 개(`SW_TEST_DEFENSIVE_SCOPE` 를 그 로그를 내는 호출에) · 서버 종료 크래시(`ConfigManager::unloadConfig` — 모듈이 정의한 설정이 모듈 이미지보다 오래 남아 엔진 종료가 지우다 죽었다) · 법선맵 10 장 재굽기 · 내비 `findNearestPoint` 가 상자 밖 점을 돌려주던 것과 8 타일 층을 넘는 장애물을 조용히 자르던 것(`RecastNavMesh`/`RecastTileCache`) · Shipping 전용(원본 리소스가 필요한 두 테스트는 `SourceResources` 가 없으면 건너뜀, `AppTest_Desktop` 은 정책 `desktopInShipping: false` 로 Shipping 에서 등록 안 함) · `assetmanage` 의 GL 색인 대기.
-
-
-남은 후보(통합 T에서 드러남): 시나리오가 `scratch/` 밖의 추적 파일에 쓰는 것을 막는 형식이 없다(`asset.openScratch` 는 여는 쪽만 막고 Quick Open 은 열림) — 자동화 실행 중 Resource 원본 쓰기를 오류로 만드는 저장 입구 게이트 · `uipreviewdesigner.scenario.xml` 이 원본 `save_probe.ui.xml` 을 연다 · `findNearestPoly` 로 시작 · 끝 점을 붙이는 `RecastNavMesh::findPath` 등이 상자 밖 점에 붙을 수 있다 · `AutomationRunnerWatchTest.WallClockLimitEndsAHeldScenarioAndWritesTheReport`(벽시계 0.05 초)와 `catalogeditor` 는 병렬 부하에서 한 번씩 졌다(단독 통과) — 대기를 시간 대신 상태로 · `ServerRuntimeOpensTheSQLiteStore…` 는 표시만 달았다(종료 중 취소된 첫 reload 가 경고로 나옴 — `ServiceStoreResult` 에서 취소와 진짜 실패를 가르는 것이 근본책). 새 거절 경로 테스트는 로그 판정기가 넓어져 표시를 같이 달아야 한다.
-
-**통합 U(2026-10-28, 끝)**: `verifycmd` · `verifyopt` · `lockfmt` 끝 4 커밋을 병합했다. 고친 것: 종료 보고가 창보다 오래 사는 저장소를 창 안에서 다시 잡던 모양(`RegistrationList` 저장소 보관·복귀, 호스트 범위를 부트스트랩보다 먼저 비움 — 결정 5-3), OnlineLoadBot 의 `Engine::shutdown` 호출. 검증: Debug · Shipping · Release 빌드 통과, Shipping ctest 통과, 린트 통과(상태판 재생성).
-
-남은 후보(통합 U에서 드러남): 부하가 큰 전체 실행에서만 진다 — `AppScenarioTest.RecordsMatchAcrossBackends` 의 crowd 시나리오가 frame 301 의 `Animation.CrowdSoloUnits` · `ActiveUnits` 를 dx11/vk 에서 다르게 기록(단독 실행은 통과, 공유 그룹 성립 시점이 시간에 의존), 218 단계 에디터 체인(DX12)의 `panelclose` 가 `Editor.PanelOpen` 을 기다리지 않고 확인(단독 통과). 둘 다 `WaitUntil` 로 상태가 선 뒤에 기록 · 확인하게 고칠 것. 종료 보고 후보: Engine 멤버(`_listFrameObserver` · `_runTitle`)의 부트스트랩 해제를 `~Engine` 으로 옮기기, 소유자 없는 `inline static` 맵 · 캐시를 `ScopeOwned` 로, 프로세스 정적 `NameRegistry` 표의 보관·복귀, `IModuleUnloadListener` 목록을 침입형으로.
-
-작업 구조(한 에이전트 단계별 진행)는 [11 작업 방식](../11_Workflow.md) 머리에 반영했다. 남은 것: 같은 구조로 `/integrate` · `/worker-brief` 스킬과 11 의 "작업자" 절을 맞춘다.
-
-사용자 결정(2026-10-27): 장르 키트 21 개(232 파일)는 유지. 말 모델은 BlendSwap "Horse Rigged All Gaits"(CC0 표기)를 사용자가 받아 `models_raw/` 에 넣는다. 평문 UDP 정책(`wt/netsec`)은 병합 승인됨 — 이번 통합에 들어갔다.
-
-**사용자 영향(통합 S)**: Shortcuts.json 초기화 · `<bind modifier>` 형식 · 레이아웃 dockspace v7→v8 · 설정 `foliageDensity` / `reduceFlashing` 제거 · Shipping 에서 평문 LAN 파티 불가 · 소문자 열거값과 옛 태그 철자는 읽기 실패 · 모듈 ABI v9(모듈 다시 빌드 필요) · `SW_EDITOR_INPUT_BAN` 다시 구성 필요 · 무적 피격은 효과음 · 큐를 내지 않음 · 화살 머리가 속도 방향으로 정렬 · 월드별 검증 결과 · 법선맵 DDS 는 다시 가져오기 전까지 낡음.
+**사용자 영향(통합 V)**: 자동화 실행 중 `Resource` 원본 쓰기는 오류(`<Scratch>` 선언 또는 `scratch/` 아래만) · `asset.import` 의 임시 폴더가 `scratch/import` · 컴퓨트 디스패치는 PSO 없으면 멈춤 · 배포본이 `SW_USER_DATA_ROOT` 로 사용자 데이터 위치를 돌릴 수 있음 · 무인 골든 · 기준은 `quality` 를 기록하고 다르면 거절 · `Ninja-Release` 가 모든 게임을 지음.
