@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
@@ -410,4 +411,42 @@ SW_TEST_CASE( ProcessTest, MissingExecutableFailsToLaunch )
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{ "sw_no_such_program_7f3a", { "x" } } ) );
     SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{} ) );
     SW_EXPECT_FALSE( sw::Process::launchDetached( sw::ProcessCommand{} ) );
+}
+
+/**
+ * @brief [ProcessTest] `ProcessOptions::_listEnvironment` 는 자식의 환경에만 닿고 부모의 환경은 그대로다. 잘못된 이름과 분리 실행은 조용히 넘기지 않고 진다
+ * @details 변이: 덮어쓰기를 무시하면 첫 단언이 지고, 부모 환경을 바꾸면 둘째 단언이 진다.
+ */
+SW_TEST_CASE( ProcessTest, EnvironmentOverrideReachesOnlyTheChild )
+{
+    constexpr const utf8* kName = "SW_PROCESS_TEST_ENV_OVERRIDE";
+    sw::ProcessOptions    options;
+    options._listEnvironment.push_back( sw::ProcessEnvironmentEntry{ kName, "from-option" } );
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::ProcessCommand command{
+        "cmd.exe",
+        { "/c", "echo", "%SW_PROCESS_TEST_ENV_OVERRIDE%" }
+    };
+#else
+    const sw::ProcessCommand command{ "printenv", { kName } };
+#endif
+    sw::Process process;
+    SW_ASSERT_TRUE( process.launch( command, options ) );
+    sw::string line;
+    bool       bFound = false;
+    while ( process.readOutputLine( line ) )
+    {
+        if ( line.find( "from-option" ) != sw::string::npos )
+            bFound = true;
+    }
+    SW_EXPECT_EQUAL( 0, process.waitForExit() );
+    SW_EXPECT_TRUE( bFound );
+    SW_EXPECT_FALSE( sw::ProcessEnvironment::isSet( kName ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "an invalid environment entry and a detached launch with overrides fail" );
+    sw::ProcessOptions badOptions;
+    badOptions._listEnvironment.push_back( sw::ProcessEnvironmentEntry{ "A=B", "x" } );
+    sw::Process badProcess;
+    SW_EXPECT_FALSE( badProcess.launch( command, badOptions ) );
+    SW_EXPECT_FALSE( sw::Process::launchDetached( command, options ) );
 }

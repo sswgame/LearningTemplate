@@ -67,8 +67,68 @@ namespace sw
         struct PosixExecImage
         {
             string              _path;
-            vector<const utf8*> _listArgumentPointer; ///< `ProcessCommand` 의 글을 가리킨다 — 그 명령이 exec 까지 살아 있어야 한다
+            vector<const utf8*> _listArgumentPointer;            ///< `ProcessCommand` 의 글을 가리킨다 — 그 명령이 exec 까지 살아 있어야 한다
+            vector<string>      _listEnvironmentText;            ///< 덮어쓴 환경의 `이름=값` 글(`_bOverridesEnvironment` 일 때만 쓴다)
+            vector<const utf8*> _listEnvironmentPointer;         ///< `_listEnvironmentText` 를 가리키는 `execve` 의 envp(nullptr 로 끝난다)
+            bool                _bOverridesEnvironment{ false }; ///< false 면 `execv` 로 이 프로세스의 환경을 그대로 물려준다
         };
+
+        /**
+         * @brief 이 프로세스의 환경에 @p listEntry 를 덮어쓴 envp 를 **fork 전에** @p inoutImage 에 만듭니다. 이름이 비었거나 `=` 를 품으면 false 입니다.
+         * @details `environ` 을 읽는 곳은 여기뿐이다(`getenv` 계열은 `ProcessEnvironment` 가 맡는다) — 환경 전체를 복사해야 하는 일이라 이름 하나를 묻는 그쪽 API 로는 못 한다.
+         */
+        [[nodiscard]] bool prepareEnvironmentOverride( const vector<ProcessEnvironmentEntry>& listEntry, PosixExecImage& inoutImage )
+        {
+            inoutImage._bOverridesEnvironment = false;
+            if ( listEntry.empty() )
+                return true;
+            for ( const ProcessEnvironmentEntry& entry : listEntry )
+            {
+                if ( entry._name.empty() || entry._name.find( '=' ) != string::npos )
+                {
+                    SW_LOG_ERROR( "Process launch got an environment entry with an empty name or '=' in the name" );
+                    return false;
+                }
+            }
+            inoutImage._listEnvironmentText.clear();
+            for ( const utf8* const* ppLine = environ; ppLine != nullptr && *ppLine != nullptr; ++ppLine )
+            {
+                const string line( *ppLine );
+                bool         bOverridden = false;
+                for ( const ProcessEnvironmentEntry& entry : listEntry )
+                {
+                    const size_t nameLength   = entry._name.size();
+                    const bool   bLongEnough  = line.size() > nameLength;
+                    const bool   bNameMatches = bLongEnough && strncmp( line.c_str(), entry._name.c_str(), nameLength ) == 0;
+                    if ( bNameMatches && line[nameLength] == '=' )
+                        bOverridden = true;
+                }
+                if ( bOverridden == false )
+                    inoutImage._listEnvironmentText.push_back( line );
+            }
+            for ( const ProcessEnvironmentEntry& entry : listEntry )
+            {
+                inoutImage._listEnvironmentText.push_back( entry._name + "=" + entry._value );
+            }
+            inoutImage._listEnvironmentPointer.clear();
+            for ( const string& line : inoutImage._listEnvironmentText )
+            {
+                inoutImage._listEnvironmentPointer.push_back( line.c_str() );
+            }
+            inoutImage._listEnvironmentPointer.push_back( nullptr );
+            inoutImage._bOverridesEnvironment = true;
+            return true;
+        }
+
+        /** @brief (자식에서) @p image 를 exec 합니다 — 환경을 덮어썼으면 `execve`, 아니면 `execv`. 성공하면 돌아오지 않고 실패하면 errno 를 남기고 돌아옵니다. */
+        void execImage( const PosixExecImage& image )
+        {
+            utf8* const* ppArgument = const_cast<utf8* const*>( image._listArgumentPointer.data() );
+            if ( image._bOverridesEnvironment )
+                execve( image._path.c_str(), ppArgument, const_cast<utf8* const*>( image._listEnvironmentPointer.data() ) );
+            else
+                execv( image._path.c_str(), ppArgument );
+        }
 
         /**
          * @brief @p command 를 exec 재료로 바꿉니다. 실행 파일이 비었거나 PATH 에서 찾지 못하면 오류를 남기고 false 입니다.
@@ -208,7 +268,7 @@ namespace sw
             if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
                 _exit( 127 );
 
-            execv( image._path.c_str(), const_cast<utf8* const*>( image._listArgumentPointer.data() ) );
+            execImage( image );
             _exit( 127 ); // exec 가 실패했을 때만 여기에 온다
         }
     } // namespace
@@ -243,7 +303,7 @@ namespace sw
 
         // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
         PosixExecImage image;
-        if ( preparePosixExec( command, image ) == false )
+        if ( preparePosixExec( command, image ) == false || prepareEnvironmentOverride( options._listEnvironment, image ) == false )
             return false;
         const string commandLine       = command.toCommandLine(); // 로그용
         const utf8*  pCommand          = commandLine.c_str();
@@ -300,6 +360,11 @@ namespace sw
 
     bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
+        if ( options._listEnvironment.empty() == false )
+        {
+            SW_LOG_ERROR( "Detached process launch does not take environment overrides - use Process::launch" );
+            return false;
+        }
         PosixExecImage image;
         if ( preparePosixExec( command, image ) == false )
             return false;
