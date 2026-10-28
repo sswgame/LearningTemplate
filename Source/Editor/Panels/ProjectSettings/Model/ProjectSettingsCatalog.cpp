@@ -53,7 +53,7 @@ namespace sw::editor
             const size_t slash = entry._relativePath.rfind( '/' );
             if ( slash == string::npos || entry._relativePath.find( '*' ) < slash )
                 continue;
-            // 이름 조건은 파이썬 `PathPattern` 과 같은 임포트 규칙 필터로 맞춘다(`*` 는 폴더를 넘지 않는다). 확장자로 모은 목록을 이 필터가 거른다.
+            // 이름 조건은 임포트 규칙 필터(`StringUtil::matchesPathPattern`)로 맞춘다(`*` 는 폴더를 넘지 않는다). 확장자로 모은 목록을 이 필터가 거른다.
             AssetImportPathFilter filter;
             filter._listIncludePattern.push_back( entry._relativePath );
             const string   directory = FileUtil::joinPath( projectRoot, string_view( entry._relativePath ).substr( 0, slash ) );

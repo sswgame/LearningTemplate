@@ -11,7 +11,6 @@ from pathlib import Path
 
 from .Paths import getProjectRoot
 
-kDefaultPreset = "Ninja-Debug"
 _kConfigPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)")
 _kServerPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)-Server")
 

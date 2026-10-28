@@ -34,7 +34,7 @@ namespace sw
         string                   _id{};     ///< 로그 id(`"영역.사건"`). 와일드카드는 쓸 수 없다
         string                   _scope{};  ///< 범위 이름 — 이 시나리오나 스위트에서만 허용한다
         string                   _reason{}; ///< 왜 아직 고치지 않았는가
-        string                   _plan{};   ///< 처리 계획 문서 이름(`py -3 -m Scripts plans` 의 이름)
+        string                   _plan{};   ///< 처리 계획 문서 이름(`docs/plans/` 의 파일 이름)
         AutomationAllowScopeKind _scopeKind{ AutomationAllowScopeKind::Scenario };
     };
 } // namespace sw

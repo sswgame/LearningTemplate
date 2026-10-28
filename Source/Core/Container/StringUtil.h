@@ -216,7 +216,6 @@ namespace sw
          * @brief 경로 패턴 @p pattern 이 @p path(`/` 구분, 호출부가 구분자를 맞춘다)에 맞는지 봅니다. 팩 쿠커 제외 패턴과 에디터 임포트 규칙이 함께 쓰는 마디 매칭입니다.
          * @details `/` 없는 패턴은 파일 이름에만 맞춥니다. `/` 가 있으면 경로를 마디(폴더 이름 · 파일 이름) 단위로 맞춥니다.
          *          마디 안의 `*` · `?` 는 마디를 넘지 않고, 마디 하나가 통째로 `**` 이면 0 개 이상의 마디에 맞습니다. 대소문자는 가리지 않습니다.
-         *          Python 쪽 정본은 `Scripts/common/PathPattern.py` 입니다.
          */
         [[nodiscard]] static bool matchesPathPattern( string_view pattern, string_view path );
 
