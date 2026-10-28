@@ -13,6 +13,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/TimePoint.h"
 
@@ -48,9 +49,10 @@ namespace sw::editor
         /**
          * @brief @p address("1.2.3.4:5678", 포트 필수)로 연결을 시작합니다. 이미 열려 있으면 먼저 닫습니다.
          * @param gameBuild Hello 에 싣는 빌드 글(64 B 이하)이다.
+         * @param tlsTrustFile 서버 인증서를 믿을 CA 번들 PEM. 비면 Dev 만 개발용 인증서를 믿는다(서버 서비스 스트림은 GM 포트도 늘 TLS 이다).
          * @return 주소를 읽지 못했거나 전송을 띄우지 못하면 false 이고 @p outError 에 이유가 있으며 상태는 `Failed` 입니다.
          */
-        [[nodiscard]] bool open( string_view address, string_view gameBuild, string& outError );
+        [[nodiscard]] bool open( string_view address, string_view gameBuild, string& outError, string_view tlsTrustFile = {} );
         void               close();
         /** @brief 전송 · 요청 시한 · 다시 연결을 돌립니다. 닫혀 있으면 아무것도 하지 않습니다. */
         void update( MonotonicMilliseconds nowMs );
@@ -66,6 +68,7 @@ namespace sw::editor
         AdminClient* getAdminClient() { return _state == AdminToolConnectionState::Disconnected || _state == AdminToolConnectionState::Failed ? nullptr : &_admin; }
 
     private:
+        unique_ptr<ITLSContext>      _tlsContext; ///< `_client` 가 빌린다 — 먼저 선언해 나중에 지운다
         unique_ptr<IStreamTransport> _pTransport;
         OnlineServiceClient          _client;
         AdminClient                  _admin;

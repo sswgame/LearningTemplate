@@ -80,7 +80,9 @@ namespace sw
         void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }
 
-        int32                     getPendingCount() const { return _pendingCount; }
+        int32 getPendingCount() const { return _pendingCount; }
+        /** @brief 이 서비스가 보고 있는 열린 거래 수입니다(시한 감시 대상). 서버 종료 드레인이 끝나기를 기다린다. */
+        int32                     getOpenTradeCount() const { return static_cast<int32>( _mapTradeToDeadline.size() ); }
         const TradeServiceConfig& getSettings() const { return _settings; }
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );

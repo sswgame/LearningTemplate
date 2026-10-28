@@ -5,10 +5,13 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
+
 namespace sw::editor
 {
     AdminToolConnection::AdminToolConnection()
-        : _pTransport{}
+        : _tlsContext{}
+        , _pTransport{}
         , _client{}
         , _admin{}
         , _onReady{}
@@ -23,7 +26,7 @@ namespace sw::editor
         close();
     }
 
-    bool AdminToolConnection::open( string_view address, string_view gameBuild, string& outError )
+    bool AdminToolConnection::open( string_view address, string_view gameBuild, string& outError, string_view tlsTrustFile )
     {
         close();
         NetAddress serverAddress;
@@ -51,10 +54,17 @@ namespace sw::editor
             }
             _bServiceRegistered = true;
         }
+        _tlsContext = NetSecurity::createClientTLSContext( tlsTrustFile, "", outError );
+        if ( _tlsContext == nullptr )
+        {
+            _state = AdminToolConnectionState::Failed;
+            return false;
+        }
         OnlineServiceClientConfig settings;
-        settings._transportSettings._ioThreadCount = 0; // 에디터 프레임의 update 가 전송을 돌린다
-        settings._serverAddress                    = serverAddress;
-        settings._gameBuild                        = string( gameBuild );
+        settings._endpointSettings._security._pTLSContext = _tlsContext.get();
+        settings._transportSettings._ioThreadCount        = 0; // 에디터 프레임의 update 가 전송을 돌린다
+        settings._serverAddress                           = serverAddress;
+        settings._gameBuild                               = string( gameBuild );
         if ( _client.initialize( _pTransport.get(), settings, outError ) == false )
         {
             _state = AdminToolConnectionState::Failed;
@@ -69,6 +79,7 @@ namespace sw::editor
     {
         _client.shutdown();
         _pTransport.reset();
+        _tlsContext.reset();
         _bReadyReported = false;
         _state          = AdminToolConnectionState::Disconnected;
     }

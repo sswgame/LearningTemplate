@@ -123,6 +123,9 @@ namespace sw
                 _listSeedAccount.clear();
             }
 
+            /** @brief 종료 드레인이 기다릴 진행 중인 일 — 맡긴 로그인 · 가입 · 티켓 요청(외부 확인 대기 포함). */
+            int32 getOpenWorkCount() const override { return _loginService.getPendingCount(); }
+
             void stop() override {}
 
             void shutdown() override
