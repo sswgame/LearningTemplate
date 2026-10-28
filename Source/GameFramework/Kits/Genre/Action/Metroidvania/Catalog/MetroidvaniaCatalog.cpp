@@ -120,7 +120,7 @@ namespace sw
         bool            bValid = GameDataXML::readFields( node, ability, sourceName );
         const XMLNode   motor  = node.findChild( "Motor" );
         if ( motor )
-            ability._motor.loadFromAttributes( motor ); // 속성이 없으면 빈 스탯이다
+            ability._motor.addAttributes( motor ); // 속성이 없으면 빈 스탯이다
         for ( const StatValue& value : ability._motor.getValues() )
         {
             if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
@@ -142,7 +142,7 @@ namespace sw
             return false;
         const XMLNode stats = node.findChild( "Stats" );
         if ( stats )
-            charm._stats.loadFromAttributes( stats ); // 속성이 없으면 빈 스탯이다
+            charm._stats.addAttributes( stats ); // 속성이 없으면 빈 스탯이다
         (void)_charmCatalog.add( charm );
         return true;
     }

@@ -231,7 +231,7 @@ namespace sw
             def._effect = hashed_string( effect->c_str() );
             if ( weight.has_value() )
                 def._weight = *weight;
-            (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
+            def._stats.addAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
             addItem( def );
             ++loadedCount;
         }

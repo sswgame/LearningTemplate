@@ -147,7 +147,7 @@ namespace sw
         }
         StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
         modifier.clear();
-        modifier.loadFromAttributes( node, "id" ); // 속성이 없으면 보정이 없는 것이다
+        modifier.addAttributes( node, "id" ); // 속성이 없으면 보정이 없는 것이다
         return true;
     }
 
@@ -196,7 +196,7 @@ namespace sw
             return false;
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )
-            skill._modifier.loadFromAttributes( statNode ); // 속성이 없으면 보정이 없는 것이다
+            skill._modifier.addAttributes( statNode ); // 속성이 없으면 보정이 없는 것이다
         (void)_catalogSkill.add( skill );
         return true;
     }

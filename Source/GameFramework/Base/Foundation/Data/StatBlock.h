@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] bool trySpend( const StatBlock& cost );
 
         /** @brief 노드의 속성을 모두 읽어 더합니다. @p pSkipName 은 건너뛸 속성 이름의 쉼표 목록("id,name")입니다. 읽은 수를 돌려줍니다. */
-        uint32 loadFromAttributes( const XMLNode& node, const utf8* pSkipName = nullptr );
+        uint32 addAttributes( const XMLNode& node, const utf8* pSkipName = nullptr );
 
         const vector<StatValue>& getValues() const { return _listValue; }
         bool                     isEmpty() const { return _listValue.empty(); }

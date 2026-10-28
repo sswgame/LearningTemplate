@@ -127,7 +127,7 @@ namespace sw
             }
             const XMLNode statNode = node.findChild( "Stats" );
             if ( statNode )
-                (void)def._stats.loadFromAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
+                def._stats.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
             for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
             {
                 EquipCondition condition;

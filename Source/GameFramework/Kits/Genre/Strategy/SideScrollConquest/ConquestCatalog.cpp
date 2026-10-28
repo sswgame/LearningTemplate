@@ -24,7 +24,7 @@ namespace sw
             {
                 outStats.clear();
                 if ( const XMLNode child = node.findChild( pChildName ) )
-                    (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
+                    outStats.addAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
             }
 
             /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나이고, 깨진 개수는 오류입니다. */
@@ -115,7 +115,7 @@ namespace sw
         if ( name == "Start" )
         {
             _rules._startResources.clear();
-            (void)_rules._startResources.loadFromAttributes( node ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
+            _rules._startResources.addAttributes( node ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
             return true;
         }
         if ( name == "Unit" )

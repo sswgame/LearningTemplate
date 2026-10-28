@@ -89,7 +89,7 @@ namespace sw
         }
     }
 
-    uint32 StatBlock::loadFromAttributes( const XMLNode& node, const utf8* pSkipName )
+    uint32 StatBlock::addAttributes( const XMLNode& node, const utf8* pSkipName )
     {
         uint32 loadedCount = 0;
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )

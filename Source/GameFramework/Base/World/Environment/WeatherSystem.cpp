@@ -66,7 +66,7 @@ namespace sw
             }
             const XMLNode valueNode = node.findChild( "Values" );
             if ( valueNode )
-                (void)weather._values.loadFromAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
+                weather._values.addAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
             (void)add( weather );
             ++loadedCount;
         }
