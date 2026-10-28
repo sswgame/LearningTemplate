@@ -1051,12 +1051,32 @@ namespace sw
         , _bEnded{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
+        , _bWriteGateHeld{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
     // 로그 리스너 해제는 `_logCapture` 의 소멸자가 맡는다.
-    AutomationRunner::~AutomationRunner() = default;
+    AutomationRunner::~AutomationRunner()
+    {
+        releaseWriteGate();
+    }
+
+    void AutomationRunner::acquireWriteGate()
+    {
+        if ( _bWriteGateHeld == SW_TRUE )
+            return;
+        AutomationScratch::acquireWriteGate();
+        _bWriteGateHeld = SW_TRUE;
+    }
+
+    void AutomationRunner::releaseWriteGate()
+    {
+        if ( _bWriteGateHeld == SW_FALSE )
+            return;
+        AutomationScratch::releaseWriteGate();
+        _bWriteGateHeld = SW_FALSE;
+    }
 
     void AutomationRunner::startFromPath( const ResourceID& resourceID, string_view reportPath )
     {
@@ -1112,6 +1132,7 @@ namespace sw
             }
             SW_LOG_INFO( "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
         }
+        acquireWriteGate(); // 사본을 만든 뒤부터 `scratch/` 밖의 리소스 원본 쓰기를 오류로 만든다
         return true;
     }
 
@@ -1998,6 +2019,7 @@ namespace sw
             return;
         _bEnded         = SW_TRUE;
         _wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
+        releaseWriteGate();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();

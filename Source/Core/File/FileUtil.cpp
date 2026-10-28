@@ -35,6 +35,8 @@ namespace sw
             atomic<uint64> _creationEpoch{ 0 };
             /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
             atomic<uint64> _removalEpoch{ 0 };
+            /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteGate`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::WriteGate> _writeGate{ nullptr };
         };
 
         struct FileUtilInternal
@@ -78,6 +80,15 @@ namespace sw
             [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size )
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
+                if ( const FileUtil::WriteGate gate = s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
+                {
+                    string reason;
+                    if ( gate( filePath, reason ) == false )
+                    {
+                        SW_LOG_ERROR( "Write to %# was refused: %#", filePath.c_str(), reason.c_str() );
+                        return false;
+                    }
+                }
 #if defined( SW_PLATFORM_WINDOWS )
                 const uint64 processID = static_cast<uint64>( GetCurrentProcessId() );
 #else
@@ -694,6 +705,11 @@ namespace sw
     void FileUtil::noteFileRemoved()
     {
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
+    }
+
+    void FileUtil::setWriteGate( WriteGate gate )
+    {
+        FileUtilInternal::s_writeCounters._writeGate.store( gate, std::memory_order_release );
     }
 
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
