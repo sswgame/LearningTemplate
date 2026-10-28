@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/LiveReloadManager.h
+ * @file ModuleManager/LiveReload/LiveReloadManager.h
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
  * @note **이 클래스는 Engine 이 아니라 GameModuleManager 에 있습니다.** 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
@@ -27,9 +27,9 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "ModuleManager/DeferredLibraryUnloadQueue.h"
-#include "ModuleManager/ModuleDependencyGraph.h"
-#include "ModuleManager/ModuleShadowCopy.h"
+#include "ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
+#include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 
 namespace sw
 {

@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/ModuleShadowCopy.h
+ * @file ModuleManager/LiveReload/ModuleShadowCopy.h
  * @brief 모듈 원본을 읽어 검사하고, 세대 이름을 붙인 섀도 복사본 파일을 씁니다. 복사본을 지우는 일도 여기서 합니다.
  *
  * @note 파일과 라이브러리 바이트만 다룹니다. 복사본을 로드하고 교체하는 순서(정적 등록 헤드 · `RegistrationReloadScope` · 라이브러리 검사 콜백)는

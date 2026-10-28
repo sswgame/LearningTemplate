@@ -9,14 +9,14 @@ namespace sw
     bool NetAddress::parse( string_view text, uint16 defaultPort, NetAddress& outAddress )
     {
         const size_t      colon       = text.rfind( ':' );
-        const string_view hostPart    = colon == string_view::npos ? text : text.substr( 0, colon );
+        const string_view hostService = colon == string_view::npos ? text : text.substr( 0, colon );
         uint32            arrOctet[4] = { 0, 0, 0, 0 };
         int32             index       = 0;
         size_t            start       = 0;
         while ( index < 4 )
         {
-            const size_t      dot           = hostPart.find( '.', start );
-            const string_view token         = hostPart.substr( start, dot == string_view::npos ? string_view::npos : dot - start );
+            const size_t      dot           = hostService.find( '.', start );
+            const string_view token         = hostService.substr( start, dot == string_view::npos ? string_view::npos : dot - start );
             int32             value         = 0;
             const bool        bInvalidOctet = token.empty() || StringUtil::parseInt( token, value ) == false || value < 0 || value > 255;
             if ( bInvalidOctet )

@@ -7,7 +7,7 @@
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
-    #include "ModuleManager/LiveReloadManager.h"
+    #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -187,7 +187,7 @@ namespace sw
         , _droppedTickCount{ 0 }
         , _pendingStepCount{ 0 }
         , _nextProcessSampleMs{ 0 }
-        , _hostParts{}
+        , _hostServices{}
         , _bReady{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
@@ -235,15 +235,15 @@ namespace sw
         if ( loadServerConfig() == false )
             return false;
         _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
-        // 호스트 부품(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostPart`)이고,
+        // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
-        if ( startHostParts( _hostParts, kArrServerHostPart, SW_DELEGATE_METHOD( HostPartStartDelegate, &ServerApp::startHostPart, this ),
-                             SW_DELEGATE_METHOD( HostPartStopDelegate, &ServerApp::stopHostPart, this ) ) == false )
+        if ( startHostServices( _hostServices, kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
+                                SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ) ) == false )
         {
-            SW_LOG_ERROR( "Host parts failed to start: %#", _hostParts.getError().c_str() );
+            SW_LOG_ERROR( "Host parts failed to start: %#", _hostServices.getError().c_str() );
             return false;
         }
-        SW_LOG_INFO( "Host parts up: %#", describeHostPartOrder( _hostParts ).c_str() );
+        SW_LOG_INFO( "Host parts up: %#", describeHostServiceOrder( _hostServices ).c_str() );
         // 서버 서비스는 부품이 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
         // `shutdown` 이 부품보다 먼저 멈춘다.
         if ( startServerServices() == false )
@@ -330,19 +330,19 @@ namespace sw
         return true;
     }
 
-    bool ServerApp::startHostPart( HostPartID id )
+    bool ServerApp::startHostService( HostServiceID id )
     {
         switch ( id )
         {
-            case HostPartID::Observability:
+            case HostServiceID::Observability:
             {
                 return initializeObservability();
             }
-            case HostPartID::CrashReports:
+            case HostServiceID::CrashReports:
             {
                 return collectPreviousCrashes();
             }
-            case HostPartID::ServiceContext:
+            case HostServiceID::ServiceContext:
             {
                 // 게임 인스턴스를 만들기 전에 건다(의존 선언) — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 연다.
                 _serverServiceContext._serverConfigPath = _serverConfigPath;
@@ -352,7 +352,7 @@ namespace sw
                 _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
                 return _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
             }
-            case HostPartID::Game:
+            case HostServiceID::Game:
             {
                 if ( _gameModuleManager == nullptr )
                     _gameModuleManager = make_unique<GameModuleManager>();
@@ -361,18 +361,18 @@ namespace sw
                     SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
                 return bStarted;
             }
-            case HostPartID::StandardInput:
+            case HostServiceID::StandardInput:
             {
                 if ( _pServerConfig->_bConsoleInput )
                     _console.start();
                 return true;
             }
-            case HostPartID::DevConsole:
+            case HostServiceID::DevConsole:
 #if SW_DEV_COMMANDS_ENABLED
                 _devConsole = make_unique<DevConsole>();
 #endif
                 return true;
-            case HostPartID::DebugChannel:
+            case HostServiceID::DebugChannel:
             {
 #if !defined( SW_SHIPPING )
                 if ( startDebugTools() == false )
@@ -380,54 +380,54 @@ namespace sw
 #endif
                 return startAdminChannel(); // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수)
             }
-            case HostPartID::BackendSwitcher:
-            case HostPartID::UserSettings:
-            case HostPartID::RuntimeUIHooks:
+            case HostServiceID::BackendSwitcher:
+            case HostServiceID::UserSettings:
+            case HostServiceID::RuntimeUIHooks:
             {
                 break;
             }
         }
-        SW_LOG_ERROR( "Host part %# is not a dedicated server part", HostPart::getName( id ) );
+        SW_LOG_ERROR( "Host part %# is not a dedicated server part", HostService::getName( id ) );
         return false;
     }
 
-    void ServerApp::stopHostPart( HostPartID id )
+    void ServerApp::stopHostService( HostServiceID id )
     {
         switch ( id )
         {
-            case HostPartID::Observability:
+            case HostServiceID::Observability:
             {
                 // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
                 shutdownObservability();
                 return;
             }
-            case HostPartID::CrashReports:
+            case HostServiceID::CrashReports:
             {
                 engine::getSubsystem<CrashReportService>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
                 return;
             }
-            case HostPartID::ServiceContext:
+            case HostServiceID::ServiceContext:
             {
                 _host.unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
                 return;
             }
-            case HostPartID::Game:
+            case HostServiceID::Game:
             {
                 _gameModuleManager->shutdown();
                 _gameModuleManager.reset();
                 return;
             }
-            case HostPartID::StandardInput:
+            case HostServiceID::StandardInput:
             {
                 _console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
                 return;
             }
-            case HostPartID::DevConsole:
+            case HostServiceID::DevConsole:
 #if SW_DEV_COMMANDS_ENABLED
                 _devConsole.reset();
 #endif
                 return;
-            case HostPartID::DebugChannel:
+            case HostServiceID::DebugChannel:
 #if !defined( SW_SHIPPING )
                 if ( _debugChannel != nullptr )
                     _debugChannel->shutdown();
@@ -439,9 +439,9 @@ namespace sw
                 _adminChannel.reset();
                 _adminTransport.reset();
                 return;
-            case HostPartID::BackendSwitcher:
-            case HostPartID::UserSettings:
-            case HostPartID::RuntimeUIHooks:
+            case HostServiceID::BackendSwitcher:
+            case HostServiceID::UserSettings:
+            case HostServiceID::RuntimeUIHooks:
             {
                 return;
             }
@@ -1029,9 +1029,9 @@ namespace sw
             _serverServices.reset();
         }
         _reloadStopsServices.reset();
-        // 호스트 부품을 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
-        // 순서는 `HostPart` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
-        _hostParts.destroyAll();
+        // 호스트 서비스을 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
+        // 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
+        _hostServices.destroyAll();
         // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).

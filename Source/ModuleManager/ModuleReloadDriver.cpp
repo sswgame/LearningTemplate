@@ -7,7 +7,7 @@
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
-    #include "ModuleManager/LiveReloadManager.h"
+    #include "ModuleManager/LiveReload/LiveReloadManager.h"
 
     #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/formatString.h"

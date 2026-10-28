@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ShadowCopyName.h"
+#include "ModuleManager/LiveReload/ShadowCopyName.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Process/Process.h"

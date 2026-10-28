@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/ShadowCopyName.h
+ * @file ModuleManager/LiveReload/ShadowCopyName.h
  * @brief 섀도 복사본 파일 이름과, 남은 복사본 가운데 지워도 되는 것을 다룹니다.
  *
  * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).

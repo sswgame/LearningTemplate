@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleLibraryPatch.h"
+#include "ModuleManager/LiveReload/ModuleLibraryPatch.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"

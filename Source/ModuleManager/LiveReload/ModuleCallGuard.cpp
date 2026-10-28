@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleCallGuard.h"
+#include "ModuleManager/LiveReload/ModuleCallGuard.h"
 
 #include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"

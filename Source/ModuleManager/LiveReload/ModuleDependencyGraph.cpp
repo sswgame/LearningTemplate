@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleDependencyGraph.h"
+#include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"

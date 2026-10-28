@@ -8,7 +8,7 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
-#include "ModuleManager/LiveReloadManager.h"
+#include "ModuleManager/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"

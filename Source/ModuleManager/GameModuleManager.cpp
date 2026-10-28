@@ -19,7 +19,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/UISystem.h"
 
-#include "ModuleManager/LiveReloadManager.h"
+#include "ModuleManager/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleCompiler.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 

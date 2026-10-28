@@ -9,7 +9,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ThreadCrashStack.h"
 
-#include "ModuleManager/LiveReloadManager.h"
+#include "ModuleManager/LiveReload/LiveReloadManager.h"
 
 namespace sw
 {

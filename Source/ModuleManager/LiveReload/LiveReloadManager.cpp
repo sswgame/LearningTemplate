@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/LiveReloadManager.h"
+#include "ModuleManager/LiveReload/LiveReloadManager.h"
 
 #include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"
@@ -18,9 +18,9 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "ModuleManager/ModuleCallGuard.h"
-#include "ModuleManager/ModuleLibraryPatch.h"
-#include "ModuleManager/ShadowCopyName.h"
+#include "ModuleManager/LiveReload/ModuleCallGuard.h"
+#include "ModuleManager/LiveReload/ModuleLibraryPatch.h"
+#include "ModuleManager/LiveReload/ShadowCopyName.h"
 
 #include "sw/config/ConfigConstants.h"
 

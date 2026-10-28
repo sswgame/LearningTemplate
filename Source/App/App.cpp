@@ -124,7 +124,7 @@ namespace sw
         , _windowResizeSubscription{}
         , _windowMessageSubscription{}
         , _initializeStartMicro{ 0 }
-        , _hostParts{}
+        , _hostServices{}
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
         , _reserved{ 0 }
@@ -204,16 +204,16 @@ namespace sw
         }
         [[maybe_unused]] const int64 windowEndMicro = MonotonicClock::nowMicroseconds();
 
-        // 3. 호스트 부품(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
+        // 3. 호스트 서비스(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        if ( startHostParts( _hostParts, kArrClientHostPart, SW_DELEGATE_METHOD( HostPartStartDelegate, &App::startHostPart, this ),
-                             SW_DELEGATE_METHOD( HostPartStopDelegate, &App::stopHostPart, this ) ) == false )
+        if ( startHostServices( _hostServices, kArrClientHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &App::startHostService, this ),
+                                SW_DELEGATE_METHOD( HostServiceStopDelegate, &App::stopHostService, this ) ) == false )
         {
-            SW_LOG_ERROR( "Host parts failed to start: %#", _hostParts.getError().c_str() );
+            SW_LOG_ERROR( "Host parts failed to start: %#", _hostServices.getError().c_str() );
             splash.dismiss();
             return false;
         }
-        SW_LOG_INFO( "Host parts up: %#", describeHostPartOrder( _hostParts ).c_str() );
+        SW_LOG_INFO( "Host parts up: %#", describeHostServiceOrder( _hostServices ).c_str() );
         [[maybe_unused]] const int64 modulesEndMicro = MonotonicClock::nowMicroseconds();
 
         warnUnknownGlobalOverrides();
@@ -330,12 +330,12 @@ namespace sw
         return _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
-    bool App::startHostPart( HostPartID id )
+    bool App::startHostService( HostServiceID id )
     {
         const bool bEnableEditor = _bEnableEditor == SW_TRUE;
         switch ( id )
         {
-            case HostPartID::Game:
+            case HostServiceID::Game:
             {
                 if ( _gameModuleManager == nullptr )
                     _gameModuleManager = make_unique<EditorModuleManager>();
@@ -345,78 +345,78 @@ namespace sw
                     SW_LOG_ERROR( "GameModuleManager initialization failed." );
                 return bStarted;
             }
-            case HostPartID::BackendSwitcher:
+            case HostServiceID::BackendSwitcher:
             {
                 _backendSwap.initialize( &_engine, _gameModuleManager.get(), bEnableEditor );
                 // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
                 return _host.bind( &_backendSwap );
             }
-            case HostPartID::UserSettings:
+            case HostServiceID::UserSettings:
             {
                 _userSettingsHost.initialize( &_engine, _pWindow );
                 return true;
             }
-            case HostPartID::RuntimeUIHooks:
+            case HostServiceID::RuntimeUIHooks:
             {
                 installRuntimeUIHooks();
                 return true;
             }
-            case HostPartID::DevConsole:
+            case HostServiceID::DevConsole:
             {
                 _devConsole.initialize( _pWindow, bEnableEditor );
                 return true;
             }
-            case HostPartID::Observability:
-            case HostPartID::CrashReports:
-            case HostPartID::ServiceContext:
-            case HostPartID::StandardInput:
-            case HostPartID::DebugChannel:
+            case HostServiceID::Observability:
+            case HostServiceID::CrashReports:
+            case HostServiceID::ServiceContext:
+            case HostServiceID::StandardInput:
+            case HostServiceID::DebugChannel:
             {
                 break;
             }
         }
-        SW_LOG_ERROR( "Host part %# is not a client part", HostPart::getName( id ) );
+        SW_LOG_ERROR( "Host part %# is not a client part", HostService::getName( id ) );
         return false;
     }
 
-    void App::stopHostPart( HostPartID id )
+    void App::stopHostService( HostServiceID id )
     {
         switch ( id )
         {
-            case HostPartID::Game:
+            case HostServiceID::Game:
             {
                 // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 부품은 엔진 종료 앞에서 내려간다.
                 _gameModuleManager->shutdown();
                 _gameModuleManager.reset();
                 return;
             }
-            case HostPartID::BackendSwitcher:
+            case HostServiceID::BackendSwitcher:
             {
                 // 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다. 전역 변수 훅은 GlobalVariableManager(엔진 소유)가 사라지기 전에 뗀다.
                 _host.unbind<RHIBackendSwitcher>();
                 _backendSwap.shutdown();
                 return;
             }
-            case HostPartID::UserSettings:
+            case HostServiceID::UserSettings:
             {
                 _userSettingsHost.shutdown();
                 return;
             }
-            case HostPartID::RuntimeUIHooks:
+            case HostServiceID::RuntimeUIHooks:
             {
                 removeRuntimeUIHooks();
                 return;
             }
-            case HostPartID::DevConsole:
+            case HostServiceID::DevConsole:
             {
                 _devConsole.shutdown();
                 return;
             }
-            case HostPartID::Observability:
-            case HostPartID::CrashReports:
-            case HostPartID::ServiceContext:
-            case HostPartID::StandardInput:
-            case HostPartID::DebugChannel:
+            case HostServiceID::Observability:
+            case HostServiceID::CrashReports:
+            case HostServiceID::ServiceContext:
+            case HostServiceID::StandardInput:
+            case HostServiceID::DebugChannel:
             {
                 return;
             }
@@ -510,9 +510,9 @@ namespace sw
 
     void App::shutdown()
     {
-        // 호스트 부품을 선 순서의 역순으로 내린다(순서는 `HostPart` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
+        // 호스트 서비스을 선 순서의 역순으로 내린다(순서는 `HostService` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
         // 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
-        _hostParts.destroyAll();
+        _hostServices.destroyAll();
         // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
 

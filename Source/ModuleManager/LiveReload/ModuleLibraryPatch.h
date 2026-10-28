@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/ModuleLibraryPatch.h
+ * @file ModuleManager/LiveReload/ModuleLibraryPatch.h
  * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 스탬프 · 리눅스 SONAME · Windows import DLL 이름).
  *
  * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).

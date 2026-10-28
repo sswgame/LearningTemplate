@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/ModuleDependencyGraph.h
+ * @file ModuleManager/LiveReload/ModuleDependencyGraph.h
  * @brief 핫 리로드가 다루는 모듈의 의존 그래프입니다. 연쇄 교체 대상(의존하는 쪽까지)과 교체 순서(위상 정렬)를 계산합니다.
  *
  * @note 이름과 의존 목록만 다루는 순수한 계산이라 DLL 없이 테스트합니다(`Test/SmokeTest/TestModuleDependencyGraph.cpp`).

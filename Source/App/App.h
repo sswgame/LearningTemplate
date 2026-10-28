@@ -21,9 +21,9 @@
 #include "Core/Time/FixedTimestep.h"
 
 #include "Engine/Engine.h"
+#include "Engine/HostServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/HostPart.h"
 #include "ModuleManager/ModuleReloadDriver.h"
 
 namespace sw
@@ -71,12 +71,12 @@ namespace sw
          */
         [[nodiscard]] bool loadModuleLibrarys();
         /**
-         * @brief 호스트 부품 하나를 세웁니다(`kArrClientHostPart` — 순서는 `HostPart` 의 의존 선언이 정한다).
+         * @brief 호스트 서비스 하나를 세웁니다(`kArrClientHostService` — 순서는 `HostService` 의 의존 선언이 정한다).
          * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했다).
          */
-        [[nodiscard]] bool startHostPart( HostPartID id );
-        /** @brief `startHostPart` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
-        void stopHostPart( HostPartID id );
+        [[nodiscard]] bool startHostService( HostServiceID id );
+        /** @brief `startHostService` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
+        void stopHostService( HostServiceID id );
         /**
          * @brief 모듈이 모두 로드된 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
          * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류한다(모듈이 선언하는 변수는 파싱 시점에 아직 없다). 그래서 오타가
@@ -92,7 +92,7 @@ namespace sw
         /** @brief 자동화 세션이 시나리오를 돌리는 중인가(`SW_ENABLE_AUTOMATION=OFF` 구성은 늘 false). 프레임 페이싱이 읽는다. */
         bool isAutomationBusy() const;
 
-        /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 부품이 선 뒤). */
+        /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 서비스이 선 뒤). */
         void bindHostCallbacks();
 
         /**
@@ -167,10 +167,10 @@ namespace sw
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
         /**
-         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 부품(게임 · 교체기 · 사용자 설정 · 런타임 UI 훅 · 개발 콘솔)입니다. 순서는 `HostPart` 의 의존 선언이 정한다.
+         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(게임 · 교체기 · 사용자 설정 · 런타임 UI 훅 · 개발 콘솔)입니다. 순서는 `HostService` 의 의존 선언이 정한다.
          * @details 부품의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다). `shutdown` 이 엔진 종료 앞에서 내린다.
          */
-        SubsystemCollection _hostParts;
+        SubsystemCollection _hostServices;
 
         uint8                  _bEnableEditor        : 1;
         uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.

@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "ModuleManager/StandardInputCommands.h"
+#include "Engine/Console/StandardInputCommands.h"
 
 namespace sw
 {

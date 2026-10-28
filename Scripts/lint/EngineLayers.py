@@ -45,7 +45,7 @@ kLayer: dict[str, int] = {
     "Renderer": 7,
     # 8 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기
     "Module": 8, "Automation": 8, "Engine.h": 8, "Engine.cpp": 8, "EngineSubsystemSet.h": 8, "EngineSubsystemSet.cpp": 8,
-    "HeadlessSubsystem.h": 8, "HeadlessSubsystem.cpp": 8,
+    "HeadlessSubsystem.h": 8, "HeadlessSubsystem.cpp": 8, "HostServices.h": 8,
 }
 kBaselinePath = Path(__file__).with_name("rules") / "EngineLayersBaseline.txt"
 kInclude = re.compile(r'^\s*#\s*include\s*"Engine/([^"]+)"', re.M)

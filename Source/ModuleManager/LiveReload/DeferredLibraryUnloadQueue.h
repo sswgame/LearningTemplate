@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/DeferredLibraryUnloadQueue.h
+ * @file ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h
  * @brief 핫 리로드로 교체된 옛 모듈 라이브러리를 바로 언로드하지 않고, 최근 몇 번의 연쇄 리로드(배치)만큼 남겨 두는 큐입니다.
  *
  * @note 핫 리로드(`LiveReloadManager`)만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleShadowCopy.h"
+#include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
@@ -10,8 +10,8 @@
 
 #include "Engine/Module/EngineABIStamp.h"
 
-#include "ModuleManager/ModuleLibraryPatch.h"
-#include "ModuleManager/ShadowCopyName.h"
+#include "ModuleManager/LiveReload/ModuleLibraryPatch.h"
+#include "ModuleManager/LiveReload/ShadowCopyName.h"
 
 namespace sw
 {

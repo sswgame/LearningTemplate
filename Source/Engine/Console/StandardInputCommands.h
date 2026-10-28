@@ -1,9 +1,10 @@
 /**
- * @file ModuleManager/StandardInputCommands.h
+ * @file Engine/Console/StandardInputCommands.h
  * @brief 호스트(App · Server)의 표준 입력 명령 채널입니다 — 줄을 읽고, 종료 명령(`quit` · `stop`)을 알아보고, 나머지 줄을 호스트에 넘깁니다.
  * @details 종료 낱말을 아는 곳은 여기 하나입니다. 나머지 줄을 무엇으로 처리할지(개발 콘솔, 서버 루프 명령)는 호스트가 델리게이트로 정합니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -25,7 +26,7 @@ namespace sw
      * @brief 호스트가 값 멤버로 들고 루프마다 `poll` 합니다. 시작하지 않았으면 `poll` 은 아무것도 하지 않습니다.
      * @details 부모 프로세스(에디터의 멀티 프로세스 재생, 서버 운영 도구)가 창 닫기나 종료 신호 없이 호스트를 정상 종료하고 명령을 보내는 채널입니다.
      */
-    class StandardInputCommands
+    class SW_API StandardInputCommands
     {
     public:
         StandardInputCommands();
