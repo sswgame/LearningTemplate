@@ -21,7 +21,8 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 제목: 스킨드 LOD 데이터
 왜 필요한가: 스킨드 메시가 LOD 를 받고 고른 메시 단계가 본 LOD 단계를 정하는 코드는 들어갔는데, LOD 규칙(simplify)을 건 스킨드 모델이 데이터에 없다.
 착수 조건: 없음.
-남은 첫 일: 규칙을 건 모델을 `App --import-models` 로 임포트해 산출물 `.mesh` 를 커밋한다.
+규칙은 걸었다(`Config/Editor/ModelImportConfig.json` 의 `KayKit_SkeletonMinionLOD`, 삼각형 50 % · 25 %).
+남은 첫 일: `App --import-models` 로 임포트해 산출물 `.mesh` 를 커밋한다(쿠킹은 이 세션에서 하지 않았다).
 함정: 베이크한 외형 메시(`createBakedMesh`)와 병합 메시(`mergeMeshes`)는 LOD 를 갖지 않는다 — 몸에 LOD 를 쓰려면 병합을 끄고 베이크하지 않는 차림이어야 한다.
 
 ### CharacterAppearanceScreenChecks
@@ -37,7 +38,8 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 제목: 가려진 뷰의 가림 판정 탐침과 시나리오
 왜 필요한가: 카메라별 후처리 · 피사계 심도 · 컷 신호 · 자동 노출 · 다중 뷰 가림 판정은 코드와 테스트가 통과했지만 가려져 쉰 뷰 수를 읽는 탐침과 시나리오가 없다.
 착수 조건: 없음.
-남은 첫 일: `RenderViewCollector::collectExtraViews` 가 가려져 쉰 뷰 수를 자동화 탐침으로 내게 하고, `-gv_occlusionCulling=1` 로 Shooter3D 의 CCTV 모니터를 벽 뒤로 보내는 카메라 위치를 정해 시나리오로 만든다.
+탐침 `RenderView.HiddenCount`(마지막 수집에서 보임 판정으로 쉰 추가 뷰 수)는 넣었다.
+남은 첫 일: `-gv_occlusionCulling=1` 로 Shooter3D 의 CCTV 모니터를 벽 뒤로 보내는 카메라 위치를 정해 시나리오로 만든다.
 
 ### PairedAnimationScreenChecks
 제목: 페어드 애니메이션의 에디터 창 시나리오
