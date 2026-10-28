@@ -96,17 +96,58 @@ namespace sw::editor
 
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
+            vector<float3> listTarget;
+            if ( computeTargets( context, static_cast<uint32>( inoutMesh.getVertexCount() ), listTarget ) == false )
+                return;
+            for ( size_t index = 0; index < listTarget.size(); ++index )
+            {
+                const float32 weight = MathUtil::saturate( inoutMesh.getWeight( index ) );
+                if ( weight <= 0.0f )
+                    continue;
+                inoutMesh._listPosition[index] += ( listTarget[index] - inoutMesh._listPosition[index] ) * weight;
+            }
+        }
+
+        bool supportsGPU() const override { return true; }
+
+        /**
+         * @brief 이 시각의 두 프레임을 보간해 모디파이어 공간으로 옮긴 정점별 목표 위치를 싣는다: float4(얻음) 뒤에 정점마다 float4 하나(xyz = 목표).
+         * @details 캐시 전체(프레임 × 정점)를 올리지 않는다 - 프로그램은 시간이 바뀔 때마다 다시 만들어지므로(머리의 시간) 지금 시각에 필요한 한 프레임분만 실으면
+         *          한 번 올리는 양이 정점 수에 그친다. 셰이더는 정점 번호로 읽기만 한다. 정점 수가 안 맞으면 CPU 처럼 경고 뒤 항등이다.
+         */
+        bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
+        {
+            vector<float3> listTarget;
+            const bool     bGot = computeTargets( context, context._vertexCount, listTarget );
+            outListValue.push_back( float4{ bGot ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f } );
+            for ( const float3& target : listTarget )
+            {
+                outListValue.push_back( float4{ target._x, target._y, target._z, 0.0f } );
+            }
+            return true;
+        }
+
+        void onParamsChanged() override
+        {
+            if ( _cache._path != getText( _fileParam ) )
+                _bCacheTried = false;
+        }
+
+    private:
+        /** @brief 이 시각의 보간 프레임을 모디파이어 공간으로 옮겨 정점마다 하나씩 @p outListTarget 에 채웁니다. 캐시를 못 읽었거나 정점 수가 다르면 false 입니다. */
+        bool computeTargets( const MeshModifierContext& context, uint32 vertexCount, vector<float3>& outListTarget ) const
+        {
+            outListTarget.clear();
             const string& path = getText( _fileParam );
             if ( path.empty() || context._pEvaluation == nullptr )
-                return;
+                return false;
             const PointCacheData* pCache = findCache( path );
             if ( pCache == nullptr )
-                return;
-            if ( pCache->_vertexCount != inoutMesh.getVertexCount() )
+                return false;
+            if ( pCache->_vertexCount != vertexCount )
             {
-                SW_LOG_WARNING( "Point cache '%#' has %# vertices but the mesh has %# - skipped", path.c_str(), pCache->_vertexCount,
-                                static_cast<uint32>( inoutMesh.getVertexCount() ) );
-                return;
+                SW_LOG_WARNING( "Point cache '%#' has %# vertices but the mesh has %# - skipped", path.c_str(), pCache->_vertexCount, vertexCount );
+                return false;
             }
 
             // 프레임 위치를 정한다
@@ -129,29 +170,18 @@ namespace sw::editor
             const uint32  frameB = ( frameA + 1 ) % pCache->_frameCount; // 감을 때 마지막 → 처음
             const float32 ratio  = pCache->_frameCount > 1 ? MathUtil::saturate( frame - static_cast<float32>( frameA ) ) : 0.0f;
 
-            // 캐시는 메시 로컬 — 로컬 → 월드 → 모디파이어 공간(행 벡터 규약)
+            // 캐시는 메시 로컬 - 로컬 → 월드 → 모디파이어 공간(행 벡터 규약)
             const float4x4 localToModifier = context._pEvaluation->_meshToWorld * context._worldToModifier;
-            const size_t   vertexCount     = inoutMesh.getVertexCount();
             const float3*  pFrameA         = pCache->_listFramePosition.data() + static_cast<size_t>( frameA ) * vertexCount;
             const float3*  pFrameB         = pCache->_listFramePosition.data() + static_cast<size_t>( frameB ) * vertexCount;
-            for ( size_t index = 0; index < vertexCount; ++index )
+            outListTarget.reserve( vertexCount );
+            for ( uint32 index = 0; index < vertexCount; ++index )
             {
-                const float32 weight = MathUtil::saturate( inoutMesh.getWeight( index ) );
-                if ( weight <= 0.0f )
-                    continue;
-                const float3 local  = pFrameA[index] + ( pFrameB[index] - pFrameA[index] ) * ratio;
-                const float3 target = float3::transform( local, localToModifier );
-                inoutMesh._listPosition[index] += ( target - inoutMesh._listPosition[index] ) * weight;
+                outListTarget.push_back( float3::transform( pFrameA[index] + ( pFrameB[index] - pFrameA[index] ) * ratio, localToModifier ) );
             }
+            return true;
         }
 
-        void onParamsChanged() override
-        {
-            if ( _cache._path != getText( _fileParam ) )
-                _bCacheTried = false;
-        }
-
-    private:
         /** @brief 경로의 캐시를 (필요하면 읽어) 냅니다. 못 읽으면 경고 한 번 뒤 nullptr 입니다. */
         const PointCacheData* findCache( const string& path ) const
         {

@@ -28,6 +28,7 @@
 namespace sw
 {
     class JSONValue;
+    class MeshModifierStack;
     class TaskManager;
 } // namespace sw
 
@@ -288,6 +289,7 @@ namespace sw::editor
         float4x4                      _worldToModifier{}; ///< 월드 → 모디파이어 공간
         const MeshModifierEvaluation* _pEvaluation{ nullptr };
         uint32                        _axisIndex{ 1 };                   ///< 주축 성분 번호(0 = X, 1 = Y, 2 = Z)
+        uint32                        _vertexCount{ 0 };                 ///< 이 모디파이어에 들어오는 메시의 정점 수(정점 단위 입력 - 포인트 캐시 - 가 길이를 맞춘다)
         const vector<float3>*         _pListOriginalPosition{ nullptr }; ///< 변형 전 원본 위치(모디파이어 공간). `needsOriginalPosition` 일 때만 채운다
 
         float32                    getTime() const { return _pEvaluation != nullptr ? _pEvaluation->_time : 0.0f; }
@@ -361,6 +363,14 @@ namespace sw::editor
         virtual bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const;
         /** @brief 정점 UV 가 필요하면 true 입니다(텍스처 표본). 프로그램 끝에 UV 표가 붙고 셰이더 `ModifierContext::_uv` 가 읽습니다. 기본은 false 입니다. */
         virtual bool needsGPUVertexUV() const { return false; }
+        /**
+         * @brief 켜진 하위 스택을 이 자리에서 건 것과 같은 묶음 모디파이어(Deformable · World Warp)면 그 하위 스택을, 아니면 nullptr 입니다.
+         * @details GPU 프로그램은 묶음을 따로 싣지 않고 하위 모디파이어의 기록을 이어 붙인다(`MeshModifierGPUProgram::make`) - 묶음의 공간 변환과 되돌림이 이웃 기록의 행렬에서
+         *          정확히 약분되므로 하위 기록의 행렬에 묶음의 로컬 → 묶음 행렬을 곱하기만 하면 된다. 하위 스택이 없는 묶음(빈 경로 · 못 읽은 파일)은 nullptr 이고 CPU 도 항등이다.
+         */
+        virtual const MeshModifierStack* getGPUChildStack() const { return nullptr; }
+        /** @brief 정점 색을 칠하는 모디파이어면 true 입니다(Paint 의 색 대상). 위치 · 법선은 안 바꾸므로 GPU 는 항등 기록만 두고, 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다. */
+        virtual bool writesGPUVertexColor() const { return false; }
         /** @brief 텍스처 입력의 GPU 격자 한 변 텍셀 수입니다(셰이더 `SW_MODIFIER_TEXTURE_RESOLUTION` 과 같다. 4 의 배수). 높이/마스크 한 채널을 이 격자로 눌러 싣는다. */
         static constexpr uint32 kGPUTextureResolution = 64;
         /** @brief 스플라인 입력의 GPU 표본 구간 수입니다(셰이더 `SW_MODIFIER_PATH_SEGMENTS` 와 같다. 표본은 하나 더 - 위치 · 접선 · 단면 축을 싣는다). */

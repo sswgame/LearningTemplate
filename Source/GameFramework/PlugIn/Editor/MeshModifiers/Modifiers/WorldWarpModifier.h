@@ -33,6 +33,9 @@ namespace sw::editor
         const utf8* getDescription() const override { return "Applies a shared warp definition file in the space of a scene object, so many meshes bend together."; }
         void        applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
         void        onParamsChanged() override;
+        bool        supportsGPU() const override { return true; }
+        /** @brief 읽은 워프 스택입니다(경로가 비었거나 못 읽었으면 빈 스택 - CPU 와 같이 항등). */
+        const MeshModifierStack* getGPUChildStack() const override;
 
     private:
         /** @brief 경로의 워프 스택을 (필요하면 읽어) 냅니다. 못 읽으면 경고 한 번 뒤 nullptr 입니다. */

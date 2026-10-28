@@ -259,6 +259,26 @@ namespace sw::editor
             return count > 0;
         }
 
+        /** @brief GPU 표면 맞추기가 싣는 삼각형 수의 상한입니다(셰이더 전수 탐색이라 정점 × 삼각형으로 늘어난다). */
+        static constexpr uint32 kGPUConformTriangleLimit = 4096;
+
+        /**
+         * @brief 모디파이어 공간 삼각형 목록을 GPU 프로그램에 싣습니다: float4(얻음, 삼각형 수) 뒤에 삼각형마다 float4 셋(a · b · c).
+         * @return 상한을 넘으면 false 입니다(프로그램을 만들지 않는다). 삼각형이 없으면 "못 얻었다" 한 칸만 싣고 true 입니다(셰이더가 항등으로 둔다 - CPU 와 같다).
+         */
+        [[nodiscard]] static bool packGPUTriangleTable( const vector<float3>& listTriangle, vector<float4>& outListValue )
+        {
+            const size_t triangleCount = listTriangle.size() / 3;
+            if ( triangleCount > kGPUConformTriangleLimit )
+                return false;
+            outListValue.push_back( float4{ triangleCount > 0 ? 1.0f : 0.0f, static_cast<float32>( triangleCount ), 0.0f, 0.0f } );
+            for ( size_t index = 0; index < triangleCount * 3; ++index )
+            {
+                outListValue.push_back( float4{ listTriangle[index]._x, listTriangle[index]._y, listTriangle[index]._z, 0.0f } );
+            }
+            return true;
+        }
+
         /** @brief 점에서 삼각형 위 가장 가까운 점입니다(무게중심 영역 판별). */
         static float3 findClosestOnTriangle( const float3& point, const float3& a, const float3& b, const float3& c )
         {

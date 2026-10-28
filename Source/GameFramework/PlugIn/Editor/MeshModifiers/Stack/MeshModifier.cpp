@@ -285,6 +285,7 @@ namespace sw::editor
         MeshModifierContext context{};
         context._pEvaluation     = &evaluation;
         context._axisIndex       = MathUtil::min( _gizmo._axisIndex, 2u );
+        context._vertexCount     = static_cast<uint32>( inoutMesh.getVertexCount() );
         context._modifierToWorld = modifierToLocal * evaluation._meshToWorld;
         context._worldToModifier = context._modifierToWorld.invert();
 

@@ -21,6 +21,7 @@
  *         평탄하게 이어진다(`ModifierContext::listCount` · `listValue`)
  *       그 뒤(수 목록 다음)가 외부 입력 블록 - 스플라인 표본 · 텍스처 격자 · 격자 제어점 · 층 곡선(`MeshModifier::packGPUInputs`). 모양은 모디파이어마다 다르고(아래 각 함수 주석)
  *         첫 float4 의 x 가 "입력을 얻었다 1 · 못 얻었다 0" 인 것은 못 얻으면 항등으로 둔다. 별도 GPU 버퍼가 아니라 같은 프로그램 목록 안이라 바인딩이 늘지 않는다
+ *   묶음(Deformable · World Warp)은 기록이 없다 - 하위 모디파이어의 기록이 같은 자리에 이어지고 행렬에 묶음의 공간 변환이 곱해져 있다(C++ 쪽이 만든다)
  *   끝     정점 UV 표(텍스처 모디파이어가 있을 때만): float4 하나에 정점 둘의 UV(xy · zw). 정점 번호는 메시 안 번호다 - 컴퓨트의 풀 정점 번호에서 칸 표 y(구간 시작)를 뺀 값
  *
  * 주의: 함수는 한 출구로 쓴다(early return 없음). OpenGL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(RHIBackendInfo.h).
@@ -87,6 +88,11 @@
 #define SW_MODIFIER_FFD2D                47
 #define SW_MODIFIER_COLLISIONDEFORM      48
 #define SW_MODIFIER_HITDEFORM            49
+#define SW_MODIFIER_CONFORM              50
+#define SW_MODIFIER_CONFORMMULTI         51
+#define SW_MODIFIER_POINTCACHE           52
+#define SW_MODIFIER_VERTEXANIM           53
+#define SW_MODIFIER_PAINT                54
 
 static const float kModifierEpsilon = 1e-6f;
 // 원주율은 common.hlsli 의 kPi · kTwoPi 를 쓴다(meshmorph.hlsl 이 common.hlsli 를 먼저 포함한다).
@@ -99,8 +105,9 @@ struct ModifierContext
     float  _boundsValid; // 1 이면 유효
     uint   _axis;
     float  _time;
-    uint   _paramBase; // g_DeformPrograms 안 매개변수 시작 원소
-    float2 _uv;        // 이 정점의 UV(프로그램 끝 UV 표 — 표가 없으면 0)
+    uint   _paramBase;   // g_DeformPrograms 안 매개변수 시작 원소
+    uint   _vertexIndex; // 이 메시 안의 정점 번호(정점별 위상 · 정점 단위 표)
+    float2 _uv;          // 이 정점의 UV(프로그램 끝 UV 표 — 표가 없으면 0)
 
     float param( uint index );
     float3 param3( uint index );
@@ -172,6 +179,13 @@ struct MeshDeform
     static float3 pushOutOfPlane( float3 pos, float3 center, float3 normalDirection, float margin );
     static float3 collisionDeform( float3 location, ModifierContext context );
     static float3 hitDeform( float3 location, ModifierContext context );
+    static float hashToUnit( uint value );
+    static float valueNoise1D( uint seed, float time );
+    static float3 vertexAnim( float3 location, ModifierContext context );
+    static float3 pointCache( float3 location, ModifierContext context );
+    static float3 closestOnTriangle( float3 pos, float3 a, float3 b, float3 c );
+    static bool intersectRayTriangle( float3 origin, float3 direction, float3 a, float3 b, float3 c, out float outDistance );
+    static float3 conform( float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
     static float3 transformVector( float3 direction, uint row );
@@ -1044,6 +1058,19 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
         case SW_MODIFIER_HITDEFORM:
             result = MeshDeform::hitDeform( location, context );
             break;
+        case SW_MODIFIER_CONFORM:
+        case SW_MODIFIER_CONFORMMULTI:
+            result = MeshDeform::conform( location, surfaceNormal, context );
+            break;
+        case SW_MODIFIER_POINTCACHE:
+            result = MeshDeform::pointCache( location, context );
+            break;
+        case SW_MODIFIER_VERTEXANIM:
+            result = MeshDeform::vertexAnim( location, context );
+            break;
+        case SW_MODIFIER_PAINT:
+            // 위치 · 법선을 안 바꾼다 - 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다(MeshModifier::writesGPUVertexColor)
+            break;
         default:
             break;
     }
@@ -1396,6 +1423,158 @@ static float3 MeshDeform::hitDeform( float3 location, ModifierContext context )
     return location + offset * context.param( 0u );
 }
 
+/** MeshModifierNoise::hashToUnit — 정수 하나를 [0, 1) 로 섞는다(정점 위상 · 1 차원 노이즈) */
+static float MeshDeform::hashToUnit( uint value )
+{
+    uint mixed = value;
+    mixed ^= mixed >> 16;
+    mixed *= 0x7feb352du;
+    mixed ^= mixed >> 15;
+    mixed *= 0x846ca68bu;
+    mixed ^= mixed >> 16;
+    return (float)( mixed & 0x00ffffffu ) / 16777216.0f;
+}
+
+/** MeshModifierNoise::valueNoise1D — 씨앗별 1 차원 값 노이즈 [-1, 1] */
+static float MeshDeform::valueNoise1D( uint seed, float time )
+{
+    const float safeTime = clamp( time, -1.0e6f, 1.0e6f );
+    const float cell     = floor( safeTime );
+    const float ratio    = safeTime - cell;
+    const int   index    = (int)cell;
+    const float valueA   = MeshDeform::hashToUnit( seed * 0x9E3779B9u + asuint( index ) );
+    const float valueB   = MeshDeform::hashToUnit( seed * 0x9E3779B9u + asuint( index + 1 ) );
+    const float weight   = ratio * ratio * ( 3.0f - 2.0f * ratio );
+    return ( valueA + ( valueB - valueA ) * weight ) * 2.0f - 1.0f;
+}
+
+/** VertexAnim — 매개변수 0 진폭(vec3) · 1 속도 · 2 위상 변화 · 3 노이즈 섞기 · 4 씨앗. 정점 번호(메시 안)로 정점마다 다른 위상을 준다 */
+static float3 MeshDeform::vertexAnim( float3 location, ModifierContext context )
+{
+    const float3 amplitude = context.param3( 0u );
+    float3       result    = location;
+    if ( dot( amplitude, amplitude ) >= kModifierEpsilon * kModifierEpsilon )
+    {
+        const uint  seed     = (uint)max( context.paramInt( 4u ), 0 ) * 7919u + context._vertexIndex;
+        const float phase    = MeshDeform::hashToUnit( seed ) * context.param( 2u );
+        const float cycle    = context._time * context.param( 1u ) + phase;
+        const float noiseMix = context.param( 3u );
+        float3      offset   = float3( 0.0f, 0.0f, 0.0f );
+        for ( uint axis = 0u; axis < 3u; ++axis )
+        {
+            const float axisCycle = cycle + (float)axis * 0.25f;
+            const float sine      = sin( kTwoPi * axisCycle );
+            const float noise     = MeshDeform::valueNoise1D( seed * 3u + axis, axisCycle );
+            offset                = MeshDeform::set( offset, axis, MeshDeform::get( amplitude, axis ) * ( sine + ( noise - sine ) * noiseMix ) );
+        }
+        result = location + offset;
+    }
+    return result;
+}
+
+/** PointCache — 매개변수 0 속도 · 1 시간 오프셋 · 2 반복, 입력 3: float4(얻음) 뒤에 정점마다 이 시각의 목표 위치(모디파이어 공간). 정점 번호로 읽는다 */
+static float3 MeshDeform::pointCache( float3 location, ModifierContext context )
+{
+    return context.raw( 3u ).x > 0.5f ? context.raw( 4u + context._vertexIndex ).xyz : location;
+}
+
+/** 점에서 삼각형 위 가장 가까운 점 — `PathModifierUtil::findClosestOnTriangle`(Ericson 5.1.5)와 같은 영역 순서(a · b · ab · c · ac · bc · 안)다 */
+static float3 MeshDeform::closestOnTriangle( float3 pos, float3 a, float3 b, float3 c )
+{
+    const float3 ab          = b - a;
+    const float3 ac          = c - a;
+    const float  d1          = dot( ab, pos - a );
+    const float  d2          = dot( ac, pos - a );
+    const float  d3          = dot( ab, pos - b );
+    const float  d4          = dot( ac, pos - b );
+    const float  d5          = dot( ab, pos - c );
+    const float  d6          = dot( ac, pos - c );
+    const float  vc          = d1 * d4 - d3 * d2;
+    const float  vb          = d5 * d2 - d1 * d6;
+    const float  va          = d3 * d6 - d5 * d4;
+    const float  denominator = va + vb + vc;
+    float3       result      = abs( denominator ) < kModifierEpsilon ? a : a + ab * ( vb / denominator ) + ac * ( vc / denominator );
+    // 우선순위가 낮은 영역부터 덮어 쓴다(마지막에 덮인 것이 CPU 의 첫 번째 반환이다)
+    result = ( va <= 0.0f && ( d4 - d3 ) >= 0.0f && ( d5 - d6 ) >= 0.0f ) ? b + ( c - b ) * ( ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) ) ) : result;
+    result = ( vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f ) ? a + ac * ( d2 / ( d2 - d6 ) ) : result;
+    result = ( d6 >= 0.0f && d5 <= d6 ) ? c : result;
+    result = ( vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f ) ? a + ab * ( d1 / ( d1 - d3 ) ) : result;
+    result = ( d3 >= 0.0f && d4 <= d3 ) ? b : result;
+    result = ( d1 <= 0.0f && d2 <= 0.0f ) ? a : result;
+    return result;
+}
+
+/** 반직선과 삼각형(양면)의 교차 — `CharacterGeometryUtil::intersectRayTriangle`(Möller-Trumbore, 무게중심 여유 1e-5). 맞으면 true 와 거리 */
+static bool MeshDeform::intersectRayTriangle( float3 origin, float3 direction, float3 a, float3 b, float3 c, out float outDistance )
+{
+    const float  slack       = 1.0e-5f;
+    const float3 edge1       = b - a;
+    const float3 edge2       = c - a;
+    const float3 pVector     = cross( direction, edge2 );
+    const float  determinant = dot( edge1, pVector );
+    const float  inverseDet  = 1.0f / ( abs( determinant ) < 1.0e-12f ? 1.0f : determinant );
+    const float3 tVector     = origin - a;
+    const float  u           = dot( tVector, pVector ) * inverseDet;
+    const float3 qVector     = cross( tVector, edge1 );
+    const float  v           = dot( direction, qVector ) * inverseDet;
+    const float  distance    = dot( edge2, qVector ) * inverseDet;
+    outDistance              = distance;
+    return abs( determinant ) >= 1.0e-12f && u >= -slack && u <= 1.0f + slack && v >= -slack && u + v <= 1.0f + slack && distance >= 0.0f;
+}
+
+/**
+ * Conform · ConformMulti — 매개변수 0 방식(0 가장 가까운 점 · 1 주축 음의 방향 · 2 법선 음의 방향) · 1 띄우기 · 2 최대 거리 · 3 양, 입력 4: float4(얻음, 삼각형 수) 뒤에
+ * 삼각형마다 float4 셋(모디파이어 공간 a · b · c). BVH 없이 전수 탐색한다(삼각형 수는 CPU 쪽 싣기가 상한을 건다).
+ */
+static float3 MeshDeform::conform( float3 location, float3 surfaceNormal, ModifierContext context )
+{
+    const float4 header = context.raw( 4u );
+    const float  amount = context.param( 3u );
+    float3       result = location;
+    if ( header.x > 0.5f && amount > 0.0f )
+    {
+        const uint   triangleCount = (uint)( header.y + 0.5f );
+        const int    mode          = clamp( context.paramInt( 0u ), 0, 2 );
+        const float3 axisDirection = MeshDeform::set( float3( 0.0f, 0.0f, 0.0f ), context._axis, -1.0f );
+        const float3 rayDirection  = mode == 2 ? MeshDeform::normalizeOr( -surfaceNormal, axisDirection ) : axisDirection;
+        float        bestDistance  = 3.0e38f;
+        float3       bestPoint     = float3( 0.0f, 0.0f, 0.0f );
+        float3       bestNormal    = float3( 0.0f, 1.0f, 0.0f );
+        for ( uint triIndex = 0u; triIndex < triangleCount; ++triIndex )
+        {
+            const float3 a         = context.raw( 5u + triIndex * 3u ).xyz;
+            const float3 b         = context.raw( 6u + triIndex * 3u ).xyz;
+            const float3 c         = context.raw( 7u + triIndex * 3u ).xyz;
+            float3       candidate = location;
+            float        distance  = 0.0f;
+            bool         bHit      = true;
+            if ( mode == 0 )
+            {
+                candidate = MeshDeform::closestOnTriangle( location, a, b, c );
+                distance  = length( candidate - location );
+            }
+            else
+            {
+                bHit      = MeshDeform::intersectRayTriangle( location, rayDirection, a, b, c, distance );
+                candidate = location + rayDirection * distance;
+            }
+            if ( bHit && distance < bestDistance )
+            {
+                bestDistance = distance;
+                bestPoint    = candidate;
+                bestNormal   = cross( b - a, c - a );
+            }
+        }
+        if ( bestDistance <= context.param( 2u ) )
+        {
+            float3 normal = MeshDeform::normalizeOr( bestNormal, float3( 0.0f, 1.0f, 0.0f ) );
+            normal        = dot( normal, location - bestPoint ) < 0.0f ? -normal : normal;
+            result        = lerp( location, bestPoint + normal * context.param( 1u ), saturate( amount ) );
+        }
+    }
+    return result;
+}
+
 static float3 MeshDeform::transformPoint( float3 location, uint row )
 {
     return location.x * g_DeformPrograms[row].xyz + location.y * g_DeformPrograms[row + 1u].xyz + location.z * g_DeformPrograms[row + 2u].xyz + g_DeformPrograms[row + 3u].xyz;
@@ -1433,6 +1612,7 @@ static void MeshDeform::applyProgram( uint programBase, uint vertexIndex, inout 
         context._axis        = (uint)record.z;
         context._time        = header.y;
         context._uv          = vertexUV;
+        context._vertexIndex = vertexIndex;
         context._paramBase   = cursor + SW_MODIFIER_RECORD_FLOAT4;
         const uint  kind     = (uint)record.x;
         const float step     = record.w;

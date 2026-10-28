@@ -35,6 +35,20 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Projects points onto the surface of another mesh object."; }
 
+        bool supportsGPU() const override { return true; }
+
+        /**
+         * @brief 대상 삼각형을 모디파이어 공간으로 옮겨 싣는다: float4(얻음, 삼각형 수) 뒤에 삼각형마다 float4 셋(꼭짓점 a · b · c).
+         * @details 셰이더는 BVH 없이 전수 탐색한다(정점 × 삼각형 - GPU 에서는 단순 반복이 빠르고 BVH 는 가변 트리 버퍼가 더 필요하다). 삼각형이 `kGPUConformTriangleLimit` 를 넘으면
+         *          프로그램을 만들지 못하고(false) 미리보기가 BVH 가 있는 CPU 경로로 돌아간다 - 거짓으로 일부만 싣지 않는다.
+         */
+        bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
+        {
+            vector<float3> listTriangle;
+            static_cast<void>( PathModifierUtil::tryAppendTriangles( context, getText( _targetParam ), listTriangle ) );
+            return PathModifierUtil::packGPUTriangleTable( listTriangle, outListValue );
+        }
+
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
             vector<float3> listTriangle;

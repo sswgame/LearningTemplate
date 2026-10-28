@@ -34,6 +34,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Adds a per-vertex sine or noise offset over time with deterministic phase per vertex."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const float3& amplitude = getVector3( _amplitudeParam );

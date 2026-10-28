@@ -55,6 +55,8 @@ namespace sw::editor
         subEvaluation._pInputs      = context.getInputs();
         subEvaluation._time         = context.getTime();
         subEvaluation._pTaskManager = context.getTaskManager();
+        // GPU 프로그램이 하위 모디파이어마다 입력 상자를 받도록 같은 수집 목록을 잇는다(묶음 자신의 상자가 먼저 들어가 있다)
+        subEvaluation._pListInputBounds = context._pEvaluation != nullptr ? context._pEvaluation->_pListInputBounds : nullptr;
         _stack.apply( inoutMesh, subEvaluation );
     }
 

@@ -34,10 +34,12 @@ namespace sw::editor
          */
         static MeshModifierStack* findOwningStack( MeshModifierStack& inoutRoot, const vector<int32>& listPath );
 
-        const utf8*        getDescription() const override { return "Groups a nested modifier stack and applies it as one unit in this modifier's gizmo space."; }
-        void               applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
-        void               writeExtraJSON( const JSONValue& object ) const override;
-        [[nodiscard]] bool readExtraJSON( const JSONValue& object ) override;
+        const utf8*              getDescription() const override { return "Groups a nested modifier stack and applies it as one unit in this modifier's gizmo space."; }
+        void                     applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
+        bool                     supportsGPU() const override { return true; }
+        const MeshModifierStack* getGPUChildStack() const override { return &_stack; }
+        void                     writeExtraJSON( const JSONValue& object ) const override;
+        [[nodiscard]] bool       readExtraJSON( const JSONValue& object ) override;
 
         MeshModifierStack&       getStack() { return _stack; }
         const MeshModifierStack& getStack() const { return _stack; }

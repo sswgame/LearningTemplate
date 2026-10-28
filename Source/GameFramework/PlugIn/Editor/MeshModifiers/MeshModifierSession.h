@@ -177,9 +177,10 @@ namespace sw::editor
         void restoreOriginalMesh();
 
         MeshModifierStack          _stack;
-        shared_ptr<Mesh>           _gpuPreviewMesh; ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
-        shared_ptr<Mesh>           _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
-        shared_ptr<Mesh>           _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        shared_ptr<Mesh>           _gpuPreviewMesh;              ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
+        bool                       _bGPUPreviewColored{ false }; ///< GPU 미리보기 메시의 정점 색을 Paint 결과로 덮었다(칠하는 스택이 아니게 되면 원본 색으로 되돌린다)
+        shared_ptr<Mesh>           _cpuPreviewMesh;              ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>           _originalMesh;                ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
         vector<float4>             _listGPUProgram;
         int32                      _gpuBlockingIndex;
         bool                       _bShadedPreview;

@@ -50,11 +50,21 @@ namespace sw::editor
             return;
         // 하위 스택에게는 워프 공간(이 모디파이어의 공간 = 워프 오브젝트)이 메시 로컬이다 — `DeformableModifier` 와 같다.
         MeshModifierEvaluation subEvaluation{};
-        subEvaluation._meshToWorld  = context._modifierToWorld;
-        subEvaluation._pInputs      = context.getInputs();
-        subEvaluation._time         = context.getTime();
-        subEvaluation._pTaskManager = context.getTaskManager();
+        subEvaluation._meshToWorld      = context._modifierToWorld;
+        subEvaluation._pInputs          = context.getInputs();
+        subEvaluation._time             = context.getTime();
+        subEvaluation._pTaskManager     = context.getTaskManager();
+        subEvaluation._pListInputBounds = context._pEvaluation != nullptr ? context._pEvaluation->_pListInputBounds : nullptr; // GPU 프로그램이 하위 상자를 받는다
         pWarp->apply( inoutMesh, subEvaluation );
+    }
+
+    const MeshModifierStack* WorldWarpModifier::getGPUChildStack() const
+    {
+        // 경로가 비었거나 못 읽은 워프는 CPU 도 항등이다 - 빈 스택으로 답해 GPU 가 "묶음인데 하위가 없다" 를 항등으로 잇는다
+        static const MeshModifierStack kEmptyStack;
+        const string&                  path  = getText( _fileParam );
+        const MeshModifierStack*       pWarp = path.empty() ? nullptr : findWarp( path );
+        return pWarp != nullptr ? pWarp : &kEmptyStack;
     }
 
     void WorldWarpModifier::onParamsChanged()

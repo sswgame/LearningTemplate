@@ -69,6 +69,10 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Paints vertex color or weight with spherical brushes."; }
 
+        /** @brief 색 대상만 GPU 로 옮긴다 - 위치 · 법선을 안 바꾸는 항등 기록이고 색은 세션이 GPU 메시 정점 스트림에 CPU 결과로 덮는다. 가중치 대상은 뒤따르는 모디파이어의 입력이라 GPU 가 모른다. */
+        bool supportsGPU() const override { return getInt( _targetParam ) == 0; }
+        bool writesGPUVertexColor() const override { return getInt( _targetParam ) == 0; }
+
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
             (void)context;

@@ -76,6 +76,36 @@ namespace sw::editor
             }
         };
 
+        /** @brief 켜진 모디파이어(묶음 안 포함) 중 정점 색을 칠하는 것이 있으면 true 입니다. */
+        bool hasColorPainter( const MeshModifierStack& stack )
+        {
+            for ( int32 index = 0; index < stack.getModifierCount(); ++index )
+            {
+                const MeshModifier* pModifier = stack.findModifier( index );
+                if ( pModifier == nullptr || pModifier->isEnabled() == false )
+                    continue;
+                const MeshModifierStack* pChild = pModifier->getGPUChildStack();
+                if ( pModifier->writesGPUVertexColor() || ( pChild != nullptr && hasColorPainter( *pChild ) ) )
+                    return true;
+            }
+            return false;
+        }
+
+        /** @brief 원본 정점에 스택 결과의 색만 덮은 정점입니다(GPU 가 위치 · 법선을 바꾸므로 나머지는 원본 그대로). */
+        vector<RHIVertex> makeColoredVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
+        {
+            vector<RHIVertex> listVertex = listSource;
+            for ( size_t index = 0; index < listVertex.size() && index < mesh._listColor.size(); ++index )
+            {
+                const float4& color            = mesh._listColor[index];
+                listVertex[index]._arrColor[0] = color._x;
+                listVertex[index]._arrColor[1] = color._y;
+                listVertex[index]._arrColor[2] = color._z;
+                listVertex[index]._arrColor[3] = color._w;
+            }
+            return listVertex;
+        }
+
         /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 탐침입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
         struct MeshModifierSessionProbes
         {
@@ -430,13 +460,20 @@ namespace sw::editor
         }
         // 텍스처를 읽는 모디파이어가 있으면 프로그램이 정점 UV 표를 싣는다(원본 UV 와 같다 - UV 를 바꾸는 모디파이어는 GPU 로 못 옮기는 쪽이다)
         const vector<float2>* pListUV = _previewMesh.hasUv() ? &_previewMesh._listUV : nullptr;
-        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, pListUV, _listGPUProgram ) )
+        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, static_cast<uint32>( _previewMesh._listPosition.size() ), pListUV, _listGPUProgram ) )
         {
-            if ( _gpuPreviewMesh == nullptr )
+            // 정점 색을 칠하는 모디파이어(Paint 색 대상)가 있으면 GPU 메시의 정점 스트림 색을 CPU 결과로 덮는다 - 모프 풀은 위치 · 법선 · 탄젠트만 바꾸고 색은 정점 스트림에서 읽는다.
+            // 그리는 중인 메시를 제자리에서 고치지 않고 새 메시로 갈아 끼운다(렌더 스냅샷이 옛 메시를 쥔다). 색을 안 칠하는 스택이 되면 원본 색의 새 메시로 한 번 되돌린다.
+            const bool bPaintsColor = hasColorPainter( _stack );
+            if ( _gpuPreviewMesh == nullptr || bPaintsColor || _bGPUPreviewColored )
             {
-                _gpuPreviewMesh = Mesh::create();
-                _gpuPreviewMesh->setVertices( _sourceData._listVertex );
-                _gpuPreviewMesh->setGPUMorphEnabled( true );
+                shared_ptr<Mesh> fresh = Mesh::create();
+                fresh->setVertices( bPaintsColor ? makeColoredVertices( _sourceData._listVertex, _previewMesh ) : _sourceData._listVertex );
+                fresh->setGPUMorphEnabled( true );
+                // mountPreviewMesh 가 옛 GPU 메시를 "우리 것" 으로 알아보도록 잠시 CPU 칸에 둔다
+                _cpuPreviewMesh     = std::move( _gpuPreviewMesh );
+                _gpuPreviewMesh     = std::move( fresh );
+                _bGPUPreviewColored = bPaintsColor;
             }
             _gpuPreviewMesh->setGPUDeformProgram( _listGPUProgram );
             mountPreviewMesh( *pMeshComp, _gpuPreviewMesh );
