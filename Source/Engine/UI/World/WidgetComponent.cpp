@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

@@ -10,7 +10,7 @@
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/2D/SpriteComponent.h"
 
 #include <imgui.h>
 

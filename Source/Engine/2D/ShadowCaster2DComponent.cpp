@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
+#include "Engine/2D/ShadowCaster2DComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

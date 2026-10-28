@@ -147,7 +147,7 @@ namespace sw
             float32 _arrOcclusionViewProj[16]{};
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};
-            /// @brief 인스턴스 LOD 선택의 화면 크기 식 항입니다(`AnimationLODUtil::computeProjectionTerms`). xyz 클립 w 를 만드는 열, w 가 m44.
+            /// @brief 인스턴스 LOD 선택의 화면 크기 식 항입니다(`LODViewUtil::computeProjectionTerms`). xyz 클립 w 를 만드는 열, w 가 m44.
             float32 _arrLODDepthRow[4]{};
             /// @brief xyz 눈 위치(눈이 경계 구 안이면 크기 1), w 투영 y 배율.
             float32 _arrLODView[4]{};

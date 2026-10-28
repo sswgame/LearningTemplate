@@ -134,13 +134,13 @@ namespace sw
         unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
         bool                            _bAutoRenderScaleActive;
         /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
-        vector<AnimationLODView> _listLODView;
+        vector<LODView> _listLODView;
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
         /** @brief 미리보기 씬마다의 스냅샷 빌더입니다(`populateScenePreviews`). 요청이 끊긴 씬의 것은 해제합니다. */
         vector<ScenePreviewBuilder> _listScenePreviewBuilder;
         /** @brief 미리보기 씬 하나의 애니메이션 LOD · 메시 LOD 뷰입니다. 프레임마다 재사용합니다. */
-        vector<AnimationLODView> _listPreviewLODView;
+        vector<LODView> _listPreviewLODView;
         /** @brief 디바이스가 텍스처를 인덱스로 고를 수 있어 머티리얼이 달라도 배치를 합치는지입니다(`initialize` 가 정한다). 미리보기 빌더에도 같은 값을 준다. */
         bool _bMergeBatchesAcrossMaterials;
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). 미리보기 빌더는 쓰지 않는다. */

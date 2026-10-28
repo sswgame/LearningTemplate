@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/2D/ParallaxLayerComponent.h"
+#include "Engine/2D/ParallaxLayerComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

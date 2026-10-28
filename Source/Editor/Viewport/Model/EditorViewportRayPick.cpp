@@ -9,7 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

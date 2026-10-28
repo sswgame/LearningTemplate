@@ -24,7 +24,7 @@ namespace sw
      * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( scene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
      * @details 추가 뷰는 레지스트리의 켜진 카메라 중 출력이 화면 사각형이나 렌더 텍스처인 것입니다(주 시점 카메라와 에디터 카메라 제외, `kMaxExtraRenderView` 까지).
      *          보이는가는 카메라 출력의 `_visibilityObject`(모니터)가 사람이 보는 화면(주 시점과 화면 사각형 뷰) 어디엔가 `_minScreenSize` 이상으로 보이는가입니다
-     *          (화면 크기는 애니메이션 LOD 와 같은 `AnimationLODUtil::computeScreenSize`). 주 시점에서의 가려짐은 렌더러가 되읽은 가림 타일 사본(`OcclusionTileSnapshot`,
+     *          (화면 크기는 애니메이션 LOD 와 같은 `LODViewUtil::computeScreenSize`). 주 시점에서의 가려짐은 렌더러가 되읽은 가림 타일 사본(`OcclusionTileSnapshot`,
      *          `gv_occlusionCulling` 이 켜졌을 때만 있다)으로 봅니다 — 언리얼 `WasRecentlyRendered` 처럼 "지난 프레임에 그려졌나" 이다. 사본이 없으면 가려짐을 보지 않습니다.
      *          화면 사각형 뷰는 사본이 없어 가려짐을 보지 않습니다. 그릴지는 `RenderViewScheduler`(갱신 주기, `RenderViewBudget`)가 정합니다.
      *          쉬는 뷰도 목록에 실어 렌더러가 그 뷰의 자원을 유지하게 합니다.

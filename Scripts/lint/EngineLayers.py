@@ -42,6 +42,7 @@ kLayer: dict[str, int] = {
     # 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
     "Physics": 6, "Audio": 6, "Animation": 6, "Navigation": 6, "TileMap": 6, "VFX": 6, "Sequencer": 6, "Dialogue": 6,
     "Environment": 6, "Destruction": 6, "DedicatedServer": 6, "Character": 6, "UI": 6, "Net": 6, "UserSettings": 6, "Automation/Scenario": 6,
+    "2D": 6,  # 2D 컴포넌트(스프라이트 · 2D 라이트 · 그림자 · 패럴랙스 · 픽셀 퍼펙트 카메라) — 스프라이트 클립(Animation) · 타일맵을 쓴다(언리얼 Paper2D)
     "Telemetry": 6,  # 크래시 · 원격 측정은 엔진 전체(사용자 설정 · 하드웨어 · 팩 설정)를 보고한다 — 엔진 루프(8)만 include 한다
     # 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
     "Renderer": 7,

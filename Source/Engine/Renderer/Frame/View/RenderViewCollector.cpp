@@ -102,7 +102,7 @@ namespace sw
              * @details 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
              *          @p pMainOcclusion 이 있고 첫 화면(주 시점)에서 경계 구가 가림 타일 뒤에 가려졌으면 그 화면은 세지 않는다.
              */
-            static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const AnimationLODView* pView, uint32 viewCount,
+            static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const LODView* pView, uint32 viewCount,
                                                      const OcclusionTileSnapshot* pMainOcclusion )
             {
                 const GameObject* pObject = manager.resolveGameObject( handle );
@@ -124,7 +124,7 @@ namespace sw
                     const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, world.getTranslation(), radius );
                     if ( bOccludedInMain )
                         continue;
-                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( pView[viewIndex], world.getTranslation(), radius ) );
+                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( pView[viewIndex], world.getTranslation(), radius ) );
                 }
                 return screenSize;
             }
@@ -233,13 +233,13 @@ namespace sw
         }
 
         // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
-        AnimationLODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
-        uint32           visibilityViewCount     = 0;
-        arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( mainViewProj, mainPosition );
+        LODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
+        uint32  visibilityViewCount              = 0;
+        arrVisibilityView[visibilityViewCount++] = LODView::make( mainViewProj, mainPosition );
         for ( const RenderViewRequest& request : outListView )
         {
             if ( request._outputKind == RenderViewOutputKind::ScreenRect )
-                arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( request._viewProj, request._position );
+                arrVisibilityView[visibilityViewCount++] = LODView::make( request._viewProj, request._position );
         }
         uint32 hiddenViewCount = 0;
         for ( uint32 index = 0; index < candidateCount; ++index )

@@ -12,11 +12,11 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"

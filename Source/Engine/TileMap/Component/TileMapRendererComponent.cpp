@@ -5,11 +5,11 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/2D/SpriteInstanceBatch.h"
+#include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
-#include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
-#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

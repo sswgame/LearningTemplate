@@ -1,10 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/2D/SpriteComponent.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
@@ -12,7 +13,6 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionValidation.h"

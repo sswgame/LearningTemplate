@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/2D/ShadowCaster2DComponent.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"

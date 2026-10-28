@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Foundation/Utility/Time/LifeSpanUtil.h"

@@ -28,10 +28,10 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

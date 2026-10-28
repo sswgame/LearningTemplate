@@ -82,7 +82,7 @@ namespace sw
     /**
      * @struct MeshLODLevel
      * @brief 메시의 낮은 상세 단계(LOD 1 이상) 하나의 저작 형태입니다 — 그 단계의 삼각형 목록과, 이 단계로 넘어가는 화면 크기 임계값입니다.
-     * @details 화면 크기는 경계 구의 화면 높이 비율이다(`AnimationLODUtil::computeScreenSize` 와 같은 값). 화면 크기가 임계값보다 작아지면 이 단계 이상을 그린다.
+     * @details 화면 크기는 경계 구의 화면 높이 비율이다(`LODViewUtil::computeScreenSize` 와 같은 값). 화면 크기가 임계값보다 작아지면 이 단계 이상을 그린다.
      *          모델 임포트가 단순화로 만들고(`ModelImporter`, 비율 · 임계값은 임포트 규칙 데이터) `.mesh` 의 `LODS` 덩어리에 싣는다.
      */
     struct MeshLODLevel

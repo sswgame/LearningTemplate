@@ -9,37 +9,16 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/Frustum.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/Graphics/LOD/LODView.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class SkeletonBoneLOD;
-
-    /**
-     * @struct AnimationLODView
-     * @brief LOD 판정에 쓰는 뷰 하나입니다(뷰-투영 · 눈 위치 · 그 행렬에서 뽑은 절두체). `make` 로 만듭니다.
-     */
-    struct AnimationLODView
-    {
-        float4x4 _viewProj{};
-        float3   _position{};
-        Frustum  _frustum{};
-
-        /** @brief 뷰-투영과 눈 위치로 만듭니다(절두체를 한 번 뽑아 둡니다). */
-        static AnimationLODView make( const float4x4& viewProj, const float3& position )
-        {
-            AnimationLODView view{};
-            view._viewProj = viewProj;
-            view._position = position;
-            view._frustum  = Frustum::fromViewProjection( viewProj );
-            return view;
-        }
-    };
 } // namespace sw
 
 namespace sw
@@ -144,18 +123,6 @@ namespace sw
      */
     struct SW_API AnimationLODUtil
     {
-        /**
-         * @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. 절두체 밖이면 0 입니다.
-         * @details 행벡터 규약이라 클립 y = dot( p, 열 1 ), w = dot( p, 열 3 ) 입니다. 강체 뷰 행렬이면 열 1 의 xyz 길이가 투영의 y 배율(cot( fov / 2 ))이고,
-         *          화면 크기 = 반지름 × 배율 / w 입니다(직교 투영이면 w = 1). 눈이 구 안에 있으면 1 로 봅니다.
-         */
-        static float32 computeScreenSize( const AnimationLODView& view, const float3& center, float32 radius );
-        /**
-         * @brief 화면 크기 식(`computeScreenSize`)이 읽는 투영의 두 항입니다. GPU 컬링의 인스턴스 LOD 선택(`gpucull.hlsl`)이 같은 식을 쓰도록 한 곳에서 뽑는다.
-         * @param outArrDepthRow 클립 w 를 만드는 열(m14, m24, m34, m44) — `w = dot( center, xyz ) + w`
-         * @param outScaleY      투영의 y 배율(열 1 의 xyz 길이)
-         */
-        static void computeProjectionTerms( const float4x4& viewProj, float32 ( &outArrDepthRow )[4], float32& outScaleY );
         /**
          * @brief 중요도 순으로 예산을 맞춥니다(언리얼 Animation Budget Allocator). 덜 중요한 것부터 주기를 두 배씩(상한까지) 늘려
          *        `Σ costPerEvaluation / 주기` 가 예산 이하가 될 때까지 갑니다. 예산이 0 이하이거나 이미 맞으면 손대지 않습니다.

@@ -36,7 +36,7 @@ namespace sw
      *        임포트한 스켈레톤(`a/knight/knight.skeleton.xml`)이면 옆 폴더 밖의 `a/knight.bonelod.xml` 이고, 옆 폴더는 다시 임포트할 때 통째로 지워집니다. 아니면 같은 폴더의 `<이름>.bonelod.xml` 입니다.
      * @details 형식은 `<SkeletonBoneLOD><levels><level max_screen_size="0.12"><remove><item>kneeIK.l</item>…</remove></level>…</levels></SkeletonBoneLOD>` 이다. 단계는 화면 크기가 작아지는 순서이고(앞 단계보다
      *          `max_screen_size` 가 작아야 한다), 뒤 단계는 앞 단계가 뺀 본을 이어받는다. 화면 크기는 경계 구의 지름이 화면 높이에서 차지하는 비율이다
-     *          (`AnimationLODUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라가며, 스키닝에는 그대로 쓰인다.
+     *          (`LODViewUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라가며, 스키닝에는 그대로 쓰인다.
      *          모르는 키나 스켈레톤에 없는 본 이름은 오류다(`computeMasks`).
      */
     class SW_API SkeletonBoneLOD

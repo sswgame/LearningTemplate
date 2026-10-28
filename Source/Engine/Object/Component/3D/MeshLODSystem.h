@@ -13,7 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Graphics/LOD/LODView.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
@@ -49,9 +49,9 @@ namespace sw
         void onSceneCleared() override {}
 
         /** @brief 이번 프레임에 그린 뷰들입니다(렌더 패킷 빌더, 게임 스레드). 뷰를 받기 전에는 고르지 않는다(모두 LOD 0). */
-        void setViews( const vector<AnimationLODView>& listView );
+        void setViews( const vector<LODView>& listView );
         /** @brief 곧 볼 시점(대기 뷰)을 넣습니다. 풀 때까지 그 시점의 화면 크기도 본다. */
-        void setPendingView( const AnimationLODView& view );
+        void setPendingView( const LODView& view );
         void clearPendingView();
         bool hasPendingView() const { return _bHasPendingView == SW_TRUE; }
         /**
@@ -82,12 +82,12 @@ namespace sw
         static uint32 selectNextLOD( const Mesh& mesh, float32 screenSize, uint32 currentLOD );
 
     private:
-        GameObjectManager&       _manager;
-        vector<AnimationLODView> _listView;
-        AnimationLODView         _pendingView;
-        int32                    _forcedLOD;           ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
-        uint8                    _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
-        uint8                    _bHasPendingView;     ///< 대기 뷰가 있다
-        uint8                    _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)
+        GameObjectManager& _manager;
+        vector<LODView>    _listView;
+        LODView            _pendingView;
+        int32              _forcedLOD;           ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
+        uint8              _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
+        uint8              _bHasPendingView;     ///< 대기 뷰가 있다
+        uint8              _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)
     };
 } // namespace sw

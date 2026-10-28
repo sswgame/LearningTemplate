@@ -248,7 +248,7 @@ namespace sw
         (void)_lodClientList.remove( reinterpret_cast<const IAnimationLODClient*>( id ) ); // 구독 하나가 등록 하나라 늘 있다
     }
 
-    void AnimationSystem::setLODViews( const vector<AnimationLODView>& listView )
+    void AnimationSystem::setLODViews( const vector<LODView>& listView )
     {
         _listLODView  = listView;
         _bLODViewsSet = SW_TRUE;
@@ -263,7 +263,7 @@ namespace sw
         _bLODViewsSet = SW_FALSE;
     }
 
-    void AnimationSystem::setPendingLODView( const AnimationLODView& view )
+    void AnimationSystem::setPendingLODView( const LODView& view )
     {
         _pendingLODView     = view;
         _bHasPendingLODView = SW_TRUE;
@@ -331,13 +331,13 @@ namespace sw
             else if ( pClient->findAnimationLODBounds( center, radius ) )
             {
                 screenSize = 0.0f;
-                for ( const AnimationLODView& view : _listLODView )
+                for ( const LODView& view : _listLODView )
                 {
-                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( view, center, radius ) );
+                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( view, center, radius ) );
                 }
                 // 대기 뷰(곧 넘어갈 컷)에서 보일 유닛도 지금부터 그 크기로 판정한다 — 컷 첫 프레임에 낮은 LOD · 지난 포즈로 보이지 않게.
                 if ( _bHasPendingLODView == SW_TRUE )
-                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( _pendingLODView, center, radius ) );
+                    screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( _pendingLODView, center, radius ) );
                 bVisible = screenSize > 0.0f;
             }
             AnimationLODState&     state    = _listScratchLODState[clientIndex];

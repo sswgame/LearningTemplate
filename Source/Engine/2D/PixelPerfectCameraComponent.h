@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
+#include "Engine/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

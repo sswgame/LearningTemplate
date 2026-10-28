@@ -278,11 +278,11 @@ namespace sw
             return;
         _listLODView.clear();
         if ( packet._bHasViewProj == SW_TRUE )
-            _listLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
+            _listLODView.push_back( LODView::make( packet._viewProj, packet._cameraPos ) );
         for ( const RenderViewRequest& view : packet._listView )
         {
             if ( view._bRender == SW_TRUE )
-                _listLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
+                _listLODView.push_back( LODView::make( view._viewProj, view._position ) );
         }
         pObjects->getSubsystem<AnimationSystem>().setLODViews( _listLODView );
         pObjects->getSubsystem<MeshLODSystem>().setViews( _listLODView );
@@ -376,7 +376,7 @@ namespace sw
             if ( pScene->getObjectManager() != nullptr )
             {
                 _listPreviewLODView.clear();
-                _listPreviewLODView.push_back( AnimationLODView::make( preview._viewProj, preview._cameraPos ) );
+                _listPreviewLODView.push_back( LODView::make( preview._viewProj, preview._cameraPos ) );
                 pScene->getObjectManager()->getSubsystem<AnimationSystem>().setLODViews( _listPreviewLODView );
                 pScene->getObjectManager()->getSubsystem<MeshLODSystem>().setViews( _listPreviewLODView );
             }

@@ -486,14 +486,14 @@ namespace sw
          * @brief 다음 평가가 쓸 뷰 목록입니다(주 시점과 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
          *        (모든 클라이언트가 보이고 매 프레임 평가합니다. 테스트, 서버, 뷰가 없는 실행이 그렇습니다).
          */
-        void setLODViews( const vector<AnimationLODView>& listView );
+        void setLODViews( const vector<LODView>& listView );
         /** @brief 뷰를 지워 LOD 를 끕니다. */
         void clearLODViews();
         /**
          * @brief 곧 넘어갈 시점(대기 뷰 — 컷 프리롤)을 LOD 판정에 더합니다. 유닛의 화면 크기는 뷰들과 이 뷰 중 큰 쪽이라, 그 시점에서 보일 유닛이 컷 전부터 포즈를 만든다.
          * @details 게임(카메라 관리자의 `setPendingView`)이 프레임마다 그 카메라의 뷰-투영으로 넣고, 컷이 끝나면 지운다. 뷰 목록(`setLODViews`)을 넣지 않은 실행에서는 LOD 가 꺼져 있어 쓰이지 않는다.
          */
-        void setPendingLODView( const AnimationLODView& view );
+        void setPendingLODView( const LODView& view );
         void clearPendingLODView();
         bool hasPendingLODView() const { return _bHasPendingLODView == SW_TRUE; }
         /** @brief LOD 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 판정할 때 `EngineDefaultAssets::_animationLODSettings` 를 읽습니다. */
@@ -604,8 +604,8 @@ namespace sw
         void releaseSubscription( uint64 id );
 
         AnimationOrderedList<IAnimationLODClient> _lodClientList; ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
-        vector<AnimationLODView>                  _listLODView;
-        AnimationLODView                          _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
+        vector<LODView>                           _listLODView;
+        LODView                                   _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>                 _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
         vector<AnimationBudgetItem>               _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
         vector<AnimationDependencyEdge>           _listScratchEdge;            ///< 성분을 지을 때 모은 의존 간선이다(재사용)

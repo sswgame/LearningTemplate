@@ -519,9 +519,9 @@ namespace sw
         cullParams._batchCount       = _gpuScene.getIndirectCommandCount();
         cullParams._visibleSlotCount = _gpuScene.getVisibleSlotCount();
         // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
-        // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`AnimationLODUtil::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
+        // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`LODViewUtil::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
         const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _arrView[static_cast<uint32>( RenderViewType::Main )];
-        AnimationLODUtil::computeProjectionTerms( lodView._viewProj, cullParams._arrLODDepthRow, cullParams._arrLODView[3] );
+        LODViewUtil::computeProjectionTerms( lodView._viewProj, cullParams._arrLODDepthRow, cullParams._arrLODView[3] );
         cullParams._arrLODView[0]    = lodView._position._x;
         cullParams._arrLODView[1]    = lodView._position._y;
         cullParams._arrLODView[2]    = lodView._position._z;

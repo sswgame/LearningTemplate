@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/2D/SpriteRenderUtil.h"
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/LifetimeScope.h"

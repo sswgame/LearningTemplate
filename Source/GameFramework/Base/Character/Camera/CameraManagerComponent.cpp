@@ -241,8 +241,8 @@ namespace sw
             return;
         }
         // shortcut: 대기 카메라가 그릴 화면의 가로세로 비를 모르므로 이 카메라와 같은 화면이라고 보고 16:9 로 잡는다 — 분할 화면 · 세로 화면이 생기면 뷰의 비를 받는다.
-        constexpr float32      kPendingViewAspect = 16.0f / 9.0f;
-        const AnimationLODView pendingView        = AnimationLODView::make( pPendingCamera->getViewProjectionMatrix( kPendingViewAspect ), pPendingCamera->getCameraPosition() );
+        constexpr float32 kPendingViewAspect = 16.0f / 9.0f;
+        const LODView     pendingView        = LODView::make( pPendingCamera->getViewProjectionMatrix( kPendingViewAspect ), pPendingCamera->getCameraPosition() );
         animation.setPendingLODView( pendingView );
         // 메시 LOD 도 그 시점의 단계로 미리 둔다 — 컷 첫 프레임에 단계가 바뀌어 보이지 않게.
         meshLOD.setPendingView( pendingView );

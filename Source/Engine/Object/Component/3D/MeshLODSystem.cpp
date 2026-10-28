@@ -35,13 +35,13 @@ namespace sw
     {
     }
 
-    void MeshLODSystem::setViews( const vector<AnimationLODView>& listView )
+    void MeshLODSystem::setViews( const vector<LODView>& listView )
     {
         _listView  = listView;
         _bViewsSet = SW_TRUE;
     }
 
-    void MeshLODSystem::setPendingView( const AnimationLODView& view )
+    void MeshLODSystem::setPendingView( const LODView& view )
     {
         _pendingView     = view;
         _bHasPendingView = SW_TRUE;
@@ -73,12 +73,12 @@ namespace sw
         float32 radius = 0.0f;
         (void)component.getWorldBounds( center, radius ); // 메시 컴포넌트는 늘 경계를 낸다
         float32 screenSize = 0.0f;
-        for ( const AnimationLODView& view : _listView )
+        for ( const LODView& view : _listView )
         {
-            screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( view, center, radius ) );
+            screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( view, center, radius ) );
         }
         if ( _bHasPendingView == SW_TRUE )
-            screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( _pendingView, center, radius ) );
+            screenSize = MathUtil::max( screenSize, LODViewUtil::computeScreenSize( _pendingView, center, radius ) );
         return screenSize;
     }
 

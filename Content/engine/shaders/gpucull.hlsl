@@ -56,7 +56,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
     float4   g_LODDepthRow;        // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
-    float4   g_LODView;            // xyz 눈 위치, w 투영 y 배율(AnimationLODUtil::computeProjectionTerms)
+    float4   g_LODView;            // xyz 눈 위치, w 투영 y 배율(LODViewUtil::computeProjectionTerms)
     uint4    g_LODControl;         // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0), y 전환 상태 비우기 1, z 이번 프레임의 전환 진행량(0 ~ 255, 0 이면 전환 없이 바로 바꾸고 상태 버퍼를 읽지 않는다)
 };
 
@@ -71,7 +71,7 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
 static const uint kMaxOcclusionTestTiles = 8u;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
 static const float kMinOcclusionClipW = 1.0e-4f;
-/// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `AnimationLODUtil::computeScreenSize` 의 `kEpsilon`).
+/// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `LODViewUtil::computeScreenSize` 의 `kEpsilon`).
 static const float kMinLODClipW = 1.0e-5f;
 /// 더 고운 단계로 돌아갈 때 화면 크기가 임계값보다 이만큼(비율) 커야 한다 — C++ `MeshLODSystem::kRefineHysteresis` 와 같다.
 static const float kLODRefineHysteresis = 0.1f;
@@ -89,7 +89,7 @@ bool isVisible( float3 center, float radius )
     return true;
 }
 
-/// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `AnimationLODUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
+/// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `LODViewUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
 float computeLODScreenSize( float3 center, float radius )
 {
     const float3 toEye  = center - g_LODView.xyz;
