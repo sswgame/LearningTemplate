@@ -69,5 +69,4 @@ out.append(f'- 합계 {total}')
 for k, v in sorted(byFolder.items(), key=lambda x: -len(x[1]))[:40]:
     out.append(f'- {k}: ' + ', '.join(v))
 
-pathlib.Path(r'C:\Users\ssw\AppData\Local\Temp\claude\d--Projects-Personal-LearningTemplate\fe9d9946-d724-47e5-aca1-6c1b1ed0dd2d\scratchpad\audit.md').write_text('\n'.join(out), encoding='utf-8')
 print('\n'.join(out)[:9000])
