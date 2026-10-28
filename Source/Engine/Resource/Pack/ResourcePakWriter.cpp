@@ -79,20 +79,20 @@ namespace sw
         }
 
         /** @brief 항목 하나의 CRC 를 구하고 팩 코덱으로 압축합니다. 빈 항목과 `None` 은 원본 그대로 둡니다. */
-        void compressOne( const Entry& entry, CompressSlot& outSlot ) const
+        void compressOne( const Entry& entry, CompressSlot& outListSlot ) const
         {
             // 32 비트 칸에 안 담기는 항목은 배치 단계가 이름과 함께 오류로 멈춘다 — 여기서 압축하느라 시간을 쓰지 않는다.
             if ( entry._bytes.size() > MathUtil::kMaxUInt32 )
                 return;
 
             const Stopwatch stopwatch;
-            outSlot._crc32 = StringUtil::computeCrc32( entry._bytes.data(), entry._bytes.size() );
+            outListSlot._crc32 = StringUtil::computeCrc32( entry._bytes.data(), entry._bytes.size() );
             if ( _pCodec != nullptr && entry._bytes.empty() == false )
             {
-                outSlot._bCompressed = true;
-                outSlot._bFailed     = compressPayload( entry, outSlot._listPayload ) == false;
+                outListSlot._bCompressed = true;
+                outListSlot._bFailed     = compressPayload( entry, outListSlot._listPayload ) == false;
             }
-            outSlot._nanos = stopwatch.getElapsedNanoseconds();
+            outListSlot._nanos = stopwatch.getElapsedNanoseconds();
         }
 
         /** @brief 항목 하나를 코덱으로 압축해 @p outPayloadBytes 에 담습니다. */
@@ -137,19 +137,17 @@ namespace sw
         _listEntry.push_back( std::move( entry ) );
     }
 
-    bool ResourcePakWriter::makePackBytes( vector<uint8>& outBytes, ResourcePakWriteStats* pOutStats ) const
+    bool ResourcePakWriter::sortEntriesByPathHash( vector<const Entry*>& outListSorted, uint64& outInputBytes ) const
     {
-        outBytes.clear();
-        const Stopwatch totalWatch;
-
         // FAT 은 경로 해시 오름차순이다. 같은 해시가 둘이면 리더가 하나만 들므로 실패로 멈춘다.
-        vector<const Entry*> listSorted;
+        vector<const Entry*>& listSorted = outListSorted;
+        listSorted.clear();
         listSorted.reserve( _listEntry.size() );
-        uint64 inputBytes{ 0 };
+        outInputBytes = 0;
         for ( const Entry& entry : _listEntry )
         {
             listSorted.push_back( &entry );
-            inputBytes += entry._bytes.size();
+            outInputBytes += entry._bytes.size();
         }
         std::stable_sort( listSorted.begin(), listSorted.end(), []( const Entry* pLeft, const Entry* pRight )
         { return pLeft->_pathHash < pRight->_pathHash; } );
@@ -161,7 +159,11 @@ namespace sw
                 return false;
             }
         }
+        return true;
+    }
 
+    bool ResourcePakWriter::compressEntries( const vector<const Entry*>& listSorted, uint64 inputBytes, vector<CompressSlot>& outListSlot, int64& outWallNanos ) const
+    {
         // 코덱은 직렬 구간에서 한 번 찾는다. 압축할 바이트가 하나도 없으면 코덱이 없어도 되는 팩이다(빈 항목은 코덱을 거치지 않는다).
         ICompressionCodec* pCodec = nullptr;
         if ( _desc._compression != PackCompressionType::None && inputBytes > 0 )
@@ -185,11 +187,12 @@ namespace sw
         std::stable_sort( listOrder.begin(), listOrder.end(), [&listSorted]( uint32 left, uint32 right )
         { return listSorted[left]->_bytes.size() > listSorted[right]->_bytes.size(); } );
 
-        vector<CompressSlot> listSlot( entryCount );
-        CompressJob          job;
+        outListSlot.clear();
+        outListSlot.resize( entryCount );
+        CompressJob job;
         job._ppEntry          = listSorted.data();
         job._pOrder           = listOrder.data();
-        job._pSlot            = listSlot.data();
+        job._pSlot            = outListSlot.data();
         job._pCodec           = pCodec;
         job._compressionLevel = _desc._compressionLevel;
 
@@ -198,18 +201,35 @@ namespace sw
         const uint32    serialThreshold = bWorthSplitting ? ResourcePakWriterInternal::kMinParallelEntryCount : entryCount + 1;
         const Stopwatch compressWatch;
         engine::runParallel( entryCount, serialThreshold, SW_DELEGATE_METHOD( ParallelBlockDelegate, &CompressJob::run, &job ) );
-        const int64 compressWallNanos = compressWatch.getElapsedNanoseconds();
+        outWallNanos = compressWatch.getElapsedNanoseconds();
+        return true;
+    }
 
+    /** @brief 직렬 배치 단계의 결과입니다. 조립 단계가 이 값으로 팩 바이트를 채웁니다. */
+    struct ResourcePakWriter::PackLayout
+    {
+        vector<PackFileEntryOnDisk> _listDiskEntry;
+        vector<uint8>               _stringPoolBytes;
+        uint64                      _indexOffset{ 0 };
+        uint64                      _indexSize{ 0 };
+        uint64                      _dataStartOffset{ 0 };
+        uint64                      _dataEndOffset{ 0 };
+        int64                       _compressCPUNanos{ 0 }; ///< 항목마다 잰 압축 · CRC 시간의 합
+    };
+
+    bool ResourcePakWriter::layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, PackLayout& outLayout ) const
+    {
         // 배치는 직렬이다 — 오프셋이 앞 항목들의 압축 크기에 달려 있다.
-        const uint64 indexOffset     = ResourcePakWriterInternal::alignToPackSector( sizeof( PackHeader ) );
-        const uint64 indexSize       = static_cast<uint64>( listSorted.size() ) * sizeof( PackFileEntryOnDisk );
-        const uint64 dataStartOffset = ResourcePakWriterInternal::alignToPackSector( indexOffset + indexSize );
+        outLayout._indexOffset     = ResourcePakWriterInternal::alignToPackSector( sizeof( PackHeader ) );
+        outLayout._indexSize       = static_cast<uint64>( listSorted.size() ) * sizeof( PackFileEntryOnDisk );
+        outLayout._dataStartOffset = ResourcePakWriterInternal::alignToPackSector( outLayout._indexOffset + outLayout._indexSize );
 
-        vector<PackFileEntryOnDisk> listDiskEntry;
+        vector<PackFileEntryOnDisk>& listDiskEntry = outLayout._listDiskEntry;
         listDiskEntry.reserve( listSorted.size() );
-        vector<uint8> stringPoolBytes;
-        uint64        dataEndOffset    = dataStartOffset;
-        int64         compressCPUNanos = 0;
+        vector<uint8>& stringPoolBytes  = outLayout._stringPoolBytes;
+        uint64&        dataEndOffset    = outLayout._dataEndOffset;
+        int64&         compressCPUNanos = outLayout._compressCPUNanos;
+        dataEndOffset                   = outLayout._dataStartOffset;
         for ( size_t index = 0; index < listSorted.size(); ++index )
         {
             const Entry*        pEntry = listSorted[index];
@@ -247,6 +267,17 @@ namespace sw
             stringPoolBytes.insert( stringPoolBytes.end(), pEntry->_relativePath.begin(), pEntry->_relativePath.end() );
             stringPoolBytes.push_back( 0 );
         }
+        return true;
+    }
+
+    void ResourcePakWriter::assemblePack( const vector<const Entry*>& listSorted, vector<CompressSlot>& inoutListSlot, const PackLayout& layout, vector<uint8>& outBytes ) const
+    {
+        const vector<PackFileEntryOnDisk>& listDiskEntry   = layout._listDiskEntry;
+        const vector<uint8>&               stringPoolBytes = layout._stringPoolBytes;
+        const uint64                       indexOffset     = layout._indexOffset;
+        const uint64                       indexSize       = layout._indexSize;
+        const uint64                       dataStartOffset = layout._dataStartOffset;
+        const uint64                       dataEndOffset   = layout._dataEndOffset;
 
         const uint64 stringPoolOffset = stringPoolBytes.empty() ? 0 : ResourcePakWriterInternal::alignToPackSector( dataEndOffset );
 
@@ -274,7 +305,7 @@ namespace sw
         for ( size_t index = 0; index < listDiskEntry.size(); ++index )
         {
             const PackFileEntryOnDisk& diskEntry = listDiskEntry[index];
-            CompressSlot&              slot      = listSlot[index];
+            CompressSlot&              slot      = inoutListSlot[index];
             if ( diskEntry._compressedSize != 0 )
             {
                 const uint8* pPayload = slot._bCompressed ? slot._listPayload.data() : listSorted[index]->_bytes.data();
@@ -284,15 +315,37 @@ namespace sw
         }
         if ( stringPoolBytes.empty() == false )
             Memory::copy( outBytes.data() + stringPoolOffset, stringPoolBytes.data(), stringPoolBytes.size() );
+    }
+
+    bool ResourcePakWriter::makePackBytes( vector<uint8>& outBytes, ResourcePakWriteStats* pOutStats ) const
+    {
+        outBytes.clear();
+        const Stopwatch totalWatch;
+
+        vector<const Entry*> listSorted;
+        uint64               inputBytes{ 0 };
+        if ( sortEntriesByPathHash( listSorted, inputBytes ) == false )
+            return false;
+
+        vector<CompressSlot> listSlot;
+        int64                compressWallNanos{ 0 };
+        if ( compressEntries( listSorted, inputBytes, listSlot, compressWallNanos ) == false )
+            return false;
+
+        PackLayout layout;
+        if ( layoutPack( listSorted, listSlot, layout ) == false )
+            return false;
+
+        assemblePack( listSorted, listSlot, layout, outBytes );
 
         if ( pOutStats != nullptr )
         {
             ResourcePakWriteStats stats;
             stats._compressWallNanos = compressWallNanos;
-            stats._compressCPUNanos  = compressCPUNanos;
+            stats._compressCPUNanos  = layout._compressCPUNanos;
             stats._layoutNanos       = totalWatch.getElapsedNanoseconds() - compressWallNanos;
             stats._inputBytes        = inputBytes;
-            stats._entryCount        = entryCount;
+            stats._entryCount        = static_cast<uint32>( listSorted.size() );
             *pOutStats               = stats;
         }
         return true;

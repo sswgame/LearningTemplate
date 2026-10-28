@@ -102,6 +102,17 @@ namespace sw
         struct CompressSlot;
         /** @brief 항목들을 압축하는 병렬 본문과 그 입력입니다(정의는 .cpp). */
         struct CompressJob;
+        /** @brief 직렬 배치 단계의 결과입니다(정의는 .cpp). FAT 칸 · 스트링 풀 · 구역 오프셋을 담아 조립 단계로 넘깁니다. */
+        struct PackLayout;
+
+        /** @brief 항목을 경로 해시 순으로 세우고 원본 바이트 합을 셉니다. 같은 해시가 둘이면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool sortEntriesByPathHash( vector<const Entry*>& outListSorted, uint64& outInputBytes ) const;
+        /** @brief 코덱을 찾고 항목별 압축 · CRC 를 돕니다. @p outWallNanos 는 그 구간의 벽시계 시간입니다. 코덱이 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool compressEntries( const vector<const Entry*>& listSorted, uint64 inputBytes, vector<CompressSlot>& outListSlot, int64& outWallNanos ) const;
+        /** @brief 압축 크기로 오프셋을 정해 FAT 칸 · 스트링 풀을 만듭니다. 32 비트 칸에 안 담기거나 압축이 실패한 항목이 있으면 false 입니다. */
+        [[nodiscard]] bool layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, PackLayout& outLayout ) const;
+        /** @brief 머리말 · FAT · 페이로드 · 스트링 풀을 @p outBytes 에 제자리 복사합니다. 항목의 압축 바이트는 복사 직후 놓습니다. */
+        void assemblePack( const vector<const Entry*>& listSorted, vector<CompressSlot>& inoutListSlot, const PackLayout& layout, vector<uint8>& outBytes ) const;
 
         vector<Entry>         _listEntry;
         ResourcePakWriterDesc _desc;
