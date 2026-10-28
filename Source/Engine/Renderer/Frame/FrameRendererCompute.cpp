@@ -492,8 +492,9 @@ namespace sw
         // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
         // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
         Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
-        cullParams._instanceCount = instanceCount;
-        cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
+        cullParams._instanceCount    = instanceCount;
+        cullParams._batchCount       = _gpuScene.getIndirectCommandCount();
+        cullParams._visibleSlotCount = _gpuScene.getVisibleSlotCount();
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
         const ViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
         if ( pOcclusionView != nullptr )

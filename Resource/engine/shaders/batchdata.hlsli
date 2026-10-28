@@ -17,7 +17,7 @@ struct BatchData
     uint _firstVertex;         // 정점 풀에서 이 배치(메시 구간)의 시작 (간접 인자의 startVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — MorphPool::computeElement 참고
     uint _vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (InstanceData::loadAnimatedVertex)
     uint _sectionVertexOffset; // 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호). VAT 표는 메시 전체 순서라 배치 안 번호에 이 값을 더한다
-    uint _pad2;
+    uint _visibleBase;         // 가시 목록(g_VisibleInstanceIDs) 안에서 이 배치 구간의 시작. 인스턴스 구간(_instanceBase)과 다른 축이다 — LOD 그룹이 없으면 둘이 같다
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };

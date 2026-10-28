@@ -95,8 +95,20 @@ namespace sw
          * @details RT 가 정점 풀 시작(`_firstVertex`)과 모프 풀 시작(`_morphVertexBase`)에 더하고, VAT 는 배치 표의 `_sectionVertexOffset` 으로 메시 안 번호를 되찾는다.
          */
         uint32 _sectionFirstVertex{ 0 };
+        /**
+         * @brief 인스턴스 배열 안에서 이 배치의 구간입니다. 배치의 인스턴스는 연속이고 구간은 앞 배치의 끝에서 빈틈없이 이어집니다.
+         * @details 인스턴스 구간과 가시 구간(`_visibleBase`)은 **다른 축**이다. LOD 그룹의 낮은 단계 배치는 인스턴스를 가지지 않고(`_instanceCount` 0) 그룹의 인스턴스를
+         *          공유하지만 컬링이 단계마다 가시 칸을 쓰므로 자기 가시 구간이 있다.
+         */
         uint32 _instanceBase{ 0 };
         uint32 _instanceCount{ 0 };
+        /**
+         * @brief 가시 목록(컬링이 압축해 쓰는 인스턴스 번호 목록 `g_VisibleInstanceIDs`) 안에서 이 배치 구간의 시작입니다. 구간은 앞 배치의 끝에서 빈틈없이 이어집니다.
+         * @details 간접 인자의 시작 인스턴스(`startInstanceLocation`)가 되고, 컬링이 `_visibleBase + 자리` 에 쓴다. LOD 그룹이 없으면 `_instanceBase` 와 같다.
+         */
+        uint32 _visibleBase{ 0 };
+        /// @brief 가시 구간의 길이(이 배치에 보일 수 있는 인스턴스 수의 상한)입니다. LOD 그룹이 없으면 `_instanceCount` 와 같다.
+        uint32 _visibleCapacity{ 0 };
         uint32 _materialIndex{ 0 };
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
@@ -508,13 +520,16 @@ namespace sw
         uint32 getOpaqueInstanceCount() const { return computeInstanceEnd( _opaqueBatchCount ); }
 
         /**
-         * @brief 배치를 끝에 붙입니다. 불투명 배치는 투명 배치보다 먼저 붙여야 하고, 인스턴스 구간은 앞 배치의 끝에서 시작해야 합니다.
+         * @brief 배치를 끝에 붙입니다. 불투명 배치는 투명 배치보다 먼저 붙여야 하고, 인스턴스 구간과 가시 구간은 각각 앞 배치의 끝에서 시작해야 합니다.
          * @details 투명 배치 뒤에 불투명 배치를 붙이면 구간 경계가 깨지므로 멈춘다(간접 슬롯 순서가 불투명 다음 투명이다).
-         *          인스턴스 구간에 빈틈이 있으면 `getOpaqueInstanceCount` 가 틀리므로 그것도 멈춘다.
+         *          인스턴스 구간에 빈틈이 있으면 `getOpaqueInstanceCount` 가 틀리고, 가시 구간에 빈틈이 있으면 가시 목록 크기(`getVisibleSlotCount`)가 틀리므로 그것도 멈춘다.
+         *          두 구간이 한 단언이 아닌 이유는 둘이 다른 축이기 때문이다(LOD 그룹의 낮은 단계 배치는 인스턴스 구간이 비고 가시 구간만 있다).
          */
         void appendBatch( GPUMeshBatch&& batch )
         {
-            SW_ASSERT( batch._instanceBase == computeInstanceEnd( static_cast<uint32>( _listBatch.size() ) ) );
+            const uint32 batchCount = static_cast<uint32>( _listBatch.size() );
+            SW_ASSERT( batch._instanceBase == computeInstanceEnd( batchCount ) );
+            SW_ASSERT( batch._visibleBase == computeVisibleEnd( batchCount ) );
             if ( batch._blendMode != RHIBlendMode::Transparent )
             {
                 SW_ASSERT( _opaqueBatchCount == _listBatch.size() );
@@ -522,6 +537,13 @@ namespace sw
             }
             _listBatch.push_back( std::move( batch ) );
         }
+        /**
+         * @brief 가시 목록의 칸 수입니다(모든 배치의 가시 구간 합). 컬링의 가시 목록 버퍼와 인스턴스 슬롯 스트림이 이 길이다.
+         * @details LOD 그룹이 없으면 인스턴스 수와 같고, 그룹이 있으면 낮은 단계 배치의 구간만큼 더 길다.
+         */
+        uint32 getVisibleSlotCount() const { return computeVisibleEnd( static_cast<uint32>( _listBatch.size() ) ); }
+        /** @brief 다음에 붙일 배치의 가시 구간 시작입니다(= 지금까지의 가시 칸 수). */
+        uint32 getNextVisibleBase() const { return getVisibleSlotCount(); }
         /** @brief 배치를 모두 지웁니다. */
         void clearBatches()
         {
@@ -532,6 +554,14 @@ namespace sw
         void truncateToOpaqueBatches() { _listBatch.resize( _opaqueBatchCount ); }
 
     private:
+        /** @brief 앞쪽 `batchCount` 개 배치가 차지한 가시 구간의 끝입니다(배치가 없으면 0). */
+        uint32 computeVisibleEnd( uint32 batchCount ) const
+        {
+            if ( batchCount == 0 )
+                return 0;
+            const GPUMeshBatch& lastBatch = _listBatch[batchCount - 1];
+            return lastBatch._visibleBase + lastBatch._visibleCapacity;
+        }
         /** @brief 앞쪽 `batchCount` 개 배치가 차지한 인스턴스 구간의 끝입니다(배치가 없으면 0). */
         uint32 computeInstanceEnd( uint32 batchCount ) const
         {

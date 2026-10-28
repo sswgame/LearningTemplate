@@ -81,7 +81,11 @@ namespace sw
         uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
         /// @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. VAT 표는 메시 전체의 정점 순서라 배치 안 번호에 이 값을 더해 찾는다(batchdata.hlsli `sectionVertexOffset`).
         uint32 _sectionVertexOffset{ 0 };
-        uint32 _pad2{ 0 };
+        /**
+         * @brief 가시 목록 안에서 이 배치 구간의 시작입니다(`GPUMeshBatch::_visibleBase`). 컬링이 `_visibleBase + 자리` 에 인스턴스 번호를 쓴다.
+         * @details 인스턴스 구간(`_instanceBase`)과 다른 축이다. LOD 그룹이 없는 배치는 둘이 같다.
+         */
+        uint32 _visibleBase{ 0 };
     };
 } // namespace sw
 
@@ -137,6 +141,8 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
+        /** @brief 가시 목록의 칸 수입니다(`GPUSceneSnapshot::getVisibleSlotCount`). */
+        uint32 getVisibleSlotCount() const { return _snapshot.getVisibleSlotCount(); }
         /**
          * @brief GPU 회전을 요청한(시드가 0이 아닌) 인스턴스 수입니다.
          * @details 0이면 애니메이션 디스패치를 통째로 건너뛴다. 그러지 않으면 회전을 쓰지 않는 씬도 매 프레임
@@ -272,8 +278,10 @@ namespace sw
         void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
         /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
         void populateIndirectCommands( uint32 argsCount );
-        /** @brief 항등 인스턴스 슬롯 스트림을 인스턴스 수 이상으로 확보합니다. */
-        void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 instanceCount );
+        /** @brief 간접 인자의 시작 인스턴스입니다. 컬링이 가시 목록을 만드는 프레임은 가시 구간의 시작, 아니면 인스턴스 구간의 시작입니다. */
+        uint32 computeStartInstance( const GPUMeshBatch& batch ) const;
+        /** @brief 항등 인스턴스 슬롯 스트림을 가시 칸 수(@p slotCount) 이상으로 확보합니다. */
+        void ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount );
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
 

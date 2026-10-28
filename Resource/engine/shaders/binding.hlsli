@@ -260,6 +260,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint   g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
     uint   g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwVisibleSlotCount;        // 그 목록의 칸 수(가시 구간의 합 — LOD 그룹이 없으면 인스턴스 수) — 범위 밖 슬롯을 막는다
     uint   g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
     uint   g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
     uint   g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -347,7 +348,7 @@ static BatchData BatchData::load( uint batchIndex )
     batch._firstVertex         = 0u;
     batch._vertexAnimationBase = kInvalidIndex;
     batch._sectionVertexOffset = 0u;
-    batch._pad2                = 0u;
+    batch._visibleBase         = 0u;
     const bool bValid          = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
     if ( bValid )
         batch = g_SwBatches[batchIndex];
@@ -610,7 +611,7 @@ static uint InstanceData::resolveId( uint instanceSlot )
 {
     // 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
     const uint slot = instanceSlot;
-    if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwInstanceCount )
+    if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwVisibleSlotCount )
         return g_SwVisibleInstanceIDs[slot];
     return slot;
 }

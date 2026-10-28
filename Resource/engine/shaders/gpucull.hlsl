@@ -49,7 +49,8 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     float4   g_FrustumPlanes[6];
     uint     g_InstanceCount;
     uint     g_BatchCount;
-    uint2    g_Pad;
+    uint     g_VisibleSlotCount; // 가시 목록의 칸 수(가시 구간의 합) — 쓰기 범위
+    uint     g_Pad;
     float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
@@ -134,12 +135,13 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
         return;
 
-    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instanceId 가 곧 자기 자리다 —
-    // 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
+    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
+    // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
     // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
-    if ( g_BatchInfo[batchIndex]._sortMode == 1u )
+    const BatchData batchInfo = g_BatchInfo[batchIndex];
+    if ( batchInfo._sortMode == 1u )
     {
-        g_VisibleInstanceIDs[instanceId] = instanceId;
+        g_VisibleInstanceIDs[batchInfo._visibleBase + ( instanceId - batchInfo._instanceBase )] = instanceId;
         return;
     }
 
@@ -179,7 +181,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     }
 #endif
 
-    const uint writeAt = g_BatchInfo[batchIndex]._instanceBase + slot;
-    if ( writeAt < g_InstanceCount )
+    const uint writeAt = batchInfo._visibleBase + slot;
+    if ( writeAt < g_VisibleSlotCount )
         g_VisibleInstanceIDs[writeAt] = instanceId;
 }

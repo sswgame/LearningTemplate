@@ -142,7 +142,8 @@ namespace sw
             float32 _arrPlane[6][4]{};
             uint32  _instanceCount{ 0 };
             uint32  _batchCount{ 0 };
-            uint32  _arrPad[2]{};
+            uint32  _visibleSlotCount{ 0 }; ///< 가시 목록의 칸 수(가시 구간의 합). 셰이더 g_VisibleSlotCount
+            uint32  _pad{ 0 };
             float32 _arrOcclusionViewProj[16]{};
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};
@@ -535,6 +536,8 @@ namespace sw
         hashed_string _flags{ "g_Flags" };
         /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 InstanceData::load 가 범위를 제한합니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };
+        /// @brief 가시 인스턴스 ID 목록의 칸 수(가시 구간의 합)입니다. PassCB g_SwVisibleSlotCount 에 대응하며, 셰이더 InstanceData::resolveId 가 슬롯 범위를 제한합니다.
+        hashed_string _swVisibleSlotCount{ "g_SwVisibleSlotCount" };
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수입니다. 셰이더 SW_MATERIAL 이 클램프합니다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };
         hashed_string _swInstances{ "SwInstances" };

@@ -1565,10 +1565,13 @@ namespace sw
         vector<GPUInstance>& work = instanceWork();
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
-        batch._blendMode          = blendMode;
-        batch._bReverseCulling    = headCandidate._bReverseCulling;
-        batch._material           = material;
-        batch._materialInstance   = instance;
+        // LOD 그룹이 없는 배치의 가시 구간은 인스턴스 구간과 같은 길이다(구간 시작만 앞 배치들의 가시 구간 끝에서 이어진다).
+        batch._visibleBase      = _snapshot.getNextVisibleBase();
+        batch._visibleCapacity  = batch._instanceCount;
+        batch._blendMode        = blendMode;
+        batch._bReverseCulling  = headCandidate._bReverseCulling;
+        batch._material         = material;
+        batch._materialInstance = instance;
         if ( instance != nullptr )
             batch._materialCb = instance->getDescriptorIndex();
         else

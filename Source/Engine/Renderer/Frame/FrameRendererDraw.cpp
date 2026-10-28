@@ -121,6 +121,7 @@ namespace sw
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
+            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _gpuScene.getVisibleSlotCount() );
         }
     }
 

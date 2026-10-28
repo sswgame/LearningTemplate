@@ -159,7 +159,7 @@ namespace sw
         _bGPUFillsIndirectCounts =
             ( _bGPUIndirectCountsRequested != SW_FALSE && _batchInfo._buffer != 0 && argsCount > 0 && hasAllVisibleBuffers() ) ? 1u : 0u;
         populateIndirectCommands( argsCount );
-        ensureInstanceSlotStream( pDevice, instanceCount );
+        ensureInstanceSlotStream( pDevice, _snapshot.getVisibleSlotCount() );
         uploadIndirectArgs( pDevice, argsCount );
 
         // 인자 버퍼를 하나라도 못 만들었으면 컴퓨트가 개수를 만들 수 없다. 개수 0 짜리 인자로 그리면
@@ -245,13 +245,15 @@ namespace sw
         // **뷰마다 하나씩**이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
         constexpr RHIBufferUsage kVisibleUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        // 가시 목록은 인스턴스 수가 아니라 가시 구간의 합만큼이다(LOD 그룹의 낮은 단계 배치가 구간을 더 가진다).
+        const uint32 visibleSlotCount = _snapshot.getVisibleSlotCount();
         SW_PROFILE_SCOPE( "RT.GPUScene.visibleBuffers" );
         for ( GPUCullViewResources& view : _listCullView )
         {
             // 인스턴스가 0 이면 버퍼를 놓는 것이라 false 가 맞다.
-            const bool bVisibleBuffer = view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true, true, nullptr );
-            if ( bVisibleBuffer == false && instanceCount > 0 )
-                SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# instances) of a cull view", instanceCount );
+            const bool bVisibleBuffer = view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), visibleSlotCount, kVisibleUsage, true, true, nullptr );
+            if ( bVisibleBuffer == false && visibleSlotCount > 0 )
+                SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
     }
 
@@ -286,6 +288,7 @@ namespace sw
             const GPUMeshBatch& infoBatch                        = _snapshot.getAllBatches()[argIndex];
             _listScratchBatchInfo[argIndex]._instanceBase        = infoBatch._instanceBase;
             _listScratchBatchInfo[argIndex]._instanceCount       = infoBatch._instanceCount;
+            _listScratchBatchInfo[argIndex]._visibleBase         = infoBatch._visibleBase;
             _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
             _listScratchBatchInfo[argIndex]._firstVertex         = infoBatch._firstVertex;
             _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
@@ -303,6 +306,11 @@ namespace sw
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GPUBatchInfo ) ) );
     }
 
+    uint32 GPUScene::computeStartInstance( const GPUMeshBatch& batch ) const
+    {
+        return ( _bGPUFillsIndirectCounts != SW_FALSE ) ? batch._visibleBase : batch._instanceBase;
+    }
+
     void GPUScene::populateIndirectCommands( uint32 argsCount )
     {
         _listScratchIndirectCmd.resize( argsCount );
@@ -317,21 +325,22 @@ namespace sw
             cmd._instanceCount    = bGPUCounts ? 0u : _snapshot.getAllBatches()[argIndex]._instanceCount;
             // 정점 풀 안의 시작. 입력 어셈블러가 그 구간을 읽는다(SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다: binding.hlsli).
             cmd._startVertexLocation = _snapshot.getAllBatches()[argIndex]._firstVertex;
-            // 배치의 인스턴스 시작. 인스턴스 슬롯 스트림(슬롯 1)의 원소를 그만큼 건너뛴다. 셰이더는 SV_InstanceID 를 쓰지 않으므로
+            // 배치의 가시 구간 시작. 인스턴스 슬롯 스트림(슬롯 1)의 원소를 그만큼 건너뛴다. 셰이더는 SV_InstanceID 를 쓰지 않으므로
             // "SPIR-V InstanceIndex 는 포함하고 DX 는 안 한다" 는 차이에 기대지 않는다. 입력 어셈블러의 인스턴스 스텝
             // 스트림은 네 API 모두 startInstance 부터 읽는다.
-            cmd._startInstanceLocation = _snapshot.getAllBatches()[argIndex]._instanceBase;
+            // 컬링이 도는 프레임은 슬롯 스트림이 가시 목록을 읽으므로 시작은 가시 구간의 시작이고, 컬링이 없으면 슬롯이 곧 인스턴스 번호라 인스턴스 구간의 시작이다.
+            cmd._startInstanceLocation = computeStartInstance( _snapshot.getAllBatches()[argIndex] );
         }
     }
 
-    void GPUScene::ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 instanceCount )
+    void GPUScene::ensureInstanceSlotStream( IRHIDevice* pDevice, uint32 slotCount )
     {
-        // 인스턴스 슬롯 스트림: 항등 배열이다. 인스턴스 수만큼 커지면 다시 만든다.
-        if ( _instanceSlotStreamCapacity >= instanceCount && _instanceSlotStream != 0 )
+        // 인스턴스 슬롯 스트림: 항등 배열이다. 가시 칸 수(`GPUSceneSnapshot::getVisibleSlotCount`)만큼 커지면 다시 만든다.
+        if ( _instanceSlotStreamCapacity >= slotCount && _instanceSlotStream != 0 )
             return;
         if ( _instanceSlotStream != 0 )
             pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
-        const uint32   capacity = MathUtil::max( instanceCount, 256u );
+        const uint32   capacity = MathUtil::max( slotCount, 256u );
         vector<uint32> listSlot( capacity );
         for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
         {
@@ -392,6 +401,8 @@ namespace sw
             const bool bPreserve = ( argIndex < _listScratchBatchInfo.size() ) &&
                                    ( static_cast<GPUBatchSortMode>( _listScratchBatchInfo[argIndex]._sortMode ) == GPUBatchSortMode::Preserve );
             _listScratchIndirectCmd[argIndex]._instanceCount = bPreserve ? _snapshot.getAllBatches()[argIndex]._instanceCount : 0u;
+            // 컬링 여부가 바뀌었을 수 있으므로 시작도 다시 정한다(populateIndirectCommands 와 같은 규칙).
+            _listScratchIndirectCmd[argIndex]._startInstanceLocation = computeStartInstance( _snapshot.getAllBatches()[argIndex] );
         }
         for ( GPUCullViewResources& view : _listCullView )
         {

@@ -73,7 +73,8 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         return;
 
     const uint count = min( g_IndirectArgs[batchIndex]._instanceCount, (uint)SW_SORT_MAX_ELEMENTS );
-    const uint base  = info._instanceBase;
+    const uint base  = info._instanceBase; // 인스턴스 구간의 시작 — 키의 배치 안 번호와 되쓰는 인스턴스 번호가 이 축이다
+    const uint slots = info._visibleBase;  // 가시 구간의 시작 — 가시 목록을 읽고 쓰는 축이다
 
     // **실제 개수의 다음 2의 거듭제곱까지만 일한다.** 늘 512 칸을 채우고 비교하면 인스턴스가 열 개인 배치도 512 칸
     // 분량이고, 작은 씬에서 컬링·정렬 프리패스 비용의 대부분이 이 패딩이 된다.
@@ -96,7 +97,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         uint key = 0xFFFFFFFFu;
         if ( loadIndex < count )
         {
-            const uint instanceId = g_VisibleInstanceIDs[base + loadIndex];
+            const uint instanceId = g_VisibleInstanceIDs[slots + loadIndex];
             if ( g_UseViewRank != 0u )
             {
                 const uint viewRank = ( instanceId >= g_TransparentTailBase ) ? min( g_ViewRank[instanceId - g_TransparentTailBase], 0x7FFFFFu ) : 0x7FFFFFu;
@@ -140,7 +141,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
 
     for ( uint storeIndex = groupThreadId.x; storeIndex < count; storeIndex += SW_SORT_THREADS )
     {
-        const uint key                          = s_arrId[storeIndex];
-        g_VisibleInstanceIDs[base + storeIndex] = ( g_UseViewRank != 0u ) ? ( base + ( key & 0x1FFu ) ) : key;
+        const uint key                           = s_arrId[storeIndex];
+        g_VisibleInstanceIDs[slots + storeIndex] = ( g_UseViewRank != 0u ) ? ( base + ( key & 0x1FFu ) ) : key;
     }
 }
