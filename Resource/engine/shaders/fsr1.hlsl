@@ -81,44 +81,14 @@ float min3( float first, float second, float third )
 // ---- 원본 읽기 ----
 float4 gatherSourceChannel( float2 uv, uint channel )
 {
-#if defined( SW_NATIVE_BINDLESS )
-    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
-    // 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다.
-    #if defined( __spirv__ )
-    if ( channel == 0u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
-    if ( channel == 1u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
-    #else
-    if ( channel == 0u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
-    if ( channel == 1u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( g_SwSampler3, uv );
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( g_SwSampler3, uv );
-    #endif
-#else
-    if ( channel == 0u )
-        return g_SwSlot0.GatherRed( g_SwSlot0Sampler, uv );
-    if ( channel == 1u )
-        return g_SwSlot0.GatherGreen( g_SwSlot0Sampler, uv );
-    return g_SwSlot0.GatherBlue( g_SwSlot0Sampler, uv );
-#endif
+    return Bindless::gatherEngineChannel( SW_ROOT( g_FsrSource ), 0u, channel, uv );
 }
 
 float3 loadSourceClamped( int2 texel )
 {
-    float2 size;
-#if defined( SW_NATIVE_BINDLESS )
-    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
-    g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GetDimensions( size.x, size.y );
-    const int2 clamped = clamp( texel, int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
-    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Load( int3( clamped, 0 ) ).rgb;
-#else
-    g_SwSlot0.GetDimensions( size.x, size.y );
-    const int2 clamped = clamp( texel, int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
-    return g_SwSlot0.Load( int3( clamped, 0 ) ).rgb;
-#endif
+    const int2 size    = int2( Bindless::getEngineTextureSize( SW_ROOT( g_FsrSource ), 0u ) );
+    const int2 clamped = clamp( texel, int2( 0, 0 ), size - int2( 1, 1 ) );
+    return Bindless::loadEngineTexel( SW_ROOT( g_FsrSource ), 0u, clamped ).rgb;
 }
 
 // ---- EASU (ffx_fsr1.h FsrEasuTapF · FsrEasuSetF · FsrEasuF) ----

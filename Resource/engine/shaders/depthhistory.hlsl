@@ -31,10 +31,7 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 // 여기서 원본의 행을 뒤집어 히스토리를 D3D 순서로 만든다(GL 에서만 깊이 충돌이 안 닿던 결함 — 입자가 바닥 아래로 떨어져 빛이 사라졌다).
 int findSourceRow( int row )
 {
-    uint sourceWidth;
-    uint sourceHeight;
-    g_SwSlot0.GetDimensions( sourceWidth, sourceHeight );
-    return int( sourceHeight ) - 1 - row;
+    return int( Bindless::getEngineTextureSize( SW_ROOT( g_DepthHistorySource ), 0u ).y ) - 1 - row;
 }
 #else
 int findSourceRow( int row )
@@ -45,12 +42,8 @@ int findSourceRow( int row )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    int3 texel = int3( int2( input._position.xy ), 0 );
-    texel.y    = findSourceRow( texel.y );
-#if defined( SW_NATIVE_BINDLESS )
-    const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
-#else
-    const float depth = g_SwSlot0.Load( texel ).r;
-#endif
+    int2 texel        = int2( input._position.xy );
+    texel.y           = findSourceRow( texel.y );
+    const float depth = Bindless::loadEngineTexel( SW_ROOT( g_DepthHistorySource ), 0u, texel ).r;
     return float4( depth, 0.0f, 0.0f, 1.0f );
 }
