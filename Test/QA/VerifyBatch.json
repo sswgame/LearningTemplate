@@ -46,9 +46,10 @@
       "source": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks", "result_doc": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks"
     },
     {
-      "id": "paired-animation-two-process", "title": "짝 애니메이션 P3b 두 프로세스(Server + App) 세션 시작 · 늦은 참가 · 끝 복제", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "need_command": "서버와 클라이언트 두 프로세스를 띄우는 확인을 한 명령으로 묶은 것이 없다",
-      "source": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks", "result_doc": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks"
+      "id": "paired-animation-two-process", "title": "짝 애니메이션 P3b 두 프로세스(Server + App) 세션 시작 · 늦은 참가 · 끝 복제", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 10,
+      "tool": "scripts", "args": ["paired-net-pair", "--preset", "{preset}"], "functional": true, "limit": "서버 · 클라이언트 [PairedAnimationNet] 줄이 맞물리고(늦은 참가 복원 · 붙은 뒤 시작한 세션 복원 · 끝 수신) [Error] 0 줄(종료 코드 0)", "judge": "exit",
+      "source": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks", "result_doc": "docs/plans/Candidates-gameplay.md PairedAnimationScreenChecks",
+      "note": "씬 game/empty/maps/pairedanimnet.scene.xml(서버 쪽 PairedAnimationNetStarterComponent 가 세션을 끝날 때마다 다시 시작). Release 빌드 폴더에 App 과 Server 가 둘 다 있어야 한다. 로그는 build/<프리셋>/pairedanimpair/{server,client}.log."
     },
     {
       "id": "bowshoot-projectile-checks", "title": "bowshoot 투사체 방향 · 당김 내내 가는 줄 · 화살 머리 방향", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,

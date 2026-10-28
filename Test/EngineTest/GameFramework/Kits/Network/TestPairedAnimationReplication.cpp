@@ -9,6 +9,7 @@
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
@@ -19,10 +20,14 @@
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 #include "EngineTest/AssetArrivalTestUtil.h"
 
+#include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationNetStarterComponent.h"
 #include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 
 #include "TestFramework/TestFramework.h"
@@ -248,4 +253,42 @@ SW_TEST_CASE( PairedAnimationReplicationTest, RefusesUnreplicableSessionsAndBadS
     vector<uint8> truncated = message.getBytes();
     truncated.resize( truncated.size() / 2 );
     SW_EXPECT_TRUE( client.handleMessage( 0, truncated ) == NetHandleResult::Malformed );
+}
+
+/**
+ * @brief [PairedAnimationReplicationTest] 두 프로세스 확인 씬(pairedanimnet.scene.xml) — 두 참가자가 같은 에셋의 서로 다른 역할을 들고 `PairedAnimationComponent` 가 스스로 시작하지 않으며
+ *        (클라이언트가 복제된 세션과 부딪히지 않게), 시작은 앵커 오브젝트의 시작자 컴포넌트가 맡고, 세션 컴포넌트는 참가자가 모두 선 뒤의 마지막 오브젝트다
+ * @details 서버 · 클라이언트 실행은 `Scripts/dev/RunPairedAnimationNetPair.py`(`py -3 -m Scripts paired-net-pair`)가 한다.
+ */
+SW_TEST_CASE( PairedAnimationReplicationTest, NetworkSceneHasTwoRolesStarterAndSessionComponent )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    SceneDocument doc;
+    SW_ASSERT_TRUE( doc.loadXML( ResourceID{ "game/empty/maps/pairedanimnet.scene.xml" } ) );
+    Scene scene{ "PairedAnimationNet" };
+    SW_ASSERT_TRUE( scene.instantiate( doc ) );
+    GameObjectManager& manager  = *scene.getObjectManager();
+    GameObject*        pLead    = manager.findGameObjectByName( "Lead" );
+    GameObject*        pPartner = manager.findGameObjectByName( "Partner" );
+    GameObject*        pSession = manager.findGameObjectByName( "PairedAnimationNetSession" );
+    SW_ASSERT_TRUE( pLead != nullptr && pPartner != nullptr && pSession != nullptr );
+
+    PairedAnimationComponent* pLeadPaired    = pLead->getComponent<PairedAnimationComponent>();
+    PairedAnimationComponent* pPartnerPaired = pPartner->getComponent<PairedAnimationComponent>();
+    SW_ASSERT_TRUE( pLeadPaired != nullptr && pPartnerPaired != nullptr );
+    SW_EXPECT_TRUE( pLeadPaired->getRole() == string( "Lead" ) );
+    SW_EXPECT_TRUE( pPartnerPaired->getRole() == string( "Partner" ) );
+    SW_EXPECT_TRUE( pLeadPaired->getPairedAnimationPath() == pPartnerPaired->getPairedAnimationPath() );
+    SW_EXPECT_NOT_NULL( pLead->getComponent<SkeletalAnimatorComponent>() );
+    SW_EXPECT_NOT_NULL( pPartner->getComponent<SkeletalAnimatorComponent>() );
+    SW_EXPECT_NOT_NULL( pLead->getComponent<PairedAnimationNetStarterComponent>() );
+    SW_EXPECT_NOT_NULL( pSession->getComponent<PairedAnimationNetSessionComponent>() );
+
+    // 에셋의 역할이 씬의 역할과 같다(복제는 역할 순서로 오브젝트 번호를 싣는다).
+    const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( pLeadPaired->getPairedAnimationPath() );
+    SW_ASSERT_NOT_NULL( def.get() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), def->getRoles().size() );
+    SW_EXPECT_TRUE( def->getRoles()[0]._name == hashed_string( "Lead" ) );
+    SW_EXPECT_TRUE( def->getRoles()[1]._name == hashed_string( "Partner" ) );
+    SW_EXPECT_FALSE( def->getSourcePath().empty() );
 }

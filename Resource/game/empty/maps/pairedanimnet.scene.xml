@@ -1,0 +1,163 @@
+<Scene formatVersion="2" name="PairedAnimationNet">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.4,-5"
+					                 _localRotation="0.08,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.05"
+					                 _farZ="60"
+					                 _orthoHeight="10"
+					                 _priority="10"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.95,0.7,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.8"
+					                           _ambient="0.42"
+					                           _shadowExtent="8"
+					                           _shadowDistance="16"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Floor">
+			<GameObject _schemaVersion="0" _name="Floor" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="12,1,12"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/defaultmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Lead">
+			<GameObject _schemaVersion="0" _name="Lead" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="-1,0,0"
+					                       _localRotation="0,1.5707964,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="game/shooter3d/models/kaykit/knight.mesh"
+					                       _materialPath="game/shooter3d/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="game/shooter3d/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+					<PairedAnimationComponent _componentName="PairedAnimationComponent"
+					                          _bActive="true"
+					                          _pairedAnimationPath="game/empty/data/anim/cheer_pair.pairedanim.xml"
+					                          _role="Lead"
+					                          _bStartOnPlay="false" />
+					<PairedAnimationNetStarterComponent _componentName="PairedAnimationNetStarterComponent"
+					                                    _bActive="true"
+					                                    _restartDelay="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Partner">
+			<GameObject _schemaVersion="0" _name="Partner" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="1,0,0"
+					                       _localRotation="0,-1.5707964,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="game/shooter3d/models/kaykit/knight.mesh"
+					                       _materialPath="game/shooter3d/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="game/shooter3d/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+					<PairedAnimationComponent _componentName="PairedAnimationComponent"
+					                          _bActive="true"
+					                          _pairedAnimationPath="game/empty/data/anim/cheer_pair.pairedanim.xml"
+					                          _role="Partner"
+					                          _bStartOnPlay="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="PairedAnimationNetSession">
+			<GameObject _schemaVersion="0" _name="PairedAnimationNetSession" _bActive="true">
+				<_listComponent>
+					<PairedAnimationNetSessionComponent _componentName="PairedAnimationNetSessionComponent"
+					                                    _bActive="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

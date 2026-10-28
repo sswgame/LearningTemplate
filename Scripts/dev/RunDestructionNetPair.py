@@ -18,34 +18,17 @@ from __future__ import annotations
 
 import argparse
 import sys
-import threading
 from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.AppRun import AppRunResult, runApp  # noqa: E402
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.DestructionHashLog import compareHashLogs, parseHashLog  # noqa: E402
+from common.NetPairRun import hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
 
 #: 파괴 복제 컴포넌트를 둔 씬(`DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase` 가 컴포넌트를 지킨다).
 kDefaultScene = "game/empty/maps/destructionnet.scene.xml"
-kDefaultPort = 7777
-#: 서버 기동을 기다리는 시간(초). 클라이언트는 연결 재시도가 있어 길게 잡지 않는다.
-kServerHeadStartSeconds = 3.0
-
-
-def findServerExecutable(tree: BuildTree) -> Path | None:
-    """빌드 폴더의 `Server` 실행 파일. 없으면 None."""
-    for name in ("Server.exe", "Server"):
-        candidate = tree.binDir / name
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def writeLog(path: Path, result: AppRunResult) -> None:
-    path.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -68,22 +51,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     outDir = args.out or tree.path / "destructionpair"
     outDir.mkdir(parents=True, exist_ok=True)
 
-    serverArguments = [f"-gv_firstScene={args.scene}", f"-gv_netListenPort={args.port}", f"-gv_serverExitAfterTicks={args.ticks}"]
-    clientArguments = [f"-gv_firstScene={args.scene}", f"-gv_netConnectAddress=127.0.0.1:{args.port}", f"-gv_profileFrames={args.frames}"]
-
-    # 서버는 따로 스레드에서 돌리고(끝날 때까지 출력을 읽는다) 잠깐 뒤 클라이언트를 붙인다.
-    mapResult: dict[str, AppRunResult] = {}
-    serverThread = threading.Thread(target=lambda: mapResult.__setitem__("server", runApp(serverPath, serverArguments, timeoutSeconds=args.timeout)))
-    serverThread.start()
-    threading.Event().wait(kServerHeadStartSeconds)
-    mapResult["client"] = runApp(appPath, clientArguments, timeoutSeconds=args.timeout)
-    serverThread.join()
-
-    serverResult, clientResult = mapResult["server"], mapResult["client"]
+    serverArguments = makeServerArguments(args.scene, args.port, args.ticks)
+    clientArguments = makeClientArguments(args.scene, args.port, args.frames)
+    serverResult, clientResult = runServerClientPair(serverPath, appPath, serverArguments, clientArguments, args.timeout)
     writeLog(outDir / "server.log", serverResult)
     writeLog(outDir / "client.log", clientResult)
     for name, result in (("server", serverResult), ("client", clientResult)):
-        if result.bLaunched is False or result.bTimedOut or result.exitCode != 0:
+        if hasBadExit(result):
             print(f"[RunDestructionNetPair] {name} 가 비정상으로 끝났습니다(종료 코드 {result.exitCode}, 시간 초과 {result.bTimedOut}). 로그: {outDir / (name + '.log')}")
             return ExitCode.CheckInvalid
 
