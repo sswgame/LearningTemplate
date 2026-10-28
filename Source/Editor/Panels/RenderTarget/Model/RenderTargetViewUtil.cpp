@@ -4,6 +4,7 @@
 
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw::editor
@@ -62,6 +63,7 @@ namespace sw::editor
             case RHIFormat::R32G32_FLOAT:
             case RHIFormat::R32_FLOAT:
             case RHIFormat::R8_UNORM:
+            case RHIFormat::R16G16_SNORM:
                 return true;
             case RHIFormat::D24_UNORM_S8_UINT: // 깊이는 bDepth 로 온다 — 깊이 배치가 아닌 D24 바이트는 풀지 않는다
             case RHIFormat::Unknown:
@@ -86,6 +88,7 @@ namespace sw::editor
             case RHIFormat::B8G8R8A8_UNORM:
             case RHIFormat::R16G16B16A16_FLOAT:
                 return 4;
+            case RHIFormat::R16G16_SNORM: // 옥타헤드럴 법선을 방향 색(xyz * 0.5 + 0.5)으로 풀어 보이므로 보이는 채널은 RGB 셋이다
             case RHIFormat::R32G32B32_FLOAT:
                 return 3;
             case RHIFormat::R32G32_FLOAT:
@@ -161,6 +164,15 @@ namespace sw::editor
             case RHIFormat::R8_UNORM:
             {
                 outValue._x = pPixel[0] / 255.0f;
+                break;
+            }
+            case RHIFormat::R16G16_SNORM:
+            {
+                // G버퍼 법선(옥타헤드럴 좌표)이다. 방향으로 풀어 옛 `n * 0.5 + 0.5` 첨부와 같은 색으로 보인다.
+                int16 arrCoordinate[2]{};
+                Memory::copy( arrCoordinate, pPixel, sizeof( arrCoordinate ) );
+                const float3 direction = OctahedralNormal{ snorm16::fromRaw( arrCoordinate[0] ), snorm16::fromRaw( arrCoordinate[1] ) }.toNormal();
+                outValue               = float4{ direction._x * 0.5f + 0.5f, direction._y * 0.5f + 0.5f, direction._z * 0.5f + 0.5f, 1.0f };
                 break;
             }
             case RHIFormat::D24_UNORM_S8_UINT:

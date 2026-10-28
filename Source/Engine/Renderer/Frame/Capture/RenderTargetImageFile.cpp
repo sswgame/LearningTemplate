@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -65,6 +66,27 @@ namespace sw
                     outRgbaBytes.push_back( gray );
                     outRgbaBytes.push_back( gray );
                     outRgbaBytes.push_back( gray );
+                    outRgbaBytes.push_back( 255 );
+                }
+            }
+            return true;
+        }
+        if ( format == RHIFormat::R16G16_SNORM )
+        {
+            // G버퍼 법선(옥타헤드럴 좌표) — 방향으로 풀어 `xyz * 0.5 + 0.5` 색으로 낸다(옛 첨부가 담던 값과 같은 모양).
+            outRgbaBytes.clear();
+            outRgbaBytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+            for ( uint32 row = 0; row < layout._height; ++row )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                for ( uint32 column = 0; column < layout._width; ++column )
+                {
+                    int16 arrCoordinate[2]{};
+                    Memory::copy( arrCoordinate, pRow + static_cast<size_t>( column ) * bytesPerPixel, sizeof( arrCoordinate ) );
+                    const float3 direction = OctahedralNormal{ snorm16::fromRaw( arrCoordinate[0] ), snorm16::fromRaw( arrCoordinate[1] ) }.toNormal();
+                    outRgbaBytes.push_back( unorm8::fromFloat( direction._x * 0.5f + 0.5f ).getRaw() );
+                    outRgbaBytes.push_back( unorm8::fromFloat( direction._y * 0.5f + 0.5f ).getRaw() );
+                    outRgbaBytes.push_back( unorm8::fromFloat( direction._z * 0.5f + 0.5f ).getRaw() );
                     outRgbaBytes.push_back( 255 );
                 }
             }

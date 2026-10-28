@@ -115,9 +115,26 @@ SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
     SW_ASSERT_EQUAL( listWritten.size(), listRead.size() );
     for ( size_t vertexIndex = 0; vertexIndex < listRead.size(); ++vertexIndex )
     {
-        SW_EXPECT_TRUE( sw::Memory::compare( &listExpected[vertexIndex], &listRead[vertexIndex], sizeof( sw::RHIVertex ) ) == 0 );
+        const sw::RHIVertex& expected = listExpected[vertexIndex];
+        const sw::RHIVertex& read     = listRead[vertexIndex];
+        // 위치는 float32 그대로, 법선 · 탄젠트는 옥타헤드럴(1e-4 라디안 아래), UV 는 경계(0..3)의 1/65535, 색은 1/255 안이다.
+        for ( uint32 axis = 0; axis < 3; ++axis )
+        {
+            SW_EXPECT_EQUAL( expected._arrPosition[axis], read._arrPosition[axis] );
+            SW_EXPECT_NEAR_EQUAL( expected._arrNormal[axis], read._arrNormal[axis], 2e-4f );
+            SW_EXPECT_NEAR_EQUAL( expected._arrTangent[axis], read._arrTangent[axis], 2e-4f );
+        }
+        SW_EXPECT_EQUAL( expected._arrTangent[3], read._arrTangent[3] );
+        for ( uint32 axis = 0; axis < 2; ++axis )
+        {
+            SW_EXPECT_NEAR_EQUAL( expected._arrUv[axis], read._arrUv[axis], 3.0f / 65535.0f );
+        }
+        for ( uint32 channel = 0; channel < 4; ++channel )
+        {
+            SW_EXPECT_NEAR_EQUAL( expected._arrColor[channel], read._arrColor[channel], 1.0f / 255.0f );
+        }
         // UV 의 u 가 +X 로 는다 — 탄젠트는 +X, 노멀(+Y)에 수직이다.
-        SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[vertexIndex]._arrTangent[0], 1e-5f );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[vertexIndex]._arrTangent[0], 2e-4f );
     }
     // 가장 먼 정점은 (2, 0, 0) 이다.
     SW_EXPECT_NEAR_EQUAL( 2.0f, boundingRadius, 1e-6f );
@@ -128,6 +145,49 @@ SW_TEST_CASE( MeshAssetTest, WriteThenReadRoundTripsEveryField )
     sw::vector<sw::RHIVertex> listLoaded;
     SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( sw::ResourceID{ ::test::makeTempResourceID( path ) }, listLoaded ) );
     SW_EXPECT_EQUAL( listWritten.size(), listLoaded.size() );
+}
+
+/**
+ * @brief [MeshAssetTest] 압축 정점 — 대각 법선 · 아래 반구 법선 · 큰 UV 범위 · 0..1 밖 색(잘림)이 풀린다
+ * @details 법선 옥타헤드럴의 아래 반구 접힘, 플래그 비트의 바이탄젠트 부호 복원, 머리 UV 경계 정규화, `unorm8x4` 색의 자름을 한 메시로 확인한다.
+ */
+SW_TEST_CASE( MeshAssetTest, PackedVertexFieldsDecodeWithinQuantizationError )
+{
+    sw::vector<sw::RHIVertex> listWritten = makeTestTriangles( 1, 0.5f );
+    // 노멀 하나는 대각, 하나는 아래 반구(z < 0).
+    listWritten[0]._arrNormal[0] = 0.57735027f;
+    listWritten[0]._arrNormal[1] = 0.57735027f;
+    listWritten[0]._arrNormal[2] = 0.57735027f;
+    listWritten[1]._arrNormal[0] = 0.0f;
+    listWritten[1]._arrNormal[1] = 0.6f;
+    listWritten[1]._arrNormal[2] = -0.8f;
+    // UV 범위가 크다(-8 .. 40) — 경계 정규화라 오차는 폭 48 의 1/65535 이다.
+    listWritten[0]._arrUv[0] = -8.0f;
+    listWritten[2]._arrUv[0] = 40.0f;
+    // 색이 0..1 밖이면 잘린다.
+    listWritten[2]._arrColor[0] = 3.0f;
+    listWritten[2]._arrColor[1] = -1.0f;
+
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( listWritten, bytes );
+    sw::vector<sw::RHIVertex> listRead;
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), listRead ) );
+    SW_ASSERT_EQUAL( size_t( 3 ), listRead.size() );
+
+    sw::vector<sw::RHIVertex> listExpected = listWritten;
+    sw::Mesh::computeTangents( listExpected );
+    for ( size_t vertexIndex = 0; vertexIndex < 3; ++vertexIndex )
+    {
+        const sw::float3 normalWritten{ listWritten[vertexIndex]._arrNormal[0], listWritten[vertexIndex]._arrNormal[1], listWritten[vertexIndex]._arrNormal[2] };
+        const sw::float3 normalRead{ listRead[vertexIndex]._arrNormal[0], listRead[vertexIndex]._arrNormal[1], listRead[vertexIndex]._arrNormal[2] };
+        SW_EXPECT_NEAR_EQUAL( 1.0f, normalRead.getLength(), 1e-4f );
+        SW_EXPECT_TRUE( normalWritten.dot( normalRead ) > 1.0f - 1e-6f ); // 각도 오차 1e-3 라디안 아래
+        SW_EXPECT_EQUAL( listExpected[vertexIndex]._arrTangent[3], listRead[vertexIndex]._arrTangent[3] );
+        SW_EXPECT_NEAR_EQUAL( listExpected[vertexIndex]._arrUv[0], listRead[vertexIndex]._arrUv[0], 48.0f / 65535.0f );
+        SW_EXPECT_NEAR_EQUAL( listExpected[vertexIndex]._arrUv[1], listRead[vertexIndex]._arrUv[1], 48.0f / 65535.0f );
+    }
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[2]._arrColor[0], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listRead[2]._arrColor[1], 1e-6f );
 }
 
 /**
@@ -169,14 +229,17 @@ SW_TEST_CASE( MeshAssetTest, MalformedBytesAreRejected )
     sw::MeshAssetFormat::makeBytes( listTwoVertex, notTriangles );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( notTriangles.data(), notTriangles.size(), listRead ) );
 
-    // 탄젠트 부호가 ±1 이 아니다(첫 정점의 탄젠트 w — 머리 뒤 float 열다섯 번째 칸).
-    sw::vector<uint8> badTangent = valid;
-    const size_t      signOffset = sw::MeshAssetFormat::kHeaderSize + 15 * sizeof( float32 );
-    badTangent[signOffset + 0]   = 0;
-    badTangent[signOffset + 1]   = 0;
-    badTangent[signOffset + 2]   = 0;
-    badTangent[signOffset + 3]   = 0;
-    SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( badTangent.data(), badTangent.size(), listRead ) );
+    // 정점 플래그에 모르는 비트가 있다(첫 정점의 마지막 uint32 — 정점 32 바이트의 28 번째 바이트부터).
+    sw::vector<uint8> badFlags    = valid;
+    const size_t      flagsOffset = sw::MeshAssetFormat::kHeaderSize + sw::MeshAssetFormat::kVertexSize - sizeof( uint32 );
+    badFlags[flagsOffset + 1]     = 0x80;
+    SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( badFlags.data(), badFlags.size(), listRead ) );
+
+    // UV 경계의 최대가 최소보다 작다(머리 24 바이트 뒤 — 최소 u, 최소 v, 최대 u, 최대 v).
+    sw::vector<uint8> badBounds = valid;
+    badBounds[24 + 11]          = 0xC0; // 최대 u 의 부호 · 지수 바이트를 음수 큰 값으로 바꾼다
+    badBounds[24 + 3]           = 0x40; // 최소 u 를 양수 큰 값으로 바꾼다
+    SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( badBounds.data(), badBounds.size(), listRead ) );
 
     // 원본은 여전히 읽힌다(위 거절이 우연이 아니다).
     SW_EXPECT_TRUE( sw::MeshAssetFormat::readFromBytes( valid.data(), valid.size(), listRead ) );

@@ -65,6 +65,8 @@ namespace sw
                     return VK_FORMAT_BC6H_UFLOAT_BLOCK;
                 case RHIFormat::R8_UNORM:
                     return VK_FORMAT_R8_UNORM;
+                case RHIFormat::R16G16_SNORM:
+                    return VK_FORMAT_R16G16_SNORM;
                 case RHIFormat::Unknown: ///< 첨부 없음. Vulkan 에는 대응 값이 없다.
                     break;
             }

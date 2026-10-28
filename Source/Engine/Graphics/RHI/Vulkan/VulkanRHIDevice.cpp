@@ -221,6 +221,9 @@ namespace sw
                 return false;
             }
 
+            if ( verifyRequiredColorAttachmentFormats() == false )
+                return false;
+
             if ( createLogicalDevice() == false )
                 return false;
         }

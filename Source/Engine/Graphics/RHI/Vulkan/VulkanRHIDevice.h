@@ -360,6 +360,12 @@ namespace sw
         bool selectDepthFormat();
 
         /**
+         * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)을 이 GPU 가 첨부로 쓸 수 있는지 확인합니다.
+         * @details 없으면 false 이고 폴백은 없습니다(장치 생성이 멈춘다).
+         */
+        bool verifyRequiredColorAttachmentFormats() const;
+
+        /**
          * @brief 스왑체인을 통째로 다시 만듭니다. 창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때 부릅니다.
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 테이블까지 함께 갱신한다.
          */

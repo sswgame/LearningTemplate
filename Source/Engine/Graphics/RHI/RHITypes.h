@@ -122,6 +122,9 @@ namespace sw
         BC7_UNORM = 13, ///< 16 B/블록, 고품질 RGBA
         BC6H_UF16 = 14, ///< 16 B/블록, 부호 없는 HDR RGB(반정밀도) — `.hdr` 원본 임포트(하늘 · 환경광)
         R8_UNORM  = 15, ///< 8비트 단일 채널 정규화(글리프 SDF 아틀라스 · 마스크). 셰이더는 `.r` 로 읽는다
+        /// @brief 16비트 부호 있는 정규화 RG(4 B) — G버퍼 법선의 옥타헤드럴 좌표. 셰이더는 `.rg` 가 [-1, 1] 실수다.
+        ///        컬러 첨부 지원은 Vulkan 필수 포맷이 아니라 장치 생성 때 조회한다(`PackedTypes.md` P4).
+        R16G16_SNORM = 16,
     };
 
     /**
@@ -967,6 +970,7 @@ namespace sw
             case RHIFormat::R8G8B8A8_UNORM:
             case RHIFormat::B8G8R8A8_UNORM:
             case RHIFormat::R32_FLOAT:
+            case RHIFormat::R16G16_SNORM:
                 return RHIFormatBlockInfo{ 1, 1, 4 };
             case RHIFormat::R16G16B16A16_FLOAT:
             case RHIFormat::R32G32_FLOAT:
@@ -1012,6 +1016,7 @@ namespace sw
             case RHIFormat::R32G32_FLOAT:
             case RHIFormat::R32_FLOAT:
             case RHIFormat::R8_UNORM:
+            case RHIFormat::R16G16_SNORM:
                 return true;
             case RHIFormat::R32G32B32_FLOAT:
             case RHIFormat::Unknown:

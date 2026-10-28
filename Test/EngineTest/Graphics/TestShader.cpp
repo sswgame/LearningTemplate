@@ -784,7 +784,7 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
  */
 SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 {
-    for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::BC6H_UF16 ); ++value )
+    for ( uint32 value = 0; value <= static_cast<uint32>( sw::RHIFormat::R16G16_SNORM ); ++value )
     {
         const sw::RHIFormat format = static_cast<sw::RHIFormat>( value );
         const utf8*         pName  = sw::FrameRendererUtil::attachmentFormatName( format );
@@ -796,6 +796,20 @@ SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
     // 이름은 철자 그대로만 읽는다(별칭 없음). 모르는 이름은 정해진 폴백이다 — 오류는 로드 검증이 낸다.
     SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "R32_FLOAT" ) == sw::RHIFormat::R32_FLOAT );
     SW_EXPECT_TRUE( sw::FrameRendererUtil::parseAttachmentFormat( "NoSuchFormat" ) == sw::RHIFormat::R8G8B8A8_UNORM );
+}
+
+/**
+ * @brief [ShaderCookerTest] G버퍼 노멀 포맷 `R16G16_SNORM` 은 렌더 타깃이 될 수 있고 픽셀당 4 바이트이며 번호 16 이다
+ * @details 번호는 저장된 값이 아니지만 기존 번호(0..15)를 밀지 않고 뒤에 이었는지 고정한다. G버퍼 패스의 고정 포맷 표가 이 포맷을 노멀 칸으로 쓴다.
+ */
+SW_TEST_CASE( ShaderCookerTest, GBufferNormalFormatIsRenderableFourBytes )
+{
+    SW_EXPECT_EQUAL( 16u, static_cast<uint32>( sw::RHIFormat::R16G16_SNORM ) );
+    SW_EXPECT_TRUE( sw::isRHIFormatRenderable( sw::RHIFormat::R16G16_SNORM ) );
+    SW_EXPECT_EQUAL( 4u, sw::getRHIFormatBytesPerPixel( sw::RHIFormat::R16G16_SNORM ) );
+    const sw::RenderPassTypeInfo& gbuffer = sw::getRenderPassTypeInfo( sw::RenderPassType::GBuffer );
+    SW_ASSERT_TRUE( gbuffer._colorTargetCount == 3 && gbuffer._pColorFormat != nullptr );
+    SW_EXPECT_TRUE( gbuffer._pColorFormat[1] == sw::RHIFormat::R16G16_SNORM );
 }
 
 /**

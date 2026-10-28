@@ -58,6 +58,7 @@ namespace sw
             {      RHIFormat::R32G32_FLOAT,                              GL_RG32F,            GL_RG,             GL_FLOAT},
             {         RHIFormat::R32_FLOAT,                               GL_R32F,           GL_RED,             GL_FLOAT},
             {          RHIFormat::R8_UNORM,                                 GL_R8,           GL_RED,     GL_UNSIGNED_BYTE},
+            {      RHIFormat::R16G16_SNORM,                         GL_RG16_SNORM,            GL_RG,             GL_SHORT},
         };
 
         const OpenGLFormatRow* findFormatRow( RHIFormat format )

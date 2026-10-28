@@ -342,6 +342,23 @@ namespace sw
         return false;
     }
 
+    bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
+    {
+        const VkFormat arrRequired[] = { VK_FORMAT_R16G16_SNORM };
+        for ( const VkFormat format : arrRequired )
+        {
+            VkFormatProperties props{};
+            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+            if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
+            {
+                SW_LOG_ERROR( "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                return false;
+            }
+        }
+        return true;
+    }
+
     uint32 VulkanRHIDevice::depthAspectMask() const
     {
         return _bDepthHasStencil != 0

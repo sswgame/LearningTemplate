@@ -1,10 +1,10 @@
 # 저장 전용 압축 타입
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 3/6
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 5/6
 
 > 질문: 정점 · 인스턴스 · 버퍼의 크기를 줄이는 압축 타입을 엔진이 어떻게 갖고, 어디부터 어떤 규칙으로 적용하는가?
 > 독자: 정점 포맷 · G버퍼 · 리플렉션을 고치는 작업자와 통합 담당.
-> 결론: 타입(P1), half 해독 복사본 통합(P2), 리플렉션 연결(P3, 빌드 확인은 통합)은 들어갔다. 다음은 첫 적용처 셋(G버퍼 법선 P4, 메시 정점 P5, VAT 위치 P6)이고 P4 는 GPU 확인과 재쿠킹을 하는 통합이 코드를 쓴다. 새 포맷은 2절 규칙을 따른다.
+> 결론: 타입(P1), half 해독 복사본 통합(P2), 리플렉션 연결(P3, 빌드 확인은 통합)은 들어갔다. G버퍼 법선(P4)과 `.mesh` 파일 정점(P5)의 코드도 들어갔다(빌드 · 셰이더 재쿠킹 · 네 백엔드 확인 전 — 통합이 한다). 남은 것은 VAT 위치(P6, `.vat` 선행)와 메모리 · GPU 정점의 압축(P5 뒤 후보)이다. 새 포맷은 2절 규칙을 따른다.
 
 ## 1. 들어간 것 (P1)
 
@@ -32,7 +32,7 @@
 - `OctahedralNormal` 의 글 · 인자 성분은 방향이 아니라 저장된 좌표 (u, v) 입니다(방향으로 풀고 다시 담으면 비트가 흔들려 글 왕복이 불안정). 인스펙터만 방향 xyz 로 편집합니다(`InspectorValueWidget::Direction`).
 - 인자 변환(`ReflectValue`)은 성분이 하나면 숫자도 받고 범위 밖은 거절, 여럿이면 글만 받습니다.
 - 헤더: `Core/Math/PackedTypesFwd.h`(이름과 별칭의 유일한 정의)와 `PackedTypes.h`(완전한 정의 묶음). 표의 C++ 타입 칸에는 별칭만 씁니다(템플릿 이름의 쉼표가 매크로 인자를 나눔).
-- 한계: (1) `Transient` 가 아닌 압축 타입 `PROPERTY` 는 고정 배치형 코덱의 인코딩 표 밖이라 코드 생성기가 **생성 오류로 멈춥니다**([결정 기록 5-4](../decisions/5-4_DataConfig.md) 3.1 · 3.4). 압축 타입을 B 코덱에 넣는 일은 새 인코딩 종류를 더하는 별도 단계 후보입니다. (2) 인스펙터는 색 선택기 · `Min` · `Max` 메타를 읽지 않고 성분 드래그입니다. (3) UI 바인딩과 스키마 이주는 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 숫자를 가릅니다. (4) `PROPERTY` 의 타입은 별칭(`unorm8x4`)으로 적습니다(풀어 쓴 `NormalizedVector<unorm8, 4>` 는 모르는 이름).
+- 한계: (1) `Transient` 가 아닌 압축 타입 `PROPERTY` 는 고정 배치형 코덱의 인코딩 표 밖이라 코드 생성기가 **생성 오류로 멈춥니다**. 압축 타입을 B 코덱에 넣는 일은 새 인코딩 종류를 더하는 별도 단계 후보입니다. (2) 인스펙터는 색 선택기 · `Min` · `Max` 메타를 읽지 않고 성분 드래그입니다. (3) UI 바인딩과 스키마 이주는 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 숫자를 가릅니다. (4) `PROPERTY` 의 타입은 별칭(`unorm8x4`)으로 적습니다(풀어 쓴 `NormalizedVector<unorm8, 4>` 는 모르는 이름).
 - 확인: `PackedValueTraitsTest`(CoreTest) · `PackedValueSerializationTest`(EngineTest) · `InspectorBuiltinValueTest`(EditorTest), 매니페스트 id `packed-types-test`.
 
 ## 2. 새 포맷 규칙
@@ -58,7 +58,7 @@
 
 ### P4 G버퍼 법선을 R16G16 옥타헤드럴로
 
-**설계만 있고 코드는 없습니다.** GPU 확인과 셰이더 재쿠킹이 필요해 통합이 아래 목록으로 쓰고 검증합니다. 1920 × 1080 에서 법선 첨부가 8 B(`R16G16B16A16_FLOAT`)에서 4 B 가 되어 프레임마다 쓰기와 읽기가 각각 약 8 MB 줄어듭니다(계산값, 측정 필요). 지금 half 의 `n * 0.5 + 0.5` 는 1 근처 간격 1/2048 로 오차가 최대 약 5e-4 이고, 옥타헤드럴은 1e-4 이하입니다.
+**코드는 들어갔고(아래 1 ~ 5), 셰이더 재쿠킹(6)과 GPU 확인은 통합이 합니다.** 구현 메모: 포맷 열거자 `R16G16_SNORM = 16`(DXGI · Vulkan · GL 표 · 에디터 렌더 타깃 뷰 · 캡처 포함), `RenderPassTypeInfo` 의 G버퍼 고정 포맷 표가 노멀을 이 포맷으로 만들고 `deferredpipeline.xml` 이 같게 선언합니다(클리어 0,0,0,0). 렌더 타깃 지원 확인은 Vulkan 만 장치 생성에서 하고(`verifyRequiredColorAttachmentFormats`, 없으면 오류) D3D 는 필수 포맷이며 **GL 은 확인하지 않았습니다**(프레임버퍼 완전성 오류로 드러남). 셰이더는 `Octahedral::encode · decode`, `sampleNormal` 이 `float3`, `loadGbufferMaterial` 이 "그려졌다" 를 `outDrawn` 으로 돌려줍니다(머티리얼 칸 알파 1). 아래는 설계 당시의 글입니다. 1920 × 1080 에서 법선 첨부가 8 B(`R16G16B16A16_FLOAT`)에서 4 B 가 되어 프레임마다 쓰기와 읽기가 각각 약 8 MB 줄어듭니다(계산값, 측정 필요). 지금 half 의 `n * 0.5 + 0.5` 는 1 근처 간격 1/2048 로 오차가 최대 약 5e-4 이고, 옥타헤드럴은 1e-4 이하입니다.
 
 **지금 모양.**
 
@@ -76,7 +76,7 @@
 3. **셰이더 인코드 · 디코드.** `VertexAnimation::unpackNormal` 의 팔면체 → 단위 벡터 식을 `Octahedral::decode( float2 )` 로 뽑고, `Octahedral::encode( float3 ) : float2` 는 `OctahedralNormal::fromNormal` 과 같은 식(`sum = |x|+|y|+|z|`, `z < 0` 이면 접기, 0 은 양수 부호)으로 씁니다. `sampleNormal` 은 디코드한 단위 노멀 `float3` 을 돌려주고 호출 둘에서 `* 2 - 1` · `normalize` 를 지웁니다. `SurfaceOutput::_normal` 은 `float2 _normal : SV_TARGET1`.
 4. **"그려졌다" 표시를 옮깁니다.** G버퍼 머티리얼 칸 알파로 옮깁니다(`encodeGbufferMaterial` 의 b · a 가 비어 있고 클리어 0 이라 같은 규칙). `deferredlighting.hlsl` 의 버림 조건은 `PassTexture::loadGbufferMaterial` 쪽으로. 알베도 알파는 셰이딩 모델(0 = Unlit)이라 쓸 수 없습니다. 노멀 클리어 값은 (0, 0)(+z).
 5. **CPU 쪽.** `readMeanGBufferNormal` 이 `snorm16x2` 두 값을 읽어 `OctahedralNormal::toNormal` 로 풀고 표시는 머티리얼 첨부 알파에서 셉니다(`RHITestImage` 에 16 비트 두 채널 읽기가 없으면 더함). 에디터 렌더 타깃 패널은 방향 색으로 보입니다.
-6. **재쿠킹.** 머티리얼 셰이더 전부(`SW_PASS_GBUFFER`)와 `deferredlighting` · `ssao` 가 바뀌므로 `App.exe --cook-shaders` 와 `ShaderCookRequestTest` 의 낡은 바이너리 삭제를 0 이 될 때까지 반복합니다([작업자 규칙](WorkerRules.md) 6절). 테스트 픽스처의 `GBufferNormal` 포맷 문자열(`TestRenderPass.cpp` · `TestShader.cpp`)도 맞춥니다.
+6. **재쿠킹.** 머티리얼 셰이더 전부(`SW_PASS_GBUFFER`)와 `deferredlighting` · `ssao` 가 바뀌므로 `App.exe --cook-shaders` 와 `ShaderCookRequestTest` 의 낡은 바이너리 삭제를 0 이 될 때까지 반복합니다. 테스트 픽스처의 `GBufferNormal` 포맷 문자열(`TestRenderPass.cpp` · `TestShader.cpp`)도 맞춥니다.
 
 영향 패스는 G버퍼(쓰기), Lighting · SSAO(읽기) 셋이고 다른 패스는 `sampleNormal` 을 부르지 않습니다. 포워드 파이프라인에는 이 첨부가 없습니다.
 **골든과 확인.** 디퍼드 경로 골든(`-gv_deferred=1`)은 림 · 반사에서 작은 차이가 날 수 있습니다. 순서: 코드 → 재쿠킹 → `RenderPassGPUTest` 의 G버퍼 노멀 테스트(수직 노멀, 4 백엔드) → 디퍼드 시나리오 스크린샷 전후 비교(양자화 오차 이내, 네 백엔드 같은 이미지) → 의도한 차이면 `golden-record`. 항목은 구현할 때 `Test/QA/VerifyBatch.json` 에 id 로 더합니다.
@@ -85,6 +85,7 @@
 
 `RHIVertex`(`RHITypes.h`)는 위치 12 + 노멀 12 + UV 8 + 색 16 + 탄젠트 16 = 64 B 입니다. 위치 `float3`(12) + 법선 `OctahedralNormal`(4) + 탄젠트 `OctahedralNormal`(4) + UV `unorm16x2`(4) + 색 `unorm8x4`(4) = 28 B 가 됩니다. 바이탄젠트 부호(±1)는 색 알파나 탄젠트 좌표의 한 비트로 나눠 쓸지 이 단위에서 정합니다(28 ~ 32 B).
 
+- **들어간 범위(파일만)**: `kVersion` 4, 파일의 정점이 32 B(위치 float32 12 + 법선 옥타헤드럴 4 + 탄젠트 옥타헤드럴 4 + UV `unorm16x2` 4 + 색 `unorm8x4` 4 + 플래그 uint32 4 — 바이탄젠트 부호는 플래그 비트 0)이고 머리가 40 B(UV 경계 4 개 추가, 기본 정점과 LOD 를 덮음)입니다. 읽을 때 64 B `RHIVertex` 로 풀므로 메모리 · GPU 정점 · 입력 레이아웃 · 컴퓨트(스킨 · 모프 · 정점 풀)는 그대로입니다 — 그쪽 압축은 `RHIVertex` 를 쓰는 76 개 파일 전체의 변경이라 따로 둡니다. 옛 형식 리더는 없고, 쿠킹된 `.mesh` 는 낡아서 모델을 다시 임포트해야 읽힙니다. 색은 0..1 밖이 잘리고 UV 는 큰 범위일수록 오차가 큽니다(`float32` 유지 선택지는 아직 없음).
 - `MeshAssetFormat::kVersion` 3 → 4, 임포터 · 로더가 새 레이아웃을 읽고 씁니다. 재임포트하면 커밋된 `.mesh` 산출물이 모두 바뀌므로 [PreloadAndLod](PreloadAndLod.md) 의 `.mesh` 변경과 같은 커밋 묶음에 넣습니다.
 - 입력 레이아웃은 `RHIVertexAttribute` 표(`_format` 확장)가 네 백엔드의 원본이므로 표 한 곳을 고치고 네 백엔드가 같은 표를 읽는지 확인합니다. 정점 셰이더는 `binding.hlsli` 의 풀이 함수로 풉니다.
 - CPU 쪽 정점(물리 · 내비 · 피킹, LOD 0)은 `float32` 사본을 유지합니다. 스킨 정점(`LSKN`)과 모프도 새 위치 경계를 쓰는지 확인하고, 경계 밖으로 움직이는 결과는 컴퓨트가 `float32` 로 계산하므로 압축 위치는 기준 포즈에만 씁니다.

@@ -8,6 +8,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OctahedralNormal.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
@@ -302,27 +304,36 @@ namespace
     }
 
     /**
-     * @brief G버퍼 노멀 첨부에서 그려진 픽셀(알파 1 — 클리어는 알파 0)의 노멀을 풀어 평균합니다. 정규화하지 않습니다.
+     * @brief G버퍼에서 그려진 픽셀(머티리얼 칸 알파 1 — 클리어는 알파 0)의 노멀을 풀어 평균합니다. 정규화하지 않습니다.
+     * @details 노멀 칸은 `R16G16_SNORM` 옥타헤드럴 좌표라(셰이더 `Octahedral::encode`) 저장된 두 정수를 `OctahedralNormal::toNormal` 로 푼다.
      * @param outDrawnCount 그려진 픽셀 수. 되읽기에 실패했거나 아무것도 그려지지 않았으면 0 이고 반환값은 영벡터입니다.
      */
     sw::float3 readMeanGBufferNormal( sw::FrameRenderer& renderer, uint32& outDrawnCount )
     {
         outDrawnCount = 0;
         test::RHITestImage image;
-        if ( image.readTransient( renderer, "GBufferNormal" ) == false )
+        test::RHITestImage material;
+        if ( image.readTransient( renderer, "GBufferNormal" ) == false || material.readTransient( renderer, "GBufferMaterial" ) == false )
+            return sw::float3{};
+        const bool bSameSize = image.getWidth() == material.getWidth() && image.getHeight() == material.getHeight();
+        if ( image.getFormat() != sw::RHIFormat::R16G16_SNORM || bSameSize == false )
             return sw::float3{};
         sw::float3 sum{};
         for ( uint32 row = 0; row < image.getHeight(); ++row )
         {
             for ( uint32 col = 0; col < image.getWidth(); ++col )
             {
-                const test::Rgba8 pixel = image.getPixel( col, row );
-                if ( pixel._a < 128 )
+                if ( material.getPixel( col, row )._a < 128 )
                     continue;
-                // 셰이더가 n * 0.5 + 0.5 로 적는다(SurfaceOutput::store · gbuffer.hlsl).
-                sum._x += static_cast<float32>( pixel._r ) / 255.0f * 2.0f - 1.0f;
-                sum._y += static_cast<float32>( pixel._g ) / 255.0f * 2.0f - 1.0f;
-                sum._z += static_cast<float32>( pixel._b ) / 255.0f * 2.0f - 1.0f;
+                const uint8* pRaw = image.getRawPixel( col, row );
+                if ( pRaw == nullptr )
+                    continue;
+                int16 arrCoordinate[2]{};
+                sw::Memory::copy( arrCoordinate, pRaw, sizeof( arrCoordinate ) );
+                const sw::float3 direction = sw::OctahedralNormal{ sw::snorm16::fromRaw( arrCoordinate[0] ), sw::snorm16::fromRaw( arrCoordinate[1] ) }.toNormal();
+                sum._x += direction._x;
+                sum._y += direction._y;
+                sum._z += direction._z;
                 ++outDrawnCount;
             }
         }
