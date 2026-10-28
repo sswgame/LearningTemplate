@@ -60,8 +60,8 @@ namespace sw
         [[nodiscard]] static AutomationStepDependency findUnresolvedDependency( const AutomationStep& step, string& outName );
 
         /**
-         * @brief 데스크톱 전역 상태를 쓰는 단계(`AutomationStepRegistration::_bUsesDesktop`)가 혼합 입력(`input="mixed"`)이 아닌 시나리오에 있으면 false 와 이유입니다.
-         * @details 그런 단계(OS 커서 클립 등)는 겹쳐 도는 다른 프로세스의 창과 서로 방해해서 `<타깃>_Desktop` 에서 혼자 도는 시나리오(혼합 입력)에서만 쓸 수 있다.
+         * @brief 데스크톱 전역 상태를 쓰는 단계(`AutomationStepRegistration::_bUsesDesktop`)나 루트 `requireForeground="true"` 가 혼합 입력(`input="mixed"`)이 아닌 시나리오에 있으면 false 와 이유입니다.
+         * @details 그런 단계(OS 커서 클립 · 화면 복사 `CaptureWindow` 등)와 전경 요구(OS 에 전경 창은 하나뿐이다)는 겹쳐 도는 다른 프로세스의 창과 서로 방해해서 `<타깃>_Desktop` 에서 혼자 도는 시나리오(혼합 입력)에서만 쓸 수 있다.
          *          표시를 시나리오 이름이 아니라 단계 등록에 두었으므로 새 데스크톱 단계는 등록 때 한 번 표시하면 모든 시나리오에 걸린다. 이 프로세스에 등록되지 않은 단계는 모르는 것이라 건너뛴다
          *          (그 판단은 `findUnresolvedDependency`).
          */

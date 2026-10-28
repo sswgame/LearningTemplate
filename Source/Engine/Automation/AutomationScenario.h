@@ -120,7 +120,7 @@ namespace sw
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
         bool _bRequiresEditor{ false };
         /**
-         * @brief 창이 전경이어야 도는 시나리오입니다(루트 `requireForeground="true"` — 실제 커서 클립 · 화면 복사를 본다).
+         * @brief 창이 전경이어야 도는 시나리오입니다(루트 `requireForeground="true"` — 실제 커서 클립 · 화면 복사를 본다. 데스크톱 전역 상태라 `input="mixed"` 시나리오에서만 쓸 수 있다).
          * @details 실행기가 시작 조건을 기다리는 프레임부터 창을 전경으로 가져온다. 시작하는 프레임까지 전경을 얻지 못하면 건너뜀(13)으로 끝낸다.
          *          단계가 아니라 루트 속성인 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦다.
          */

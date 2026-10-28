@@ -22,7 +22,7 @@
 	<At frame="230"><EditorClick mark="gizmo.translate"/></At>
 	<At frame="245">
 		<Expect probe="Editor.GizmoOperation" equals="0"/>
-		<CaptureWindow file="toolbar.png"/>
+		<CaptureEditorUI file="toolbar.png"/>
 	</At>
 	<At frame="250"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

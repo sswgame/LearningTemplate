@@ -15,6 +15,6 @@
 	<At frame="70"><Variable name="gv_editorProbeObject" value="TestMesh"/></At>
 	<At frame="75"><Expect probe="Editor.HierarchyRowIcon" equals="57414"/></At>
 	<At frame="80"><EditorClick mark="hierarchy.row.TestKeyLight"/></At>
-	<At frame="100"><CaptureWindow file="hierarchy.png"/></At>
+	<At frame="100"><CaptureEditorUI file="hierarchy.png"/></At>
 	<At frame="110"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>
