@@ -23,6 +23,7 @@
 - `NameReference/ScenarioStep` · `ScenarioProbe` · `DevCommand`: 시나리오(`*.scenario.xml`)의 `<At>` 안 단계 이름, `probe` 속성,
   `<DevCommand line>` 의 첫 낱말이 `SW_AUTOMATION_STEP` · `SW_AUTOMATION_PROBE` · `SW_DEV_COMMAND` 로 등록된 이름이다. 실행기는 이것을
   시나리오를 올린 실기동(hostgpu 의 AppScenarioTest)에서야 오류로 낸다 — CI(nogpu)는 단계 · 명령 이름을 바꿔도 통과했다.
+- `NameReference/ScenarioXml`: 시나리오 XML 이 깨져 위 이름 검사를 못 했으면 건너뛰고 통과하지 않고 위반이다.
 
   python Scripts/lint/gate/CheckNameReferences.py [--root <repo>]
 """
@@ -40,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
+from common.ScenarioFile import readScenarioXmlFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.
@@ -323,12 +325,10 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
     listScenarioPath = LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",), accept=lambda candidate: candidate.name.endswith(".scenario.xml"))
-    for path in listScenarioPath:
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            root = ElementTree.parse(path).getroot()
-        except ElementTree.ParseError:
-            continue  # XML 이 깨진 것은 에셋 검증 규칙 xml-parses 가 알린다
+    # 깨진 시나리오는 공통 입구가 오류 줄로 돌려준다 — 건너뛰면 그 시나리오의 이름 검사가 빠진 채 통과한다.
+    listScenarioRoot, listReadError = readScenarioXmlFiles(repositoryRoot, listScenarioPath)
+    listViolation += [f"[NameReference/ScenarioXml] {error}" for error in listReadError]
+    for relative, root in listScenarioRoot:
         scenarioCount += 1
         for at in root.iter("At"):
             for step in at:
@@ -453,6 +453,15 @@ class CheckNameReferencesGate(LintGate):
                                                        "                           &distance, true, true );\n"),
                 "Resource/engine/automation/probe.scenario.xml": ("<Scenario><At frame=\"1\"><WaitUntil probe=\"Probe.Distance\" target=\"Farmer\" atMost=\"1\"/>"
                                                                   "</At></Scenario>\n"),
+            },
+        },
+        {
+            "name": "깨진 시나리오 XML 은 건너뛰어 통과하지 않고 위반이다",
+            "expectedViolation": "[NameReference/ScenarioXml] Resource/engine/automation/broken.scenario.xml: XML 을 읽지 못해",
+            "files": {
+                "Source/Engine/ProbeSteps.cpp": "SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n",
+                "Resource/engine/automation/ok.scenario.xml": "<Scenario/>\n",
+                "Resource/engine/automation/broken.scenario.xml": "<Scenario><At frame=\"1\"></Scenario>\n",
             },
         },
     ]

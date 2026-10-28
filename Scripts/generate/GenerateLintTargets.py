@@ -64,7 +64,12 @@ def emitTargetsInternal(listTarget: Sequence[LintTarget]) -> str:
 
 
 def emitTestsInternal(listTarget: Sequence[LintTarget]) -> str:
-    """CTest 등록 — 라벨은 전부 `lint` 다 (폴더가 성격을 말한다, CLAUDE.md)."""
+    """CTest 등록 — 라벨은 전부 `lint` 다 (폴더가 성격을 말한다, CLAUDE.md).
+
+    `SKIP_RETURN_CODE 77` 은 일부러 달지 않는다. 게이트의 건너뜀(77)은 `--files` 로 좁힌 훑기에 볼 것이 없을 때만 나고 ctest 는 전체 훑기라 77 이 날 수 없다
+    (`LintGate.endRun` 이 막는다). 달면 전체 훑기에서 새는 77 이 ctest 에서 "건너뜀" 으로 읽혀 실패가 아닌 채로 지나간다 — 없으면 0 이 아닌 값은 모두 실패다
+    (`TestGenerators.testLintTestsDoNotRegisterSkipReturnCode` 가 지킨다).
+    """
     listLine: list[str] = [
         "# CTest 등록. 게이트는 보고만 한다 — 고치는 것은 lint/fixer/ 의 픽서다.",
         "function(sw_registerGeneratedLintTests)",

@@ -405,5 +405,21 @@ class ShippingBuildTest(ScenarioRunCase):
         self.assertIn("하나만 링크했다", err)
 
 
+class ReadScenarioXmlFilesTest(unittest.TestCase):
+    def testBrokenFileIsReturnedAsErrorNotSkipped(self) -> None:
+        from common.ScenarioFile import readScenarioXmlFiles
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "Resource").mkdir()
+            good = root / "Resource" / "good.scenario.xml"
+            broken = root / "Resource" / "broken.scenario.xml"
+            good.write_text("<Scenario/>", encoding="utf-8")
+            broken.write_text("<Scenario><At></Scenario>", encoding="utf-8")
+            listRoot, listError = readScenarioXmlFiles(root, [good, broken])
+        self.assertEqual(["Resource/good.scenario.xml"], [label for label, _ in listRoot])
+        self.assertEqual(1, len(listError))
+        self.assertIn("Resource/broken.scenario.xml: XML 을 읽지 못해", listError[0])
+
+
 if __name__ == "__main__":
     unittest.main()

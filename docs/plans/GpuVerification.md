@@ -97,3 +97,13 @@ Debug 빌드 · 테스트는 아직 돌리지 않았다. 병합 뒤 Shipping 으
 ## 5. 사용자 결정
 
 없습니다.
+
+## 6. 명령 없는 검증 항목 (2026-10-28)
+
+`Test/QA/VerifyBatch.json` 의 명령 없는 항목은 이유가 둘로 갈린다: `manual`(사람 눈 · 귀 · 장비 · 외부 에셋이 있어야 한다 — 42 개) 과 `need_command`(사람이 필요 없는데 명령을 못 만들었다 — 0 개). 읽을 때 일회성(`pending`) 항목은 명령이 있거나 `manual` 이어야 하고, 명령 없는 항목은 어느 문서의 `매니페스트 id` 줄이 가리켜야 한다(주인 문서).
+
+- **구조로 닫은 것:** 상태가 `측정대기` 인 계획 문서는 돌릴 명령이 있는 항목(`manual` · `need_command` 가 아닌 것)을 `매니페스트 id` 줄로 하나는 가리켜야 한다(`findMeasureWaitViolations`, `plans --check` · `CheckVerifyPending` 이 부른다). 사람 확인만 남은 문서는 `측정대기` 로 둘 수 없다 — 아무도 못 푸는 대기가 쌓이는 모양을 막는다.
+- **`result_doc` 정리:** 옛 `docs/plans/NEXT.md 0000절`(232 곳)은 이미 실제 문서로 바뀌어 있었다. 다시 생기지 않게 `findDocReferenceProblems` 가 `result_doc` 이 인계 · 규칙 문서(`NEXT.md` 등)를 가리키거나 `N절` 번호의 제목이 문서에 없으면 `verify-batch --check` · `plans --check` 에서 거절한다(번호 없는 절 이름은 사람이 읽는 글이라 확인하지 않는다).
+- **통과한 일회성 항목:** 통합 S 의 `app-scenarios-release` 통과(1300 s, 시나리오 Warning/Error 0)로 덮이는 `covered` 일회성 14 개 가운데 보고 · 사진 · 첫 측정값을 사람이 읽어야 닫히지 않는 것을 뺀 7 개(`ability-arena-ai-control-scenarios` · `game-pack-scenarios` · `assertdialog-scenario` · `standard-input-commands` · `scene-reference-scenario` · `sync-tab-object-diff-scenario` · `scenarios-new-q2`)의 항목과 문서의 대기 글을 지웠다. 남은 7 개(`module-pass-scenario` 문턱 확정 · `shooter-*-scenario` 넷 · `wildwest-mount-scenario` 사진 확인 · `usersettings-scenario` dx12 `measured` 더하기)는 통과만으로 닫히지 않는다. 그 밖의 일회성 test · measure 항목은 마지막 통합의 항목별 결과 표가 저장소에 없어(`build/verify-batch` 는 낡은 한 판뿐) 통과를 확인하지 못했다.
+- **`need_command` 둘을 닫았다 (명령 없는 `need_command` 는 이제 0):** `shooter-crowd-measure` 는 perf-compare 케이스가 이미 있었다(`crowdShare` — 벤치 KayKit 기사 30 명, 군중 공유 끔 대 켬). 항목에 `perf-compare --cases crowdShare --runs 3` 을 달았다(`--measure` 로 돈다, 실행은 통합 몫). `paired-animation-two-process` 는 러너가 아니라 씬이 없다: `RunDestructionNetPair`(Server `-gv_netListenPort` + App `-gv_netConnectAddress`, 로그 맞댐)는 같은 모양으로 재사용할 수 있지만 `PairedAnimationNetSessionComponent` 를 단 씬과 세션 시작 · 늦은 참가 · 끝을 구동하는 시나리오가 데이터에 없다. 씬 저작이 선행이라 `manual`(저작 작업)로 분리했다 — [Candidates-gameplay](Candidates-gameplay.md).
+- **통합에서 확인 (매니페스트 id `app-scenarios-release`):** 위에서 항목을 지운 시나리오 일곱 묶음이 통합의 `ctest -L hostgpu` 에서 실제로 통과로 오르는지 케이스 이름으로 본다 — `game/abilityarena/automation/ai` · `control`, 게임 팩 시나리오 전부(`AppScenarioTest.<게임>.*` × 네 백엔드), `engine/automation/editor/assertdialog` · `netconditions`(표준 입력 명령) · `scenereference` · `netsyncobjects`, 새 시나리오 일곱 `editor/audiographpanel` · `behaviortreepanel` · `worldcellspanel` · `reflectionprobebake` · `wildwest/autoplaymount` · `frontiertown/autoplayclock` · `meadowvillage/autoplayclock`. 하나라도 건너뜀이거나 빠져 있으면 지운 항목을 되살리지 말고 그 시나리오를 고친다.

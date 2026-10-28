@@ -15,7 +15,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 옛번호: D4-6
 왜 필요한가: 스킨드 메시가 LOD 를 받고(`makeLODLevels( …, skinBoneCount, … )` · `.mesh` 의 선택 덩어리 `LSKN`) 고른 메시 단계가 본 LOD 단계를 정한다(`AnimationSystem::updateLOD` 가 `min( 메시 단계, 본 LOD 단계 수 - 1 )`, 한 프레임 늦음). 군중 공유 측정은 항목 `shooter-crowd-measure`(perf-compare `crowdShare`)가 돈다.
 남은 것: 매니페스트 id `skinned-lod-gpu-check` — LOD 규칙(simplify)을 건 스킨드 모델이 데이터에 아직 없다. 규칙을 건 모델을 `App --import-models` 로 임포트해(산출물 `.mesh` 를 커밋) 먼 거리 사진에서 낮은 단계가 스키닝되어 그려지고 본 LOD 단계가 메시 단계를 따르는지 본다.
-남은 것: 매니페스트 id `shooter-crowd-measure` — 적 30 마리를 세워 군중 포즈 공유 끔 대 켬의 GT.Animation 비용을 재는 perf-compare 케이스가 없다.
+군중 공유 끔 대 켬의 GT.Animation 비용: 매니페스트 id `shooter-crowd-measure`(perf-compare `crowdShare`, 벤치 기사 30 명 — 슈터 적과 같은 스킨드 군중이라 슈터 씬을 따로 세우지 않는다). `--measure` 로 돌고 표를 읽는 일만 남았다.
 못 하는 이유: 임포트 산출물을 만들려면 App 을 돌려야 하고 사진은 GPU 가 있어야 본다. 풀리는 조건: 통합 담당이 임포트와 사진을 한 번에 한다.
 함정: 외형이 구운 메시(`createBakedMesh`)와 병합 메시(`mergeMeshes`)는 LOD 를 갖지 않는다 — 몸에 LOD 를 쓰려면 병합을 끄고 베이크하지 않는 차림이어야 한다. 휘두름 · 움찔 클립(반복하지 않음)으로 갈 때 혼자로 내려가는 것은 맞다. 군중 시나리오의 사진에서 섞기 묶음이 끝날 때 위상이 튀면 들어가는 클립 시각을 다음 묶음의 칸 시각에 맞추는 길을 본다.
 
@@ -59,7 +59,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 남은 것:
 - 매니페스트 id `paired-animation-editor-window` — 미리보기 창(`PairedAnimationPanel`)에서 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 매니페스트 id `bowshoot-projectile-checks` — 쇼케이스(`bowshoot.scenario.xml`): ① 앞에서 보는 카메라를 씬에 더해 놓은 뒤 날아가는 투사체의 `_localDirection` 이 화살 앞이고 `_alignGain` 이 머리를 속도 쪽으로 돌리는지 본다 ② 당김 내내 화살 길이만 한 가는 줄 하나가 활 쪽에 붙어 보인다(활 메시의 시위 띠 스킨 의심).
-- 매니페스트 id `paired-animation-two-process` — Server + App 두 프로세스로 세션 시작 · 늦은 참가 · 끝 복제를 보는 확인을 한 명령으로 묶는다(지금은 두 프로세스를 띄우는 명령이 없다).
+- 매니페스트 id `paired-animation-two-process` — Server + App 두 프로세스로 세션 시작 · 늦은 참가 · 끝 복제를 보는 확인. 막힌 곳은 러너가 아니라 씬이다 — `PairedAnimationNetSessionComponent` 를 단 씬과 세션을 구동하는 시나리오가 데이터에 없다. 씬을 저작하면 `RunDestructionNetPair`(Server `-gv_netListenPort` + App `-gv_netConnectAddress`, 로그 맞댐)와 같은 모양으로 묶는다.
 함정: 재생 속도를 매 프레임 쓰는 컴포넌트가 새로 생기면 세션 쥠(`setPlayRateHeld`)을 받아야 한다 — 안 받으면 시각 검사가 어긋남으로 보고 중단한다. 복원은 `warp` 창을 다시 열지 않아 창 도중에 이어 받은 클라이언트는 휘지 않은 루트 모션으로 가고 서버 보정을 받는다. 프롭 역할 묶기는 시작 때 매니저 전체를 훑고 같은 에셋 · 같은 역할의 프롭이 둘 이상이면 거절한다.
 
 ### RigEditingScreenChecks

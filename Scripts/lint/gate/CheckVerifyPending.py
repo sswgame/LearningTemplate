@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.VerifyManifest import checkVerifyPending, kManifestRelPath  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
-_kPlanText = "# 계획\n\n> 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
+_kPlanText = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
 _kManifestText = (
     '{"configs": [{"name": "Debug", "preset": "Ninja-Debug"}], "items": [{"id": "debug-full-build", "title": "빌드", "kind": "build", "config": "Debug", '
     '"platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 10, "source": "docs/plans/A.md 절", "result_doc": "docs/plans/A.md 절"}]}'
@@ -49,6 +49,11 @@ class CheckVerifyPendingGate(LintGate):
             "name": "없는 id 를 가리킨다",
             "expectedViolation": "매니페스트 id `missing-item` 가",
             "files": {"Test/QA/VerifyBatch.json": _kManifestText, "docs/plans/A.md": _kPlanText + "확인 대기: 매니페스트 id `missing-item`.\n"},
+        },
+        {
+            "name": "측정대기 문서가 돌릴 항목을 가리키지 않는다",
+            "expectedViolation": "돌릴 명령이 있는 항목을 가리키는",
+            "files": {"Test/QA/VerifyBatch.json": _kManifestText, "docs/plans/A.md": _kPlanText.replace("구현중", "측정대기") + "본문\n"},
         },
         {
             "name": "대기 줄이 있는데 매니페스트가 없다",

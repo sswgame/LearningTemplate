@@ -51,7 +51,7 @@
 
 ## 실행 대기
 
-- 구조 이동 S21 · S22(nogpu · 단언 대화상자 · 표준 입력 명령), 게임 팩 네 백엔드, 3D 내비메시 확장(막는 식생 · 장애물 캐시 요 부호 · AbilityArena 내비 이동) — 실행 대기(통합): 매니페스트 id `ctest-nogpu`, `assertdialog-scenario`, `standard-input-commands`, `game-pack-scenarios`, `foliage-navmesh-tests`, `ability-arena-ai-control-scenarios`.
+- 구조 이동 S21 · S22(nogpu), 3D 내비메시 확장(막는 식생 · 장애물 캐시 요 부호) — 실행 대기(통합): 매니페스트 id `ctest-nogpu`, `foliage-navmesh-tests`. 단언 대화상자 · 표준 입력 명령 · 게임 팩 네 백엔드 · AbilityArena 내비 이동 시나리오는 통합 S 의 `app-scenarios-release` 통과(1300 s, 시나리오 Warning/Error 0)로 덮여 항목을 지웠다.
 
 ## 조건부
 
