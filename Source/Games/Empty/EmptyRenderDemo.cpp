@@ -1,8 +1,11 @@
 #include "pch.h"
 
-#include "Games/Empty/EmptyRenderDemo.h"
+// 렌더러 헤더를 쓰는 시연이라 클라이언트 빌드에만 있다(서버는 Engine/Renderer 를 짓지 않아 이 번역 단위가 링크 오류가 된다).
+#if defined( SW_WITH_CLIENT_CODE )
 
-#include "Core/Math/MatrixMath.h"
+    #include "Games/Empty/EmptyRenderDemo.h"
+
+    #include "Core/Math/MatrixMath.h"
 
 namespace sw
 {
@@ -81,3 +84,5 @@ namespace sw
         { static_cast<EmptyDrawDemoProxy&>( proxy ).setElements( listCube ); } ) );
     }
 } // namespace sw
+
+#endif // SW_WITH_CLIENT_CODE

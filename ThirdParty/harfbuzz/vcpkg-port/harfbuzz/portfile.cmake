@@ -39,6 +39,14 @@ vcpkg_cmake_configure(
 )
 vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(PACKAGE_NAME harfbuzz CONFIG_PATH lib/cmake/harfbuzz)
+# 업스트림 내보내기는 포함 경로를 `${CMAKE_INSTALL_INCLUDEDIR}/harfbuzz` 로 적는데, vcpkg 의 설치 경로 치환이 `include` 를 지워
+# 설치된 설정 파일이 `INTERFACE_INCLUDE_DIRECTORIES "/harfbuzz"` 가 되어 `<hb.h>` 를 못 찾는다(2026-10-29 설치 · 빌드에서 확인). 접두사 기준으로 되돌린다.
+file(READ "${CURRENT_PACKAGES_DIR}/share/harfbuzz/harfbuzzConfig.cmake" swHarfBuzzConfig)
+string(REPLACE "INTERFACE_INCLUDE_DIRECTORIES \"/harfbuzz\"" "INTERFACE_INCLUDE_DIRECTORIES \"\${_IMPORT_PREFIX}/include/harfbuzz\"" swHarfBuzzConfigFixed "${swHarfBuzzConfig}")
+if(swHarfBuzzConfigFixed STREQUAL swHarfBuzzConfig)
+    message(FATAL_ERROR "harfbuzzConfig.cmake 의 포함 경로 모양이 달라졌다 — 오버레이 포트의 치환을 업스트림에 맞춰 고쳐라")
+endif()
+file(WRITE "${CURRENT_PACKAGES_DIR}/share/harfbuzz/harfbuzzConfig.cmake" "${swHarfBuzzConfigFixed}")
 vcpkg_fixup_pkgconfig()
 vcpkg_copy_pdbs()
 
