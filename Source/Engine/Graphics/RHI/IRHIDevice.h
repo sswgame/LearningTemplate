@@ -432,7 +432,7 @@ namespace sw
          * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
          * @details 모든 백엔드의 register/unregister · create/destroy 진입부에서 부른다. 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이라(DX11 `forget*InRecordingStates`,
          *          bindless 표의 디스크립터 참조) 한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
-         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다(결정 기록 5-5).
+         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.
          * @param pWhat 로그에 남길 호출 지점 이름입니다.
          */
         void requireRegistryMutableNow( const utf8* pWhat ) const;
