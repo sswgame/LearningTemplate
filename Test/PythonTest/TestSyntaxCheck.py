@@ -114,6 +114,19 @@ class SyntaxJobTest(SyntaxCheckFixture):
         self.assertEqual([["Source/Mod/New.cpp:1: boom"]], [listDiagnostic for _, listDiagnostic in listResult])
         self.assertTrue(any("이웃 TU" in note for note in listNote), listNote)
 
+    def testBorrowedFlagsDropEditorLayerStubsButOwnEntryKeepsThem(self) -> None:
+        stubFlag = f"-I{self.buildDir}/generated/sw/EditorLayerStubs/tier0"
+        self.database = [self.makeEntry(self.root / "Source" / "Mod" / "A.cpp", stubFlag)]
+        newSource = self.writeSource("New.cpp", "int ok;\n")
+        _, listNote = self.runJobs([newSource])
+        self.assertTrue(any("껍데기는 뗀다" in note for note in listNote), listNote)
+        with tempfile.TemporaryDirectory() as probeDir:
+            listJob, _ = planSyntaxJobs(self.root, self.buildDir, [newSource, self.root / "Source" / "Mod" / "A.cpp"], self.database, Path(probeDir))
+        mapCommand = {job.source.name: job.entry["command"] for job in listJob}
+        self.assertNotIn("EditorLayerStubs", mapCommand["New.cpp"])   # 빌린 층 껍데기는 떼고
+        self.assertIn("EditorLayerStubs", mapCommand["A.cpp"])        # 자기 항목은 그대로 둔다
+        self.assertIn(str(self.root / "Source"), mapCommand["New.cpp"])
+
     def testChangedHeaderRunsProbeAndIncluders(self) -> None:
         listResult, _ = self.runJobs([self.root / "Source" / "Mod" / "A.h"])
         mapDiagnostic = {job.source.name: listDiagnostic for job, listDiagnostic in listResult}

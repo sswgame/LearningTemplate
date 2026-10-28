@@ -14,6 +14,7 @@ TU, 리플렉션 코드젠(빌드 폴더의 `.gen.h` 는 메인 기준이라 어
 from __future__ import annotations
 
 import re
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
@@ -41,6 +42,28 @@ _kMaxIncluderPerHeader = 2
 
 _kFileLineRe = re.compile(r"^(?P<file>.+?)(?:\((?P<msvcLine>\d+)(?:,\d+)?\)|:(?P<gccLine>\d+)(?::\d+)?): (?:fatal )?error: (?P<message>.+)$")
 _kBareErrorRe = re.compile(r"(?:fatal )?error: (.+)")
+
+
+#: 에디터 층 껍데기 폴더 이름 — `Source/Editor/CMakeLists.txt` 의 `sw_addEditorLayerStubs` 가 `<빌드>/generated/sw/EditorLayerStubs/tier<N>` 로 만들고 층 TU 의 `-I` 맨 앞에 놓는다.
+_kEditorLayerStubFolder = "EditorLayerStubs"
+
+
+def isLayerStubFlagInternal(token: str) -> bool:
+    return token.startswith(("-I", "/I")) and _kEditorLayerStubFolder in token
+
+
+def dropLayerStubFlags(entry: dict) -> dict:
+    """
+    컴파일 DB 항목에서 에디터 층 껍데기 `-I` 를 뗀다(원본은 건드리지 않는다).
+
+    층 TU 는 윗층 헤더 자리에 `#error` 껍데기를 놓는 `-I` 를 받아 층 규칙을 어기는 include 에서 멈춘다. 그런데 자기 항목이 DB 에 없어 **이웃 TU 의 플래그를 빌려 온** 파일은
+    이웃의 층이 자기 층과 다를 수 있다(새 파일 · 낡은 DB) — 빌린 껍데기가 자기 층이 쓰는 진짜 헤더를 가려 `EditorInputActions.cpp` 같은 파일이 거짓으로 실패한다.
+    층 규칙은 빌드가 지키고 이 검사는 문법만 보므로 빌린 항목에서는 껍데기를 떼 진짜 헤더가 보이게 한다.
+    """
+    if "arguments" in entry:
+        return {**entry, "arguments": [token for token in entry["arguments"] if not isLayerStubFlagInternal(str(token))]}
+    listToken = shlex.split(str(entry.get("command", "")), posix=False)
+    return {**entry, "command": " ".join(token for token in listToken if not isLayerStubFlagInternal(token))}
 
 
 @dataclass(frozen=True)
@@ -114,7 +137,8 @@ def planSyntaxJobs(root: Path, buildDir: Path, listFile: Sequence[Path], databas
         if entry is None:
             entry = findSeedEntry(pathKey, listSeed)
             if entry is not None:
-                listNote.append(f"{label}: 컴파일 DB 에 없어 이웃 TU 의 플래그를 썼다 — {makeRelativeLabel(root, Path(str(entry['file'])))}")
+                listNote.append(f"{label}: 컴파일 DB 에 없어 이웃 TU 의 플래그를 썼다(에디터 층 껍데기는 뗀다) — {makeRelativeLabel(root, Path(str(entry['file'])))}")
+                entry = dropLayerStubFlags(entry)
         addJobInternal(label, path, entry)
 
     for path in listFile:
@@ -126,7 +150,8 @@ def planSyntaxJobs(root: Path, buildDir: Path, listFile: Sequence[Path], databas
         if spelling is not None:
             probe = probeDir / (spelling.replace("/", "_")[:-2] + "_probe.cpp")
             probe.write_text('#include "%s"\n' % spelling, encoding="utf-8")
-            addJobInternal(f"{label} (헤더 단독)", probe, findSeedEntry(normalizePath(path.resolve()), listSeed))
+            seedEntry = findSeedEntry(normalizePath(path.resolve()), listSeed)
+            addJobInternal(f"{label} (헤더 단독)", probe, dropLayerStubFlags(seedEntry) if seedEntry is not None else None)
         for includer in findIncluders(root, path, mapEntryByFile):
             addSourceInternal(f"{makeRelativeLabel(root, includer)} ({label} 을 include)", includer)
     return list(mapJob.values()), listNote
