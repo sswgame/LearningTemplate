@@ -2505,6 +2505,12 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMultiplayer.ProfilerRecordHidden"
+		       source="Keep asking the processes for net.stats while another tab is shown (off by default - every child process logs a line at 2 Hz)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.ProfilerReplicas" source="Replication by name (per second)">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>

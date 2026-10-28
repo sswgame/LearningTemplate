@@ -225,6 +225,10 @@ namespace sw::editor
                     entry._pTab->drawTab( context );
                     ImGui::EndTabItem();
                 }
+                else
+                {
+                    entry._pTab->updateWhileHidden( context );
+                }
             }
             ImGui::EndTabBar();
         }

@@ -845,6 +845,40 @@ SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
 }
 
 /**
+ * @brief [AuthorityGhostTest] 회전 · 히트박스 묶음을 쓰고 되읽고(공백이 든 이름 포함), 옛 형식과 섞여도 읽고, 각도 차와 상자 중심 거리를 구한다(서버 디버깅 S6)
+ */
+SW_TEST_CASE( AuthorityGhostTest, RoundTripsRotationAndHitBoxAndComputesAngle )
+{
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
+#if !defined( SW_SHIPPING )
+    vector<AuthorityPose> listServer;
+    AuthorityGhost::parsePoses( "Hero Knight 1 2 3 rot 0 0.7071068 0 0.7071068 box 1 3 3 0.5 1 0.5\nLegacy 4 5 6\n", listServer );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listServer.size() ) );
+    SW_EXPECT_TRUE( listServer[0]._name == "Hero Knight" );
+    SW_EXPECT_TRUE( listServer[0]._bHasRotation && listServer[0]._bHasBox );
+    SW_EXPECT_TRUE( listServer[0]._boxHalfExtent._y == 1.0f );
+    SW_EXPECT_TRUE( listServer[1]._bHasRotation == false && listServer[1]._bHasBox == false ); // 옛 형식은 묶음이 없다
+    string written;
+    AuthorityGhost::writePoses( listServer, written );
+    vector<AuthorityPose> listAgain;
+    AuthorityGhost::parsePoses( written, listAgain );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listAgain.size() ) );
+    SW_EXPECT_TRUE( listAgain[0]._name == "Hero Knight" && listAgain[0]._bHasBox && listAgain[0]._rotation._y == listServer[0]._rotation._y );
+
+    vector<AuthorityPose> listLocal;
+    AuthorityGhost::parsePoses( "Hero Knight 1 2 3 rot 0 0 0 1 box 1 3 3 0.5 1 0.5\nLegacy 4 5 6 rot 0 0 0 1\n", listLocal );
+    vector<AuthorityDelta> listDelta;
+    AuthorityGhost::computeDeltas( listLocal, listServer, listDelta );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listDelta.size() ) );
+    const AuthorityDelta* pHero = listDelta[0]._name == "Hero Knight" ? &listDelta[0] : &listDelta[1];
+    SW_EXPECT_TRUE( pHero->_angleDegrees > 89.9f && pHero->_angleDegrees < 90.1f ); // 요 90 도
+    SW_EXPECT_TRUE( pHero->_bHasBoxPair && pHero->_boxCenterDistance == 0.0f );
+    const AuthorityDelta* pLegacy = pHero == &listDelta[0] ? &listDelta[1] : &listDelta[0];
+    SW_EXPECT_TRUE( pLegacy->_angleDegrees == 0.0f && pLegacy->_bHasBoxPair == false ); // 한쪽에 없으면 0
+#endif
+}
+
+/**
  * @brief [ServerBootTest] 클라이언트의 로컬 포즈와 서버가 읽어 준 포즈의 차이가 서버에서 옮긴 거리와 같다(서버 디버깅 S6)
  * @details 확인 시나리오: 서버의 `scene.poses` 를 "내 화면"으로 삼고 -> 서버에서 오브젝트를 옮기고 -> 다시 읽은 서버 포즈와 비교해 차이가 옮긴 거리로 나온다.
  */

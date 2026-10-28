@@ -37,17 +37,17 @@ Profiler 탭과 `net.stats` 질의, 종류별 셈(`NetMessageKindTallyTable`, �
 
 - 눈으로 보는 확인: 두 프로세스 합친 트레이스의 화살표(`netplay.scenario.xml` + `-gv_traceSaveOnExit`). 확인 대기: 매니페스트 id `net-stats-replicas-tests` · `profiler-replica-rate-tests` · `game-net-session-replica-stats-tests`.
 - 한 줄 답의 상한은 Core 의 `DebugReplyLine::kMaxBytes`(3500) 하나다(`Core/Network/DebugReplyLine.h`, 2026-10-26 `wt/linecap` · `wt/netstats`, 빌드 전). 줄일 수 있는 꼬리가 있는 줄(`net.stats`)은 `DebugReplyLine::makeCapped`(`NetStatsReport::makeLine` 이 유일한 길 — 넘으면 뒤의 항목을 빼고 ` truncated=<원래 길이>` 를 붙이고 읽는 쪽이 `_truncatedLineBytes` 로 되읽음), 길이가 정해진 줄(`net.emulation stats`)은 `makeFixed` 가 만들고, 줄일 수 없는 줄(`state.objectline` · `state.hashline`)은 `fits` 로 재서 넘으면 오류로 멈춘다(S7). Sync 탭 질의(이력 · 오브젝트 해시)는 시간 상한(`EditorSyncPreferences._clientReplyTimeoutSeconds`, 기본 10 초)을 넘으면 대기를 끝내고 오류 글을 보인다. 확인 대기: 매니페스트 id `net-stats-replicas-tests`(새 테스트 `DebugReplyLineTest.*` · `OverlongLineIsCappedAndMarkedTruncated`).
-- 복제 키트(`ReplicationServer` · 파괴 복제 · MMO)가 틱마다 자기 합을 올리는 한 줄씩(셈이 있는 `DestructionReplicationStats` 부터).
-- 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 늘 묻게 하면 자식 로그에 2 Hz 줄이 쌓인다.
-- 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오. 봇이 "online kit 'matchmaking' could not initialize" 로 서던 것(프로세스에 엔진 서비스 · 타입 레지스트리가 없어 모드 범위 검사가 실패)은 봇 `Main.cpp` 가 `ServerApp` 처럼 호스트 범위 + `Engine`(DedicatedServer)을 세워 고쳤다(`wt/loadbot`, 빌드 전). 빌드 뒤의 확인은 부하 검증 loadbot 구동기(`Scripts/qa/Load.py`)가 `--local-server` 로 돈다.
+- 키트별 복제 통계(들어감, 빌드 전): 파괴 복제(`DestructionNetSessionComponent`, 이름 `destruction` — 사건 · 자세 · 멈춤 · 스냅숏 · 해시 메시지 수와 보낸 바이트)와 페어드 애니메이션(`PairedAnimationNetSessionComponent`, 이름 `paired_animation` — 바이트는 세지 않아 0)이 틱마다 `setReplicaStats` 로 자기 합을 올린다. 클라이언트는 보낸 양이 없어 서버 쪽 값이 주로 오른다. `ReplicationServer` 와 MMO 복제는 키트에 셈 구조가 없어 올리지 않았다(셈을 먼저 만들어야 한다).
+- 탭이 보이지 않을 때도 기록하기(들어감, 빌드 전): `IMultiplayerTab::updateWhileHidden` 을 창이 열려 있고 그 탭이 고른 탭이 아닐 때 부르고, Profiler 탭의 "Record while hidden" 체크(기본 꺼짐 — 자식 로그에 2 Hz 줄이 쌓인다)가 켜져 있으면 `net.stats` 를 묻는다. 창을 닫으면 기록하지 않는다. 번역 키 `EditorMultiplayer.ProfilerRecordHidden` 은 `editor.strings.xml` 에만 더했다(번역 파일의 sourceHash 는 글 수집 도구가 채운다 — 다음 수집에서 `ko` 를 채운다).
+- 부하 봇을 붙인 시나리오는 만들지 않았다: 봇(`Tools/OnlineLoadBot`)은 온라인 서버(TCP)를 치는데 Profiler 는 게임 세션(UDP)의 `net.stats` 를 보므로 봇을 붙여도 숫자가 오르지 않는다고 판단했다(코드로 확인한 것은 봇의 인자 `--server=` · `--local-server` 뿐이다). 숫자가 오르는 확인은 `net.traffic` 이 하는 `netprofiler.scenario.xml` 이 맡는다. 봇이 "online kit 'matchmaking' could not initialize" 로 서던 것은 봇 `Main.cpp` 가 `ServerApp` 처럼 호스트 범위 + `Engine`(DedicatedServer)을 세워 고쳤다(`wt/loadbot`, 빌드 전). 빌드 뒤의 확인은 `Scripts/qa/Load.py` 의 loadbot 구동기(`--local-server`)가 한다.
 
 ### S6 권위 겹쳐 보기 — 남은 것
 
 `AuthorityGhost`(`Source/Engine/Scene`)와 게임 화면 겹치기(`-gv_debugDrawGameView=1`, `DebugDrawCanvasUtil`, 게임 뷰 툴바 벌레 단추)는 들어갔습니다. 클라이언트가 `-gv_authorityGhostPort=N -gv_authorityGhostToken=T` 로 디버그 채널에 붙어 `scene.poses` 를 4 Hz 로 읽고 서버 위치 고스트 · 어긋난 거리 선을 그립니다. 개발 명령 `net.ghost` 가 차이를 글로 알립니다(ServerTest `AuthorityGhostDeltaMatchesHowFarTheServerMovedAnObject`).
 
 - 눈으로 보는 확인: 클라이언트 App 을 `-gv_authorityGhostPort … -gv_debugDrawGameView=1 -gv_screenshot=…` 로 띄워 캡처에 고스트가 보이는지 네 백엔드로 본다.
-- 서버가 실제로 가진 위치를 읽는다(복제 키트가 마지막으로 알린 자세가 아니다). 복제 · 보간 지연 숫자는 키트가 마지막 수신 자세를 `NetStatsReport` 처럼 싣는 창구를 정해야 한다.
-- 회전 · 히트박스(랙 보상 기록) 고스트: 지금은 위치만.
+- 서버가 실제로 가진 위치: `scene.poses` 가 서버 씬의 월드 트랜스폼을 직접 읽으므로(복제 키트가 마지막으로 알린 자세가 아니다) 이미 그렇다. 복제 · 보간 지연 숫자는 키트가 마지막 수신 자세를 `NetStatsReport` 처럼 싣는 창구를 정해야 하고, 아직 없다.
+- 회전 · 히트박스(들어감, 빌드 전): `scene.poses` 줄이 `name x y z [rot qx qy qz qw] [box cx cy cz hx hy hz]` 로 늘었고(옛 형식도 읽는다 — `parsePoses` 가 뒤에서부터 떼어 낸다, 쓰기는 `writePoses`), `AuthorityDelta` 에 회전 각도 차 · 상자 중심 거리가 더해졌다. 고스트는 서버의 상자를 서버 회전으로 돌려 그리고 앞쪽(+Z) 화살표를 보이며, 위치가 같아도 각도가 어긋나면 선 · 글(`… deg`)을 낸다. 히트박스는 오브젝트가 선언한 월드 상자(`getWorldBox`)이다 — 엔진이 키트의 랙 보상 몸(`LagRecord`, 위치 + 반지름)을 알 수 없어 그 몸 자체는 그리지 못한다(키트가 같은 줄 형식으로 몸을 싣는 창구가 필요하다). 새 테스트 `AuthorityGhostTest.RoundTripsRotationAndHitBoxAndComputesAngle` 가 형식 · 각도 계산을 덮는다(아직 돌리지 않았다 — 통합의 서버 테스트 묶음이 돌린다).
 
 ### S7 어긋남 찾기 — 남은 것
 

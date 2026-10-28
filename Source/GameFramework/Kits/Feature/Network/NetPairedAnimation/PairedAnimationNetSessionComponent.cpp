@@ -61,12 +61,26 @@ namespace sw
         Component::onEndPlay();
     }
 
+    void PairedAnimationNetSessionComponent::reportReplicaStats()
+    {
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession == nullptr )
+            return;
+        // 이 키트는 바이트를 세지 않는다(0) — 갱신 수만 오른다. 서버는 보낸 상태 · 끝 메시지, 클라이언트는 복원 · 끝으로 중단한 수이다.
+        const PairedAnimationReplicationStats& stats       = _bServer == SW_TRUE ? _server.getStats() : _client.getStats();
+        const uint64                           updateCount = _bServer == SW_TRUE ? static_cast<uint64>( stats._stateSentCount ) + stats._endSentCount
+                                                                                 : static_cast<uint64>( stats._appliedCount ) + stats._endAppliedCount;
+        (void)pNetSession->setReplicaStats( "paired_animation", updateCount, 0 );
+    }
+
     void PairedAnimationNetSessionComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
         const bool bSends = _routerSubscription.isActive() && _bServer == SW_TRUE;
         if ( bSends )
             _server.update();
+        if ( _routerSubscription.isActive() )
+            reportReplicaStats();
         // 클라이언트: 클립을 읽는 중이라 보관한 상태는 준비된 뒤 복원한다 — 세션이 다른 오브젝트의 애니메이터를 바꾸므로 틱 뒤에 한다.
         const bool         bRetries = _routerSubscription.isActive() && _bServer == SW_FALSE && _client.getPendingCount() > 0;
         GameObject*        pOwner   = getOwner();

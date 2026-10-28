@@ -160,6 +160,7 @@ namespace sw::editor
         MultiplayerProfilerTab();
 
         void drawTab( const MultiplayerTabContext& context ) override;
+        void updateWhileHidden( const MultiplayerTabContext& context ) override;
 
     private:
         /** @brief 대상의 시계열을 칸마다 한 장씩 그립니다. */
@@ -174,6 +175,7 @@ namespace sw::editor
         vector<EditorNetKindShare> _listShareScratch;
         bool                       _bAllProcessKinds; ///< 비중을 대상 대신 모든 프로세스의 합으로 본다
         bool                       _bSentKinds;       ///< 비중을 받은 메시지 대신 보낸 메시지(큐에 넣은 것)로 본다
+        bool                       _bRecordHidden;    ///< 다른 탭을 보는 동안에도 `net.stats` 를 묻는다(기본 꺼짐 — 자식 로그에 2 Hz 줄이 쌓인다)
     };
 } // namespace sw::editor
 
@@ -185,7 +187,15 @@ namespace sw::editor
         , _listShareScratch{}
         , _bAllProcessKinds{ false }
         , _bSentKinds{ false }
+        , _bRecordHidden{ false }
     {
+    }
+
+    void MultiplayerProfilerTab::updateWhileHidden( const MultiplayerTabContext& context )
+    {
+        if ( _bRecordHidden == false || context._pSession == nullptr )
+            return;
+        MultiplayerProfilerTabInternal::getHistory().update( *context._pSession, MultiplayerProfilerTabInternal::nowSeconds() );
     }
 
     void MultiplayerProfilerTab::drawGraphs( const EditorNetProfilerTrack& track )
@@ -282,6 +292,8 @@ namespace sw::editor
         EditorNetPlaySession&     session = *context._pSession;
         EditorNetProfilerHistory& history = MultiplayerProfilerTabInternal::getHistory();
         history.update( session, MultiplayerProfilerTabInternal::nowSeconds() );
+        ImGui::Checkbox( "Record while hidden", &_bRecordHidden );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerRecordHidden" ) );
         const EditorNetProfilerTrack* pTrack          = history.findTrack( context._targetProcessIndex );
         const bool                    bNoProfilerData = context._targetProcessIndex < 0 || pTrack == nullptr || pTrack->_series.getCount() == 0;
         if ( bNoProfilerData )

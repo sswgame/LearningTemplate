@@ -41,6 +41,9 @@ namespace sw
         const DestructionNetSession& getSession() const { return _session; }
 
     private:
+        /** @brief 파괴 복제의 누적 셈을 `GameNetSession::setReplicaStats( "destruction" … )` 로 올립니다(Profiler 탭의 `replicas=` 표). */
+        void reportReplicaStats();
+
         PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Server fixed step; pose times are tick x interval, so it must equal the server tick" )
         float32 _tickInterval;
         PROPERTY( Category = "Network", DisplayName = "Hash Interval", Min = 0.1, Units = s, Tooltip = "How often the server sends its structure hash for the clients to compare" )

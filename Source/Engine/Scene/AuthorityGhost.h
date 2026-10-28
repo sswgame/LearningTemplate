@@ -5,8 +5,9 @@
  *          게임 스레드의 `update` 는 최근 서버 포즈를 이름으로 로컬 씬의 오브젝트와 맞춰 차이(`AuthorityDelta`)를 구하고, 서버 위치에 고스트 상자를,
  *          어긋난 오브젝트에는 로컬 위치에서 고스트까지 선과 거리 글을 디버그 드로우 큐에 올립니다. 개발 명령 `net.ghost` 가 같은 차이를 글로 알립니다.
  *          값은 서버가 **실제로 가진** 위치입니다(복제 키트가 마지막으로 알린 자세가 아니다) - 복제 지연 · 보간 · 예측 오차가 모두 이 차이로 보입니다.
- *          한계: 이름이 같은 오브젝트끼리 맞추고(이름이 없거나 한쪽에만 있으면 건너뜀), 차이는 월드 위치뿐입니다(회전 · 히트박스는 더하는 자리).
- *          위치 읽기는 `scene.poses` 명령의 글(`<이름> x y z`)이라 파서와 비교(`parsePoses` · `computeDeltas`)는 서버 없이 테스트합니다.
+ *          한계: 이름이 같은 오브젝트끼리 맞춥니다(이름이 없거나 한쪽에만 있으면 건너뜀). 차이는 위치 거리 · 회전 각도 차 · 히트박스 중심 거리이고,
+ *          고스트는 서버의 회전한 상자(상자가 없으면 기본 크기 상자)로 그립니다. 히트박스는 오브젝트가 선언한 월드 상자(`getWorldBox`)이고 키트의 랙 보상 몸이 아닙니다.
+ *          읽기는 `scene.poses` 명령의 글(`<이름> x y z [rot …] [box …]`)이라 파서와 비교(`parsePoses` · `writePoses` · `computeDeltas`)는 서버 없이 테스트합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -30,24 +31,42 @@ namespace sw
     class GameObjectManager;
     class Scene;
 
-    /** @brief 이름 있는 오브젝트의 월드 위치입니다. */
+    /**
+     * @brief 이름 있는 오브젝트의 월드 위치 · 회전 · 히트박스입니다.
+     * @details 회전과 히트박스는 없을 수 있다(`_bHasRotation` · `_bHasBox`) — 옛 형식의 글이나 크기 없는 컴포넌트다.
+     *          히트박스는 `SceneComponent::getWorldBox` 의 월드 축 정렬 상자(중심 · 반 크기)다. 엔진은 키트의 랙 보상 몸(`LagRecord`)을 알지 못하므로
+     *          판정이 쓰는 몸 대신 오브젝트가 선언한 상자를 보인다.
+     */
     struct AuthorityPose
     {
         string           _name;
         float3           _position{};
+        float4           _rotation{ 0.0f, 0.0f, 0.0f, 1.0f }; ///< 월드 회전 쿼터니언(x y z w)
+        float3           _boxCenter{};
+        float3           _boxHalfExtent{};
         GameObjectHandle _object{}; ///< 로컬 포즈의 오브젝트다(`collectPoses`). 서버 글에서 읽은 포즈는 비어 있다
+        bool             _bHasRotation{ false };
+        bool             _bHasBox{ false };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 같은 이름의 오브젝트에서 로컬과 서버 위치의 차이입니다. */
+    /** @brief 같은 이름의 오브젝트에서 로컬과 서버 위치 · 회전 · 히트박스의 차이입니다. */
     struct AuthorityDelta
     {
         string  _name;
         float3  _local{};
         float3  _server{};
-        float32 _distance{ 0.0f };
+        float32 _distance{ 0.0f };          ///< 월드 위치의 거리(m)
+        float32 _angleDegrees{ 0.0f };      ///< 회전의 각도 차(도). 한쪽에 회전이 없으면 0
+        float32 _boxCenterDistance{ 0.0f }; ///< 히트박스 중심의 거리(m). 한쪽에 상자가 없으면 0
+        float4  _serverRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float3  _serverBoxCenter{};
+        float3  _serverBoxHalfExtent{};
+        bool    _bHasServerRotation{ false };
+        bool    _bHasServerBox{ false };
+        bool    _bHasBoxPair{ false }; ///< 두 쪽 모두 상자가 있다(`_boxCenterDistance` 가 뜻을 가진다)
     };
 } // namespace sw
 
@@ -70,9 +89,14 @@ namespace sw
         AuthorityGhost();
         ~AuthorityGhost() override;
 
-        /** @brief `scene.poses` 의 글을 되읽습니다. 읽지 못한 줄은 건너뜁니다. */
+        /**
+         * @brief `scene.poses` 의 글을 되읽습니다. 읽지 못한 줄은 건너뜁니다.
+         * @details 줄 형식: `<이름> x y z [rot qx qy qz qw] [box cx cy cz hx hy hz]`. 뒤의 두 묶음은 있어도 없어도 된다(옛 형식 `<이름> x y z` 도 읽는다).
+         */
         static void parsePoses( string_view text, vector<AuthorityPose>& outListPose );
-        /** @brief 매니저의 이름 있는 오브젝트 중 트랜스폼이 있는 것의 월드 위치를 이름 순으로 채웁니다. */
+        /** @brief `parsePoses` 가 읽는 형식으로 포즈를 한 줄씩 씁니다(`scene.poses` 의 답). 회전 · 상자가 있는 포즈만 그 묶음을 붙입니다. */
+        static void writePoses( const vector<AuthorityPose>& listPose, string& outText );
+        /** @brief 매니저의 이름 있는 오브젝트 중 트랜스폼이 있는 것의 월드 위치 · 회전 · 히트박스(있으면)를 이름 순으로 채웁니다. */
         static void collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose );
         /** @brief 이름이 같은 쌍의 차이를 거리가 큰 순서로 채웁니다. 한쪽에만 있는 오브젝트는 건너뜁니다. */
         static void computeDeltas( const vector<AuthorityPose>& listLocal, const vector<AuthorityPose>& listServer, vector<AuthorityDelta>& outListDelta );

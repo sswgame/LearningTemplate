@@ -5,7 +5,7 @@
  *          디버그 채널(`DebugChannel`)은 이 명령들을 원격으로 부를 뿐이라, 같은 명령을 표준 입력 콘솔과 에디터 콘솔에서도 씁니다.
  *          - `scene.tree [limit]`: 오브젝트 한 줄씩(`id name parent=… active=… components=…`), ID 순.
  *          - `object.dump <name>`: 이름이 같은 첫 오브젝트의 컴포넌트와 프로퍼티 값(`Type.property = value`).
- *          - `scene.poses`: 이름 있는 오브젝트의 월드 위치(`name x y z`), 이름 순. 클라이언트의 권위 고스트(`AuthorityGhost`)가 읽는다.
+ *          - `scene.poses`: 이름 있는 오브젝트의 월드 위치 · 회전 · 히트박스(`name x y z rot qx qy qz qw box cx cy cz hx hy hz`, 뒤 두 묶음은 있을 때만), 이름 순. 클라이언트의 권위 고스트(`AuthorityGhost`)가 읽는다.
  *          - `state.hash`: 지금 씬 상태 해시. `state.hashes <from> <count>`: 틱별 이력(`SceneStateHash`).
  */
 #include "pch.h"
@@ -164,18 +164,7 @@ namespace sw
                 }
                 vector<AuthorityPose> listPose;
                 AuthorityGhost::collectPoses( *pManager, listPose );
-                outReply.clear();
-                for ( const AuthorityPose& pose : listPose )
-                {
-                    outReply += pose._name;
-                    outReply += ' ';
-                    appendFloat( outReply, pose._position._x );
-                    outReply += ' ';
-                    appendFloat( outReply, pose._position._y );
-                    outReply += ' ';
-                    appendFloat( outReply, pose._position._z );
-                    outReply += '\n';
-                }
+                AuthorityGhost::writePoses( listPose, outReply );
                 return true;
             }
 
@@ -303,7 +292,7 @@ namespace sw
     SW_DEV_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
     SW_DEV_COMMAND( ObjectDump, "object.dump", "object.dump <name>", "Print the components and property values of a named object of the active scene",
                     &SceneInspectCommandsInternal::runObjectDump );
-    SW_DEV_COMMAND( ScenePoses, "scene.poses", "scene.poses", "Print the world position of every named object that has a transform (name x y z)", &SceneInspectCommandsInternal::runPoses );
+    SW_DEV_COMMAND( ScenePoses, "scene.poses", "scene.poses", "Print the world position, rotation and hit box of every named object that has a transform (name x y z [rot qx qy qz qw] [box cx cy cz hx hy hz])", &SceneInspectCommandsInternal::runPoses );
     SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
     SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
                     &SceneInspectCommandsInternal::runStateObjects );

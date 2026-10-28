@@ -83,5 +83,17 @@ namespace sw
             }
         }
         _session.update( deltaTime );
+        reportReplicaStats();
+    }
+
+    void DestructionNetSessionComponent::reportReplicaStats()
+    {
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession == nullptr )
+            return;
+        // 누적 셈을 틱마다 올린다(같은 이름은 덮는다). 서버는 보낸 양, 클라이언트는 받아 적용한 자세 · 사건 수가 갱신 수이다.
+        const DestructionReplicationStats& stats       = _session.getStats();
+        const uint64                       updateCount = stats._eventMessageCount + stats._poseMessageCount + stats._restPoseCount + stats._snapshotCount + stats._hashMessageCount;
+        (void)pNetSession->setReplicaStats( "destruction", updateCount, stats._sentBytes );
     }
 } // namespace sw

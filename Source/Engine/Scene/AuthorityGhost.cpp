@@ -9,6 +9,9 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Log/Logger.h"
+    #include "Core/Math/AABB.h"
+    #include "Core/Math/MathUtil.h"
+    #include "Core/Math/MatrixMath.h"
     #include "Core/Time/MonotonicClock.h"
 
     #include "Engine/Common/EngineServices.h"
@@ -40,6 +43,7 @@ namespace sw
             static constexpr int32   kRequestTimeoutMilli     = 1000;
             static constexpr float32 kVisibleDistance         = 0.01f; ///< 이보다 가까우면 어긋남으로 치지 않는다(선 · 글을 그리지 않음)
             static constexpr float32 kGhostHalfExtent         = 0.5f;
+            static constexpr float32 kVisibleAngleDegrees     = 0.5f; ///< 이보다 덜 돌아갔으면 어긋남으로 치지 않는다
 
             static float32 distance( const float3& left, const float3& right )
             {
@@ -54,6 +58,59 @@ namespace sw
                 utf8                       arrBuffer[constant::kMaxBuffer32];
                 const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
                 outText.append( arrBuffer, result.ptr );
+            }
+
+            /**
+             * @brief @p rest 의 끝에서 `<keyword> v0 v1 …`(숫자 @p count 개) 묶음을 떼어 @p pOutValue 에 씁니다. 묶음이 없으면 false 이고 @p rest 는 그대로입니다.
+             * @details 이름이 공백을 품을 수 있으므로 앞에서가 아니라 뒤에서부터 센다.
+             */
+            static bool peelSection( string_view& rest, string_view keyword, float32* pOutValue, int32 count )
+            {
+                string_view work = rest;
+                for ( int32 index = count - 1; index >= 0; --index )
+                {
+                    const size_t space = work.rfind( ' ' );
+                    if ( space == string_view::npos || StringUtil::parseFloat( work.substr( space + 1 ), pOutValue[index] ) == false )
+                        return false;
+                    work = work.substr( 0, space );
+                }
+                const size_t keywordSpace = work.rfind( ' ' );
+                if ( keywordSpace == string_view::npos || work.substr( keywordSpace + 1 ) != keyword )
+                    return false;
+                rest = work.substr( 0, keywordSpace );
+                return true;
+            }
+
+            static float32 computeAngleDegrees( const float4& left, const float4& right )
+            {
+                const float32 dot     = std::fabs( left._x * right._x + left._y * right._y + left._z * right._z + left._w * right._w );
+                const float32 cosHalf = dot > 1.0f ? 1.0f : dot;
+                return 2.0f * std::acos( cosHalf ) * MathUtil::kRadianToDegree;
+            }
+
+            static void appendFloat3( string& outText, const float3& value )
+            {
+                appendFloat( outText, value._x );
+                outText += ' ';
+                appendFloat( outText, value._y );
+                outText += ' ';
+                appendFloat( outText, value._z );
+            }
+
+            /** @brief 루트 씬 컴포넌트의 월드 위치 · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
+            static void readPoseValues( const SceneComponent& root, AuthorityPose& outPose )
+            {
+                outPose._position     = root.getWorldPosition();
+                const quaternion rot  = root.getWorldMatrix().getRotation();
+                outPose._rotation     = float4{ rot._x, rot._y, rot._z, rot._w };
+                outPose._bHasRotation = true;
+                AABB box;
+                outPose._bHasBox = root.getWorldBox( box ) && box.isValid();
+                if ( outPose._bHasBox )
+                {
+                    outPose._boxCenter     = float3{ ( box._min._x + box._max._x ) * 0.5f, ( box._min._y + box._max._y ) * 0.5f, ( box._min._z + box._max._z ) * 0.5f };
+                    outPose._boxHalfExtent = float3{ ( box._max._x - box._min._x ) * 0.5f, ( box._max._y - box._min._y ) * 0.5f, ( box._max._z - box._min._z ) * 0.5f };
+                }
             }
 
             static bool runGhostReport( const vector<string>& listArgument, string& outReply )
@@ -112,11 +169,22 @@ namespace sw
                 lineEnd = text.size();
             const string_view line = StringUtil::trim( text.substr( lineStart, lineEnd - lineStart ) );
             lineStart              = lineEnd + 1;
-            // 이름은 공백을 품을 수 있으므로 뒤에서부터 숫자 셋을 떼어 낸다.
+            // 이름은 공백을 품을 수 있으므로 뒤에서부터 떼어 낸다 — 선택 묶음(box → rot) 다음 위치 숫자 셋.
             AuthorityPose pose;
-            string_view   rest        = line;
-            bool          bOk         = true;
-            float32*      arrValue[3] = { &pose._position._z, &pose._position._y, &pose._position._x };
+            string_view   rest = line;
+            float32       arrBox[6]{};
+            float32       arrRotation[4]{};
+            pose._bHasBox      = AuthorityGhostInternal::peelSection( rest, "box", arrBox, 6 );
+            pose._bHasRotation = AuthorityGhostInternal::peelSection( rest, "rot", arrRotation, 4 );
+            if ( pose._bHasBox )
+            {
+                pose._boxCenter     = float3{ arrBox[0], arrBox[1], arrBox[2] };
+                pose._boxHalfExtent = float3{ arrBox[3], arrBox[4], arrBox[5] };
+            }
+            if ( pose._bHasRotation )
+                pose._rotation = float4{ arrRotation[0], arrRotation[1], arrRotation[2], arrRotation[3] };
+            bool     bOk         = true;
+            float32* arrValue[3] = { &pose._position._z, &pose._position._y, &pose._position._x };
             for ( float32* pValue : arrValue )
             {
                 const size_t space = rest.rfind( ' ' );
@@ -131,6 +199,32 @@ namespace sw
         }
     }
 
+    void AuthorityGhost::writePoses( const vector<AuthorityPose>& listPose, string& outText )
+    {
+        outText.clear();
+        for ( const AuthorityPose& pose : listPose )
+        {
+            outText += pose._name;
+            outText += ' ';
+            AuthorityGhostInternal::appendFloat3( outText, pose._position );
+            if ( pose._bHasRotation )
+            {
+                outText += " rot ";
+                AuthorityGhostInternal::appendFloat3( outText, float3{ pose._rotation._x, pose._rotation._y, pose._rotation._z } );
+                outText += ' ';
+                AuthorityGhostInternal::appendFloat( outText, pose._rotation._w );
+            }
+            if ( pose._bHasBox )
+            {
+                outText += " box ";
+                AuthorityGhostInternal::appendFloat3( outText, pose._boxCenter );
+                outText += ' ';
+                AuthorityGhostInternal::appendFloat3( outText, pose._boxHalfExtent );
+            }
+            outText += '\n';
+        }
+    }
+
     void AuthorityGhost::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
     {
         outListPose.clear();
@@ -141,8 +235,8 @@ namespace sw
                 return;
             AuthorityPose& pose = outListPose.emplace_back();
             pose._name          = pObject->getName().c_str();
-            pose._position      = pRoot->getWorldPosition();
-            pose._object        = pObject->getHandle();
+            AuthorityGhostInternal::readPoseValues( *pRoot, pose );
+            pose._object = pObject->getHandle();
         } );
         std::sort( outListPose.begin(), outListPose.end(), []( const AuthorityPose& left, const AuthorityPose& right )
         { return left._name < right._name; } );
@@ -157,11 +251,21 @@ namespace sw
             {
                 if ( local._name != server._name )
                     continue;
-                AuthorityDelta& delta = outListDelta.emplace_back();
-                delta._name           = local._name;
-                delta._local          = local._position;
-                delta._server         = server._position;
-                delta._distance       = AuthorityGhostInternal::distance( local._position, server._position );
+                AuthorityDelta& delta      = outListDelta.emplace_back();
+                delta._name                = local._name;
+                delta._local               = local._position;
+                delta._server              = server._position;
+                delta._distance            = AuthorityGhostInternal::distance( local._position, server._position );
+                delta._bHasServerRotation  = server._bHasRotation;
+                delta._serverRotation      = server._rotation;
+                delta._bHasServerBox       = server._bHasBox;
+                delta._serverBoxCenter     = server._boxCenter;
+                delta._serverBoxHalfExtent = server._boxHalfExtent;
+                if ( local._bHasRotation && server._bHasRotation )
+                    delta._angleDegrees = AuthorityGhostInternal::computeAngleDegrees( local._rotation, server._rotation );
+                delta._bHasBoxPair = local._bHasBox && server._bHasBox;
+                if ( delta._bHasBoxPair )
+                    delta._boxCenterDistance = AuthorityGhostInternal::distance( local._boxCenter, server._boxCenter );
                 break;
             }
         }
@@ -189,6 +293,10 @@ namespace sw
             AuthorityGhostInternal::appendFloat( outText, delta._server._y );
             outText += ' ';
             AuthorityGhostInternal::appendFloat( outText, delta._server._z );
+            outText += " angle ";
+            AuthorityGhostInternal::appendFloat( outText, delta._angleDegrees );
+            outText += " box ";
+            AuthorityGhostInternal::appendFloat( outText, delta._boxCenterDistance );
             outText += '\n';
         }
     }
@@ -274,7 +382,7 @@ namespace sw
                 const GameObject*     pObject = pManager->resolveGameObject( pose._object );
                 const SceneComponent* pRoot   = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
                 if ( pRoot != nullptr )
-                    pose._position = pRoot->getWorldPosition();
+                    AuthorityGhostInternal::readPoseValues( *pRoot, pose );
             }
         }
         vector<AuthorityDelta> listDelta;
@@ -284,15 +392,36 @@ namespace sw
         const hashed_string category( "AuthorityGhost" );
         for ( const AuthorityDelta& delta : listDelta )
         {
-            queue.drawBox( delta._server, float3{ AuthorityGhostInternal::kGhostHalfExtent, AuthorityGhostInternal::kGhostHalfExtent, AuthorityGhostInternal::kGhostHalfExtent }, ghostColor, 0.0f,
-                           category );
-            if ( delta._distance <= AuthorityGhostInternal::kVisibleDistance )
+            // 서버의 히트박스가 있으면 그 상자(서버 회전으로 돌려서), 없으면 기본 크기 상자를 서버 위치에 그린다.
+            const float3     ghostCenter   = delta._bHasServerBox ? delta._serverBoxCenter : delta._server;
+            const float3     ghostExtent   = delta._bHasServerBox ? delta._serverBoxHalfExtent
+                                                                  : float3{ AuthorityGhostInternal::kGhostHalfExtent, AuthorityGhostInternal::kGhostHalfExtent, AuthorityGhostInternal::kGhostHalfExtent };
+            const quaternion ghostRotation = delta._bHasServerRotation ? quaternion( delta._serverRotation ) : quaternion::Identity;
+            if ( delta._bHasServerBox && delta._bHasServerRotation )
+                queue.drawOrientedBox( ghostCenter, ghostExtent, ghostRotation, ghostColor, 0.0f, category );
+            else
+                queue.drawBox( ghostCenter, ghostExtent, ghostColor, 0.0f, category );
+            if ( delta._bHasServerRotation )
+            {
+                // 서버가 바라보는 앞쪽(로컬 +Z)을 화살표로 보인다 — 로컬의 방향과 견주는 기준이다.
+                const float3 forward = float3{ 0.0f, 0.0f, 1.0f };
+                const float3 tip     = delta._server + float3::transformVector( forward, float4x4::makeFromQuaternion( ghostRotation ) );
+                queue.drawArrow( delta._server, tip, ghostColor, 0.0f, category );
+            }
+            const bool bAngleOff = delta._angleDegrees > AuthorityGhostInternal::kVisibleAngleDegrees;
+            if ( delta._distance <= AuthorityGhostInternal::kVisibleDistance && bAngleOff == false )
                 continue;
             queue.drawLine( delta._local, delta._server, errorColor, 0.0f, category );
             string label = delta._name;
             label += ' ';
             AuthorityGhostInternal::appendFloat( label, delta._distance );
             label += " m";
+            if ( bAngleOff )
+            {
+                label += ' ';
+                AuthorityGhostInternal::appendFloat( label, delta._angleDegrees );
+                label += " deg";
+            }
             queue.drawText( delta._server, label, errorColor, 0.0f, category );
         }
         ScopedLock<mutex> lock{ _mutex };
@@ -305,15 +434,19 @@ namespace sw
         if ( _bReceived == SW_FALSE )
             return false;
         float32 maxDistance = 0.0f;
+        float32 maxAngle    = 0.0f;
         for ( const AuthorityDelta& delta : _listDelta )
         {
             maxDistance = delta._distance > maxDistance ? delta._distance : maxDistance;
+            maxAngle    = delta._angleDegrees > maxAngle ? delta._angleDegrees : maxAngle;
         }
         outText = "authority ghost: ";
         AuthorityGhostInternal::appendFloat( outText, static_cast<float32>( _listDelta.size() ) );
         outText += " matched objects, max difference ";
         AuthorityGhostInternal::appendFloat( outText, maxDistance );
-        outText += " m\n";
+        outText += " m, max rotation difference ";
+        AuthorityGhostInternal::appendFloat( outText, maxAngle );
+        outText += " deg\n";
         string report;
         writeReport( _listDelta, report );
         outText += report;

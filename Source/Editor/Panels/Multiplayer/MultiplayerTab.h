@@ -38,6 +38,11 @@ namespace sw::editor
         virtual ~IMultiplayerTab() = default;
         /** @brief 탭 본문을 그립니다. 탭이 보일 때만 불립니다. */
         virtual void drawTab( const MultiplayerTabContext& context ) = 0;
+        /**
+         * @brief 창이 열려 있지만 이 탭이 고른 탭이 아닐 때 프레임마다 불립니다(그리지 않는다). 기본은 아무것도 하지 않습니다.
+         * @details 탭 기록을 숨김 중에도 잇고 싶은 탭(Profiler 의 "Record while hidden")이 쓴다. 창을 닫으면 불리지 않는다.
+         */
+        virtual void updateWhileHidden( const MultiplayerTabContext& context ) { (void)context; }
     };
 } // namespace sw::editor
 

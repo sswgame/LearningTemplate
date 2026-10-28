@@ -45,6 +45,9 @@ namespace sw
         const PairedAnimationReplicationClient& getClient() const { return _client; }
 
     private:
+        /** @brief 누적 셈을 `GameNetSession::setReplicaStats( "paired_animation" … )` 로 올립니다(Profiler 탭의 `replicas=` 표). */
+        void reportReplicaStats();
+
         PairedAnimationReplicationServer _server;
         PairedAnimationReplicationClient _client;
         Subscription                     _routerSubscription; ///< 세션 라우터에 단 처리기의 등록. 없으면 시작하지 않았다(처리기보다 뒤에 선언 — 먼저 풀린다)
