@@ -31,7 +31,7 @@ namespace sw
      * @details 스트림은 프로퍼티마다 이름 해시와 기록 타입을 싣는 자기 기술형이라 스키마가 바뀐 뒤에도 읽습니다.
      *          프로퍼티 순서로 짝을 맞추던 컴팩트 모드는 스키마 확인 없이 엉뚱한 필드에 읽혀 지웠습니다. 같은 빌드끼리
      *          주고받는 짧은 바이트는 스키마 해시로 배치를 확인하는 고정 배치형(`FixedLayout`)을 씁니다.
-     *          빌드가 섞인 서버끼리의 메시지와 캐시도 이 형식이므로(docs/09_Decisions.md 5-9 서버 버스), 인코딩 버전(`kCurrentBinaryWireVersion`)을 올릴 때는
+     *          빌드가 섞인 서버끼리의 메시지와 캐시도 이 형식이므로, 인코딩 버전(`kCurrentBinaryWireVersion`)을 올릴 때는
      *          한 배포 동안 옛 버전도 읽어야 합니다. 이 빌드는 지금 버전 하나만 읽으므로 그냥 올리면 섞인 동안 모든 버스 메시지와 캐시 레코드를 읽지 못합니다.
      */
     class SW_API BinarySerializer
@@ -129,7 +129,7 @@ namespace sw
 
         /**
          * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. orphan 수집을 지나지 않습니다.
-         * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다(docs/09_Decisions.md 5-9 서버 버스 읽기 정책). 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
+         * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다. 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
          *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
          *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.
          * @param outReadVersion 읽은 버전 머리입니다. 머리가 없으면 0 입니다.

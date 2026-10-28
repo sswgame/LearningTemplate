@@ -10,7 +10,7 @@
 - **스탬프는 `Memory` 가 나른다.** `AllocationRecord::_windowStamp`(uint32)를 블록 헤더에 적었다가 해제 때 `recordFree` 로 돌려준다(헤더 패딩 `_arrPad[6]` 를 `uint8[2] + uint32` 로 나눠 48 B 와 `static_assert` 유지). `Memory`(티어 2)는 스탬프의 뜻을 모르고 창은 `MemoryProfiler`(Diagnostics, 티어 10)가 맡는다.
 - **창 하나로 합친다.** 기존 태그별 기준선 배열은 지웠다. `captureMemoryLeakBaseline` 이 `TagTotals` 창을 열고 종료 끝(`DiagnosticsSubsystem`)이 `endLeakWindow` 로 닫아 `printLeakWindowReport` 로 찍는다. 두 번째 경로는 없다.
 - **창의 기록 수준은 연 쪽이 고른다(기본값 없음).** `TagTotals` 는 태그별 바이트 · 개수만 센다(할당마다 원자 덧셈 둘). `FullStacks` 는 창 안의 모든 할당의 스택을 잡고 블록마다 기록한다. 설계 검토는 "창 안은 전수 스택 캡처" 였지만 기동부터 종료까지의 긴 창(기준선)까지 전수 캡처하면 Debug 실행이 느려져 기준선 창만 `TagTotals` 로 둔다(4절 측정으로 확인).
-- **`FullStacks` 의 테이블은 블록 주소로 나눈 슬롯이다**(`ShardArray<LeakWindowShard>`, 결정 기록 5-3 메모리 절). 해제하는 스레드가 할당한 스레드와 다를 수 있어 스레드 슬롯으로는 지울 슬롯을 모른다.
+- **`FullStacks` 의 테이블은 블록 주소로 나눈 슬롯이다**. 해제하는 스레드가 할당한 스레드와 다를 수 있어 스레드 슬롯으로는 지울 슬롯을 모른다.
 - **창 없이 `endLeakWindow` 를 부르면 오류다**(단언 + `_bValid` false 인 빈 보고서). `beginLeakWindow` 를 열린 채 다시 부르는 것도 단언이다.
 - **다른 스레드의 할당이 섞이는 한계는 숨기지 않는다.** 창은 프로세스 전체의 할당을 세고 `_foreignThreadBlockCount` · `_foreignThreadBytes` 가 창을 연 스레드가 아닌 스레드의 몫을 따로 알린다(`FullStacks` 만).
 - **회차**: 한 창 안에서 `beginLeakRound()` 로 회차를 넘기면 보고서 줄에 태어난 회차(`_bornRound`)가 남는다(`FullStacks` 만, 씬 로드를 되풀이할 때 어느 회차의 블록이 남았나를 한 창으로 본다).
@@ -24,7 +24,7 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개. 종료 보고가 창 밖까지 사는 저장소(레지스트리 · 호스트 범위 · 정적 캐시)를 누수로 보던 것은 결정 기록 5-3 "종료 누수는 …" 줄대로 정리했다(2026-10-28) | 끝남 |
+| L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개. 종료 보고가 창 밖까지 사는 저장소(레지스트리 · 호스트 범위 · 정적 캐시)를 누수로 보던 것은 방침대로 정리했다(2026-10-28) | 끝남 |
 | L2 | 측정으로 질문 셋에 답한다(4절). 답에 따라 `FullStacks` 의 상한(블록 수 · 스택 깊이)과 기준선 창을 `FullStacks` 로 올릴지를 정한다 | 대기 |
 | L3 | 반복 로드 곡선 검사: 한 씬을 워밍업 1회 + 측정 8회 로드 · 언로드하며 회차마다 창을 닫아 `_totalBytes` · `_totalBlockCount` 곡선을 낸다. 8회가 평평하지 않으면(기울기 > 0) 실패하는 테스트나 시나리오. 판정은 `MemoryProfiler::judgeLeakCurve`(워밍업을 버린 점의 최소제곱 기울기 ≤ `LeakCurveCriteria` 허용치, 점이 모자라면 `_bValid` false)이고 `TestMemoryProfiler` 의 `JudgeLeakCurveSeparatesFlatFromGrowing` · `RepeatedLoadCurveIsFlatWithoutLeakAndSteepWithLeak`(흉내 낸 로드로 정상 · 누수 곡선)가 건다. **기울기 허용치(바이트 256 · 블록 1 / 회차)는 잠정이고 L2 측정 뒤 확정.** 진짜 씬 로드 곡선(엔진 테스트가 같은 판정에 점을 넘긴다)은 남음 | 코드 끝남(2026-10-28, 빌드 · 테스트 안 돌림) · 씬 연결 남음 |
 | L4 | 보고 연결: 종료 보고와 에디터 프로파일러 패널이 `FullStacks` 보고서(줄 · 첫 프레임)를 보이게 한다. 켜는 방법(`gv_*`)과 줄 수 상한은 L2 로 정한다. Core 쪽은 끝남: `captureMemoryLeakBaseline( LeakWindowDetail )` 오버로드(인자 없는 호출은 `TagTotals` 그대로)와 `printLeakWindowReport` 의 줄 수 인자(`kDefaultMaxPrintedLeakEntry` 64 는 잠정, L2 측정 뒤 확정). 엔진 기동이 `gv_*` 를 읽어 오버로드를 부르는 것과 에디터 패널은 남음 | Core 끝남(2026-10-28) · 엔진 · 패널 남음 |
@@ -34,14 +34,14 @@
 
 ## 4. 측정으로 가릴 질문
 
-Release 에서 혼자 돌린다([작업 방식](../11_Workflow.md)). 추정으로 정하지 않는다.
+Release 에서 혼자 돌린다. 추정으로 정하지 않는다.
 1. **씬 로드 한 번의 할당 수**(`getTotalAllocationCount()` 차이) — `FullStacks` 블록 테이블 메모리(블록 하나당 약 40 B + 해시 테이블 오버헤드)와 창이 닫힐 때 정렬 · 묶는 시간이 감당 가능한지.
 2. **전수 캡처의 오버헤드** — 같은 씬 로드를 창 없이 / `TagTotals` / `FullStacks` 로 돌려 로드 시간을 비교하고 `CallStackCapture::capture` 의 할당당 비용, 스택 테이블 잠금(슬롯 16개)의 병렬 로드 대기를 본다. 결과로 기준선 창을 `FullStacks` 로 올릴 수 있는지, 전수가 안 되면 N번째 할당마다 표본을 잡는지를 정한다.
 3. **워밍업 1 + 측정 8 회의 곡선** — 첫 회는 캐시 · 풀이 차는 증가라 버리고 이어지는 8회의 `_totalBytes` 가 평평한지 본다. 평평하다고 판정하는 기울기 임계값과 로더 · 로그 워커가 섞이는 정도를 이 곡선으로 정한다.
 
 ## 5. 읽을 곳 · 고칠 곳
 
-코드: `Source/Core/Memory/Memory.{h,cpp}`(`AllocationRecord` · 헤더) · `Source/Core/Diagnostics/MemoryProfiler.{h,cpp}`(창) · `Source/Engine/Bootstrap/DiagnosticsSubsystem.cpp`(종료 보고) · `Test/CoreTest/Memory/TestMemoryProfiler.cpp`. 층: `Scripts/lint/rules/CheckCoreLayers.toml` 의 Memory 2 · Diagnostics 10(`Memory` 는 `recordFree` 에 `AllocationRecord` 를 넘기는 인터페이스만 알고 창을 모른다). 정본 위치: 결정 기록 5-3 "누수는 창 안에서 태어난 블록으로 잰다".
+코드: `Source/Core/Memory/Memory.{h,cpp}`(`AllocationRecord` · 헤더) · `Source/Core/Diagnostics/MemoryProfiler.{h,cpp}`(창) · `Source/Engine/Bootstrap/DiagnosticsSubsystem.cpp`(종료 보고) · `Test/CoreTest/Memory/TestMemoryProfiler.cpp`. 층: `Scripts/lint/rules/CheckCoreLayers.toml` 의 Memory 2 · Diagnostics 10(`Memory` 는 `recordFree` 에 `AllocationRecord` 를 넘기는 인터페이스만 알고 창을 모른다).
 
 ## 6. 추정 · 확인하지 못한 것
 

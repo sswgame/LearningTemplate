@@ -48,7 +48,6 @@
 - 팩 키의 도메인 떼고 재조회 — 도메인 없는 리소스 id(검색 우선순위로 푸는 형식)가 이에 기대고 있다. 키를 전역 경로로 바꾸려면 도메인 없는 id 쓰는 곳을 먼저 없애야 한다.
 - 렌더러 첨부 선언 필수화는 7.5 P2 가 맡는다.
 - 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관). XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
-- 확인 대기: 매니페스트 id `nav-settings-required-test` · `physics-unknown-material-3d-test` · `physics-unknown-material-2d-test`.
 - 같은 모양은 고쳤다: `NavMeshSettings::ensureDefaults` 삭제(선언하지 않은 표는 `validate` 가 거절), `PhysicsDesc` 의 모르는 재질은 첫 재질로 가지 않고 거절(`resolveMaterial` 이 `nullptr`, `[[nodiscard]]`), `MaterialUtil::parseBlendMode` 는 [SilentFallbackAudit](SilentFallbackAudit.md) 에서 오류로. `CameraPreset` 은 보지 않았다(GameFramework 소관).
 
 ## 6. W4 에서 볼 것

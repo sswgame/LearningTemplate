@@ -75,7 +75,7 @@ namespace sw
             /**
              * @brief Tracy C API 함수 표입니다. 리눅스는 링크한 함수의 주소를, Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 찾은 주소를 담습니다.
              * @details Windows 는 import 라이브러리를 링크하지 않는다 — 일반 import 면 DLL 이 올라오는 순간(프로세스 시작) Tracy 수집 스레드 · 리슨 소켓이
-             *          서고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자(`___tracy_emit_plot` 의 값)를 망가뜨려 쓰지 않는다(docs/09_Decisions.md).
+             *          서고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자(`___tracy_emit_plot` 의 값)를 망가뜨려 쓰지 않는다.
              */
             struct TracyClientAPI
             {

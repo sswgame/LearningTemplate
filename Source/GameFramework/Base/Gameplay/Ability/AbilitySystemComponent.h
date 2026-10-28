@@ -169,7 +169,7 @@ namespace sw
          * @details 막는 곳은 base 를 쓰는 두 경로(이펙트 모디파이어 `applyModifierToBase`, 직접 쓰기 `setAttributeBaseValue`)가 함께 지나는
          *          `guardHealthBaseChange` 하나다. `IncomingDamage` 같은 메타 어트리뷰트도 끝내 `setAttributeBaseValue` 로 체력을 쓰므로 함께 막힌다.
          *          이펙트가 부여 태그로 주면 무적 시간(구르기 · 부활 직후)이고, 치트(`cheat.god`)는 이펙트 없는 태그로 단다(언리얼 Lyra 의
-         *          `Cheat.GodMode`, `Gameplay.DamageImmunity` 에 해당한다. 결정 기록 5-12 `D3-4.2`).
+         *          `Cheat.GodMode`, `Gameplay.DamageImmunity` 에 해당한다).
          */
         static TagID getInvulnerableTag();
         /** @brief 주인이 무적 태그를 가졌으면 true 입니다. */

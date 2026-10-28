@@ -46,8 +46,7 @@ namespace sw
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
-        text += "  -gv_<name>=<value>  (global variable - docs/Config/GlobalVariables.md)\n";
-        text += "Descriptions: docs/Config/CommandLine.md\n";
+        text += "  -gv_<name>=<value>  (global variable)\n";
         return text;
     }
 

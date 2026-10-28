@@ -2,7 +2,7 @@
  * @file SkyComponent.h
  * @brief 씬의 하늘입니다. 천정 · 지평선 · 땅 색의 그러데이션 또는 대기 산란(레일리 · 미)으로 방향마다의 하늘빛(복사휘도)을 정하고, 그 위에 구름 층을 얹을 수 있습니다.
  * @details 렌더러는 이 값을 패킷으로 받아 스카이 패스(`RenderPassType::Sky`, `sky.hlsl`)가 아무것도 그리지 않은 곳(깊이 원경)을 칠한다.
- *          같은 식(`SkyGradient::evaluateRadiance`)을 간접 조명 베이크가 프로브마다 SH 로 투영한다(결정 기록 5-5 P2).
+ *          같은 식(`SkyGradient::evaluateRadiance`)을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
  *          언리얼 `SkyAtmosphere` + `SkyLight`, 유니티 `RenderSettings.skybox`(Gradient 앰비언트) 자리이고, 큐브맵은 아직 없다.
  *          대기 모드의 시간대는 씬의 방향광 방향이 정한다(해 = 방향광이 오는 쪽) — 방향광이 없으면 하늘이 어둡다. 구름은 평면 노이즈 층이다(`SkyClouds`).
  */

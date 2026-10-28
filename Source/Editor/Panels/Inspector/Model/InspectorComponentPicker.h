@@ -1,8 +1,8 @@
 /**
  * @file InspectorComponentPicker.h
  * @brief 타입 핸들(`TComponentHandle<T>`) 프로퍼티의 선택기가 쓰는 판단입니다. ImGui 에 의존하지 않으므로 테스트를 붙일 수 있습니다.
- * @details 선택기가 필드에 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 대상 타입이 틀린 값이 형식상 들어갈 수 없다
- *          (`docs/09_Decisions.md` 5-6 타입 핸들 인스펙터). 그리는 쪽은 `InspectorPropertyManager.cpp` 의 `ComponentHandleProperty` 이다.
+ * @details 선택기가 필드에 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 대상 타입이 틀린 값이 형식상 들어갈 수 없다.
+ *          그리는 쪽은 `InspectorPropertyManager.cpp` 의 `ComponentHandleProperty` 이다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -73,7 +73,7 @@ namespace sw::editor
     /**
      * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
      * @details 지금 에디터 범위와 그 상위 범위에서 먼저 찾고, 없으면 호스트 서비스 범위를 본다. 게임 쪽 `game::findSubsystem<T>()` 와 계약이 같다.
-     *          한쪽만 실패 위치에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. `CheckNullableServiceUse` 린트가 두 함수를 모두 검사한다.
+     *          한쪽만 실패 위치에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. 그래서 두 함수 모두 받는 쪽이 널을 검사해야 한다.
      *          에디터 컨텍스트도 이 창구로 찾는다(컨텍스트가 자기 범위에 자신을 등록한다): 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 명령)은
      *          `getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트가 부르는 함수 · 탐침)는 `findSubsystem<EditorContext>()` 다.
      */
@@ -126,7 +126,7 @@ namespace sw::editor
 
     /**
      * @brief 에디터 도구 시드(`editortooldefaults.json`)입니다 — 에디터 컨텍스트가 자기 범위에 빌려 건 값(`EditorContext::initialize`)을 찾는다.
-     * @details 정적 칸을 두지 않는다(결정 기록 5-10). 범위가 서기 전에 읽는 기동 단계(글꼴)는 값을 인자로 받는다. 없으면 부른 쪽의 잘못이라 모든 구성에서 멈춘다.
+     * @details 정적 칸을 두지 않는다. 범위가 서기 전에 읽는 기동 단계(글꼴)는 값을 인자로 받는다. 없으면 부른 쪽의 잘못이라 모든 구성에서 멈춘다.
      */
     EditorToolDefaults& getEditorToolDefaults();
 

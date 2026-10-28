@@ -14,7 +14,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
 // 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 만든다.
-// 실제 푸시 제공자는 설정이 있을 때만 만든다 — 자격(서비스 계정 키)은 환경 변수에서 읽고, 없으면 서버 기동이 실패한다(결정 기록 5-9, OnlineKits 4절). 지금은 FCM 이다.
+// 실제 푸시 제공자는 설정이 있을 때만 만든다 — 자격(서비스 계정 키)은 환경 변수에서 읽고, 없으면 서버 기동이 실패한다. 지금은 FCM 이다.
 // 옵션:
 //   fakePush           1 이면 가짜 푸시 제공자("fake")를 등록한다(Dev 만).
 //   pushProvidersFile  실제 푸시 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PushProviderSet::readSettings`). 비우면 실제 제공자가 없다.

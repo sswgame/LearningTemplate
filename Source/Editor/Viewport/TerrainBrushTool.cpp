@@ -204,7 +204,7 @@ namespace sw::editor
                         outGrid = TerrainBrush::makeHoleGrid( outGrid );
                     return true;
                 }
-                // 브러시는 정사각형 스플랫만 다룬다(결정 기록 5-5).
+                // 브러시는 정사각형 스플랫만 다룬다.
                 const uint32 splatWidth = heightfield.getSplatWidth();
                 if ( splatWidth < 2 || splatWidth != heightfield.getSplatHeight() )
                     return false;

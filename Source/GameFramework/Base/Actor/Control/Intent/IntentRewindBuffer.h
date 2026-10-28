@@ -3,7 +3,7 @@
  * @brief 의도 재생의 되감기 키 상태입니다 — 일정 틱 간격으로 찍은 게임 상태 스냅샷을 메모리 상한 안에서 듭니다.
  * @details 되감기 = 목표 틱 이하의 가장 가까운 스냅샷으로 되돌리고(`GameInstanceBase::restoreSnapshot`), 그 틱부터 목표 틱까지 기록된 의도(`ControlIntentHistory`)로
  *          다시 돈다. 재생은 같은 고정 프레임이면 결정적이므로 되돌린 자리에서 다시 돈 궤적이 처음과 같다(언리얼 Replay 의 체크포인트 + 델타 재생과 같은 모양).
- *          설계(간격 · 상한 · 리플레이 씬)는 `docs/decisions/5-8_GameFramework.md`이다.
+ *
  */
 #pragma once
 #include "Core/Common/Macros.h"

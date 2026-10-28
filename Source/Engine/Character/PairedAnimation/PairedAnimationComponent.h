@@ -4,7 +4,7 @@
  * @details 같은 오브젝트의 `SkeletalAnimatorComponent` 가 `_role` 역할로 묶이고, 나머지 역할은 부르는 쪽(상호작용, 게임플레이)이 바인딩으로 넘긴다.
  *          넘기지 않은 역할은 같은 에셋을 가리키고 그 역할을 적은 다른 `PairedAnimationComponent`(활 · 화살 같은 프롭 — 역할을 자기 데이터로 든다)의 애니메이터로 묶는다.
  *          그런 컴포넌트가 둘 이상이면 고를 수 없어 오류다. `_bStartOnPlay` 를 켜면 플레이가 시작된 뒤 첫 틱 뒤에 스스로 세션을 시작한다(쇼케이스 · 시나리오).
- *          `startSession` · `abortSession` 은 게임 스레드, 틱 밖에서 부른다(세션이 다른 오브젝트의 애니메이터를 바꾼다). 설계는 `docs/decisions/5-8_GameFramework.md`.
+ *          `startSession` · `abortSession` 은 게임 스레드, 틱 밖에서 부른다(세션이 다른 오브젝트의 애니메이터를 바꾼다).
  */
 #pragma once
 #include "Core/Common/Macros.h"

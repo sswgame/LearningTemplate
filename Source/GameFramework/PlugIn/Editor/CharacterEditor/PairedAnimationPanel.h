@@ -1,7 +1,7 @@
 /**
  * @file PairedAnimationPanel.h
  * @brief 페어드 애니메이션(`*.pairedanim.xml`) 편집 창입니다 — 미리보기 씬에 역할마다 프리팹을 놓고 한 시계로 스크럽하며, 정렬 오프셋을 기즈모로 옮기고,
- *        공유 알림의 시각 · 역할을 고칩니다(`docs/decisions/5-8_GameFramework.md`, 언리얼 Contextual Anim 에디터 자리).
+ *        공유 알림의 시각 · 역할을 고칩니다.
  * @details 데이터 편집은 모두 `PairedAnimationEditModel` 이 하고 이 창은 그리기와 미리보기 씬 동기화만 한다. 저장은 모델이 규칙(런타임 검사)을 통과할 때만 된다.
  *          - **미리보기 배치**: 앵커는 원점 · 요 0 이다. 정렬 역할(`snap` · `warp`)은 정렬 목표(`computeRoleTarget`)에, 정렬하지 않는 역할(부착 프롭)은 원점에 놓는다.
  *            미리보기는 부착을 하지 않는다 — 활 같은 프롭은 런타임에 손 소켓에 붙는다.

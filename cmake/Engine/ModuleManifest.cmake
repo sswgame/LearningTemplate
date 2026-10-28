@@ -130,8 +130,8 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		endif()
 	endforeach()
 
-	# 선택 키 셋(`_bEnabledByDefault` · `_listDependency` · `_minVersion`)은 매니페스트 형식의 기본값이다 — 설정 파일에는 기본값과 다른 값만 적는다
-	# (docs/09_Decisions.md 5-4). 같은 기본값을 런타임 `ModuleCatalog::parseManifest` 가 들고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 두 해석을 견준다.
+	# 선택 키 셋(`_bEnabledByDefault` · `_listDependency` · `_minVersion`)은 매니페스트 형식의 기본값이다 — 설정 파일에는 기본값과 다른 값만 적는다.
+	# 같은 기본값을 런타임 `ModuleCatalog::parseManifest` 가 들고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 두 해석을 견준다.
 	sw_readOptionalJsonValue(swEnabled "${MANIFEST_PATH}" _bEnabledByDefault)
 
 	if(NOT DEFINED swEnabled)

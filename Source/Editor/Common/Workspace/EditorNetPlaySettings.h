@@ -86,7 +86,7 @@ namespace sw::editor
 {
     /**
      * @brief 사용자 프리셋 파일(`Saved/Editor/NetPlayPresets.json`, 커밋하지 않는다) 하나의 내용입니다.
-     * @details 결정 기록 D7-3.3 — 언리얼 `EditorPerProjectUserSettings`, 유니티 `UserSettings` 와 같은 사용자별 파일이다.
+     * @details 언리얼 `EditorPerProjectUserSettings`, 유니티 `UserSettings` 와 같은 사용자별 파일이다.
      */
     REFLECT()
     struct EditorNetPlayPresetFile

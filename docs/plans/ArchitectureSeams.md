@@ -14,8 +14,8 @@
 |---|---|---|
 | 1 | 검증 처리량이 병목이다. 측정대기 계획 문서 59/101, 검증 항목 212 개가 쌓였고 작업자가 빌드하지 않아 의미 충돌이 통합 빌드에서야 드러난다 | 구조 변경이 확인되지 않은 채 쌓인다 |
 | 2 | 테스트 대상이 소스를 손으로 고른다. EditorTest 는 Editor `.cpp` 130 경로 + 리플렉션 단계, EngineTest 는 플러그인 소스 13 경로, SmokeTest · EditorUITest · FuzzTest 에도 손 목록 | 30 일에 120 커밋이 몰린 충돌 지점, "목록은 하나" 원칙 위반 |
-| 3 | 대형 단일 문서와 생성물이 병합 충돌을 부른다(결정 기록 373 KB, README 진행 표, `NEXT.md`, `ConfigReference.json`) | 통합 G 에서 충돌 셋 |
-| 4 | 빌드 기준선이 낡았다. 지금 Debug 콜드 풀 빌드 266.5 s(Lean 236.3 s), `Engine.dll` 링크 2.3 ~ 5.8 s(중앙값 약 2.7 s), GF 기반 9.43 만 줄. 링크는 Engine · GF · 에디터 `.cpp` 증분의 29 ~ 61 % | 층 DLL 분할 전에 링크 옵션(GHASH)이 먼저 — 5 단계 판정([08 검증](../08_Verification.md) "아키텍처 이음매 0 단계 기준선") |
+| 3 | 대형 단일 문서와 생성물이 병합 충돌을 부른다(README 진행 표, `NEXT.md`) | 통합 G 에서 충돌 셋 |
+| 4 | 빌드 기준선이 낡았다. 지금 Debug 콜드 풀 빌드 266.5 s(Lean 236.3 s), `Engine.dll` 링크 2.3 ~ 5.8 s(중앙값 약 2.7 s), GF 기반 9.43 만 줄. 링크는 Engine · GF · 에디터 `.cpp` 증분의 29 ~ 61 % | 층 DLL 분할 전에 링크 옵션(GHASH)이 먼저 — 5 단계 판정 |
 | 5 | 전역 가변 정적 상태가 남았다(래칫 진행 중). `getActive` 류가 정적 사본의 참조를 돌려주는 것을 게이트가 못 봤다 | 핫 리로드 · 다중 월드 · 테스트 격리 |
 | 6 | 서버에서 렌더러를 빼는 일을 폴더 정규식 · `SW_WITH_CLIENT_CODE` · 리플렉션 제외 정규식이 나눠 맡는다 | 중하. 틈은 링크 오류로 드러난다 |
 | 7 | 변경이 `FrameRenderer` 에 몰린다(헤더 1,344 줄, 값 멤버 117 개, 10 일에 40 커밋) | 병합 충돌과 단일 책임. 빌드 팬아웃은 작다 |
@@ -29,14 +29,13 @@
 
 | 단계 | 내용 | 확인 | 롤백 |
 |---|---|---|---|
-| 0 (끝남, 2026-10-25) | 측정 기준선. 판정: DLL 링크가 `.cpp` 증분의 29 ~ 61 %(Engine `.cpp` 52 ~ 61 %)라 30 % 기준을 넘지만 5 단계의 `Engine_Render` OBJECT 는 여전히 `Engine.dll` 에 링크되어 링크 시간을 줄이지 않는다 → 5a 를 먼저. `FrameRenderer.h` 팬아웃 27 TU(18.5 s) | [08 검증](../08_Verification.md) 표 | 해당 없음 |
-| 1a | 결정 기록 5 절을 영역별 파일로 나눈다. 본문에는 1 ~ 4 절과 목록만 | `CheckDocPaths`, lint-suite | revert |
+| 0 (끝남, 2026-10-25) | 측정 기준선. 판정: DLL 링크가 `.cpp` 증분의 29 ~ 61 %(Engine `.cpp` 52 ~ 61 %)라 30 % 기준을 넘지만 5 단계의 `Engine_Render` OBJECT 는 여전히 `Engine.dll` 에 링크되어 링크 시간을 줄이지 않는다 → 5a 를 먼저. `FrameRenderer.h` 팬아웃 27 TU(18.5 s) | 측정 표 | 해당 없음 |
 | 1b | README 진행 표를 생성 파일로 빼고 `CheckStatusBoard` 대상을 바꾼다 | `CheckStatusBoard`, `plans --check` | revert |
 | 2a | `EditorCore` OBJECT(ImGui 없음)를 만든다. 대상은 폴더 규칙(`Editor/Common` 의 Asset · Commands · Config · Localization · SourceControl · Workspace). EditorModule 과 EditorTest 가 같은 오브젝트를 받고 EditorTest 의 손 목록 79 줄을 지운다 | 전 프리셋 구성, EditorTest, 에디터 시나리오 | revert |
 | 2b | Panels · Viewport 의 헤드리스 파일(약 37 개)을 패널별 `Model` 하위 폴더로 옮겨 폴더 규칙에 더한다 | EditorTest | 폴더별 revert |
 | 2c | (먼저 끝남) `sw_addEditorExtensionModel()` 이 전역 속성에 모델 **소스 경로**를 올리고 EngineTest 가 읽는다(정의 · include · PCH 가 컴파일하는 타깃 것이어야 해서 — 사유는 `ModuleTargets.cmake` 주석). SmokeTest 핫 리로드 소스는 ModuleHost CMake 의 목록에서, EditorUITest 의 Platform 소스는 GLOB 으로, 하네스 기동 소스는 `sw_addTestHostRuntime` 한 곳에서 파생. **남은 것(2a 뒤)**: `ImGuiOsInputFilter` · `ImGuiKeyForward` 손 목록, `TestResourceDataSchema` 의 종류 문자열 파서, EngineTest 의 Editor 소스 3개(`ImageUtil` · `EditorThemeTokens` · `EditorThemeTokensDataKind`) | EngineTest 전체 | revert |
 | 3 | 래칫을 줄이고 정적 사본 참조 접근자를 게이트에 넣는다. `EngineConfig` · `GameConfig` · `Render2DSettings` 를 범위 소유로 | `-L lint`, 설정 핫 리로드 테스트, 큐브 20k 벤치 | 파일별 revert |
-| 4 | 통합이 main 으로 올리기 전에 `-k 0` 빌드와 `ctest -L nogpu|lint` 증거 파일을 요구하고 GPU 항목은 정해진 시각에 `verify-batch` 로 몰아 돌린다 | 스크립트 자가 테스트 | revert |
+| 4 | 통합이 main 으로 올리기 전에 `-k 0` 빌드와 `ctest -L nogpu|lint` 증거 파일을 요구하고 GPU 항목은 정해진 시각에 검증 묶음 로 몰아 돌린다 | 스크립트 자가 테스트 | revert |
 | 5a | Debug 링크 옵션 A/B: 컴파일 `/clang:-gcodeview-ghash` + 링크 `/DEBUG:GHASH`(지금 `lld-link /debug` 에 GHASH 없음, `Engine.pdb` 125 MB). 같은 날 번갈아 `GameObjectManager.cpp` 증분의 `Engine.dll` 링크 시간과 콜드 풀 빌드를 잰다. 줄지 않거나 여전히 증분의 30 % 를 넘으면 층 DLL 분할을 다시 본다 | 0 단계 표와 같은 방법, Debug 경고 0 · `nogpu` | 옵션 revert |
 | 5 (조건부, 링크 이유로는 열지 않음) | 서버에서 뺄 폴더가 렌더러 밖으로 늘면 `Engine_Render` OBJECT 분할 | 네 백엔드 × Dev · Shipping · Server | revert |
 | 6 (빌드 이유로는 낮음) | 렌더 기능 객체를 엔진 내부 기능 목록으로 옮겨 `FrameRenderer` 헤더 변경을 줄인다(`RealtimeProbeUpdater` · `VfxParticleRenderer` 값 멤버 패턴). 헤더 증분 27 TU 중 16 개가 `FrameRenderer*.cpp` 자신이라 줄일 것은 바깥 11 TU 뿐 — 하면 이유는 병합 충돌(10 일 40 커밋)이고 1 ~ 4 단계 뒤에 한다 | 렌더 GPU 테스트, 큐브 벤치 RT p50 · p99 | revert |
@@ -71,7 +70,6 @@
 
 ## 4. 사용자 결정이 필요한 것
 
-- **GPU 검증을 CI 로 자동화할지**(외부 공개 · 비용): 공개 저장소의 자가 호스팅 GPU 러너는 보안 위험이고 유료 러너는 비용이 든다. 결정 없이 갈 길은 로컬 GPU 기계의 예약 작업으로 `verify-batch` 를 돌리는 것이고 4 단계는 그쪽이 기본이다.
 - **재검토 제안**(사용자의 규칙이라 에이전트가 바꾸지 않는다): 작업자가 맡은 대상 하나만 컴파일하게 허용하는 안(`cmake --build --target <소유 대상>`, 테스트 · 실행은 안 함) — 통합 전에 `getState()` 같은 의미 충돌을 잡는다.
 
 ## 5. 확인하지 못한 것
@@ -80,7 +78,7 @@ GHASH 효과는 5a 가 잰다. `EditorCore` 후보 폴더의 ImGui 사용은 직
 
 ## 6. 3 단계 진행 (2026-10-25, 통합 L 에서 빌드 · nogpu · 백엔드 교체 시나리오 확인)
 
-끝난 커밋: `CheckServiceAccess` 가 정적 사본의 참조를 내주는 `static const T& getActive()` 도 센다(예외 표 종류 `PendingScopeMove`), `EngineConfig` 를 `ConfigManager` 소유로, `GameConfig` 정적 사본 제거, `Render2DSettings` 를 `Render2DSettingsSubsystem` 소유로(서비스 표에 행 셋 추가). 전역 가변 정적 래칫 231 파일 · 상한 합 494 → 227 · 489. 결정은 [결정 기록 5-4](../decisions/5-4_DataConfig.md) 의 끝 항목.
+끝난 커밋: `CheckServiceAccess` 가 정적 사본의 참조를 내주는 `static const T& getActive()` 도 센다(예외 표 종류 `PendingScopeMove`), `EngineConfig` 를 `ConfigManager` 소유로, `GameConfig` 정적 사본 제거, `Render2DSettings` 를 `Render2DSettingsSubsystem` 소유로(서비스 표에 행 셋 추가).
 
 다음 커밋 단위:
 - **`GameConfig::getActive()` 전달 창구 지우기** — 에디터 호출처 열 파일(`EditorDataTableCommands` · `EditorGlobalVariableCommands` · `EditorSceneFileCommands` · `EditorCommandGUI` · `LocalizationTools` · `ContentBrowserPanel` · `PackagingPanel` · `ProjectSettingsPanel` · `EditorSelfTestPanelCases`)과 게임 프레임워크 셋(`GameInstanceBase.cpp` → `game::getSubsystem<GameConfig>()`, `CharacterEditorPanel.cpp` · `ParkLayoutPreview.cpp` → `editor::findSubsystem<GameConfig>()`)을 범위 창구로. `GameInstanceBase` 를 옮길 때 `TestGameFramework` 의 `_hostServices` 에 `GameConfig` 를 걸어야 한다. 끝나면 `GameConfig.cpp` 와 `CheckServiceAccess.toml` 의 `GameConfig` 줄을 지운다.

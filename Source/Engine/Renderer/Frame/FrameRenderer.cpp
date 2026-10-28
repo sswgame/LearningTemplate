@@ -61,7 +61,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
     /**
      * @brief 라이트 컬링 방식입니다. `-gv_lightCulling=None` 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), `CPU` 면 CPU 가 만든 클러스터 그리드, `GPU` 면 GPU 컴퓨트가 만든 그리드입니다.
-     * @details 학습용으로 세 방식을 나란히 보게 둔다(결정 기록 5-12 D2-13). 기본값은 Shipping 과 같은 GPU 다. Shipping 은 변수를 두지 않고 GPU 로 고정한다
+     * @details 학습용으로 세 방식을 나란히 보게 둔다. 기본값은 Shipping 과 같은 GPU 다. Shipping 은 변수를 두지 않고 GPU 로 고정한다
      *          (`FrameRenderer::selectLightGridProducer`). 명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
     SW_TEST_GLOBAL_VARIABLE( LightGridProducer, gv_lightCulling, LightGridProducer::GPU, "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)" );

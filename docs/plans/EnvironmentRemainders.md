@@ -15,7 +15,7 @@
 
 E2 와 E3 · E4 의 셰이더는 소스를 바꾸므로 패치로 넘긴다(`CheckShaderStamps`). E2 의 패치는 통합이 적용해 구운 뒤 물의 굴절을 GPU 화면으로 본다(굴절 오프셋 `kRefractionStrength` · `kRefractionFullDepth` 는 눈으로 맞춘다). E3 · E4 의 C++ 와 머티리얼은 패치와 **함께** 적용해야 앱이 뜬다(새 프로퍼티 이름이 셰이더와 같아야 한다).
 
-**남은 확인(통합에서 확인):** 매니페스트 id `spline-river-path-tests` — 빌드 뒤 `SplineRiverPathTest` · `WaterTest` 필터. 패치 05 는 통합(integF)이 적용해 구웠다 — 지형이 그려지는지(여덟 레이어 · 지오모프)는 GPU 화면으로 본다(GPU 확인 대기). 지오모프를 켠 지형 시나리오는 아직 없다.
+**남은 확인(통합에서 확인):** — 빌드 뒤 `SplineRiverPathTest` · `WaterTest` 필터. 패치 05 는 통합(integF)이 적용해 구웠다 — 지형이 그려지는지(여덟 레이어 · 지오모프)는 GPU 화면으로 본다(GPU 확인 대기). 지오모프를 켠 지형 시나리오는 아직 없다.
 
 ## 2. 함정
 

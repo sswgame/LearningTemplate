@@ -72,7 +72,7 @@ namespace sw
     struct SW_KIT_SERVER_API ServerDirectoryChanged
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전
     };
 } // namespace sw
 

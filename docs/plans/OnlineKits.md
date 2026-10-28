@@ -19,9 +19,9 @@
 |---|---|---|---|
 | A5 | 실제 제공자 등록(client id), 스팀 티켓 확인, 모바일 SDK 클라이언트 | 결정(4절) | 일부(티켓 확인 API 제공자 `TicketQueryLoginProvider` — 스팀은 데이터 한 줄, 빌드 미확인. 등록 · 모바일 SDK 는 남음) |
 | B2 | 채팅 채널 샤딩 | 부하 봇 측정 | 남음(측정 대기 — `chat_send_p99` 를 잰 뒤 정한다. 재는 길은 `py -3 -m Scripts load suite onlineMeasure`, 아래 M1) |
-| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 코드 끝남(FCM · APNs — H2-1~5 빌드 전, 3절 G4. 확인 대기: 매니페스트 id `http2-codec-tests`. 실제 계정 등록은 쓰는 게임이 생길 때) |
-| I6 | GM 전용 호스트 포트(`_adminServicePort` · `_adminListenAddress`, 3절 I6) | 없음 | 끝남(Debug 빌드 · 테스트 통과. GM 도구의 GM 포트 접속은 코드만. 확인 대기: 매니페스트 id `admin-gm-port-real`) |
-| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 코드 끝남(세 화면 + GM 도구 설정 화면, 빌드 전 — 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
+| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 코드 끝남(FCM · APNs — H2-1~5 빌드 전, 3절 G4. 실제 계정 등록은 쓰는 게임이 생길 때) |
+| I6 | GM 전용 호스트 포트(`_adminServicePort` · `_adminListenAddress`, 3절 I6) | 없음 | 끝남(Debug 빌드 · 테스트 통과. GM 도구의 GM 포트 접속은 코드만. 확인 대기:) |
+| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 코드 끝남(세 화면 + GM 도구 설정 화면, 빌드 전 — 3절 U1. 확인 대기:) |
 | M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 가 부하 검증에 연결됐다 — `Test/Load/Scenarios/friendpresence.load.xml` · `chatp99.load.xml`, 묶음 `onlineMeasure`, 예산은 두지 않아 보고만. 돌려 숫자를 남기는 일만) |
 
 ## 4. 결정 (2026-10-22, 권고안 — 사용자 지시로 되묻지 않고 정했다)

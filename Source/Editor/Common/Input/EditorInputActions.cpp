@@ -123,7 +123,7 @@ namespace sw::editor
         }
         if ( bValid == false )
             return false;
-        // 사용자 재배치(옛 `Shortcuts.json` 은 읽지 않는다 — 결정 기록 5-11). 낡은 줄은 경고하고 건너뛴다.
+        // 사용자 재배치(옛 `Shortcuts.json` 은 읽지 않는다). 낡은 줄은 경고하고 건너뛴다.
         if ( ShellInputActions::loadUserBindings( _map, getUserBindingsPath() ) == false )
             SW_LOG_WARNING( "EditorInputActions: the user bindings '%#' could not be read - the default shortcuts are used", getUserBindingsPath().c_str() );
         return true;

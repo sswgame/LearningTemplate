@@ -531,7 +531,7 @@ namespace sw
         while ( _pWindow->processMessages() )
         {
             // 리슨 호스트(이 App 의 넷 세션이 서버)이면 줄마다 프레임 번호를 붙인다. 고정 틱이 없어 전용 서버의 `[tick=N]` 과 구분해
-            // `[frame=N]` 으로 적는다(결정 기록 5-12 `D7-3.6`). 세션이 서버가 아니게 되면 꼬리표를 뗀다.
+            // `[frame=N]` 으로 적는다. 세션이 서버가 아니게 되면 꼬리표를 뗀다.
             const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
             const bool            bListenHost = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server;
             if ( bListenHost )

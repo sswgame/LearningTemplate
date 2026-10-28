@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 실시간으로 갱신할 라이트 프로브 볼륨 하나의 요청입니다(`collectSceneLights` 가 만들고 렌더 스레드의 `RealtimeProbeUpdater` 가 읽는다 — 결정 기록 5-5 R6).
+     * @brief 실시간으로 갱신할 라이트 프로브 볼륨 하나의 요청입니다(`collectSceneLights` 가 만들고 렌더 스레드의 `RealtimeProbeUpdater` 가 읽는다).
      * @details 볼륨 원소(`_volumeElement`)가 격자 모양(시작점 · 간격 · 수)과 프로브 버퍼 안의 자리를 이미 담고 있어 여기에는 갱신에만 필요한 값을 둔다.
      *          복셀 격자는 불변 공유 값이다 — 컴포넌트의 캐시와 같은 것을 가리키고, 렌더 스레드는 포인터가 바뀐 프레임에만 다시 올린다.
      */
@@ -88,7 +88,7 @@ namespace sw
 
     /**
      * @enum LightGridProducer
-     * @brief 라이트 그리드를 누가 만드는지입니다. 개발 빌드는 `gv_lightCulling` 이 고르고 Shipping 은 GPU 로 고정합니다(결정 기록 5-12 D2-13).
+     * @brief 라이트 그리드를 누가 만드는지입니다. 개발 빌드는 `gv_lightCulling` 이 고르고 Shipping 은 GPU 로 고정합니다.
      * @details 리플렉션 enum 이라 명령줄이 이름으로 고른다(`-gv_lightCulling=CPU`). 숫자는 받지 않는다.
      */
     ENUM()
@@ -112,7 +112,7 @@ namespace sw
         GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
 
         /**
-         * @brief GPU 구간(`getGpuLightBase` 부터 `getGpuLightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정, 결정 기록 5-5 VfxGpuLights L1).
+         * @brief GPU 구간(`getGpuLightBase` 부터 `getGpuLightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
          * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfxsimulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
          *          셰이더가 보는 라이트 수(`g_SwLightCount`)에 든다 — 라이트 그리드 생산자(lightgrid.hlsl)와 조명 커서가 구간을 따로 알 필요가 없다.
          *          CPU 라이트 수는 이 구간만큼 줄여 CPU + GPU 가 `shaderslot::kMaxFrameLight` 를 넘지 않게 한다.

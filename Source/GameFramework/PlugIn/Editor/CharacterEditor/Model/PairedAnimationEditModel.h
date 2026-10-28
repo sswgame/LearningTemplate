@@ -6,7 +6,7 @@
  *          `PairedAnimationDef::loadFromXMLText` 로 다시 읽어 본다 — 런타임과 같은 검사 하나이며 에디터 쪽 사본 규칙을 두지 않는다. 규칙에 어긋난 내용은 저장하지 않는다.
  *          편집 하나가 값 하나의 범위(유한, 0 이상)를 먼저 보고, 역할 사이 규칙(앵커 하나, 시작 < 길이, 알림 역할)은 저장 · `isValid` 가 본다.
  *          미리보기 계산은 세션 규칙과 같다: 역할은 공유 시각이 `start` 에 닿으면 들어오고, 클립 시각은 `공유 시각 - start`, 클립이 끝나면 종료 상태로 나간다.
- *          정렬 목표는 `PairedAnimationDef::computeAlignTarget`(세션과 같은 식)이다. 설계는 `docs/decisions/5-8_GameFramework.md`.
+ *          정렬 목표는 `PairedAnimationDef::computeAlignTarget`(세션과 같은 식)이다.
  */
 #pragma once
 #include "Core/Common/Types.h"

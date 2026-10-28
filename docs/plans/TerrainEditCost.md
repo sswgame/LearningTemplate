@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-5.6, D2-5.7 · 진행: 3/4
 
-후보 `TerrainWaterVegetationRemainders`(지금은 [EnvironmentRemainders](EnvironmentRemainders.md))의 "지형 LOD 교체 프레임 시간"과 "지형 쓰기의 남은 것" 조각을 계획으로 올린 문서입니다. 지형 쓰기의 결정은 [결정 기록](../09_Decisions.md) 5-5, 측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체" · "지형 높이 쓰기" 입니다.
+후보 `TerrainWaterVegetationRemainders`(지금은 [EnvironmentRemainders](EnvironmentRemainders.md))의 "지형 LOD 교체 프레임 시간"과 "지형 쓰기의 남은 것" 조각을 계획으로 올린 문서입니다.
 
 ## 1. 왜 하는가
 
@@ -16,14 +16,12 @@ LOD 고리를 넘는 프레임은 청크 여럿의 메시를 한꺼번에 다시
 
 ## 3. 남은 단위
 
-### T3 Release 측정과 예산
-
-매니페스트 id `terrain-bench-release`.
+### T3 Release 측정과 예산.
 - `TerrainBenchTest.LODSweepWorstFrame`(Release, 3 회): T1 뒤 updateLODs 최악이 GT 2 ms 안인지(워커 수에 달려 PC 를 함께 적는다).
 - `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고 `TerrainComponentInternal::kMaxChunkMeshRebuildsPerFrame`(넷)을 GT 2 ms 에 맞춘다.
 - 식생 부분 계산: 쇼케이스에서 브러시 한 번 뒤 `Foliage: refreshed N of M cell batches` 로그의 시간(Debug 0.86 s 와 견준다). 최소 거리 풀이가 전부 다시 도는 몫이 크면 따로 잰다.
 - 렌더 스레드 `RT.GPUScene.vertexPool` 의 교체 프레임 최대값(App 프로파일 표).
-- 절차(Release, VSync 끔, 혼자 도는 시간대): `cmake --build build/Ninja-Release --target EngineTest` 뒤 `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=TerrainBenchTest.* --load_suites=only --host_suites=all` 를 3 회. 표에 PC(코어 수)와 커밋을 함께 적는다. App 프로파일 표에서 볼 구간: `GT.GPUScene.build.partition` · `build.batches` · `build.meshSwap` 과 횟수 `build.meshSwapCount`(교체 프레임은 0 이 아닌 프레임), `RT.GPUScene.vertexPool`. 결과는 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체" 에 숫자로 남기고 `kMaxChunkMeshRebuildsPerFrame` 을 고친다.
+- 절차(Release, VSync 끔, 혼자 도는 시간대): `cmake --build build/Ninja-Release --target EngineTest` 뒤 `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=TerrainBenchTest.* --load_suites=only --host_suites=all` 를 3 회. 표에 PC(코어 수)와 커밋을 함께 적는다. App 프로파일 표에서 볼 구간: `GT.GPUScene.build.partition` · `build.batches` · `build.meshSwap` 과 횟수 `build.meshSwapCount`(교체 프레임은 0 이 아닌 프레임), `RT.GPUScene.vertexPool`.
 
 ## 4. 확인하지 않은 것
 

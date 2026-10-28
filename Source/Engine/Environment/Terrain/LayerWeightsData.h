@@ -13,7 +13,6 @@
  *          가중치는 텍스처가 아니라 게임플레이 데이터다(발소리 · 표면 재질 · 이동 속도 판정). 텍스처(`.dds`)는 전용 서버 패키지에서 빠지므로
  *          (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`) 이 형식으로 둔다 — 서버도 레이어 질의에 정확히 답한다.
  *          클라이언트의 GPU 텍스처는 지형이 읽은 뒤 이 바이트로 만든다(`TerrainComponent`, `TextureCache::createCPUTexture`).
- *          결정과 근거는 `docs/09_Decisions.md` "지형 레이어 가중치는 텍스처가 아닌 데이터 에셋이다" 에 있다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"

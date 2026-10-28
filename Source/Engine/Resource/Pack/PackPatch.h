@@ -3,7 +3,7 @@
  * @brief 팩 단위 차분 배포(패치)의 형식입니다 — 두 빌드의 내용 목록에서 바뀐 · 지운 경로를 셈하고, 패치 목록 파일(`*.packpatch.xml`)을 읽고 쓰고,
  *        설치된 빌드에서 목표 빌드까지 이어지는 패치 순서를 정합니다.
  * @details 패치 하나는 팩 하나(바뀐 · 새 파일)와 목록 하나(어느 빌드에서 어느 빌드로, 지운 경로)다. 런타임은 패치 팩을 기본 팩보다 높은 우선순위로
- *          지움 목록과 함께 마운트한다(`ResourcePakManager::mountPatchPack`). 설계와 남은 단위는 docs/decisions/5-9_OnlineNet.md 이다.
+ *          지움 목록과 함께 마운트한다(`ResourcePakManager::mountPatchPack`).
  *          빌드 번호는 목록에 적힌 글 그대로 비교한다 — 대소 비교를 하지 않는다(순서는 목록의 from → to 사슬이 정한다).
  */
 #pragma once
@@ -42,7 +42,7 @@ namespace sw
 {
     /**
      * @brief 설치 빌드가 패치를 받는 방식입니다. 빌드 기록(`base.packbuild.xml`)에 `patching="chain|none"` 으로 늘 적히고, 빠져 있으면 읽기가 거절한다(빈 값을 `none` 으로 보지 않는다).
-     * @details 기록이 팩 안이 아니라 팩 폴더 옆 파일인 것이 이 결정의 핵심이다 — 팩을 마운트하기 전에 읽어야 하기 때문이다(결정 기록 5-9).
+     * @details 기록이 팩 안이 아니라 팩 폴더 옆 파일인 것이 이 결정의 핵심이다 — 팩을 마운트하기 전에 읽어야 하기 때문이다.
      */
     enum class PackPatching : uint8
     {

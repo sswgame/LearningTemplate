@@ -111,7 +111,7 @@ namespace sw
         }
         if ( fillStoreSettings( serverConfig, settings._config, settings, outError ) == false )
             return false;
-        // 서비스 스트림은 TLS 1.3 이다. 인증서와 키 경로는 서버 설정에 있고, 키 암호는 환경 변수에서 읽는다(결정 기록 5-9).
+        // 서비스 스트림은 TLS 1.3 이다. 인증서와 키 경로는 서버 설정에 있고, 키 암호는 환경 변수에서 읽는다.
         settings._bTLS               = SW_TRUE;
         settings._tlsCertificateFile = serverConfig._tlsCertificateFile;
         settings._tlsPrivateKeyFile  = serverConfig._tlsPrivateKeyFile;

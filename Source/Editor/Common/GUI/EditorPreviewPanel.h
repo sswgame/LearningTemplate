@@ -25,8 +25,7 @@ namespace sw::editor
     /**
      * @class EditorPreviewPanel
      * @brief 문서 패널(`EditorDocumentPanel`)에 미리보기 씬 뷰포트와 창 범위의 선택, Undo 를 더한 기반 클래스입니다.
-     * @details 언리얼의 `FAssetEditorToolkit` 과 `FPreviewScene`, 유니티의 `EditorWindow` 와 `PreviewRenderUtility` 에 해당합니다
-     *          (docs/decisions/5-11_Editor.md 2.3).
+     * @details 언리얼의 `FAssetEditorToolkit` 과 `FPreviewScene`, 유니티의 `EditorWindow` 와 `PreviewRenderUtility` 에 해당합니다.
      *
      *          **파생 창이 지킬 계약**
      *          - 내용을 그릴 때 먼저 `beginPreviewFrame()` 을 부른다. 처음 부를 때 씬을 만들고(`getPreviewPolicy`, `getPreviewEnvironment`)

@@ -1,10 +1,8 @@
 # Wayland 창 계층
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-6 · 진행: 1/3
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-6 · 진행: 1/2
 
-**CI 확인:** 잡 `Build Linux Debug Wayland (Clang)`(W2) — push 뒤 `py -3 -m Scripts ci-jobs --summary` 로 본다(리눅스 확인은 CI 가 하므로 검증 묶음 항목을 두지 않는다). main CI 실행 `40180268417` 에서 잡 `Build Linux Debug Wayland (Clang)` 가 success 로 보고돼 W3 의 코어 프로토콜 부분(클립보드 · 배율)에 착수했다 — 그 잡의 다음 실행이 이 코드를 처음 컴파일한다.
-
-`Engine/Window/Linux` 가 X11 뿐이었다. 컴포지터 없이 지을 수 있는 백엔드 코드는 들어갔고(W1) 확인은 CI 리눅스 잡의 headless 컴포지터에서만 한다(결정 기록 5-12 — 로컬 WSL 빌드는 하지 않는다).
+`Engine/Window/Linux` 가 X11 뿐이었다. 컴포지터 없이 지을 수 있는 백엔드 코드는 들어갔고(W1) 컴파일 확인은 없다.
 
 ## 1. 설계
 
@@ -19,22 +17,12 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | W1 | 위 설계의 코드 — 빌드 옵션 · 프로토콜 생성 · `WaylandWindow` · 입력 갈래 · 표면 종류 · Vulkan WSI · GL 거절 | 코드 완료(빌드 안 함) |
-| W2 | CI 리눅스 잡에서 확인(3절). CI 쪽은 넣었다: 매트릭스 잡 `Build Linux Debug Wayland (Clang)`(`configureArgs: -DSW_ENABLE_WAYLAND=ON`, `reportOnly`) · 단계 `Wayland window layer smoke (Linux)`(weston headless 위 Vulkan 기동 · GL 거절 · 모르는 값 거절) · `setup-build-env` 패키지 · vcpkg `vulkan-loader[wayland]` | CI 첫 실행을 기다림 |
-| W3 | 코드 완료(CI 미컴파일): 클립보드(`WaylandWindow::readClipboardText` · `writeClipboardText` — `PlatformClipboard` 는 창 종류를 모르고 `IWindow::supportsClipboard` 로 잇는다. 데이터 장치가 없는 Wayland 창은 지원 안 함이라 UI 가 엔진 안 클립보드를 쓴다), 화면 배율(소수 배율이 있으면 그 값, 없으면 `wl_output.scale` 정수 배율 최댓값), 포인터 잠금 · 가둠(`setPointerLock`), 커서 모양(`setCursorShape`). 프로토콜 XML 은 `sw_wayland_protocols` 의 목록(`cmake/Modules/Platform/Linux.cmake`, wayland-protocols 1.32 이상 — CI 러너 ubuntu-24.04 는 1.34)에 더했다. 에디터 ImGui 플랫폼 백엔드 · 스플래시 창 · 개발 콘솔 창도 코드 완료(CI 미컴파일 — 한 번도 컴파일되지 않은 Linux 코드이고 이 PC 에서는 글을 읽어 맞췄다): `ImGuiWaylandPlatformBackend`(`Editor/Common/Backend/Platform`, 팩토리 `createPlatformBackendFor( window )` 가 Wayland 창이면 이것을 고른다 — 키 · 포인터 · 휠 · 포커스 · 클립보드 · 커서 모양, 멀티 뷰포트는 안 켜서 패널은 메인 창 안에서만 도킹한다), `WaylandSplashWindow`(자기 연결 · xdg 최상위 창 · 공유 메모리 버퍼 — `SW_WINDOW_BACKEND` 를 메인 창과 같이 읽는 `tryReadLinuxWindowBackend` 가 고른다, 이제 순수 Wayland 에서도 스플래시가 뜬다), `WaylandDevConsoleWindow`(게임 창 표면의 서브표면 `wl_subsurface` 에 줄을 그린다). 글은 X11 의 서버 글꼴이 없어 `WaylandTextPainter`(엔진 `IFontRasterizer` 의 SDF 글리프 + `SystemFontLocator`)로 그리고, 공유 메모리 버퍼 묶음(`WaylandShmBufferPool`)은 둘이 함께 쓴다. 남음: EGL 로 GL(RHI 영역). 클립보드 왕복 시나리오는 weston headless 에 `wl-copy`/`wl-paste` 가 있어야 만들 수 있다 | 코드 완료(CI 미컴파일), EGL 만 남음 |
-
-## 3. CI 에서 확인할 목록(W2)
-
-1. 패키지: `.github/actions/setup-build-env` 가 `libwayland-dev libxkbcommon-dev wayland-protocols` 를 깔고(weston 은 스모크 단계가 깐다) vcpkg `vulkan-loader` 는 `wayland` 기능으로 짓는다.
-2. 구성 · 빌드: `-DSW_ENABLE_WAYLAND=ON` — `[Linux] Wayland window layer enabled` 줄, `xdg-shell-client-protocol.h` 생성, Engine 링크(`ldd libEngine.so | grep wayland`).
-3. 기동: `weston --backend=headless-backend.so --socket=wayland-ci &` 뒤 `WAYLAND_DISPLAY=wayland-ci SW_WINDOW_BACKEND=wayland ./App -gv_rhiBackend=Vulkan -gv_profileFrames=120` — `Window backend: Wayland` · `Native Wayland Window created` 줄과 종료 코드 0(`Vulkan WSI: VK_KHR_wayland_surface` 는 TRACE 라 스모크가 보지 않는다).
-4. 거절: `-gv_rhiBackend=OpenGL` 은 `OpenGL on Linux needs an X11 window` 오류로 기동 실패(조용히 X11 로 가지 않는다), `SW_WINDOW_BACKEND=foo` 는 `is not a window backend` 오류.
-5. 입력: headless 에서 `wl_seat` 가 없을 수 있어 리스너 없이도 창이 서는지가 확인 대상이다(가상 입력은 `AutomationVirtualInput`).
-6. 기본 길이 그대로인지: `SW_WINDOW_BACKEND` 없이 X11 잡이 전과 같이 통과한다.
+| W3 | 코드 완료(컴파일 확인 없음): 클립보드(`WaylandWindow::readClipboardText` · `writeClipboardText` — `PlatformClipboard` 는 창 종류를 모르고 `IWindow::supportsClipboard` 로 잇는다. 데이터 장치가 없는 Wayland 창은 지원 안 함이라 UI 가 엔진 안 클립보드를 쓴다), 화면 배율(소수 배율이 있으면 그 값, 없으면 `wl_output.scale` 정수 배율 최댓값), 포인터 잠금 · 가둠(`setPointerLock`), 커서 모양(`setCursorShape`). 프로토콜 XML 은 `sw_wayland_protocols` 의 목록(`cmake/Modules/Platform/Linux.cmake`, wayland-protocols 1.32 이상)에 더했다. 에디터 ImGui 플랫폼 백엔드 · 스플래시 창 · 개발 콘솔 창도 코드 완료(컴파일 확인 없음 — 한 번도 컴파일되지 않은 Linux 코드이고 이 PC 에서는 글을 읽어 맞췄다): `ImGuiWaylandPlatformBackend`(`Editor/Common/Backend/Platform`, 팩토리 `createPlatformBackendFor( window )` 가 Wayland 창이면 이것을 고른다 — 키 · 포인터 · 휠 · 포커스 · 클립보드 · 커서 모양, 멀티 뷰포트는 안 켜서 패널은 메인 창 안에서만 도킹한다), `WaylandSplashWindow`(자기 연결 · xdg 최상위 창 · 공유 메모리 버퍼 — `SW_WINDOW_BACKEND` 를 메인 창과 같이 읽는 `tryReadLinuxWindowBackend` 가 고른다, 이제 순수 Wayland 에서도 스플래시가 뜬다), `WaylandDevConsoleWindow`(게임 창 표면의 서브표면 `wl_subsurface` 에 줄을 그린다). 글은 X11 의 서버 글꼴이 없어 `WaylandTextPainter`(엔진 `IFontRasterizer` 의 SDF 글리프 + `SystemFontLocator`)로 그리고, 공유 메모리 버퍼 묶음(`WaylandShmBufferPool`)은 둘이 함께 쓴다. 남음: EGL 로 GL(RHI 영역). 클립보드 왕복 시나리오는 weston headless 에 `wl-copy`/`wl-paste` 가 있어야 만들 수 있다 | 코드 완료(컴파일 확인 없음), EGL 만 남음 |
 
 ## 남은 것
 
-- W1 코드와 CI 단계는 모두 들어가 있고 남은 W2 는 push 뒤 CI 첫 실행, W3 은 W2 초록이 조건이다. 서버 빌드에 Wayland 코드가 새지 않게 하는 정적 게이트는 `CheckX11Isolation` 4번 규칙이다.
-- 소수 배율 · 커서 모양 · 포인터 잠금 코드(W3)도 W2 잡의 같은 첫 컴파일이 처음 본다 — 실패하면 생성 헤더 이름(`<XML 이름>-client-protocol.h`, 커서 모양은 `tablet-unstable-v2` 가 함께 링크돼야 한다)과 판 상수부터 본다. 스모크(ci.yml)는 기동 로그의 `Window backend: Wayland` · `Native Wayland Window created` 줄만 보므로 새 `Wayland extensions: …` 줄은 스모크를 깨지 않는다. 잠금 왕복(잠그면 `PointerMove` 가 멎고 `PointerRelative` 가 오는지)은 weston headless 에 가상 포인터가 있어야 볼 수 있어 시나리오로 만들지 못했다.
+- W1 코드는 들어가 있고 컴파일 확인은 없다(이 PC 에서는 리눅스를 빌드하지 않는다). 서버 빌드에 Wayland 코드가 새지 않게 하는 정적 게이트는 `CheckX11Isolation` 4번 규칙이다.
+- 소수 배율 · 커서 모양 · 포인터 잠금 코드(W3)도 한 번도 컴파일되지 않았다 — 컴파일이 실패하면 생성 헤더 이름(`<XML 이름>-client-protocol.h`, 커서 모양은 `tablet-unstable-v2` 가 함께 링크돼야 한다)과 판 상수부터 본다. 잠금 왕복(잠그면 `PointerMove` 가 멎고 `PointerRelative` 가 오는지)은 weston headless 에 가상 포인터가 있어야 볼 수 있어 시나리오로 만들지 못했다.
 - W3 의 에디터 백엔드 · 스플래시 · 콘솔 코드도 같은 첫 컴파일을 기다린다. 컴파일에서 볼 곳: `WaylandShmBuffer.cpp`(`memfd_create` 는 glibc 2.27 이상 `<sys/mman.h>`), `WaylandSplashWindow.cpp` · `WaylandDevConsoleWindow.cpp`(리스너 구조체 값 초기화, `wl_subcompositor` 바인드 판 1), 헤더에 선언만 둔 `struct wl_*`(`WaylandWindow.h`). 글꼴은 후보 파일 이름 목록이 `WaylandTextPainter.cpp` 에 있어(`editortooldefaults.json` 의 `_listBaseFont` · `_listKoreanFont` 와 같은 이름 — 에디터 설정을 엔진이 못 읽어 따로 둔다, 바뀌면 함께 고친다) 라틴 고정폭 글꼴이 하나도 없는 기계에서는 콘솔을 세우지 않고 스플래시는 글 없이 그림과 막대만 그린다. 스플래시 창 자리는 컴포지터가 정한다(가운데 보장 없음). Wayland 에디터는 패널을 OS 창으로 떼어 낼 수 없다(xdg-shell 이 창 자리를 못 정한다). 에디터의 GL 렌더러는 EGL 이 없는 한 Wayland 에서 못 쓴다(Vulkan 만).
 - `X11Window::getContentScale` 은 `Xft.dpi` 를 연결을 연 때의 값으로 읽는다. 실행 중 배율 변경을 따르려면 루트 창의 `RESOURCE_MANAGER` 속성 변경 알림을 받아 캐시해야 한다 — 지금은 하지 않는다.
-- W2 의 CI 잡 첫 실행을 보고 실패를 고친다(`py -3 -m Scripts ci-jobs --summary`). 초록이 이어지면 잡의 `reportOnly` 를 지우고 `configureArgs` 를 `Build Linux Debug (Clang)` 로 옮겨 잡을 하나로 합친다(ci.yml 주석). 리스너 구조체는 값 초기화한 뒤 이름으로 채웠다(설치된 wayland 헤더 판이 바인드한 판보다 새로우면 남는 칸은 비어 그 이벤트는 오지 않는다).
+- 리스너 구조체는 값 초기화한 뒤 이름으로 채웠다(설치된 wayland 헤더 판이 바인드한 판보다 새로우면 남는 칸은 비어 그 이벤트는 오지 않는다).

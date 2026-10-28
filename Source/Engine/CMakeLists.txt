@@ -110,7 +110,7 @@ set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 # ------------------------------------------------------------------------------
 # 4) 서드파티 링크 — 서드파티 물리 · 애니메이션 · 프로파일러 · 내비 · 글꼴 라이브러리를 링크하는 곳은 이 파일 하나다.
-# 헤더는 각 백엔드 폴더에서만 include 한다(CheckThirdPartyIsolation.py) — 다른 코드와 다른 타깃은 엔진 인터페이스만 본다.
+# 헤더는 각 백엔드 폴더에서만 include 한다 — 다른 코드와 다른 타깃은 엔진 인터페이스만 본다.
 # ThirdParty include/link 는 PRIVATE 로 둔다. Engine 밖으로 헤더가 노출되지 않게 해 C-ABI 격리를 유지한다.
 # ------------------------------------------------------------------------------
 # 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/ACL/` 에서만 include 한다 — 코덱 인터페이스(`AnimationCodec.h`) 뒤에 감춘다.
@@ -133,8 +133,7 @@ target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
 # Shipping 은 링크하지 않는다(SW_ENABLE_TRACY 를 무시). 클라이언트는 프로세스에 하나 — Engine 만 링크하고, RHI 백엔드 · 모듈은 엔진
 # 인터페이스(IProfilerBackend)만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘기므로 백엔드 DLL 이 Tracy 를 알 필요가 없다.
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
-# 링크하지 않는다 — Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`,
-# 지연 로드를 쓰지 않는 이유는 docs/09_Decisions.md). 리눅스는 링크한다.
+# 링크하지 않는다 — Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 	if(NOT WIN32)
 		target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
@@ -184,7 +183,7 @@ elseif(SW_SHIPPING_BUILD)
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
 	sw_resolveShippingRhiBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
 	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
-	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표, docs/09_Decisions.md 5-4).
+	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표).
 	sw_readOptionalJsonValue(swEngineConfigRhi "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
 	if(DEFINED swEngineConfigRhi AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
 		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${swShippingBackend}'")
@@ -203,7 +202,7 @@ elseif(SW_SHIPPING_BUILD)
 endif()
 
 # ------------------------------------------------------------------------------
-# 6) Windows 시스템 라이브러리 — Input(XInput) + 파일 대화상자 + 셰이더 컴파일러 유틸리티 + OS 난수(bcrypt, Core 의 SecureRandom). 지연 로드(/DELAYLOAD)는 쓰지 않는다(docs/09_Decisions.md):
+# 6) Windows 시스템 라이브러리 — Input(XInput) + 파일 대화상자 + 셰이더 컴파일러 유틸리티 + OS 난수(bcrypt, Core 의 SecureRandom). 지연 로드(/DELAYLOAD)는 쓰지 않는다:
 #    없을 수 있는 DLL(Media Foundation — Windows N · XAudio2)은 쓰는 쪽이 LoadLibrary + 함수 표로 올리므로 import 라이브러리를 링크하지 않는다
 #    (`XAudio2AudioBackend.cpp`). d3dcompiler_47 은 Windows 8.1 부터 System32 에 늘 있어 일반 import 다(DX 백엔드 모듈도 그렇다).
 # ------------------------------------------------------------------------------
@@ -229,10 +228,9 @@ endif()
 # 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
-# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/Helpers.md). `CheckCodeConventions` 의
-# `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, docs/agents/Helpers.md). 이름 규칙이 그것을 정한다.
 #
-# 다시 넣고 싶어지면 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
+# 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_setUnityBuild` 가
 # include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
@@ -273,7 +271,7 @@ sw_addReflectBuiltinsGen(Engine)
 #
 # Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
 # PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt
-# 래퍼 헤더로 PCH 를 하나 만든다(측정은 docs/08_Verification.md "빌드 속도"). 컴파일 설정은 Engine 의 것을 그대로 옮기고 Jolt 의 정의 ·
+# 래퍼 헤더로 PCH 를 하나 만든다. 컴파일 설정은 Engine 의 것을 그대로 옮기고 Jolt 의 정의 ·
 # 옵션만 더한다. 그래서 이 블록은 Engine 설정이 모두 끝난 뒤(파일 끝)에 둔다 — 이 뒤에 Engine 에 더한 설정은 Jolt 소스에 가지 않는다.
 # 유니티 묶음에는 넣지 않는다. 코드젠 산출물(`FlagOps.gen.h` 등)을 읽으므로 Engine 이 기다리는 대상을 같이 기다린다.
 # ------------------------------------------------------------------------------

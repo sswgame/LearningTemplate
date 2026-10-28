@@ -168,7 +168,7 @@ namespace sw
 
         /**
          * @brief 받는 인자의 목록(`-help` 가 찍는 글)을 만듭니다 — 줄마다 표(ArgumentList.xxx)의 철자와 값 모양(`-key` · `-key=<int>` …)입니다.
-         * @details 목록은 표에서 만든다(손으로 쓴 도움말이 표와 어긋나지 않는다). 사람이 읽는 설명은 표의 주석이 원본인 생성 문서 `docs/Config/CommandLine.md` 를 가리킨다.
+         * @details 목록은 표에서 만든다(손으로 쓴 도움말이 표와 어긋나지 않는다).
          */
         string makeUsageText() const;
 

@@ -1217,8 +1217,8 @@ namespace sw
              * @brief PROPERTY 에 컴포넌트 핸들이 있으면 저장할 수 있는 모양인지 확인하고 내장 `ComponentHandle` 로 정규화합니다. 아니면 오류를 남기고 false 입니다.
              * @details 저장할 수 있는 모양은 **타입 핸들 `TComponentHandle<T>` 한 값**, 또는 **그 시퀀스(한 겹, `vector` 등)** 입니다. 정규화하면 값 · 원소의 타입 이름은
              *          내장 `ComponentHandle` 이 되어 직렬화기 · 인스펙터가 기존 처리기를 그대로 쓰고, 대상 `T` 는 `_handleTargetTypeName` 에 실려
-             *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다
-             *          (`docs/09_Decisions.md` 5-6 타입 핸들 직렬화). 리플렉션 구조체의 필드도 이 검사를 지난다.
+             *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다.
+             *          리플렉션 구조체의 필드도 이 검사를 지난다.
              */
             [[nodiscard]] static bool resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
             {
@@ -1241,8 +1241,7 @@ namespace sw
                 if ( bSingleValue == false && bSequenceOfHandles == false )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
-                                  "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type "
-                                  "(see docs/09_Decisions.md 5-6, typed handle serialization).",
+                                  "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type.",
                                   owner, prop._typeName );
                     return false;
                 }

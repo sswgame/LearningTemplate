@@ -5,7 +5,7 @@
  *          주제는 `[0-9a-z_.]`(200 B 이하)이다. 예: "account.revoke", "chat.channel.<이름>". 틀린 주제의 발행과 구독은 경고를 남기고 버린다.
  *          - 바이트 전송(`IServerBusTransport`)과 타입 있는 앞(`ServerBus`)이 나뉜다. 전송은 호스트와 서버 조립만 가지고, 키트는 앞만 받는다.
  *            앞의 바이트 발행과 메시지의 본문 바이트는 주제 정의(`ServerBusTopic`, `ServerBusTopicFamily`)만 쓰고 읽는다. 키트가 바이트를 직접 쓰거나
- *            `BitReader` 로 읽는 코드는 컴파일되지 않는다(docs/09_Decisions.md 5-9 서버 버스 주제).
+ *            `BitReader` 로 읽는 코드는 컴파일되지 않는다.
  *          - 본문은 자기 기술형(A, 의미 버전 머리 + `BinarySerializer`)이다. 서버 사이에는 핸드셰이크가 없어 배포 중에 빌드가 섞이기 때문이다.
  *          구현은 `EphemeralServerBus`(캐시 발행/구독 위, 서버 여럿)와 `LocalServerBus`(프로세스 안, 서버 한 대와 테스트)다.
  */

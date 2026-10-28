@@ -134,7 +134,7 @@ namespace sw
          * @param frameBeginNanos 틱 본문 시작(단조 시계) — 파일에 "Slow tick" 표식으로 찍힌다
          * @param frameEndNanos 틱 본문 끝
          * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다. 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
-         *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다(결정 기록).
+         *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다.
          */
         static void updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
 

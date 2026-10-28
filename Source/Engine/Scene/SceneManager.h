@@ -163,7 +163,7 @@ namespace sw
 
         /**
          * @brief 미리보기 씬(툴 창의 숨은 월드)을 만듭니다. 활성 씬 · 로드된 씬 목록과 따로 삽니다 — 저장 · 전환 · 영속 오브젝트에 끼지 않습니다.
-         * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다(docs/decisions/5-11_Editor.md 2.1). 씬마다 오브젝트 매니저와 씬 범위
+         * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다. 씬마다 오브젝트 매니저와 씬 범위
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
          *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `adoptScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.

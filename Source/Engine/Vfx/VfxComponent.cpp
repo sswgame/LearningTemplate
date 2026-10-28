@@ -38,7 +38,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
     /**
      * @brief CPU · GPU 둘 다 되는 방출기의 시뮬레이션 대상입니다. 기본값은 Shipping 과 같은 GPU 다.
-     * @details 학습용으로 두 방식을 나란히 보게 둔다(결정 기록 5-12 `D2-11`). 한 곳만 되는 방출기(물리 충돌은 CPU, 깊이 충돌은 GPU)는
+     * @details 학습용으로 두 방식을 나란히 보게 둔다. 한 곳만 되는 방출기(물리 충돌은 CPU, 깊이 충돌은 GPU)는
      *          이 값과 무관하게 그곳이다(`VfxEmitterDef::computeSupportedTargets`). Shipping 은 변수를 두지 않고 GPU 로 고정한다. 효과를 읽을 때 정하므로 바꾼 뒤 읽은 효과부터 따른다.
      */
     SW_TEST_GLOBAL_VARIABLE( VfxSimulationTarget, gv_vfxSimulation, VfxSimulationTarget::GPU, "둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳)" );

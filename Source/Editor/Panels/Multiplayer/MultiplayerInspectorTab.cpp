@@ -235,7 +235,7 @@ namespace sw::editor
             if ( ImGui::Button( "Attach" ) )
             {
                 NetAddress remote;
-                // 채널은 루프백에만 묶이므로(결정 기록 5-10) 다른 주소는 붙기 전에 거절한다.
+                // 채널은 루프백에만 묶이므로 다른 주소는 붙기 전에 거절한다.
                 const bool bLoopback = NetAddress::parse( _address.c_str(), 0, remote ) && remote.isValid() && remote == NetAddress::makeLoopback( remote._port );
                 if ( bLoopback == false )
                     SW_LOG_WARNING( "Inspector attaches only to 127.0.0.1:<port> - '%#' is not one", _address.c_str() );

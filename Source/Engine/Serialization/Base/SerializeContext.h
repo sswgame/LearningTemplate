@@ -85,7 +85,7 @@ namespace sw
         /**
          * @brief 바이너리 엄격 읽기가 **타입에 없는 이름**의 필드를 건너뛰고 계속할지 설정합니다. 켜면 (타입, 이름)마다 한 번 경고하고, 끄면(기본) 읽기가 실패합니다.
          * @details 같은 컨텍스트가 중첩 구조체 · 컨테이너 원소 · 맵 키까지 내려가므로 모든 깊이에서 같은 정책입니다. 혼합 빌드 사이의 메시지와 캐시는 이것만 켭니다
-         *          (`MixedBuildCodec::getReadContext`, docs/09_Decisions.md 5-9 서버 버스 읽기 정책).
+         *          (`MixedBuildCodec::getReadContext`).
          */
         SerializeContext& setSkipUnknownProperties( bool bSkip )
         {

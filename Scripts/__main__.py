@@ -9,7 +9,7 @@ SW Engine 통합 CLI 엔트리포인트:
 
   py -3 -m Scripts --help     # 무엇이 있는지는 이 명령이 답한다
   py -3 -m Scripts <명령> ... # 나머지 인자는 그대로 넘어간다
-  py -3 -m Scripts gate CheckEngineLayers --files a.h   # lint/ 의 폴더에서 이름으로(gate · fix · report)
+  py -3 -m Scripts gate CheckIncludeOrder --files a.h   # lint/ 의 폴더에서 이름으로(gate · fix)
 
 이름 있는 명령은 표(`_kSubcommand`), 종류로 묶이는 린트 · 보고서는 폴더 훑기(`LintCatalog`)다 — 린트를 더해도 이 파일은 고치지 않는다.
 """
@@ -63,8 +63,8 @@ _kSubcommand: tuple[Subcommand, ...] = (
 
 _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command in _kSubcommand}
 
-#: 폴더를 훑어 이름으로 부르는 명령 — `py -3 -m Scripts gate CheckEngineLayers --files a.h`. 목록은 폴더다(LintCatalog).
-_kFolderCommand: dict[str, str] = {"gate": "gate", "fix": "fixer", "report": "report"}
+#: 폴더를 훑어 이름으로 부르는 명령 — `py -3 -m Scripts gate CheckIncludeOrder --files a.h`. 목록은 폴더다(LintCatalog).
+_kFolderCommand: dict[str, str] = {"gate": "gate", "fix": "fixer"}
 
 
 def runFolderCommand(folderName: str, listArgument: list[str]) -> int:
@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="py -3 -m Scripts",
         description="SW Engine 통합 개발 도구체인 CLI",
         epilog="\n".join([*(f"  {command.name:<15} {command.description}" for command in _kSubcommand),
-                          f"  {'|'.join(_kFolderCommand)} <이름>  lint/ 의 폴더(gate · fixer · report)에서 이름으로 — 이름 없이 부르면 목록"]),
+                          f"  {'|'.join(_kFolderCommand)} <이름>  lint/ 의 폴더(gate · fixer)에서 이름으로 — 이름 없이 부르면 목록"]),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", choices=[*_kSubcommandByName, *_kFolderCommand], help="실행할 하위 도구 명령")

@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @brief `-gv_traceSlowTickMs=N`: 틱 본문이 N ms 를 넘으면 그 앞뒤 링 버퍼를 트레이스로 저장합니다(0=끄기). 켜 두면 타임라인 기록이 늘 돈다.
-     * @details 전용 서버가 부릅니다(`ServerApp::run`). Shipping 에는 없습니다 — 운영 캡처는 Dev 구성 서버로(결정 기록 "트레이스 내보내기").
+     * @details 전용 서버가 부릅니다(`ServerApp::run`). Shipping 에는 없습니다 — 운영 캡처는 Dev 구성 서버로.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_traceSlowTickMs, 0, "틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기)" );
     /**

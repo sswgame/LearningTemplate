@@ -123,7 +123,7 @@ function(sw_addEditorLayerStubs PART TIER)
 					continue()
 				endif()
 				set(stubPath "${stubRoot}/Editor/${header}")
-				set(stubContent "#error \"Editor layer '${layer}' (tier ${upperTier}) cannot be included from tier ${TIER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency (docs/09_Decisions.md 5-11, Scripts/lint/rules/GenerateEditorLayers.toml).\"\n")
+				set(stubContent "#error \"Editor layer '${layer}' (tier ${upperTier}) cannot be included from tier ${TIER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"\n")
 				set(oldContent "")
 				if(EXISTS "${stubPath}")
 					file(READ "${stubPath}" oldContent)
@@ -336,7 +336,7 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 endforeach()
 sw_applyEditorInputBan(EditorModule)
 
-# 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).
+# 에디터는 LTO 를 받지 않는다(링크 시간 — Tools/ 와 같은 이유).
 set_target_properties(EditorModule ${listEditorPart} PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)   # EditorCore 부분은 만들 때 이미 껐다
 
 # 확장 모듈은 에디터 헤더(Source/ 기준 경로)를 쓴다. ImGui 링크는 확장이 스스로 한다 — vcpkg imgui 는 정적이라 DLL 마다 사본이고 결속기가 컨텍스트를 맞춘다.

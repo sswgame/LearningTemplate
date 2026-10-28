@@ -385,7 +385,7 @@ namespace sw
             request._pPolicy    = &currencies;
             request._timeMs     = nowMs;
             request._actorKind  = LedgerActorKind::System;
-            request._bAllowDebt = SW_TRUE; // 환불 회수만 빚을 허용한다(결정 기록 5-9)
+            request._bAllowDebt = SW_TRUE; // 환불 회수만 빚을 허용한다
             for ( const LedgerPosting& posting : redeem._listPosting )
             {
                 request._listPosting.push_back( LedgerPosting{ posting._to, LedgerHolder::makeSink(), posting._assetID, posting._amount } );

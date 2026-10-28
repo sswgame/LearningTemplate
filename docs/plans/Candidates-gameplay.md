@@ -36,7 +36,7 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 왜 필요한가: 세션 · 정렬 · 복제 · 에디터 모델은 테스트가 통과했다(`PairedAnimationTest` · `PairedAnimationReplicationTest` · `PairedAnimationEditModelTest`). 에디터 창 시나리오는 없다.
 남은 것:
 - 미리보기 창(`PairedAnimationPanel`)에서 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
-- 두 프로세스(Server + App) 세션 시작 · 늦은 참가 · 끝 복제는 씬 `game/empty/maps/pairedanimnet.scene.xml` 과 명령 `py -3 -m Scripts paired-net-pair --preset Ninja-Release` 가 만들어졌고 항목 `paired-animation-two-process` 가 통합에서 돈다(실행 전 — 첫 통합 결과로 이 줄을 지운다). 씬은 기사 둘(Lead · Partner)에 `PairedAnimationComponent`(스스로 시작하지 않는다) · 서버 쪽 시작자 `PairedAnimationNetStarterComponent`(세션이 끝날 때마다 다시 시작해 늘 재생 중인 세션이 있다) · `PairedAnimationNetSessionComponent` 를 단다. 러너는 `common/NetPairRun.py`(`RunDestructionNetPair` 와 같이 쓴다)로 서버를 먼저 띄우고 클라이언트를 붙여 `[PairedAnimationNet]` 줄(`common/PairedAnimationNetLog.py`)을 맞댄다: 서버 `join` → 클라이언트 `restore`(늦은 참가), 붙은 뒤 서버 `start` → 클라이언트 `restore`(세션 시작), 서버 `end` → 클라이언트 `end`(끝). 한 판 로그는 `build/<프리셋>/pairedanimpair/{server,client}.log`. 화면으로 보려면 같은 인자로 서버(`Server -gv_firstScene=<씬> -gv_netListenPort=7777`)와 클라이언트(`App ... -gv_netConnectAddress=127.0.0.1:7777`)를 띄우면 클라이언트 창에서 두 기사가 서버를 따라 환호 · 상호작용을 되풀이한다. 스폰된 오브젝트(활 · 화살 같은 외형 부품 프롭)를 역할로 복제하는 확인은 이 씬이 아니라 그 게임이 생길 때 그 게임 계획에서 만든다(결정 기록 5-8).
+- 두 프로세스(Server + App) 세션 시작 · 늦은 참가 · 끝 복제는 씬 `game/empty/maps/pairedanimnet.scene.xml` 과 명령 `py -3 -m Scripts paired-net-pair --preset Ninja-Release` 가 만들어졌고 항목 `paired-animation-two-process` 가 통합에서 돈다(실행 전 — 첫 통합 결과로 이 줄을 지운다). 씬은 기사 둘(Lead · Partner)에 `PairedAnimationComponent`(스스로 시작하지 않는다) · 서버 쪽 시작자 `PairedAnimationNetStarterComponent`(세션이 끝날 때마다 다시 시작해 늘 재생 중인 세션이 있다) · `PairedAnimationNetSessionComponent` 를 단다. 러너는 `common/NetPairRun.py`(`RunDestructionNetPair` 와 같이 쓴다)로 서버를 먼저 띄우고 클라이언트를 붙여 `[PairedAnimationNet]` 줄(`common/PairedAnimationNetLog.py`)을 맞댄다: 서버 `join` → 클라이언트 `restore`(늦은 참가), 붙은 뒤 서버 `start` → 클라이언트 `restore`(세션 시작), 서버 `end` → 클라이언트 `end`(끝). 한 판 로그는 `build/<프리셋>/pairedanimpair/{server,client}.log`. 화면으로 보려면 같은 인자로 서버(`Server -gv_firstScene=<씬> -gv_netListenPort=7777`)와 클라이언트(`App ... -gv_netConnectAddress=127.0.0.1:7777`)를 띄우면 클라이언트 창에서 두 기사가 서버를 따라 환호 · 상호작용을 되풀이한다. 스폰된 오브젝트(활 · 화살 같은 외형 부품 프롭)를 역할로 복제하는 확인은 이 씬이 아니라 그 게임이 생길 때 그 게임 계획에서 만든다.
 함정: 재생 속도를 매 프레임 쓰는 컴포넌트가 새로 생기면 세션 쥠(`setPlayRateHeld`)을 받아야 한다 — 안 받으면 시각 검사가 어긋남으로 보고 중단한다. 복원은 `warp` 창을 다시 열지 않아 창 도중에 이어 받은 클라이언트는 휘지 않은 루트 모션으로 가고 서버 보정을 받는다. 프롭 역할 묶기는 시작 때 매니저 전체를 훑고 같은 에셋 · 같은 역할의 프롭이 둘 이상이면 거절한다.
 
 ### RigEditingScreenChecks
@@ -47,4 +47,4 @@ GameFramework 키트와 게임, 캐릭터, 카메라, 애니메이션 영역의 
 
 ## 기능
 
-지금 남은 후보는 없다. `PhotoModePauseUpdate`(D4-14)는 2026-10-27 에 닫았다 — 포토 모드는 게임 일시정지에서만 움직인다([결정 기록](../09_Decisions.md) 5-8).
+지금 남은 후보는 없다. `PhotoModePauseUpdate`(D4-14)는 2026-10-27 에 닫았다 — 포토 모드는 게임 일시정지에서만 움직인다.

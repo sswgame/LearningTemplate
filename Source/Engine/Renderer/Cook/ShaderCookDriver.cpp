@@ -92,7 +92,7 @@ namespace sw
             /**
              * @brief 병렬로 도는 쿠킹 한 번의 입력과 본문입니다. 병렬 단위는 **사슬**(같은 바이너리 파일을 만드는 작업의 묶음)이라 두 스레드가 한 파일을 쓰지 않습니다.
              * @details 컴파일러(DXC · FXC) · `ContentHash` · `isCookedOutputCurrent`(전역 잠금) · `ShaderReflection::reflect` · `ShaderBindingValidator::validate` 가 스레드 안전해야 하고,
-             *          그 확인은 `docs/08_Verification.md` 의 쿠킹 절과 각 함수의 주석에 있다.
+             *          그 확인은 각 함수의 주석에 있다.
              */
             struct CookJob
             {
@@ -147,7 +147,7 @@ namespace sw
 
                     // 새로 쿠킹했든 이미 최신이든 리플렉션은 항상 바이너리에서 뽑는다. 바이너리만 최신이고
                     // 리플렉션이 빠지면 런타임이 조용히 폴백하고, 배포 빌드에서는 그대로 실패한다.
-                    // 최신 바이너리의 리플렉션을 이전 매니페스트에서 가져오지 않는 이유는 `docs/09_Decisions.md` 에 있다.
+                    // 최신 바이너리의 리플렉션을 이전 매니페스트에서 가져오지 않는다.
                     const Stopwatch reflectWatch;
                     vector<uint8>   bytecode;
                     const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다

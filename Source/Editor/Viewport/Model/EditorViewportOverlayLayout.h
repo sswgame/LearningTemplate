@@ -1,7 +1,7 @@
 /**
  * @file EditorViewportOverlayLayout.h
  * @brief 씬 뷰 위에 떠 있는 오버레이 바(유니티 씬 뷰 Overlays)의 위치 · 붙은 쪽 · 접힘 · 보임과 그 저장입니다(ImGui 없음 — EditorTest 가 테스트합니다).
- * @details 저장은 사용자 상태라 리플렉션 JSON(`EditorViewportOverlayFile`)이다(결정 기록 5-4 TX2 — 예전 `key=value`). 옛 파일을 읽는 길은 두지 않는다.
+ * @details 저장은 사용자 상태라 리플렉션 JSON(`EditorViewportOverlayFile`)이다. 옛 파일을 읽는 길은 두지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"

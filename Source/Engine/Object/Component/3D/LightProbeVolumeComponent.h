@@ -1,6 +1,6 @@
 /**
  * @file LightProbeVolumeComponent.h
- * @brief 라이트 프로브 볼륨 하나입니다. 축 정렬 상자 안에 균일 격자로 프로브를 두고, 베이크 결과(`.probes`)를 읽어 간접 조명으로 씁니다(결정 기록 5-5 P1).
+ * @brief 라이트 프로브 볼륨 하나입니다. 축 정렬 상자 안에 균일 격자로 프로브를 두고, 베이크 결과(`.probes`)를 읽어 간접 조명으로 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -56,7 +56,7 @@ namespace sw
         float32 getBounceAlbedo() const { return _bounceAlbedo; }
 
         /**
-         * @brief 켜져 있으면 베이크 대신 GPU 가 프로브를 프레임마다 조금씩 다시 계산합니다(결정 기록 5-5 R6). 베이크 데이터는 쓰지 않는다.
+         * @brief 켜져 있으면 베이크 대신 GPU 가 프로브를 프레임마다 조금씩 다시 계산합니다. 베이크 데이터는 쓰지 않는다.
          * @details 장면은 정적 메시의 점유 복셀(`SceneVoxelGrid`)이다 — 움직이는 물체와 스킨 메시, 반투명은 빛을 가리지 않는다. 직접광이 닿은 면이 한 번 튕긴 빛(반사율 = `getBounceAlbedo`)과
          *          하늘만 담는다(베이커와 같은 규칙).
          */

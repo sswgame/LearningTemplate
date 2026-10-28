@@ -32,7 +32,7 @@
 제목: 메시 모디파이어 패널 캡처 세 장을 눈으로 확인
 옛번호: D3-10
 왜 필요한가: `GF_EditorPlugIn_MeshModifiers` 는 56 id 를 등록했고 시나리오 `editor.meshmodifiers` 가 `meshmodifiers/panel.png` · `gizmo.png` · `nested.png` 를 찍는다. 시나리오 통과(`app-scenarios-release`)는 캡처가 찍힌다는 것까지만 증명한다.
-남은 것: 매니페스트 id `mesh-modifier-captures-review` — 사람이 PNG 세 장(패널 · 기즈모 · 중첩)을 본다.
+남은 것: — 사람이 PNG 세 장(패널 · 기즈모 · 중첩)을 본다.
 못 하는 이유: 기준 그림이 없어 눈이 판정한다. 풀리는 조건: 기준 그림을 정해 `ExpectImage` 로 옮기면 항목과 절을 지운다.
 
 ## 기능
@@ -56,6 +56,6 @@
 제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
 옛번호: D3-10
 왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 줄이지 못해 더하지 않았다.
-착수 조건: 매니페스트 id `mesh-modifier-preview-cost` 의 값(사람이 큰 메시를 열어 매개변수를 끌며 Release 프로파일러의 `Editor.MeshModifiers.*` 구간을 읽는다 — 그 입력 흐름을 한 명령으로 도는 케이스가 없다)에서 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때.
+착수 조건: 의 값(사람이 큰 메시를 열어 매개변수를 끌며 Release 프로파일러의 `Editor.MeshModifiers.*` 구간을 읽는다 — 그 입력 흐름을 한 명령으로 도는 케이스가 없다)에서 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때.
 남은 것: `Editor.MeshModifiers.Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표에 올린다(`MeshModifierGPUProgram`). `Editor.MeshModifiers.CpuMesh` 가 크면 미리보기 메시의 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents` 에 위치만 바뀐 탄젠트를 넘기는 길 포함)을 본다.
 함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다.

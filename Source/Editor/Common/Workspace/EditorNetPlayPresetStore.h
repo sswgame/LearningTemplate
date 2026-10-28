@@ -1,7 +1,7 @@
 /**
  * @file EditorNetPlayPresetStore.h
  * @brief 멀티 프로세스 재생의 사용자 프리셋(이름 붙인 `EditorNetPlaySettings`)을 사용자 파일 하나에 저장 · 고르기 · 지우기를 합니다. ImGui 에 의존하지 않습니다.
- * @details 파일은 `Saved/Editor/NetPlayPresets.json` 이고 커밋하지 않는다(결정 기록 D7-3.3). 바꾸는 호출은 즉시 파일을 다시 쓴다 — 에디터가 죽어도
+ * @details 파일은 `Saved/Editor/NetPlayPresets.json` 이고 커밋하지 않는다. 바꾸는 호출은 즉시 파일을 다시 쓴다 — 에디터가 죽어도
  *          마지막으로 고른 프리셋이 남는다. 깨진 파일은 환경설정 · 단축키와 같은 한 경로(`EditorUserFile::quarantineCorruptFile`)로 치운다.
  */
 #pragma once

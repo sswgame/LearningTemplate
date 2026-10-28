@@ -95,7 +95,7 @@ namespace sw
      * @details `Gradient` 모드: 위쪽은 천정 색에서 지평선 색으로, 아래쪽은 땅 색에서 지평선 색으로 간다. 지평선 쪽 비율은 `(1 - |y|)^지수` 이고 마지막에 세기를 곱한다.
      *          지수가 클수록 지평선 띠가 좁다. 셰이더 상수로는 `g_SkyZenith`(rgb, w = 지수) · `g_SkyHorizon`(rgb) · `g_SkyGround`(rgb, w = 세기)로 싣는다.
      *          `Atmosphere` 모드: 산란(`SkyAtmosphere`) × 해 색 × `_atmosphere._sunIntensity` × 세기. 해는 `setSun` 으로 받는다 — 해(방향광)가 없으면 해 색이 0 이라 하늘은 0(땅도 0)이다(폴백 없음).
-     *          셰이더는 해 방향 · 색을 키 라이트 상수(`g_KeyLightDirIntensity` · `g_KeyLightColor`)에서 읽는다 — 같은 값이다. 같은 식을 간접 조명 베이크가 프로브마다 SH 로 투영한다(결정 기록 5-5 P2).
+     *          셰이더는 해 방향 · 색을 키 라이트 상수(`g_KeyLightDirIntensity` · `g_KeyLightColor`)에서 읽는다 — 같은 값이다. 같은 식을 간접 조명 베이크가 프로브마다 SH 로 투영한다.
      */
     struct SW_API SkyGradient
     {

@@ -1,6 +1,6 @@
 /**
  * @file SphericalHarmonics.h
- * @brief 2차 구면 조화 함수(SH9, RGB)입니다. 라이트 프로브의 조명 표현이고, 유니티 APV · 라이트 프로브와 같은 차수입니다(결정 기록 5-5 P0).
+ * @brief 2차 구면 조화 함수(SH9, RGB)입니다. 라이트 프로브의 조명 표현이고, 유니티 APV · 라이트 프로브와 같은 차수입니다.
  * @details 계수는 실수 기저(Sloan, "Stupid Spherical Harmonics Tricks" 의 순서)로 9 개, 채널마다 하나씩 27 개입니다.
  *          투영은 방향마다 복사휘도에 기저를 곱해 더하고(`addSample`, 균일 구 샘플이면 가중치 4π / 샘플 수), 합산은 계수를 그대로 더합니다(회전 없음).
  *          평가는 둘입니다 — `evaluateRadiance` 는 그 방향의 복사휘도, `evaluateIrradiance` 는 코사인 로브(램버트)를 컨볼루션한 조도입니다

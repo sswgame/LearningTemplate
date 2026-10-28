@@ -2,7 +2,7 @@
  * @file PackCooker.h
  * @brief 도메인 폴더(`engine` · `common` · `game/<팩>`)마다 팩 하나(`engine.pack` · `common.pack` · `game_<팩>.pack`)를 베이크합니다. `App --cook-packs` · `--cook-all` 이 부릅니다.
  * @details 무엇을 담을지(이 파일)와 어떤 바이트가 되는지(`ResourcePakWriter`)를 나눈다. 쿠킹은 엔진 언어 한 곳이다 — 예전 파이썬 쿠커(`CookAssets.py`)가
- *          레이아웃 · 압축 · 증분 기록을 따로 들던 것을 옮겼다(결정 기록 5-4 PK2).
+ *          레이아웃 · 압축 · 증분 기록을 따로 들던 것을 옮겼다.
  *          - 담는 것: 도메인 폴더의 파일 중 `PackConfig` 의 제외(전역 · 규칙별 폴더 · 패턴), 셰이더 원본, 다른 백엔드의 셰이더 바이너리, 빌드 타깃이 빼는
  *            종류(`ResourcePaths::isExcludedForTarget` — 런타임이 같은 표로 읽지 않는다)를 뺀 것과, 스테이징 폴더(`<쿠킹 폴더>/<도메인>`)의 쿠킹 산출물 전부.
  *            스테이징은 도메인 기준 **같은 상대 경로**로 들어간다. 소스 트리에 남은 쿠킹본(`AssetCookPath::isCookedOutput`)은 낡은 잔재라 넣지 않고 이름을 알린다.

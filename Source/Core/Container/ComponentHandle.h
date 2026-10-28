@@ -78,7 +78,7 @@ namespace sw
      *          - 타입 없는 `ComponentHandle` 과의 `==` 는 허용한다. 비교는 id 만 보고 주소를 만들지 않는다. 서로 관계없는 두 타입 핸들의 비교는 컴파일 오류다.
      *          Core 는 `Component` 를 모른다. `T` 의 멤버는 템플릿이 인스턴스화될 때만 본다.
      * @note `PROPERTY()` 에는 이 타입 핸들 한 값과 그 시퀀스만 둘 수 있다. 파서가 값을 내장 `ComponentHandle` 로 기록하고 대상 `T` 를 따로 싣는다. 파일에는
-     *       `{대상 오브젝트의 저장 id, 안정 키}` 로 적는다(`docs/09_Decisions.md` 5-6 타입 핸들 직렬화).
+     *       `{대상 오브젝트의 저장 id, 안정 키}` 로 적는다.
      */
     template <typename T>
     class TComponentHandle

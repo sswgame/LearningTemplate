@@ -50,7 +50,7 @@ namespace sw
      * @brief 같은 오브젝트의 `TerrainComponent` 높이장을 렌더 청크마다 정적 바디 하나로 만듭니다(언리얼 랜드스케이프의 컴포넌트별 충돌과 같다).
      * @details 물리 프레임마다 청크 세대(`TerrainComponent::getChunkGenerations`)를 비교해 바뀐 청크의 바디만 다시 만든다 — `writeHeights` 로 작은 사각형을 쓰면
      *          그 사각형이 닿는 청크 몇 개만, `reloadTerrain` 이면 모두. 지형 전체를 한 바디로 두면 쓸 때마다 N² 점 메시 전체를 다시 짓는다
-     *          (257² 에서 약 80 배 — `TerrainBenchTest.ColliderRebuildAfterBrushWrite`, docs/08_Verification.md 영역별 측정값).
+     *          (257² 에서 약 80 배 — `TerrainBenchTest.ColliderRebuildAfterBrushWrite`).
      *          바디는 플레이 중에만 있고(다른 물리 컴포넌트와 같다), 높이장 원점에 회전 없이 놓인다(지형이 오너의 회전과 크기를 보지 않는 것과 같다).
      *          충돌 레이어와 재질은 이 컴포넌트의 속성이다. 지형이 없거나 비었으면 바디를 만들지 않는다.
      */

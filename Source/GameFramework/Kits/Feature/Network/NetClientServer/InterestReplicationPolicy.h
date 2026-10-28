@@ -1,6 +1,6 @@
 /**
  * @file InterestReplicationPolicy.h
- * @brief 클라이언트-서버 복제의 관심 영역 정책입니다 — 관찰자(연결의 폰) 근처의 엔티티만 보냅니다(결정 기록 5-9 R2).
+ * @brief 클라이언트-서버 복제의 관심 영역 정책입니다 — 관찰자(연결의 폰) 근처의 엔티티만 보냅니다.
  * @details 규칙은 MMO 키트와 같은 Core 부품 `NetInterestGrid` 다(들어오는 반경 안이면 보이기 시작, 나가는 반경 밖으로 가야 빠짐 — 히스테리시스).
  *          `IReplicationPolicy::isRelevant` 는 여러 스레드에서 읽기만 하므로, 보이는 목록은 게임 스레드가 `sendSnapshots` 앞에 `updateRelevancy` 로 한 번 정한다.
  *          - 자리를 알리지 않은 엔티티(판 상태 · 점수판처럼 공간에 없는 것)는 모두에게 보낸다 — 공간 정책이 판단할 대상이 아니다.

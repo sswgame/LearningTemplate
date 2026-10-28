@@ -35,7 +35,7 @@ namespace sw
              *          정적 소멸자 · `DllMain` 에서의 `FreeLibrary` 는 로더 잠금 아래라 금지다. 라이브러리 안의 전역 상태(Media Foundation 플랫폼 · COM)는
              *          `MFStartup`/`MFShutdown` · `CoInitializeEx`/`CoUninitialize` 쌍이 닫는다(장치 열기 · 닫기와 디코드 한 번마다 짝을 맞춘다).
              * @details import 라이브러리를 링크하지 않는다 — 없을 수 있는 DLL 이라(Media Foundation 이 빠진 Windows N) 일반 import 면 프로세스가
-             *          뜨지 못하고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자를 망가뜨려 쓰지 않는다(docs/09_Decisions.md).
+             *          뜨지 못하고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자를 망가뜨려 쓰지 않는다.
              *          함수가 없으면 그 기능이 꺼진다(오프라인 렌더 · 대체 디코더 없음).
              */
             struct SystemAudioAPI

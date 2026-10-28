@@ -21,7 +21,7 @@
 - `half` 변환은 비트 연산 직접 구현(가까운 값 반올림, 가운데는 짝수, 65520 이상은 무한대)이고 65536 비트 패턴이 전수 왕복합니다. `std::bit_cast` 대신 `BitUtil::floatToBits` · `bitsToFloat` 를 씁니다(C++17 이상 옵션).
 - 크기와 정렬은 헤더의 `static_assert` 가 고정합니다. 묶음의 정렬은 성분 하나의 정렬이라 `unorm8x4` 는 1 B 정렬이고 4 B 정렬이 필요한 구조체는 쓰는 쪽이 맞춥니다.
 - `OctahedralNormal` 의 풀이는 `binding.hlsli` 의 `VertexAnimation::unpackNormal` 과 같은 식이고(`OctahedralNormalTest.DecodeMatchesShaderFormula`), 인코딩은 `MeshVertexAnimation::packNormal` 과 같습니다. VAT 는 12 + 12 비트 정수를 실수 하나에 담고 이 타입은 `snorm16` 두 개입니다.
-- 테스트는 `Test/CoreTest/Math` 의 `TestHalf` · `TestNormalizedInt` · `TestOctahedralNormal` · `TestRGB10A2`, 매니페스트 id `packed-types-test`.
+- 테스트는 `Test/CoreTest/Math` 의 `TestHalf` · `TestNormalizedInt` · `TestOctahedralNormal` · `TestRGB10A2`.
 
 ### 리플렉션 접점 (P3)
 
@@ -33,7 +33,7 @@
 - 인자 변환(`ReflectValue`)은 성분이 하나면 숫자도 받고 범위 밖은 거절, 여럿이면 글만 받습니다.
 - 헤더: `Core/Math/PackedTypesFwd.h`(이름과 별칭의 유일한 정의)와 `PackedTypes.h`(완전한 정의 묶음). 표의 C++ 타입 칸에는 별칭만 씁니다(템플릿 이름의 쉼표가 매크로 인자를 나눔).
 - 한계: (1) `Transient` 가 아닌 압축 타입 `PROPERTY` 는 고정 배치형 코덱의 인코딩 표 밖이라 코드 생성기가 **생성 오류로 멈춥니다**. 압축 타입을 B 코덱에 넣는 일은 새 인코딩 종류를 더하는 별도 단계 후보입니다. (2) 인스펙터는 색 선택기 · `Min` · `Max` 메타를 읽지 않고 성분 드래그입니다. (3) UI 바인딩과 스키마 이주는 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 숫자를 가릅니다. (4) `PROPERTY` 의 타입은 별칭(`unorm8x4`)으로 적습니다(풀어 쓴 `NormalizedVector<unorm8, 4>` 는 모르는 이름).
-- 확인: `PackedValueTraitsTest`(CoreTest) · `PackedValueSerializationTest`(EngineTest) · `InspectorBuiltinValueTest`(EditorTest), 매니페스트 id `packed-types-test`.
+- 확인: `PackedValueTraitsTest`(CoreTest) · `PackedValueSerializationTest`(EngineTest) · `InspectorBuiltinValueTest`(EditorTest).
 
 ## 2. 새 포맷 규칙
 
@@ -79,7 +79,7 @@
 6. **재쿠킹.** 머티리얼 셰이더 전부(`SW_PASS_GBUFFER`)와 `deferredlighting` · `ssao` 가 바뀌므로 `App.exe --cook-shaders` 와 `ShaderCookRequestTest` 의 낡은 바이너리 삭제를 0 이 될 때까지 반복합니다. 테스트 픽스처의 `GBufferNormal` 포맷 문자열(`TestRenderPass.cpp` · `TestShader.cpp`)도 맞춥니다.
 
 영향 패스는 G버퍼(쓰기), Lighting · SSAO(읽기) 셋이고 다른 패스는 `sampleNormal` 을 부르지 않습니다. 포워드 파이프라인에는 이 첨부가 없습니다.
-**골든과 확인.** 디퍼드 경로 골든(`-gv_deferred=1`)은 림 · 반사에서 작은 차이가 날 수 있습니다. 순서: 코드 → 재쿠킹 → `RenderPassGPUTest` 의 G버퍼 노멀 테스트(수직 노멀, 4 백엔드) → 디퍼드 시나리오 스크린샷 전후 비교(양자화 오차 이내, 네 백엔드 같은 이미지) → 의도한 차이면 `golden-record`. 항목은 구현할 때 `Test/QA/VerifyBatch.json` 에 id 로 더합니다.
+**골든과 확인.** 디퍼드 경로 골든(`-gv_deferred=1`)은 림 · 반사에서 작은 차이가 날 수 있습니다. 순서: 코드 → 재쿠킹 → `RenderPassGPUTest` 의 G버퍼 노멀 테스트(수직 노멀, 4 백엔드) → 디퍼드 시나리오 스크린샷 전후 비교(양자화 오차 이내, 네 백엔드 같은 이미지) → 의도한 차이면 `golden-record`. 항목은 구현할 때 검증 묶음 에 id 로 더합니다.
 
 ### P5 메시 정점 포맷 (`.mesh` 버전 4)
 

@@ -1,7 +1,7 @@
 /**
  * @file ConfigKeyDoc.h
  * @brief 손으로 읽는 설정 JSON 의 키 표입니다 — 읽기 코드는 이 표로 모르는 키를 거르고, 문서 생성기(`Scripts/common/ConfigReference.py`)는 같은 표로
- *        `docs/Config/` 의 칸 표를 만듭니다. 키가 두 곳(검사 목록 · 문서)에 적히지 않게 합니다.
+ *        칸 표를 만듭니다. 키가 두 곳(검사 목록 · 문서)에 적히지 않게 합니다.
  * @details 표는 반드시 이 모양으로 적습니다(생성기가 이 모양만 읽는다):
  *          @code
  *          static constexpr ConfigKeyDoc kArrXxxKeyDoc[] = {

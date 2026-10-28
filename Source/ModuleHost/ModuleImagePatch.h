@@ -21,7 +21,7 @@ namespace sw
      *       아직 올라와 있는 **옛** 의존에 묶이고(리눅스), 원본 이름의 import 는 원본 DLL 을 한 벌 더 올립니다(Windows). 그래서 복사본에 세대마다
      *       고유한 이름을 주고(리눅스 SONAME · Windows 파일 이름), 의존 모듈 복사본이 그 이름을 부르게 바꿉니다 — 언리얼이 빌드마다 번호 붙은
      *       이름으로 다시 링크하는 것을 복사 시점에 하는 셈입니다. 그래서 모듈끼리 지연 로드(`/DELAYLOAD`)를 쓰지 않고 일반 import 로 묶습니다
-     *       (lld 20 의 지연 로드 썽크는 첫 호출의 float 인자를 망가뜨린다 — `docs/09_Decisions.md`).
+     *       (lld 20 의 지연 로드 썽크는 첫 호출의 float 인자를 망가뜨린다).
      */
     struct ModuleImagePatch
     {

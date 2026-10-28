@@ -94,7 +94,7 @@ namespace sw
         static bool isAllowedOutputPath( string_view path );
         /**
          * @brief 작업 폴더의 `Saved` 를 붙이는 디스크 도메인입니다. 녹화는 디스크 경로 `Saved/Automation/a.scenario.xml` 로 쓰고 id `saved/Automation/a.scenario.xml` 로 다시 읽습니다.
-         * @details 시나리오 입구는 리소스 id 만 받는다(결정 기록 5-4 안 B). Godot 의 `user://` 처럼 사용자 데이터 폴더를 도메인으로 붙인 자리다.
+         * @details 시나리오 입구는 리소스 id 만 받는다. Godot 의 `user://` 처럼 사용자 데이터 폴더를 도메인으로 붙인 자리다.
          */
         static constexpr string_view kSavedDomain = "saved";
         /** @brief @p workingFolder 아래 `Saved` 를 `kSavedDomain` 으로 붙입니다(없으면 만든다). 못 붙이면 오류를 남기고 false 입니다. */

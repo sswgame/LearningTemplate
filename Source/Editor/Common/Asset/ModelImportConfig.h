@@ -53,7 +53,7 @@ namespace sw::editor
      * @struct ModelImportRule
      * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음, 애니메이션 모두, ACL)을 씁니다.
      * @details 적용 순서는 `translation` 다음 `recenter` 이다. 스킨드 모델에는 둘 다 쓸 수 없다. 바인드 행렬이 어긋나기 때문이다.
-     *          키는 `ModelImportConfig.cpp` 의 `kArrModelImport…KeyDoc` 테이블에 있고 생성 문서는 `docs/Config/ModelImportConfig.md` 이다. 모르는 키나 틀린 값은 설정 오류다.
+     *          키는 `ModelImportConfig.cpp` 의 `kArrModelImport…KeyDoc` 테이블에 있다. 모르는 키나 틀린 값은 설정 오류다.
      */
     struct ModelImportRule
     {

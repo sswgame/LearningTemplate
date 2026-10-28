@@ -10,7 +10,7 @@ namespace sw
     /**
      * @enum SerializePurpose
      * @brief 직렬화가 무엇을 위해 쓰고 읽는지입니다. 필드 플래그와 함께 어떤 필드를 쓰는지 정합니다.
-     * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다(docs/09_Decisions.md 5-4 "저장 목적은 문맥의 필수 값이다").
+     * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다.
      *          | 필드 | Authoring | Snapshot | SaveGame |
      *          | 없음 | 씀 | 씀 | 타입에 `SaveGame` 필드가 없으면 씀 |
      *          | `Transient` | 안 씀 | 안 씀 | 안 씀 |

@@ -2,7 +2,7 @@
  * @file ResourceID.h
  * @brief 리소스 id(도메인으로 시작하는 리소스 경로 — `engine/shaders/lit.hlsl`)를 담는 형식입니다. 리소스 입구(`ResourceIO`)는 이 형식만 받습니다.
  * @details 리소스 id 와 디스크 경로가 같은 `string_view` 로 오가면 디스크 경로를 리소스 입구에 넣는 호출이 컴파일을 지나고, 구성마다 다른 실행 규칙에서야
- *          드러났다(결정 기록 5-4 "리소스 입구" 두 줄 — 안 B 는 실행 중 거절, 이 형식은 안 C 의 컴파일 막기). 그래서 문자열에서 **암시적으로** 만들 수 없다 —
+ *          드러났다. 그래서 문자열에서 **암시적으로** 만들 수 없다 —
  *          `ResourceIO::readTextResource( path, … )` 는 컴파일되지 않고, 글을 id 로 쓰는 자리는 `ResourceID{ text }` 로 드러난다.
  *          디스크 경로는 리소스 루트 안이든 밖이든 id 가 아니다 — `ResourcePaths::toResourceID` 가 붙인 도메인 아래 경로를 id 로 바꾼다.
  *          담는 글을 고치지 않는다(대소문자 · 구분자). OS 경로 거절은 입구(`ResourceIO`)가 한 곳에서 한다.

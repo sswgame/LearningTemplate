@@ -100,7 +100,7 @@ namespace sw
         bool takeChildText( const utf8* pName, string& dst ) const;
 
         // ------------------------------------------------------------------------------
-        // 1-1) 값 읽기 — 폴백 인자 없이(결정 기록 5-4, 데이터 주도 계획 7.3). 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).
+        // 1-1) 값 읽기 — 폴백 인자 없이. 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).
         //      좁은 칸은 `static_cast<uint8>( … )` 로 감지 말고 `readOptionalAttributeInRange` 로 의미의 범위를 준다("256" 이 0 번 패드가 되지 않게).
         //      필수: 없거나 깨지면 원소 · 속성 이름으로 오류를 남기고 nullopt.
         //      선택: 없으면 `out` 이 비고 true(기본값은 Def 초기값이 정한다 — 여기서 정하지 않는다), 깨지면 오류와 false.

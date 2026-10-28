@@ -14,7 +14,7 @@
  *          줄 순서 = CommandLineArgument 열거값 = _listArgument 인덱스이고, 이 일치 덕분에 findArgument 가 이름 조회 없이
  *          O(1) 인덱싱으로 끝납니다. initialize() 가 줄마다 이 일치를 확인합니다.
  *
- *          줄 바로 위 `//` 는 사용자 설명이고 빈 줄까지의 줄 모두에 붙습니다(생성 문서 `docs/Config/CommandLine.md`). 짝인 줄은 빈 줄 없이 붙여 씁니다.
+ *          줄 바로 위 `//` 는 사용자 설명이고 빈 줄까지의 줄 모두에 붙습니다(생성 문서). 짝인 줄은 빈 줄 없이 붙여 씁니다.
  *
  *          bUseDefaultValue 를 켜면 getArgument 의 반환값이 더 이상 "이 인자가 주어졌다" 는 뜻이 아닙니다. 창 크기의 기본값은
  *          **EngineConfig 가 가집니다**(`_window._width` / `_height`). 여기서 켜 두면 인자를 주지 않아도 getArgument 가 등록된

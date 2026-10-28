@@ -2,7 +2,7 @@
  * @file EditorRemoteInspector.h
  * @brief Multiplayer 창 Inspector 탭(서버 디버깅 S3)의 원격 검사기입니다 — 디버그 채널로 서버에 붙어 하이어라키 · 컴포넌트 값을 읽고 개발 명령을 보냅니다. ImGui 에 의존하지 않습니다.
  * @details 채널(`DebugChannelClient`)은 같은 PC 의 루프백 TCP 이고 요청마다 답을 기다리는 동기 방식이다. 서버가 `pause` 로 멈춰 있어도 채널은 답하므로
- *          중단점처럼 멈춘 상태의 값을 읽을 수 있다. 쓰는 명령(`teleport` 등)은 게임이 정한 개발 명령만 지나간다(결정 기록 5-10).
+ *          중단점처럼 멈춘 상태의 값을 읽을 수 있다. 쓰는 명령(`teleport` 등)은 게임이 정한 개발 명령만 지나간다.
  *          - 붙을 때 `help` 를 한 번 물어 입력줄 자동완성의 명령 이름(`getCommandNames`)을 채운다. 답의 둘째 줄부터 `  <사용법> - <설명>` 이고 사용법의 첫 낱말이 이름이다.
  *          - 하이어라키는 `scene.tree` 의 답(`<id> <이름> parent=… active=… components=…`)을 줄마다 `EditorRemoteObjectRow` 로 나눈다.
  *          - 값은 `object.dump <이름>` 의 답을 그대로 보인다(`Type.property = value`).

@@ -166,7 +166,7 @@ namespace sw::editor
     private:
         /**
          * @brief 프리셋이나 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키, 모르는 swizzle · format 이면 오류를 남기고 false 입니다.
-         * @details 키 테이블은 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc` 에 있다. 생성 문서는 `docs/Config/TextureImportConfig.md` 이다.
+         * @details 키 테이블은 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc` 에 있다.
          */
         [[nodiscard]] static bool parseRuleObject( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule, string_view context );
         /**

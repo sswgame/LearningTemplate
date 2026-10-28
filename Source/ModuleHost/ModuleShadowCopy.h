@@ -69,8 +69,8 @@ namespace sw
         /**
          * @brief 모듈 이미지 바이트 @p bytes 에 지연 import 가 있으면 원인을 남기고 true 를 반환합니다 — 그런 이미지는 올리지 않습니다.
          * @details 모듈 이미지는 모든 import 를 로드할 때 묶어야 한다. lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을
-         *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다(`docs/09_Decisions.md`).
-         *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`CheckNoDelayLoad`), 이것은 그 규칙을 어긴 이미지를 올리기 **전에** 거절하는 마지막 그물이다.
+         *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다.
+         *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`ArchitectureTest.NoBuiltImageHasDelayLoadedImports` 가 산출물을 본다), 이것은 그 규칙을 어긴 이미지를 올리기 **전에** 거절하는 마지막 그물이다.
          */
         static bool rejectsDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes );
 

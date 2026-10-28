@@ -109,7 +109,7 @@ namespace sw
 
         /**
          * @brief 반드시 있어야 하는 객체 멤버 @p key 를 타입 T 로 읽습니다. 없거나 타입이 다르면(정수 칸의 실수 · 범위 밖 포함) 키와 함께 오류를 남기고 nullopt 입니다.
-         * @details 폴백 인자를 받지 않는다(결정 기록 5-4). T 는 int32 · uint32 · int64 · uint64 · float32 · float64 · bool · string 입니다.
+         * @details 폴백 인자를 받지 않는다. T 는 int32 · uint32 · int64 · uint64 · float32 · float64 · bool · string 입니다.
          */
         template <typename T>
         [[nodiscard]] std::optional<T> readRequired( string_view key ) const

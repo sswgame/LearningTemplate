@@ -37,7 +37,7 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 id 가 아닌 OS 경로를 리소스 입구에 넣었으면 오류를 남기고 true 입니다(결정 기록 5-4 안 B).
+         * @brief 리소스 id 가 아닌 OS 경로를 리소스 입구에 넣었으면 오류를 남기고 true 입니다.
          * @details 리소스 입구는 **리소스 id 만** 받는다. 디스크 파일은 디스크 입구(`ResourceIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
          *          읽고, 루트 밖 폴더를 리소스로 읽어야 하면 `ResourcePaths::mountDiskDomain` 으로 붙인다. 예전에는 OS 절대 경로를 디스크에서 바로 읽고
          *          배포 구성만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 테스트를 지나 Shipping 에서야 드러났다(2026-10-19 CI).

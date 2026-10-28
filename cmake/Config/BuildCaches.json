@@ -8,7 +8,7 @@
     "derived_data_cache": { "base": "source", "path": "Saved/DDC", "reason": "증분 쿠킹의 내용 주소 캐시. 기록이 새것이면 여기서 출력을 다시 쓴다" }
   },
   "keep": {
-    "vcpkg_cache": { "path": "build/vcpkg_cache", "reason": "vcpkg 바이너리 캐시. main 과 나눠 쓰는 링크 폴더(docs/11_Workflow.md)이고 configure 때만 쓰여 재는 빌드 명령에 들지 않는다" },
+    "vcpkg_cache": { "path": "build/vcpkg_cache", "reason": "vcpkg 바이너리 캐시. main 과 나눠 쓰는 링크 폴더이고 configure 때만 쓰여 재는 빌드 명령에 들지 않는다" },
     "vcpkg_installed": { "path": "build/vcpkg_installed", "reason": "vcpkg 설치 트리. 링크 폴더라 지우면 main 빌드가 링크 오류로 선다" },
     "tools_cache": { "path": "Tools/_cache", "reason": "도구(LLVM · Ninja …) 내려받기 캐시. 링크 폴더이고 빌드 시간에 끼지 않는다" },
     "shader_cook_outputs": { "path": "Resource/**/shaders/bin", "reason": "쿠킹된 셰이더 바이너리와 cook.stamp. 소스 트리에 커밋된 산출물이다" },
