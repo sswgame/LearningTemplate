@@ -9,6 +9,9 @@
         },
         {
             "_name": "GF_NetClientServer"
+        },
+        {
+            "_name": "GF_NetSimulation"
         }
     ],
     "_listPlatform": [

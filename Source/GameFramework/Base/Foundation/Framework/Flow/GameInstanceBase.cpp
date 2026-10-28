@@ -190,6 +190,13 @@ namespace sw
         const bool bNetSessionOpened = netSession.openFromLaunch();
         if ( bNetSessionOpened == false )
             SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
+        // 열린 세션의 창구 · 라우터 · 역할을 씬 매니저에 건다 — 이 뒤에 받아들이는 씬(월드)마다 넷 링크가 올라 컴포넌트가 자기 씬에서 찾는다. 세션이 없으면 걸지 않는다(혼자 하는 게임).
+        if ( bNetSessionOpened && netSession.isActive() )
+        {
+            SceneManager* pLinkSceneManager = game::findSubsystem<SceneManager>();
+            if ( pLinkSceneManager != nullptr )
+                pLinkSceneManager->setNetLink( netSession.makeNetLink() );
+        }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
         if ( _pUISystem != nullptr )

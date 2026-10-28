@@ -6,9 +6,9 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
@@ -85,12 +85,14 @@ namespace sw
     void ShooterNetPawnComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        _role                                    = Role::None;
-        GameNetSession*               pSession   = game::findSubsystem<GameNetSession>();
+        _role = Role::None;
+        // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 — 전역 세션을 찾지 않는다. 한 프로세스에 월드가 여럿이어도(가상 서버 하니스) 각자 자기 링크를 본다.
+        const SceneNetLink*           pLink      = findLink();
         ShooterBodyMovementComponent* pMovement  = findMovement();
-        const bool                    bNoSession = pSession == nullptr || pSession->isActive() == false || pMovement == nullptr;
+        const bool                    bNoSession = pLink == nullptr || pLink->isBound() == false || pMovement == nullptr;
         if ( bNoSession )
             return; // 혼자 하는 게임 — 몸 이동은 프레임마다 예전 길로 돈다
+        const NetLinkValue& link = pLink->get();
 
         PredictionSmootherSettings smoothing;
         smoothing._halfLifeSeconds = _smoothingHalfLife;
@@ -100,14 +102,14 @@ namespace sw
             SW_LOG_ERROR( "Shooter net pawn: smoothing half life %# s is not usable - the networked movement stays off", _smoothingHalfLife );
             return;
         }
-        if ( pSession->getRole() == GameNetRole::Server )
+        if ( link._role == NetLinkRole::Server )
         {
             ReplicationServerConfig settings;
             settings._tickInterval  = _tickInterval;
             const bool bInitialized = _interest.initialize( _interestCellSize, _interestEnterRadius, _interestLeaveRadius ) &&
-                                      _server.initialize( &pSession->getPeers(), settings, &_interest );
+                                      _server.initialize( link._pPeers, settings, &_interest );
             if ( bInitialized )
-                _routerSubscription = pSession->getRouter().registerHandler( &_server );
+                _routerSubscription = link._pRouter->registerHandler( &_server );
             if ( _routerSubscription.isActive() == false )
             {
                 SW_LOG_ERROR( "Shooter net pawn: the replication server did not start (reason above) - the networked movement stays off" );
@@ -119,8 +121,8 @@ namespace sw
         {
             ReplicationClientConfig settings;
             settings._tickInterval = _tickInterval;
-            if ( _client.initialize( &pSession->getPeers(), settings ) )
-                _routerSubscription = pSession->getRouter().registerHandler( &_client );
+            if ( _client.initialize( link._pPeers, settings ) )
+                _routerSubscription = link._pRouter->registerHandler( &_client );
             if ( _routerSubscription.isActive() == false )
             {
                 SW_LOG_ERROR( "Shooter net pawn: the replication client did not start (reason above) - the networked movement stays off" );
@@ -186,13 +188,14 @@ namespace sw
     {
         ++_tick;
         ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) );
-        GameNetSession* pSession = game::findSubsystem<GameNetSession>();
-        if ( pSession == nullptr )
+        const SceneNetLink* pLink = findLink();
+        if ( pLink == nullptr || pLink->isBound() == false )
             return;
+        INetPeers& peers = *pLink->get()._pPeers;
         // 조종 연결 — 처음 붙은 클라이언트가 이 몸을 맡고, 끊기면 다음 클라이언트가 처음부터 맡는다.
         vector<int32> listConnection;
-        pSession->getPeers().collectConnected( listConnection );
-        const bool bControllerGone = _controllerID < 0 || pSession->getPeers().getConnectionState( _controllerID ) != NetConnectionState::Connected;
+        peers.collectConnected( listConnection );
+        const bool bControllerGone = _controllerID < 0 || peers.getConnectionState( _controllerID ) != NetConnectionState::Connected;
         if ( bControllerGone )
         {
             _controllerID  = listConnection.empty() ? -1 : listConnection.front();
@@ -290,6 +293,13 @@ namespace sw
     {
         GameObject* pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getComponent<ShooterBodyMovementComponent>() : nullptr;
+    }
+
+    const SceneNetLink* ShooterNetPawnComponent::findLink() const
+    {
+        const GameObject*  pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
     }
 
     const vector<ShooterArenaBox>* ShooterNetPawnComponent::findArenaBoxes() const

@@ -1,7 +1,7 @@
 /**
  * @file ShooterNetPawnComponent.h
  * @brief 슈터 플레이어 몸의 네트워크 이동입니다 — 서버 권위 + 내 폰만 예측 · 재조정 + 보정 녹이기.
- * @details 게임 세션(`GameNetSession`)이 열려 있을 때만 일한다. 혼자 하는 게임에서는 아무것도 하지 않아 몸 이동이 예전처럼 프레임마다 돈다.
+ * @details 이 컴포넌트의 월드에 넷 링크(`SceneNetLink` — 전역 세션 또는 가상 서버 하니스 월드가 올린다)가 올라 있을 때만 일한다. 혼자 하는 게임에서는 아무것도 하지 않아 몸 이동이 예전처럼 프레임마다 돈다.
  *          고정 틱(`_tickInterval`)으로 돈다 — 예측과 서버 시뮬레이션이 같은 걸음 크기여야 재조정이 맞는다. 켜지면 몸 이동을 네트워크 몫으로 돌린다(`setNetDriven`).
  *          - 서버: 이 몸의 조종 연결은 처음 붙은 클라이언트 하나다(아레나에 플레이어 몸이 하나라서 — 여럿은 몸 스폰과 함께 할 일). 틱마다 그 연결의 다음 입력 틱을 꺼내
  *            (`ReplicationServer::popInput`, 늦으면 지난 입력을 되풀이) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
@@ -28,6 +28,8 @@
 
 namespace sw
 {
+    class SceneNetLink;
+
     /**
      * @class ShooterNetPawnComponent
      * @brief 플레이어 오브젝트에 두는 네트워크 이동입니다. 같은 오브젝트의 `ShooterBodyMovementComponent` · `ShooterPlayerComponent`(감독의 막는 상자)를 씁니다.
@@ -75,6 +77,8 @@ namespace sw
         void                           stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
         ShooterBodyMovementComponent*  findMovement() const;
         const vector<ShooterArenaBox>* findArenaBoxes() const;
+        /** @brief 이 컴포넌트의 월드(오브젝트 매니저)의 넷 링크입니다. 오브젝트가 매니저에 없으면 nullptr 입니다. */
+        const SceneNetLink* findLink() const;
 
         PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Fixed step of the networked movement; server simulation and client prediction use the same step" )
         float32 _tickInterval;

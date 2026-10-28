@@ -15,7 +15,7 @@
 | S5 | Profiler 탭 — 바이트 · 패킷 · 재전송 · RTT · 손실 시간축, 메시지 종류별 비중, 복제 빈도 | 끝(남은 것은 아래) |
 | S6 | 권위 겹쳐 보기(서버 위치 고스트) | 끝(눈 확인 · 일부 빌드 전) |
 | S7 | Sync 탭 — 틱별 해시 이력 두 벌과 처음 어긋난 틱 | 끝(되감기 코드 끝, 빌드 전) |
-| S8 | In process 탭 — 한 프로세스 가상 서버 | 끝(실제 게임 구현은 남음) |
+| S8 | In process 탭 — 한 프로세스 가상 서버 | 끝(Shooter3D 구현 들어감, 눈 확인 남음) |
 | O1 | 사고 기록 — 프레임 이력 링 버퍼 · 느린 틱 덤프 | 코드 끝, 빌드 전. 크래시 폴더 묶기 · 서버용 동의 남음 |
 | O2 | 서버 로그 JSON lines | 끝(빌드 전) |
 | O3 | 종료 · 드레인 | 코드 끝, 빌드 전. 키트 종료 API 남음 |
@@ -69,7 +69,7 @@
 - **들어간 것:** 씬 공급자(`NetSimConfig::_pSceneSource`), `EditorNetSimSession` 과 **In process** 탭(월드마다 미리보기 뷰포트를 나란히), 입력 초점(`setInputFocus` — 한 번에 한 월드, 게임 세션은 참일 때만 입력을 읽음), 본보기 게임 `NetSimSampleGame`, 카메라 창구. DX12 캡처는 눈으로 봤고 네 백엔드 자동 확인도 통과했다.
 - **결정:** 본보기 게임은 복제 키트를 쓰지 않고 게임 메시지 둘(입력 · 아바타 목록)만 쓴다. 에디터 확장은 자기 키트만 include 할 수 있어 하니스 키트와 복제 키트를 함께 쓰면 층 위반이다. 복제 키트 위의 실제 게임 구현은 게임 모듈의 일이다.
 - **남은 것:**
-  - 게임 모듈이 `INetSimGame` 을 구현한 실제 게임이 없다. Shooter3D 의 `ShooterNetPawnComponent` 는 `onBeginPlay` · `stepServer` 에서 전역 `findSubsystem<GameNetSession>()` 으로 호스트 · 라우터 · 역할을 받는다. 월드마다 받게 하려면 이 셋을 한 값("넷 링크")으로 묶어 컴포넌트가 자기 오브젝트 매니저에서 찾게 하고, 전역 세션과 `NetSimWorld` 가 각자 그 값을 매니저에 올린다(전역 폴백을 두지 않는다). 그 뒤 게임 모듈이 월드마다 아레나 씬 · 폰 스폰 · 입력 초점 읽기를 하는 `INetSimGame` 을 구현해 `NetSimGameRegistry::registerGame` 한다. 눈 · 빌드로 확인할 수 없는 큰 개편이라 이번에는 시도하지 않았다.
+  - (끝, 빌드 확인) **넷 링크 + Shooter3D `INetSimGame`.** 컴포넌트가 전역 세션을 찾던 자리를 월드마다의 **넷 링크**(`SceneNetLink` 씬 서비스 — 창구 · 라우터 · 역할)로 바꿨다. 전역 세션은 `GameInstanceBase` 가 열린 뒤 `SceneManager::setNetLink` 로 걸어 새로 받아들이는 씬마다 올리고, 하니스 월드(`NetSimWorld::start`)는 자기 호스트 · 라우터를 올린다. 링크가 비면 혼자 도는 월드이고 전역으로 대신 찾지 않는다. `ShooterNetPawnComponent` 는 자기 오브젝트 매니저에서 링크를 읽는다. `ShooterNetSimGame`(`Games/Shooter3D`)이 월드마다 아레나 씬을 풀어 넣고(클라이언트 월드의 웨이브 감독은 끔 — 복제는 플레이어 몸뿐), 입력 초점이 없는 클라이언트 월드의 몸 이동을 멈춰 입력을 막으며 `NetSimGameRegistry` 에 "Shooter3D: arena" 로 올린다. 언리얼 `UWorld::GetNetDriver` 가 월드마다 넷 드라이버를 쥐는 것과 같은 자리다. 눈 확인(In process 탭에서 서버 + 클라이언트 둘로 몸 이동이 맞는지)은 남았다.
   - 클라이언트 폰 카메라를 따르는 보기는 아직 고정 오빗이고, 뷰포트 크기에 따른 거리 조정이 없어 아바타가 작게 보인다. 캡처는 DX12 만 눈으로 봤다.
 
 ## 운영 단위

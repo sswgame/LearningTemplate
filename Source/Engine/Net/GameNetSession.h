@@ -55,6 +55,7 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -202,6 +203,11 @@ namespace sw
         int32 getConnectedCount() const;
         /** @brief 키트가 보내고 연결을 묻는 창구입니다(샤드 묶음 — 연결 ID 에 샤드 번호가 접혀 있다). 세션을 열지 않았으면 쓰면 안 됩니다(`isActive`). */
         INetPeers& getPeers() { return _peers; }
+        /**
+         * @brief 이 세션의 창구 · 라우터 · 역할을 씬의 넷 링크 값(`SceneNetLink`)으로 묶습니다. 게임 인스턴스가 씬 매니저에 건다(`SceneManager::setNetLink`) —
+         *        네트워크 컴포넌트는 전역 세션이 아니라 자기 씬의 링크를 읽는다. 세션이 열려 있지 않으면(`isActive` 거짓) 쓰면 안 됩니다.
+         */
+        [[nodiscard]] NetLinkValue makeNetLink() { return NetLinkValue{ &_peers, &_router, _role == GameNetRole::Server ? NetLinkRole::Server : NetLinkRole::Client }; }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 pump 합니다. */
         NetMessageRouter& getRouter() { return _router; }
         /** @brief 샤드 하나의 전송을 감싼 회선 흉내입니다. 세션을 열지 않았거나 Shipping 이면 nullptr 입니다. 스레드 안전합니다(네트워크 스레드가 같이 쓴다). */

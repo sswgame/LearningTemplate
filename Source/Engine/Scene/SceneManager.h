@@ -14,6 +14,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/SceneLoadLeakProbe.h"
 
 namespace sw
@@ -226,6 +227,11 @@ namespace sw
         void setWorldPlaying( bool bPlaying );
         /** @brief 월드가 플레이 중이면 true 입니다. */
         bool isWorldPlaying() const { return _bWorldPlaying; }
+        /**
+         * @brief 이 매니저가 앞으로 받아들이는 로드 · 활성 씬에 넣을 넷 링크입니다(`SceneNetLink`) — 게임 인스턴스가 전역 세션을 열고 건다. 미리보기 씬에는 넣지 않는다(미리보기 월드는 만드는 쪽이 자기 링크를 올린다).
+         * @details 이미 활성인 씬에도 바로 올린다. 값이 비어 있으면(세션 없음) 씬의 링크는 비어 있어 혼자 도는 월드다.
+         */
+        void setNetLink( const NetLinkValue& value );
         /** @brief 활성 씬이 바뀐 횟수입니다. 에디터가 씬 로드 · 새 씬 동기화에 씁니다. */
         uint64 getSceneGeneration() const { return _sceneGeneration; }
         /** @brief 비동기 로드가 진행 중이거나 교체 대기면 true 입니다. */
@@ -331,6 +337,7 @@ namespace sw
         TaskHandleTracker               _loadTracker;
         string                          _saveBlockReason;               ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated;     ///< `onSceneObjectsInvalidated`
+        NetLinkValue                    _netLink;                       ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
         Subscription                    _commandStackClearSubscription; ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
         bool                            _bInitialized;
 

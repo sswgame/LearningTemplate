@@ -6,10 +6,13 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "NetSimHarness" );
+
     namespace
     {
         /** @brief 시드 하나에서 엔드포인트마다 다른 시드를 만듭니다(splitmix64 한 단계). */
@@ -123,6 +126,13 @@ namespace sw
 
     void NetSimWorld::start( INetSimGame* pGame )
     {
+        // 이 월드의 넷 링크 — 게임 컴포넌트가 전역 세션이 아니라 자기 월드의 호스트 · 라우터를 보게 한다(세션 · 컴포넌트보다 먼저 올린다).
+        NetLinkValue link;
+        link._pPeers  = &_host;
+        link._pRouter = &_router;
+        link._role    = isServer() ? NetLinkRole::Server : NetLinkRole::Client;
+        if ( getObjectManager().getSubsystem<SceneNetLink>().bind( link ) == false )
+            SW_LOG_ERROR( "Net sim world %# could not bind its net link", _worldIndex );
         if ( pGame != nullptr )
             _pSession = pGame->createSession( *this );
         getObjectManager().beginPlay();
@@ -161,6 +171,7 @@ namespace sw
             manager.update( 0.0f ); // 끝난 플레이의 물리 바디를 해제한다
         }
         _pSession.reset();
+        manager.getSubsystem<SceneNetLink>().unbind();
         if ( _pSceneSource != nullptr )
             _pSceneSource->releaseScene( *_pScene );
         _pOwnedScene.reset();
