@@ -149,7 +149,7 @@ namespace sw::editor
                             CatalogCurveModel::collectCurves( inoutDocument.getParsed(), elementIndex, _listProbeCurve );
                             if ( _listProbeCurve.empty() == false )
                             {
-                                ImGui::SameLine();
+                                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curves" ) );
                                 if ( ImGui::SmallButton( "Curves" ) )
                                 {
                                     _curveOwner      = elementIndex;
@@ -371,7 +371,7 @@ namespace sw::editor
             ImGui::SameLine();
             drawCell( document, key._elementIndex, "_interpolation", false );
             ImGui::PopItemWidth();
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
             {
                 _pendingKind    = PendingKind::RemoveRow;

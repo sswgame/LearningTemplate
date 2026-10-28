@@ -144,11 +144,11 @@ namespace sw::editor
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::note( "dialogueGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
             if ( ImGui::Button( "Reload" ) )
                 reloadDocument();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ReloadTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Default" ) );
             if ( ImGui::Button( "Reset Default" ) )
             {
                 _graph._listNode.clear();
@@ -158,7 +158,7 @@ namespace sw::editor
                 notifyDocumentEdited( "Reset Dialogue Graph" );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ResetDefaultTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom Fit" ) );
             if ( ImGui::Button( "Zoom Fit" ) )
                 _nodeGraph.requestContentFit();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ZoomFitTip" ) );
@@ -387,7 +387,7 @@ namespace sw::editor
     {
         ImGui::SameLine();
         EditorWidgets::drawToolbarSeparator();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play Preview" ) );
         if ( ImGui::Button( "Play Preview" ) )
         {
             const DialogueGraphAsset asset  = captureGraphData();
@@ -396,11 +396,11 @@ namespace sw::editor
             enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PlayPreviewTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance Preview" ) );
         if ( ImGui::Button( "Advance Preview" ) )
             previewStep( DialogueStepInput{} );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AdvancePreviewTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop Preview" ) );
         if ( ImGui::Button( "Stop Preview" ) )
         {
             _bPreviewPlaying = SW_FALSE;
@@ -729,7 +729,7 @@ namespace sw::editor
             EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {
                 node._listChoice.erase( node._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );

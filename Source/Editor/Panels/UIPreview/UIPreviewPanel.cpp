@@ -927,7 +927,7 @@ namespace sw::editor
         }
         UIPreviewPanelInternal::noteMark( "uipreview", "path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
         if ( ImGui::Button( "Reload" ) )
             revertDocument();
         UIPreviewPanelInternal::noteMark( "uipreview", "reload" );
@@ -1100,7 +1100,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
         if ( ImGui::Button( "Play" ) )
         {
             _bAnimationPaused = false;
@@ -1109,14 +1109,14 @@ namespace sw::editor
         }
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
         EditorWidgets::drawTooltip( "Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document." );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _bAnimationPaused ? "Resume" : "Pause" ) );
         if ( ImGui::Button( _bAnimationPaused ? "Resume" : "Pause" ) )
         {
             _bAnimationPaused = !_bAnimationPaused;
             player.setPaused( _animation, _bAnimationPaused );
         }
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "pause" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
         if ( ImGui::Button( "Stop" ) )
         {
             player.stop( _animation );

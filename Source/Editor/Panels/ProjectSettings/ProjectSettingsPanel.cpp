@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
@@ -285,7 +286,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.save" );
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kUndo, "Revert" ) ) );
         ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kUndo, "Revert" ) ) )
         {
@@ -296,7 +297,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.revert" );
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset to Default" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset to Default" ) ) )
         {
             document.resetToDefault();

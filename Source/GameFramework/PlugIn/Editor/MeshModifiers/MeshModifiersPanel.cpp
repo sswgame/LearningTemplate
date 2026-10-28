@@ -106,15 +106,15 @@ namespace sw::editor
                 if ( ImGui::SmallButton( "^" ) )
                     inoutAction = MeshModifierListAction{ MeshModifierListActionKind::MoveUp, item };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowUp" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "v" ) );
                 if ( ImGui::SmallButton( "v" ) )
                     inoutAction = MeshModifierListAction{ MeshModifierListActionKind::MoveDown, item };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowDown" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+" ) );
                 if ( ImGui::SmallButton( "+" ) )
                     inoutAction = MeshModifierListAction{ MeshModifierListActionKind::Duplicate, item };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "DuplicateRow" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "x" ) );
                 if ( ImGui::SmallButton( "x" ) )
                     inoutAction = MeshModifierListAction{ MeshModifierListActionKind::Remove, item };
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "RemoveRow" ) );
@@ -213,15 +213,15 @@ namespace sw::editor
                 if ( ImGui::SmallButton( "^" ) )
                     inoutAction._upRow = static_cast<int32>( row );
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowUp" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "v" ) );
                 if ( ImGui::SmallButton( "v" ) )
                     inoutAction._downRow = static_cast<int32>( row );
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowDown" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+" ) );
                 if ( ImGui::SmallButton( "+" ) )
                     inoutAction._duplicateAt = static_cast<int32>( row );
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "DuplicateRow" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "x" ) );
                 if ( ImGui::SmallButton( "x" ) )
                     inoutAction._removeAt = static_cast<int32>( row );
                 drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "RemoveRow" ) );
@@ -370,18 +370,18 @@ namespace sw::editor
             if ( ImGui::Selectable( pModifier->getName().c_str(), selected == index, ImGuiSelectableFlags_None, ImVec2{ ImGui::GetContentRegionAvail().x - buttonWidth, 0.0f } ) )
                 selected = index;
             MeshModifiersPanelInternal::noteMark( pMarkPrefix, static_cast<size_t>( index ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "^" ) );
             if ( ImGui::SmallButton( "^" ) )
                 upIndex = index;
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "v" ) );
             if ( ImGui::SmallButton( "v" ) )
                 downIndex = index;
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "x" ) );
             if ( ImGui::SmallButton( "x" ) )
                 removeIndex = index;
             if ( pOutEnterIndex != nullptr && DeformableModifier::findFrom( *pModifier ) != nullptr )
             {
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( ">" ) );
                 if ( ImGui::SmallButton( ">" ) )
                     *pOutEnterIndex = index;
                 MeshModifiersPanelInternal::noteMark( "meshmodifiers.enter", static_cast<size_t>( index ) );
@@ -637,7 +637,7 @@ namespace sw::editor
             modifier.fitToBounds( session.getSourceBounds() );
             session.markDirty();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "ResetParams" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ResetParams" ) ) )
         {
             session.recordUndo();
@@ -1192,7 +1192,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kUndo, SW_LOCKEY( "EdMeshModifiers", "Undo" ) ) ) )
             (void)session.undo(); // 버튼이 켜져 있으면 기록이 있다
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRedo, SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) );
         ImGui::BeginDisabled( session.canRedo() == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRedo, SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) )
             (void)session.redo(); // 버튼이 켜져 있으면 기록이 있다
@@ -1200,14 +1200,14 @@ namespace sw::editor
 
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kSave, SW_LOCKEY( "EdMeshModifiers", "SaveStack" ) ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다(`saveDocument` → `saveSidecar`) — 실패는 saveSidecar 가 알린다
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "ReloadStack" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ReloadStack" ) ) )
         {
             session.recordUndo();
             if ( session.loadSidecar() == false )
                 SW_LOG_WARNING( "No mesh modifier stack next to %#", session.getMeshPath().c_str() );
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "Bake" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "Bake" ) ) )
         {
             string bakedPath;

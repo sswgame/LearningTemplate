@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
@@ -117,7 +118,7 @@ namespace sw::editor
             _presetName.clear(); // 실패 이유는 저장소가 오류로 남겼다 — 이름은 다시 누를 수 있게 둔다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SavePreset" ) );
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete preset" ) );
         ImGui::BeginDisabled( selectedName.empty() );
         if ( ImGui::Button( "Delete preset" ) )
             (void)store.removePreset( selectedName ); // 실패 이유는 저장소가 오류로 남긴다
@@ -186,7 +187,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "UDP %u", static_cast<uint32>( session.getPort() ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause server" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause server" ) ) )
                 (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
@@ -195,11 +196,11 @@ namespace sw::editor
             ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
                 (void)session.sendServerCommand( "step " + to_string( _stepTickCount ) ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) )
                 (void)session.sendServerCommand( "resume" ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ResumeServer" ) );

@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -120,7 +121,7 @@ namespace sw::editor
         if ( _bChangedSinceStart )
         {
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Build" ) );
             if ( ImGui::SmallButton( "Build" ) )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
@@ -236,7 +237,7 @@ namespace sw::editor
             ImGui::CloseCurrentPopup();
         }
         EditorSelfTestMarks::note( "modules.apply" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
         if ( ImGui::Button( "Cancel" ) )
         {
             _pendingModule.clear();

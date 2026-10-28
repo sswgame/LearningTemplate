@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
@@ -198,10 +199,10 @@ namespace sw::editor
         if ( inspector.isConnected() )
         {
             ImGui::Text( "Connected to %s", inspector.getRemoteAddress().toString().c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Disconnect" ) );
             if ( ImGui::Button( "Disconnect" ) )
                 inspector.disconnect();
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
             if ( ImGui::Button( "Refresh" ) && inspector.refreshTree() == false )
                 SW_LOG_WARNING( "Inspector could not read the hierarchy: %#", inspector.getLastError() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "InspectorRefresh" ) );
@@ -230,7 +231,7 @@ namespace sw::editor
             ImGui::InputTextWithHint( "##InspectorAddress", "127.0.0.1:<port>", _address.data(), _address.capacity() );
             ImGui::SameLine();
             ImGui::InputTextWithHint( "##InspectorToken", "token", _token.data(), _token.capacity(), ImGuiInputTextFlags_Password );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Attach" ) );
             if ( ImGui::Button( "Attach" ) )
             {
                 NetAddress remote;

@@ -170,7 +170,7 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "animationGraph.add.Idle" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddIdleTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Walk" ) );
             if ( ImGui::Button( "Add Walk" ) )
             {
                 addNamedNode( "Walk" );
@@ -178,7 +178,7 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "animationGraph.add.Walk" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddWalkTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Attack" ) );
             if ( ImGui::Button( "Add Attack" ) )
             {
                 addNamedNode( "Attack" );
@@ -186,23 +186,23 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "animationGraph.add.Attack" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Link Selected" ) );
             // 고른 노드 둘(고른 순서)을 잇는다 — 캔버스에서 노드를 누르고 Ctrl 로 둘째를 고른다.
             if ( ImGui::Button( "Link Selected" ) )
                 linkSelectedNodes();
             EditorSelfTestMarks::note( "animationGraph.linkSelected" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LinkSelectedTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
             if ( ImGui::Button( "Load" ) )
                 reloadDocument();
             EditorSelfTestMarks::note( "animationGraph.load" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LoadTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
             if ( ImGui::Button( "Save" ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::note( "animationGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
             if ( ImGui::Button( "Play" ) )
             {
                 syncPreviewGraph();
@@ -213,7 +213,7 @@ namespace sw::editor
                 notePreviewTransition();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "PlayTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance" ) );
             if ( ImGui::Button( "Advance" ) )
             {
                 syncPreviewGraph();
@@ -224,7 +224,7 @@ namespace sw::editor
                 notePreviewTransition();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AdvanceTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
             if ( ImGui::Button( "Stop" ) )
             {
                 _previewPlayer.stop();

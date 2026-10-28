@@ -443,7 +443,7 @@ namespace sw::editor
         else
             ImGui::Text( "Tracy: on (port %u, viewer %s)", static_cast<uint32>( ProfilerBackend::getTracyPort() ),
                          pBackend->isViewerConnected() ? "connected" : "waiting" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open Tracy" ) );
         ImGui::BeginDisabled( ProfilerBackend::isTracyCompiled() == false );
         if ( ImGui::SmallButton( "Open Tracy" ) )
         {
@@ -463,7 +463,7 @@ namespace sw::editor
         if ( ImGui::SmallButton( "RenderDoc Capture" ) )
             RenderDocCapture::triggerCapture();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocCapture" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open UI" ) );
         if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUI() == false )
             SW_LOG_WARNING( "RenderDoc replay UI could not be started" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocOpenUI" ) );
@@ -507,12 +507,12 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
             _bTimelineFrozen = bFrozen ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Fit" ) );
         if ( ImGui::SmallButton( "Fit" ) )
             _bTimelineZoomed = SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Fit" ) );
 #if SW_PROFILER_TRACE_ENABLED
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Trace" ) );
         if ( ImGui::SmallButton( "Save Trace" ) )
         {
             string     savedPath;
@@ -628,7 +628,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _bLoadedTrace == SW_TRUE )
         {
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unload" ) );
             if ( ImGui::SmallButton( "Unload" ) )
             {
                 _bLoadedTrace    = SW_FALSE;
@@ -904,7 +904,7 @@ namespace sw::editor
         if ( _rowQuery._frameOffset > 0 )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _rowQuery._frameOffset );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Latest" ) );
             if ( ImGui::SmallButton( "Latest" ) )
                 _rowQuery._frameOffset = 0;
         }

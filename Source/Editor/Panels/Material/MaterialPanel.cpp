@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -321,11 +322,11 @@ namespace sw::editor
         if ( ImGui::Button( "Reload" ) )
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ReloadTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "SaveTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Apply to Selection" ) );
         if ( ImGui::Button( "Apply to Selection" ) )
             applyLivePreview();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) );

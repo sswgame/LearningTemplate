@@ -404,7 +404,7 @@ namespace sw::editor
     void ConsolePanel::drawToolbarCommands()
     {
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Copy All" ) );
         if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
         {
             string allLogs;
@@ -417,7 +417,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Open Log File" ) );
         if ( ImGui::Button( "Open Log File" ) )
             showLogFileInExplorer();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );

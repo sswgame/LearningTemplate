@@ -116,7 +116,7 @@ namespace sw::editor
 
         IAudioService& audio       = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
         const bool     bAudioReady = audio.isInitialized();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) );
         ImGui::BeginDisabled( bAudioReady == false || _bEditDirty );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) )
         {
@@ -127,7 +127,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "PreviewTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) );
         ImGui::BeginDisabled( bAudioReady == false || _previewID == 0 );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) )
         {
@@ -366,7 +366,7 @@ namespace sw::editor
     {
         EditorChrome::setNextItemWidthColumns( -16.0f );
         (void)ImGui::InputTextWithHint( "##AudioGraphPath", SW_LOCKEY( "EditorAudioGraph", "PathHint" ), _pathInput.data(), _pathInput.capacity() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Open" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Open" ) ) )
             loadGraph();
         if ( _editPath.empty() )

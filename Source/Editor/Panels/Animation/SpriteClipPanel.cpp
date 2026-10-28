@@ -80,7 +80,7 @@ namespace sw::editor
         if ( ImGui::Button( "Load" ) )
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) )
         {
             saveClip();
@@ -110,7 +110,7 @@ namespace sw::editor
             _selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
             notifyDocumentEdited( "Add Sprite Frame" );
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Frame" ) );
         const bool bRemoveFrameRequested = ImGui::Button( "Remove Frame" ) && 0 <= _selectedFrame &&
                                            _selectedFrame < static_cast<int32>( _listFrame.size() );
         if ( bRemoveFrameRequested )
@@ -154,7 +154,7 @@ namespace sw::editor
             _selectedKey = static_cast<int32>( _listKey.size() ) - 1;
             notifyDocumentEdited( "Add Sprite Key" );
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Key" ) );
         const bool bRemoveKeyRequested = ImGui::Button( "Remove Key" ) && 0 <= _selectedKey &&
                                          _selectedKey < static_cast<int32>( _listKey.size() );
         if ( bRemoveKeyRequested )

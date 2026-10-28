@@ -12,6 +12,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -407,12 +408,12 @@ namespace sw::editor
             (void)EditorInspectorCommands::applyToPrefab( pObj, resourceID ); // 실패는 프리팹 저장이 알린다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert to Prefab" ) );
         if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
             SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "RevertToPrefab" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unlink" ) );
         if ( ImGui::Button( "Unlink" ) )
             (void)EditorInspectorCommands::unlinkPrefab( pObj ); // 거절 이유는 명령이 경고 로그로 남긴다. 부품이면 맨 바깥 인스턴스를 한 겹 푼다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "UnlinkPrefab" ) );
@@ -522,7 +523,7 @@ namespace sw::editor
     void InspectorPanel::drawComponentPresetItems( Component* pComp )
     {
         ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) && _presetNameBuffer.empty() == false )
         {
             if ( EditorTransformCommands::saveComponentPreset( pComp, _presetNameBuffer.c_str() ) )
@@ -593,7 +594,7 @@ namespace sw::editor
         if ( pParent != nullptr )
         {
             ImGui::Text( "Parent: %s", pParent->getName().c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unparent" ) );
             if ( ImGui::SmallButton( "Unparent" ) )
                 InspectorObjectEdit::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
                 { pObj->detachFromParent(); } );

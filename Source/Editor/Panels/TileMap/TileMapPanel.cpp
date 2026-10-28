@@ -223,7 +223,7 @@ namespace sw::editor
         ImGui::Checkbox( "Erase", &_bErase );
         EditorSelfTestMarks::note( "tileMap.erase" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset View" ) );
         if ( ImGui::SmallButton( "Reset View" ) )
         {
             _canvasPan  = float2{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin };
@@ -659,7 +659,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
         const bool bLoad = ImGui::Button( "Load" );
         EditorSelfTestMarks::note( "tileMap.load" );
         if ( bLoad )
@@ -671,7 +671,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "No tile map at '%#'", _pathBuffer.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         const bool bSave = ImGui::Button( "Save" );
         EditorSelfTestMarks::note( "tileMap.save" );
         if ( bSave )
@@ -726,7 +726,7 @@ namespace sw::editor
         {
             ImGui::InputText( "Tile Set", _tileSetBuffer.data(), _tileSetBuffer.capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TileSetTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Use" ) );
             if ( ImGui::Button( "Use" ) )
             {
                 _map._tileSetPath = _tileSetBuffer.c_str();
@@ -756,7 +756,7 @@ namespace sw::editor
             EditorChrome::setNextItemWidthColumns( 7.0f );
             ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Apply" ) );
             if ( ImGui::Button( "Apply" ) )
                 paintEdgeWarp( edgeIndex );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplyEdgeTip" ) );

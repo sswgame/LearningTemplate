@@ -216,13 +216,13 @@ namespace sw::editor
             }
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Localization" ) );
 
             if ( ImGui::Button( "Save Localization" ) )
                 saveLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveLocalizationTip" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
             if ( ImGui::Button( "Reload" ) )
                 reloadLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
@@ -230,7 +230,7 @@ namespace sw::editor
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Key" ) );
             const bool bAddKeyRequested = ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false;
             if ( bAddKeyRequested )
             {
@@ -472,11 +472,11 @@ namespace sw::editor
         {
             const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
             ImGui::Text( "File: %s", entry._fileName.c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save File" ) );
             if ( ImGui::Button( "Save File" ) )
                 saveSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
             if ( ImGui::Button( "Revert" ) )
                 loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );

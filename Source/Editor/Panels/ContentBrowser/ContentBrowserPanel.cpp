@@ -598,7 +598,7 @@ namespace sw::editor
             (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일과 .meta 를 그대로 둔다)
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
         if ( ImGui::Button( "Cancel" ) || EditorInputGUI::wasCancelPressed() )
         {
             _fileActions.cancelDelete();
@@ -1070,7 +1070,7 @@ namespace sw::editor
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
             EditorInputGUI::openPopup( "##cb_add" );
         EditorSelfTestMarks::note( "contentBrowser.add" );
@@ -1144,7 +1144,7 @@ namespace sw::editor
         if ( importClicked )
             importFilesFromDialog();
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
         if ( ImGui::Button( "Refresh" ) )
         {
             _folderCache.clear();

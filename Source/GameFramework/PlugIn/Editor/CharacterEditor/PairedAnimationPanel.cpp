@@ -169,13 +169,13 @@ namespace sw::editor
             reportEdit( _model.undo() );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "pairedanim.undo" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
         ImGui::BeginDisabled( _model.canRedo() == false );
         if ( ImGui::Button( "Redo" ) )
             reportEdit( _model.redo() );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "pairedanim.redo" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Check" ) );
         if ( ImGui::Button( "Check" ) )
             _status = _model.isValid() ? "The paired animation follows every rule" : "The paired animation breaks a rule - see the log";
         EditorSelfTestMarks::note( "pairedanim.check" );
@@ -318,7 +318,7 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
                 removeIndex = notifyIndex;
             ImGui::PopID();

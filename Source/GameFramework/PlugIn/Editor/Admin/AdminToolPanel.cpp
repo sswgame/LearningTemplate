@@ -184,7 +184,7 @@ namespace sw::editor
 
         EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDpiScale() );
         EditorSelfTestMarks::note( "admin.account" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Lookup" ) );
         if ( ImGui::Button( "Lookup" ) )
         {
             AccountID accountID = kInvalidAccountID;
@@ -253,7 +253,7 @@ namespace sw::editor
         if ( ImGui::Button( "Grant" ) )
             session.requestAdjust( accountID, _assetText, _amount, false, _memoText );
         EditorSelfTestMarks::note( "admin.grant" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revoke" ) );
         if ( ImGui::Button( "Revoke" ) )
             session.requestAdjust( accountID, _assetText, -_amount, _bRefund, _memoText );
         EditorSelfTestMarks::note( "admin.revoke" );
@@ -289,7 +289,7 @@ namespace sw::editor
         if ( ImGui::Button( "Apply sanction" ) )
             session.requestSanction( accountID, _sanctionKind, _sanctionSeconds, _reasonText, _memoText );
         EditorSelfTestMarks::note( "admin.sanction.apply" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Lift sanction" ) );
         if ( ImGui::Button( "Lift sanction" ) )
             session.requestSanction( accountID, _sanctionKind, 0, _reasonText, _memoText );
         EditorSelfTestMarks::note( "admin.sanction.lift" );
@@ -305,7 +305,7 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Audit log" );
 
         EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDpiScale() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "List audit" ) );
         if ( ImGui::Button( "List audit" ) )
             session.requestAudit( _auditSubjectText );
         EditorSelfTestMarks::note( "admin.audit.list" );
@@ -346,7 +346,7 @@ namespace sw::editor
         if ( ImGui::Button( "Open reports" ) )
             session.requestReports( true );
         EditorSelfTestMarks::note( "admin.report.list" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Closed reports" ) );
         if ( ImGui::Button( "Closed reports" ) )
             session.requestReports( false );
 
@@ -376,7 +376,7 @@ namespace sw::editor
             ImGui::BeginDisabled( bOpen == false || _memoText.empty() );
             if ( ImGui::SmallButton( "Resolve" ) )
                 session.requestResolveReport( report._reportKey, ServiceReportStatus::Resolved, _memoText );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Dismiss" ) );
             if ( ImGui::SmallButton( "Dismiss" ) )
                 session.requestResolveReport( report._reportKey, ServiceReportStatus::Dismissed, _memoText );
             ImGui::EndDisabled();
@@ -401,7 +401,7 @@ namespace sw::editor
         if ( ImGui::Button( "Start maintenance" ) )
             session.requestSetMaintenance( _scopeText, _maintenanceKeyText, _maintenanceSeconds, _memoText );
         EditorSelfTestMarks::note( "admin.maintenance.set" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "End maintenance" ) );
         if ( ImGui::Button( "End maintenance" ) )
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
@@ -418,7 +418,7 @@ namespace sw::editor
         if ( ImGui::Button( "Post notice" ) )
             session.requestPostNotice( static_cast<uint64>( _noticeID ), _noticeText, _noticePriority, _noticeSeconds, _memoText );
         EditorSelfTestMarks::note( "admin.notice.post" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove notice" ) );
         if ( ImGui::Button( "Remove notice" ) )
             session.requestRemoveNotice( static_cast<uint64>( _noticeID ), _memoText );
         ImGui::EndDisabled();
@@ -450,7 +450,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "admin.liveevent.put" );
         ImGui::EndDisabled();
         EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDpiScale() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove live event" ) );
         ImGui::BeginDisabled( _memoText.empty() || _eventIDText.empty() );
         if ( ImGui::Button( "Remove live event" ) )
             session.requestRemoveLiveEvent( _eventIDText, _memoText );

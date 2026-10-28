@@ -75,7 +75,7 @@ namespace sw::editor
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "Apply" ) )
                 _lastRejectedCount = settings.applyPending()._failedCount; // 저장 실패 · 거절된 설정 이름은 매니저가 경고로 남긴다
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
             if ( ImGui::Button( "Revert" ) )
                 settings.revertPending();
             if ( bPending == false )
@@ -105,10 +105,10 @@ namespace sw::editor
         if ( settings.isAwaitingConfirm() )
         {
             ImGui::Text( "Keep these display settings? Reverting in %.0f s", static_cast<float64>( settings.getConfirmSecondsLeft() ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Keep" ) );
             if ( ImGui::Button( "Keep" ) )
                 settings.confirmChanges();
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert Now" ) );
             if ( ImGui::Button( "Revert Now" ) )
                 settings.update( settings.getConfirmSecondsLeft() );
         }
