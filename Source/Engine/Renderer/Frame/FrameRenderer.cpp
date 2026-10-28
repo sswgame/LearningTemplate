@@ -821,10 +821,14 @@ namespace sw
         // 상수 버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
         ensurePassCbCapacityForFrame();
 
-        // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
+        // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
+        // 만드는 일은 빌더 스레드가 한다(`MaterialPSOBuilder`) — 먼저 지난 프레임까지 끝난 결과를 캐시에 합치고, 이번 프레임에 필요한 키를 줄에 넣는다.
+        pumpMaterialPSOBuilds();
         ensureMaterialPSOs();
-        // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다.
+        // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄).
         warmPinnedMaterialPSOs();
+        // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
+        pumpMaterialPSOBuilds();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, *_pPSOCache );

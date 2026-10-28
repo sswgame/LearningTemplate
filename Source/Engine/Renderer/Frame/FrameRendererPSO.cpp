@@ -4,6 +4,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -23,6 +24,12 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_psoAsync=0` 이면 머티리얼 변형 PSO 를 빌더 스레드가 아니라 렌더 스레드가 셋업 구간에서 모두 만듭니다(옛 동작 - A/B 측정 · 진단용).
+     * @details 기본은 빌더 스레드입니다(`MaterialPSOBuilder`). 스레드를 쓸 수 없는 백엔드(GL)는 이 값과 상관없이 렌더 스레드가 프레임당 시간 예산 안에서 만듭니다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_psoAsync, true, "머티리얼 변형 PSO 를 빌더 스레드가 만든다 (false=렌더 스레드가 동기로 만듦, A/B 측정용)" );
+
     namespace
     {
         /**
@@ -261,7 +268,7 @@ namespace sw
 
     RenderPSOCache::MaterialPSOEntry FrameRenderer::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
                                                                               const GPUShaderPermutation* pPermutation,
-                                                                              RenderViewMode viewMode, bool bReverseCulling )
+                                                                              RenderViewMode viewMode, bool bReverseCulling, RHIPipelineStateDesc* pOutDeferredDesc )
     {
         if ( passPSO == 0 || _pDevice == nullptr )
             return RenderPSOCache::MaterialPSOEntry::failed();
@@ -339,6 +346,13 @@ namespace sw
         // 적용할 것이 없다는 것은 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이고 컬 모드도 그대로라는 뜻이다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
         if ( bChanged == false )
             return RenderPSOCache::MaterialPSOEntry::ready( passPSO, false );
+
+        // 셰이더 컴파일 · 드라이버 생성은 호출자가 desc 를 받아 빌더 줄에 넣는다(`Building` 으로 돌려준다). 합치는 쪽이 같은 규칙으로 `Ready` · `Failed` 를 정한다.
+        if ( pOutDeferredDesc != nullptr )
+        {
+            *pOutDeferredDesc = std::move( desc );
+            return RenderPSOCache::MaterialPSOEntry::building();
+        }
 
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
@@ -422,7 +436,7 @@ namespace sw
                     {
                         if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
                             continue;
-                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ) ) )
+                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), false ) )
                             bCreatedVariant = true;
                     }
                 }
@@ -506,17 +520,43 @@ namespace sw
     }
 
     bool FrameRenderer::ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
-                                                  uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
+                                                  uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, bool bUrgent )
     {
-        // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의 조회를 붙잡으면 안 된다.
-        // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 지금은 이 함수 안에서 `Ready` 나 `Failed` 로 끝나지만, 상태가 드러나 있어 빌더 스레드(U12)가
-        // 같은 자리를 채울 때 드로우 경로가 "아직 안 됨" 과 "실패" 를 구별한다.
+        // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
+        // 결과는 `pumpMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
         const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
         if ( _pPSOCache->beginMaterialPSO( key ) == false )
             return false;
-        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling );
+        RHIPipelineStateDesc                   deferredDesc{};
+        const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling, &deferredDesc );
+        if ( entry._state == RenderPSOCache::MaterialPSOState::Building )
+        {
+            _pPSOCache->requestMaterialPSO( _pDevice, key, std::move( deferredDesc ), bUrgent, usesAsyncMaterialPSOBuilder() );
+            return false;
+        }
         _pPSOCache->setMaterialPSO( key, entry );
         return true;
+    }
+
+    bool FrameRenderer::usesAsyncMaterialPSOBuilder() const
+    {
+        // GL 은 컨텍스트가 스레드에 묶여 빌더 스레드에서 만들 수 없다 — 렌더 스레드가 같은 줄을 예산 안에서 만든다.
+        return gv_psoAsync && _pDevice != nullptr && _pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE;
+    }
+
+    void FrameRenderer::pumpMaterialPSOBuilds()
+    {
+        if ( _pDevice == nullptr )
+            return;
+        SW_PROFILE_SCOPE( "RT.PSO.pumpBuilds" );
+        // 빌더 스레드를 쓰지 않을 때: `-gv_psoAsync=0` 은 전부(옛 동작, A/B 측정), 그 밖(GL)은 프레임당 시간 예산(줄이 있으면 최소 하나)이다.
+        constexpr uint32 kFrameBudgetMicroseconds = 2000;
+        const uint32     budgetMicroseconds       = gv_psoAsync ? kFrameBudgetMicroseconds : 0u;
+        const uint32     readyCount               = _pPSOCache->pumpMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
+        SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pPSOCache->getPendingMaterialPSOBuilds() );
+        // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOs` 의 같은 이유).
+        if ( readyCount > 0 )
+            ensureMaterialFallbackBuffers();
     }
 
     void FrameRenderer::ensureParticlePSO()

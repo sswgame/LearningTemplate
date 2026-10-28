@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 
 namespace sw
@@ -146,6 +147,20 @@ namespace sw
          * @details 0 이 "없음", "만드는 중", "실패" 중 무엇인지는 `findMaterialPSOState` 가 답합니다(`Building` 이면 `RT.PSO.pendingBatches` 로 센다).
          */
         RHIPipelineStateHandle findMaterialPSO( uint64 key ) const;
+        /**
+         * @brief `Building` 키 하나의 생성을 빌더 줄에 넣습니다(`beginMaterialPSO` 가 true 를 준 쪽이 부릅니다). 렌더 스레드만 부릅니다.
+         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기면 false 입니다.
+         * @param bAsync true 이면 빌더 스레드가, false 이면 `pumpMaterialPSOBuilds` 를 부른 스레드가 만듭니다.
+         */
+        void requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync );
+        /**
+         * @brief 빌더가 끝낸 결과를 캐시에 합칩니다(`Building` → `Ready` · `Failed`, 레이아웃 등록 포함). 렌더 스레드가 셋업 구간(기록 전)에만 부릅니다.
+         * @param bAsync false 이면 먼저 줄의 작업을 @p budgetMicroseconds 안에서 이 스레드가 만듭니다(0 이면 전부).
+         * @return 이번에 `Ready` 로 합친 항목 수입니다(0 보다 크면 호출자가 폴백 버퍼를 다시 점검합니다).
+         */
+        uint32 pumpMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds );
+        /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
+        [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
         /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */
         [[nodiscard]] size_t countMaterialPSOs( MaterialPSOState state ) const;
 
@@ -181,5 +196,7 @@ namespace sw
         unordered_map<hashed_string, RHIPipelineStateHandle>    _mapModulePassPSO;
         unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable mutex                                           _materialPSOMutex;
+        /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
+        MaterialPSOBuilder _materialPSOBuilder;
     };
 } // namespace sw

@@ -1,8 +1,8 @@
 # RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 진행: 13/15
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 진행: 15/15
 
-게임 스레드(GT)와 렌더 스레드(RT)가 GPU 완료를 기다리는 지점을 없앤다. 업로드와 되읽기는 **"제출 → 티켓 → 폴링"** 계약 하나로 바꾸고(RHI ABI 버전을 한 번 높여 옛 동기 함수 세 개를 지움), 새 머티리얼과 PSO 는 **"준비 전 / 준비됨 / 실패"** 상태를 데이터로 두어 준비 전에는 그리지 않는다. 프레임 경로에는 `waitIdle`(GPU 전체를 비우는 대기)을 새로 만들지 않는다. 네 백엔드의 새 전송 계약과 호출처 이전은 들어가 GPU 확인까지 통과했다. 남은 것은 머티리얼 GPU 상태(U10)와 PSO 백그라운드 빌더(U12), 그리고 새로 쓴 단위의 컴파일 · GPU 확인이다. 근거 표시: **[코드]** 읽어서 확인, **[추정]**, **[확인 전]**. 관련 문서: [PreloadAndLod](PreloadAndLod.md)(PSO 미리 만들기와 텍스처 밉 스트리밍).
+게임 스레드(GT)와 렌더 스레드(RT)가 GPU 완료를 기다리는 지점을 없앤다. 업로드와 되읽기는 **"제출 → 티켓 → 폴링"** 계약 하나로 바꾸고(RHI ABI 버전을 한 번 높여 옛 동기 함수 세 개를 지움), 새 머티리얼과 PSO 는 **"준비 전 / 준비됨 / 실패"** 상태를 데이터로 두어 준비 전에는 그리지 않는다. 프레임 경로에는 `waitIdle`(GPU 전체를 비우는 대기)을 새로 만들지 않는다. 네 백엔드의 새 전송 계약과 호출처 이전은 들어가 GPU 확인까지 통과했다. 머티리얼 GPU 상태(U10)와 PSO 백그라운드 빌더(U12)도 코드를 썼다. 남은 것은 새로 쓴 단위의 컴파일 · GPU 확인이다. 근거 표시: **[코드]** 읽어서 확인, **[추정]**, **[확인 전]**. 관련 문서: [PreloadAndLod](PreloadAndLod.md)(PSO 미리 만들기와 텍스처 밉 스트리밍).
 
 ## 진행
 
@@ -19,12 +19,12 @@
 | U9 | 렌더 타깃 읽기 티켓(글리프 아틀라스는 끝) | 코드 끝, 컴파일 · GPU 확인 전 |
 | U10 | 머티리얼 GPU 상태와 프레임 경계 초기화 | 코드 끝(렌더 스레드 셋업이 프레임당 4 개 초기화, 파일 읽기는 아직 렌더 스레드), 컴파일 · GPU 확인 전 |
 | U11 | PSO 상태 데이터와 드로우 규칙 | 코드 끝, 컴파일 · GPU 확인 전 |
-| U12 | PSO 백그라운드 빌더 | 남음(선행 U11 · DX11 · GL 워커 안전성 점검) |
+| U12 | PSO 백그라운드 빌더 | 코드 끝(`MaterialPSOBuilder` 전용 스레드 하나, `-gv_psoAsync`, GL 은 렌더 스레드 시간 예산), 컴파일 · GPU 확인 전 |
 | U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거 | 코드 끝, 컴파일 · GPU 확인 전 |
 | U14 | `waitIdle` 이유 인자(호출처 약 70곳) | 코드 끝, 빌드 전. 프레임 경로 호출 금지 게이트는 보류 |
 | GL-1 | GL 영속 매핑 PBO 스테이징 링 | 끝 |
 
-첫 일: 컴파일하고 U7 · U8 · U9 · U11 · U13 의 GPU 확인을 돌린다. 그다음 M0 로 W1 · W2 · W3 대기가 실제로 큰지 재서 U10 · U12 의 우선순위를 정한다(Vulkan 이 아닌 백엔드는 W2 에 이미 대기가 없어 이득이 작으면 미룬다).
+첫 일: 컴파일하고 U7 · U8 · U9 · U10 · U11 · U12 · U13 의 GPU 확인을 돌린다.
 
 ## 1. 지금 동기 대기 지점
 
@@ -115,12 +115,12 @@ DX12 의 인덱스 반환 지연과 Vulkan 의 해제 큐는 이미 GPU 완료�
 `RenderPSOCache` 의 머티리얼 변형 항목은 (핸들, 소유 여부)이고 실패는 핸들 0, 미생성은 항목 없음이라 "만드는 중"이 없었다.
 
 - **상태(U11, 코드 끝):** `MaterialPSOState`(`Absent` · `Building` · `Ready` · `Failed`)를 항목에 두고 항목은 `building()` · `ready( pso, bOwned )` · `failed()` 로만 만든다(핸들 0 의 `ready` 는 `failed`). `beginMaterialPSO( key )` 가 "처음 올린 쪽만 만든다" 를 한 번에 정한다. `findMaterialPSO` 는 `Ready` 의 핸들만, `findMaterialPSOState` 가 0 의 이유를 답한다. `psoForBatch` 가 상태를 내주고 `drawBatchGroup` 이 `Building` 배치를 `RT.PSO.pendingBatches` 로 센다(생성이 아직 RT 에서 동기라 값은 늘 0 — 이 0 이 U12 의 비교 기준).
-- **빌더(U12, 남음):** 요청은 셋업 구간의 `ensureMaterialPSOs` 가 모아 `requestMaterialPSO( key, desc )` 로 넣고 `Absent` 를 `Building` 으로 바꿔 빌더 큐에 넣는다. **전용 스레드 하나**가 순서대로 만든다(이번 프레임 배치가 필요한 키가 먼저, `warmPinnedMaterialPSOs` 의 미리 만들기가 나중). 결과는 완료 목록에 쌓고 RT 가 셋업 구간에서 캐시에 합친다. 그래서 캐시를 쓰는 스레드가 RT 하나로 유지되어 "삽입은 기록 시작 전에만" 불변식이 서고 `ensureMaterialFallbackBuffers` 후처리도 합치는 자리에서 한다. `-gv_psoAsync=0` 이면 동기 생성(A/B 측정용).
+- **빌더(U12, 코드 끝):** 요청은 셋업 구간의 `ensureMaterialPSOs` 가 모아 `requestMaterialPSO( key, desc )` 로 넣고 `Absent` 를 `Building` 으로 바꿔 빌더 큐에 넣는다. **전용 스레드 하나**가 순서대로 만든다(이번 프레임 배치가 필요한 키가 먼저, `warmPinnedMaterialPSOs` 의 미리 만들기가 나중). 결과는 완료 목록에 쌓고 RT 가 셋업 구간에서 캐시에 합친다. 그래서 캐시를 쓰는 스레드가 RT 하나로 유지되어 "삽입은 기록 시작 전에만" 불변식이 서고 `ensureMaterialFallbackBuffers` 후처리도 합치는 자리에서 한다. `-gv_psoAsync=0` 이면 렌더 스레드가 셋업 구간에서 전부 만든다(A/B 측정용). 구현: 작업 줄과 스레드는 `MaterialPSOBuilder`(`RenderPSOCache` 가 소유 — 미리보기 렌더러와 공유), `ensureMaterialPSOVariant` 가 desc 만 정해 `requestMaterialPSO` 로 넣고, `FrameRenderer::pumpMaterialPSOBuilds` 가 셋업 구간 앞뒤에서 결과를 합친다(레이아웃 등록 · 폴백 버퍼 점검도 거기서). `releaseAll` 이 스레드부터 합류한다.
 - **GL:** `_bThreadSafeResourceCreation` 이 거짓이라 빌더 스레드를 쓸 수 없어 RT 가 프레임당 시간 예산 안에서 만들고 남은 키는 `Building` 으로 둔다(폴백이 아니라 같은 상태 규칙을 다른 방식으로 채움).
 - **스레드가 하나인 이유:** PSO 병렬 생성은 이득 9 %(드라이버가 직렬)로 기각됐다. 이 설계는 빠르게 만들려는 것이 아니라 RT 임계 경로에서 빼려는 것이다. 공유 풀에서 돌린 GT 병렬화가 RT 를 170 → 261 µs 로 늦춘 선례가 있어 전용 스레드다.
 - **`warmPinnedMaterialPSOs`:** 별도 생성 루프가 "우선순위가 낮은 요청" 넣기로 바뀌어 "고정한 머티리얼의 PSO 가 모두 `Ready`" 를 물을 수 있다.
 - **키 공간:** 키 = 씬 메시 패스 수 × 머티리얼 퍼뮤테이션 수 × 마스크에 포함된 뷰 모드 수 × 컬 반전 2 라 불리언 스위치 하나가 키 수를 두 배로 만든다. 에디터에서 뷰 모드를 바꾸면 (머티리얼 수 × 패스 수)만큼 새 키가 한꺼번에 생겨 가장 큰 히치 후보다 **[추정]**. 실제 키 수와 생성 시간 분포는 M0 가 `RT.PSO.create` 로 잰다.
-- **빌더 안전성(U12 시작 전 점검):** Vulkan · DX12 의 `createPipelineState` 는 워커에서 부를 수 있다. **DX11 과 GL 은 아직 점검하지 않았고 Dev 의 `ShaderCache::getOrCompile` 도 보지 않았다 [확인 전].**
+- **빌더 안전성(점검 결과):** DX11 · DX12 · Vulkan 의 `createPipelineState` 는 `requireRegistryMutableNow` 를 부르지 않고 핸들 테이블(`SlotHandleTable`)이 insert 를 직렬화하며 `get` 은 락 없이 안전하다. `ShaderCache` 는 `_mutexCache` 와 로드 블록으로 동시 요청을 합친다 **[코드]**. GL 은 컨텍스트가 스레드에 묶여 빌더 스레드를 쓰지 않는다(`_bThreadSafeResourceCreation` 거짓). **[확인 전]** 실제 DX11 · DX12 · Vulkan 에서 병렬 기록 중 워커 생성이 안전한지(GPU 확인).
 - **락 점검 결과:** 락 없이 `push_back` 한 벡터의 포인터를 밖으로 내주는 모양을 RHI 전체에서 찾아 고쳤다(GL bindless 등록 · 해제를 `ScopedOpenGLContext` 안으로, `IRHIDevice` 의 렌더 스레드 상태 변수를 atomic 으로, `MaterialCache::acquire` · `reload` 의 초기화를 락 밖으로 + `DeviceInitScope` 가 동시 초기화를 오류로 막음). **락 순서 규칙:** GL 가드가 렌더 스레드의 프레임 끝을 기다리므로, RT 가 아닌 스레드가 락을 쥔 채 등록 · 해제를 부르고 RT 가 프레임 안에서 같은 락을 잡으면 교착이다.
 
 ### 2.5 단위별 구현 요약

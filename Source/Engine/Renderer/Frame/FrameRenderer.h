@@ -1038,7 +1038,17 @@ namespace sw
          */
         RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
                                                                    const GPUShaderPermutation* pPermutation, RenderViewMode viewMode,
-                                                                   bool bReverseCulling );
+                                                                   bool bReverseCulling, RHIPipelineStateDesc* pOutDeferredDesc );
+        /**
+         * @brief 머티리얼 변형을 빌더 스레드가 만들게 하는지 반환합니다(`-gv_psoAsync` 가 켜져 있고 백엔드가 `_bThreadSafeResourceCreation` 이면 true).
+         * @details false 이면 렌더 스레드가 같은 줄을 셋업 구간에서 직접 만듭니다(GL 은 프레임당 시간 예산, `-gv_psoAsync=0` 은 전부 — A/B 측정용).
+         */
+        [[nodiscard]] bool usesAsyncMaterialPSOBuilder() const;
+        /**
+         * @brief 빌더가 끝낸 머티리얼 변형을 캐시에 합치고(스레드를 쓰지 않으면 이 자리에서 만들고), 새로 `Ready` 가 된 것이 있으면 폴백 버퍼를 점검합니다.
+         * @details 렌더 스레드의 셋업 구간(기록 전)에서만 부릅니다 — 캐시를 쓰는 스레드가 렌더 스레드 하나라 "삽입은 기록 시작 전에만" 이 선다.
+         */
+        void pumpMaterialPSOBuilds();
         /**
          * @brief 이번 프레임 배치 수에 맞춰 상수 버퍼 슬롯을 **기록 시작 전에** 늘려 둡니다. 드로우마다 슬롯을 하나씩 쓰기 때문입니다.
          * @details 기록 중에는 버퍼 생성과 bindless 등록을 할 수 없다. 지난 프레임의 최대 사용량(하이워터)도 최솟값으로 본다.
@@ -1126,9 +1136,13 @@ namespace sw
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
-        /** @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. @return 새로 만들었으면 true 입니다. */
+        /**
+         * @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
+         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
+         * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
+         */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
-                                                     bool bReverseCulling, RenderViewMode viewMode );
+                                                     bool bReverseCulling, RenderViewMode viewMode, bool bUrgent = true );
         /**
          * @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를 씁니다.
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나(둘 다 없음) 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.

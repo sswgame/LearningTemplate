@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "RenderPSOCache" );
+
     RenderPSOCache::RenderPSOCache()
         : _bindingLayoutCache{}
         , _mapPSOLayout{}
@@ -162,8 +164,45 @@ namespace sw
         return bReady ? it->second._pso : 0;
     }
 
+    void RenderPSOCache::requestMaterialPSO( IRHIDevice* pDevice, uint64 key, RHIPipelineStateDesc&& desc, bool bUrgent, bool bAsync )
+    {
+        _materialPSOBuilder.submit( pDevice, MaterialPSOBuilder::Job{ key, std::move( desc ) }, bUrgent, bAsync );
+    }
+
+    uint32 RenderPSOCache::pumpMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds )
+    {
+        if ( pDevice == nullptr )
+            return 0;
+        if ( bAsync == false )
+            (void)_materialPSOBuilder.buildOnCaller( budgetMicroseconds );
+        vector<MaterialPSOBuilder::Result> listResult;
+        _materialPSOBuilder.takeResults( listResult );
+        uint32 readyCount{ 0 };
+        for ( const MaterialPSOBuilder::Result& result : listResult )
+        {
+            if ( result._handle == 0 )
+            {
+                // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
+                SW_LOG_ERROR( "Material PSO variant '%#' failed to build - these batches are not drawn", result._desc._vertexShaderPath );
+                setMaterialPSO( result._key, MaterialPSOEntry::failed() );
+                continue;
+            }
+            registerLayout( result._handle, result._desc, pDevice->getBackendType() );
+            setMaterialPSO( result._key, MaterialPSOEntry::ready( result._handle, true ) );
+            ++readyCount;
+        }
+        return readyCount;
+    }
+
+    uint32 RenderPSOCache::getPendingMaterialPSOBuilds() const
+    {
+        return _materialPSOBuilder.getPendingCount();
+    }
+
     void RenderPSOCache::releaseAll( IRHIDevice* pDevice )
     {
+        // 빌더 스레드가 디바이스를 쓰므로 가장 먼저 합류한다(줄은 버리고, 끝났으나 가져가지 않은 PSO 는 파괴한다).
+        _materialPSOBuilder.shutdown( pDevice );
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {
             forgetAll();
@@ -215,6 +254,7 @@ namespace sw
 
     void RenderPSOCache::forgetAll()
     {
+        _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
         _mapModulePassPSO.clear();
