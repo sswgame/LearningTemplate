@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scripts/setup/InstallGitHooks.py
+Scripts/setup/GitHooks.py
 
 Git 훅을 .git/hooks/ 디렉터리에 설치합니다 — pre-commit(커밋 시 린트 · 포맷 검사).
 """
@@ -20,7 +20,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 
 def installPreCommitHook(projectRoot: Path | None = None) -> bool:
     """
-    .git/hooks/pre-commit 훅을 설치하여 커밋 시 PreCommitLint.py가 자동 실행되도록 합니다.
+    .git/hooks/pre-commit 훅을 설치하여 커밋 시 PreCommit.py가 자동 실행되도록 합니다.
     """
     root = projectRoot or getProjectRoot()
     gitDir = root / ".git"
@@ -54,14 +54,14 @@ def installPreCommitHook(projectRoot: Path | None = None) -> bool:
     if platform.system() != "Windows":
         os.chmod(preCommitPath, 0o755)
 
-    print(f"[InstallGitHooks] Git pre-commit 훅이 설치되었습니다: {preCommitPath}")
+    print(f"[GitHooks] Git pre-commit 훅이 설치되었습니다: {preCommitPath}")
     return True
 
 
 def main(argv: list[str] | None = None) -> int:
-    argparse.ArgumentParser(description="Git pre-commit 훅(PreCommitLint)을 설치한다 — 인자 없음").parse_args(argv)
+    argparse.ArgumentParser(description="Git pre-commit 훅(PreCommit)을 설치한다 — 인자 없음").parse_args(argv)
     if not installPreCommitHook():
-        print("[InstallGitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
+        print("[GitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
         return ExitCode.Violation
     return ExitCode.Passed
 

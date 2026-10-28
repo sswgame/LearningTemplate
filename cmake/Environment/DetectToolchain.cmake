@@ -1,10 +1,10 @@
 # ==============================================================================
 # @file cmake/Environment/DetectToolchain.cmake
-# @brief Scripts/setup/SetupEnvironment.py를 실행하여 개발 환경을 탐색하고,
+# @brief Scripts/setup/Environment.py를 실행하여 개발 환경을 탐색하고,
 # 생성된 Config/Environment/toolchain_config.json으로부터 LLVM/vcpkg/SDK 경로를 CMake에 주입
 #
 # [동작 파이프라인]:
-# 1. Python 서브프로세스를 통해 `SetupEnvironment.py`를 실행하여 툴체인 및 패키지 매니저 경로를 자동 탐지/다운로드.
+# 1. Python 서브프로세스를 통해 `Environment.py`를 실행하여 툴체인 및 패키지 매니저 경로를 자동 탐지/다운로드.
 # 2. `toolchain_config.json`의 키(llvm_path, vcpkg_root, windows_sdk_dir, msvc_tools_dir, ninja_path 등)를 파싱.
 # 3. `CMAKE_TOOLCHAIN_FILE`, `CMAKE_C_COMPILER`, `CMAKE_CXX_COMPILER`, `CMAKE_AR` 등의 빌드 도구 변수를 강제 바인딩(FORCE).
 # ==============================================================================
@@ -22,7 +22,7 @@ if(SW_LLVM_AUTO_BOOTSTRAP)
 	set(ENV{SW_LLVM_AUTO_BOOTSTRAP} "1")
 endif()
 
-# SetupEnvironment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영).
+# Environment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영).
 # 필수다 — 실패하면 아래가 낡은 toolchain_config.json 이나 빈 값으로 지나가 다른 컴파일러를 집는다.
 sw_executePythonScript(
 	"${SW_SCRIPT_SETUP_ENVIRONMENT}"
@@ -35,10 +35,10 @@ sw_executePythonScript(
 # toolchain_config.json 을 CMake 가 다시 파싱하지 않는다. 그 파일을 쓰는 쪽이 파이썬이니
 # 읽는 모양도 파이썬이 준다 — CMake 가 키마다 `string(JSON ... GET)` 블록을 두면 같은 키를 곳마다
 # 다른 철자(상수 · 리터럴)로 적게 된다.
-# 키는 SetupEnvironment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
+# 키는 Environment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
 # 그래서 아래는 `if(X AND EXISTS ...)` 로 묻는다. 파일 자체가 없으면 구성을 세운다.
 set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
-sw_executePythonScript("Scripts/generate/GenerateToolchainCMake.py"
+sw_executePythonScript("Scripts/generate/ToolchainCMake.py"
 	ARGS "${SW_GENERATED_TOOLCHAIN_VARS}"
 	REQUIRED
 )

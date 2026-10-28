@@ -38,7 +38,7 @@ function(sw_pinnedArchiverPath OUT_VAR)
 		list(APPEND swCandidateDirs "${swCompilerDir}" "${swCompilerRealDir}")
 	endif()
 
-	# (2) 저장소가 고정한 LLVM(SetupEnvironment 가 적은 llvm_path). `project()` 이전처럼 컴파일러가 아직 없을 때 여기가 답한다.
+	# (2) 저장소가 고정한 LLVM(Environment 가 적은 llvm_path). `project()` 이전처럼 컴파일러가 아직 없을 때 여기가 답한다.
 	if(SW_TOOLCHAIN_LLVM_PATH)
 		list(APPEND swCandidateDirs "${SW_TOOLCHAIN_LLVM_PATH}/bin")
 	endif()

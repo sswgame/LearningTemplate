@@ -34,7 +34,7 @@ namespace sw
             Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT). 로더가 로드할 때 바인딩한다
             Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT). 첫 호출이 썽크를 지나 바인딩한다
         };
-        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`GenerateEngineAbiStamp.py` 와 같아야 한다). */
+        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`EngineAbiStamp.py` 와 같아야 한다). */
         static constexpr const utf8* kEngineAbiStampMarker = "swEngineAbiStamp:";
         static constexpr uint32      kEngineAbiStampDigits = 40;
 

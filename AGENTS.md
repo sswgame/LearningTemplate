@@ -53,8 +53,8 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 ## Build workflow
 
 ```powershell
-py -3 Scripts/setup/SetupEnvironment.py
-py -3 Scripts/setup/SetupVcpkg.py --install
+py -3 Scripts/setup/Environment.py
+py -3 Scripts/setup/Vcpkg.py --install
 cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug  # App, Server, modules
 ```

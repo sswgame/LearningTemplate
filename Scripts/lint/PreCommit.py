@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/lint/PreCommitLint.py
+Scripts/lint/PreCommit.py
 
 Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     if not allStagedFiles:
         return ExitCode.Passed
 
-    print(f"[PreCommitLint] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
+    print(f"[PreCommit] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
     hasErrors = False
 
     stagedCppFiles = getStagedCppFiles(projectRoot)
@@ -61,10 +61,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[포맷] C++ 파일 {len(stagedCppFiles)}개 · 셰이더 {len(stagedShaderFiles)}개 통과")
 
     if hasErrors:
-        print("\n[PreCommitLint] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
+        print("\n[PreCommit] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
         return ExitCode.Violation
 
-    print("\n[PreCommitLint] [OK] 모든 검사를 통과했습니다.")
+    print("\n[PreCommit] [OK] 모든 검사를 통과했습니다.")
     return ExitCode.Passed
 
 

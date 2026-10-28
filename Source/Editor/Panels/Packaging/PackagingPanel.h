@@ -1,6 +1,6 @@
 /**
  * @file PackagingPanel.h
- * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/dev/MakePackage.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
+ * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/package/Pack.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
  */
 #pragma once
 #include "Core/Common/Types.h"

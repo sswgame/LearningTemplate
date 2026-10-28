@@ -17,7 +17,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 # 여기서는 상수만 필요한 곳(vcpkg 포트 툴체인처럼 따로 도는 CMake)일 때만 이 생성기를 혼자 부른다.
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")
 if(NOT SW_CONFIGURE_FILES_GENERATED)
-	sw_executePythonScript("Scripts/generate/GenerateCMakeConstants.py"
+	sw_executePythonScript("Scripts/generate/CMakeConstants.py"
 		ARGS "${SW_GENERATED_CMAKE_VARS}"
 		REQUIRED
 	)

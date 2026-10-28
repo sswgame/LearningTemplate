@@ -53,18 +53,18 @@
         // 2. Test & Quality Tasks
         // ==========================================
         {
-            "label": "Lint: PreCommitLint",
+            "label": "Lint: PreCommit",
             "type": "shell",
-            "command": "py -3 Scripts/lint/PreCommitLint.py"
+            "command": "py -3 Scripts/lint/PreCommit.py"
         },
 
         // ==========================================
         // 3. Environment & Setup Tasks
         // ==========================================
         {
-            "label": "Setup: SetupEnvironment",
+            "label": "Setup: Environment",
             "type": "shell",
-            "command": "py -3 Scripts/setup/SetupEnvironment.py"
+            "command": "py -3 Scripts/setup/Environment.py"
         }
     ]
 }

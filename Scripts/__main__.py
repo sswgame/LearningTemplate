@@ -47,10 +47,10 @@ class Subcommand:
 
 
 _kSubcommand: tuple[Subcommand, ...] = (
-    Subcommand("setup", "setup.SetupEnvironment", "개발 환경 및 도구체인 탐색/설정"),
-    Subcommand("vcpkg", "setup.SetupVcpkg", "vcpkg 탐색 및 부트스트랩"),
-    Subcommand("llvm", "setup.SetupLlvm", "LLVM/Clang 탐색 및 설정"),
-    Subcommand("lint", "lint.PreCommitLint", "Staged 파일 대상 사전 커밋 린트 검사"),
+    Subcommand("setup", "setup.Environment", "개발 환경 및 도구체인 탐색/설정"),
+    Subcommand("vcpkg", "setup.Vcpkg", "vcpkg 탐색 및 부트스트랩"),
+    Subcommand("llvm", "setup.Llvm", "LLVM/Clang 탐색 및 설정"),
+    Subcommand("lint", "lint.PreCommit", "Staged 파일 대상 사전 커밋 린트 검사"),
     Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
     Subcommand("format", "lint.Format:mainFormatClang", "C++ 코드 clang-format 자동 포맷팅"),

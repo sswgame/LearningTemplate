@@ -152,7 +152,7 @@ namespace sw
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
-        // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `MakePackage.py` 가
+        // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가
         // "쿠킹하지 못했다"는 사실을 알 수 있다.
         if ( _engine.isHeadless() )
         {

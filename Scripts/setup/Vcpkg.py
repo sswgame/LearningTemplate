@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Scripts/setup/SetupVcpkg.py
+Scripts/setup/Vcpkg.py
 
 vcpkg: VCPKG_ROOT → PATH → vcpkg_search_roots → Tools/vcpkg → opt-in clone.
 
-  python3 Scripts/setup/SetupVcpkg.py
-  python3 Scripts/setup/SetupVcpkg.py --install
+  python3 Scripts/setup/Vcpkg.py
+  python3 Scripts/setup/Vcpkg.py --install
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from setup.ToolchainDetect import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 kVcpkgToolSpec = ToolSpec(
-    name="SetupVcpkg",
+    name="Vcpkg",
     tools_subdir_key=kKeyVcpkgToolsSubdir,
     search_roots_key=kKeyVcpkgSearchRoots,
     bin_names=("vcpkg.exe", "vcpkg"),
@@ -70,7 +70,7 @@ def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str) -> None:
         return
     gitProbe = runGit(["-C", str(vcpkgRoot), "rev-parse", "--is-inside-work-tree"])
     if gitProbe.returnCode != 0 or gitProbe.stdout.strip() != "true":
-        print(f"[SetupVcpkg] Skip pin (not a git work tree): {vcpkgRoot}", file=sys.stderr)
+        print(f"[Vcpkg] Skip pin (not a git work tree): {vcpkgRoot}", file=sys.stderr)
         return
 
     head = runGit(["-C", str(vcpkgRoot), "rev-parse", "HEAD"])
@@ -82,19 +82,19 @@ def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str) -> None:
     ):
         return
 
-    print(f"[SetupVcpkg] Pinning {vcpkgRoot} to {commit}", file=sys.stderr)
+    print(f"[Vcpkg] Pinning {vcpkgRoot} to {commit}", file=sys.stderr)
     checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
     if checkout.returnCode == 0:
         return
     fetch = runGit(["-C", str(vcpkgRoot), "fetch", "--depth", "1", "origin", commit])
     if fetch.returnCode != 0:
         sys.stderr.write(
-            f"[SetupVcpkg] Could not fetch {commit} ({fetch.stderr.strip() or checkout.stderr.strip()})\n"
+            f"[Vcpkg] Could not fetch {commit} ({fetch.stderr.strip() or checkout.stderr.strip()})\n"
         )
         return
     checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
     if checkout.returnCode != 0:
-        sys.stderr.write(f"[SetupVcpkg] checkout {commit} failed: {checkout.stderr.strip()}\n")
+        sys.stderr.write(f"[Vcpkg] checkout {commit} failed: {checkout.stderr.strip()}\n")
 
 
 def removeIncompleteVcpkgTreeInternal(toolsDir: Path) -> None:
@@ -103,7 +103,7 @@ def removeIncompleteVcpkgTreeInternal(toolsDir: Path) -> None:
         return
     if isVcpkgRoot(toolsDir):
         return
-    print(f"[SetupVcpkg] Removing incomplete vcpkg tree: {toolsDir}", file=sys.stderr)
+    print(f"[Vcpkg] Removing incomplete vcpkg tree: {toolsDir}", file=sys.stderr)
     shutil.rmtree(toolsDir, ignore_errors=True)
 
 
@@ -120,12 +120,12 @@ def runBootstrapScriptInternal(vcpkgRoot: Path) -> bool:
     """이미 있는 vcpkg 트리에서 이 OS 의 bootstrap 스크립트만 돌립니다(클론 · 지우기 없음). 성공하면 True 입니다."""
     bootstrap = vcpkgRoot / ("bootstrap-vcpkg.bat" if platformKey() == "windows" else "bootstrap-vcpkg.sh")
     if not bootstrap.is_file():
-        sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
+        sys.stderr.write(f"[Vcpkg Error] bootstrap script missing: {bootstrap}\n")
         return False
-    print(f"[SetupVcpkg] Running {bootstrap.name} in {vcpkgRoot} (no vcpkg executable for this OS)...", file=sys.stderr)
+    print(f"[Vcpkg] Running {bootstrap.name} in {vcpkgRoot} (no vcpkg executable for this OS)...", file=sys.stderr)
     process = runProcess(platformScriptCommand(bootstrap), cwd=vcpkgRoot)
     if process.returnCode != 0 or not hasVcpkgExecutable(vcpkgRoot):
-        sys.stderr.write(f"[SetupVcpkg Error] bootstrap failed (exit {process.returnCode}):\n"
+        sys.stderr.write(f"[Vcpkg Error] bootstrap failed (exit {process.returnCode}):\n"
                          f"{process.stderr.strip() or process.stdout.strip()}\n")
         return False
     return True
@@ -141,13 +141,13 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
     toolsDir.parent.mkdir(parents=True, exist_ok=True)
     removeIncompleteVcpkgTreeInternal(toolsDir)
 
-    print(f"[SetupVcpkg] Cloning into {toolsDir}...", file=sys.stderr)
-    print(f"[SetupVcpkg] Using git: {gitExe}", file=sys.stderr)
+    print(f"[Vcpkg] Cloning into {toolsDir}...", file=sys.stderr)
+    print(f"[Vcpkg] Using git: {gitExe}", file=sys.stderr)
 
     clone = runGit(["clone", gitUrl, str(toolsDir)])
     if clone.returnCode != 0:
         sys.stderr.write(
-            f"[SetupVcpkg Error] git clone failed:\n{clone.stderr.strip() or clone.stdout.strip()}\n"
+            f"[Vcpkg Error] git clone failed:\n{clone.stderr.strip() or clone.stdout.strip()}\n"
         )
         removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
@@ -156,7 +156,7 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
         checkout = runGit(["-C", str(toolsDir), "checkout", "--detach", gitCommit])
         if checkout.returnCode != 0:
             sys.stderr.write(
-                f"[SetupVcpkg Error] checkout {gitCommit} failed:\n{checkout.stderr.strip()}\n"
+                f"[Vcpkg Error] checkout {gitCommit} failed:\n{checkout.stderr.strip()}\n"
             )
             removeIncompleteVcpkgTreeInternal(toolsDir)
             return False
@@ -166,22 +166,22 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
     bootstrapCmd = platformScriptCommand(bootstrap)
 
     if not bootstrap.is_file():
-        sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
+        sys.stderr.write(f"[Vcpkg Error] bootstrap script missing: {bootstrap}\n")
         removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
 
-    print(f"[SetupVcpkg] Running {bootstrap.name}...", file=sys.stderr)
+    print(f"[Vcpkg] Running {bootstrap.name}...", file=sys.stderr)
     bootstrapProcess = runProcess(bootstrapCmd, cwd=toolsDir)
     if bootstrapProcess.returnCode != 0:
         sys.stderr.write(
-            f"[SetupVcpkg Error] bootstrap failed (exit {bootstrapProcess.returnCode}):\n"
+            f"[Vcpkg Error] bootstrap failed (exit {bootstrapProcess.returnCode}):\n"
             f"{bootstrapProcess.stderr.strip() or bootstrapProcess.stdout.strip()}\n"
         )
         removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
 
     if not isVcpkgRoot(toolsDir):
-        sys.stderr.write("[SetupVcpkg Error] bootstrap finished but vcpkg.cmake is missing.\n")
+        sys.stderr.write("[Vcpkg Error] bootstrap finished but vcpkg.cmake is missing.\n")
         removeIncompleteVcpkgTreeInternal(toolsDir)
         return False
     return True
@@ -205,7 +205,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
             gitCommit = resolveVcpkgCommitInternal(search)
             if ensureGitOnPath() is not None and gitCommit:
                 pinVcpkgCommitInternal(toolsDir, gitCommit)
-            print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
+            print(f"[Vcpkg] Using project kit: {toolsDir}", file=sys.stderr)
         # 다른 OS 에서 부트스트랩한 트리면 이 OS 의 실행 파일이 없다. 설치를 요청받았으면 그 자리에서 부트스트랩하고, 아니면 알리기만 한다
         # (CMake 툴체인이 configure 때 스스로 부트스트랩한다).
         if not hasVcpkgExecutable(Path(foundRoot)):
@@ -213,7 +213,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
                 if not runBootstrapScriptInternal(Path(foundRoot)):
                     return None
             else:
-                sys.stderr.write(f"[SetupVcpkg] {foundRoot} has no vcpkg executable for this OS — "
+                sys.stderr.write(f"[Vcpkg] {foundRoot} has no vcpkg executable for this OS — "
                                  "run with --install to bootstrap it here (CMake configure also bootstraps it).\n")
         return Path(recordEnginePath(kKeyVcpkgRoot, foundRoot))
 
@@ -224,7 +224,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
         search=search,
     ):
         sys.stderr.write(
-            "[SetupVcpkg] vcpkg not found. Set VCPKG_ROOT, use Tools/vcpkg, "
+            "[Vcpkg] vcpkg not found. Set VCPKG_ROOT, use Tools/vcpkg, "
             "or --install / vcpkg_auto_bootstrap / SW_VCPKG_AUTO_BOOTSTRAP.\n"
         )
         return None
@@ -232,9 +232,9 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
     gitExe = ensureGitOnPath()
     if gitExe is None:
         sys.stderr.write(
-            "[SetupVcpkg Error] git not found on PATH (or typical Git for Windows locations).\n"
+            "[Vcpkg Error] git not found on PATH (or typical Git for Windows locations).\n"
             "  Install Git for Windows, or add git to PATH, then re-run CMake configure / "
-            "Scripts/setup/SetupVcpkg.py --install.\n"
+            "Scripts/setup/Vcpkg.py --install.\n"
         )
         return None
 
@@ -266,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     if resolvedPath:
         print(resolvedPath.as_posix())
         return ExitCode.Passed
-    sys.stderr.write("[SetupVcpkg Error] vcpkg not found\n")
+    sys.stderr.write("[Vcpkg Error] vcpkg not found\n")
     return ExitCode.Violation
 
 

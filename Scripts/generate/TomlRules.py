@@ -1,5 +1,5 @@
 """
-린트 규칙 데이터 읽기 — `Scripts/lint/rules/<이름>.toml` 하나를 읽고 모양을 검사하는 한 자리입니다.
+린트 규칙 데이터 읽기 — `Scripts/generate/rules/<이름>.toml` 하나를 읽고 모양을 검사하는 한 자리입니다.
 
 게이트의 예외 표(`[exemption]` — 경로 · 이름 → 이유)와 레지스트리 · 게이트의 목록(약어 · 제품 이름 · 티어 · 금지 동사 …)은 코드가 아니라
 데이터다. 파이썬 사전에 두면 고칠 때마다 게이트 코드를 열어야 하고, 이유 칸 · 낡은 줄 검사가 표마다 따로 붙는다. 그래서 데이터는
@@ -30,8 +30,8 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 #: 규칙 데이터 폴더(저장소 기준). 검사 대상 트리(`--root`)가 아니라 **이 스크립트 트리**의 것을 읽는다 — 자기 테스트의 임시 트리에도 같은 규칙이 든다.
-kRuleDataRelDir = "Scripts/lint/rules"
-kRuleDataDir = Path(__file__).resolve().parents[1] / "lint" / "rules"
+kRuleDataRelDir = "Scripts/generate/rules"
+kRuleDataDir = Path(__file__).resolve().parent / "rules"
 
 kKindReason = "reason"
 kKindText = "text"

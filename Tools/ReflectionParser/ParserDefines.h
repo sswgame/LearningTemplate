@@ -115,7 +115,7 @@ namespace sw
     {
         inline constexpr const utf8* kParserConfig         = sw::config::kFileParserConfig;
         inline constexpr const utf8* kParserConfigDefaults = sw::config::kFileParserDefaults;
-        /** @brief SetupEnvironment 툴체인 캐시 Config/Environment/toolchain_config.json */
+        /** @brief Environment 툴체인 캐시 Config/Environment/toolchain_config.json */
         inline constexpr const utf8* kToolchainConfig = sw::config::kFileEnvToolchainConfig;
     } // namespace parserpath
 

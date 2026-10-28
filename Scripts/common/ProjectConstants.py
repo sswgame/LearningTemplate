@@ -74,8 +74,8 @@ kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 # --- 4. Script Entry Points (스크립트 실행 진입점 경로) ------------------------
 # =============================================================================
 
-kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
-kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
+kScriptSetupVcpkg = "Scripts/setup/Vcpkg.py"
+kScriptSetupEnvironment = "Scripts/setup/Environment.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -

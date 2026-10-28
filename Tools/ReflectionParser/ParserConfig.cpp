@@ -255,7 +255,7 @@ namespace sw
                         if ( defaultIt == defaultsIt->end() || *defaultIt != keyIt.value() )
                         {
                             SW_LOG_WARNING( "%#: '%#.%#' differs from parser_config.defaults.json and is ignored - only paths.*, parser_args.extra "
-                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/SetupEnvironment.py)",
+                                            "and parser_args.force_include are local settings (remove it, or rerun Scripts/setup/Environment.py)",
                                             localPath, section.c_str(), key.c_str() );
                         }
                     }

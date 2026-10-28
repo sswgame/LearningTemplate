@@ -78,7 +78,7 @@ def loadToolchainConfig() -> dict[str, Any] | None:
     """
     개발 환경 툴체인 경로 캐시 파일(Config/Environment/toolchain_config.json)을 읽어 반환합니다.
 
-    이 파일은 SetupEnvironment 가 채우는 **캐시**라 처음 실행에는 없다 — 없으면 None 이다. 빈 사전으로 바꾸지 않는다:
+    이 파일은 Environment 가 채우는 **캐시**라 처음 실행에는 없다 — 없으면 None 이다. 빈 사전으로 바꾸지 않는다:
     호출부의 `.get(키, 기본값)` 이 "캐시 없음" 을 조용히 삼키지 못하게 호출부가 None 을 직접 다룬다. 깨졌으면 멈춘다.
     """
     configFile = getProjectRoot() / kDirConfigEnv / kFileToolchainConfig

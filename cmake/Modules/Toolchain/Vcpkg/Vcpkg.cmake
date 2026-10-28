@@ -3,7 +3,7 @@
 # @brief vcpkg 통합 모듈: root 탐색 · triplet · manifest hash/stamp · install gate · INTERFACE
 #
 # VcpkgGate.cmake(project() 전)에서 include. 역할:
-# 1. vcpkg 루트 탐색 (SetupVcpkg.py / 환경 변수)
+# 1. vcpkg 루트 탐색 (Vcpkg.py / 환경 변수)
 # 2. VCPKG_TARGET_TRIPLET 자동 결정
 # 3. install 게이트 — 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
 #    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고(공유 설치 폴더), 빠진 포트가 있을 때만 install
@@ -232,7 +232,7 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 3) vcpkg 루트 탐색
-# 우선순위: SetupVcpkg.py → VCPKG_ROOT → VCPKG_INSTALLATION_ROOT
+# 우선순위: Vcpkg.py → VCPKG_ROOT → VCPKG_INSTALLATION_ROOT
 # ------------------------------------------------------------------------------
 if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
     set(swFindVcpkgArgs "")
@@ -261,7 +261,7 @@ if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
     endif()
 
     if(sw_find_vcpkg_result EQUAL 0 AND NOT "${sw_detected_vcpkg_root}" STREQUAL "")
-        # SetupVcpkg.py는 stdout에 경로만 출력. 상태 메시지가 섞이면 마지막 줄만 사용
+        # Vcpkg.py는 stdout에 경로만 출력. 상태 메시지가 섞이면 마지막 줄만 사용
         string(STRIP "${sw_detected_vcpkg_root}" sw_detected_vcpkg_root)
         string(REPLACE "\r\n" "\n" sw_detected_vcpkg_root "${sw_detected_vcpkg_root}")
         string(REPLACE "\r" "\n" sw_detected_vcpkg_root "${sw_detected_vcpkg_root}")
@@ -468,14 +468,14 @@ if(SW_USE_VCPKG AND swToolchainFile AND NOT EXISTS "${swToolchainFile}")
             "  ${swToolchainFile}\n"
             "Auto-bootstrap was enabled but Tools/vcpkg is still missing.\n"
             "  Check that Git is installed, then reconfigure, or run:\n"
-            "    py -3 Scripts/setup/SetupVcpkg.py --install"
+            "    py -3 Scripts/setup/Vcpkg.py --install"
         )
     else()
         message(FATAL_ERROR
             "[vcpkg] CMAKE_TOOLCHAIN_FILE does not exist:\n"
             "  ${swToolchainFile}\n"
             "Enable SW_VCPKG_AUTO_BOOTSTRAP / search_paths.vcpkg_auto_bootstrap, or run:\n"
-            "    py -3 Scripts/setup/SetupVcpkg.py --install"
+            "    py -3 Scripts/setup/Vcpkg.py --install"
         )
     endif()
 endif()

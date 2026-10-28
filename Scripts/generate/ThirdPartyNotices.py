@@ -8,7 +8,7 @@
 
 내용이 같으면 파일을 다시 쓰지 않습니다(빌드가 다시 돌지 않게).
 
-사용법: py -3 Scripts/generate/GenerateThirdPartyNotices.py --manifest vcpkg.json --installed build/vcpkg_installed
+사용법: py -3 Scripts/generate/ThirdPartyNotices.py --manifest vcpkg.json --installed build/vcpkg_installed
         --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty]
 """
 from __future__ import annotations

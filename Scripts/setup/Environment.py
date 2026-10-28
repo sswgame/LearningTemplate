@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Scripts/setup/SetupEnvironment.py
+Scripts/setup/Environment.py
 
 개발 PC 도구 경로 → Config/Environment/toolchain_config.json / parser_config.json.
 캐시가 유효하면 재사용, 비었거나 깨졌을 때만 탐색/다운로드.
 
-  python3 Scripts/setup/SetupEnvironment.py
+  python3 Scripts/setup/Environment.py
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ from setup.ToolchainDetect import (
     findWindowsSdkPath,
     setupNinja,
 )
-from setup.SetupLlvm import findLibClangDllPath, isMinimalLlvmRoot
+from setup.Llvm import findLibClangDllPath, isMinimalLlvmRoot
 
 
 def asDictInternal(value: Any) -> dict:
@@ -119,7 +119,7 @@ class EnvironmentSetupManager:
         self.toolchain_config_file = self.config_dir / kFileToolchainConfig
         self.parser_config_file = self.config_dir / kFileParserConfig
 
-        self.logger = logging.getLogger("SetupEnvironment")
+        self.logger = logging.getLogger("Environment")
         self.existing_config: dict[str, Any] = {}
         if not self.force_refresh:
             self.existing_config = loadToolchainConfig() or {}  # 처음 실행은 캐시가 없다
@@ -131,7 +131,7 @@ class EnvironmentSetupManager:
         if cachedLlvm and isMinimalLlvmRoot(cachedLlvm):
             llvmPath = normalizePath(str(cachedLlvm))
         else:
-            from setup.SetupLlvm import setupLlvm
+            from setup.Llvm import setupLlvm
 
             path = setupLlvm(allowBootstrap=False)
             llvmPath = normalizePath(path or "")
@@ -161,7 +161,7 @@ class EnvironmentSetupManager:
         if cachedVcpkg and isVcpkgRoot(cachedVcpkg):
             vcpkgPath = normalizePath(str(cachedVcpkg))
         else:
-            from setup.SetupVcpkg import setupVcpkg
+            from setup.Vcpkg import setupVcpkg
 
             allowBootstrap = autoBootstrapEnabled(
                 False,
@@ -179,10 +179,10 @@ class EnvironmentSetupManager:
 
     def installPreCommitHookInternal(self) -> None:
         # 훅 설치 실패를 경고로 넘기면 커밋 검사 없이 커밋하게 된다 — 멈춘다.
-        from setup.InstallGitHooks import installPreCommitHook
+        from setup.GitHooks import installPreCommitHook
 
         if installPreCommitHook(self.project_root):
-            self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
+            self.logger.info("[Environment] Installed git pre-commit hook (Scripts/lint/PreCommit.py).")
 
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()
@@ -220,7 +220,7 @@ class EnvironmentSetupManager:
         self.installPreCommitHookInternal()
 
         self.logger.info(
-            f"[SetupEnvironment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{platform.system()}':"
+            f"[Environment] Resolved {kDirConfigEnv}/{kFileToolchainConfig} for OS '{platform.system()}':"
         )
         for key, value in asdict(config).items():
             self.logger.info(f"  - {key:22}: {value}")
@@ -264,7 +264,7 @@ class EnvironmentSetupManager:
 
         self.parser_config_file.write_text(json.dumps(parserData, indent=4), encoding="utf-8")
         self.logger.info(
-            f"[SetupEnvironment] Wrote {kDirConfigEnv}/{kFileParserConfig} "
+            f"[Environment] Wrote {kDirConfigEnv}/{kFileParserConfig} "
             f"(platform '{targetOs}', machine-local: {len(localPaths)} path(s), {len(argsData)} argument list(s); "
             f"everything else comes from {kFileParserDefaults})."
         )

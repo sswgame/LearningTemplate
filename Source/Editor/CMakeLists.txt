@@ -12,12 +12,12 @@
 file(GLOB_RECURSE listEditorSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 set(listEditorAllSource ${listEditorSource})
 
-# 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Scripts/lint/rules/GenerateEditorLayers.toml` 이고
-# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/GenerateEditorLayers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
+# 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Scripts/generate/rules/EditorLayers.toml` 이고
+# configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/EditorLayers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
 # 2) 가 티어마다 부분(OBJECT 라이브러리)을 짓고, 부분마다 자기 티어보다 위 층의 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다.
 # EditorModule 자신은 `Source/Editor` 바로 아래 파일(셸 · 모든 매니저를 만드는 조립 파일)만 가진다.
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EditorLayers.cmake")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/lint/rules/GenerateEditorLayers.toml")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/EditorLayers.toml")
 
 # ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리 · 에디터 작업 · 작업 공간)과, 뷰 층(Panels · Viewport)의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는
 # imgui 링크가 없는 부분(`*Model`)이 짓는다. 뷰 층 파일이 ImGui 를 쓰지 않게 되면 `Model` 폴더로 옮긴다(`git mv` + include 경로).
@@ -88,7 +88,7 @@ endforeach()
 set(listEditorUnassignedSource ${listEditorSource})
 list(REMOVE_ITEM listEditorUnassignedSource ${listEditorRootSource} ${listEditorPartSource})
 if(listEditorUnassignedSource)
-	message(FATAL_ERROR "Editor sources outside every layer in GenerateEditorLayers.toml: ${listEditorUnassignedSource}")
+	message(FATAL_ERROR "Editor sources outside every layer in EditorLayers.toml: ${listEditorUnassignedSource}")
 endif()
 set(listEditorSource ${listEditorRootSource})
 # EditorCore(위 층 표의 모델 층 + 뷰 층의 `Model` 폴더)가 짓는 소스 — 배포는 에디터 모듈을 짓지 않으므로 이것을 뺀 나머지를 "짓지 않는 소스" 로 적는다.

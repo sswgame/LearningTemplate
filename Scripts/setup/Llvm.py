@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Scripts/setup/SetupLlvm.py
+Scripts/setup/Llvm.py
 
 LLVM 탐색 + (없으면) GitHub tar 로 Tools/LLVM 최소 키트 확보.
 Ninja/vcpkg 와 같이 find/setup 을 한 파일에 둡니다.
 
-  python3 Scripts/setup/SetupLlvm.py
-  python3 Scripts/setup/SetupLlvm.py --install
+  python3 Scripts/setup/Llvm.py
+  python3 Scripts/setup/Llvm.py --install
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ def isMinimalLlvmRoot(path: str) -> bool:
     return True
 
 kLlvmToolSpec = ToolSpec(
-    name="SetupLlvm",
+    name="Llvm",
     tools_subdir_key=kKeyLlvmToolsSubdir,
     search_roots_key=kKeyLlvmSearchRoots,
     bin_names=("clang-cl.exe", "clang-cl", "clang.exe", "clang"),
@@ -257,7 +257,7 @@ def replaceDirInternal(src: Path, dest: Path) -> None:
     shutil.rmtree(old, ignore_errors=True)
     if old.exists():
         print(
-            f"[SetupLlvm] 경고: '{old}' 임시 폴더를 삭제할 수 없습니다 "
+            f"[Llvm] 경고: '{old}' 임시 폴더를 삭제할 수 없습니다 "
             "(파일이 아직 점유 중입니다. IDE나 clangd 종료 후 수동 삭제 가능합니다)."
         )
 
@@ -311,7 +311,7 @@ def extractTarMinimalInternal(archive: Path, destRootDir: Path) -> None:
                 relativeMemberPath = "/".join(parts[1:]) if topDirectory and parts[0] == topDirectory else member.name
                 if any(relativeMemberPath == p.rstrip("/") or relativeMemberPath.startswith(p) for p in _kTarKeepPrefixes):
                     members.append(member)
-            print(f"[SetupLlvm] Extracting {len(members)} archive members (minimal)...")
+            print(f"[Llvm] Extracting {len(members)} archive members (minimal)...")
             safeMembers = [
                 member
                 for member in members
@@ -390,7 +390,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
     """
     existing = findLlvmPath()
     if existing:
-        print(f"[SetupLlvm] Using existing LLVM kit: {existing}")
+        print(f"[Llvm] Using existing LLVM kit: {existing}")
         return recordInternal(Path(existing))
 
     search = loadSearchPaths()
@@ -402,7 +402,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         need = requiredLlvmMajor()
         if need > 0 and major > 0 and major < need:
             print(
-                f"[SetupLlvm] Tools/LLVM is Clang {major}; "
+                f"[Llvm] Tools/LLVM is Clang {major}; "
                 f"VS STL requires Clang {need}+ - re-bootstrapping"
             )
 
@@ -413,7 +413,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         search=search,
     ):
         sys.stderr.write(
-            "[SetupLlvm] clang-cl/libclang not found (or too old for this STL). "
+            "[Llvm] clang-cl/libclang not found (or too old for this STL). "
             "Re-run with --install (or llvm_auto_bootstrap / SW_LLVM_AUTO_BOOTSTRAP).\n"
         )
         return ""
@@ -425,30 +425,30 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         (".tar.xz", ".tar.gz", ".tgz", ".tar.bz2", ".tar")
     ):
         sys.stderr.write(
-            "[SetupLlvm] Use GitHub clang+llvm-*-x86_64-pc-windows-msvc.tar.xz "
+            "[Llvm] Use GitHub clang+llvm-*-x86_64-pc-windows-msvc.tar.xz "
             "(NSIS .exe not supported).\n"
         )
         return ""
 
     # 부트스트랩을 허락받은 뒤의 받기 · 풀기 실패는 "LLVM 없음" 이 아니라 오류다 — 예외 그대로 멈춘다
     # (빈 문자열로 돌려주면 configure 가 LLVM 없이 다음 단계로 가서 엉뚱한 자리에서 깨진다).
-    print(f"[SetupLlvm] Bootstrapping minimal kit into {tools}")
+    print(f"[Llvm] Bootstrapping minimal kit into {tools}")
     tools.parent.mkdir(parents=True, exist_ok=True)
     archive = ensureCachedDownload(
-        url, toolsCacheDir() / filename, minSize=50_000_000, label="SetupLlvm"
+        url, toolsCacheDir() / filename, minSize=50_000_000, label="Llvm"
     )
     extractTarMinimalInternal(archive, tools)
-    print(f"[SetupLlvm] Pruning to clang-cl/libclang kit under {tools}")
+    print(f"[Llvm] Pruning to clang-cl/libclang kit under {tools}")
     pruneBinInternal(tools)
     pruneLibIncludeInternal(tools)
     if not isMinimalLlvmRoot(str(tools)):
-        raise RuntimeError(f"[SetupLlvm] Minimal kit check failed under {tools}")
-    print(f"[SetupLlvm] Minimal kit ready: {tools}")
+        raise RuntimeError(f"[Llvm] Minimal kit check failed under {tools}")
+    print(f"[Llvm] Minimal kit ready: {tools}")
 
     # 헤더가 바뀌었으니 이 툴체인으로 만든 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
     staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
     if staleCount > 0:
-        print(f"[SetupLlvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")
+        print(f"[Llvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")
 
     return recordInternal(tools)
 
@@ -461,7 +461,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if path := setupLlvm(allowBootstrap=args.install):
         print(path)
         return ExitCode.Passed
-    sys.stderr.write("[SetupLlvm Error] LLVM kit not available\n")
+    sys.stderr.write("[Llvm Error] LLVM kit not available\n")
     return ExitCode.Violation
 
 

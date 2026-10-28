@@ -1,4 +1,4 @@
-# 에디터 층 표 — 읽는 곳은 Scripts/generate/GenerateEditorLayers.py(→ EditorLayers.cmake). 예전 린트 게이트 CheckEditorLayers 를 빌드 형식이 대신한다:
+# 에디터 층 표 — 읽는 곳은 Scripts/generate/EditorLayers.py(→ EditorLayers.cmake). 예전 린트 게이트 CheckEditorLayers 를 빌드 형식이 대신한다:
 # Source/Editor/CMakeLists.txt 가 티어마다 부분을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아, 위 층 헤더 include 가 컴파일에서 멈춘다.
 
 # ------------------------------------------------------------------------------

@@ -322,7 +322,7 @@ def inspectText(rawText: str, relative: str, headerMaps: tuple[dict[str, str], d
     newBody, listViolation = computeIncludeOrderInternal(body, relative, *headerMaps)
     if newBody != body:
         listViolation.append(f"{relative}: Include 순서/중복 문제가 발견되었습니다. "
-                             f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {relative}` 로 고친다)")
+                             f"(`py -3 Scripts/lint/Format.py --files {relative}` 로 고친다)")
     restored = ("\ufeff" if text.startswith("\ufeff") else "") + newBody.replace("\n", lineEnding)
     return listViolation, (restored if restored != rawText else None)
 

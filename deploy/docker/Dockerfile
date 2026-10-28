@@ -1,6 +1,6 @@
-# 전용 서버 컨테이너 이미지 (서버 운영 O6). 빌드 컨텍스트는 `MakePackage.py --target Server` 가 만든 패키지 폴더다(리눅스 Shipping 서버).
+# 전용 서버 컨테이너 이미지 (서버 운영 O6). 빌드 컨텍스트는 `Pack.py --target Server` 가 만든 패키지 폴더다(리눅스 Shipping 서버).
 #
-#   py -3 Scripts/dev/MakePackage.py --target Server --game <게임> --output Saved/Packages
+#   py -3 Scripts/package/Pack.py --target Server --game <게임> --output Saved/Packages
 #   docker build -f deploy/docker/Dockerfile -t <레지스트리>/<게임>-server:<판> Saved/Packages/<패키지 폴더>
 #
 # 운영 설정(포트 · 접속 문자열)은 이미지에 굽지 않는다 — `/etc/swserver/server.json` 으로 마운트한다(`deploy/kubernetes/server.yaml` 의 ConfigMap).

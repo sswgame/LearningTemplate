@@ -164,7 +164,7 @@ def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
             sys.stderr.write(f"[ClangFormat] clang-format {version} 휠을 이 플랫폼에서 찾지 못했습니다.\n")
 
     raise RuntimeError(f"[ClangFormat] 고정 버전 clang-format {version} 을 찾지도 설치하지도 못했습니다 "
-                       f"(위 줄이 이유다) — 'py -3 Scripts/setup/SetupEnvironment.py' 로 설치하십시오")
+                       f"(위 줄이 이유다) — 'py -3 Scripts/setup/Environment.py' 로 설치하십시오")
 
 
 def resolveClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:

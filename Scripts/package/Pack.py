@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@file MakePackage.py
+@file Pack.py
 @brief 배포 패키지 하나를 만든다 — Shipping 빌드, 리소스 팩 쿠킹, 스테이징(실행 파일 · DLL · 팩 · 서버 설정 · 서드파티 고지), 검사.
 
 에디터의 Packaging 창과 사람이 같은 진입점을 쓴다(언리얼 Package Project, 유니티 Build Settings 의 Build). 단계마다
@@ -20,9 +20,9 @@ Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테�
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
 
 사용법:
-    py -3 Scripts/dev/MakePackage.py --target Client --game Empty
-    py -3 Scripts/dev/MakePackage.py --target Server --game Shooter3D --rhi DirectX12 --output Saved/Packages
-    py -3 Scripts/dev/MakePackage.py --target Client --skip-build --skip-cook --bin-dir build/Ninja-Debug/Bin   # 스테이징만(창의 시나리오)
+    py -3 Scripts/package/Pack.py --target Client --game Empty
+    py -3 Scripts/package/Pack.py --target Server --game Shooter3D --rhi DirectX12 --output Saved/Packages
+    py -3 Scripts/package/Pack.py --target Client --skip-build --skip-cook --bin-dir build/Ninja-Debug/Bin   # 스테이징만(창의 시나리오)
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from dev.BuildPreset import BuildTree, kMapConfigPreset, kMapServerPreset  # noqa: E402
+from package.BuildPreset import BuildTree, kMapConfigPreset, kMapServerPreset  # noqa: E402
 from common.ToolchainConfig import ConfigError, requireConfig  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ProjectConstants import kDirRuntimeGamePreset  # noqa: E402

@@ -276,7 +276,7 @@ def setupBuildToolInternal(toolName: str,
                            downloadUrlsKey: str) -> str:
     """도구 탐색 및 다운로드(zip 으로 받아 `Tools/<이름>` 에 푼다)."""
     import logging
-    logger = logging.getLogger("SetupEnvironment")
+    logger = logging.getLogger("Environment")
     logger.info(f"[{toolName}] Checking {toolName}...")
 
     search = loadSearchPaths()

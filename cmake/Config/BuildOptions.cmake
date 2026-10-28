@@ -102,9 +102,9 @@ set(SW_UNITY_BATCH_KIT 0 CACHE STRING "GameFramework 키트 유니티 묶음 크
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션
-option(SW_LLVM_AUTO_BOOTSTRAP "LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용" ON)
+option(SW_LLVM_AUTO_BOOTSTRAP "LLVM이 없을 때 Llvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용" ON)
 option(SW_USE_VCPKG "vcpkg 패키지 매니저 연동 및 툴체인 사용" ON)
-option(SW_VCPKG_AUTO_BOOTSTRAP "vcpkg가 없을 때 Scripts/setup/SetupVcpkg.py를 통해 Tools/vcpkg로 자동 git clone 허용" ON)
+option(SW_VCPKG_AUTO_BOOTSTRAP "vcpkg가 없을 때 Scripts/setup/Vcpkg.py를 통해 Tools/vcpkg로 자동 git clone 허용" ON)
 option(SW_VCPKG_FORCE_INSTALL "설치 트리 및 스탬프가 일치해도 vcpkg manifest install 강제 실행" OFF)
 
 # ------------------------------------------------------------------------------
