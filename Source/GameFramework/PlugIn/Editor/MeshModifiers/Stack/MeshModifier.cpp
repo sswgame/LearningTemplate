@@ -399,6 +399,34 @@ namespace sw::editor
                 }
             }
         }
+        // 수 목록은 고정 매개변수 뒤에 모은다 - 길이가 가변이라 앞에 두면 뒤따르는 매개변수의 번호가 밀린다(셰이더는 번호를 컴파일 때 안다).
+        // 모양: float4(항목 수, 항목 원소 수) 뒤에 원소를 float4 하나에 넷씩 평탄하게(셰이더 `ModifierContext::listValue`). 항목 수는 `_stride` 로 나눈 몫(남는 원소는 CPU 와 같이 버린다).
+        for ( size_t index = 0; index < _listParamDef.size(); ++index )
+        {
+            if ( _listParamDef[index]._kind != MeshModifierParamKind::NumberList )
+                continue;
+            const vector<float32>& listNumber   = _listParamValue[index]._listNumber;
+            const uint32           stride       = _listParamDef[index]._stride > 0 ? _listParamDef[index]._stride : 1u;
+            const size_t           itemCount    = listNumber.size() / stride;
+            const size_t           elementCount = itemCount * stride;
+            outListValue.push_back( float4{ static_cast<float32>( itemCount ), static_cast<float32>( stride ), 0.0f, 0.0f } );
+            for ( size_t element = 0; element < elementCount; element += 4 )
+            {
+                float32 arrValue[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                for ( size_t lane = 0; lane < 4 && element + lane < elementCount; ++lane )
+                {
+                    arrValue[lane] = listNumber[element + lane];
+                }
+                outListValue.push_back( float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] } );
+            }
+        }
+        return true;
+    }
+
+    bool MeshModifier::packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const
+    {
+        (void)context;
+        (void)outListValue;
         return true;
     }
 
@@ -609,6 +637,49 @@ namespace sw::editor
     float32 MeshModifierUtil::computeJacobianStep( const MeshModifierBounds& bounds )
     {
         return MathUtil::max( bounds.getSize().getLength() * kJacobianStepRatio, kMinJacobianStep );
+    }
+
+    bool MeshModifierUtil::packGPUTextureGrid( const MeshModifierContext& context, const string& assetPath, int32 channel, vector<float4>& outListValue )
+    {
+        const IMeshModifierInputs* pInputs = context.getInputs();
+        const size_t               start   = outListValue.size();
+        outListValue.push_back( float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        if ( pInputs == nullptr || assetPath.empty() )
+            return false;
+        constexpr uint32 kResolution = MeshModifier::kGPUTextureResolution;
+        constexpr uint32 kTexelCount = kResolution * kResolution;
+        vector<float32>  listHeight;
+        listHeight.reserve( kTexelCount );
+        for ( uint32 row = 0; row < kResolution; ++row )
+        {
+            for ( uint32 column = 0; column < kResolution; ++column )
+            {
+                const float2 uv{ ( static_cast<float32>( column ) + 0.5f ) / static_cast<float32>( kResolution ),
+                                 ( static_cast<float32>( row ) + 0.5f ) / static_cast<float32>( kResolution ) };
+                float4       color{ 0.0f, 0.0f, 0.0f, 0.0f };
+                if ( pInputs->trySampleTexture( assetPath, uv, color ) == false )
+                {
+                    outListValue.resize( start + 1 ); // 첫 표본 실패 = 에셋을 못 읽었다 - 헤더만 남긴다
+                    return false;
+                }
+                float32 value = color._x * 0.2126f + color._y * 0.7152f + color._z * 0.0722f;
+                if ( channel == 0 )
+                    value = color._x;
+                else if ( channel == 1 )
+                    value = color._y;
+                else if ( channel == 2 )
+                    value = color._z;
+                else if ( channel == 3 )
+                    value = color._w;
+                listHeight.push_back( value );
+            }
+        }
+        outListValue[start]._x = 1.0f;
+        for ( uint32 texel = 0; texel < kTexelCount; texel += 4 )
+        {
+            outListValue.push_back( float4{ listHeight[texel], listHeight[texel + 1], listHeight[texel + 2], listHeight[texel + 3] } );
+        }
+        return true;
     }
 
     float32 MeshModifierUtil::getComponent( const float3& value, uint32 axisIndex )

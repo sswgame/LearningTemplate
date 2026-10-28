@@ -428,7 +428,9 @@ namespace sw::editor
             restoreOriginalMesh();
             return;
         }
-        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, _listGPUProgram ) )
+        // 텍스처를 읽는 모디파이어가 있으면 프로그램이 정점 UV 표를 싣는다(원본 UV 와 같다 - UV 를 바꾸는 모디파이어는 GPU 로 못 옮기는 쪽이다)
+        const vector<float2>* pListUV = _previewMesh.hasUv() ? &_previewMesh._listUV : nullptr;
+        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, pListUV, _listGPUProgram ) )
         {
             if ( _gpuPreviewMesh == nullptr )
             {

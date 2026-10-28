@@ -745,6 +745,11 @@ namespace sw
             if ( program == nullptr || program->empty() )
                 continue;
             _listScratchDeformProgram[slot]._x = static_cast<float32>( _listScratchDeformProgram.size() );
+            // y = 이 메시 구간의 풀 안 시작 정점 - 컴퓨트의 정점 번호는 풀 전체 번호라, 메시별 표(정점 UV 등)를 읽는 프로그램이 메시 안 번호를 구하는 데 쓴다.
+            // 구간이 바뀌는 때(`updateMorphMeshes` 의 집합 변경)는 세대 표를 비워 이 표가 다시 올라간다. 정확한 정수(2^24 미만)라 float 로 싣는다.
+            const auto entryIt = _mapMorphEntry.find( pMesh );
+            if ( entryIt != _mapMorphEntry.end() && entryIt->second._base != kInvalidBase )
+                _listScratchDeformProgram[slot]._y = static_cast<float32>( entryIt->second._base );
             _listScratchDeformProgram.insert( _listScratchDeformProgram.end(), program->begin(), program->end() );
         }
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _deformProgram, _listScratchDeformProgram.data(), static_cast<uint32>( _listScratchDeformProgram.size() ) );

@@ -31,7 +31,10 @@ namespace sw::editor
         /** @brief 격자 모디파이어(레지스트리 id `lattice` · `ffd2` · `ffd3` · `ffd4`)면 그 포인터, 아니면 nullptr 입니다. RTTI 없이 id 로 가린다. */
         static LatticeModifier* findFrom( MeshModifier& modifier );
 
-        float3             deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override;
+        float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override;
+        bool   supportsGPU() const override { return true; }
+        /** @brief 3D 격자 표본 버퍼를 싣는다: float4(격자 수 x · y · z, 1) · 쓰는 상자 최소 · 최대(저장된 상자, 무효면 입력 정점 상자), 뒤에 제어점(정규 좌표, x 가 가장 빨리 도는 순서)마다 float4 하나. */
+        bool               packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override;
         void               writeExtraJSON( const JSONValue& object ) const override;
         [[nodiscard]] bool readExtraJSON( const JSONValue& object ) override;
         void               onParamsChanged() override;

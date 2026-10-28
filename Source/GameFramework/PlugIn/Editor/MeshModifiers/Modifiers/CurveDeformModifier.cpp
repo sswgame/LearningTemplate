@@ -31,6 +31,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Displaces and scales the mesh cross-section along its main axis using curves."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const uint32  axis      = context._axisIndex;

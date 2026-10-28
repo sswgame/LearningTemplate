@@ -21,7 +21,9 @@ namespace sw::editor
                                                               "push", "poke", "displace", "bubble", "bulge", "cylindrify", "globe", "hump",
                                                               "radialskew", "skew", "spherify", "squeeze", "scale", "sinuscurve", "rolled", "simplemod",
                                                               "crumple", "dynamicripple", "pageflip", "treebend", "vertnoise", "zstretchnoise", "waving", "pivotadjust",
-                                                              "displacelimits", "bezierattractor", "rubber" };
+                                                              "displacelimits", "bezierattractor", "rubber", "curvedeform", "curvesculpt",
+                                                              "curvesculptlayered", "ropedeform", "pathdeform", "worldpathdeform", "displacerendertarget", "displacewebcam",
+                                                              "lattice", "ffd2", "ffd3", "ffd4", "ffd2d", "collisiondeform", "hitdeform" };
 
             /** @brief 행렬의 행 0..@p rowCount-1 을 xyz 로 붙입니다(행 벡터 규약 v·M, 행 3 은 평행 이동). */
             static void pushRows( const float4x4& matrix, uint32 rowCount, vector<float4>& outListProgram )
@@ -86,7 +88,7 @@ namespace sw::editor
     }
 
     bool MeshModifierGPUProgram::make( const MeshModifierStack& stack, const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds,
-                                       bool bHasWeight, vector<float4>& outProgram )
+                                       bool bHasWeight, const vector<float2>* pListUV, vector<float4>& outProgram )
     {
         outProgram.clear();
         if ( bHasWeight || canMake( stack ) == false )
@@ -94,6 +96,7 @@ namespace sw::editor
 
         outProgram.push_back( float4{ 0.0f, evaluation._time, 0.0f, 0.0f } );
         uint32 modifierCount = 0;
+        bool   bNeedsUV      = false;
         for ( int32 index = 0; index < stack.getModifierCount(); ++index )
         {
             const MeshModifier* pModifier = stack.findModifier( index );
@@ -124,6 +127,19 @@ namespace sw::editor
 
             const size_t paramStart = outProgram.size();
             (void)pModifier->packGPUParams( outProgram );
+            // 외부 입력은 매개변수 뒤에 인라인으로 싣는다 - CPU `apply` 가 만드는 것과 같은 문맥(상자 · 주축 · 월드 ↔ 모디파이어 행렬)에서 얻는다
+            MeshModifierContext context{};
+            context._pEvaluation     = &evaluation;
+            context._bounds          = bounds;
+            context._axisIndex       = MathUtil::min( pModifier->getGizmo()._axisIndex, 2u );
+            context._modifierToWorld = modifierToLocal * evaluation._meshToWorld;
+            context._worldToModifier = context._modifierToWorld.invert();
+            if ( pModifier->packGPUInputs( context, outProgram ) == false )
+            {
+                outProgram.clear();
+                return false;
+            }
+            bNeedsUV                   = bNeedsUV || pModifier->needsGPUVertexUV();
             outProgram[recordStart]._y = static_cast<float32>( outProgram.size() - paramStart );
             ++modifierCount;
         }
@@ -133,6 +149,24 @@ namespace sw::editor
             return false;
         }
         outProgram[0]._x = static_cast<float32>( modifierCount );
+        if ( bNeedsUV )
+        {
+            // 정점 UV 표 - 프로그램 맨 끝, float4 하나에 UV 둘. 머리 z 가 표의 시작(프로그램 시작 기준 float4 번호)이고 w 가 정점 수다.
+            // 셰이더는 풀 안의 메시 정점 번호(칸 표 y 의 구간 시작을 뺀 값)로 읽는다.
+            if ( pListUV == nullptr || pListUV->empty() )
+            {
+                outProgram.clear();
+                return false;
+            }
+            outProgram[0]._z = static_cast<float32>( outProgram.size() );
+            outProgram[0]._w = static_cast<float32>( pListUV->size() );
+            for ( size_t vertex = 0; vertex < pListUV->size(); vertex += 2 )
+            {
+                const float2& first  = ( *pListUV )[vertex];
+                const float2& second = vertex + 1 < pListUV->size() ? ( *pListUV )[vertex + 1] : first;
+                outProgram.push_back( float4{ first._x, first._y, second._x, second._y } );
+            }
+        }
         return true;
     }
 } // namespace sw::editor

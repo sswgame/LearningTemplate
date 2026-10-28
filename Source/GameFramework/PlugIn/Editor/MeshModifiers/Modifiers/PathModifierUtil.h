@@ -202,6 +202,35 @@ namespace sw::editor
             return true;
         }
 
+        /**
+         * @brief 경로를 GPU 프로그램에 싣습니다(`MeshModifier::packGPUInputs` 의 경로 모양).
+         * @details 앞에 float4 하나(x = 얻었다 1 · 못 얻었다 0, y = 경로 길이)가 붙고, 얻었을 때만 표본이 뒤따른다. 표본 하나 = float4 셋(위치 · 단위 접선 · 단면 축 V, xyz),
+         *          `PathFrameCache::kSegmentCount + 1` 개 - CPU 가 `tryPlaceOnPath` 에서 쓰는 같은 회전 최소화 프레임 표다. 셰이더는 호 길이 비율로 이웃 표본을 선형 보간하고
+         *          접선에 V 를 다시 직교화한다(CPU 는 스플라인을 정확히 표본하고 바로 앞 표본에서 한 걸음 옮긴다 - 128 구간이라 차이는 곡률이 큰 곳에서 표본 간격 제곱 정도다).
+         * @return 경로를 못 얻으면 "못 얻었다" 한 칸만 싣고 false 입니다.
+         */
+        static bool packGPUPathTable( const MeshModifierContext& context, const string& reference, PathSpace space, vector<float4>& outListValue )
+        {
+            static_assert( PathFrameCache::kSegmentCount == MeshModifier::kGPUPathSegmentCount, "GPU 경로 표본 수와 프레임 표의 구간 수가 같아야 한다" );
+            const size_t start = outListValue.size();
+            outListValue.push_back( float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+            float32 length = 0.0f;
+            if ( tryGetPathLength( context, reference, length ) == false )
+                return false;
+            PathFrameCache cache;
+            cache.populate( context, reference, space );
+            if ( cache.isEmpty() )
+                return false;
+            outListValue[start] = float4{ 1.0f, length, 0.0f, 0.0f };
+            for ( size_t index = 0; index < cache._listPosition.size(); ++index )
+            {
+                outListValue.push_back( float4{ cache._listPosition[index]._x, cache._listPosition[index]._y, cache._listPosition[index]._z, 0.0f } );
+                outListValue.push_back( float4{ cache._listTangent[index]._x, cache._listTangent[index]._y, cache._listTangent[index]._z, 0.0f } );
+                outListValue.push_back( float4{ cache._listAxisV[index]._x, cache._listAxisV[index]._y, cache._listAxisV[index]._z, 0.0f } );
+            }
+            return true;
+        }
+
         /** @brief (u, v) 를 각 @p radian 만큼 돌립니다. */
         static void rotate2D( float32 radian, float32& inoutU, float32& inoutV )
         {

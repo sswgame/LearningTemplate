@@ -36,6 +36,15 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Bends the mesh in place along the shape of a spline."; }
 
+        bool supportsGPU() const override { return true; }
+
+        /** @brief 경로 표본(위치 · 접선 · 단면 축)을 싣는다 - 경로 참조는 CPU 만 풀 수 있어서 GPU 는 표만 읽는다. 못 얻으면 셰이더가 항등으로 둔다(CPU 와 같다). */
+        bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
+        {
+            (void)PathModifierUtil::packGPUPathTable( context, getText( _pathParam ), PathModifierUtil::PathSpace::PathLocal, outListValue );
+            return true;
+        }
+
         /** @brief 경로의 회전 최소화 프레임 표를 한 번 만들고(단일 스레드) 기본 정점 루프를 돈다 — 정점 루프는 표를 읽기만 한다. */
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {

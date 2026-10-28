@@ -350,6 +350,21 @@ namespace sw::editor
          *          파생이 다른 배치가 필요하면 재정의한다. 공간 행렬 · 주축 · 상자는 모디파이어 스택이 따로 넣는다.
          */
         virtual bool packGPUParams( vector<float4>& outListValue ) const;
+        /**
+         * @brief 외부 입력(스플라인 · 텍스처 · 격자 제어점 · 단순 도형 표)을 `packGPUParams` 가 낸 매개변수 뒤에 이어 싣습니다. 기본은 아무것도 싣지 않고 true 입니다.
+         * @details 입력은 별도 GPU 버퍼가 아니라 같은 프로그램 목록(`g_DeformPrograms`)의 기록 뒤쪽에 인라인으로 싣는다 - 기록의 매개변수 길이(`record.y`)가 가변이라
+         *          새 바인딩 없이 네 백엔드가 같은 길로 읽고, 입력이 모디파이어 하나에 묶여 스택 순서 · 켜짐 끔이 그대로 따른다. 모양은 모디파이어마다 정한다 -
+         *          첫 float4 의 x 는 "입력을 얻었다(1) · 못 얻었다(0)" 이고 0 이면 셰이더가 항등으로 둔다(CPU 가 입력을 못 얻을 때와 같다). 해석되는 좌표는 모두 모디파이어 공간이다.
+         *          표본 수 · 해상도는 `kGPU*` 상수와 셰이더 `SW_MODIFIER_*` 매크로가 짝이다.
+         * @param context 이 모디파이어를 거는 문맥(입력 상자 · 주축 · 월드 ↔ 모디파이어 행렬 · 평가)입니다. CPU `applyToMesh` 가 보는 것과 같다.
+         */
+        virtual bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const;
+        /** @brief 정점 UV 가 필요하면 true 입니다(텍스처 표본). 프로그램 끝에 UV 표가 붙고 셰이더 `ModifierContext::_uv` 가 읽습니다. 기본은 false 입니다. */
+        virtual bool needsGPUVertexUV() const { return false; }
+        /** @brief 텍스처 입력의 GPU 격자 한 변 텍셀 수입니다(셰이더 `SW_MODIFIER_TEXTURE_RESOLUTION` 과 같다. 4 의 배수). 높이/마스크 한 채널을 이 격자로 눌러 싣는다. */
+        static constexpr uint32 kGPUTextureResolution = 64;
+        /** @brief 스플라인 입력의 GPU 표본 구간 수입니다(셰이더 `SW_MODIFIER_PATH_SEGMENTS` 와 같다. 표본은 하나 더 - 위치 · 접선 · 단면 축을 싣는다). */
+        static constexpr uint32 kGPUPathSegmentCount = 128;
         /** @brief 패널 추가 메뉴의 툴팁으로 보일 설명 한 줄(영문)입니다. 기본은 빈 글입니다. */
         virtual const utf8* getDescription() const { return ""; }
 
@@ -439,6 +454,13 @@ namespace sw::editor
          * @details 본문은 자기 덩어리의 정점만 쓰고, 스크래치는 본문 안에서 가져야 한다(덩어리마다 다른 스레드일 수 있다).
          */
         static void runBlocks( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
+        /**
+         * @brief 텍스처 에셋 한 장의 한 채널(0 R · 1 G · 2 B · 3 A · 4 밝기)을 `MeshModifier::kGPUTextureResolution` 제곱 격자로 눌러 GPU 프로그램에 싣습니다.
+         * @details 앞에 float4 하나(x = 얻었다 1 · 못 얻었다 0)가 붙고, 얻었을 때만 격자(텍셀 중심 (i + 0.5) / 해상도의 `trySampleTexture` 값을 행 우선으로 float4 하나에 넷)가 뒤따른다.
+         *          셰이더가 같은 규약(텍셀 중심 · 반복 감김 · 이중선형)으로 읽으니 원본이 그 해상도 이하면 CPU 표본과 같고, 크면 격자 해상도로 무뎌진다.
+         * @return 경로가 비었거나 입력이 없거나 표본에 실패하면 "못 얻었다" 한 칸만 싣고 false 입니다(호출자는 그래도 프로그램을 만들 수 있다 - 셰이더가 항등으로 둔다).
+         */
+        static bool packGPUTextureGrid( const MeshModifierContext& context, const string& assetPath, int32 channel, vector<float4>& outListValue );
         /** @brief 성분 번호(0 · 1 · 2)로 값을 읽습니다. */
         static float32 getComponent( const float3& value, uint32 axisIndex );
         /** @brief 성분 번호로 값을 씁니다. */

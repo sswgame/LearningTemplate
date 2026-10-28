@@ -94,6 +94,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Pushes vertices inside static sphere, box or plane colliders back out to the surface."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             (void)context;

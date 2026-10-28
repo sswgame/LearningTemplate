@@ -66,6 +66,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "2D free-form lattice deform on the XY plane for sprite meshes; Z is left unchanged."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const vector<float32>& listOffset = getNumberList( _offsetsParam );

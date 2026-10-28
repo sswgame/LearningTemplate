@@ -110,6 +110,20 @@ namespace sw::editor
                        LatticeModifierInternal::multiplyOrKeep( moved._z, box._min._z, size._z, point._position._z ) };
     }
 
+    bool LatticeModifier::packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const
+    {
+        // CPU 와 같은 쓰는 상자(저장된 상자, 무효면 입력 정점 상자)를 싣는다 - 셰이더는 고르지 않는다
+        const MeshModifierBounds box = getEffectiveBox( context._bounds );
+        outListValue.push_back( float4{ static_cast<float32>( _countX ), static_cast<float32>( _countY ), static_cast<float32>( _countZ ), 1.0f } );
+        outListValue.push_back( float4{ box._min._x, box._min._y, box._min._z, 0.0f } );
+        outListValue.push_back( float4{ box._max._x, box._max._y, box._max._z, 0.0f } );
+        for ( const float3& point : _listControlPoint )
+        {
+            outListValue.push_back( float4{ point._x, point._y, point._z, 0.0f } );
+        }
+        return true;
+    }
+
     float3 LatticeModifier::deformNormalized( const float3& normalizedPoint ) const
     {
         float32 arrWeightX[LatticeModifierInternal::kMaxCount];

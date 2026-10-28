@@ -43,6 +43,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Dents vertices within each hit radius along the hit direction (static hit list for baking)."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             (void)context;

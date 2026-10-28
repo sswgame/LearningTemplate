@@ -28,7 +28,7 @@ SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
-// [모프 메시 칸마다 float4 하나(x = 그 메시 변형 프로그램의 시작 원소, 없으면 -1)][프로그램들] — GPUMeshMorphPool::updateDeformPrograms.
+// [모프 메시 칸마다 float4 하나(x = 그 메시 변형 프로그램의 시작 원소, 없으면 -1 · y = 그 메시 구간의 풀 안 시작 정점)][프로그램들] — GPUMeshMorphPool::updateDeformPrograms.
 // 레스트 노멀의 w 가 칸 번호 + 1 이다. 프로그램이 있는 메시는 아래 물결 대신 프로그램(meshmodifier.hlsli)을 건다.
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_DeformPrograms, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
@@ -75,7 +75,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     {
         position = restPosition;
         normal   = restNormalElement.xyz;
-        MeshDeform::applyProgram( (uint)programStart, position, normal );
+        MeshDeform::applyProgram( (uint)programStart, vertexIndex - (uint)g_DeformPrograms[slot].y, position, normal );
     }
 
     g_MorphVerticesRW[element]      = float4( position, 1.0f );

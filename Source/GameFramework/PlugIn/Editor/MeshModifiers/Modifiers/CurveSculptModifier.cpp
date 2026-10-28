@@ -28,6 +28,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Pushes points along their normals by a curve of their distance from the main axis."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const uint32 axis    = context._axisIndex;

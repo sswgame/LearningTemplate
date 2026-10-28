@@ -62,6 +62,17 @@ namespace sw::editor
             return "Displaces vertices along the normal by a texture channel. The realtime render target is replaced by a static texture for editor baking.";
         }
 
+        bool supportsGPU() const override { return true; }
+
+        bool needsGPUVertexUV() const override { return true; }
+
+        /** @brief 텍스처 한 채널을 격자로 눌러 싣는다(`MeshModifierUtil::packGPUTextureGrid`) - 타일링 · 오프셋 · 좌우 뒤집기는 셰이더가 UV 에 건다. */
+        bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
+        {
+            (void)MeshModifierUtil::packGPUTextureGrid( context, getText( _textureParam ), getInt( _channelParam ), outListValue );
+            return true;
+        }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const float32              amount          = getFloat( _amountParam );

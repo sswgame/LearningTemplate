@@ -41,6 +41,34 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Stacks several curve-shaped bumps pushed along the normals."; }
 
+        bool supportsGPU() const override { return true; }
+
+        /**
+         * @brief 층마다 낙하 곡선 표본을 싣는다(층 하나 = float4 8 개). 자기 곡선이 없는 층은 공용 Shape 곡선을 싣는다 - 셰이더가 층을 한 모양으로 읽는다.
+         * @details 층 표(Layers)는 기본 매개변수 배치가 고정 매개변수 뒤에 싣는다(항목 수 · 원소 · 평탄한 값). 이 곡선들은 그 뒤에 항목 수만큼 이어 붙는다.
+         */
+        bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
+        {
+            (void)context;
+            const size_t              layerCount = getNumberList( _layersParam ).size() / 4;
+            const vector<FloatCurve>& listCurve  = getParamValue( _layerCurveParam )._listCurve;
+            for ( size_t layer = 0; layer < layerCount; ++layer )
+            {
+                const bool bOwnCurve = layer < listCurve.size() && listCurve[layer]._listKey.empty() == false;
+                for ( uint32 sample = 0; sample < kGPUCurveSampleCount; sample += 4 )
+                {
+                    float32 arrValue[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                    for ( uint32 lane = 0; lane < 4; ++lane )
+                    {
+                        const float32 x = static_cast<float32>( sample + lane ) / static_cast<float32>( kGPUCurveSampleCount - 1 );
+                        arrValue[lane]  = bOwnCurve ? *listCurve[layer].evaluate( x ) : evaluateCurve( _shapeParam, x ); // bOwnCurve 가 키를 확인했다
+                    }
+                    outListValue.push_back( float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] } );
+                }
+            }
+            return true;
+        }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             const vector<float32>&    listLayer = getNumberList( _layersParam );

@@ -24,8 +24,8 @@
 함정: 같은 파일을 두 편집기가 쥐지 않는다(카탈로그 편집기가 쥔 종류는 보기 전용). 닫기 확인 · 창 Undo 는 틀이 맡는다.
 
 ### MeshModifierCpuPreviewCost
-제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
-왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 못 줄여 더하지 않았다.
-착수 조건: 측정 없이 착수 가능. 베지어 끌개(`bezierattractor`)와 Rubber(`rubber`)는 올렸다. 곡선 매개변수(`Curve`)는 `packGPUParams` 기본 배치가 [0,1] 32 개 균등 표본(float4 8 개)으로 싣고 셰이더 `ModifierContext::curve` 가 선형 보간한다(키 목록을 싣는 것보다 기록 길이가 고정이라 단순하다. Constant 보간 곡선의 계단은 32 등분으로 무뎌진다). 남은 것은 스플라인 참조(`CurveDeform` · `CurveSculpt` · `RopeDeform`) · 텍스처 · 격자 · 충돌 같은 외부 입력을 읽는 모디파이어다 — 입력을 GPU 버퍼로 올리는 길(프로그램 옆 보조 버퍼)이 먼저 필요하다.
-남은 첫 일: `Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표(`MeshModifierGPUProgram`)에 올린다. `CpuMesh` 가 크면 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents`)을 본다.
-함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다.
+제목: 메시 모디파이어 CPU 미리보기의 남은 비용
+왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 못 줄여 더하지 않았다. 점 단위 모디파이어는 곡선 · 스플라인(`CurveDeform` · `CurveSculpt` · `CurveSculptLayered` · `RopeDeform` · `PathDeform` · `WorldPathDeform`) · 텍스처(`DisplaceRenderTarget` · `DisplaceWebCam`) · 격자(`Lattice` · `FFD2/3/4` · `FFD2D`) · 충돌(`CollisionDeform` · `HitDeform`)까지 모두 GPU 표에 올랐다. 입력은 새 바인딩이 아니라 기록의 매개변수 뒤에 인라인으로 싣는다(`MeshModifier::packGPUInputs` — 스플라인은 128 구간 위치 · 접선 · 단면 축 표본, 텍스처는 한 채널을 64² 격자로 누른 값과 프로그램 끝의 정점 UV 표, 격자는 제어점 버퍼, 충돌 · 충돌점은 수 목록 평탄 배치). 근사: 스플라인은 128 구간 선형 보간이라 곡률이 큰 곳에서 CPU 정확 표본과 구간 간격 제곱 정도 어긋나고, 텍스처는 64² 보다 큰 원본이 무뎌진다(해상도는 `kGPUTextureResolution` 과 셰이더 매크로를 함께 바꾼다).
+착수 조건: 측정 없이 착수 가능.
+남은 첫 일: 아직 CPU 로만 도는 것을 입력 모양별로 올린다 — `Conform` · `ConformMulti`(다른 메시의 삼각형 BVH 와 광선 투영: 삼각형 · 노드 버퍼가 정점 수에 비례해 커서 인라인이 아닌 별도 버퍼가 필요하다), `PointCache` · `VertexAnim`(프레임 × 정점 데이터라 같은 이유로 별도 버퍼), `Paint`(색 채널은 모프 풀이 위치 · 노멀 · 탄젠트만 가진다), `WorldWarp`(`applyToMesh` 재정의), `Deformable`(묶음). `CpuMesh` 가 크면 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents`)도 본다.
+함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다. 정점 UV 표는 칸 표 y(풀 안 구간 시작)를 빼서 읽는다 — 풀이 구간을 다시 짜면 세대 표를 비워 칸 표가 다시 올라가야 한다(`GPUMeshMorphPool::updateDeformPrograms`). 수 목록은 고정 매개변수 뒤에 싣는 규약이라 새 모디파이어가 매개변수를 더하면 셰이더 번호도 함께 바꾼다. 셰이더 출구는 하나, HLSL 예약어 `point` 는 변수 이름으로 쓰지 않는다.
