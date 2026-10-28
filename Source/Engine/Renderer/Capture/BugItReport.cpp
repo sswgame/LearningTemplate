@@ -181,10 +181,13 @@ namespace sw
                 outReport._buildConfiguration = string( value );
             else if ( key == BugItReportInternal::kKeyGame )
                 outReport._game = string( value );
-            else if ( key == BugItReportInternal::kKeyPosition )
-                (void)BugItReportInternal::parseFloat3( value, outReport._cameraPosition ); // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽는다
-            else if ( key == BugItReportInternal::kKeyRotation )
-                (void)BugItReportInternal::parseFloat3( value, outReport._cameraRotationDegrees ); // 위와 같다
+            else if ( key == BugItReportInternal::kKeyPosition || key == BugItReportInternal::kKeyRotation )
+            {
+                // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽되, 카메라가 원점으로 보이는 이유를 남긴다.
+                const bool bPosition = key == BugItReportInternal::kKeyPosition;
+                if ( BugItReportInternal::parseFloat3( value, bPosition ? outReport._cameraPosition : outReport._cameraRotationDegrees ) == false )
+                    SW_LOG_WARNING( "BugIt report: '%#' value '%#' is not three numbers - the camera keeps 0,0,0", string( key ).c_str(), string( value ).c_str() );
+            }
         } );
         return true;
     }
