@@ -8,11 +8,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationThresholdBasis.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 namespace sw
 {
@@ -70,7 +70,7 @@ namespace sw
             AutomationImageMetricKind _metric{ AutomationImageMetricKind::MeanLuma };
         };
 
-        static constexpr float32 kProbeNearTolerance = 1.0e-4f; ///< 탐침 `near` 의 기본 허용 폭
+        static constexpr float32 kWatchNearTolerance = 1.0e-4f; ///< 탐침 `near` 의 기본 허용 폭
         static constexpr float32 kImageNearTolerance = 1.0e-3f; ///< 이미지 측정 `near` 의 기본 허용 폭
 
         /** @brief 있으면 수로 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 인자 구조체의 초기값). 형식이 틀리면 false 와 이유이고 값은 그대로입니다. */
@@ -93,7 +93,7 @@ namespace sw
         [[nodiscard]] static bool compareVariable( const GlobalVariableInfo& info, string_view expected, float32 tolerance, bool& outMatched );
 
         /** @brief 탐침 값의 글입니다(수는 끝의 0 을 정리한다). */
-        static string makeValueText( const AutomationProbeValue& value );
+        static string makeValueText( const AutomationWatchValue& value );
         /** @brief 수를 글로 씁니다(끝의 0 을 정리한다 — 1.000000 은 1). */
         static string formatNumber( float64 value );
     };

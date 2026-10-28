@@ -10,7 +10,7 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
-#include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include <algorithm>
@@ -321,8 +321,8 @@ namespace sw
         root.set( "rhi" ).setString( rhi );
         root.set( "gpu" ).setString( gpu );
         // 시스템 정보는 묶는 지금 읽는다 — 같은 기계의 다음 실행이다.
-        const HardwareProbeResult hardware = HardwareProbe::probe();
-        const JSONValue           system   = root.set( "system" );
+        const HardwareDetectionResult hardware = HardwareDetection::probe();
+        const JSONValue               system   = root.set( "system" );
         system.setObject();
         system.set( "logicalCores" ).setUint( hardware._logicalCoreCount );
         system.set( "memoryMb" ).setUint( hardware._systemMemoryMb );

@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
@@ -198,8 +198,8 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( ScheduleDebugPanel, ScheduleDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
 
-    SW_AUTOMATION_PROBE( editorScheduleNpcCount, "Editor.ScheduleNpcCount", "NPCs of the schedule system the NPC Schedule window shows",
+    SW_AUTOMATION_WATCH( editorScheduleNpcCount, "Editor.ScheduleNpcCount", "NPCs of the schedule system the NPC Schedule window shows",
                          &ScheduleDebugPanelInternal::readNpcCount );
-    SW_AUTOMATION_PROBE( editorScheduleTimelineRowCount, "Editor.ScheduleTimelineRowCount", "Rows of today's timeline for the NPC picked in the NPC Schedule window",
+    SW_AUTOMATION_WATCH( editorScheduleTimelineRowCount, "Editor.ScheduleTimelineRowCount", "Rows of today's timeline for the NPC picked in the NPC Schedule window",
                          &ScheduleDebugPanelInternal::readTimelineRowCount );
 } // namespace sw::editor

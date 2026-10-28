@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -157,7 +157,7 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
-    SW_AUTOMATION_PROBE( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
+    SW_AUTOMATION_WATCH( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
                          &RenderViewCollectorInternal::readHiddenViewCount );
 
     RenderViewBudget RenderViewCollector::getDefaultBudget()

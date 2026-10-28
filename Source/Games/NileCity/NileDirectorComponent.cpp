@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -114,9 +114,9 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 
-    SW_AUTOMATION_PROBE( nilePopulation, "Nile.Population", "Population of the city", &NileDirectorComponentInternal::readPopulation );
-    SW_AUTOMATION_PROBE( nileMoney, "Nile.Money", "Money in the city treasury", &NileDirectorComponentInternal::readMoney );
-    SW_AUTOMATION_PROBE( nileMonth, "Nile.Month", "Months the city has run", &NileDirectorComponentInternal::readMonth );
+    SW_AUTOMATION_WATCH( nilePopulation, "Nile.Population", "Population of the city", &NileDirectorComponentInternal::readPopulation );
+    SW_AUTOMATION_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", &NileDirectorComponentInternal::readMoney );
+    SW_AUTOMATION_WATCH( nileMonth, "Nile.Month", "Months the city has run", &NileDirectorComponentInternal::readMonth );
 } // namespace sw
 
 namespace sw

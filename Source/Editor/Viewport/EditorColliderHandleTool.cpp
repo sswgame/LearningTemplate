@@ -21,7 +21,7 @@
 #include "Editor/Viewport/Model/EditorColliderHandleMath.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
@@ -239,10 +239,10 @@ namespace sw::editor
         return EditorColliderHandleToolInternal::getState()._commitCount;
     }
 
-    SW_AUTOMATION_PROBE( editorColliderHalfExtentX, "Editor.ColliderHalfExtentX", "Half size X of the first shape of the selected RigidBody (0 when none)",
+    SW_AUTOMATION_WATCH( editorColliderHalfExtentX, "Editor.ColliderHalfExtentX", "Half size X of the first shape of the selected RigidBody (0 when none)",
                          &EditorColliderHandleToolInternal::readHalfExtentX );
-    SW_AUTOMATION_PROBE( editorColliderHandleCommitCount, "Editor.ColliderHandleCommitCount", "Collider handle drags that finished and left an undo entry",
+    SW_AUTOMATION_WATCH( editorColliderHandleCommitCount, "Editor.ColliderHandleCommitCount", "Collider handle drags that finished and left an undo entry",
                          &EditorColliderHandleToolInternal::readCommitCount );
-    SW_AUTOMATION_PROBE( editorColliderHandleCount, "Editor.ColliderHandleCount", "Collider handles drawn in the last frame",
+    SW_AUTOMATION_WATCH( editorColliderHandleCount, "Editor.ColliderHandleCount", "Collider handles drawn in the last frame",
                          &EditorColliderHandleToolInternal::readDrawnHandleCount );
 } // namespace sw::editor

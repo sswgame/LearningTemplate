@@ -5,7 +5,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -52,7 +52,7 @@ namespace sw
             }
 
             /** @brief 질의 대상 말의 탈것 이동입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const MountMovementComponent* findTargetMovement( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            static const MountMovementComponent* findTargetMovement( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const MountMovementComponent* pMovement = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<MountMovementComponent>() : nullptr;
                 if ( pMovement == nullptr )
@@ -61,7 +61,7 @@ namespace sw
             }
 
             /** @brief 탐침 `WildWest.Gait` 입니다. 대상 말의 걸음새 번호(0 서기 .. 4 질주)입니다. */
-            [[nodiscard]] static bool readGait( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            [[nodiscard]] static bool readGait( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
                 if ( pMovement == nullptr )
@@ -71,7 +71,7 @@ namespace sw
             }
 
             /** @brief 탐침 `WildWest.Speed` 입니다. 대상 말이 몸 방향으로 가는 속도(m/s)입니다. */
-            [[nodiscard]] static bool readSpeed( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            [[nodiscard]] static bool readSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
                 if ( pMovement == nullptr )
@@ -81,7 +81,7 @@ namespace sw
             }
 
             /** @brief 탐침 `WildWest.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
-            [[nodiscard]] static bool readStamina( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            [[nodiscard]] static bool readStamina( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const WildWestHorseComponent* pHorseComponent = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<WildWestHorseComponent>() : nullptr;
                 const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
@@ -99,10 +99,10 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_wildWestAutoPlay, 0, "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_wildWestAutoPlay, "WildWest", "The rider mounts the nearest horse" );
 
-    SW_AUTOMATION_QUERY_PROBE( wildWestGait, "WildWest.Gait", "Gait of the horse on target (0 standing, 1 walk, 2 trot, 3 canter, 4 gallop)",
+    SW_AUTOMATION_QUERY_WATCH( wildWestGait, "WildWest.Gait", "Gait of the horse on target (0 standing, 1 walk, 2 trot, 3 canter, 4 gallop)",
                                &WildWestDirectorComponentInternal::readGait, true, false );
-    SW_AUTOMATION_QUERY_PROBE( wildWestSpeed, "WildWest.Speed", "Forward speed (m/s) of the horse on target", &WildWestDirectorComponentInternal::readSpeed, true, false );
-    SW_AUTOMATION_QUERY_PROBE( wildWestStamina, "WildWest.Stamina", "Stamina ratio (0..1) of the horse on target", &WildWestDirectorComponentInternal::readStamina, true,
+    SW_AUTOMATION_QUERY_WATCH( wildWestSpeed, "WildWest.Speed", "Forward speed (m/s) of the horse on target", &WildWestDirectorComponentInternal::readSpeed, true, false );
+    SW_AUTOMATION_QUERY_WATCH( wildWestStamina, "WildWest.Stamina", "Stamina ratio (0..1) of the horse on target", &WildWestDirectorComponentInternal::readStamina, true,
                                false );
 } // namespace sw
 

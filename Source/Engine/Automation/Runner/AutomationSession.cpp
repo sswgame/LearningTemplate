@@ -28,7 +28,7 @@ namespace sw
         : _pRunner{ nullptr }
         , _pChain{ nullptr }
         , _recorder{}
-        , _listRecordProbe{}
+        , _listRecordWatch{}
         , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
@@ -53,7 +53,7 @@ namespace sw
         _recordPath.clear();
     }
 
-    bool AutomationSession::beginRecording( string_view outputPath, string_view probeList )
+    bool AutomationSession::beginRecording( string_view outputPath, string_view watchList )
     {
         if ( ScenarioRecorder::isAllowedOutputPath( outputPath ) == false )
         {
@@ -61,8 +61,8 @@ namespace sw
             return false;
         }
         _recordPath      = string( outputPath );
-        _listRecordProbe = AutomationScenarioChain::splitList( probeList );
-        SW_LOG_INFO( "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordProbe.size() ) );
+        _listRecordWatch = AutomationScenarioChain::splitList( watchList );
+        SW_LOG_INFO( "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordWatch.size() ) );
         return true;
     }
 
@@ -93,7 +93,7 @@ namespace sw
         settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
         Scene*                   pScene        = engine::getSubsystem<SceneManager>().getActiveScene();
         const GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-        for ( const string& spec : _listRecordProbe )
+        for ( const string& spec : _listRecordWatch )
         {
             ScenarioRecordCheckpoint checkpoint;
             string                   error;

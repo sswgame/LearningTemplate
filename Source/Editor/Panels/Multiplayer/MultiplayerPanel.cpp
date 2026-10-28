@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -137,9 +137,9 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
+    SW_AUTOMATION_WATCH( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
                          &MultiplayerPanelInternal::readProcessCount );
-    SW_AUTOMATION_PROBE( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
+    SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
                          &MultiplayerPanelInternal::readConnectedClients );
     SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>]", "Start the editor's multi-process play session",
                     &MultiplayerPanelInternal::runStart );

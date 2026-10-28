@@ -8,7 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 
 namespace sw
@@ -76,7 +76,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when App installed the interactive assert dialog (never in automated runs)",
+    SW_AUTOMATION_WATCH( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when App installed the interactive assert dialog (never in automated runs)",
                          &AppAssertDialogInternal::readAssertDialogInstalled );
 } // namespace sw
 

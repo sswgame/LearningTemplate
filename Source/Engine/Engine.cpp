@@ -107,7 +107,7 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/EngineFrameObserver.h"

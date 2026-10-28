@@ -8,7 +8,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -268,8 +268,8 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound",
+    SW_AUTOMATION_WATCH( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound",
                          &ShooterAvatarComponentInternal::readStrideScale );
-    SW_AUTOMATION_PROBE( shooterStrideAppliedCount, "Shooter3D.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)",
+    SW_AUTOMATION_WATCH( shooterStrideAppliedCount, "Shooter3D.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)",
                          &ShooterAvatarComponentInternal::readStrideAppliedCount );
 } // namespace sw

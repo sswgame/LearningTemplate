@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include <cstdlib>
 
@@ -57,7 +57,7 @@ namespace sw::editor
 
     SW_DEV_COMMAND( NotifyPush, "notify.push", "notify.push <seconds> <text>", "Show a toast notification for the given seconds (scenarios check that it goes away)",
                     &EditorNotificationManagerInternal::runPush );
-    SW_AUTOMATION_PROBE( editorNotificationCount, "Editor.NotificationCount", "Toast notifications on screen now", &EditorNotificationManagerInternal::readNotificationCount );
+    SW_AUTOMATION_WATCH( editorNotificationCount, "Editor.NotificationCount", "Toast notifications on screen now", &EditorNotificationManagerInternal::readNotificationCount );
 
     void EditorNotificationManager::push( string_view title, string_view message, NotificationType type,
                                           float32 durationSec, float32 progress )

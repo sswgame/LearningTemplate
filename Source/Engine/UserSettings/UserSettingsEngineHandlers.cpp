@@ -9,7 +9,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 namespace sw
@@ -359,7 +359,7 @@ namespace sw
         // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 처음 한 번만 읽는다.
         if ( _bResolutionProbed == false )
         {
-            HardwareProbe::probeDisplayResolutions( _listDisplayResolution );
+            HardwareDetection::probeDisplayResolutions( _listDisplayResolution );
             _bResolutionProbed = true;
         }
         for ( const int2& resolution : _listDisplayResolution )

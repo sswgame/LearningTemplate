@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -99,9 +99,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "CameraPresetPanel" );
     SW_EDITOR_PANEL( CameraPresetPanel, CameraPresetPanel::kPanelID, EditorPanelCategory::Tool, 1330 );
-    SW_AUTOMATION_PROBE( editorCameraPresetCount, "Editor.CameraPresetCount", "Presets in the file the Camera Presets panel has open (fails while the panel is closed)",
+    SW_AUTOMATION_WATCH( editorCameraPresetCount, "Editor.CameraPresetCount", "Presets in the file the Camera Presets panel has open (fails while the panel is closed)",
                          &CameraPresetPanelInternal::readPresetCount );
-    SW_AUTOMATION_PROBE( editorCameraPresetSelected, "Editor.CameraPresetSelected", "Index of the preset selected in the Camera Presets panel (-1 = none, fails while the panel is closed)",
+    SW_AUTOMATION_WATCH( editorCameraPresetSelected, "Editor.CameraPresetSelected", "Index of the preset selected in the Camera Presets panel (-1 = none, fails while the panel is closed)",
                          &CameraPresetPanelInternal::readSelectedIndex );
 
     CameraPresetPanel::CameraPresetPanel()

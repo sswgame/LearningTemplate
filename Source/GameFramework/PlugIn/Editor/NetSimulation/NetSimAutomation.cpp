@@ -3,7 +3,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -68,7 +68,7 @@ namespace sw::editor
              * @details 세션이 돌지 않거나 · 월드나 오브젝트가 없거나 · 인자가 맞지 않으면 값을 내지 않고 이유를 글로 적는다(0 으로 지어내지 않는다).
              *          게임을 가리지 않는다 — 월드마다 같은 이름의 오브젝트가 같은 곳에 있는지 보는 데 쓴다(본보기 게임의 아바타 `Avatar1`).
              */
-            [[nodiscard]] static bool readObjectAxis( const AutomationProbeQuery& query, AutomationProbeValue& outValue, bool bX )
+            [[nodiscard]] static bool readObjectAxis( const AutomationWatchQuery& query, AutomationWatchValue& outValue, bool bX )
             {
                 int32 worldIndex = 0;
                 if ( StringUtil::parseInt( query._target, worldIndex ) == false || query._key.empty() )
@@ -100,20 +100,20 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readObjectX( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, outValue, true ); }
-            [[nodiscard]] static bool readObjectZ( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, outValue, false ); }
+            [[nodiscard]] static bool readObjectX( const AutomationWatchQuery& query, AutomationWatchValue& outValue ) { return readObjectAxis( query, outValue, true ); }
+            [[nodiscard]] static bool readObjectZ( const AutomationWatchQuery& query, AutomationWatchValue& outValue ) { return readObjectAxis( query, outValue, false ); }
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorNetSimRunning, "Editor.NetSimRunning", "1 while the In process tab runs a one-process play session", &NetSimAutomationInternal::readRunning );
-    SW_AUTOMATION_PROBE( editorNetSimTick, "Editor.NetSimTick", "Fixed steps the one-process harness has run (no value while no session runs)", &NetSimAutomationInternal::readTick );
-    SW_AUTOMATION_PROBE( editorNetSimWorldCount, "Editor.NetSimWorldCount", "Worlds of the one-process play session: the server plus the live clients", &NetSimAutomationInternal::readWorldCount );
-    SW_AUTOMATION_PROBE( editorNetSimInputFocus, "Editor.NetSimInputFocus", "World that takes the human input in the one-process play session (0 server, N client, -1 none)",
+    SW_AUTOMATION_WATCH( editorNetSimRunning, "Editor.NetSimRunning", "1 while the In process tab runs a one-process play session", &NetSimAutomationInternal::readRunning );
+    SW_AUTOMATION_WATCH( editorNetSimTick, "Editor.NetSimTick", "Fixed steps the one-process harness has run (no value while no session runs)", &NetSimAutomationInternal::readTick );
+    SW_AUTOMATION_WATCH( editorNetSimWorldCount, "Editor.NetSimWorldCount", "Worlds of the one-process play session: the server plus the live clients", &NetSimAutomationInternal::readWorldCount );
+    SW_AUTOMATION_WATCH( editorNetSimInputFocus, "Editor.NetSimInputFocus", "World that takes the human input in the one-process play session (0 server, N client, -1 none)",
                          &NetSimAutomationInternal::readInputFocus );
-    SW_AUTOMATION_QUERY_PROBE( editorNetSimObjectX, "Editor.NetSimObjectX", "X of an object of one world of the one-process play session (target = world number, key = object name)",
+    SW_AUTOMATION_QUERY_WATCH( editorNetSimObjectX, "Editor.NetSimObjectX", "X of an object of one world of the one-process play session (target = world number, key = object name)",
                                &NetSimAutomationInternal::readObjectX, true, true );
-    SW_AUTOMATION_QUERY_PROBE( editorNetSimObjectZ, "Editor.NetSimObjectZ", "Z of an object of one world of the one-process play session (target = world number, key = object name)",
+    SW_AUTOMATION_QUERY_WATCH( editorNetSimObjectZ, "Editor.NetSimObjectZ", "Z of an object of one world of the one-process play session (target = world number, key = object name)",
                                &NetSimAutomationInternal::readObjectZ, true, true );
-    SW_AUTOMATION_PROBE( editorNetSimViewportCount, "Editor.NetSimViewportCount", "Worlds of the one-process play session whose preview viewport the tab has drawn at least once",
+    SW_AUTOMATION_WATCH( editorNetSimViewportCount, "Editor.NetSimViewportCount", "Worlds of the one-process play session whose preview viewport the tab has drawn at least once",
                          &NetSimAutomationInternal::readViewportCount );
 } // namespace sw::editor

@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/SceneStateHash.h"
 
@@ -206,13 +206,13 @@ namespace sw::editor
 
     SW_EDITOR_SETTINGS( EditorSyncPreferences, "multiplayer_sync", "Editor/Multiplayer Sync", 370, nullptr );
 
-    SW_AUTOMATION_PROBE( editorNetPlaySyncCommonTicks, "Editor.NetPlaySyncCommonTicks", "Ticks both state hash histories of the multiplayer Sync tab held at the last comparison",
+    SW_AUTOMATION_WATCH( editorNetPlaySyncCommonTicks, "Editor.NetPlaySyncCommonTicks", "Ticks both state hash histories of the multiplayer Sync tab held at the last comparison",
                          &MultiplayerSyncTabInternal::readCommonTicks );
-    SW_AUTOMATION_PROBE( editorNetPlaySyncDiverged, "Editor.NetPlaySyncDiverged", "1 when the multiplayer Sync tab's last comparison found a divergent tick",
+    SW_AUTOMATION_WATCH( editorNetPlaySyncDiverged, "Editor.NetPlaySyncDiverged", "1 when the multiplayer Sync tab's last comparison found a divergent tick",
                          &MultiplayerSyncTabInternal::readDiverged );
-    SW_AUTOMATION_PROBE( editorNetPlaySyncObjectsCompared, "Editor.NetPlaySyncObjectsCompared", "1 when the Sync tab's last 'Which objects differ' compared the two object hash lists",
+    SW_AUTOMATION_WATCH( editorNetPlaySyncObjectsCompared, "Editor.NetPlaySyncObjectsCompared", "1 when the Sync tab's last 'Which objects differ' compared the two object hash lists",
                          &MultiplayerSyncTabInternal::readObjectsCompared );
-    SW_AUTOMATION_PROBE( editorNetPlaySyncDifferingObjects, "Editor.NetPlaySyncDifferingObjects", "Objects the Sync tab's last 'Which objects differ' found different",
+    SW_AUTOMATION_WATCH( editorNetPlaySyncDifferingObjects, "Editor.NetPlaySyncDifferingObjects", "Objects the Sync tab's last 'Which objects differ' found different",
                          &MultiplayerSyncTabInternal::readDifferingObjects );
     SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path> | netplay.sync objects server|client | netplay.sync channel <name>",
                     "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick), or list the objects that differ (Which objects differ), or pick the hash line to read (scene, or a kit's such as destruction · rollback)",

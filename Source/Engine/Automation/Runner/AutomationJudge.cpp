@@ -16,7 +16,6 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
@@ -25,6 +24,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
@@ -61,32 +61,32 @@ namespace sw
     {
         bool   bMatched = false;
         string message;
-        if ( compareProbe( context, step, bMatched, message ) == false )
+        if ( compareWatch( context, step, bMatched, message ) == false )
             context.recordFailure( step, message );
         else if ( bMatched == false )
             context.recordFailure( step, "Expect " + message );
     }
 
-    bool AutomationJudge::readProbeValue( const AutomationStepContext& context, const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const
+    bool AutomationJudge::readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const
     {
-        const string&                      probeName     = *step.findAttribute( "probe" );
-        const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
+        const string&                      watchName     = *step.findAttribute( "watch" );
+        const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( watchName );
         // 모듈을 언로드했다 로드하면 탐침이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr )
         {
-            outMessage = probeName + " is no longer registered";
+            outMessage = watchName + " is no longer registered";
             return false;
         }
         const string*              pTarget = step.findAttribute( "target" );
         const string*              pKey    = step.findAttribute( "key" );
-        const AutomationProbeQuery query   = AutomationProbeQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
+        const AutomationWatchQuery query   = AutomationWatchQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
                                                                        pKey != nullptr ? string_view{ *pKey } : string_view{} );
-          string subject = probeName;
+          string subject = watchName;
         if ( pTarget != nullptr )
             subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
         else if ( pKey != nullptr )
             subject += "(" + *pKey + ")";
-        if ( AutomationProbes::read( *pRegistration, query, outValue ) == false )
+        if ( AutomationWatchs::read( *pRegistration, query, outValue ) == false )
         {
             const string reason = outValue._bText && outValue._text.empty() == false ? outValue._text : string( "no target in the scene" );
             outMessage          = subject + " has no value (" + reason + ")";
@@ -96,12 +96,12 @@ namespace sw
         return true;
     }
 
-    bool AutomationJudge::compareProbe( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    bool AutomationJudge::compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const
     {
         using Internal = AutomationStepArgsUtil;
-        AutomationProbeValue value{};
+        AutomationWatchValue value{};
         outMatched = false;
-        if ( readProbeValue( context, step, value, outMessage ) == false )
+        if ( readWatchValue( context, step, value, outMessage ) == false )
             return false;
         const string valueText = Internal::makeValueText( value );
         const string subject   = outMessage;
@@ -144,7 +144,7 @@ namespace sw
         {
             Internal::NumberComparison comparison;
             string                     error;
-            if ( Internal::parseNumberComparison( step, Internal::kProbeNearTolerance, comparison, error ) == false )
+            if ( Internal::parseNumberComparison( step, Internal::kWatchNearTolerance, comparison, error ) == false )
             {
                 outMessage = error; // 검사 뒤 단계가 바뀌었다(핫 리로드)
                 return false;
@@ -171,14 +171,14 @@ namespace sw
                 continue;
             const string* pTarget = step.findAttribute( "target" );
             const string* pKey    = step.findAttribute( "key" );
-            ProbeWatch    watch{};
-            watch._probe  = *step.findAttribute( "probe" );
+            WatchWatch    watch{};
+            watch._watch  = *step.findAttribute( "watch" );
             watch._target = pTarget != nullptr ? *pTarget : string();
             watch._key    = pKey != nullptr ? *pKey : string();
             bool bKnown   = false;
-            for ( const ProbeWatch& existing : _listWatch )
+            for ( const WatchWatch& existing : _listWatch )
             {
-                bKnown = bKnown || ( existing._probe == watch._probe && existing._target == watch._target && existing._key == watch._key );
+                bKnown = bKnown || ( existing._watch == watch._watch && existing._target == watch._target && existing._key == watch._key );
             }
             if ( bKnown == false )
                 _listWatch.push_back( std::move( watch ) );
@@ -187,18 +187,18 @@ namespace sw
 
     void AutomationJudge::sampleWatches( AutomationStepContext& context )
     {
-        for ( ProbeWatch& watch : _listWatch )
+        for ( WatchWatch& watch : _listWatch )
         {
             AutomationStep step{};
             step._kind = "ExpectVisited";
-            step._listAttribute.push_back( AutomationAttribute{ "probe", watch._probe } );
+            step._listAttribute.push_back( AutomationAttribute{ "watch", watch._watch } );
             if ( watch._target.empty() == false )
                 step._listAttribute.push_back( AutomationAttribute{ "target", watch._target } );
             if ( watch._key.empty() == false )
                 step._listAttribute.push_back( AutomationAttribute{ "key", watch._key } );
-            AutomationProbeValue value{};
+            AutomationWatchValue value{};
             string               message;
-            if ( readProbeValue( context, step, value, message ) == false )
+            if ( readWatchValue( context, step, value, message ) == false )
                 continue;
             string text = AutomationStepArgsUtil::makeValueText( value );
             if ( watch._listValue.empty() == false && watch._listValue.back() == text )
@@ -212,13 +212,13 @@ namespace sw
     {
         const string*     pTarget = step.findAttribute( "target" );
         const string*     pKey    = step.findAttribute( "key" );
-        const string_view probe   = *step.findAttribute( "probe" );
+        const string_view watch   = *step.findAttribute( "watch" );
         const string_view target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
         const string_view key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
-        const ProbeWatch* pWatch  = nullptr;
-        for ( const ProbeWatch& watch : _listWatch )
+        const WatchWatch* pWatch  = nullptr;
+        for ( const WatchWatch& watch : _listWatch )
         {
-            const bool bSame = watch._probe == probe && watch._target == target && watch._key == key;
+            const bool bSame = watch._watch == watch && watch._target == target && watch._key == key;
             if ( bSame )
                 pWatch = &watch;
         }
@@ -266,7 +266,7 @@ namespace sw
         {
             want += want.empty() ? string( value ) : " > " + value;
         }
-        string subject = string( probe );
+        string subject = string( watch );
         if ( target.empty() == false || key.empty() == false )
             subject += "(" + string( target ) + ( target.empty() || key.empty() ? "" : ", " ) + string( key ) + ")";
         context.recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
@@ -275,9 +275,9 @@ namespace sw
 
     void AutomationJudge::runRecord( AutomationStepContext& context, const AutomationStep& step )
     {
-        AutomationProbeValue value{};
+        AutomationWatchValue value{};
         string               message;
-        if ( readProbeValue( context, step, value, message ) == false )
+        if ( readWatchValue( context, step, value, message ) == false )
         {
             context.recordFailure( step, "Record " + message );
             return;
@@ -287,9 +287,9 @@ namespace sw
 
     void AutomationJudge::runRemember( AutomationStepContext& context, const AutomationStep& step )
     {
-        AutomationProbeValue value{};
+        AutomationWatchValue value{};
         string               message;
-        if ( readProbeValue( context, step, value, message ) == false )
+        if ( readWatchValue( context, step, value, message ) == false )
         {
             context.recordFailure( step, "Remember " + message );
             return;

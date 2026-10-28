@@ -31,7 +31,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -98,7 +98,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
 
-    SW_AUTOMATION_PROBE( engineFramePacingState, "Engine.FramePacingState",
+    SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
                          "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
                          &AppInternal::readFramePacingState );
 } // namespace sw

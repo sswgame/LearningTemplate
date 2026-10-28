@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -56,7 +56,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 창이 지금 연 문서가 `gv_editorProbeAsset`(리소스 id)이면 1 입니다. */
+            /** @brief 창이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다. */
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VfxPreviewPanel* pPanel = findOpenPanel();
@@ -79,12 +79,12 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "VfxPreviewPanel" );
     SW_EDITOR_PANEL( VfxPreviewPanel, VfxPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1310 );
-    SW_AUTOMATION_PROBE( editorVfxPreviewParticleCount, "Editor.VfxPreviewParticleCount",
+    SW_AUTOMATION_WATCH( editorVfxPreviewParticleCount, "Editor.VfxPreviewParticleCount",
                          "Particles the effect in the VFX Preview panel spawned this run, CPU and GPU emitters alike (fails while the panel is closed or has no preview scene)",
                          &VfxPreviewPanelInternal::readParticleCount );
-    SW_AUTOMATION_PROBE( editorVfxPreviewDocumentIsProbeAsset, "Editor.VfxPreviewDocumentIsProbeAsset",
-                         "1 when the effect open in the VFX Preview panel is gv_editorProbeAsset and it loaded", &VfxPreviewPanelInternal::readDocumentIsProbeAsset );
-    SW_AUTOMATION_PROBE( editorVfxPreviewSceneFrames, "Editor.VfxPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
+    SW_AUTOMATION_WATCH( editorVfxPreviewDocumentIsProbeAsset, "Editor.VfxPreviewDocumentIsProbeAsset",
+                         "1 when the effect open in the VFX Preview panel is gv_editorWatchAsset and it loaded", &VfxPreviewPanelInternal::readDocumentIsProbeAsset );
+    SW_AUTOMATION_WATCH( editorVfxPreviewSceneFrames, "Editor.VfxPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
                          &VfxPreviewPanelInternal::readPreviewSceneFrames );
 
     VfxPreviewPanel::VfxPreviewPanel()

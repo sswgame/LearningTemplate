@@ -59,7 +59,7 @@ option(SW_ENABLE_ATSPI "리눅스 클라이언트에 AT-SPI 접근성 브리지�
 option(SW_ENABLE_XTEST "리눅스 클라이언트에 XTest 입력 주입기를 짓는다(libxtst 가 없으면 기능을 끈다)" OFF)
 
 # 자동화 런타임(`Engine/Automation/Runner` 의 시나리오 실행기 · 세션 · 판정 · 보고 — `-scenario` 가 쓴다). 기본은 켠다: 배포 구성도 GPU 검증을 배포 구성 App 으로 돌린다.
-# 끄면 그 소스를 Engine 이 짓지 않고 `-scenario` 는 이유를 남기고 무시된다(`SW_AUTOMATION_ENABLED=0`). 단계 등록 · 탐침 표(`Engine/Automation/Scenario` · `Engine/Automation/Probe`)는 남는다 — 기능이 자기 폴더에서 등록하는 형식이다.
+# 끄면 그 소스를 Engine 이 짓지 않고 `-scenario` 는 이유를 남기고 무시된다(`SW_AUTOMATION_ENABLED=0`). 단계 등록 · 탐침 표(`Engine/Automation/Scenario` · `Engine/Automation/Watch`)는 남는다 — 기능이 자기 폴더에서 등록하는 형식이다.
 option(SW_ENABLE_AUTOMATION "자동화 시나리오 런타임(Engine/Automation/Runner)을 짓는다(끄면 -scenario 불가)" ON)
 
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")

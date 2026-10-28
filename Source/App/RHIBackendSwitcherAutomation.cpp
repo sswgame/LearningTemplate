@@ -18,7 +18,7 @@
     #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/StringUtil.h"
 
-    #include "Engine/Automation/Probe/AutomationProbe.h"
+    #include "Engine/Automation/Watch/AutomationWatch.h"
     #include "Engine/Automation/Scenario/AutomationBackendSteps.h"
     #include "Engine/Automation/Scenario/AutomationScenario.h"
     #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -158,11 +158,11 @@ namespace sw
                     &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
     SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherAutomationInternal::runSwapBackend,
                                    &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );
-    SW_AUTOMATION_PROBE( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
+    SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
                          &RHIBackendSwitcherAutomationInternal::readCommittedBackend );
-    SW_AUTOMATION_PROBE( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
+    SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
                          &RHIBackendSwitcherAutomationInternal::readSwapPending );
-    SW_AUTOMATION_PROBE( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
+    SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
                          &RHIBackendSwitcherAutomationInternal::readFailedSwapCount );
 } // namespace sw
 

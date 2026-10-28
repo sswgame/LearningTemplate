@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -884,11 +884,11 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
+    SW_AUTOMATION_WATCH( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
                          &ShooterPlayerComponentInternal::readWeaponIndex );
-    SW_AUTOMATION_PROBE( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerComponentInternal::readAlive );
-    SW_AUTOMATION_PROBE( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
-    SW_AUTOMATION_PROBE( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
-    SW_AUTOMATION_PROBE( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
+    SW_AUTOMATION_WATCH( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerComponentInternal::readAlive );
+    SW_AUTOMATION_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
+    SW_AUTOMATION_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
+    SW_AUTOMATION_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
                          &ShooterPlayerComponentInternal::readControllerKind );
 } // namespace sw

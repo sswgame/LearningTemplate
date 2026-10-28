@@ -66,11 +66,11 @@ namespace sw
         /**
          * @brief 플레이를 시나리오로 녹화합니다(`-scenario-record=<Saved/Automation/...scenario.xml>`). 활성 씬이 플레이를 시작한 첫 프레임부터 입력을 적고,
          *        시나리오가 끝나거나 창이 닫힐 때 파일을 씁니다.
-         * @param probeList `-scenario-record-probes=` 값 — 쉼표로 가른 검사점(`탐침`, `탐침@대상`, `탐침@대상@키`). 끝 프레임의 값이 `<Expect>` 로 실려 녹화가 스스로를 검증한다.
+         * @param watchList `-scenario-record-watchs=` 값 — 쉼표로 가른 검사점(`탐침`, `탐침@대상`, `탐침@대상@키`). 끝 프레임의 값이 `<Expect>` 로 실려 녹화가 스스로를 검증한다.
          * @details 시나리오와 함께 돌리면(`-scenario`) 시나리오가 낸 가상 입력도 적는다 — 시나리오 → 녹화 → 재생의 왕복으로 결정적 재생을 확인한다. 시작 조건은 시나리오의 `ScenePlaying` 과 같은 프레임이다.
          * @return 경로가 `Saved/Automation/` 아래의 `.scenario.xml` 이 아니면 false 입니다.
          */
-        [[nodiscard]] bool beginRecording( string_view outputPath, string_view probeList );
+        [[nodiscard]] bool beginRecording( string_view outputPath, string_view watchList );
         /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
         bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
 
@@ -104,7 +104,7 @@ namespace sw
         unique_ptr<AutomationRunner>        _pRunner;
         unique_ptr<AutomationScenarioChain> _pChain;
         ScenarioRecorder                    _recorder;
-        vector<string>                      _listRecordProbe;    ///< `-scenario-record-probes` 의 검사점
+        vector<string>                      _listRecordWatch;    ///< `-scenario-record-watchs` 의 검사점
         string                              _recordPath;         ///< `-scenario-record` 경로(비면 녹화하지 않는다)
         string                              _reportPath;         ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;      ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)

@@ -23,14 +23,14 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.AudioMixerBusVolume` 이 볼 버스 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeBus, "master", "탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchBus, "master", "탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
 
     namespace
     {
@@ -270,7 +270,7 @@ namespace sw::editor
         {
             probe._mutedCount += status._bMuted ? 1u : 0u;
             probe._soloCount += status._bSolo ? 1u : 0u;
-            if ( status._name == hashed_string( gv_editorProbeBus.c_str() ) )
+            if ( status._name == hashed_string( gv_editorWatchBus.c_str() ) )
                 probe._probedBusVolume = status._userVolume;
         }
 
@@ -290,9 +290,9 @@ namespace sw::editor
     SW_EDITOR_PANEL( AudioMixerPanel, AudioMixerPanel::kPanelID, EditorPanelCategory::Tool, 2100 );
     SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer", nullptr, &AudioMixerPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window", None, 0 );
 
-    SW_AUTOMATION_PROBE( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
-    SW_AUTOMATION_PROBE( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );
-    SW_AUTOMATION_PROBE( editorAudioMixerSoloCount, "Editor.AudioMixerSoloCount", "Mixer buses that are solo", &AudioMixerPanelInternal::readSoloCount );
-    SW_AUTOMATION_PROBE( editorAudioMixerBusVolume, "Editor.AudioMixerBusVolume", "User volume of the bus named by gv_editorProbeBus (-1 when there is none)",
+    SW_AUTOMATION_WATCH( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
+    SW_AUTOMATION_WATCH( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );
+    SW_AUTOMATION_WATCH( editorAudioMixerSoloCount, "Editor.AudioMixerSoloCount", "Mixer buses that are solo", &AudioMixerPanelInternal::readSoloCount );
+    SW_AUTOMATION_WATCH( editorAudioMixerBusVolume, "Editor.AudioMixerBusVolume", "User volume of the bus named by gv_editorWatchBus (-1 when there is none)",
                          &AudioMixerPanelInternal::readBusVolume );
 } // namespace sw::editor

@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -214,5 +214,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &readViewLagMax );
+    SW_AUTOMATION_WATCH( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &readViewLagMax );
 } // namespace sw

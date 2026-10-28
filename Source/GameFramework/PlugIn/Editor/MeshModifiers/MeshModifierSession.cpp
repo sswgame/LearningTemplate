@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -759,19 +759,19 @@ namespace sw::editor
 
     SW_EDITOR_SUBSYSTEM( MeshModifierSession, 9400 );
 
-    SW_AUTOMATION_PROBE( meshModifierCount, "MeshModifiers.ModifierCount", "Modifiers in the mesh modifier stack (0 without a target)",
+    SW_AUTOMATION_WATCH( meshModifierCount, "MeshModifiers.ModifierCount", "Modifiers in the mesh modifier stack (0 without a target)",
                          &MeshModifierSessionProbes::readModifierCount );
-    SW_AUTOMATION_PROBE( meshModifierGPUPreview, "MeshModifiers.GPUPreviewActive", "1 when the target mesh is drawn by the GPU modifier program",
+    SW_AUTOMATION_WATCH( meshModifierGPUPreview, "MeshModifiers.GPUPreviewActive", "1 when the target mesh is drawn by the GPU modifier program",
                          &MeshModifierSessionProbes::readGPUPreviewActive );
-    SW_AUTOMATION_PROBE( meshModifierCenterOffset, "MeshModifiers.SelectedCenterOffset", "Distance of the selected modifier's gizmo center from the source bounds center",
+    SW_AUTOMATION_WATCH( meshModifierCenterOffset, "MeshModifiers.SelectedCenterOffset", "Distance of the selected modifier's gizmo center from the source bounds center",
                          &MeshModifierSessionProbes::readSelectedCenterOffset );
-    SW_AUTOMATION_PROBE( meshModifierFirstParam, "MeshModifiers.SelectedFirstParam", "First (scalar) parameter of the selected modifier",
+    SW_AUTOMATION_WATCH( meshModifierFirstParam, "MeshModifiers.SelectedFirstParam", "First (scalar) parameter of the selected modifier",
                          &MeshModifierSessionProbes::readSelectedFirstParam );
-    SW_AUTOMATION_PROBE( meshModifierNestedCount, "MeshModifiers.NestedCount", "Nested modifiers of the selected Deformable", &MeshModifierSessionProbes::readNestedCount );
-    SW_AUTOMATION_PROBE( meshModifierCurveListItems, "MeshModifiers.CurveListItemCount", "Items of the selected modifier's first curve list",
+    SW_AUTOMATION_WATCH( meshModifierNestedCount, "MeshModifiers.NestedCount", "Nested modifiers of the selected Deformable", &MeshModifierSessionProbes::readNestedCount );
+    SW_AUTOMATION_WATCH( meshModifierCurveListItems, "MeshModifiers.CurveListItemCount", "Items of the selected modifier's first curve list",
                          &MeshModifierSessionProbes::readCurveListItemCount );
-    SW_AUTOMATION_PROBE( meshModifierCurveListKeys, "MeshModifiers.CurveListKeyCount", "Keys over all items of the selected modifier's first curve list",
+    SW_AUTOMATION_WATCH( meshModifierCurveListKeys, "MeshModifiers.CurveListKeyCount", "Keys over all items of the selected modifier's first curve list",
                          &MeshModifierSessionProbes::readCurveListKeyCount );
-    SW_AUTOMATION_PROBE( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
+    SW_AUTOMATION_WATCH( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
                          &MeshModifierSessionProbes::readReferenceListCount );
 } // namespace sw::editor

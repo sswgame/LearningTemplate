@@ -6,7 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
@@ -726,5 +726,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorComponentInternal::readGuestCount );
+    SW_AUTOMATION_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorComponentInternal::readGuestCount );
 } // namespace sw

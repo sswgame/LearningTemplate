@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -114,7 +114,7 @@ namespace sw
         }
 
         /** @brief 탐침 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
-        [[nodiscard]] bool readAITask( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+        [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const SkirmishDirectorComponent* pDirector = findProbeDirector( query._pManager );
             int32                            player    = -1;
@@ -142,9 +142,9 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
 
-    SW_AUTOMATION_PROBE( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", &readSelectedCount );
-    SW_AUTOMATION_PROBE( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", &readSelectedMovingCount );
-    SW_AUTOMATION_QUERY_PROBE( skirmishAITask, "Skirmish.AITask", "Active behavior tree task of the AI commander playing player key (0 or 1)", &readAITask, false, true );
+    SW_AUTOMATION_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", &readSelectedCount );
+    SW_AUTOMATION_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", &readSelectedMovingCount );
+    SW_AUTOMATION_QUERY_WATCH( skirmishAITask, "Skirmish.AITask", "Active behavior tree task of the AI commander playing player key (0 or 1)", &readAITask, false, true );
 } // namespace sw
 
 namespace sw

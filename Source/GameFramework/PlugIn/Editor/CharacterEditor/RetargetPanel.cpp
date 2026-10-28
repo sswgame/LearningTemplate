@@ -18,7 +18,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include <imgui.h>
 
@@ -139,11 +139,11 @@ namespace sw::editor
     SW_LOG_CALLER( "RetargetPanel" );
     SW_EDITOR_PANEL( RetargetPanel, RetargetPanel::kPanelID, EditorPanelCategory::Custom, 9040 );
 
-    SW_AUTOMATION_PROBE( editorRetargetPoseCount, "Editor.RetargetPoseCount", "Retarget pose rows (target bone turns) in the profile the Retarget Profile window has open",
+    SW_AUTOMATION_WATCH( editorRetargetPoseCount, "Editor.RetargetPoseCount", "Retarget pose rows (target bone turns) in the profile the Retarget Profile window has open",
                          &RetargetPanelInternal::readTargetPoseCount );
-    SW_AUTOMATION_PROBE( editorRetargetPreviewSegments, "Editor.RetargetPreviewSegments", "Skeleton line segments the Retarget Profile window's 3D preview drew last frame",
+    SW_AUTOMATION_WATCH( editorRetargetPreviewSegments, "Editor.RetargetPreviewSegments", "Skeleton line segments the Retarget Profile window's 3D preview drew last frame",
                          &RetargetPanelInternal::readPreviewSegmentCount );
-    SW_AUTOMATION_PROBE( editorRetargetChainCount, "Editor.RetargetChainCount", "Chains in the profile the Retarget Profile window has open", &RetargetPanelInternal::readChainCount );
+    SW_AUTOMATION_WATCH( editorRetargetChainCount, "Editor.RetargetChainCount", "Chains in the profile the Retarget Profile window has open", &RetargetPanelInternal::readChainCount );
 
     RetargetPanel::RetargetPanel()
         : EditorPreviewPanel{ EditorAssetType::Data, false }

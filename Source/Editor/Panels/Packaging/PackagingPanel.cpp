@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
 
@@ -88,7 +88,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( PackagingPanel, PackagingPanel::kPanelID, EditorPanelCategory::Tool, 2050 );
-    SW_AUTOMATION_PROBE( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
+    SW_AUTOMATION_WATCH( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
                          &PackagingPanelInternal::readPackagingState );
 
     PackagingPanel::PackagingPanel()

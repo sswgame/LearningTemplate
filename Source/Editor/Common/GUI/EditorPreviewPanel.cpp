@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
@@ -36,7 +36,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
+    SW_AUTOMATION_WATCH( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
                          &readPreviewTickCount );
 
     EditorPreviewPanel::EditorPreviewPanel( EditorAssetType kind, bool bLoadOnOpen )
@@ -119,7 +119,7 @@ namespace sw::editor
 
     bool EditorPreviewPanel::readDocumentIsProbeAsset( float64& outValue ) const
     {
-        const GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_editorProbeAsset" );
+        const GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_editorWatchAsset" );
         if ( pInfo == nullptr )
             return false;
         const string wanted = pInfo->getValueAsString();

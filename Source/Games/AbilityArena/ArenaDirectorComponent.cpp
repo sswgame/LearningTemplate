@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -115,11 +115,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
 
-    SW_AUTOMATION_PROBE( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", &ArenaDirectorComponentInternal::readPlayerX );
-    SW_AUTOMATION_PROBE( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", &ArenaDirectorComponentInternal::readPlayerZ );
-    SW_AUTOMATION_PROBE( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", &ArenaDirectorComponentInternal::readPlayerShotCount );
-    SW_AUTOMATION_PROBE( arenaKillCount, "Arena.KillCount", "Enemies felled this game", &ArenaDirectorComponentInternal::readKillCount );
-    SW_AUTOMATION_PROBE( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI",
+    SW_AUTOMATION_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", &ArenaDirectorComponentInternal::readPlayerX );
+    SW_AUTOMATION_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", &ArenaDirectorComponentInternal::readPlayerZ );
+    SW_AUTOMATION_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", &ArenaDirectorComponentInternal::readPlayerShotCount );
+    SW_AUTOMATION_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", &ArenaDirectorComponentInternal::readKillCount );
+    SW_AUTOMATION_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI",
                          &ArenaDirectorComponentInternal::readPlayerControllerKind );
 } // namespace sw
 

@@ -168,7 +168,7 @@ namespace sw
         return false;
     }
 
-    string AutomationStepArgsUtil::makeValueText( const AutomationProbeValue& value )
+    string AutomationStepArgsUtil::makeValueText( const AutomationWatchValue& value )
     {
         return value._bText ? value._text : formatNumber( value._number );
     }

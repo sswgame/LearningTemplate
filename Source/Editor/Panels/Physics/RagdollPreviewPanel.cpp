@@ -19,7 +19,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -121,15 +121,15 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "RagdollPreviewPanel" );
     SW_EDITOR_PANEL( RagdollPreviewPanel, RagdollPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1340 );
-    SW_AUTOMATION_PROBE( editorRagdollPreviewDocumentBodies, "Editor.RagdollPreviewDocumentBodies",
+    SW_AUTOMATION_WATCH( editorRagdollPreviewDocumentBodies, "Editor.RagdollPreviewDocumentBodies",
                          "Bodies of the physics asset open in the Ragdoll Preview panel (fails while the panel is closed or the asset was not read)",
                          &RagdollPreviewPanelInternal::readDocumentBodies );
-    SW_AUTOMATION_PROBE( editorRagdollPreviewBuiltBodies, "Editor.RagdollPreviewBuiltBodies",
+    SW_AUTOMATION_WATCH( editorRagdollPreviewBuiltBodies, "Editor.RagdollPreviewBuiltBodies",
                          "Bodies the preview body's ragdoll built (fails while the panel is closed, there is no body or the ragdoll is not up yet)",
                          &RagdollPreviewPanelInternal::readBuiltBodies );
-    SW_AUTOMATION_PROBE( editorRagdollPreviewState, "Editor.RagdollPreviewState", "RagdollState number of the preview body (0 Animated, 1 Ragdoll, 2 Partial, 3 BlendingBack; fails while there is no body)",
+    SW_AUTOMATION_WATCH( editorRagdollPreviewState, "Editor.RagdollPreviewState", "RagdollState number of the preview body (0 Animated, 1 Ragdoll, 2 Partial, 3 BlendingBack; fails while there is no body)",
                          &RagdollPreviewPanelInternal::readRagdollState );
-    SW_AUTOMATION_PROBE( editorRagdollPreviewSceneFrames, "Editor.RagdollPreviewSceneFrames", "Frames the Ragdoll Preview panel asked the renderer to draw its preview scene",
+    SW_AUTOMATION_WATCH( editorRagdollPreviewSceneFrames, "Editor.RagdollPreviewSceneFrames", "Frames the Ragdoll Preview panel asked the renderer to draw its preview scene",
                          &RagdollPreviewPanelInternal::readPreviewSceneFrames );
 
     RagdollPreviewPanel::RagdollPreviewPanel()

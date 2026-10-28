@@ -30,7 +30,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -306,43 +306,43 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorUIPreviewWidgetCount, "Editor.UIPreviewWidgetCount", "Widgets in the UI Preview tree (no value while the panel is closed or has no document)",
+    SW_AUTOMATION_WATCH( editorUIPreviewWidgetCount, "Editor.UIPreviewWidgetCount", "Widgets in the UI Preview tree (no value while the panel is closed or has no document)",
                          &UIPreviewPanelInternal::readWidgetCount );
-    SW_AUTOMATION_PROBE( editorUIPreviewFirstTextBytes, "Editor.UIPreviewFirstTextBytes",
+    SW_AUTOMATION_WATCH( editorUIPreviewFirstTextBytes, "Editor.UIPreviewFirstTextBytes",
                          "UTF-8 bytes of the displayed text of the first text widget in the UI Preview (longer in an expanding pseudo-language)",
                          &UIPreviewPanelInternal::readFirstTextBytes );
-    SW_AUTOMATION_PROBE( editorUIPreviewRightToLeft, "Editor.UIPreviewRightToLeft", "1 when the UI Preview root lays out right to left (qps-plocm)",
+    SW_AUTOMATION_WATCH( editorUIPreviewRightToLeft, "Editor.UIPreviewRightToLeft", "1 when the UI Preview root lays out right to left (qps-plocm)",
                          &UIPreviewPanelInternal::readRightToLeft );
-    SW_AUTOMATION_PROBE( editorUIPreviewHoveredOrdinal, "Editor.UIPreviewHoveredOrdinal",
+    SW_AUTOMATION_WATCH( editorUIPreviewHoveredOrdinal, "Editor.UIPreviewHoveredOrdinal",
                          "Document-order index of the widget under the simulated pointer in the UI Preview, -1 when none", &UIPreviewPanelInternal::readHoveredOrdinal );
-    SW_AUTOMATION_PROBE( editorUIPreviewHoveredFocusable, "Editor.UIPreviewHoveredFocusable", "1 when the widget under the simulated pointer can take focus (a button)",
+    SW_AUTOMATION_WATCH( editorUIPreviewHoveredFocusable, "Editor.UIPreviewHoveredFocusable", "1 when the widget under the simulated pointer can take focus (a button)",
                          &UIPreviewPanelInternal::readHoveredFocusable );
-    SW_AUTOMATION_PROBE( editorUIPreviewFocusedOrdinal, "Editor.UIPreviewFocusedOrdinal",
+    SW_AUTOMATION_WATCH( editorUIPreviewFocusedOrdinal, "Editor.UIPreviewFocusedOrdinal",
                          "Document-order index of the focused widget in the UI Preview (set by the navigation buttons), -1 when none", &UIPreviewPanelInternal::readFocusedOrdinal );
-    SW_AUTOMATION_PROBE( editorUIPreviewSelectedOpacity, "Editor.UIPreviewSelectedOpacity", "Opacity of the widget selected in the UI Preview (no value without a selection)",
+    SW_AUTOMATION_WATCH( editorUIPreviewSelectedOpacity, "Editor.UIPreviewSelectedOpacity", "Opacity of the widget selected in the UI Preview (no value without a selection)",
                          &UIPreviewPanelInternal::readSelectedOpacity );
-    SW_AUTOMATION_PROBE( editorUIPreviewDirty, "Editor.UIPreviewDirty", "1 when the UI Preview has edits not yet written to the document",
+    SW_AUTOMATION_WATCH( editorUIPreviewDirty, "Editor.UIPreviewDirty", "1 when the UI Preview has edits not yet written to the document",
                          &UIPreviewPanelInternal::readDirty );
-    SW_AUTOMATION_PROBE( editorUIPreviewAnimationTime, "Editor.UIPreviewAnimationTime", "Playback time (seconds) of the animation chosen in the UI Preview, 0 when it is not playing",
+    SW_AUTOMATION_WATCH( editorUIPreviewAnimationTime, "Editor.UIPreviewAnimationTime", "Playback time (seconds) of the animation chosen in the UI Preview, 0 when it is not playing",
                          &UIPreviewPanelInternal::readAnimationTime );
-    SW_AUTOMATION_PROBE( editorUIPreviewAnimationPlaying, "Editor.UIPreviewAnimationPlaying", "1 while the animation chosen in the UI Preview is playing (a paused one counts as stopped)",
+    SW_AUTOMATION_WATCH( editorUIPreviewAnimationPlaying, "Editor.UIPreviewAnimationPlaying", "1 while the animation chosen in the UI Preview is playing (a paused one counts as stopped)",
                          &UIPreviewPanelInternal::readAnimationPlaying );
-    SW_AUTOMATION_PROBE( editorUIPreviewTextureReady, "Editor.UIPreviewTextureReady", "1 once the UI Preview render texture is registered with ImGui and the picture is drawn",
+    SW_AUTOMATION_WATCH( editorUIPreviewTextureReady, "Editor.UIPreviewTextureReady", "1 once the UI Preview render texture is registered with ImGui and the picture is drawn",
                          &UIPreviewPanelInternal::readTextureReady );
-    SW_AUTOMATION_PROBE( editorUIPreviewReloadedAfterSave, "Editor.UIPreviewReloadedAfterSave",
+    SW_AUTOMATION_WATCH( editorUIPreviewReloadedAfterSave, "Editor.UIPreviewReloadedAfterSave",
                          "1 once the UI Preview rebuilt its tree from the file after the last Save (proves the write reached the document)",
                          &UIPreviewPanelInternal::readReloadedAfterSave );
-    SW_AUTOMATION_PROBE( editorUIPreviewSlotEditable, "Editor.UIPreviewSlotEditable",
+    SW_AUTOMATION_WATCH( editorUIPreviewSlotEditable, "Editor.UIPreviewSlotEditable",
                          "1 when the selected widget's slot can be dragged by handles (its parent is a canvas panel); no value without a selection",
                          &UIPreviewPanelInternal::readSlotEditable );
-    SW_AUTOMATION_PROBE( editorUIPreviewSelectedOffsetMinX, "Editor.UIPreviewSelectedOffsetMinX", "Slot _offsetMin._x of the selected widget (a handle drag changes it)",
+    SW_AUTOMATION_WATCH( editorUIPreviewSelectedOffsetMinX, "Editor.UIPreviewSelectedOffsetMinX", "Slot _offsetMin._x of the selected widget (a handle drag changes it)",
                          &UIPreviewPanelInternal::readSelectedOffsetMinX );
-    SW_AUTOMATION_PROBE( editorUIPreviewPaletteCount, "Editor.UIPreviewPaletteCount", "Widget types the UI Preview palette lists (every constructible Widget subclass)",
+    SW_AUTOMATION_WATCH( editorUIPreviewPaletteCount, "Editor.UIPreviewPaletteCount", "Widget types the UI Preview palette lists (every constructible Widget subclass)",
                          &UIPreviewPanelInternal::readPaletteCount );
-    SW_AUTOMATION_PROBE( editorUIPreviewSlotEditCount, "Editor.UIPreviewSlotEditCount",
+    SW_AUTOMATION_WATCH( editorUIPreviewSlotEditCount, "Editor.UIPreviewSlotEditCount",
                          "Slot edits applied in the UI Preview (canvas handles, Slot fields, box order and grid cell handles; one undo entry each)",
                          &UIPreviewPanelInternal::readSlotEditCount );
-    SW_AUTOMATION_PROBE( editorUIPreviewLanguageIndex, "Editor.UIPreviewLanguageIndex", "Row of the UI Preview language combo (0 = the game language)",
+    SW_AUTOMATION_WATCH( editorUIPreviewLanguageIndex, "Editor.UIPreviewLanguageIndex", "Row of the UI Preview language combo (0 = the game language)",
                          &UIPreviewPanelInternal::readLanguageIndex );
 
     UIPreviewPanel::UIPreviewPanel()

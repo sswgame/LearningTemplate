@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -155,11 +155,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
 
-    SW_AUTOMATION_PROBE( farmFarmerX, "Farm.FarmerX", "World X of the farmer", &readFarmerX );
-    SW_AUTOMATION_PROBE( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", &readFarmerTool );
-    SW_AUTOMATION_PROBE( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", &readTilledCount );
-    SW_AUTOMATION_PROBE( farmCropCount, "Farm.CropCount", "Field tiles with a crop", &readCropCount );
-    SW_AUTOMATION_PROBE( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", &readFarmerControllerKind );
+    SW_AUTOMATION_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", &readFarmerX );
+    SW_AUTOMATION_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", &readFarmerTool );
+    SW_AUTOMATION_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", &readTilledCount );
+    SW_AUTOMATION_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", &readCropCount );
+    SW_AUTOMATION_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", &readFarmerControllerKind );
 } // namespace sw
 
 namespace sw

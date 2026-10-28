@@ -4,7 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -50,10 +50,10 @@ namespace sw
 {
     SW_SCENE_SERVICE( SocketPartPool, DestroyPost )
 
-    SW_AUTOMATION_PROBE( socketPartPoolTakeHits, "SocketPartPool.TakeHits", "Appearance parts the socket part pool handed out from rest (cumulative)", &SocketPartPoolInternal::readTakeHitCount );
-    SW_AUTOMATION_PROBE( socketPartPoolTakeMisses, "SocketPartPool.TakeMisses", "Appearance part requests the socket part pool could not serve (the part was spawned new, cumulative)",
+    SW_AUTOMATION_WATCH( socketPartPoolTakeHits, "SocketPartPool.TakeHits", "Appearance parts the socket part pool handed out from rest (cumulative)", &SocketPartPoolInternal::readTakeHitCount );
+    SW_AUTOMATION_WATCH( socketPartPoolTakeMisses, "SocketPartPool.TakeMisses", "Appearance part requests the socket part pool could not serve (the part was spawned new, cumulative)",
                          &SocketPartPoolInternal::readTakeMissCount );
-    SW_AUTOMATION_PROBE( socketPartPoolStored, "SocketPartPool.Stored", "Appearance parts the socket part pool took in to rest (cumulative)", &SocketPartPoolInternal::readStoredCount );
+    SW_AUTOMATION_WATCH( socketPartPoolStored, "SocketPartPool.Stored", "Appearance parts the socket part pool took in to rest (cumulative)", &SocketPartPoolInternal::readStoredCount );
 
     SocketPartPool::SocketPartPool( GameObjectManager& manager )
         : _pManager{ &manager }

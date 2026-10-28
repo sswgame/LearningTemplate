@@ -13,7 +13,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
@@ -67,8 +67,8 @@ namespace sw::editor
                        "활성 씬의 내비메시를 에이전트 종류마다 다시 베이크합니다(Nav 시각화로 폴리곤 테두리를 봅니다)", "Bake the navmesh of the active scene", nullptr,
                        &EditorNavigationBakeCommandInternal::runBake, &EditorNavigationBakeCommandInternal::isEnabled, Scene, "MainMenu/Build", None, 0 );
 
-    SW_AUTOMATION_PROBE( editorNavigationBakeCount, "Editor.NavigationBakeCount", "Times the navigation.bake command ran in this editor session",
+    SW_AUTOMATION_WATCH( editorNavigationBakeCount, "Editor.NavigationBakeCount", "Times the navigation.bake command ran in this editor session",
                          &EditorNavigationBakeCommandInternal::readBakeRunCount );
-    SW_AUTOMATION_PROBE( editorNavMeshCount, "Editor.NavMeshCount", "Agent types that have a baked navmesh in the active scene",
+    SW_AUTOMATION_WATCH( editorNavMeshCount, "Editor.NavMeshCount", "Agent types that have a baked navmesh in the active scene",
                          &EditorNavigationBakeCommandInternal::readNavMeshCount );
 } // namespace sw::editor

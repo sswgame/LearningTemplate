@@ -14,7 +14,7 @@
     #include "Core/Math/MathUtil.h"
     #include "Core/String/fixed_string.h"
 
-    #include "Engine/Automation/Probe/AutomationProbe.h"
+    #include "Engine/Automation/Watch/AutomationWatch.h"
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Canvas/CanvasPainter.h"
     #include "Engine/Input/Map/InputMap.h"
@@ -625,12 +625,12 @@ namespace sw
     SW_DEV_COMMAND( debugHUD, "hud", "hud [on|off|list|window] | hud <section> [on|off] | hud corner <topLeft|topRight|bottomLeft|bottomRight> | hud opacity <0.2..1>",
                     "Show or hide the debug HUD and its sections (Ctrl+F3 toggles it)", &DebugHUDInternal::runCommand );
 
-    SW_AUTOMATION_PROBE( debugHUDShown, "DebugHUD.Shown", "1 while the debug HUD screen is open", &DebugHUDInternal::readShown );
-    SW_AUTOMATION_PROBE( debugHUDWindowOpen, "DebugHUD.WindowOpen", "1 while the debug HUD settings window is open", &DebugHUDInternal::readWindowOpen );
-    SW_AUTOMATION_PROBE( debugHUDCorner, "DebugHUD.Corner", "Corner the HUD panel was laid out in (0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right)",
+    SW_AUTOMATION_WATCH( debugHUDShown, "DebugHUD.Shown", "1 while the debug HUD screen is open", &DebugHUDInternal::readShown );
+    SW_AUTOMATION_WATCH( debugHUDWindowOpen, "DebugHUD.WindowOpen", "1 while the debug HUD settings window is open", &DebugHUDInternal::readWindowOpen );
+    SW_AUTOMATION_WATCH( debugHUDCorner, "DebugHUD.Corner", "Corner the HUD panel was laid out in (0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right)",
                          &DebugHUDInternal::readCorner );
-    SW_AUTOMATION_PROBE( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDInternal::readSectionCount );
-    SW_AUTOMATION_PROBE( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDProbeSection",
+    SW_AUTOMATION_WATCH( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDInternal::readSectionCount );
+    SW_AUTOMATION_WATCH( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDProbeSection",
                          &DebugHUDInternal::readSectionShown );
 } // namespace sw
 

@@ -17,7 +17,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include <imgui.h>
 
@@ -457,10 +457,10 @@ namespace sw::editor
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( catalogFileCount, "Editor.CatalogFileCount", "Catalog files the Catalog Editor lists (0 until its scan finishes)",
+    SW_AUTOMATION_WATCH( catalogFileCount, "Editor.CatalogFileCount", "Catalog files the Catalog Editor lists (0 until its scan finishes)",
                          &editor::CatalogPanelInternal::readFileCount );
-    SW_AUTOMATION_PROBE( catalogRowCount, "Editor.CatalogRowCount", "Rows (elements under the root) of the catalog file open in the Catalog Editor",
+    SW_AUTOMATION_WATCH( catalogRowCount, "Editor.CatalogRowCount", "Rows (elements under the root) of the catalog file open in the Catalog Editor",
                          &editor::CatalogPanelInternal::readRowCount );
-    SW_AUTOMATION_PROBE( catalogValidation, "Editor.CatalogValidation", "Last validation of the open catalog file: 0 not run, 1 passed, 2 failed",
+    SW_AUTOMATION_WATCH( catalogValidation, "Editor.CatalogValidation", "Last validation of the open catalog file: 0 not run, 1 passed, 2 failed",
                          &editor::CatalogPanelInternal::readValidation );
 } // namespace sw

@@ -21,7 +21,7 @@
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 
@@ -462,9 +462,9 @@ namespace sw::editor
         return getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._lastCommand;
     }
 
-    SW_AUTOMATION_PROBE( editorExplorerLaunchCount, "Editor.ExplorerLaunchCount", "Times the editor built a file explorer command (Show in Explorer, dry run included)",
+    SW_AUTOMATION_WATCH( editorExplorerLaunchCount, "Editor.ExplorerLaunchCount", "Times the editor built a file explorer command (Show in Explorer, dry run included)",
                          &EditorAssetFileCommandsInternal::readExplorerLaunchCount );
-    SW_AUTOMATION_PROBE( editorExplorerCommandWellFormed, "Editor.ExplorerCommandWellFormed",
+    SW_AUTOMATION_WATCH( editorExplorerCommandWellFormed, "Editor.ExplorerCommandWellFormed",
                          "1 when the last file explorer command selects a quoted path using the platform separator (Windows: backslashes only)",
                          &EditorAssetFileCommandsInternal::readExplorerCommandWellFormed );
     SW_DEV_COMMAND( ExplorerDryRun, "explorer.dryRun", "explorer.dryRun <on|off>", "Record Show in Explorer commands without starting the file explorer",

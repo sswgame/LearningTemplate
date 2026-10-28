@@ -27,7 +27,7 @@ namespace sw
 {
     enum class InputGlyphStyle : uint8;
 
-    struct HardwareProbeResult;
+    struct HardwareDetectionResult;
     struct InputSlot;
 
     /** @brief 보류 값을 넣은 결과입니다. */
@@ -216,9 +216,9 @@ namespace sw
         // 3) 기동: 품질 자동 선택과 전체 적용
         // ------------------------------------------------------------------------------
         /** @brief 사양에 맞는 품질 프리셋 이름입니다(첫 품질 번들에서 규칙 순서대로 첫 일치를 고르고, 없으면 `autoDetectFallback`). 번들이 없으면 빈 이름입니다. */
-        hashed_string detectScalabilityPreset( const HardwareProbeResult& probe ) const;
+        hashed_string detectScalabilityPreset( const HardwareDetectionResult& probe ) const;
         /** @brief 자동 선택한 프리셋을 확정 값으로 씁니다(적용과 저장은 하지 않으며, 이어지는 `reapplyAll` 이 넣습니다). */
-        [[nodiscard]] bool applyAutoDetectedPreset( const HardwareProbeResult& probe );
+        [[nodiscard]] bool applyAutoDetectedPreset( const HardwareDetectionResult& probe );
         /**
          * @brief 모든 확정 값을 대상에 다시 넣습니다(기동 적용). 게임이 언어 팩과 입력 맵을 만든 뒤에도 부릅니다. 그 대상은 그때 생기기 때문입니다.
          * @details 첫 호출(엔진 기동)은 `NeedsRestart` 설정도 넣는다(이것이 "다음 실행" 의 적용이다). 그 뒤의 호출은 그 설정에 기동 때 값을 다시 넣는다.

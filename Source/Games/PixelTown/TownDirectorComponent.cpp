@@ -6,7 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -97,12 +97,12 @@ namespace sw
         }
     } // namespace
 
-    SW_AUTOMATION_PROBE( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", &readHeroTileX );
-    SW_AUTOMATION_PROBE( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", &readHeroTileY );
-    SW_AUTOMATION_PROBE( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", &readHeroFacing );
-    SW_AUTOMATION_PROBE( townTalking, "Town.Talking", "1 while a talk with a villager is open", &readTalking );
-    SW_AUTOMATION_PROBE( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", &readShownLineCount );
-    SW_AUTOMATION_PROBE( townFinishedTalks, "Town.FinishedTalks", "Talks finished this session", &readFinishedTalkCount );
+    SW_AUTOMATION_WATCH( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", &readHeroTileX );
+    SW_AUTOMATION_WATCH( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", &readHeroTileY );
+    SW_AUTOMATION_WATCH( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", &readHeroFacing );
+    SW_AUTOMATION_WATCH( townTalking, "Town.Talking", "1 while a talk with a villager is open", &readTalking );
+    SW_AUTOMATION_WATCH( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", &readShownLineCount );
+    SW_AUTOMATION_WATCH( townFinishedTalks, "Town.FinishedTalks", "Talks finished this session", &readFinishedTalkCount );
 } // namespace sw
 
 namespace sw

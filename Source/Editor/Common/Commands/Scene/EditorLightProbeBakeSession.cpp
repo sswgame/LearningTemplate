@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -100,11 +100,11 @@ namespace sw::editor
     SW_EDITOR_SUBSYSTEM( EditorLightProbeBakeSession, 9100 );
     SW_EDITOR_FRAME_STEP( LightProbeBake, "lightProbeBake", EditorFrameStepOrder::kCommands + 20, &EditorLightProbeBakeSessionInternal::runFrame );
 
-    SW_AUTOMATION_PROBE( editorLightProbeBakeCount, "Editor.LightProbeBakeCount", "Times a lighting.bakeProbes run finished (or was canceled) in the active scene",
+    SW_AUTOMATION_WATCH( editorLightProbeBakeCount, "Editor.LightProbeBakeCount", "Times a lighting.bakeProbes run finished (or was canceled) in the active scene",
                          &EditorLightProbeBakeSessionInternal::readBakeRunCount );
-    SW_AUTOMATION_PROBE( editorLightProbeBakeRunning, "Editor.LightProbeBakeRunning", "1 while a light probe bake is running over editor frames",
+    SW_AUTOMATION_WATCH( editorLightProbeBakeRunning, "Editor.LightProbeBakeRunning", "1 while a light probe bake is running over editor frames",
                          &EditorLightProbeBakeSessionInternal::readBakeRunning );
-    SW_AUTOMATION_PROBE( editorBakedLightProbeVolumeCount, "Editor.BakedLightProbeVolumeCount", "Light probe volumes of the active scene with usable baked data",
+    SW_AUTOMATION_WATCH( editorBakedLightProbeVolumeCount, "Editor.BakedLightProbeVolumeCount", "Light probe volumes of the active scene with usable baked data",
                          &EditorLightProbeBakeSessionInternal::readBakedVolumeCount );
 
     EditorLightProbeBakeSession::EditorLightProbeBakeSession()

@@ -8,12 +8,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 
 namespace sw
 {
@@ -51,7 +51,7 @@ namespace sw
         void sampleWatches( AutomationStepContext& context );
 
         /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다(값이 있으면 `<탐침> <규칙>, got <값>`). */
-        [[nodiscard]] bool compareProbe( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const;
+        [[nodiscard]] bool compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const;
 
         void runExpect( AutomationStepContext& context, const AutomationStep& step );
         void runExpectVisited( AutomationStepContext& context, const AutomationStep& step );
@@ -83,14 +83,14 @@ namespace sw
 
     private:
         /**
-         * @struct ProbeWatch
+         * @struct WatchWatch
          * @brief `<ExpectVisited>` 가 보는 탐침 하나(탐침 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
          */
-        struct ProbeWatch
+        struct WatchWatch
         {
             vector<string> _listValue{}; ///< 바뀐 값(끝의 0 을 정리한 글)
             vector<uint32> _listFrame{}; ///< 그 값이 처음 보인 시나리오 프레임
-            string         _probe{};
+            string         _watch{};
             string         _target{};
             string         _key{};
         };
@@ -107,7 +107,7 @@ namespace sw
         };
 
         /** @brief 단계의 탐침 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
-        [[nodiscard]] bool readProbeValue( const AutomationStepContext& context, const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const;
+        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 탐침마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
 
@@ -119,7 +119,7 @@ namespace sw
         vector<string>          _listAllowedLogID; ///< 이 실행에서 허용 항목이 맞은 로그 id
         vector<string>          _listMetricLine;   ///< 보고에 적는 지표 값
         vector<string>          _listRecordLine;   ///< 보고에 적는 기록 값(결정성 대조)
-        vector<ProbeWatch>      _listWatch;        ///< `<ExpectVisited>` 가 보는 탐침 이력
+        vector<WatchWatch>      _listWatch;        ///< `<ExpectVisited>` 가 보는 탐침 이력
         vector<RememberedValue> _listRemembered;   ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

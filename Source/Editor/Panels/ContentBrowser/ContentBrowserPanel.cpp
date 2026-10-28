@@ -36,8 +36,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
@@ -46,7 +46,7 @@
 
 namespace sw::editor
 {
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeAsset, "", "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchAsset, "", "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
 
     namespace
     {
@@ -182,13 +182,13 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeAsset` 을 참조하는 텍스트 에셋 파일 수입니다. 역색인이 마지막 변경을 반영하지 않았으면(스캔 중 · 아직 없음 · 패널이 가려짐) 낡은 값 대신 값을 내지 않습니다. */
+            /** @brief `-gv_editorWatchAsset` 을 참조하는 텍스트 에셋 파일 수입니다. 역색인이 마지막 변경을 반영하지 않았으면(스캔 중 · 아직 없음 · 패널이 가려짐) 낡은 값 대신 값을 내지 않습니다. */
             [[nodiscard]] static bool readReferenceCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
                 if ( pPanel == nullptr || pPanel->isReferenceIndexCurrent() == false )
                     return false;
-                outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorProbeAsset ) );
+                outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorWatchAsset ) );
                 return true;
             }
 
@@ -320,19 +320,19 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ContentBrowserPanel" );
     SW_EDITOR_PANEL( ContentBrowserPanel, ContentBrowserPanel::kPanelID, EditorPanelCategory::Core, 600 );
-    SW_AUTOMATION_PROBE( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
+    SW_AUTOMATION_WATCH( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
-    SW_AUTOMATION_PROBE( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
+    SW_AUTOMATION_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
                          "1 when the Content Browser reference index reflects the last Resource/ change the editor saw (built, no scan in flight)",
                          &ContentBrowserPanelInternal::readReferenceIndexReady );
     SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
-    SW_AUTOMATION_PROBE( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
+    SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );
-    SW_AUTOMATION_PROBE( editorThumbnailCacheCount, "Editor.ThumbnailCacheCount", "Texture thumbnails the Content Browser holds as ImGui textures",
+    SW_AUTOMATION_WATCH( editorThumbnailCacheCount, "Editor.ThumbnailCacheCount", "Texture thumbnails the Content Browser holds as ImGui textures",
                          &ContentBrowserPanelInternal::readThumbnailCacheCount );
-    SW_AUTOMATION_PROBE( editorThumbnailFallbackGlyphCount, "Editor.ThumbnailFallbackGlyphCount",
+    SW_AUTOMATION_WATCH( editorThumbnailFallbackGlyphCount, "Editor.ThumbnailFallbackGlyphCount",
                          "Content Browser tiles drawn last frame with the kind icon (kinds without a drawn thumbnail)", &ContentBrowserPanelInternal::readFallbackGlyphCount );
-    SW_AUTOMATION_PROBE( editorReferenceCount, "Editor.ReferenceCount", "Text assets that name gv_editorProbeAsset (the reference index)",
+    SW_AUTOMATION_WATCH( editorReferenceCount, "Editor.ReferenceCount", "Text assets that name gv_editorWatchAsset (the reference index)",
                          &ContentBrowserPanelInternal::readReferenceCount );
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );

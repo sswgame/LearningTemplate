@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Localization/LocText.h"
@@ -216,12 +216,12 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorNetPlayResentMessages, "Editor.NetPlayResentMessages",
+    SW_AUTOMATION_WATCH( editorNetPlayResentMessages, "Editor.NetPlayResentMessages",
                          "Reliable messages the multiplayer session's processes resent, as last reported (netplay.stats asks again)",
                          &MultiplayerConditionsTabInternal::readResentMessages );
-    SW_AUTOMATION_PROBE( editorNetPlayEmulationDroppedPackets, "Editor.NetPlayEmulationDroppedPackets",
+    SW_AUTOMATION_WATCH( editorNetPlayEmulationDroppedPackets, "Editor.NetPlayEmulationDroppedPackets",
                          "Packets the multiplayer session's line emulation dropped, as last reported", &MultiplayerConditionsTabInternal::readDroppedPackets );
-    SW_AUTOMATION_PROBE( editorNetPlayMeasuredLossPercent, "Editor.NetPlayMeasuredLossPercent",
+    SW_AUTOMATION_WATCH( editorNetPlayMeasuredLossPercent, "Editor.NetPlayMeasuredLossPercent",
                          "Highest packet loss (%) a connection of the multiplayer session measured, as last reported", &MultiplayerConditionsTabInternal::readMeasuredLoss );
     SW_DEV_COMMAND( NetPlayCommand, "netplay.command", "netplay.command <server|client<N>|clients|all> <command>",
                     "Send a console line (net.emulation, net.disconnect, dev commands) to processes of the multiplayer session", &MultiplayerConditionsTabInternal::runCommand );

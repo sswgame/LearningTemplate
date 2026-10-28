@@ -14,7 +14,7 @@
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
 
-    #include "Engine/Automation/Probe/AutomationProbe.h"
+    #include "Engine/Automation/Watch/AutomationWatch.h"
     #include "Engine/Common/EngineServices.h"
 #endif
 
@@ -87,13 +87,13 @@ namespace sw
 
     SW_DEV_COMMAND( ReloadModule, "module.reload", "module.reload <module>", "Queue a hot reload of a loaded module and the modules that depend on it (e.g. SWGame)",
                     &ModuleReloadDriverInternal::runReloadModule );
-    SW_AUTOMATION_PROBE( moduleReloadCount, "Module.ReloadCount", "Hot reload cascades that finished successfully since the process started",
+    SW_AUTOMATION_WATCH( moduleReloadCount, "Module.ReloadCount", "Hot reload cascades that finished successfully since the process started",
                          &ModuleReloadDriverInternal::readReloadCount );
-    SW_AUTOMATION_PROBE( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
+    SW_AUTOMATION_WATCH( moduleReloadPending, "Module.ReloadPending", "1 while a reload queued by module.reload has not finished (0 once it finished, or the graph broke)",
                          &ModuleReloadDriverInternal::readReloadPending );
-    SW_AUTOMATION_PROBE( moduleGraphBroken, "Module.GraphBroken", "1 when a failed reload blocked the module graph (restart needed), else 0",
+    SW_AUTOMATION_WATCH( moduleGraphBroken, "Module.GraphBroken", "1 when a failed reload blocked the module graph (restart needed), else 0",
                          &ModuleReloadDriverInternal::readGraphBroken );
-    SW_AUTOMATION_PROBE( moduleBindingsOk, "Module.BindingsOk", "1 when every loaded module is bound to the dependency images the manager holds now, else 0",
+    SW_AUTOMATION_WATCH( moduleBindingsOk, "Module.BindingsOk", "1 when every loaded module is bound to the dependency images the manager holds now, else 0",
                          &ModuleReloadDriverInternal::readBindingsOk );
 } // namespace sw
 #endif

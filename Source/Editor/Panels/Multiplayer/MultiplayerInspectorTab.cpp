@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -143,7 +143,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorNetPlayInspectorObjects, "Editor.NetPlayInspectorObjects",
+    SW_AUTOMATION_WATCH( editorNetPlayInspectorObjects, "Editor.NetPlayInspectorObjects",
                          "Objects the multiplayer Inspector tab last read from the server hierarchy (scene.tree over the debug channel)",
                          &MultiplayerInspectorTabInternal::readObjectCount );
     SW_DEV_COMMAND( NetPlayInspect, "netplay.inspect", "netplay.inspect [<command line>]",

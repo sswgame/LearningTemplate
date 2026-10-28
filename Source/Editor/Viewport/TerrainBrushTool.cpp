@@ -22,7 +22,7 @@
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
@@ -722,13 +722,13 @@ namespace sw::editor
         Internal::drawSettingsWindow( state, args );
     }
 
-    SW_AUTOMATION_PROBE( editorTerrainBrushStrokeCount, "Editor.TerrainBrushStrokeCount", "Terrain brush drags that finished and left an undo entry",
+    SW_AUTOMATION_WATCH( editorTerrainBrushStrokeCount, "Editor.TerrainBrushStrokeCount", "Terrain brush drags that finished and left an undo entry",
                          &TerrainBrushToolInternal::readStrokeCount );
-    SW_AUTOMATION_PROBE( editorTerrainBrushHit, "Editor.TerrainBrushHit", "1 when the mouse ray hit a terrain in the last terrain tool frame",
+    SW_AUTOMATION_WATCH( editorTerrainBrushHit, "Editor.TerrainBrushHit", "1 when the mouse ray hit a terrain in the last terrain tool frame",
                          &TerrainBrushToolInternal::readHit );
-    SW_AUTOMATION_PROBE( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
+    SW_AUTOMATION_WATCH( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
                          &TerrainBrushToolInternal::readToolActive );
-    SW_AUTOMATION_PROBE( editorTerrainResolution, "Editor.TerrainResolution", "Height samples per side of the terrain the resize control targets (0 when there is none)",
+    SW_AUTOMATION_WATCH( editorTerrainResolution, "Editor.TerrainResolution", "Height samples per side of the terrain the resize control targets (0 when there is none)",
                          &TerrainBrushToolInternal::readResolution );
     SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]",
                     "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolInternal::runBrush );

@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -91,12 +91,12 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "MeshPreviewPanel" );
     SW_EDITOR_PANEL( MeshPreviewPanel, MeshPreviewPanel::kPanelID, EditorPanelCategory::Tool, 1320 );
-    SW_AUTOMATION_PROBE( editorMeshPreviewVertexCount, "Editor.MeshPreviewVertexCount",
+    SW_AUTOMATION_WATCH( editorMeshPreviewVertexCount, "Editor.MeshPreviewVertexCount",
                          "LOD 0 vertices of the mesh in the Mesh Preview panel (fails while the panel is closed, has no preview scene or the mesh is not read yet)",
                          &MeshPreviewPanelInternal::readVertexCount );
-    SW_AUTOMATION_PROBE( editorMeshPreviewDrawnLOD, "Editor.MeshPreviewDrawnLOD", "LOD level the Mesh Preview panel mesh draws now (fails while the mesh is not read yet)",
+    SW_AUTOMATION_WATCH( editorMeshPreviewDrawnLOD, "Editor.MeshPreviewDrawnLOD", "LOD level the Mesh Preview panel mesh draws now (fails while the mesh is not read yet)",
                          &MeshPreviewPanelInternal::readDrawnLOD );
-    SW_AUTOMATION_PROBE( editorMeshPreviewSceneFrames, "Editor.MeshPreviewSceneFrames", "Frames the Mesh Preview panel asked the renderer to draw its preview scene",
+    SW_AUTOMATION_WATCH( editorMeshPreviewSceneFrames, "Editor.MeshPreviewSceneFrames", "Frames the Mesh Preview panel asked the renderer to draw its preview scene",
                          &MeshPreviewPanelInternal::readPreviewSceneFrames );
 
     MeshPreviewPanel::MeshPreviewPanel()

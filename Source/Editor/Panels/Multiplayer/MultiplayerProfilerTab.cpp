@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -135,10 +135,10 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( editorNetPlayProfilerSamples, "Editor.NetPlayProfilerSamples",
+    SW_AUTOMATION_WATCH( editorNetPlayProfilerSamples, "Editor.NetPlayProfilerSamples",
                          "Samples the multiplayer Profiler tab collected from net.stats reports (every process, netplay.profile collects too)",
                          &MultiplayerProfilerTabInternal::readSampleCount );
-    SW_AUTOMATION_PROBE( editorNetPlayProfilerPeakSentBytesPerSecond, "Editor.NetPlayProfilerPeakSentBytesPerSecond",
+    SW_AUTOMATION_WATCH( editorNetPlayProfilerPeakSentBytesPerSecond, "Editor.NetPlayProfilerPeakSentBytesPerSecond",
                          "Highest bytes per second one process of the multiplayer session sent, over the Profiler tab's history",
                          &MultiplayerProfilerTabInternal::readPeakSentBytes );
     SW_DEV_COMMAND( NetPlayProfile, "netplay.profile", "netplay.profile [<seconds>]",

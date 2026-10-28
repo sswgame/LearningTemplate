@@ -21,7 +21,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsFile.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
@@ -299,7 +299,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 기동
     // ------------------------------------------------------------------------------
-    hashed_string UserSettingsManager::detectScalabilityPreset( const HardwareProbeResult& probe ) const
+    hashed_string UserSettingsManager::detectScalabilityPreset( const HardwareDetectionResult& probe ) const
     {
         const vector<ScalabilityGroupDef>& listGroup = _schema.getScalabilityGroups();
         if ( listGroup.empty() )
@@ -313,7 +313,7 @@ namespace sw
         return listGroup.front()._autoDetectFallback;
     }
 
-    bool UserSettingsManager::applyAutoDetectedPreset( const HardwareProbeResult& probe )
+    bool UserSettingsManager::applyAutoDetectedPreset( const HardwareDetectionResult& probe )
     {
         const hashed_string presetName = detectScalabilityPreset( probe );
         if ( presetName.empty() )
@@ -1057,7 +1057,7 @@ namespace sw
         const CommandLineManager& commandLine   = *targets._pCommandLineManager;
         const bool                bAutomatedRun = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO );
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )
-            (void)applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
+            (void)applyAutoDetectedPreset( HardwareDetection::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
         reapplyAll();
         return SubsystemInitResult::Succeeded;
     }

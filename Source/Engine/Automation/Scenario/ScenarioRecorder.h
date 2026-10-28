@@ -22,7 +22,7 @@ namespace sw
      */
     struct ScenarioRecordCheckpoint
     {
-        string _probe{};
+        string _watch{};
         string _target{};
         string _key{};
         string _value{}; ///< 읽은 값(수는 끝의 0 을 정리한 글)

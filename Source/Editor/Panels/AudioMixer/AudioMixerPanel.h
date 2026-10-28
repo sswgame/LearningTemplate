@@ -47,7 +47,7 @@ namespace sw::editor
         static uint32 getMutedCount();
         /** @brief 솔로인 버스 수입니다(탐침 `Editor.AudioMixerSoloCount`). */
         static uint32 getSoloCount();
-        /** @brief 이름이 `gv_editorProbeBus` 인 버스의 사용자 볼륨입니다. 없으면 -1 입니다(탐침 `Editor.AudioMixerBusVolume`). */
+        /** @brief 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨입니다. 없으면 -1 입니다(탐침 `Editor.AudioMixerBusVolume`). */
         static float32 getProbedBusVolume();
 
     private:

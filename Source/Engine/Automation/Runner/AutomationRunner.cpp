@@ -16,7 +16,6 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
@@ -25,6 +24,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
@@ -640,7 +640,7 @@ namespace sw
     {
         bool                                    bMatched = false;
         string                                  message;
-        const bool                              bHasValue = _judge.compareProbe( *this, step, bMatched, message );
+        const bool                              bHasValue = _judge.compareWatch( *this, step, bMatched, message );
         const bool                              bReady    = bHasValue && bMatched;
         string                                  error;
         AutomationStepArgsUtil::WaitTimeoutArgs timeout;

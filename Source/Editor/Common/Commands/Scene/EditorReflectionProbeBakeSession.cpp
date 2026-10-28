@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Lighting/ReflectionProbeData.h"
 #include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -127,11 +127,11 @@ namespace sw::editor
     SW_EDITOR_SUBSYSTEM( EditorReflectionProbeBakeSession, 9110 );
     SW_EDITOR_FRAME_STEP( ReflectionProbeBake, "reflectionProbeBake", EditorFrameStepOrder::kCommands + 21, &EditorReflectionProbeBakeSessionInternal::runFrame );
 
-    SW_AUTOMATION_PROBE( editorReflectionProbeBakeCount, "Editor.ReflectionProbeBakeCount",
+    SW_AUTOMATION_WATCH( editorReflectionProbeBakeCount, "Editor.ReflectionProbeBakeCount",
                          "Times a lighting.bakeReflectionProbes run finished (or was canceled) in the active scene", &EditorReflectionProbeBakeSessionInternal::readBakeRunCount );
-    SW_AUTOMATION_PROBE( editorReflectionProbeBakeRunning, "Editor.ReflectionProbeBakeRunning", "1 while a reflection probe bake is running over editor frames",
+    SW_AUTOMATION_WATCH( editorReflectionProbeBakeRunning, "Editor.ReflectionProbeBakeRunning", "1 while a reflection probe bake is running over editor frames",
                          &EditorReflectionProbeBakeSessionInternal::readBakeRunning );
-    SW_AUTOMATION_PROBE( editorBakedReflectionProbeCount, "Editor.BakedReflectionProbeCount", "Reflection probes of the active scene with usable baked data",
+    SW_AUTOMATION_WATCH( editorBakedReflectionProbeCount, "Editor.BakedReflectionProbeCount", "Reflection probes of the active scene with usable baked data",
                          &EditorReflectionProbeBakeSessionInternal::readBakedProbeCount );
 
     EditorReflectionProbeBakeSession::EditorReflectionProbeBakeSession()

@@ -14,7 +14,6 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
@@ -24,6 +23,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
@@ -215,21 +215,21 @@ namespace sw
             }
 
             /** @brief 탐침 이름과 그 탐침이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
-            static bool validateProbeReference( const AutomationStep& step, string& outError )
+            static bool validateWatchReference( const AutomationStep& step, string& outError )
             {
-                const string* pProbe = step.requireAttribute( "probe", outError );
-                if ( pProbe == nullptr )
+                const string* pWatch = step.requireAttribute( "watch", outError );
+                if ( pWatch == nullptr )
                     return false;
-                const AutomationProbeRegistration* pRegistration = AutomationProbes::find( *pProbe );
+                const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( *pWatch );
                 if ( pRegistration == nullptr )
                 {
-                    outError = step.describe() + ": unknown probe '" + *pProbe + "' (is the game that registers it running?)";
+                    outError = step.describe() + ": unknown watch '" + *pWatch + "' (is the game that registers it running?)";
                     return false;
                 }
                 const bool bQueryOnlyAttribute = pRegistration->_pQueryFunction == nullptr && ( step.findAttribute( "target" ) != nullptr || step.findAttribute( "key" ) != nullptr );
                 if ( bQueryOnlyAttribute )
                 {
-                    outError = step.describe() + ": probe '" + *pProbe + "' takes no target or key";
+                    outError = step.describe() + ": watch '" + *pWatch + "' takes no target or key";
                     return false;
                 }
                 if ( pRegistration->_bNeedsTarget && step.requireAttribute( "target", outError ) == nullptr )
@@ -238,9 +238,9 @@ namespace sw
             }
 
             /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 탐침이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
-            static bool validateProbeComparison( const AutomationStep& step, string& outError )
+            static bool validateWatchComparison( const AutomationStep& step, string& outError )
             {
-                if ( validateProbeReference( step, outError ) == false )
+                if ( validateWatchReference( step, outError ) == false )
                     return false;
                 if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom" } ) == false )
                 {
@@ -251,19 +251,19 @@ namespace sw
                 if ( bTextRule )
                     return true;
                 AutomationStepArgsUtil::NumberComparison comparison;
-                return AutomationStepArgsUtil::parseNumberComparison( step, AutomationStepArgsUtil::kProbeNearTolerance, comparison, outError );
+                return AutomationStepArgsUtil::parseNumberComparison( step, AutomationStepArgsUtil::kWatchNearTolerance, comparison, outError );
             }
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
-                       validateProbeComparison( step, outError );
+                return step.hasOnlyAttributes( { "watch", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
+                       validateWatchComparison( step, outError );
             }
 
             /** @brief `WaitUntil` 입니다. 그 프레임에 혼자 있는지는 준비 함수(`AutomationRunnerEngineSteps::prepareWaitUntil`)가 시나리오 전체를 보고 확인합니다. */
             static bool validateWaitUntil( const AutomationStep& step, string& outError )
             {
-                if ( step.hasOnlyAttributes( { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
+                if ( step.hasOnlyAttributes( { "watch", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
                                                "timeoutSeconds" },
                                              outError ) == false )
                     return false;
@@ -273,14 +273,14 @@ namespace sw
                     return false;
                 }
                 AutomationStepArgsUtil::WaitTimeoutArgs timeout;
-                return AutomationStepArgsUtil::parseWaitTimeout( step, timeout, outError ) && validateProbeComparison( step, outError );
+                return AutomationStepArgsUtil::parseWaitTimeout( step, timeout, outError ) && validateWatchComparison( step, outError );
             }
 
             /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */
             static bool validateExpectVisited( const AutomationStep& step, string& outError )
             {
                 uint32 since = 0; // 적지 않으면 처음부터 본다
-                if ( step.hasOnlyAttributes( { "probe", "target", "key", "is", "sequence", "since" }, outError ) == false || validateProbeReference( step, outError ) == false )
+                if ( step.hasOnlyAttributes( { "watch", "target", "key", "is", "sequence", "since" }, outError ) == false || validateWatchReference( step, outError ) == false )
                     return false;
                 if ( countComparisons( step, { "is", "sequence" } ) == false )
                 {
@@ -293,14 +293,14 @@ namespace sw
             /** @brief `Record` 입니다. 탐침 값을 보고의 `records` 에 남깁니다. */
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
+                return step.hasOnlyAttributes( { "watch", "target", "key" }, outError ) && validateWatchReference( step, outError );
             }
 
             /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
             static bool validateRemember( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "probe", "target", "key", "as" }, outError ) && step.requireAttribute( "as", outError ) != nullptr &&
-                       validateProbeReference( step, outError );
+                return step.hasOnlyAttributes( { "watch", "target", "key", "as" }, outError ) && step.requireAttribute( "as", outError ) != nullptr &&
+                       validateWatchReference( step, outError );
             }
 
             static bool validateExpectLog( const AutomationStep& step, string& outError )
@@ -346,7 +346,7 @@ namespace sw
             /**
              * @brief `<Screenshot waitForSettle="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
-             *          그런 시나리오는 앞에서 `<WaitUntil probe="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
+             *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */
             [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
             {

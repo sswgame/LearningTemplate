@@ -5,7 +5,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -148,11 +148,11 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_PROBE( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", &VoxelPlayerComponentInternal::readWalkedDistance );
-    SW_AUTOMATION_PROBE( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", &VoxelPlayerComponentInternal::readHotbarSlot );
-    SW_AUTOMATION_PROBE( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", &VoxelPlayerComponentInternal::readBrokenCount );
-    SW_AUTOMATION_PROBE( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", &VoxelPlayerComponentInternal::readControlYaw );
-    SW_AUTOMATION_PROBE( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody",
+    SW_AUTOMATION_WATCH( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", &VoxelPlayerComponentInternal::readWalkedDistance );
+    SW_AUTOMATION_WATCH( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", &VoxelPlayerComponentInternal::readHotbarSlot );
+    SW_AUTOMATION_WATCH( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", &VoxelPlayerComponentInternal::readBrokenCount );
+    SW_AUTOMATION_WATCH( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", &VoxelPlayerComponentInternal::readControlYaw );
+    SW_AUTOMATION_WATCH( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody",
                          &VoxelPlayerComponentInternal::readControllerKind );
 } // namespace sw
 

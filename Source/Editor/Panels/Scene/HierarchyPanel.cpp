@@ -33,7 +33,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -50,7 +50,7 @@
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeHierarchyObject, "", "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchHierarchyObject, "", "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
 
     namespace
     {
@@ -160,12 +160,12 @@ namespace sw::editor
                 rowState._bClickedThisFrame = false;
             }
 
-            /** @brief `gv_editorProbeHierarchyObject` 오브젝트가 마지막 프레임에 그린 행에서 몇 번째인지입니다(0 부터). 그리지 않았거나 없으면 -1 입니다. */
+            /** @brief `gv_editorWatchHierarchyObject` 오브젝트가 마지막 프레임에 그린 행에서 몇 번째인지입니다(0 부터). 그리지 않았거나 없으면 -1 입니다. */
             [[nodiscard]] static bool readProbedRowIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue                    = -1.0;
                 GameObjectManager* pManager = editor::getActiveObjectManager();
-                const GameObject*  pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeHierarchyObject.c_str() ) ) : nullptr;
+                const GameObject*  pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchHierarchyObject.c_str() ) ) : nullptr;
                 if ( pObject == nullptr )
                     return true;
                 const vector<uint64>& listRow = getRowState()._listDrawnRow;
@@ -774,9 +774,9 @@ namespace sw::editor
                                &HierarchyPanelInternal::hasSingleTargetObject, Scene, &HierarchyPanelInternal::drawAddComponentSubmenu );
     SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", "Select All With", editoricon::kGameObject, "Scene", GameObject, 410, nullptr, nullptr,
                                &HierarchyPanelInternal::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
-    SW_AUTOMATION_PROBE( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorProbeHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
+    SW_AUTOMATION_WATCH( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorWatchHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
                          &HierarchyPanelInternal::readProbedRowIndex );
-    SW_AUTOMATION_PROBE( editorHierarchyRowRebuildCount, "Editor.HierarchyRowRebuildCount",
+    SW_AUTOMATION_WATCH( editorHierarchyRowRebuildCount, "Editor.HierarchyRowRebuildCount",
                          "Times the Hierarchy row model was rebuilt (roots and filter matches); rises only when the scene structure, tags or filter text change",
                          &HierarchyPanelInternal::readRowRebuildCount );
 

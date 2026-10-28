@@ -21,7 +21,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -362,10 +362,10 @@ namespace sw::editor
     SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", 2220, "Project Settings...", editoricon::kSettings, "Editor", "프로젝트 설정 창을 엽니다",
                        "Open project settings", nullptr, &ProjectSettingsPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Edit", None, 0 );
 
-    SW_AUTOMATION_PROBE( editorProjectSettingsPageCount, "Editor.ProjectSettingsPageCount", "Settings files the Project Settings window lists",
+    SW_AUTOMATION_WATCH( editorProjectSettingsPageCount, "Editor.ProjectSettingsPageCount", "Settings files the Project Settings window lists",
                          &ProjectSettingsPanelInternal::readPageCount );
-    SW_AUTOMATION_PROBE( editorProjectSettingsKeyCount, "Editor.ProjectSettingsKeyCount", "Keys of the picked settings file that differ from the defaults (in memory)",
+    SW_AUTOMATION_WATCH( editorProjectSettingsKeyCount, "Editor.ProjectSettingsKeyCount", "Keys of the picked settings file that differ from the defaults (in memory)",
                          &ProjectSettingsPanelInternal::readSelectedKeyCount );
-    SW_AUTOMATION_PROBE( editorProjectSettingsDirtyPageCount, "Editor.ProjectSettingsDirtyPageCount", "Settings files with edits that are not saved yet",
+    SW_AUTOMATION_WATCH( editorProjectSettingsDirtyPageCount, "Editor.ProjectSettingsDirtyPageCount", "Settings files with edits that are not saved yet",
                          &ProjectSettingsPanelInternal::readDirtyPageCount );
 } // namespace sw::editor

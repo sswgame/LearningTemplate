@@ -25,7 +25,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"
@@ -247,7 +247,7 @@ namespace sw::editor
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
-            /** @brief 패널이 지금 연 문서가 `gv_editorProbeAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
+            /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MaterialPanel* pPanel = findOpenPanel();
@@ -279,16 +279,16 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "MaterialPanel" );
     SW_EDITOR_PANEL( MaterialPanel, MaterialPanel::kPanelID, EditorPanelCategory::Tool, 1300 );
-    SW_AUTOMATION_PROBE( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
+    SW_AUTOMATION_WATCH( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
                          "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
                          &MaterialPanelInternal::readPreviewRedMinusBlue );
-    SW_AUTOMATION_PROBE( editorMaterialDocumentIsProbeAsset, "Editor.MaterialDocumentIsProbeAsset",
-                         "1 when the document open in the Material panel is gv_editorProbeAsset (tells a document switch that did not happen from a preview that did not follow)",
+    SW_AUTOMATION_WATCH( editorMaterialDocumentIsProbeAsset, "Editor.MaterialDocumentIsProbeAsset",
+                         "1 when the document open in the Material panel is gv_editorWatchAsset (tells a document switch that did not happen from a preview that did not follow)",
                          &MaterialPanelInternal::readDocumentIsProbeAsset );
-    SW_AUTOMATION_PROBE( editorMaterialSwitchPending, "Editor.MaterialSwitchPending",
+    SW_AUTOMATION_WATCH( editorMaterialSwitchPending, "Editor.MaterialSwitchPending",
                          "1 while the Material panel waits for the 'unsaved changes, switch anyway?' answer - the new document is not opened until then",
                          &MaterialPanelInternal::readSwitchPending );
-    SW_AUTOMATION_PROBE( editorMaterialPreviewSceneFrames, "Editor.MaterialPreviewSceneFrames",
+    SW_AUTOMATION_WATCH( editorMaterialPreviewSceneFrames, "Editor.MaterialPreviewSceneFrames",
                          "Frames the Material panel asked the renderer to draw its preview scene (0 until the panel shows a document)",
                          &MaterialPanelInternal::readPreviewSceneFrames );
 

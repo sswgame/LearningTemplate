@@ -5,10 +5,10 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevConsole.h"
 
@@ -36,11 +36,11 @@ namespace sw
         if ( findValidator( step._kind, pValidate ) == AutomationValidatorLookup::Unknown )
             return AutomationStepDependency::StepKind;
 
-        const string* pProbe = step.findAttribute( "probe" );
-        if ( pProbe != nullptr && AutomationProbes::find( *pProbe ) == nullptr )
+        const string* pWatch = step.findAttribute( "watch" );
+        if ( pWatch != nullptr && AutomationWatchs::find( *pWatch ) == nullptr )
         {
-            outName = *pProbe;
-            return AutomationStepDependency::Probe;
+            outName = *pWatch;
+            return AutomationStepDependency::Watch;
         }
 
         // `Variable` · `ExpectVariable` 의 검사 함수가 `name` 을 전역 변수 관리자에 묻는다. 엔진 서비스가 묶이지 않았으면 묻지 못하므로 모르는 것으로 센다.
@@ -106,8 +106,8 @@ namespace sw
                 return "resolved";
             case AutomationStepDependency::StepKind:
                 return "step kind not registered in this process";
-            case AutomationStepDependency::Probe:
-                return "probe not registered in this process";
+            case AutomationStepDependency::Watch:
+                return "watch not registered in this process";
             case AutomationStepDependency::GlobalVariable:
                 return "global variable not registered in this process";
             case AutomationStepDependency::DevCommand:

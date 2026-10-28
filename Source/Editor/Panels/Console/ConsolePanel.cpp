@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -204,7 +204,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( ConsolePanel, ConsolePanel::kPanelID, EditorPanelCategory::Core, 400 );
-    SW_AUTOMATION_PROBE( editorOutputLogVisibleRows, "Editor.OutputLogVisibleRows", "Rows the Output Log drew in the last frame (after its filters and Collapse)",
+    SW_AUTOMATION_WATCH( editorOutputLogVisibleRows, "Editor.OutputLogVisibleRows", "Rows the Output Log drew in the last frame (after its filters and Collapse)",
                          &ConsolePanelInternal::readVisibleRows );
     SW_DEV_COMMAND( LogRepeat, "log.repeat", "log.repeat <count> <warning|info> <text...>", "Write the same log line several times (Output Log Collapse checks)",
                     &ConsolePanelInternal::runLogRepeat );

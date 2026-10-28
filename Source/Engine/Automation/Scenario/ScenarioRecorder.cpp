@@ -7,8 +7,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -531,7 +531,7 @@ namespace sw
             for ( const ScenarioRecordCheckpoint& checkpoint : settings._listCheckpoint )
             {
                 writer.beginElement( "Expect" );
-                writer.attribute( "probe", checkpoint._probe );
+                writer.attribute( "watch", checkpoint._watch );
                 if ( checkpoint._target.empty() == false )
                     writer.attribute( "target", checkpoint._target );
                 if ( checkpoint._key.empty() == false )
@@ -561,20 +561,20 @@ namespace sw
         outCheckpoint         = ScenarioRecordCheckpoint{};
         const size_t firstAt  = spec.find( '@' );
         const size_t secondAt = firstAt == string_view::npos ? string_view::npos : spec.find( '@', firstAt + 1 );
-        outCheckpoint._probe  = string( StringUtil::trim( spec.substr( 0, firstAt ) ) );
+        outCheckpoint._watch  = string( StringUtil::trim( spec.substr( 0, firstAt ) ) );
         if ( firstAt != string_view::npos )
             outCheckpoint._target = string( StringUtil::trim( spec.substr( firstAt + 1, secondAt == string_view::npos ? string_view::npos : secondAt - firstAt - 1 ) ) );
         if ( secondAt != string_view::npos )
             outCheckpoint._key = string( StringUtil::trim( spec.substr( secondAt + 1 ) ) );
-        const AutomationProbeRegistration* pRegistration = AutomationProbes::find( outCheckpoint._probe );
+        const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( outCheckpoint._watch );
         if ( pRegistration == nullptr )
         {
-            outError = "unknown probe '" + outCheckpoint._probe + "'";
+            outError = "unknown watch '" + outCheckpoint._watch + "'";
             return false;
         }
-        const AutomationProbeQuery query = AutomationProbeQuery::make( pManager, outCheckpoint._target, outCheckpoint._key );
-        AutomationProbeValue       value{};
-        if ( AutomationProbes::read( *pRegistration, query, value ) == false )
+        const AutomationWatchQuery query = AutomationWatchQuery::make( pManager, outCheckpoint._target, outCheckpoint._key );
+        AutomationWatchValue       value{};
+        if ( AutomationWatchs::read( *pRegistration, query, value ) == false )
         {
             outError = string( spec ) + " has no value" + ( value._bText ? " (" + value._text + ")" : string() );
             return false;
