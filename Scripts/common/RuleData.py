@@ -12,7 +12,7 @@
 - `kKindInteger` : 표. 키 → 정수
 - `kKindTextList`: 배열. 빈 글과 같은 값 두 번은 오류
 
-스키마에 없는 키, 종류가 다른 값, `requiredKeys` 에 든 키가 없는 것, 읽을 수 없는 파일은 `RuleDataError` 다. 게이트(`LintGate`)는 이것을
+스키마에 없는 키, 종류가 다른 값, `requiredKeys` 에 든 키가 없는 것, 읽을 수 없는 파일은 `RuleDataError` 다. 부르는 쪽은 이것을
 "검사가 서지 않는다"(종료 2)로 바꾼다. 결과의 표는 `dict`(파일 순서), 배열은 `tuple` 이고 부를 때마다 새 사본이다 — 읽은 원문은 파일마다
 한 번만 읽어 둔다(`lru_cache`).
 
@@ -39,7 +39,7 @@ kKindInteger = "integer"
 kKindTextList = "textList"
 _kTableKinds = (kKindReason, kKindText, kKindInteger)
 
-#: 게이트 예외 표의 키(`LintGate.mapExemption` 이 이것을 읽는다).
+#: 예외 표의 키.
 kExemptionKey = "exemption"
 
 

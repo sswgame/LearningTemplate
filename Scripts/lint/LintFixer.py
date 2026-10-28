@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-픽서 하나 = 클래스 하나. `LintGate` 의 형제다.
-
-픽서들은 껍데기가 같다 — 대상 파일 고르기(명시 경로 > `--all` > git 수정분 > 전부), `--all`/`--check` 인자,
-동시 처리, "위반이 있고 --check 면 1" 종료 규칙. 다른 것은 **설명 문자열과 변환뿐**이므로 껍데기는 여기 한 번만 적는다.
-
-픽서가 쓰는 것은 `listPass` 하나다 — 텍스트를 받아 `(새 텍스트, 바뀌었는가)` 를 돌려주는 변환과,
-그 변환이 잡은 것을 검사 모드와 수정 모드에서 각각 뭐라고 부를지. 파일 읽기·쓰기는 기반이 맡는다
-(줄끝을 보존하는 `newline=""` 로 통일했다 — 포맷터가 줄끝을 바꾸면 안 된다).
-
-대상 파일 고르기는 `addFileArguments` / `selectFixerTargetFiles` 로 따로 내놓는다. 픽서가 아닌
-`FormatClangFormat` 도 같은 규칙으로 파일을 고르기 때문이다.
+픽서가 나눠 쓰는 대상 파일 고르기 — 명시 경로(`--files`) > `--all` > git 수정분 > 전부, 그리고 `--all` · `--files` 인자.
+`FormatIncludeOrder` 와 `FormatClangFormat`(셰이더는 `FixerFileKind`)가 같은 규칙으로 파일을 고른다.
 """
 
 from __future__ import annotations
@@ -20,21 +11,15 @@ import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
-from typing import Callable, Sequence
 
 
 from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
 from common.Host import getModifiedCppFiles  # noqa: E402
-from common.Parallel import flatMapConcurrent  # noqa: E402
-from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
-from common.ExitCode import ExitCode  # noqa: E402
-from lint.SourceScan import FileFindings, SourceFile, fixedTextOf  # noqa: E402
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
-    """대상 파일을 고르는 인자 — 세 스크립트가 같은 철자를 쓴다."""
+    """대상 파일을 고르는 인자 — 픽서들이 같은 철자를 쓴다."""
     parser.add_argument(
         "--files",
         nargs="*",
@@ -123,176 +108,3 @@ def selectFileKindTargetsInternal(args: argparse.Namespace, repositoryRoot: Path
     if not args.all:
         print(f"[{tag}] 변경된 파일이 없어 전체 {len(listAll)}개 파일 대상 실행.", file=sys.stderr)
     return listAll
-
-
-@dataclass(frozen=True)
-class FixPass:
-    """
-    텍스트 변환 한 가지.
-
-    - `transform` : `(텍스트) -> (새 텍스트, 바뀌었는가)`
-    - `inspect`   : `transform` 대신 쓰는 형식 — 게이트의 `checkSourceFile` 이 부르는 같은 판정 함수(`SourceFile -> FileFindings`). 고친 글은
-                    `FileFindings.fixedText` 이고, 줄 끝 · BOM 은 `SourceFile.restore` 가 지킨다(`SourceScan.fixedTextOf`). 둘 중 하나만 적는다
-    - `problem`   : `--check` 에서 이 변환이 걸렸을 때 할 말 (무엇이 어긋났는가)
-    - `done`      : 실제로 고쳤을 때 할 말
-    - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
-    - `fixedSample`: `badSample` 을 고친 **글자 그대로의** 결과 — 게이트 `selfTestCases` 의 `expectedViolation` 과 같은 축이다.
-      "바뀌었는가" 만 보면 엉뚱하게 고쳐도(글을 지우거나 다른 자리를 고쳐도) 살아 있는 것으로 보인다.
-    - `goodSample`: 이 변환이 **건드리면 안 되는** 조각
-    - `bNeedsPath`: 참이면 변환이 `(텍스트, 저장소 기준 경로)` 를 받는다(include 순서처럼 파일 자리로 판정하는 규칙)
-    - `samplePath`: 그때 조각 둘을 돌릴 가상의 저장소 기준 경로
-
-    픽서가 변환을 여럿 들면 **선언 순서대로** 이어 돌린다. 순서가 의미를 갖는 경우가 있어
-    (`FormatBranchBraces` 는 if 를 먼저 벗겨야 case 의 문장 수가 부풀지 않는다) 목록 순서가
-    곧 계약이다.
-
-    **조각 둘은 변환과 같은 자리에 있다.** 게이트가 `selfTestCases` 를 들고 다니는 것과 같은 이유다 —
-    규칙과 그 증거가 떨어져 있으면 언제든 어긋난다.
-    `goodSample` 이 특히 중요하다: 픽서는 **파일을 고쳐 쓰므로**, 잡아선 안 될 것을 잡으면
-    게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
-    """
-
-    transform: Callable[..., tuple[str, bool]] | None = None
-    problem: str = ""
-    done: str = ""
-    badSample: str = ""
-    fixedSample: str = ""
-    goodSample: str = ""
-    bNeedsPath: bool = False
-    samplePath: str = ""
-    inspect: Callable[[SourceFile], FileFindings] | None = None
-
-    def __post_init__(self) -> None:
-        """조각 셋은 필수다 — 비었거나 고친 결과가 원래 조각과 같으면 픽서를 만들 때 `TypeError` 로 멈춘다(돌릴 증거가 없다)."""
-        if (self.transform is None) == (self.inspect is None):
-            raise TypeError(f"FixPass '{self.done}': `transform` 과 `inspect` 중 하나만 적습니다")
-        if not self.problem or not self.done:
-            raise TypeError(f"FixPass '{self.done}': `problem` 과 `done` 은 필수입니다")
-        for fieldName in ("badSample", "fixedSample", "goodSample"):
-            if not getattr(self, fieldName):
-                raise TypeError(f"FixPass '{self.done}': `{fieldName}` 이 비었습니다 — 조각 셋(badSample · fixedSample · goodSample)은 필수입니다")
-        if self.fixedSample == self.badSample:
-            raise TypeError(f"FixPass '{self.done}': `fixedSample` 이 `badSample` 과 같습니다 — 고친 결과를 적습니다")
-
-    def apply(self, text: str, relativePath: str) -> tuple[str, bool]:
-        """변환 한 번 — `inspect` 면 게이트와 같은 판정 함수의 고친 글을, 아니면 `transform` 을(경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다)."""
-        if self.inspect is not None:
-            return fixedTextOf(self.inspect, text, relativePath)
-        return self.transform(text, relativePath) if self.bNeedsPath else self.transform(text)
-
-
-class LintFixer:
-    """
-    파일을 고쳐 쓰는 린트 하나. 상속해서 `listPass` 만 적으면 나머지는 기반이 준다.
-
-    - `name`       : 클래스 이름에서 `Fixer` 를 뗀 것. CLI 이름이다.
-    - `tag`        : 메시지 앞의 `[태그]`. 비우면 `name`.
-    - `description`: `--help` 한 줄.
-    - `listPass`   : 이 픽서가 하는 변환들 (선언 순서대로 돈다).
-    - `listScopeRelDir`: 비어 있지 않으면 이 저장소 기준 폴더 밑의 파일만 고친다(같은 규칙의 게이트가 보는 범위와 맞춘다).
-    - `fileKind`   : C++ 가 아닌 파일을 고치는 픽서의 대상(`FixerFileKind`). 없으면 C++ 소스.
-    """
-
-    name: str = ""
-    tag: str = ""
-    description: str = ""
-    listPass: tuple[FixPass, ...] = ()
-    listScopeRelDir: tuple[str, ...] = ()
-    fileKind: FixerFileKind | None = None
-
-    def __init_subclass__(cls, **kwargs: object) -> None:
-        super().__init_subclass__(**kwargs)
-        if not cls.name:
-            cls.name = cls.__name__.removesuffix("Fixer")
-        if not cls.tag:
-            cls.tag = cls.name
-
-    # --- 파일 하나 ---------------------------------------------------------------
-
-    def processFile(self, filePath: Path, checkOnly: bool = False) -> list[str]:
-        """
-        파일 하나를 검사하거나 고칩니다. 걸린 것이 있으면 메시지 목록을 돌려줍니다.
-
-        줄끝은 건드리지 않는다(`newline=""`) — 포맷터가 CRLF 를 LF 로 바꿔 놓으면 그 파일 전체가
-        바뀐 것으로 보이고, 진짜 변경이 그 안에 묻힌다.
-        """
-        try:
-            relativePath = filePath.resolve().relative_to(getProjectRoot().resolve()).as_posix()
-        except ValueError:
-            relativePath = filePath.as_posix()
-        if self.listScopeRelDir and not any(relativePath.startswith(scope + "/") for scope in self.listScopeRelDir):
-            return []
-
-        try:
-            with filePath.open("r", encoding="utf-8", errors="strict", newline="") as file:
-                content = file.read()
-        except UnicodeDecodeError as error:
-            # 고쳐 쓰면 UTF-8 이 아닌 바이트가 사라진다 — 읽지 못한 파일은 손대지 않고 알린다(이 저장소의 소스는 UTF-8 이다).
-            return [f"[{self.tag}] {filePath}: UTF-8 이 아니라 건너뜁니다({error.reason}, 바이트 {error.start}) — 파일을 UTF-8 로 저장하십시오"]
-        except OSError as error:
-            return [f"[{self.tag}] {filePath} 읽기 실패: {error}"]
-
-        formatted = content
-        listHit: list[FixPass] = []
-        for fixPass in self.listPass:
-            formatted, bChanged = fixPass.apply(formatted, relativePath)
-            if bChanged:
-                listHit.append(fixPass)
-
-        if not listHit:
-            return []
-
-        if checkOnly:
-            return [f"[{self.tag}] {filePath}: {hit.problem}" for hit in listHit]
-
-        try:
-            with filePath.open("w", encoding="utf-8", newline="") as file:
-                file.write(formatted)
-        except OSError as error:
-            return [f"[{self.tag}] {filePath} 쓰기 실패: {error}"]
-
-        return [f"[{self.tag}] {filePath}: {hit.done}" for hit in listHit]
-
-    def processFiles(
-        self,
-        files: Sequence[Path],
-        checkOnly: bool = False,
-        maxWorkers: int | None = None,
-    ) -> list[str]:
-        """여러 파일을 동시에 처리합니다 (워커 수 정책은 `common.Parallel`)."""
-        return flatMapConcurrent(
-            lambda path: self.processFile(path, checkOnly), list(files), workerCount=maxWorkers
-        )
-
-    # --- 진입점 ------------------------------------------------------------------
-
-    @classmethod
-    def run(cls, argv: Sequence[str] | None = None) -> int:
-        """각 픽서 모듈은 `main = XxxFixer.run` 한 줄로 이것을 내보냅니다."""
-        return cls().main(argv)
-
-    def main(self, argv: Sequence[str] | None = None) -> int:
-        parser = argparse.ArgumentParser(description=self.description)
-        addFileArguments(parser)
-        parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
-        args = parser.parse_args(argv)
-
-        listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag, self.fileKind)
-        if not listFile:
-            print(f"[{self.tag}] 대상 파일이 없습니다.", file=sys.stderr)
-            return ExitCode.Passed
-
-        listMessage = self.processFiles(listFile, checkOnly=args.check)
-        for message in listMessage:
-            print(message)
-
-        return ExitCode.Violation if (args.check and listMessage) else ExitCode.Passed
-
-
-def findFixerClass(module: ModuleType) -> type[LintFixer] | None:
-    """모듈 안에 정의된 픽서 클래스를 찾습니다 (한 파일에 픽서 하나). `findGateClass` 의 짝입니다."""
-    for value in vars(module).values():
-        if isinstance(value, type) and issubclass(value, LintFixer) and value is not LintFixer:
-            if value.__module__ == module.__name__:
-                return value
-    return None

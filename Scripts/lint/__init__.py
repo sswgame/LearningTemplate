@@ -1,1 +1,1 @@
-"""린트 틀(LintGate · LintFixer · LintReport · LintCatalog · SourceScan · LayerRules · StagedScope · conventions)과 린트 명령(gate · fixer · report · selftest, 훅 · 묶음 실행)입니다."""
+"""include 순서 게이트(gate) · 픽서(fixer) · 커밋 훅(PreCommitLint)입니다."""

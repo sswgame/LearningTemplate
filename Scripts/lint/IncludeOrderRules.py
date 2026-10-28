@@ -1,10 +1,7 @@
 """
 Scripts/lint/IncludeOrderRules.py
 
-include 순서 규칙 — `computeIncludeOrderInternal`(판정)과 `fixText`(고침). 게이트 `CheckIncludeOrder` 와 픽서 `FormatIncludeOrder` 가 같이 읽는다.
-
-판정을 린트 틀 층(층 1)에 두는 까닭: 게이트 · 픽서 · 보고서(층 2)가 서로의 모듈을 import 하면 명령끼리 의존한다.
-(`docs/decisions/5-2_Build.md`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
+include 순서 규칙 — `inspectText`(판정 + 고친 글)와 `fixText`(고침). 게이트 `CheckIncludeOrder` 와 픽서 `FormatIncludeOrder` 가 같이 읽는다.
 """
 
 from __future__ import annotations
@@ -15,7 +12,6 @@ from pathlib import Path
 from common.Constants import kCppSourceExtensions, kLintTargetBaseDirNames
 from common.Paths import getProjectRoot
 from common.Search import collectRepositoryFiles
-from lint.SourceScan import FileFindings, SourceFile, fixedTextOf
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -290,30 +286,27 @@ def computeIncludeOrderInternal(text: str, relativeFilePath: str,
 _s_mapHeaderLookup: dict[Path, tuple[dict[str, str], dict[str, str], dict[str, str]]] = {}
 
 
-def inspectSource(source: SourceFile, headerMaps: tuple[dict[str, str], dict[str, str], dict[str, str]]) -> FileFindings:
+def inspectText(rawText: str, relative: str, headerMaps: tuple[dict[str, str], dict[str, str], dict[str, str]]) -> tuple[list[str], str | None]:
     """
-    파일 하나의 판정과 고친 글 — 게이트 `CheckIncludeOrder.checkSourceFile` 과 픽서(`fixText`)가 **같은 이 함수**를 부른다.
-    BOM 을 뗀 글(`bodyText`)로 판정하고, 고친 글은 원본의 BOM · 줄 끝으로 되돌린다(`restore`). 줄 끝만 섞인 파일은 위반이 아니지만
-    고친 글은 줄 끝을 하나로 맞춘다(전부터 픽서가 그랬다).
+    파일 하나의 판정과 고친 글 — 게이트 `CheckIncludeOrder` 와 픽서(`fixText`)가 **같은 이 함수**를 부른다. `rawText` 는 줄 끝을 건드리지 않고 읽은 원본이다.
+    BOM 을 뗀 글로 판정하고, 고친 글은 원본의 BOM · 줄 끝으로 되돌린다. 줄 끝만 섞인 파일은 위반이 아니지만 고친 글은 줄 끝을 하나로 맞춘다.
+    돌려주는 것은 `(위반 목록, 고친 글 — 고칠 것이 없으면 None)`.
     """
-    if source.decodeError:
-        return FileFindings(listViolation=[f"[CheckIncludeOrder] 읽기 실패: {source.relative}: {source.decodeError}"])
-    newBody, listViolation = computeIncludeOrderInternal(source.bodyText, source.relative, *headerMaps)
-    if newBody != source.bodyText:
-        listViolation.append(f"{source.relative}: Include 순서/중복 문제가 발견되었습니다. "
-                             f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {source.relative}` 로 고친다)")
-    restored = source.restore(newBody)
-    return FileFindings(listViolation=listViolation, fixedText=restored if restored != source.rawText else None)
+    text = rawText.replace("\r\n", "\n").replace("\r", "\n")
+    lineEnding = "\r\n" if "\r\n" in rawText else "\n"
+    body = text.removeprefix("\ufeff")
+    newBody, listViolation = computeIncludeOrderInternal(body, relative, *headerMaps)
+    if newBody != body:
+        listViolation.append(f"{relative}: Include 순서/중복 문제가 발견되었습니다. "
+                             f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {relative}` 로 고친다)")
+    restored = ("\ufeff" if text.startswith("\ufeff") else "") + newBody.replace("\n", lineEnding)
+    return listViolation, (restored if restored != rawText else None)
 
 
 def fixText(text: str, relativeFilePath: str) -> tuple[str, bool]:
-    """픽서 변환(`FixPass.transform`, 경로 필요) — 게이트와 같은 `inspectSource`. 헤더 조회표는 이 저장소의 것이다."""
+    """픽서 변환 — 게이트와 같은 `inspectText`. 헤더 조회표는 이 저장소의 것이다. 돌려주는 것은 `(고친 글, 바뀌었는가)`."""
     repositoryRoot = getProjectRoot().resolve()
     if repositoryRoot not in _s_mapHeaderLookup:
         _s_mapHeaderLookup[repositoryRoot] = buildHeaderLookupMap(repositoryRoot)
-    return fixedTextOf(lambda source: inspectSource(source, _s_mapHeaderLookup[repositoryRoot]), text, relativeFilePath)
-
-
-#: 픽서의 조각 — 게이트의 첫 자가 테스트 조각(Engine 이 Core 보다 앞)과 그것을 고친 결과.
-kFixBadSample = '#include "pch.h"\n\n#include "Engine/Common/EngineServices.h"\n#include "Core/File/FileUtil.h"\n'
-kFixGoodSample = '#include "pch.h"\n\n#include "Core/File/FileUtil.h"\n\n#include "Engine/Common/EngineServices.h"\n'
+    _, fixedText = inspectText(text, relativeFilePath, _s_mapHeaderLookup[repositoryRoot])
+    return (text, False) if fixedText is None else (fixedText, True)
