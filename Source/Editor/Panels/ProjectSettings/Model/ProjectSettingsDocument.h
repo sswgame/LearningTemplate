@@ -66,6 +66,11 @@ namespace sw::editor
         [[nodiscard]] uint32 countNonDefaultKeys() const;
         /** @brief 파일에 쓸 글 — 기본값과 다른 키만 가진 JSON(들여쓰기 4)이고, 요소 모드는 그 요소의 XML 입니다. 열려 있지 않으면 빈 글입니다. */
         [[nodiscard]] string makeDifferenceText() const;
+        /**
+         * @brief `makeDifferenceText` 와 같은 글을 만들되 못 만들면 false 와 이유를 돌려줍니다. 파일에 쓰는 길은 이것만 씁니다 — 빈 글을 "성공한 빈 설정" 으로 쓰면
+         *        설정 파일이 비워집니다.
+         */
+        [[nodiscard]] bool tryMakeDifferenceText( string& outText, string& outError ) const;
         /** @brief 요소 모드(XML 파일 안의 설정 요소 하나)면 true 입니다. */
         [[nodiscard]] bool isElementMode() const { return _elementName.empty() == false; }
         /** @brief 타입이 바탕 층(`REFLECT( Meta = "ConfigBaseLayer" )` — 값이 파일에만 있다)이면 true 입니다. 그때 저장은 모든 키를 쓰고 되돌리기는 파일 값입니다. */
@@ -83,8 +88,8 @@ namespace sw::editor
     private:
         /** @brief 파일 글 @p fileText 를 @p pInstance 에 엄격하게 읽습니다(JSON 은 파일 전체, 요소 모드는 그 요소). 요소가 없으면 `Missing` 입니다. */
         [[nodiscard]] ConfigReadResult readInto( void* pInstance, string_view fileText ) const;
-        [[nodiscard]] string           makeDifferenceJSON() const;
-        [[nodiscard]] string           makeDifferenceElement() const;
+        [[nodiscard]] bool             makeDifferenceJSON( string& outText, string& outError ) const;
+        [[nodiscard]] bool             makeDifferenceElement( string& outText, string& outError ) const;
         /** @brief 요소 모드의 저장 — 파일에서 그 요소의 글만 @p elementText 로 바꿔 씁니다. */
         [[nodiscard]] bool saveElement( const string& elementText ) const;
 

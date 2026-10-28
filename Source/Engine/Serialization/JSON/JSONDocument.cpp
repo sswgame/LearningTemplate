@@ -581,6 +581,12 @@ namespace sw
     {
         if ( absPath.empty() )
             return false;
+        // 루트가 없는 문서(읽기에 실패해 비워졌거나 아직 아무것도 안 만든)는 "null" 이 된다 - 그대로 쓰면 있던 파일이 "null" 로 바뀐다.
+        if ( getRoot().isNull() )
+        {
+            SW_LOG_ERROR( "JSON document has no root - %# was not written", string{ absPath }.c_str() );
+            return false;
+        }
         return FileUtil::writeTextFile( absPath, dump( indent ) );
     }
 

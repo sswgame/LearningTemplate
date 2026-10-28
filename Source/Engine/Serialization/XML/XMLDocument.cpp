@@ -676,7 +676,14 @@ namespace sw
     {
         if ( absPath.empty() )
             return false;
-        return FileUtil::writeTextFile( absPath, saveToString() );
+        // 루트가 없는 문서는 빈 글이 된다 - 그대로 쓰면 있던 파일이 비워진다.
+        const string text = saveToString();
+        if ( text.empty() )
+        {
+            SW_LOG_ERROR( "XML document is empty - %# was not written", string{ absPath }.c_str() );
+            return false;
+        }
+        return FileUtil::writeTextFile( absPath, text );
     }
 
     string XMLDocument::escapeString( string_view text )

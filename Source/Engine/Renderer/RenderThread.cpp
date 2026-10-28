@@ -7,6 +7,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
@@ -222,7 +223,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
         {
-            SW_LOG_WARNING( "submit() with no bound device — packet dropped." );
+            SW_LOG_WARNING_ONCE( "submit() with no bound device — packet dropped." );
             return;
         }
 
@@ -421,7 +422,7 @@ namespace sw
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
         if ( bOffscreen && pFrameStream == nullptr )
         {
-            SW_LOG_ERROR( "getFrameStreamContext() is null; skipping offscreen packet" );
+            SW_LOG_ERROR_ONCE( "getFrameStreamContext() is null; skipping offscreen packet" );
             return false;
         }
 

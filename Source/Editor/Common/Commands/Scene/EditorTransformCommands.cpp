@@ -212,8 +212,8 @@ namespace sw::editor
         if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
             return false;
 
-        const string xmlData = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
-        return FileUtil::writeTextFile( fullPath, xmlData );
+        // 저장 입구(`saveFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
+        return XMLSerializer::saveFile( fullPath, pComp, *pComp->getTypeInfo() );
     }
 
     bool EditorTransformCommands::loadComponentPreset( Component* pComp, string_view presetFilePath )

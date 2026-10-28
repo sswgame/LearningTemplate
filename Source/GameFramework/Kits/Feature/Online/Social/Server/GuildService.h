@@ -153,9 +153,10 @@ namespace sw
         void addExperience( uint64 guildID, int64 amount, UnixMilliseconds nowMs );
         /**
          * @brief 레벨 테이블을 정합니다. @p listLevelExperience 의 i 번째 값은 레벨 i + 2 가 되는 누적 경험치이며 1 이상이고 늘어나야 합니다.
+         * @param outError 규칙에 맞지 않을 때 어느 값이 왜 틀렸는지 적습니다.
          * @return 규칙에 맞지 않으면 false 이고 테이블을 바꾸지 않습니다. 비어 있으면 모든 길드가 레벨 1 입니다.
          */
-        [[nodiscard]] bool setLevelTable( const vector<int64>& listLevelExperience );
+        [[nodiscard]] bool setLevelTable( const vector<int64>& listLevelExperience, string& outError );
         /** @brief 경험치에 맞는 레벨입니다(1 부터). */
         int32 computeLevel( int64 experience ) const;
         /** @brief 이벤트를 받을 델리게이트입니다. 게임 조립 단계가 지정하며 비어 있으면 이벤트를 버립니다. */

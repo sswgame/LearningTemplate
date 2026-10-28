@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
@@ -41,7 +42,7 @@ namespace sw
         if ( list->isValid() == false )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
+                SW_LOG_ERROR_ONCE( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
             return nullptr;
         }
         return list;
@@ -301,8 +302,8 @@ namespace sw
             waitedSeconds += 2;
             if ( isDeviceRemoved() )
             {
-                SW_LOG_ERROR( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
-                              static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                SW_LOG_ERROR_ONCE( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
                 bReached = false;
                 break;
             }
@@ -334,7 +335,7 @@ namespace sw
         }
         if ( FAILED( signalHr ) )
         {
-            SW_LOG_ERROR( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
+            SW_LOG_ERROR_ONCE( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
             return;
         }
         _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
@@ -375,10 +376,10 @@ namespace sw
         if ( FAILED( allocHr ) )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
-                              static_cast<uint32>( allocHr ),
-                              static_cast<uint32>( _device->GetDeviceRemovedReason() ),
-                              static_cast<uint32>( _cmdListEntryCreated ) );
+                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
+                                   static_cast<uint32>( allocHr ),
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                   static_cast<uint32>( _cmdListEntryCreated ) );
             flushDebugMessages( "acquireCommandListEntry" );
             entry = D3D12CommandListEntry{};
             return entry;
@@ -388,10 +389,10 @@ namespace sw
         if ( FAILED( listHr ) )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
-                              static_cast<uint32>( listHr ),
-                              static_cast<uint32>( _device->GetDeviceRemovedReason() ),
-                              static_cast<uint32>( _cmdListEntryCreated ) );
+                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
+                                   static_cast<uint32>( listHr ),
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                   static_cast<uint32>( _cmdListEntryCreated ) );
             entry = D3D12CommandListEntry{};
             return entry;
         }
@@ -675,8 +676,8 @@ namespace sw
                 if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 {
                     // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
-                    SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
-                                  static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
+                    SW_LOG_ERROR_ONCE( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
+                                       static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
                 }
                 flushDebugMessages( "after Present" );
             }
