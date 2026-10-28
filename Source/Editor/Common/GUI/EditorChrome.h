@@ -177,6 +177,8 @@ namespace sw::editor
         static void setNextItemWidthColumns( float32 columns );
         /** @brief 숫자 "0" 폭의 @p columns 배인 폭입니다(`setNextItemWidthColumns` 와 같은 값 — 줄바꿈 판단에 쓴다). */
         [[nodiscard]] static float32 measureColumns( float32 columns );
+        /** @brief 단추(`ImGui::SmallButton` · `ImGui::Button` 은 좌우 안쪽 여백이 같다)의 폭입니다(글자 + 좌우 안쪽 여백) — `sameLineIfFits` 의 인자로 쓴다. 수를 미리 모르는 단추 줄(선택지마다 하나)이 창 밖으로 나가지 않게 한다. */
+        [[nodiscard]] static float32 measureSmallButton( const utf8* pLabel );
         /**
          * @brief 다음 항목(폭 @p itemWidth)이 이 줄 오른쪽 끝 안에 들어가면 같은 줄에 이어 놓고, 아니면 줄을 바꿉니다.
          * @details 도구 줄이 창보다 길면 오른쪽 항목이 창 밖에 놓여 누를 수 없다(좁은 창 · 넓은 도크 · 기본 배치 변경). 사람도 시나리오도 닿을 수 있어야 한다.

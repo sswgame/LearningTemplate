@@ -269,16 +269,16 @@ namespace sw::editor
         ImGui::SameLine();
         (void)_inputMapPath.drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
         if ( ImGui::Button( "Reload" ) )
             reloadFromFile();
         EditorSelfTestMarks::note( "inputMap.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReloadTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All to Default" ) );
         if ( ImGui::Button( "Revert All to Default" ) )
         {
             _inputMap.resetAllBindingsToDefault();

@@ -423,9 +423,9 @@ namespace sw::editor
         {
             for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
             {
-                ImGui::SameLine();
                 fixed_string<constant::kMaxBuffer64> label;
                 formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) ); // 선택지 수는 노드가 정한다 — 좁은 패널에서 뒤 단추가 창 밖에 놓이지 않게 줄을 바꾼다
                 if ( ImGui::SmallButton( label.c_str() ) )
                 {
                     DialogueStepInput input{};
@@ -437,7 +437,7 @@ namespace sw::editor
         }
         if ( pInfo->_flow == DialogueNodeFlow::Condition )
         {
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "True" ) );
             if ( ImGui::SmallButton( "True" ) )
             {
                 DialogueStepInput input{};
@@ -445,7 +445,7 @@ namespace sw::editor
                 previewStep( input );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewTrueTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "False" ) );
             if ( ImGui::SmallButton( "False" ) )
                 previewStep( DialogueStepInput{} );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewFalseTip" ) );
