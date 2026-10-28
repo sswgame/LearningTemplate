@@ -105,6 +105,7 @@ namespace sw
     struct VulkanRecordingState
     {
         RHIPipelineStateHandle _activeGraphicsPSO;
+        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
 
         RHIBufferHandle _boundMeshVb;
         uint32          _boundMeshStride;
@@ -126,6 +127,7 @@ namespace sw
         /** @brief 아무것도 바인딩되지 않은 상태로 시작합니다. */
         VulkanRecordingState()
             : _activeGraphicsPSO{ 0 }
+            , _activeComputePSO{ 0 }
             , _boundMeshVb{ 0 }
             , _boundMeshStride{ sizeof( RHIVertex ) }
             , _boundMeshOffset{ 0 }

@@ -177,11 +177,12 @@ namespace sw
 
     void OpenGLRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
+        // 등록되지 않은 핸들도 기록한다 — 앞 컴퓨트 PSO 를 남겨 두면 다음 디스패치가 그것으로 대신 돈다. 그 디스패치는 resolveComputeProgram 에서 멈춘다.
+        _pDevice->_recordingState._boundComputePSO                = pso;
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr )
             return;
 
-        _pDevice->_recordingState._boundComputePSO = pso;
         if ( pRecord->_program != 0 )
             glUseProgram( pRecord->_program );
     }
@@ -573,6 +574,16 @@ namespace sw
         outMode    = toGlPrimitive( pPSO->_topology );
     }
 
+    uint32 OpenGLRHICommandContext::resolveComputeProgram() const
+    {
+        // 백엔드 계약(네 백엔드 같음): 등록된 컴퓨트 PSO 없이 디스패치하면 오류로 멈춘다. 조용히 건너뛰지 않고 그래픽스 프로그램으로도 돌지 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
+        if ( pPSO == nullptr || pPSO->_program == 0 )
+            SW_FATAL( "GL dispatch without a registered compute PSO (handle %#)", _pDevice->_recordingState._boundComputePSO );
+        return pPSO->_program;
+    }
+
     void OpenGLRHICommandContext::drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex )
     {
         const bool bNothingToDraw = _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0;
@@ -677,11 +688,7 @@ namespace sw
         // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 그래픽스 PSO(또는 디바이스 기본 프로그램)로
         // 디스패치하면 GL_INVALID_OPERATION("no active compute program") 이 나는데, 컬링 결과가 CPU 가 채운
         // 인자 그대로 남아 화면에는 드러나지 않는다.
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
-        if ( pPSO == nullptr || pPSO->_program == 0 )
-            return;
-
-        glUseProgram( pPSO->_program );
+        glUseProgram( resolveComputeProgram() );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
         // 이미지 스토어 결과를 이후 샘플링 · 읽기 · 업로드가 보도록 한다. SSBO 는 transitionBuffer 가 따로 막는다.
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
@@ -870,10 +877,7 @@ namespace sw
             return;
         // dispatchCompute 와 같다 — 간접 디스패치도 **컴퓨트 PSO** 의 프로그램으로 한다. 앞서 그래픽스 PSO 가 건 프로그램이 남아 있으면
         // GL_INVALID_OPERATION("no active compute program")이 난다(D3D · Vulkan 은 컴퓨트 PSO 를 따로 걸어 이 차이가 없다).
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
-        if ( pPSO == nullptr || pPSO->_program == 0 )
-            return;
-        glUseProgram( pPSO->_program );
+        glUseProgram( resolveComputeProgram() );
         glBindBuffer( GL_DISPATCH_INDIRECT_BUFFER, buf );
         if ( glad_glDispatchComputeIndirect != nullptr )
             glDispatchComputeIndirect( static_cast<GLintptr>( argumentBufferOffset ) );

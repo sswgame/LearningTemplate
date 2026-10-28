@@ -328,9 +328,19 @@ namespace sw
         }
 
         _pState->_arrSlotState[1]                                 = VulkanSlotState{}; // 컴퓨트 슬롯 상태도 PSO 단위
+        _pState->_activeComputePSO                                = pso;               // 레코드가 없어도 기록한다 — 디스패치가 앞 PSO 로 대신 돌지 않고 멈추게 한다
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord != nullptr && pRecord->_pipeline != VK_NULL_HANDLE )
             vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pRecord->_pipeline );
+    }
+
+    void VulkanRHICommandContext::requireComputePipelineForDispatch() const
+    {
+        // 백엔드 계약(네 백엔드 같음): 등록된 컴퓨트 PSO 없이 디스패치하면 오류로 멈춘다. 앞 디스패치의 파이프라인으로 대신 돌지 않고 조용히 건너뛰지도 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
+        if ( pRecord == nullptr || pRecord->_pipeline == VK_NULL_HANDLE )
+            SW_FATAL( "Vulkan dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
     // 길이 유지(긴 함수 정리 기준): 첨부 전이 · 렌더링 정보 채우기 · 시작 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
@@ -873,6 +883,7 @@ namespace sw
             _pState->_bRenderPassActive = SW_FALSE;
         }
 
+        requireComputePipelineForDispatch();
         flushSlotSet( true );
         vkCmdDispatch( cmd, threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
@@ -971,6 +982,7 @@ namespace sw
 
         if ( pRecord->_buffer != VK_NULL_HANDLE )
         {
+            requireComputePipelineForDispatch();
             flushSlotSet( true );
             vkCmdDispatchIndirect( cmd, pRecord->_buffer, argumentBufferOffset );
         }

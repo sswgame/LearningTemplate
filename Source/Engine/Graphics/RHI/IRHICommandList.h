@@ -77,6 +77,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 컴퓨트: PSO, 디스패치, 루트 상수, UAV
         // ------------------------------------------------------------------------------
+        /**
+         * @brief 컴퓨트 PSO 를 건다. 등록되지 않은 핸들도 기록하므로 앞 컴퓨트 PSO 가 남지 않는다.
+         * @note 디스패치(`dispatchCompute` · `dispatchIndirect`)는 **등록된 컴퓨트 PSO 가 걸려 있어야** 한다 — 없으면 네 백엔드 모두 오류로 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+         *       PSO 가 0 이면 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이다.
+         */
         virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                           = 0;
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
