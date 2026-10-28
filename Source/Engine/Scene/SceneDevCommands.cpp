@@ -181,9 +181,29 @@ namespace sw
                 outReply = describeRewind( rewind );
                 return true;
             }
+
+            static bool runSceneLeakCurve( const vector<string>& listArgument, string& outReply )
+            {
+                constexpr int32 kDefaultMeasuredRounds = 8;
+                int32           measuredRounds         = kDefaultMeasuredRounds;
+                const bool      bInvalidArguments      = listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && StringUtil::parseInt( listArgument[1], measuredRounds ) == false ) || measuredRounds < 1;
+                if ( bInvalidArguments )
+                    return false;
+                SceneManager* pManager = &engine::getSubsystem<SceneManager>();
+                if ( pManager->startLoadLeakProbe( listArgument[0], static_cast<uint32>( measuredRounds ) ) == false )
+                {
+                    outReply = "could not start (see the log)";
+                    return false;
+                }
+                outReply = "scene leak probe started - the verdict goes to the log when the rounds finish";
+                return true;
+            }
         };
     } // namespace
 
+    SW_DEV_COMMAND( SceneLeakCurve, "scene.leakcurve", "scene.leakcurve <scene> [measuredRounds]",
+                    "Load a scene again and again (1 warmup + N measured, default 8) and judge whether leftover memory grows (leak detection L3)",
+                    &SceneDevCommandsInternal::runSceneLeakCurve );
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene", &SceneDevCommandsInternal::runTeleport );
     SW_DEV_COMMAND( WorldCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
                     &SceneDevCommandsInternal::runWorldCells );

@@ -14,6 +14,7 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Scene/SceneLoadLeakProbe.h"
 
 namespace sw
 {
@@ -237,6 +238,13 @@ namespace sw
          *          먼저 이것을 불러 둘이 겹치지 않게 한다. 짓는 동안 표가 바뀌지 않으니 세대 비교(`_typeTableGeneration`)의 다시 짓기는 기다린 뒤의 등록에서만 일어난다.
          */
         void waitForPendingLoad() const;
+        /**
+         * @brief 씬 로드를 되풀이해 누수 곡선을 잽니다(`SceneLoadLeakProbe`, 누수 탐지 L3). 프레임마다 `update` 가 진행하고 끝나면 판정을 로그로 남깁니다.
+         * @return 시작하지 못하면 false 입니다(이미 도는 중 · 프로파일러 없음 · 경로 없음).
+         */
+        [[nodiscard]] bool startLoadLeakProbe( string_view path, uint32 measuredRounds ) { return _leakProbe.start( path, measuredRounds ); }
+        /** @brief 씬 로드 누수 탐침이 도는 중이면 true 입니다. */
+        bool isLoadLeakProbeRunning() const { return _leakProbe.isRunning(); }
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /**
@@ -333,6 +341,7 @@ namespace sw
 
         unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
+        SceneLoadLeakProbe     _leakProbe;         ///< 씬 로드 누수 곡선 탐침(`startLoadLeakProbe`)
     };
 } // namespace sw
 

@@ -69,6 +69,7 @@ namespace sw
         , _bInitialized{ false }
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
+        , _leakProbe{}
     {
         _asyncLoad->_services = _services;
     }
@@ -572,6 +573,8 @@ namespace sw
     void SceneManager::update( float32 deltaTime )
     {
         SW_MEMORY_SCOPE( Scene );
+        if ( _leakProbe.isRunning() )
+            _leakProbe.update( *this ); // 활성 씬이 없는 프레임에도 진행한다(로드 사이)
         if ( _pActiveScene == nullptr )
             return;
 
