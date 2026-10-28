@@ -560,7 +560,8 @@ namespace sw
         CameraComponent* pMainCamera = scene.pickActiveGameCamera() ? scene.getActiveGameCamera() : nullptr;
         if ( pMainCamera == nullptr )
         {
-            SW_LOG_ERROR( "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
+            // 프레임마다 도는 길이라 장면 이름별로 한 번만 알린다.
+            SW_LOG_ERROR_ONCE_FOR( scene.getName(), "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
             return false;
         }
         Scene* const pScene = &scene;
