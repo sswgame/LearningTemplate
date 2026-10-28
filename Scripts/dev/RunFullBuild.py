@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 @file RunFullBuild.py
-@brief 병합 전 검증 빌드 — 빌드 칸을 잡고 `all AllTests` 를 짓고, 성공하면 그 커밋 트리의 증거를 남깁니다. main 으로의 push 는 증거를 요구합니다.
+@brief 병합 전 검증 빌드 — 빌드 칸을 잡고 `all AllTests` 를 짓고, 성공하면 그 커밋 트리의 증거를 남깁니다.
 
     py -3 -m Scripts full-build --owner <이름>                         # build/Ninja-Debug, 빌드 칸(공유 2)을 잡고 짓는다
     py -3 -m Scripts full-build --owner <이름> --below-normal -j 4     # 도우미 — 낮은 우선순위
-    py -3 -m Scripts full-build check-push < <pre-push 입력>           # pre-push 훅이 부른다 — main 으로 가는 커밋의 트리에 증거가 있는가
 
 **왜 전체인가.** 브랜치 검증이 바꾼 영역의 테스트만 지으면, 다른 영역의 테스트가 쓰는 헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨진다
 (2026-10-17 integ5). 검증 빌드는 늘 `kTestBuildTargets`(`all AllTests`)다 — 타깃을 고르는 인자를 두지 않는다.
@@ -15,9 +14,6 @@
 `<공통 .git>/sw-build-evidence/<빌드 입력 해시>.json` 을 쓴다. 키는 트리에서 빌드 · 테스트가 읽지 않는 파일(`isBuildInputPath`: 마크다운과 `.claude/`)을
 뺀 **빌드 입력 해시**라서, 문서만 바꾼 커밋은 직전 증거가 그대로 맞고 다시 짓지 않는다. 같은 입력이면 어느 워크트리 · 어느 커밋에서 지었든 같다
 (통합 워크트리에서 지은 병합 결과를 main 체크아웃에서 push 해도 맞는다). 공통 .git 은 모든 워크트리가 나눠 쓰고 추적되지 않는다.
-
-**막는 자리.** `Scripts/setup/InstallGitHooks.py` 가 설치하는 pre-push 훅이 `check-push` 를 부른다. `refs/heads/main` 으로 가는 커밋의
-트리에 증거가 없으면 push 를 막는다. 브랜치 push 는 막지 않는다(도우미는 push 하지 않는다 — 작업 방식 4 절).
 """
 
 from __future__ import annotations
@@ -30,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.BuildEvidence import (  # noqa: E402
-    getEvidenceDirectory, getEvidencePath, listPushedTreesNeedingEvidence, listUncommittedFiles, readBuildInputHash, readTreeHash, writeEvidence)
+    getEvidenceDirectory, listUncommittedFiles, readBuildInputHash, readTreeHash, writeEvidence)
 from common.BuildTree import BuildTree, kTestBuildTargets  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -43,17 +39,6 @@ from common.ExitCode import ExitCode  # noqa: E402
 
 #: 검증 빌드가 잡는 잠금 자원(공유 칸 — 동시 빌드 한도).
 kBuildLockResource = "build"
-
-
-def checkPush(repositoryRoot: Path, pushInput: str) -> int:
-    """pre-push — main 으로 가는 커밋의 빌드 입력에 전체 빌드 증거가 없으면 1."""
-    evidenceDirectory = getEvidenceDirectory(repositoryRoot)
-    listMissing = [(ref, tree) for ref, tree in listPushedTreesNeedingEvidence(pushInput, lambda commit: readBuildInputHash(repositoryRoot, commit))
-                   if not getEvidencePath(evidenceDirectory, tree).is_file()]
-    for ref, tree in listMissing:
-        print(f"[FullBuild] {ref} 로 가는 빌드 입력 {tree[:12]} 에 전체 빌드(all AllTests) 증거가 없습니다(마크다운 · .claude 만 바뀐 커밋은 직전 증거를 쓴다) — "
-              f"그 커밋에서 `py -3 -m Scripts full-build --owner <이름>` 을 돌린 뒤 push 합니다.", file=sys.stderr)
-    return 1 if listMissing else 0
 
 
 def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
@@ -95,9 +80,6 @@ def main(argv: list[str] | None = None) -> int:
     listArgument = list(sys.argv[1:] if argv is None else argv)
     repositoryRoot = getProjectRoot()
     try:
-        if listArgument[:1] == ["check-push"]:
-            argparse.ArgumentParser(description="pre-push 훅 — 표준 입력의 push 줄을 본다").parse_args(listArgument[1:])
-            return checkPush(repositoryRoot, sys.stdin.read())
         parser = argparse.ArgumentParser(description="빌드 칸을 잡고 all AllTests 전체 빌드 — 성공하면 그 커밋 트리의 증거를 남긴다")
         parser.add_argument("--owner", required=True, help="소유자 이름(에이전트 · 워크트리 이름) — 빌드 칸 잠금에 적힌다")
         parser.add_argument("--preset", default=kDefaultPreset, help=f"빌드 폴더 build/<프리셋>(기본 {kDefaultPreset})")

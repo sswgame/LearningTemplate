@@ -1,6 +1,6 @@
 """
 @file BuildEvidence.py
-@brief 검증 증거 파일의 자리 · 키 · 읽기 쓰기 — `full-build`(빌드 증거)와 `integ-gate`(통합 증거)가 같이 쓴다.
+@brief 검증 증거 파일의 자리 · 키 · 읽기 쓰기 — `full-build`(빌드 증거)가 쓴다.
 
 증거는 공통 `.git` 아래 폴더에 **빌드 입력 해시**를 이름으로 한 JSON 하나다. 빌드 입력은 커밋 트리에서 빌드 · 테스트가 읽지 않는 파일
 (`isBuildInputPath`: 마크다운 · `.claude/` · 빌드가 실행하지 않는 Scripts 폴더 · 파이썬 단위 테스트)을 뺀 것이라, 그런 파일만 바꾼 커밋은

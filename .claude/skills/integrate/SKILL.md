@@ -10,7 +10,7 @@ argument-hint: "<통합 이름 예: q>"
 정본은 `docs/11_Workflow.md`. 여기는 순서만 둔다. 통합이 도는 중에는 범위를 늘리지 않는다.
 
 1. **모으기**: `git branch --no-merged main` 의 `wt/*`. 체인(뒤가 앞 위에 쌓인 것)은 앞에서부터 병합한다. `py -3 -m Scripts worktree-make integ-<이름> --base main` 후 병합, 충돌은 NEXT 의 충돌 경고를 먼저 본다.
-2. **Debug**: `py -3 -m Scripts integ-gate run` (빌드 경고 0 · lint · `-L nogpu`). 실패는 원인별로 고친다. 기준선을 다시 잡아 가리지 않는다.
+2. **Debug**: `-k 0` 빌드(경고 0), `ctest -L "nogpu|lint"`. 실패는 원인별로 고친다. 기준선을 다시 잡아 가리지 않는다.
 3. **Shipping → Release**: 구성별로 한 번씩. GPU 잠금은 `shared-lock`. 시나리오 Warning/Error 는 종료 코드 0 이어도 실패(15).
 4. **검증**: `py -3 -m Scripts verify-batch` 한 번. 결과 표 하나.
 5. **push**: 통과하면 `git fetch` 로 origin 을 보고 force 없이 push. CI 는 기다리지 않는다.
