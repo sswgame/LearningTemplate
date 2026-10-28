@@ -33,7 +33,7 @@ kTag = "FormatIncludeOrder"
 
 
 class FormatIncludeOrderFixer:
-    """include 순서 픽서 — 파일 하나를 읽어 `IncludeOrderRules.fixText` 로 고친다(`processFiles` 는 `FormatModified` 도 부른다)."""
+    """include 순서 픽서 — 파일 하나를 읽어 `IncludeOrderRules.fixText` 로 고친다."""
 
     def processFile(self, filePath: Path, checkOnly: bool = False) -> list[str]:
         try:

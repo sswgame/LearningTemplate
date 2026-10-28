@@ -80,16 +80,6 @@ class CookContractSpec:
 
     # --- 값 --------------------------------------------------------------------
 
-    @property
-    def listShaderFolder(self) -> list[str]:
-        """셰이더 바이너리 폴더 이름 전부(`shaders/bin/<폴더>`)."""
-        return [backend.shaderFolder for backend in self.listBackend]
-
-    @property
-    def mapBackendSwitch(self) -> dict[str, str]:
-        """App 의 백엔드 스위치 — 명령줄 이름 → `-<명령줄 이름>`(`ArgumentList.xxx` 의 RHI 줄이 그 이름 하나만 받는다). 표 순서 그대로."""
-        return {backend.commandLineName: f"-{backend.commandLineName}" for backend in self.listBackend}
-
     def findBackend(self, text: str) -> RhiBackendSpec | None:
         """백엔드 이름(대소문자 무시 — EngineConfig · CMake 값) 또는 명령줄 이름으로 줄을 찾습니다. 모르면 None."""
         key = text.strip().lower()

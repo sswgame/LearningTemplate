@@ -4,13 +4,13 @@
 Scripts/lint/PreCommitLint.py
 
 Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`gate/CheckIncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
-검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `fixer/FormatModified.py`(`py -3 -m Scripts format`)다.
+검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
 **병합 커밋은 새 내용만 본다.** 병합 중(`MERGE_HEAD` 가 있다)이면 병합으로 바뀐 파일이 전부 staged 로 잡히는데, 그 대부분은 한쪽 부모와 바이트가 같다 —
 그 부모 커밋을 만들 때 이 훅이 같은 내용을 이미 검사했다. 그래서 staged 내용이 어느 부모의 같은 경로 blob 과도 다른 파일만 검사한다
 (`StagedScope.selectFileScopedStaged`).
 
-**통과한 것은 찍지 않는다.** 훅 출력을 에이전트와 세션이 매번 입력으로 다시 읽으므로 통과는 한 줄, 실패만 상세를 찍는다.
+**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
 """
 
 from __future__ import annotations

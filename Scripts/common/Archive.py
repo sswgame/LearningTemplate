@@ -127,8 +127,7 @@ def ensureCachedDownload(url: str,
                          destPath: Path,
                          *,
                          minSize: int = 10_000,
-                         label: str = "Download",
-                         sha256: str | None = None) -> Path:
+                         label: str = "Download") -> Path:
     """
     외부 도구를 다운로드하고, 사이드카 .sha256 해시를 검증하여 이미 다운로드된 캐시가 있으면 재다운로드를 생략합니다.
 
@@ -137,13 +136,11 @@ def ensureCachedDownload(url: str,
         destPath: 저장할 로컬 파일 경로
         minSize: 정상 파일로 인정할 최소 크기 (바이트 단위)
         label: 콘솔 로그 출력용 태그 이름
-        sha256: 기대되는 SHA-256 해시값 (지정 시 엄격하게 검증)
 
     Returns:
         다운로드되었거나 캐시에서 재사용된 파일 경로
     """
     sidecarFile = destPath.with_name(destPath.name + ".sha256")
-    expectedHash = (sha256 or "").strip().lower()
 
     def writeSidecarInternal(digest: str) -> None:
         sidecarFile.write_text(digest + "\n", encoding="utf-8")
@@ -152,11 +149,6 @@ def ensureCachedDownload(url: str,
         if not destPath.is_file() or destPath.stat().st_size < minSize:
             return False
         digest = fileSha256(destPath)
-        if expectedHash:
-            if digest == expectedHash:
-                return True
-            print(f"[{label}] SHA256 mismatch for cache {destPath}, re-downloading")
-            return False
         if sidecarFile.is_file():
             recorded = sidecarFile.read_text(encoding="utf-8").strip().split()[0].lower()
             if digest == recorded:
@@ -175,8 +167,5 @@ def ensureCachedDownload(url: str,
     if destPath.stat().st_size < minSize:
         destPath.unlink(missing_ok=True)
         raise RuntimeError(f"[{label}] Download too small: {destPath}")
-    if expectedHash and digest != expectedHash:
-        destPath.unlink(missing_ok=True)
-        raise RuntimeError(f"[{label}] SHA256 mismatch for {destPath}")
-    writeSidecarInternal(expectedHash or digest)
+    writeSidecarInternal(digest)
     return destPath

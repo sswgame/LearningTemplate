@@ -1,5 +1,5 @@
 """
-자식 프로세스 하나를 돌리는 자리 — 컴파일러 · git · App · clang-tidy 를 띄우는 모든 스크립트가 이것을 쓴다.
+자식 프로세스 하나를 돌리는 자리 — git · clang-format · 빌드 도구를 띄우는 스크립트가 이것을 쓴다.
 
 모양을 하나로 두는 이유 둘:
 - **디코딩** — `text=True` 만 주면 출력을 시스템 코드 페이지(cp949 · cp1252)로 읽는다. UTF-8 진단 · 한글 경로가 섞이면 도구가
@@ -7,8 +7,6 @@
 - **실패의 모양** — 실행 파일이 없으면(`FileNotFoundError`) · 시간이 넘으면(`TimeoutExpired`) 곳마다 다르게 죽었다. 여기서는 예외 대신
   `ProcessResult` 의 칸으로 돌려준다(부르는 쪽이 "못 띄웠다" 와 "띄웠는데 졌다" 를 가른다).
 
-쓰지 않는 곳: 컴파일 DB 의 `command` 문자열을 셸로 넘기는 훑기(그 문자열이 이미
-셸 문법이다), 출력을 실시간으로 읽거나 살아 있는 동안 측정하는 App 실행.
 """
 
 from __future__ import annotations
@@ -17,7 +15,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Sequence
 
 
 @dataclass(frozen=True)
@@ -42,49 +40,21 @@ class ProcessResult:
         """띄웠고, 제때 끝났고, 0 으로 끝났는가."""
         return self.bLaunched and not self.bTimedOut and self.returnCode == 0
 
-    @property
-    def output(self) -> str:
-        """stdout 과 stderr 를 이은 것(진단을 한 덩어리로 볼 때)."""
-        return self.stdout + self.stderr
-
 
 def runProcess(command: Sequence[str | Path],
                *,
                cwd: Path | None = None,
                timeoutSeconds: float | None = None,
-               bCapture: bool = True,
-               env: Mapping[str, str] | None = None,
-               stdinText: str | None = None,
-               stdoutPath: Path | None = None,
-               bMergeStderr: bool = False,
-               bBelowNormalPriority: bool = False) -> ProcessResult:
+               bCapture: bool = True) -> ProcessResult:
     """
     `command` 를 돌리고 끝날 때까지 기다립니다.
 
     - `bCapture` : 출력을 잡는다(UTF-8, 깨진 바이트는 대체 글자). 거짓이면 부모 콘솔로 흘린다.
-    - `stdoutPath`: 출력(stdout + stderr)을 이 파일에 쓴다(`bCapture` 를 무시한다) — 긴 로그를 남기는 실행(백엔드 스모크).
-    - `bMergeStderr`: 잡을 때 stderr 를 stdout 칸에 섞는다 — 쓰인 순서 그대로 다시 찍을 출력(커밋 훅이 뒤에서 돌린 게이트).
-    - `bBelowNormalPriority`: 낮은 우선순위로 띄운다(Windows 만 — 도우미 빌드).
     """
     listArgument = [str(part) for part in command]
-    workingDir = str(cwd) if cwd else None
-    environment = dict(env) if env else None
-    creationFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS if bBelowNormalPriority and os.name == "nt" else 0
     try:
-        if stdoutPath is not None:
-            stdoutPath.parent.mkdir(parents=True, exist_ok=True)
-            with stdoutPath.open("w", encoding="utf-8", errors="replace") as logFile:
-                completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=logFile, stderr=subprocess.STDOUT,
-                                           timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False,
-                                           creationflags=creationFlags)
-            return ProcessResult(returnCode=completed.returncode)
-        if bCapture and bMergeStderr:
-            completed = subprocess.run(listArgument, cwd=workingDir, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       timeout=timeoutSeconds, input=stdinText, encoding="utf-8", errors="replace", check=False,
-                                       creationflags=creationFlags)
-        else:
-            completed = subprocess.run(listArgument, cwd=workingDir, env=environment, capture_output=bCapture, timeout=timeoutSeconds,
-                                       input=stdinText, encoding="utf-8", errors="replace", check=False, creationflags=creationFlags)
+        completed = subprocess.run(listArgument, cwd=str(cwd) if cwd else None, capture_output=bCapture, timeout=timeoutSeconds,
+                                   encoding="utf-8", errors="replace", check=False)
         return ProcessResult(returnCode=completed.returncode, stdout=completed.stdout or "", stderr=completed.stderr or "")
     except (FileNotFoundError, PermissionError) as error:
         return ProcessResult(returnCode=-1, stderr=f"실행 파일을 띄우지 못했다: {listArgument[0]} ({error})", bLaunched=False)

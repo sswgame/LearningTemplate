@@ -24,7 +24,7 @@ def addFileArguments(parser: argparse.ArgumentParser) -> None:
         "--files",
         nargs="*",
         default=None,
-        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상) — 게이트와 같은 철자",
+        help="대상 C++ 파일 목록 (생략 시 Git 변경 파일, 없으면 전체 대상) ",
     )
     parser.add_argument(
         "--all",
@@ -36,34 +36,26 @@ def addFileArguments(parser: argparse.ArgumentParser) -> None:
 @dataclass(frozen=True)
 class FixerFileKind:
     """
-    C++ 가 아닌 파일을 고치는 픽서의 대상 — 확장자 · 이름, 그리고 손대지 않는 폴더.
-
-    - `suffixes` · `fileNames`: 대상(확장자는 대소문자 무시)
-    - `excludedDirNames`      : 이 이름의 폴더로는 내려가지 않는다(빌드 산출물 · 남의 코드)
-    - `excludedRelDirs`       : 이 저장소 기준 폴더 밑은 고치지 않는다(손대지 않는 영역)
+    C++ 가 아닌 파일(셰이더)을 고치는 픽서의 대상 — 확장자(대소문자 무시)와, 내려가지 않는 폴더 이름(빌드 산출물 · 남의 코드).
     """
 
     suffixes: tuple[str, ...] = ()
-    fileNames: tuple[str, ...] = ()
     excludedDirNames: frozenset[str] = kNotOurDirNames
-    excludedRelDirs: tuple[str, ...] = ()
 
     def isTarget(self, path: Path, repositoryRoot: Path) -> bool:
-        if path.name not in self.fileNames and path.suffix.lower() not in self.suffixes:
+        if path.suffix.lower() not in self.suffixes:
             return False
         try:
             relative = path.resolve().relative_to(repositoryRoot.resolve()).as_posix()
         except ValueError:
             return False
-        if any(part in self.excludedDirNames for part in relative.split("/")[:-1]):
-            return False
-        return not any(relative.startswith(prefix.rstrip("/") + "/") for prefix in self.excludedRelDirs)
+        return not any(part in self.excludedDirNames for part in relative.split("/")[:-1])
 
 
 def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind | None = None) -> list[Path]:
     """
-    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — 게이트와 같은 규칙, `common.Search.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
-    `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(CMake 처럼).
+    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — `common.Search.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
+    `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(셰이더).
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도
     아무 일도 안 하는 대신 전체를 본다 — 처음 받은 저장소에서도 한 번에 맞춰진다.
@@ -90,20 +82,17 @@ def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: 
 def selectFileKindTargetsInternal(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind) -> list[Path]:
     """`selectFixerTargetFiles` 의 C++ 가 아닌 갈래 — 같은 순서(`--files` > `--all` > Git 변경 > 전체), 같은 제외."""
     if args.files:
-        listFile = resolveFileArguments(repositoryRoot, args.files, suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
-                                        excludedDirNames=fileKind.excludedDirNames)
+        listFile = resolveFileArguments(repositoryRoot, args.files, suffixes=fileKind.suffixes, excludedDirNames=fileKind.excludedDirNames)
         return [path for path in listFile if fileKind.isTarget(path, repositoryRoot)]
 
     if not args.all:
-        setSuffix = {*fileKind.suffixes, *(Path(name).suffix.lower() for name in fileKind.fileNames)}
-        listModified = [path for path in getModifiedCppFiles(repositoryRoot, extensions=setSuffix)
+        listModified = [path for path in getModifiedCppFiles(repositoryRoot, extensions=set(fileKind.suffixes))
                         if fileKind.isTarget(path, repositoryRoot)]
         if listModified:
             print(f"[{tag}] Git 변경 파일 {len(listModified)}개 감지.", file=sys.stderr)
             return listModified
 
-    listAll = [path for path in collectRepositoryFiles(repositoryRoot, ("",), suffixes=fileKind.suffixes, fileNames=fileKind.fileNames,
-                                                       excludedDirNames=fileKind.excludedDirNames)
+    listAll = [path for path in collectRepositoryFiles(repositoryRoot, ("",), suffixes=fileKind.suffixes, excludedDirNames=fileKind.excludedDirNames)
                if fileKind.isTarget(path, repositoryRoot)]
     if not args.all:
         print(f"[{tag}] 변경된 파일이 없어 전체 {len(listAll)}개 파일 대상 실행.", file=sys.stderr)

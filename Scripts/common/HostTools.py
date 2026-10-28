@@ -12,7 +12,6 @@ import shutil
 import sys
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable
 
 from .Archive import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
 from .Config import loadSearchPaths, recordEnginePath
@@ -173,17 +172,8 @@ def setupBuildToolInternal(toolName: str,
                            exeName: str,
                            subdirKey: str,
                            searchRootsKey: str,
-                           downloadUrlsKey: str,
-                           extractFunc: Callable[[Path, Path, Path, str], None],
-                           *,
-                           acceptExe: Callable[[Path], bool] | None = None,
-                           sha256Key: str = "") -> str:
-    """
-    공통 도구(Ninja 등) 탐색 및 다운로드 추상화 함수.
-
-    - `acceptExe` : 찾은 실행 파일을 쓸지 고른다(버전 핀) — 거절하면 찾지 못한 것으로 보고 받는다.
-    - `sha256Key` : search_paths 의 `{플랫폼: 해시}` 키 — 받은 압축 파일을 그 해시로 검사한다.
-    """
+                           downloadUrlsKey: str) -> str:
+    """도구 탐색 및 다운로드(zip 으로 받아 `Tools/<이름>` 에 푼다)."""
     import logging
     logger = logging.getLogger("SetupEnvironment")
     logger.info(f"[{toolName}] Checking {toolName}...")
@@ -194,7 +184,7 @@ def setupBuildToolInternal(toolName: str,
 
     def isUsableInternal(root: Path) -> bool:
         exePath = root if root.is_file() else root / exeName
-        return exePath.is_file() and (acceptExe is None or acceptExe(exePath))
+        return exePath.is_file()
 
     spec = ToolSpec(
         name=toolName,
@@ -212,13 +202,10 @@ def setupBuildToolInternal(toolName: str,
     logger.info(f"[{toolName}] Downloading into {toolsDir}")
     toolsDir.mkdir(parents=True, exist_ok=True)
     archiveName = url.rsplit("/", 1)[-1]
-    expectedHash = (search.get(sha256Key) or {}).get(platformKey()) if sha256Key else None
-    archivePath = ensureCachedDownload(
-        url, toolsCacheDir() / archiveName, minSize=50_000, label=toolName, sha256=expectedHash
-    )
+    archivePath = ensureCachedDownload(url, toolsCacheDir() / archiveName, minSize=50_000, label=toolName)
 
     # 받은 압축을 풀다 실패하면 "도구 없음" 이 아니라 오류다 — 예외 그대로 멈춘다.
-    extractFunc(archivePath, toolsDir, localExePath, exeName)
+    extractZipSafe(archivePath, toolsDir)
     if not localExePath.is_file():
         raise RuntimeError(f"[{toolName}] 압축을 풀었지만 {localExePath} 가 없습니다: {archivePath}")
     if platform.system() != "Windows":
@@ -231,10 +218,4 @@ def setupNinja() -> str:
     """시스템 PATH 또는 search_paths.json에서 Ninja 빌드 도구를 탐색하며, 없을 경우 다운로드하여 Tools/Ninja에 설치합니다."""
     exeName = "ninja.exe" if platform.system() == "Windows" else "ninja"
 
-    def extractNinjaInternal(archive: Path, destDir: Path, localExe: Path, exe: str) -> None:
-        extractZipSafe(archive, destDir)
-
-    return setupBuildToolInternal(
-        "SetupNinja", exeName, kKeyNinjaToolsSubdir,
-        kKeyNinjaSearchRoots, kKeyNinjaDownloadUrls, extractNinjaInternal
-    )
+    return setupBuildToolInternal("SetupNinja", exeName, kKeyNinjaToolsSubdir, kKeyNinjaSearchRoots, kKeyNinjaDownloadUrls)

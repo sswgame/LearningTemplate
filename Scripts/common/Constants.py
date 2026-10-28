@@ -40,7 +40,6 @@ kFileRuntimeEditorToolDefaults = "Config/Editor/editortooldefaults.json"
 # --- 2. Project Source & Reflection Architecture (소스 레이아웃 & 리플렉션 SSOT) -
 # =============================================================================
 
-kDirSourceEngine = "Source/Engine"
 kDirSourceEditor = "Source/Editor"
 
 kFileReflectBuiltins = "Source/Engine/Reflection/ReflectBuiltins.xxx"
@@ -81,8 +80,6 @@ kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -
 # =============================================================================
-
-# Target / Platform
 
 # Reflection Parser (parser_config.json)
 kKeyParserArgsSection = "parser_args"

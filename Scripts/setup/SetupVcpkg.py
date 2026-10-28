@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -61,7 +60,7 @@ def resolveVcpkgCommitInternal(search: dict) -> str:
     return str(manifest["builtin-baseline"]).strip()
 
 
-def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str, gitExe: str) -> None:
+def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str) -> None:
     """
     Tools/vcpkg 디렉터리가 Git 워크트리인 경우, search_paths.json에 지정된 특정 커밋(vcpkg_git_commit)으로 체크아웃합니다.
     (단, 시스템 환경변수 VCPKG_ROOT나 PATH로 탐색된 외부 트리는 수정하지 않습니다.)
@@ -203,10 +202,9 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
     toolsDir = resolveToolsSubdir(kKeyVcpkgToolsSubdir, search)
     if foundRoot := findToolRoot(kVcpkgToolSpec, search):
         if foundRoot == toolsDir:
-            gitExe = ensureGitOnPath()
             gitCommit = resolveVcpkgCommitInternal(search)
-            if gitExe is not None and gitCommit:
-                pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
+            if ensureGitOnPath() is not None and gitCommit:
+                pinVcpkgCommitInternal(toolsDir, gitCommit)
             print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
         # 다른 OS 에서 부트스트랩한 트리면 이 OS 의 실행 파일이 없다. 설치를 요청받았으면 그 자리에서 부트스트랩하고, 아니면 알리기만 한다
         # (CMake 툴체인이 configure 때 스스로 부트스트랩한다).
