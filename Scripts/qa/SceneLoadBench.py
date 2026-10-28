@@ -27,12 +27,14 @@ import argparse
 import re
 import statistics
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.Paths import getProjectRoot  # noqa: E402
-from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable, runApp  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, loadGameTable, parseProfileTable, runApp  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
@@ -45,17 +47,18 @@ def collectFilesInternal(root: Path) -> set[Path]:
     return {path for path in root.rglob("*") if path.is_file()}
 
 
-def measureVariantInternal(args: argparse.Namespace, sceneResourcePath: str, runCount: int) -> tuple[dict[str, list[float]], set[str], list[str]]:
-    """판마다 로드 시간과 프레임 표를 모읍니다. (값 목록, 읽은 경로들, 실패)."""
+def measureVariantInternal(args: argparse.Namespace, sceneResourcePath: str, runCount: int,
+                           listQualityArgument: list[str]) -> tuple[dict[str, list[float]], set[str], list[str]]:
+    """판마다 로드 시간과 프레임 표를 모읍니다. (값 목록, 읽은 경로들, 실패). `listQualityArgument` 는 품질 프리셋을 쓴 설정 파일을 가리키는 인자입니다."""
     mapValue: dict[str, list[float]] = {}
     uniqueSource: set[str] = set()
     listFailure: list[str] = []
     listArgument = [f"-gv_benchMeshes={args.bench_meshes}", f"-gv_benchSceneLoadPath={sceneResourcePath}", f"-gv_benchProbeFrame={args.probe_frame}",
-                    f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend]]
+                    f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend], *listQualityArgument]
     if args.asset_report:
         listArgument.append("-gv_assetLoadReport=1")
     for runIndex in range(runCount):
-        result = runApp(args.app, listArgument, timeoutSeconds=args.timeout)
+        result = runApp(args.app, listArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=args.timeout)
         if result.bTimedOut or result.exitCode != 0:
             listFailure.append(f"run {runIndex + 1}: exit {result.exitCode}{' (timeout)' if result.bTimedOut else ''}")
             continue
@@ -106,17 +109,23 @@ def main(listArgument: list[str] | None = None) -> int:
 
     mapResult: dict[str, tuple[dict[str, list[float]], set[str], list[str]]] = {}
     listCreated: list[Path] = []
+    # 품질 프리셋은 표가 정한 이름을 설정 파일로 써 준다 — 없으면 이 PC 의 사용자 폴더 파일 · 사양으로 고른 프리셋이 프레임 시간을 정한다.
+    quality = readTableQuality(loadGameTable(repositoryRoot))
+    qualityFolder = tempfile.TemporaryDirectory(prefix="sw_sceneload_")
+    listQualityArgument = writePresetSettingsFile(repositoryRoot, quality, Path(qualityFolder.name) / "usersettings.json")
     try:
-        mapResult["xml"] = measureVariantInternal(args, sceneResourcePath, args.runs)
+        mapResult["xml"] = measureVariantInternal(args, sceneResourcePath, args.runs, listQualityArgument)
         if not args.skip_cooked:
             uniqueBefore = collectFilesInternal(resourceRoot)
-            cooked = runApp(args.app, ["--cook-scenes", f"--cooked-dir={resourceRoot.as_posix()}"], timeoutSeconds=args.timeout)
+            # 쿠킹은 그리지 않고 사용자 설정을 읽지 않는 명령이다.
+            cooked = runApp(args.app, ["--cook-scenes", f"--cooked-dir={resourceRoot.as_posix()}"], settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=args.timeout)
             listCreated = sorted(collectFilesInternal(resourceRoot) - uniqueBefore)
             if cooked.exitCode != 0:
                 print(f"[SceneLoadBench] cook failed (exit {cooked.exitCode}) — cooked variant skipped", flush=True)
             else:
-                mapResult["cooked"] = measureVariantInternal(args, sceneResourcePath, args.runs)
+                mapResult["cooked"] = measureVariantInternal(args, sceneResourcePath, args.runs, listQualityArgument)
     finally:
+        qualityFolder.cleanup()
         if not args.keep:
             for path in listCreated:
                 path.unlink(missing_ok=True)
@@ -128,7 +137,7 @@ def main(listArgument: list[str] | None = None) -> int:
         if changed.stdout.strip():
             print("[SceneLoadBench] note: cooking rewrote tracked files under Resource — check `git status`:\n" + changed.stdout, flush=True)
 
-    print(f"\n[SceneLoadBench] scene {sceneResourcePath} ({args.count} entities) | backend {args.backend} | runs {args.runs}")
+    print(f"\n[SceneLoadBench] scene {sceneResourcePath} ({args.count} entities) | backend {args.backend} | quality {quality} | runs {args.runs}")
     listKey = sorted({key for values, _, _ in mapResult.values() for key in values})
     listVariant = list(mapResult)
     widthKey = max([len("metric"), *(len(key) for key in listKey)])

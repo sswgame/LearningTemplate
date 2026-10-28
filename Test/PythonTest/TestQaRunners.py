@@ -24,6 +24,9 @@ from common.AppRun import AppRunResult, kAppRhiUnusableExitCode, readRhiUnusable
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
 from common.AppRun import kStartupRe, splitRunSeconds  # noqa: E402
+from common.AppRun import runApp  # noqa: E402
+from common.QualityPreset import (SettingsIsolation, checkSettingsIsolation, describeQualityMismatch, readScalabilityPreset,  # noqa: E402
+                                  readTableQuality, readUserDataRootVariable, writePresetSettingsFile)
 from qa.GoldenImages import formatCaseLine  # noqa: E402
 from qa.PerfRegression import compareInternal  # noqa: E402
 
@@ -222,6 +225,106 @@ class GameTableTest(unittest.TestCase):
             self.assertEqual(game["arguments"], record["capture"]["arguments"], referencePath)
             self.assertEqual(game["settled_frames"], record["capture"]["settled_frames"], referencePath)
             self.assertTrue(referencePath.with_suffix(".png").is_file(), referencePath)
+
+
+class QualityPresetTest(unittest.TestCase):
+    """골든 · 기준을 뜨는 러너는 품질 프리셋을 표에서 읽어 설정 파일로 명시하고, 기준의 프리셋과 다르거나 없으면 거절한다."""
+
+    def testTableNamesAnExistingPreset(self) -> None:
+        table = loadGameTable(kRepositoryRoot)
+        self.assertEqual("high", readTableQuality(table))   # 스키마 기본값이 high 라 기존 골든의 그림이 바뀌지 않는다
+        self.assertEqual("high", readScalabilityPreset(kRepositoryRoot, readTableQuality(table))["graphics.quality"])
+
+    def testTableWithoutQualityStopsInsteadOfFallingBack(self) -> None:
+        with self.assertRaises(KeyError):
+            readTableQuality({"games": {}})
+
+    def testUnknownPresetIsAnError(self) -> None:
+        with self.assertRaises(ValueError):
+            readScalabilityPreset(kRepositoryRoot, "no-such-preset")
+
+    def testWrittenSettingsFileCarriesThePresetAndIsPassedToApp(self) -> None:
+        import json
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "usersettings.json"
+            listArgument = writePresetSettingsFile(kRepositoryRoot, "low", path)
+            self.assertEqual([f"-gv_userSettingsFile={path.as_posix()}"], listArgument)
+            document = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual("low", document["values"]["graphics.quality"])
+            self.assertEqual("0.75", document["values"]["graphics.renderScale"])
+
+    def testMismatchOrMissingRecordedQualityIsRejected(self) -> None:
+        self.assertEqual("", describeQualityMismatch("high", "high"))
+        self.assertIn("'low'", describeQualityMismatch("low", "high"))
+        self.assertIn("does not record", describeQualityMismatch(None, "high"))
+
+    def testLoadBaselineRejectsOtherQuality(self) -> None:
+        from qa.Load import judgeBaseline
+        listRegression, _ = judgeBaseline({"quality": "low", "metrics": {}}, {}, "high")
+        self.assertEqual(1, len(listRegression))
+        self.assertEqual(([], []), judgeBaseline({"quality": "high", "metrics": {}}, {}, "high"))
+
+
+class SettingsIsolationEntranceTest(unittest.TestCase):
+    """App 을 띄우는 공통 입구(`runApp`)는 설정 격리 선언을 필수로 받고 인자와 어긋나면 띄우기 전에 멈춘다 — 프리셋 없이 띄우는 호출을 쓸 수 없다."""
+
+    def testDeclarationIsRequired(self) -> None:
+        with self.assertRaises(TypeError):
+            runApp(Path(sys.executable), ["-c", "pass"])   # type: ignore[call-arg]
+
+    def testDeclarationMustMatchTheArguments(self) -> None:
+        for isolation, listArgument in ((SettingsIsolation.PRESET_FILE, ["-gv_profileFrames=1"]),
+                                        (SettingsIsolation.PRESET_FILE, ["-gv_userSettingsFile="]),
+                                        (SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"]),
+                                        (SettingsIsolation.ISOLATED_AUTOMATED, ["-gv_userSettingsFile=a.json", "-scenario-report=x"])):
+            with self.assertRaises(ValueError, msg=(isolation, listArgument)):
+                runApp(Path(sys.executable), listArgument, settings=isolation)
+
+    def testMatchingDeclarationsPass(self) -> None:
+        for isolation, listArgument in ((SettingsIsolation.PRESET_FILE, ["-gv_userSettingsFile=a.json"]),
+                                        (SettingsIsolation.ISOLATED_AUTOMATED, ["-scenario=x.xml", "-gv_userSettingsFile=a.json"]),
+                                        (SettingsIsolation.NOT_APPLICABLE, [])):
+            checkSettingsIsolation(isolation, listArgument)
+
+    def testShippingIsolationComesFromTheUserDataRootEnvironmentVariable(self) -> None:
+        """배포본은 `gv_` 를 몰라 설정 파일 인자를 못 준다 — 엔진 헤더의 `kUserDataRootVariable` 환경 변수가 있으면 격리한 것으로 본다."""
+        variable = readUserDataRootVariable(kRepositoryRoot)
+        self.assertEqual("SW_USER_DATA_ROOT", variable)
+        checkSettingsIsolation(SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"], {variable: "C:/home"})
+        with self.assertRaises(ValueError):
+            checkSettingsIsolation(SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"], {"OTHER": "x"})
+
+    def testNoCodeLaunchesTheAppBehindRunAppsBack(self) -> None:
+        """App 실행 파일을 `runProcess` · `subprocess` 로 직접 띄우는 코드가 없다 — `runApp` 을 거쳐야 설정 격리 선언을 강제로 받는다.
+        `BuildTree.appExecutable` 에서 받은 이름 · `--app` 인자(`args.app`/`appPath`)가 그 호출의 앞부분에 보이면 지는 근사 검사다."""
+        import re
+        listLaunch = re.compile(r"(?<![\w.])(?:runProcess|subprocess\.(?:run|Popen|call|check_call|check_output))\(([^)]*)")
+        listViolation = []
+        for path in sorted((kRepositoryRoot / "Scripts").rglob("*.py")):
+            if path.name in ("AppRun.py", "Process.py"):
+                continue
+            text = path.read_text(encoding="utf-8")
+            listAppName = {match.group(1) for match in re.finditer(r"(\w+)\s*=\s*[\w.()]*\.appExecutable\b", text)} | {"appPath", "args.app"}
+            for match in listLaunch.finditer(text):
+                firstArguments = match.group(1)
+                bNamedApp = any(re.search(rf"(?<![\w.]){re.escape(name)}\b", firstArguments) for name in listAppName)
+                if bNamedApp or "appExecutable" in firstArguments:
+                    listViolation.append(f"{path.relative_to(kRepositoryRoot)}: {text.count(chr(10), 0, match.start()) + 1}")
+        self.assertEqual([], listViolation)
+
+    def testEveryRunAppCallerStatesItsIsolation(self) -> None:
+        """Scripts 의 `runApp(` 호출이 모두 `settings=` 를 적는다(새 호출자가 빠뜨리면 여기서 알린다 — 런타임 TypeError 의 정적 짝)."""
+        import re
+        listMissing = []
+        for path in sorted((kRepositoryRoot / "Scripts").rglob("*.py")):
+            if path.name == "AppRun.py":
+                continue
+            text = path.read_text(encoding="utf-8")
+            for match in re.finditer(r"(?<![\w.])runApp\(", text):
+                call = text[match.start():match.start() + 600]
+                if "settings=" not in call:
+                    listMissing.append(f"{path.relative_to(kRepositoryRoot)}: {text.count(chr(10), 0, match.start()) + 1}")
+        self.assertEqual([], listMissing)
 
 
 if __name__ == "__main__":

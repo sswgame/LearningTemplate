@@ -35,6 +35,15 @@ namespace sw
             }
 
             static string makeFallback( string_view gameName ) { return FileUtil::joinPath( kFallbackFolder, makeFolderName( gameName ) ); }
+
+            /** @brief 환경 변수 `kUserDataRootVariable` 이 값을 가지면 그 아래 `<game>` 폴더, 아니면 빈 글입니다(그때는 OS 의 사용자 폴더 규칙을 따른다). */
+            static string makeUnderRootOverride( string_view gameName )
+            {
+                string root;
+                if ( ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) == false )
+                    return string{};
+                return FileUtil::joinPath( root, makeFolderName( gameName ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -44,6 +53,8 @@ namespace sw
     string UserDataPath::getDataDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
+        if ( string overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
+            return overridden;
 #if defined( SW_PLATFORM_WINDOWS )
         const string directory = Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName );
 #elif defined( SW_PLATFORM_LINUX )
@@ -57,6 +68,8 @@ namespace sw
     string UserDataPath::getConfigDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
+        if ( string overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
+            return overridden;
 #if defined( SW_PLATFORM_WINDOWS )
         const string directory = Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName );
 #elif defined( SW_PLATFORM_LINUX )

@@ -24,6 +24,7 @@ import json
 import platform
 import statistics
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -31,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.QualityPreset import SettingsIsolation, describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
@@ -47,7 +49,7 @@ def measureInternal(appPath: Path, listArgument: list[str], runCount: int) -> tu
     mapSample: dict[str, dict[str, list[float]]] = {}
     listFailure: list[str] = []
     for runIndex in range(runCount):
-        result = runApp(appPath, listArgument, timeoutSeconds=600.0)
+        result = runApp(appPath, listArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=600.0)
         if result.bBackendUnusable:
             listFailure.append("backend unusable on this machine")
             break
@@ -97,7 +99,7 @@ def captureTraceInternal(appPath: Path, listAppArgument: list[str], gameName: st
     tracePath = Path(appPath).resolve().parent / "Saved" / "Traces" / f"perf_{gameName}_{backend}.trace.json"
     tracePath.parent.mkdir(parents=True, exist_ok=True)
     tracePath.unlink(missing_ok=True)
-    result = runApp(appPath, [*listAppArgument, f"-gv_profileTracePath={tracePath.as_posix()}"], timeoutSeconds=600.0)
+    result = runApp(appPath, [*listAppArgument, f"-gv_profileTracePath={tracePath.as_posix()}"], settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=600.0)
     if not result.bClean or not tracePath.is_file():
         print(f"[Perf] trace run did not leave {tracePath} ({(result.listErrorLine or [f'exit {result.exitCode}'])[0]})", flush=True)
         return None
@@ -131,7 +133,18 @@ def main(listArgument: list[str] | None = None) -> int:
         return ExitCode.Violation
 
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend]]
-    measured, listFailure = measureInternal(args.app, listAppArgument, max(1, args.runs))
+    quality = readTableQuality(table)
+    # 품질 프리셋은 표가 정한 이름을 사용자 설정 파일로 써 준다(기준의 `arguments` 에는 임시 경로를 적지 않는다) — 없으면 App 이 이 PC 의 사용자 폴더 파일을
+    # 읽거나 사양으로 프리셋을 고른다. 측정 · 트레이스 판까지 파일이 살아 있도록 임시 폴더는 판정이 끝날 때까지 둔다.
+    with tempfile.TemporaryDirectory(prefix="sw_perf_") as tempDir:
+        listRunArgument = [*listAppArgument, *writePresetSettingsFile(repositoryRoot, quality, Path(tempDir) / "usersettings.json")]
+        return runMeasuredInternal(args, repositoryRoot, gameName, listAppArgument, listRunArgument, quality)
+
+
+def runMeasuredInternal(args: argparse.Namespace, repositoryRoot: Path, gameName: str, listAppArgument: list[str], listRunArgument: list[str],
+                        quality: str) -> int:
+    """측정하고 기준을 남기거나(--record) 견줍니다. `listAppArgument` 는 기준에 적히는 인자, `listRunArgument` 는 거기에 품질 설정 파일을 더한 실제 인자입니다."""
+    measured, listFailure = measureInternal(args.app, listRunArgument, max(1, args.runs))
     if listFailure:
         for failure in listFailure:
             print(f"[Perf] FAIL {failure}", flush=True)
@@ -150,7 +163,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if args.record:
         document["machines"][entryKey] = {
             "recorded": datetime.date.today().isoformat(), "frames": args.frames, "runs": args.runs,
-            "arguments": listAppArgument, "scopes": measured,
+            "arguments": listAppArgument, "quality": quality, "scopes": measured,
         }
         baselinePath.parent.mkdir(parents=True, exist_ok=True)
         baselinePath.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -164,6 +177,10 @@ def main(listArgument: list[str] | None = None) -> int:
     if entry.get("frames") != args.frames or entry.get("arguments") != listAppArgument:
         print("[Perf] 기준이 다른 인자로 재어졌다 — 다시 남기십시오", flush=True)
         return ExitCode.Violation
+    mismatch = describeQualityMismatch(entry.get("quality"), quality)
+    if mismatch:
+        print(f"[Perf] {mismatch}", flush=True)
+        return ExitCode.Violation
     tolerance = {"p50_us": args.tolerance_p50, "p99_us": args.tolerance_p99, "avg_us": args.tolerance_p50}
     listRegression, listNote = compareInternal(entry["scopes"], measured, tolerance, args.floor_us)
     for note in listNote:
@@ -171,7 +188,7 @@ def main(listArgument: list[str] | None = None) -> int:
     for regression in listRegression:
         print(f"[Perf] REGRESSION {regression}", flush=True)
     if listRegression and not args.no_trace:
-        captureTraceInternal(args.app, listAppArgument, gameName, args.backend)
+        captureTraceInternal(args.app, listRunArgument, gameName, args.backend)
     print("[Perf] PASS" if not listRegression else "[Perf] FAIL", flush=True)
     return ExitCode.Violation if listRegression else ExitCode.Passed
 

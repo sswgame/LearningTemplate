@@ -25,6 +25,7 @@ from common.ConflictSchedule import runConflictSchedule  # noqa: E402
 from common import Timeline  # noqa: E402
 from common.AppBinary import runHeadlessTask  # noqa: E402
 from common.AppRun import runApp  # noqa: E402
+from common.QualityPreset import SettingsIsolation  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Timeline import kTimelineEnvName, kTimelineItemEnvName, summarizeAppArguments  # noqa: E402
 from common.VerifyManifest import (ItemResult, ShardPlan, VerifyItem, VerifyManifest, VerifyManifestError, buildItemCommand, checkVerifyPending, combineShardResults,  # noqa: E402
@@ -257,7 +258,7 @@ class TimelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "timeline.log"
             with mock.patch.dict("os.environ", {kTimelineEnvName: str(path), kTimelineItemEnvName: "perf-x"}):
-                runApp(Path(sys.executable), ["-c", "pass"])
+                runApp(Path(sys.executable), ["-c", "pass"], settings=SettingsIsolation.NOT_APPLICABLE)
             listLine = path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(2, len(listLine))
             self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 앱시작 perf-x pid=\d+ ")
@@ -268,8 +269,8 @@ class TimelineTest(unittest.TestCase):
             env = {key: value for key, value in os.environ.items() if key not in (kTimelineEnvName, kTimelineItemEnvName)}
             with mock.patch.dict("os.environ", env, clear=True), mock.patch.object(Timeline, "getProjectRoot", return_value=Path(folder)), \
                     mock.patch.object(Timeline, "_standalonePath", None):
-                runApp(Path(sys.executable), ["-c", "pass"])
-                runApp(Path(sys.executable), ["-c", "pass"])   # 같은 프로세스의 실행은 같은 파일에 쌓인다
+                runApp(Path(sys.executable), ["-c", "pass"], settings=SettingsIsolation.NOT_APPLICABLE)
+                runApp(Path(sys.executable), ["-c", "pass"], settings=SettingsIsolation.NOT_APPLICABLE)   # 같은 프로세스의 실행은 같은 파일에 쌓인다
             listFile = list((Path(folder) / Timeline.kStandaloneRelDir).glob("*.log"))
             self.assertEqual(1, len(listFile))
             listLine = listFile[0].read_text(encoding="utf-8").splitlines()
@@ -287,7 +288,7 @@ class TimelineTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as folder, mock.patch.object(subprocess, "Popen", spy), \
                 mock.patch.dict("os.environ", {kTimelineEnvName: str(Path(folder) / "t.log")}):
-            runApp(Path(sys.executable), ["-c", "pass"])
+            runApp(Path(sys.executable), ["-c", "pass"], settings=SettingsIsolation.NOT_APPLICABLE)
         self.assertTrue(listStdout[0].closed)   # 안 닫으면 가비지 수집 때 ResourceWarning 이 난다
 
     def testHeadlessTaskLeavesTimelineLinesAndKeepsCapture(self) -> None:

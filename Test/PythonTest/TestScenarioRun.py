@@ -26,6 +26,7 @@ from common.AutomationTimeLimits import kTimeLimitsHeaderRelPath, readProcessKil
 from common.CppConstants import ConstantResolver  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation, checkSettingsIsolation, readUserDataRootVariable  # noqa: E402
 from common import ScenarioArguments  # noqa: E402
 from common.ScenarioFile import findScenarioCandidates, readScenarioDeclaration  # noqa: E402
 from common.ScenarioOutcome import kExitCodeHeaderRelPath, readOutcomeExitCodes  # noqa: E402
@@ -77,8 +78,12 @@ class FakeApp:
         self.bTimedOut = bTimedOut
         self.outputFile: Path | None = None   # 이 판이 쓰는 산출물(있으면 매 부름마다 쓴다)
         self.listCall: list[tuple[Path, list[str], Path | None, float]] = []
+        self.listEnvironment: list[dict[str, str] | None] = []   # 부름마다 받은 환경 덮어쓰기
 
-    def __call__(self, appPath: Path, listArgument: list[str], *, cwd: Path | None = None, timeoutSeconds: float = 300.0, **_: object) -> AppRunResult:
+    def __call__(self, appPath: Path, listArgument: list[str], *, settings: SettingsIsolation, cwd: Path | None = None, timeoutSeconds: float = 300.0,
+                 environment: dict[str, str] | None = None, **_: object) -> AppRunResult:
+        checkSettingsIsolation(settings, listArgument, environment)   # 진짜 `runApp` 이 띄우기 전에 하는 검사 — 선언이 인자와 어긋나면 여기서 진다
+        self.listEnvironment.append(environment)
         self.listCall.append((appPath, list(listArgument), cwd, timeoutSeconds))
         backend = next((argument[1:] for argument in listArgument if argument in ("-dx11", "-dx12", "-vk", "-gl")), "default")
         reportRel = next(argument.split("=", 1)[1] for argument in listArgument if argument.startswith("-scenario-report="))
@@ -132,7 +137,8 @@ class ArgumentAssemblyTest(ScenarioRunCase):
         appPath, listArgument, cwd, timeout = fake.listCall[0]
         self.assertEqual(["-unattended", "-scenario=game/empty/automation/motionblur.scenario.xml",
                           "-scenario-report=Saved/Automation/motionblur_dx12.json", "-dx12", "-game=Empty",
-                          "-gv_firstScene=game/empty/maps/rendertest3d.scene.xml", "-gv_deferred=1"], listArgument)
+                          "-gv_firstScene=game/empty/maps/rendertest3d.scene.xml", "-gv_deferred=1",
+                          f"-gv_userSettingsFile={self.appPath.resolve().parent.as_posix()}/Saved/Automation/UserSettings/motionblur_dx12.json"], listArgument)
         self.assertEqual(self.appPath, appPath)
         self.assertEqual(self.appPath.resolve().parent, cwd.resolve())
         self.assertEqual(ScenarioRun.kDefaultTimeoutSeconds, timeout)
@@ -142,8 +148,23 @@ class ArgumentAssemblyTest(ScenarioRunCase):
         fake = FakeApp()
         code, _, _ = self.runMain(["runner", "--backend", "vulkan"], fake)
         self.assertEqual(ExitCode.Passed, code)
-        self.assertEqual(["-unattended", "-scenario=engine/automation/runner.scenario.xml", "-scenario-report=Saved/Automation/runner_vk.json", "-vk"],
+        self.assertEqual(["-unattended", "-scenario=engine/automation/runner.scenario.xml", "-scenario-report=Saved/Automation/runner_vk.json", "-vk",
+                          f"-gv_userSettingsFile={self.appPath.resolve().parent.as_posix()}/Saved/Automation/UserSettings/runner_vk.json"],
                          fake.listCall[0][1])
+
+    def testIsolatedSettingsFileStartsAbsentAndAppArgSettingsFileIsKept(self) -> None:
+        """격리 설정 파일은 판마다 지워 없는 채로 시작하고, 시퀀스가 `--app-arg` 로 준 설정 파일은 그대로 쓰며 지우지도 않는다."""
+        isolated = self.appPath.parent / "Saved/Automation/UserSettings/motionblur_dx12.json"
+        writeText(isolated, "{\"stale\": true}")
+        self.runMain(["motionblur"], FakeApp())
+        self.assertFalse(isolated.exists())
+        own = self.root / "shared_usersettings.json"
+        writeText(own, "{\"kept\": true}")
+        fake = FakeApp()
+        self.runMain(["motionblur", f"--app-arg=-gv_userSettingsFile={own.as_posix()}"], fake)
+        listSettings = [argument for argument in fake.listCall[0][1] if argument.startswith("-gv_userSettingsFile=")]
+        self.assertEqual([f"-gv_userSettingsFile={own.as_posix()}"], listSettings)
+        self.assertTrue(own.exists())
 
     def testEditorScenarioGetsEditorAndStateFolder(self) -> None:
         fake = FakeApp()
@@ -304,9 +325,11 @@ class ArgumentVocabularyTest(unittest.TestCase):
     def testVocabularyIsReadFromTheCppHeader(self) -> None:
         """정본(`ArgumentList.xxx` 의 철자 · `AutomationScenario.h` 의 상수)이 맞는 글을 준다 — 파이썬이 그것을 읽어 온다."""
         words = ScenarioArguments.kVocabulary
-        self.assertEqual(("-unattended", "-scenario=", "-scenario-report=", "-EnableEditor", "-gv_editorStateDir=", "-game=", "Saved/Automation", "EditorState"),
+        self.assertEqual(("-unattended", "-scenario=", "-scenario-report=", "-EnableEditor", "-gv_editorStateDir=", "-game=", "Saved/Automation", "EditorState",
+                          "-gv_userSettingsFile="),
                          (words.unattendedArgument, words.scenarioArgumentPrefix, words.scenarioReportArgumentPrefix, words.editorArgument,
-                          words.editorStateDirArgumentPrefix, words.gameArgumentPrefix, words.automationFolder, words.editorStateSubfolder))
+                          words.editorStateDirArgumentPrefix, words.gameArgumentPrefix, words.automationFolder, words.editorStateSubfolder,
+                          words.userSettingsFileArgumentPrefix))
 
     def testMissingConstantStopsLoudly(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -374,6 +397,9 @@ class ShippingBuildTest(ScenarioRunCase):
         self.assertEqual(ExitCode.Passed, code)
         self.assertEqual(["-unattended", "-scenario=game/empty/automation/kaykitrig.scenario.xml", "-scenario-report=Saved/Automation/kaykitrig_dx12.json"],
                          fake.listCall[0][1])
+        # 배포본은 `gv_` 를 몰라 설정 파일 인자 대신 환경 변수가 사용자 폴더를 실행별 폴더로 가른다(5-2_Build.md).
+        expectedHome = self.appPath.resolve().parent / "Saved/Automation/UserHome/kaykitrig_dx12"
+        self.assertEqual([{readUserDataRootVariable(getProjectRoot()): str(expectedHome)}], fake.listEnvironment)
         code, _, err = self.runMain(["kaykitrig", "--backend", "gl"], fake)
         self.assertEqual(ExitCode.CheckInvalid, code)
         self.assertIn("하나만 링크했다", err)

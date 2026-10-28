@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.AppRun import runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation  # noqa: E402
 
 kLocationTableRelativePath = "Test/AppTest/HostWriteLocations.json"
 kTempFolderPrefix = "sw_"
@@ -164,7 +165,8 @@ def main(listArgument: list[str] | None = None) -> int:
 
     mapRoot = resolveRootDirectories(appPath.parent, projectRoot, dict(os.environ))
     before = takeSnapshot(mapRoot)
-    result = runApp(appPath, arguments.appArguments, timeoutSeconds=arguments.timeout)
+    # 사용자 설정을 읽고 쓰는 위치(`%LOCALAPPDATA%/SWEngine`)까지 조사 대상이라 격리하면 안 된다. 결과는 그림이 아니라 쓰기 위치뿐이다.
+    result = runApp(appPath, arguments.appArguments, settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=arguments.timeout)
     after = takeSnapshot(mapRoot)
     mapKnown, listUnknown = classifyChanges(diffSnapshots(before, after), listLocation)
 

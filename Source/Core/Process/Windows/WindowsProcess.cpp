@@ -68,6 +68,54 @@ namespace sw
             };
 
             /**
+             * @brief 이 프로세스의 환경에 @p listEntry 를 덮어쓴 UTF-16 환경 블록(`이름=값\0` 들 뒤에 `\0` 하나 더)을 만듭니다.
+             * @details 이름은 대소문자를 가리지 않고 같게 본다(Windows 규칙). 블록은 이름 순(대소문자 무시)으로 정렬한다(`CreateProcessW` 문서가 권하는 모양).
+             * @return 이름이 비었거나 `=` 를 품은 항목이 있으면 false 입니다(블록은 건드리지 않는다).
+             */
+            static bool makeEnvironmentBlock( const vector<ProcessEnvironmentEntry>& listEntry, vector<utf16>& outListBlock )
+            {
+                vector<wstring> listLine;
+                if ( LPWCH pBase = GetEnvironmentStringsW(); pBase != nullptr )
+                {
+                    for ( const utf16* pLine = pBase; *pLine != L'\0'; pLine += wcslen( pLine ) + 1 )
+                    {
+                        listLine.emplace_back( pLine );
+                    }
+                    FreeEnvironmentStringsW( pBase );
+                }
+                for ( const ProcessEnvironmentEntry& entry : listEntry )
+                {
+                    if ( entry._name.empty() || entry._name.find( '=' ) != string::npos )
+                        return false;
+                    const wstring   name = StringUtil::utf8ToUtf16( entry._name.c_str() );
+                    vector<wstring> listKept;
+                    for ( const wstring& line : listLine )
+                    {
+                        const bool bLongEnough  = line.size() > name.size();
+                        const bool bNameMatches = bLongEnough && _wcsnicmp( line.c_str(), name.c_str(), name.size() ) == 0;
+                        const bool bSameName    = bNameMatches && line[name.size()] == L'=';
+                        if ( bSameName == false )
+                            listKept.push_back( line );
+                    }
+                    listKept.push_back( StringUtil::utf8ToUtf16( ( entry._name + "=" + entry._value ).c_str() ) );
+                    listLine = std::move( listKept );
+                }
+                std::sort( listLine.begin(), listLine.end(), []( const wstring& left, const wstring& right )
+                {
+                    return _wcsicmp( left.c_str(), right.c_str() ) < 0;
+                } );
+                outListBlock.clear();
+                for ( const wstring& line : listLine )
+                {
+                    outListBlock.insert( outListBlock.end(), line.c_str(), line.c_str() + line.size() + 1 );
+                }
+                if ( outListBlock.empty() )
+                    outListBlock.push_back( L'\0' ); // 항목이 하나도 없는 블록도 널 두 개로 끝난다
+                outListBlock.push_back( L'\0' );
+                return true;
+            }
+
+            /**
              * @brief 표준 출력 파이프와, 표준 입력 파이프(@p bPipeStandardInput) 또는 NUL 을 엽니다. 비워 두면 자식은 표준 입력 핸들이 없다.
              *        실패하면 연 것을 닫고 false 입니다.
              */
@@ -208,6 +256,14 @@ namespace sw
             return false;
         }
 
+        // 환경 덮어쓰기는 파이프를 열기 전에 만든다 — 이름이 잘못되면 닫을 것이 없는 채로 실패한다.
+        vector<utf16> listEnvironmentBlock;
+        if ( options._listEnvironment.empty() == false && Internal::makeEnvironmentBlock( options._listEnvironment, listEnvironmentBlock ) == false )
+        {
+            SW_LOG_ERROR( "Process launch got an environment entry with an empty name or '=' in the name" );
+            return false;
+        }
+
         Internal::StdPipes pipes;
         if ( Internal::createStdPipes( options._bPipeStandardInput, pipes ) == false )
             return false;
@@ -237,7 +293,7 @@ namespace sw
         DWORD       consoleProcessID = 0;
         const bool  bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessID, 1 ) != 0;
         const DWORD creationFlags    = ( options._bCreateWindow || bShareConsole ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT |
-                                    ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 );
+                                    ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 ) | ( listEnvironmentBlock.empty() ? 0 : CREATE_UNICODE_ENVIRONMENT );
 
         PROCESS_INFORMATION pi{};
         const BOOL          bCreated = CreateProcessW(
@@ -247,7 +303,7 @@ namespace sw
             nullptr,
             TRUE,
             creationFlags,
-            nullptr,
+            listEnvironmentBlock.empty() ? nullptr : listEnvironmentBlock.data(), // nullptr 이면 이 프로세스의 환경을 그대로 물려준다
             options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
             &startupInfo.StartupInfo,
             &pi );
@@ -276,6 +332,11 @@ namespace sw
         if ( command._executable.empty() )
         {
             SW_LOG_ERROR( "Detached process launch needs an executable" );
+            return false;
+        }
+        if ( options._listEnvironment.empty() == false )
+        {
+            SW_LOG_ERROR( "Detached process launch does not take environment overrides - use Process::launch" );
             return false;
         }
         const string  cmdStr      = command.toCommandLine();

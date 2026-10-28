@@ -13,6 +13,7 @@ kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
 
 from common import AppRun, ProcessLimits as ProcessLimitsModule  # noqa: E402
+from common.QualityPreset import SettingsIsolation  # noqa: E402
 
 
 class JobHandleOwnershipTest(unittest.TestCase):
@@ -35,12 +36,12 @@ class JobHandleOwnershipTest(unittest.TestCase):
         self.assertEqual(self.listClosed, [777])
 
     def testRunAppClosesAfterExit(self) -> None:
-        result = AppRun.runApp(Path(sys.executable), ["-c", "pass"], timeoutSeconds=30.0)
+        result = AppRun.runApp(Path(sys.executable), ["-c", "pass"], settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=30.0)
         self.assertTrue(result.bLaunched)
         self.assertEqual(self.listClosed, [777])
 
     def testRunAppClosesAfterTimeout(self) -> None:
-        result = AppRun.runApp(Path(sys.executable), ["-c", "import time; time.sleep(60)"], timeoutSeconds=0.5)
+        result = AppRun.runApp(Path(sys.executable), ["-c", "import time; time.sleep(60)"], settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=0.5)
         self.assertTrue(result.bTimedOut)
         self.assertEqual(self.listClosed, [777])
 

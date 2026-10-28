@@ -35,6 +35,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.QualityPreset import SettingsIsolation, describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
@@ -47,11 +48,13 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     """한 판 그려 축소본을 돌려줍니다. ("ok", RgbImage, 초) · ("skip", 이유, 초) · ("fail", 이유, 초) — 초는 App 이 돈 시간입니다."""
     screenshotPath = workDir / f"{backend}_{runIndex}.ppm"
     settledFrames = int(game["settled_frames"])
+    # 품질 프리셋은 표가 정한 이름을 사용자 설정 파일로 써 준다 — 없으면 App 이 이 PC 의 사용자 폴더 파일을 읽거나 사양으로 프리셋을 고른다(기계마다 그림이 갈린다).
+    listQualityArgument = writePresetSettingsFile(getProjectRoot(), readTableQuality(table), workDir / f"{backend}_{runIndex}_usersettings.json")
     # 사진을 다 찍으면(또는 자리 잡지 않아 못 찍으면 14 로) App 이 스스로 끝난다 — 프레임 수로 끝내면 자리 잡기 전에 끝날 수 있다.
-    listArgument = [f"-W={table['capture_width']}", f"-H={table['capture_height']}", *game["arguments"],
+    listArgument = [f"-W={table['capture_width']}", f"-H={table['capture_height']}", *game["arguments"], *listQualityArgument,
                     f"-gv_screenshotSettledFrames={settledFrames}", "-gv_screenshotQuit=1", f"-gv_screenshot={screenshotPath}",
                     kBackendSwitch[backend], *game["extra_arguments"]]
-    result = runApp(appPath, listArgument, timeoutSeconds=300.0)
+    result = runApp(appPath, listArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=300.0)
     if result.bBackendUnusable:
         return "skip", "backend unusable on this machine", result.seconds
     listIgnored = result.findIgnoredGlobals(listArgument)
@@ -120,7 +123,7 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
         "backend": backend,
         "runs": runCount,
         "capture": {"width": table["capture_width"], "height": table["capture_height"], "settled_frames": game["settled_frames"],
-                    "arguments": game["arguments"]},
+                    "arguments": game["arguments"], "quality": readTableQuality(table)},
         "metrics": averageMetrics(listMetrics).toJSON(),
         "tolerance": tolerance,
         "device": describeGpuInternal(),
@@ -137,6 +140,9 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
     record = json.loads(referencePath.read_text(encoding="utf-8"))
     if record["capture"]["arguments"] != game["arguments"] or record["capture"].get("settled_frames") != game["settled_frames"]:
         return "fail", "the reference was captured with other arguments/settled_frames than Test/QA/Games.json - re-record it", 0.0
+    mismatch = describeQualityMismatch(record["capture"].get("quality"), readTableQuality(table))
+    if mismatch:
+        return "fail", mismatch, 0.0
     status, payload, seconds = captureInternal(appPath, game, table, backend, workDir, 0)
     if status != "ok":
         return status, str(payload), seconds

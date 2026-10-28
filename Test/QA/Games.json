@@ -1,5 +1,6 @@
 {
-  "_comment": "QA runners (Scripts/qa) read this table: how each test game plays itself. arguments go to App as-is; settled_frames is how many render-thread frames the golden capture waits after the screen settled (scene playing, loading screen and screen fade gone, no asset loads in flight - -gv_screenshotSettledFrames); a fixed frame from start would catch the wall-clock loading screen on a fast machine.",
+  "_comment": "QA runners (Scripts/qa) read this table: how each test game plays itself. quality is the graphics.quality preset (engine.settings.xml <Scalability>) that golden/perf runs are written with via -gv_userSettingsFile, so the hardware probe and the user folder never pick it; each golden/baseline records it and a different or missing one is rejected. arguments go to App as-is; settled_frames is how many render-thread frames the golden capture waits after the screen settled (scene playing, loading screen and screen fade gone, no asset loads in flight - -gv_screenshotSettledFrames); a fixed frame from start would catch the wall-clock loading screen on a fast machine.",
+  "quality": "high",
   "capture_width": 320,
   "capture_height": 180,
   "reference_width": 160,

@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -150,7 +151,7 @@ namespace test
              *            `Saved/Editor`(레이아웃 · 테마 · 설정)를 읽고 써 동시에 도는 실행끼리 같은 JSON 을 고친다.
              *          - `-gv_userSettingsFile` 이 없으면 `<쓰기 루트>/Saved/UserSettings/usersettings.json` — 없으면 App 이 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>/`)의
              *            설정을 읽어 결과가 그 PC 의 설정에 달리고, 설정을 바꾸는 시나리오가 그 파일을 고친다.
-             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 배포본의 사용자 설정은 사용자 폴더 그대로다(결정 기록 5-2 W11).
+             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 대신 `makeIsolationEnvironment` 가 환경 변수로 같은 일을 한다(결정 기록 5-2 W11).
              */
             static sw::vector<sw::string> makeIsolationArguments( sw::string_view arguments, const sw::string& runFolder )
             {
@@ -177,6 +178,25 @@ namespace test
                 (void)runFolder;
 #endif
                 return listArgument;
+            }
+
+            /**
+             * @brief 배포본(Shipping)이 사용자 설정 · 세이브를 이 실행의 쓰기 루트 아래에서만 읽고 쓰게 하는 환경 변수들입니다. 배포본이 아니면 빈 목록입니다.
+             * @details 배포본은 `-gv_userSettingsFile` 을 몰라 이 PC 의 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>/`)를 읽었다. 엔진이 읽는 위치만 가리키는
+             *          `SW_USER_DATA_ROOT`(`sw::kUserDataRootVariable`)를 `<쓰기 루트>/Saved/UserHome` 으로 주고, 붙일 때마다 그 폴더를 비운다.
+             *          `LOCALAPPDATA` 를 옮기지 않는 까닭: 드라이버의 셰이더 캐시 같은 남의 폴더가 따라가 첫 실행이 느려지고 결과가 달라진다.
+             */
+            static sw::vector<sw::ProcessEnvironmentEntry> makeIsolationEnvironment( const sw::string& runFolder )
+            {
+                sw::vector<sw::ProcessEnvironmentEntry> listEnvironment;
+#if defined( SW_SHIPPING )
+                const sw::string userHome = sw::FileUtil::joinPath( runFolder, "Saved/UserHome" );
+                SW_EXPECT_TRUE_MSG( sw::FileUtil::removeDirectory( userHome ), ( "사용자 폴더 대역을 비우지 못했다: " + userHome ).c_str() );
+                listEnvironment.push_back( sw::ProcessEnvironmentEntry{ sw::kUserDataRootVariable, userHome } );
+#else
+                (void)runFolder;
+#endif
+                return listEnvironment;
             }
 
             /** @brief 체인의 단계 보고 경로입니다(`<base>.<단계>.json` — 단계가 둘 이상일 때 `AutomationScenarioChain::makeStageReportPath` 가 정한다). */
@@ -265,6 +285,7 @@ namespace test
         const sw::vector<sw::string> listIsolation = AppTestUtilInternal::makeIsolationArguments( arguments, runFolder );
         launch._command._listArgument.insert( launch._command._listArgument.end(), listIsolation.begin(), listIsolation.end() );
         launch._options._workingDirectory = runFolder;
+        launch._options._listEnvironment  = AppTestUtilInternal::makeIsolationEnvironment( runFolder );
         return launch;
     }
 

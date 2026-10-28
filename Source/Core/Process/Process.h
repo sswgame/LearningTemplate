@@ -56,7 +56,20 @@ namespace sw
      *          온 줄인지 가려낼 방법은 없습니다.
      */
     using ProcessOutputDelegate = Delegate<void( string_view line )>;
+} // namespace sw
 
+namespace sw
+{
+    /** @brief 자식에게 줄 환경 변수 한 개(이름 · 값)입니다. 값이 비어도 "빈 값으로 정함" 이다. */
+    struct ProcessEnvironmentEntry
+    {
+        string _name{};
+        string _value{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct ProcessOptions
      * @brief 프로세스 생성 옵션입니다.
@@ -72,6 +85,12 @@ namespace sw
          * @details 모든 자식에 걸면 터미널의 Ctrl+C 가 자식(빌드 중인 컴파일러)에 닿지 않으므로 옵션이다. POSIX 는 늘 자기 그룹이라 무시합니다.
          */
         bool _bNewProcessGroup{ false };
+        /**
+         * @brief 이 프로세스의 환경에 덮어써서 자식에게 줄 환경 변수들입니다. 비면 환경을 그대로 물려줍니다.
+         * @details `launch` 만 받는다 — `launchDetached` 는 비어 있지 않으면 거절한다(조용히 무시하지 않는다). 이름이 비었거나 `=` 를 품으면 launch 가 실패합니다.
+         *          부모 프로세스의 환경은 바뀌지 않는다(`ProcessEnvironment::trySet` 은 부모 전체에 새고 다른 스레드가 읽는다).
+         */
+        vector<ProcessEnvironmentEntry> _listEnvironment{};
     };
 } // namespace sw
 

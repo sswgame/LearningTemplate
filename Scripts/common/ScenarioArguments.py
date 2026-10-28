@@ -5,7 +5,7 @@
 
 - 엔진이 읽는 인자의 철자(`-unattended` · `-scenario` · `-scenario-report` · `-EnableEditor` · `-game`) — `Source/Core/Predefined/ArgumentList.xxx` 의 줄
   (`ConfigReference.collectArguments` 가 읽는다. C++ 은 `getCommandLineArgumentSpelling` 으로 같은 표를 쓴다).
-- 자동화 산출물 폴더 · 에디터 상태 폴더 이름 · 에디터 상태 폴더를 주는 전역 변수 이름 — `Source/Engine/Automation/AutomationScenario.h` 의
+- 자동화 산출물 폴더 · 에디터 상태 폴더 이름 · 에디터 상태 폴더와 사용자 설정 파일을 주는 전역 변수 이름 —`Source/Engine/Automation/AutomationScenario.h` 의
   `inline constexpr const utf8* kAutomationXxx = "…";` 줄(실행기 · 녹화기 · AppTest 가 쓴다).
 
 철자나 상수 줄이 없거나 모양이 바뀌었으면 오류로 멈춘다(폴백 없음). 인자를 만드는 순서와 `<Launch>` 값은 시나리오 파일에서 오므로 여기 없다 — 인자 순서는 App 에게 의미가 없다.
@@ -46,6 +46,7 @@ class ScenarioArgumentVocabulary:
     gameArgumentPrefix: str
     automationFolder: str
     editorStateSubfolder: str
+    userSettingsFileArgumentPrefix: str
 
 
 def readScenarioArgumentVocabulary(repositoryRoot: Path) -> ScenarioArgumentVocabulary:
@@ -56,7 +57,7 @@ def readScenarioArgumentVocabulary(repositoryRoot: Path) -> ScenarioArgumentVoca
     for enumName in (_kEnumUnattended, _kEnumScenario, _kEnumScenarioReport, _kEnumEditor, _kEnumGame):
         if enumName not in mapSpelling:
             sys.exit(f"{repositoryRoot / kArgumentListRelPath}: SW_REGISTER_ARGUMENT( {enumName}, … ) 줄을 찾지 못했다 — 줄이 바뀌었나")
-    for constantName in ("kAutomationOutputFolder", "kAutomationEditorStateFolder", "kAutomationEditorStateVariable"):
+    for constantName in ("kAutomationOutputFolder", "kAutomationEditorStateFolder", "kAutomationEditorStateVariable", "kAutomationUserSettingsVariable"):
         if constantName not in mapConstant:
             sys.exit(f"{headerPath}: `inline constexpr const utf8* {constantName} = \"…\";` 줄을 찾지 못했다 — 줄 모양이 바뀌었나")
     return ScenarioArgumentVocabulary(
@@ -67,7 +68,8 @@ def readScenarioArgumentVocabulary(repositoryRoot: Path) -> ScenarioArgumentVoca
         editorStateDirArgumentPrefix=f"-{mapConstant['kAutomationEditorStateVariable']}=",
         gameArgumentPrefix=f"-{mapSpelling[_kEnumGame]}=",
         automationFolder=mapConstant["kAutomationOutputFolder"],
-        editorStateSubfolder=mapConstant["kAutomationEditorStateFolder"])
+        editorStateSubfolder=mapConstant["kAutomationEditorStateFolder"],
+        userSettingsFileArgumentPrefix=f"-{mapConstant['kAutomationUserSettingsVariable']}=")
 
 
 kVocabulary = readScenarioArgumentVocabulary(getProjectRoot())
