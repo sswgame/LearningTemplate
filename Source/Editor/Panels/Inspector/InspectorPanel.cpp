@@ -248,7 +248,7 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "\xe2\x80\x94" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Active" ) );
         }
         if ( ImGui::Checkbox( "Active", &bActive ) )
         {

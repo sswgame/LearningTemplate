@@ -214,12 +214,14 @@ namespace sw::editor
         };
         for ( const ToolButton& button : arrToolButton )
         {
+            if ( &button != arrToolButton )
+                EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( button._pLabel ) );
             if ( ImGui::RadioButton( button._pLabel, _tool == button._tool ) )
                 _tool = button._tool;
             EditorSelfTestMarks::note( button._pMark );
             EditorWidgets::drawTooltip( button._pTooltip );
-            ImGui::SameLine();
         }
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Erase" ) );
         ImGui::Checkbox( "Erase", &_bErase );
         EditorSelfTestMarks::note( "tileMap.erase" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
