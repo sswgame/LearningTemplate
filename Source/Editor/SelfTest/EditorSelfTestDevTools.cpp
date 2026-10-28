@@ -556,7 +556,7 @@ namespace sw::editor
 
             // ------------------------------------------------------------------------------
             // gameView.pointerOriginReachesTheGame: 게임 뷰 이미지의 창 안 자리가 패널 창 안에 있고, 런타임 UI 의 포인터 원점과 입력의 게임 화면 원점에 같이 닿는다
-            // (결정 기록 5-7 I3 — 창 픽셀 포인터를 게임 뷰 픽셀로 옮기는 값이 에디터 → 엔진으로 어긋나지 않고 가는지)
+            //
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGameViewPointerOriginReachesTheGame( EditorSelfTestContext& context )
             {

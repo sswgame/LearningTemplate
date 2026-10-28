@@ -102,17 +102,7 @@ if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VC
 	set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
 endif()
 
-# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
-# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
-# 각 린트가 직접 든다. 이 파일에 린트를 손으로 나열하지 않는다.
-#
-# **폴더가 목록이므로 폴더를 감시해야 한다.** 이 GLOB 의 결과는 쓰지 않는다 — `CONFIGURE_DEPENDS`
-# 가 그 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다. 없으면 `gate/` 에 파일을 놓아도
-# 아무 일이 없다(고칠 CMakeLists 가 없으니 reconfigure 를 부를 것도 없다).
-file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
-	"${CMAKE_SOURCE_DIR}/Scripts/lint/gate/*.py"
-	"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"
-)
+# 린트 타깃·CTest 등록은 파이썬이 만든다(Scripts/generate/GenerateLintTargets.py — 린트는 Scripts/lint/gate/CheckIncludeOrder.py 하나).
 
 # 파일은 configure 첫머리(GenerateConfigConstants.cmake 의 GenerateConfigureFiles)가 이미 만들었다.
 set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")

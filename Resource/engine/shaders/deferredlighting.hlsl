@@ -29,11 +29,9 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     const float4 albedoSample = PassTexture::sampleAlbedo( input._uv );
-    const float4 normalSample = PassTexture::sampleNormal( input._uv );
     float3       albedo       = albedoSample.rgb;
-    float3       normal       = normalize( normalSample.xyz * 2.0f - 1.0f );
-    if ( length( normal ) < 0.1f )
-        normal = float3( 0.0f, 0.85f, 0.5f );
+    // 옥타헤드럴 좌표(G버퍼 노멀 칸)를 단위 노멀로 푼 값이다. 클리어 값 (0, 0) 은 +z 로 풀려 안 그린 곳도 단위 길이다.
+    const float3 normal = PassTexture::sampleNormal( input._uv );
 
     float  depth         = PassTexture::sampleDepth( input._uv ).r;
     float3 worldPosition = Transform::computeWorldPositionFromDepth( input._uv, depth );
@@ -42,16 +40,17 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 금속도 · 거칠기는 G버퍼 머티리얼 칸이다(binding.hlsli SurfaceOutput::encodeGbufferMaterial 이 적는다).
     float roughness;
     float metallic;
-    PassTexture::loadGbufferMaterial( input._uv, roughness, metallic );
+    bool  bDrawn;
+    PassTexture::loadGbufferMaterial( input._uv, roughness, metallic, bDrawn );
 
     float  shadow = Shadow::sampleAtWorld( worldPosition, normal );
     float3 lit    = Lighting::shadeLights( albedo, worldPosition, normal, shadow, roughness, metallic );
 
-    // 아무것도 안 그린 곳(깊이 원경이고 노멀 칸의 알파가 클리어 값 0)은 **쓰지 않고 버린다**. G버퍼가 비어 있어 셰이딩할 표면이
+    // 아무것도 안 그린 곳(깊이 원경이고 머티리얼 칸의 알파가 클리어 값 0)은 **쓰지 않고 버린다**. G버퍼가 비어 있어 셰이딩할 표면이
     // 없고, 그대로 계산하면 검은 알베도에 림 라이트만 남아 배경이 이상한 색이 된다.
     // discard 하면 LitColor 는 자기 클리어 색 그대로 남는다 — 포워드의 SceneColor 와 같은 배경이다.
-    // 노멀 알파도 보는 이유: 보기 모드 Overdraw 는 깊이를 쓰지 않는다 — 깊이만 보면 겹친 면이 모두 버려진다.
-    if ( depth >= 1.0f && normalSample.a < 0.5f )
+    // "그려졌다" 표시도 보는 이유: 보기 모드 Overdraw 는 깊이를 쓰지 않는다 — 깊이만 보면 겹친 면이 모두 버려진다.
+    if ( depth >= 1.0f && bDrawn == false )
         discard;
     // 알베도 알파는 G버퍼 패스가 적은 셰이딩 모델이다(binding.hlsli SW_GBUFFER_SHADING) — 보기 모드 Unlit 의 표면은 알베도 그대로.
     if ( albedoSample.a < 0.5f * ( SW_GBUFFER_SHADING_LIT + SW_GBUFFER_SHADING_UNLIT ) )

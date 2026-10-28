@@ -16,9 +16,6 @@ from pathlib import Path
 kAppBuildBinDir: tuple[str, ...] = (
     "build/Ninja-Debug/Bin",
     "build/Ninja-Release/Bin",
-    "build/CI-Debug/Bin",
-    "build/WSL-Debug/Bin",
-    "build/WSL-Release/Bin",
 )
 
 kAppExecutableName: tuple[str, ...] = ("App.exe", "App")

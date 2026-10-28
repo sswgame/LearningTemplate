@@ -7,7 +7,7 @@
  *          맥락 메뉴 · 끌어 놓기 · 포인터 · 글 칸의 편집 키는 `EditorInputGUI`(`Common/Input`).
  *          금지를 받지 않는 곳은 ImGui 를 직접 부르는 두 파일뿐이다 — 어댑터(`Common/Input/EditorInputGUI.cpp`)와 ImGui 키를 엔진 입력으로 옮기는
  *          `Common/Backend/ImGuiKeyForward.cpp`. 둘은 imgui.h 를 include 하기 전에 `SW_EDITOR_INPUT_ADAPTER` 를 정의하고 유니티 묶음에서 빠진다(CMake).
- *          그 정의가 다른 곳에 생기면 린트(`CheckEditorInputCalls`)가 실패한다 — 매크로는 형식으로 폴더에 묶을 수 없어서다.
+ *          그 정의가 다른 곳에 생기면 린트가 실패한다 — 매크로는 형식으로 폴더에 묶을 수 없어서다.
  *          imgui_internal.h 의 다른 겹(키 주인 · 입력 플래그를 받는 것)과 그 밖의 여는 길(`OpenPopupEx` · `Shortcut` · `BeginDragDropTargetCustom` …)도 막는다.
  *          C++ 는 앞서 선언한 함수를 속성을 붙여 다시 선언하는 것을 허용한다(기본 인자는 다른 선언의 것을 쓰므로 여기서 적지 않는다).
  */

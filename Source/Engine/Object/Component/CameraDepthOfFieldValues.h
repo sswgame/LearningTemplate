@@ -14,7 +14,7 @@ namespace sw
      * @struct CameraDepthOfFieldValues
      * @brief 카메라 하나의 피사계 심도 렌즈 값입니다 — 초점이 맞는 거리, 조리개 f 값, 착란원을 화면 크기로 바꾸는 센서 높이.
      * @details 언리얼 CineCameraComponent 의 FocusSettings · CurrentAperture · Filmback 에 해당한다.
-     *          값 타입을 엔진(Object 티어)에 두어 렌더러가 아래로 읽는다(CheckEngineLayers). 게임 프레임워크의 프리셋 `<Lens focusDistance · aperture · sensorSize>` 와
+     *          값 타입을 엔진(Object 티어)에 두어 렌더러가 아래로 읽는다. 게임 프레임워크의 프리셋 `<Lens focusDistance · aperture · sensorSize>` 와
      *          포즈 블렌드가 이 값을 쓰고, `CameraPoseUtil::applyLensToCamera` 가 카메라 컴포넌트(`CameraComponent::setDepthOfField`)에,
      *          수집기가 `RenderViewSettings::_depthOfField` 에 싣고, `FrameRenderer::applyViewPassConstants` 가 `g_CameraLens` 로 바꿔 피사계 심도 패스(depthoffield.hlsl)가 읽는다.
      *          조리개 0 은 핀홀로 보아 피사계 심도가 없다 — 기본값이라 렌즈를 적지 않은 카메라는 흐리지 않는다.

@@ -16,10 +16,10 @@ target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX SW_PLAT
 # main 전에 libX11.so 를 찾다 실패한다. X11 을 쓰는 .cpp 는 `SW_WITH_CLIENT_CODE` 로 서버 빌드에서 빠진다(Window · Input 의 Linux 폴더).
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	# ------------------------------------------------------------------------------
-	# 1) X11 / xcb — 윈도잉 + WSLg Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
+	# 1) X11 / xcb — 윈도잉 + Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
 	# ------------------------------------------------------------------------------
 	# 클라이언트 빌드에는 모두 필수다 — 없으면 구성을 세운다(예전에는 경고만 남기고 링크 단계에서야 섰다).
-	# 패키지: libx11-dev · libxcb1-dev · libx11-xcb-dev(.github/actions/setup-build-env 가 깐다).
+	# 패키지: libx11-dev · libxcb1-dev · libx11-xcb-dev(apt 로 깐다).
 	find_package(X11 REQUIRED)
 	target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
 	target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
@@ -30,14 +30,14 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
 	target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY} ${SW_X11_XCB_LIBRARY})
 
-	# 개발 콘솔 오버레이(X11DevConsoleWindow)가 Xft(fontconfig 폴백 글꼴)로 한글 · 일본어 글자를 그린다. 패키지: libxft-dev(fontconfig · freetype 를 끌고 온다 — .github/actions/setup-build-env).
+	# 개발 콘솔 오버레이(X11DevConsoleWindow)가 Xft(fontconfig 폴백 글꼴)로 한글 · 일본어 글자를 그린다. 패키지: libxft-dev(fontconfig · freetype 를 끌고 온다).
 	# 라이선스: libXft · fontconfig 는 MIT 계열, FreeType 은 FTL(BSD 계열)/GPLv2 중 FTL 로 쓴다. 동적 링크이고 배포물에 싣지 않는 시스템 라이브러리다.
 	# 다른 폴더의 대상이 이 INTERFACE 를 쓰므로 가져온 대상은 GLOBAL 이어야 한다.
 	find_package(PkgConfig REQUIRED)
 	pkg_check_modules(SW_XFT REQUIRED IMPORTED_TARGET GLOBAL xft fontconfig)
 	target_link_libraries(sw_platform_linux INTERFACE PkgConfig::SW_XFT)
 
-	# AT-SPI 접근성 브리지(`SW_ENABLE_ATSPI`) — D-Bus 위의 org.a11y.atspi 객체를 libdbus-1 로 내보낸다. 패키지: libdbus-1-dev(.github/actions/setup-build-env).
+	# AT-SPI 접근성 브리지(`SW_ENABLE_ATSPI`) — D-Bus 위의 org.a11y.atspi 객체를 libdbus-1 로 내보낸다. 패키지: libdbus-1-dev(apt 로 깐다).
 	# 라이선스: libdbus 는 AFL-2.1 또는 GPL-2.0+ 이중 — AFL-2.1(허용 라이선스)로 쓴다. 동적 링크이고 배포물에 싣지 않는 시스템 라이브러리다.
 	if(SW_ENABLE_ATSPI)
 		pkg_check_modules(SW_DBUS REQUIRED IMPORTED_TARGET GLOBAL dbus-1)
@@ -48,7 +48,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 
 	# ------------------------------------------------------------------------------
 	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · cursor-shape · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
-	# 패키지: libwayland-dev · libxkbcommon-dev · wayland-protocols(.github/actions/setup-build-env 가 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
+	# 패키지: libwayland-dev · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
 	# ------------------------------------------------------------------------------
 	if(SW_ENABLE_WAYLAND)
 		find_package(PkgConfig REQUIRED)

@@ -92,7 +92,7 @@ namespace sw
         /**
          * @brief **디스크 파일**에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
-         *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
+         *          게임 런타임 코드는 쓰지 않습니다.
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */

@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Toolchain/VcpkgTsan/x64-linux-tsan.cmake
-# @brief ThreadSanitizer 구성(CI-Debug-TSAN) 전용 vcpkg overlay triplet — x64-linux 에 더해 스스로 동기화하는 포트를 TSan 으로 계측한다
+# @brief ThreadSanitizer 구성(`SW_SANITIZER_KIND=thread`) 전용 vcpkg overlay triplet — x64-linux 에 더해 스스로 동기화하는 포트를 TSan 으로 계측한다
 #
 # TSan 은 계측된 코드의 원자 연산 · futex 만 동기화로 본다(pthread 는 계측 없이도 가로챈다). 원자 연산으로 스스로 동기화하는 라이브러리를
 # 계측 없이 링크하면 그 동기화는 안 보이고, 헤더 인라인 함수는 링커가 우리 TU 의 계측된 사본을 골라 라이브러리 안에서도 그것이 불리므로
@@ -15,10 +15,9 @@
 # 원자 연산으로 스스로 동기화하는 포트를 새로 들이면 이 목록에 더한다.
 #
 # 주의:
-# - 이 파일은 `Toolchain/Vcpkg/` 밖에 둔다 — 그 폴더는 모든 CI 잡의 vcpkg 캐시 키(ci.yml `hashFiles`)에 들어, 여기를 고칠 때마다 다른 잡의
-#   캐시까지 새로 저장된다. TSan 잡의 키만 이 폴더를 본다.
+# - 이 파일은 `Toolchain/Vcpkg/` 밖에 둔다 — 그 폴더를 고칠 때마다 다른 구성의 vcpkg 캐시까지 새로 저장되기 때문이다.
 # - vcpkg 는 트리플릿 파일 내용을 ABI 해시에 넣는다(include 한 파일은 추적하지 않는다). 그래서 x64-linux.cmake 를 include 하지 않고 같은 설정을
-#   여기 그대로 둔다 — 둘 중 하나를 바꾸면 다른 쪽도 맞춘다. 이 파일을 한 글자라도 바꾸면 모든 포트를 다시 짓는다(WSL 약 35 분).
+#   여기 그대로 둔다 — 둘 중 하나를 바꾸면 다른 쪽도 맞춘다. 이 파일을 한 글자라도 바꾸면 모든 포트를 다시 짓는다(약 35 분).
 # - 포트 컴파일러는 프리셋 환경의 CC/CXX(clang)가 정한다. 비어 있으면 vcpkg 가 시스템 GCC 로 짓는다(계측 런타임이 섞이고 DirectXTex 가 OpenMP 를 끌고 온다).
 # ==============================================================================
 

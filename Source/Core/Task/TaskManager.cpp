@@ -24,7 +24,7 @@ namespace sw
     {
         thread_local int32 t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
         /**
-         * @brief 스레드마다 하나인 태스크 관리 상태입니다. 정적 칸을 늘리지 않으려고 한 구조체로 모았습니다(`CheckMutableStatics`).
+         * @brief 스레드마다 하나인 태스크 관리 상태입니다. 정적 칸을 늘리지 않으려고 한 구조체로 모았습니다.
          */
         struct ThreadTaskState
         {

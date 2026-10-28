@@ -7,7 +7,7 @@
 - **실패의 모양** — 실행 파일이 없으면(`FileNotFoundError`) · 시간이 넘으면(`TimeoutExpired`) 곳마다 다르게 죽었다. 여기서는 예외 대신
   `ProcessResult` 의 칸으로 돌려준다(부르는 쪽이 "못 띄웠다" 와 "띄웠는데 졌다" 를 가른다).
 
-쓰지 않는 곳: 컴파일 DB 의 `command` 문자열을 셸로 넘기는 훑기(`TranslationUnits` · `HeaderSelfContained` · `RunBuildWarnings` — 그 문자열이 이미
+쓰지 않는 곳: 컴파일 DB 의 `command` 문자열을 셸로 넘기는 훑기(그 문자열이 이미
 셸 문법이다), 출력을 실시간으로 읽거나 살아 있는 동안 측정하는 App 실행(`AppRun` · `AppBinary`).
 """
 

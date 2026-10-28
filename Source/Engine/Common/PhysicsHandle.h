@@ -2,7 +2,7 @@
  * @file PhysicsHandle.h
  * @brief 물리 객체(바디, 관절, 캐릭터, 셰이프, 탈것)를 가리키는 세대 포함 핸들입니다.
  * @details 컴포넌트 모델 코어(`Component.h` 의 충돌 · 트리거 정보)가 바디 핸들을 값으로 든다. 코어는 Physics 폴더를 include 하지 않으므로
- *          (CheckEngineLayers) 핸들만 Engine/Common 에 두고, 나머지 물리 기본 타입은 `Engine/Physics/PhysicsTypes.h` 에 있다.
+ *          핸들만 Engine/Common 에 두고, 나머지 물리 기본 타입은 `Engine/Physics/PhysicsTypes.h` 에 있다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

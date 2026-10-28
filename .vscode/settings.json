@@ -267,5 +267,6 @@
                 "git.stageAll"
             ]
         }
-    ]
+    ],
+    "git.ignoreLimitWarning": true
 }

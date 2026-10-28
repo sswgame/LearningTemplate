@@ -73,7 +73,7 @@ def mapConcurrent(
     항목이 하나뿐이면 풀을 만들지 않고 그냥 부른다 — 풀 생성 비용이 일보다 큰 흔한 경우다.
     예외는 그대로 올라온다(호출부가 처리한다).
 
-    `onProgress(끝난 수, 전체 수)` 는 몇 분씩 걸리는 훑기(`RunClangTidy` · `RunBuildWarnings`)가 살아 있음을
+    `onProgress(끝난 수, 전체 수)` 는 몇 분씩 걸리는 훑기가 살아 있음을
     보이려고 있다 — 진행률 때문에 스크립트가 따로 풀을 열 이유가 없게 한다.
     """
     if not items:

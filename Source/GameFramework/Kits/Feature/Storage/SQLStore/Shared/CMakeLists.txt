@@ -7,6 +7,6 @@ sw_addGameFrameworkKit(GF_SQLStore)
 if(NOT TARGET GF_SQLStore)
 	return()
 endif()
-# sqlite3.h 는 Driver/SQLite 에서만 include 한다(CheckThirdPartyIsolation.py) — 링크도 이 파일에서만.
+# sqlite3.h 는 Driver/SQLite 에서만 include 한다 — 링크도 이 파일에서만.
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 target_link_libraries(GF_SQLStore PRIVATE unofficial::sqlite3::sqlite3)

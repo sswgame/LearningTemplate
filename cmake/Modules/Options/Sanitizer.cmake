@@ -15,12 +15,12 @@ add_library(sw_sanitizer INTERFACE)
 # ------------------------------------------------------------------------------
 if(SW_SANITIZER_KIND STREQUAL "thread")
 	if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-		message(FATAL_ERROR "[Sanitizer] ThreadSanitizer 는 clang-cl · MSVC 에서 지원되지 않는다 — 리눅스 Clang 프리셋(CI-Debug-TSAN)을 쓰십시오")
+		message(FATAL_ERROR "[Sanitizer] ThreadSanitizer 는 clang-cl · MSVC 에서 지원되지 않는다 — 리눅스 Clang 에서 `SW_SANITIZER_KIND=thread` 로 구성하십시오")
 	endif()
 	# 원자 연산으로 스스로 동기화하는 포트(Jolt · Box2D)는 TSan 으로 지은 것과 링크해야 한다 — 계측 안 된 라이브러리는 그 동기화가 안 보여
 	# 거짓 경쟁 수백 건을 낸다(cmake/Modules/Toolchain/VcpkgTsan/x64-linux-tsan.cmake 머리말). 억제 목록은 그것을 덮지 않는다.
 	if(SW_USE_VCPKG AND NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-linux-tsan")
-		message(WARNING "[Sanitizer] ThreadSanitizer with vcpkg triplet '${VCPKG_TARGET_TRIPLET}': Jolt/Box2D are not instrumented and will report false races — use the CI-Debug-TSAN preset (x64-linux-tsan)")
+		message(WARNING "[Sanitizer] ThreadSanitizer with vcpkg triplet '${VCPKG_TARGET_TRIPLET}': Jolt/Box2D are not instrumented and will report false races — configure on Linux Clang with SW_SANITIZER_KIND=thread (x64-linux-tsan)")
 	endif()
 	target_compile_definitions(sw_sanitizer INTERFACE SW_SANITIZER_THREAD=1)
 	target_compile_options(sw_sanitizer INTERFACE -fsanitize=thread -fno-omit-frame-pointer)
@@ -58,7 +58,7 @@ if(MSVC OR sw_is_clang_cl)
 	# 디버그 라이브러리를 물려주는데, 우리 오브젝트는 /MD(`_ITERATOR_DEBUG_LEVEL=0`)이므로
 	# /failifmismatch 를 심어 둔 라이브러리(imgui-node-editor 등)가 링크를 세운다. 이것 때문에
 	# Windows ASan 빌드는 EditorModule.dll 링크에서 멈춰 **한 번도 완주하지 못했다** — CI 는
-	# Linux ASan 만 돌려서(ci.yml) 이 경로를 밟지 않았다.
+	# Linux ASan 만 돌려 이 경로를 밟지 않았다.
 	# 임포트 타깃을 릴리스 쪽으로 매핑해 CRT 를 맞춘다.
 	set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG "Release;RelWithDebInfo;" CACHE STRING
 		"ASan(/MD)은 vcpkg 릴리스 라이브러리와 링크한다" FORCE)
@@ -109,7 +109,7 @@ if(MSVC OR sw_is_clang_cl)
 			#   BuildTools/ — ReflectionParser (libclang.dll 때문에 따로 나간다)
 			# BuildTools 를 빼먹으면 ASan 빌드가 **빌드 도중에** 죽는다. 코드젠이 빌드 단계에서
 			# ReflectionParser 를 실행하는데, 그게 DLL 을 못 찾아 0xc0000135 로 뜨지 못한다.
-			# CI 는 Linux ASan 만 돌려서(ci.yml) 이 경로를 아무도 밟지 않았다.
+			# Linux ASan 만 돌려 이 경로를 아무도 밟지 않았다.
 			foreach(sw_asan_dest "Bin" "BuildTools")
 				file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${sw_asan_dest}")
 				file(COPY "${sw_clang_asan_dir}/clang_rt.asan_dynamic-x86_64.dll"

@@ -4,8 +4,7 @@
 > 독자: C++ · Python · CMake · HLSL 을 처음 고치는 사람.
 > 결론: 규칙의 원본은 `docs/agents/` 이고 이 문서는 한국어 예시만 가진다. 둘이 갈리면 `docs/agents/` 가 맞다. 규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제한다.
 
-규칙을 다시 적지 않고 `docs/agents/` 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를 한국어 설명과 함께 모읍니다. 규칙을 더하거나 바꿀 때는 `docs/agents/` 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
-게이트 · 픽서의 목록은 `py -3 -m Scripts --list lint` 입니다.
+규칙을 다시 적지 않고 `docs/agents/` 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를 한국어 설명과 함께 모읍니다. 게이트 · 픽서의 목록은 `py -3 -m Scripts --list lint` 입니다.
 
 ---
 
@@ -84,11 +83,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 #endif
 ```
 
-Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`CheckCoreLayers.py`). 예를 들어 `Concurrency`(티어 1)는 교착 검출기(`Diagnostics`, 티어 10)를 include 하지 않고 `ILockObserver` 를 받으며, 검출기가 `initialize` 에서 `registerLockObserver( this )` 로 등록합니다.
-
-`Log` 보다 아래 폴더(`CheckCoreLayers.toml` 의 `[tier]`)의 `.cpp` 는 `Logger.h` · File · String 이 없는 전용 pch(`pchLow.h`)로 컴파일됩니다.
-그래서 `SW_LOG_*` · `StringBuilder` 처럼 위 티어 선언을 쓰면 컴파일이 실패합니다. 보고는 `SW_LOW_LEVEL_*` 로 합니다.
-낮은 티어 **헤더**는 위 티어 pch 로 컴파일되는 TU 가 포함하므로 컴파일이 못 막고 `CheckCoreLayers.py` 의 로그 매크로 규칙이 막습니다.
+Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`Concurrency` 는 교착 검출기를 include 하지 않고 `ILockObserver` 를 받는다). `Log` 보다 아래 층의 `.cpp` 는 `SW_LOG_*` 대신 `SW_LOW_LEVEL_*` 로 보고합니다(`CheckCoreLayers.py`).
 
 클래스 멤버 순서는 public 멤버 변수, 생성자 · 소멸자, `initialize`/`shutdown`, process, getter/setter, private 함수(따로 접근 지정자), private 멤버 변수(맨 아래)입니다.
 
@@ -164,7 +159,6 @@ namespace sw                                    // 구현은 다른 블록 — �
     void VulkanRHIResourceFactory::createPipeline( … ) { … }
 } // namespace sw
 ```
-
 
 ## 6. 문법 형태 — [docs/agents › C++ style](agents/CppStyle.md#c-style)
 

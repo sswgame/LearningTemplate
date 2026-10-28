@@ -10,30 +10,26 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 - **Used across one module** → the owning type as `static constexpr` (`MeshAssetFormat::kExtension`), or the module's namespace in its
   types header (`audio::kSampleRate` in `AudioTypes.h`). No `*Constants.h` grab-bag per folder.
 - **A contract between modules or backends** → the contract header: `RHITypes.h` `constant` block (backend ↔ backend),
-  `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read through `ShaderBindingSlots.h` as `shaderslot::k*`),
-  `Core/Common/Defines.h` · `Engine/Common/EngineDefines.h` `constant` (engine-wide). If two sides must agree, there is one definition and both
-  read it — even when the values happen to match today. A per-side copy with a "must equal X" comment is the bug, not the fix.
-- **Well-known values have one home**: π family, √2, e → `MathUtil` (`kPi` · `kTwoPi` · `kHalfPi` · `kPi64` · `kDegreeToRadian` · `kSqrt2` ·
-  `kInvSqrt2` · `kEuler`; shaders use `common.hlsli`); gravity → `PhysicsSystem::getConfiguredGravity(Magnitude)` at run time
-  (`constant::kDefaultGravity` is only its default); golden-ratio, splitmix64 and FNV-1a → `HashUtil`; four-character tags →
-  `FourCcUtil::make( "SWHF" )` (file byte order). `CheckWellKnownConstants.py` blocks the literals elsewhere.
-- **Time and byte units** → `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond`, `kMillisecondsPerSecond`, `kSecondsPerMinute`,
-  `kSecondsPerHour`, `kSecondsPerDay`, `kBytesPerKilobyte`, `kBytesPerMegabyte` and the other pairs). Never write `1e9`, `1'000'000'000`, `1024 * 1024` or a local `kKilobyte`
-  (`CheckWellKnownConstants.py`). Limits several online modules must agree on live in `OnlineLimit.h`.
+  `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read as `shaderslot::k*`),
+  `Core/Common/Defines.h` · `Engine/Common/EngineDefines.h` `constant` (engine-wide). If two sides must agree, both read one definition.
+  A per-side copy with a "must equal X" comment is the bug, not the fix.
+- **Well-known values have one home**: π family, √2, e → `MathUtil` (shaders: `common.hlsli`); gravity →
+  `PhysicsSystem::getConfiguredGravity(Magnitude)`; golden-ratio, splitmix64 and FNV-1a → `HashUtil`; four-character tags →
+  `FourCcUtil::make( "SWHF" )`. `CheckWellKnownConstants.py` blocks the literals elsewhere.
+- **Time and byte units** → `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond`, `kBytesPerMegabyte` and the other pairs);
+  never `1e9`, `1024 * 1024` or a local `kKilobyte`. Limits several online modules must agree on live in `OnlineLimit.h`.
 - **Sentinels** keep a domain name but take their value from `invalid_index` (`static constexpr uint32 kNotRegistered = invalid_index::kUint32;`).
   An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
 - **No aliases.** `static constexpr uint32 kFrameCount = constant::kMaxFrameCountInFlight;` is a second name for one concept — use the original.
-  A local name that adds meaning to a shared value is fine only when the meaning differs (`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
+  A local name is fine only when it adds meaning (`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
 - **Gameplay tuning values** (speeds, distances, chances, intervals, model scales) are data: a `PROPERTY` on the component (default in the
-  constructor, data without the key keeps it), or a field of the settings / catalog struct a kit already takes from the game. Performance
-  thresholds (spin counts, parallel thresholds, buffer and pool limits) stay named constants next to their use; only one that someone needs
-  to change without a rebuild becomes a `gv_*`. Never a shared header. Asset paths are data too (never a `"engine/…"` literal in code), and a
-  missing required value stops with an error instead of falling back (`*OrDefault`, `fallback` parameters, discarded load results);
-  `CheckDataDrivenStructure.py` freezes what remains (examples: `docs/04_CodingGuidelines.md` 4 "데이터 주도 규칙").
+  constructor), or a field of the settings / catalog struct a kit takes from the game. Performance thresholds (spin counts, parallel
+  thresholds, buffer and pool limits) stay named constants next to their use; one that must change without a rebuild becomes a `gv_*`.
+  Asset paths are data too (no `"engine/…"` literal in code). A missing required value stops with an error instead of falling back
+  (`*OrDefault`, `fallback` parameters, discarded load results; `CheckDataDrivenStructure.py`; examples: `docs/04_CodingGuidelines.md` 4).
 - **Names**: `kPascalCase`, including `MathUtil`. Same meaning, same name across formats: a file or blob format declares `kMagic` · `kVersion` ·
   `kExtension` on its owning type; a state section declares `kStateTag` · `kStateVersion`; a second format in the same scope prefixes the
-  format (`kBinMagic`). A value with a unit says it in the name unless the type does (`kTimeoutSeconds`, `kBudgetMilliseconds`, `kMaxBytes`,
-  `kSlopeRadians`); a converted value goes through a named rate (`constant::kNanosecondsPerSecond`), not a bare `1000`.
+  format (`kBinMagic`). A value with a unit says it in the name unless the type does (`kTimeoutSeconds`, `kMaxBytes`).
 - **Literals that stay literal**: `0` · `1` · `-1` · `2` in their obvious uses, test expectations, rows of an initializer table, log and assert
   strings, reflection metadata (`PROPERTY( Max = ... )` — the parser reads literals). Everything else that repeats or needs a comment to be
-  understood gets a name. `RunRepeatedConstants.py` reports what repeats.
+  understood gets a name.

@@ -1,6 +1,6 @@
 /**
  * @file ProcessEnvironment.h
- * @brief 프로세스의 환경 변수를 읽고 정하는 유일한 자리입니다. `std::getenv` · `GetEnvironmentVariable` 을 부르는 곳은 이 구현 파일뿐입니다(`CheckProcessEnvironment`).
+ * @brief 프로세스의 환경 변수를 읽고 정하는 유일한 자리입니다. `std::getenv` · `GetEnvironmentVariable` 을 부르는 곳은 이 구현 파일뿐입니다.
  * @details 환경 변수에는 세 상태가 있다 — 없음(unset), 빈 값(`FOO=`), 값 있음. 곳곳에서 `getenv` 를 직접 부르면 빈 값을 없음으로 읽는 곳과 있음으로 읽는 곳이 갈린다.
  *          그래서 읽기를 두 함수로 나눠 호출 쪽이 정책을 이름으로 고른다.
  *          - `tryRead`: 빈 값도 "정해져 있음"으로 읽는다. 사용자가 일부러 비워 정한 값을 존중해야 하는 변수(허용 목록 · 비밀 · 명시적 선택)가 쓴다.

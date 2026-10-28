@@ -57,34 +57,6 @@
             "sourceLanguages": [
                 "cpp"
             ]
-        },
-        {
-            // WSL 안에서 연 창(Remote - WSL)에서 쓴다. 빌드는 WSL-Debug 프리셋.
-            "name": "App (WSL · 사이드바 인자)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
-            "args": [],
-            "launchArgs": "replace",
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "테스트 (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/${input:testExecutable}",
-            "args": [
-                "--test_filter=${input:testFilter}"
-            ],
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
         }
     ],
     "inputs": [

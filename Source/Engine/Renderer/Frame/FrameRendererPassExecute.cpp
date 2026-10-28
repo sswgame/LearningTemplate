@@ -985,6 +985,9 @@ namespace sw
                 if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다)
                     continue;
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
+                // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
+                const bool bCascadeSlot = _pActiveView == &_mainView && tileIndex < _cascadeCullCount;
+                context._cullViewIndex  = bCascadeSlot ? _cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
@@ -1016,9 +1019,6 @@ namespace sw
 
         // 주의: 여기서 updatePassConstants 를 부르지 않는다. 이 함수는 드로우 루프 안에서 불리므로 그러면
         // 드로우마다 라이트와 뷰 행렬을 다시 만들고(정규화, 외적, 4x4 곱 두 번) 카메라를 다시 찾고
-                // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
-                const bool bCascadeSlot = _pActiveView == &_mainView && tileIndex < _cascadeCullCount;
-                context._cullViewIndex  = bCascadeSlot ? _cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
         // hashed_string 을 여덟 개씩 intern 한다. 그 값들은 모두 프레임 상수라 execute/executePacket
         // 이 프레임 시드(_frameContext)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
         // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.

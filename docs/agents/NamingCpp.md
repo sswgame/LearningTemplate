@@ -10,14 +10,11 @@
 - Classes, structs, enums: `PascalCase`; interfaces: `I` + `PascalCase`.
 - Functions: `camelCase`; members: `_camelCase`; locals: `camelCase`.
 - Constants: `kPascalCase`; globals: `gv_camelCase`.
-- Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`); every macro takes the type first
-  (`bool`, `int32`, `float32`, `sw::string` or a reflected enum). Runtime settings someone would change in the editor use
-  `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE`: they
-  stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Use
-  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable — the list lives in
-  `Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`. Release is not Shipping: test variables stay registered in Release,
-  so `gv_bench*` and `gv_crashTest` are plain `SW_TEST_GLOBAL_VARIABLE`. An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
-  every kind (`CheckGlobalVariableKinds.py`).
+- Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`); every macro takes the type first. Runtime settings
+  someone would change in the editor use `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use
+  `SW_TEST_GLOBAL_VARIABLE`: settable with `-gv_*`, hidden from the editor panel, **not registered in Shipping**; `_SHIPPED` only when
+  scripts must drive the shipped executable (`Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`). An `extern` is
+  `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for every kind.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
 - Raw pointers use a `p` prefix (`pObject`, `_pObject`); double pointers use
@@ -58,8 +55,7 @@ A C function table is `…API` (`GameAPI`, `EditorAPI`, `ModuleAPI`).
 
 Fixed naming rules that go with the table:
 
-- **`Anim` is spelled out as `Animation`.** Identifiers with an `Anim` prefix are being renamed and no new one is added. The only
-  exception is a name that refers to an outside term, such as Unreal's `AnimInstance` or `AnimMontage`.
+- **`Anim` is spelled out as `Animation`**, except a name that refers to an outside term (Unreal's `AnimInstance`).
 - **A boolean variable or member keeps the `b` prefix** (`bVisible`, `_bOpen`), as in Unreal. Only a function that returns a
   boolean follows the `is` / `has` / `can` / `should` rule.
 - **`Scene` owns the data of one scene.** `GameObjectManager` manages the lifetime of that scene's objects, and `GameObjectStore` is the storage it uses.
@@ -67,11 +63,9 @@ Fixed naming rules that go with the table:
 ### Function names
 
 A reader who knows one of these names must be able to guess the rest.
-`CheckFunctionVocabulary.py` enforces six checks on header declarations: `AcronymRun`, `BannedVerb`, `Abbreviation` (`Attr` → `Attribute`),
-`CheckVerb` (`check*` predicates), `NamePair` (`string_view`/`hashed_string` pairs) and `BareGetter`.
-Declarations that predate a check sit in `[exemption]` of `Scripts/lint/rules/CheckFunctionVocabulary.toml`
-(key `<Rule>:<HeaderStem>::<function>`, reason "개명 예정 <new name>" or "도메인 용어"). A new declaration is never added there unless the verb is
-the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is removed from the table. The `on*` and spell-it-out rules are kept by review.
+`CheckFunctionVocabulary.py` enforces six checks on header declarations: `AcronymRun`, `BannedVerb`, `Abbreviation`, `CheckVerb`,
+`NamePair` and `BareGetter`. Existing violations sit in `[exemption]` of `Scripts/lint/rules/CheckFunctionVocabulary.toml`; add one
+only when the verb is the domain's own term (`UUID::generate`, `SurfaceBvh::build`). The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
   `acronym` in `Scripts/lint/rules/AcronymRegistry.toml`; a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
@@ -80,8 +74,8 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is r
   as the first word (`uiSystem`, `_gpuScene`). Two capital acronyms never touch (`RHIUI…` — spell one
   out or put a word between). Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep
   their spelling (a third-party member that looks like ours goes in `kExternalName`).
-  `CheckAcronymSpelling.py` and `AcronymRun` enforce it (`UAV` is not registered, so it stays `bindComputeUav`).
-  A new acronym is added to that data file and rewritten across the tree with `FormatAcronymSpelling.py` in one commit.
+  `CheckAcronymSpelling.py` and `AcronymRun` enforce it. A new acronym is added to the data file and rewritten with
+  `FormatAcronymSpelling.py` in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |
@@ -129,7 +123,7 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is r
   bound is a code constant (never data, a path or user input) where the heap is off limits (crash, log and signal
   paths) or a fixed buffer is required (ImGui input). `size()` scans for a null (O(length), not in a loop condition),
   overflow truncates with a warning (use `try_assign` / `try_append` where truncation is wrong), and a null is never data in it.
-  Up to 15 characters `string` is already heap-free (SSO). No bulk rewrites.
+  Up to 15 characters `string` is already heap-free (SSO).
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).

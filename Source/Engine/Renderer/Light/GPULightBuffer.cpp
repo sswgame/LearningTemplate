@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
@@ -22,6 +23,14 @@
 namespace sw
 {
     SW_LOG_CALLER( "GPULightBuffer" );
+
+    /**
+     * @brief `-gv_realtimeProbeRayCount=N`: 실시간 프로브 볼륨의 프로브당 광선 수를 N 으로 덮어씁니다(0 이면 볼륨의 `_realtimeRayCount`) — 광선 수별 GPU 시간(RealtimeProbeUpdateSweep)을 한 씬으로 잽니다.
+     * @details 프로브 수는 볼륨의 `_spacing` 이 정해서 씬 파일로 가른다(`game/empty/maps/realtimegi_dense` · `realtimegi_sparse`).
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_realtimeProbeRayCount, 0, "실시간 프로브 볼륨의 프로브당 광선 수 덮어쓰기(0 이면 볼륨의 값 — 스윕용)" );
+    /** @brief `-gv_realtimeProbeUpdatePeriod=N`: 실시간 프로브 볼륨의 갱신 주기(프레임)를 N 으로 덮어씁니다(0 이면 볼륨의 `_realtimeUpdatePeriod`). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_realtimeProbeUpdatePeriod, 0, "실시간 프로브 볼륨의 갱신 주기(프레임) 덮어쓰기(0 이면 볼륨의 값 — 스윕용)" );
 
     namespace
     {
@@ -88,11 +97,12 @@ namespace sw
                 request._volumeElement = makeRealtimeProbeVolumeElement( layout, inoutListProbeElement );
                 request._volumeID      = volume.getComponentID();
                 request._probeCount    = layout.getProbeCount();
-                request._rayCount      = volume.getRealtimeRayCount();
-                request._updatePeriod  = volume.getRealtimeUpdatePeriod();
-                request._blend         = volume.getRealtimeBlend();
-                request._bounceAlbedo  = volume.getBounceAlbedo();
-                request._pVoxelGrid    = std::move( pGrid );
+                // 광선 수 · 주기는 스윕 스위치가 0 보다 크면 그 값이다(같은 씬으로 값만 바꿔 잰다).
+                request._rayCount     = gv_realtimeProbeRayCount > 0 ? static_cast<uint32>( gv_realtimeProbeRayCount ) : volume.getRealtimeRayCount();
+                request._updatePeriod = gv_realtimeProbeUpdatePeriod > 0 ? static_cast<uint32>( gv_realtimeProbeUpdatePeriod ) : volume.getRealtimeUpdatePeriod();
+                request._blend        = volume.getRealtimeBlend();
+                request._bounceAlbedo = volume.getBounceAlbedo();
+                request._pVoxelGrid   = std::move( pGrid );
                 inoutList.push_back( request._volumeElement );
                 inoutListRequest.push_back( std::move( request ) );
             }
@@ -188,7 +198,7 @@ namespace sw
                 pVfx->appendGPULights( outList );
         }
 
-        // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다(결정 기록 5-5 P3). 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
+        // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다. 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
         if ( pOutListProbeElement != nullptr )
         {
@@ -207,7 +217,7 @@ namespace sw
                 if ( pGrid != nullptr )
                     outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pGrid, *pOutListProbeElement ) );
             }
-            // 반사 프로브는 볼륨 뒤에 붙는다(결정 기록 5-5 P4). 쓸 수 있는 베이크가 없는 프로브(베이크하지 않음 · 옮긴 뒤 다시 베이크하지 않음)는 넣지 않는다.
+            // 반사 프로브는 볼륨 뒤에 붙는다. 쓸 수 있는 베이크가 없는 프로브(베이크하지 않음 · 옮긴 뒤 다시 베이크하지 않음)는 넣지 않는다.
             for ( const ReflectionProbeComponent* pProbe : registry.getAll<ReflectionProbeComponent>() )
             {
                 const ReflectionProbeData* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;

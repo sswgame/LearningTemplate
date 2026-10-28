@@ -3,7 +3,7 @@
  * @brief 물리 씬 인터페이스입니다. 월드(고정 스텝, 중력, 레이어, 접촉 이벤트)를 다루고, 역할별 인터페이스(바디 · 관절 · 캐릭터 · 질의 · 바퀴 차)를 모두 상속합니다
  *        (`IPhysicsScene3D`, `IPhysicsScene2D`).
  * @details 엔진 코드는 이 인터페이스들만 본다. 구현(Jolt, Box2D)은 백엔드 폴더(`Physics/Jolt`, `Physics/Box2D`) 안에 있고, 라이브러리 헤더는 거기서만
- *          include 한다(`CheckThirdPartyIsolation.py`). 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsSystem` 의 생성 코드 한 줄을 바꾼다.
+ *          include 한다. 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsSystem` 의 생성 코드 한 줄을 바꾼다.
  *          Godot 의 PhysicsServer3D 에 해당한다.
  *
  *          **역할 나눔.** 씬 하나가 역할 다섯을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다. 언리얼 Chaos 가 월드(`FPhysScene`),

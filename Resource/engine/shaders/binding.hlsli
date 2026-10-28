@@ -110,6 +110,13 @@ struct MorphPool
     static float4 loadTangent( uint batchIndex, uint vertexId, float4 restTangent );
 };
 
+/** @brief 단위 벡터 ↔ 옥타헤드럴 좌표 [-1, 1]^2 (6 절 앞). C++ `OctahedralNormal` 과 같은 식이다 — G버퍼 노멀 첨부(R16G16_SNORM)와 VAT 노멀이 쓴다. */
+struct Octahedral
+{
+    static float2 encode( float3 direction );
+    static float3 decode( float2 coordinate );
+};
+
 /** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호는 InstanceData::computeVertexAnimationElements 다. */
 struct VertexAnimation
 {
@@ -150,10 +157,10 @@ struct PassTexture
 {
     static float4 sampleShadow( float2 uv );
     static float4 sampleAlbedo( float2 uv );
-    static float4 sampleNormal( float2 uv );
+    static float3 sampleNormal( float2 uv ); // G버퍼 노멀 칸(옥타헤드럴 좌표)을 푼 단위 노멀
     static float4 sampleGbufferMaterial( float2 uv );
     static float4 sampleGbufferMaterialSlot( float2 uv );
-    static void loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic );
+    static void loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out bool outDrawn );
     static float4 sampleDepth( float2 uv );
     static float4 sampleSource( float2 uv );
     static float4 sampleDepthPoint( float2 uv );
@@ -421,17 +428,38 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint vertexId, float4 res
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
 // 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
 
+/**
+ * @brief 옥타헤드럴 좌표 [-1, 1]^2 를 단위 벡터로 푼다. C++ `OctahedralNormal::decodeOctant` 와 같은 식이다(0 은 양수 부호).
+ */
+static float3 Octahedral::decode( float2 coordinate )
+{
+    float3       normal = float3( coordinate, 1.0f - abs( coordinate.x ) - abs( coordinate.y ) );
+    const float2 signs  = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
+    const float2 folded = ( 1.0f - abs( normal.yx ) ) * signs;
+    normal.xy           = ( normal.z < 0.0f ) ? folded : normal.xy;
+    return normalize( normal );
+}
+
+/**
+ * @brief 방향(길이는 상관없다)을 옥타헤드럴 좌표 [-1, 1]^2 로 접는다. C++ `OctahedralNormal::fromNormal` 과 같은 식이다
+ *        (`sum = |x| + |y| + |z|`, z < 0 이면 접기, 0 은 양수 부호). 영벡터는 (0, 0) 이라 +z 로 풀린다.
+ */
+static float2 Octahedral::encode( float3 direction )
+{
+    const float  sum    = abs( direction.x ) + abs( direction.y ) + abs( direction.z );
+    const float2 plane  = sum > 0.0f ? direction.xy / sum : float2( 0.0f, 0.0f );
+    const float2 signs  = float2( plane.x >= 0.0f ? 1.0f : -1.0f, plane.y >= 0.0f ? 1.0f : -1.0f );
+    const float2 folded = ( 1.0f - abs( plane.yx ) ) * signs;
+    return ( direction.z < 0.0f ) ? folded : plane;
+}
+
 /** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
 static float3 VertexAnimation::unpackNormal( float packed )
 {
     const uint   integer = (uint)packed;
     const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
     const float2 octant  = float2( (float)( integer / SW_VERTEX_ANIMATION_NORMAL_STEPS ), (float)( integer % SW_VERTEX_ANIMATION_NORMAL_STEPS ) ) / maxStep * 2.0f - 1.0f;
-    float3       normal  = float3( octant, 1.0f - abs( octant.x ) - abs( octant.y ) );
-    const float2 signs   = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
-    const float2 folded  = ( 1.0f - abs( normal.yx ) ) * signs;
-    normal.xy            = ( normal.z < 0.0f ) ? folded : normal.xy;
-    return normalize( normal );
+    return Octahedral::decode( octant );
 }
 
 /**
@@ -1456,20 +1484,22 @@ static float4 PassTexture::sampleAlbedo( float2 uv )
 {
     return Bindless::sampleIndex( g_GBufferAlbedoIndex, uv );
 }
-static float4 PassTexture::sampleNormal( float2 uv )
+/** @brief G버퍼 노멀 칸(R16G16_SNORM 의 옥타헤드럴 좌표 `.xy`)을 단위 노멀로 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::pack 하나다. */
+static float3 PassTexture::sampleNormal( float2 uv )
 {
-    return Bindless::sampleIndex( g_GBufferNormalIndex, uv );
+    return Octahedral::decode( Bindless::sampleIndex( g_GBufferNormalIndex, uv ).xy );
 }
 static float4 PassTexture::sampleGbufferMaterial( float2 uv )
 {
     return Bindless::sampleIndex( g_GBufferMaterialIndex, uv );
 }
-/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기). */
-static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic )
+/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, a "그려졌다" 표시: 클리어 0, 그려지면 1). */
+static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out bool outDrawn )
 {
     const float4 encoded = PassTexture::sampleGbufferMaterial( uv );
     outMetallic          = encoded.r;
     outRoughness         = encoded.g;
+    outDrawn             = encoded.a >= 0.5f;
 }
 static float4 PassTexture::sampleDepth( float2 uv )
 {
@@ -1536,7 +1566,7 @@ struct SurfaceOutput
 {
 #if defined( SW_PASS_GBUFFER )
     float4 _albedo : SV_TARGET0;
-    float4 _normal : SV_TARGET1;
+    float2 _normal : SV_TARGET1;   // R16G16_SNORM — Octahedral::encode(월드 노멀)
     float4 _material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
 #else
     float4 _color : SV_TARGET0;
@@ -1730,12 +1760,13 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 #endif
 
 /**
- * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b · a 는 쓰지 않는다(0).
+ * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b 는 쓰지 않는다(0), a 는 "그려졌다" 표시(1).
  * @details 읽는 쪽은 11-3 절 PassTexture::loadGbufferMaterial 하나다. 셰이딩 모델은 알베도 칸의 알파(SW_GBUFFER_SHADING)에 그대로 둔다.
+ *          클리어 값 0 과 갈라지는 알파가 "이 픽셀을 G버퍼 패스가 그렸다" 를 싣는다(노멀 칸은 옥타헤드럴 두 채널이라 알파가 없다).
  */
 static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metallic )
 {
-    return float4( saturate( metallic ), saturate( roughness ), 0.0f, 0.0f );
+    return float4( saturate( metallic ), saturate( roughness ), 0.0f, 1.0f );
 }
 
 /**
@@ -1757,7 +1788,7 @@ static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3
 {
     SurfaceOutput output;
     output._albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
-    output._normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+    output._normal   = Octahedral::encode( normalize( worldNormal ) );
     output._material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
     return output;
 }

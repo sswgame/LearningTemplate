@@ -1,0 +1,98 @@
+<Scene formatVersion="2" name="RealtimeGIDense">
+	<!-- 프로브 수 스윕(RealtimeProbeUpdateSweep)의 측정 씬 — realtimegi 와 같은 무대이고 프로브 간격만 0.5 m 다(8x3x8 상자에 17x7x17 = 2023 개, 기준은 1 m 간격 324 개). 시나리오는 없다(측정 전용).
+	     perf-compare --cases realtimeProbeDense 가 RT.Probe.Update 를 기준 씬(realtimegi)과 견준다. 광선 수 · 갱신 주기는 -gv_realtimeProbeRayCount · -gv_realtimeProbeUpdatePeriod 로 바꾼다. -->
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-4"
+					                 _localRotation="0.1,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="1.5,0,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="3.0"
+					                           _ambient="0"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,3"
+					               _localRotation="0,0,0"
+					               _localScale="20,1,20"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="15"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Cube">
+			<GameObject _schemaVersion="0" _name="Cube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1,3"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ProbeVolume">
+			<GameObject _schemaVersion="0" _name="ProbeVolume" _bActive="true">
+				<_listComponent>
+					<LightProbeVolumeComponent _componentName="LightProbeVolumeComponent"
+					                           _bActive="true"
+					                           _localPosition="0,1.5,3"
+					                           _localRotation="0,0,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _extent="8,3,8"
+					                           _spacing="0.5"
+					                           _probeDataPath=""
+					                           _bakeSampleCount="256"
+					                           _bounceAlbedo="0.5"
+					                           _bRealtime="true"
+					                           _voxelSize="0.5"
+					                           _realtimeRayCount="64"
+					                           _realtimeUpdatePeriod="4"
+					                           _realtimeBlend="0.25" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

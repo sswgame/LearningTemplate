@@ -43,7 +43,7 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 활성화
 	${swWarningBase}
 	# 실패를 알리는 결과([[nodiscard]])를 버리면 빌드가 선다. 실패할 수 있는 동사(load · save · parse · apply …)는 선언에 [[nodiscard]] 를
-	# 붙이고(`CheckFallibleNodiscard` 게이트), 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
+	# 붙이고, 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
 	-Werror=unused-result
 	# enum switch — 모든 열거자를 다룬 switch 에는 default: 를 두지 않는다(LLVM 코딩 표준). 그래야 열거자를 늘리고 case 를 빠뜨리면
 	# -Wswitch 가 빌드를 세운다. 다 다뤘는데 default: 가 있으면 그 검사가 꺼지므로 그것도 오류다. 일부만 다루는 switch 는 default: 를 쓴다.

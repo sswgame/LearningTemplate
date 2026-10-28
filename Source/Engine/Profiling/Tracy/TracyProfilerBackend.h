@@ -1,6 +1,6 @@
 /**
  * @file TracyProfilerBackend.h
- * @brief Tracy 출력(`IProfilerBackend`)입니다. Tracy 헤더는 짝 .cpp 하나만 include 합니다(`CheckThirdPartyIsolation.py`).
+ * @brief Tracy 출력(`IProfilerBackend`)입니다. Tracy 헤더는 짝 .cpp 하나만 include 합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

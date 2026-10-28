@@ -2,7 +2,7 @@
  * @file EngineFrameObserver.h
  * @brief 엔진 루프의 프레임 경계에 붙는 구동기(자동화 시나리오 · 시퀀서 · AI 같은 외부 구동기)의 인터페이스와 그 문맥입니다.
  * @details 루프는 관찰자 목록만 알고 무엇이 붙었는지는 모릅니다(언리얼 자동화 모듈 · 유니티 PlayerLoop 훅과 같은 자리).
- *          Core 만 include 하므로 어느 Engine 티어에서 구현해도 됩니다(`CheckEngineLayers` prelude).
+ *          Core 만 include 하므로 어느 Engine 티어에서 구현해도 됩니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

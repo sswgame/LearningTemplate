@@ -13,5 +13,5 @@
 
 ## 남은 것
 
-- 화면 확인(매니페스트 id `wildwest-mount-scenario`): 시나리오 `mount.scenario.xml` 의 사진을 보고 말 크기(0.4 는 계산값) · 좌석 높이 · 걸음새를 눈으로 맞춘다. 모델에는 Trot · Canter 가 없어 Gait 2 · 3 은 Walk 와 Run 사이다.
+- 화면 확인): 시나리오 `mount.scenario.xml` 의 사진을 보고 말 크기(0.4 는 계산값) · 좌석 높이 · 걸음새를 눈으로 맞춘다. 모델에는 Trot · Canter 가 없어 Gait 2 · 3 은 Walk 와 Run 사이다.
   좌석 소켓(`_socketName`)은 외형 컴포넌트의 소켓이라 외형이 없는 말은 좌석 오프셋을 쓴다 — 기수가 말 몸통의 오르내림을 따르지 않는다.

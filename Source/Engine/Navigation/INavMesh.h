@@ -1,7 +1,7 @@
 /**
  * @file INavMesh.h
  * @brief 엔진 쪽 내비메시 인터페이스입니다. 타일 베이크, 교체, 경로, 가장 가까운 점, 레이캐스트, 디버그 선을 다루고 군중(`INavCrowd`)을 만들어 줍니다.
- * @details 라이브러리(Recast, Detour)는 `Navigation/Recast/` 안에만 있고 여기에는 그 타입이 하나도 없다(`CheckThirdPartyIsolation.py`).
+ * @details 라이브러리(Recast, Detour)는 `Navigation/Recast/` 안에만 있고 여기에는 그 타입이 하나도 없다.
  *          백엔드를 바꾸려면 이 인터페이스를 구현하는 두 클래스(내비메시와 군중)와 `NavMeshBackend::createNavMesh` 의 한 줄을 바꾼다.
  *
  *          **타일.** 내비메시는 XZ 타일 격자다. 타일 하나는 백엔드가 아는 불투명 바이트(`NavTileData`)이고, 베이크(`bakeTile`)는 입력만 읽는

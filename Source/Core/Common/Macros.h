@@ -204,7 +204,7 @@ namespace sw::internal
 #endif
 
 // ------------------------------------------------------------------------------
-// 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다(`CheckCoreLayers`).
+// 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다.
 //     아래 티어는 `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` · `SW_LOW_LEVEL_ASSERT` 로 보고한다(`SW_LOG_*` 와 같은 호출 구조: 수준은 이름에,
 //     호출하는 쪽의 이름은 인자가 아니라 파일에서 자동으로 정해진다). 구조는 Godot 의 `_err_print_error` + `add_error_handler` 와 같다 —
 //     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 등록하는 보고자(`setLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
@@ -260,7 +260,7 @@ namespace sw::internal
     /**
      * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 **유일한** 자리입니다(`SW_FATAL` · `SW_LOW_LEVEL_FATAL` 이 부른다).
      * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 싱크를 비운다
-     *          (`Logger::flushGlobalForCrash`) — 직접 `std::abort` 를 부르면 이 둘을 빠뜨려 크래시 직전 줄을 잃는다(`CheckDirectAbort`).
+     *          (`Logger::flushGlobalForCrash`) — 직접 `std::abort` 를 부르면 이 둘을 빠뜨려 크래시 직전 줄을 잃는다.
      */
     [[noreturn]] SW_API void reportFatal( const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
 } // namespace sw::internal

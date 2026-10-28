@@ -7,7 +7,7 @@
  *            대상(Client, Server. `_listTarget` 이며 언리얼 모듈 Type 의 ClientOnly, ServerOnly 에 해당한다), 기본 켜짐을 담는다.
  *          - 키트를 나누는 규칙: 한 기능은 최대 세 모듈이다. 공유 `GF_<X>`(`["Client","Server"]`. 메시지, 직렬화, 프로토콜, 클라이언트 쪽 요청, 게임플레이),
  *            서버 전용 `GF_Server_<X>`(`["Server"]`. 인증, 세션 테이블, 저장소, 관리 명령이며 `GF_<X>` 에 의존한다), 필요할 때만 클라이언트 전용 `GF_Client_<X>`(`["Client"]`. UI)이다.
- *            의존은 서버 전용 → 공유 ← 클라이언트 전용 방향만 허용한다(`CheckModuleTargets` 게이트).
+ *            의존은 서버 전용 → 공유 ← 클라이언트 전용 방향만 허용한다.
  *          - 프로젝트(활성 게임 `SWGame.module.json`)가 `_listModuleOverride` 로 모듈을 켜고 끈다.
  *          - **CMake 와 App 이 같은 매니페스트와 같은 규칙을 쓴다.** CMake 는 꺼진 모듈을 빌드하지 않고(`cmake/Engine/ModuleManifest.cmake`),
  *            빌드가 모든 매니페스트를 `Bin/Modules/` 에 복사하면 App 이 그것을 읽어 같은 결과(로드 순서)를 낸다.
