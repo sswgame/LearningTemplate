@@ -16,17 +16,35 @@ namespace sw
     {
         struct ConsoleLogOutputInternal
         {
-            /** @brief 줄마다 비울지(`setFlushEveryLine`) — 프로세스 전역이다. */
-            static inline atomic<uint32> s_flushEveryLine{ 0 };
+            /** @brief 깃발 비트입니다 — 줄마다 비운다(`setFlushEveryLine`). */
+            static constexpr uint32 kFlagFlushEveryLine = 1u;
+            /** @brief 깃발 비트입니다 — 쓰지 않는다(`setMuted`). */
+            static constexpr uint32 kFlagMuted = 2u;
+            /** @brief 두 깃발을 한 원자에 모았다 — 프로세스 전역이다. */
+            static inline atomic<uint32> s_flags{ 0 };
+
+            static void setFlag( uint32 flag, bool bOn )
+            {
+                if ( bOn )
+                    s_flags.fetch_or( flag, std::memory_order_relaxed );
+                else
+                    s_flags.fetch_and( ~flag, std::memory_order_relaxed );
+            }
+            static bool hasFlag( uint32 flag ) { return ( s_flags.load( std::memory_order_relaxed ) & flag ) != 0; }
 
             /** @brief 이 수준의 줄을 바로 비우는가 — Error 는 늘, 나머지는 `setFlushEveryLine` 일 때. */
-            static bool shouldFlush( LogLevel level ) { return level == LogLevel::Error || s_flushEveryLine.load( std::memory_order_relaxed ) != 0; }
+            static bool shouldFlush( LogLevel level ) { return level == LogLevel::Error || hasFlag( kFlagFlushEveryLine ); }
         };
     } // namespace
 
     void ConsoleLogOutput::setFlushEveryLine( bool bFlushEveryLine )
     {
-        ConsoleLogOutputInternal::s_flushEveryLine.store( bFlushEveryLine ? 1u : 0u, std::memory_order_relaxed );
+        ConsoleLogOutputInternal::setFlag( ConsoleLogOutputInternal::kFlagFlushEveryLine, bFlushEveryLine );
+    }
+
+    void ConsoleLogOutput::setMuted( bool bMuted )
+    {
+        ConsoleLogOutputInternal::setFlag( ConsoleLogOutputInternal::kFlagMuted, bMuted );
     }
 
     ConsoleLogOutput::ConsoleLogOutput()
@@ -84,6 +102,8 @@ namespace sw
 
     void ConsoleLogOutput::write( const LogRecord& record )
     {
+        if ( ConsoleLogOutputInternal::hasFlag( ConsoleLogOutputInternal::kFlagMuted ) )
+            return;
         const LogLevel level    = record._level;
         const utf8*    pMessage = record._formatted.c_str();
 

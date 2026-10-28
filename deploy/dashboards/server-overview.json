@@ -1,0 +1,51 @@
+{
+  "_comment": "전용 서버 대시보드 예시(Grafana 가져오기, Prometheus 데이터 소스). 틱 p99 · 틱 사용률 · 연결 수 · 밀린 틱 · 메모리 · 크래시 묶음 수 (서버 운영 O5).",
+  "title": "Dedicated server overview",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Tick body p99 (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [ { "expr": "histogram_quantile(0.99, sum(rate(server_tick_seconds_bucket[1m])) by (le))", "legendFormat": "p99" } ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Tick utilization (1.0 = no idle time)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [ { "expr": "server_tick_utilization_ratio", "legendFormat": "{{instance}}" } ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 0.7 }, { "color": "red", "value": 0.9 } ] } } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Service connections",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [ { "expr": "server_service_connections", "legendFormat": "{{instance}}" } ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Dropped ticks (per minute)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [ { "expr": "increase(server_dropped_ticks_total[1m])", "legendFormat": "{{instance}}" } ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Resident memory (bytes)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [ { "expr": "process_resident_memory_bytes", "legendFormat": "{{instance}}" } ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Crash report bundles kept",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [ { "expr": "server_crash_reports", "legendFormat": "{{instance}}" } ]
+    }
+  ]
+}

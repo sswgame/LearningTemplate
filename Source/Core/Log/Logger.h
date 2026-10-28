@@ -74,6 +74,12 @@ namespace sw
          * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.
          */
         virtual void flushForCrash() {}
+        /**
+         * @brief 줄마다 JSON 한 줄을 표준 출력에 쓰는 장치(`JSONLinesLogOutput`)를 달고 콘솔 장치를 끕니다(컨테이너 · 로그 수집기용, 운영 설정 `_bJSONLogs`). 두 번 불러도 한 번입니다.
+         * @return 켰으면 true. 장치를 달 수 없는 싱크(감싸는 싱크 · 비동기 큐가 없는 싱크)는 기본 구현이 false 를 돌려줍니다 — 부른 쪽이 알려야 합니다.
+         * @details 출력 장치 형식(`ILogOutput`)이 이 헤더보다 위 층에 있어 장치를 인자로 받지 않고, 켜는 일만 싱크에 맡깁니다.
+         */
+        virtual bool enableJSONLinesOutput() { return false; }
     };
 } // namespace sw
 
@@ -149,7 +155,7 @@ namespace sw
          * @brief 이후 모든 줄(모든 스레드)에 시계 태그(`[tick=N] ` 또는 `[frame=N] `)를 붙입니다. 호스트가 틱 · 프레임마다 부릅니다.
          * @details 언리얼 로그 줄의 프레임 번호(`[123]LogNet:`)에 해당합니다. 서버와 클라이언트 로그를 모아 볼 때 한 사건이 몇 번째 틱인지 알 수 있습니다.
          *          고정 틱을 도는 전용 서버는 `LogClock::Tick`, 고정 틱이 없는 리슨 호스트(App)는 `LogClock::Frame` 이다 — 한 이름으로 적으면 두 번호를
-         *          같은 간격으로 읽게 된다(결정 기록 5-12 `D7-3.6`). 종류와 번호는 한 원자 값이라 다른 스레드가 둘을 섞어 읽지 않습니다.
+         *          같은 간격으로 읽게 된다. 종류와 번호는 한 원자 값이라 다른 스레드가 둘을 섞어 읽지 않습니다.
          *          프로세스 전역 값이라 틱 밖의 스레드(네트워크, 로더) 줄에도 지금 번호가 붙습니다. 정하지 않으면(기본) 줄은 바이트 하나 다르지 않습니다.
          */
         static void setClockNumber( LogClock clock, uint64 number );

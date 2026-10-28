@@ -51,5 +51,10 @@ namespace sw
          *          크래시가 멈춤이 됩니다. 버퍼가 없는 장치는 아무것도 하지 않아도 됩니다.
          */
         virtual void flushWithoutWaiting() {}
+        /**
+         * @brief 이 장치가 `LogRecord::_json`(필드별로 나눈 한 줄)을 읽으면 true 입니다. 싱크는 이런 장치가 하나라도 달려 있을 때만 줄마다 JSON 을 만듭니다.
+         * @details 기본 장치(콘솔 · 파일)는 쓰지 않습니다. 줄마다 문자열을 하나 더 만드는 비용을 쓰는 곳만 내게 하려는 것입니다.
+         */
+        virtual bool needsStructuredFields() const { return false; }
     };
 } // namespace sw

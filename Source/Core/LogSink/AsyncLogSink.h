@@ -76,6 +76,8 @@ namespace sw
          *          줄과 파일의 stdio 버퍼가 사라집니다.
          */
         void flushForCrash() override;
+        /** @brief `JSONLinesLogOutput` 을 달고 콘솔 장치를 끕니다(두 번째부터는 true 만 돌려줍니다). 장치 상한에 걸리면 false 입니다. */
+        bool enableJSONLinesOutput() override;
 
     private:
         /** @brief 백그라운드 I/O 작업 스레드의 루프입니다. */
@@ -142,8 +144,10 @@ namespace sw
         atomic<uint32>                                          _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다
         uint32 _broadcastEpoch                                  SW_GUARDED_BY( _mutex );  ///< 방송 세대. _mutex 로 보호한다
         atomic<bool>                                            _bIsRunning;
-        atomic<bool>                                            _bInitialized; ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
-        atomic<bool>                                            _bHasListener; ///< 리스너가 하나라도 있으면 true. 생산자가 없을 때 _mutex 를 건너뛴다
+        atomic<bool>                                            _bInitialized;      ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
+        atomic<bool>                                            _bHasListener;      ///< 리스너가 하나라도 있으면 true. 생산자가 없을 때 _mutex 를 건너뛴다
+        atomic<bool>                                            _bWantsStructured;  ///< `needsStructuredFields` 장치가 달렸으면 true. 생산자가 줄마다 JSON 을 만들지 정한다
+        atomic<bool>                                            _bJSONLinesEnabled; ///< `enableJSONLinesOutput` 이 이미 장치를 달았다
         /**
          * @brief 작업 스레드가 조건 변수에서 잠들려 하거나 잠들어 있으면 true 입니다. 생산자는 이때만 깨웁니다.
          * @details 작업 스레드는 `_cvMutex` 를 쥔 채 이 값을 올리고(seq_cst) 큐를 확인한 뒤 잠들고, 생산자는 넣기 → 펜스 → 이 값을 봅니다(Dekker 짝).

@@ -933,3 +933,24 @@ SW_TEST_CASE( ServerBootTest, AuthorityGhostDeltaMatchesHowFarTheServerMovedAnOb
     SW_EXPECT_TRUE_MSG( listDelta[0]._distance > expected - 0.001f && listDelta[0]._distance < expected + 0.001f, "the reported difference is not the distance the server moved the object" );
 #endif
 }
+
+/**
+ * @brief [ServerBootTest] 서버 설정 `_bJSONLogs` 를 켜면 설정을 읽은 뒤의 줄이 JSON 한 줄(JSON lines)로 나온다(서버 운영 O2)
+ * @details 설정을 읽기 전의 줄(엔진 기동)은 아직 평문이다. 켠 뒤에는 콘솔 장치가 꺼지므로 "ready" 줄은 `"msg":"Dedicated server ready …` 꼴로만 나오고 `"tick"` 칸이 붙는다.
+ */
+SW_TEST_CASE( ServerBootTest, JSONLogsConfigWritesEveryLineAsOneJSONObject )
+{
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    const string folder = makeConfigFolder();
+    SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    const string configPath = FileUtil::joinPath( folder, "server_json.json" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( configPath, R"({ "_listenAddress": "127.0.0.1", "_servicePort": 0, "_gamePort": 0, "_bJSONLogs": true })" ) );
+    const ServerRun run = runServer( "-server-config=\"" + configPath + "\" -gv_serverExitAfterTicks=30", ProcessOptions{}, []( Process& ) {} );
+    (void)FileUtil::removeDirectory( folder ); // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
+    expectCleanExit( run, "TickLimit" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "\"level\":\"info\"" ) != string::npos, "no JSON line in the server output" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "\"msg\":\"Dedicated server ready" ) != string::npos, "the ready line is not a JSON object" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "\"tick\":30," ) != string::npos, "the JSON lines after the ready line carry no tick" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "[Info] [tick=" ) == string::npos, "the console output is still on" );
+}

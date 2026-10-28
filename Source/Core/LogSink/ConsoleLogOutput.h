@@ -37,6 +37,10 @@ namespace sw
          *        `docker logs` 가 "Dedicated server ready" 같은 줄을 바로 봐야 한다. 프로세스 전역입니다.
          */
         static void setFlushEveryLine( bool bFlushEveryLine );
+        /**
+         * @brief 켜면 이 장치가 줄을 쓰지 않습니다(기본 꺼짐). 표준 출력을 다른 장치(`JSONLinesLogOutput`)가 쓸 때 같은 줄이 두 모양으로 섞이지 않게 합니다. 프로세스 전역입니다.
+         */
+        static void setMuted( bool bMuted );
 
     private:
         mutex                                            _mutex;                  ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다

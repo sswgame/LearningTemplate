@@ -1,0 +1,107 @@
+# 전용 서버 쿠버네티스 매니페스트 예시 (서버 운영 O6). 이미지 이름 · 포트 · 비밀 이름은 자기 환경에 맞게 바꾼다.
+# 종료 신호 → 드레인 → 정상 종료와 `/readyz` 준비 확인이 이 파일의 핵심이다(`deploy/README.md` "종료 · 드레인").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: game-server-config
+data:
+  server.json: |
+    {
+      "_listenAddress": "0.0.0.0",
+      "_gamePort": 7777,
+      "_servicePort": 7780,
+      "_opsPort": 9100,
+      "_opsListenAddress": "0.0.0.0",
+      "_bConsoleInput": false,
+      "_bJSONLogs": true,
+      "_drainWaitSeconds": 60,
+      "_shutdownGraceSeconds": 15,
+      "_tickLoadWarnPercent": 70,
+      "_slowTickDumpMs": 100,
+      "_frameHistoryTicks": 600
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: game-server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: game-server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: /metrics
+    spec:
+      # 종료 신호 뒤 서버가 드레인(`_drainWaitSeconds`)하고 저장(`_shutdownGraceSeconds`)하는 시간보다 크게 잡는다. 모자라면 SIGKILL 이 드레인을 끊는다.
+      terminationGracePeriodSeconds: 90
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: server
+          image: registry.example.com/game-server:1.0.0
+          args: ["-server-config=/etc/swserver/server.json"]
+          ports:
+            - { name: game, containerPort: 7777, protocol: UDP }
+            - { name: service, containerPort: 7780, protocol: TCP }
+            - { name: ops, containerPort: 9100, protocol: TCP }
+          env:
+            # 서버 설정의 `_secretEnvironment` 가 가리키는 이름과 같아야 한다(`Config/Server`). 값은 비밀 저장소에서만 온다.
+            - name: SW_DB_ACCOUNTS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: game-server-secrets, key: db-accounts-password }
+            - name: SW_CACHE_SESSIONS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: game-server-secrets, key: cache-sessions-password }
+          readinessProbe:
+            # 비우는 중이면 503 — 서비스(Service · 부하 분산기)가 새 접속을 끊는다. 종료 신호를 받으면 곧바로 이 검사가 실패한다.
+            httpGet: { path: /readyz, port: ops }
+            periodSeconds: 2
+            failureThreshold: 1
+          livenessProbe:
+            # 틱이 멈춘 서버만 재시작한다. 드레인 중에도 200 이다.
+            httpGet: { path: /healthz, port: ops }
+            periodSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet: { path: /healthz, port: ops }
+            periodSeconds: 2
+            failureThreshold: 60
+          resources:
+            requests: { cpu: "1", memory: 512Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: config, mountPath: /etc/swserver, readOnly: true }
+            - { name: saved, mountPath: /srv/game/Saved }
+            - { name: tls, mountPath: /etc/swserver/tls, readOnly: true }
+      volumes:
+        - name: config
+          configMap: { name: game-server-config }
+        - name: saved # 로그 · 크래시 묶음 · 프레임 이력 덤프(`Saved/ServerReports`). 파드가 사라지면 같이 사라지므로 오래 둘 덤프는 수집기가 가져간다.
+          emptyDir: {}
+        - name: tls # `_tlsCertificateFile` · `_tlsPrivateKeyFile` 이 가리키는 파일. 서버 설정에 `/etc/swserver/tls/tls.crt` · `tls.key` 를 적는다.
+          secret: { secretName: game-server-tls }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-server
+spec:
+  selector:
+    app: game-server
+  ports:
+    - { name: game, port: 7777, protocol: UDP }
+    - { name: service, port: 7780, protocol: TCP }
+# 운영 HTTP 는 평문이고 인증이 없다 — 클러스터 안(스크레이퍼)에서만 닿게 하고 바깥으로 내보내지 않는다(Service 에 넣지 않았다).

@@ -23,6 +23,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -41,6 +42,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ProcessMetrics.h"
+#include "Engine/Observability/ServerFrameHistory.h"
 #include "Engine/Observability/ServerServiceManager.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
 #include "Core/Console/DevCommandRegistry.h"
@@ -79,6 +81,15 @@ namespace sw
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
             /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
             static constexpr int64 kProcessSampleIntervalMs = 1000;
+            /** @brief 프레임 이력 덤프(`ServerApp::dumpFrameHistory`)가 놓이는 폴더 이름입니다. 로그 폴더(`Saved/Logs`) 옆에 둔다(`CrashReports` 묶음 폴더와 같은 자리). */
+            static constexpr const utf8* kServerReportsFolderName = "ServerReports";
+            /** @brief 느린 틱 덤프의 최소 간격입니다. 과부하 서버가 덤프 때문에 더 느려지지 않게 한다. */
+            static constexpr int64 kMinFrameDumpIntervalMs = 10000;
+            /** @brief 틱 사용률 경고의 최소 간격입니다(1 분에 한 번). */
+            static constexpr int64 kLoadWarningIntervalMs = 60000;
+
+            /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
+            static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
 #if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
             /** @brief Dev 서버 루프의 명령(`executePauseCommand`)입니다. 표준 입력 `help` 와 디버그 채널 `help` 가 같은 줄을 보입니다(쓰는 두 곳과 같은 조건). */
             static constexpr const utf8* kLoopCommandHelp = "pause | resume | step [N]";
@@ -141,6 +152,13 @@ namespace sw
         , _pTickHistogram{ nullptr }
         , _pDroppedTickCounter{ nullptr }
         , _pServiceConnectionGauge{ nullptr }
+        , _pTickUtilizationGauge{ nullptr }
+        , _frameHistory{ nullptr }
+        , _lastFrameDumpMs{ 0 }
+        , _loadWindowStartMs{ 0 }
+        , _loadWindowBusyNanoseconds{ 0 }
+        , _lastLoadWarningMs{ 0 }
+        , _drainDeadlineMs{ 0 }
         , _tickCount{ 0 }
         , _startNanoseconds{ 0 }
         , _tickNanoseconds{ 0 }
@@ -154,6 +172,7 @@ namespace sw
         , _bReady{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
+        , _bDraining{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -205,7 +224,7 @@ namespace sw
             return false;
         }
         SW_LOG_INFO( "Host parts up: %#", describeHostPartOrder( _hostParts ).c_str() );
-        // 서버 서비스는 부품이 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다(결정 기록 5-7). 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
+        // 서버 서비스는 부품이 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
         // `shutdown` 이 부품보다 먼저 멈춘다.
         if ( startServerServices() == false )
             return false;
@@ -216,7 +235,8 @@ namespace sw
             return false;
         }
 
-        _bReady = SW_TRUE;
+        _bReady            = SW_TRUE;
+        _loadWindowStartMs = ServerAppInternal::nowMonotonicMs();
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setClockNumber( LogClock::Tick, _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
@@ -268,6 +288,16 @@ namespace sw
         {
             SW_LOG_ERROR( "Server config '%#' could not be read - pass -server-config=<path>", path.c_str() );
             return false;
+        }
+        if ( _pServerConfig->_bJSONLogs )
+        {
+            // 로거는 엔진 기동에서 이미 섰다. 설정을 읽은 지금부터 줄이 JSON 한 줄로 나간다(콘솔 장치는 꺼진다). 켰는데 못 켜면 수집기가 못 읽는 줄을 내는 서버가 되므로 기동을 멈춘다.
+            ILogSink* pLogSink = Logger::getGlobalSink();
+            if ( pLogSink == nullptr || pLogSink->enableJSONLinesOutput() == false )
+            {
+                SW_LOG_ERROR( "Server config _bJSONLogs is on but the log sink could not add the JSON lines output" );
+                return false;
+            }
         }
         SW_LOG_INFO( "Server config: %#", path.c_str() );
         return true;
@@ -394,6 +424,9 @@ namespace sw
         _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
         _pServiceConnectionGauge =
             _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
+        _pTickUtilizationGauge = _metricRegistry->registerGauge( "server_tick_utilization_ratio", "Tick body time divided by wall time over the last second (1.0 = no idle time left)" );
+        _frameHistory          = make_unique<ServerFrameHistory>();
+        _frameHistory->initialize( static_cast<uint32>( _pServerConfig->_frameHistoryTicks ) );
         _processMetrics = make_unique<ProcessMetrics>();
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
@@ -435,6 +468,8 @@ namespace sw
         _pTickHistogram          = nullptr;
         _pDroppedTickCounter     = nullptr;
         _pServiceConnectionGauge = nullptr;
+        _pTickUtilizationGauge   = nullptr;
+        _frameHistory.reset();
         _healthRegistry.reset();
         _metricRegistry.reset();
     }
@@ -468,11 +503,108 @@ namespace sw
             pCrashGauge->set( static_cast<float64>( listReport.size() ) );
     }
 
+    void ServerApp::onTickFinished( int64 tickNanoseconds, int64 monotonicMs )
+    {
+        _loadWindowBusyNanoseconds += tickNanoseconds;
+        if ( _frameHistory == nullptr )
+            return;
+        ServerFrameSample sample;
+        sample._tick             = _tickCount;
+        sample._bodyMicroseconds = tickNanoseconds / constant::kNanosecondsPerMicrosecond;
+        sample._connectionCount  = _serverServices != nullptr ? static_cast<uint32>( _serverServices->getConnectionCount() ) : 0u;
+        sample._droppedTickTotal = _droppedTickCount;
+        _frameHistory->record( sample );
+        const int64 slowNanoseconds = static_cast<int64>( _pServerConfig->_slowTickDumpMs ) * constant::kNanosecondsPerMillisecond;
+        const bool  bSlowTick       = slowNanoseconds > 0 && tickNanoseconds >= slowNanoseconds;
+        const bool  bDumpDue        = monotonicMs - _lastFrameDumpMs >= ServerAppInternal::kMinFrameDumpIntervalMs;
+        if ( bSlowTick && bDumpDue )
+        {
+            _lastFrameDumpMs = monotonicMs;
+            dumpFrameHistory( "slow_tick" );
+        }
+    }
+
+    void ServerApp::dumpFrameHistory( const utf8* pReason )
+    {
+        if ( _frameHistory == nullptr || _frameHistory->getCount() == 0 )
+            return;
+        const string crashFolder = getCrashReportFolder();
+        if ( crashFolder.empty() )
+            return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
+        const string reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), ServerAppInternal::kServerReportsFolderName );
+        if ( FileUtil::ensureDirectoryExists( reportsFolder ) == false )
+            return; // 실패는 ensureDirectoryExists 가 남겼다
+        string          netStatsLine;
+        GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        if ( pNetSession != nullptr )
+            netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
+        string text;
+        _frameHistory->writeReport( text, pReason, CrashHandler::getSessionID(), netStatsLine );
+        string fileName{ "frames_" };
+        fileName.append( CrashHandler::getSessionID() ).append( "_tick" ).append( to_string( _tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
+        const string path = FileUtil::joinPath( reportsFolder, fileName );
+        if ( FileUtil::writeTextFile( path, text ) == false )
+        {
+            SW_LOG_WARNING( "Frame history could not be written to '%#'", path.c_str() );
+            return;
+        }
+        SW_LOG_INFO( "Frame history (%#) written to '%#' (%# ticks)", pReason, path.c_str(), _frameHistory->getCount() );
+    }
+
+    void ServerApp::updateLoadAndCrashContext( int64 monotonicMs )
+    {
+        const int64 windowMs = monotonicMs - _loadWindowStartMs;
+        if ( windowMs <= 0 )
+            return;
+        const float64 utilization  = static_cast<float64>( _loadWindowBusyNanoseconds ) / ( static_cast<float64>( windowMs ) * static_cast<float64>( constant::kNanosecondsPerMillisecond ) );
+        _loadWindowStartMs         = monotonicMs;
+        _loadWindowBusyNanoseconds = 0;
+        if ( _pTickUtilizationGauge != nullptr )
+            _pTickUtilizationGauge->set( utilization );
+        const float64 warnRatio   = static_cast<float64>( _pServerConfig->_tickLoadWarnPercent ) * 0.01;
+        const bool    bOverloaded = warnRatio > 0.0 && utilization > warnRatio;
+        const bool    bWarnDue    = monotonicMs - _lastLoadWarningMs >= ServerAppInternal::kLoadWarningIntervalMs;
+        if ( bOverloaded && bWarnDue )
+        {
+            _lastLoadWarningMs = monotonicMs;
+            SW_LOG_WARNING( "Server tick load is %# percent of the tick budget (warn above %# percent) - the server is close to falling behind", static_cast<int32>( utilization * 100.0 ),
+                            _pServerConfig->_tickLoadWarnPercent );
+        }
+        // 크래시 보고에 마지막 틱 한 줄을 붙인다. 크래시 시점에는 할당하지 않으므로 지금 고정 버퍼에 복사해 둔다(`CrashHandler::setContextValue`).
+        ServerFrameSample latest;
+        if ( _frameHistory != nullptr && _frameHistory->tryGetLatest( latest ) )
+        {
+            fixed_string<constant::kMaxBuffer128> context{};
+            formatstring( context.data(), context.capacity(), "tick=%# body_us=%# connections=%# dropped=%#", latest._tick, latest._bodyMicroseconds, latest._connectionCount,
+                          latest._droppedTickTotal );
+            CrashHandler::setContextValue( "ServerTick", context.c_str() );
+        }
+    }
+
+    void ServerApp::beginDrain( ShutdownCause cause, int64 monotonicMs )
+    {
+        _bDraining = SW_TRUE;
+        _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
+        const int64 waitMs = ServerAppInternal::shouldDrainFor( cause ) ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::kMillisecondsPerSecond : 0;
+        _drainDeadlineMs   = monotonicMs + waitMs;
+        if ( waitMs > 0 )
+            SW_LOG_INFO( "Draining: waiting up to %# s for %# connections to leave (%#)", _pServerConfig->_drainWaitSeconds,
+                         _serverServices != nullptr ? _serverServices->getConnectionCount() : 0, ShutdownSignal::getCauseName( cause ) );
+    }
+
+    bool ServerApp::isDrainFinished( int64 monotonicMs ) const
+    {
+        if ( monotonicMs >= _drainDeadlineMs )
+            return true;
+        return _serverServices == nullptr || _serverServices->getConnectionCount() == 0;
+    }
+
     void ServerApp::updateProcessMetrics( int64 monotonicMs )
     {
         if ( monotonicMs < _nextProcessSampleMs )
             return;
         _nextProcessSampleMs = monotonicMs + ServerAppInternal::kProcessSampleIntervalMs;
+        updateLoadAndCrashContext( monotonicMs );
         if ( _processMetrics != nullptr )
             _processMetrics->update();
         if ( _pServiceConnectionGauge != nullptr && _serverServices != nullptr )
@@ -511,9 +643,15 @@ namespace sw
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
             if ( cause != ShutdownCause::None || _engine.isQuitRequested() )
             {
-                SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
-                _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
-                break;
+                const int64 nowMs = ServerAppInternal::nowMonotonicMs();
+                if ( _bDraining == SW_FALSE )
+                    beginDrain( cause, nowMs ); // 처음 본 순간 /readyz 를 503 으로 바꾸고 기한을 정한다
+                if ( isDrainFinished( nowMs ) )
+                {
+                    SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
+                    break;
+                }
+                // 접속이 남았고 기한 전이다 — 틱을 계속 돌려 진행 중인 매치 · 거래가 끝나게 한다(아래의 일반 틱 경로).
             }
 
             // 서버 서비스는 게임 틱과 따로 돈다. 일시정지(Dev `pause`) 중에도 로그인이나 채팅 요청은 처리한다.
@@ -545,6 +683,7 @@ namespace sw
             ++_statusTickSampleCount;
             ++_tickCount;
             Logger::setClockNumber( LogClock::Tick, _tickCount );
+            onTickFinished( tickTime, ServerAppInternal::nowMonotonicMs() );
 #if !defined( SW_SHIPPING )
             StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
@@ -740,7 +879,7 @@ namespace sw
 
     void ServerApp::shutdown()
     {
-        // 서버 서비스는 모듈 코드이고 부품이 아니다(결정 기록 5-7) — 부품(게임 · 모듈)이 내려가기 전에 멈춘다.
+        // 서버 서비스는 모듈 코드이고 부품이 아니다 — 부품(게임 · 모듈)이 내려가기 전에 멈춘다.
         if ( _serverServices != nullptr )
         {
             _serverServices->stopAll();

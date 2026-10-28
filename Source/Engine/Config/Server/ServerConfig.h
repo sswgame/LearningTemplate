@@ -129,6 +129,32 @@ namespace sw
         PROPERTY( Min = 0, Max = 120 )
         int32 _shutdownGraceSeconds{ 10 };
         /**
+         * @brief 종료 신호(SIGTERM 등)를 받은 뒤 접속자가 모두 나가기를 기다리는 시간(초)입니다(서버 운영 O3 — 드레인).
+         * @details 신호가 오면 먼저 `/readyz` 가 503 이 되고(새 접속을 부하 분산기가 끊는다), 서버는 접속(서비스 연결 수)이 0 이 되거나 이 시간이 지날 때까지 틱을 돌린 뒤
+         *          서비스를 멈춘다. 0 이면 기다리지 않고 바로 내린다. 콘솔 `quit` · 틱 상한 종료는 기다리지 않는다(사람이 내린 것이다 — 테스트가 느려지지 않게).
+         *          쿠버네티스는 `terminationGracePeriodSeconds` 를 이 값 + `_shutdownGraceSeconds` 보다 크게 잡는다(`deploy/kubernetes/`).
+         */
+        PROPERTY( Min = 0, Max = 3600 )
+        int32 _drainWaitSeconds{ 0 };
+        /** @brief 서버 로그를 줄마다 JSON 한 줄(JSON lines)로 표준 출력에 씁니다(서버 운영 O2 — 컨테이너 로그 수집기용). 켜면 콘솔 장치는 꺼지고 파일 로그는 그대로입니다. */
+        PROPERTY()
+        bool _bJSONLogs{ false };
+        /**
+         * @brief 틱 본문이 이 시간(밀리초)을 넘으면 프레임 이력(`ServerFrameHistory`)을 `Saved/ServerReports/` 에 덤프합니다(서버 운영 O1). 0 이면 끔.
+         * @details 덤프는 틱 사이에 최소 10 초 간격을 두며 최근 `_frameHistoryTicks` 틱의 시간 · 접속 수 · 메시지 바이트가 든다. Dev 의 `-gv_traceSlowTickMs`(프로파일러 캡처)와는 따로다.
+         */
+        PROPERTY( Min = 0, Max = 60000 )
+        int32 _slowTickDumpMs{ 0 };
+        /** @brief 프레임 이력 링 버퍼가 기억하는 최근 틱 수입니다(서버 운영 O1). 0 이면 이력을 남기지 않습니다. */
+        PROPERTY( Min = 0, Max = 36000 )
+        int32 _frameHistoryTicks{ 600 };
+        /**
+         * @brief 틱 사용률(틱 본문 시간 ÷ 틱 주기)이 이 값(퍼센트)을 넘으면 경고합니다(서버 운영 O5). 0 이면 끔.
+         * @details 초마다 구간 평균 사용률을 지표 `server_tick_utilization_ratio` 에 적고, 넘으면 로그 경고를 남긴다(경고는 1 분에 한 번). 예 70.
+         */
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _tickLoadWarnPercent{ 0 };
+        /**
          * @brief 서비스 TLS 1.3 인증서(PEM, 체인 포함) 경로입니다 — 네트워크 보안 제공자의 서버 TLS 문맥에 그대로 넘깁니다.
          * @details 둘 다 비면 **Dev 에서만** `Saved/Certificates/` 의 개발용 자체 서명 인증서, Shipping 은 서비스 포트를 열 때 오류입니다.
          *          상대 경로는 이 설정 파일이 아니라 프로젝트 루트 기준(ConfigManager 와 같다)입니다.

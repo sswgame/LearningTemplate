@@ -77,6 +77,7 @@ namespace sw
     struct LogRecord
     {
         string   _formatted;
+        string   _json; ///< JSON lines 한 줄(끝의 줄바꿈 포함). `ILogOutput::needsStructuredFields` 장치가 달려 있을 때만 채운다(아니면 빈 글)
         int32    _year{ 0 };
         int32    _month{ 0 };
         int32    _day{ 0 };

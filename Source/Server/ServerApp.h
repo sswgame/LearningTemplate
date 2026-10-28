@@ -37,6 +37,8 @@
 
 namespace sw
 {
+    enum class ShutdownCause : uint8;
+
     struct ServerConfig;
 
     class DebugChannel;
@@ -50,6 +52,7 @@ namespace sw
     class ModuleImageHostSubsystem;
     class OpsHTTPEndpoint;
     class ProcessMetrics;
+    class ServerFrameHistory;
     class ServerServiceManager;
     class ServiceHealthRegistry;
 
@@ -97,6 +100,20 @@ namespace sw
          *          보내기(보고 프로세스)는 운영 설정의 동의와 서버용 보고 경로가 생기면 더합니다.
          */
         void collectPreviousCrashes();
+        /**
+         * @brief 틱 하나를 끝낸 뒤 부릅니다(`_tickCount` 는 이미 올랐다). 프레임 이력(서버 운영 O1)에 남기고, 느린 틱이면 이력을 덤프하고, 틱 사용률 창(O5)에 더합니다.
+         * @param tickNanoseconds 틱 본문 시간
+         * @param monotonicMs 지금(단조 밀리초)
+         */
+        void onTickFinished( int64 tickNanoseconds, int64 monotonicMs );
+        /** @brief 프레임 이력과 메시지 종류별 누적 셈을 `Saved/ServerReports/frames_<세션>_<틱>_<까닭>.txt` 로 씁니다. 이력이 비었거나 폴더를 만들 수 없으면 경고만 남깁니다. */
+        void dumpFrameHistory( const utf8* pReason );
+        /** @brief 초마다 부릅니다 — 틱 사용률 지표 · 경고(O5)와, 크래시 보고에 붙는 서버 문맥 한 줄(마지막 틱 · 접속 수)을 갱신합니다. */
+        void updateLoadAndCrashContext( int64 monotonicMs );
+        /** @brief 종료 요청이 처음 보였을 때 드레인(서버 운영 O3)을 시작합니다. `/readyz` 를 503 으로 바꾸고 접속이 빌 때까지의 기한을 정합니다. */
+        void beginDrain( ShutdownCause cause, int64 monotonicMs );
+        /** @brief 드레인이 끝났는지입니다 — 기다릴 이유가 없거나(접속 0 · 기다림 0 초) 기한이 지났으면 true. */
+        [[nodiscard]] bool isDrainFinished( int64 monotonicMs ) const;
 #if !defined( SW_SHIPPING )
         /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈춥니다(게임 쪽은 모듈 호스트의 배치 콜백이 뒤이어 한다). 다음 틱에 다시 시작합니다. */
         bool onBeforeModuleReload( const vector<string>& listModuleName );
@@ -118,7 +135,7 @@ namespace sw
          * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)와 리로드 구동기(빌려 건다), 종료 신호 처리기를 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 창구를 찾아 부릅니다.
          *          종료 신호 처리기는 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
          *          게임이 서 있는 동안은 서버 문맥(`_serverServiceContext`)도 빌려 건다.
-         *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다(결정 기록 5-3).
+         *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다.
          */
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
@@ -140,14 +157,21 @@ namespace sw
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓰므로 엔드포인트를 종료한 뒤 지운다).
         unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
         unique_ptr<ProcessMetrics>        _processMetrics;
-        unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
-        Subscription                      _reloadStopsServices;     ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
-        string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
-        const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
-        MetricHistogram*                  _pTickHistogram;          ///< server_tick_seconds. 틱 본문 시간.
-        MetricCounter*                    _pDroppedTickCounter;     ///< server_dropped_ticks_total
-        MetricGauge*                      _pServiceConnectionGauge; ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
+        unique_ptr<ServerServiceManager>  _serverServices;            ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
+        Subscription                      _reloadStopsServices;       ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
+        string                            _serverConfigPath;          ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
+        ServerServiceContext              _serverServiceContext;      ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
+        const ServerConfig*               _pServerConfig;             // ConfigManager 가 소유한다
+        MetricHistogram*                  _pTickHistogram;            ///< server_tick_seconds. 틱 본문 시간.
+        MetricCounter*                    _pDroppedTickCounter;       ///< server_dropped_ticks_total
+        MetricGauge*                      _pServiceConnectionGauge;   ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
+        MetricGauge*                      _pTickUtilizationGauge;     ///< server_tick_utilization_ratio. 최근 1 초 틱 본문 시간 ÷ 흐른 시간(O5)
+        unique_ptr<ServerFrameHistory>    _frameHistory;              ///< 최근 N 틱 기록(O1)
+        int64                             _lastFrameDumpMs;           ///< 마지막 덤프의 단조 밀리초(느린 틱 덤프의 간격 제한)
+        int64                             _loadWindowStartMs;         ///< 틱 사용률 창의 시작
+        int64                             _loadWindowBusyNanoseconds; ///< 창 안의 틱 본문 시간 합
+        int64                             _lastLoadWarningMs;         ///< 마지막 사용률 경고(1 분에 한 번)
+        int64                             _drainDeadlineMs;           ///< 드레인 기한(단조 밀리초)
         uint64                            _tickCount;
         int64                             _startNanoseconds;
         int64                             _tickNanoseconds;          ///< 한 틱 주기
@@ -166,6 +190,7 @@ namespace sw
         uint8                  _bReady                 : 1;
         uint8                  _bPaused                : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
         [[maybe_unused]] uint8 _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
-        [[maybe_unused]] uint8 _reserved               : 5;
+        uint8                  _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
+        [[maybe_unused]] uint8 _reserved               : 4;
     };
 } // namespace sw

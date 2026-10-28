@@ -10,6 +10,7 @@
 #include "Core/LogSink/ConsoleLogOutput.h"
 #include "Core/LogSink/FileLogOutput.h"
 #include "Core/LogSink/ILogOutput.h"
+#include "Core/LogSink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Process/ThreadCrashStack.h"
@@ -185,6 +186,8 @@ namespace sw
         , _bIsRunning{ false }
         , _bInitialized{ false }
         , _bHasListener{ false }
+        , _bWantsStructured{ false }
+        , _bJSONLinesEnabled{ false }
         , _bWorkerSleeping{ false }
     {
         // 기본 장치 두 개. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
@@ -383,6 +386,7 @@ namespace sw
     {
         if ( output == nullptr )
             return false;
+        const bool bStructured = output->needsStructuredFields();
 
         // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`broadcastToListeners` ·
         // `dispatchToOutputs`), 리스너가 있으면 방송까지 하므로 락 밖에서 남긴다.
@@ -405,7 +409,11 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             bRejected = _listOutput.size() >= _s_kMaxOutput;
             if ( bRejected == false )
+            {
                 _listOutput.push_back( std::move( output ) );
+                if ( bStructured )
+                    _bWantsStructured.store( true, std::memory_order_release );
+            }
         }
 
         if ( bRejected )
@@ -413,6 +421,20 @@ namespace sw
             SW_LOG_WARNING( "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
             return false;
         }
+        return true;
+    }
+
+    bool AsyncLogSink::enableJSONLinesOutput()
+    {
+        if ( _bJSONLinesEnabled.exchange( true, std::memory_order_acq_rel ) )
+            return true;
+        if ( addOutput( make_unique<JSONLinesLogOutput>() ) == false )
+        {
+            _bJSONLinesEnabled.store( false, std::memory_order_release );
+            return false;
+        }
+        // 장치가 달린 뒤에 콘솔을 끈다 — 그 사이의 줄은 두 모양으로 나가도 사라지지는 않는다.
+        ConsoleLogOutput::setMuted( true );
         return true;
     }
 
@@ -636,6 +658,32 @@ namespace sw
         record._month     = stamp._month;
         record._day       = stamp._day;
         record._hour      = stamp._hour;
+        if ( _bWantsStructured.load( std::memory_order_acquire ) )
+        {
+            // 메시지만 UTF-8 이 아닐 수 있다(태그 · 호출자 · 파일은 소스의 글자 상수). 잘못된 바이트는 줄 전체와 같은 방식으로 바꾼다.
+            string      escapedMessage;
+            string_view message{ pEffectiveMsg };
+            if ( StringUtil::isValidUtf8( pEffectiveMsg ) == false )
+            {
+                escapedMessage = StringUtil::escapeInvalidUtf8( message );
+                message        = escapedMessage;
+            }
+            JSONLogFields fields;
+            fields._time             = stamp._text.c_str();
+            fields._unixMilliseconds = WallClock::nowUnixMilliseconds().count();
+            fields._level            = level;
+            fields._tag              = pEffectiveTag;
+            fields._caller           = pEffectiveCaller != nullptr ? string_view{ pEffectiveCaller } : string_view{};
+            fields._message          = message;
+            fields._id               = pID != nullptr ? string_view{ pID } : string_view{};
+            fields._file             = pEffectiveFile;
+            fields._line             = line;
+            fields._context          = context;
+            LogClock clock{ LogClock::Tick };
+            fields._bHasClock = Logger::getClockNumber( clock, fields._clockNumber );
+            fields._clock     = clock;
+            JSONLinesLogOutput::appendLine( record._json, fields );
+        }
         submitRecord( std::move( record ) );
     }
 } // namespace sw
