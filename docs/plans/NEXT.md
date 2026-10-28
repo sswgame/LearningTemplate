@@ -4,7 +4,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 V(작업자 브랜치 14 개)가 main 에 들어가 push 됐다(adaeb8de8). 병합된 상태에서 세 구성의 빌드와 일부 검증만 돌렸으므로 첫 일은 CI 의 Linux 잡을 보고 못 돌린 검증을 마치는 것이다(아래 1절). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
+> 결론: 통합 V(작업자 브랜치 14 개)와 뒤이은 설정 소유 변경 · 테스트 수정이 main 에 들어가 push 됐다(ca6208524). 병합된 상태에서 세 구성의 빌드와 일부 검증만 돌렸으므로 첫 일은 CI 의 Linux 잡을 보고 못 돌린 검증을 마치는 것이다(아래 1절). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
 
 이 문서는 지금 상태 한 장만 둔다. 순서는 [Roadmap](Roadmap.md), 설계는 계획 문서(`py -3 -m Scripts plans`), 결정은 [결정 기록](../09_Decisions.md), 작업 방식은 [11 작업 방식](../11_Workflow.md)이다.
 
@@ -12,16 +12,18 @@
 
 1 차(net-load · gfx-baseline · cand-sweep · old-defects · scratch-gate · vtools · keep-assets)와 2 차(wpath · svc-cancel · parse-core · ui-wrap · py-compat · rhi-leftovers · pair-scene)를 병합해 main 에 fast-forward 로 push 했다. CI 수정 커밋 01e3e4e06(Vulkan 확장 개수 · Python 3.12 `read_text` · 없는 sysfs 카드 조사)과 사용자가 지운 `prof.out` 도 들어갔다. push 직전 증거는 세 구성의 빌드 통과와 `full-build` 뿐이고 아래 "못 돌린 검증"은 안 했다.
 
-워크트리는 병합된 21 개를 지웠다. 남은 `errh` · `gfxc` · `netsec` · `integ-v`(`D:/w`)는 지워도 잃는 것이 없다(셰이더 6 개 편집은 main 의 같은 파일과 같고 `netsec` 의 `.cpp.t` 는 임시 파일) — `worktree-remove --force` 가 권한 분류기에 막혀 사용자가 직접 지운다. 병합 안 된 `wt/integ-merge` 의 커밋 12 개는 태그 `archive/integ-merge-20261028` 로 보존했다(`ConfigManager` 모듈 설정 언로드 · `ResourceID` 호출처 수정 5 패치가 main 에 같은 모양으로 있는지는 확인 안 했다).
+워크트리는 모두 지웠다(주 작업 트리만 남는다). 병합 안 된 `wt/integ-merge` 의 커밋 12 개를 보존했던 태그는 내용을 확인한 뒤 지웠다 — 5 패치 가운데 `d3338bc16`(모듈이 정의한 설정을 `ConfigManager` 에 등록하지 않고 서비스가 `readConfigFileInto` 로 직접 소유)만 main 에 없어 9d2c3d83f 로 가져왔고 `unloadConfig` 는 지웠다. 나머지는 main 에 같은 수정이 있거나(`releaseConfig` = `unloadConfig`) 낡은 문서다. `ResourceID` 호출처 수정(`f505cecc3`)은 15 개 파일을 하나씩 대조하지 않았고 main 이 세 구성에서 빌드되는 것으로 갈음했다.
+
+그 뒤 Debug `nogpu` 에서 새로 쓰고 돌려 보지 않았던 테스트 둘이 이미 push 된 main 에서 졌다 — `ServiceStoreMemoryTest`(`armFault` 의 `skipCount` 1 이 읽기를 흘려보냄)와 `PairedAnimationReplicationTest`(앞 구간의 클립이 공유 캐시에 남아 뒤 구간 참가자가 이미 준비됨) — ca6208524 가 고쳤다. **작업자가 돌리지 않고 쓴 테스트는 통합에서 처음 돌릴 때 이렇게 가정이 틀린 채 나온다.**
 
 | 단계 | 결과 |
 |---|---|
 | 1 차 병합 뒤 재검증(`verify-batch --only …`) | Debug `ctest-hostgpu-debug` 통과(3677 s) · Shipping `ctest-hostgpu-shipping` 통과 · Release `app-scenarios-release` 11 중 10 통과 |
 | crowd 기록 불일치(해결) | `WaitUntil` 이 시계를 붙잡는 동안 실제 프레임이 흘러 전투가 진행되므로 풀린 뒤의 군중 수가 백엔드마다 달랐다. 3a8dd4e51 · 5d3613207 이 흔들리는 `<Record>` 를 모두 지웠다. `RecordsMatchAcrossBackends` 단독 159 s 통과, crowd 시나리오 네 백엔드 통과 |
 | `shooter3d-keyrebind-restart`(Release) | 병합된 상태에서 직접 돌리면 통과(두 시나리오 2.4 s · 1.7 s). 검증 도구 안에서 20 분 시간 초과였던 원인은 재현 못 했다(원인 불명 — 다시 나오면 앱 로그부터) |
-| 2 차 병합 뒤(Debug · Release) | 두 구성 빌드 통과. Debug 린트 35/35(`StatusBoard` 재생성) · 파이썬 71/71(`pairedanimnet.scene.xml` 을 엔진 서식으로) 통과. Release 공식 샤드 1 통과(236 s), 샤드 0 · 1 · 5 는 비용표 없이 직접 돌려 통과(57 · 56 · 61 개). **Shipping 빌드, Debug nogpu · race · hostgpu 재실행, Release 샤드 2 · 3 · 5(공식 분배)와 `AppTest_Desktop` 은 아직 안 했다**. 컴파일 확인이 못 본 것: `PosixProcess.cpp`(Linux 전용) |
+| 2 차 병합 뒤(Debug · Release) | 두 구성 빌드 통과. Debug 린트 35/35(`StatusBoard` 재생성) · 파이썬 71/71(`pairedanimnet.scene.xml` 을 엔진 서식으로) 통과. Release 공식 샤드 1 통과(236 s), 샤드 0 · 1 · 5 는 비용표 없이 직접 돌려 통과(57 · 56 · 61 개). Shipping 빌드 통과. ca6208524 기준 Debug `nogpu` 90/90 · `race` 5/5 · 파이썬 71/71 통과, 린트 35/35(`CheckSourceGlob` 은 병렬에서 15 s 제한에 걸렸다가 단독 1 s 통과). **Debug `hostgpu` 재실행, Shipping 테스트, Release 샤드 2 · 3 · 5(공식 분배)와 `AppTest_Desktop` 은 아직 안 했다**. 컴파일 확인이 못 본 것: `PosixProcess.cpp`(Linux 전용) |
 
-**첫 일(순서)**: ① `py -3 -m Scripts ci-jobs --summary` 로 Linux 잡(특히 `PosixProcess.cpp` · 쓰기 게이트 · `NetHost` 경고 · 야간 Load)을 보고 원인별로 묶는다(`ci-triage` 스킬) ② main 기준으로 새 워크트리를 만들어(`worktree-make <이름> --base main`) **못 돌린 검증**을 `run_in_background` 로 돌린다 — Shipping 테스트, Debug `nogpu` · `race` · `hostgpu`, Release 공식 샤드 2 · 3 · 5 와 `AppTest_Desktop` ③ 아래 확인 목록 ④ 고칠 것이 나오면 작업자 브랜치로 나눈다(남은 일 표와 3절이 병렬로 나눌 묶음).
+**첫 일(순서)**: ① `py -3 -m Scripts ci-jobs --summary` 로 Linux 잡(특히 `PosixProcess.cpp` · 쓰기 게이트 · `NetHost` 경고 · 야간 Load)을 보고 원인별로 묶는다(`ci-triage` 스킬) ② main 기준으로 새 워크트리를 만들어(`worktree-make <이름> --base main`) **못 돌린 검증**을 `run_in_background` 로 돌린다 — Debug `hostgpu`, Shipping 테스트, Release 공식 샤드 2 · 3 · 5 와 `AppTest_Desktop` ③ 아래 확인 목록 ④ 고칠 것이 나오면 작업자 브랜치로 나눈다(남은 일 표와 3절이 병렬로 나눌 묶음).
 
 **돌릴 때 알아 둘 것(이번 세션에서 시간을 크게 썼다)**
 - `verify-batch` 는 `--owner <이름>` 이 필수이고 전경에서는 훅이 막는다. `--failed-from` 은 폴더가 아니라 요약 파일을 받는다. 호출 하나는 10 분이 한도라 긴 검증은 `run_in_background`.
