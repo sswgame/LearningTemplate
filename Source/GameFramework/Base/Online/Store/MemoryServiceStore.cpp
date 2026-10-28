@@ -304,6 +304,7 @@ namespace sw
             if ( bShutdown )
             {
                 MemoryServiceStoreInternal::ClosedConnection closed;
+                work->markCancelled(); // 종료 때문에 실행하지 못한 일이다 — 저장소 고장과 가른다
                 work->run( closed );
             }
             else

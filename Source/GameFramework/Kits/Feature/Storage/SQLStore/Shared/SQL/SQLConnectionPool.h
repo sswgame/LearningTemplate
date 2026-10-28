@@ -40,6 +40,11 @@ namespace sw
 
         virtual void run( ISQLConnection& connection ) = 0;
         virtual void complete()                        = 0;
+        /**
+         * @brief 풀이 종료 중이라 이 작업을 닫힌 연결로 끝내려 할 때 `run` 앞에서 부릅니다. 작업이 취소와 연결 고장을 가르고 싶을 때 겹쳐 씁니다.
+         * @details 기본은 아무것도 하지 않는다(풀 자체 테스트의 작업처럼 가르지 않는 작업).
+         */
+        virtual void cancel() {}
     };
 } // namespace sw
 

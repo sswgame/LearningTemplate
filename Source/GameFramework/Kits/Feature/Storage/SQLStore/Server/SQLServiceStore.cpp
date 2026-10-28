@@ -226,6 +226,8 @@ namespace sw
                     _work->run( adapter );
                 }
 
+                void cancel() override { _work->markCancelled(); }
+
                 void complete() override
                 {
                     ScopedLogContext scope( _work->getLogContext() );

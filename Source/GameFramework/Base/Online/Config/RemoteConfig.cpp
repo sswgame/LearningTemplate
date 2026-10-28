@@ -182,7 +182,7 @@ namespace sw
             }
         }
 
-        void complete() override { _pConfig->onReloadCompleted( _result, _mapEntry ); }
+        void complete() override { _pConfig->onReloadCompleted( _result, isCancelled(), _mapEntry ); }
 
     private:
         map<string, Entry> _mapEntry;
@@ -449,12 +449,14 @@ namespace sw
         _snapshotHash              = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), static_cast<size_t>( writer.getByteCount() ), false );
     }
 
-    void RemoteConfig::onReloadCompleted( ServiceStoreResult result, map<string, Entry>& inoutMapEntry )
+    void RemoteConfig::onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry )
     {
         --_pendingWorkCount;
         _lastReloadResult = result;
         if ( result != ServiceStoreResult::Ok )
         {
+            if ( bCancelled )
+                return; // 저장소가 종료 중이라 취소된 첫 읽기다 — 고장이 아니므로 경고하지 않는다. 이전 값을 그대로 둔다
             SW_LOG_WARNING( "Remote config reload failed — keeping the previous values" );
             return;
         }
