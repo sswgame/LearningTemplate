@@ -48,7 +48,7 @@ namespace sw
 
     /**
      * @brief 리플렉션 메타데이터(`ReflectionMetadata.h`)를 값처럼 들되, 그 정의를 모르는 TU 에서도 복사 · 이동 · 소멸할 수 있게 하는 상자입니다.
-     * @details 속성 키를 더할 때마다 바뀌는 메타데이터 구조를 이 헤더(`GameObject.h` · `Component.h` 를 거쳐 TU 약 1,200 개가 읽는다)에서 빼려는 것이다(계획 BuildSpeed 12).
+     * @details 속성 키를 더할 때마다 바뀌는 메타데이터 구조를 이 헤더(`GameObject.h` · `Component.h` 를 거쳐 TU 약 1,200 개가 읽는다)에서 빼려는 것이다.
      *          복사와 소멸은 만들 때 적은 함수 표로 하므로 메타데이터 정의가 필요한 것은 기본 생성뿐이다. 기본 생성은 `ReflectionCore.cpp` 의
      *          `TypeInfo` · `PropertyInfo` · `FunctionInfo` · `EventInfo` 생성자만 한다(함수 표가 엔진 모듈 코드를 가리켜 게임 모듈을 내려도 남는다).
      *          값 의미다 — 복사는 깊은 복사다. 이동한 뒤의 원본은 소멸과 대입만 할 수 있다. 칸은 `->` 로 읽고(`prop._metadata->_bTransient`) 그 TU 는 `ReflectionMetadata.h` 를 include 한다.

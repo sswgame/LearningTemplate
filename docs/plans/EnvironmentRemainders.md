@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: graphics · 진행: 3/4
 
-지형 · 식생 · 물의 남은 일 넷이다. E1 · E3 · E4 는 코드가 들어갔고 E2(굴절)는 절반이다. 전부 **빌드 · 셰이더 구움 · GPU 화면 확인 전**이다. 계약(지형 충돌 · 부력 포함)은 `Source/Engine/Environment` 각 헤더 주석에 있고, 지형 LOD 교체 · 쓰기 비용은 [TerrainEditCost](TerrainEditCost.md), 물속 안개 값은 `WaterBodyComponent::findUnderwaterFog` 가 준다.
+지형 · 식생 · 물의 남은 일 넷이다. E1 · E3 · E4 는 코드가 들어갔고 E2(굴절)는 절반이다. 전부 **빌드 · 셰이더 구움 전**이다. 계약(지형 충돌 · 부력 포함)은 `Source/Engine/Environment` 각 헤더 주석에 있고, 물속 안개 값은 `WaterBodyComponent::findUnderwaterFog` 가 준다.
 
 | 단위 | 내용 | 상태 |
 |---|---|---|
@@ -23,7 +23,7 @@
 
 - 들어감: `RenderPassInputRole::SceneColorCopy`(에뮬 슬롯 1 을 G버퍼 알베도 · AO 와 나눠 씀)와 패스 종류 `SceneColorCopy`(`blitTexture` 로 장면 색 복사). 포워드 파이프라인 넷이 Sky 뒤 · Transparent 앞에 이 패스를 선언하고 Transparent 가 그 첨부를 입력으로 받는다. 사본이 없는 파이프라인(2D · 디퍼드)은 굴절 없이 알파 블렌드다. 테스트 `RenderPassTest.SceneColorCopyPassFeedsTransparentRefraction`.
 - 셰이더(`binding.hlsli` · `water.hlsl`)는 패치 `ShaderPatches/06-EnvironmentRemainders-E2-Water.patch` 로 넘긴다. C++ 와 파이프라인은 패치 없이도 앱이 뜬다.
-- 남은 일: 화면 공간 두께(장면 깊이 사본과 그 복사 패스, 지금은 지형 깊이를 정점에 굽는다), 디퍼드 파이프라인의 패스 선언, 구운 뒤 GPU 화면에서 굴절 세기(`kRefractionStrength` · `kRefractionFullDepth`)를 눈으로 맞추기.
+- 남은 일: 화면 공간 두께(장면 깊이 사본과 그 복사 패스, 지금은 지형 깊이를 정점에 굽는다), 디퍼드 파이프라인의 패스 선언.
 
 ## E3 레이어 여덟
 
@@ -42,7 +42,7 @@
 ## 남은 일 요약
 
 - 셰이더 소스를 바꾸므로 E2 와 E3 · E4 는 패치(`05-…E3E4-Terrain.patch` · `06-…E2-Water.patch`)로 넘긴다. E3 · E4 의 C++ · 머티리얼은 패치와 **함께** 적용해야 앱이 뜬다(새 프로퍼티 이름이 셰이더와 같아야 한다).
-- 첫 일: 빌드 뒤 `SplineRiverPathTest` · `WaterTest` 를 돌리고, 지형 여덟 레이어 · 지오모프와 물 굴절을 GPU 화면으로 본다. 지오모프를 켠 지형 시나리오는 아직 없다.
+- 첫 일: 빌드 뒤 `SplineRiverPathTest` · `WaterTest` 를 돌린다. 지오모프를 켠 지형 시나리오는 아직 없다.
 
 ## 함정
 

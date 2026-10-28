@@ -26,7 +26,6 @@
 - **지워진 것**: `.github`(CI) · `.claude`(훅 · 에이전트 정의 · settings · 스킬 넷) · `docs` 의 번호 문서 · 설정 참조(`docs/Config`) · 결정 기록(`docs/decisions`) · `README`/`StatusBoard` 들 · `Test/` 전체와 `Resource/**/automation` 시나리오 · `Scripts` 대부분 · 린트 게이트 84 개(`CheckIncludeOrder` + clang-format 만 남음) · CMake 프리셋의 `CI-*` · `WSL-*` · `Lean` · `ASAN`.
 - **남은 Scripts**: `setup/` · 쿠킹 계약 · CMake 가 부르는 생성기 · `MakePackage`(에디터 패키징 패널이 부름) · `qa/ValidateAssets`(에디터 에셋 검증이 부름) · `plans` · `doc` 읽기 도구 · 린트(IncludeOrder + clang-format 훅).
 - **`Resource` 의 생성물 전부 삭제**: `*/shaders/bin` · `*/models` · `*/textures` · `*/heightfields` · 모든 `import.stamp`. 사용자가 다시 뽑는다 — 셰이더는 `App --cook-shaders`, 모델 · 텍스처는 `--import-models` 등. 셰이더 소스(`.hlsl`)는 남아 있다. PackedTypes P4 의 셰이더(옥타헤드럴 법선)와 굴절 E2 의 셰이더 변경이 같은 파일(`binding.hlsli`)에 섞여 있으니 쿠킹 때 한 번에 확인한다. 굴절 셰이더 일부는 패치(`docs/plans/ShaderPatches/06-…`)로 남아 있다.
-- **WildWest 말**: Quaternius Farm Animals(CC0)의 `Horse` 로 교체(Idle · Walk · Run). 크기 0.4 · 좌석 높이 1.62 는 계산값이라 화면으로 맞춘다.
 - **푸시**: main 은 origin 보다 앞서 있을 수 있다 — `git fetch` 로 보고 force 없이 push.
 
 ## 3. 새로 세울 것 (사용자와 정한다)
@@ -38,6 +37,6 @@
 
 ## 4. 남은 계획
 
-`py -3 -m Scripts plans` 가 목록이다. 이번에 코드는 들어갔지만 빌드 · 쿠킹 · 화면 확인이 안 된 것: RhiAsyncUploads(U10 · U12 남음) · ServerDebug(O4 · O7 · S5 부하 봇 · S7 되감기 · S8 남음) · OnlineKits(F5 · A5 남음) · PackedTypes(P6 `.vat` 선행) · EnvironmentRemainders(E2 화면 공간 두께) · PreloadAndLod(P9 GPU 인스턴스 LOD 미구현) · PackPatchSigning(시작 마운트 · `-make-patch` 연결 미구현) · ShooterCharacterIntegration(S7 망토 데이터 전환) · ThirdPartyGaps(T2 설치 확인 · T3b) · LongFunctions(예비 항목).
+`py -3 -m Scripts plans` 가 목록이다. 구현이 끝났고 측정 · 장비 · 눈 확인만 남았던 계획(BuildSpeed · ClusteredLighting · RuntimeQualityAdjust · TerrainEditCost · MsdfGlyphs · WildWestHorseMount)과 조건부 보류만 남은 CrossFileObjectReference 는 문서째 지웠다(측정은 나중에 다시 한다). 이번에 코드는 들어갔지만 빌드 · 쿠킹 · 화면 확인이 안 된 것: RhiAsyncUploads(U10 · U12 남음) · ServerDebug(O4 · O7 · S5 부하 봇 · S7 되감기 · S8 남음) · OnlineKits(F5 · A5 남음) · PackedTypes(P6 `.vat` 선행) · EnvironmentRemainders(E2 화면 공간 두께) · PreloadAndLod(P9 GPU 인스턴스 LOD 미구현) · PackPatchSigning(시작 마운트 · `-make-patch` 연결 미구현) · ShooterCharacterIntegration(S7 망토 데이터 전환) · ThirdPartyGaps(T2 설치 확인 · T3b) · LongFunctions(예비 항목).
 
 사용자 결정(2026-10-27 · 28): 장르 키트 21 개 유지, 컴파일 셰이더 git 보관 유지(이후 생성물은 모두 지움), 측정 · 사람 눈 확인 · 장비 확인만 남은 항목은 후보에서 지운다(나중에 다시 측정).

@@ -6,7 +6,7 @@
  * @warning 모든 TU 가 읽는 헤더입니다(CoreMinimal · pch.h). Core 헤더가 쓰는 것만 둡니다.
  *          스트림(<fstream> · <sstream> · <iostream> · <ostream>) · <random> · <regex> · <future> · <variant> · <condition_variable> ·
  *          <csignal> · <queue> · <stack> · <bitset> 처럼 몇 파일만 쓰는 무거운 헤더는 쓰는 파일이 직접 include 합니다
- *          (PCH 를 끈 콜드 빌드에서 TU 마다 파싱 시간이 붙는다 — docs/plans/BuildSpeed.md 2 단계).
+ *          (PCH 를 끈 콜드 빌드에서 TU 마다 파싱 시간이 붙는다).
  *          스트림 연산자 선언은 <iosfwd> 의 전방 선언으로 충분합니다.
  */
 #pragma once

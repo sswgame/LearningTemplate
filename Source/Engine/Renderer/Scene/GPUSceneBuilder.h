@@ -243,7 +243,7 @@ namespace sw
         /** @brief 부분 제자리 갱신입니다. 더티 프리미티브가 가리키는 인스턴스만 고치고 회전 인스턴스 수를 증감합니다. 매핑이 어긋나면 false 입니다. */
         [[nodiscard]] bool refreshDirtyInstances( const vector<GPUInstance>& listPublishedInstance, size_t slotCount, bool& ioTooManyRuns );
         /**
-         * @brief 부분 수집에서 메시만 바뀐 불투명 후보(`_listMeshSwapCandidate`)의 배치를 다시 나누지 않고 그 배치의 메시만 바꿉니다(TerrainEditCost T4).
+         * @brief 부분 수집에서 메시만 바뀐 불투명 후보(`_listMeshSwapCandidate`)의 배치를 다시 나누지 않고 그 배치의 메시만 바꿉니다.
          * @details 후보마다 그 배치가 인스턴스 하나뿐이어야 한다(지형 청크는 청크마다 인스턴스 배치 하나다). 같은 메시를 여럿이 쓰는 배치는
          *          새 메시로 갈라야 하므로 나누기가 맡는다. 불투명 인스턴스 슬롯은 정렬된 나누기 항목의 슬롯과 같다(`populateBatches` 가 항목 순서로 방출한다) —
          *          그 슬롯의 나누기 키 메시도 함께 바꿔 다음 전체 방출(`populateBatches`)이 낡은 메시 포인터로 묶지 않게 한다.

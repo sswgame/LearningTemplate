@@ -41,7 +41,7 @@ namespace sw
     class SW_API LightGrid
     {
     public:
-        /// @brief 클러스터 칸 수입니다. 원본은 bindingslots.hlsli 10절이고 측정 뒤에 조정합니다(ClusteredLighting.md S3).
+        /// @brief 클러스터 칸 수입니다. 원본은 bindingslots.hlsli 10절입니다.
         static constexpr uint32 kDimX         = shaderslot::lightgrid::kDimX;
         static constexpr uint32 kDimY         = shaderslot::lightgrid::kDimY;
         static constexpr uint32 kDimZ         = shaderslot::lightgrid::kDimZ;

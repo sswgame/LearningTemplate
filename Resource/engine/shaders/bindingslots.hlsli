@@ -345,7 +345,7 @@
 // 배치: 헤더 단어 16 개 → 클러스터마다 단어 두 개(목록 안의 시작, 개수) → 라이트 번호 목록(전역 구간이 맨 앞). 클러스터 번호는 (조각 × Y + y) × X + x 다.
 #define SW_LIGHT_GRID_HEADER_WORD_COUNT 16u
 #define SW_LIGHT_GRID_WORDS_PER_CLUSTER 2u
-// 클러스터 칸 수 — 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈다(결정 기록 5-12 D2-13 의 시작값, 측정 뒤 조정은 ClusteredLighting.md S3).
+// 클러스터 칸 수 — 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈다(결정 기록 5-12 D2-13 의 시작값).
 // 컴퓨트 생산자는 클러스터마다의 개수를 그룹 공유 메모리에 두므로 칸 수 × 4 바이트가 그 한도(32KB) 안이어야 한다(ShaderBindingSlots.h 가 확인한다).
 #define SW_LIGHT_GRID_DIM_X 16u
 #define SW_LIGHT_GRID_DIM_Y 9u

@@ -25,7 +25,7 @@ namespace sw
      * @details 격자의 모양은 트랜스폼과 두 칸(`_extent`, `_spacing`)에서 나옵니다(`computeLayout`). 회전과 크기 배율은 쓰지 않습니다 — 격자는 월드 축 정렬입니다.
      *          베이크(P2)가 `.probes` 를 쓰고 `_probeDataPath` 에 그 경로를 둡니다. 읽은 격자의 모양이 지금 볼륨과 다르면(옮기거나 크기를 바꾸고 다시 베이크하지 않았다)
      *          그 데이터를 쓰지 않고 오류를 남깁니다 — 옛 위치의 빛을 새 위치에 비추지 않습니다(폴백 없음). 베이크하지 않은 볼륨(경로가 빔)은 맵 검사가 경고합니다.
-     *          셰이더 소비(P3)는 레지스트리로 볼륨을 모아 라이트 그리드의 항목으로 넣습니다(ClusteredLighting.md S5).
+     *          셰이더 소비(P3)는 레지스트리로 볼륨을 모아 라이트 그리드의 항목으로 넣습니다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Light Probe Volume", Tooltip = "Grid of baked spherical-harmonics light probes for indirect lighting", Meta = "Icon=LightPoint, IconColor=Light" )
     class SW_API LightProbeVolumeComponent : public SceneComponent

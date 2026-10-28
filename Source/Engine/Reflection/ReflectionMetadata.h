@@ -1,7 +1,7 @@
 /**
  * @file ReflectionMetadata.h
  * @brief `REFLECT()` · `PROPERTY()` · `FUNCTION()` 에 적은 메타데이터(속성 키 표)입니다. 카테고리, 기본값, 범위, 직렬화 · 복제 · 세이브 플래그를 담습니다.
- * @details 속성 키를 더할 때마다 바뀌는 구조라 `ReflectionTypes.h` 에서 갈랐습니다(계획 BuildSpeed 12). `ReflectionTypes.h` 는
+ * @details 속성 키를 더할 때마다 바뀌는 구조라 `ReflectionTypes.h` 에서 갈랐습니다. `ReflectionTypes.h` 는
  *          `ReflectMetadataBox` 로 이 구조를 값처럼 들 뿐 정의를 모르므로, `GameObject.h` · `Component.h` 를 거쳐 그 헤더를 읽는 TU 는
  *          이 파일이 바뀌어도 다시 컴파일되지 않습니다. 메타데이터 칸(`info._metadata->_category` 등)을 읽거나 쓰는 TU 만 이 파일을 include 합니다.
  *          생성 코드(.gen.cpp)는 `ReflectGenerated.h` 가 include 합니다.
