@@ -87,6 +87,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("claims", "dev.RunClaims", "에이전트끼리 맡은 경로를 적어 두고 겹침을 묻는 작업 장부와 짧은 공지(add · check · list · release · post · read)"),
     Subcommand("full-build","dev.RunFullBuild", "빌드 칸을 잡고 all AllTests 전체 빌드 — 성공하면 그 트리의 증거를 남긴다(main push 가 요구한다)"),
     Subcommand("pack-patch-run", "dev.RunPackPatchChain", "패치 사슬을 한 명령으로 — 1.0 구움 → 파일 하나 더해 1.1 구움 → 패치 만들기 → 배포 폴더 Packs/ 에 두고 App 시작 로그에서 사슬이 얹히는지 본다"),
+    Subcommand("pack-patch-run", "dev.RunPackPatchChain", "패치 사슬을 한 명령으로 — 1.0 구움 → 파일 하나 더해 1.1 구움 → 패치 만들기 → 배포 폴더 Packs/ 에 두고 App 시작 로그에서 사슬이 얹히는지 본다"),
     Subcommand("ci-jobs","dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
     Subcommand("plans", "dev.ListPlans", "계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(--status · --area · --file · --section)"),
     Subcommand("doc", "dev.RunDoc", "큰 마크다운 문서의 목차(제목 · 행 번호 · 절 크기)나 한 절만 보인다(--section, 5-4 같은 번호도 된다)"),
