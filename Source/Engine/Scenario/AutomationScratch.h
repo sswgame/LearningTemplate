@@ -52,6 +52,7 @@ namespace sw
         /**
          * @brief 쓰기 입구 게이트를 세웁니다 — 실행기가 시나리오를 시작할 때 한 번 부르고 끝날 때 `releaseWriteGate` 로 짝을 맞춥니다(`FileUtil::setWriteGate`). 시나리오는 한 프로세스에서 차례로 돌므로 셈을 두지 않는다.
          * @details 게이트가 서 있는 동안 리소스 루트 아래에서 `scratch/` 밖으로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
+         *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길).
          *          `asset.openScratch` 가 여는 쪽만 막던 것을 쓰는 쪽 한 문으로 닫는다.
          */
         static void acquireWriteGate();

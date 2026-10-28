@@ -11,7 +11,6 @@
 | LinuxManualChecks | X11 입력 자동 테스트 | XTest 테스트를 계획 문서로 올릴 때 |
 | ImageIntakeChecks | 노멀 맵 열 장 다시 굽기 | 바로 가능 |
 | LogGateRemainders | 종료 때 `Task fencing timeout` 원인 | 다시 보일 때 |
-| WriteGateRemainders | 쓰기 게이트 밖 추적 파일 쓰기 | 새 쓰기 길이 생길 때 |
 
 ## 테스트 · 검증
 
@@ -26,12 +25,6 @@
 왜 필요한가: 시나리오 · 모든 테스트 케이스는 선언하지 않은 Warning · Error 로 진다. 표식 없는 줄은 코드로 손봤고 상시 `ctest-nogpu` 전체가 확인한다. 돌려 보기 전이라 Release · Shipping 이나 시간에 기대는 배경 스레드 줄이 남았을 수 있고, 지는 케이스는 원인을 고치거나 그 호출에 범위(`SW_TEST_DEFENSIVE_SCOPE`)를 씌운다(판정기를 좁히지 않는다).
 착수 조건: 에디터를 켠 짧은 실행(`-gv_profileFrames=90`)이 다른 GPU 작업과 겹쳐 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 를 다시 낼 때(36 회 중 3 회, 단독 0 회).
 남은 첫 일: 5 초 넘게 도는 에디터 배경 작업이 무엇인지 가린다. 로그의 첫 미완료 태스크 이름(`ModuleHost::drainRenderWorkers` 가 찍는다)과 `py -3 -m Scripts stacks <pid>` 의 워커 스택을 본다.
-
-### WriteGateRemainders
-제목: 쓰기 게이트의 남은 것
-왜 필요한가: 자동화 실행 중 `Resource/` 의 `scratch/` 밖 쓰기는 `FileUtil::isWriteAllowed` 가 거절한다. 입구 밖의 직접 호출은 `CheckFacilityBypass` 규칙이 센다(기준선 0, 예외는 `Scripts/lint/rules/CheckFacilityBypass.toml` 에 이유와 함께). 입구 밖 쓰기는 대부분 `FileUtil` 로 옮겼고 남은 예외(로그 파일 · 크래시 기록 · 자식 프로세스 파이프 · 키 파일 `chmod` · `imgui.ini`)는 이유가 표에 있다.
-착수 조건: 게이트가 안 지키는 쓰기 길이 새로 생길 때.
-남은 첫 일: 게이트는 `Resource/` 루트 아래만 지켜서 `docs/` · `Config/` 같은 추적 파일에 자동화가 쓰는 길은 못 막는다. 현재 그런 쓰기는 명시 옵션(`--record` · `--apply`)의 스크립트와 `scene-load-bench`(별도 프로세스가 `Resource/` 에 만들고 지운 뒤 `git status` 로 확인)뿐이다. 이 모양이 더 생기면 게이트를 넓힌다.
 
 ## 관찰
 

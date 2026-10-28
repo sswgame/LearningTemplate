@@ -26,7 +26,25 @@ namespace sw
              */
             static inline atomic<uint64> s_prepareCount{ 0 };
 
-            /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기를 거절합니다. 루트 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
+            /**
+             * @brief 자동화 실행이 쓰면 안 되는 추적 폴더(프로젝트 루트 기준)입니다 — `docs/` 와 `Config/`.
+             * @details 언리얼 · 유니티의 자동화 실행도 소스 관리 아래 폴더(`Config/` · `ProjectSettings/`)는 쓰기를 막고 `Saved/` · 임시 폴더로 보낸다. 같은 이유로 둔다.
+             */
+            static constexpr string_view kTrackedFolders[] = { "docs", "Config" };
+            /**
+             * @brief `kTrackedFolders` 안에서 쓰기를 허락하는 하위 폴더입니다(프로젝트 루트 기준). 에디터 설정을 저장하는 길이 쓰는 `Config/Editor/` 하나다.
+             * @details 프로젝트 설정 창(`Config/Game` · `Config/Engine`)의 저장은 허락하지 않는다 — 시나리오가 그 파일을 고치려면 사본으로 돌려야 한다.
+             */
+            static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
+
+            /** @brief @p target(정규화한 절대 경로)이 @p folder(루트 뒤 상대 폴더) 자신이거나 그 아래인지입니다. */
+            static bool isInside( string_view target, string_view projectRoot, string_view folder )
+            {
+                const string base = string( projectRoot ) + string( folder );
+                return target == base || StringUtil::startsWith( target, base + "/" );
+            }
+
+            /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static bool allowWrite( string_view path, string& outReason )
             {
                 const string& rootPath = ResourcePaths::getRootFolderPath();
@@ -40,7 +58,24 @@ namespace sw
                 const string root        = FileUtil::normalizePath( rootPath ) + "/";
                 const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
                 const string target      = FileUtil::normalizePath( absolutePath );
-                const bool   bScratch    = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
+
+                // 프로젝트 루트(Resource 의 부모)의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
+                const string projectRoot = FileUtil::normalizePath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( rootPath ) ) ) + "/";
+                for ( const string_view folder : kTrackedFolders )
+                {
+                    if ( isInside( target, projectRoot, folder ) == false )
+                        continue;
+                    const bool bAllowed = std::any_of( std::begin( kAllowedConfigWrites ), std::end( kAllowedConfigWrites ), [&]( string_view allowed )
+                    {
+                        return isInside( target, projectRoot, allowed );
+                    } );
+                    if ( bAllowed )
+                        return true;
+                    outReason = "an automation run may not write the tracked folder " + string( folder ) + "/ (only Config/Editor is open); run on a copy under Resource/scratch/ or write under Saved/";
+                    return false;
+                }
+
+                const bool bScratch = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
                 if ( StringUtil::startsWith( target, root ) == false || bScratch )
                     return true;
                 outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
