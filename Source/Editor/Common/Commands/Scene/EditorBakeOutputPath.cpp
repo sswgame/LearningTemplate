@@ -4,8 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -19,16 +19,16 @@ namespace sw::editor
         };
     } // namespace
 
-    string makeSceneBakeResourcePath( const Scene& scene, const GameObject& owner, string_view extension )
+    string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension )
     {
         const string& sourcePath = scene.getSourcePath();
-        string        resourceID = ResourcePaths::toResourceID( sourcePath );
-        if ( resourceID.empty() )
-            resourceID = sourcePath;
-        if ( resourceID.empty() )
+        string        assetID    = AssetPaths::toAssetID( sourcePath );
+        if ( assetID.empty() )
+            assetID = sourcePath;
+        if ( assetID.empty() )
             return {};
-        const size_t suffix = resourceID.rfind( EditorBakeOutputPathInternal::kSceneSuffix );
-        string       path{ suffix == string::npos ? resourceID : resourceID.substr( 0, suffix ) };
+        const size_t suffix = assetID.rfind( EditorBakeOutputPathInternal::kSceneSuffix );
+        string       path{ suffix == string::npos ? assetID : assetID.substr( 0, suffix ) };
         string       name = StringUtil::toLower( owner.getName().c_str() );
         for ( utf8& character : name )
         {

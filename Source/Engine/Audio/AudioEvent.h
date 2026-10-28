@@ -13,10 +13,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -205,7 +205,7 @@ namespace sw
         vector<AudioEventDesc> _listEvent{};
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
@@ -217,7 +217,7 @@ namespace sw
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
          * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool saveToResource( string_view resourcePath ) const;
+        [[nodiscard]] bool saveToAsset( string_view assetPath ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */
         const AudioEventDesc* findEvent( const hashed_string& name ) const;

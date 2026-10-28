@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
@@ -367,18 +367,18 @@ namespace sw
 
     bool SkirmishDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromResource( ResourceID{ _unitDataPath } ) == false )
+        if ( _catalog.loadFromAsset( AssetID{ _unitDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
         _unitModelCatalog.clear();
-        if ( _unitModelCatalog.loadFromResource( ResourceID{ _unitModelPath } ) == false )
+        if ( _unitModelCatalog.loadFromAsset( AssetID{ _unitModelPath } ) == false )
         {
             SW_LOG_ERROR( "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
             return false;
         }
-        if ( _commanderTree.loadFromResource( ResourceID{ _commanderTreePath } ) == false )
+        if ( _commanderTree.loadFromAsset( AssetID{ _commanderTreePath } ) == false )
         {
             SW_LOG_ERROR( "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
             return false;

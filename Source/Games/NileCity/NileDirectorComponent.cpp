@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -16,7 +17,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
@@ -279,7 +279,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromResource( ResourceID{ _cityDataPath } ) == false )
+        if ( _catalog.loadFromAsset( AssetID{ _cityDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
@@ -295,7 +295,7 @@ namespace sw
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
         const NileCityLayout layout = makeCityLayout();
         NileCityPlanner::paintTerrain( _city, layout );
-        if ( _planner.reset( layout, ResourceID{ _autoPlanPath } ) == false )
+        if ( _planner.reset( layout, AssetID{ _autoPlanPath } ) == false )
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
 
         _listEvent.clear();
@@ -510,7 +510,7 @@ namespace sw
         NileCityPlanner planner;
         Wallet          wallet;
         WorldClock      clock;
-        if ( planner.reset( makeCityLayout(), ResourceID{ _autoPlanPath } ) == false )
+        if ( planner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) == false )
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         if ( clock.initialize( makeClockSettings() ) == false )
             return false;

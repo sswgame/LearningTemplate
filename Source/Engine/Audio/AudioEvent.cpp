@@ -5,26 +5,26 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Audio/AudioMixerDesc.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AudioEventLibrary" );
 
-    bool AudioEventLibrary::loadFromResource( const ResourceID& resourceID )
+    bool AudioEventLibrary::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio event library not found: %#", resourcePath );
+            SW_LOG_ERROR( "Audio event library not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, resourcePath );
+        return loadFromXMLText( text, assetPath );
     }
 
     bool AudioEventLibrary::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -140,17 +140,17 @@ namespace sw
         return XMLSerializer::serialize( this, *StaticType() );
     }
 
-    bool AudioEventLibrary::saveToResource( string_view resourcePath ) const
+    bool AudioEventLibrary::saveToAsset( string_view assetPath ) const
     {
-        if ( validate( resourcePath ) == false )
+        if ( validate( assetPath ) == false )
         {
-            SW_LOG_ERROR( "%#: audio event library not saved - it does not pass validation", resourcePath );
+            SW_LOG_ERROR( "%#: audio event library not saved - it does not pass validation", assetPath );
             return false;
         }
-        const string filePath = ResourcePaths::getWritePath( resourcePath );
+        const string filePath = AssetPaths::getWritePath( assetPath );
         if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio event library could not be written to '%#'", resourcePath, filePath );
+            SW_LOG_ERROR( "%#: audio event library could not be written to '%#'", assetPath, filePath );
             return false;
         }
         return true;
@@ -167,5 +167,5 @@ namespace sw
     SW_ASSET_TYPE( AudioEventLibrary, AudioEventLibrary::kAssetType );
 
     /** @brief 오디오 이벤트 라이브러리 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioEvents, "audioevents", nullptr, nullptr, ".audioevents.xml", &ResourceDataKindUtil::loadCatalog<AudioEventLibrary> );
+    SW_RESOURCE_DATA_KIND( AudioEvents, "audioevents", nullptr, nullptr, ".audioevents.xml", &AssetDataKindUtil::loadCatalog<AudioEventLibrary> );
 } // namespace sw

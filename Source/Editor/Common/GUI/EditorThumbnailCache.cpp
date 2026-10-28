@@ -11,9 +11,9 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw::editor
 {
@@ -72,7 +72,7 @@ namespace sw::editor
         TextureCache* pTextures          = EditorThumbnailCacheInternal::findTextureCache();
         const bool    bReleasableTexture = entry._textureHandle != 0 && pTextures != nullptr && pDevice != nullptr;
         if ( bReleasableTexture )
-            pTextures->release( entry._resourceID, pDevice );
+            pTextures->release( entry._assetID, pDevice );
         entry._textureHandle = 0;
     }
 
@@ -90,9 +90,9 @@ namespace sw::editor
         _uniqueKnownID.clear();
     }
 
-    void EditorThumbnailCache::recordFailure( string resourceID )
+    void EditorThumbnailCache::recordFailure( string assetID )
     {
-        _listFailedID.push_back( std::move( resourceID ) );
+        _listFailedID.push_back( std::move( assetID ) );
         while ( _listFailedID.size() > kMaxFailed )
         {
             _uniqueKnownID.erase( _listFailedID.front() ); // 잊힌 경로는 다시 보이면 새로 예약된다
@@ -100,12 +100,12 @@ namespace sw::editor
         }
     }
 
-    void* EditorThumbnailCache::findTexture( string_view resourceID )
+    void* EditorThumbnailCache::findTexture( string_view assetID )
     {
-        const string key = FileUtil::normalizePath( resourceID );
+        const string key = FileUtil::normalizePath( assetID );
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._resourceID != key )
+            if ( entry._assetID != key )
                 continue;
             entry._lastUsedFrame = _frame;
             return entry._pTextureID;
@@ -128,7 +128,7 @@ namespace sw::editor
         for ( size_t entryIndex = _listEntry.size(); entryIndex > 0; --entryIndex )
         {
             Entry&           entry    = _listEntry[entryIndex - 1];
-            const Texture2D* pTexture = textures.find( entry._resourceID );
+            const Texture2D* pTexture = textures.find( entry._assetID );
             const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == entry._textureHandle;
             if ( bValid )
                 continue;
@@ -148,17 +148,17 @@ namespace sw::editor
         TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
         while ( _listPendingID.empty() == false && _listLoading.size() < kMaxLoading )
         {
-            const string resourceID = std::move( _listPendingID.front() );
+            const string assetID = std::move( _listPendingID.front() );
             _listPendingID.pop_front();
 
             // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
-            const TextureHandle handle = textures.request( resourceID, pDevice, AssetLoadStart::Async );
+            const TextureHandle handle = textures.request( assetID, pDevice, AssetLoadStart::Async );
             if ( handle.isValid() == false )
             {
-                recordFailure( resourceID );
+                recordFailure( assetID );
                 continue;
             }
-            _listLoading.push_back( Loading{ resourceID, handle.getBlock() } );
+            _listLoading.push_back( Loading{ assetID, handle.getBlock() } );
         }
     }
 
@@ -179,38 +179,38 @@ namespace sw::editor
                 ++loadingIndex;
                 continue;
             }
-            const string resourceID = _listLoading[loadingIndex]._resourceID;
-            if ( state == AssetLoadState::Failed || adoptReady( resourceID, pDevice ) == false )
-                recordFailure( resourceID );
+            const string assetID = _listLoading[loadingIndex]._assetID;
+            if ( state == AssetLoadState::Failed || adoptReady( assetID, pDevice ) == false )
+                recordFailure( assetID );
             else
-                _uniqueKnownID.erase( resourceID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
+                _uniqueKnownID.erase( assetID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
             // 핸들 몫의 참조는 지우며 놓인다 — `adoptReady` 가 우리 몫을 따로 쥐었으므로 항목은 남는다.
             _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
         }
     }
 
-    bool EditorThumbnailCache::adoptReady( const string& resourceID, IRHIDevice* pDevice )
+    bool EditorThumbnailCache::adoptReady( const string& assetID, IRHIDevice* pDevice )
     {
         TextureCache&          textures = EditorThumbnailCacheInternal::requireTextureCache();
         IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
         // 준비된 텍스처라 읽지 않는다(캐시 적중) — 핸들이 살아 있는 동안 참조를 하나 더 세어 해제를 `releaseEntry` 의 `release` 짝으로 맞춘다.
-        Texture2D* pTexture           = textures.acquire( resourceID, pDevice );
+        Texture2D* pTexture           = textures.acquire( assetID, pDevice );
         const bool bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
         if ( bThumbnailUnusable )
         {
             if ( pTexture != nullptr )
-                textures.release( resourceID, pDevice );
+                textures.release( assetID, pDevice );
             return false;
         }
 
         Entry entry{};
-        entry._resourceID    = resourceID;
+        entry._assetID       = assetID;
         entry._textureHandle = pTexture->getHandle();
         entry._pTextureID    = pBackend->registerTexture( entry._textureHandle );
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
         {
-            textures.release( resourceID, pDevice );
+            textures.release( assetID, pDevice );
             return false;
         }
         _listEntry.push_back( std::move( entry ) );

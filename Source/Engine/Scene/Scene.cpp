@@ -6,6 +6,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/Component/SceneAudio.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -21,8 +23,6 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/WorldStreamingSubsystem.h"
 

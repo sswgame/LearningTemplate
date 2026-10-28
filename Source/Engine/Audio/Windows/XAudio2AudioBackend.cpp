@@ -7,7 +7,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Resource/ResourceIO.h"
+    #include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -137,16 +137,16 @@ namespace sw
 
             /**
              * @brief 공통 디코더가 다루지 않는 형식(MP3, ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 디코드합니다. 클립 캐시의 대체 디코더입니다.
-             * @details 바이트는 `ResourceIO` 로 읽어 메모리 스트림으로 넘긴다 — 디스크 경로(URL)로 열면 팩으로 쿠킹한 빌드에서 열 파일이 없다.
+             * @details 바이트는 `AssetIO` 로 읽어 메모리 스트림으로 넘긴다 — 디스크 경로(URL)로 열면 팩으로 쿠킹한 빌드에서 열 파일이 없다.
              */
-            static bool decodeWithMediaFoundation( const ResourceID& resourceID, AudioPcm& outPcm )
+            static bool decodeWithMediaFoundation( const AssetID& assetID, AudioPcm& outPcm )
             {
-                const string_view     path = resourceID.view();
+                const string_view     path = assetID.view();
                 const SystemAudioAPI& api  = getSystemAudioAPI();
                 if ( api.hasMediaFoundation() == false )
                     return false; // Media Foundation 이 없는 Windows(N 에디션) — 공통 디코더가 못 푸는 형식은 재생하지 않는다
                 vector<uint8> bytes;
-                if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false || bytes.empty() )
+                if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || bytes.empty() )
                     return false;
                 ScopedThreadComAndMf threadComScope;
                 IStream*             pMemoryStream = api._pfnSHCreateMemStream( bytes.data(), static_cast<UINT>( bytes.size() ) );

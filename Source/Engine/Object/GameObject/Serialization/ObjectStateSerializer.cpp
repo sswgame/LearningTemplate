@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
@@ -19,7 +20,6 @@
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"

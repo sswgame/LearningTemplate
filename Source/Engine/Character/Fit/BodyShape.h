@@ -28,7 +28,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -137,7 +137,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성이나 원소, 겹친 축은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이름의 축입니다. 없으면 nullptr 입니다. */
         const BodyShapeAxis* findAxis( const hashed_string& name ) const;
         /** @brief 축들입니다. */

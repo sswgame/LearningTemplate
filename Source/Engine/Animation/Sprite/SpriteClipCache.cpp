@@ -5,7 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const ResourceID& resourceID, SpriteClipAsset& outClip ) { return outClip.loadFromFile( resourceID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromFile( assetID ); }
     };
 } // namespace sw
 

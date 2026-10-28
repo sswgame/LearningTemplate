@@ -19,7 +19,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Common/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Base/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
 | Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them |
 | Data-defined resource path | `Engine/Serialization/Base/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers |
-| Resolve a resource id | `Engine/Resource/ResourcePaths.h`; read: `Engine/Resource/ResourceIO.h` `readTextResource` · `readBinaryResource` · `collectResources` | disk paths in runtime game code |
+| Resolve a resource id | `Engine/Asset/AssetPaths.h`; read: `Engine/Asset/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectResources` | disk paths in runtime game code |
 | User data and config folder | `Core/File/UserDataPath.h` `getDataDirectory` · `getConfigDirectory` · `resolve` | `getenv( "HOME" )` · `%LOCALAPPDATA%` by hand |
 | Path text (join, extension, normalize) | `Core/File/FileUtil.h` `joinPath` · `getExtension` · `removeExtension` · `getFileNamePart` · `getDirectoryPart` · `normalizeSeparators` · `splitPath`; part under a root: `tryMakePathUnderRoot` | `std::filesystem::path`, `rfind( '.' )` · `find_last_of( '/' )` loops |
 | Read or write a whole file | `Core/File/FileUtil.h` `readFile` · `readTextFile` · `writeFile` · `writeTextFile` (`[[nodiscard]] bool`) | `fopen` · `_wfopen` · `std::ifstream` · `std::ofstream` |
@@ -41,7 +41,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Publish and subscribe by channel | `Core/Event/EventDispatcher.h` `subscribe` · `publish` · `push` | a hand-rolled listener list |
 | Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; result: `Core/Task/TaskFuture.h` | `std::async` · a thread per job |
 | A dedicated thread | `Core/Concurrency/thread.h` `sw::thread`; locks: `Core/Concurrency/mutex.h` | `std::thread` |
-| Load an asset | `Engine/Resource/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `ResourceIO` | `FileUtil` reads of `Resource/` in game code |
+| Load an asset | `Engine/Asset/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `AssetIO` | `FileUtil` reads of `Resource/` in game code |
 | Engine or game setting | `Engine/Config/ConfigManager.h` `getConfig<T>` (keyed by type) | config lookup by a name string |
 | Console variable, cheat, switch | `Core/GlobalVariable/GlobalVariableManager.h` `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE` | a mutable `static` tuning flag |
 | User-facing text | `Engine/Localization/LocalizationManager.h` `getString` · `formatText` through `engine::getSubsystem<LocalizationManager>()` | literal UI strings |

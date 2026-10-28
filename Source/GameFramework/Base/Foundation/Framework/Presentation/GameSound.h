@@ -13,8 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -27,15 +27,15 @@ namespace sw
     struct SW_GF_API GameSound
     {
         /** @brief 효과음 클립 하나를 비동기로 냅니다. 리소스 경로는 `game/<게임>/sounds/x.ogg` 형식이며, 버스가 비면 sfx 입니다. */
-        static bool play( const ResourceID& resourceID, const hashed_string& bus = hashed_string{} );
+        static bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
         /** @brief 배경 음악을 바꿉니다. */
-        static bool playMusic( const ResourceID& resourceID );
+        static bool playMusic( const AssetID& assetID );
 
         /**
          * @brief 이벤트 라이브러리를 올립니다. 이름은 경로이며, 같은 경로면 바꿉니다. 게임 초기화에서 부릅니다.
          * @return 파일을 못 읽거나, 검사나 그래프 대조를 통과하지 못하면 false 이다. 오디오 서비스가 없으면 할 일이 없으므로 true 이다.
          */
-        [[nodiscard]] static bool loadEvents( const ResourceID& resourceID );
+        [[nodiscard]] static bool loadEvents( const AssetID& assetID );
         /** @brief 이벤트 라이브러리를 내립니다. 게임을 종료하거나 모듈을 내릴 때 부릅니다. */
         static void unloadEvents( string_view path );
         /** @brief 이벤트를 2D(공간화 없음)로 냅니다. UI 와 플레이어 자신의 소리에 씁니다. */

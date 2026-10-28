@@ -5,6 +5,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -17,7 +18,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw

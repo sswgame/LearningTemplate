@@ -73,7 +73,7 @@ namespace sw::editor
         const string_view path{ _pathInput.c_str() };
         _selectedNode      = -1;
         _pendingPlacedNode = -1;
-        if ( _editGraph.loadFromResource( ResourceID{ path } ) == false )
+        if ( _editGraph.loadFromAsset( AssetID{ path } ) == false )
         {
             _editGraph = AudioGraphDef{};
             _editPath  = hashed_string{};
@@ -108,7 +108,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Save" ) ) )
         {
             // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다).
-            if ( _editGraph.saveToResource( _editPath.view() ) )
+            if ( _editGraph.saveToAsset( _editPath.view() ) )
                 _bEditDirty = false;
         }
         ImGui::EndDisabled();

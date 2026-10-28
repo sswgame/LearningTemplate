@@ -190,12 +190,12 @@ namespace sw
         return ( _listMaterial[static_cast<size_t>( material )]._flags & ( 1u << static_cast<uint32>( flag ) ) ) != 0;
     }
 
-    bool ElementRuleTable::loadFromResource( const ResourceID& resourceID )
+    bool ElementRuleTable::loadFromAsset( const AssetID& assetID )
     {
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( XMLReadUtil::loadRootOrWarn( doc, resourceID, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, assetID, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
             return false;
         return loadRoot( root, sourceName );
     }

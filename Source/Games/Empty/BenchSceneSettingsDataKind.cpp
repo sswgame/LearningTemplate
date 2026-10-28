@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 #include "Games/Empty/BenchSceneSettings.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadBenchSceneSettings( const ResourceID& id )
+        [[nodiscard]] bool loadBenchSceneSettings( const AssetID& id )
         {
             BenchSceneSettings settings;
             return ReflectedXMLFile::loadDesc( id, settings );

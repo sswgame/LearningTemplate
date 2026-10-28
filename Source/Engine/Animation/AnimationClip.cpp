@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -407,12 +407,12 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool AnimationClip::loadFromResource( const ResourceID& resourceID )
+    bool AnimationClip::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
             SW_LOG_ERROR( "Animation clip '%#' could not be read", path );
             clear();

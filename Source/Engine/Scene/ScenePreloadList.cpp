@@ -83,27 +83,27 @@ namespace sw
         return document.saveFile( diskPath, 2 );
     }
 
-    bool ScenePreloadList::read( const ResourceID& resourceID, vector<string>& outListPath )
+    bool ScenePreloadList::read( const AssetID& assetID, vector<string>& outListPath )
     {
-        const string_view listResourceID = resourceID.view();
+        const string_view listAssetID = assetID.view();
         outListPath.clear();
         JSONDocument document;
-        if ( document.loadResource( resourceID ) == false )
+        if ( document.loadResource( assetID ) == false )
         {
-            SW_LOG_ERROR( "Scene preload list '%#' could not be read: %#", listResourceID, document.getLastError().c_str() );
+            SW_LOG_ERROR( "Scene preload list '%#' could not be read: %#", listAssetID, document.getLastError().c_str() );
             return false;
         }
         const JSONValue root    = document.getRoot();
         const auto      version = root.readRequired<uint32>( "version" );
         if ( version.has_value() == false || *version != kVersion )
         {
-            SW_LOG_ERROR( "Scene preload list '%#' has version %# - this build reads version %#", listResourceID, version.has_value() ? *version : 0u, kVersion );
+            SW_LOG_ERROR( "Scene preload list '%#' has version %# - this build reads version %#", listAssetID, version.has_value() ? *version : 0u, kVersion );
             return false;
         }
         const JSONValue paths = root.get( "paths" );
         if ( paths.isArray() == false )
         {
-            SW_LOG_ERROR( "Scene preload list '%#' has no 'paths' array", listResourceID );
+            SW_LOG_ERROR( "Scene preload list '%#' has no 'paths' array", listAssetID );
             return false;
         }
         for ( size_t index = 0; index < paths.size(); ++index )
@@ -112,7 +112,7 @@ namespace sw
             if ( path.has_value() == false )
             {
                 outListPath.clear();
-                SW_LOG_ERROR( "Scene preload list '%#': path %# is not a string", listResourceID, static_cast<uint32>( index ) );
+                SW_LOG_ERROR( "Scene preload list '%#': path %# is not a string", listAssetID, static_cast<uint32>( index ) );
                 return false;
             }
             outListPath.push_back( *path );

@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -108,7 +108,7 @@ namespace sw
         };
 
         /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 

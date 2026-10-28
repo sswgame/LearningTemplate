@@ -9,6 +9,8 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -19,8 +21,6 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsFile.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -102,10 +102,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 스키마
     // ------------------------------------------------------------------------------
-    bool UserSettingsManager::loadSchema( const ResourceID& resourceID )
+    bool UserSettingsManager::loadSchema( const AssetID& assetID )
     {
         const UserSettingsSchema backup  = _schema;
-        const bool               bLoaded = _schema.loadFromResource( resourceID );
+        const bool               bLoaded = _schema.loadFromAsset( assetID );
         if ( appendSchema( bLoaded ) )
             return true;
         _schema = backup;
@@ -1031,16 +1031,16 @@ namespace sw
         initialize( targets );
 
         const PackEngineSettings& packSettings = engine::getSubsystem<PackEngineSettings>();
-        if ( loadSchema( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() } ) && packSettings._userSettingsSchema.isSet() )
+        if ( loadSchema( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() } ) && packSettings._userSettingsSchema.isSet() )
         {
-            if ( loadSchema( ResourceID{ packSettings._userSettingsSchema.get() } ) == false )
+            if ( loadSchema( AssetID{ packSettings._userSettingsSchema.get() } ) == false )
                 SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", packSettings._userSettingsSchema.c_str() );
         }
         const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         for ( DataPath EngineDefaultAssets::* pSchemaField : _listStartupSchemaField )
         {
             const DataPath& schemaPath = defaultAssets.*pSchemaField;
-            if ( loadSchema( ResourceID{ schemaPath.get() } ) == false )
+            if ( loadSchema( AssetID{ schemaPath.get() } ) == false )
                 SW_LOG_ERROR( "User settings schema '%#' is not loaded", schemaPath.c_str() );
         }
         for ( const auto& [settingID, value] : packSettings._mapUserSettingDefault )

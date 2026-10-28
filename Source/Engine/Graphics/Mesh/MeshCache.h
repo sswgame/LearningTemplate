@@ -8,9 +8,9 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/AssetHandle.h"
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 
 namespace sw
 {
@@ -88,7 +88,7 @@ namespace sw
         /** @brief 그 경로의 메시가 사용 중이면 true 입니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 제자리에서 다시 읽습니다(`reloadShared`). 물리 셰이프 캐시는 사용 중인 메시가 없어도 비웁니다(다음 셰이프가 새 정점을 읽습니다). */
-        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override;
         /** @brief 지금 사용 중인 메시 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */

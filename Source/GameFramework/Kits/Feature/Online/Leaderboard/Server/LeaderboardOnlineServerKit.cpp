@@ -44,7 +44,7 @@ namespace sw
                 },
                                         outError ) == false )
                     return false;
-                if ( catalogPath.empty() == false && _catalog.loadFromResource( ResourceID{ catalogPath } ) == false )
+                if ( catalogPath.empty() == false && _catalog.loadFromAsset( AssetID{ catalogPath } ) == false )
                 {
                     outError = "the leaderboard catalog '" + catalogPath + "' could not be read";
                     return false;

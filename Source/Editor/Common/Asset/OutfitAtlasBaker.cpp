@@ -9,14 +9,14 @@
 
 #include "Editor/Common/Asset/ImageUtil.h"
 
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/OutfitAtlas.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Resource/Image/ImageFileWriter.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
@@ -33,7 +33,7 @@ namespace sw::editor
             static constexpr const utf8* kArrSourceAttribute[] = { "part", "texture" };
 
             /** @brief 리소스 루트 기준 경로를 디스크 경로로 풉니다. */
-            static string toDiskPath( string_view resourcePath ) { return FileUtil::normalizeSeparators( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), resourcePath ) ); }
+            static string toDiskPath( string_view assetPath ) { return FileUtil::normalizeSeparators( FileUtil::joinPath( AssetPaths::getRootFolderPath(), assetPath ) ); }
 
             static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
             {
@@ -288,7 +288,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 )
                     return false;
                 OutfitAtlasSpec spec;
-                if ( OutfitAtlasBaker::loadSpec( ResourceID{ listArgument[0] }, spec ) == false )
+                if ( OutfitAtlasBaker::loadSpec( AssetID{ listArgument[0] }, spec ) == false )
                 {
                     outReply = "outfit atlas spec '" + listArgument[0] + "' could not be read (see the log)";
                     return false;
@@ -322,14 +322,14 @@ namespace sw::editor
         return bRead;
     }
 
-    bool OutfitAtlasBaker::loadSpec( const ResourceID& resourceID, OutfitAtlasSpec& outSpec )
+    bool OutfitAtlasBaker::loadSpec( const AssetID& assetID, OutfitAtlasSpec& outSpec )
     {
-        const string_view resourcePath = resourceID.view();
-        outSpec                        = OutfitAtlasSpec{};
-        CharacterDataReader reader( resourcePath );
+        const string_view assetPath = assetID.view();
+        outSpec                     = OutfitAtlasSpec{};
+        CharacterDataReader reader( assetPath );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourceID, "OutfitAtlas", root ) )
+        if ( reader.loadRoot( document, assetID, "OutfitAtlas", root ) )
         {
             OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
             OutfitAtlasBakerInternal::validateSpec( outSpec, reader );

@@ -29,9 +29,9 @@ namespace sw
         return reportRootStatus( outDocument, XMLReadUtil::parseRoot( outDocument, xmlText, _sourceName, pRootName, outRoot ), pRootName );
     }
 
-    bool CharacterDataReader::loadRoot( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot )
+    bool CharacterDataReader::loadRoot( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot )
     {
-        return reportRootStatus( outDocument, XMLReadUtil::loadRoot( outDocument, resourceID, pRootName, outRoot ), pRootName );
+        return reportRootStatus( outDocument, XMLReadUtil::loadRoot( outDocument, assetID, pRootName, outRoot ), pRootName );
     }
 
     bool CharacterDataReader::reportRootStatus( const XMLDocument& document, XMLRootStatus status, const utf8* pRootName )

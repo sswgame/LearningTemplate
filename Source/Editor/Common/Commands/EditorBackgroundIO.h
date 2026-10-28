@@ -11,10 +11,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
-#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
 namespace sw
@@ -98,10 +98,10 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorResourceIndexJob
+     * @class EditorAssetIndexJob
      * @brief Resource 트리 분류 인덱스를 워커에서 만듭니다.
      */
-    class EditorResourceIndexJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<EditorResourceIndexEntry>>
+    class EditorAssetIndexJob final : public EditorBackgroundTask<EditorBackgroundNoInput, vector<EditorAssetIndexEntry>>
     {
     public:
         /** @brief 워커에 Resource 스캔을 요청합니다. */

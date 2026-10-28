@@ -12,11 +12,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -94,7 +94,7 @@ namespace sw
         Material& operator=( Material&& ) = delete;
 
         /** @brief 머티리얼 에셋을 로드하고 GPU 자원(상수 버퍼, 텍스처)을 올립니다. */
-        [[nodiscard]] bool initialize( IRHIDevice* pRHI, const ResourceID& resourceID );
+        [[nodiscard]] bool initialize( IRHIDevice* pRHI, const AssetID& assetID );
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 GPU 자원을 반환합니다. */
         void releaseRHI( IRHIDevice* pRHI ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
@@ -109,7 +109,7 @@ namespace sw
         void setGpuState( MaterialGpuState state ) { _gpuState.store( static_cast<uint8>( state ), std::memory_order_release ); }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
-        [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /**
          * @brief 디스크 파일에서 머티리얼을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(`XMLDocument::loadFile`).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.

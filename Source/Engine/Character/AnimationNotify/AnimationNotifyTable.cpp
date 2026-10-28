@@ -138,15 +138,15 @@ namespace sw
         return reader.finish();
     }
 
-    bool AnimationNotifyTable::loadFromResource( const ResourceID& resourceID, const AnimationNotifyHandlerRegistry& registry )
+    bool AnimationNotifyTable::loadFromAsset( const AssetID& assetID, const AnimationNotifyHandlerRegistry& registry )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         _listEntry.clear();
         _listFootContact.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourceID, "AnimationNotifies", root ) )
+        if ( reader.loadRoot( document, assetID, "AnimationNotifies", root ) )
             readRoot( root, registry, reader );
         return reader.finish();
     }

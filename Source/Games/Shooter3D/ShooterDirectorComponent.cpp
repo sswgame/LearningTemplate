@@ -387,12 +387,12 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        if ( _profile.loadFromResource( ResourceID{ _pacingProfile } ) == false )
+        if ( _profile.loadFromAsset( AssetID{ _pacingProfile } ) == false )
         {
             SW_LOG_ERROR( "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
             return;
         }
-        if ( _table.loadFromResource( ResourceID{ _spawnTable } ) == false )
+        if ( _table.loadFromAsset( AssetID{ _spawnTable } ) == false )
         {
             SW_LOG_ERROR( "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
             return;

@@ -17,8 +17,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/AssetHandle.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Base/Actor/AI/IBehaviorTreeDebugSource.h"

@@ -4,25 +4,25 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AudioMixerDesc" );
 
-    bool AudioMixerDesc::loadFromResource( const ResourceID& resourceID )
+    bool AudioMixerDesc::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio mixer not found: %#", resourcePath );
+            SW_LOG_ERROR( "Audio mixer not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, resourcePath );
+        return loadFromXMLText( text, assetPath );
     }
 
     bool AudioMixerDesc::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -432,5 +432,5 @@ namespace sw
     SW_ASSET_TYPE( AudioMixerDesc, AudioMixerDesc::kAssetType );
 
     /** @brief 오디오 믹서 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioMixer, "audiomixer", nullptr, nullptr, ".audiomixer.xml", &ResourceDataKindUtil::loadCatalog<AudioMixerDesc> );
+    SW_RESOURCE_DATA_KIND( AudioMixer, "audiomixer", nullptr, nullptr, ".audiomixer.xml", &AssetDataKindUtil::loadCatalog<AudioMixerDesc> );
 } // namespace sw

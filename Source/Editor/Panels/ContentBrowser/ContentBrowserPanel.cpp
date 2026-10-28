@@ -35,12 +35,12 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -153,7 +153,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const string folderAbs = ResourcePaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
+                const string folderAbs = AssetPaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -244,7 +244,7 @@ namespace sw::editor
 
             static void showInExplorer( const EditorCommandTarget& target ) { EditorAssetFileCommands::showInFileExplorer( findTargetPath( target ) ); }
 
-            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( ResourcePaths::toResourceID( findTargetPath( target ) ).c_str() ); }
+            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( AssetPaths::toAssetID( findTargetPath( target ) ).c_str() ); }
 
             static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
 
@@ -580,7 +580,7 @@ namespace sw::editor
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
         {
-            const uint32 referrerCount = referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( pendingDeleteAbs ) );
+            const uint32 referrerCount = referenceIndex.countReferrerFiles( AssetPaths::toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
                 ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
             else
@@ -737,9 +737,9 @@ namespace sw::editor
 
     void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
     {
-        string resourceID;
-        if ( EditorWidgets::acceptAssetDrop( resourceID ) )
-            (void)moveAssetToFolder( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
+        string assetID;
+        if ( EditorWidgets::acceptAssetDrop( assetID ) )
+            (void)moveAssetToFolder( AssetPaths::findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )
@@ -933,11 +933,11 @@ namespace sw::editor
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
-            addRoot( packRoot, ResourcePaths::findLooseDomainFolder( packRoot ).getDiskPath() );
+            addRoot( packRoot, AssetPaths::findLooseDomainFolder( packRoot ).getDiskPath() );
         if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
         {
             vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( ResourcePaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
+            (void)FileUtil::collectFolders( AssetPaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
             std::sort( listPackFolder.begin(), listPackFolder.end() );
             for ( const string& packFolder : listPackFolder )
             {
@@ -946,9 +946,9 @@ namespace sw::editor
                     addRoot( packName, packFolder );
             }
         }
-        addRoot( "engine", ResourcePaths::findLooseDomainFolder( "engine" ).getDiskPath() );
-        addRoot( "common", ResourcePaths::findLooseDomainFolder( "common" ).getDiskPath() );
-        addRoot( "editor", ResourcePaths::findLooseDomainFolder( "editor" ).getDiskPath() );
+        addRoot( "engine", AssetPaths::findLooseDomainFolder( "engine" ).getDiskPath() );
+        addRoot( "common", AssetPaths::findLooseDomainFolder( "common" ).getDiskPath() );
+        addRoot( "editor", AssetPaths::findLooseDomainFolder( "editor" ).getDiskPath() );
 
         // 현재 폴더가 숨긴 팩 안에 있으면 첫 루트로 이동한다.
         bool bSelectedIsUnderRoot = false;
@@ -1192,8 +1192,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? ResourcePaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
-                                         : ResourcePaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
+                                         ? AssetPaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
+                                         : AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
@@ -1244,7 +1244,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourcePaths::toResourceID( absPath ) );
+            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", AssetPaths::toAssetID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )
@@ -1534,7 +1534,7 @@ namespace sw::editor
         if ( bRecordHistory )
             _history.record( normalizedPath, listCrumb );
 
-        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourcePaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
+        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 AssetPaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
         _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();

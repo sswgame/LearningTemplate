@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_set.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
@@ -27,7 +28,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
@@ -980,7 +980,7 @@ namespace sw
         if ( bSameData && bFits )
             return;
         SurfaceChannelTable channels;
-        if ( channels.loadFromResource( ResourceID{ _surfaceChannelsPath } ) == false )
+        if ( channels.loadFromAsset( AssetID{ _surfaceChannelsPath } ) == false )
         {
             SW_LOG_ERROR( "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
             _surfaceBinding.releaseTextures();

@@ -149,7 +149,7 @@ namespace sw::editor
                     return;
                 }
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( ResourceID{ pEngineDefaultAssets->_defaultRenderPass.get() } );
+                pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultRenderPass.get() } );
                 if ( pResult->_bRenderPassLoaded == false )
                     SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
             }
@@ -166,7 +166,7 @@ namespace sw::editor
                     return;
                 }
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( ResourceID{ pEngineDefaultAssets->_defaultForwardPipeline.get() } );
+                pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultForwardPipeline.get() } );
                 if ( pResult->_bForwardPipelineLoaded == false )
                     SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }

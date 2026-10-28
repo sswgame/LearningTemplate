@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Base/UIPointerState.h"
 #include "Engine/UI/Base/WidgetNavigation.h"
@@ -66,7 +66,7 @@ namespace sw
          * @brief 입력을 연결하고 글자 콜백을 등록합니다. @p uiInputMapPath 가 비면 UI 액션이 없습니다(포인터만 동작).
          * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다(입력은 연결된 채로 남습니다).
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, const ResourceID& resourceID );
+        [[nodiscard]] bool initialize( InputManager& inputManager, const AssetID& assetID );
         /** @brief 키보드 포커스와 글자 콜백을 놓고 액션 맵과 소비 기록을 지웁니다. */
         void shutdown();
 

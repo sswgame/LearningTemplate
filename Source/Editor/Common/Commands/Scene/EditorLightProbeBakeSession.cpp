@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
@@ -21,7 +22,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -219,24 +219,24 @@ namespace sw::editor
             return;
         }
         // 출력 경로 규칙(`<씬>.<오브젝트 이름>.probes`)은 반사 프로브 베이크와 같은 함수 하나다.
-        const string resourcePath = pVolume->getOwner() != nullptr ? makeSceneBakeResourcePath( scene, *pVolume->getOwner(), LightProbeGrid::kExtension ) : string{};
-        if ( resourcePath.empty() )
+        const string assetPath = pVolume->getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *pVolume->getOwner(), LightProbeGrid::kExtension ) : string{};
+        if ( assetPath.empty() )
         {
             reportFailure( "the scene has never been saved - save it before baking light probes" );
             return;
         }
-        if ( grid.saveToFile( ResourcePaths::getWritePath( resourcePath ) ) == false )
+        if ( grid.saveToFile( AssetPaths::getWritePath( assetPath ) ) == false )
         {
-            reportFailure( "could not write " + resourcePath );
+            reportFailure( "could not write " + assetPath );
             return;
         }
         const uint32 probeCount = static_cast<uint32>( grid._listProbe.size() );
-        if ( pVolume->adoptProbeData( std::move( grid ), resourcePath ) == false )
+        if ( pVolume->adoptProbeData( std::move( grid ), assetPath ) == false )
         {
             reportFailure( "the baked grid does not fit the volume" );
             return;
         }
-        SW_LOG_INFO( "Baked light probes '%#' (%# probes)", resourcePath.c_str(), probeCount );
+        SW_LOG_INFO( "Baked light probes '%#' (%# probes)", assetPath.c_str(), probeCount );
         ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
     }
 

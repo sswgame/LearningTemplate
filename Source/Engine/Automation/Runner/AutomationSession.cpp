@@ -159,7 +159,7 @@ namespace sw
         _pRunner = make_unique<AutomationRunner>();
         _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
-        _pRunner->startFromPath( ResourceID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
+        _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
         _screenshotBaseline = completedScreenshotCount;
         if ( _pRunner->isActive() )
         {

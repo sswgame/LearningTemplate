@@ -4,7 +4,7 @@
 
 #include "Core/Memory/LifetimeScope.h"
 
-#include "Engine/Resource/AssetManager.h"
+#include "Engine/Asset/AssetManager.h"
 
 namespace sw
 {

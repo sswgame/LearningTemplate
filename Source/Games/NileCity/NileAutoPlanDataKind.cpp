@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 
 #include "Games/NileCity/NileCityPlanner.h"
 
@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadNileAutoPlan( const ResourceID& id )
+        [[nodiscard]] bool loadNileAutoPlan( const AssetID& id )
         {
             vector<NileAutoPlanStep> listStep;
             return NileCityPlanner::readPlanFile( id, listStep );

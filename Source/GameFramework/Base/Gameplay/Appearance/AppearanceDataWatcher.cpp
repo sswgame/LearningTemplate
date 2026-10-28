@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/IFileWatcher.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 
@@ -35,7 +35,7 @@ namespace sw
     {
         shutdown();
         // 감시할 디스크 폴더는 필수 파일(slots.xml)의 낱개 파일 자리로 찾는다 — 팩에 든 데이터면 낱개 파일이 없다.
-        const LooseFilePath looseSlots = ResourcePaths::findLooseFile( FileUtil::joinPath( folder, "slots.xml" ) );
+        const LooseFilePath looseSlots = AssetPaths::findLooseFile( FileUtil::joinPath( folder, "slots.xml" ) );
         if ( looseSlots.isEmpty() )
         {
             SW_LOG_INFO( "Appearance hot reload is off - '%#' is not on disk as loose files (packed data)", string( folder ).c_str() );

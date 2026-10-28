@@ -11,11 +11,11 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 
 namespace sw
 {
@@ -183,7 +183,7 @@ namespace sw
         bool bInitialized{ false };
         {
             const Impl::DeviceInitScope initScope{ *_impl };
-            bInitialized = material->initialize( pDevice, ResourceID{ key } );
+            bInitialized = material->initialize( pDevice, AssetID{ key } );
         }
         if ( bInitialized )
             return material.get();
@@ -287,7 +287,7 @@ namespace sw
             if ( material->getGpuState() == MaterialGpuState::Ready )
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
-            if ( material->initialize( pDevice, ResourceID{ key } ) == false )
+            if ( material->initialize( pDevice, AssetID{ key } ) == false )
                 SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
         }
         if ( processed < listKey.size() )
@@ -313,9 +313,9 @@ namespace sw
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
-    void MaterialCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
+    void MaterialCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
             return;
@@ -346,7 +346,7 @@ namespace sw
             material->releaseRHI( pDevice );
         }
 
-        if ( material->initialize( pDevice, ResourceID{ key } ) == false )
+        if ( material->initialize( pDevice, AssetID{ key } ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
     }
 

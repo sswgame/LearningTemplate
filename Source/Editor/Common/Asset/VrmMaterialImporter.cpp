@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -719,7 +719,7 @@ namespace sw::editor
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
-        if ( ResourceIO::readTextResource( ResourceID{ toonTemplate.get() }, templateText ) == false )
+        if ( AssetIO::readTextAsset( AssetID{ toonTemplate.get() }, templateText ) == false )
         {
             SW_LOG_ERROR( "Toon material template '%#' could not be read", toonTemplate.c_str() );
             return {};

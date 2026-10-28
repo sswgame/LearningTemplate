@@ -50,7 +50,7 @@ namespace sw
         Archive( const Archive& ) = default;
         /** @brief 버퍼 소유권을 넘깁니다. */
         Archive( Archive&& ) = default;
-        /** @brief **디스크 파일**에서 읽거나 쓸 아카이브를 엽니다. 리소스 id 는 받지 않습니다 — 리소스는 `ResourceIO::readBinaryResource` 로 읽어 버퍼 생성자로 엽니다. */
+        /** @brief **디스크 파일**에서 읽거나 쓸 아카이브를 엽니다. 리소스 id 는 받지 않습니다 — 리소스는 `AssetIO::readBinaryAsset` 로 읽어 버퍼 생성자로 엽니다. */
         explicit Archive( string_view fileName, bool bReadMode = true );
         /** @brief 메모리 버퍼를 읽기 전용으로 감쌉니다. */
         Archive( const uint8* pData, uint64 size );

@@ -8,8 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 
 namespace sw
 
@@ -53,7 +53,7 @@ namespace sw
         /** @brief 경로의 Material 을 확보하고 GPU 자원까지 만듭니다. */
         Material* acquire( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 경로의 Material 을 다시 로드하고 GPU 자원을 다시 만듭니다. */
-        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override;
         /** @brief 경로의 Material 참조를 하나 놓습니다. */
         void release( string_view relativePath );
         /**

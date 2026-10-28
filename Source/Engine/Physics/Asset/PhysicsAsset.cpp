@@ -2,23 +2,23 @@
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "PhysicsAsset" );
 
-    bool PhysicsAsset::loadFromResource( const ResourceID& resourceID )
+    bool PhysicsAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Physics asset not found: %#", resourcePath );
+            SW_LOG_ERROR( "Physics asset not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, resourcePath );
+        return loadFromXMLText( text, assetPath );
     }
 
     bool PhysicsAsset::loadFromXMLText( string_view xmlText, string_view sourceName )

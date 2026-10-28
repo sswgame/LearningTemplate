@@ -5,7 +5,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -66,16 +66,16 @@ namespace sw
         return true;
     }
 
-    bool LayerWeightsData::loadFromResource( const ResourceID& id )
+    bool LayerWeightsData::loadFromAsset( const AssetID& id )
     {
-        const string_view resourceID = id.view();
+        const string_view assetID = id.view();
         vector<uint8>     bytes;
-        if ( ResourceIO::readBinaryResource( id, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( id, bytes ) == false )
         {
-            SW_LOG_ERROR( "Layer weight map '%#' could not be read", resourceID );
+            SW_LOG_ERROR( "Layer weight map '%#' could not be read", assetID );
             return false;
         }
-        return loadFromMemory( bytes, resourceID );
+        return loadFromMemory( bytes, assetID );
     }
 
     void LayerWeightsData::saveToMemory( vector<uint8>& outBytes ) const

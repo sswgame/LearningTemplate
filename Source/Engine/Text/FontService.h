@@ -14,9 +14,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/IFontRasterizer.h"
@@ -84,7 +84,7 @@ namespace sw
         FontService& operator=( const FontService& ) = delete;
 
         /** @brief 카탈로그 파일을 읽고 기본 패밀리를 엽니다. 기본 패밀리를 열지 못하면 false 입니다(글자를 그릴 수 없으므로 기동 오류입니다). */
-        [[nodiscard]] bool initialize( const ResourceID& resourceID );
+        [[nodiscard]] bool initialize( const AssetID& assetID );
         /** @brief 이미 읽은 카탈로그로 시작합니다(테스트와 도구). 검사와 기본 패밀리 열기는 `initialize` 와 같습니다. */
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
         /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
@@ -132,7 +132,7 @@ namespace sw
         /** @brief 패밀리 이름으로 면을 엽니다. 저장소 패밀리를 먼저, 시스템 패밀리를 다음으로 봅니다. 못 찾으면 kInvalidFontFaceID 를 반환하고 처음 한 번 경고합니다. 결과(없음 포함)를 캐시합니다. */
         FontFaceID openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
         /** @brief 폰트 파일 하나를 엽니다. 등록한 메모리 파일, 리소스, 절대 경로 순서로 찾습니다. 같은 (경로, 면 번호)는 한 번만 엽니다. */
-        FontFaceID openFontFile( const ResourceID& resourceID, uint32 faceIndex, bool bResourcePath );
+        FontFaceID openFontFile( const AssetID& assetID, uint32 faceIndex, bool bAssetPath );
         /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
         bool markWarnedOnce( const string& key );
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */

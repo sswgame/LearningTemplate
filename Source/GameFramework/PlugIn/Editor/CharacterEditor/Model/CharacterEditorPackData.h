@@ -9,7 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -45,8 +45,8 @@ namespace sw::editor
         string _rigPath{};
 
         /** @brief 리소스 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
-        /** @brief `loadFromResource` 의 XML 글 버전입니다(테스트). */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief `loadFromAsset` 의 XML 글 버전입니다(테스트). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
     private:

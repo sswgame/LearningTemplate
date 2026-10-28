@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 #include <optional>
 
@@ -284,10 +284,10 @@ namespace sw
         [[nodiscard]] bool loadFile( string_view absPath );
 
         /**
-         * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `ResourceIO::readTextResource` 로 읽고 파싱합니다(낱개 파일 · 팩).
-         * @details 디스크를 먼저 보는 별도 입구를 두지 않는다 — 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다.
+         * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 파싱합니다(낱개 파일 · 팩).
+         * @details 디스크를 먼저 보는 별도 입구를 두지 않는다 — 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다.
          */
-        [[nodiscard]] bool loadResource( const ResourceID& resourceID, string* pOutAbsPath = nullptr );
+        [[nodiscard]] bool loadResource( const AssetID& assetID, string* pOutAbsPath = nullptr );
 
         /**
          * @brief 마지막 parse 나 load 가 실패한 이유입니다. 성공했으면 빈 문자열입니다. `XMLDocument::getLastError` 와 같은 형태입니다.

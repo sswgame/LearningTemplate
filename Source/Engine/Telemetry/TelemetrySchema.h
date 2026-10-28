@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -91,7 +91,7 @@ namespace sw
     public:
         TelemetrySchema();
 
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 

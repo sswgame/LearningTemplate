@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -55,15 +55,15 @@ namespace sw::editor
 
     /** @brief 캐릭터 편집 데이터의 종류입니다(게임 팩의 `data/charactereditor.xml` — 스키마 테스트가 같은 로더로 읽는다). */
     SW_RESOURCE_DATA_KIND( CharacterEditorPackData, CharacterEditorPackData::kDataKind, "game/", nullptr, "/data/charactereditor.xml",
-                           &ResourceDataKindUtil::loadCatalog<CharacterEditorPackData> );
+                           &AssetDataKindUtil::loadCatalog<CharacterEditorPackData> );
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    bool CharacterEditorPackData::loadFromResource( const ResourceID& resourceID )
+    bool CharacterEditorPackData::loadFromAsset( const AssetID& assetID )
     {
         *this = CharacterEditorPackData{};
-        if ( GameDataXML::loadFile( *this, &CharacterEditorPackData::loadRoot, resourceID, CharacterEditorPackDataInternal::kRootName ) )
+        if ( GameDataXML::loadFile( *this, &CharacterEditorPackData::loadRoot, assetID, CharacterEditorPackDataInternal::kRootName ) )
             return true;
         *this = CharacterEditorPackData{};
         return false;

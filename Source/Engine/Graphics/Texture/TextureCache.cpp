@@ -14,6 +14,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -21,9 +24,6 @@
 #include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Image/DDSLoader.h"
 
 #include <condition_variable>
 
@@ -782,9 +782,9 @@ namespace sw
         return bReady;
     }
 
-    void TextureCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
+    void TextureCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         SW_MEMORY_SCOPE( Texture );
         // 렌더 텍스처 · CPU 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
         const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );
@@ -820,7 +820,7 @@ namespace sw
         // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유). 텍스처 객체 해제도 같은 대기에 기댄다.
         pDevice->waitIdle( RHIWaitIdleReason::HotReload );
         pTexture->releaseRHI( pDevice );
-        if ( pTexture->loadFromResource( pDevice, ResourceID{ key } ) == false )
+        if ( pTexture->loadFromAsset( pDevice, AssetID{ key } ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
 
         lock.lock();
@@ -1027,7 +1027,7 @@ namespace sw
         if ( _source != Source::File )
             return true;
         _pImage = make_unique<DDSImageData>();
-        if ( Texture2D::readImage( ResourceID{ getPath() }, *_pImage ) == false )
+        if ( Texture2D::readImage( AssetID{ getPath() }, *_pImage ) == false )
         {
             _loadError = "the DDS could not be read or uses a format the engine cannot upload";
             _pImage.reset();

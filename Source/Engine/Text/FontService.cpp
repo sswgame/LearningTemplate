@@ -6,12 +6,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/SystemFontLocator.h"
 
 // 카탈로그의 `_glyphField` 가 값의 정본이다. 이 변수는 카탈로그를 고치지 않고 MSDF 로 켜 SDF 와 견주는 측정 스위치다.
@@ -135,10 +135,10 @@ namespace sw
         shutdown();
     }
 
-    bool FontService::initialize( const ResourceID& resourceID )
+    bool FontService::initialize( const AssetID& assetID )
     {
         FontCatalogDesc catalog;
-        if ( catalog.loadFromResource( resourceID ) == false )
+        if ( catalog.loadFromAsset( assetID ) == false )
             return false;
         if ( gv_fontMsdfGlyphs )
             catalog._glyphField = GlyphFieldKind::Msdf;
@@ -178,7 +178,7 @@ namespace sw
     {
         // 의존 서비스는 시작할 때 한 번 받는다(언리얼 `InitializeDependency`) — 연쇄를 고를 때마다 전역 표를 찾지 않는다. 문화권 표는 서비스 범위에 먼저 묶인다.
         _pLocalization = engine::findSubsystem<LocalizationManager>();
-        return initialize( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._fontCatalog.get() } ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        return initialize( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._fontCatalog.get() } ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
     void FontService::shutdown()
@@ -316,7 +316,7 @@ namespace sw
             }
             if ( pBest != nullptr )
             {
-                opened._face        = openFontFile( ResourceID{ pBest->_path }, pBest->_faceIndex, true );
+                opened._face        = openFontFile( AssetID{ pBest->_path }, pBest->_faceIndex, true );
                 opened._bFauxBold   = FontServiceInternal::needsFauxBold( weight, pBest->_weight ) ? SW_TRUE : SW_FALSE;
                 opened._bFauxItalic = slant == FontSlant::Italic && pBest->_slant != FontSlant::Italic ? SW_TRUE : SW_FALSE;
             }
@@ -338,7 +338,7 @@ namespace sw
             const string  filePath   = SystemFontLocator::findSystemFontFile( fileName );
             if ( filePath.empty() == false )
             {
-                opened._face        = openFontFile( ResourceID{ filePath }, faceIndex, false );
+                opened._face        = openFontFile( AssetID{ filePath }, faceIndex, false );
                 opened._bFauxBold   = bWantsBold && bUseBold == false ? SW_TRUE : SW_FALSE;
                 opened._bFauxItalic = slant == FontSlant::Italic ? SW_TRUE : SW_FALSE;
             }
@@ -364,9 +364,9 @@ namespace sw
         return opened._face;
     }
 
-    FontFaceID FontService::openFontFile( const ResourceID& resourceID, uint32 faceIndex, bool bResourcePath )
+    FontFaceID FontService::openFontFile( const AssetID& assetID, uint32 faceIndex, bool bAssetPath )
     {
-        const string& path      = resourceID.str();
+        const string& path      = assetID.str();
         const string  lowerPath = StringUtil::toLower( path.c_str() );
         const string  fileKey   = FontServiceInternal::makeFileKey( lowerPath, faceIndex );
         const auto    iter      = _mapOpenedFile.find( fileKey );
@@ -381,9 +381,9 @@ namespace sw
             bytes = memoryIter->second;
             bRead = true;
         }
-        else if ( bResourcePath )
+        else if ( bAssetPath )
         {
-            bRead = ResourceIO::readBinaryResource( resourceID, bytes );
+            bRead = AssetIO::readBinaryAsset( assetID, bytes );
         }
         else
         {

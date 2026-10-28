@@ -7,9 +7,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Localization/CurrencyUtil.h"
 #include "Engine/Localization/TimeZoneUtil.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -941,17 +941,17 @@ namespace sw
         return true;
     }
 
-    bool CultureTable::loadFromResource( const ResourceID& resourceID )
+    bool CultureTable::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
+            SW_LOG_ERROR( "Culture table '%#' cannot be read", assetPath );
             return false;
         }
         string error;
-        if ( loadFromXMLText( text, resourcePath, &error ) == false )
+        if ( loadFromXMLText( text, assetPath, &error ) == false )
         {
             SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
             return false;

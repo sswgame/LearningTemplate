@@ -30,12 +30,12 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/CommandStack.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
@@ -103,13 +103,13 @@ namespace sw::editor
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
 
                 const string activePack = editor::getSubsystem<const GameConfig>()._packRoot.get();
-                const string mapsDir    = ResourcePaths::findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
+                const string mapsDir    = AssetPaths::findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
                 if ( FileUtil::isDirectory( mapsDir ) )
                     params._initialDirectory = mapsDir;
-                else if ( ResourcePaths::findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = ResourcePaths::findLooseDomainFolder( activePack ).getDiskPath();
-                else if ( ResourcePaths::findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = ResourcePaths::findLooseDomainFolder( path::kGamePack ).getDiskPath();
+                else if ( AssetPaths::findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = AssetPaths::findLooseDomainFolder( activePack ).getDiskPath();
+                else if ( AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath();
 
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }
@@ -329,7 +329,7 @@ namespace sw::editor
                     SW_LOG_WARNING( "Apply Overrides needs a selected prefab instance - nothing was written" );
                     return;
                 }
-                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, ResourceID{ path } ) == false )
+                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, AssetID{ path } ) == false )
                     SW_LOG_ERROR( "Apply Overrides could not write '%#'", path.c_str() );
             }
 

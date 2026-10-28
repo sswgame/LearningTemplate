@@ -13,7 +13,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Serialization/Base/ReloadOutcome.h"
 
 namespace sw
@@ -109,7 +109,7 @@ namespace sw::editor
          * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면(워커 임포터의 원본 포함) `NotTracked`,
          *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.
          */
-        [[nodiscard]] static ReloadOutcome reloadChangedAsset( const ResourceID& resourceID );
+        [[nodiscard]] static ReloadOutcome reloadChangedAsset( const AssetID& assetID );
 
         /**
          * @brief 임포트 잡이 도는 중이거나 기다리는 원본이 있으면 true 입니다. 이 동안 임포트 결과를 읽는 쪽(캐시 리로드 · 검증)은 미뤄진다.
@@ -135,7 +135,7 @@ namespace sw::editor
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`IAssetCache::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
          * @return 다시 읽게 한 캐시 수입니다.
          */
-        static uint32 reloadInCachesHolding( AssetManager& resources, const ResourceID& resourceID, IRHIDevice* pDevice );
+        static uint32 reloadInCachesHolding( AssetManager& resources, const AssetID& assetID, IRHIDevice* pDevice );
 
         /**
          * @brief @p objects 에서 그 에셋을 쓰는 컴포넌트를 찾아, 인스펙터에서 그 프로퍼티를 고쳤을 때처럼 `onPropertyChanged` 를 호출합니다. 언리얼의 PostEditChange 에 해당합니다.
@@ -170,7 +170,7 @@ namespace sw::editor
         /** @brief 바뀐 파일의 검증을 요청하고 캐시를 다시 읽습니다(`reloadChangedAsset`). */
         void handleChangedFile( const string& relativePath );
         /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */
-        [[nodiscard]] static ReloadOutcome reloadCaches( const AssetReloadRoute& route, const ResourceID& resourceID );
+        [[nodiscard]] static ReloadOutcome reloadCaches( const AssetReloadRoute& route, const AssetID& assetID );
 
         /** @brief 끝난 잡의 결과를 가져오고 다음 잡을 시작하며, 더 할 일이 없으면 미룬 파일을 처리합니다. */
         void pumpImportJob();

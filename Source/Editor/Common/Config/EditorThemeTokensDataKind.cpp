@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Config/EditorThemeTokens.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 
 namespace sw::editor
 {

@@ -8,9 +8,9 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -42,7 +42,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bDecodeFailed = ResourceIO::readBinaryResource( ResourceID{ relative }, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
+            const bool    bDecodeFailed = AssetIO::readBinaryAsset( AssetID{ relative }, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
                                        AudioClipData::convertPcm( pcm, clip ) == false;
             if ( bDecodeFailed )
             {

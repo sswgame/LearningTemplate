@@ -2,12 +2,12 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualCursor.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 /**
@@ -15,9 +15,9 @@
  * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장, 로드(런타임 리매핑 영속화)를 구현합니다.
  *
  * 두 XML 포맷은 용도가 다릅니다.
- *  - `loadFromResource()`, `saveToResource()`: Resource/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
+ *  - `loadFromAsset()`, `saveToAsset()`: Resource/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
  *    에디터 InputMap 패널에서 편집한 정의는 같은 형식으로 같은 위치에 다시 씁니다.
- *  - `appendFromResource()`: 같은 형식의 다른 파일을 이미 읽은 맵에 더합니다(확장 모듈 · 게임 모드). 맵 전체 속성은 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않는다.
+ *  - `appendFromAsset()`: 같은 형식의 다른 파일을 이미 읽은 맵에 더합니다(확장 모듈 · 게임 모드). 맵 전체 속성은 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않는다.
  *
  * 정의 형식(`<InputMap>`) 요약 — 읽는 곳은 이 파일 하나다.
  *  - 루트 속성(맵 전체, 기본 맵만): `defaultLayer`, `doubleClickTime`(초), `doubleClickMaxDistance`(픽셀), `holdThreshold`(초),
@@ -326,7 +326,7 @@ namespace sw
             }
 
             /**
-             * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에, `loadFromResource` 가 읽는 형태로 씁니다.
+             * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에, `loadFromAsset` 가 읽는 형태로 씁니다.
              * @return `<InputMap>` 형식으로 표현할 수 없는 종류(가상 조이스틱, 아무 키)면 오류를 남기고 false 를 반환합니다.
              *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라지기 때문입니다.
              */
@@ -975,8 +975,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `<action>` 노드 하나를 읽어 InputMap 에 바인딩을 넣습니다. `loadFromResource` 가 레이어마다, 그리고 최상위에서 부릅니다.
-     * @details 바인딩 태그 종류마다 함수 하나다. 읽기 실패는 `_bValid` 에 모아 `loadFromResource` 가 한 번에 오류로 돌린다.
+     * @brief `<action>` 노드 하나를 읽어 InputMap 에 바인딩을 넣습니다. `loadFromAsset` 가 레이어마다, 그리고 최상위에서 부릅니다.
+     * @details 바인딩 태그 종류마다 함수 하나다. 읽기 실패는 `_bValid` 에 모아 `loadFromAsset` 가 한 번에 오류로 돌린다.
      */
     struct InputMapActionLoader
     {
@@ -1252,24 +1252,24 @@ namespace sw
 
 namespace sw
 {
-    bool InputMap::loadFromResource( const ResourceID& resourceID )
+    bool InputMap::loadFromAsset( const AssetID& assetID )
     {
-        const string_view relativePath = resourceID.view();
-        return loadDefinition( ResourceID{ relativePath }, false );
+        const string_view relativePath = assetID.view();
+        return loadDefinition( AssetID{ relativePath }, false );
     }
 
-    bool InputMap::appendFromResource( const ResourceID& resourceID )
+    bool InputMap::appendFromAsset( const AssetID& assetID )
     {
-        return loadDefinition( resourceID, true );
+        return loadDefinition( assetID, true );
     }
 
-    bool InputMap::loadDefinition( const ResourceID& resourceID, bool bAppend )
+    bool InputMap::loadDefinition( const AssetID& assetID, bool bAppend )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         using InputMapXML              = InputMapSerializationInternal::InputMapXML;
         XMLDocument doc;
         string      absPath;
-        if ( doc.loadResource( resourceID, &absPath ) == false )
+        if ( doc.loadResource( assetID, &absPath ) == false )
         {
             SW_LOG_WARNING( "Failed to load InputMap %#", relativePath );
             return false;
@@ -1479,7 +1479,7 @@ namespace sw
         return true;
     }
 
-    bool InputMap::saveToResource( string_view relativePath ) const
+    bool InputMap::saveToAsset( string_view relativePath ) const
     {
         if ( relativePath.empty() )
             return false;
@@ -1527,7 +1527,7 @@ namespace sw
         if ( bAllWritten == false )
             return false;
 
-        const string absPath = ResourcePaths::getWritePath( relativePath );
+        const string absPath = AssetPaths::getWritePath( relativePath );
         if ( doc.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Could not write InputMap %#", absPath );

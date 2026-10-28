@@ -8,10 +8,10 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -389,7 +389,7 @@ namespace sw
         RenderPassAsset& operator=( const RenderPassAsset& ) = delete;
 
         /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
-        [[nodiscard]] bool loadFromXMLFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
 
         /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
         [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;

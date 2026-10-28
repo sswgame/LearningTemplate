@@ -260,7 +260,7 @@ namespace sw
         RTSCommandResult issueMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
         RTSCommandResult issueAttackMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
         RTSCommandResult issueAttack( RTSUnitID unitID, RTSUnitID targetID, bool bQueue = false );
-        RTSCommandResult issueGather( RTSUnitID unitID, RTSUnitID resourceID, bool bQueue = false );
+        RTSCommandResult issueGather( RTSUnitID unitID, RTSUnitID assetID, bool bQueue = false );
         /** @brief 일꾼이 @p cell(왼쪽 아래)에 @p buildingID 를 짓게 합니다. 비용은 그 위치에 도착해 건설을 시작할 때 냅니다. */
         RTSCommandResult issueBuild( RTSUnitID workerID, const hashed_string& buildingID, const int2& cell, bool bQueue = false );
         RTSCommandResult issueHold( RTSUnitID unitID );

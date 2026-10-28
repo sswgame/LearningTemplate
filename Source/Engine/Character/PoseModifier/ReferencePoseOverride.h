@@ -22,8 +22,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Character/CharacterIssue.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -66,7 +66,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다. @p pBones 가 있으면 본 이름을 대조합니다(없는 본은 오류). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const CharacterBoneArray* pBones = nullptr );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const CharacterBoneArray* pBones = nullptr );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, const CharacterBoneArray* pBones = nullptr );
         /** @brief XML 텍스트로 씁니다. */
         string saveToXMLText() const;
 

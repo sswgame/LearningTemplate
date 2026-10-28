@@ -13,7 +13,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Serialization/Base/SerializePurpose.h"
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
@@ -249,15 +249,15 @@ namespace sw
                 return false;
             if ( load( static_cast<const string&>( path ) ) )
                 return true;
-            reportRequiredDataFailure( kindLabel, ResourceID{ path } );
+            reportRequiredDataFailure( kindLabel, AssetID{ path } );
             return false;
         }
-        /** @brief 카탈로그(종류 `TCatalog::kDataKind`)를 `loadFromResource` 로 읽고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다. */
+        /** @brief 카탈로그(종류 `TCatalog::kDataKind`)를 `loadFromAsset` 로 읽고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다. */
         template <class TCatalog>
         [[nodiscard]] bool loadRequiredCatalog( TCatalog& catalog )
         {
             if ( loadRequiredData( TCatalog::kDataKind, [&catalog]( const string& path )
-            { return catalog.loadFromResource( ResourceID{ path } ); } ) == false )
+            { return catalog.loadFromAsset( AssetID{ path } ); } ) == false )
                 return false;
             bindScopedService( &catalog );
             return true;
@@ -321,7 +321,7 @@ namespace sw
         /** @brief `loadRequiredData` 의 경로를 만듭니다. 못 만들면 이유를 오류로 남기고 false 입니다. */
         [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
         /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
-        void reportRequiredDataFailure( string_view kindLabel, const ResourceID& resourceID ) const;
+        void reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const;
         /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 다른 범위가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */

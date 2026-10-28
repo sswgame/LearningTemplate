@@ -153,7 +153,7 @@ namespace sw::editor
             {
                 string _sourcePath;
                 string _relativePath; ///< 원본 폴더 기준
-                string _resourcePath; ///< 리소스 루트 기준
+                string _assetPath;    ///< 리소스 루트 기준
                 string _importedPath;
             };
 
@@ -189,12 +189,12 @@ namespace sw::editor
                     const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath );
                     if ( pUnsupportedReason != nullptr )
                     {
-                        outResult._problem = file._resourcePath + ": " + pUnsupportedReason;
+                        outResult._problem = file._assetPath + ": " + pUnsupportedReason;
                         return;
                     }
 
                     StampEntry current;
-                    current._sourceHash   = _pImporter->computeSourceHash( file._sourcePath, file._resourcePath );
+                    current._sourceHash   = _pImporter->computeSourceHash( file._sourcePath, file._assetPath );
                     current._importedHash = _pImporter->computeImportedHash( file._importedPath );
 
                     const auto   itStamped = _pMapStamped->find( file._relativePath );
@@ -208,13 +208,13 @@ namespace sw::editor
 
                     if ( _mode == AssetImportMode::CheckOnly )
                     {
-                        outResult._problem = file._resourcePath + ": " + reason;
+                        outResult._problem = file._assetPath + ": " + reason;
                         return;
                     }
 
-                    if ( _pImporter->importSource( file._sourcePath, file._importedPath, file._resourcePath ) == false )
+                    if ( _pImporter->importSource( file._sourcePath, file._importedPath, file._assetPath ) == false )
                     {
-                        outResult._problem = file._resourcePath + ": 임포트하지 못했습니다";
+                        outResult._problem = file._assetPath + ": 임포트하지 못했습니다";
                         return;
                     }
 
@@ -351,8 +351,8 @@ namespace sw::editor
                         continue;
 
                     file._relativePath = file._sourcePath.substr( rawFolder.size() + 1 );
-                    file._resourcePath = file._sourcePath.substr( rootDir.size() + 1 );
-                    if ( pScope != nullptr && pScope->find( makeScopeKey( file._resourcePath ) ) == pScope->end() )
+                    file._assetPath    = file._sourcePath.substr( rootDir.size() + 1 );
+                    if ( pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end() )
                         continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
                     file._importedPath = importer.makeImportedPath( file._sourcePath );
                     listFile.push_back( std::move( file ) );
@@ -368,7 +368,7 @@ namespace sw::editor
                     bool bOrderDependent = false;
                     for ( const uint32 fileIndex : listChain[chainIndex] )
                     {
-                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._resourcePath ) );
+                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._assetPath ) );
                     }
                     if ( bOrderDependent )
                         listSerialChain.push_back( chainIndex );
@@ -434,7 +434,7 @@ namespace sw::editor
             }
 
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
-            static string makeScopeKey( string_view resourcePath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( resourcePath ).c_str() ); }
+            static string makeScopeKey( string_view assetPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( assetPath ).c_str() ); }
 
             /** @brief @p pScope 에 @p resourceFolder 아래 원본이 하나라도 있으면 true 입니다. 원본이 없는 폴더는 훑지 않는다. */
             static bool hasScopeUnder( const unordered_set<string>& uniqueScope, string_view resourceFolder )
@@ -487,13 +487,13 @@ namespace sw::editor
         return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager );
     }
 
-    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath,
+    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                             TaskManager* pTaskManager )
     {
         unordered_set<string> uniqueScope;
-        for ( const string& resourcePath : listResourcePath )
+        for ( const string& assetPath : listAssetPath )
         {
-            uniqueScope.insert( AssetImportStampInternal::makeScopeKey( resourcePath ) );
+            uniqueScope.insert( AssetImportStampInternal::makeScopeKey( assetPath ) );
         }
         return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager );
     }

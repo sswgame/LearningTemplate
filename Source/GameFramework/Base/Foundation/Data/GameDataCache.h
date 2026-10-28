@@ -25,8 +25,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -55,7 +55,7 @@ namespace sw
 {
     /**
      * @class GameDataCache
-     * @brief 경로마다 테이블 하나를 보관하는 캐시입니다. 테이블 타입은 `bool loadFromResource( string_view )` 를 가져야 합니다.
+     * @brief 경로마다 테이블 하나를 보관하는 캐시입니다. 테이블 타입은 `bool loadFromAsset( string_view )` 를 가져야 합니다.
      * @tparam TableType 기본 생성되는 데이터 표 타입입니다.
      * @details 읽지 못한 경로도 빈 항목으로 남긴다. 쓰는 쪽마다 같은 오류를 다시 내지 않게 하려는 것이며, 파일을 고치면 `reload` 가 그 항목을 채운다.
      */
@@ -96,7 +96,7 @@ namespace sw
             }
             getCacheStats().recordMiss();
             unique_ptr<TableType> table = make_unique<TableType>();
-            if ( table->loadFromResource( toResourceID( path ) ) == false )
+            if ( table->loadFromAsset( toAssetID( path ) ) == false )
                 table.reset();
             const TableType* pTable = table.get();
             _mapTable[key]          = std::move( table );
@@ -115,9 +115,9 @@ namespace sw
         }
 
         /** @brief 읽은 적 있는 경로면 새 테이블로 다시 읽어 항목을 바꿉니다. 읽지 못하면 옛 테이블을 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
-        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override
+        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override
         {
-            const string_view relativePath = resourceID.view();
+            const string_view relativePath = assetID.view();
             (void)pDevice;
             const string key = makeKey( relativePath );
             {
@@ -126,7 +126,7 @@ namespace sw
                     return; // 아무도 읽지 않았으므로 다음 `find` 가 새 내용을 읽는다.
             }
             unique_ptr<TableType> fresh = make_unique<TableType>();
-            if ( fresh->loadFromResource( resourceID ) == false )
+            if ( fresh->loadFromAsset( assetID ) == false )
             {
                 SW_LOG_ERROR( "[GameDataCache] %# could not be reloaded - keeping the previous table", key );
                 return;
@@ -176,7 +176,7 @@ namespace sw
         /** @brief 테이블의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 항목을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
         /** @brief 캐시 키(찾기 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
-        static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
+        static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
         const utf8*                                            _pKindName;
         mutable mutex                                          _mutex;

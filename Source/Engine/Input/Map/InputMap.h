@@ -17,11 +17,11 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputActionBuffer.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -48,7 +48,7 @@ namespace sw
      * @details 명령형 게임(RTS · 도시 건설)이 패드만으로 커서를 쓰게 한다. 맵을 들고 있는 `InputManager` 가 매 프레임 이 값대로 켜고 끈다 —
      *          게임 코드가 켜고 끄지 않으므로 서비스가 묶이는 시점 · 오브젝트 시작 순서에 기대지 않는다.
      *          가상 커서는 그 스틱과 패드 A · B 를 마우스 이동 · 왼쪽 · 오른쪽 버튼으로 바꾸므로, 맵이 같은 스틱 · 버튼을 액션에 따로 묶으면
-     *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromResource`).
+     *          한 입력이 두 입력이 된다. 그래서 읽기가 그런 바인딩을 오류로 거절한다(`loadFromAsset`).
      */
     enum class InputMapVirtualCursor : uint8
     {
@@ -372,7 +372,7 @@ namespace sw
         /** @brief 액션, 레이어, 바인딩을 모두 비웁니다. */
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
          * @brief 이미 읽은 맵에 다른 InputMap XML 의 레이어와 액션을 더합니다(확장 모듈 · 게임 모드가 기본 맵에 액션을 보탠다).
          * @details 더하는 파일은 맵 전체 값(`defaultLayer` · 시간 · 거리 · `virtualCursor`)을 적지 않는다 — 그것은 기본 맵의 것이다.
@@ -380,14 +380,14 @@ namespace sw
          *          다른 액션이 이미 쓰는 바인딩은 오류다. 실패하면 맵이 일부만 더해진 채이므로 부른 쪽은 오류로 멈춘다.
          * @return 모두 더했으면 true 입니다.
          */
-        [[nodiscard]] bool appendFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool appendFromAsset( const AssetID& assetID );
         /**
-         * @brief 레이어, 액션, 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
-         * @param relativePath 리소스 id 또는 절대 경로입니다. 쓸 위치는 `ResourcePaths::getWritePath` 가 정하며, 작업 폴더 기준이 아닙니다.
+         * @brief 레이어, 액션, 현재 바인딩을 `loadFromAsset` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
+         * @param relativePath 리소스 id 또는 절대 경로입니다. 쓸 위치는 `AssetPaths::getWritePath` 가 정하며, 작업 폴더 기준이 아닙니다.
          * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */
-        [[nodiscard]] bool saveToResource( string_view relativePath ) const;
+        [[nodiscard]] bool saveToAsset( string_view relativePath ) const;
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 
@@ -518,7 +518,7 @@ namespace sw
         const ActionBinding* getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const;
         /**
          * @brief 바인딩 @p bindIndex 와 같은 레이어 · 같은 발화 규칙 · 같은 입력(키 · 수정 키 · 단추)을 다른 액션이 쓰면 그 이름을 @p outOtherAction 에 담고 true 입니다.
-         * @details 한 번 눌러 둘이 발화하는 겹침이다. 맵 더하기(`appendFromResource`)와 재배치 창이 같은 검사를 쓴다.
+         * @details 한 번 눌러 둘이 발화하는 겹침이다. 맵 더하기(`appendFromAsset`)와 재배치 창이 같은 검사를 쓴다.
          */
         [[nodiscard]] bool findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const;
         /** @brief `modifier` 속성 글자(`Ctrl`, `Ctrl+Shift` …)를 수정 키 마스크로 읽습니다. 모르는 이름 · 빈 글 · 같은 이름 두 번이면 false 입니다. */
@@ -775,17 +775,17 @@ namespace sw
         /** @brief 눌린 바인딩의 포인터가 이번 누름 위치(`_lastPress`)에서 끌기 문턱을 넘었는지 갱신합니다(`_bDragged` · `_bDragStarted`). */
         void advanceDrag( const ActionBinding& binding, ActionBindingState& state, const int2& mousePos ) const;
         /**
-         * @brief `loadFromResource` 와 `appendFromResource` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
+         * @brief `loadFromAsset` 와 `appendFromAsset` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
          * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
          */
-        [[nodiscard]] bool loadDefinition( const ResourceID& resourceID, bool bAppend );
+        [[nodiscard]] bool loadDefinition( const AssetID& assetID, bool bAppend );
         /** @brief `loadDefinition` 의 맵 전체 값 단계입니다. 시간 문턱 · 가상 커서 · 기본 레이어를 읽고, 더하지 않을 때만 맵을 비우고 적용합니다. 깨졌거나 거절되면 false 입니다. */
         [[nodiscard]] bool readMapSettings( const XMLNode& root, string_view absPath, bool bAppend );
         /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */
         void readLayerDefinitions( const XMLNode& root, string_view absPath, bool bAppend, bool& inoutbValid );
         /** @brief `loadDefinition` 의 액션 단계입니다. 최상위 `<layer>` 와 `<action>` 을 읽고 더한 액션 이름을 @p outListLoadedAction 에 모읍니다. */
         void readActionDefinitions( const XMLNode& root, string_view absPath, bool bAppend, vector<hashed_string>& outListLoadedAction, bool& inoutbValid );
-        /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromResource`). */
+        /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromAsset`). */
         [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
 
         /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
@@ -868,7 +868,7 @@ namespace sw
     private:
         /**
          * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
-         * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromResource`)가 0 이 아니면 실패로 돌린다.
+         * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromAsset`)가 0 이 아니면 실패로 돌린다.
          */
         [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
         /**

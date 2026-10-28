@@ -28,13 +28,13 @@
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -132,14 +132,14 @@ namespace sw::editor
             static string saveRig( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
             {
                 const string_view rigPath  = modifier.getRigPath();
-                const string      readPath = ResourcePaths::findLooseFile( rigPath ).getDiskPath();
+                const string      readPath = AssetPaths::findLooseFile( rigPath ).getDiskPath();
                 string            text;
                 if ( readPath.empty() || FileUtil::readTextFile( readPath, text ) == false )
                     return string( "The rig file could not be read" );
                 string rewritten;
                 if ( RigAsset::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
-                const string writePath = ResourcePaths::getWritePath( rigPath );
+                const string writePath = AssetPaths::getWritePath( rigPath );
                 if ( writePath.empty() || FileUtil::writeTextFile( writePath, rewritten ) == false )
                     return string( "The rig file could not be written" );
                 if ( pUndoLabel != nullptr )

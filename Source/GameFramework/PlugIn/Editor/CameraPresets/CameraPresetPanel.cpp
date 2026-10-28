@@ -13,11 +13,11 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
@@ -187,7 +187,7 @@ namespace sw::editor
 
         _catalog.clear();
         _selectedIndex = -1;
-        if ( _catalog.loadFromResource( ResourceID{ path } ) == false )
+        if ( _catalog.loadFromAsset( AssetID{ path } ) == false )
         {
             _status = "The preset file could not be read - see the log";
             return ToolAssetLoadResult::Malformed;

@@ -144,7 +144,7 @@ namespace sw
             return false;
         }
         _catalog.clear();
-        if ( _catalog.loadFromResource( ResourceID{ _scheduleDataPath } ) == false )
+        if ( _catalog.loadFromAsset( AssetID{ _scheduleDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;

@@ -42,7 +42,7 @@ namespace sw
     {
         JSONDocument document;
         string       absolutePath;
-        if ( document.loadResource( ResourceID{ kAllowListPath }, &absolutePath ) == false )
+        if ( document.loadResource( AssetID{ kAllowListPath }, &absolutePath ) == false )
         {
             outError = string( kAllowListPath ) + " cannot be read";
             return false;

@@ -2,8 +2,8 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -11,23 +11,23 @@ namespace sw
 {
     SW_LOG_CALLER( "ReflectedXMLFile" );
 
-    bool ReflectedXMLFile::loadDescInternal( const ResourceID& resourceID, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::loadDescInternal( const AssetID& assetID, void* pDesc, const TypeInfo* pTypeInfo )
     {
-        // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.
+        // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 읽으면 팩 전용 구성의 거절을 지나간다.
         string text;
-        if ( pTypeInfo != nullptr && ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( pTypeInfo != nullptr && AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", resourceID.view(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", assetID.view(), pTypeInfo->_name.c_str() );
             return false;
         }
-        return parseDesc( resourceID.view(), text, pDesc, pTypeInfo );
+        return parseDesc( assetID.view(), text, pDesc, pTypeInfo );
     }
 
     bool ReflectedXMLFile::loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo )
     {
         // 디스크 파일은 부르는 쪽이 이름(`loadDescFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         string text;
-        if ( pTypeInfo != nullptr && ResourceIO::readTextFile( diskPath, text ) == false )
+        if ( pTypeInfo != nullptr && AssetIO::readTextFile( diskPath, text ) == false )
         {
             SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", diskPath, pTypeInfo->_name.c_str() );
             return false;
@@ -72,7 +72,7 @@ namespace sw
         }
 
         // 쓰기 경로는 `getWritePath` 하나가 정한다(아직 없는 파일도 도메인 루트 아래로 — 작업 디렉터리에 떨어지지 않게).
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
 
         if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
         {

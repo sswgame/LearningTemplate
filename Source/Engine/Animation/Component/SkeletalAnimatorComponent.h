@@ -18,9 +18,9 @@
 #include "Engine/Animation/Skeletal/CurveAccumulator.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/Cache/SharedAssetCache.h"
 
 namespace sw
 {

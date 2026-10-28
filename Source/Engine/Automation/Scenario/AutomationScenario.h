@@ -9,10 +9,10 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -152,7 +152,7 @@ namespace sw
         AutomationScenario();
 
         /** @brief 리소스 경로 또는 절대 경로에서 읽습니다. 형식 오류면 false 이고 @p outError 에 `경로: 이유` 를 씁니다. */
-        [[nodiscard]] bool loadFromPath( const ResourceID& resourceID, string& outError );
+        [[nodiscard]] bool loadFromPath( const AssetID& assetID, string& outError );
         /** @brief XML 글에서 읽습니다. */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName, string& outError );
 

@@ -61,7 +61,7 @@ namespace sw
         if ( _graphPath.empty() )
             return;
         const string path = _graphPath;
-        if ( loadGraphFile( ResourceID{ path } ) == false )
+        if ( loadGraphFile( AssetID{ path } ) == false )
             SW_LOG_WARNING( "Dialogue graph '%#' could not be loaded", path );
     }
 
@@ -75,11 +75,11 @@ namespace sw
     {
     }
 
-    bool DialogueRunnerComponent::loadGraphFile( const ResourceID& resourceID )
+    bool DialogueRunnerComponent::loadGraphFile( const AssetID& assetID )
     {
-        const string_view xmlPath = resourceID.view();
+        const string_view xmlPath = assetID.view();
         _graphPath                = string( xmlPath );
-        return _graph.loadFromFile( resourceID );
+        return _graph.loadFromFile( assetID );
     }
 
     bool DialogueRunnerComponent::loadGraphXML( string_view xmlContent )

@@ -177,7 +177,7 @@ namespace sw
         if ( _probeDataPath.empty() )
             return;
         string error;
-        if ( _probeData.loadFromResource( ResourceID{ _probeDataPath }, &error ) == false )
+        if ( _probeData.loadFromAsset( AssetID{ _probeDataPath }, &error ) == false )
         {
             SW_LOG_ERROR( "Light probe data '%#' could not be loaded (%#) - the volume gives no indirect light until it is baked again", _probeDataPath.c_str(), error.c_str() );
             return;

@@ -256,7 +256,7 @@ namespace sw
         static bool isOnPoolWorkerThread();
         /**
          * @brief 현재 스레드가 병렬 본문(`runParallel` · `runParallelByCost` · `emplaceParallel*` 의 본문)을 실행 중인지 확인합니다.
-         * @details 병렬 단계 중에는 락 없는 전역(`ResourcePaths` 의 검색 목록 · 루트)을 바꾸지 않는다는 계약의 Debug 가드가 읽는다.
+         * @details 병렬 단계 중에는 락 없는 전역(`AssetPaths` 의 검색 목록 · 루트)을 바꾸지 않는다는 계약의 Debug 가드가 읽는다.
          */
         static bool isInParallelBody();
 

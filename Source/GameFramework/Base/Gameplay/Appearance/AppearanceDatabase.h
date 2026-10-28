@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceRule.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
@@ -59,7 +59,7 @@ namespace sw
          * @brief 프리셋 에셋 파일 하나(`*.appearance.xml`)를 읽어 더하거나 같은 id 를 바꾸고 프리셋을 다시 검사합니다. 새 오류가 없으면 true 입니다.
          * @details 폴더를 읽을 때 `presets/` 의 파일마다 부르고, 에디터가 내보낸 파일을 실행 중인 데이터에 올릴 때도 부른다(`getRevision` 이 오른다).
          */
-        [[nodiscard]] bool loadPresetFile( const ResourceID& presetID );
+        [[nodiscard]] bool loadPresetFile( const AssetID& presetID );
         /**
          * @brief 읽은 데이터끼리 이름을 대조합니다. 오류가 없으면 true 입니다.
          * @param pListKnownBodyRegion 몸 영역 테이블(피팅 데이터)의 이름 목록입니다. 주면 숨김 영역 이름도 대조합니다.
@@ -98,7 +98,7 @@ namespace sw
     private:
         [[nodiscard]] bool loadSectionFromNode( const XMLNode& root, string_view sourceName );
         /** @brief 프리셋 에셋 파일 하나를 읽어 카탈로그에 더합니다(검사 없음). 읽지 못하면 false 이고 오류는 `_report` 에 있습니다. */
-        [[nodiscard]] bool readPresetFile( const ResourceID& presetID );
+        [[nodiscard]] bool readPresetFile( const AssetID& presetID );
         /**
          * @brief 몸 부품이 가리키는 피팅 표(`fitTables`)들의 영역 이름을 모읍니다. 읽지 못한 표는 오류로 남깁니다.
          * @return 피팅 표를 가리키는 부품이 하나라도 있으면 true 입니다(그때만 숨김 영역 이름을 대조한다).

@@ -11,13 +11,13 @@
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -193,13 +193,13 @@ namespace sw
          * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
          * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
          */
-        [[nodiscard]] bool readManifestInternal( const ResourceID& resourceID, ShaderReflectionLibrary::EntryMap& outMapEntry )
+        [[nodiscard]] bool readManifestInternal( const AssetID& assetID, ShaderReflectionLibrary::EntryMap& outMapEntry )
         {
-            const string& manifestRelative = resourceID.str();
+            const string& manifestRelative = assetID.str();
             outMapEntry.clear();
             // 매니페스트는 리소스 id 다 — 리소스 입구로 바이트를 읽고 버퍼로 연다(`Archive` 의 파일 입구는 디스크 경로만 받는다).
             vector<uint8> bytes;
-            if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+            if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
                 return false;
             Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
             if ( archive.isError() )
@@ -289,7 +289,7 @@ namespace sw
         string manifestRelative( binDirectoryRelative );
         if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
             manifestRelative += '/';
-        return readManifestInternal( ResourceID{ manifestRelative + getManifestFileName() }, outMapEntry );
+        return readManifestInternal( AssetID{ manifestRelative + getManifestFileName() }, outMapEntry );
     }
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
@@ -311,8 +311,8 @@ namespace sw
         // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 비어 있는 루트 디스크립터를 읽고 GPU 페이지
         // 폴트(DEVICE_HUNG)로 죽는다. 셰이더 한 줄 고쳤을 뿐인데 죽는 곳은 드로우라 추적이 오래 걸린다.
         {
-            const string sourceAbs   = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
-            const string manifestAbs = ResourcePaths::findLooseFile( binDirRel + getManifestFileName() ).getDiskPath();
+            const string sourceAbs   = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
+            const string manifestAbs = AssetPaths::findLooseFile( binDirRel + getManifestFileName() ).getDiskPath();
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
                 // 판정 기준은 ShaderCache 와 **같은 것 하나**, cook.stamp 의 내용 해시다. 파일 시간으로
@@ -340,7 +340,7 @@ namespace sw
         {
             // 없거나 망가진 파일도 빈 채로 캐시한다 — 매번 다시 열지 않는다.
             EntryMap loaded;
-            if ( readManifestInternal( ResourceID{ binDirRel + getManifestFileName() }, loaded ) == false )
+            if ( readManifestInternal( AssetID{ binDirRel + getManifestFileName() }, loaded ) == false )
                 loaded.clear();
             manifestIter = mapManifest.emplace( binDirRel, std::move( loaded ) ).first;
         }

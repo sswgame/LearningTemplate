@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 
-#include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandSplashWindow.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"
@@ -144,7 +144,7 @@ namespace sw
 
     bool ISplashWindow::loadSplashImage()
     {
-        if ( DDSLoader::loadFromResource( ResourceID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
+        if ( DDSLoader::loadFromAsset( AssetID{ "textures/splash.dds" }, _splashData ) == false || _splashData.isValid() == false )
             return false;
 
         // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에

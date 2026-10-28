@@ -12,8 +12,8 @@
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -141,7 +141,7 @@ namespace sw
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
     private:
         /** @brief 블롭을 정렬된 저장소에 옮깁니다. */

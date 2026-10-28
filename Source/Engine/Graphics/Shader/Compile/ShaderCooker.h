@@ -112,7 +112,7 @@ namespace sw
          *                        이번에 다시 컴파일하지 않은 요청의 몫은 `isCookedOutputCurrent` 가 돌려준 목록으로 채운다. 여기 없는 소스는 헤더에 기대지 않는 것으로 적히므로,
          *                        컴파일한 소스를 빼먹으면 그 소스의 헤더 변경이 낡음으로 잡히지 않는다.
          * @return 스탬프를 썼으면 true 입니다. 도메인 설정이 틀렸거나 가려진 헤더가 있거나 헤더를 읽지 못하거나 shaders 폴더 밖이거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
-         * @details 루트와 우선순위를 전역(`ResourcePaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
+         * @details 루트와 우선순위를 전역(`AssetPaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
          *          실제 `Resource/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
          *          스탬프를 쓰면 그 폴더의 스탬프 읽기 캐시를 버린다.
          */
@@ -199,7 +199,7 @@ namespace sw
 
         /**
          * @brief 셰이더를 가질 수 있는 도메인(`engine` · `common` · `game/<팩>` · 그 밖에 우선순위에 적힌 것)을 @p listPriority 에서 발견합니다.
-         * @param listPriority `EngineConfig._listResourcePriority`(`ResourcePaths::getSearchPriority()`) — 도메인 목록의 기준은 이 설정 데이터다.
+         * @param listPriority `EngineConfig._listResourcePriority`(`AssetPaths::getSearchPriority()`) — 도메인 목록의 기준은 이 설정 데이터다.
          *                     `game` 토큰은 @p resourceRoot 의 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 나머지 토큰은 그대로 도메인이다.
          * @return 목록이 비었거나 include 루트 종류(`engine` · `common`)가 빠졌으면 오류를 남기고 false 입니다(기본 목록으로 넘어가지 않는다).
          */
@@ -244,7 +244,7 @@ namespace sw
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
         static void verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem );
-        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 기준인 우선순위 설정을 직접 받습니다(위 판은 `ResourcePaths::getSearchPriority()` 를 넘긴다). */
+        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 기준인 우선순위 설정을 직접 받습니다(위 판은 `AssetPaths::getSearchPriority()` 를 넘긴다). */
         static void verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view shaderFolder, vector<string>& outListProblem );
 
         /**

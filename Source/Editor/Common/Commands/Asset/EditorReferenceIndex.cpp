@@ -76,15 +76,15 @@ namespace sw::editor
             }
 
             /** @brief 파일 하나를 읽어 참조를 더합니다. 읽지 못하면 아무것도 더하지 않는다. */
-            static bool scanFile( string_view resourceRoot, string_view resourceID, const vector<string>& listSortedKnownID,
+            static bool scanFile( string_view resourceRoot, string_view assetID, const vector<string>& listSortedKnownID,
                                   vector<EditorAssetReference>& outListReference )
             {
                 // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
-                const string filePath = FileUtil::joinPath( resourceRoot, resourceID );
+                const string filePath = FileUtil::joinPath( resourceRoot, assetID );
                 string       text;
                 if ( FileUtil::exists( filePath ) == false || FileUtil::readTextFile( filePath, text ) == false )
                     return false;
-                EditorReferenceIndex::extractReferences( resourceID, text, listSortedKnownID, outListReference );
+                EditorReferenceIndex::extractReferences( assetID, text, listSortedKnownID, outListReference );
                 return true;
             }
 
@@ -116,7 +116,7 @@ namespace sw::editor
             /** @brief 파일 수가 이보다 적으면 나누지 않습니다. 파일 하나가 읽기 · 파싱이라 디스패치 비용보다 훨씬 큽니다. */
             static constexpr uint32 kSerialFileThreshold = 8;
 
-            static string makeResourceID( string_view resourceRoot, string_view filePath )
+            static string makeAssetID( string_view resourceRoot, string_view filePath )
             {
                 string       relativePath;
                 const string rootPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
@@ -209,17 +209,17 @@ namespace sw::editor
         outData._listKnownID.reserve( listFile.size() );
         for ( const string& filePath : listFile )
         {
-            string resourceID = EditorReferenceIndexInternal::makeResourceID( resourceRoot, filePath );
-            if ( resourceID.empty() == false )
-                outData._listKnownID.push_back( std::move( resourceID ) );
+            string assetID = EditorReferenceIndexInternal::makeAssetID( resourceRoot, filePath );
+            if ( assetID.empty() == false )
+                outData._listKnownID.push_back( std::move( assetID ) );
         }
         std::sort( outData._listKnownID.begin(), outData._listKnownID.end() );
 
         vector<const string*> listTextID;
-        for ( const string& resourceID : outData._listKnownID )
+        for ( const string& assetID : outData._listKnownID )
         {
-            if ( isTextAsset( resourceID ) )
-                listTextID.push_back( &resourceID );
+            if ( isTextAsset( assetID ) )
+                listTextID.push_back( &assetID );
         }
 
         // 파일마다 자기 칸에 담고(병렬), 파일 순서대로 직렬로 합친다. 정렬 키가 (대상, 참조자, 줄)이고 같은 키는 지우므로 병렬이어도 결과가 직렬과 같다.
@@ -262,28 +262,28 @@ namespace sw::editor
         _bReady = SW_TRUE;
     }
 
-    void EditorReferenceIndex::refreshFile( string_view resourceRoot, string_view resourcePath )
+    void EditorReferenceIndex::refreshFile( string_view resourceRoot, string_view assetPath )
     {
-        const string resourceID = FileUtil::normalizePath( resourcePath );
-        VectorUtil::removeIf( _data._listReference, [&resourceID]( const EditorAssetReference& reference )
-        { return reference._referrerPath == resourceID; } );
+        const string assetID = FileUtil::normalizePath( assetPath );
+        VectorUtil::removeIf( _data._listReference, [&assetID]( const EditorAssetReference& reference )
+        { return reference._referrerPath == assetID; } );
 
-        const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, resourceID ) );
-        const auto itKnown = std::lower_bound( _data._listKnownID.begin(), _data._listKnownID.end(), resourceID );
-        const bool bKnown  = itKnown != _data._listKnownID.end() && *itKnown == resourceID;
+        const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, assetID ) );
+        const auto itKnown = std::lower_bound( _data._listKnownID.begin(), _data._listKnownID.end(), assetID );
+        const bool bKnown  = itKnown != _data._listKnownID.end() && *itKnown == assetID;
         if ( bExists && bKnown == false )
-            _data._listKnownID.insert( itKnown, resourceID );
+            _data._listKnownID.insert( itKnown, assetID );
         else if ( bExists == false && bKnown )
             _data._listKnownID.erase( itKnown );
 
-        if ( bExists && isTextAsset( resourceID ) )
-            (void)EditorReferenceIndexInternal::scanFile( resourceRoot, resourceID, _data._listKnownID, _data._listReference ); // 읽지 못한 파일은 참조가 없는 것과 같다
+        if ( bExists && isTextAsset( assetID ) )
+            (void)EditorReferenceIndexInternal::scanFile( resourceRoot, assetID, _data._listKnownID, _data._listReference ); // 읽지 못한 파일은 참조가 없는 것과 같다
         sortByTarget( _data._listReference );
     }
 
-    bool EditorReferenceIndex::containsFile( string_view resourceID ) const
+    bool EditorReferenceIndex::containsFile( string_view assetID ) const
     {
-        const string id = FileUtil::normalizePath( resourceID );
+        const string id = FileUtil::normalizePath( assetID );
         return std::binary_search( _data._listKnownID.begin(), _data._listKnownID.end(), id );
     }
 

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 
 namespace sw
 {
@@ -13,7 +13,7 @@ namespace sw
     {
         outPath.clear();
         outError.clear();
-        const ResourceDataKind* pKind = ResourceDataKindUtil::findByLabel( kindLabel );
+        const AssetDataKind* pKind = AssetDataKindUtil::findByLabel( kindLabel );
         if ( pKind == nullptr )
         {
             outError = "data kind '" + string( kindLabel ) + "' is not registered (SW_RESOURCE_DATA_KIND)";

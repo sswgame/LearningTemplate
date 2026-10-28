@@ -2,7 +2,7 @@
     "$schema_note": [
         "쿠킹이 C++ 과 Python 에서 같이 쓰는 표 둘의 단일 출처(SSOT)다.",
         "C++ 은 configure 때 Scripts/generate/CookContract.py 가 만든 sw/config/CookContract.gen.h 의 X-macro 로 읽고",
-        "(ArgumentList.xxx · RHIBackendUtil · ShaderCooker · PackCooker · ResourcePaths), Python 도구(Pack 등)는",
+        "(ArgumentList.xxx · RHIBackendUtil · ShaderCooker · PackCooker · AssetPaths), Python 도구(Pack 등)는",
         "Scripts/common/CookTable.py 로 이 파일을 직접 읽는다. 쿠커(PackCooker)는 같은 X-macro 를 읽어 컴파일 때 표를 따라온다.",
         "",
         "rhi_backends: 줄 순서 = RHIBackend 열거값(Config/RHIBackendType.h, static_assert 로 맞춘다).",
@@ -12,7 +12,7 @@
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listPlatform 이 정본이다.",
         "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 묶음 — 엔진 에셋 종류의 제외 묶음 이름(AssetTypeDef::_excludeGroup, 모르는 이름은 AssetTypeRegistryTest 가 막는다). 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
-        "  같은 호스트의 런타임(ResourcePaths::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
+        "  같은 호스트의 런타임(AssetPaths::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
         "  전용 서버: 텍스처 · 셰이더 바이너리 · 오디오를 뺀다. 메시 · 애니메이션은 충돌 · 소켓 · 히트박스 · 루트 모션 때문에 남긴다."
     ],
 

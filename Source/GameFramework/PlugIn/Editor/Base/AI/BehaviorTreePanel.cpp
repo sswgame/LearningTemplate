@@ -17,8 +17,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
@@ -152,7 +152,7 @@ namespace sw::editor
         _selectedID     = -1;
         _bLayoutPending = true;
         _nodeGraph.requestContentFit();
-        string diskPath = ResourcePaths::findLooseFile( path ).getDiskPath();
+        string diskPath = AssetPaths::findLooseFile( path ).getDiskPath();
         if ( diskPath.empty() )
             diskPath = path;
         string text;
@@ -179,7 +179,7 @@ namespace sw::editor
         const string& path = getLoadedAssetPath();
         if ( path.empty() )
             return false;
-        string diskPath = ResourcePaths::findLooseFile( path ).getDiskPath();
+        string diskPath = AssetPaths::findLooseFile( path ).getDiskPath();
         if ( diskPath.empty() )
             diskPath = path;
         _model.collectIssues( _listIssue );

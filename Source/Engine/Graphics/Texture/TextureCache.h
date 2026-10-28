@@ -9,11 +9,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Resource/AssetHandle.h"
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -145,7 +145,7 @@ namespace sw
          *          `Texture2D` 객체는 **그대로 두고** 내용만 교체합니다. 머티리얼이 포인터를
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킵니다.
          */
-        void reload( const ResourceID& resourceID, IRHIDevice* pDevice ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override;
         /**
          * @brief 이미 가진 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없거나 처음 업로드하는 중이면 nullptr 입니다.
          * @warning 빌린 포인터입니다. 누군가 `acquire` 로 참조를 잡고 있는 동안만 유효하고, 마지막 `release` 나 `clear` 뒤에는 해제된 객체입니다.

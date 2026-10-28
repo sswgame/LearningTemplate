@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -19,7 +20,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/CookContract.gen.h"

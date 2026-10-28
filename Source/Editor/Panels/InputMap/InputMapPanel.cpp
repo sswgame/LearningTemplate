@@ -22,6 +22,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -33,7 +34,6 @@
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -960,7 +960,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Replay" ) );
         if ( ImGui::Button( "Save Replay" ) )
         {
-            const string diskPath = ResourcePaths::resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
+            const string diskPath = AssetPaths::resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
             if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
         }
@@ -971,7 +971,7 @@ namespace sw::editor
         {
             if ( input.getVirtualInput() == &_replay )
                 input.detachVirtualInput();
-            const string diskPath = ResourcePaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
+            const string diskPath = AssetPaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
             if ( diskPath.empty() )
                 SW_LOG_ERROR( "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
             else if ( _replay.loadFromFile( diskPath ) == false )
@@ -1108,7 +1108,7 @@ namespace sw::editor
     void InputMapPanel::reloadFromFile()
     {
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
-        if ( _inputMap.loadFromResource( ResourceID{ _inputMapPath.c_str() } ) == false )
+        if ( _inputMap.loadFromAsset( AssetID{ _inputMapPath.c_str() } ) == false )
         {
             SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return;
@@ -1121,7 +1121,7 @@ namespace sw::editor
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reloadFromFile`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
-        if ( _inputMap.saveToResource( _inputMapPath.c_str() ) == false )
+        if ( _inputMap.saveToAsset( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;

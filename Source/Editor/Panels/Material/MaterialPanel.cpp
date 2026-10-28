@@ -24,6 +24,7 @@
 #include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -31,7 +32,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
@@ -508,7 +508,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( ResourceID{ getLoadedAssetPath() }, editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ getLoadedAssetPath() }, editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();
@@ -525,7 +525,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        if ( _material->loadFromFile( ResourceID{ path } ) == false )
+        if ( _material->loadFromFile( AssetID{ path } ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "LoadFailedStatus" );
             return ToolAssetLoadResult::Malformed;

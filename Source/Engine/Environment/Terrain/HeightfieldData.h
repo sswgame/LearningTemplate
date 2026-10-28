@@ -19,8 +19,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -56,7 +56,7 @@ namespace sw
         /** @brief 바이트 배열에서 읽습니다. 형식이 틀리면 이유를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromMemory( const vector<uint8>& bytes, string_view sourceName );
         /** @brief 리소스 경로(`game/empty/heightfields/x.heightfield`)에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& id );
+        [[nodiscard]] bool loadFromAsset( const AssetID& id );
         /** @brief 형식대로 바이트를 만듭니다. */
         void saveToMemory( vector<uint8>& outBytes ) const;
         /** @brief 절대 경로에 씁니다(임포터와 테스트용). */

@@ -12,6 +12,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -20,7 +21,6 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -416,7 +416,7 @@ namespace sw
 
             [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
             {
-                // 엔진 셰이더 경로는 데이터(enginedefaultassets.xml)에만 있다 — 못 읽으면 쿠킹 목록을 만들 수 없다(이유는 loadFromResource 가 남긴다).
+                // 엔진 셰이더 경로는 데이터(enginedefaultassets.xml)에만 있다 — 못 읽으면 쿠킹 목록을 만들 수 없다(이유는 loadFromAsset 가 남긴다).
                 const unique_ptr<EngineDefaultAssets> loadedAssets = EngineDefaultAssets::load();
                 if ( loadedAssets == nullptr )
                     return false;

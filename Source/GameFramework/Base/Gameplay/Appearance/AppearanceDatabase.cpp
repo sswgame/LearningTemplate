@@ -8,10 +8,10 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -109,7 +109,7 @@ namespace sw
             const string path = FileUtil::joinPath( folder, file._pFileName );
             XMLDocument  doc;
             string       absolutePath;
-            if ( doc.loadResource( ResourceID{ path }, &absolutePath ) == false )
+            if ( doc.loadResource( AssetID{ path }, &absolutePath ) == false )
             {
                 if ( file._bRequired == SW_TRUE || AppearanceDatabaseInternal::isNotFound( doc.getLastError() ) == false )
                     _report.addErrorWithID( "Appearance.DataUnreadable", "%#: cannot read appearance data (%#)", path, doc.getLastError() );
@@ -118,18 +118,18 @@ namespace sw
             // 실패는 각 섹션이 _report 에 오류로 남긴다
             (void)loadSectionFromNode( doc.getRoot(), absolutePath.empty() ? string_view( path ) : string_view( absolutePath ) );
         }
-        // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 나열은 팩을 아는 `ResourceIO` 로 한다(디스크만 훑으면 팩 빌드에서 0개로 읽힌다).
+        // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 나열은 팩을 아는 `AssetIO` 로 한다(디스크만 훑으면 팩 빌드에서 0개로 읽힌다).
         // 나열이 이름순이라 같은 id 는 뒤 파일이 이긴다(실행마다 같다). 폴더가 있는데 나열에 실패하면 오류다.
         const string                presetFolder = FileUtil::joinPath( folder, kPresetFolder );
-        vector<ResourceID>          listPresetFile;
+        vector<AssetID>             listPresetFile;
         bool                        bPresetsRead = true;
-        const ResourceFolderListing listing      = ResourceIO::collectResources( ResourceID{ presetFolder }, kPresetExtension, listPresetFile );
+        const ResourceFolderListing listing      = AssetIO::collectResources( AssetID{ presetFolder }, kPresetExtension, listPresetFile );
         if ( listing == ResourceFolderListing::Failed )
         {
             _report.addErrorWithID( "Appearance.PresetFolderUnreadable", "%#: cannot list the appearance preset folder", presetFolder );
             bPresetsRead = false;
         }
-        for ( const ResourceID& presetFile : listPresetFile )
+        for ( const AssetID& presetFile : listPresetFile )
         {
             bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
         }
@@ -171,7 +171,7 @@ namespace sw
         return listTablesPath.empty() == false;
     }
 
-    bool AppearanceDatabase::loadPresetFile( const ResourceID& presetID )
+    bool AppearanceDatabase::loadPresetFile( const AssetID& presetID )
     {
         const size_t errorCountBefore = _report.getErrors().size();
         if ( readPresetFile( presetID ) == false )
@@ -180,7 +180,7 @@ namespace sw
         return _report.getErrors().size() == errorCountBefore;
     }
 
-    bool AppearanceDatabase::readPresetFile( const ResourceID& presetID )
+    bool AppearanceDatabase::readPresetFile( const AssetID& presetID )
     {
         const string_view path = presetID.view();
         XMLDocument       doc;

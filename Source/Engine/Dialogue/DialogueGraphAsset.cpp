@@ -7,11 +7,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -37,9 +37,9 @@ namespace sw
 
 namespace sw
 {
-    bool DialogueGraphAsset::loadFromFile( const ResourceID& resourceID )
+    bool DialogueGraphAsset::loadFromFile( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Script );
         _listNode.clear();
         _listLink.clear();
@@ -47,7 +47,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read dialogue graph '%#'", path );
             return false;
@@ -64,7 +64,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
             SW_LOG_WARNING( "Could not read dialogue graph file '%#'", diskPath );
             return false;

@@ -7,9 +7,9 @@
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <algorithm>
 
@@ -73,7 +73,7 @@ namespace sw::editor
 {
     string EditorThemeTokens::getFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder( path::kEditorPack, kFolderName ).getDiskPath();
+        return AssetPaths::findLooseDomainFolder( path::kEditorPack, kFolderName ).getDiskPath();
     }
 
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )
@@ -100,12 +100,12 @@ namespace sw::editor
         return loadThemeFile( FileUtil::joinPath( folder, fileName ), outConfig, outError );
     }
 
-    bool EditorThemeTokens::loadThemeResource( const ResourceID& id )
+    bool EditorThemeTokens::loadThemeResource( const AssetID& id )
     {
-        const string&     resourceID = id.str();
+        const string&     assetID = id.str();
         EditorThemeConfig config{};
         string            error;
-        if ( loadThemeFile( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), config, error ) )
+        if ( loadThemeFile( AssetPaths::findLooseFile( assetID ).getDiskPath(), config, error ) )
             return true;
         SW_LOG_ERROR( "Theme tokens were not loaded: %#", error.c_str() );
         return false;

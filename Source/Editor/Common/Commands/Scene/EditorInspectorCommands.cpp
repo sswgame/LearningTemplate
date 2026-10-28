@@ -11,6 +11,8 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -18,8 +20,6 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
@@ -28,9 +28,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorInspectorCommands" );
 
-    bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, const ResourceID& resourceID )
+    bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, const AssetID& assetID )
     {
-        const string_view prefabPath = resourceID.view();
+        const string_view prefabPath = assetID.view();
         if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
@@ -42,7 +42,7 @@ namespace sw::editor
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.
-        const string                        filePath = ResourcePaths::getWritePath( prefabPath );
+        const string                        filePath = AssetPaths::getWritePath( prefabPath );
         string                              oldFileText;
         string                              oldBaseState;
         const bool                          bHadFile   = FileUtil::exists( filePath ) && FileUtil::readTextFile( filePath, oldFileText );
@@ -66,7 +66,7 @@ namespace sw::editor
             return true;
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
         PrefabCache& prefabCache = *pPrefabCache;
-        prefabCache.reload( resourceID, nullptr );
+        prefabCache.reload( assetID, nullptr );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
         // 인스턴스는 두 종류다. 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와 다른 프리팹 인스턴스가 스폰한 중첩 부품이다.
@@ -95,7 +95,7 @@ namespace sw::editor
                 if ( FileUtil::writeTextFile( filePath, text ) == false )
                     SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
                 // 이 되돌리기 · 다시 하기는 위에서 에셋 관리자가 있을 때(`pPrefabCache`)만 등록된다 - 여기서는 필수다.
-                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( ResourceID{ savedPath }, nullptr );
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ savedPath }, nullptr );
             };
             EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePrefabFile, oldFileText]()
             { writePrefabFile( oldFileText ); } ),
@@ -196,7 +196,7 @@ namespace sw::editor
             SW_LOG_WARNING( "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
             return false;
         }
-        return applyToPrefab( pOuter, ResourceID{ outerPath } );
+        return applyToPrefab( pOuter, AssetID{ outerPath } );
     }
 
     EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )

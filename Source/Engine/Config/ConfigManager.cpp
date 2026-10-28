@@ -2,13 +2,13 @@
 
 #include "Engine/Config/ConfigManager.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -239,7 +239,7 @@ namespace sw
 {
     SubsystemInitResult ConfigManager::initializeSubsystem()
     {
-        setRootDirectory( ResourcePaths::getProjectFolderPath() );
+        setRootDirectory( AssetPaths::getProjectFolderPath() );
 #if defined( SW_SHIPPING )
         EngineConfig probe;
         if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )

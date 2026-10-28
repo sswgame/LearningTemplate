@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 
@@ -8,10 +8,10 @@ namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadGameSettings( const ResourceID& id )
+        [[nodiscard]] bool loadGameSettings( const AssetID& id )
         {
             GameSettings settings;
-            return settings.loadFromResource( id );
+            return settings.loadFromAsset( id );
         }
     } // namespace
 

@@ -12,8 +12,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
-#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
@@ -34,7 +34,7 @@ namespace sw::editor
         /** @brief 스켈레톤을 정합니다(테스트와 이미 읽은 것을 넘길 때). 덮어쓰기는 그대로 둡니다. */
         void setSkeleton( const Skeleton& skeleton ) { _skeleton = skeleton; }
         /** @brief 리소스 경로(또는 절대 경로)의 스켈레톤을 읽습니다. 실패하면 현재 스켈레톤을 그대로 두고 false 입니다. */
-        [[nodiscard]] bool loadSkeleton( const ResourceID& resourceID );
+        [[nodiscard]] bool loadSkeleton( const AssetID& assetID );
         const Skeleton&    getSkeleton() const { return _skeleton; }
         /** @brief 본 이름을 스켈레톤 순서로 모읍니다(`SocketEditModel::setBoneNames` 의 입력). */
         void collectBoneNames( vector<hashed_string>& outListBoneName ) const;

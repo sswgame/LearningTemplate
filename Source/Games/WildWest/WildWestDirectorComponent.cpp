@@ -134,7 +134,7 @@ namespace sw
 
     bool WildWestDirectorComponent::startGame()
     {
-        if ( _westernDataPath.empty() || _westernCatalog.loadFromResource( ResourceID{ _westernDataPath } ) == false )
+        if ( _westernDataPath.empty() || _westernCatalog.loadFromAsset( AssetID{ _westernDataPath } ) == false )
         {
             SW_LOG_ERROR( "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
             return false;

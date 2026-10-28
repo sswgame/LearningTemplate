@@ -8,9 +8,9 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -151,14 +151,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool BodyShapeSet::loadFromResource( const ResourceID& resourceID )
+    bool BodyShapeSet::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         _listAxis.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourceID, "BodyShapeSet", root ) )
+        if ( reader.loadRoot( document, assetID, "BodyShapeSet", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
@@ -278,5 +278,5 @@ namespace sw
     }
 
     /** @brief 몸 모양 묶음 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( BodyShape, "bodyshape", nullptr, nullptr, ".bodyshape.xml", &ResourceDataKindUtil::loadCatalog<BodyShapeSet> );
+    SW_RESOURCE_DATA_KIND( BodyShape, "bodyshape", nullptr, nullptr, ".bodyshape.xml", &AssetDataKindUtil::loadCatalog<BodyShapeSet> );
 } // namespace sw

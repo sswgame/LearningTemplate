@@ -46,7 +46,7 @@ namespace sw
     {
         if ( _bBound == false )
         {
-            _mapDebugAction = createInputMap( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._shellInputMap.get() } );
+            _mapDebugAction = createInputMap( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._shellInputMap.get() } );
             _bBound         = true;
             // 플레이어가 셸 키(콘솔 여는 키 …)를 바꿨으면 리소스의 기본 위에 입힌다. 읽지 못한 파일은 로그가 알리고 기본 키로 돈다.
             if ( _userBindingsPath.empty() == false )
@@ -67,14 +67,14 @@ namespace sw
         _bBound = false;
     }
 
-    unique_ptr<InputMap> ShellInputActions::createInputMap( const ResourceID& resourceID )
+    unique_ptr<InputMap> ShellInputActions::createInputMap( const AssetID& assetID )
     {
-        const string_view inputMapPath = resourceID.view();
+        const string_view inputMapPath = assetID.view();
         SW_MEMORY_SCOPE( EngineMisc );
         unique_ptr<InputMap> map = make_unique<InputMap>();
         // 셸 단축키와 개발 콘솔은 콘솔이 키보드를 쥔 동안에도 키를 받아야 한다(닫는 키 · 편집 키).
         map->setKeyboardFocusIgnored( true );
-        if ( inputMapPath.empty() || map->loadFromResource( resourceID ) == false )
+        if ( inputMapPath.empty() || map->loadFromAsset( assetID ) == false )
         {
             map->clear();
             SW_LOG_ERROR( "Shell input map '%#' could not be loaded - shell debug actions stay unbound", inputMapPath );

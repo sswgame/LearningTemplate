@@ -29,7 +29,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -117,7 +117,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 처리기는 @p registry 에서 이름으로 찾습니다. 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const AnimationNotifyHandlerRegistry& registry );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, const AnimationNotifyHandlerRegistry& registry );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, const AnimationNotifyHandlerRegistry& registry );
 
         /** @brief 알림 이름의 항목을 반환합니다. 없으면 nullptr 입니다(테이블에 없는 알림은 처리하지 않으며, 게임 코드가 목록을 직접 읽을 수 있습니다). */
         const AnimationNotifyEntry* findEntry( const hashed_string& notify ) const;

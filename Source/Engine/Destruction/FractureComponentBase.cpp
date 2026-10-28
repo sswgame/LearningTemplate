@@ -881,7 +881,7 @@ namespace sw
         if ( _asset == nullptr )
             return false;
         const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath;
-        if ( _profile.loadFromResource( ResourceID{ profilePath } ) == false )
+        if ( _profile.loadFromAsset( AssetID{ profilePath } ) == false )
             SW_LOG_ERROR( "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
                           profilePath.c_str() );
         vector<uint8> listAnchor;

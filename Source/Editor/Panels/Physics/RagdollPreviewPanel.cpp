@@ -17,6 +17,8 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -26,8 +28,6 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceID.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
@@ -415,7 +415,7 @@ namespace sw::editor
         _listBodyRow.clear();
         _selectedBody = -1;
         PhysicsAsset asset;
-        if ( asset.loadFromResource( ResourceID{ path } ) == false )
+        if ( asset.loadFromAsset( AssetID{ path } ) == false )
         {
             _status = "The physics asset could not be read - see the log";
             return ToolAssetLoadResult::Malformed;

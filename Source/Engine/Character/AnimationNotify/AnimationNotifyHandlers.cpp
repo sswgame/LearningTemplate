@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Scene/MotionWarpingComponent.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/Component/SceneAudio.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -66,7 +66,7 @@ namespace sw
                     const float3               position = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     IAudioService*             pAudio   = findAudioService( context );
                     if ( pAudio != nullptr )
-                        (void)pAudio->play( ResourceID{ sound } );
+                        (void)pAudio->play( AssetID{ sound } );
                     record( context, hashed_string( sound ), position, 0, AnimationNotifyPhase::Instant );
                 }
 
@@ -144,7 +144,7 @@ namespace sw
                     const string               sound   = context._entry.getTextParam( s_sound );
                     IAudioService*             pAudio  = findAudioService( context );
                     if ( sound.empty() == false && pAudio != nullptr )
-                        (void)pAudio->play( ResourceID{ StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) } );
+                        (void)pAudio->play( AssetID{ StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) } );
                     record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectID() : 0, AnimationNotifyPhase::Instant );
                 }
 

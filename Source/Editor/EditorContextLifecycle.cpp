@@ -104,7 +104,7 @@ namespace sw::editor
         LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
         if ( pLocalization == nullptr )
             SW_LOG_WARNING( "No LocalizationManager - editor text shows its keys" );
-        else if ( pLocalization->mountProject( ResourceID{ EditorPaths::kLocalizationProject }, LocalizationScope::Editor ) == false )
+        else if ( pLocalization->mountProject( AssetID{ EditorPaths::kLocalizationProject }, LocalizationScope::Editor ) == false )
             SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
 
         if ( _scope.getCollection().initializeAll( EngineSubsystemHost::kClient ) == false )

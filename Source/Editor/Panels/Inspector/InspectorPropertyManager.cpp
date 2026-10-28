@@ -14,7 +14,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -35,13 +35,13 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
@@ -70,7 +70,7 @@ namespace sw::editor
         /** @brief 에셋 선택 팝업의 상태입니다. 열린 팝업은 하나뿐이므로 상태도 하나만 보관합니다. */
         struct AssetPickerState
         {
-            vector<EditorResourceIndexEntry>     _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
+            vector<EditorAssetIndexEntry>        _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
             fixed_string<constant::kMaxBuffer64> _search;
         };
 
@@ -155,7 +155,7 @@ namespace sw::editor
                     AssetPickerState& picker = getAssetPickerState();
                     picker._listEntry.clear();
                     picker._search.clear();
-                    EditorResourceIndex::collectEntries( picker._listEntry );
+                    EditorAssetIndex::collectEntries( picker._listEntry );
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
@@ -172,7 +172,7 @@ namespace sw::editor
                     const EditorListFilter filter{ picker._search.c_str() };
                     uint32                 shownCount{ 0 };
                     ImGui::BeginChild( "##pickerList", measureExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
-                    for ( const EditorResourceIndexEntry& entry : picker._listEntry )
+                    for ( const EditorAssetIndexEntry& entry : picker._listEntry )
                     {
                         if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||
                              filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
@@ -210,7 +210,7 @@ namespace sw::editor
             }
 
             /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
-            static void revealInContentBrowser( string_view resourcePath )
+            static void revealInContentBrowser( string_view assetPath )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
@@ -218,7 +218,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
-                const string fileAbs = ResourcePaths::findLooseFile( FileUtil::normalizePath( resourcePath ) ).getDiskPath();
+                const string fileAbs = AssetPaths::findLooseFile( FileUtil::normalizePath( assetPath ) ).getDiskPath();
                 if ( fileAbs.empty() )
                     return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs ) );

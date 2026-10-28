@@ -4,9 +4,9 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -30,7 +30,7 @@ namespace sw
         {
             _bBudgetFileRead = true;
             if ( _crashHandler.isCrashReporterRun() == false )
-                (void)_monitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
+                (void)_monitor.loadBudgetFile( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
         }
         _monitor.onFrameEnd();
     }

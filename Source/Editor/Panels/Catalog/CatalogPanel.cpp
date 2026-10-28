@@ -14,10 +14,10 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceID.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -133,8 +133,8 @@ namespace sw::editor
 
     void CatalogPanel::pollIndexJob()
     {
-        vector<EditorResourceIndexEntry> listEntry;
-        const EditorTaskPoll             poll = _indexJob.take( listEntry );
+        vector<EditorAssetIndexEntry> listEntry;
+        const EditorTaskPoll          poll = _indexJob.take( listEntry );
         if ( poll == EditorTaskPoll::Ready )
         {
             rebuildFileList( listEntry );
@@ -146,18 +146,18 @@ namespace sw::editor
         }
     }
 
-    void CatalogPanel::rebuildFileList( const vector<EditorResourceIndexEntry>& listEntry )
+    void CatalogPanel::rebuildFileList( const vector<EditorAssetIndexEntry>& listEntry )
     {
         _listFile.clear();
-        vector<const ResourceDataKind*> listKind;
-        for ( const EditorResourceIndexEntry& entry : listEntry )
+        vector<const AssetDataKind*> listKind;
+        for ( const EditorAssetIndexEntry& entry : listEntry )
         {
-            ResourceDataKindUtil::collectMatches( entry._path, listKind );
+            AssetDataKindUtil::collectMatches( entry._path, listKind );
             if ( listKind.size() != 1 )
                 continue; // 카탈로그가 아니거나(0) 종류가 겹치는(스키마 테스트가 잡는다) 파일은 이 창이 다루지 않는다
             FileRow row;
-            row._resourceID = entry._path;
-            row._kindLabel  = listKind[0]->_pLabel;
+            row._assetID   = entry._path;
+            row._kindLabel = listKind[0]->_pLabel;
             _listFile.push_back( std::move( row ) );
         }
         std::sort( _listFile.begin(), _listFile.end(), &CatalogPanel::isFileBefore );
@@ -167,7 +167,7 @@ namespace sw::editor
     bool CatalogPanel::isFileBefore( const FileRow& lhs, const FileRow& rhs )
     {
         const int32 byKind = StringUtil::compare( lhs._kindLabel, rhs._kindLabel );
-        return byKind != 0 ? byKind < 0 : StringUtil::compare( lhs._resourceID, rhs._resourceID ) < 0;
+        return byKind != 0 ? byKind < 0 : StringUtil::compare( lhs._assetID, rhs._assetID ) < 0;
     }
 
     void CatalogPanel::drawToolbar()
@@ -247,15 +247,15 @@ namespace sw::editor
                 for ( size_t fileIndex = index; fileIndex < end; ++fileIndex )
                 {
                     const FileRow& file = _listFile[fileIndex];
-                    if ( filter.empty() == false && StringUtil::contains( file._resourceID, filter, true ) == false )
+                    if ( filter.empty() == false && StringUtil::contains( file._assetID, filter, true ) == false )
                         continue;
-                    const bool bSelected = file._resourceID == _selectedID;
-                    if ( ImGui::Selectable( file._resourceID.c_str(), bSelected ) && bSelected == false )
+                    const bool bSelected = file._assetID == _selectedID;
+                    if ( ImGui::Selectable( file._assetID.c_str(), bSelected ) && bSelected == false )
                     {
                         if ( _document.isDirty() )
                             _statusText = "Save or revert the open file first";
                         else
-                            openFile( file._resourceID );
+                            openFile( file._assetID );
                     }
                     if ( bFirstFile )
                     {
@@ -325,9 +325,9 @@ namespace sw::editor
         }
     }
 
-    void CatalogPanel::openFile( const string& resourceID )
+    void CatalogPanel::openFile( const string& assetID )
     {
-        const string absolutePath = ResourcePaths::findLooseFile( resourceID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
+        const string absolutePath = AssetPaths::findLooseFile( assetID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
         string       text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -338,11 +338,11 @@ namespace sw::editor
         }
         _selectedID.clear();
         _selectedKindLabel.clear();
-        vector<const ResourceDataKind*> listKind;
-        ResourceDataKindUtil::collectMatches( resourceID, listKind );
+        vector<const AssetDataKind*> listKind;
+        AssetDataKindUtil::collectMatches( assetID, listKind );
         if ( listKind.size() == 1 )
             _selectedKindLabel = listKind[0]->_pLabel;
-        _selectedID = resourceID;
+        _selectedID = assetID;
         (void)_document.load( text ); // 깨진 원문은 글 상자로 고치게 열어 둔다 — 이유는 문서가 안다
         _tableEditor.reset();
         _listWarning.clear();
@@ -350,7 +350,7 @@ namespace sw::editor
         _previousFileText = text;
         _statusText.clear();
         syncDirty();
-        SW_LOG_INFO( "Catalog opened %#", resourceID.c_str() );
+        SW_LOG_INFO( "Catalog opened %#", assetID.c_str() );
     }
 
     bool CatalogPanel::writeCurrentFile()
@@ -362,7 +362,7 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const string absolutePath = ResourcePaths::resolveWritePath( _selectedID );
+        const string absolutePath = AssetPaths::resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _document.getText() ) == false )
         {
             SW_LOG_ERROR( "Could not write catalog file '%#'", absolutePath.c_str() );
@@ -396,8 +396,8 @@ namespace sw::editor
     void CatalogPanel::validateCurrentFile()
     {
         _listWarning.clear();
-        _validationState              = ValidationState::None;
-        const ResourceDataKind* pKind = _selectedKindLabel.empty() ? nullptr : ResourceDataKindUtil::findByLabel( _selectedKindLabel );
+        _validationState           = ValidationState::None;
+        const AssetDataKind* pKind = _selectedKindLabel.empty() ? nullptr : AssetDataKindUtil::findByLabel( _selectedKindLabel );
         if ( pKind == nullptr )
         {
             _statusText = "No registered kind - nothing to validate with";
@@ -406,7 +406,7 @@ namespace sw::editor
         bool bLoaded = false;
         {
             CatalogWarningCollector collector;
-            bLoaded      = pKind->_pLoad( ResourceID{ _selectedID } );
+            bLoaded      = pKind->_pLoad( AssetID{ _selectedID } );
             _listWarning = collector.take();
         }
         const bool bPassed = bLoaded && _listWarning.empty();
@@ -422,7 +422,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const string absolutePath = ResourcePaths::resolveWritePath( _selectedID );
+        const string absolutePath = AssetPaths::resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _previousFileText ) == false )
         {
             SW_LOG_ERROR( "Could not restore catalog file '%#'", absolutePath.c_str() );

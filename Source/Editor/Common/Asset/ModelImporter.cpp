@@ -29,6 +29,7 @@
 
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/FractureAsset.h"
@@ -37,7 +38,6 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #define CGLTF_IMPLEMENTATION
@@ -594,7 +594,7 @@ namespace sw::editor
                     }
                     SkeletonAttachment entry{};
                     entry._name           = attachment._name;
-                    entry._meshPath       = ResourcePaths::toResourceID( partPath );
+                    entry._meshPath       = AssetPaths::toAssetID( partPath );
                     entry._parentBone     = attachment._parentBone;
                     entry._localTransform = attachment._localTransform;
                     inoutResult._skeleton.addAttachment( entry );
@@ -640,10 +640,10 @@ namespace sw::editor
             string_view getImportedLabel() const override { return "메시"; }
             bool        isSourceFile( string_view path ) const override { return ModelImporterInternal::isSourceModel( path ); }
             string      makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
+            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
-                if ( findRule( resourcePath, rule ) == false )
+                if ( findRule( assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return ModelImporter::computeSourceHash( sourcePath, rule );
             }
@@ -654,24 +654,24 @@ namespace sw::editor
                 return nullptr;
             }
             /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface` 가 `MeshCache` 로 읽는다)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
-            bool hasOrderDependency( string_view resourcePath ) const override
+            bool hasOrderDependency( string_view assetPath ) const override
             {
-                const ModelImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                const ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
                 return match.hasError() == false && match._rule._bodySurface.empty() == false; // 겹침 오류는 importSource 가 전한다
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
+            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
-                if ( findRule( resourcePath, rule ) == false )
+                if ( findRule( assetPath, rule ) == false )
                     return false;
                 return ModelImporter::importModel( sourcePath, rule, importedPath );
             }
 
         private:
             /** @brief 리소스 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
-            [[nodiscard]] bool findRule( string_view resourcePath, ModelImportRule& outRule ) const
+            [[nodiscard]] bool findRule( string_view assetPath, ModelImportRule& outRule ) const
             {
-                ModelImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
                     SW_LOG_ERROR( "%#", match._error.c_str() );
@@ -803,7 +803,7 @@ namespace sw::editor
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
             return false;
 
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {

@@ -9,8 +9,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 
 /** @brief 안전 영역 흉내(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다(언리얼 r.DebugSafeZone.TitleRatio). 테스트와 미리보기용입니다. */
@@ -60,7 +60,7 @@ namespace sw
         bool _bApplyContentScale{ false };
 
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 를 반환하며, 읽은 값은 남습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 규칙만 적용한 배율입니다(사용자 배율과 창 배율을 적용하기 전이며, 최소와 최대로 제한합니다). */
         float32 computeResolutionScale( const float2& physicalSize ) const;
     };

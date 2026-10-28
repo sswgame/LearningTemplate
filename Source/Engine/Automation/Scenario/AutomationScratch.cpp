@@ -10,8 +10,8 @@
 #include "Core/Process/Process.h"
 #include "Core/UUID/UUID.h"
 
-#include "Engine/Resource/AssetMeta.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetMeta.h"
+#include "Engine/Asset/AssetPaths.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
             /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static bool allowWrite( string_view path, string& outReason )
             {
-                const string& rootPath = ResourcePaths::getRootFolderPath();
+                const string& rootPath = AssetPaths::getRootFolderPath();
                 if ( rootPath.empty() )
                     return true; // 리소스 루트가 아직 없으면 지킬 원본도 없다
                 string absolutePath;
@@ -162,7 +162,7 @@ namespace sw
             outReason = "<Scratch> needs from=\"<resource id>\" and as=\"scratch/<name>\"";
             return false;
         }
-        const bool bLeavesTree = ResourcePaths::hasParentDirectoryComponent( folder._sourceID ) || ResourcePaths::hasParentDirectoryComponent( folder._scratchID );
+        const bool bLeavesTree = AssetPaths::hasParentDirectoryComponent( folder._sourceID ) || AssetPaths::hasParentDirectoryComponent( folder._scratchID );
         if ( bLeavesTree )
         {
             outReason = "<Scratch> ids may not use '..'";
@@ -212,7 +212,7 @@ namespace sw
     {
         if ( isValidFolder( folder, outError ) == false )
             return false;
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
         const string  sourceDir    = FileUtil::joinPath( resourceRoot, folder._sourceID );
         const string  scratchDir   = FileUtil::joinPath( resourceRoot, folder._scratchID );
         if ( FileUtil::isDirectory( sourceDir ) == false )

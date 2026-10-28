@@ -220,7 +220,7 @@ namespace sw
         if ( _regionTablePath.empty() )
             return;
         const FitSolver solver;
-        if ( _regionTable.loadFromResource( ResourceID{ _regionTablePath }, solver.getOperatorRegistry() ) == false )
+        if ( _regionTable.loadFromAsset( AssetID{ _regionTablePath }, solver.getOperatorRegistry() ) == false )
         {
             SW_LOG_ERROR( "'%#': region table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _regionTablePath.c_str() );
             return;
@@ -239,7 +239,7 @@ namespace sw
         }
         const string&       channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
         SurfaceChannelTable channels;
-        if ( channels.loadFromResource( ResourceID{ channelsPath } ) == false )
+        if ( channels.loadFromAsset( AssetID{ channelsPath } ) == false )
         {
             // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
             SW_LOG_ERROR( "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );

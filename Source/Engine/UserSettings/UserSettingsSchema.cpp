@@ -704,17 +704,17 @@ namespace sw
         _version = 1;
     }
 
-    bool UserSettingsSchema::loadFromResource( const ResourceID& resourceID )
+    bool UserSettingsSchema::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         XMLDocument       doc;
         string            absPath;
-        if ( doc.loadResource( resourceID, &absPath ) == false )
+        if ( doc.loadResource( assetID, &absPath ) == false )
         {
-            SW_LOG_ERROR( "Failed to read the user settings schema '%#'", resourcePath );
+            SW_LOG_ERROR( "Failed to read the user settings schema '%#'", assetPath );
             return false;
         }
-        return loadRoot( doc.getRoot( "UserSettingsSchema" ), resourcePath );
+        return loadRoot( doc.getRoot( "UserSettingsSchema" ), assetPath );
     }
 
     bool UserSettingsSchema::loadFromXMLText( string_view xmlText, string_view sourceName )

@@ -125,10 +125,10 @@ namespace sw
         return pushOrder( *pUnit, order, bQueue );
     }
 
-    RTSCommandResult RTSWorld::issueGather( RTSUnitID unitID, RTSUnitID resourceID, bool bQueue )
+    RTSCommandResult RTSWorld::issueGather( RTSUnitID unitID, RTSUnitID assetID, bool bQueue )
     {
         RTSUnit*       pUnit   = findUnitMutable( unitID );
-        const RTSUnit* pTarget = findUnit( resourceID );
+        const RTSUnit* pTarget = findUnit( assetID );
         if ( pUnit == nullptr || pTarget == nullptr )
             return RTSCommandResult::InvalidUnit;
         if ( pUnit->_pDef->_bWorker == SW_FALSE )
@@ -139,7 +139,7 @@ namespace sw
             return RTSCommandResult::CannotDo;
         RTSOrder order;
         order._type       = RTSOrderType::Gather;
-        order._targetUnit = resourceID;
+        order._targetUnit = assetID;
         order._target     = pTarget->_position;
         return pushOrder( *pUnit, order, bQueue );
     }

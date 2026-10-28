@@ -16,14 +16,14 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -118,7 +118,7 @@ namespace sw::editor
         {
             // 드롭한 것은 콘텐츠 브라우저의 리소스 id 다. 이것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
             // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려지므로 주의한다.
-            const string textureID = ResourcePaths::toResourceID( pPath );
+            const string textureID = AssetPaths::toAssetID( pPath );
             if ( textureID.empty() )
                 SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
             pSprite->setTextureName( textureID );
@@ -138,7 +138,7 @@ namespace sw::editor
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
         // 메시 id 는 리소스 id 로 저장한다(씬 파일이 다른 PC 에서도 읽힌다). 리소스 트리 밖이면 만들지 않는다.
-        const string meshID = ResourcePaths::toResourceID( pPath );
+        const string meshID = AssetPaths::toAssetID( pPath );
         if ( meshID.empty() )
         {
             SW_LOG_WARNING( "Mesh drop: '%#' is not inside the resource tree - nothing was placed", pPath );

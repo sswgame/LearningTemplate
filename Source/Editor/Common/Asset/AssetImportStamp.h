@@ -82,7 +82,7 @@ namespace sw::editor
         /** @brief 원본 경로에 해당하는 결과 경로를 반환합니다. 원본 폴더 구간이 없으면 빈 문자열입니다. */
         virtual string makeImportedPath( string_view sourcePath ) const = 0;
         /** @brief 원본 바이트, 적용한 규칙, 임포터 버전을 섞은 해시입니다. 읽지 못하면 0 입니다. */
-        virtual uint64 computeSourceHash( string_view sourcePath, string_view resourcePath ) const = 0;
+        virtual uint64 computeSourceHash( string_view sourcePath, string_view assetPath ) const = 0;
         /**
          * @brief 임포트 결과의 해시입니다. 결과가 없으면 0 입니다. 기본은 결과 파일 하나의 바이트입니다.
          * @details 결과가 여러 파일인 종류는 그것을 모두 섞어 반환한다. 스킨드 모델은 메시와 옆 폴더의 스켈레톤, 클립이 해당한다. 그래야 옆 파일을 손대거나
@@ -95,13 +95,13 @@ namespace sw::editor
          * @brief 이 원본의 임포트가 다른 원본의 임포트 결과를 읽으면 true 입니다(기본은 false). 클래스 설명의 임포터 규칙을 보십시오.
          * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
          */
-        virtual bool hasOrderDependency( [[maybe_unused]] string_view resourcePath ) const { return false; }
+        virtual bool hasOrderDependency( [[maybe_unused]] string_view assetPath ) const { return false; }
         /**
          * @brief 원본 하나를 결과 경로로 임포트합니다.
-         * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `ResourcePaths` 의 전역 쓰기,
+         * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `AssetPaths` 의 전역 쓰기,
          *          에디터 서비스 범위(`findEditorScope`)를 건드리지 않는다.
          */
-        [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const = 0;
+        [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const = 0;
     };
 } // namespace sw::editor
 
@@ -131,14 +131,14 @@ namespace sw::editor
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager );
 
         /**
-         * @brief @p listResourcePath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
+         * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
          * @details 루트 전체를 훑는 `importAll` 은 원본마다 내용 해시를 읽어 비용이 바뀐 파일 수가 아니라 원본 수에 비례한다. 이쪽은 범위 안 원본이 든 폴더만 훑고 범위 밖 원본은 읽지 않는다.
          *          스탬프를 쓰는 길은 `importAll` 과 같은 한 곳이다(에디터가 임포트한 것과 `App --import-*` 가 임포트한 것이 같은 판정을 받는다). 범위 밖 원본의 스탬프 줄은 그대로 둔다.
          *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.
          *          **범위 밖에서 어긋난 것(규칙 파일만 고친 다른 원본 등)은 보정하지 않는다.** 그 보정은 `App --import-*` 의 전체 대조가 한다.
          *          작업 시스템(@p pTaskManager, `importAll` 과 같음)을 부르는 쪽이 넘기므로 에디터 스레드에서도 워커에서도 부를 수 있다.
          */
-        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath,
+        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
                                                                TaskManager* pTaskManager );
 
         /**

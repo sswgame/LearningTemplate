@@ -7,12 +7,12 @@
 
 namespace sw
 {
-    bool XMLCatalogLoader::loadFile( void* pCatalog, ReadRootFunction pReadRoot, const ResourceID& resourceID, const utf8* pRootName )
+    bool XMLCatalogLoader::loadFile( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        return XMLReadUtil::loadRootOrWarn( doc, resourceID, pRootName, root, sourceName ) && pReadRoot( pCatalog, root, sourceName );
+        return XMLReadUtil::loadRootOrWarn( doc, assetID, pRootName, root, sourceName ) && pReadRoot( pCatalog, root, sourceName );
     }
 
     bool XMLCatalogLoader::loadText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )

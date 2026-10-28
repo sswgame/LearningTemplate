@@ -23,6 +23,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -46,7 +47,6 @@
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -69,7 +69,7 @@ namespace sw::editor
 
         // 이 테이블이 확장자 → 에디터 종류의 원본이다. 엔진이 읽는 포맷의 철자는 그 포맷의 에셋 종류 정의(`AssetTypeDef`)를 가리키고(문자열을 다시 적지 않는다),
         // 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을, 카탈로그 데이터는 `.xml` · `.json` 을 따른다. 계약은 `EditorAssetTypeTest` 의
-        // `EveryEngineFormatMapsToItsKind` · `EveryResourceDataKindIsData` · `EveryEngineAssetTypeIsAccountedFor` 가 지킨다. 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
+        // `EveryEngineFormatMapsToItsKind` · `EveryAssetDataKindIsData` · `EveryEngineAssetTypeIsAccountedFor` 가 지킨다. 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
         // 여기 적는 확장자는 이 저장소가 실제로 읽거나 쓰는 것만 둔다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
         // `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Resource/common/shaders/bin/`) 셰이더
         // 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.

@@ -53,11 +53,11 @@
     #include "Engine/Renderer/ScreenshotMailbox.h"
     #include "Engine/Window/MainWindowSubsystem.h"
 #endif
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/PackEngineSettingsSubsystem.h"
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetStreamingQueue.h"
+#include "Engine/Asset/PackEngineSettingsSubsystem.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
@@ -119,7 +119,7 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<CrashReportService>() );
         services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
-        services.addSubsystem( sw::make_unique<ResourceDataKindRegistry>() );
+        services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
 #if SW_DEV_COMMANDS_ENABLED
         if ( setup._bAuthorityGhost )

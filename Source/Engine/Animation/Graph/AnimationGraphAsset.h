@@ -12,8 +12,8 @@
 
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/BlendSpace.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -219,7 +219,7 @@ namespace sw
         AnimationGraphAsset() = default;
 
         /** @brief 리소스 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
-        [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief XML 파일을 씁니다. */

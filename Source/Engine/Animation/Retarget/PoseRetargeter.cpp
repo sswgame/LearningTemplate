@@ -384,7 +384,7 @@ namespace sw
         return true;
     }
 
-    bool RetargetBakeUtil::bakeClipFile( const ResourceID& profileID, const ResourceID& sourceClipID, string_view outClipPath )
+    bool RetargetBakeUtil::bakeClipFile( const AssetID& profileID, const AssetID& sourceClipID, string_view outClipPath )
     {
         const string_view sourceClipPath = sourceClipID.view();
         const string_view profilePath    = profileID.view();
@@ -392,8 +392,8 @@ namespace sw
         Skeleton          sourceSkeleton;
         Skeleton          targetSkeleton;
         AnimationClip     sourceClip;
-        const bool        bLoaded = profile.loadFromResource( profileID ) && sourceSkeleton.loadFromResource( ResourceID{ profile.getSourceSkeletonPath() } ) &&
-                             targetSkeleton.loadFromResource( ResourceID{ profile.getTargetSkeletonPath() } ) && sourceClip.loadFromResource( sourceClipID );
+        const bool        bLoaded = profile.loadFromAsset( profileID ) && sourceSkeleton.loadFromAsset( AssetID{ profile.getSourceSkeletonPath() } ) &&
+                             targetSkeleton.loadFromAsset( AssetID{ profile.getTargetSkeletonPath() } ) && sourceClip.loadFromAsset( sourceClipID );
         if ( bLoaded == false )
         {
             SW_LOG_ERROR( "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
@@ -420,12 +420,12 @@ namespace sw
         outError.clear();
         Skeleton sourceSkeleton;
         Skeleton targetSkeleton;
-        if ( profile.getSourceSkeletonPath().empty() || sourceSkeleton.loadFromResource( ResourceID{ profile.getSourceSkeletonPath() } ) == false )
+        if ( profile.getSourceSkeletonPath().empty() || sourceSkeleton.loadFromAsset( AssetID{ profile.getSourceSkeletonPath() } ) == false )
         {
             outError = "The source skeleton could not be read";
             return false;
         }
-        if ( profile.getTargetSkeletonPath().empty() || targetSkeleton.loadFromResource( ResourceID{ profile.getTargetSkeletonPath() } ) == false )
+        if ( profile.getTargetSkeletonPath().empty() || targetSkeleton.loadFromAsset( AssetID{ profile.getTargetSkeletonPath() } ) == false )
         {
             outError = "The target skeleton could not be read";
             return false;

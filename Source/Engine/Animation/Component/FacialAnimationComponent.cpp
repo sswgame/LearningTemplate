@@ -10,6 +10,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioService.h"
@@ -18,7 +19,6 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -214,7 +214,7 @@ namespace sw
     void FacialAnimationComponent::loadRig()
     {
         FacialRig rig;
-        if ( _facialRigPath.empty() == false && rig.loadFromResource( ResourceID{ _facialRigPath } ) == false )
+        if ( _facialRigPath.empty() == false && rig.loadFromAsset( AssetID{ _facialRigPath } ) == false )
             SW_LOG_ERROR( "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
         setFacialRig( rig );
     }
@@ -291,13 +291,13 @@ namespace sw
         _listTrackToRigViseme.clear();
     }
 
-    bool FacialAnimationComponent::speak( const ResourceID& resourceID )
+    bool FacialAnimationComponent::speak( const AssetID& assetID )
     {
-        const string_view audioPath = resourceID.view();
+        const string_view audioPath = assetID.view();
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
             const string& lipSyncPath = engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get();
-            if ( _lipSync.loadFromResource( ResourceID{ lipSyncPath } ) == false )
+            if ( _lipSync.loadFromAsset( AssetID{ lipSyncPath } ) == false )
                 SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", lipSyncPath );
             _bLipSyncSettingsReady = SW_TRUE;
         }
@@ -306,7 +306,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( ResourceIO::readTextResource( ResourceID{ trackPath }, trackText ) && track.parseXML( trackText, trackPath ) )
+        if ( AssetIO::readTextAsset( AssetID{ trackPath }, trackText ) && track.parseXML( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;
@@ -316,7 +316,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            const bool    bAudioDecoded = ResourceIO::readBinaryResource( resourceID, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+            const bool    bAudioDecoded = AssetIO::readBinaryAsset( assetID, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
                                        AudioClipData::convertPcm( pcm, clip );
             if ( bAudioDecoded )
             {
@@ -335,7 +335,7 @@ namespace sw
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
         IAudioService*           pAudio   = pManager != nullptr ? pManager->getSceneEngineServices()._pAudioService : nullptr;
         if ( pAudio != nullptr && pAudio->isInitialized() )
-            (void)pAudio->play( resourceID );
+            (void)pAudio->play( assetID );
         return true;
     }
 

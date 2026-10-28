@@ -1,16 +1,16 @@
 #include "pch.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
-#include "Engine/Resource/ResourceDataKind.h"
 
 namespace sw
 {
     namespace
     {
-        [[nodiscard]] bool loadPresetTable( const ResourceID& id )
+        [[nodiscard]] bool loadPresetTable( const AssetID& id )
         {
             NetEmulationPresetTable table;
-            return table.loadFromResource( id );
+            return table.loadFromAsset( id );
         }
     } // namespace
 

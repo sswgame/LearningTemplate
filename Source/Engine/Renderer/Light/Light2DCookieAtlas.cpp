@@ -2,12 +2,12 @@
 
 #include "Engine/Renderer/Light/Light2DCookieAtlas.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Resource/Image/ImageFileWriter.h"
 
 namespace sw
 {

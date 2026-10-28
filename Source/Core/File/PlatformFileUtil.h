@@ -3,7 +3,7 @@
  * @brief 플랫폼마다 이름이 다른 stdio 원시 연산입니다.
  *
  * @details 안전한 파일 열기와 64비트 오프셋 탐색은 Windows 와 POSIX 에서 함수 이름이 다릅니다. 쓰는 곳마다 그 `#if` 를
- *          적으면(`FileUtil` · `Logger` · Engine 의 `ResourcePakReader`) 플랫폼을 하나 더 지원할 때 모두 찾아내 빠짐없이
+ *          적으면(`FileUtil` · `Logger` · Engine 의 `PackReader`) 플랫폼을 하나 더 지원할 때 모두 찾아내 빠짐없이
  *          고쳐야 합니다. 그래서 원시 연산은 여기 한 곳에만 둡니다.
  *
  * @note 분기가 짧아 이 `.cpp` 하나가 두 플랫폼을 모두 담습니다. 플랫폼 코드가 큰 것(비동기 IO 백엔드 · FileDialog · FileWatcher)은

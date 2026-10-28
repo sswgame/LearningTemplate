@@ -5,6 +5,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -28,7 +29,6 @@
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -246,7 +246,7 @@ namespace sw
         choice._bDeferred                  = gv_deferred;
         const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
 
-        if ( loadPipeline( ResourceID{ resolvedPipeline } ) == false )
+        if ( loadPipeline( AssetID{ resolvedPipeline } ) == false )
         {
             _status = FrameRendererStatus::Failed;
             if ( _statusMessage.empty() )
@@ -324,15 +324,15 @@ namespace sw
         SW_LOG_INFO( "Shut down." );
     }
 
-    bool FrameRenderer::loadPipeline( const ResourceID& resourceID )
+    bool FrameRenderer::loadPipeline( const AssetID& assetID )
     {
-        const string_view pipelineXMLPath = resourceID.view();
+        const string_view pipelineXMLPath = assetID.view();
         _pipelinePath                     = pipelineXMLPath;
         _bCallbacksBound                  = SW_FALSE;
         _graph.clear();
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXMLFile( resourceID ) == false )
+        if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
         {
             _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;

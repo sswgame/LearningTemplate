@@ -4,7 +4,7 @@ Scripts/generate/CookContract.py
 Config/Engine/CookContract.json(쿠킹 표의 단일 출처)을 읽어 C++ 헤더(sw/config/CookContract.gen.h)를 생성합니다.
 
 생성물은 X-macro 둘이다 — `SW_RHI_BACKEND_TABLE( X )` 와 `SW_TARGET_EXCLUDED_GROUP_TABLE( X )`. 쓰는 쪽(ArgumentList.xxx ·
-RHIBackendUtil · ShaderCooker · PackCooker · ResourcePaths)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
+RHIBackendUtil · ShaderCooker · PackCooker · AssetPaths)이 X 를 정의해 펼치므로, 줄이 늘면 그 자리들이 같이 늘어난다. Python 쿠커
 (Pack 등)는 같은 파일을 `CookContractSpec` 으로 읽는다.
 
 Usage:

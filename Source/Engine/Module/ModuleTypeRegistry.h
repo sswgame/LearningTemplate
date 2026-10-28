@@ -10,7 +10,7 @@ namespace sw
 {
     struct EnumRegistrar;
     struct GlobalVariableRegistrar;
-    struct ResourceDataKindRegistrar;
+    struct AssetDataKindRegistrar;
     struct TypeRegistrar;
 
     namespace engine
@@ -22,10 +22,10 @@ namespace sw
          */
         struct ModuleRegistrarHeads
         {
-            TypeRegistrar*             _pType{ nullptr };
-            EnumRegistrar*             _pEnum{ nullptr };
-            GlobalVariableRegistrar*   _pVariable{ nullptr }; ///< 타입과 달리 캐시해 두었다 다시 쓰지 않는다 — 같은 이름을 두 번 올리면 매니저가 경고하고 무시하므로, 새로 뗀 것만 올린다.
-            ResourceDataKindRegistrar* _pDataKind{ nullptr }; ///< 변수와 같다 — 새로 뗀 것만 올린다(모듈 이름으로 올리고 내리기 전에 뺀다).
+            TypeRegistrar*           _pType{ nullptr };
+            EnumRegistrar*           _pEnum{ nullptr };
+            GlobalVariableRegistrar* _pVariable{ nullptr }; ///< 타입과 달리 캐시해 두었다 다시 쓰지 않는다 — 같은 이름을 두 번 올리면 매니저가 경고하고 무시하므로, 새로 뗀 것만 올린다.
+            AssetDataKindRegistrar*  _pDataKind{ nullptr }; ///< 변수와 같다 — 새로 뗀 것만 올린다(모듈 이름으로 올리고 내리기 전에 뺀다).
         };
 
         /** @brief 전역 머리들을 그대로 읽습니다(비우지 않습니다). */

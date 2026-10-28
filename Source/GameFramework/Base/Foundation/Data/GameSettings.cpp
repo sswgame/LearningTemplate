@@ -5,11 +5,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -20,21 +20,21 @@ namespace sw
 {
     SW_LOG_CALLER( "GameSettings" );
 
-    bool GameSettings::loadFromResource( const ResourceID& resourceID )
+    bool GameSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         // 게임별 기본 경로를 엔진이 알 필요는 없다. 경로가 없으면 로드할 것도 없다.
         if ( assetRelativePath.empty() )
             return false;
 
-        if ( ResourceIO::hasResource( resourceID ) == false )
+        if ( AssetIO::hasResource( assetID ) == false )
             return false;
 
         // **먼저 비운다.**
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameSettings{};
-        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, resourceID, "GameSettings" );
+        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, assetID, "GameSettings" );
     }
 
     bool GameSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -122,6 +122,6 @@ namespace sw
 
     bool BootstrapConfig::load( string_view gameSettingsFileName )
     {
-        return _data.loadFromResource( ResourceID{ resolve( gameSettingsFileName ) } );
+        return _data.loadFromAsset( AssetID{ resolve( gameSettingsFileName ) } );
     }
 } // namespace sw

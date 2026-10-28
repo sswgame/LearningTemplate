@@ -19,9 +19,9 @@ namespace sw
     {
     }
 
-    bool SequencePlayer::loadFromFile( const ResourceID& resourceID )
+    bool SequencePlayer::loadFromFile( const AssetID& assetID )
     {
-        const bool bLoaded = _asset.loadFromFile( resourceID );
+        const bool bLoaded = _asset.loadFromFile( assetID );
         // **에셋을 바꾼 뒤에 멈춘다.** `stop()` 이 먼저면 그 안의 `_previousFrame = _asset._frameMin` 이
         // **바뀌기 전 에셋**의 시작 프레임을 가져간다. 새 에셋이 100 프레임에서 시작하고 직전 값이 0 이면 첫 갱신이
         // `applyFrame(100, 0)` 이 되어 100 이하의 이벤트가 모두 한꺼번에 발화한다.

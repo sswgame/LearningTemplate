@@ -16,9 +16,9 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -215,7 +215,7 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const string writePath = ResourcePaths::getWritePath( string_view( getLoadedAssetPath() ) );
+        const string writePath = AssetPaths::getWritePath( string_view( getLoadedAssetPath() ) );
         if ( writePath.empty() || FileUtil::writeTextFile( writePath, _profile.toXML() ) == false )
         {
             _status = writePath.empty() ? string( "No write path for this asset" ) : string( "The profile could not be written" );
@@ -240,7 +240,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        if ( ResourceIO::hasResource( ResourceID{ path } ) == false )
+        if ( AssetIO::hasResource( AssetID{ path } ) == false )
         {
             // 없는 경로는 새 프로필이다 — 빈 문서로 시작하고 저장하면 파일을 만든다(스켈레톤 · 뿌리와 골반이 묶이기 전에는 저장되지 않는다).
             _profile.clear();
@@ -248,7 +248,7 @@ namespace sw::editor
             _status = "New profile - set both skeletons and the root and pelvis pairs, then save";
             return ToolAssetLoadResult::Missing;
         }
-        if ( _profile.loadFromResource( ResourceID{ path } ) == false )
+        if ( _profile.loadFromAsset( AssetID{ path } ) == false )
         {
             _status = "The retarget profile could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
@@ -285,8 +285,8 @@ namespace sw::editor
 
     void RetargetPanel::reloadPreviewSkeletons()
     {
-        _bPreviewSourceReady = _profile.getSourceSkeletonPath().empty() == false && _previewSource.loadFromResource( ResourceID{ _profile.getSourceSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
-        _bPreviewTargetReady = _profile.getTargetSkeletonPath().empty() == false && _previewTarget.loadFromResource( ResourceID{ _profile.getTargetSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
+        _bPreviewSourceReady = _profile.getSourceSkeletonPath().empty() == false && _previewSource.loadFromAsset( AssetID{ _profile.getSourceSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
+        _bPreviewTargetReady = _profile.getTargetSkeletonPath().empty() == false && _previewTarget.loadFromAsset( AssetID{ _profile.getTargetSkeletonPath() } ) ? SW_TRUE : SW_FALSE;
         _bFramePending       = SW_TRUE;
         rebuildPreviewPoses();
     }

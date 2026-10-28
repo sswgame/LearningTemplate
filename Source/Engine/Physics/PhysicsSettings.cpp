@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -14,13 +14,13 @@ namespace sw
 
 namespace sw
 {
-    bool PhysicsSettings::loadFromResource( const ResourceID& resourceID )
+    bool PhysicsSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
-        *this                          = PhysicsSettings{};
-        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
+        const string_view assetPath = assetID.view();
+        *this                       = PhysicsSettings{};
+        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", resourcePath );
+            SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", assetPath );
             return false;
         }
         return validate();
@@ -150,5 +150,5 @@ namespace sw
     }
 
     /** @brief 물리 설정 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( PhysicsSettings, "physicssettings", nullptr, nullptr, "physicssettings.xml", &ResourceDataKindUtil::loadCatalog<PhysicsSettings> );
+    SW_RESOURCE_DATA_KIND( PhysicsSettings, "physicssettings", nullptr, nullptr, "physicssettings.xml", &AssetDataKindUtil::loadCatalog<PhysicsSettings> );
 } // namespace sw

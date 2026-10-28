@@ -9,10 +9,10 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"

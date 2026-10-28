@@ -10,7 +10,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 
 namespace sw::editor
 {
@@ -55,7 +55,7 @@ namespace sw::editor
         if ( _bDisabled == SW_TRUE || resourceRelativePath.empty() )
             return;
         // 규칙은 저장소 리소스(`Resource/`)의 것이다 — 붙인 디스크 도메인(시나리오의 `saved`)의 파일은 저장소의 guid 표로 볼 수 없다.
-        if ( ResourcePaths::isMountedDiskDomainID( ResourcePaths::toResourceID( resourceRelativePath ) ) )
+        if ( AssetPaths::isMountedDiskDomainID( AssetPaths::toAssetID( resourceRelativePath ) ) )
             return;
         const string path = FileUtil::normalizeSeparators( resourceRelativePath );
         for ( const string& pending : _listPendingPath )
@@ -114,11 +114,11 @@ namespace sw::editor
         return _listPendingPath.empty() == false || _pJob->isPending();
     }
 
-    ProcessCommand EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listResourcePath )
+    ProcessCommand EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listAssetPath )
     {
         ProcessCommand command = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) );
         command._listArgument.insert( command._listArgument.end(), { "--severity", "warning", "--files" } );
-        command._listArgument.insert( command._listArgument.end(), listResourcePath.begin(), listResourcePath.end() );
+        command._listArgument.insert( command._listArgument.end(), listAssetPath.begin(), listAssetPath.end() );
         return command;
     }
 

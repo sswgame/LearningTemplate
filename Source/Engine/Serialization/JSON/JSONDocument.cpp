@@ -8,7 +8,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 #include <nlohmann/json.hpp>
 
@@ -517,9 +517,9 @@ namespace sw
 
     bool JSONDocument::loadFile( string_view absPath )
     {
-        // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`ResourceIO::readTextFile`).
+        // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;
-        if ( ResourceIO::readTextFile( absPath, text ) == false )
+        if ( AssetIO::readTextFile( absPath, text ) == false )
         {
             _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
             return false;
@@ -527,9 +527,9 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool JSONDocument::loadResource( const ResourceID& resourceID, string* pOutAbsPath )
+    bool JSONDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         if ( relativePath.empty() )
         {
             _lastError = "empty path";
@@ -537,7 +537,7 @@ namespace sw
         }
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( resourceID, text, &absPath ) == false )
+        if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false )
         {
             _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;

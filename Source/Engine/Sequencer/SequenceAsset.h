@@ -11,10 +11,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -219,7 +219,7 @@ namespace sw
         SequenceAsset() = default;
 
         /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
-        [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief XML 파일을 씁니다. */

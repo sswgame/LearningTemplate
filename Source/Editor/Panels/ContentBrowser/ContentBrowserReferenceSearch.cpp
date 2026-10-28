@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 
 namespace sw::editor
 {
@@ -62,16 +62,16 @@ namespace sw::editor
 
     bool ContentBrowserReferenceSearch::tryRefreshChangedFiles( const vector<string>& listChangedPath )
     {
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
-        for ( const string& resourceID : listChangedPath )
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        for ( const string& assetID : listChangedPath )
         {
-            const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, resourceID ) );
-            if ( bExists != _index.containsFile( resourceID ) )
+            const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, assetID ) );
+            if ( bExists != _index.containsFile( assetID ) )
                 return false; // 생기거나 사라진 파일 — 다른 파일의 참조 판정이 바뀐다
         }
-        for ( const string& resourceID : listChangedPath )
+        for ( const string& assetID : listChangedPath )
         {
-            _index.refreshFile( resourceRoot, resourceID );
+            _index.refreshFile( resourceRoot, assetID );
         }
         return true;
     }
@@ -99,12 +99,12 @@ namespace sw::editor
         if ( _pChangeSource != nullptr )
             _pChangeSource->discardChangedPaths();
         // 워커는 에디터 범위를 찾지 않는다 — 여기서 찾아 넘긴다. 작업 관리자는 엔진 기동이 늘 올리므로 없으면 버그다.
-        _job.request( ResourcePaths::getRootFolderPath(), &editor::getSubsystem<TaskManager>() );
+        _job.request( AssetPaths::getRootFolderPath(), &editor::getSubsystem<TaskManager>() );
     }
 
     void ContentBrowserReferenceSearch::query( string_view absolutePath, bool bDependencies )
     {
-        _queryID          = ResourcePaths::toResourceID( absolutePath );
+        _queryID          = AssetPaths::toAssetID( absolutePath );
         _bDependencyQuery = bDependencies ? SW_TRUE : SW_FALSE;
         if ( bDependencies )
             _index.findDependencies( _queryID, _listResult );

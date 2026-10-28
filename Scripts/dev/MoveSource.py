@@ -27,7 +27,7 @@ from common.Paths import getProjectRoot
 
 kTextSuffix = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli"}
 kCppSuffix = {".h", ".hpp", ".inl", ".cpp"}
-kScanRoot = ["Source", "Tools/ReflectionParser", "Tools/OnlineLoadBot", "cmake", "Scripts", "docs", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md"]
+kScanRoot = ["Source", "Tools/ReflectionParser", "Tools/OnlineLoadBot", "cmake", "Scripts", "docs", "Config","CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md"]
 kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 
@@ -163,9 +163,10 @@ def mainMove(argv: list[str]) -> int:
                 changedCppSet.add(path)
     listChangedCpp = sorted(changedCppSet)
 
-    from lint.Format import FormatIncludeOrderFixer
+    from lint.Format import FormatIncludeOrderFixer, runClangFormatBatch
 
     FormatIncludeOrderFixer().processFiles(listChangedCpp, checkOnly=False)
+    runClangFormatBatch(listChangedCpp, cwd=root)  # 경로 길이가 바뀌면 정렬 칸이 어긋난다
     print(f"[move-source] {len(mapFile)} 파일을 옮기고 C++ {len(listChangedCpp)} 파일의 참조 · include 순서를 고쳤다")
     return ExitCode.Passed
 
@@ -175,10 +176,27 @@ def mainRename(argv: list[str]) -> int:
     parser.add_argument("pair", nargs="+", help="Old=New")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true", help="새 이름이 이미 쓰여도 바꾼다")
+    parser.add_argument("--regex", action="store_true", help="Old 를 정규식(낱말 경계 없이)으로, New 를 치환식으로 — 이름 일부를 바꾼다. 충돌 검사는 하지 않으니 빌드로 확인한다")
     args = parser.parse_args(argv)
 
     root = getProjectRoot()
     listPair = [pair.partition("=")[::2] for pair in args.pair]
+    if args.regex:
+        listRule = [(re.compile(old), new) for old, new in listPair]
+        changedCount = 0
+        listChanged: list[Path] = []
+        for path in listTrackedText(root):
+            text = readText(path)
+            rewritten = text
+            for pattern, replacement in listRule:
+                rewritten = pattern.sub(replacement, rewritten)
+            if rewritten != text:
+                changedCount += 1
+                listChanged.append(path)
+                if not args.dry_run:
+                    writeText(path, rewritten)
+        print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
+        return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
     listFile = [path for path in listTrackedText(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
     mapText = {path: readText(path) for path in listFile}
     bClash = False
@@ -192,13 +210,23 @@ def mainRename(argv: list[str]) -> int:
     if bClash:
         return ExitCode.Violation
     changedCount = 0
+    listChanged = []
     for path, text in mapText.items():
         rewritten = text
         for old, new in listPair:
             rewritten = re.sub(rf"\b{re.escape(old)}\b", new, rewritten)
         if rewritten != text:
             changedCount += 1
+            listChanged.append(path)
             if not args.dry_run:
                 writeText(path, rewritten)
     print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
-    return ExitCode.Passed
+    return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
+
+
+def formatChanged(root: Path, listPath: list[Path]) -> int:
+    """이름 길이가 바뀌면 clang-format 의 정렬 칸이 어긋난다 — 바꾼 C++ 파일만 다시 포맷한다."""
+    from lint.Format import runClangFormatBatch
+
+    listCpp = [path for path in listPath if path.suffix.lower() in kCppSuffix]
+    return runClangFormatBatch(listCpp, cwd=root) if listCpp else ExitCode.Passed

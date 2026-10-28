@@ -6,11 +6,11 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw

@@ -208,11 +208,11 @@ namespace sw::editor
 
     void QuickLauncherPopup::pollFileIndex()
     {
-        vector<EditorResourceIndexEntry> listFileEntry;
+        vector<EditorAssetIndexEntry> listFileEntry;
         if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
 
-        for ( const EditorResourceIndexEntry& entry : listFileEntry )
+        for ( const EditorAssetIndexEntry& entry : listFileEntry )
         {
             QuickLauncherItem item{};
             item._kind     = entry._kind;

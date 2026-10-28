@@ -7,14 +7,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/UUID/UUID.h"
 
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -195,14 +195,14 @@ namespace sw
 
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
 
-    bool SceneDocument::loadXML( const ResourceID& resourceID )
+    bool SceneDocument::loadXML( const AssetID& assetID )
     {
         *this       = {};
-        _sourcePath = resourceID.str();
-        AssetLoadScope loadScope( "Scene", resourceID.view() );
+        _sourcePath = assetID.str();
+        AssetLoadScope loadScope( "Scene", assetID.view() );
         XMLDocument    doc;
         string         absPath;
-        const bool     bRead = doc.loadResource( resourceID, &absPath );
+        const bool     bRead = doc.loadResource( assetID, &absPath );
         return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
@@ -354,7 +354,7 @@ namespace sw
             }
         }
 
-        const string absPath = ResourcePaths::getWritePath( path );
+        const string absPath = AssetPaths::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -370,17 +370,17 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::loadBinary( const ResourceID& resourceID )
+    bool SceneDocument::loadBinary( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         *this                  = {};
         _sourcePath            = path;
 
-        // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `ResourceIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
+        // 낱개 파일 허용 정책(OS 절대 경로 · 작업 경로 포함)은 `AssetIO` 한 곳이 본다 — 실패 뒤 디스크를 다시 열지 않는다.
         vector<uint8> bytes;
         const string  absPath{ path };
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -489,7 +489,7 @@ namespace sw
             SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 
-        const string absPath = ResourcePaths::getWritePath( path );
+        const string absPath = AssetPaths::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -512,26 +512,26 @@ namespace sw
         return count;
     }
 
-    bool SceneDocument::load( const ResourceID& resourceID )
+    bool SceneDocument::load( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 쿠킹하지 않는다.
         const string binPath = AssetCookPath::toCookedPath( path );
 
 #if defined( SW_SHIPPING )
-        if ( binPath.empty() == false && loadBinary( ResourceID{ binPath } ) )
+        if ( binPath.empty() == false && loadBinary( AssetID{ binPath } ) )
             return true;
         SW_LOG_ERROR( "Shipping requires cooked binary scene: %# (cooked name '%#')", path, binPath );
         return false;
 #else
         if ( FileUtil::hasExtension( path, ".bin" ) )
-            return loadBinary( resourceID );
+            return loadBinary( assetID );
 
-        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( ResourceID{ binPath } ) && loadBinary( ResourceID{ binPath } );
+        const bool bBinaryLoaded = binPath.empty() == false && AssetIO::hasResource( AssetID{ binPath } ) && loadBinary( AssetID{ binPath } );
         if ( bBinaryLoaded )
             return true;
 
-        return loadXML( ResourceID{ path } );
+        return loadXML( AssetID{ path } );
 #endif
     }
 

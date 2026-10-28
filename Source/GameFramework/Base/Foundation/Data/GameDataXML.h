@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
@@ -35,18 +35,18 @@ namespace sw
     {
         /**
          * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
-         * @details 카탈로그마다 같았던 `loadFromResource` 의 몸통이다. 카탈로그는 이 한 줄만 두면 된다.
+         * @details 카탈로그마다 같았던 `loadFromAsset` 의 몸통이다. 카탈로그는 이 한 줄만 두면 된다.
          * @code
-         *     bool CropCatalog::loadFromResource( const ResourceID& resourceID ) { const string_view path = resourceID.view(); return GameDataXML::loadFile( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }
+         *     bool CropCatalog::loadFromAsset( const AssetID& assetID ) { const string_view path = assetID.view(); return GameDataXML::loadFile( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }
          * @endcode
          *          루트 읽기는 읽은 항목 수(`uint32`, 0 이면 실패)나 성공 여부(`bool`)를 반환한다.
          *          멤버 포인터를 카탈로그 안에서 넘기므로 루트 읽기는 비공개로 둘 수 있다.
          */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), const ResourceID& resourceID, const utf8* pRootName )
+        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), const AssetID& assetID, const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
-            return XMLCatalogLoader::loadFile( &call, &RootCall<TLoader, TResult>::invoke, resourceID, pRootName );
+            return XMLCatalogLoader::loadFile( &call, &RootCall<TLoader, TResult>::invoke, assetID, pRootName );
         }
         /** @brief `loadFile` 의 XML 문자열 버전입니다. 테스트와 에디터 미리보기(`loadFromXMLText`)가 씁니다. */
         template <typename TLoader, typename TResult>
@@ -60,10 +60,10 @@ namespace sw
         /** @brief `loadFile` 에 다른 카탈로그(기술, 코스터 설계)를 함께 넘기는 버전입니다. 루트 읽기가 `( root, context, sourceName )` 를 받습니다. */
         template <typename TLoader, typename TResult, typename TContext>
         [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
-                                            const ResourceID& resourceID, const utf8* pRootName )
+                                            const AssetID& assetID, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
-            return XMLCatalogLoader::loadFile( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, resourceID, pRootName );
+            return XMLCatalogLoader::loadFile( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, assetID, pRootName );
         }
         /** @brief `loadText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
         template <typename TLoader, typename TResult, typename TContext>

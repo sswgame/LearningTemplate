@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Resource/Pack/PackPatchTrustSource.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Pack/PackPatchTrustSource.h"
 
 #include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
@@ -50,7 +50,7 @@ namespace sw
 {
     string NetSecurity::makeProjectPath( string_view path )
     {
-        const string& projectFolder = ResourcePaths::getProjectFolderPath();
+        const string& projectFolder = AssetPaths::getProjectFolderPath();
         const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
         if ( bKeepPathAsIs )
             return string( path );
@@ -71,7 +71,7 @@ namespace sw
         outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
         return false;
 #else
-        const string& projectFolder = ResourcePaths::getProjectFolderPath();
+        const string& projectFolder = AssetPaths::getProjectFolderPath();
         const string  rootFolder    = projectFolder.empty() ? FileUtil::getCurrentPath() : projectFolder;
         const string  folder        = FileUtil::joinPath( FileUtil::joinPath( rootFolder, path::kSavedFolder ), kDevCertificateFolder );
         outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateFile );

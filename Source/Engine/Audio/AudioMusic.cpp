@@ -2,26 +2,26 @@
 
 #include "Engine/Audio/AudioMusic.h"
 
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AudioMusic" );
 
-    bool AudioMusicDesc::loadFromResource( const ResourceID& resourceID )
+    bool AudioMusicDesc::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Music not found: %#", resourcePath );
+            SW_LOG_ERROR( "Music not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, resourcePath );
+        return loadFromXMLText( text, assetPath );
     }
 
     bool AudioMusicDesc::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -152,5 +152,5 @@ namespace sw
     }
 
     /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &ResourceDataKindUtil::loadCatalog<AudioMusicDesc> );
+    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &AssetDataKindUtil::loadCatalog<AudioMusicDesc> );
 } // namespace sw

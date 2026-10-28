@@ -35,7 +35,7 @@ namespace sw
             return pathIt->second;
 
         unique_ptr<RenderPassAsset> res = make_unique<RenderPassAsset>();
-        if ( res->loadFromXMLFile( ResourceID{ pathKey } ) == false )
+        if ( res->loadFromXMLFile( AssetID{ pathKey } ) == false )
             return nullptr;
 
         hashed_string    key( res->getDesc()._name.c_str() );
@@ -63,7 +63,7 @@ namespace sw
             return pathIt->second;
 
         unique_ptr<RenderPipelineAsset> res = make_unique<RenderPipelineAsset>();
-        if ( res->loadFromXMLFile( ResourceID{ pathKey } ) == false )
+        if ( res->loadFromXMLFile( AssetID{ pathKey } ) == false )
             return nullptr;
 
         hashed_string        key( res->getDesc()._name.c_str() );

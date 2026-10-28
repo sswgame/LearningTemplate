@@ -5,6 +5,7 @@
 #include "Core/Common/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -13,7 +14,6 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {

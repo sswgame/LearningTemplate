@@ -3,14 +3,14 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -373,10 +373,10 @@ namespace sw
         }
     }
 
-    bool Material::loadFromFile( const ResourceID& resourceID )
+    bool Material::loadFromFile( const AssetID& assetID )
     {
         XMLDocument doc;
-        if ( doc.loadResource( resourceID ) == false )
+        if ( doc.loadResource( assetID ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
@@ -408,13 +408,13 @@ namespace sw
         ScopedLock<mutex> lock{ state->_mutex };
         if ( state->_pMaterial == nullptr )
             return;
-        if ( state->_pMaterial->loadFromFile( ResourceID{ args.get<string>( 1 ) } ) == false )
+        if ( state->_pMaterial->loadFromFile( AssetID{ args.get<string>( 1 ) } ) == false )
             SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
     }
 
     bool Material::saveToFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
 
         XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )

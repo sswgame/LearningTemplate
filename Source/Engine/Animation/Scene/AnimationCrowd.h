@@ -19,7 +19,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -72,7 +72,7 @@ namespace sw
         /** @brief XML 을 읽습니다. 모르는 속성이나 범위 밖 값은 오류이고 false 를 반환합니다(기본값으로 돌아갑니다). */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
     private:
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );

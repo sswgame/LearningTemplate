@@ -18,7 +18,7 @@
 
 #include "Editor/Common/Asset/ImageUtil.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 
 namespace sw::editor
 {
@@ -60,7 +60,7 @@ namespace sw::editor
                 if ( FileUtil::exists( assetPath ) )
                     resolved = string( assetPath );
                 else
-                    resolved = ResourcePaths::findLooseFile( assetPath ).getDiskPath();
+                    resolved = AssetPaths::findLooseFile( assetPath ).getDiskPath();
                 return resolved;
             }
 

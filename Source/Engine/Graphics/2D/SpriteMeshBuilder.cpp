@@ -7,9 +7,9 @@
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
 {

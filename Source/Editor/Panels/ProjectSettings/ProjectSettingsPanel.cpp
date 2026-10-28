@@ -20,13 +20,13 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -124,7 +124,7 @@ namespace sw::editor
             pPackPage->_entry._typeName     = pPackPage->_entry._page;
             pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
             pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( "Resource", packRoot.get() ), PackEngineSettings::kPackRelativePath );
-            pPackPage->_absolutePath        = FileUtil::joinPath( ResourcePaths::findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
+            pPackPage->_absolutePath        = FileUtil::joinPath( AssetPaths::findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
             pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
             _listPage.push_back( std::move( pPackPage ) );
         }

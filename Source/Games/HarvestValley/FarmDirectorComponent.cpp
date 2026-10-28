@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Config/GameAutoplay.h"
@@ -17,7 +18,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
@@ -415,7 +415,7 @@ namespace sw
     bool FarmDirectorComponent::startGame()
     {
         _cropCatalog.setKnownSeasons( FarmDirectorComponentInternal::makeSeasons() );
-        if ( _cropCatalog.loadFromResource( ResourceID{ _cropDataPath } ) == false )
+        if ( _cropCatalog.loadFromAsset( AssetID{ _cropDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;

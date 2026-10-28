@@ -23,7 +23,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -78,7 +78,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소와 빠진 값은 오류입니다. 겹 · 프로필 · 영역 이름은 피팅 표와 만나는 곳에서 `validateNames` 로 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
          * @brief 겹 · 프로필 · 숨김 영역 이름이 @p tables 에 있는지 봅니다.
          * @details 부품 피팅 데이터는 표와 따로 읽는 에셋이다(같은 장비를 표가 다른 캐릭터가 입는다, 공유 캐시가 경로만으로 나눠 준다). 그래서 대조는 읽을 때가 아니라

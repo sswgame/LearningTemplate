@@ -6,12 +6,12 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -19,11 +19,11 @@ namespace sw
 {
     SW_LOG_CALLER( "RenderPipelineAsset" );
 
-    bool RenderPipelineAsset::loadFromXMLFile( const ResourceID& resourceID )
+    bool RenderPipelineAsset::loadFromXMLFile( const AssetID& assetID )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         _desc                               = {};
-        if ( ReflectedXMLFile::loadDesc( resourceID, _desc ) == false )
+        if ( ReflectedXMLFile::loadDesc( assetID, _desc ) == false )
             return false;
         return finishLoad( assetRelativePath );
     }
@@ -673,7 +673,7 @@ namespace sw
         RenderPipelineAsset* pResource = args.get<RenderPipelineAsset*>( 0 );
         if ( pResource == nullptr )
             return;
-        if ( pResource->loadFromXMLFile( ResourceID{ args.get<string>( 1 ) } ) == false )
+        if ( pResource->loadFromXMLFile( AssetID{ args.get<string>( 1 ) } ) == false )
             SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
     }
 

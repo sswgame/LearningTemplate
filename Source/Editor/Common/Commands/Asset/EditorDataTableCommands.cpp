@@ -8,11 +8,11 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -139,12 +139,12 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
+        return AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ).getDiskPath();
+        return AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ).getDiskPath();
     }
 
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
@@ -154,7 +154,7 @@ namespace sw::editor
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
             SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
-        const string enginePath = pDefaultAssets != nullptr ? ResourcePaths::findLooseFile( pDefaultAssets->_localizationProject.get() ).getDiskPath() : string{};
+        const string enginePath = pDefaultAssets != nullptr ? AssetPaths::findLooseFile( pDefaultAssets->_localizationProject.get() ).getDiskPath() : string{};
         if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
             outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
 

@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -56,11 +56,11 @@ namespace sw
         /** @brief 정렬 레이어 수 상한입니다(키의 상위 16 비트). */
         static constexpr uint32 kMaxSortingLayerCount = 0xFFFF;
 
-        /** @brief 레이어가 없는 빈 표를 만듭니다(형식만 — 값은 `loadFromResource` · `loadFromXMLText` 가 채웁니다). 정렬은 `<TransparencySort>` 를 적지 않은 표의 값인 Auto 입니다. */
+        /** @brief 레이어가 없는 빈 표를 만듭니다(형식만 — 값은 `loadFromAsset` · `loadFromXMLText` 가 채웁니다). 정렬은 `<TransparencySort>` 를 적지 않은 표의 값인 Auto 입니다. */
         Render2DSettings();
 
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면 오류를 남기고 false 를 반환하며 설정은 바뀌지 않습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 읽습니다. 실패하면 오류를 남기고 false 를 반환하며 설정은 바뀌지 않습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 

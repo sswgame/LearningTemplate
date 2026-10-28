@@ -11,6 +11,15 @@
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"
 
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Asset/Cook/CookJob.h"
+#include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -19,15 +28,6 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Cook/CookJob.h"
-#include "Engine/Resource/Cook/CookStore.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -610,20 +610,20 @@ namespace sw
     {
     }
 
-    bool PrefabAsset::loadFromXMLFile( const ResourceID& resourceID )
+    bool PrefabAsset::loadFromXMLFile( const AssetID& assetID )
     {
-        AssetLoadScope loadScope( "Prefab", resourceID.view() );
+        AssetLoadScope loadScope( "Prefab", assetID.view() );
         XMLDocument    doc;
         string         absPath;
-        const bool     bRead = doc.loadResource( resourceID, &absPath );
+        const bool     bRead = doc.loadResource( assetID, &absPath );
         return readXMLSource( doc, bRead, absPath, loadScope );
     }
 
-    bool PrefabAsset::loadFromJSONFile( const ResourceID& resourceID )
+    bool PrefabAsset::loadFromJSONFile( const AssetID& assetID )
     {
         JSONDocument doc;
         string       absPath;
-        const bool   bRead = doc.loadResource( resourceID, &absPath );
+        const bool   bRead = doc.loadResource( assetID, &absPath );
         return readJSONSource( doc, bRead, absPath );
     }
 
@@ -747,15 +747,15 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::loadFromBinaryFile( const ResourceID& resourceID )
+    bool PrefabAsset::loadFromBinaryFile( const AssetID& assetID )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         _bValid                             = SW_FALSE;
-        // 쿠킹한 프리팹은 팩에 든다 — 디스크 경로로 열지 않고 `ResourceIO` 로 읽는다(낱개 파일 허용 정책도 거기서 본다).
+        // 쿠킹한 프리팹은 팩에 든다 — 디스크 경로로 열지 않고 `AssetIO` 로 읽는다(낱개 파일 허용 정책도 거기서 본다).
         const string  absPath{ assetRelativePath };
         vector<uint8> bytes;
         Archive       arch;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) )
             arch = Archive( bytes.data(), bytes.size() );
         if ( arch.getSize() < 12 )
         {
@@ -814,7 +814,7 @@ namespace sw
 
     bool PrefabAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
             SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file - '%#' is left as it was", _name,
@@ -868,7 +868,7 @@ namespace sw
 
     bool PrefabAsset::saveToJSONFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
             SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath );
@@ -922,7 +922,7 @@ namespace sw
 
     bool PrefabAsset::saveToBinaryFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
 
         Archive arch;
         arch << PrefabAssetInternal::kBinMagic;
@@ -1036,9 +1036,9 @@ namespace sw
         { return node.isResolved(); } );
     }
 
-    void PrefabCache::reload( const ResourceID& resourceID, IRHIDevice* )
+    void PrefabCache::reload( const AssetID& assetID, IRHIDevice* )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         if ( assetRelativePath.empty() )
             return;
 
@@ -1228,7 +1228,7 @@ namespace sw
 #endif
         if ( bReadsSource == false )
         {
-            if ( asset->loadFromBinaryFile( ResourceID{ binPath } ) == false )
+            if ( asset->loadFromBinaryFile( AssetID{ binPath } ) == false )
             {
                 SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
                 return nullptr;
@@ -1239,7 +1239,7 @@ namespace sw
             // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
             // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
             const bool bJSON         = FileUtil::hasExtension( resolvedPath, ".json" );
-            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( ResourceID{ resolvedPath } ) : asset->loadFromXMLFile( ResourceID{ resolvedPath } );
+            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( AssetID{ resolvedPath } ) : asset->loadFromXMLFile( AssetID{ resolvedPath } );
             if ( bSourceLoaded == false )
             {
                 SW_LOG_ERROR( "Prefab source could not be loaded: %#", resolvedPath );

@@ -16,8 +16,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -60,7 +60,7 @@ namespace sw
          */
         [[nodiscard]] bool parseObject( const XMLNode& element, string_view context );
         /** @brief 프리셋 파일을 읽습니다. 성공하면 `_filePath` 를 그 경로로 둡니다. */
-        [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief "roots" 와 "bones" 를 @p element(이미 만든 요소여야 합니다)의 자식으로 씁니다. */
         void writeObject( const XMLNode& element ) const;
         /**

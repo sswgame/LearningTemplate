@@ -6,8 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -32,15 +32,15 @@ namespace sw
 
 namespace sw
 {
-    bool SpriteClipAsset::loadFromFile( const ResourceID& resourceID )
+    bool SpriteClipAsset::loadFromFile( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         clear();
         if ( path.empty() )
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sprite clip '%#'", path );
             return false;
@@ -55,7 +55,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sprite clip file '%#'", diskPath );
             return false;

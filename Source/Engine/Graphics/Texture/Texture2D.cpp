@@ -5,11 +5,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/Image/DDSLoader.h"
 
 /**
  * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
@@ -109,22 +109,22 @@ namespace sw
         return drop;
     }
 
-    bool Texture2D::loadFromResource( IRHIDevice* pDevice, const ResourceID& resourceID )
+    bool Texture2D::loadFromAsset( IRHIDevice* pDevice, const AssetID& assetID )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
         DDSImageData image;
-        if ( readImage( resourceID, image ) == false )
+        if ( readImage( assetID, image ) == false )
             return false;
         return loadFromImage( pDevice, relativePath, image, TextureResidency::Full );
     }
 
-    bool Texture2D::readImage( const ResourceID& resourceID, DDSImageData& outImage )
+    bool Texture2D::readImage( const AssetID& assetID, DDSImageData& outImage )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         AssetLoadScope    loadScope( "Texture", relativePath );
-        if ( DDSLoader::loadFromResource( resourceID, outImage ) == false || outImage.isValid() == false )
+        if ( DDSLoader::loadFromAsset( assetID, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
             return false;
@@ -418,7 +418,7 @@ namespace sw
         // CPU 텍스처는 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
         if ( hasCPUBytes() )
             return true;
-        return loadFromResource( pDevice, ResourceID{ _path } );
+        return loadFromAsset( pDevice, AssetID{ _path } );
     }
 
     void Texture2D::setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes )

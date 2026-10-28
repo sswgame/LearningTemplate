@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Common/Widgets/EditableResourcePath.h"
+#include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
@@ -213,7 +213,7 @@ namespace sw::editor
         string                          _slotDragBaseline;  ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
         string                          _slotFieldBaseline; ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
         hashed_string                   _paletteType;       ///< 팔레트에서 고른 타입(Add 가 붙인다)
-        EditableResourcePath            _documentPath;      ///< 미리보는 문서. 처음 값은 editortooldefaults, 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
+        EditableAssetPath               _documentPath;      ///< 미리보는 문서. 처음 값은 editortooldefaults, 경로 칸은 확정할 때만 바꾼다(글자마다 다시 짓지 않는다)
         string                          _openedDocument;    ///< 지금 미리보기 화면의 문서
         string                          _targetPath;        ///< 지금 렌더 텍스처 경로
         string                          _error;             ///< 마지막으로 열지 못한 까닭

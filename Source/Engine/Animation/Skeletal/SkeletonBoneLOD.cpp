@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -50,12 +50,12 @@ namespace sw
         return false;
     }
 
-    bool SkeletonBoneLOD::loadFromResource( const ResourceID& resourceID )
+    bool SkeletonBoneLOD::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
         string text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#' could not be read", path );
             _listLevel.clear();

@@ -33,10 +33,10 @@ namespace sw::editor
     {
     }
 
-    bool BonePoseEditModel::loadSkeleton( const ResourceID& resourceID )
+    bool BonePoseEditModel::loadSkeleton( const AssetID& assetID )
     {
         Skeleton loaded;
-        if ( loaded.loadFromResource( resourceID ) == false )
+        if ( loaded.loadFromAsset( assetID ) == false )
             return false;
         _skeleton = std::move( loaded );
         return true;

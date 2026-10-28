@@ -19,7 +19,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -61,7 +61,7 @@ namespace sw
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, string* pOutError = nullptr );
 
         /** @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). */
         static float2 encodeOctahedral( const float3& direction );

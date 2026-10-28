@@ -88,14 +88,14 @@
     #include "Engine/Renderer/RenderThread.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/Cache/CacheStatsUtil.h"
-#include "Engine/Resource/Pack/ResourcePakManager.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetStreamingQueue.h"
+#include "Engine/Asset/Cache/CacheStatsUtil.h"
+#include "Engine/Asset/Pack/PackManager.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
@@ -229,7 +229,7 @@ namespace sw
         }
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
-        ResourcePaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
+        AssetPaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // 외부 프로파일러(서비스 범위의 `ProfilerBackend`)의 스레드 이름 — 서비스 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 
@@ -941,9 +941,9 @@ namespace sw
         _shellActions.update( *_pInputManager, deltaTime );
     }
 
-    unique_ptr<InputMap> Engine::createShellInputMap( const ResourceID& resourceID )
+    unique_ptr<InputMap> Engine::createShellInputMap( const AssetID& assetID )
     {
-        return ShellInputActions::createInputMap( resourceID );
+        return ShellInputActions::createInputMap( assetID );
     }
 
     void Engine::pollShaderReloadHotkey()

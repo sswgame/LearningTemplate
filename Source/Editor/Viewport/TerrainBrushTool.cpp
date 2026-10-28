@@ -21,13 +21,13 @@
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <cmath>
 #include <imgui.h>
@@ -464,7 +464,7 @@ namespace sw::editor
                 if ( pTerrain == nullptr )
                     return;
                 bool         bSaved          = true;
-                const string heightfieldPath = ResourcePaths::findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
+                const string heightfieldPath = AssetPaths::findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
                 if ( heightfieldPath.empty() || pTerrain->saveHeightfield( heightfieldPath ) == false )
                 {
                     SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
@@ -472,7 +472,7 @@ namespace sw::editor
                 }
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const string splatPath = ResourcePaths::findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
+                    const string splatPath = AssetPaths::findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
                     if ( splatPath.empty() || pTerrain->saveSplat( splatPath ) == false )
                     {
                         SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );

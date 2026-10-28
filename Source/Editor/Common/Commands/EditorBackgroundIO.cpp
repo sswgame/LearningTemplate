@@ -109,18 +109,18 @@ namespace sw::editor
     }
 
     // ======================================================================
-    // EditorResourceIndexJob
+    // EditorAssetIndexJob
     // ======================================================================
 
-    void EditorResourceIndexJob::request()
+    void EditorAssetIndexJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        submitEditorBackgroundJob( "EditorResourceIndex",
-                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
+        submitEditorBackgroundJob( "EditorAssetIndex",
+                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetIndexJob::runJob ),
                                    MakeTaskArgs( _pState, generation ) );
     }
 
-    void EditorResourceIndexJob::runJob( const TaskArgs& args )
+    void EditorAssetIndexJob::runJob( const TaskArgs& args )
     {
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
@@ -129,9 +129,9 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<EditorResourceIndexEntry>     listEntry;
+        vector<EditorAssetIndexEntry>        listEntry;
         const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorResourceIndex::collectEntries( listEntry, pStop.get() );
+        EditorAssetIndex::collectEntries( listEntry, pStop.get() );
         if ( isStopRaised( pStop ) )
             return;
 
@@ -226,7 +226,7 @@ namespace sw::editor
 
         EditorResourceCatalogCounts          counts{};
         const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorResourceIndex::collectCatalogCounts( counts, pStop.get() );
+        EditorAssetIndex::collectCatalogCounts( counts, pStop.get() );
         if ( isStopRaised( pStop ) )
             return;
 

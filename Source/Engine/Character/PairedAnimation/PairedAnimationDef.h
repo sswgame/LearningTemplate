@@ -24,8 +24,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -135,7 +135,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /**
          * @brief 내용을 파일 형식(`*.pairedanim.xml`)으로 씁니다. 적지 않아도 되는 값(앵커가 아닌 역할의 `anchor`, 0 인 `start` · `yaw`, 빈 `skeleton`)은 쓰지 않습니다.
          * @details 쓰기는 검사하지 않는다 — 결과를 `loadFromXMLText` 로 다시 읽어야 규칙(앵커 하나, 정렬 속성 등)을 본다. 정렬하지 않는 역할의 오프셋 · 워프 값은 쓰지 않는다.
@@ -147,7 +147,7 @@ namespace sw
         const PairedAnimationContentDef& getContent() const { return _content; }
 
         /**
-         * @brief 읽은 리소스 경로입니다(`loadFromResource`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
+         * @brief 읽은 리소스 경로입니다(`loadFromAsset`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
          * @details 네트워크 복제(`GF_NetPairedAnimation`)는 이 경로로 클라이언트가 같은 에셋을 받게 한다 — 경로가 빈 에셋의 세션은 복제할 수 없다(오류).
          */
         const string& getSourcePath() const { return _sourcePath; }

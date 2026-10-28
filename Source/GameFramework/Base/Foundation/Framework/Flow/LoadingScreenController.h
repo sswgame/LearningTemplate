@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Serialization/Base/DataPath.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -77,7 +77,7 @@ namespace sw
          * @brief 팁 목록 파일(`<LoadingTips><Tip text="원문"/>…</LoadingTips>`)을 읽어 @p outListTip 을 채웁니다(먼저 비운다). 파일을 못 읽거나 `text` 가 빈 팁이 있으면 오류를 남기고 false 입니다.
          * @details 글은 지역화 원문이다 — 열 때 `LocalizationManager::findStringByText` 로 지금 문화권의 글로 푼다. 수집은 현지화 프로젝트의 `assetRules`(`files`·`attribute="text"`·`elements`)로 한다.
          */
-        [[nodiscard]] static bool loadTipsFromResource( const ResourceID& resourceID, vector<string>& outListTip );
+        [[nodiscard]] static bool loadTipsFromResource( const AssetID& assetID, vector<string>& outListTip );
         /** @brief `loadTipsFromResource` 의 XML 문자열 버전이며 테스트가 씁니다. */
         [[nodiscard]] static bool loadTipsFromXMLText( string_view xmlText, string_view sourceName, vector<string>& outListTip );
 

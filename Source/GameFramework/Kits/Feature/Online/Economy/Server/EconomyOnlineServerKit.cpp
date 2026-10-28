@@ -68,12 +68,12 @@ namespace sw
                     outError = "the economy kit needs the currencyCatalog and offerCatalog options";
                     return false;
                 }
-                if ( _currencyCatalog.loadFromResource( ResourceID{ currencyPath } ) == false )
+                if ( _currencyCatalog.loadFromAsset( AssetID{ currencyPath } ) == false )
                 {
                     outError = "the currency catalog could not be read ('" + currencyPath + "')";
                     return false;
                 }
-                if ( _offerCatalog.loadFromResource( ResourceID{ offerPath } ) == false )
+                if ( _offerCatalog.loadFromAsset( AssetID{ offerPath } ) == false )
                 {
                     outError = "the offer catalog could not be read ('" + offerPath + "')";
                     return false;

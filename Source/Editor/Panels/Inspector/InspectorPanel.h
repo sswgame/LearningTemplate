@@ -18,7 +18,7 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -76,7 +76,7 @@ namespace sw::editor
         /** @brief 다중 편집에서 그 프로퍼티 값이 오브젝트마다 다른지 확인합니다. 그리드의 `_isMixed` 가 호출합니다. */
         bool isMultiEditMixed( const PropertyInfo& prop );
         /** @brief 프리팹 인스턴스일 때 적용, 되돌리기, 연결 해제 버튼을 그립니다. */
-        void drawPrefabLinkSection( GameObject* pObj, const ResourceID& resourceID );
+        void drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID );
         /** @brief 선택한 오브젝트의 컴포넌트 카드 목록을 그립니다. */
         void drawComponentList( GameObject* pObj, EditorWorkspace& workspace );
         /** @brief 직전 카드 헤더에 컴포넌트 맥락 메뉴(`scene.component.*` 명령 — 계층 창의 컴포넌트 행과 같은 메뉴)를 엽니다. */

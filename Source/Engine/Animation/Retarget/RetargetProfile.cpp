@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -99,11 +99,11 @@ namespace sw
         return false;
     }
 
-    bool RetargetProfile::loadFromResource( const ResourceID& resourceID )
+    bool RetargetProfile::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Retarget profile '%#' could not be read", path );
             clear();

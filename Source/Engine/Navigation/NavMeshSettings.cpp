@@ -7,7 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -44,13 +44,13 @@ namespace sw
 
 namespace sw
 {
-    bool NavMeshSettings::loadFromResource( const ResourceID& resourceID )
+    bool NavMeshSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
-        *this                          = NavMeshSettings{};
-        if ( XMLSerializer::loadFile( resourceID, this, *StaticType() ) == false )
+        const string_view assetPath = assetID.view();
+        *this                       = NavMeshSettings{};
+        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
         {
-            SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", resourcePath );
+            SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", assetPath );
             return false;
         }
         return validate();
@@ -192,5 +192,5 @@ namespace sw
     }
 
     /** @brief 내비메시 설정 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( NavMeshSettings, "navmeshsettings", nullptr, nullptr, "navmeshsettings.xml", &ResourceDataKindUtil::loadCatalog<NavMeshSettings> );
+    SW_RESOURCE_DATA_KIND( NavMeshSettings, "navmeshsettings", nullptr, nullptr, "navmeshsettings.xml", &AssetDataKindUtil::loadCatalog<NavMeshSettings> );
 } // namespace sw

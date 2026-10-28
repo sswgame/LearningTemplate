@@ -8,9 +8,9 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
@@ -27,7 +27,7 @@ namespace sw::editor
 
     string EditorGlobalVariableCommands::getComponentPresetFolderPath()
     {
-        return ResourcePaths::findLooseDomainFolder(
+        return AssetPaths::findLooseDomainFolder(
                    editor::getSubsystem<const GameConfig>()._packRoot.get(),
                    FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) )
             .getDiskPath();

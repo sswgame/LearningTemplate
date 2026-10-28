@@ -431,7 +431,7 @@ namespace sw::editor
                 inoutMask._filePath.clear();
                 pInoutEdit = "Embed Bone Mask";
             }
-            else if ( loaded.loadFromFile( ResourceID{ presetPath } ) )
+            else if ( loaded.loadFromFile( AssetID{ presetPath } ) )
             {
                 inoutMask  = std::move( loaded );
                 pInoutEdit = "Use Bone Mask Preset";

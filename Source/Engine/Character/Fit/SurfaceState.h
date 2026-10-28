@@ -24,7 +24,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -53,7 +53,7 @@ namespace sw
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 모르는 속성이나 원소, 겹친 이름은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */
         void addChannel( const SurfaceChannelDef& channel );
         /** @brief 이름의 채널 번호입니다. 없으면 -1 입니다. */

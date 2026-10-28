@@ -6,12 +6,12 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -64,13 +64,13 @@ namespace sw
         return reader.finish();
     }
 
-    bool SocketKindTable::loadFromResource( const ResourceID& resourceID )
+    bool SocketKindTable::loadFromAsset( const AssetID& assetID )
     {
-        const string_view   path = resourceID.view();
+        const string_view   path = assetID.view();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourceID, "SocketKinds", root ) )
+        if ( reader.loadRoot( document, assetID, "SocketKinds", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
@@ -78,7 +78,7 @@ namespace sw
     bool SocketKindTable::loadDefault()
     {
         const string& path = engine::getSubsystem<EngineDefaultAssets>()._defaultSocketKinds.get();
-        if ( loadFromResource( ResourceID{ path } ) )
+        if ( loadFromAsset( AssetID{ path } ) )
             return true;
         SW_LOG_ERROR( "Default socket kinds '%#' could not be loaded", path.c_str() );
         return false;
@@ -147,14 +147,14 @@ namespace sw
         return reader.finish();
     }
 
-    bool SocketSet::loadFromResource( const ResourceID& resourceID, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
+    bool SocketSet::loadFromAsset( const AssetID& assetID, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, resourceID, "SocketSet", root ) )
+        if ( reader.loadRoot( document, assetID, "SocketSet", root ) )
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
         {
@@ -422,5 +422,5 @@ namespace sw
     }
 
     /** @brief 소켓 종류 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( SocketKinds, "socketkinds", nullptr, nullptr, ".socketkinds.xml", &ResourceDataKindUtil::loadCatalog<SocketKindTable> );
+    SW_RESOURCE_DATA_KIND( SocketKinds, "socketkinds", nullptr, nullptr, ".socketkinds.xml", &AssetDataKindUtil::loadCatalog<SocketKindTable> );
 } // namespace sw

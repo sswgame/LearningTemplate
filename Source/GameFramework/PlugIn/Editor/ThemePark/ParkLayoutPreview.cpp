@@ -9,8 +9,8 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/ResourceIO.h"
 
 #include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -90,13 +90,13 @@ namespace sw::editor
             clearPreview( false );
             return false;
         }
-        if ( ResourceIO::hasResource( ResourceID{ _layoutPath } ) == false )
+        if ( AssetIO::hasResource( AssetID{ _layoutPath } ) == false )
         {
             clearPreview( true ); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
             return false;
         }
         string text;
-        if ( ResourceIO::readTextResource( ResourceID{ _layoutPath }, text ) == false )
+        if ( AssetIO::readTextAsset( AssetID{ _layoutPath }, text ) == false )
         {
             if ( _bWarned == false )
                 SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
@@ -112,7 +112,7 @@ namespace sw::editor
 
         CoasterLayoutCatalog catalog;
         ParkLayout           layout;
-        if ( catalog.loadFromResource( ResourceID{ coasterPath } ) == false )
+        if ( catalog.loadFromAsset( AssetID{ coasterPath } ) == false )
         {
             SW_LOG_WARNING( "The coaster catalog '%#' could not be loaded - the park layout preview is empty", coasterPath );
             clearPreview( false );

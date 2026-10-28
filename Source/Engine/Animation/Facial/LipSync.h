@@ -13,9 +13,9 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -97,7 +97,7 @@ namespace sw
 
         /** @brief XML 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 비즘 번호입니다. 없으면 -1 입니다. */
@@ -134,7 +134,7 @@ namespace sw
         void sample( float32 time, vector<float32>& outListWeight ) const;
 
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         string             toXML() const;
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.xml`). */

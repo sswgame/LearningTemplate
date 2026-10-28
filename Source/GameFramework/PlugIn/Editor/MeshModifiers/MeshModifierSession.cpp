@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -21,7 +22,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/World/Spline/SplineComponent.h"
 #include "GameFramework/Base/World/Spline/SplinePath.h"
@@ -271,7 +271,7 @@ namespace sw::editor
         const MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
-        if ( MeshAssetFormat::loadFromResource( ResourceID{ pMesh->getMeshID() }, _sourceData ) == false )
+        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, _sourceData ) == false )
         {
             SW_LOG_WARNING( "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
             return false;
@@ -601,7 +601,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = ResourcePaths::getWritePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        const string path = AssetPaths::getWritePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( _stack.saveFile( path ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
@@ -616,7 +616,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = ResourcePaths::findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
+        const string path = AssetPaths::findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
         if ( path.empty() )
             return false;
         if ( _stack.loadFile( path ) == false )
@@ -650,8 +650,8 @@ namespace sw::editor
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
-        const string resourceID = MeshModifierStack::makeBakedMeshPath( _meshPath );
-        const string path       = ResourcePaths::getWritePath( resourceID );
+        const string assetID = MeshModifierStack::makeBakedMeshPath( _meshPath );
+        const string path    = AssetPaths::getWritePath( assetID );
         if ( MeshAssetFormat::saveToFile( path, baked ) == false )
         {
             SW_LOG_ERROR( "Failed to write baked mesh %#", path.c_str() );
@@ -659,7 +659,7 @@ namespace sw::editor
         }
         SW_LOG_INFO( "Baked mesh written to %#", path.c_str() );
         if ( pOutPath != nullptr )
-            *pOutPath = resourceID;
+            *pOutPath = assetID;
         return true;
     }
 
@@ -722,7 +722,7 @@ namespace sw::editor
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
         vector<RHIVertex> listVertex;
-        if ( MeshAssetFormat::loadFromResource( ResourceID{ pMesh->getMeshID() }, listVertex ) == false )
+        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, listVertex ) == false )
             return false;
         const float4x4 world = pMesh->getWorldMatrix();
         outListPosition.reserve( listVertex.size() );

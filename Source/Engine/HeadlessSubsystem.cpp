@@ -12,6 +12,13 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Cook/CookStore.h"
+#include "Engine/Asset/Cook/PackConfig.h"
+#include "Engine/Asset/Cook/PackCooker.h"
+#include "Engine/Asset/Pack/PackPatchBuilder.h"
+#include "Engine/Asset/Pack/PackPatchTrustSource.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -31,13 +38,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/RHISubsystem.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/Cook/CookStore.h"
-#include "Engine/Resource/Cook/PackConfig.h"
-#include "Engine/Resource/Cook/PackCooker.h"
-#include "Engine/Resource/Pack/PackPatchBuilder.h"
-#include "Engine/Resource/Pack/PackPatchTrustSource.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
@@ -59,7 +59,7 @@ namespace sw
              */
             [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const AnimationCrowdSettings& crowdSettings, bool bCrowdSettingsLoaded )
             {
-                const string& resourceRoot     = ResourcePaths::getRootFolderPath();
+                const string& resourceRoot     = AssetPaths::getRootFolderPath();
                 uint32        sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
                 const SceneEngineServices&    sceneServices              = engine::getSubsystem<SceneManager>().getEngineServices();
@@ -104,7 +104,7 @@ namespace sw
             static bool verifyShaderFolder( string_view shaderFolder )
             {
                 vector<string> listProblem;
-                ShaderCooker::verifyCookedShaders( ResourcePaths::getRootFolderPath(), shaderFolder, listProblem );
+                ShaderCooker::verifyCookedShaders( AssetPaths::getRootFolderPath(), shaderFolder, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR( "[%#] %#", shaderFolder, problem );
@@ -153,7 +153,7 @@ namespace sw
                 const string shaderFolder = resolveShaderFolder( commandLine );
 
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
@@ -161,7 +161,7 @@ namespace sw
                 }
 
                 PackCookParams params;
-                params._resourceRoot = ResourcePaths::getRootFolderPath();
+                params._resourceRoot = AssetPaths::getRootFolderPath();
                 params._cookedDir    = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
@@ -219,7 +219,7 @@ namespace sw
                     }
                 }
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
@@ -322,7 +322,7 @@ namespace sw
                 if ( bWellFormed == false )
                     SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
                 inoutState._bFailed = bWellFormed == false ||
-                                      RetargetBakeUtil::bakeClipFile( ResourceID{ StringUtil::trim( listArgument[0] ) }, ResourceID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
+                                      RetargetBakeUtil::bakeClipFile( AssetID{ StringUtil::trim( listArgument[0] ) }, AssetID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
                 return true;
             }
 
@@ -392,7 +392,7 @@ namespace sw
                 }
                 SW_LOG_INFO( "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
                 AnimationCrowdSettings crowdSettings{};
-                const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
+                const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 const CookStore        cookStore            = CookStore::makeLocal();
                 // 셰이더 판정 · 재쿠킹은 세션 밖에서(`ensureShadersFresh` 설명). 씬 단계보다 먼저 보므로 낡은 셰이더로 씬을 굽는 시간을 쓰지 않는다.
                 if ( bCookPacks || bCookAll )
@@ -426,8 +426,8 @@ namespace sw
                 LipSyncSettings         lipSyncSettings{};
                 uint32                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-                if ( lipSyncSettings.loadFromResource( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() } ) )
-                    lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                if ( lipSyncSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() } ) )
+                    lipSyncCount = LipSyncImport::importAll( AssetPaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
                 SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );

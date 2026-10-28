@@ -156,9 +156,9 @@ namespace sw
     {
     }
 
-    bool FighterCatalog::loadFromResource( const ResourceID& resourceID, const MoveCatalog& moveCatalog )
+    bool FighterCatalog::loadFromAsset( const AssetID& assetID, const MoveCatalog& moveCatalog )
     {
-        return GameDataXML::loadFile( *this, &FighterCatalog::loadRoot, moveCatalog, resourceID, "FighterCatalog" );
+        return GameDataXML::loadFile( *this, &FighterCatalog::loadRoot, moveCatalog, assetID, "FighterCatalog" );
     }
 
     bool FighterCatalog::loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )

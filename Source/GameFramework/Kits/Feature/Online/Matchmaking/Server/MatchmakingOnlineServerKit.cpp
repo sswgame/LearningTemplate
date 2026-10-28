@@ -67,7 +67,7 @@ namespace sw
                     return false;
                 if ( catalogPath.empty() == false )
                 {
-                    if ( _catalog.loadFromResource( ResourceID{ catalogPath } ) == false )
+                    if ( _catalog.loadFromAsset( AssetID{ catalogPath } ) == false )
                     {
                         outError = "the match mode catalog '" + catalogPath + "' could not be read";
                         return false;

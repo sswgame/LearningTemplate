@@ -66,7 +66,7 @@ namespace sw::editor
 
     private:
         vector<QuickLauncherItem>             _listAllItem;
-        EditorResourceIndexJob                _fileIndexJob;
+        EditorAssetIndexJob                   _fileIndexJob;
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         int32                                 _selectedIndex;
         bool                                  _bJustOpened;

@@ -7,8 +7,8 @@
 
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -67,7 +67,7 @@ namespace sw::editor
         (void)FileUtil::collectFolders( folderAbs, listFolder, false );             // 표시용 — 모은 데까지 보인다
         (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, pStop ); // 표시용 — 모은 데까지 보인다
 
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )

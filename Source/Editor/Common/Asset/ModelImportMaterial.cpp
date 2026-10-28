@@ -15,10 +15,10 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
+#include "Engine/Asset/AssetMeta.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Resource/AssetMeta.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -287,7 +287,7 @@ namespace sw::editor
                     return false;
                 }
             }
-            listTexturePath[textureIndex] = ResourcePaths::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
+            listTexturePath[textureIndex] = AssetPaths::toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
         }
 
         // 툰 머티리얼 견본의 경로는 엔진 기본 에셋 표에 있다. 이 함수는 워커에서도 도므로 서비스를 찾지 않고 데이터에서 표를 읽는다.
@@ -336,18 +336,18 @@ namespace sw::editor
 
     bool ModelImportUtil::writeImportedMeta( const string& assetPath )
     {
-        const string resourceID = ResourcePaths::toResourceID( assetPath );
+        const string assetID = AssetPaths::toAssetID( assetPath );
         AssetMeta    meta;
-        meta._guid       = makeImportedGuid( resourceID );
-        meta._sourcePath = resourceID;
+        meta._guid       = makeImportedGuid( assetID );
+        meta._sourcePath = assetID;
         meta._bImported  = true;
         return FileUtil::writeTextFile( assetPath + path::kMetaExtension, meta.toXML() );
     }
 
-    string ModelImportUtil::makeImportedGuid( string_view resourceID )
+    string ModelImportUtil::makeImportedGuid( string_view assetID )
     {
-        const uint64 high = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false );
-        const uint64 low  = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
+        const uint64 high = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false );
+        const uint64 low  = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false, high ^ HashUtil::kGoldenRatio64 );
         // 8-4-4-4-12 글자 16 진. 셋째 그룹 첫 글자는 버전 4, 넷째 그룹 첫 글자는 변형(8..b)이다.
         const auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
         { HexUtil::appendUint64( inoutText, value, digitCount ); };

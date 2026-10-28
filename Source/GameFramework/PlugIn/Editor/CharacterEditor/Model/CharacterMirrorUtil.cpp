@@ -89,14 +89,14 @@ namespace sw::editor
         return true;
     }
 
-    bool MirrorNameRules::loadFromResource( const ResourceID& resourceID )
+    bool MirrorNameRules::loadFromAsset( const AssetID& assetID )
     {
-        const string_view   path = resourceID.view();
+        const string_view   path = assetID.view();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
         MirrorNameRules     loaded;
-        if ( reader.loadRoot( document, ResourceID{ path }, "MirrorNames", root ) )
+        if ( reader.loadRoot( document, AssetID{ path }, "MirrorNames", root ) )
             CharacterMirrorUtilInternal::readRoot( root, reader, loaded );
         if ( reader.finish() == false )
             return false;

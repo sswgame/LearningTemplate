@@ -83,7 +83,7 @@ namespace sw
          *          엉뚱한 태스크의 자식이 된다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식 — 어느 스레드가 티켓을 가져가느냐에
          *          따라 부모가 달라진다). 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
          *
-         *          겹침 깊이(`_parallelBodyDepth`)를 센다. 용도는 둘이다 — ① `TaskManager::isInParallelBody` 로 병렬 단계 중 쓰면 안 되는 전역(`ResourcePaths` 의
+         *          겹침 깊이(`_parallelBodyDepth`)를 센다. 용도는 둘이다 — ① `TaskManager::isInParallelBody` 로 병렬 단계 중 쓰면 안 되는 전역(`AssetPaths` 의
          *          검색 목록 · 루트)의 쓰기를 Debug 에서 단언한다. 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
          *          ② 중첩 `runParallel` 이 한도(`kMaxParallelBodyDepth`)를 넘으면 Debug 에서 단언한다 — 본문이 다시 병렬 for 를 부르고, 합류를 기다리며 돕는 스레드가
          *          다른 그룹의 본문을 그 위에 쌓으므로 워커 스택 깊이가 호출 모양에 묶인다.

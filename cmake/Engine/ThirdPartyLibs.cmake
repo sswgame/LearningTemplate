@@ -91,7 +91,7 @@ endfunction()
 #   Engine 의 CMakeLists 가 부른다 — 임포트 타깃은 부른 디렉터리에 생긴다(ThirdParty/zlib 의 ZLIB::ZLIB 은 그 폴더에서만 보인다).
 #   Core 는 압축 라이브러리에 의존하지 않고(ICompressionCodec), ReflectionParser 가 끌고 가지 않게 Engine 에만 붙인다.
 #
-#   - zlib: 리소스 팩 압축 해제(ResourcePakReader 가 uncompress 를 직접 부른다). raw 이름 `zlib` 은 링커에 `-lzlib` 로 가서
+#   - zlib: 리소스 팩 압축 해제(PackReader 가 uncompress 를 직접 부른다). raw 이름 `zlib` 은 링커에 `-lzlib` 로 가서
 #     Windows(zlib.lib)에서만 우연히 맞고 리눅스(libz.so)는 못 찾는다 — 공유 라이브러리는 미해결 심볼을 허용해 libEngine.so 링크는 통과하고
 #     App 에서야 `undefined reference to uncompress` 로 터진다. 그래서 임포트 타깃을 쓰고, 임포트 타깃 **하나에만** 기대지 않는다:
 #     리눅스 CI 에서 링크 줄에 zlib 이 아예 붙지 않은 일이 세 번 있었다(임포트 타깃이 왜 비었는지는 재현하지 못했다). find_package 가 채우는

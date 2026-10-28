@@ -11,11 +11,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -76,7 +76,7 @@ namespace sw
         RenderPipelineAsset& operator=( const RenderPipelineAsset& ) = delete;
 
         /** @brief 리소스 상대 경로에서 파이프라인 XML 을 로드합니다. */
-        [[nodiscard]] bool loadFromXMLFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /**
          * @brief 디스크 파일에서 파이프라인 XML 을 로드합니다. 팩을 보지 않습니다(`ReflectedXMLFile::loadDescFromDiskFile`).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.

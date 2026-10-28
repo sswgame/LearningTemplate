@@ -104,9 +104,9 @@ namespace sw
 
     UIInputRouter::~UIInputRouter() = default;
 
-    bool UIInputRouter::initialize( InputManager& inputManager, const ResourceID& resourceID )
+    bool UIInputRouter::initialize( InputManager& inputManager, const AssetID& assetID )
     {
-        const string_view uiInputMapPath = resourceID.view();
+        const string_view uiInputMapPath = assetID.view();
         _pInput                          = &inputManager;
         _bPointerKnown                   = SW_FALSE;
         _consumption.clear();
@@ -119,7 +119,7 @@ namespace sw
         // 텍스트 입력 위젯이 키보드 포커스(UI)를 가진 동안에도 Back 과 Tab 은 UI 가 받는다. 그 밖의 액션은 processActions 가 걸러 낸다.
         _uiInputMap->setKeyboardFocusIgnored( true );
         _uiInputMap->setSuppressBaseActionOnChord( true ); // Shift+Tab 이 Tab 도 함께 발화하지 않게
-        if ( _uiInputMap->loadFromResource( resourceID ) == false )
+        if ( _uiInputMap->loadFromAsset( assetID ) == false )
         {
             SW_LOG_ERROR( "[UI] UI input map '%#' could not be loaded - UI navigation actions stay unbound", uiInputMapPath );
             _uiInputMap.reset();

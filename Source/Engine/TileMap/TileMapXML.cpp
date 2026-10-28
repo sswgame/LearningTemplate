@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -403,15 +403,15 @@ namespace sw
         static_assert( TileMapXMLInternal::isFlagLayerTableValid(), "kArrTileFlagLayerInfo must be ordered by TileFlagLayer and have at most one text layer" );
     } // namespace
 
-    bool TileMapXMLData::load( const ResourceID& resourceID )
+    bool TileMapXMLData::load( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         if ( path.empty() )
             return false;
 
         string text;
         string absPath;
-        if ( ResourceIO::readTextResource( resourceID, text, &absPath ) == false ) // 낱개 파일 허용 정책은 ResourceIO 한 곳이 본다
+        if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false ) // 낱개 파일 허용 정책은 AssetIO 한 곳이 본다
         {
             SW_LOG_ERROR( "TileMap file not found: %#", path );
             return false;
@@ -429,7 +429,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
             SW_LOG_ERROR( "TileMap file not found: %#", diskPath );
             return false;
@@ -631,7 +631,7 @@ namespace sw
 
     bool TileMapXMLData::save( string_view path ) const
     {
-        const string absPath = ResourcePaths::getWritePath( path );
+        const string absPath = AssetPaths::getWritePath( path );
 
         const string xml = toXML();
         if ( xml.empty() )

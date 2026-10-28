@@ -7,6 +7,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
@@ -16,8 +18,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"

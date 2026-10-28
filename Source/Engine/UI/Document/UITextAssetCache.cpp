@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -39,7 +39,7 @@ namespace sw
 
         getCacheStats().recordMiss();
         string text;
-        if ( readText( key, ResourceID{ path }, text ) == false )
+        if ( readText( key, AssetID{ path }, text ) == false )
         {
             outError = string( path ) + ": " + _pAssetLabel + " not found";
             return asset;
@@ -63,13 +63,13 @@ namespace sw
         return _mapPathToAsset.find( FileUtil::normalizePath( relativePath ) ) != _mapPathToAsset.end();
     }
 
-    void UITextAssetCache::reload( const ResourceID& resourceID, IRHIDevice* pDevice )
+    void UITextAssetCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         (void)pDevice;
         const string key = FileUtil::normalizePath( relativePath );
         string       text;
-        if ( readText( key, resourceID, text ) == false )
+        if ( readText( key, assetID, text ) == false )
         {
             SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
             return;
@@ -94,7 +94,7 @@ namespace sw
         getCacheStats().recordClear();
     }
 
-    bool UITextAssetCache::readText( const string& key, const ResourceID& resourceID, string& outText ) const
+    bool UITextAssetCache::readText( const string& key, const AssetID& assetID, string& outText ) const
     {
         const auto memory = _mapPathToMemoryText.find( key );
         if ( memory != _mapPathToMemoryText.end() )
@@ -102,7 +102,7 @@ namespace sw
             outText = memory->second;
             return true;
         }
-        // 낱개 파일 허용 정책은 `ResourceIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
-        return ResourceIO::readTextResource( resourceID, outText );
+        // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
+        return AssetIO::readTextAsset( assetID, outText );
     }
 } // namespace sw

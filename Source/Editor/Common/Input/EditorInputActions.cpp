@@ -93,7 +93,7 @@ namespace sw::editor
         _focusedPanelLayer   = {};
 
         const string& basePath = getEditorToolDefaults()._editorInputMap.get();
-        if ( _map.loadFromResource( ResourceID{ basePath } ) == false )
+        if ( _map.loadFromAsset( AssetID{ basePath } ) == false )
         {
             SW_LOG_ERROR( "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", basePath.c_str() );
             return false;
@@ -102,13 +102,13 @@ namespace sw::editor
         for ( uint32 index = 0; index < MapRegistry::getCount(); ++index )
         {
             const EditorInputMapRegistration& row = MapRegistry::getAt( index );
-            if ( _map.appendFromResource( ResourceID{ row._pResourcePath } ) == false )
+            if ( _map.appendFromAsset( AssetID{ row._pAssetPath } ) == false )
             {
-                SW_LOG_ERROR( "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pResourcePath, row._pID );
+                SW_LOG_ERROR( "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pAssetPath, row._pID );
                 bValid = false;
             }
         }
-        // 기본 맵 안의 겹침도 데이터 오류다 — 한 번 눌러 두 명령이 돈다. 더한 파일의 겹침은 `appendFromResource` 가 이미 알렸다.
+        // 기본 맵 안의 겹침도 데이터 오류다 — 한 번 눌러 두 명령이 돈다. 더한 파일의 겹침은 `appendFromAsset` 가 이미 알렸다.
         for ( const hashed_string& action : _map.getActionNames() )
         {
             for ( uint32 bindIndex = 0; bindIndex < _map.getBindingCount( action ); ++bindIndex )

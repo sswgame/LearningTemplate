@@ -5,6 +5,8 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -18,8 +20,6 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -96,9 +96,9 @@ namespace sw
         }
     }
 
-    bool Material::initialize( IRHIDevice* pRHI, const ResourceID& resourceID )
+    bool Material::initialize( IRHIDevice* pRHI, const AssetID& assetID )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         if ( pRHI == nullptr )
             return false;
 
@@ -116,7 +116,7 @@ namespace sw
 
         // 못 읽은 머티리얼은 빈 값으로 올리지 않고 실패한다. 대신 그릴 것(마젠타 `missingmaterial`)은 부르는 쪽 한 곳이 정한다(`MeshComponent::resolveMaterialAsset`).
         AssetLoadScope loadScope( "Material", assetRelativePath );
-        if ( loadFromFile( resourceID ) == false )
+        if ( loadFromFile( assetID ) == false )
         {
             SW_LOG_ERROR( "Material file '%#' could not be loaded", assetRelativePath );
             return false;
@@ -346,7 +346,7 @@ namespace sw
         // 한 번도 initialize 되지 않은 머티리얼이다. 복원할 내용 자체가 없다.
         if ( pDevice == nullptr || _assetPath.empty() )
             return true;
-        return initialize( pDevice, ResourceID{ _assetPath } );
+        return initialize( pDevice, AssetID{ _assetPath } );
     }
 
     void Material::forgetRHI( IRHIDevice* pDevice )

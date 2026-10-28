@@ -28,10 +28,10 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -131,7 +131,7 @@ namespace sw
         bool _bCollideJointedBodies{ false };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키나 열거자, 겹친 뼈, 셰이프 없는 바디, 모르는 쌍 뼈는 오류이며 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 에셋 자체의 규칙을 검사합니다(뼈 이름이 겹치지 않고, 바디마다 셰이프가 있고, 쌍의 뼈가 에셋에 있다). */

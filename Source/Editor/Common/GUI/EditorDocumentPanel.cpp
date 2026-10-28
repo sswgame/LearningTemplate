@@ -5,7 +5,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -49,10 +49,10 @@ namespace sw::editor
         if ( ImGui::Button( "Open..." ) )
         {
             // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
-            vector<EditorResourceIndexEntry> listEntry;
-            EditorResourceIndex::collectEntries( listEntry );
+            vector<EditorAssetIndexEntry> listEntry;
+            EditorAssetIndex::collectEntries( listEntry );
             _listOpenCandidate.clear();
-            for ( const EditorResourceIndexEntry& entry : listEntry )
+            for ( const EditorAssetIndexEntry& entry : listEntry )
             {
                 if ( entry._kind == _kind && acceptsDocumentPath( entry._path ) )
                     _listOpenCandidate.push_back( entry._path );

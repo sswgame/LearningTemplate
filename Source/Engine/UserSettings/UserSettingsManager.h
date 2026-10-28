@@ -16,9 +16,9 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Resource/ResourceID.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
@@ -177,7 +177,7 @@ namespace sw
         void addStartupSchema( DataPath EngineDefaultAssets::* pSchemaField ) { _listStartupSchemaField.push_back( pSchemaField ); }
 
         /** @brief 스키마 XML 을 덧붙이고 검사합니다. 실패하면 덧붙인 것을 버리고 false 입니다. 새 설정은 기본값으로 시작합니다. */
-        [[nodiscard]] bool loadSchema( const ResourceID& resourceID );
+        [[nodiscard]] bool loadSchema( const AssetID& assetID );
         /** @brief 위와 같되 XML 글에서 읽습니다. */
         [[nodiscard]] bool loadSchemaFromXMLText( string_view xmlText, string_view sourceName );
         /**

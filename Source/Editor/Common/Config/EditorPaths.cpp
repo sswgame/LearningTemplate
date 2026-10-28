@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -22,11 +22,11 @@ namespace sw::editor
 
     string EditorPaths::getProjectRootPath()
     {
-        const string& projectRoot = ResourcePaths::getProjectFolderPath();
+        const string& projectRoot = AssetPaths::getProjectFolderPath();
         if ( projectRoot.empty() == false )
             return projectRoot;
 
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
         if ( resourceRoot.empty() )
             return {};
 

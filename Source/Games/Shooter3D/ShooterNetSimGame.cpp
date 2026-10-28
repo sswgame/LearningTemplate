@@ -4,9 +4,9 @@
 
 #include "Core/Container/vector.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceID.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -67,7 +67,7 @@ namespace sw
     unique_ptr<INetSimSession> ShooterNetSimGame::createSession( NetSimWorld& world )
     {
         SceneDocument document{};
-        if ( document.load( ResourceID{ kScenePath } ) == false )
+        if ( document.load( AssetID{ kScenePath } ) == false )
         {
             SW_LOG_ERROR( "Shooter net sim: the arena scene '%#' could not be loaded - the world stays empty", kScenePath );
             return nullptr;

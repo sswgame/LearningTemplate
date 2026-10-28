@@ -9,7 +9,7 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -703,19 +703,19 @@ namespace sw
         return saveToFile( path, data );
     }
 
-    bool MeshAssetFormat::loadFromResource( const ResourceID& resourceID, MeshAssetData& outData )
+    bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, MeshAssetData& outData )
     {
         outData = MeshAssetData{};
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
             return false;
         return readFromBytes( bytes.data(), bytes.size(), outData );
     }
 
-    bool MeshAssetFormat::loadFromResource( const ResourceID& resourceID, vector<RHIVertex>& outListVertex )
+    bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, vector<RHIVertex>& outListVertex )
     {
         MeshAssetData data{};
-        const bool    bRead = loadFromResource( resourceID, data );
+        const bool    bRead = loadFromAsset( assetID, data );
         outListVertex       = std::move( data._listVertex );
         return bRead;
     }

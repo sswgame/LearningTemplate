@@ -85,7 +85,7 @@ namespace sw::editor
     void AudioEventBrowserPanel::beginEditing()
     {
         // 엔진의 사본이 아니라 파일을 다시 읽는다 — 엔진 설명자는 오디오 스레드가 참조하고, 저장은 파일이 원본이다.
-        if ( _editLibrary.loadFromResource( ResourceID{ _selectedLibrary.view() } ) == false )
+        if ( _editLibrary.loadFromAsset( AssetID{ _selectedLibrary.view() } ) == false )
         {
             endEditing();
             return;
@@ -111,7 +111,7 @@ namespace sw::editor
     bool AudioEventBrowserPanel::saveDocument()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
-        if ( _bEditDirty == false || _editLibrary.saveToResource( _editLibraryName.view() ) == false )
+        if ( _bEditDirty == false || _editLibrary.saveToAsset( _editLibraryName.view() ) == false )
             return false;
         _bEditDirty = false;
         return true;
@@ -129,7 +129,7 @@ namespace sw::editor
     {
         ImGui::BeginDisabled( _bEditDirty == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
-            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToResource 가 오류로 남기고 사본은 그대로다
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToAsset 가 오류로 남기고 사본은 그대로다
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "audioevents.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "SaveEditsTip" ) );

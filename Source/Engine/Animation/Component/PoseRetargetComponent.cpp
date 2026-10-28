@@ -96,7 +96,7 @@ namespace sw
     {
         _profilePath   = string{ path };
         _bProfileReady = SW_FALSE;
-        if ( _profilePath.empty() == false && _profile.loadFromResource( ResourceID{ _profilePath } ) )
+        if ( _profilePath.empty() == false && _profile.loadFromAsset( AssetID{ _profilePath } ) )
             _bProfileReady = SW_TRUE;
         _pBoundSourceSkeleton = nullptr; // 다음 평가가 다시 묶는다
     }

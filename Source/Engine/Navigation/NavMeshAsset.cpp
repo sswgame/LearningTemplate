@@ -10,10 +10,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 
 namespace sw
@@ -150,13 +150,13 @@ namespace sw
         return true;
     }
 
-    bool NavMeshAsset::loadFromResource( const ResourceID& resourceID )
+    bool NavMeshAsset::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         vector<uint8>     bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
             return false;
-        return readBytes( bytes.data(), bytes.size(), resourcePath );
+        return readBytes( bytes.data(), bytes.size(), assetPath );
     }
 
     bool NavMeshAsset::saveToFile( string_view absolutePath ) const

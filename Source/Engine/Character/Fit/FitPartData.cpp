@@ -54,13 +54,13 @@ namespace sw
         return reader.finish();
     }
 
-    bool FitPartData::loadFromResource( const ResourceID& resourceID )
+    bool FitPartData::loadFromAsset( const AssetID& assetID )
     {
-        const string_view   path = resourceID.view();
+        const string_view   path = assetID.view();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, ResourceID{ path }, "PartFit", root ) )
+        if ( reader.loadRoot( document, AssetID{ path }, "PartFit", root ) )
             readRoot( root, reader );
         return reader.finish();
     }

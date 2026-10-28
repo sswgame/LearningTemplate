@@ -13,7 +13,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Text/SystemFontLocator.h"
 
 #include <imgui.h>
@@ -53,7 +53,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const string editorRoot = ResourcePaths::findLooseDomainFolder( path::kEditorPack ).getDiskPath();
+                const string editorRoot = AssetPaths::findLooseDomainFolder( path::kEditorPack ).getDiskPath();
                 if ( editorRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorPaths::kFontsFolderName ), pFileName );
@@ -61,7 +61,7 @@ namespace sw::editor
                         return candidate;
                 }
 
-                const string& resourceRoot = ResourcePaths::getRootFolderPath();
+                const string& resourceRoot = AssetPaths::getRootFolderPath();
                 if ( resourceRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath(

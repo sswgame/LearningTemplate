@@ -10,8 +10,8 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -197,11 +197,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool MeshVertexAnimation::loadFromResource( const ResourceID& resourceID )
+    bool MeshVertexAnimation::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         vector<uint8>     bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
             SW_LOG_ERROR( "Vertex animation '%#' could not be read", path );
             *this = MeshVertexAnimation{};

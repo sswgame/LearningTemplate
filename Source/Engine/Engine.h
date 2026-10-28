@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
@@ -19,7 +20,6 @@
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -134,7 +134,7 @@ namespace sw
         /** @brief 셸 디버그 액션 맵을 한 프레임 돌립니다(`ShellInputActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
         void updateShellActions( float32 deltaTime );
         /** @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_shellInputMap`)에서 만듭니다(`ShellInputActions::createInputMap`). */
-        static unique_ptr<InputMap> createShellInputMap( const ResourceID& resourceID );
+        static unique_ptr<InputMap> createShellInputMap( const AssetID& assetID );
 
         /**
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).

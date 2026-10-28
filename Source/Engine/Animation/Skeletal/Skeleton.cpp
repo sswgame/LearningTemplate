@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -74,12 +74,12 @@ namespace sw
         return false;
     }
 
-    bool Skeleton::loadFromResource( const ResourceID& resourceID )
+    bool Skeleton::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
         string text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Skeleton '%#' could not be read", path );
             clear();

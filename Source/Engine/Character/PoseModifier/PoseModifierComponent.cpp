@@ -240,7 +240,7 @@ namespace sw
             shared_ptr<SocketSet> sockets = make_shared<SocketSet>();
             if ( kinds.loadDefault() == false )
                 SW_LOG_ERROR( "Default socket kinds could not be loaded for the rig sockets '%#'", _socketSetPath.c_str() );
-            else if ( sockets->loadFromResource( ResourceID{ _socketSetPath }, kinds ) == false )
+            else if ( sockets->loadFromAsset( AssetID{ _socketSetPath }, kinds ) == false )
                 SW_LOG_ERROR( "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
             else
                 _ownSockets = std::move( sockets );
@@ -630,7 +630,7 @@ namespace sw
         if ( _physicsAssetPath.empty() == false && _pUnit != nullptr )
         {
             PhysicsAsset asset;
-            if ( asset.loadFromResource( ResourceID{ _physicsAssetPath } ) == false )
+            if ( asset.loadFromAsset( AssetID{ _physicsAssetPath } ) == false )
                 SW_LOG_ERROR( "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
             for ( const PhysicsAssetBodyDef& body : asset._listBody )
             {

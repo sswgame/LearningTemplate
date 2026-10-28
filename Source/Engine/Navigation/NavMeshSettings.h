@@ -13,9 +13,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Navigation/NavigationTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -118,7 +118,7 @@ namespace sw
         float32 _obstacleMoveThreshold{ 0.25f };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 이름, 겹친 이름, 범위 밖) 오류를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
         /** @brief 영역과 에이전트 종류가 하나 이상인지(데이터가 선언한다 — 코드가 채우지 않는다), 이름이 겹치지 않는지, 영역이 16 개 이하인지, 값이 범위 안인지, 기본 종류가 있는 이름인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */

@@ -4,6 +4,7 @@
 
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
@@ -12,7 +13,6 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
-#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 
 namespace sw
 {

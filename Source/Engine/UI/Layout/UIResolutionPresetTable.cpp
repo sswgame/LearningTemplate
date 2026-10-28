@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -11,10 +11,10 @@ namespace sw
 
     namespace
     {
-        [[nodiscard]] bool loadTable( const ResourceID& id )
+        [[nodiscard]] bool loadTable( const AssetID& id )
         {
             UIResolutionPresetTable table;
-            return table.loadFromResource( id );
+            return table.loadFromAsset( id );
         }
     } // namespace
 
@@ -24,11 +24,11 @@ namespace sw
 
 namespace sw
 {
-    bool UIResolutionPresetTable::loadFromResource( const ResourceID& resourceID )
+    bool UIResolutionPresetTable::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         _listResolution.clear();
-        bool bOk = ReflectedXMLFile::loadDesc( resourceID, *this );
+        bool bOk = ReflectedXMLFile::loadDesc( assetID, *this );
         if ( bOk && _listResolution.empty() )
         {
             SW_LOG_ERROR( "%#: no resolutions in <_listResolution>", path );

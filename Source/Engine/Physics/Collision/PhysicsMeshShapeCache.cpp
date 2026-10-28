@@ -24,7 +24,7 @@ namespace sw
             static constexpr const utf8* kStatsName = "PhysicsMeshShape";
 
             /** @brief 셰이프 캐시 키(메시 리소스 id 의 글)를 읽기 함수에 넘길 리소스 id 로 바꾸는 한 곳입니다. 이 캐시의 키는 리소스 id 만 담는다. */
-            [[nodiscard]] static ResourceID toResourceID( string_view path ) { return ResourceID{ path }; }
+            [[nodiscard]] static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
             /** @brief 물리 셰이프 캐시의 계측 칸입니다. 표는 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */
             static const CacheStatsHandle& getStats()
@@ -40,7 +40,7 @@ namespace sw
              *          않으려고 남깁니다 — 씬 교체 때 비우면 재방문마다 파일 읽기와 합치기를 다시 한다. 비우는 때는 메시가 다시 읽힐 때(`MeshCache::reload`)와 종료(`MeshCache::clear`)뿐이다.
              *          읽지 못한 경로 기억도 같은 한계(콘텐츠의 깨진 경로 수)다. 크기는 `[CacheStats] PhysicsMeshShape` 줄의 항목 수로 보고, 콘텐츠가 수천 메시로 자라 문제가 되면 그때 바이트 상한을 둔다.
              *          **읽지 못한 경로는 영원히 믿지 않는다.** 파일이 나중에 생길 수 있으므로(임포트가 끝난 뒤, 바깥 도구가 쓴 뒤) 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과
-             *          같은 동안만 믿고, 바뀌었으면 다시 읽어 본다(경로 캐시 `ResourcePaths` 의 "없음" 과 같은 규칙). 다시 읽어도 못 읽으면 오류는 다시 남기지 않는다.
+             *          같은 동안만 믿고, 바뀌었으면 다시 읽어 본다(경로 캐시 `AssetPaths` 의 "없음" 과 같은 규칙). 다시 읽어도 못 읽으면 오류는 다시 남기지 않는다.
              */
             struct Table
             {
@@ -113,7 +113,7 @@ namespace sw
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
         const LoadTriangleListFunction pfnLoad = table._pfnLoad.load( std::memory_order_acquire );
         vector<float3>                 listPosition;
-        const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( PhysicsMeshShapeCacheInternal::toResourceID( path ), listPosition ) && listPosition.size() >= 3;
+        const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( PhysicsMeshShapeCacheInternal::toAssetID( path ), listPosition ) && listPosition.size() >= 3;
         if ( bLoaded == false )
         {
             bool bFirstFailure = false;

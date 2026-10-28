@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Image/DDSLoader.h"
+#include "Engine/Asset/Image/DDSLoader.h"
 
 namespace sw
 {

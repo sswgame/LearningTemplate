@@ -6,6 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
@@ -26,7 +27,6 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Vfx/VfxComponent.h"
 

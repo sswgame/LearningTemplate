@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -255,7 +255,7 @@ namespace sw
                 SW_LOG_ERROR( "GameSettings localization project '%#' needs the engine service LocalizationManager, which is not bound to the game services",
                               settings._localizationProject.c_str() );
             }
-            else if ( pLocalization->initialize( ResourceID{ settings._localizationProject.get() }, settings._defaultLanguage, settings._fallbackLanguage ) == false )
+            else if ( pLocalization->initialize( AssetID{ settings._localizationProject.get() }, settings._defaultLanguage, settings._fallbackLanguage ) == false )
             {
                 SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
             }
@@ -270,7 +270,7 @@ namespace sw
                           settings._inputMap.c_str() );
             return false;
         }
-        if ( _pInput->getInputMap().loadFromResource( ResourceID{ settings._inputMap.get() } ) == false )
+        if ( _pInput->getInputMap().loadFromAsset( AssetID{ settings._inputMap.get() } ) == false )
             SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         return true;
     }
@@ -281,7 +281,7 @@ namespace sw
         if ( audioEvents.isSet() == false )
             return true; // 적지 않은 게임은 사운드 이벤트가 없다
         const string& path = audioEvents.get();
-        if ( GameSound::loadEvents( ResourceID{ path } ) == false )
+        if ( GameSound::loadEvents( AssetID{ path } ) == false )
         {
             SW_LOG_ERROR( "GameSettings audioEvents '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", path.c_str() );
             return false;
@@ -299,10 +299,10 @@ namespace sw
         return false;
     }
 
-    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const ResourceID& resourceID ) const
+    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const
     {
-        const string& path    = resourceID.str();
-        const utf8*   pReason = ResourceIO::hasResource( resourceID ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
+        const string& path    = assetID.str();
+        const utf8*   pReason = AssetIO::hasResource( assetID ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
         SW_LOG_ERROR( "Required game data '%#' (%#) could not be loaded: %# - the game does not start", kindLabel, path.c_str(), pReason );
     }
 

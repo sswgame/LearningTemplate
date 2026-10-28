@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -239,11 +239,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool ReflectionProbeData::loadFromResource( const ResourceID& resourceID, string* pOutError )
+    bool ReflectionProbeData::loadFromAsset( const AssetID& assetID, string* pOutError )
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
             ReflectionProbeDataInternal::setError( pOutError, "reflection probe file could not be read" );
             return false;

@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Input/InputManager.h"
@@ -13,7 +14,6 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLWriter.h"
 
 namespace sw
@@ -615,14 +615,14 @@ namespace sw
             SW_LOG_ERROR( "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
             return false;
         }
-        return ResourcePaths::mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
+        return AssetPaths::mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
     }
 
     string ScenarioRecorder::makeReplayID( string_view outputPath )
     {
         if ( isAllowedOutputPath( outputPath ) == false )
             return {};
-        // `Saved/` 를 도메인 이름으로 바꾼다. 나머지는 표기 그대로 둔다(리눅스는 대소문자를 가린다 — `ResourcePaths::findLooseFile` 이 원래 표기로 다시 찾는다).
+        // `Saved/` 를 도메인 이름으로 바꾼다. 나머지는 표기 그대로 둔다(리눅스는 대소문자를 가린다 — `AssetPaths::findLooseFile` 이 원래 표기로 다시 찾는다).
         const size_t firstSlash = outputPath.find( '/' );
         return string( kSavedDomain ) + string( outputPath.substr( firstSlash ) );
     }

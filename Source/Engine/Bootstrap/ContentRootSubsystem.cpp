@@ -4,10 +4,10 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -23,7 +23,7 @@ namespace sw
     {
         if ( _crashHandler.isCrashReporterRun() )
             return SubsystemInitResult::Succeeded;
-        if ( ResourcePaths::initialize() == false )
+        if ( AssetPaths::initialize() == false )
         {
             SW_LOG_ERROR( "Resource root not found - run from a location that contains Resource/." );
             return SubsystemInitResult::Failed;

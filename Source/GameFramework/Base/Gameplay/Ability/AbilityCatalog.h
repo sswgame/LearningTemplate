@@ -138,7 +138,7 @@ namespace sw
      *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`),
      *          어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`), 실행 계산은 "Damage"(`DamageExecution`)이다.
      *
-     *          **데이터**(`loadFromResource`, `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<GameplayEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
+     *          **데이터**(`loadFromAsset`, `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<GameplayEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
      *          파일 안의 순서와 상관없이 이펙트, 어빌리티, 세트 순으로 읽는다. 그래서 비용 이펙트나 쿨다운 이펙트 같은 참조가 앞에 있지 않아도 된다.
      *          여러 파일을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 형식은 `Source/GameFramework/Base/Gameplay/Ability/README.md` 에 있다.
      */

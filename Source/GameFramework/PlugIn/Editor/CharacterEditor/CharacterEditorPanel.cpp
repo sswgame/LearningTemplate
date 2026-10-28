@@ -20,6 +20,8 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -32,8 +34,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -357,7 +357,7 @@ namespace sw::editor
         bool bSaved = true;
         if ( _sockets.isDirty() )
         {
-            const string writePath = ResourcePaths::getWritePath( string_view( _path.c_str() ) );
+            const string writePath = AssetPaths::getWritePath( string_view( _path.c_str() ) );
             if ( writePath.empty() || _sockets.saveToFile( writePath ) == false )
             {
                 _status = "Socket file could not be saved";
@@ -371,7 +371,7 @@ namespace sw::editor
         }
         if ( _pose.isDirty() )
         {
-            const string writePath = ResourcePaths::getWritePath( string_view( _refPosePath.c_str() ) );
+            const string writePath = AssetPaths::getWritePath( string_view( _refPosePath.c_str() ) );
             if ( writePath.empty() || _pose.saveToFile( writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
@@ -417,7 +417,7 @@ namespace sw::editor
         }
         if ( _path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath().empty() )
+        if ( AssetPaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath().empty() )
             return ToolAssetLoadResult::Missing; // 새 소켓 파일 — 저장하면 만든다
         return loadSocketFile() ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
@@ -425,7 +425,7 @@ namespace sw::editor
     bool CharacterEditorPanel::loadSocketFile()
     {
         ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
-        const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
+        const string readPath = AssetPaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
         if ( readPath.empty() )
         {
             _status = "Socket file '" + string{ _path.c_str() } + "' has no file on disk to load";
@@ -772,7 +772,7 @@ namespace sw::editor
         if ( _clipFolder.empty() )
             return;
         // 클립 목록은 디스크의 폴더를 훑어 얻는다 — 에디터는 원본 트리에서 도는 도구다(배포 팩에는 폴더 목록이 없어 목록이 빈다).
-        const string   diskFolder = ResourcePaths::findLooseFile( string_view( _clipFolder.c_str() ) ).getDiskPath();
+        const string   diskFolder = AssetPaths::findLooseFile( string_view( _clipFolder.c_str() ) ).getDiskPath();
         vector<string> listFile;
         if ( diskFolder.empty() || FileUtil::collectFiles( diskFolder, string( AnimationClip::kExtension ), listFile, false ) == false )
             return;
@@ -1032,7 +1032,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load pose" ) );
         if ( ImGui::Button( "Load pose" ) )
         {
-            const string readPath = ResourcePaths::findLooseFile( string_view( _refPosePath.c_str() ) ).getDiskPath();
+            const string readPath = AssetPaths::findLooseFile( string_view( _refPosePath.c_str() ) ).getDiskPath();
             if ( readPath.empty() )
                 _status = "Reference pose file was not found - edit bones and Save to create it";
             else if ( _pose.loadFromFile( readPath ) == false )
@@ -1415,13 +1415,13 @@ namespace sw::editor
                 safeName[index] = '_';
         }
         const string thumbnailID = FileUtil::removeExtension( string_view( _presetPath.c_str() ) ) + "." + safeName + ".png";
-        const string imagePath   = ResourcePaths::getWritePath( thumbnailID );
+        const string imagePath   = AssetPaths::getWritePath( thumbnailID );
         if ( imagePath.empty() || getPreviewViewport().requestImageFile( imagePath ) == false )
         {
             _status = "The thumbnail needs a write path and the Preview tab drawn at least once";
             return;
         }
-        const string presetFile = ResourcePaths::getWritePath( string_view( _presetPath.c_str() ) );
+        const string presetFile = AssetPaths::getWritePath( string_view( _presetPath.c_str() ) );
         const bool   bAttached  = presetFile.empty() == false && _presetStore.setThumbnailPath( name, thumbnailID );
         if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, presetFile ) == false )
         {
@@ -1522,7 +1522,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load presets" ) );
         if ( ImGui::Button( "Load presets" ) )
         {
-            const string readPath = ResourcePaths::findLooseFile( string_view( _presetPath.c_str() ) ).getDiskPath();
+            const string readPath = AssetPaths::findLooseFile( string_view( _presetPath.c_str() ) ).getDiskPath();
             if ( readPath.empty() || AppearanceEditModel::loadPresetFile( _presetStore, readPath ) == false )
                 _status = "Preset file could not be loaded (needs appearance data; see log)";
             else
@@ -1534,7 +1534,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _bDatabaseLoaded == false );
         if ( ImGui::Button( "Save as preset" ) )
         {
-            const string writePath = ResourcePaths::getWritePath( string_view( _presetPath.c_str() ) );
+            const string writePath = AssetPaths::getWritePath( string_view( _presetPath.c_str() ) );
             if ( writePath.empty() || _appearance.saveToPresetFile( _presetStore, string_view( _presetName.c_str() ), writePath ) == false )
                 _status = "Preset could not be saved (needs a name and appearance data)";
             else
@@ -1600,17 +1600,17 @@ namespace sw::editor
             _status = "Data preset could not be made - " + reason;
             return;
         }
-        const string resourceID = FileUtil::joinPath( string_view( _exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
-        const string writePath  = ResourcePaths::getWritePath( resourceID );
-        const bool   bWritten   = writePath.empty() == false && FileUtil::ensureParentDirectoryExists( writePath ) && doc.saveFile( writePath );
+        const string assetID   = FileUtil::joinPath( string_view( _exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
+        const string writePath = AssetPaths::getWritePath( assetID );
+        const bool   bWritten  = writePath.empty() == false && FileUtil::ensureParentDirectoryExists( writePath ) && doc.saveFile( writePath );
         if ( bWritten == false )
         {
-            _status = "Data preset could not be written to " + resourceID;
+            _status = "Data preset could not be written to " + assetID;
             return;
         }
         // 이 창의 데이터와 실행 중인 게임의 데이터에 올린다 — 씬의 컴포넌트는 게임 서비스(`AppearanceDatabase`)에서 프리셋을 푼다.
         // 쓰기는 디스크 경로, 읽기는 리소스 id 다(리소스 입구는 OS 경로를 받지 않는다).
-        if ( _database.loadPresetFile( ResourceID{ resourceID } ) == false )
+        if ( _database.loadPresetFile( AssetID{ assetID } ) == false )
         {
             _status = "Exported preset has errors - " + _database.getReport().joined();
             return;
@@ -1618,19 +1618,19 @@ namespace sw::editor
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
         if ( pGameData == nullptr )
             SW_LOG_WARNING( "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
-        else if ( pGameData->loadPresetFile( ResourceID{ resourceID } ) == false )
+        else if ( pGameData->loadPresetFile( AssetID{ assetID } ) == false )
         {
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
             return;
         }
         ++_published._exportCount;
         _status.clear();
-        SW_LOG_INFO( "Exported appearance preset '%#' to '%#'", presetID.c_str(), resourceID.c_str() );
+        SW_LOG_INFO( "Exported appearance preset '%#' to '%#'", presetID.c_str(), assetID.c_str() );
     }
 
     void CharacterEditorPanel::loadSkeleton()
     {
-        if ( _pose.loadSkeleton( ResourceID{ string_view( _skeletonPath.c_str() ) } ) == false )
+        if ( _pose.loadSkeleton( AssetID{ string_view( _skeletonPath.c_str() ) } ) == false )
         {
             _status = "Skeleton could not be loaded (see log)";
             return;
@@ -1648,7 +1648,7 @@ namespace sw::editor
         _bPreviewValid   = false;
         _database.clear();
         _pItems = make_unique<ItemCatalog>();
-        if ( _pItems->loadFromResource( ResourceID{ string_view( _itemsPath.c_str() ) } ) == false )
+        if ( _pItems->loadFromAsset( AssetID{ string_view( _itemsPath.c_str() ) } ) == false )
         {
             _status = "Items file could not be loaded (see log)";
             return;
@@ -1676,13 +1676,13 @@ namespace sw::editor
             _packDataMessage = "Character editor data has no path: " + error;
             return;
         }
-        if ( ResourceIO::hasResource( ResourceID{ _packDataPath } ) == false )
+        if ( AssetIO::hasResource( AssetID{ _packDataPath } ) == false )
         {
             _packDataState = PackDataState::Missing;
             return;
         }
         CharacterEditorPackData data;
-        if ( data.loadFromResource( ResourceID{ _packDataPath } ) == false )
+        if ( data.loadFromAsset( AssetID{ _packDataPath } ) == false )
         {
             _packDataState   = PackDataState::Invalid;
             _packDataMessage = _packDataPath + " could not be read (see log)";
@@ -1718,7 +1718,7 @@ namespace sw::editor
             _sockets.setKindTable( kinds );
 
         MirrorNameRules rules;
-        if ( rules.loadFromResource( ResourceID{ MirrorNameRules::kDefaultPath } ) == false )
+        if ( rules.loadFromAsset( AssetID{ MirrorNameRules::kDefaultPath } ) == false )
             SW_LOG_WARNING( "Default mirror name table could not be loaded - left/right pairs are not found" );
         else
             _sockets.setMirrorRules( rules );

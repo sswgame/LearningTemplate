@@ -16,6 +16,9 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -25,9 +28,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -43,7 +43,7 @@ namespace sw::editor
         struct AssetHotReloadInternal
         {
             /** @brief 파일 감시가 리소스 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
-            [[nodiscard]] static ResourceID toResourceID( string_view relativePath ) { return ResourceID{ relativePath }; }
+            [[nodiscard]] static AssetID toAssetID( string_view relativePath ) { return AssetID{ relativePath }; }
 
             /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Resource/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
             static constexpr const utf8* kFenceFileStem = "contentfence";
@@ -82,7 +82,7 @@ namespace sw::editor
             static string makeFenceFileName() { return AutomationScratch::makeInstanceID( kFenceFileStem ) + ".tmp"; }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
-            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
+            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
 
             /**
              * @brief 감시 사건이 울타리 표지 파일(이 에디터 것이든 같은 체크아웃의 다른 에디터 것이든)의 것인지 봅니다. 맞으면 @p outbOwn 이 이 에디터의 표지인지입니다.
@@ -98,7 +98,7 @@ namespace sw::editor
                 if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
                     return false; // 값싼 이름 검사로 대부분의 사건을 거른다
                 const string eventPath   = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ) );
+                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( AssetPaths::getRootFolderPath(), AutomationScratch::kScratchDomain ) );
                 if ( FileUtil::normalizePath( FileUtil::getDirectoryPart( eventPath ) ) != scratchRoot )
                     return false;
                 outbOwn = eventPath == FileUtil::normalizePath( makeFenceMarkerPath() );
@@ -199,10 +199,10 @@ namespace sw::editor
         FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
-        _resourceWatch = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), listExtension, fileWatchDelegate );
+        _resourceWatch = _pFileWatchDispatcher->registerWatch( AssetPaths::getRootFolderPath(), listExtension, fileWatchDelegate );
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
-        _contentWatch = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), {}, treeWatchDelegate );
+        _contentWatch = _pFileWatchDispatcher->registerWatch( AssetPaths::getRootFolderPath(), {}, treeWatchDelegate );
         return _resourceWatch.isActive();
     }
 
@@ -263,15 +263,15 @@ namespace sw::editor
                 _bChangedPathsUnknown = true;
             return;
         }
-        const string resourceID = StringUtil::toLower( ResourcePaths::toResourceID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
-        if ( resourceID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
+        const string assetID = StringUtil::toLower( AssetPaths::toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
+        if ( assetID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
         {
             _bChangedPathsUnknown = true;
             return;
         }
         // 목록 크기가 `kMaxTrackedChangedPaths` 로 막혀 있어 선형 검색이 O(256) 으로 끝난다(넘으면 위에서 "모름" 으로 돌아간다).
-        if ( std::find( _listChangedPath.begin(), _listChangedPath.end(), resourceID ) == _listChangedPath.end() )
-            _listChangedPath.push_back( resourceID );
+        if ( std::find( _listChangedPath.begin(), _listChangedPath.end(), assetID ) == _listChangedPath.end() )
+            _listChangedPath.push_back( assetID );
     }
 
     bool AssetHotReload::takeChangedPaths( vector<string>& outListPath )
@@ -347,7 +347,7 @@ namespace sw::editor
             return;
 
         string relPath{};
-        if ( FileUtil::makeRelativePath( ResourcePaths::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
+        if ( FileUtil::makeRelativePath( AssetPaths::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
             return;
 
         if ( relPath.empty() )
@@ -380,7 +380,7 @@ namespace sw::editor
             pContext->getSubsystem<EditorAssetValidation>().requestValidation( relativePath );
 
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
-        if ( reloadChangedAsset( AssetHotReloadInternal::toResourceID( relativePath ) ) == ReloadOutcome::Failed )
+        if ( reloadChangedAsset( AssetHotReloadInternal::toAssetID( relativePath ) ) == ReloadOutcome::Failed )
             SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
     }
 
@@ -462,7 +462,7 @@ namespace sw::editor
             {
                 // 임포터가 원본으로 보지 않은 파일 — 옛 길처럼 캐시가 다시 읽는다. 표가 임포터를 달아 둔 파일에서만 일어난다.
                 const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( itemResult._relativePath );
-                if ( reloadCaches( route, AssetHotReloadInternal::toResourceID( itemResult._relativePath ) ) == ReloadOutcome::Failed )
+                if ( reloadCaches( route, AssetHotReloadInternal::toAssetID( itemResult._relativePath ) ) == ReloadOutcome::Failed )
                     SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", itemResult._relativePath.c_str() );
             }
         }
@@ -484,9 +484,9 @@ namespace sw::editor
         }
     }
 
-    ReloadOutcome AssetHotReload::reloadChangedAsset( const ResourceID& resourceID )
+    ReloadOutcome AssetHotReload::reloadChangedAsset( const AssetID& assetID )
     {
-        const string_view      relativePath = resourceID.view();
+        const string_view      relativePath = assetID.view();
         const AssetReloadRoute route        = EditorAssetTypeRegistry::findReloadRoute( relativePath );
         if ( route._pfnImportSource != nullptr )
         {
@@ -497,12 +497,12 @@ namespace sw::editor
             if ( route._pfnImportSource( relativePath ) )
                 return ReloadOutcome::Reloaded;
         }
-        return reloadCaches( route, resourceID );
+        return reloadCaches( route, assetID );
     }
 
-    ReloadOutcome AssetHotReload::reloadCaches( const AssetReloadRoute& route, const ResourceID& resourceID )
+    ReloadOutcome AssetHotReload::reloadCaches( const AssetReloadRoute& route, const AssetID& assetID )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         if ( route._pCacheKindName == nullptr )
             return ReloadOutcome::NotTracked;
 
@@ -516,7 +516,7 @@ namespace sw::editor
         if ( route._pCacheKindName[0] == '\0' )
         {
             // 모듈이 로드한 캐시 — 이름 대신 그 경로를 가진 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).
-            if ( reloadInCachesHolding( *pResources, resourceID, pDevice ) == 0 )
+            if ( reloadInCachesHolding( *pResources, assetID, pDevice ) == 0 )
                 return ReloadOutcome::NotTracked;
         }
         else
@@ -528,7 +528,7 @@ namespace sw::editor
                 return ReloadOutcome::Failed;
             }
             SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
-            pCache->reload( resourceID, pDevice );
+            pCache->reload( assetID, pDevice );
         }
 
         Scene*             pScene   = getActiveScene();
@@ -538,16 +538,16 @@ namespace sw::editor
         return ReloadOutcome::Reloaded;
     }
 
-    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const ResourceID& resourceID, IRHIDevice* pDevice )
+    uint32 AssetHotReload::reloadInCachesHolding( AssetManager& resources, const AssetID& assetID, IRHIDevice* pDevice )
     {
-        const string_view relativePath = resourceID.view();
+        const string_view relativePath = assetID.view();
         uint32            reloadedCount{ 0 };
         for ( IAssetCache* pCache : resources.getAllAssetCache() )
         {
             if ( pCache->isCached( relativePath ) == false )
                 continue;
             SW_LOG_INFO( "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
-            pCache->reload( resourceID, pDevice );
+            pCache->reload( assetID, pDevice );
             ++reloadedCount;
         }
         return reloadedCount;

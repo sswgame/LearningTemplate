@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Navigation/Component/NavAgentCrowdSync.h"
@@ -21,7 +22,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -107,8 +107,8 @@ namespace sw
         if ( _bSettingsLoaded == false )
         {
             _bSettingsLoaded = true;
-            const ResourceID settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
-            if ( ResourceIO::hasResource( settingsID ) == false || _settings.loadFromResource( settingsID ) == false )
+            const AssetID settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
+            if ( AssetIO::hasResource( settingsID ) == false || _settings.loadFromAsset( settingsID ) == false )
                 _settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표는 굽기 전에 validate 가 거절한다(DataDriven)
         }
         return _settings;
@@ -329,10 +329,10 @@ namespace sw
         shared_ptr<const NavMeshAsset> pAsset     = _pCookedAsset;
         if ( pAsset == nullptr )
         {
-            if ( cookedPath.empty() || ResourceIO::hasResource( ResourceID{ cookedPath } ) == false )
+            if ( cookedPath.empty() || AssetIO::hasResource( AssetID{ cookedPath } ) == false )
                 return false;
             shared_ptr<NavMeshAsset> pLoaded = make_shared<NavMeshAsset>();
-            if ( pLoaded->loadFromResource( ResourceID{ cookedPath } ) == false )
+            if ( pLoaded->loadFromAsset( AssetID{ cookedPath } ) == false )
                 return false;
             pAsset = std::move( pLoaded );
         }

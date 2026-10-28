@@ -4,10 +4,10 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -97,16 +97,16 @@ namespace sw
         }
     } // namespace
 
-    bool AudioGraphDef::loadFromResource( const ResourceID& resourceID )
+    bool AudioGraphDef::loadFromAsset( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "Audio graph not found: %#", resourcePath );
+            SW_LOG_ERROR( "Audio graph not found: %#", assetPath );
             return false;
         }
-        return loadFromXMLText( text, resourcePath );
+        return loadFromXMLText( text, assetPath );
     }
 
     bool AudioGraphDef::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -161,17 +161,17 @@ namespace sw
         return XMLSerializer::serialize( this, *StaticType() );
     }
 
-    bool AudioGraphDef::saveToResource( string_view resourcePath ) const
+    bool AudioGraphDef::saveToAsset( string_view assetPath ) const
     {
-        if ( validate( resourcePath ) == false )
+        if ( validate( assetPath ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", resourcePath );
+            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", assetPath );
             return false;
         }
-        const string filePath = ResourcePaths::getWritePath( resourcePath );
+        const string filePath = AssetPaths::getWritePath( assetPath );
         if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", resourcePath, filePath );
+            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", assetPath, filePath );
             return false;
         }
         return true;

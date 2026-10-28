@@ -8,6 +8,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GpuAssert.h"
@@ -20,7 +21,6 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {

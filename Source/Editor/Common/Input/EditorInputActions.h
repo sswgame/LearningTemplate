@@ -26,14 +26,14 @@ namespace sw::editor
     /**
      * @struct EditorInputMapRegistration
      * @brief 확장 모듈이 에디터 입력 맵에 자기 액션 · 레이어를 더하는 등록 줄입니다(`SW_EDITOR_INPUT_MAP`).
-     * @details 파일은 `InputMap::appendFromResource` 규칙을 따른다 — 맵 전체 속성을 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않고,
+     * @details 파일은 `InputMap::appendFromAsset` 규칙을 따른다 — 맵 전체 속성을 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않고,
      *          같은 레이어의 같은 입력을 다른 액션과 나누지 않는다. 확장 명령의 `SW_EDITOR_COMMAND` 입력 액션 칸이 이 파일의 액션을 가리킨다.
      */
     struct EditorInputMapRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "inputMap";
 
-        const utf8* _pResourcePath; ///< 리소스 경로(`editor/input/…` 또는 확장 팩의 경로)
+        const utf8* _pAssetPath; ///< 리소스 경로(`editor/input/…` 또는 확장 팩의 경로)
     };
 } // namespace sw::editor
 
@@ -168,7 +168,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /**
- * @brief 확장 모듈이 에디터 입력 맵에 자기 액션 파일을 더합니다. @p pID 는 등록 id, @p pResourcePath 는 `*.input.xml` 리소스 경로입니다.
+ * @brief 확장 모듈이 에디터 입력 맵에 자기 액션 파일을 더합니다. @p pID 는 등록 id, @p pAssetPath 는 `*.input.xml` 리소스 경로입니다.
  * @code SW_EDITOR_INPUT_MAP( ParkInput, "themepark.input", "editor/input/themepark.input.xml" ); @endcode
  */
-#define SW_EDITOR_INPUT_MAP( name, pID, pResourcePath ) SW_EDITOR_REGISTER( ::sw::editor::EditorInputMapRegistration, InputMap_##name, { pID, 0 }, pResourcePath )
+#define SW_EDITOR_INPUT_MAP( name, pID, pAssetPath ) SW_EDITOR_REGISTER( ::sw::editor::EditorInputMapRegistration, InputMap_##name, { pID, 0 }, pAssetPath )

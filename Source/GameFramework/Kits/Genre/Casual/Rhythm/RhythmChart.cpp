@@ -96,9 +96,9 @@ namespace sw
         makeTimingPoints( {}, {} );
     }
 
-    bool RhythmChart::loadFromResource( const ResourceID& resourceID )
+    bool RhythmChart::loadFromAsset( const AssetID& assetID )
     {
-        return GameDataXML::loadFile( *this, &RhythmChart::loadRoot, resourceID, "Chart" );
+        return GameDataXML::loadFile( *this, &RhythmChart::loadRoot, assetID, "Chart" );
     }
 
     bool RhythmChart::loadFromXMLText( string_view xmlText, string_view sourceName )

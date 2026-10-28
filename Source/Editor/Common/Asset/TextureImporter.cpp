@@ -18,8 +18,8 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -368,10 +368,10 @@ namespace sw::editor
             string_view getImportedLabel() const override { return "DDS"; }
             bool        isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
             string      makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
+            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( resourcePath, rule ) == false )
+                if ( findRule( assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return TextureImporter::computeSourceHash( sourcePath, rule );
             }
@@ -380,19 +380,19 @@ namespace sw::editor
                 (void)sourcePath;
                 return nullptr;
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
+            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( resourcePath, rule ) == false )
+                if ( findRule( assetPath, rule ) == false )
                     return false;
                 return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
 
         private:
             /** @brief 리소스 루트 기준 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
-            [[nodiscard]] bool findRule( string_view resourcePath, TextureImportRule& outRule ) const
+            [[nodiscard]] bool findRule( string_view assetPath, TextureImportRule& outRule ) const
             {
-                TextureImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                TextureImportRuleMatch match = _config.findMatchingRule( assetPath );
                 if ( match.hasError() )
                 {
                     SW_LOG_ERROR( "%#", match._error.c_str() );
@@ -497,7 +497,7 @@ namespace sw::editor
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        const string& resourceRoot = AssetPaths::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {

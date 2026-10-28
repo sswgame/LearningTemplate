@@ -368,7 +368,7 @@ namespace sw
         if ( _effectPath.empty() )
             return;
         VfxEffectDef effect;
-        if ( effect.loadFromResource( ResourceID{ _effectPath } ) == false )
+        if ( effect.loadFromAsset( AssetID{ _effectPath } ) == false )
             return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
         _listSimulation.reserve( effect._listEmitter.size() );
         // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.

@@ -9,8 +9,8 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -33,7 +33,7 @@ namespace sw::editor
     {
         shutdown();
 
-        const string configFolder = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), config::kDirConfig );
+        const string configFolder = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO( "Config hot reload is off - no config folder at %#", configFolder.c_str() );

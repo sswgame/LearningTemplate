@@ -107,12 +107,12 @@ namespace sw
         return true;
     }
 
-    bool AnimationBoneMaskDef::loadFromFile( const ResourceID& resourceID )
+    bool AnimationBoneMaskDef::loadFromFile( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         _listEntry.clear();
         XMLDocument doc;
-        if ( path.empty() || doc.loadResource( resourceID ) == false )
+        if ( path.empty() || doc.loadResource( assetID ) == false )
         {
             SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
             return false;

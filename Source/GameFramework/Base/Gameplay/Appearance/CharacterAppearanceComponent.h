@@ -15,13 +15,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/Cache/SharedAssetCache.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"

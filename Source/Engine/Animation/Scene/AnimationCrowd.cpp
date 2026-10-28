@@ -9,12 +9,12 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -68,11 +68,11 @@ namespace sw
         return false;
     }
 
-    bool AnimationCrowdSettings::loadFromResource( const ResourceID& resourceID )
+    bool AnimationCrowdSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#' could not be read", path );
             *this = AnimationCrowdSettings{};
@@ -419,7 +419,7 @@ namespace sw
         entry._bAnchorRootMotion        = anchor;
         const string cookedPath         = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
         bool         bReady             = false;
-        const bool   bCookedBinaryFound = cookedPath.empty() == false && ResourceIO::hasResource( ResourceID{ cookedPath } ) && animation->loadFromResource( ResourceID{ cookedPath } );
+        const bool   bCookedBinaryFound = cookedPath.empty() == false && AssetIO::hasResource( AssetID{ cookedPath } ) && animation->loadFromAsset( AssetID{ cookedPath } );
         if ( bCookedBinaryFound )
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.
@@ -454,5 +454,5 @@ namespace sw
     }
 
     /** @brief 군중 공유 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( AnimationCrowd, "animationcrowd", nullptr, nullptr, "/animation/animationcrowd.xml", &ResourceDataKindUtil::loadCatalog<AnimationCrowdSettings> );
+    SW_RESOURCE_DATA_KIND( AnimationCrowd, "animationcrowd", nullptr, nullptr, "/animation/animationcrowd.xml", &AssetDataKindUtil::loadCatalog<AnimationCrowdSettings> );
 } // namespace sw

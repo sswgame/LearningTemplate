@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
          * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
          *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
          */
-        static unique_ptr<InputMap> createInputMap( const ResourceID& resourceID );
+        static unique_ptr<InputMap> createInputMap( const AssetID& assetID );
 
         /** @brief 해당 액션이 이번 프레임에 발동했는지 반환합니다. 맵이 아직 없으면 false 입니다. */
         bool wasActionTriggered( const hashed_string& actionName ) const;

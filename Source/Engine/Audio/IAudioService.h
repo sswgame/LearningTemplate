@@ -18,9 +18,9 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -117,7 +117,7 @@ namespace sw
          * @param bus 보낼 버스입니다. 비어 있으면 `sfx` 입니다(`voice`, `ambient`, `ui` 등).
          * @return 경로가 비었거나 리소스가 없으면 false 를 반환합니다.
          */
-        bool play( const ResourceID& resourceID, const hashed_string& bus = hashed_string{} );
+        bool play( const AssetID& assetID, const hashed_string& bus = hashed_string{} );
 
         /**
          * @brief 소리를 **지금** 디코드해 캐시에 올립니다. 언리얼의 사운드 프리캐시, 유니티의 `AudioClip.LoadAudioData` 에 해당합니다.
@@ -126,12 +126,12 @@ namespace sw
         bool preload( string_view path );
 
         /** @brief 배경음악(BGM)을 `music` 버스에서 루프로 재생합니다. 같은 곡이 재생 중이면 다시 시작하지 않고, 다른 곡이면 짧게 크로스페이드합니다. */
-        bool playMusic( const ResourceID& resourceID );
+        bool playMusic( const AssetID& assetID );
         /**
          * @brief 적응형 음악(`*.music.xml`: 구간, 레이어, 전환)을 시작합니다. 구간은 `getEngine().setMusicSegment` 로 바꾸고, 레이어는 게임 파라미터로 조절합니다.
          * @return 파일을 읽지 못하거나 검사를 통과하지 못하면 false 를 반환합니다.
          */
-        bool playAdaptiveMusic( const ResourceID& resourceID );
+        bool playAdaptiveMusic( const AssetID& assetID );
         /** @brief 현재 재생 중인 배경음악(BGM)을 중지합니다. */
         void stopMusic();
         /** @brief 배경음악을 일시정지합니다. */
@@ -142,7 +142,7 @@ namespace sw
         string getMusicPath() const { return _musicPath; }
 
         /** @brief 믹서 그래프를 리소스에서 읽어 교체합니다(게임이 자기 그래프를 쓸 때). 읽기나 검사에 실패하면 false 를 반환하고 현재 그래프를 그대로 씁니다. */
-        [[nodiscard]] bool loadMixer( const ResourceID& resourceID );
+        [[nodiscard]] bool loadMixer( const AssetID& assetID );
         /** @brief 마지막으로 읽은 믹서 그래프의 리소스 경로입니다. 코드의 기본 그래프를 쓰면 비어 있습니다. */
         const string& getMixerPath() const { return _mixerPath; }
 
@@ -150,13 +150,13 @@ namespace sw
          * @brief 그 경로가 지금 쓰는 오디오 데이터(믹서 그래프 · 이벤트 라이브러리 · 읽어 둔 소리 그래프)의 파일인지 반환합니다. 모르는 경로로 이름을 intern 하지 않습니다.
          * @details 핫 리로드가 바뀐 파일마다 묻는 길이다(`AudioReloadCache`).
          */
-        bool isDataFile( string_view resourcePath ) const;
+        bool isDataFile( string_view assetPath ) const;
         /**
          * @brief 바뀐 오디오 데이터 파일을 다시 읽어 바꿉니다. 믹서 그래프면 `loadMixer`, 이벤트 라이브러리면 같은 이름으로 `loadEventLibrary`(쿨다운과 순서 커서는 이름으로 이어지고 재생 중인 인스턴스는 끝까지 옛 것을 씁니다).
          *        소리 그래프면 클립 캐시가 다시 굳히고(`AudioClipCache::reloadClip`), 재생 중인 보이스는 옛 그래프로 끝까지 냅니다.
          * @return 읽기나 검사에 실패하면 false 이고 지금 것을 그대로 씁니다. 오디오 데이터 파일이 아니면 false 입니다.
          */
-        [[nodiscard]] bool reloadDataFile( const ResourceID& resourceID );
+        [[nodiscard]] bool reloadDataFile( const AssetID& assetID );
 
         /** @brief 엔진을 반환합니다. 이벤트, 파라미터, 스냅샷, 음악, 공간화는 여기서 씁니다. */
         AudioEngine& getEngine() { return *_pEngine; }
@@ -220,7 +220,7 @@ namespace sw
         /** @brief 오프라인 렌더 덤프를 WAV 로 씁니다(`gv_audioDumpPath`). 쌓인 것이 없으면 아무것도 하지 않습니다. */
         void writeOfflineDump();
         /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
-        [[nodiscard]] bool findLoadedGraphPath( string_view resourcePath, hashed_string& outGraphPath ) const;
+        [[nodiscard]] bool findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const;
 
     private:
         unique_ptr<AudioEngine> _pEngine;          /**< 오디오 엔진입니다. */

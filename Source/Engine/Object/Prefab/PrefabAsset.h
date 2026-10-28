@@ -13,10 +13,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Resource/AssetHandle.h"
-#include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -86,9 +86,9 @@ namespace sw
          * @brief XML 에서 프리팹을 로드합니다(`<Prefab formatVersion="0" name="..."><GameObject …/><PrefabInstance …/></Prefab>`. 저장하는 형태 하나만 받습니다).
          * @details 중첩 인스턴스는 `<PrefabInstance name prefab prefabGuid attach>` 이고 안에 `<PrefabOverrides>` 와 그 인스턴스에 붙는 `<PrefabInstance>` 를 둔다.
          */
-        [[nodiscard]] bool loadFromXMLFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
-        [[nodiscard]] bool loadFromJSONFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromJSONFile( const AssetID& assetID );
         /**
          * @brief **디스크 파일**에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
@@ -96,7 +96,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */
-        [[nodiscard]] bool loadFromBinaryFile( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromBinaryFile( const AssetID& assetID );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다. */
         [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
         /** @brief JSON 으로 저장합니다(GameObject 상태 JSON + `_listPrefabInstance`). 상태를 JSON 으로 옮기지 못하거나 쿠킹본 형식이면 쓰지 않고 오류를 알리며 false 입니다. */
@@ -294,7 +294,7 @@ namespace sw
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
          * @param pDevice 쓰지 않습니다. 프리팹은 GPU 리소스를 가지지 않습니다(`IAssetCache` 계약).
          */
-        void reload( const ResourceID& resourceID, IRHIDevice* pDevice = nullptr ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice = nullptr ) override;
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";

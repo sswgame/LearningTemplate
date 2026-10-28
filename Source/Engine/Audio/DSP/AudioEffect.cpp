@@ -4,13 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioFft.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -564,7 +564,7 @@ namespace sw
                 vector<uint8> bytes;
                 AudioPcm      pcm;
                 AudioClipData clip;
-                const bool    bDecoded = ResourceIO::readBinaryResource( ResourceID{ path.get() }, bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
+                const bool    bDecoded = AssetIO::readBinaryAsset( AssetID{ path.get() }, bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
                                       AudioClipData::convertPcm( pcm, clip );
                 if ( bDecoded == false || clip._frameCount == 0 )
                 {

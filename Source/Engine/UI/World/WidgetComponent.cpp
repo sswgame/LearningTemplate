@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -17,7 +18,6 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/UILayoutPass.h"

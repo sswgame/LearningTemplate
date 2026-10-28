@@ -5,6 +5,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -17,8 +19,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -89,7 +89,7 @@ namespace sw
         if ( path.empty() == false )
         {
             // 디바이스 없이 잡는 acquire 는 파일을 읽지 않아 늘 성공한다 — 없는 파일은 여기서 가린다.
-            pMaterial    = ResourceIO::hasResource( ResourceID{ path.c_str() } ) ? cache.acquire( path.c_str(), nullptr ) : nullptr;
+            pMaterial    = AssetIO::hasResource( AssetID{ path.c_str() } ) ? cache.acquire( path.c_str(), nullptr ) : nullptr;
             borrowedPath = path;
             if ( pMaterial == nullptr )
             {

@@ -2,29 +2,29 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "EngineDefaultAssets" );
 
-    unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( const ResourceID& resourceID )
+    unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( const AssetID& assetID )
     {
         unique_ptr<EngineDefaultAssets> assets = make_unique<EngineDefaultAssets>( ConstructKey{} );
-        if ( assets->loadFromResource( resourceID ) == false )
+        if ( assets->loadFromAsset( assetID ) == false )
             return nullptr;
         return assets;
     }
 
-    bool EngineDefaultAssets::loadFromResource( const ResourceID& resourceID )
+    bool EngineDefaultAssets::loadFromAsset( const AssetID& assetID )
     {
-        const string_view assetRelativePath = resourceID.view();
+        const string_view assetRelativePath = assetID.view();
         const string      path              = assetRelativePath.empty() ? string( path::kEngineDefaultAssets ) : string( assetRelativePath );
 
         // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질
@@ -37,7 +37,7 @@ namespace sw
         }
 
         // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
-        if ( XMLSerializer::loadFile( ResourceID{ path }, this, *pTypeInfo ) == false )
+        if ( XMLSerializer::loadFile( AssetID{ path }, this, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR( "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
             return false;
@@ -60,7 +60,7 @@ namespace sw
             }
 #if !defined( SW_SHIPPING )
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 · 글꼴)는 팩에 없다 — 그 칸은 쓰는 쪽도 없으므로 보지 않는다.
-            if ( ResourcePaths::isExcludedForHost( pValue->get() ) == false && ResourceIO::hasResource( ResourceID{ pValue->get() } ) == false )
+            if ( AssetPaths::isExcludedForHost( pValue->get() ) == false && AssetIO::hasResource( AssetID{ pValue->get() } ) == false )
             {
                 SW_LOG_ERROR( "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
                 bComplete = false;

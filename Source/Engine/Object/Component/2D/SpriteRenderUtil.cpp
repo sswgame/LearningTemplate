@@ -5,12 +5,12 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
+#include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Resource/Cache/BuiltInAssetCache.h"
-#include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
 {

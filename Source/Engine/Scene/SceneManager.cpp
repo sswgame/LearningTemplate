@@ -13,6 +13,11 @@
 #include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetStreamingQueue.h"
+#include "Engine/Asset/PreloadSet.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -25,11 +30,6 @@
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/PreloadSet.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -304,10 +304,10 @@ namespace sw
             return;
         // 목록은 쿠킹이 굽는다 — 쿠킹 전 Dev 실행은 목록이 없고, 그 씬은 예전처럼 에셋을 잡을 때 읽는다.
         const string listPath = ScenePreloadList::makeListPath( path );
-        if ( listPath.empty() || ResourceIO::hasResource( ResourceID{ listPath } ) == false )
+        if ( listPath.empty() || AssetIO::hasResource( AssetID{ listPath } ) == false )
             return;
         vector<string> listAsset;
-        if ( ScenePreloadList::read( ResourceID{ listPath }, listAsset ) == false || listAsset.empty() )
+        if ( ScenePreloadList::read( AssetID{ listPath }, listAsset ) == false || listAsset.empty() )
             return; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
         _pScenePreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
         if ( _services._pAssetManager != nullptr )
@@ -357,7 +357,7 @@ namespace sw
         bool          ok = false;
         {
             ScopedTimer parseTimer{ "Scene.load.parse" };
-            ok = doc.load( ResourceID{ pathStr } );
+            ok = doc.load( AssetID{ pathStr } );
         }
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )

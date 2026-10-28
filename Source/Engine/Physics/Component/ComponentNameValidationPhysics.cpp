@@ -22,7 +22,7 @@ namespace sw
             static PhysicsSettings loadSettingsFromFile()
             {
                 PhysicsSettings settings;
-                const bool      bLoaded = settings.loadFromResource( ResourceID{ PhysicsSystem::kSettingsPath } );
+                const bool      bLoaded = settings.loadFromAsset( AssetID{ PhysicsSystem::kSettingsPath } );
                 SW_LOG_ASSERT( bLoaded, "Physics settings '%#' could not be loaded for name validation", PhysicsSystem::kSettingsPath );
                 if ( bLoaded == false )
                     settings = PhysicsSettings{};

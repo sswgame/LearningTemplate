@@ -15,9 +15,9 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -176,9 +176,9 @@ namespace sw::editor
                     return HeightfieldImporter::makeImportedLayerWeightsPath( sourcePath );
                 return HeightfieldImporter::makeImportedHeightfieldPath( sourcePath );
             }
-            uint64 computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
+            uint64 computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
-                (void)resourcePath;
+                (void)assetPath;
                 return HeightfieldImporter::computeSourceHash( sourcePath );
             }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
@@ -186,9 +186,9 @@ namespace sw::editor
                 (void)sourcePath;
                 return nullptr;
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
+            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
-                (void)resourcePath;
+                (void)assetPath;
                 if ( HeightfieldImporter::isSourceLayerWeights( sourcePath ) )
                 {
                     LayerWeightsData data;
@@ -293,7 +293,7 @@ namespace sw::editor
         const HeightfieldRawImporter importer;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
         const AssetImportSummary summary =
-            AssetImportStampUtil::importSources( ResourcePaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
+            AssetImportStampUtil::importSources( AssetPaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );

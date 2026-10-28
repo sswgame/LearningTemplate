@@ -11,8 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Resource/AssetHandle.h"
 
 namespace sw
 {

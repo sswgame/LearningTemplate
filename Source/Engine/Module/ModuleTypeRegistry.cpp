@@ -10,11 +10,11 @@
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -81,16 +81,16 @@ namespace sw
             heads._pType     = TypeRegistrar::getHead();
             heads._pEnum     = EnumRegistrar::getHead();
             heads._pVariable = GlobalVariableRegistrar::getHead();
-            heads._pDataKind = ResourceDataKindRegistrar::getHead();
+            heads._pDataKind = AssetDataKindRegistrar::getHead();
             return heads;
         }
 
         void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads )
         {
-            TypeRegistrar::getHead()             = heads._pType;
-            EnumRegistrar::getHead()             = heads._pEnum;
-            GlobalVariableRegistrar::getHead()   = heads._pVariable;
-            ResourceDataKindRegistrar::getHead() = heads._pDataKind;
+            TypeRegistrar::getHead()           = heads._pType;
+            EnumRegistrar::getHead()           = heads._pEnum;
+            GlobalVariableRegistrar::getHead() = heads._pVariable;
+            AssetDataKindRegistrar::getHead()  = heads._pDataKind;
         }
 
         void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )
@@ -103,7 +103,7 @@ namespace sw
                 getSubsystem<GlobalVariableManager>().registerPendingVariables( moduleName, heads._pVariable );
             // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
             if ( heads._pDataKind != nullptr )
-                (void)getSubsystem<ResourceDataKindRegistry>().registerModuleKinds( moduleName, heads._pDataKind );
+                (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( moduleName, heads._pDataKind );
 
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
@@ -173,7 +173,7 @@ namespace sw
             }
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
-            (void)getSubsystem<ResourceDataKindRegistry>().unregisterModuleKinds( moduleName );
+            (void)getSubsystem<AssetDataKindRegistry>().unregisterModuleKinds( moduleName );
         }
 #endif
     } // namespace engine

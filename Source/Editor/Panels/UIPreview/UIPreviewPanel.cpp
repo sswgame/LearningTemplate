@@ -28,6 +28,8 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -39,8 +41,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
@@ -502,7 +502,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "UI preview needs the engine default assets for its resolution table - the preview stays empty" );
                 return nullptr;
             }
-            if ( _resolutionTable.loadFromResource( ResourceID{ pDefaultAssets->_uiResolutionPresets.get() } ) == false )
+            if ( _resolutionTable.loadFromAsset( AssetID{ pDefaultAssets->_uiResolutionPresets.get() } ) == false )
                 return nullptr;
         }
         if ( _resolutionTable._listResolution.empty() )
@@ -528,7 +528,7 @@ namespace sw::editor
             return; // 같은 문서가 지난번에 만들지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
         if ( bReopen )
         {
-            const string documentPath = _documentPath.get(); // 확정 경로는 늘 값이 있다(EditableResourcePath)
+            const string documentPath = _documentPath.get(); // 확정 경로는 늘 값이 있다(EditableAssetPath)
             releaseTexture();                                // 크기가 바뀌면 렌더 텍스처도 새것이다
             closePreview();                                  // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 올린다)
             _screen             = ui.openOffscreenScreen( documentPath, targetPath );
@@ -662,7 +662,7 @@ namespace sw::editor
             SW_LOG_ERROR( "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
             return false;
         }
-        const string path = ResourcePaths::getWritePath( _openedDocument );
+        const string path = AssetPaths::getWritePath( _openedDocument );
         if ( path.empty() || FileUtil::writeTextFile( path, text ) == false )
         {
             SW_LOG_ERROR( "UI Preview: '%#' could not be written to '%#'", _openedDocument.c_str(), path.c_str() );

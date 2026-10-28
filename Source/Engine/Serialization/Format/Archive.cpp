@@ -10,8 +10,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -44,9 +44,9 @@ namespace sw
     {
         if ( bReadMode )
         {
-            // 파일 입구는 디스크 경로만 받는다 — `saveFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `ResourceIO::readBinaryResource`
+            // 파일 입구는 디스크 경로만 받는다 — `saveFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `AssetIO::readBinaryAsset`
             // 로 바이트를 읽어 버퍼 생성자로 넘긴다. 예전에는 디스크를 먼저 보고 없으면 리소스 id 로 다시 찾아, 두 종류의 경로가 한 입구로 들어왔다.
-            const bool bLoaded = fileName.empty() == false && ResourceIO::readBinaryFile( fileName, _bytes );
+            const bool bLoaded = fileName.empty() == false && AssetIO::readBinaryFile( fileName, _bytes );
             if ( bLoaded )
             {
                 _pData    = _bytes.data();

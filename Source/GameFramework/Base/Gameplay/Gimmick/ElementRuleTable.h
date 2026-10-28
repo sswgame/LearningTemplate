@@ -30,7 +30,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -152,7 +152,7 @@ namespace sw
         static constexpr int32   kMaxMaterialCount = 255;
         static constexpr float32 kDefaultStepTime  = 0.25f; ///< `stepTime` 을 적지 않은 표의 스텝 길이(초)
 
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
         /**

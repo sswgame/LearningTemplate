@@ -6,6 +6,9 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -16,9 +19,6 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -193,17 +193,17 @@ namespace sw
         _bGPUDirty = SW_TRUE;
     }
 
-    bool MaterialInstance::loadFromFile( const ResourceID& resourceID )
+    bool MaterialInstance::loadFromFile( const AssetID& assetID )
     {
         XMLDocument doc;
-        if ( doc.loadResource( resourceID ) == false )
+        if ( doc.loadResource( assetID ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
     }
 
     bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
+        const string absPath = AssetPaths::getWritePath( assetRelativePath );
 
         syncDescOverrides();
 

@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Graphics/Lighting/ReflectionProbeData.h"
 #include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
@@ -22,7 +23,6 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Renderer/Capture/ReflectionProbeBaker.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -65,26 +65,26 @@ namespace sw::editor
             /** @brief 베이크한 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
             static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeData&& data, string& outError )
             {
-                const string resourcePath = probe.getOwner() != nullptr ? makeSceneBakeResourcePath( scene, *probe.getOwner(), ReflectionProbeData::kExtension ) : string{};
-                if ( resourcePath.empty() )
+                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *probe.getOwner(), ReflectionProbeData::kExtension ) : string{};
+                if ( assetPath.empty() )
                 {
                     outError = "the scene has never been saved - save it before baking reflection probes";
                     return false;
                 }
-                if ( data.saveToFile( ResourcePaths::getWritePath( resourcePath ) ) == false )
+                if ( data.saveToFile( AssetPaths::getWritePath( assetPath ) ) == false )
                 {
                     utf8 arrMessage[constant::kMaxBuffer512];
-                    formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", resourcePath.c_str() );
+                    formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", assetPath.c_str() );
                     outError = arrMessage;
                     return false;
                 }
                 const uint32 resolution = data._resolution;
-                if ( probe.adoptProbeData( std::move( data ), resourcePath ) == false )
+                if ( probe.adoptProbeData( std::move( data ), assetPath ) == false )
                 {
                     outError = "the baked reflection does not fit the probe";
                     return false;
                 }
-                SW_LOG_INFO( "Baked reflection probe '%#' (%#x%# octahedral)", resourcePath.c_str(), resolution, resolution );
+                SW_LOG_INFO( "Baked reflection probe '%#' (%#x%# octahedral)", assetPath.c_str(), resolution, resolution );
                 return true;
             }
 

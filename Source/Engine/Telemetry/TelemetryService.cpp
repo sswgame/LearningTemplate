@@ -13,11 +13,11 @@
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
@@ -304,11 +304,11 @@ namespace sw
                                                           : string( gv_telemetryFolder );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
-        if ( loadSchema( ResourceID{ engineSchema } ) == false )
+        if ( loadSchema( AssetID{ engineSchema } ) == false )
             SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engineSchema.c_str() );
         if ( packSettings._telemetrySchema.isSet() )
         {
-            if ( loadSchema( ResourceID{ packSettings._telemetrySchema.get() } ) == false )
+            if ( loadSchema( AssetID{ packSettings._telemetrySchema.get() } ) == false )
                 SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", packSettings._telemetrySchema.c_str() );
         }
         initialize( folder, context );
@@ -337,10 +337,10 @@ namespace sw
         shutdown();
     }
 
-    bool TelemetryService::loadSchema( const ResourceID& resourceID )
+    bool TelemetryService::loadSchema( const AssetID& assetID )
     {
         ScopedLock<mutex> lock{ _mutex };
-        const bool        bLoaded = _schema.loadFromResource( resourceID );
+        const bool        bLoaded = _schema.loadFromAsset( assetID );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }

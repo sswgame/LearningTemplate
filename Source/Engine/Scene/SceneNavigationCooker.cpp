@@ -5,14 +5,14 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/Cook/CookStore.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -40,20 +40,20 @@ namespace sw
 
 namespace sw
 {
-    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, const ResourceID& resourceID, NavMeshAsset& outAsset )
+    bool SceneNavigationCooker::cookScene( const SceneEngineServices& services, const AssetID& assetID, NavMeshAsset& outAsset )
     {
-        const string_view sceneResourcePath = resourceID.view();
-        outAsset                            = NavMeshAsset{};
+        const string_view sceneAssetPath = assetID.view();
+        outAsset                         = NavMeshAsset{};
         SceneDocument document;
-        if ( document.loadXML( resourceID ) == false )
+        if ( document.loadXML( assetID ) == false )
         {
-            SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneResourcePath );
+            SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneAssetPath );
             return false;
         }
         Scene scene{ "NavMeshCook", services };
         if ( scene.instantiate( document ) == false || scene.getObjectManager() == nullptr )
         {
-            SW_LOG_ERROR( "Navmesh cook could not build scene '%#'", sceneResourcePath );
+            SW_LOG_ERROR( "Navmesh cook could not build scene '%#'", sceneAssetPath );
             return false;
         }
         GameObjectManager&    manager    = *scene.getObjectManager();
@@ -80,7 +80,7 @@ namespace sw
             NavMeshAssetEntry entry;
             if ( navigation.makeCookedEntry( agentType, entry ) == false )
             {
-                SW_LOG_ERROR( "Navmesh cook could not bake agent type '%#' of scene '%#'", agentType.c_str(), sceneResourcePath );
+                SW_LOG_ERROR( "Navmesh cook could not bake agent type '%#' of scene '%#'", agentType.c_str(), sceneAssetPath );
                 bAll = false;
                 continue;
             }
@@ -123,10 +123,10 @@ namespace sw
                {
                 // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
-                if ( ResourceIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
+                if ( AssetIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
                     return CookStep::Skipped;
                 NavMeshAsset asset;
-                if ( cookScene( services, ResourceID{ relativePath }, asset ) == false )
+                if ( cookScene( services, AssetID{ relativePath }, asset ) == false )
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;

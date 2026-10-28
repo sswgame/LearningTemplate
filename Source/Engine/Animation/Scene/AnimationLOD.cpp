@@ -7,9 +7,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceDataKind.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -26,11 +26,11 @@ namespace sw
         return false;
     }
 
-    bool AnimationLODSettings::loadFromResource( const ResourceID& resourceID )
+    bool AnimationLODSettings::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
             *this = AnimationLODSettings{};
@@ -166,5 +166,5 @@ namespace sw
     }
 
     /** @brief 애니메이션 LOD 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( AnimationLOD, "animationlod", nullptr, nullptr, "/animation/animationlod.xml", &ResourceDataKindUtil::loadCatalog<AnimationLODSettings> );
+    SW_RESOURCE_DATA_KIND( AnimationLOD, "animationlod", nullptr, nullptr, "/animation/animationlod.xml", &AssetDataKindUtil::loadCatalog<AnimationLODSettings> );
 } // namespace sw

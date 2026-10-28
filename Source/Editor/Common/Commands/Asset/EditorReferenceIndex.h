@@ -64,7 +64,7 @@ namespace sw::editor
         /** @brief 스캔한 결과로 색인을 교체합니다. 이후 `isReady` 가 true 입니다. */
         void assign( EditorReferenceIndexData&& data );
         /** @brief 파일 하나의 참조를 다시 스캔합니다. 파일이 지워졌으면 그 파일이 적은 참조와 그 파일의 id 를 뺍니다. */
-        void refreshFile( string_view resourceRoot, string_view resourcePath );
+        void refreshFile( string_view resourceRoot, string_view assetPath );
 
         /** @brief @p targetPath 를 적은 참조를 모읍니다. 먼저 출력 목록을 비우며, 리소스 id 의 대소문자는 구분하지 않습니다. */
         void findReferrers( string_view targetPath, vector<EditorAssetReference>& outListReference ) const;
@@ -74,7 +74,7 @@ namespace sw::editor
         uint32 countReferrerFiles( string_view targetPath ) const;
 
         /** @brief 트리의 파일로 아는 리소스 id(소문자)이면 true 입니다. 파일 하나만 다시 읽어도 되는지(있던 파일의 내용 변경) 가르는 데 씁니다. */
-        bool containsFile( string_view resourceID ) const;
+        bool containsFile( string_view assetID ) const;
         /** @brief 한 번이라도 결과를 넣었으면 true 입니다. */
         bool isReady() const { return _bReady == SW_TRUE; }
         /** @brief 마지막으로 스캔한 텍스트 에셋 수를 반환합니다. */

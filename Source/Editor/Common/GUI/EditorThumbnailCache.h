@@ -50,10 +50,10 @@ namespace sw::editor
         void clear();
 
         /**
-         * @brief @p resourceID 텍스처의 ImGui 텍스처 id 입니다. 아직 없으면(예약 · 읽는 중 포함) 읽기를 예약하고 nullptr 을 돌려줍니다.
+         * @brief @p assetID 텍스처의 ImGui 텍스처 id 입니다. 아직 없으면(예약 · 읽는 중 포함) 읽기를 예약하고 nullptr 을 돌려줍니다.
          * @details 읽지 못한 경로는 기억해 두고 다시 읽지 않습니다(`clear` 가 잊는다).
          */
-        void* findTexture( string_view resourceID );
+        void* findTexture( string_view assetID );
         /** @brief 지금 보관하고 있는 썸네일 수입니다. */
         uint32 getCachedCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 읽기를 기다리거나 읽는 중인 썸네일이 있으면 true 입니다. 그동안 패널은 연속 프레임을 청한다(워커가 끝내도 창 메시지는 오지 않는다). */
@@ -63,7 +63,7 @@ namespace sw::editor
         /** @brief 썸네일 하나입니다. */
         struct Entry
         {
-            string _resourceID;
+            string _assetID;
             void*  _pTextureID{ nullptr };
             uint64 _textureHandle{ 0 }; ///< 등록한 RHI 텍스처 — 바뀌면(다시 읽기, 디바이스 교체) 다시 등록한다
             uint64 _lastUsedFrame{ 0 };
@@ -72,7 +72,7 @@ namespace sw::editor
         /** @brief 워커에서 읽는 중인 썸네일 하나입니다. 핸들이 로드를 살려 둡니다(블록은 에셋이 준비된 뒤 참조 하나를 쥔다). */
         struct Loading
         {
-            string                       _resourceID;
+            string                       _assetID;
             shared_ptr<TextureLoadBlock> _pBlock;
         };
 
@@ -83,7 +83,7 @@ namespace sw::editor
         /** @brief 읽는 중인 로드를 보아, 워커가 읽기를 마친 것은 올리고(`kMaxUploadsPerUpdate`) 끝난 것은 등록하거나 실패 목록에 둡니다. */
         void finishLoads( IRHIDevice* pDevice );
         /** @brief 준비된 텍스처 하나를 참조를 쥐고 ImGui 에 등록합니다. 못 쓰는 텍스처면 false 이고 아무것도 쥐지 않습니다. */
-        bool adoptReady( const string& resourceID, IRHIDevice* pDevice );
+        bool adoptReady( const string& assetID, IRHIDevice* pDevice );
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
         void evictOverCapacity( IRHIDevice* pDevice );
 
@@ -92,7 +92,7 @@ namespace sw::editor
 
     private:
         /** @brief 실패를 기록하고 상한을 넘은 오래된 실패를 잊습니다. */
-        void recordFailure( string resourceID );
+        void recordFailure( string assetID );
 
     private:
         vector<Entry>         _listEntry;

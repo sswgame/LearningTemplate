@@ -190,7 +190,7 @@ namespace sw::editor
         GameObject*                pRoot = pManager->findGameObjectByID( frame._rootObjectID );
 
         // 저장하지 못하면 나가지 않는다. 나가면 편집한 프리팹 내용이 저장 없이 사라진다.
-        const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, ResourceID{ frame._prefabPath } ) == false;
+        const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ frame._prefabPath } ) == false;
         if ( bSaveFailed )
         {
             SW_LOG_ERROR( "Prefab window could not save '%#' - still editing it", frame._prefabPath.c_str() );
@@ -229,7 +229,7 @@ namespace sw::editor
         GameObjectManager* pManager = findPreviewManager();
         const auto*        pFrame   = _isolation.getFrame();
         GameObject*        pRoot    = ( pManager != nullptr && pFrame != nullptr ) ? pManager->findGameObjectByID( pFrame->_rootObjectID ) : nullptr;
-        if ( pRoot == nullptr || EditorInspectorCommands::applyToPrefab( pRoot, ResourceID{ pFrame->_prefabPath } ) == false )
+        if ( pRoot == nullptr || EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ pFrame->_prefabPath } ) == false )
         {
             _status = "Could not save the prefab";
             return false;

@@ -6,7 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Asset/AssetIO.h"
 
 namespace sw
 {
@@ -329,11 +329,11 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool FractureAsset::loadFromResource( const ResourceID& resourceID )
+    bool FractureAsset::loadFromAsset( const AssetID& assetID )
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
             return false;
         return readFromBytes( bytes.data(), bytes.size() );
     }

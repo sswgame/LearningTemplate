@@ -15,10 +15,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Destruction/FractureGraph.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -90,7 +90,7 @@ namespace sw
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시 경로 옆의 파쇄 경로입니다(`a/b.mesh` → `a/b.fracture`). */
         static string makePathForMesh( string_view meshPath );
     };

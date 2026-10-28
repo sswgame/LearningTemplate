@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include <algorithm>
@@ -61,15 +61,15 @@ namespace sw
 
 namespace sw
 {
-    bool SequenceAsset::loadFromFile( const ResourceID& resourceID )
+    bool SequenceAsset::loadFromFile( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         *this                  = SequenceAsset{};
         if ( path.empty() )
             return false;
 
         string text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sequence '%#'", path );
             return false;
@@ -84,7 +84,7 @@ namespace sw
             return false;
 
         string text;
-        if ( ResourceIO::readTextFile( diskPath, text ) == false )
+        if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
             SW_LOG_WARNING( "Could not read sequence file '%#'", diskPath );
             return false;

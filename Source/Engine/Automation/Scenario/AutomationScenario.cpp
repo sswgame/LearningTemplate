@@ -7,13 +7,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
+#include "Engine/Asset/Pack/PackManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Pack/ResourcePakManager.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -31,9 +31,9 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const string loosePath = ResourcePaths::findLooseFile( path ).getDiskPath();
+                const string loosePath = AssetPaths::findLooseFile( path ).getDiskPath();
                 const bool   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
-                return "[read] not found (resource root '" + ResourcePaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
+                return "[read] not found (resource root '" + AssetPaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
                        ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
                        ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
             }
@@ -267,14 +267,14 @@ namespace sw
         }
     }
 
-    bool AutomationScenario::loadFromPath( const ResourceID& resourceID, string& outError )
+    bool AutomationScenario::loadFromPath( const AssetID& assetID, string& outError )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         XMLDocument       doc;
-        if ( doc.loadResource( resourceID ) == false )
+        if ( doc.loadResource( assetID ) == false )
         {
             // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 `[scenario]` 로 붙는다.
-            const bool bReadable = ResourceIO::hasResource( resourceID );
+            const bool bReadable = AssetIO::hasResource( assetID );
             outError             = bReadable ? "[xml] " + doc.getLastError() : AutomationScenarioInternal::describeReadFailure( path );
             return false;
         }
@@ -545,7 +545,7 @@ namespace sw
             {
                 NetEmulationPresetTable presetTable;
                 const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
-                if ( presetTable.loadFromResource( ResourceID{ presetPath.get() } ) == false )
+                if ( presetTable.loadFromAsset( AssetID{ presetPath.get() } ) == false )
                 {
                     outReason = string( "network presets could not be read (" ) + presetPath.get() + ")";
                     return false;

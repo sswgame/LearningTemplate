@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Asset/AssetDataKind.h"
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 
@@ -8,10 +8,10 @@ namespace sw::editor
 {
     namespace
     {
-        [[nodiscard]] bool loadMirrorNames( const ResourceID& id )
+        [[nodiscard]] bool loadMirrorNames( const AssetID& id )
         {
             MirrorNameRules rules;
-            return rules.loadFromResource( id );
+            return rules.loadFromAsset( id );
         }
     } // namespace
 

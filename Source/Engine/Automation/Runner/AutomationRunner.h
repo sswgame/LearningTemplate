@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 #include "Engine/Automation/Runner/AutomationJudge.h"
@@ -18,7 +19,6 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationTimeline.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
-#include "Engine/Resource/ResourceID.h"
 
 namespace sw
 {
@@ -63,7 +63,7 @@ namespace sw
         [[nodiscard]] static string findBackendName();
 
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
-        void startFromPath( const ResourceID& resourceID, string_view reportPath );
+        void startFromPath( const AssetID& assetID, string_view reportPath );
         /**
          * @brief XML 글로 시작합니다(테스트). 형식 오류면 false 이고 결과는 LoadError 입니다.
          * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).

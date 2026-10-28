@@ -23,8 +23,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Resource/ResourceID.h"
 
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -182,7 +182,7 @@ namespace sw
          * @details 실패는 세 가지이고 모두 같게 다룬다. 파일이 없는 경우, 루트가 `<MonsterCatalog>` 가 아닌 경우, **읽었는데 `<Monster>` 가 하나도 없는** 경우다.
          *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.
          */
-        [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
         /** @brief 몬스터 ID 로 정의를 찾습니다. */
         const MonsterDef* findMonster( const hashed_string& id ) const;

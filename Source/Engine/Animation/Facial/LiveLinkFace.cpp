@@ -6,8 +6,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -140,11 +140,11 @@ namespace sw
         return true;
     }
 
-    bool LiveLinkFaceLayout::loadFromResource( const ResourceID& resourceID )
+    bool LiveLinkFaceLayout::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face layout '%#' could not be read", path );
             *this = LiveLinkFaceLayout{};
@@ -180,7 +180,7 @@ namespace sw
             *this = LiveLinkFaceMapping{};
             return false;
         }
-        if ( outLayout.loadFromResource( ResourceID{ _layoutPath } ) == false )
+        if ( outLayout.loadFromAsset( AssetID{ _layoutPath } ) == false )
         {
             *this = LiveLinkFaceMapping{};
             return false; // 읽기가 까닭을 알렸다
@@ -211,11 +211,11 @@ namespace sw
         return true;
     }
 
-    bool LiveLinkFaceMapping::loadFromResource( const ResourceID& resourceID, LiveLinkFaceLayout& outLayout )
+    bool LiveLinkFaceMapping::loadFromAsset( const AssetID& assetID, LiveLinkFaceLayout& outLayout )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         string            text;
-        if ( ResourceIO::readTextResource( resourceID, text ) == false )
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
             SW_LOG_ERROR( "Live Link Face mapping '%#' could not be read", path );
             *this     = LiveLinkFaceMapping{};

@@ -18,7 +18,7 @@
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -220,10 +220,10 @@ namespace sw::editor
         if ( result._listSection.empty() || result._bSkinned == SW_FALSE )
             return true;
         auto resourceOf = [&]( string_view extension )
-        { return ResourcePaths::toResourceID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
+        { return AssetPaths::toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
         auto materialOf = [&]( const ModelImportSection& section )
-        { return ResourcePaths::toResourceID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
-        const string meshID       = ResourcePaths::toResourceID( meshPath );
+        { return AssetPaths::toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
+        const string meshID       = AssetPaths::toAssetID( meshPath );
         const string skeletonPath = resourceOf( Skeleton::kExtension );
 
         // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XmlAssetMerge).

@@ -7,11 +7,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/string_splitter.h"
 
+#include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Resource/Image/ImageFileWriter.h"
 
 namespace sw
 {

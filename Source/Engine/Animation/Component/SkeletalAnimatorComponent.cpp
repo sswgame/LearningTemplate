@@ -280,7 +280,7 @@ namespace sw
     void SkeletalAnimatorComponent::loadGraphForBeginPlay()
     {
         _graph = AnimationGraphAsset{};
-        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( ResourceID{ _animationGraphPath } ) == false )
+        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         requestClipLoads();
         if ( _listClipLoad.empty() )
@@ -429,7 +429,7 @@ namespace sw
         _listClipLoad.clear();
         _bClipsPending = SW_FALSE;
         _graph         = AnimationGraphAsset{};
-        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( ResourceID{ _animationGraphPath } ) == false )
+        if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR( "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         applyGraphPlayables();
         if ( bWasPending )

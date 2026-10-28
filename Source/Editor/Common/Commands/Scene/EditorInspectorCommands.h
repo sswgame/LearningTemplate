@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Resource/ResourceID.h"
+#include "Engine/Asset/AssetID.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw::editor
         };
 
         /** @brief 선택 오브젝트 상태를 프리팹 XML로 저장합니다. */
-        [[nodiscard]] static bool applyToPrefab( GameObject* pObj, const ResourceID& resourceID );
+        [[nodiscard]] static bool applyToPrefab( GameObject* pObj, const AssetID& assetID );
         /** @brief 프리팹 상태로 되돌리고 Undo에 기록합니다. */
         [[nodiscard]] static bool revertToPrefab( GameObject* pObj, string_view prefabPath );
         /**

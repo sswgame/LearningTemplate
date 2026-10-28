@@ -16,12 +16,12 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -222,7 +222,7 @@ namespace sw::editor
         {
             _bScenarioListDirty = SW_FALSE;
             _listScenarioPath.clear();
-            const string&  root = ResourcePaths::getRootFolderPath();
+            const string&  root = AssetPaths::getRootFolderPath();
             vector<string> listFilePath;
             if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) )
             {

@@ -20,6 +20,9 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Asset/AssetIO.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -29,9 +32,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -66,7 +66,7 @@ namespace sw::editor
             {
                 if ( path.empty() )
                     return {};
-                string absPath = ResourcePaths::findLooseFile( path ).getDiskPath();
+                string absPath = AssetPaths::findLooseFile( path ).getDiskPath();
                 if ( absPath.empty() )
                     absPath = string{ path };
                 return absPath;
@@ -352,9 +352,9 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, const ResourceID& resourceID )
+    bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, const AssetID& assetID )
     {
-        return EditorInspectorCommands::applyToPrefab( pInstance, resourceID );
+        return EditorInspectorCommands::applyToPrefab( pInstance, assetID );
     }
 
     bool EditorToolAssetCommands::revertAllPrefabOverrides( GameObject* pInstance, string_view prefabPath )

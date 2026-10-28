@@ -8,13 +8,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Audio/NullAudioBackend.h"
-#include "Engine/Resource/ResourceIO.h"
 
 // NullAudioBackend 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
@@ -96,7 +96,7 @@ namespace sw
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDesc mixerDesc;
-        if ( mixerDesc.loadFromResource( ResourceID{ kDefaultMixerPath } ) == false )
+        if ( mixerDesc.loadFromAsset( AssetID{ kDefaultMixerPath } ) == false )
         {
             SW_LOG_ERROR( "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
             return false;
@@ -313,13 +313,13 @@ namespace sw
         }
     }
 
-    bool IAudioService::play( const ResourceID& resourceID, const hashed_string& bus )
+    bool IAudioService::play( const AssetID& assetID, const hashed_string& bus )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( ResourceIO::hasResource( resourceID ) == false )
+        if ( AssetIO::hasResource( assetID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
@@ -335,15 +335,15 @@ namespace sw
         return _pEngine->getClipStore().loadClip( hashed_string( path ) ) != nullptr;
     }
 
-    bool IAudioService::playMusic( const ResourceID& resourceID )
+    bool IAudioService::playMusic( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         if ( _bInitialized == false || path.empty() )
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
-        if ( ResourceIO::hasResource( resourceID ) == false )
+        if ( AssetIO::hasResource( assetID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
@@ -363,15 +363,15 @@ namespace sw
         return _musicPlayingID != 0;
     }
 
-    bool IAudioService::playAdaptiveMusic( const ResourceID& resourceID )
+    bool IAudioService::playAdaptiveMusic( const AssetID& assetID )
     {
-        const string_view path = resourceID.view();
+        const string_view path = assetID.view();
         if ( _bInitialized == false || path.empty() )
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
-        if ( pMusic->loadFromResource( resourceID ) == false )
+        if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
         if ( _musicPlayingID != 0 )
             _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
@@ -401,67 +401,67 @@ namespace sw
             _pEngine->setPaused( _musicPlayingID, false );
     }
 
-    bool IAudioService::loadMixer( const ResourceID& resourceID )
+    bool IAudioService::loadMixer( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
+        const string_view assetPath = assetID.view();
         AudioMixerDesc    mixerDesc;
-        if ( mixerDesc.loadFromResource( resourceID ) == false )
+        if ( mixerDesc.loadFromAsset( assetID ) == false )
             return false;
         if ( _pEngine->loadMixer( mixerDesc ) == false )
             return false;
-        _mixerPath = string( resourcePath );
+        _mixerPath = string( assetPath );
         return true;
     }
 
-    bool IAudioService::isDataFile( string_view resourcePath ) const
+    bool IAudioService::isDataFile( string_view assetPath ) const
     {
-        if ( _bInitialized == false || resourcePath.empty() )
+        if ( _bInitialized == false || assetPath.empty() )
             return false;
-        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
+        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( assetPath ), true );
         hashed_string libraryName;
         hashed_string graphPath;
-        const bool    bLibrary = _pEngine->findEventLibraryName( resourcePath, libraryName );
-        const bool    bGraph   = findLoadedGraphPath( resourcePath, graphPath );
+        const bool    bLibrary = _pEngine->findEventLibraryName( assetPath, libraryName );
+        const bool    bGraph   = findLoadedGraphPath( assetPath, graphPath );
         return bMixer || bLibrary || bGraph;
     }
 
-    bool IAudioService::findLoadedGraphPath( string_view resourcePath, hashed_string& outGraphPath ) const
+    bool IAudioService::findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const
     {
         // 소리 그래프는 이벤트가 클립처럼 고르므로 클립 캐시가 읽어 둔 것만 다시 읽는다(아직 재생하지 않은 그래프는 처음 재생할 때 새로 읽힌다).
-        return StringUtil::endsWith( resourcePath, AudioGraphDef::kExtension, true ) && _pEngine->getClipStore().findReadyPath( resourcePath, outGraphPath );
+        return StringUtil::endsWith( assetPath, AudioGraphDef::kExtension, true ) && _pEngine->getClipStore().findReadyPath( assetPath, outGraphPath );
     }
 
-    bool IAudioService::reloadDataFile( const ResourceID& resourceID )
+    bool IAudioService::reloadDataFile( const AssetID& assetID )
     {
-        const string_view resourcePath = resourceID.view();
-        if ( _bInitialized == false || resourcePath.empty() )
+        const string_view assetPath = assetID.view();
+        if ( _bInitialized == false || assetPath.empty() )
             return false;
-        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
+        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( assetPath ), true );
         hashed_string graphPath;
-        if ( findLoadedGraphPath( resourcePath, graphPath ) )
+        if ( findLoadedGraphPath( assetPath, graphPath ) )
         {
             const bool bReloaded = _pEngine->getClipStore().reloadClip( graphPath );
             if ( bReloaded )
-                SW_LOG_INFO( "Audio graph reloaded (playing voices finish with the previous graph): %#", resourcePath );
+                SW_LOG_INFO( "Audio graph reloaded (playing voices finish with the previous graph): %#", assetPath );
             return bReloaded;
         }
         hashed_string libraryName;
-        if ( bMixer == false && _pEngine->findEventLibraryName( resourcePath, libraryName ) == false )
+        if ( bMixer == false && _pEngine->findEventLibraryName( assetPath, libraryName ) == false )
             return false;
         if ( bMixer )
         {
-            const bool bReloaded = loadMixer( ResourceID{ _mixerPath } );
+            const bool bReloaded = loadMixer( AssetID{ _mixerPath } );
             if ( bReloaded )
-                SW_LOG_INFO( "Mixer graph reloaded: %#", resourcePath );
+                SW_LOG_INFO( "Mixer graph reloaded: %#", assetPath );
             return bReloaded;
         }
         AudioEventLibrary library;
-        if ( library.loadFromResource( resourceID ) == false )
+        if ( library.loadFromAsset( assetID ) == false )
             return false;
         // 이름은 라이브러리를 처음 올린 이름 그대로여야 같은 라이브러리를 바꾼다.
         if ( _pEngine->loadEventLibrary( libraryName, library ) == false )
             return false;
-        SW_LOG_INFO( "Event library reloaded: %#", resourcePath );
+        SW_LOG_INFO( "Event library reloaded: %#", assetPath );
         return true;
     }
 

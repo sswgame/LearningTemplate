@@ -8,7 +8,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
-#include "Engine/Resource/Cache/SharedAssetCacheDefinition.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const ResourceID& resourceID, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( resourceID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, Skeleton& outSkeleton ) { return outSkeleton.loadFromAsset( assetID ); }
     };
 } // namespace sw
 
@@ -32,7 +32,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const ResourceID& resourceID, AnimationClip& outClip ) { return outClip.loadFromResource( resourceID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, AnimationClip& outClip ) { return outClip.loadFromAsset( assetID ); }
     };
 } // namespace sw
 
@@ -45,7 +45,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const ResourceID& resourceID, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromResource( resourceID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromAsset( assetID ); }
     };
 } // namespace sw
 
@@ -58,7 +58,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const ResourceID& resourceID, RigAsset& outRig ) { return outRig.loadFromResource( resourceID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, RigAsset& outRig ) { return outRig.loadFromAsset( assetID ); }
     };
 } // namespace sw
 

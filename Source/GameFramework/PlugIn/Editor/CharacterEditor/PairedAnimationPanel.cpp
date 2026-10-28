@@ -14,13 +14,13 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
@@ -98,7 +98,7 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const string writePath = ResourcePaths::getWritePath( string_view( getLoadedAssetPath() ) );
+        const string writePath = AssetPaths::getWritePath( string_view( getLoadedAssetPath() ) );
         string       error;
         if ( writePath.empty() || _model.saveToFile( writePath, error ) == false )
         {
@@ -126,7 +126,7 @@ namespace sw::editor
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
 
-        const string readPath = ResourcePaths::findLooseFile( string_view( path ) ).getDiskPath();
+        const string readPath = AssetPaths::findLooseFile( string_view( path ) ).getDiskPath();
         if ( readPath.empty() )
         {
             _status = "The paired animation '" + path + "' has no file on disk to read";

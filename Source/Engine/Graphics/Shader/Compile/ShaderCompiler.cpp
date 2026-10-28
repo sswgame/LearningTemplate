@@ -11,12 +11,12 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
-#include "Engine/Resource/ResourcePaths.h"
 
 #include <algorithm>
 
@@ -47,11 +47,11 @@ namespace sw
 
                 // 쿠킹 스탬프도 같은 도메인의 헤더를 본다(`ShaderCooker::collectIncludeRootDomains`). 도메인 종류는 우선순위 설정에서 온다.
                 vector<string> listDomain;
-                if ( ShaderCooker::collectIncludeRootDomains( ResourcePaths::getSearchPriority(), listDomain ) == false )
+                if ( ShaderCooker::collectIncludeRootDomains( AssetPaths::getSearchPriority(), listDomain ) == false )
                     return false;
                 for ( const string& domain : listDomain )
                 {
-                    const string domainShaders = ResourcePaths::findLooseDomainFolder( domain, "shaders" ).getDiskPath();
+                    const string domainShaders = AssetPaths::findLooseDomainFolder( domain, "shaders" ).getDiskPath();
                     if ( domainShaders.empty() == false )
                         outListDir.push_back( domainShaders );
                 }
@@ -220,8 +220,8 @@ namespace sw
 
             static string getShaderCacheDirectory()
             {
-                const string& root     = ResourcePaths::getRootFolderPath();
-                const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Resource" ) : root;
+                const string& root     = AssetPaths::getRootFolderPath();
+                const string  baseRoot = root.empty() ? FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Resource" ) : root;
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
             }
 
@@ -792,7 +792,7 @@ namespace sw
         if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
-            absPathStr = ResourcePaths::findLooseFile( desc._filePath ).getDiskPath();
+            absPathStr = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
 
         if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {
@@ -803,7 +803,7 @@ namespace sw
 
         // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
         vector<string> listShadowed;
-        if ( ShaderCooker::findShadowedHeaders( ResourcePaths::getRootFolderPath(), ResourcePaths::getSearchPriority(), absPathStr, listShadowed ) == false )
+        if ( ShaderCooker::findShadowedHeaders( AssetPaths::getRootFolderPath(), AssetPaths::getSearchPriority(), absPathStr, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {

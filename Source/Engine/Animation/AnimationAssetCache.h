@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 
-#include "Engine/Resource/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 
 namespace sw
 {
