@@ -2,7 +2,7 @@
 
 > 상태: 후보 · 선행: 없음 · 영역: quality · 진행: 해당없음
 
-테스트 틀 · 린트 · 부하 검증 · 쿠킹 · 간헐 실패 관찰에서 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 이미 계획 문서가 있는 일은 [BuildSpeed](BuildSpeed.md) · [GpuVerification](GpuVerification.md) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md) 에 있다.
+테스트 틀 · 린트 · 부하 검증 · 쿠킹 · 간헐 실패 관찰에서 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 이미 계획 문서가 있는 일은 [GpuVerification](GpuVerification.md) 에 있다.
 
 ## 한눈에 보기
 

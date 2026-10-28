@@ -2,7 +2,7 @@
 
 > 상태: 후보 · 선행: 없음 · 영역: gameplay · 진행: 해당없음
 
-GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에서 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 이미 계획 문서가 있는 일은 [WildWestHorseMount](WildWestHorseMount.md), 큰 기능 대기열은 [FeatureQueue](FeatureQueue.md)에 있다.
+GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에서 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 큰 기능 대기열은 [FeatureQueue](FeatureQueue.md)에 있다.
 아래는 모두 코드와 테스트가 끝나고 데이터 · 탐침 · 시나리오를 새로 만들어야 남은 절이다. 착수 조건은 모두 "바로 착수 가능" 이다.
 
 ## 한눈에 보기
