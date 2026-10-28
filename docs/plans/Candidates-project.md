@@ -8,17 +8,17 @@
 
 | 절 | 한 줄 설명 | 착수 조건 |
 |---|---|---|
-| DecisionMeasurementColumn | "레인 없이 GT 병렬화" 기각을 레인 있는 설계로 재판단 | 사용자가 GT 병렬화를 다시 올릴 때 |
+| DecisionMeasurementColumn | 프레임 시스템 레인의 안전 선언 감사와 측정(설계 · 실행기는 끝남) | 프레임 시스템이 둘 이상 레인 안전을 선언할 때 |
 | CarriedOverChecks | shaderdoc 뒤 bindless 진입 함수 구조 결정 | shaderdoc 결과가 나온 뒤 |
 | CcZeroAssetsMechArena | 게임별 CC0 리소스와 SD 메카 테스트 게임 | 사용자 결정 "안정화된 뒤" |
 
 ## 정리
 
 ### DecisionMeasurementColumn
-제목: 측정 조건 칸과 GT 병렬화 재검토
-왜 필요한가: 기각 결정에 측정 조건(기계 · 규모 · 날짜 · 커밋)이 없으면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했다.
-착수 조건: 재검토는 사용자가 판단한다 — 사용자가 GT 병렬화를 다시 올릴 때.
-남은 첫 일: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다.
+제목: 프레임 시스템 레인의 안전 선언 감사와 측정
+왜 필요한가: "레인 없이 GT 병렬화" 기각(공유 풀에서 돌린 GT 병렬화가 RT 를 170 → 261 µs 로 늦춤)의 전제는 `TaskPriority` 큐(High · Normal · Low)로 사라졌다. 재판단 결과: 병렬화 단위는 컴포넌트 틱(이미 `SceneTickScheduler` 가 병렬)이 아니라 프레임 시스템(`ISceneFrameSystem`)이고, 요구 사항은 ① 읽기 · 쓰기 선언(`SceneFrameAccess`, 있었다) ② 선언으로 묶는 계획(`FrameSystemLanePlan` — 붙인 순서를 지키는 파도, 겹치는 접근은 다음 파도가 선행) ③ 실행기(`FrameSystems` 단계가 파도를 `engine::runParallel` 로 돌림) ④ 워커에서 돌려도 된다는 시스템별 선언(`_bLaneSafe`, 기본 꺼짐)이다. ①~④ 는 구현했다(언리얼 Task Graph 의 선행 있는 태스크 · 유니티 Job System 의 JobHandle 의존과 같은 선). 측정 조건 칸 형식은 정했다.
+착수 조건: 프레임 시스템이 둘 이상 겹치지 않는 선언을 가질 때 이득이 난다. 지금 `_bLaneSafe` 인 것은 `MeleeHitLedger` 하나라 실제 병렬이 도는 곳이 거의 없다.
+남은 첫 일: `ControlSystem` · `InteractionSpatialIndex` · `PairedAnimationSystem` 을 코드를 따라가 워커에서 돌려도 되는지 감사한다(입력 · 싱글턴 · 게임 스레드 전용 API 를 만지는지 — 확신이 없으면 켜지 않는다). 켠 뒤 레인 켬 · 끔의 `GT.Scene.tick.frameSystems` 와 `RT` 구간 영향을 측정 조건(기계 · 규모 · 날짜 · 커밋)과 함께 통합에서 잰다.
 
 ### CarriedOverChecks
 제목: 셰이더 bindless 입문 구조 결정
