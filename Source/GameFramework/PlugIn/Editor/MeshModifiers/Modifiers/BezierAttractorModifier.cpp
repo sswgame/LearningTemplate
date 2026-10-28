@@ -34,6 +34,8 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Pulls points within a radius toward a cubic Bezier curve."; }
 
+        bool supportsGPU() const override { return true; }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& ) const override
         {
             const float32 strength = getFloat( _strengthParam );

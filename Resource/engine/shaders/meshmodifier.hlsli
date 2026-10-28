@@ -25,39 +25,40 @@
 #define SW_MODIFIER_RECORD_FLOAT4 17
 
 // 종류 번호 — C++ 표 `MeshModifierGPUProgram.cpp` 의 순서와 같다(테스트가 supportsGPU 집합과 맞는지 본다)
-#define SW_MODIFIER_BEND           0
-#define SW_MODIFIER_TWIST          1
-#define SW_MODIFIER_TAPER          2
-#define SW_MODIFIER_STRETCH        3
-#define SW_MODIFIER_WAVE           4
-#define SW_MODIFIER_RIPPLE         5
-#define SW_MODIFIER_NOISE          6
-#define SW_MODIFIER_MELT           7
-#define SW_MODIFIER_PUSH           8
-#define SW_MODIFIER_POKE           9
-#define SW_MODIFIER_DISPLACE       10
-#define SW_MODIFIER_BUBBLE         11
-#define SW_MODIFIER_BULGE          12
-#define SW_MODIFIER_CYLINDRIFY     13
-#define SW_MODIFIER_GLOBE          14
-#define SW_MODIFIER_HUMP           15
-#define SW_MODIFIER_RADIALSKEW     16
-#define SW_MODIFIER_SKEW           17
-#define SW_MODIFIER_SPHERIFY       18
-#define SW_MODIFIER_SQUEEZE        19
-#define SW_MODIFIER_SCALE          20
-#define SW_MODIFIER_SINUSCURVE     21
-#define SW_MODIFIER_ROLLED         22
-#define SW_MODIFIER_SIMPLEMOD      23
-#define SW_MODIFIER_CRUMPLE        24
-#define SW_MODIFIER_DYNAMICRIPPLE  25
-#define SW_MODIFIER_PAGEFLIP       26
-#define SW_MODIFIER_TREEBEND       27
-#define SW_MODIFIER_VERTNOISE      28
-#define SW_MODIFIER_ZSTRETCHNOISE  29
-#define SW_MODIFIER_WAVING         30
-#define SW_MODIFIER_PIVOTADJUST    31
-#define SW_MODIFIER_DISPLACELIMITS 32
+#define SW_MODIFIER_BEND            0
+#define SW_MODIFIER_TWIST           1
+#define SW_MODIFIER_TAPER           2
+#define SW_MODIFIER_STRETCH         3
+#define SW_MODIFIER_WAVE            4
+#define SW_MODIFIER_RIPPLE          5
+#define SW_MODIFIER_NOISE           6
+#define SW_MODIFIER_MELT            7
+#define SW_MODIFIER_PUSH            8
+#define SW_MODIFIER_POKE            9
+#define SW_MODIFIER_DISPLACE        10
+#define SW_MODIFIER_BUBBLE          11
+#define SW_MODIFIER_BULGE           12
+#define SW_MODIFIER_CYLINDRIFY      13
+#define SW_MODIFIER_GLOBE           14
+#define SW_MODIFIER_HUMP            15
+#define SW_MODIFIER_RADIALSKEW      16
+#define SW_MODIFIER_SKEW            17
+#define SW_MODIFIER_SPHERIFY        18
+#define SW_MODIFIER_SQUEEZE         19
+#define SW_MODIFIER_SCALE           20
+#define SW_MODIFIER_SINUSCURVE      21
+#define SW_MODIFIER_ROLLED          22
+#define SW_MODIFIER_SIMPLEMOD       23
+#define SW_MODIFIER_CRUMPLE         24
+#define SW_MODIFIER_DYNAMICRIPPLE   25
+#define SW_MODIFIER_PAGEFLIP        26
+#define SW_MODIFIER_TREEBEND        27
+#define SW_MODIFIER_VERTNOISE       28
+#define SW_MODIFIER_ZSTRETCHNOISE   29
+#define SW_MODIFIER_WAVING          30
+#define SW_MODIFIER_PIVOTADJUST     31
+#define SW_MODIFIER_DISPLACELIMITS  32
+#define SW_MODIFIER_BEZIERATTRACTOR 33
 
 static const float kModifierEpsilon = 1e-6f;
 // 원주율은 common.hlsli 의 kPi · kTwoPi 를 쓴다(meshmorph.hlsl 이 common.hlsli 를 먼저 포함한다).
@@ -119,6 +120,7 @@ struct MeshDeform
     static float3 zstretchNoise( float3 location, ModifierContext context );
     static float3 waving( float3 location, ModifierContext context );
     static float3 displaceLimits( float3 location, ModifierContext context );
+    static float3 bezierAttractor( float3 location, ModifierContext context );
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
     static float3 transformVector( float3 direction, uint row );
@@ -719,6 +721,46 @@ static float3 MeshDeform::waving( float3 location, ModifierContext context )
     return result;
 }
 
+/** Bezier Attractor — 3차 베지어(제어점 4 = 매개변수 0..3)에서 가장 가까운 점 쪽으로 반경 안의 정점을 끌어당긴다. CPU 와 같이 64 선분으로 나눠 찾는다 */
+static float3 MeshDeform::bezierAttractor( float3 location, ModifierContext context )
+{
+    const float  strength = context.param( 4u );
+    const float  radius   = context.param( 5u );
+    const float3 p0       = context.param3( 0u );
+    const float3 p1       = context.param3( 1u );
+    const float3 p2       = context.param3( 2u );
+    const float3 p3       = context.param3( 3u );
+    float3       previous = p0;
+    float3       best     = p0;
+    float        bestDist = dot( p0 - location, p0 - location );
+    for ( uint segment = 1u; segment <= 64u; ++segment )
+    {
+        const float  t        = (float)segment / 64.0f;
+        const float  inverse  = 1.0f - t;
+        const float3 current  = p0 * ( inverse * inverse * inverse ) + p1 * ( 3.0f * inverse * inverse * t ) + p2 * ( 3.0f * inverse * t * t ) + p3 * ( t * t * t );
+        const float3 edge     = current - previous;
+        const float  edgeLen  = dot( edge, edge );
+        const float  ratio    = edgeLen > kModifierEpsilon ? saturate( dot( location - previous, edge ) / edgeLen ) : 0.0f;
+        const float3 cand     = previous + edge * ratio;
+        const float  candDist = dot( cand - location, cand - location );
+        if ( candDist < bestDist )
+        {
+            bestDist = candDist;
+            best     = cand;
+        }
+        previous = current;
+    }
+    const float3 delta    = best - location;
+    const float  distance = length( delta );
+    float3       result   = location;
+    if ( strength > kModifierEpsilon && distance < radius )
+    {
+        const float weight = strength * pow( 1.0f - distance / radius, context.param( 6u ) );
+        result             = location + delta * saturate( weight );
+    }
+    return result;
+}
+
 /** Displace Limits — 위치를 상자(Mode 1) · 구(Mode 2) 안으로 자른다. "Clamp Displacement" 를 켜면 CPU 전용이라 여기 오지 않는다 */
 static float3 MeshDeform::displaceLimits( float3 location, ModifierContext context )
 {
@@ -837,6 +879,9 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             break;
         case SW_MODIFIER_DISPLACELIMITS:
             result = MeshDeform::displaceLimits( location, context );
+            break;
+        case SW_MODIFIER_BEZIERATTRACTOR:
+            result = MeshDeform::bezierAttractor( location, context );
             break;
         default:
             break;
