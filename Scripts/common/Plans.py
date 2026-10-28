@@ -34,7 +34,7 @@ from pathlib import Path
 kPlansRelDir = "docs/plans"
 
 #: 계획 문서가 아닌 파일 — 안내 · 인계 · 규칙 · 로드맵.
-kPlanNonDocumentName: tuple[str, ...] = ("README.md", "NEXT.md", "WorkerRules.md", "Roadmap.md")
+kPlanNonDocumentName: tuple[str, ...] = ("README.md", "NEXT.md", "Roadmap.md")
 
 #: 상태 값 — 진행 순서대로. `보류` 는 사용자가 나중으로 정한 것, `참고` 는 할 일 없는 참고 문서, `후보` 는 시작 전 후보를 모은 문서.
 kListPlanStatus: tuple[str, ...] = ("설계", "구현대기", "구현중", "측정대기", "보류", "참고", "끝", "후보")
