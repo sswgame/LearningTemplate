@@ -1182,7 +1182,8 @@ static float Bindless::sampleShadowComparison( uint index, float2 uv, float dept
 }
 
 /** @brief 패스가 슬롯 @p emulatedSlot(0..3)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 슬롯 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
-static float4 Bindless::loadEngineTexel( [[maybe_unused]] uint index, uint emulatedSlot, int2 texel )
+// 에뮬 백엔드(DX11 · GL)의 셰이더 컴파일은 매개변수 속성 `[[maybe_unused]]` 를 읽지 못한다(X3000) — 쓰지 않는 index 는 이름만 두고 속성을 달지 않는다.
+static float4 Bindless::loadEngineTexel( uint index, uint emulatedSlot, int2 texel )
 {
     switch ( emulatedSlot )
     {
@@ -1198,7 +1199,7 @@ static float4 Bindless::loadEngineTexel( [[maybe_unused]] uint index, uint emula
             return kUnmappedEngineTextureColor;
     }
 }
-static uint2 Bindless::getEngineTextureSize( [[maybe_unused]] uint index, uint emulatedSlot )
+static uint2 Bindless::getEngineTextureSize( uint index, uint emulatedSlot )
 {
     uint2 size = uint2( 0, 0 );
     switch ( emulatedSlot )
@@ -1221,7 +1222,7 @@ static uint2 Bindless::getEngineTextureSize( [[maybe_unused]] uint index, uint e
     return size;
 }
 /** @brief 에뮬 게더는 슬롯 0 만 있다(쓰는 패스는 FSR 하나다). 다른 슬롯은 오류 색을 낸다 — 필요해지면 슬롯 케이스를 더한다. */
-static float4 Bindless::gatherEngineChannel( [[maybe_unused]] uint index, uint emulatedSlot, uint channel, float2 uv )
+static float4 Bindless::gatherEngineChannel( uint index, uint emulatedSlot, uint channel, float2 uv )
 {
     if ( emulatedSlot != 0u )
         return kUnmappedEngineTextureColor;

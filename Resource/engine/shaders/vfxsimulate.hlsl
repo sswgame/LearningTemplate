@@ -604,17 +604,17 @@ void passOutput( uint thread, uint group )
 SW_NUMTHREADS( SW_VFX_SIMULATE_THREAD_COUNT, 1, 1 )
 void CSMain( uint3 groupThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID )
 {
-    const uint pass      = SW_ROOT( g_VfxPass ) & ( ( 1u << SW_VFX_PASS_STEP_SHIFT ) - 1u );
+    const uint passKind  = SW_ROOT( g_VfxPass ) & ( ( 1u << SW_VFX_PASS_STEP_SHIFT ) - 1u );
     const uint stepIndex = SW_ROOT( g_VfxPass ) >> SW_VFX_PASS_STEP_SHIFT;
-    if ( pass == SW_VFX_PASS_BEGIN )
+    if ( passKind == SW_VFX_PASS_BEGIN )
         passBegin( groupThreadId.x );
-    else if ( pass == SW_VFX_PASS_INTEGRATE )
+    else if ( passKind == SW_VFX_PASS_INTEGRATE )
         passIntegrate( groupThreadId.x, groupId.x, stepIndex );
-    else if ( pass == SW_VFX_PASS_SCAN )
+    else if ( passKind == SW_VFX_PASS_SCAN )
         passScan( groupThreadId.x, stepIndex );
-    else if ( pass == SW_VFX_PASS_COMPACT )
+    else if ( passKind == SW_VFX_PASS_COMPACT )
         passCompact( groupThreadId.x, groupId.x );
-    else if ( pass == SW_VFX_PASS_OUTPUT )
+    else if ( passKind == SW_VFX_PASS_OUTPUT )
         passOutput( groupThreadId.x, groupId.x );
     else
         simulateSingleGroup( groupThreadId.x );

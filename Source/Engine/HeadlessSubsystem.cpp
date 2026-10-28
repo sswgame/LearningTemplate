@@ -113,35 +113,44 @@ namespace sw
             }
 
             /**
-             * @brief 팩을 베이크합니다. 셰이더 판정을 켰으면(배포 빌드) 먼저 그 백엔드를 보고, 낡았으면 다시 쿠킹한 뒤 다시 본다 — 그래도 맞지 않으면 베이크하지 않는다.
-             * @details 빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
-             *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
+             * @brief 팩에 담을 셰이더 바이너리가 소스와 맞는지 판정합니다(배포 빌드의 `-verify-shaders`). 낡았으면 쿠커가 있는 자리에서 다시 쿠킹한 뒤 다시 보고, 그래도 맞지 않으면 false 입니다.
+             * @details `CookSession` 을 열기 **전에** 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
+             *          셰이더 바이너리는 쿠킹 저장소가 아니라 `Resource/engine/shaders/<백엔드>` 의 커밋 산출물이라 `CookJob` 입력 기록 대상도 아니다.
              */
-            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore )
+            [[nodiscard]] static bool ensureShadersFresh( const CommandLineManager& commandLine )
             {
                 const string shaderFolder   = resolveShaderFolder( commandLine );
                 bool         bVerifyShaders = false;
                 (void)commandLine.getArgument( CommandLineArgument::VERIFY_SHADERS, bVerifyShaders ); // 없으면 false 그대로
                 // 전용 서버는 이 인자를 받지 않는다(`kArrClientOnlyTask`) — 서버 팩에는 셰이더 바이너리가 없다.
-                const bool bStaleShaders = bVerifyShaders && verifyShaderFolder( shaderFolder ) == false;
-                if ( bStaleShaders )
-                {
+                if ( bVerifyShaders == false || verifyShaderFolder( shaderFolder ) )
+                    return true;
 #if defined( SW_WITH_CLIENT_CODE )
-                    // 낡았을 뿐이라면 쿠커가 있는 자리에서 스스로 고친다 — 셰이더 한 줄 고칠 때마다 손으로 다시 쿠킹하라고 요구할 이유는 없다.
-                    SW_LOG_INFO( "Cooked shaders are stale - cooking them again before packing" );
-                    const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
-                    ShaderCooker::invalidateSharedHeaderCache();
-                    if ( summary.isClean() == false || verifyShaderFolder( shaderFolder ) == false )
-                    {
-                        SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops (App --cook-shaders)" );
-                        return false;
-                    }
-#else
-                    // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않는다 — 고칠 수 없으니 베이크하지 않는다.
-                    SW_LOG_ERROR( "Cooked shaders are stale and this build has no shader cooker - cook them with App --cook-shaders" );
+                // 낡았을 뿐이라면 쿠커가 있는 자리에서 스스로 고친다 — 셰이더 한 줄 고칠 때마다 손으로 다시 쿠킹하라고 요구할 이유는 없다.
+                SW_LOG_INFO( "Cooked shaders are stale - cooking them again before packing" );
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
+                ShaderCooker::invalidateSharedHeaderCache();
+                if ( summary.isClean() == false || verifyShaderFolder( shaderFolder ) == false )
+                {
+                    SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops (App --cook-shaders)" );
                     return false;
-#endif
                 }
+                return true;
+#else
+                // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않는다 — 고칠 수 없으니 베이크하지 않는다.
+                SW_LOG_ERROR( "Cooked shaders are stale and this build has no shader cooker - cook them with App --cook-shaders" );
+                return false;
+#endif
+            }
+
+            /**
+             * @brief 팩을 베이크합니다. 셰이더 판정은 세션 앞의 `ensureShadersFresh` 가 끝냈다.
+             * @details 빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
+             *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
+             */
+            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore )
+            {
+                const string shaderFolder = resolveShaderFolder( commandLine );
 
                 PackConfig   packConfig;
                 const string packConfigPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), PackConfig::kConfigPath );
@@ -385,6 +394,15 @@ namespace sw
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( ResourceID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 const CookStore        cookStore            = CookStore::makeLocal();
+                // 셰이더 판정 · 재쿠킹은 세션 밖에서(`ensureShadersFresh` 설명). 씬 단계보다 먼저 보므로 낡은 셰이더로 씬을 굽는 시간을 쓰지 않는다.
+                if ( bCookPacks || bCookAll )
+                {
+                    if ( ensureShadersFresh( commandLine ) == false )
+                    {
+                        inoutState._bFailed = true;
+                        return true;
+                    }
+                }
                 // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
                 const CookSession cookSession;
                 bool              bSucceeded = true;
