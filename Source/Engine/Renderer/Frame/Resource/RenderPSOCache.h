@@ -32,8 +32,22 @@ namespace sw
     {
     public:
         /**
+         * @enum MaterialPSOState
+         * @brief 머티리얼 변형 PSO 하나의 준비 상태입니다(RhiAsyncUploads 2.4).
+         * @details "아직 없음" · "만드는 중" · "됐음" · "실패" 를 핸들 0 이나 항목 없음으로 흉내 내지 않고 데이터로 둔다. 드로우 경로는 `Ready` 의 핸들만 쓰고,
+         *          `Building` 은 그 배치를 이번 프레임에 그리지 않으며(`RT.PSO.pendingBatches`), `Failed` 는 만들 때 오류를 한 번 남기고 그리지 않는다.
+         */
+        enum class MaterialPSOState : uint8
+        {
+            Absent = 0, ///< 항목이 없다(키를 처음 본다). 저장하지 않는 값이다 — 조회가 항목 없음을 이렇게 돌려준다
+            Building,   ///< 만드는 중이다(`beginMaterialPSO` 가 올렸다). 핸들이 아직 없다
+            Ready,      ///< 만들었고 핸들이 유효하다(`_bOwned` 가 0 이면 패스 PSO 그대로)
+            Failed,     ///< 만들지 못했다(오류를 남겼다). 핸들이 없고 다시 만들지 않는다
+        };
+
+        /**
          * @struct MaterialPSOEntry
-         * @brief (패스, 머티리얼 퍼뮤테이션, 뷰 모드) 하나에 대응하는 PSO 입니다.
+         * @brief (패스, 머티리얼 퍼뮤테이션, 뷰 모드) 하나에 대응하는 PSO 와 그 준비 상태입니다. 값은 `building` · `ready` · `failed` 로만 만듭니다.
          * @details `_bOwned` 가 0 이면 값은 패스 PSO 그대로입니다. 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
          *          새로 만들지 않습니다. 그래서 파괴할 때 **이 PSO 는 건드리면 안 됩니다**(패스가 소유합니다).
          */
@@ -41,6 +55,17 @@ namespace sw
         {
             RHIPipelineStateHandle _pso{ 0 };
             uint8                  _bOwned{ 0 };
+            MaterialPSOState       _state{ MaterialPSOState::Absent };
+
+            /** @brief 만드는 중인 항목입니다. */
+            [[nodiscard]] static MaterialPSOEntry building() { return MaterialPSOEntry{ 0, 0, MaterialPSOState::Building }; }
+            /** @brief 만든 항목입니다. @p pso 가 0 이면 만들지 못한 것이라 `failed()` 입니다. @p bOwned 가 거짓이면 패스 PSO 를 그대로 가리킨다. */
+            [[nodiscard]] static MaterialPSOEntry ready( RHIPipelineStateHandle pso, bool bOwned )
+            {
+                return pso != 0 ? MaterialPSOEntry{ pso, static_cast<uint8>( bOwned ? 1 : 0 ), MaterialPSOState::Ready } : failed();
+            }
+            /** @brief 만들지 못한 항목입니다. */
+            [[nodiscard]] static MaterialPSOEntry failed() { return MaterialPSOEntry{ 0, 0, MaterialPSOState::Failed }; }
         };
 
         /** @brief 등록된 PSO 하나와 그 바인딩 레이아웃입니다. `collectLayouts` 가 반환합니다. */
@@ -104,12 +129,25 @@ namespace sw
          *          컬 반전(거울 변환 배치, `GPUMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
          */
         static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling );
-        /** @brief 그 키의 변형이 이미 있는지 반환합니다. */
+        /** @brief 그 키의 항목이 어떤 상태로든(`Building` · `Ready` · `Failed`) 이미 있는지 반환합니다. */
         bool hasMaterialPSO( uint64 key ) const;
-        /** @brief 변형을 둡니다(있으면 덮어씁니다). */
+        /**
+         * @brief 그 키가 처음이면 `Building` 항목을 올리고 true 를 반환합니다. 이미 있으면(만드는 중이든 끝났든) 아무것도 하지 않고 false 입니다.
+         * @details 만드는 쪽이 "내가 만든다" 를 한 번에 정하는 자리다 — `hasMaterialPSO` 로 묻고 `setMaterialPSO` 로 넣는 두 걸음은 만드는 스레드가 둘이 되면 같은 키를 두 번 만든다.
+         *          true 를 받은 쪽은 `setMaterialPSO( key, ready/failed )` 로 끝낸다.
+         */
+        [[nodiscard]] bool beginMaterialPSO( uint64 key );
+        /** @brief 변형을 둡니다(있으면 덮어씁니다). `Absent` 항목은 둘 수 없습니다(assert) — 만드는 중이면 `building()`, 끝났으면 `ready` · `failed` 를 넘깁니다. */
         void setMaterialPSO( uint64 key, const MaterialPSOEntry& entry );
-        /** @brief 그 키의 변형 PSO 입니다. 없거나 0 이면 0 이고, 부르는 쪽은 그 배치를 그리지 않습니다(패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다). */
+        /** @brief 그 키의 준비 상태입니다. 항목이 없으면 `Absent` 입니다. */
+        MaterialPSOState findMaterialPSOState( uint64 key ) const;
+        /**
+         * @brief 그 키의 변형 PSO 입니다. `Ready` 가 아니면(없음 · 만드는 중 · 실패) 0 이고, 부르는 쪽은 그 배치를 그리지 않습니다(패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다).
+         * @details 0 이 "없음", "만드는 중", "실패" 중 무엇인지는 `findMaterialPSOState` 가 답합니다(`Building` 이면 `RT.PSO.pendingBatches` 로 센다).
+         */
         RHIPipelineStateHandle findMaterialPSO( uint64 key ) const;
+        /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */
+        [[nodiscard]] size_t countMaterialPSOs( MaterialPSOState state ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 수명

@@ -444,10 +444,15 @@ namespace sw
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
-        const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head, drawMode );
-        // 변형을 만들지 못한 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다(만들 때 오류를 남겼다).
+        RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
+        const RHIPipelineStateHandle     batchPSO = psoForBatch( pso, head, drawMode, &psoState );
+        // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
         if ( batchPSO == 0 )
+        {
+            if ( psoState == RenderPSOCache::MaterialPSOState::Building )
+                SW_PROFILE_COUNT( "RT.PSO.pendingBatches", 1 );
             return false;
+        }
         if ( batchPSO != ioBoundPSO )
         {
             context._pCmd->setPipelineState( batchPSO );
@@ -533,7 +538,7 @@ namespace sw
                 SW_LOG_ERROR( "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
             else
                 registerPSOLayout( handle, desc );
-            _pPSOCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
+            _pPSOCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
         }
         const RHIPipelineStateHandle pso = _pPSOCache->findMaterialPSO( psoKey );
         if ( pso == 0 )

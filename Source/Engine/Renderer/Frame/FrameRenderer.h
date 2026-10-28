@@ -267,9 +267,12 @@ namespace sw
          * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형이 있으면 그것을, 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 드로우 경로가 배치마다 부르는 읽기 전용 조회다. 캐시는 `ensureMaterialPSOs` 가 기록 전에 채운다.
          *          거울 변환을 건 배치(`GPUMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그린다.
+         *          변형이 `Ready` 가 아니면(만드는 중 · 실패 · 없음) 0 이고, 이유는 @p pOutState 가 답한다.
          * @param viewMode 이 드로우의 보기 모드입니다. 보통 지금 그리는 뷰의 설정이고, 겹침 모드(ShadedWireframe)의 첫 드로우는 Lit 입니다.
+         * @param pOutState 널이 아니면 변형 항목의 준비 상태를 받습니다(변형이 필요 없는 배치는 `Ready`). 드로우 경로가 `Building` 을 `RT.PSO.pendingBatches` 로 셀 때 씁니다.
          */
-        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode ) const;
+        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode,
+                                            RenderPSOCache::MaterialPSOState* pOutState = nullptr ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.

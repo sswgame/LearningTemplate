@@ -122,17 +122,44 @@ namespace sw
         return _mapMaterialPSO.find( key ) != _mapMaterialPSO.end();
     }
 
-    void RenderPSOCache::setMaterialPSO( uint64 key, const MaterialPSOEntry& entry )
+    bool RenderPSOCache::beginMaterialPSO( uint64 key )
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
+        return _mapMaterialPSO.try_emplace( key, MaterialPSOEntry::building() ).second;
+    }
+
+    void RenderPSOCache::setMaterialPSO( uint64 key, const MaterialPSOEntry& entry )
+    {
+        SW_ASSERT( entry._state != MaterialPSOState::Absent );
+        ScopedLock<mutex> lock{ _materialPSOMutex };
         _mapMaterialPSO.insert_or_assign( key, entry );
+    }
+
+    RenderPSOCache::MaterialPSOState RenderPSOCache::findMaterialPSOState( uint64 key ) const
+    {
+        ScopedLock<mutex> lock{ _materialPSOMutex };
+        const auto        it = _mapMaterialPSO.find( key );
+        return ( it != _mapMaterialPSO.end() ) ? it->second._state : MaterialPSOState::Absent;
+    }
+
+    size_t RenderPSOCache::countMaterialPSOs( MaterialPSOState state ) const
+    {
+        ScopedLock<mutex> lock{ _materialPSOMutex };
+        size_t            count = 0;
+        for ( const auto& [key, entry] : _mapMaterialPSO )
+        {
+            if ( entry._state == state )
+                ++count;
+        }
+        return count;
     }
 
     RHIPipelineStateHandle RenderPSOCache::findMaterialPSO( uint64 key ) const
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
-        const auto        it = _mapMaterialPSO.find( key );
-        return ( it != _mapMaterialPSO.end() ) ? it->second._pso : 0;
+        const auto        it     = _mapMaterialPSO.find( key );
+        const bool        bReady = it != _mapMaterialPSO.end() && it->second._state == MaterialPSOState::Ready;
+        return bReady ? it->second._pso : 0;
     }
 
     void RenderPSOCache::releaseAll( IRHIDevice* pDevice )

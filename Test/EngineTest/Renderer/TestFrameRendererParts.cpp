@@ -8,6 +8,7 @@
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -283,4 +284,53 @@ SW_TEST_CASE( TransientAttachmentPoolTest, IdleTargetsReleaseOnlyAfterTheFrameCo
     sw::TransientAttachmentPool pool;
     SW_EXPECT_FALSE( pool.releaseIfIdle( nullptr, "DepthOfFieldColor", false ) );
     SW_EXPECT_EQUAL( pool.getAllocationCount(), 0u );
+}
+
+/**
+ * @brief [RenderPSOCacheTest] 머티리얼 변형 항목의 상태가 Absent → Building → Ready · Failed 로 가고, 드로우 경로가 읽는 `findMaterialPSO` 는 Ready 의 핸들만 돌려준다
+ * @details RhiAsyncUploads U11. 같은 키를 `beginMaterialPSO` 로 두 번 올릴 수 없고(두 번 만들지 않는다), 만드는 중 · 실패 · 없음은 모두 핸들 0 이지만 상태로 구별된다.
+ *          패스 PSO 를 그대로 가리키는 항목(`_bOwned` 0)도 Ready 다. 핸들 0 으로 만든 `ready` 는 Failed 다.
+ */
+SW_TEST_CASE( RenderPSOCacheTest, MaterialVariantStateGoesFromBuildingToReadyOrFailed )
+{
+    using State = sw::RenderPSOCache::MaterialPSOState;
+    using Entry = sw::RenderPSOCache::MaterialPSOEntry;
+    sw::RenderPSOCache cache;
+    const uint64       readyKey  = sw::RenderPSOCache::materialPSOKey( 1, 11, sw::RenderViewMode::Lit, false );
+    const uint64       failedKey = sw::RenderPSOCache::materialPSOKey( 1, 22, sw::RenderViewMode::Lit, false );
+    const uint64       sharedKey = sw::RenderPSOCache::materialPSOKey( 1, 33, sw::RenderViewMode::Lit, true );
+
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( readyKey ) == State::Absent );
+    SW_EXPECT_FALSE( cache.hasMaterialPSO( readyKey ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( cache.findMaterialPSO( readyKey ) ) );
+
+    // 처음 올린 쪽만 만든다 — 이미 있으면(만드는 중이어도) false.
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( readyKey ) );
+    SW_EXPECT_FALSE( cache.beginMaterialPSO( readyKey ) );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( readyKey ) == State::Building );
+    SW_EXPECT_TRUE( cache.hasMaterialPSO( readyKey ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( cache.findMaterialPSO( readyKey ) ) ); // 만드는 중에는 핸들이 없다
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), cache.countMaterialPSOs( State::Building ) );
+
+    cache.setMaterialPSO( readyKey, Entry::ready( 7, true ) );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( readyKey ) == State::Ready );
+    SW_EXPECT_EQUAL( 7u, static_cast<uint32>( cache.findMaterialPSO( readyKey ) ) );
+    SW_EXPECT_FALSE( cache.beginMaterialPSO( readyKey ) ); // 끝난 키도 다시 만들지 않는다
+
+    SW_EXPECT_TRUE( cache.beginMaterialPSO( failedKey ) );
+    cache.setMaterialPSO( failedKey, Entry::failed() );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( failedKey ) == State::Failed );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( cache.findMaterialPSO( failedKey ) ) );
+    SW_EXPECT_FALSE( cache.beginMaterialPSO( failedKey ) ); // 실패도 되풀이해 만들지 않는다
+
+    // 패스 PSO 를 그대로 가리키는 항목은 Ready 이고, 핸들 0 으로 만든 ready 는 실패다.
+    cache.setMaterialPSO( sharedKey, Entry::ready( 5, false ) );
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( sharedKey ) == State::Ready );
+    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( cache.findMaterialPSO( sharedKey ) ) );
+    SW_EXPECT_TRUE( Entry::ready( 0, true )._state == State::Failed );
+
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), cache.countMaterialPSOs( State::Ready ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), cache.countMaterialPSOs( State::Failed ) );
+    cache.forgetAll();
+    SW_EXPECT_TRUE( cache.findMaterialPSOState( readyKey ) == State::Absent );
 }

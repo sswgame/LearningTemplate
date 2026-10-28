@@ -263,9 +263,8 @@ namespace sw
                                                                               const GPUShaderPermutation* pPermutation,
                                                                               RenderViewMode viewMode, bool bReverseCulling )
     {
-        RenderPSOCache::MaterialPSOEntry entry{ passPSO, 0 };
         if ( passPSO == 0 || _pDevice == nullptr )
-            return entry;
+            return RenderPSOCache::MaterialPSOEntry::failed();
 
         // 패스가 정한 렌더 상태를 통째로 물려받는다. 블렌드, 뎁스, RT 포맷은 패스의 사실이지 머티리얼의 것이 아니다.
         RHIPipelineStateDesc desc{};
@@ -273,7 +272,7 @@ namespace sw
         {
             // desc 를 모르는 PSO 다 — 변형을 만들 근거가 없다. 패스 PSO 로 다른 그림을 그리지 않고 이 조합은 그리지 않는다.
             SW_LOG_ERROR( "Material PSO variant: pass PSO of pass type %# has no recorded desc - these batches are not drawn", static_cast<uint32>( passType ) );
-            return RenderPSOCache::MaterialPSOEntry{ 0, 0 };
+            return RenderPSOCache::MaterialPSOEntry::failed();
         }
 
         bool bChanged{ false };
@@ -339,7 +338,7 @@ namespace sw
 
         // 적용할 것이 없다는 것은 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이고 컬 모드도 그대로라는 뜻이다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
         if ( bChanged == false )
-            return entry;
+            return RenderPSOCache::MaterialPSOEntry::ready( passPSO, false );
 
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
@@ -347,12 +346,10 @@ namespace sw
             // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
             SW_LOG_ERROR( "Material PSO variant '%#' (view mode %#) failed to build - these batches are not drawn", desc._vertexShaderPath,
                           getRenderViewModeInfo( viewMode )._pName );
-            return RenderPSOCache::MaterialPSOEntry{ 0, 0 };
+            return RenderPSOCache::MaterialPSOEntry::failed();
         }
         registerPSOLayout( handle, desc );
-        entry._pso    = handle;
-        entry._bOwned = 1;
-        return entry;
+        return RenderPSOCache::MaterialPSOEntry::ready( handle, true );
     }
 
     void FrameRenderer::ensureMaterialPSOs()
@@ -512,8 +509,10 @@ namespace sw
                                                   uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
     {
         // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의 조회를 붙잡으면 안 된다.
+        // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 지금은 이 함수 안에서 `Ready` 나 `Failed` 로 끝나지만, 상태가 드러나 있어 빌더 스레드(U12)가
+        // 같은 자리를 채울 때 드로우 경로가 "아직 안 됨" 과 "실패" 를 구별한다.
         const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
-        if ( _pPSOCache->hasMaterialPSO( key ) )
+        if ( _pPSOCache->beginMaterialPSO( key ) == false )
             return false;
         const RenderPSOCache::MaterialPSOEntry entry = createMaterialPSOVariant( passPSO, passType, pPermutation, viewMode, bReverseCulling );
         _pPSOCache->setMaterialPSO( key, entry );
@@ -539,7 +538,7 @@ namespace sw
         if ( _pPSOCache->findDesc( transparentPSO, desc ) == false )
         {
             SW_LOG_ERROR( "Transparent pass PSO has no recorded desc - particles are not drawn" );
-            _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ 0, 0 } );
+            _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::failed() );
             return;
         }
         desc._vertexShaderPath = shaderPath;
@@ -556,7 +555,7 @@ namespace sw
         if ( handle == 0 )
             SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
         registerPSOLayout( handle, desc );
-        _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry{ handle, static_cast<uint8>( handle != 0 ? 1 : 0 ) } );
+        _pPSOCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
     }
 
     RHIPipelineStateHandle FrameRenderer::findParticlePSO() const
@@ -569,8 +568,11 @@ namespace sw
         return _pPSOCache->findDesc( pso, outDesc );
     }
 
-    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode ) const
+    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch, RenderViewMode viewMode,
+                                                       RenderPSOCache::MaterialPSOState* pOutState ) const
     {
+        if ( pOutState != nullptr )
+            *pOutState = RenderPSOCache::MaterialPSOState::Ready;
         if ( passPSO == 0 )
             return passPSO;
 
@@ -590,9 +592,12 @@ namespace sw
         if ( bDefaultPassPSO )
             return passPSO;
 
-        // 찾지 못하거나 만들지 못한 변형(0)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
-        // 채우므로 정상 경로에서는 항상 있고, 만들지 못한 것은 그때 오류를 남겼다.
-        return _pPSOCache->findMaterialPSO( RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling ) );
+        // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
+        // 채우므로 동기 생성에서는 항상 `Ready` 나 `Failed` 이고(`Failed` 는 그때 오류를 남겼다), `Building` 은 빌더 스레드(U12)가 아직 못 끝낸 배치다.
+        const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
+        if ( pOutState != nullptr )
+            *pOutState = _pPSOCache->findMaterialPSOState( key );
+        return _pPSOCache->findMaterialPSO( key );
     }
 
     bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
