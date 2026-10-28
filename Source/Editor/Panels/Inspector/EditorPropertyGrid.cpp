@@ -954,92 +954,102 @@ namespace sw::editor
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
-            // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 호출하면 안전하지 않다.
-            if ( method._metadata->_bConstructor != SW_FALSE )
-                continue;
+            drawTypeMethod( pInstance, pTypeInfo, method );
+        }
+    }
 
-            const utf8* pLabelName = method._name.c_str();
-            if ( method._metadata->_displayName.empty() == false )
-                pLabelName = method._metadata->_displayName.c_str();
+    void EditorPropertyGrid::drawTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method )
+    {
+        // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 호출하면 안전하지 않다.
+        if ( method._metadata->_bConstructor != SW_FALSE )
+            return;
 
-            const uint32 paramCount = method.getParameterCount();
+        const utf8* pLabelName = method._name.c_str();
+        if ( method._metadata->_displayName.empty() == false )
+            pLabelName = method._metadata->_displayName.c_str();
 
-            if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
-            {
-                ImGui::PushID( method._hashName.c_str() );
-                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButton ) );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonHovered ) );
-                ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonActive ) );
+        const uint32 paramCount = method.getParameterCount();
 
-                fixed_string<constant::kMaxBuffer128> buttonLabel;
-                formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
-                if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
-                {
-                    invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
-                }
-                ImGui::PopStyleColor( 3 );
-                EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
-                ImGui::PopID();
-                continue;
-            }
-
+        if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
+        {
             ImGui::PushID( method._hashName.c_str() );
-            ImGui::Text( "%s (%s)", pLabelName,
-                         method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
-            if ( method._metadata->_bCallInEditor != SW_FALSE )
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButton ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonHovered ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonActive ) );
+
+            fixed_string<constant::kMaxBuffer128> buttonLabel;
+            formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
+            if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
             {
-                ImGui::SameLine();
-                ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
+                invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
             }
+            ImGui::PopStyleColor( 3 );
             EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
-            // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
-            const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
-            vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
-            const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
-            for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( listSlot.size() ); ++paramIndex )
-            {
-                ImGui::PushID( static_cast<int32>( paramIndex ) );
-                // 선언에 인자 이름이 있으면 그것을 쓰고, 없으면 순번을 쓴다.
-                const FunctionParameterInfo&         parameter = method._listParameter[paramIndex];
-                fixed_string<constant::kMaxBuffer64> label;
-                if ( parameter._name.empty() )
-                    formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
-                else
-                    formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
-                const GameObject* pEditOwner = getEditOwner();
-                InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
-                    // 좁은 창에서 위젯 사각형의 가운데가 레이블 글 위에 놓이므로 입력 칸만 표식으로 남긴다.
-                    const string argMark = string( "inspector.method.arg." ) + method._name.c_str() + "." + to_string( paramIndex );
-                    EditorSelfTestMarks::noteInputFrame( argMark.c_str() );
-                }
-                ImGui::PopID();
-            }
+            ImGui::PopID();
+            return;
+        }
 
-            if ( paramCount > InspectorBuiltinValueUtil::kMaxMethodArgCount )
-                ImGui::TextDisabled( "Too many arguments (max %u in UI).", InspectorBuiltinValueUtil::kMaxMethodArgCount );
+        ImGui::PushID( method._hashName.c_str() );
+        ImGui::Text( "%s (%s)", pLabelName,
+                     method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
+        if ( method._metadata->_bCallInEditor != SW_FALSE )
+        {
+            ImGui::SameLine();
+            ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
+        }
+        EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
+        // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
+        const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
+        vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
+        const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
+        drawMethodArgInputs( method, listSlot );
 
-            if ( bArgsOk == false )
+        if ( paramCount > InspectorBuiltinValueUtil::kMaxMethodArgCount )
+            ImGui::TextDisabled( "Too many arguments (max %u in UI).", InspectorBuiltinValueUtil::kMaxMethodArgCount );
+
+        if ( bArgsOk == false )
+        {
+            ImGui::BeginDisabled();
+            ImGui::Button( "Invoke" );
+            ImGui::EndDisabled();
+            ImGui::TextDisabled( "Unsupported FUNCTION args - invoke skipped." );
+        }
+        else
+        {
+            const bool bInvoke = ImGui::Button( "Invoke" );
+            if ( EditorSelfTestMarks::isEnabled() )
             {
-                ImGui::BeginDisabled();
-                ImGui::Button( "Invoke" );
-                ImGui::EndDisabled();
-                ImGui::TextDisabled( "Unsupported FUNCTION args - invoke skipped." );
+                const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
+                EditorSelfTestMarks::note( invokeMark.c_str() );
             }
+            if ( bInvoke )
+                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
+        }
+
+        ImGui::PopID();
+    }
+
+    void EditorPropertyGrid::drawMethodArgInputs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )
+    {
+        for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( inoutListSlot.size() ); ++paramIndex )
+        {
+            ImGui::PushID( static_cast<int32>( paramIndex ) );
+            // 선언에 인자 이름이 있으면 그것을 쓰고, 없으면 순번을 쓴다.
+            const FunctionParameterInfo&         parameter = method._listParameter[paramIndex];
+            fixed_string<constant::kMaxBuffer64> label;
+            if ( parameter._name.empty() )
+                formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
             else
+                formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
+            const GameObject* pEditOwner = getEditOwner();
+            InspectorPropertyManager::drawMethodArg( label.c_str(), inoutListSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
+            if ( EditorSelfTestMarks::isEnabled() )
             {
-                const bool bInvoke = ImGui::Button( "Invoke" );
-                if ( EditorSelfTestMarks::isEnabled() )
-                {
-                    const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
-                    EditorSelfTestMarks::note( invokeMark.c_str() );
-                }
-                if ( bInvoke )
-                    invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
+                // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
+                // 좁은 창에서 위젯 사각형의 가운데가 레이블 글 위에 놓이므로 입력 칸만 표식으로 남긴다.
+                const string argMark = string( "inspector.method.arg." ) + method._name.c_str() + "." + to_string( paramIndex );
+                EditorSelfTestMarks::noteInputFrame( argMark.c_str() );
             }
-
             ImGui::PopID();
         }
     }

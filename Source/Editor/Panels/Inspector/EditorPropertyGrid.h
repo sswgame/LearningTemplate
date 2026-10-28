@@ -166,6 +166,10 @@ namespace sw::editor
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
+        /** @brief 메서드 하나를 그립니다. 인자 없는 CallInEditor 는 "Run" 단추 하나, 나머지는 머리 · 인자 입력란 · "Invoke" 단추입니다. 생성자는 건너뜁니다. */
+        void drawTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method );
+        /** @brief 메서드의 인자 입력란을 인자 슬롯마다 그립니다. */
+        void drawMethodArgInputs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
         /** @brief 타입의 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 기반 클래스부터 그립니다. 인자 없는 이벤트는 즉시 호출할 수 있습니다. */
         void drawTypeEvents( void* pInstance, const TypeInfo* pTypeInfo );
         /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
