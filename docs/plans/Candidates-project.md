@@ -2,40 +2,44 @@
 
 > 상태: 후보 · 선행: 없음 · 영역: project · 옛번호: C-75, C-76, H-1 · 진행: 해당없음
 
-저장소 규칙, 서드파티, 리소스처럼 한 영역에 속하지 않는 착수 전 후보의 목록입니다. 착수하면 절을 계획 문서로 옮기고 여기서 지웁니다. 긴 함수 정리는 [LongFunctions](LongFunctions.md) 로 착수했습니다.
+저장소 규칙, 서드파티, 리소스처럼 한 영역에 속하지 않는 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다.
+
+## 한눈에 보기
+
+| 절 | 한 줄 설명 | 착수 조건 |
+|---|---|---|
+| DecisionMeasurementColumn | "레인 없이 GT 병렬화" 기각을 레인 있는 설계로 재판단 | 사용자가 GT 병렬화를 다시 올릴 때 |
+| CarriedOverChecks | shaderdoc 뒤 bindless 진입 함수 구조 결정 | shaderdoc 결과가 나온 뒤 |
+| CcZeroAssetsMechArena | 게임별 CC0 리소스와 SD 메카 테스트 게임 | 사용자 결정 "안정화된 뒤" |
 
 ## 정리
 
 ### DecisionMeasurementColumn
 제목: 측정 조건 칸과 GT 병렬화 재검토
 옛번호: C-75
-왜 필요한가: 측정 조건(기계 · 규모 · 날짜 · 근거 커밋)이 떨어져 나가면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했고 3절의 측정 기반 기각 줄은 채웠다. 기계가 `미상` 인 칸은 재측정 때 `PC SW` 처럼 적어 고친다.
-남은 것:
-- 재검토: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다.
-- 스핀 늘리기 · hot pool · `flatMapInProcesses` 16 → 8 워커의 재측정은 하지 않는다(2026-10-28 지움 — 나중에 다시 측정하면 된다). 그 기각 줄의 조건 칸은 `미상` 으로 둔다.
-지금 못 하는 까닭: 재검토는 사용자가 판단할 일이다. 풀리는 조건: 사용자가 GT 병렬화를 다시 올릴 때.
+왜 필요한가: 기각 결정에 측정 조건(기계 · 규모 · 날짜 · 커밋)이 없으면 "그 조건에서 이득 없음" 이 무조건 금지가 된다. 형식은 정했다.
+착수 조건: 재검토는 사용자가 판단한다 — 사용자가 GT 병렬화를 다시 올릴 때.
+남은 첫 일: "레인 없이 GT 병렬화" 기각은 High · Normal · Low 큐(`TaskManager`)가 생겨 전제가 사라졌다. 레인 있는 설계로 다시 판단한다. 기계가 `미상` 인 칸은 재측정 때 `PC SW` 처럼 적어 고친다.
 
 ### CarriedOverChecks
-제목: 그 밖에 확인이 필요한 이월 항목
+제목: 셰이더 bindless 입문 구조 결정
 옛번호: C-76
-왜 필요한가: 다른 항목에 속하지 않고 확인만 남은 이월 조각입니다.
-남은 것:
-- 셰이더 bindless 입문: `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다.
-- 남은 관찰은 각자의 절에서 본다: `ShardExitCodeAfterPass`(`E-4` `E-10`), `RuntimeQualityAdjust`(`C-29 ⑤`), `LinuxManualChecks`(`B-7`). `E-1` 은 다 풀려 지웠다.
-풀리는 조건: shaderdoc 결과 · 각 관찰 절의 조건.
+왜 필요한가: 다른 항목에 속하지 않고 남은 이월 조각이다.
+착수 조건: `shaderdoc` 결과가 나온 뒤.
+남은 첫 일: 분기를 숨기는 진입 함수 구조 변경을 결정한다. 그 밖의 관찰은 `ShardExitCodeAfterPass` · `RuntimeQualityAdjust` · `LinuxManualChecks` 각 절에 있다.
 
 ## 보류
 
 ### CcZeroAssetsMechArena
 제목: 게임별 CC0 리소스 배치와 SD 메카 테스트 게임
 옛번호: H-1
-왜 필요한가: 테스트 게임마다 CC0 리소스를 배치하고, 건담풍 사람형 메카가 CC0 로 없어 SD 메카 생성기와 MechArena 테스트 게임을 만듭니다.
-착수 조건: 사용자 결정 "안정화된 뒤 개발". 2026-10-24 확인: NEXT · Roadmap 에 안정화 선언이 없어 보류를 유지한다.
-남은 것:
-- 라이선스: **CC0 급만**. 출처 표기 의무 · 재배포 금지가 붙은 것은 넣지 않고 내려받기 스크립트 우회도 안 한다.
-- 확인한 원본: VRoid 알파판 샘플 D · E · F · G · 남녀 기본(OpenGameArt `vroid-studio-cc0-models`, VRM 0.x), KayKit(GitHub `KayKit-Game-Assets` 의 `*-1.0` 저장소, CC0 — Space Base · Restaurant · City Builder · Dungeon Remastered · Furniture · Halloween), 음악 OpenGameArt CC0 `jaoan`(고토) · `menu-music-2`(도장풍 루프).
-- 배치함(2026-10-17 `res3`): StarSkirmish ← Space Base, Shooter3D ← Dungeon(NileCity ← City Builder 는 쓰지 못했다). 남은 배치안: ThemePark ← Restaurant · Halloween, HarvestValley ← jaoan(음악만), AbilityArena ← VRoid + menu-music-2. 프리팹 · 데이터 연결까지 한다(안 쓰면 에셋 검증 `orphans`).
-- SD 메카: CC0 로 쓸 만한 건담풍 사람형이 없다(Quaternius 메카는 동물이 탄 보행기, OGA Shock Bot 은 리얼풍). 파이썬으로 SD 메카 부품 메시를 만들어 부품마다 뼈 하나에 붙이고 KayKit 사람형 뼈대 이름에 맞춰 KayKit 애니메이션(CC0)을 쓰는 생성기 + MechArena 테스트 게임(`GF_MechArena` 키트는 있고 테스트만 씀). 건담 고유 요소(V 안테나 · 얼굴 마스크 · 흰 · 파랑 · 빨강 · 노랑 배색)는 피한다.
-- 탈것: 말(`MountMovementComponent` · `WesternHorseMountComponent`) · 차(`ArcadeVehicleComponent`)는 기본 도형으로만 테스트했다. CC0 말 메시 · 걸음새 애니메이션(Gait 0..4 · Turn)과 차 모델을 찾으면 서부극 · 카트 테스트 게임에 붙인다.
-- 카트 키트: `Kits/Genre/Casual/KartRacing` 의 플레이어 경로를 `ArcadeVehicleComponent::toVehicleInput` 으로 바꾸는 것은 카트 테스트 게임이 생길 때(지금 `KartRace::resolveInput` 이 이미 "같은 모터에 다른 조종자").
+왜 필요한가: 테스트 게임마다 CC0 리소스를 놓고, 건담풍 사람형 메카가 CC0 로 없어 SD 메카 생성기와 MechArena 테스트 게임을 만든다.
+착수 조건: 사용자 결정 "안정화된 뒤 개발". NEXT · Roadmap 에 안정화 선언이 아직 없어 보류한다.
+남은 첫 일: 아래 배치를 이어 간다(프리팹 · 데이터 연결까지 — 안 쓰면 에셋 검증 `orphans`).
+- 라이선스: **CC0 급만**. 출처 표기 의무 · 재배포 금지는 넣지 않고 내려받기 스크립트로 우회도 안 한다.
+- 원본: VRoid 알파판 샘플(OpenGameArt `vroid-studio-cc0-models`, VRM 0.x), KayKit(GitHub `KayKit-Game-Assets` 의 `*-1.0`), 음악 OpenGameArt `jaoan` · `menu-music-2`.
+- 남은 배치: ThemePark ← Restaurant · Halloween, HarvestValley ← jaoan(음악), AbilityArena ← VRoid + menu-music-2. (StarSkirmish · Shooter3D 는 끝남.)
+- SD 메카: 파이썬으로 부품 메시를 만들어 부품마다 뼈 하나에 붙이고 KayKit 사람형 뼈대 이름에 맞춰 KayKit 애니메이션을 쓰는 생성기 + MechArena 테스트 게임(`GF_MechArena` 키트는 있다). 건담 고유 요소(V 안테나 · 얼굴 마스크 · 배색)는 피한다.
+- 탈것: 말(`MountMovementComponent` · `WesternHorseMountComponent`) · 차(`ArcadeVehicleComponent`)는 기본 도형으로만 시험했다. CC0 말 메시 · 걸음새 애니메이션과 차 모델을 찾으면 서부극 · 카트 테스트 게임에 붙인다.
+- 카트 키트: `Kits/Genre/Casual/KartRacing` 플레이어 경로를 `ArcadeVehicleComponent::toVehicleInput` 으로 바꾸는 일은 카트 테스트 게임이 생길 때.
 함정: 물리 차(`WheeledVehicleComponent`)는 바퀴 메시를 바퀴 자세로 옮기지 않는다. 차 모델이 생기면 바퀴 자식 이름 표와 `getVehicleWheelPose` 창구를 더한다.
