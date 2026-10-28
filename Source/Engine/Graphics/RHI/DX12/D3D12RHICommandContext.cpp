@@ -77,7 +77,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return 0;
 
-        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 assertRegistryMutableNow 가 감시한다). 그러나
+        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 requireRegistryMutableNow 가 감시한다). 그러나
         // **게임 스레드**는 렌더 스레드의 기록과 겹쳐 버퍼를 만들고 부순다(에디터가 없는 빌드 — 오브젝트가 사라지며 머티리얼 인스턴스가 풀린다).
         // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
         ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };

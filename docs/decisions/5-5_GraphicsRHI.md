@@ -4,6 +4,8 @@
 > 독자: 같은 제안을 다시 하려는 사람, 정한 이유를 찾는 사람.
 > 결론: 결정 기록 5 절의 한 영역이다. 번호 체계와 쓰는 법은 [결정 기록](../09_Decisions.md) 5절에 있다.
 
+- **병렬 기록 중 리소스 표(bindless 등록 · 해제, 텍스처 생성 · 파괴)를 바꾸는 진입은 모든 백엔드가 `IRHIDevice::requireRegistryMutableNow` 로 모든 구성에서 멈춘다 — 디버그 전용 `assertRegistryMutableNow` 는 없앴다**(2026-10-28). 단언은 한 번도 걸리지 않았고(Debug 전 구성 통과) Release 에서는 아예 없어, 어긴 호출이 있어도 Release 에서만 GPU PageFault 로 드러날 수 있었다. 비용은 relaxed 원자 읽기 한 번이고 호출은 자원 생성 · 등록 때뿐이라 핫 패스가 아니다. 언리얼도 RHI 스레드 규칙 위반(`check(IsInRenderingThread())` 류)을 개발 구성에서만 보지만, 이 프로젝트는 "필수 값이 없거나 규칙이 깨지면 폴백 없이 멈춘다" 가 원칙이라 강도를 둘로 두지 않는다.
+
 - **RHI 의 완료 · 동기화 계약은 `IRHIDevice` 머리말의 한 표로 두고 네 백엔드가 같은 테스트로 지킨다**(2026-10-25). `waitIdle` 은 앞서 제출한 모든 GPU 작업이 끝난 뒤 돌아오고, `enqueueGPURelease` 콜백은 그 프레임의 작업이 끝난 뒤에만 불리며, GPU 는 `kMaxFrameCountInFlight` 보다 더 뒤처지지 못하고, `readReadbackBuffer` 는 읽기 버퍼가 아닌 핸들을 거절한다. DX11 은 프레임 끝 이벤트 쿼리 링, GL 은 `glFenceSync` 링으로 DX12 · Vulkan 의 펜스와 같은 모양을 만들었고 쿼리를 못 만들면 초기화를 실패시킨다(폴백 없음). 장치 제거 뒤 `waitIdle` 테스트는 Vulkan 에만 있다.
 - **장치 손실의 저장소는 `RHITransferSerials` 의 손실 표시 하나이고, 전송 제출은 진입에서 `isLost` 를 보고 `Rejected` 를 돌려준다. 네 백엔드가 같다**(2026-10-25). 손실 표시가 호출 결과를 보는 자리마다 흩어져 빠지던 모양을 모았다. `GetDeviceRemovedReason` 은 `isDeviceRemoved`(묻고 표시) 한 함수만 묻고, 손실 로그는 처음 표시한 호출만 남긴다. `debugRemoveDevice` 는 표시만 하는 시험용 훅이다(D3D11 에는 `RemoveDevice` 가 없어 제거된 장치의 Present 실패 경로는 확인하지 못함).
 - **스테이징 링의 할당 결과는 `RHITransferSerials::classifyStagingAllocation` 한 곳이 제출 결과로 옮기고 장치를 잃었으면 `Rejected` 다. GL 의 버퍼 구간 갱신(`updateConstantBuffer` 등)은 링으로 옮기지 않는다**(2026-10-25). 옮기는 안은 기각했다 — 프레임 경로 호출자는 모두 RT 이고 RT 는 프레임 내내 컨텍스트를 쥐어 줄어드는 점유가 없으며 링 장부 · 펜스 · GPU 복사만 더해진다(언리얼 GL RHI 도 작은 유니폼은 `glBufferSubData`). 큰 인스턴스 구간에서 드라이버 암묵 동기가 보이면 측정으로 다시 연다.

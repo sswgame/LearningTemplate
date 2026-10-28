@@ -427,18 +427,11 @@ namespace sw
         void setParallelRecording( bool bEnable ) { _bParallelRecording.store( bEnable, std::memory_order_relaxed ); }
 
         /**
-         * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 확인합니다.
-         * @details 백엔드의 register/unregister 진입부에서 부른다. 규칙이 깨지면 로그를 남기고
-         *          **디버거를 세운다**(`SW_LOG_ASSERT`). 로그만으로는 다른 줄에 묻혀 지나치기 쉽다.
-         *          Release 에서는 제거된다.
+         * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
+         * @details 모든 백엔드의 register/unregister · create/destroy 진입부에서 부른다. 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이라(DX11 `forget*InRecordingStates`,
+         *          bindless 표의 디스크립터 참조) 한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
+         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다(결정 기록 5-5).
          * @param pWhat 로그에 남길 호출 지점 이름입니다.
-         */
-        void assertRegistryMutableNow( const utf8* pWhat ) const;
-
-        /**
-         * @brief `assertRegistryMutableNow` 와 같은 확인을 **모든 구성에서** 하고, 어기면 오류를 남기고 멈춥니다.
-         * @details 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이 되는 곳(DX11 `forget*InRecordingStates`)에 씁니다. 비용은 원자 읽기 한 번이라
-         *          Release 에서도 확인합니다. 어긴 호출은 한 프레임 낡은 바인딩으로 그리거나(죽은 핸들을 "이미 묶임"으로 오인) 조용히 어긋나므로 멈추는 쪽이 낫습니다.
          */
         void requireRegistryMutableNow( const utf8* pWhat ) const;
 
@@ -450,7 +443,7 @@ namespace sw
          *          깊이 첨부(`_depthAttachment`)는 `FrameRenderer::bindPassCallbacks` 가 그래프에 선언한다.
          *          실제 전이는 락이 보호하므로 남아 있어도 안전하다. 여기 찍히는 이름이 곧
          *          "파이프라인 선언을 채우면 사라질 항목" 이다.
-         * @note bindless 레지스트리 쪽(`assertRegistryMutableNow`)은 불변식이 확실해서 assert 다.
+         * @note 레지스트리 쪽(`requireRegistryMutableNow`)은 불변식이 확실해서 멈춘다.
          *       두 감시의 강도가 다른 이유가 이것이다.
          */
         void reportBarrierDuringRecording( const utf8* pWhat ) const;

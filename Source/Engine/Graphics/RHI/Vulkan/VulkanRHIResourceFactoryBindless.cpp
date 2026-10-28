@@ -28,7 +28,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
         const bool bCannotRegisterTexture = texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE;
         if ( bCannotRegisterTexture )
             return kInvalidDescriptorIndex;
@@ -82,7 +82,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessBufferSrv" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSrv" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -94,7 +94,7 @@ namespace sw
 
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
         // 넣으면 다음 registerBindlessBufferSrv 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
@@ -123,7 +123,7 @@ namespace sw
 
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         if ( index == kInvalidDescriptorIndex )
             return;
         // 텍스처 레코드가 자기 인덱스를 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽도
@@ -166,7 +166,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUav" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -179,7 +179,7 @@ namespace sw
 
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
         VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
@@ -205,7 +205,7 @@ namespace sw
 
     void VulkanRHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
     {
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUav" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const bool               bBuffer  = index < _pDevice->_listUavSourceBuffer.size() && _pDevice->_listUavSourceBuffer[index] != 0;
         const bool               bTexture = index < _pDevice->_listUavSourceTexture.size() && _pDevice->_listUavSourceTexture[index] != 0;
