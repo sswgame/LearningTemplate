@@ -103,6 +103,12 @@ if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFR
 	add_subdirectory(Source/Programs/OnlineLoadBot)
 endif()
 
+# 단위 테스트(Test/ — 링크하는 것마다 실행 파일 하나, 각각 CTest 항목). 배포 구성은 짓지 않는다. 시나리오(Content/**/automation/)는 App 이 돌린다.
+if(NOT SW_SHIPPING_BUILD)
+	enable_testing()
+	add_subdirectory(Test)
+endif()
+
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verifyDynamicModuleRegistry()
