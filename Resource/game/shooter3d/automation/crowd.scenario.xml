@@ -12,16 +12,11 @@
 	<!-- 단언은 WaitUntil 이다: 60 초 안에 둘 이상 나누지 못하면 진다(구간 최댓값 >= 2). 나눈 수는 프레임마다 흔들린다 — 자동 플레이가 쏴 맞은 적 · 휘두르는 적은
 	     반복하지 않는 클립이라 그 프레임에 혼자로 내려간다. 그래서 다음 프레임에 같은 값을 다시 단언하지 않는다(그 단언이 2 → 1 로 졌다). 다음 프레임 값은 기록만 한다. -->
 	<At frame="300"><WaitUntil probe="Animation.CrowdSharedUnits" atLeast="2" timeoutSeconds="60"/></At>
-	<!-- 기록은 쫓는 상태(혼자 평가하는 유닛이 없고 일하는 유닛이 둘 이상)가 선 뒤에 한다. 공유 묶음이 처음 서는 프레임은 로딩 속도(백엔드 · 부하)에 따라 달라
-	     첫 조건만 기다리면 어떤 프레임에서 기록할지가 시간에 매인다 — 상태가 서면 기록한 값이 백엔드끼리 같다. -->
+	<!-- 쫓는 상태(혼자 평가하는 유닛이 없고 일하는 유닛이 둘 이상)가 선 뒤에 사진을 찍는다. 이 두 값은 WaitUntil 이 이미 단언하므로 다시 기록하지 않는다 —
+	     WaitUntil 이 시계를 붙잡는 동안에도 실제 프레임은 흘러 전투가 진행되고 그 길이는 백엔드 · 부하마다 달라, 풀린 다음 프레임의 값(프레임마다 흔들린다)은 백엔드끼리 같을 수 없다. -->
 	<At after="1"><WaitUntil probe="Animation.CrowdSoloUnits" equals="0" timeoutSeconds="60"/></At>
 	<At after="1"><WaitUntil probe="Animation.ActiveUnits" atLeast="2" timeoutSeconds="60"/></At>
-	<At after="1">
-		<Record probe="Animation.CrowdSharedUnits"/>
-		<Record probe="Animation.CrowdSoloUnits"/>
-		<Record probe="Animation.ActiveUnits"/>
-		<Screenshot file="shooter3d/crowd_chase.ppm"/>
-	</At>
+	<At after="1"><Screenshot file="shooter3d/crowd_chase.ppm"/></At>
 	<At after="240">
 		<Record probe="Animation.CrowdSharedUnits"/>
 		<Record probe="Animation.CrowdSoloUnits"/>
