@@ -423,7 +423,18 @@ namespace sw
         if ( unitCount == 0 )
             return;
 
-        // Kahn 위상 정렬: 모든 유닛이 자기 위 유닛보다 뒤에 오는 순서(`_listScratchOrder`)를 만든다.
+        // 단계 사이로 넘기는 값은 `_listScratch*` 멤버다. 모든 유닛이 자기 위 유닛보다 뒤에 오는 순서(`_listScratchOrder`)를 만든 뒤 성분으로 묶는다.
+        collectDependencyEdges( listUnit );
+        sortUnitsTopologically( unitCount );
+        if ( _listScratchOrder.size() != unitCount )
+            appendCyclicUnits( listUnit );
+        const uint32 componentCount = groupUnitsIntoComponents( unitCount );
+        placeUnitsInComponents( listUnit, componentCount );
+    }
+
+    void AnimationSystem::collectDependencyEdges( const vector<SkeletalMeshComponent*>& listUnit )
+    {
+        const uint32 unitCount = static_cast<uint32>( listUnit.size() );
         // 간선(위 유닛 → 아래 유닛)을 모아 위 유닛별 구간(CSR)으로 정렬한다 — 유닛마다 벡터를 할당하지 않고, 임시 버퍼는 멤버로 재사용한다.
         // 위 유닛의 번호는 `_unitList` 의 위치 색인으로 O(1) 에 찾는다.
         _listScratchEdge.clear();
@@ -460,7 +471,10 @@ namespace sw
         {
             _listScratchDependent[_listScratchDependentCursor[edge._upstream]++] = edge._dependent;
         }
+    }
 
+    void AnimationSystem::sortUnitsTopologically( uint32 unitCount )
+    {
         // 순서 배열이 큐를 겸한다: 위 유닛이 없는 유닛을 등록 순서로 넣고, 앞에서부터 꺼내며 아래 유닛의 남은 위 유닛 수를 줄여 0 이 되면 뒤에 붙인다.
         for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
@@ -477,23 +491,27 @@ namespace sw
                     _listScratchOrder.push_back( dependentIndex );
             }
         }
+    }
 
-        if ( _listScratchOrder.size() != unitCount )
+    void AnimationSystem::appendCyclicUnits( const vector<SkeletalMeshComponent*>& listUnit )
+    {
+        // 고리 — 데이터 오류다. 알리고, 고리의 유닛과 그 아래 유닛(위 유닛이 놓이지 않은 유닛)은 등록 순서로 순서 배열의 뒤에 붙인다.
+        // 성분 안은 직렬로 돌므로 고리의 유닛이 서로의 포즈를 읽고 써도 데이터 레이스가 아니다(순서만 강제하지 않는다).
+        const uint32 unitCount = static_cast<uint32>( listUnit.size() );
+        _componentAll._bCycle  = SW_TRUE;
+        for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
-            // 고리 — 데이터 오류다. 알리고, 고리의 유닛과 그 아래 유닛(위 유닛이 놓이지 않은 유닛)은 등록 순서로 순서 배열의 뒤에 붙인다.
-            // 성분 안은 직렬로 돌므로 고리의 유닛이 서로의 포즈를 읽고 써도 데이터 레이스가 아니다(순서만 강제하지 않는다).
-            _componentAll._bCycle = SW_TRUE;
-            for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+            if ( _listScratchPendingCount[unitIndex] > 0 )
             {
-                if ( _listScratchPendingCount[unitIndex] > 0 )
-                {
-                    _listScratchOrder.push_back( unitIndex );
-                    const GameObject* pOwner = listUnit[unitIndex]->getOwner();
-                    SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
-                }
+                _listScratchOrder.push_back( unitIndex );
+                const GameObject* pOwner = listUnit[unitIndex]->getOwner();
+                SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
             }
         }
+    }
 
+    uint32 AnimationSystem::groupUnitsIntoComponents( uint32 unitCount )
+    {
         // 간선으로 이어진 유닛을 한 성분으로 묶는다(union-find). 대표는 성분에서 가장 작은 번호이므로 성분 번호는 "등록 순서가 가장 앞선 유닛" 순으로 매겨진다.
         _listScratchComponentRoot.resize( unitCount );
         for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
@@ -512,7 +530,12 @@ namespace sw
             // 대표는 성분에서 가장 작은 번호라 자기 번호보다 앞서므로 성분 번호는 이미 정해져 있다.
             _listScratchComponentOf[unitIndex] = ( root == unitIndex ) ? componentCount++ : _listScratchComponentOf[root];
         }
+        return componentCount;
+    }
 
+    void AnimationSystem::placeUnitsInComponents( const vector<SkeletalMeshComponent*>& listUnit, uint32 componentCount )
+    {
+        const uint32 unitCount = static_cast<uint32>( listUnit.size() );
         // 성분별 구간(CSR)을 센다.
         vector<uint32>& listStart = _componentAll._listStart;
         listStart.assign( componentCount + 1, 0 );

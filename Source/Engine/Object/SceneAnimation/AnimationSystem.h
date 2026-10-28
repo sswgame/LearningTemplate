@@ -560,6 +560,16 @@ namespace sw
          *        임시 버퍼(`_listScratch*`)와 성분 벡터의 용량을 재사용합니다.
          */
         void rebuildComponents();
+        /** @brief `rebuildComponents` 1 단계: 의존 간선을 모아 위 유닛별 구간(CSR)으로 정렬합니다. 유닛의 "아래 유닛이 있음" 표시도 이때 갱신합니다. */
+        void collectDependencyEdges( const vector<SkeletalMeshComponent*>& listUnit );
+        /** @brief `rebuildComponents` 2 단계: Kahn 위상 정렬로 `_listScratchOrder` 를 채웁니다. 고리가 있으면 순서가 유닛 수보다 짧게 남습니다. */
+        void sortUnitsTopologically( uint32 unitCount );
+        /** @brief `rebuildComponents` 3 단계: 고리의 유닛과 그 아래 유닛을 오류로 알리고 등록 순서로 순서 배열 뒤에 붙입니다. */
+        void appendCyclicUnits( const vector<SkeletalMeshComponent*>& listUnit );
+        /** @brief `rebuildComponents` 4 단계: 간선으로 이어진 유닛을 성분으로 묶어(union-find) `_listScratchComponentOf` 를 채우고 성분 수를 돌려줍니다. */
+        [[nodiscard]] uint32 groupUnitsIntoComponents( uint32 unitCount );
+        /** @brief `rebuildComponents` 5 단계: 성분별 구간을 세고 위상 순서대로 유닛을 `_componentAll` 의 구간에 놓습니다. */
+        void placeUnitsInComponents( const vector<SkeletalMeshComponent*>& listUnit, uint32 componentCount );
         /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 성분을 다시 지을 예정이면 모아 둔 것만 버립니다. */
         void flushSingletonRemoval();
         /**
