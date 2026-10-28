@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Navigation/Recast/RecastNavMesh.h"
+#include "Engine/Navigation/Recast/RecastQueryUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <recastnavigation/DetourCommon.h>
@@ -162,9 +163,8 @@ namespace sw
         if ( isActiveAgent( agentID ) == false )
             return false;
         _listTarget[static_cast<size_t>( agentID )] = target;
-        dtPolyRef targetRef                         = 0;
-        float32   arrNearest[3]{};
-        (void)_pQuery->findNearestPoly( &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &targetRef, arrNearest ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
+        float32         arrNearest[3]{};
+        const dtPolyRef targetRef = RecastQueryUtil::findPolyInBox( _pQuery, &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrNearest ); // 상자 밖이면 0 이다
         if ( targetRef == 0 )
         {
             _pCrowd->resetMoveTarget( agentID );
@@ -188,10 +188,17 @@ namespace sw
         if ( isActiveAgent( agentID ) == false )
             return;
         // Detour 의 addAgent 가 하는 것과 같은 초기화다. 통로를 새 위치에서 다시 시작한다.
-        dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentID );
-        dtPolyRef     polyRef = 0;
+        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID );
         float32       arrNearest[3]{ position._x, position._y, position._z };
-        (void)_pQuery->findNearestPoly( &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &polyRef, arrNearest ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
+        // 못 찾거나 상자 밖이면 ref 0 이고 붙은 점 대신 요청한 위치를 쓴다.
+        float32         arrFound[3]{};
+        const dtPolyRef polyRef = RecastQueryUtil::findPolyInBox( _pQuery, &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrFound );
+        if ( polyRef != 0 )
+        {
+            arrNearest[0] = arrFound[0];
+            arrNearest[1] = arrFound[1];
+            arrNearest[2] = arrFound[2];
+        }
         pAgent->corridor.reset( polyRef, arrNearest );
         pAgent->boundary.reset();
         pAgent->partial          = false;
