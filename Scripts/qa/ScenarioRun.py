@@ -212,8 +212,9 @@ def makeIsolatedUserHome(plan: RunPlan, backend: Backend) -> Path:
 
 
 def hasOwnSettingsArgument(plan: RunPlan) -> bool:
-    """`--app-arg` 가 사용자 설정 파일을 직접 정했는가 — 시퀀스 러너가 앞 실행의 설정을 뒤 실행이 읽게 같은 파일을 줄 때다. 그러면 격리 파일을 붙이지 않는다."""
-    return any(argument.startswith(kVocabulary.userSettingsFileArgumentPrefix) for argument in plan.listAppArg)
+    """`--app-arg` 나 시나리오의 `<Launch>` 변수가 사용자 설정 파일을 직접 정했는가 — 재시작 시퀀스(rebindsave → rebindrestart)가 앞 실행의 설정을 뒤 실행이
+    읽게 같은 파일을 줄 때다. 그러면 격리 파일을 붙이지 않는다(붙이면 뒤 인자가 이겨 두 실행이 다른 파일을 본다)."""
+    return any(argument.startswith(kVocabulary.userSettingsFileArgumentPrefix) for argument in [*plan.declaration.makeLaunchArguments(), *plan.listAppArg])
 
 
 def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
@@ -309,7 +310,7 @@ def judgeRun(plan: RunPlan, backend: Backend, listArgument: list[str], mapCode: 
             return result
         clearOutputFolder(plan)   # 잠금을 잡은 뒤에 비운다 — 같은 시나리오를 도는 다른 판의 산출물을 지우지 않게
         # 무인 인자(`-unattended`)라 엔진이 사양으로 프리셋을 고르지 않고(a0521e79a), 격리 설정 파일(배포본은 환경 변수)이라 이 PC 의 사용자 폴더 설정도 읽지 않는다.
-        # 품질에 기대는 시나리오는 <Launch> 로 못 박는다. 시퀀스가 `--app-arg` 로 준 설정 파일은 지우지 않는다(앞 실행의 설정을 읽는 용도).
+        # 품질에 기대는 시나리오는 <Launch> 로 못 박는다. 시퀀스가 `<Launch>` · `--app-arg` 로 준 설정 파일은 지우지 않는다(앞 실행의 설정을 읽는 용도).
         environment: dict[str, str] = {}
         if plan.bShipping:
             userHome = makeIsolatedUserHome(plan, backend)

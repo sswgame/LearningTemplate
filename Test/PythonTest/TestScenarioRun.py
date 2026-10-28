@@ -166,6 +166,15 @@ class ArgumentAssemblyTest(ScenarioRunCase):
         self.assertEqual([f"-gv_userSettingsFile={own.as_posix()}"], listSettings)
         self.assertTrue(own.exists())
 
+    def testLaunchSettingsFileIsKeptWithoutIsolatedFile(self) -> None:
+        """재시작 시퀀스(rebindsave → rebindrestart)는 `<Launch>` 로 같은 설정 파일을 준다 — 격리 파일을 뒤에 붙이면 그것이 이겨 두 실행이 다른 파일을 봤다."""
+        writeText(self.root / "Resource/game/empty/automation/rebindsave.scenario.xml",
+                  kPlainXml.replace('<At frame="1">', '<Launch variable="gv_userSettingsFile" value="Saved/Automation/seq/usersettings.json"/>\n    <At frame="1">'))
+        fake = FakeApp()
+        self.runMain(["game/empty/automation/rebindsave.scenario.xml"], fake)
+        listSettings = [argument for argument in fake.listCall[0][1] if argument.startswith("-gv_userSettingsFile=")]
+        self.assertEqual(["-gv_userSettingsFile=Saved/Automation/seq/usersettings.json"], listSettings)
+
     def testEditorScenarioGetsEditorAndStateFolder(self) -> None:
         fake = FakeApp()
         self.runMain(["addcomponent"], fake)
