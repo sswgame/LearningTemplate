@@ -112,7 +112,7 @@ namespace sw
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    void ModuleReloadDriver::initialize( [[maybe_unused]] SubsystemScope& hostScope, [[maybe_unused]] ModuleLoaderSubsystem& moduleImageHost )
+    void ModuleReloadDriver::initialize( [[maybe_unused]] SubsystemScope& hostScope, [[maybe_unused]] ModuleLoaderSubsystem& moduleLibraryHost )
     {
 #if !defined( SW_SHIPPING )
         _liveReloadManager = make_unique<LiveReloadManager>();
@@ -120,8 +120,8 @@ namespace sw
         const bool bBound  = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );
         (void)bBound;
-        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 이미지 창구가 엔진 종료 안에서 그 자리를 부른다.
-        _scenesReleasedHook = moduleImageHost.bindScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 라이브러리 창구가 엔진 종료 안에서 그 자리를 부른다.
+        _scenesReleasedHook = moduleLibraryHost.bindScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             if ( _pHostScope != nullptr )
                 _pHostScope->unbind<ModuleReloadDriver>();

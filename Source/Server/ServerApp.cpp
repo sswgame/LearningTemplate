@@ -214,13 +214,13 @@ namespace sw
     bool ServerApp::initialize( int32 argc, utf8* pArgv[] )
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
-        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
+        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 라이브러리 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleLibrarys`).
         // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
         {
             SW_MEMORY_SCOPE( EngineMisc );
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
-        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ), "ServerApp" );
+        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
         if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )
@@ -271,7 +271,7 @@ namespace sw
         return true;
     }
 
-    bool ServerApp::loadModuleImages()
+    bool ServerApp::loadModuleLibrarys()
     {
         SW_MEMORY_SCOPE( EngineMisc );
 #if !defined( SW_SHIPPING )
@@ -282,7 +282,7 @@ namespace sw
         _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
         _gameModuleManager = make_unique<GameModuleManager>();
-        if ( _gameModuleManager->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+        if ( _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
 #if !defined( SW_SHIPPING )
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저).
@@ -1032,11 +1032,11 @@ namespace sw
         // 호스트 부품을 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
         // 순서는 `HostPart` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostParts.destroyAll();
-        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
+        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
-        // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 이미지 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
+        // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
         Logger::clearClockNumber();

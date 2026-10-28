@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -48,7 +48,7 @@ namespace sw
             wcscat_s( arrSearchPath, constant::kMaxBuffer4096, arrModulePath );
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
             const wstring symbolFolder = StringUtil::utf8ToUTF16(
-                FileUtil::toNativeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), ModuleImageUtil::kSymbolFolder ) ).c_str() );
+                FileUtil::toNativeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), ModuleLibraryUtil::kSymbolFolder ) ).c_str() );
             if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::kMaxBuffer4096 )
             {
                 wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );

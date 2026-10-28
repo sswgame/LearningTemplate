@@ -137,9 +137,9 @@ namespace sw
         return releasedCount;
     }
 
-    uint32 IWindow::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 IWindow::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
     {
-        (void)outKeepImageMapped;
+        (void)outKeepLibraryMapped;
         return removeCodeWithin( pBegin, pEnd );
     }
 

@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -58,8 +58,8 @@ namespace sw
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg        = engine::getSubsystem<RHIBackendRegistry>();
-                const string        dllName    = ModuleImageUtil::formatSharedLibraryName( pModuleBaseName );
-                const string        modulePath = ModuleImageUtil::findModuleLibraryPath( pModuleBaseName ); // Bin/Modules
+                const string        dllName    = ModuleLibraryUtil::formatSharedLibraryName( pModuleBaseName );
+                const string        modulePath = ModuleLibraryUtil::findModuleLibraryPath( pModuleBaseName ); // Bin/Modules
 
                 if ( reg.tryLoadModule( backend, modulePath ) )
                     return true;
@@ -167,30 +167,30 @@ namespace sw
 
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
-        void* pModuleHandle = ModuleImageUtil::loadDynamicLibrary( modulePath );
+        void* pModuleHandle = ModuleLibraryUtil::loadDynamicLibrary( modulePath );
         if ( pModuleHandle == nullptr )
             return false;
 
-        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
+        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
         if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleABIVersion )
         {
             SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );
-            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
+            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
 
-        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
+        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
         if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleABIStamp ) == false )
         {
             SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );
-            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
+            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
 
-        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
+        PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
         if ( pfnCreate == nullptr )
         {
-            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
+            (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
 
@@ -228,7 +228,7 @@ namespace sw
         // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 남아 있을 뿐이다. 이유는 경고로 남는다.
         for ( const LoadedModule& module : _listLoadedModule )
         {
-            (void)ModuleImageUtil::unloadModuleImage( module._modulePath, module._pHandle );
+            (void)ModuleLibraryUtil::unloadModuleLibrary( module._modulePath, module._pHandle );
         }
         _listLoadedModule.clear();
     }

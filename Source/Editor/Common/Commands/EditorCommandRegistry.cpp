@@ -7,7 +7,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 
@@ -271,7 +271,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < CommandRegistry::getCount(); ++index )
         {
             const EditorCommandRegistration& row = CommandRegistry::getAt( index );
-            if ( ModuleImageUtil::isAddressWithin( &row, pExcludeBegin, pExcludeEnd ) )
+            if ( ModuleLibraryUtil::isAddressWithin( &row, pExcludeBegin, pExcludeEnd ) )
             {
                 ++excludedCount;
                 continue;

@@ -26,7 +26,7 @@ namespace sw
 
         /**
          * @brief @p pAddressInside 를 담은 모듈의 빌드 id 입니다. nullptr 이면 실행 파일입니다. 찾지 못하면(서명 없는 링크) 빈 값입니다.
-         * @details 디스크를 읽지 않습니다 — 올라온 이미지의 머리에서 읽습니다.
+         * @details 디스크를 읽지 않습니다 — 올라온 라이브러리의 머리에서 읽습니다.
          */
         static ModuleBuildID find( const void* pAddressInside );
     };

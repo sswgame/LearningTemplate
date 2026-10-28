@@ -1,10 +1,10 @@
 /**
- * @file ModuleImageUtil.h
- * @brief 동적 라이브러리(모듈 이미지)를 다루는 유일한 진입점입니다.
- * @details 이름 만들기, 로드, 심볼 조회, 이미지 범위 조회, 의존 이미지 고정을 제공합니다. 이미지의 코드를 가리키는 등록을 해제하고 언로드하는 일도 여기서 합니다.
+ * @file ModuleLibraryUtil.h
+ * @brief 동적 라이브러리(모듈 라이브러리)를 다루는 유일한 진입점입니다.
+ * @details 이름 만들기, 로드, 심볼 조회, 라이브러리 범위 조회, 의존 라이브러리 고정을 제공합니다. 라이브러리의 코드를 가리키는 등록을 해제하고 언로드하는 일도 여기서 합니다.
  *          게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
- *          레지스트리 목록은 `ModuleImageUtil::registerUnloadHandler` 가 보관합니다. 이 구조체는 그 목록을 순회하고 결과를 로그로 남긴 뒤 이미지를 언로드합니다.
- *          섀도 복사본의 **파일 바이트**를 고치는 `ModuleImagePatch` 는 핫 리로드만 쓰므로 `GameModuleManager/ModuleImagePatch` 에 있습니다.
+ *          레지스트리 목록은 `ModuleLibraryUtil::registerUnloadHandler` 가 보관합니다. 이 구조체는 그 목록을 순회하고 결과를 로그로 남긴 뒤 라이브러리를 언로드합니다.
+ *          섀도 복사본의 **파일 바이트**를 고치는 `ModuleLibraryPatch` 는 핫 리로드만 쓰므로 `GameModuleManager/ModuleLibraryPatch` 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,10 +17,10 @@
 namespace sw
 {
     /**
-     * @brief 모듈 언로드 처리기입니다(`ModuleImageUtil::registerUnloadHandler`). [@p pBegin, @p pEnd) 안의 코드를 가리키는 등록을 떼고 뗀 수를 돌려준다.
-     *        떼어 낼 수 없어 이미지를 내리면 안 되면 @p outKeepImageMapped 를 true 로 둔다.
+     * @brief 모듈 언로드 처리기입니다(`ModuleLibraryUtil::registerUnloadHandler`). [@p pBegin, @p pEnd) 안의 코드를 가리키는 등록을 떼고 뗀 수를 돌려준다.
+     *        떼어 낼 수 없어 라이브러리를 내리면 안 되면 @p outKeepLibraryMapped 를 true 로 둔다.
      */
-    using ModuleUnloadFunction = Delegate<uint32( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )>;
+    using ModuleUnloadFunction = Delegate<uint32( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )>;
 } // namespace sw
 
 namespace sw
@@ -36,10 +36,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct ModuleImageUtil
-     * @brief 모듈 이미지의 이름, 로드, 조회, 코드 등록 해제, 언로드를 담당합니다.
+     * @struct ModuleLibraryUtil
+     * @brief 모듈 라이브러리의 이름, 로드, 조회, 코드 등록 해제, 언로드를 담당합니다.
      */
-    struct SW_API ModuleImageUtil
+    struct SW_API ModuleLibraryUtil
     {
         // ------------------------------------------------------------------------------
         // 1) 이름. 플랫폼 접두어, 확장자, 디버그 심볼 파일.
@@ -92,7 +92,7 @@ namespace sw
         /**
          * @brief 동적 라이브러리를 로드합니다.
          * @details **연 쪽이 핸들을 소유하고 내린다**(`LiveReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈 · ALSA 백엔드). 프로세스 끝까지 두는 곳은 그 자리에
-         *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleImage` 가 고정하는 의존 이미지도 같은 규칙의 예외다.
+         *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleLibrary` 가 고정하는 의존 라이브러리도 같은 규칙의 예외다.
          */
         static void* loadDynamicLibrary( string_view libraryName );
         /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
@@ -101,72 +101,72 @@ namespace sw
         static void unloadDynamicLibrary( void* pHandle );
         /**
          * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 중 지금 로드된 것을 프로세스 끝까지 언로드되지 않게 고정하고, 고정한 수를 반환합니다.
-         * @details 이 핸들을 언로드해도 그 라이브러리가 끌어온 의존 이미지는 남긴다. Windows 는 import 테이블의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN` 으로,
-         *          리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정한다. 아직 로드되지 않은 의존 이미지는 로드하지 않는다.
+         * @details 이 핸들을 언로드해도 그 라이브러리가 끌어온 의존 라이브러리는 남긴다. Windows 는 import 테이블의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN` 으로,
+         *          리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정한다. 아직 로드되지 않은 의존 라이브러리는 로드하지 않는다.
          */
         static uint32 pinDynamicLibraryDependencies( void* pHandle );
 
         // ------------------------------------------------------------------------------
-        // 3) 로드된 이미지 조회.
+        // 3) 로드된 라이브러리 조회.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 주소 @p pAddressInside 를 포함한 실행 이미지(exe, DLL, SO)가 메모리에서 차지하는 범위를 찾습니다.
-         * @details Windows 는 이미지 기준 주소와 `SizeOfImage` 로, 리눅스는 그 이미지의 적재 세그먼트(PT_LOAD) 전체로 범위를 정한다. 핫 리로드가
+         * @brief 주소 @p pAddressInside 를 포함한 실행 라이브러리(exe, DLL, SO)가 메모리에서 차지하는 범위를 찾습니다.
+         * @details Windows 는 라이브러리 기준 주소와 `SizeOfImage` 로, 리눅스는 그 라이브러리의 적재 세그먼트(PT_LOAD) 전체로 범위를 정한다. 핫 리로드가
          *          "이 델리게이트나 함수 포인터가 언로드하려는 모듈의 코드를 가리키는가"를 판단하는 데 쓴다.
          * @return 찾지 못하면 false 를 반환합니다(그 밖의 플랫폼 포함).
          */
-        [[nodiscard]] static bool findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
-        /** @brief `loadDynamicLibrary` 가 준 핸들의 이미지 범위를 찾습니다(`findLoadedImageRange` 와 같습니다). */
+        [[nodiscard]] static bool findLoadedLibraryRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd );
+        /** @brief `loadDynamicLibrary` 가 준 핸들의 라이브러리 범위를 찾습니다(`findLoadedLibraryRange` 와 같습니다). */
         [[nodiscard]] static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
         /**
-         * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 **어느 이미지에 바인딩했는지** import 테이블에서 읽습니다.
-         * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 이미지다(모듈 이미지에는 지연 import 가 없다.
-         *          `LiveReloadManager` 가 그런 이미지를 거절한다). Windows 전용이며, 리눅스는 import 테이블에서 바인딩을 읽을 수 없어
+         * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 **어느 라이브러리에 바인딩했는지** import 테이블에서 읽습니다.
+         * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 라이브러리다(모듈 라이브러리에는 지연 import 가 없다.
+         *          `LiveReloadManager` 가 그런 라이브러리를 거절한다). Windows 전용이며, 리눅스는 import 테이블에서 바인딩을 읽을 수 없어
          *          부르는 쪽이 심볼로 판단한다(`LiveReloadManager` 의 바인딩 검사).
-         * @return 바인딩된 이미지의 핸들을 반환합니다. 그 DLL 을 import 하지 않으면(그 밖의 플랫폼 포함) nullptr 입니다.
+         * @return 바인딩된 라이브러리의 핸들을 반환합니다. 그 DLL 을 import 하지 않으면(그 밖의 플랫폼 포함) nullptr 입니다.
          */
-        static void* findBoundImportImage( void* pHandle, string_view dependencyFileName );
+        static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName );
 
         // ------------------------------------------------------------------------------
-        // 4) 코드 등록 해제와 언로드. 이미지의 코드를 가리키는 엔진 등록(5 절의 언로드 처리기)을 먼저 해제한다.
+        // 4) 코드 등록 해제와 언로드. 라이브러리의 코드를 가리키는 엔진 등록(5 절의 언로드 처리기)을 먼저 해제한다.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 모듈 이미지 [@p pBegin, @p pEnd) 의 코드를 가리키는 등록을 해제합니다. 이미지를 언로드하거나 언로드를 미루기 **전에** 부릅니다.
+         * @brief 모듈 라이브러리 [@p pBegin, @p pEnd) 의 코드를 가리키는 등록을 해제합니다. 라이브러리를 언로드하거나 언로드를 미루기 **전에** 부릅니다.
          * @details 모듈보다 오래 사는 레지스트리는 언로드 처리기(`registerUnloadHandler`)를 올리고, 이 함수는 그 처리기를 모두 부른다.
          *          대상은 이벤트 버스(구독과 그 모듈이 만든 채널 항목), 전역 로그 리스너, Undo 스택(들어 있으면 통째로 비운다), 창의 처리기, 에셋 캐시 레지스트리다.
          *          레지스트리를 하나 더하려면 처리기 구독 멤버 한 줄을 더하면 되고, 이 함수는 고치지 않는다.
          *          이 훑기는 탐지기다. 등록은 구독(`Subscription`)이 소유해 모듈 객체와 함께 풀리므로, 예상 밖으로 해제한 것(`_bReleaseExpected` 가 아닌 처리기)은
          *          처리기 이름과 함께 **오류**로 남긴다(`Module.ListenerLeftBehind`). 모듈이 스스로 해제하지 않고 남긴 것이므로 모듈 쪽 버그다.
-         * @param pOutKeepImageMapped 주면, 이 이미지를 **언로드하면 안 되는지** 받습니다. 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독하면 true 입니다.
-         *                            채널의 브로드캐스트 함수와 멀티캐스트의 해제자(`shared_ptr` 컨트롤 블록)가 그 이미지의 코드라, 언로드하면 다음
-         *                            발행이나 디스패처 소멸이 언로드된 코드로 점프한다. 그런 이미지는 프로세스 끝까지 로드해 둔다(해제할 방법이 없다).
+         * @param pOutKeepLibraryMapped 주면, 이 라이브러리를 **언로드하면 안 되는지** 받습니다. 라이브러리가 만든 이벤트 채널을 다른 코드가 아직 구독하면 true 입니다.
+         *                            채널의 브로드캐스트 함수와 멀티캐스트의 해제자(`shared_ptr` 컨트롤 블록)가 그 라이브러리의 코드라, 언로드하면 다음
+         *                            발행이나 디스패처 소멸이 언로드된 코드로 점프한다. 그런 라이브러리는 프로세스 끝까지 로드해 둔다(해제할 방법이 없다).
          * @return 모든 처리기에서 해제한 항목 수입니다. 모듈이 제대로 정리했으면 0 입니다.
          */
-        static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped = nullptr );
+        static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepLibraryMapped = nullptr );
         /**
-         * @brief `loadDynamicLibrary` 로 로드한 이미지 @p pHandle 의 코드를 가리키는 등록을 해제합니다(`releaseModuleCode` 를 그 이미지 범위로 부릅니다).
-         * @details 언로드를 미루는 핫 리로드처럼 등록 해제와 언로드 사이가 벌어지는 곳이 쓴다. 바로 언로드하면 `unloadModuleImage` 가 이것까지 한다.
-         * @return 이미지를 언로드해도 되면 true 입니다. 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독하면 false 이며, 프로세스 끝까지 로드해 둡니다.
+         * @brief `loadDynamicLibrary` 로 로드한 라이브러리 @p pHandle 의 코드를 가리키는 등록을 해제합니다(`releaseModuleCode` 를 그 라이브러리 범위로 부릅니다).
+         * @details 언로드를 미루는 핫 리로드처럼 등록 해제와 언로드 사이가 벌어지는 곳이 쓴다. 바로 언로드하면 `unloadModuleLibrary` 가 이것까지 한다.
+         * @return 라이브러리를 언로드해도 되면 true 입니다. 라이브러리가 만든 이벤트 채널을 다른 코드가 아직 구독하면 false 이며, 프로세스 끝까지 로드해 둡니다.
          *         범위를 찾지 못하면(핸들이 null 등) 해제할 것이 없으므로 true 입니다.
          */
-        [[nodiscard]] static bool releaseImageCode( string_view moduleName, void* pHandle );
+        [[nodiscard]] static bool releaseLibraryCode( string_view moduleName, void* pHandle );
 
         /**
-         * @brief `loadDynamicLibrary` 로 로드한 모듈 이미지 @p pHandle 을 언로드합니다.
-         * @details 언로드하기 전에 그 이미지의 코드를 가리키는 등록을 해제한다(`releaseModuleCode`). 해제할 수 없는 것이 남으면 언로드하지 않고 false 를 반환한다.
-         *          그 이미지가 끌어온 의존 이미지(GameFramework 같은 공유 모듈)는 **언로드하지 않는다**. 의존 이미지가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
+         * @brief `loadDynamicLibrary` 로 로드한 모듈 라이브러리 @p pHandle 을 언로드합니다.
+         * @details 언로드하기 전에 그 라이브러리의 코드를 가리키는 등록을 해제한다(`releaseModuleCode`). 해제할 수 없는 것이 남으면 언로드하지 않고 false 를 반환한다.
+         *          그 라이브러리가 끌어온 의존 라이브러리(GameFramework 같은 공유 모듈)는 **언로드하지 않는다**. 의존 라이브러리가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
          *          Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 붙잡으므로 원래 그렇다. 리눅스는 `DT_NEEDED` 참조가 함께 풀려 언로드되므로 여기서 고정한다(`pinDynamicLibraryDependencies`).
-         *          핫 리로드(`LiveReloadManager`)는 등록 해제와 언로드 사이에 언로드를 미루므로 `releaseImageCode` 만 쓴다.
-         * @return 이미지를 내렸으면 true 입니다.
+         *          핫 리로드(`LiveReloadManager`)는 등록 해제와 언로드 사이에 언로드를 미루므로 `releaseLibraryCode` 만 쓴다.
+         * @return 라이브러리를 내렸으면 true 입니다.
          */
-        [[nodiscard]] static bool unloadModuleImage( string_view moduleName, void* pHandle );
+        [[nodiscard]] static bool unloadModuleLibrary( string_view moduleName, void* pHandle );
 
         // ------------------------------------------------------------------------------
         // 5) 언로드 처리기. 모듈 DLL 보다 오래 사는 레지스트리(이벤트 버스 · 로그 리스너 · Undo 스택 · 창 처리기 · 에셋 캐시 …)는 처리기를 올리고
         //    구독을 멤버로 든다(언리얼 `FModuleManager::OnModulesChanged` 와 같은 모양 — 상속하지 않는다). `releaseModuleCode` 가 처리기를 모두 부른다.
         //    처리기는 엔진(또는 App) 쪽 코드여야 한다 — 모듈 코드의 처리기는 그 모듈보다 오래 살면 훑기가 내려간 코드로 뛴다.
         //
-        //        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "input callbacks" },
+        //        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "input callbacks" },
         //                                                    ModuleUnloadFunction::create<&InputManager::onModuleUnloading>( this ) ) };
         // ------------------------------------------------------------------------------
         /** @brief 처리기를 올립니다. 돌려준 구독이 사라지면 빠진다. 훑기 안에서 올리거나 풀어도 된다(훑기는 시작 때의 사본을 돌고 풀린 것은 건너뛴다). */
@@ -174,7 +174,7 @@ namespace sw
         /** @brief 주소 @p pCode 가 [@p pBegin, @p pEnd) 안인지 봅니다. nullptr 은 늘 밖입니다. */
         static bool isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd );
         /**
-         * @brief 다형 객체 @p pObject 의 vtable 주소입니다. 객체가 어느 이미지의 코드인지 묻는 데 씁니다.
+         * @brief 다형 객체 @p pObject 의 vtable 주소입니다. 객체가 어느 라이브러리의 코드인지 묻는 데 씁니다.
          * @details MSVC · Itanium ABI 모두 다형 (부분)객체의 첫 포인터가 vptr 입니다. 가상 함수를 가진 기반 포인터를 넘깁니다.
          */
         static const void* findVtableAddress( const void* pObject );

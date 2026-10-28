@@ -1,6 +1,6 @@
 /**
  * @file ModuleManager/GameModuleManager.h
- * @brief 게임 모듈의 수명 주기를 관리합니다. 이미지 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
+ * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(RuntimeAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화는 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다. 의존은 그쪽에서 여기로 한 방향입니다.
@@ -40,8 +40,8 @@ namespace sw
     /** @brief 모듈을 내리기 전에 워커를 비우는 까닭입니다. 비우기가 시한을 넘겼을 때 리로드 그래프를 막을지가 이것으로 갈립니다. */
     enum class DrainReason : uint8
     {
-        Reload,      ///< 모듈 리로드 앞 — 시한을 넘기면 그래프를 막는다(옛 이미지를 내리면 도는 태스크가 해제된 코드를 탄다)
-        BackendSwap, ///< RHI 백엔드 교체 앞 — 같은 이미지로 다시 세우지만 리로드와 같이 막는다
+        Reload,      ///< 모듈 리로드 앞 — 시한을 넘기면 그래프를 막는다(옛 라이브러리를 내리면 도는 태스크가 해제된 코드를 탄다)
+        BackendSwap, ///< RHI 백엔드 교체 앞 — 같은 라이브러리로 다시 세우지만 리로드와 같이 막는다
         Shutdown,    ///< 종료 앞 — 다시 설 리로드가 없으니 남은 태스크만 알린다
     };
 
@@ -110,7 +110,7 @@ namespace sw
         void* getLoadedModuleHandle( string_view moduleName ) const;
 
         /**
-         * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
+         * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
          * @details 기동 단계 `ModuleLoadStage` 의 호스트 로더(`App`, `Server`)가 부릅니다. 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는
          *          그 뒤 기동 함수(`initializeDedicatedServer`, `EditorModuleManager::initialize`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
          *          무엇을 어떤 순서로 로드할지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다. 켜진 GameFramework, 키트, SWGame 을 로드 순서대로
@@ -119,7 +119,7 @@ namespace sw
          * @param catalog 매니페스트 번들(`Bin/Modules/<모듈>.module.json`)
          * @param resolution `catalog.resolve` 결과
          */
-        [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
+        [[nodiscard]] bool loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
          * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr, nullptr )` 를 받습니다.
          * @details 모듈 콜백, 핫 리로드(Dev), 상태 보존은 App 과 같습니다.
@@ -172,10 +172,10 @@ namespace sw
          */
         [[nodiscard]] bool onBeforeCommitBatch( const vector<string>& listModuleName );
         /**
-         * @brief 새 게임 이미지가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportGameAPI`). 옛 이미지를 언로드하기 전에 불립니다.
-         * @details 여기서 거절하면 옛 게임이 그대로 돈다. 같은 검사를 옛 이미지를 언로드한 뒤(`onAfterGameReload`)에야 하면 거절이 곧 게임을 잃는 일이 된다.
+         * @brief 새 게임 라이브러리가 이 호스트와 같은 API 테이블로 빌드됐는지 확인합니다(ABI 버전, 지문, `exportGameAPI`). 옛 라이브러리를 언로드하기 전에 불립니다.
+         * @details 여기서 거절하면 옛 게임이 그대로 돈다. 같은 검사를 옛 라이브러리를 언로드한 뒤(`onAfterGameReload`)에야 하면 거절이 곧 게임을 잃는 일이 된다.
          */
-        bool isGameImageUsable( void* pLibraryModule ) const;
+        bool isGameLibraryUsable( void* pLibraryModule ) const;
         /**
          * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
@@ -215,7 +215,7 @@ namespace sw
 
     protected:
         /**
-         * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
+         * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
          * @param pRHI 활성 RHI. 주면 게임은 디바이스가 있어야 만들어지고, nullptr 이면(전용 서버) 디바이스 없이 만듭니다.
          * @param pWindow 플랫폼 창(없으면 nullptr)
          * @param pRenderThread 렌더 스레드(워커 비우기용, 없으면 nullptr)
@@ -274,7 +274,7 @@ namespace sw
         /**
          * @brief `suspendModules` 의 본체입니다.
          * @param bKeepGameOnCaptureFailure true 면 게임 상태를 저장하지 못했을 때 아무것도 언로드하지 않고 false 를 반환합니다(리로드 직전).
-         *        종료나 RHI 교체처럼 상태를 넘겨받을 새 이미지가 없으면 false 로 둡니다.
+         *        종료나 RHI 교체처럼 상태를 넘겨받을 새 라이브러리가 없으면 false 로 둡니다.
          */
         [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, DrainReason reason );
         /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 **버리지 않고** 다음 리로드까지 보관합니다. */
@@ -301,7 +301,7 @@ namespace sw
 
         // 핫 리로드 때 게임 상태를 보존하는 재사용 버퍼.
         vector<uint8> _listGameSavedState;
-        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(GameFramework · 키트, SWGame 은 이름으로 따로 본다)입니다. `loadModuleImages` 가 채웁니다. */
+        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(GameFramework · 키트, SWGame 은 이름으로 따로 본다)입니다. `loadModuleLibrarys` 가 채웁니다. */
         vector<string> _listGameScopeModule;
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */

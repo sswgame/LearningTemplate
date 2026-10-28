@@ -17,7 +17,7 @@ namespace sw
     {
         /**
          * @struct ModuleRegistrarHeads
-         * @brief 이미지 하나의 정적 등록자 목록 머리 모음입니다. 모듈 이미지가 링크 때 목록에 다는 등록자 종류를 늘릴 때 여기 한 줄만 더하면, 올리는 길
+         * @brief 라이브러리 하나의 정적 등록자 목록 머리 모음입니다. 모듈 라이브러리가 링크 때 목록에 다는 등록자 종류를 늘릴 때 여기 한 줄만 더하면, 올리는 길
          *        (`registerModuleTypes`)과 핫 리로드(머리를 떼어 두었다 커밋 때 올리고, 중단하면 되돌린다)가 같이 따라온다.
          */
         struct ModuleRegistrarHeads

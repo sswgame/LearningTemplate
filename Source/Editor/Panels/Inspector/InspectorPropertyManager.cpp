@@ -11,7 +11,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
@@ -968,7 +968,7 @@ namespace sw::editor
         for ( size_t index = _listRegistration.size(); index-- > 0; )
         {
             const EditorPropertyDrawerRegistration* pRegistration = _listRegistration[index];
-            if ( ModuleImageUtil::isAddressWithin( pRegistration, pBegin, pEnd ) == false )
+            if ( ModuleLibraryUtil::isAddressWithin( pRegistration, pBegin, pEnd ) == false )
                 continue;
             _listRegistration.erase( _listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
             ++releasedCount;

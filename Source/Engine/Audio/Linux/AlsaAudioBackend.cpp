@@ -6,7 +6,7 @@
     #include "Core/Concurrency/atomic.h"
     #include "Core/Concurrency/thread.h"
     #include "Core/Container/vector.h"
-    #include "Core/Module/ModuleImageUtil.h"
+    #include "Core/Module/ModuleLibraryUtil.h"
 
     #include "Engine/Audio/AudioEngine.h"
 
@@ -103,19 +103,19 @@ namespace sw
         /** @brief 라이브러리에서 함수를 찾습니다. 하나라도 없으면 false 입니다. */
         bool bindFunctions()
         {
-            _pfnOpen                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_open>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_open" ) );
-            _pfnClose                  = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_close>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_close" ) );
-            _pfnSetParams              = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_set_params>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_set_params" ) );
-            _pfnWritei                 = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_writei>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_writei" ) );
-            _pfnRecover                = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_recover>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_recover" ) );
-            _pfnDrop                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_drop>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_drop" ) );
-            _pfnHwParamsMalloc         = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_malloc>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_malloc" ) );
-            _pfnHwParamsFree           = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_free>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_free" ) );
-            _pfnHwParamsAny            = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any>( ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_any" ) );
+            _pfnOpen                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_open>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_open" ) );
+            _pfnClose                  = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_close>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_close" ) );
+            _pfnSetParams              = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_set_params>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_set_params" ) );
+            _pfnWritei                 = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_writei>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_writei" ) );
+            _pfnRecover                = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_recover>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_recover" ) );
+            _pfnDrop                   = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_drop>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_drop" ) );
+            _pfnHwParamsMalloc         = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_malloc>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_malloc" ) );
+            _pfnHwParamsFree           = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_free>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_free" ) );
+            _pfnHwParamsAny            = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_any>( ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_any" ) );
             _pfnHwParamsGetChannelsMax = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_pcm_hw_params_get_channels_max>(
-                ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_get_channels_max" ) );
+                ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_pcm_hw_params_get_channels_max" ) );
             _pfnConfigFreeGlobal = reinterpret_cast<AlsaAudioBackendInternal::PFN_snd_config_update_free_global>(
-                ModuleImageUtil::getDynamicSymbol( _pLibrary, "snd_config_update_free_global" ) );
+                ModuleLibraryUtil::getDynamicSymbol( _pLibrary, "snd_config_update_free_global" ) );
             const bool bCoreFunctions  = _pfnOpen != nullptr && _pfnClose != nullptr && _pfnSetParams != nullptr && _pfnWritei != nullptr && _pfnRecover != nullptr;
             const bool bQueryFunctions = _pfnDrop != nullptr && _pfnHwParamsMalloc != nullptr && _pfnHwParamsFree != nullptr && _pfnHwParamsAny != nullptr &&
                                          _pfnHwParamsGetChannelsMax != nullptr && _pfnConfigFreeGlobal != nullptr;
@@ -136,7 +136,7 @@ namespace sw
     bool AlsaAudioBackend::openDevice( AudioOutputDevice& outDevice )
     {
         using Internal   = AlsaAudioBackendInternal;
-        _impl->_pLibrary = ModuleImageUtil::loadDynamicLibrary( "libasound.so.2" );
+        _impl->_pLibrary = ModuleLibraryUtil::loadDynamicLibrary( "libasound.so.2" );
         if ( _impl->_pLibrary == nullptr )
         {
             SW_LOG_INFO( "ALSA (libasound.so.2) is not available. Rendering offline." );
@@ -255,7 +255,7 @@ namespace sw
         }
         if ( _impl->_pLibrary != nullptr )
         {
-            ModuleImageUtil::unloadDynamicLibrary( _impl->_pLibrary );
+            ModuleLibraryUtil::unloadDynamicLibrary( _impl->_pLibrary );
             _impl->_pLibrary = nullptr;
         }
     }

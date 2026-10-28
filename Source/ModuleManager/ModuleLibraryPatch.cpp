@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleImagePatch.h"
+#include "ModuleManager/ModuleLibraryPatch.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        struct ModuleImagePatchInternal
+        struct ModuleLibraryPatchInternal
         {
             static constexpr uint64 kElfHeaderSize     = 64;
             static constexpr uint64 kProgramHeaderSize = 56;
@@ -167,8 +167,8 @@ namespace sw
             /** @brief PE32+ 인지 보고, 섹션 표와 두 import 디렉터리의 RVA 를 찾습니다. */
             [[nodiscard]] static bool findPe( const vector<uint8>& bytes, PeView& outView )
             {
-                const bool bNotPeImage = bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z';
-                if ( bNotPeImage )
+                const bool bNotPeLibrary = bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z';
+                if ( bNotPeLibrary )
                     return false;
                 uint32     peOffset{ 0 };
                 uint32     signature{ 0 };
@@ -241,10 +241,10 @@ namespace sw
              * @brief @p table 의 서술자마다 DLL 이름 문자열의 파일 위치를 모읍니다.
              * @return 표를 끝까지 읽었으면 true(표가 없으면 빈 목록). 이름이 파일 밖을 가리키면 false 입니다.
              */
-            [[nodiscard]] static bool collectImportNameOffsets( const vector<uint8>& bytes, const PeView& view, ModuleImagePatch::ImportTable table, vector<uint64>& outListOffset )
+            [[nodiscard]] static bool collectImportNameOffsets( const vector<uint8>& bytes, const PeView& view, ModuleLibraryPatch::ImportTable table, vector<uint64>& outListOffset )
             {
                 outListOffset.clear();
-                const bool   bDelay         = table == ModuleImagePatch::ImportTable::Delay;
+                const bool   bDelay         = table == ModuleLibraryPatch::ImportTable::Delay;
                 const uint32 directoryRva   = bDelay ? view._delayImportRva : view._importRva;
                 const uint64 descriptorSize = bDelay ? kDelayDescriptorSize : kImportDescriptorSize;
                 const uint64 nameField      = bDelay ? kDelayDescriptorName : kImportDescriptorName;
@@ -295,25 +295,25 @@ namespace sw
 
 namespace sw
 {
-    bool ModuleImagePatch::readSoname( const vector<uint8>& bytes, string& outSoname )
+    bool ModuleLibraryPatch::readSoname( const vector<uint8>& bytes, string& outSoname )
     {
-        ModuleImagePatchInternal::DynamicView view{};
-        if ( ModuleImagePatchInternal::findDynamic( bytes, view ) == false )
+        ModuleLibraryPatchInternal::DynamicView view{};
+        if ( ModuleLibraryPatchInternal::findDynamic( bytes, view ) == false )
             return false;
 
-        for ( uint64 entryOffset = 0; entryOffset + ModuleImagePatchInternal::kDynamicEntrySize <= view._dynamicSize;
-              entryOffset += ModuleImagePatchInternal::kDynamicEntrySize )
+        for ( uint64 entryOffset = 0; entryOffset + ModuleLibraryPatchInternal::kDynamicEntrySize <= view._dynamicSize;
+              entryOffset += ModuleLibraryPatchInternal::kDynamicEntrySize )
         {
             int64  tag{ 0 };
             uint64 value{ 0 };
-            // 잘린 이미지는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
-            const bool bRead = ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset, tag ) &&
-                               ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
-            if ( bRead == false || tag == ModuleImagePatchInternal::kTagNull )
+            // 잘린 라이브러리는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
+            const bool bRead = ModuleLibraryPatchInternal::readAt( bytes, view._dynamicOffset + entryOffset, tag ) &&
+                               ModuleLibraryPatchInternal::readAt( bytes, view._dynamicOffset + entryOffset + ModuleLibraryPatchInternal::kDynamicValue, value );
+            if ( bRead == false || tag == ModuleLibraryPatchInternal::kTagNull )
                 break;
             if ( tag != kTagSoname )
                 continue;
-            const string_view soname = ModuleImagePatchInternal::stringAt( bytes, view, value );
+            const string_view soname = ModuleLibraryPatchInternal::stringAt( bytes, view, value );
             if ( soname.empty() )
                 return false;
             outSoname = string{ soname };
@@ -322,27 +322,27 @@ namespace sw
         return false;
     }
 
-    uint32 ModuleImagePatch::replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to )
+    uint32 ModuleLibraryPatch::replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to )
     {
         if ( from.empty() || from.size() != to.size() )
             return 0;
 
-        ModuleImagePatchInternal::DynamicView view{};
-        if ( ModuleImagePatchInternal::findDynamic( inoutBytes, view ) == false )
+        ModuleLibraryPatchInternal::DynamicView view{};
+        if ( ModuleLibraryPatchInternal::findDynamic( inoutBytes, view ) == false )
             return 0;
 
         uint32 replacedCount{ 0 };
-        for ( uint64 entryOffset = 0; entryOffset + ModuleImagePatchInternal::kDynamicEntrySize <= view._dynamicSize;
-              entryOffset += ModuleImagePatchInternal::kDynamicEntrySize )
+        for ( uint64 entryOffset = 0; entryOffset + ModuleLibraryPatchInternal::kDynamicEntrySize <= view._dynamicSize;
+              entryOffset += ModuleLibraryPatchInternal::kDynamicEntrySize )
         {
             int64  entryTag{ 0 };
             uint64 value{ 0 };
-            // 잘린 이미지는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
-            const bool bRead = ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset, entryTag ) &&
-                               ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
-            if ( bRead == false || entryTag == ModuleImagePatchInternal::kTagNull )
+            // 잘린 라이브러리는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
+            const bool bRead = ModuleLibraryPatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset, entryTag ) &&
+                               ModuleLibraryPatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset + ModuleLibraryPatchInternal::kDynamicValue, value );
+            if ( bRead == false || entryTag == ModuleLibraryPatchInternal::kTagNull )
                 break;
-            if ( entryTag != tag || ModuleImagePatchInternal::stringAt( inoutBytes, view, value ) != from )
+            if ( entryTag != tag || ModuleLibraryPatchInternal::stringAt( inoutBytes, view, value ) != from )
                 continue;
             Memory::copy( inoutBytes.data() + view._stringOffset + value, to.data(), to.size() );
             ++replacedCount;
@@ -350,7 +350,7 @@ namespace sw
         return replacedCount;
     }
 
-    bool ModuleImagePatch::findEngineABIStamp( const vector<uint8>& bytes, string& outStamp )
+    bool ModuleLibraryPatch::findEngineABIStamp( const vector<uint8>& bytes, string& outStamp )
     {
         const string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
         const string_view marker{ kEngineABIStampMarker };
@@ -378,7 +378,7 @@ namespace sw
         return false;
     }
 
-    string ModuleImagePatch::makeGenerationName( string_view libraryName, uint32 generation )
+    string ModuleLibraryPatch::makeGenerationName( string_view libraryName, uint32 generation )
     {
         size_t     extensionPos           = libraryName.find( ".so" );
         const bool bShouldTryDLLExtension = extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true );
@@ -387,15 +387,15 @@ namespace sw
         if ( extensionPos == string_view::npos )
             return {};
         // 접두어(`lib`) 뒤에 원래 이름이 한 글자는 남아야 세대 이름에서 모듈을 알아본다.
-        const size_t prefixLength = StringUtil::startsWith( libraryName, "lib" ) ? ModuleImagePatchInternal::kLibPrefixLength : 0;
-        const size_t minimumStem  = prefixLength + 1 + ModuleImagePatchInternal::kGenerationDigits;
+        const size_t prefixLength = StringUtil::startsWith( libraryName, "lib" ) ? ModuleLibraryPatchInternal::kLibPrefixLength : 0;
+        const size_t minimumStem  = prefixLength + 1 + ModuleLibraryPatchInternal::kGenerationDigits;
         if ( extensionPos < minimumStem )
             return {};
 
         constexpr const utf8* kDigits = "0123456789abcdefghijklmnopqrstuvwxyz";
         string                name{ libraryName };
         uint32                remaining = generation;
-        for ( uint32 digitIndex = 0; digitIndex < ModuleImagePatchInternal::kGenerationDigits; ++digitIndex )
+        for ( uint32 digitIndex = 0; digitIndex < ModuleLibraryPatchInternal::kGenerationDigits; ++digitIndex )
         {
             name[extensionPos - 1 - digitIndex] = kDigits[remaining % 36];
             remaining /= 36;
@@ -403,43 +403,43 @@ namespace sw
         return name;
     }
 
-    bool ModuleImagePatch::readImportDLLNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDLLName )
+    bool ModuleLibraryPatch::readImportDLLNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDLLName )
     {
         outListDLLName.clear();
-        ModuleImagePatchInternal::PeView view{};
-        vector<uint64>                   listOffset;
-        if ( ModuleImagePatchInternal::findPe( bytes, view ) == false || ModuleImagePatchInternal::collectImportNameOffsets( bytes, view, table, listOffset ) == false )
+        ModuleLibraryPatchInternal::PeView view{};
+        vector<uint64>                     listOffset;
+        if ( ModuleLibraryPatchInternal::findPe( bytes, view ) == false || ModuleLibraryPatchInternal::collectImportNameOffsets( bytes, view, table, listOffset ) == false )
             return false;
         for ( const uint64 offset : listOffset )
         {
-            outListDLLName.push_back( string{ ModuleImagePatchInternal::cStringAt( bytes, offset ) } );
+            outListDLLName.push_back( string{ ModuleLibraryPatchInternal::cStringAt( bytes, offset ) } );
         }
         return true;
     }
 
-    bool ModuleImagePatch::hasImportDirectory( const vector<uint8>& bytes, ImportTable table )
+    bool ModuleLibraryPatch::hasImportDirectory( const vector<uint8>& bytes, ImportTable table )
     {
-        ModuleImagePatchInternal::PeView view{};
-        if ( ModuleImagePatchInternal::findPe( bytes, view ) == false )
+        ModuleLibraryPatchInternal::PeView view{};
+        if ( ModuleLibraryPatchInternal::findPe( bytes, view ) == false )
             return false;
         return ( table == ImportTable::Delay ? view._delayImportRva : view._importRva ) != 0;
     }
 
-    uint32 ModuleImagePatch::replaceImportDLLName( vector<uint8>& inoutBytes, string_view from, string_view to )
+    uint32 ModuleLibraryPatch::replaceImportDLLName( vector<uint8>& inoutBytes, string_view from, string_view to )
     {
         if ( from.empty() || from.size() != to.size() )
             return 0;
-        ModuleImagePatchInternal::PeView view{};
-        vector<uint64>                   listOffset;
-        if ( ModuleImagePatchInternal::findPe( inoutBytes, view ) == false ||
-             ModuleImagePatchInternal::collectImportNameOffsets( inoutBytes, view, ImportTable::Load, listOffset ) == false )
+        ModuleLibraryPatchInternal::PeView view{};
+        vector<uint64>                     listOffset;
+        if ( ModuleLibraryPatchInternal::findPe( inoutBytes, view ) == false ||
+             ModuleLibraryPatchInternal::collectImportNameOffsets( inoutBytes, view, ImportTable::Load, listOffset ) == false )
             return 0;
 
         uint32 replacedCount{ 0 };
         for ( const uint64 offset : listOffset )
         {
             // Windows 로더는 DLL 이름을 대소문자 없이 맞춘다 — 링커가 적은 철자(`gameframework.dll` 일 수도 있다)와 무관하게 바꾼다.
-            if ( StringUtil::equals( ModuleImagePatchInternal::cStringAt( inoutBytes, offset ), from, true ) == false )
+            if ( StringUtil::equals( ModuleLibraryPatchInternal::cStringAt( inoutBytes, offset ), from, true ) == false )
                 continue;
             Memory::copy( inoutBytes.data() + offset, to.data(), to.size() );
             ++replacedCount;

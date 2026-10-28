@@ -46,7 +46,7 @@ namespace sw
         const delegate_type& get() const { return _delegate; }
 
         /**
-         * @brief 걸린 델리게이트의 호출 스텁이 [@p pBegin, @p pEnd) 안이면 칸을 비우고 true 입니다(모듈 이미지 언로드 훑기).
+         * @brief 걸린 델리게이트의 호출 스텁이 [@p pBegin, @p pEnd) 안이면 칸을 비우고 true 입니다(모듈 라이브러리 언로드 훑기).
          * @details 그 구독은 이제 아무것도 풀지 않는다 — 주인 객체는 함께 내려가는 모듈 안에 있어 놓을 기회가 없을 수 있다.
          */
         bool releaseIfCodeWithin( const void* pBegin, const void* pEnd )

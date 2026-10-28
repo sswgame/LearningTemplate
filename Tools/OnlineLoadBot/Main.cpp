@@ -6,7 +6,7 @@
  *            서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
  *          - `--server` 는 전용 서버(`Server` 의 온라인 서비스)에 붙는다. 그 서비스 포트는 TLS 1.3 이므로 `--tls` 를 함께 준다(신뢰 PEM 을 비우면 Dev 개발용 인증서).
  *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2, 엔진 기동 실패는 3.
- *          - 프로세스 바닥은 전용 서버(`ServerApp`)와 같은 모양이다 — 호스트 범위(모듈 이미지 창구) 위에 `Engine`(`DedicatedServer`)을 세운다. 서버 키트가 쓰는 엔진 서비스와
+ *          - 프로세스 바닥은 전용 서버(`ServerApp`)와 같은 모양이다 — 호스트 범위(모듈 라이브러리 창구) 위에 `Engine`(`DedicatedServer`)을 세운다. 서버 키트가 쓰는 엔진 서비스와
  *            타입 레지스트리(설정의 범위 검사 · 리플렉션)가 이 엔진에 있다. 없이 돌리면 키트 `initialize` 가 "could not initialize" 로 멈춘다.
  */
 #include "pch.h"
@@ -14,7 +14,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -41,7 +41,7 @@ namespace sw
     {
         /**
          * @brief 프로세스 바닥 — 전용 서버(`ServerApp`)와 같은 모양의 호스트 범위와 `Engine`(`DedicatedServer`)을 세우고 역순으로 내립니다.
-         * @details 호스트 범위(모듈 이미지 창구)가 엔진 범위의 부모이고, 엔진이 부트스트랩(이름 풀 · 로거 · 크래시 핸들러) · 서비스 · 기동 단계를 세운다. 서버 키트는 엔진 서비스와
+         * @details 호스트 범위(모듈 라이브러리 창구)가 엔진 범위의 부모이고, 엔진이 부트스트랩(이름 풀 · 로거 · 크래시 핸들러) · 서비스 · 기동 단계를 세운다. 서버 키트는 엔진 서비스와
          *          타입 레지스트리를 쓰므로 키트 `initialize` 전에 엔진이 서 있어야 한다. 엔진 기동 단계 `ModuleTypes` 가 창구의 로더를 불러 서버 키트 모듈을 올리고 그 타입을 등록한다.
          *          main 의 맨 처음에 두어 hashed_string 을 든 객체가 모두 사라진 뒤에 이름 풀이 내려가게 한다(로거는 비동기라 내리지 않으면 마지막 줄을 잃는다).
          *          게임 모듈 · 서버 설정 · 서버 서비스는 세우지 않는다 — 봇은 서버 조립(`LoadBotLocalServer`)을 스스로 연다.
@@ -105,7 +105,7 @@ namespace sw
                     return true;
                 for ( const utf8* pModule : kArrServerKitModule )
                 {
-                    if ( ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( pModule ) ) == nullptr )
+                    if ( ModuleLibraryUtil::loadDynamicLibrary( ModuleLibraryUtil::findModuleLibraryPath( pModule ) ) == nullptr )
                     {
                         SW_LOG_ERROR( "OnlineLoadBot: cannot load the server kit module %#", pModule );
                         return false;

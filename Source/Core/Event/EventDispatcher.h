@@ -13,7 +13,7 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -160,7 +160,7 @@ namespace sw
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 해제하고, 그 범위가 만든 채널 항목을 정리합니다. 해제한 구독 수를 반환합니다.
          * @param outRemainingEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
-         * @details 핫 리로드가 모듈 이미지를 언로드하기 전에 부른다(`ModuleImageUtil::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트와
+         * @details 핫 리로드가 모듈 라이브러리를 언로드하기 전에 부른다(`ModuleLibraryUtil::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트와
          *          해제)는 그 이벤트 타입을 **처음** 구독하거나 발행한 쪽에서 인스턴스화된다. 그래서 모듈이 만든 항목은 모듈이 언로드된 뒤 발행하면
          *          언로드된 코드로 점프한다. 그런 항목은 비어 있으면 지운다(다음 구독이나 발행이 자기 쪽에서 새로 만든다).
          */
@@ -180,10 +180,10 @@ namespace sw
         uint32 countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const;
 
         /**
-         * @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다.
+         * @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepLibraryMapped 를 true 로 둡니다.
          *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 언로드하면 다음 발행이나 디스패처 소멸이 언로드된 코드로 점프하기 때문입니다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
 
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
@@ -335,7 +335,7 @@ namespace sw
         atomic<int32>       _activeAllocatorIndex;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "event subscriptions" }, ModuleUnloadFunction::create<&EventDispatcher::onModuleUnloading>( this ) ) };
+        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "event subscriptions" }, ModuleUnloadFunction::create<&EventDispatcher::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

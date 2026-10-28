@@ -31,10 +31,10 @@ namespace sw
         EditorModuleManager();
         ~EditorModuleManager() override;
 
-        /** @brief 매니페스트가 에디터 모듈을 켰는지 기억하고 공통 `GameModuleManager::loadModuleImages` 를 부릅니다. */
-        [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
+        /** @brief 매니페스트가 에디터 모듈을 켰는지 기억하고 공통 `GameModuleManager::loadModuleLibrarys` 를 부릅니다. */
+        [[nodiscard]] bool loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
-         * @brief LiveReloadManager 에 콜백을 등록하고 게임과 에디터 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 로드했습니다).
+         * @brief LiveReloadManager 에 콜백을 등록하고 게임과 에디터 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했습니다).
          * @details **게임이 먼저, 에디터가 나중**입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
          *          (`-gv_editorStartupScene`)을 요청해야, 마지막 요청을 남기는 씬 매니저에서 에디터의 씬이 열립니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
@@ -49,7 +49,7 @@ namespace sw
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
          * @details 헤드리스 부팅(창과 RHI 없음)에서 부릅니다. 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 해제한 뒤 모듈을 언로드합니다.
          *          Shipping 에는 에디터 모듈이 없어 실패합니다. 인스턴스 상태를 쓰지 않아 구현은 `EditorModuleManagerHeadless.cpp` 에 따로 둡니다
-         *          (모듈 이미지를 직접 올리고 내리는 의존이 인스턴스 경로와 `SmokeTest` 에 섞이지 않게).
+         *          (모듈 라이브러리를 직접 올리고 내리는 의존이 인스턴스 경로와 `SmokeTest` 에 섞이지 않게).
          * @return 원본과 임포트 결과가 맞으면(임포트는 모두 성공하면) true 를 반환합니다.
          */
         [[nodiscard]] static bool importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly );
@@ -137,7 +137,7 @@ namespace sw
         void onBeforeDrainWorkers( DrainReason reason ) override;
 
     private:
-        /** @brief 에디터 모듈 이미지의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleManagerHeadless.cpp`)가 같이 씁니다. */
+        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleManagerHeadless.cpp`)가 같이 씁니다. */
         static const ModuleAPISymbols& getModuleSymbols();
         /** @brief 에디터를 실제로 호출할 수 있는 상태인지 확인합니다(모드가 켜져 있고 인스턴스가 살아 있음). */
         bool hasEditor() const { return _bEnableEditor == SW_TRUE && _editor != nullptr; }
@@ -173,10 +173,10 @@ namespace sw
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
         unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindEditorService` 가 새로 만든다)
-        vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleImages` 가 모은다).
+        vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleLibrarys` 가 모은다).
 
         uint8                  _bEnableEditor        : 1;
-        uint8                  _bEditorModuleActive  : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다).
+        uint8                  _bEditorModuleActive  : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleLibrarys` 가 정한다).
         uint8                  _bFreshEditorInstance : 1; ///< 인스턴스를 새로 만든 뒤 첫 UI 프레임 전이다(`updateEditorUI` 가 렌더 스레드를 기다린 뒤 내린다).
         [[maybe_unused]] uint8 _reserved             : 5;
     };

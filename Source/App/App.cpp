@@ -141,8 +141,8 @@ namespace sw
         // 리소스 루트 탐색은 Engine 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
-        // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 이미지 창구를 찾아 타입 공급자 모듈을 올리고
-        //    (이 App 의 `loadModuleImages`), `ModuleUnloadStage` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
+        // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 라이브러리 창구를 찾아 타입 공급자 모듈을 올리고
+        //    (이 App 의 `loadModuleLibrarys`), `ModuleUnloadStage` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
         if ( initializeHostScope() == false )
             return false;
         // 시동 단계별 시간(측정만 한다 — 시동 요약 로그의 재료). 각 값은 그 단계가 끝난 시각의 `_initializeStartMicro` 기준 경과이다.
@@ -263,7 +263,7 @@ namespace sw
             _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
         }
 #endif
-        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ), "App" );
+        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleLibrarys, this ), "App" );
         return _pModuleImageHost != nullptr;
     }
 
@@ -311,7 +311,7 @@ namespace sw
         return true;
     }
 
-    bool App::loadModuleImages()
+    bool App::loadModuleLibrarys()
     {
         // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 GameModuleManager 가 에디터와 게임 태그를 걸어 처리한다.
         SW_MEMORY_SCOPE( EngineMisc );
@@ -327,7 +327,7 @@ namespace sw
 #endif
 
         _gameModuleManager = make_unique<EditorModuleManager>();
-        return _gameModuleManager->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        return _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startHostPart( HostPartID id )
@@ -513,11 +513,11 @@ namespace sw
         // 호스트 부품을 선 순서의 역순으로 내린다(순서는 `HostPart` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
         // 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostParts.destroyAll();
-        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
+        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
-        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
+        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 라이브러리 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
         _automationFrameSubscription.reset();
         if ( _pModuleImageHost != nullptr )

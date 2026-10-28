@@ -267,7 +267,7 @@ namespace sw::editor
     struct SW_EDITOR_API EditorCommandTableUtil
     {
         /**
-         * @brief 등록 항목을 모두 @p registry 에 추가합니다. 항목이 [@p pExcludeBegin, @p pExcludeEnd)(언로드되는 모듈 이미지) 안에 있으면 건너뜁니다.
+         * @brief 등록 항목을 모두 @p registry 에 추가합니다. 항목이 [@p pExcludeBegin, @p pExcludeEnd)(언로드되는 모듈 라이브러리) 안에 있으면 건너뜁니다.
          * @return 건너뛴 항목 수입니다.
          */
         static uint32 appendRegistrations( EditorCommandRegistry& registry, const void* pExcludeBegin, const void* pExcludeEnd );

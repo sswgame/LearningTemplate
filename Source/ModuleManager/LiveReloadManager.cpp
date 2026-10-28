@@ -7,7 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Task/TaskManager.h"
 
@@ -19,7 +19,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "ModuleManager/ModuleCallGuard.h"
-#include "ModuleManager/ModuleImagePatch.h"
+#include "ModuleManager/ModuleLibraryPatch.h"
 #include "ModuleManager/ShadowCopyName.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -51,7 +51,7 @@ namespace sw
             }
 
             /**
-             * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
+             * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 라이브러리에 묶었는지 봅니다.
              * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `ModuleShadowCopy::writeShadowCopy`).
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
@@ -65,17 +65,17 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
                 (void)dependencyName;
                 pOutExpected = pExpected;
-                pOutActual   = ModuleImageUtil::findBoundImportImage( pModule, dependencyFileName );
+                pOutActual   = ModuleLibraryUtil::findBoundImportLibrary( pModule, dependencyFileName );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;
                 const string stampSymbolName = string{ "sw_moduleEngineABIStamp_" } + string{ dependencyName };
-                pOutExpected                 = ModuleImageUtil::getDynamicSymbol( pExpected, stampSymbolName );
+                pOutExpected                 = ModuleLibraryUtil::getDynamicSymbol( pExpected, stampSymbolName );
                 pOutActual                   = nullptr;
                 // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
-                pOutActual = ModuleImageUtil::getDynamicSymbol( pModule, stampSymbolName );
+                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, stampSymbolName );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #else
                 (void)pModule;
@@ -123,7 +123,7 @@ namespace sw
         , _reserved{ 0 }
     {
         // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
-        (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
+        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
     }
 
     LiveReloadManager::~LiveReloadManager()
@@ -143,7 +143,7 @@ namespace sw
         _listCallbackRegistration.clear();
 
         // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
-        (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
+        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
 
         if ( _fileWatcher != nullptr )
         {
@@ -151,8 +151,8 @@ namespace sw
             _fileWatcher.reset();
         }
 
-        // 언로드를 미룬 옛 이미지를 먼저 언로드한다. 그것들은 같은 배치의 미룬 이미지나 **지금 살아 있는** 이미지에 바인딩돼 있으므로, 살아
-        // 있는 모듈을 먼저 언로드하면 옛 이미지의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
+        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 **지금 살아 있는** 라이브러리에 바인딩돼 있으므로, 살아
+        // 있는 모듈을 먼저 언로드하면 옛 라이브러리의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
         _deferredUnloadQueue.unloadAll();
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -204,13 +204,13 @@ namespace sw
                 return false;
             }
         }
-        for ( const SharedImage& loaded : _listSharedModule )
+        for ( const SharedLibrary& loaded : _listSharedModule )
         {
             if ( LiveReloadManagerInternal::isSameModuleName( loaded._name, moduleName ) )
                 return true;
         }
 
-        const string modulePath = ModuleImageUtil::findModuleLibraryPath( moduleName );
+        const string modulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
         if ( FileUtil::exists( modulePath ) == false )
         {
             SW_LOG_INFO( "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
@@ -225,7 +225,7 @@ namespace sw
             return false;
         }
         string moduleStamp;
-        if ( ModuleImagePatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
+        if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
         {
             SW_LOG_ERROR( "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
                           moduleName, moduleStamp, engine::getEngineABIStamp() );
@@ -235,14 +235,14 @@ namespace sw
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
-        void* const pSharedHandle = ModuleImageUtil::loadDynamicLibrary( modulePath );
+        void* const pSharedHandle = ModuleLibraryUtil::loadDynamicLibrary( modulePath );
         if ( pSharedHandle == nullptr )
         {
             SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
             return false;
         }
         engine::registerModuleTypes( moduleName );
-        _listSharedModule.push_back( SharedImage{ string{ moduleName }, pSharedHandle } );
+        _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, pSharedHandle } );
         SW_LOG_INFO( "Shared module loaded: %#", moduleName );
         return true;
     }
@@ -251,7 +251,7 @@ namespace sw
     {
         // 공용 모듈(GameFramework)은 키트 · 게임보다 오래 산다는 전제가 그 함수 정적(데이터 표 캐시 · 카탈로그 · 서비스 표)의 근거다.
         // 리로드 대상(_mapModule)에 오르는 길은 여기 하나뿐이므로, 공용 모듈을 내리거나 다시 올리는 길을 여기서 막는다.
-        for ( const SharedImage& shared : _listSharedModule )
+        for ( const SharedLibrary& shared : _listSharedModule )
         {
             if ( LiveReloadManagerInternal::isSameModuleName( shared._name, moduleName ) )
             {
@@ -260,7 +260,7 @@ namespace sw
             }
         }
 
-        const string moduleDir = ModuleImageUtil::getModuleDirectory();
+        const string moduleDir = ModuleLibraryUtil::getModuleDirectory();
         if ( FileUtil::isDirectory( moduleDir ) == false )
         {
             SW_LOG_ERROR( "Module directory does not exist: %#", moduleDir );
@@ -282,7 +282,7 @@ namespace sw
         ModuleRecord& moduleRecord       = getOrCreateRecord( moduleName );
         moduleRecord._moduleName         = moduleName;
         moduleRecord._tempModulePath     = "";
-        moduleRecord._originalModulePath = ModuleImageUtil::findModuleLibraryPath( moduleName );
+        moduleRecord._originalModulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
         if ( loadShadowCopyModule( moduleRecord ) )
         {
             if ( verifyModuleBindings() == false )
@@ -290,7 +290,7 @@ namespace sw
             return true;
         }
 
-        // commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfterReload 가 그래프를 막아도 실패를 돌려준다. 그대로 지우면 이미지 · 등록한 타입 ·
+        // commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfterReload 가 그래프를 막아도 실패를 돌려준다. 그대로 지우면 라이브러리 · 등록한 타입 ·
         // 섀도 파일이 프로세스 끝까지 남으므로, 등록을 거두기 전에 평소처럼 내린다.
         if ( moduleRecord._pLibraryModule != nullptr )
             unloadModule( moduleRecord );
@@ -479,10 +479,10 @@ namespace sw
         return issueSlotSubscription( moduleName, CallbackSlot::ReloadFault );
     }
 
-    Subscription LiveReloadManager::setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate )
+    Subscription LiveReloadManager::setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate )
     {
-        getOrCreateRecord( moduleName )._onValidateImage = std::move( delegate );
-        return issueSlotSubscription( moduleName, CallbackSlot::ValidateImage );
+        getOrCreateRecord( moduleName )._onValidateLibrary = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::ValidateLibrary );
     }
 
     Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
@@ -570,9 +570,9 @@ namespace sw
                 record._onReloadFault = {};
                 break;
             }
-            case CallbackSlot::ValidateImage:
+            case CallbackSlot::ValidateLibrary:
             {
-                record._onValidateImage = {};
+                record._onValidateLibrary = {};
                 break;
             }
             case CallbackSlot::BeforeCommitBatch:
@@ -605,10 +605,10 @@ namespace sw
                 if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
                     continue;
 
-                const void*                 pActual{ nullptr };
-                const void*                 pExpected{ nullptr };
-                const ShadowImageNameState& dependencyImageName = dependencyIt->second._imageName;
-                const string                dependencyFileName  = dependencyImageName._loaded.empty() ? ModuleImageUtil::formatSharedLibraryName( dependencyName ) : dependencyImageName._loaded;
+                const void*                   pActual{ nullptr };
+                const void*                   pExpected{ nullptr };
+                const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second._libraryName;
+                const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
                 if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second._pLibraryModule, pActual,
                                                            pExpected ) )
                     continue;
@@ -642,22 +642,22 @@ namespace sw
 
     void LiveReloadManager::populateShadowCopyParams( const ModuleRecord& context, ShadowCopyParams& outParams ) const
     {
-        outParams._moduleName            = context._moduleName;
-        outParams._originalModulePath    = context._originalModulePath;
-        outParams._bReplacingLoadedImage = context._pLibraryModule != nullptr;
+        outParams._moduleName              = context._moduleName;
+        outParams._originalModulePath      = context._originalModulePath;
+        outParams._bReplacingLoadedLibrary = context._pLibraryModule != nullptr;
 
-        // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 넣지 않는다 — 원래 이름 그대로 이미 올라온 이미지에 묶인다.
+        // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 넣지 않는다 — 원래 이름 그대로 이미 올라온 라이브러리에 묶인다.
         for ( const string& dependencyName : _dependencyGraph.getDependsOn( context._moduleName ) )
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
             if ( dependencyIt != _mapModule.end() )
-                outParams._listDependencyImage.push_back( ShadowCopyModuleImage{ dependencyIt->first, &dependencyIt->second._imageName } );
+                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second._libraryName } );
         }
 
-        outParams._listRegisteredImage.reserve( _mapModule.size() );
+        outParams._listRegisteredLibrary.reserve( _mapModule.size() );
         for ( const auto& [registeredName, registeredRecord] : _mapModule )
         {
-            outParams._listRegisteredImage.push_back( ShadowCopyModuleImage{ registeredName, &registeredRecord._imageName } );
+            outParams._listRegisteredLibrary.push_back( ShadowCopyModuleLibrary{ registeredName, &registeredRecord._libraryName } );
         }
     }
 
@@ -692,7 +692,7 @@ namespace sw
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
             params._sourceMtime = outShadow._sourceMtime;
-            if ( ModuleShadowCopy::writeShadowCopy( params, context._imageName, outShadow._tempPath ) == false )
+            if ( ModuleShadowCopy::writeShadowCopy( params, context._libraryName, outShadow._tempPath ) == false )
                 return false;
         }
 
@@ -703,20 +703,20 @@ namespace sw
             // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
             outShadow._previousHeads = engine::peekGlobalRegistrarHeads();
 
-            // 교체 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
+            // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
             if ( context._pLibraryModule != nullptr )
             {
                 RegistrationReloadScope reloadScope;
-                outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadDynamicLibrary( outShadow._tempPath );
             }
             else
             {
-                outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadDynamicLibrary( outShadow._tempPath );
             }
             if ( outShadow._pHandle == nullptr )
             {
-                context._imageName._current = context._imageName._loaded;
+                context._libraryName._current = context._libraryName._loaded;
                 SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
                 ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
                 outShadow = {};
@@ -729,9 +729,9 @@ namespace sw
 
         BLOCK( "Validate New Image" )
         {
-            // 옛 이미지가 아직 도는 동안 호스트가 새 이미지를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 이미지를 두고 그래프를 막지 않는다.
-            // 새 이미지의 코드가 불리므로 onAfterReload 와 같이 지킨다.
-            if ( context._onValidateImage.isBound() )
+            // 옛 라이브러리가 아직 도는 동안 호스트가 새 라이브러리를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 라이브러리를 두고 그래프를 막지 않는다.
+            // 새 라이브러리의 코드가 불리므로 onAfterReload 와 같이 지킨다.
+            if ( context._onValidateLibrary.isBound() )
             {
                 bool        bAccepted{ false };
                 uint32      faultCode{ 0 };
@@ -739,7 +739,7 @@ namespace sw
                 const bool  bCompleted = ModuleCallGuard::run(
                     SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
                  {
-                    bAccepted = context._onValidateImage( pNewHandle );
+                    bAccepted = context._onValidateLibrary( pNewHandle );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
@@ -767,11 +767,11 @@ namespace sw
 
         const string previousTempModule = context._tempModulePath;
         void*        pPreviousHandle    = context._pLibraryModule;
-        bool         bKeepPreviousImage{ false };
+        bool         bKeepPreviousLibrary{ false };
 
         BLOCK( "Swap Module Handles" )
         {
-            // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 이미지에서 빠져나와 있어야 한다.
+            // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 라이브러리에서 빠져나와 있어야 한다.
             if ( pPreviousHandle != nullptr && drainTasksBeforeUnload() == false )
                 return false;
 
@@ -783,14 +783,14 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( context._moduleName );
-                bKeepPreviousImage = ModuleImageUtil::releaseImageCode( context._moduleName, pPreviousHandle ) == false;
+                bKeepPreviousLibrary = ModuleLibraryUtil::releaseLibraryCode( context._moduleName, pPreviousHandle ) == false;
             }
 
-            context._pLibraryModule    = prepared._pHandle;
-            context._tempModulePath    = prepared._tempPath;
-            context._loadedSourceMtime = prepared._sourceMtime;
-            context._imageName._loaded = context._imageName._current;
-            prepared._pHandle          = nullptr;
+            context._pLibraryModule      = prepared._pHandle;
+            context._tempModulePath      = prepared._tempPath;
+            context._loadedSourceMtime   = prepared._sourceMtime;
+            context._libraryName._loaded = context._libraryName._current;
+            prepared._pHandle            = nullptr;
             prepared._tempPath.clear();
 
             engine::registerModuleTypes( context._moduleName, prepared._heads );
@@ -798,9 +798,9 @@ namespace sw
 
             invokeAfterReload( context );
 
-            // 옛 이미지는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
+            // 옛 라이브러리는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
-                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
+                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousLibrary );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -816,7 +816,7 @@ namespace sw
 
     void LiveReloadManager::invokeAfterReload( ModuleRecord& context )
     {
-        // 새 이미지의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
+        // 새 라이브러리의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
         if ( context._onAfterReload.isBound() == false )
             return;
         uint32     faultCode{ 0 };
@@ -850,12 +850,12 @@ namespace sw
 
     void LiveReloadManager::abortShadowCopy( ModuleRecord& context, PreparedShadow& prepared )
     {
-        context._imageName._current = context._imageName._loaded;
+        context._libraryName._current = context._libraryName._loaded;
         if ( prepared._pHandle != nullptr )
         {
             engine::setGlobalRegistrarHeads( prepared._previousHeads );
-            if ( ModuleImageUtil::releaseImageCode( context._moduleName, prepared._pHandle ) )
-                ModuleImageUtil::unloadDynamicLibrary( prepared._pHandle );
+            if ( ModuleLibraryUtil::releaseLibraryCode( context._moduleName, prepared._pHandle ) )
+                ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
@@ -877,8 +877,8 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
-            if ( ModuleImageUtil::releaseImageCode( context._moduleName, context._pLibraryModule ) )
-                ModuleImageUtil::unloadDynamicLibrary( context._pLibraryModule );
+            if ( ModuleLibraryUtil::releaseLibraryCode( context._moduleName, context._pLibraryModule ) )
+                ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
             context._pLibraryModule = nullptr;
         }
 
@@ -890,7 +890,7 @@ namespace sw
     {
         if ( _listSharedModule.empty() )
             return;
-        // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 이미지를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
+        // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 라이브러리를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
         if ( engine::areEngineServicesBound() == false )
         {
             _listSharedModule.clear();
@@ -901,8 +901,8 @@ namespace sw
         {
             SW_LOG_INFO( "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
             engine::unregisterModuleTypes( it->_name );
-            if ( ModuleImageUtil::releaseImageCode( it->_name, it->_pHandle ) )
-                ModuleImageUtil::unloadDynamicLibrary( it->_pHandle );
+            if ( ModuleLibraryUtil::releaseLibraryCode( it->_name, it->_pHandle ) )
+                ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
             it->_pHandle = nullptr;
         }
         _listSharedModule.clear();
@@ -914,7 +914,7 @@ namespace sw
         // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.
         constexpr uint32 kDrainTimeoutMs = LiveReloadManager::kModuleDrainTimeoutMs;
 
-        // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 이미지에 들어가지 못하게 한다.
+        // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 라이브러리에 들어가지 못하게 한다.
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<SceneManager>().cancelPendingAsyncLoads();
@@ -1021,7 +1021,7 @@ namespace sw
             return;
         }
 
-        // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 이미지만 버리고 옛 이미지로 계속 돈다.
+        // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
         // 나중에 더한 것(바깥 층)부터 부른다. 콜백이 목록을 바꿔도 이번 차례는 지금 목록대로 돈다.
         const vector<BeforeCommitBatchEntry> listBeforeCommit = _listBeforeCommitBatch;
         bool                                 bCommitAccepted  = true;
@@ -1040,7 +1040,7 @@ namespace sw
         if ( commitCascade( listPrepared ) == false )
             return;
 
-        // 새 이미지가 모두 로드됐다. 의존 모듈이 옛 이미지에 바인딩돼 있으면, 옛 이미지를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
+        // 새 라이브러리가 모두 로드됐다. 의존 모듈이 옛 라이브러리에 바인딩돼 있으면, 옛 라이브러리를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
         if ( verifyModuleBindings() == false )
         {
             markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
@@ -1054,11 +1054,11 @@ namespace sw
         : _onBeforeReload{}
         , _onAfterReload{}
         , _onReloadFault{}
-        , _onValidateImage{}
+        , _onValidateLibrary{}
         , _moduleName{}
         , _originalModulePath{}
         , _tempModulePath{}
-        , _imageName{}
+        , _libraryName{}
         , _pLibraryModule{ nullptr }
         , _loadedSourceMtime{ 0 }
         , _debounceMtime{ 0 }

@@ -31,7 +31,7 @@ namespace sw
      * @class UIBindingConverterRegistry
      * @brief 이름으로 찾는 변환기 레지스트리입니다(`UISystem::getBindingConverters`). 엔진 기본 변환기는 `Percent`(0..1 → "75%"), `Invert`(불리언 뒤집기),
      *        `NotEmpty`(텍스트가 비지 않았는지), `IsZero`(숫자가 0 인지), `Seconds`(초 → "m:ss")입니다.
-     * @details 게임과 키트가 자기 변환기를 추가한다. 함수가 모듈 이미지 안에 있으면 그 모듈이 언로드될 때 `UISystem` 이 제거한다(`removeCodeWithin`). 게임 스레드에서만 쓴다.
+     * @details 게임과 키트가 자기 변환기를 추가한다. 함수가 모듈 라이브러리 안에 있으면 그 모듈이 언로드될 때 `UISystem` 이 제거한다(`removeCodeWithin`). 게임 스레드에서만 쓴다.
      */
     class SW_API UIBindingConverterRegistry
     {

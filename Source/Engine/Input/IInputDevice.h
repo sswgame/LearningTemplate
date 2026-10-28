@@ -124,7 +124,7 @@ namespace sw
 
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백을 해제합니다. 해제한 개수를 반환합니다.
-         * @details 모듈 이미지를 언로드하기 전에 `InputManager` 가 장치마다 부른다(`ModuleImageUtil::registerUnloadHandler`). 콜백을 가진 장치만 재정의한다.
+         * @details 모듈 라이브러리를 언로드하기 전에 `InputManager` 가 장치마다 부른다(`ModuleLibraryUtil::registerUnloadHandler`). 콜백을 가진 장치만 재정의한다.
          */
         virtual uint32 removeCodeWithin( const void* pBegin, const void* pEnd )
         {

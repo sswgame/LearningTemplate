@@ -9,7 +9,7 @@
 # 핫 리로드는 모듈만 갈아 끼우고 Engine 은 그대로다. Engine 헤더를 고친 빌드에서 `Engine.dll` 은 실행 중이라
 # 다시 링크되지 못해도(잠김) 모듈은 **새 헤더로** 써질 수 있고, 그 모듈을 올리면 구조체 배치 · vtable 이 어긋나
 # 조용히 망가진다. 그래서 Engine 과 모듈이 같은 지문을 박고 `LiveReloadManager` 가 섀도 복사본을 올리기 **전에**
-# 파일 바이트에서 찾아 대조한다(`ModuleImagePatch::findEngineABIStamp`). 헤더 내용이 같으면 스크립트가 파일을
+# 파일 바이트에서 찾아 대조한다(`ModuleLibraryPatch::findEngineABIStamp`). 헤더 내용이 같으면 스크립트가 파일을
 # 다시 쓰지 않으므로(Ninja restat) 뒤따르는 재빌드가 없다.
 # ------------------------------------------------------------------------------
 set(SW_ENGINE_ABI_STAMP_HEADER "${CMAKE_BINARY_DIR}/generated/engineabi/EngineABIStamp.gen.h")

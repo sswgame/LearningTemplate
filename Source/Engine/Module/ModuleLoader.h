@@ -1,6 +1,6 @@
 /**
  * @file Engine/Module/ModuleLoader.h
- * @brief 호스트가 엔진에 내주는 모듈 이미지 창구의 인터페이스입니다 — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 기동 단계가 호스트 범위에서 찾아 부릅니다.
+ * @brief 호스트가 엔진에 내주는 모듈 라이브러리 창구의 인터페이스입니다 — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 기동 단계가 호스트 범위에서 찾아 부릅니다.
  * @details 호스트(App · Server)는 엔진 범위의 부모인 호스트 범위에 이 인터페이스를 구현한 서브시스템을 걸어 둡니다(`ModuleLoaderSubsystem`).
  *          엔진은 모듈 DLL 을 어떻게 올리고 내리는지 모르고, 호스트가 있으면 부르고 없으면(테스트 하네스 · 정적 링크 구성) 건너뜁니다.
  *          부르는 쪽은 `locateSubsystem<IModuleLoader>` 로 찾는 읽기 전용 조회입니다.

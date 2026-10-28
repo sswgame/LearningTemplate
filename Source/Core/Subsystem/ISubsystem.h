@@ -80,7 +80,7 @@ namespace sw
         virtual span<const utf8* const> getSubsystemDependencies() const { return {}; }
         /**
          * @brief 이 서브시스템 **뒤에** 서야 하는 서브시스템 이름들입니다(그들이 이것에 의존한다 — 역방향 의존). 목록에 없는 이름은 건너뜁니다.
-         * @details 이름 상수는 층을 따라 아래로만 include 된다. 그래서 낮은 층의 서브시스템(비동기 IO · 오디오 · 입력)이 높은 층의 것(모듈 이미지)보다
+         * @details 이름 상수는 층을 따라 아래로만 include 된다. 그래서 낮은 층의 서브시스템(비동기 IO · 오디오 · 입력)이 높은 층의 것(모듈 라이브러리)보다
          *          늦게 서야 하면, 높은 층 쪽이 이 칸에 낮은 층의 이름을 적는다. 그 호스트에 없는 이름은 순서에 영향이 없다(선택 의존).
          */
         virtual span<const utf8* const> getSubsystemDependents() const { return {}; }

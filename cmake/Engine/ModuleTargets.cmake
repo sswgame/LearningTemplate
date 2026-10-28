@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # 모듈 · 핫 리로드 타깃의 런타임 출력 — 모듈 DLL(rhi · kit · game · editor)은 `Bin/Modules/`, 모두가 링크하는 GameFramework 는 `Bin/` 이다.
-# 런타임은 `ModuleImageUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
+# 런타임은 `ModuleLibraryUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
 # 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
 # vcpkg 의 applocal 이 `Bin/Modules` 의 모듈 옆에 서드파티 DLL 을 복사하지 않게 하고, 같은 일을 모듈마다 스테이지 폴더에서 해 `Bin` 으로 옮긴다
 # (`StageModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
@@ -173,7 +173,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addModulePart: 모듈 하나의 소스 일부를 의존을 좁힌 OBJECT 라이브러리로 짓고, 오브젝트를 그 모듈 이미지 안에 그대로 넣는다.
+# sw_addModulePart: 모듈 하나의 소스 일부를 의존을 좁힌 OBJECT 라이브러리로 짓고, 오브젝트를 그 모듈 라이브러리 안에 그대로 넣는다.
 #
 # 모듈이 링크하는 라이브러리(에디터의 imgui 계열) 가운데 이 부분이 몰라야 하는 것을 컴파일로 막는다. 부분은 `LINK` 의 include · 정의만 보므로
 # 그 헤더를 include 하면 "file not found" 로 멈춘다. 정적 라이브러리 · 별도 DLL 이 아닌 까닭: 확장 모듈이 따로 링크하면 정적 상태가
@@ -195,7 +195,7 @@ function(sw_addModulePart PART_NAME)
 	endif()
 	add_library(${PART_NAME} OBJECT ${ARG_SOURCES})
 	get_target_property(ownerFolder ${ARG_OWNER} FOLDER)
-	# 부분의 오브젝트는 모듈 이미지에 들어가므로 이미지와 같은 코드 모델로 짓는다. CMake 는 SHARED · MODULE 자신에게만 PIC 를 붙이고
+	# 부분의 오브젝트는 모듈 라이브러리에 들어가므로 이미지와 같은 코드 모델로 짓는다. CMake 는 SHARED · MODULE 자신에게만 PIC 를 붙이고
 	# 거기 넣는 OBJECT 라이브러리에는 붙이지 않는다 — 빠지면 ELF 링크가 `R_X86_64_PC32 ... recompile with -fPIC` 로 멈춘다(COFF 인 Windows 는 무관).
 	get_target_property(ownerType ${ARG_OWNER} TYPE)
 	if(ownerType MATCHES "^(SHARED|MODULE)_LIBRARY$")
@@ -222,7 +222,7 @@ function(sw_addModulePart PART_NAME)
 		get_target_property(ownerBatch ${ARG_OWNER} UNITY_BUILD_BATCH_SIZE)
 		sw_setUnityBuild(${PART_NAME} BATCH_SIZE ${ownerBatch})
 	endif()
-	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 이미지에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
+	# OBJECT 라이브러리를 직접 링크하면 오브젝트가 모듈 라이브러리에 들어간다(CMake 3.12+). 확장 모듈은 모듈의 export 로 그대로 쓴다.
 	target_link_libraries(${ARG_OWNER} PRIVATE ${PART_NAME})
 endfunction()
 

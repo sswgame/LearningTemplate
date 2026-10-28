@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 namespace sw
 {
@@ -32,9 +32,9 @@ namespace sw
                 return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pCreate ) ) );
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
             {
-                (void)outKeepImageMapped;
+                (void)outKeepLibraryMapped;
                 return releaseWithin( _pCreateServiceStore, pBegin, pEnd ) + releaseWithin( _pCreateEphemeralStore, pBegin, pEnd );
             }
 
@@ -69,14 +69,14 @@ namespace sw
             static uint32 releaseWithin( atomic<TFunction>& slot, const void* pBegin, const void* pEnd )
             {
                 const TFunction pCreate = slot.load( std::memory_order_acquire );
-                if ( ModuleImageUtil::isAddressWithin( reinterpret_cast<const void*>( pCreate ), pBegin, pEnd ) == false )
+                if ( ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( pCreate ), pBegin, pEnd ) == false )
                     return 0;
                 return release( slot, pCreate ) ? 1 : 0;
             }
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "online store drivers", true }, ModuleUnloadFunction::create<&OnlineStoreDriverSlots::onModuleUnloading>( this ) ) };
+            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "online store drivers", true }, ModuleUnloadFunction::create<&OnlineStoreDriverSlots::onModuleUnloading>( this ) ) };
         };
     } // namespace
 } // namespace sw

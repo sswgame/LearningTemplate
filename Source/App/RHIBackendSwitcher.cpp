@@ -184,16 +184,16 @@ namespace sw
 #endif
 
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
-        // 모듈 이미지는 내리지 않고 인스턴스만 다시 만든다 — 에디터가 자기 코드를 가진 되돌리기 명령(지형 붓질 등)을 스택에 남기게 알린다.
+        // 모듈 라이브러리는 내리지 않고 인스턴스만 다시 만든다 — 에디터가 자기 코드를 가진 되돌리기 명령(지형 붓질 등)을 스택에 남기게 알린다.
 #if !defined( SW_SHIPPING )
         EditSessionState* pEditSession = engine::findSubsystem<EditSessionState>();
         if ( pEditSession != nullptr )
-            pEditSession->setModuleImageKept( true );
+            pEditSession->setModuleLibraryKept( true );
 #endif
         _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
 #if !defined( SW_SHIPPING )
         if ( pEditSession != nullptr )
-            pEditSession->setModuleImageKept( false );
+            pEditSession->setModuleLibraryKept( false );
 #endif
 
         const bool bSwapOk = _pEngine->applyPendingBackendChange();

@@ -8,7 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Asset/AssetPaths.h"
@@ -433,7 +433,7 @@ namespace sw
             {
                 static auto s_getDxCompilerHandle = []() -> void*
                 {
-                    string libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
+                    string libName = ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" );
                     // 실행 파일 옆(배포 구성의 테스트는 TestBin 에 DXC 를 둔다) → Bin → 이름만.
                     const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                     vector<string> listCandidate = {
@@ -444,17 +444,17 @@ namespace sw
                     {
                         if ( FileUtil::isRegularFile( candidatePath ) )
                         {
-                            void* pLibrary = ModuleImageUtil::loadDynamicLibrary( candidatePath );
+                            void* pLibrary = ModuleLibraryUtil::loadDynamicLibrary( candidatePath );
                             if ( pLibrary != nullptr )
                                 return pLibrary;
                             SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
                         }
                     }
-                    return ModuleImageUtil::loadDynamicLibrary( libName );
+                    return ModuleLibraryUtil::loadDynamicLibrary( libName );
                 };
                 static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
                 static DxcCreateInstanceProc s_fnDXCCreateInstance = ( s_pDxCompiler != nullptr )
-                                                                       ? reinterpret_cast<DxcCreateInstanceProc>( ModuleImageUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
+                                                                       ? reinterpret_cast<DxcCreateInstanceProc>( ModuleLibraryUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
                                                                        : nullptr;
                 return s_fnDXCCreateInstance;
             }

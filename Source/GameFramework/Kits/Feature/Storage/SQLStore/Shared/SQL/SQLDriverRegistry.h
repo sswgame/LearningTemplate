@@ -2,7 +2,7 @@
  * @file SQLDriverRegistry.h
  * @brief 드라이버 이름으로 드라이버를 찾는 레지스트리입니다. 이 실행 파일에 포함된 드라이버만 있으며, 없는 이름은 분명한 이유와 함께 nullptr 을 반환합니다. 다른 드라이버로 대신하지 않습니다.
  * @details 드라이버는 등록을 손으로 부르지 않고 그 드라이버 `.cpp` 의 정적 `SQLDriverRegistration` 하나로 오른다. 모듈이 로드되면 오르고
- *          (SQLite 는 이 키트 GF_SQLStore, PostgreSQL 은 서버 키트 GF_Server_SQLStore), 언로드 직전에는 레지스트리가 모듈 언로드 리스너(`ModuleImageUtil::registerUnloadHandler`)로서
+ *          (SQLite 는 이 키트 GF_SQLStore, PostgreSQL 은 서버 키트 GF_Server_SQLStore), 언로드 직전에는 레지스트리가 모듈 언로드 리스너(`ModuleLibraryUtil::registerUnloadHandler`)로서
  *          그 이미지의 드라이버를 지운다. 핫 리로드가 옛 이미지의 언로드를 미뤄도 옛 드라이버가 남거나 새 등록을 지우지 않는다.
  *          어느 드라이버가 실행 파일에 포함되는지는 빌드 타깃이 정한다. Client 는 SQLite 만, Server 와 Game 은 둘 다 포함한다.
  */

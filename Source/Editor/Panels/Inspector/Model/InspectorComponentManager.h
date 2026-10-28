@@ -90,7 +90,7 @@ namespace sw::editor
         void registerDefaults();
         /** @brief 등록 목록과 맞춥니다. 새 항목은 만들고 사라진 항목의 확장은 지웁니다. 세대가 같으면 바로 반환합니다. */
         void syncWithRegistry();
-        /** @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 이미지) 안에 있는 확장을 지우고, 지운 수를 반환합니다. 이미지를 언로드하기 전에 호출합니다. */
+        /** @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 라이브러리) 안에 있는 확장을 지우고, 지운 수를 반환합니다. 이미지를 언로드하기 전에 호출합니다. */
         uint32 releaseInspectorsWithin( const void* pBegin, const void* pEnd );
 
     private:

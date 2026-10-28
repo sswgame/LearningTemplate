@@ -73,7 +73,7 @@ namespace sw::editor
 
         /** @brief 등록 목록과 맞춥니다. 사라진 줄의 인스턴스를 종료하고, 새 줄은 만들어 초기화한 뒤 범위에 등록합니다. 세대가 같으면 비교 한 번으로 끝납니다. */
         void syncWithRegistry();
-        /** @brief 등록 항목이 언로드될 모듈 이미지 [@p pBegin, @p pEnd) 안에 있는 서브시스템을 종료하고, 종료한 수를 반환합니다. */
+        /** @brief 등록 항목이 언로드될 모듈 라이브러리 [@p pBegin, @p pEnd) 안에 있는 서브시스템을 종료하고, 종료한 수를 반환합니다. */
         uint32 releaseSubsystemsWithin( const void* pBegin, const void* pEnd );
         /** @brief 모두 역순으로 종료합니다. 다음 `syncWithRegistry` 가 다시 만듭니다. */
         void releaseAll();

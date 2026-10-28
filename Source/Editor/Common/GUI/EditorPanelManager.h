@@ -124,7 +124,7 @@ namespace sw::editor
          */
         void syncWithRegistry( IRHIDevice* pRHIDevice );
         /**
-         * @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 이미지) 안에 있는 패널을 종료하고 지웁니다. 지운 수를 반환합니다.
+         * @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 라이브러리) 안에 있는 패널을 종료하고 지웁니다. 지운 수를 반환합니다.
          * @details 이미지를 언로드하기 전에 호출한다(`EditorModuleUnloadListener`). 저장하지 않은 문서는 경고하고 버린다.
          *          열림 상태는 id 로 기억해 두었다가 같은 id 가 다시 등록되면 연 채로 만든다.
          */

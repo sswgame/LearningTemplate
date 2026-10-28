@@ -3,7 +3,7 @@
 #include "Editor/Panels/Settings/ModulesPanel.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -103,7 +103,7 @@ namespace sw::editor
     {
         _catalog = ModuleCatalog{};
         _loadError.clear();
-        const string         directory = ModuleImageUtil::getModuleDirectory();
+        const string         directory = ModuleLibraryUtil::getModuleDirectory();
         ModuleResolveContext context{};
         if ( _catalog.loadDirectory( directory, _loadError ) == false || _catalog.resolve( context, _resolution, _loadError ) == false )
             SW_LOG_WARNING( "Modules: the catalog in %# could not be resolved - %#", directory.c_str(), _loadError.c_str() );

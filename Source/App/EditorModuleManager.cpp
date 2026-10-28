@@ -48,7 +48,7 @@ namespace sw
         shutdown();
     }
 
-    bool EditorModuleManager::loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool EditorModuleManager::loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -66,7 +66,7 @@ namespace sw
             }
             _listEditorExtension.push_back( std::move( extension ) );
         }
-        return GameModuleManager::loadModuleImages( pLiveReloadManager, catalog, resolution );
+        return GameModuleManager::loadModuleLibrarys( pLiveReloadManager, catalog, resolution );
     }
 
     bool EditorModuleManager::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor )
@@ -97,8 +97,8 @@ namespace sw
                     config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
                 holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
                     config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
-                holdReloadSubscription( pLiveReloadManager->setOnValidateImage(
-                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
+                holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
+                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
                 if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
                     SW_LOG_ERROR( "Failed to load the Editor Module." );
@@ -274,7 +274,7 @@ namespace sw
     bool EditorModuleManager::isEditorImageUsable( void* pLibraryModule ) const
     {
         EditorAPI api{};
-        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), api ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), api ) == false )
             return false;
         return api.create != nullptr && api.destroy != nullptr;
     }
@@ -332,7 +332,7 @@ namespace sw
 
     bool EditorModuleManager::bindEditorAPI( void* pLibraryModule )
     {
-        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), _editorAPI ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), _editorAPI ) == false )
             return false;
 
         rebindEditorService();

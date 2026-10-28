@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/UserDataPath.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"
 
 #include "GameFramework/Base/Online/Local/FileLocalSlotStorage.h"
@@ -68,15 +68,15 @@ namespace sw
                 return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
             {
-                (void)outKeepImageMapped;
+                (void)outKeepLibraryMapped;
                 ScopedLock<mutex> lock{ _mutex };
                 uint32            releasedCount = 0;
                 for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )
                 {
                     const LocalStoreBackend* pBackend = _registeredBackend.getAt( index - 1 );
-                    if ( ModuleImageUtil::isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
+                    if ( ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
                         continue;
                     (void)_registeredBackend.remove( pBackend ); // 방금 목록에서 읽은 항목이라 올라 있다
                     ++releasedCount;
@@ -101,8 +101,8 @@ namespace sw
             LocalStoreBackend                                            _memoryBackend; ///< 기반 백엔드
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "local store backends", true }, ModuleUnloadFunction::create<&LocalStoreBackendTable::onModuleUnloading>( this ) ) };
+            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "local store backends", true }, ModuleUnloadFunction::create<&LocalStoreBackendTable::onModuleUnloading>( this ) ) };
         };
     } // namespace
 } // namespace sw

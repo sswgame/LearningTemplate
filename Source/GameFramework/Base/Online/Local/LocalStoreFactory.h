@@ -4,7 +4,7 @@
  * @details 기반은 키트를 include 하지 못하므로 등록 함수를 둔다. 등록되지 않은 이름은 기동 오류다(다른 저장소로 바꾸지 않는다).
  *          "file" · "memory" 도 키트 백엔드와 같은 표(`RegistrationList`)에 올라 있어, 기반 이름을 덮는 등록은 이름 중복으로 거절된다(이름 검사를 손으로 두지 않는다).
  *          키트는 등록을 손으로 부르지 않고 `.cpp` 의 정적 `LocalStoreBackendRegistration` 하나로 둔다. 모듈이 로드되면 오르고,
- *          언로드 직전에는 바닥 테이블이 모듈 언로드 리스너(`ModuleImageUtil::registerUnloadHandler`)로서 그 이미지의 만들기 함수를 지운다. 핫 리로드가 옛 이미지의
+ *          언로드 직전에는 바닥 테이블이 모듈 언로드 리스너(`ModuleLibraryUtil::registerUnloadHandler`)로서 그 이미지의 만들기 함수를 지운다. 핫 리로드가 옛 이미지의
  *          언로드를 미뤄도(정적 소멸자가 새 이미지의 등록 뒤에 돈다) 옛 함수가 남거나 새 등록을 지우지 않는다.
  *          모든 저장소는 전용 스레드 하나(`ThreadedLocalStore`) 위에 선다. 경로는 `UserDataPath::resolve( 게임 이름, _root )`.
  */

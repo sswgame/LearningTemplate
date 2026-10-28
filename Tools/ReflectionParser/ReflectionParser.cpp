@@ -3,7 +3,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Diagnostics/DataRaceReporter.h"
 #include "Core/Log/Logger.h"
-#include "Core/LogSink/AsyncLogSink.h"
+#include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Time/GameTimer.h"
 
 #include "ReflectionParser/AnnotationFields.h"

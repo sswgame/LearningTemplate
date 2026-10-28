@@ -26,7 +26,7 @@ namespace sw
      * @details 호스트 범위의 서브시스템입니다(App 이 엔진을 세우기 전에 걸고, 전용 서버는 시나리오를 쓰지 않아 걸지 않는다). 서브시스템으로서의 초기화는 하는 일이 없고,
      *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::registerFrameObserver` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
      *          엔진이 내려가기 전에 `shutdownSubsystem` 이 비웁니다 — 호스트 범위는 엔진보다 오래 살기 때문에 런처가 엔진 종료 앞에서 이 서브시스템만 먼저 내립니다
-     *          (모듈 이미지 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
+     *          (모듈 라이브러리 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다),
@@ -49,7 +49,7 @@ namespace sw
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
         /**
-         * @brief 모듈 이미지 창구(`HostSubsystemNames::kModuleLoader`)보다 뒤에 섭니다 — 시나리오는 모듈이 올라온 뒤에 시작하고,
+         * @brief 모듈 라이브러리 창구(`HostSubsystemNames::kModuleLoader`)보다 뒤에 섭니다 — 시나리오는 모듈이 올라온 뒤에 시작하고,
          *        `shutdownDependentsOf( 창구 )` 가 구동기만 엔진 종료 앞에서 내립니다(창구는 엔진 범위가 종료하는 동안 살아 있어야 한다). 창구는 구동기를 모릅니다.
          */
         span<const utf8* const> getSubsystemDependencies() const override;

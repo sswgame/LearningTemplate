@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -28,7 +28,7 @@ namespace sw
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 엔진(`Engine`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
      * @details 명령은 둘로 나뉜다.
      *          - **데이터 명령**: 코드는 엔진에 있고 나머지는 값(오브젝트 id, 직렬화한 상태)인 명령이다(`ObjectUndoUtil`). 모듈이 언로드되어도 남는다.
-     *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
+     *          - **모듈 명령**: undo 와 redo 가 모듈 라이브러리의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
      *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
      */
     class SW_API CommandStack final : public ISubsystem
@@ -67,7 +67,7 @@ namespace sw
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
-        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `ModuleImageUtil::registerUnloadHandler` 의 주의(vtable 의 집)입니다. */
+        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `ModuleLibraryUtil::registerUnloadHandler` 의 주의(vtable 의 집)입니다. */
         CommandStack();
 
         /** @brief 명령 스택에 새로운 명령을 추가합니다. undo 와 redo 가 비었거나(트랜잭션 묶음 제외) 실행 중이면 버립니다. */
@@ -126,14 +126,14 @@ namespace sw
 
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 명령만 분리하고, 분리한 명령 수를 반환합니다. 알림 처리기도 그 범위면 분리합니다(수에는 넣지 않습니다).
-         * @details 모듈 이미지를 언로드하기 전에 부른다(그 모듈 스스로, 핫 리로드의 안전망). 트랜잭션 묶음은 안쪽에 하나라도 걸리면 **통째로** 분리한다
+         * @details 모듈 라이브러리를 언로드하기 전에 부른다(그 모듈 스스로, 핫 리로드의 안전망). 트랜잭션 묶음은 안쪽에 하나라도 걸리면 **통째로** 분리한다
          *          (트랜잭션의 반쪽만 되돌리지 않는다). 남은 명령의 순서와 현재 위치(되돌린 것과 아직 되돌리지 않은 것의 경계)는 그대로다. 데이터 명령은 대상
          *          오브젝트의 상태 전체를 가지고 있어, 사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
          */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
 
     private:
         /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */
@@ -163,7 +163,7 @@ namespace sw
         bool   _bHistoryParked; ///< 보관한 내역이 있다
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "undo commands" }, ModuleUnloadFunction::create<&CommandStack::onModuleUnloading>( this ) ) };
+        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "undo commands" }, ModuleUnloadFunction::create<&CommandStack::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

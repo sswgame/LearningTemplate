@@ -61,7 +61,7 @@ namespace sw
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.
-        /** @brief 호스트 범위를 세웁니다 — 모듈 이미지 창구와 자동화 구동기를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
+        /** @brief 호스트 범위를 세웁니다 — 모듈 라이브러리 창구와 자동화 구동기를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
         [[nodiscard]] bool initializeHostScope();
         /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
@@ -69,10 +69,10 @@ namespace sw
          * @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
-        [[nodiscard]] bool loadModuleImages();
+        [[nodiscard]] bool loadModuleLibrarys();
         /**
          * @brief 호스트 부품 하나를 세웁니다(`kArrClientHostPart` — 순서는 `HostPart` 의 의존 선언이 정한다).
-         * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 이미지는 `loadModuleImages` 가 이미 로드했다).
+         * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했다).
          */
         [[nodiscard]] bool startHostPart( HostPartID id );
         /** @brief `startHostPart` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
@@ -127,11 +127,11 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 이미지 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
+         * @details 모듈 라이브러리 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
          *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
          */
         SubsystemScope _host;
-        /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
+        /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
         /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
         AutomationSession* _pAutomationSession;

@@ -22,7 +22,7 @@ namespace sw::editor
         static void registerDefaults();
         /** @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)의 세대가 바뀌었으면 표와 등록 줄로 레지스트리를 다시 만듭니다. 세대가 같으면 아무것도 하지 않습니다. */
         static void syncWithRegistry();
-        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 이미지) 안인 커맨드를 빼고 레지스트리를 다시 만듭니다. 뺀 수를 돌려줍니다. */
+        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 라이브러리) 안인 커맨드를 빼고 레지스트리를 다시 만듭니다. 뺀 수를 돌려줍니다. */
         static uint32 releaseCommandsWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 메뉴 경로의 부모가 `commandmenu::kMainMenuBar` 인 메뉴들을 테이블의 순서대로 메뉴바에 그립니다. */

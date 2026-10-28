@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -27,7 +27,7 @@ namespace sw
      * @class AbilitySystemModuleUnloadGuard
      * @brief 모듈(DLL, SO)을 언로드하기 전에, 그 모듈의 코드(게임 어빌리티, 어트리뷰트 세트, 실행 계산, 델리게이트)를 가리키는 참조를 컴포넌트에서 제거합니다.
      * @details 게임 모듈이 준 어빌리티 인스턴스는 vtable 이 그 모듈 안에 있다. 핫 리로드가 모듈을 언로드한 뒤에 컴포넌트가 그 인스턴스를 지우면,
-     *          이미 언로드된 코드로 점프해서 크래시가 난다. 그래서 컴포넌트마다 리스너를 하나 두고(`ModuleImageUtil::registerUnloadHandler`),
+     *          이미 언로드된 코드로 점프해서 크래시가 난다. 그래서 컴포넌트마다 리스너를 하나 두고(`ModuleLibraryUtil::registerUnloadHandler`),
      *          언로드하기 전에 코드가 아직 남아 있을 때 해당 범위의 것을 지운다.
      */
     class AbilitySystemModuleUnloadGuard final
@@ -38,9 +38,9 @@ namespace sw
         {
         }
 
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
         {
-            (void)outKeepImageMapped; // 모두 지울 수 있다
+            (void)outKeepLibraryMapped; // 모두 지울 수 있다
             return _owner.onModuleUnloading( pBegin, pEnd );
         }
 
@@ -48,8 +48,8 @@ namespace sw
         AbilitySystemComponent& _owner;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "ability system" }, ModuleUnloadFunction::create<&AbilitySystemModuleUnloadGuard::onModuleUnloading>( this ) ) };
+        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "ability system" }, ModuleUnloadFunction::create<&AbilitySystemModuleUnloadGuard::onModuleUnloading>( this ) ) };
     };
 } // namespace sw
 
@@ -400,7 +400,7 @@ namespace sw
                 AbilitySpec& spec = *_listAbilitySpec[specIndex];
                 if ( spec._bPendingRemove == SW_TRUE )
                     continue;
-                if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( spec._pAbility.get() ), pBegin, pEnd ) )
+                if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( spec._pAbility.get() ), pBegin, pEnd ) )
                 {
                     retireAbilitySpec( spec );
                     ++releasedCount;
@@ -416,7 +416,7 @@ namespace sw
                     continue;
                 for ( const shared_ptr<const IGameplayEffectExecution>& pExecution : activeEffect._spec._pDef->_listExecution )
                 {
-                    if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pExecution.get() ), pBegin, pEnd ) )
+                    if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pExecution.get() ), pBegin, pEnd ) )
                     {
                         removeActiveEffectInternal( activeEffect );
                         ++releasedCount;
@@ -429,7 +429,7 @@ namespace sw
         // 4) 게임 모듈이 정의한 어트리뷰트 세트: 값도 함께 사라진다. 모듈을 다시 로드하면 게임이 세트를 다시 준다.
         for ( size_t setIndex = _listAttributeSet.size(); setIndex > 0; --setIndex )
         {
-            if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( _listAttributeSet[setIndex - 1].get() ), pBegin, pEnd ) )
+            if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( _listAttributeSet[setIndex - 1].get() ), pBegin, pEnd ) )
             {
                 _listAttributeSet.erase( _listAttributeSet.begin() + static_cast<ptrdiff_t>( setIndex - 1 ) );
                 ++releasedCount;

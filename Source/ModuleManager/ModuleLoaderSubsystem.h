@@ -1,8 +1,8 @@
 /**
  * @file ModuleManager/ModuleLoaderSubsystem.h
- * @brief 호스트 범위의 서브시스템입니다 — 엔진의 모듈 이미지 창구(`IModuleLoader`)를 호스트가 정한 두 델리게이트로 구현합니다.
+ * @brief 호스트 범위의 서브시스템입니다 — 엔진의 모듈 라이브러리 창구(`IModuleLoader`)를 호스트가 정한 두 델리게이트로 구현합니다.
  * @details App 과 Server 가 같은 모양으로 씁니다. 엔진 범위가 서기 전에 호스트 범위에 걸어 두고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 부모 범위에서 찾아 부릅니다.
- *          로더(타입 공급자 이미지 로드)는 만들 때 받고, 씬 뒤 훅(모듈 DLL 내리기)은 모듈 매니저가 선 뒤에 걸 수 있다(Dev 전용이라 Shipping 은 걸지 않는다).
+ *          로더(타입 공급자 라이브러리 로드)는 만들 때 받고, 씬 뒤 훅(모듈 DLL 내리기)은 모듈 매니저가 선 뒤에 걸 수 있다(Dev 전용이라 Shipping 은 걸지 않는다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@ namespace sw
 {
     class SubsystemScope;
 
-    /** @brief 호스트의 타입 공급자 로더입니다. 이미지를 올리고 타입을 등록하면 true 입니다. */
+    /** @brief 호스트의 타입 공급자 로더입니다. 라이브러리를 올리고 타입을 등록하면 true 입니다. */
     SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 } // namespace sw
 
@@ -25,7 +25,7 @@ namespace sw
 {
     /**
      * @class ModuleLoaderSubsystem
-     * @brief 호스트 범위에서 모듈 이미지 창구를 맡는 서브시스템입니다.
+     * @brief 호스트 범위에서 모듈 라이브러리 창구를 맡는 서브시스템입니다.
      */
     class ModuleLoaderSubsystem final : public IModuleLoader
     {

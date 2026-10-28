@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"
@@ -17,7 +17,7 @@
     #include <link.h>
 #endif
 
-SW_LOG_CALLER( "ModuleImageUtil" );
+SW_LOG_CALLER( "ModuleLibraryUtil" );
 namespace sw
 {
     namespace
@@ -36,7 +36,7 @@ namespace sw
          */
         ModuleSubdirectory s_moduleSubdirectory;
 
-        struct ModuleImageUtilInternal
+        struct ModuleLibraryUtilInternal
         {
             /** @brief @p baseName 이 옮긴 모듈이면 그 `Bin` 상대 폴더를, 아니면 빈 뷰를 돌려줍니다. */
             static string_view findModuleSubdirectory( string_view baseName )
@@ -48,8 +48,8 @@ namespace sw
             }
 
 #if defined( SW_PLATFORM_LINUX )
-            /** @brief `dl_iterate_phdr` 가 이미지마다 부르는 곳에 넘기는 문맥입니다. */
-            struct ImageRangeQuery
+            /** @brief `dl_iterate_phdr` 가 라이브러리마다 부르는 곳에 넘기는 문맥입니다. */
+            struct LibraryRangeQuery
             {
                 uintptr_t _address{ 0 };
                 uintptr_t _begin{ 0 };
@@ -57,12 +57,12 @@ namespace sw
                 bool      _bFound{ false };
             };
 
-            /** @brief 이미지 하나의 PT_LOAD 범위를 모아 @p pContext 의 주소를 담는지 봅니다. 담으면 1 을 반환해 순회를 멈춥니다. */
-            static int32 collectImageRange( struct dl_phdr_info* pInfo, size_t, void* pContext )
+            /** @brief 라이브러리 하나의 PT_LOAD 범위를 모아 @p pContext 의 주소를 담는지 봅니다. 담으면 1 을 반환해 순회를 멈춥니다. */
+            static int32 collectLibraryRange( struct dl_phdr_info* pInfo, size_t, void* pContext )
             {
-                ImageRangeQuery* pQuery = static_cast<ImageRangeQuery*>( pContext );
-                uintptr_t        begin  = UINTPTR_MAX;
-                uintptr_t        end    = 0;
+                LibraryRangeQuery* pQuery = static_cast<LibraryRangeQuery*>( pContext );
+                uintptr_t          begin  = UINTPTR_MAX;
+                uintptr_t          end    = 0;
                 for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )
                 {
                     const ElfW( Phdr ) & header = pInfo->dlpi_phdr[headerIndex];
@@ -83,7 +83,7 @@ namespace sw
                 return 0;
             }
 #elif defined( SW_PLATFORM_WINDOWS )
-            /** @brief 이미지 기준 주소 @p pBase 의 PE NT 머리입니다. DOS · NT 서명이 맞지 않으면 nullptr 입니다. */
+            /** @brief 라이브러리 기준 주소 @p pBase 의 PE NT 머리입니다. DOS · NT 서명이 맞지 않으면 nullptr 입니다. */
             static const IMAGE_NT_HEADERS* findNtHeaders( const void* pBase )
             {
                 const uint8*            pBytes = static_cast<const uint8*>( pBase );
@@ -108,7 +108,7 @@ namespace sw
                 static const bool s_bAdded = []()
                 {
                     const string binaryDir = FileUtil::toNativeSeparators( FileUtil::getBinaryDirectory() );
-                    const string moduleDir = FileUtil::toNativeSeparators( ModuleImageUtil::getModuleDirectory() );
+                    const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory() );
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
                         if ( FileUtil::isDirectory( directory ) )
@@ -122,7 +122,7 @@ namespace sw
         };
         /**
          * @class ModuleUnloadHandlerList
-         * @brief 살아 있는 언로드 처리기 목록과 그 잠금입니다(`ModuleImageUtil::registerUnloadHandler`). 구독이 풀리면 그 처리기를 뺀다.
+         * @brief 살아 있는 언로드 처리기 목록과 그 잠금입니다(`ModuleLibraryUtil::registerUnloadHandler`). 구독이 풀리면 그 처리기를 뺀다.
          * @details 함수 지역 static 으로 둔다(`getModuleUnloadHandlerList`) — 정적 처리기(로그 리스너)가 정적 초기화 중에 오르므로 목록이 그보다 먼저 서야 하고,
          *          먼저 선 것이 나중에 사라지므로 정적 처리기의 구독이 죽은 목록을 밟지 않는다(목록이 먼저 사라지면 구독이 무효가 된다).
          */
@@ -134,7 +134,7 @@ namespace sw
             {
                 const utf8* _pHandlerName{ nullptr };
                 uint32      _releasedCount{ 0 };
-                bool        _bKeepImageMapped{ false };
+                bool        _bKeepLibraryMapped{ false };
                 bool        _bExpected{ false };
             };
 
@@ -171,7 +171,7 @@ namespace sw
                     ReleaseResult result{};
                     result._pHandlerName  = entry._desc._pName;
                     result._bExpected     = entry._desc._bReleaseExpected;
-                    result._releasedCount = entry._function( pBegin, pEnd, result._bKeepImageMapped );
+                    result._releasedCount = entry._function( pBegin, pEnd, result._bKeepLibraryMapped );
                     outListResult.push_back( result );
                 }
                 _walkingThread = std::thread::id{};
@@ -215,7 +215,7 @@ namespace sw
         }
     } // namespace
 
-    string_view ModuleImageUtil::getSharedLibraryPrefix()
+    string_view ModuleLibraryUtil::getSharedLibraryPrefix()
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return "";
@@ -224,7 +224,7 @@ namespace sw
 #endif
     }
 
-    string_view ModuleImageUtil::getSharedLibraryExtension()
+    string_view ModuleLibraryUtil::getSharedLibraryExtension()
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return ".dll";
@@ -233,14 +233,14 @@ namespace sw
 #endif
     }
 
-    string ModuleImageUtil::formatSharedLibraryName( string_view baseName )
+    string ModuleLibraryUtil::formatSharedLibraryName( string_view baseName )
     {
         StringBuilder<constant::kMaxBuffer128> sb;
         sb.append( getSharedLibraryPrefix() ).append( baseName ).append( getSharedLibraryExtension() );
         return string( sb.view() );
     }
 
-    string ModuleImageUtil::getDebugSymbolPath( string_view libraryPath )
+    string ModuleLibraryUtil::getDebugSymbolPath( string_view libraryPath )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return FileUtil::replaceExtension( libraryPath, ".pdb" );
@@ -249,7 +249,7 @@ namespace sw
 #endif
     }
 
-    string ModuleImageUtil::findBuiltDebugSymbolPath( string_view libraryPath )
+    string ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
     {
         const string besideLibrary = getDebugSymbolPath( libraryPath );
         string_view  fileName;
@@ -269,12 +269,12 @@ namespace sw
         return found;
     }
 
-    string ModuleImageUtil::getModuleDirectory()
+    string ModuleLibraryUtil::getModuleDirectory()
     {
         return FileUtil::joinPath( FileUtil::getBinaryDirectory(), kModuleFolder );
     }
 
-    void ModuleImageUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
+    void ModuleLibraryUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
     {
         ModuleSubdirectory& entry = s_moduleSubdirectory;
         entry                     = ModuleSubdirectory{};
@@ -289,7 +289,7 @@ namespace sw
         StringUtil::strncpy( entry._arrDirectory, string{ binRelativeDirectory }.c_str(), static_cast<uint32>( std::size( entry._arrDirectory ) ) );
     }
 
-    bool ModuleImageUtil::getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory )
+    bool ModuleLibraryUtil::getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory )
     {
         const ModuleSubdirectory& entry = s_moduleSubdirectory;
         if ( entry._arrDirectory[0] == '\0' )
@@ -299,11 +299,11 @@ namespace sw
         return true;
     }
 
-    string ModuleImageUtil::findModuleLibraryPath( string_view baseName )
+    string ModuleLibraryUtil::findModuleLibraryPath( string_view baseName )
     {
         const string fileName = formatSharedLibraryName( baseName );
         // 옮긴 모듈은 그 폴더에만 있다 — 없으면 그 경로를 돌려 부르는 쪽이 "없다" 를 알리게 한다(활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다).
-        const string_view movedDirectory = ModuleImageUtilInternal::findModuleSubdirectory( baseName );
+        const string_view movedDirectory = ModuleLibraryUtilInternal::findModuleSubdirectory( baseName );
         if ( movedDirectory.empty() == false )
             return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), movedDirectory ), fileName );
         string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
@@ -316,7 +316,7 @@ namespace sw
         return modulePath;
     }
 
-    void* ModuleImageUtil::loadDynamicLibrary( string_view libraryName )
+    void* ModuleLibraryUtil::loadDynamicLibrary( string_view libraryName )
     {
         if ( libraryName.empty() )
             return nullptr;
@@ -340,7 +340,7 @@ namespace sw
 
             // 0) 모듈은 `Bin/Modules` 에 있고 그 의존(서드파티, GameFramework DLL)은 `Bin` 에 있다. 실행 파일이 `TestBin` 이면 `Bin` 은 응용 프로그램
             //    폴더도 아니다. 그래서 두 폴더를 사용자 검색 폴더에 한 번 더 추가하고, DLL 폴더와 기본 폴더(응용 프로그램, System32, 사용자 폴더)로 찾는다.
-            ModuleImageUtilInternal::addBinarySearchDirectories();
+            ModuleLibraryUtilInternal::addBinarySearchDirectories();
             HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
             // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
             if ( hModule == nullptr )
@@ -385,7 +385,7 @@ namespace sw
 #endif
     }
 
-    void* ModuleImageUtil::getDynamicSymbol( void* pHandle, string_view symbolName )
+    void* ModuleLibraryUtil::getDynamicSymbol( void* pHandle, string_view symbolName )
     {
         if ( pHandle == nullptr || symbolName.empty() )
             return nullptr;
@@ -398,7 +398,7 @@ namespace sw
 #endif
     }
 
-    bool ModuleImageUtil::findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd )
+    bool ModuleLibraryUtil::findLoadedLibraryRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd )
     {
         pOutBegin = nullptr;
         pOutEnd   = nullptr;
@@ -409,16 +409,16 @@ namespace sw
         if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                                  static_cast<LPCWSTR>( pAddressInside ), &hModule ) == FALSE )
             return false;
-        const IMAGE_NT_HEADERS* pNt = ModuleImageUtilInternal::findNtHeaders( hModule );
+        const IMAGE_NT_HEADERS* pNt = ModuleLibraryUtilInternal::findNtHeaders( hModule );
         if ( pNt == nullptr )
             return false;
         pOutBegin = hModule;
         pOutEnd   = reinterpret_cast<const uint8*>( hModule ) + pNt->OptionalHeader.SizeOfImage;
         return true;
 #elif defined( SW_PLATFORM_LINUX )
-        ModuleImageUtilInternal::ImageRangeQuery query{};
+        ModuleLibraryUtilInternal::LibraryRangeQuery query{};
         query._address = reinterpret_cast<uintptr_t>( pAddressInside );
-        dl_iterate_phdr( &ModuleImageUtilInternal::collectImageRange, &query );
+        dl_iterate_phdr( &ModuleLibraryUtilInternal::collectLibraryRange, &query );
         if ( query._bFound == false )
             return false;
         pOutBegin = reinterpret_cast<const void*>( query._begin );
@@ -429,27 +429,27 @@ namespace sw
 #endif
     }
 
-    bool ModuleImageUtil::findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd )
+    bool ModuleLibraryUtil::findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd )
     {
         pOutBegin = nullptr;
         pOutEnd   = nullptr;
         if ( pHandle == nullptr )
             return false;
 #if defined( SW_PLATFORM_WINDOWS )
-        // Windows 의 모듈 핸들은 이미지의 기준 주소다.
-        return findLoadedImageRange( pHandle, pOutBegin, pOutEnd );
+        // Windows 의 모듈 핸들은 라이브러리의 기준 주소다.
+        return findLoadedLibraryRange( pHandle, pOutBegin, pOutEnd );
 #elif defined( SW_PLATFORM_LINUX )
-        // 리눅스 핸들은 주소가 아니다. 링크 맵이 가리키는 동적 섹션은 이미지 안에 있다.
+        // 리눅스 핸들은 주소가 아니다. 링크 맵이 가리키는 동적 섹션은 라이브러리 안에 있다.
         struct link_map* pLinkMap = nullptr;
         if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr )
             return false;
-        return findLoadedImageRange( pLinkMap->l_ld, pOutBegin, pOutEnd );
+        return findLoadedLibraryRange( pLinkMap->l_ld, pOutBegin, pOutEnd );
 #else
         return false;
 #endif
     }
 
-    void ModuleImageUtil::unloadDynamicLibrary( void* pHandle )
+    void ModuleLibraryUtil::unloadDynamicLibrary( void* pHandle )
     {
         if ( pHandle == nullptr )
             return;
@@ -461,16 +461,16 @@ namespace sw
 #endif
     }
 
-    uint32 ModuleImageUtil::pinDynamicLibraryDependencies( void* pHandle )
+    uint32 ModuleLibraryUtil::pinDynamicLibraryDependencies( void* pHandle )
     {
         if ( pHandle == nullptr )
             return 0;
 
         uint32 pinnedCount{ 0 };
 #if defined( SW_PLATFORM_WINDOWS )
-        // Windows 의 모듈 핸들은 이미지의 기준 주소다.
+        // Windows 의 모듈 핸들은 라이브러리의 기준 주소다.
         const uint8*            pBase = static_cast<const uint8*>( pHandle );
-        const IMAGE_NT_HEADERS* pNt   = ModuleImageUtilInternal::findNtHeaders( pHandle );
+        const IMAGE_NT_HEADERS* pNt   = ModuleLibraryUtilInternal::findNtHeaders( pHandle );
         if ( pNt == nullptr )
             return 0;
 
@@ -479,7 +479,7 @@ namespace sw
         {
             for ( const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress ); pDesc->Name != 0; ++pDesc )
             {
-                if ( ModuleImageUtilInternal::pinLoadedModule( reinterpret_cast<const utf8*>( pBase + pDesc->Name ) ) )
+                if ( ModuleLibraryUtilInternal::pinLoadedModule( reinterpret_cast<const utf8*>( pBase + pDesc->Name ) ) )
                     ++pinnedCount;
             }
         }
@@ -506,7 +506,7 @@ namespace sw
         {
             if ( pEntry->d_tag != DT_NEEDED )
                 continue;
-            // NOLOAD 는 이미 로드된 것만 찾는다(SONAME 으로 맞춘다). NODELETE 는 그 이미지를 프로세스 끝까지 남긴다. 찾느라 늘린 참조는 바로 돌려준다.
+            // NOLOAD 는 이미 로드된 것만 찾는다(SONAME 으로 맞춘다). NODELETE 는 그 라이브러리를 프로세스 끝까지 남긴다. 찾느라 늘린 참조는 바로 돌려준다.
             const utf8* pName       = reinterpret_cast<const utf8*>( stringTable + static_cast<uintptr_t>( pEntry->d_un.d_val ) );
             void*       pDependency = dlopen( pName, RTLD_LAZY | RTLD_NOLOAD | RTLD_NODELETE );
             if ( pDependency == nullptr )
@@ -518,13 +518,13 @@ namespace sw
         return pinnedCount;
     }
 
-    uint32 ModuleImageUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped )
+    uint32 ModuleLibraryUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepLibraryMapped )
     {
-        if ( pOutKeepImageMapped != nullptr )
-            *pOutKeepImageMapped = false;
+        if ( pOutKeepLibraryMapped != nullptr )
+            *pOutKeepLibraryMapped = false;
 
         // 모듈은 자기가 등록한 것을 스스로 해제해야 한다 — 등록 API 는 구독(`Subscription`)을 돌려주므로 구독을 든 객체가 사라지면 풀린다.
-        // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 이미지는 내린다).
+        // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 라이브러리는 내린다).
         vector<ModuleUnloadHandlerList::ReleaseResult> listResult;
         if ( pBegin != nullptr && pEnd != nullptr )
             getModuleUnloadHandlerList().releaseAllWithin( pBegin, pEnd, listResult );
@@ -537,23 +537,23 @@ namespace sw
                 SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
             else if ( result._releasedCount > 0 )
                 SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
-            // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
-            if ( result._bKeepImageMapped )
+            // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 라이브러리의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
+            if ( result._bKeepLibraryMapped )
             {
                 SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pHandlerName );
-                if ( pOutKeepImageMapped != nullptr )
-                    *pOutKeepImageMapped = true;
+                if ( pOutKeepLibraryMapped != nullptr )
+                    *pOutKeepLibraryMapped = true;
             }
         }
         return releasedCount;
     }
 
-    void* ModuleImageUtil::findBoundImportImage( void* pHandle, string_view dependencyFileName )
+    void* ModuleLibraryUtil::findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         if ( pHandle == nullptr )
             return nullptr;
-        const IMAGE_NT_HEADERS* pNt = ModuleImageUtilInternal::findNtHeaders( pHandle );
+        const IMAGE_NT_HEADERS* pNt = ModuleLibraryUtilInternal::findNtHeaders( pHandle );
         if ( pNt == nullptr )
             return nullptr;
         const uint8* pBase = static_cast<const uint8*>( pHandle );
@@ -584,42 +584,42 @@ namespace sw
 #endif
     }
 
-    bool ModuleImageUtil::releaseImageCode( string_view moduleName, void* pHandle )
+    bool ModuleLibraryUtil::releaseLibraryCode( string_view moduleName, void* pHandle )
     {
         const void* pBegin{ nullptr };
         const void* pEnd{ nullptr };
         if ( pHandle == nullptr || findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
             return true;
-        bool bKeepImageMapped{ false };
-        (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepImageMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
-        return bKeepImageMapped == false;
+        bool bKeepLibraryMapped{ false };
+        (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepLibraryMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
+        return bKeepLibraryMapped == false;
     }
 
-    bool ModuleImageUtil::unloadModuleImage( string_view moduleName, void* pHandle )
+    bool ModuleLibraryUtil::unloadModuleLibrary( string_view moduleName, void* pHandle )
     {
         if ( pHandle == nullptr )
             return false;
-        if ( releaseImageCode( moduleName, pHandle ) == false )
+        if ( releaseLibraryCode( moduleName, pHandle ) == false )
             return false;
 
-        // 이 이미지가 끌어온 의존 이미지가 함께 언로드되지 않게 한다. 그 이미지의 코드를 가리키는 등록은 여기서 해제할 수 없다.
+        // 이 라이브러리가 끌어온 의존 라이브러리가 함께 언로드되지 않게 한다. 그 라이브러리의 코드를 가리키는 등록은 여기서 해제할 수 없다.
         (void)pinDynamicLibraryDependencies( pHandle );
         unloadDynamicLibrary( pHandle );
         return true;
     }
 
-    Subscription ModuleImageUtil::registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
+    Subscription ModuleLibraryUtil::registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
     {
         return getModuleUnloadHandlerList().add( desc, function );
     }
 
-    bool ModuleImageUtil::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
+    bool ModuleLibraryUtil::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
     {
         const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );
         return code != 0 && reinterpret_cast<uintptr_t>( pBegin ) <= code && code < reinterpret_cast<uintptr_t>( pEnd );
     }
 
-    const void* ModuleImageUtil::findVtableAddress( const void* pObject )
+    const void* ModuleLibraryUtil::findVtableAddress( const void* pObject )
     {
         if ( pObject == nullptr )
             return nullptr;

@@ -185,7 +185,7 @@ namespace sw
     // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
     {
-        // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 이미지 창구 · 자동화 구동기) 아래로
+        // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 라이브러리 창구 · 자동화 구동기) 아래로
         // 코어(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
         // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
         // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
@@ -397,7 +397,7 @@ namespace sw
 #endif
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
-        // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
+        // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         _startup.getCollection().shutdownAll();
         // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
         _shellActions.reset();
@@ -424,7 +424,7 @@ namespace sw
         _services.destroyAll();
         _pEventDispatcher = nullptr;
         engine::unbindEngineServices();
-        // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 이미지 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
+        // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 라이브러리 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
         _coreScope.destroyAll();
         _pCommandLineSubsystem = nullptr;

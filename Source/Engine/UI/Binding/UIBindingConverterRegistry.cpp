@@ -5,7 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
 
                 bool operator()( const UIBindingConverter& converter ) const
                 {
-                    return ModuleImageUtil::isAddressWithin( reinterpret_cast<const void*>( converter._pConvert ), _pBegin, _pEnd );
+                    return ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( converter._pConvert ), _pBegin, _pEnd );
                 }
             };
 

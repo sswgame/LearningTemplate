@@ -1,7 +1,7 @@
 /**
  * @file Engine/Module/ModuleLoadStageSubsystem.h
  * @brief 기동 순서의 ModuleLoadStage 자리입니다 — 호스트가 타입 공급자(GameFramework · 킷 · 게임 모듈)를 올려 등록을 끝냅니다. 씬을 읽는 일은 이 뒤다.
- * @details 호스트 범위의 모듈 이미지 창구(`IModuleLoader`)가 로더다. 창구가 없으면 올릴 것이 없다(배포 구성은 정적 링크라 Reflection 이 이미 다 모았다). 어느 쪽이든 끝나면 모든 타입이 등록된 것으로 적고
+ * @details 호스트 범위의 모듈 라이브러리 창구(`IModuleLoader`)가 로더다. 창구가 없으면 올릴 것이 없다(배포 구성은 정적 링크라 Reflection 이 이미 다 모았다). 어느 쪽이든 끝나면 모든 타입이 등록된 것으로 적고
  *          (`TypeRegistry::markAllModuleTypesRegistered`), 그때부터 씬을 읽을 수 있다 — 헤드리스 쿠킹이 이것에 의존한다.
  */
 #pragma once

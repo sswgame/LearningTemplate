@@ -59,7 +59,7 @@ namespace sw
         void registerModuleTypes( string_view moduleName )
         {
             // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다. 그것을 걷어서 넘긴다.
-            // 이미 등록한 모듈인데 머리에 새 등록기가 있으면 **다른 이미지**의 것이다 — 핫 리로드는 올린 직후 머리를 따로 걷어 넘기므로(인자 있는
+            // 이미 등록한 모듈인데 머리에 새 등록기가 있으면 **다른 라이브러리**의 것이다 — 핫 리로드는 올린 직후 머리를 따로 걷어 넘기므로(인자 있는
             // 오버로드) 이 자리에서는 비어 있어야 한다. 지연 로드로 늦게 올라온 공용 모듈이 이렇게 남의 이름으로 들어간다. 알린다.
             if ( getModuleHeadCache().contains( string{ moduleName } ) &&
                  TypeRegistrar::getHead() != nullptr )

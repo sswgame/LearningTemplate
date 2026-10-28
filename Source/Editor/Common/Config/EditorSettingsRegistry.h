@@ -111,7 +111,7 @@ namespace sw::editor
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
         [[nodiscard]] static bool saveAll( string_view filePath );
         /**
-         * @brief 값(`_pInstance`)이 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 이미지가 가진 섹션).
+         * @brief 값(`_pInstance`)이 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 라이브러리가 가진 섹션).
          * @details 그 섹션의 값은 그 이미지의 소유자(`EditorSettingsRegistrar`) 멤버라 이미지를 내리면 사라진다. 언로드 훅이 이것으로 묻고 내리기 전에 `saveAll` 한다.
          */
         [[nodiscard]] static bool hasSectionWithin( const void* pBegin, const void* pEnd );

@@ -45,7 +45,7 @@ namespace sw
                 bool          _bFound{ false };
             };
 
-            /** @brief 이미지가 주소를 담는가(첫 이미지 — 실행 파일 — 를 찾을 때는 늘 참). */
+            /** @brief 라이브러리가 주소를 담는가(첫 라이브러리 — 실행 파일 — 를 찾을 때는 늘 참). */
             static bool containsAddress( const dl_phdr_info* pInfo, uintptr_t address )
             {
                 for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )
@@ -60,7 +60,7 @@ namespace sw
                 return false;
             }
 
-            static int32 visitImage( dl_phdr_info* pInfo, size_t, void* pContext )
+            static int32 visitLibrary( dl_phdr_info* pInfo, size_t, void* pContext )
             {
                 BuildIDQuery* pQuery = static_cast<BuildIDQuery*>( pContext );
                 if ( pQuery->_bMain == false && containsAddress( pInfo, pQuery->_address ) == false )
@@ -150,7 +150,7 @@ namespace sw
         Internal::BuildIDQuery query{};
         query._address = reinterpret_cast<uintptr_t>( pAddressInside );
         query._bMain   = pAddressInside == nullptr;
-        dl_iterate_phdr( &Internal::visitImage, &query );
+        dl_iterate_phdr( &Internal::visitLibrary, &query );
         if ( query._bFound )
             result = query._result;
 #endif

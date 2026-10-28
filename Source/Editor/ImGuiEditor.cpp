@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
@@ -239,7 +239,7 @@ namespace sw::editor
                 const void*   pEnd{ nullptr };
                 if ( pCommandStack == nullptr )
                     return;
-                if ( ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
+                if ( ModuleLibraryUtil::findLoadedLibraryRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
                 {
                     SW_LOG_ERROR( "Could not find the editor module image range - its undo commands stay on the stack" );
                     return;
@@ -729,9 +729,9 @@ namespace sw::editor
     {
         // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
         // 호스트가 이미지를 내리지 않고 인스턴스만 다시 만들면(백엔드 교체) 모듈 명령도 남긴다 — 다음 인스턴스가 되돌릴 수 있다.
-        // 선택 조회(②): 종료 경로 - 서비스 결합이 먼저 풀렸으면 모듈 이미지를 유지하는 표시도 없다(내리는 쪽으로 간주).
+        // 선택 조회(②): 종료 경로 - 서비스 결합이 먼저 풀렸으면 모듈 라이브러리를 유지하는 표시도 없다(내리는 쪽으로 간주).
         const EditSessionState* pEditSession = editor::findSubsystem<EditSessionState>();
-        if ( pEditSession == nullptr || pEditSession->isModuleImageKept() == false )
+        if ( pEditSession == nullptr || pEditSession->isModuleLibraryKept() == false )
             ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;

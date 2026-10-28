@@ -74,11 +74,11 @@ namespace sw
         shutdown();
     }
 
-    bool GameModuleManager::loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool GameModuleManager::loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _pLiveReloadManager = pLiveReloadManager;
 #if defined( SW_SHIPPING )
-        // 게임, 키트, GameFramework 는 정적 링크라 로드할 이미지가 없다. 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
+        // 게임, 키트, GameFramework 는 정적 링크라 로드할 라이브러리가 없다. 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
         (void)catalog;
         (void)resolution;
         return true;
@@ -126,13 +126,13 @@ namespace sw
             listGameModule.push_back( moduleName );
         }
 
-        // 게임 모듈은 이미지만 로드한다(타입 등록까지). 리로드 직후 콜백인 인스턴스 생성은 기동(`initializeGame`)이 등록하고 호출한다.
+        // 게임 모듈은 라이브러리만 로드한다(타입 등록까지). 리로드 직후 콜백인 인스턴스 생성은 기동(`initializeGame`)이 등록하고 호출한다.
         holdReloadSubscription( _pLiveReloadManager->setOnBeforeReload(
             sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &GameModuleManager::onBeforeGameReload, this ) ) );
         holdReloadSubscription( _pLiveReloadManager->setOnReloadFault(
             sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &GameModuleManager::onGameReloadFault, this ) ) );
-        holdReloadSubscription( _pLiveReloadManager->setOnValidateImage(
-            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &GameModuleManager::isGameImageUsable, this ) ) );
+        holdReloadSubscription( _pLiveReloadManager->setOnValidateLibrary(
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &GameModuleManager::isGameLibraryUsable, this ) ) );
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
@@ -319,7 +319,7 @@ namespace sw
             const bool bGameScope = name == sw::config::kTargetGameModule || VectorUtil::contains( _listGameScopeModule, name );
             if ( bGameScope )
             {
-                // 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.
+                // 게임 상태는 새 라이브러리가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.
                 if ( suspendModulesInternal( ModuleScope::Game, true, true, DrainReason::Reload ) == false )
                 {
                     SW_LOG_ERROR( "The game could not serialize its state for the reload — keeping the old game modules running" );
@@ -334,10 +334,10 @@ namespace sw
         return true;
     }
 
-    bool GameModuleManager::isGameImageUsable( void* pLibraryModule ) const
+    bool GameModuleManager::isGameLibraryUsable( void* pLibraryModule ) const
     {
         GameAPI api{};
-        if ( ModuleInstanceUtil::exportAPIFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, GameModuleManagerInternal::kGameSymbols, api ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( pLibraryModule, GameModuleManagerInternal::kGameSymbols, api ) == false )
             return false;
         return api.create != nullptr && api.destroy != nullptr;
     }
@@ -380,7 +380,7 @@ namespace sw
         // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
         // **엔진 전체 대기가 맞다(모듈이 낸 태스크만 기다리지 않는다).** 입구를 한 곳으로 모아 `TaskHandleTracker` 에 올리는 구조는 만들 수 없다:
         // 모듈 코드는 태스크 본문(`emplaceTask` 에 넘기는 델리게이트)으로만 들어오지 않는다. 엔진이 낸 태스크(씬 틱 병렬 일 · `runParallel`)가 가상 함수로
-        // 컴포넌트·델리게이트를 불러 모듈 이미지에 들어가고, 델리게이트는 어디서나 만들어져 어디로나 넘어간다. 낸 쪽 · 델리게이트 주소로 가르면 옛 이미지에
+        // 컴포넌트·델리게이트를 불러 모듈 라이브러리에 들어가고, 델리게이트는 어디서나 만들어져 어디로나 넘어간다. 낸 쪽 · 델리게이트 주소로 가르면 옛 라이브러리에
         // 들어가는 태스크를 놓쳐 언로드 뒤 해제된 코드를 실행한다. 그래서 영구 태스크는 두지 않는 것이 계약이다(엔진 소스에는 없다). 있으면 제한 시간 뒤
         // 아래 오류가 도는 태스크 이름과 함께 드러낸다.
         if ( engine::areEngineServicesBound() )
@@ -441,7 +441,7 @@ namespace sw
         }
 #else
         // Shipping 은 게임을 정적으로 링크하므로(위 분기) 테이블이 어긋날 수 없다. 대조는 동적 경로에서만 한다.
-        if ( ModuleInstanceUtil::exportAPIFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, GameModuleManagerInternal::kGameSymbols, _gameAPI ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( pLibraryModule, GameModuleManagerInternal::kGameSymbols, _gameAPI ) == false )
             return false;
 #endif
 
@@ -453,7 +453,7 @@ namespace sw
 
     void GameModuleManager::suspendModules( ModuleScope scope, bool bReleaseAPITable, DrainReason reason )
     {
-        // 종료, RHI 교체, 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 이미지가 없다. 저장에 실패해도 언로드를 막지 않는다.
+        // 종료, RHI 교체, 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 라이브러리가 없다. 저장에 실패해도 언로드를 막지 않는다.
         (void)suspendModulesInternal( scope, bReleaseAPITable, false, reason );
     }
 

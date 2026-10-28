@@ -4,7 +4,7 @@
 
 #if !defined( SW_SHIPPING )
     #include "Core/File/FileUtil.h"
-    #include "Core/Module/ModuleImageUtil.h"
+    #include "Core/Module/ModuleLibraryUtil.h"
 
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Module/ModuleTypeRegistry.h"
@@ -33,8 +33,8 @@ namespace sw
             template <typename TEntryFn, typename TCall>
             [[nodiscard]] static bool callEditorModuleEntry( const ModuleAPISymbols& symbols, const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
             {
-                const string modulePath     = ModuleImageUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-                void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
+                const string modulePath     = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+                void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadDynamicLibrary( modulePath ) : nullptr;
                 if ( pLibraryModule == nullptr )
                 {
                     SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
@@ -47,7 +47,7 @@ namespace sw
                 bool bSucceeded = false;
                 if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
                 {
-                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
+                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
                     if ( pfnEntry == nullptr )
                         SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
                     else
@@ -60,7 +60,7 @@ namespace sw
 
                 engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
                 // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
-                (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
+                (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, pLibraryModule );
                 return bSucceeded;
             }
         };

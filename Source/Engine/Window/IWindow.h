@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/DelegateSlot.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Window/CursorShape.h"
@@ -312,12 +312,12 @@ namespace sw
         [[nodiscard]] bool tryBeginClose();
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 처리기(메시지, 크기, 닫기)를 해제하고, 해제한 개수를 반환합니다.
-         * @details 창은 App 이 소유해 모듈보다 오래 산다. 핫 리로드가 모듈 이미지를 언로드하기 전에 부른다. 에디터는 닫기 처리기를 등록한다.
+         * @details 창은 App 이 소유해 모듈보다 오래 산다. 핫 리로드가 모듈 라이브러리를 언로드하기 전에 부른다. 에디터는 닫기 처리기를 등록한다.
          */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief `removeCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();
@@ -401,7 +401,7 @@ namespace sw
         uint32 _minClientHeight; /**< 위와 같습니다(세로). */
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "window handlers" }, ModuleUnloadFunction::create<&IWindow::onModuleUnloading>( this ) ) };
+        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "window handlers" }, ModuleUnloadFunction::create<&IWindow::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

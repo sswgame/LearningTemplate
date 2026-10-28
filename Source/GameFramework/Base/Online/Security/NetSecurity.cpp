@@ -33,7 +33,7 @@ namespace sw
         };
 
         /**
-         * @brief GameFramework 가 올라와 있는 동안 패치 서명 신뢰 설정의 제공자 함수 칸(`PackPatchTrustSource`)을 채웁니다. 모듈 이미지가 올라올 때(정적 초기화)
+         * @brief GameFramework 가 올라와 있는 동안 패치 서명 신뢰 설정의 제공자 함수 칸(`PackPatchTrustSource`)을 채웁니다. 모듈 라이브러리가 올라올 때(정적 초기화)
          *        채우고 내려갈 때 자기 함수만 비운다 - Engine 은 OpenSSL 을 링크하지 않으므로 칸으로만 제공자를 받는다.
          */
         struct PackPatchProviderRegistrar

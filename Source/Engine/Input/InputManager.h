@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -90,8 +90,8 @@ namespace sw
     /**
      * @class InputManager
      * @brief 다형 IInputDevice 를 등록하고 관리하며, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
-     * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)과 모듈이 등록한 장치를 가지므로 `ModuleImageUtil::registerUnloadHandler` 를 구현한다.
-     *          모듈 이미지를 언로드하기 전에 그 범위의 콜백을 해제하고, 그 범위에 vtable 이 있는 장치를 등록에서 제거한다(`onModuleUnloading`).
+     * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)과 모듈이 등록한 장치를 가지므로 `ModuleLibraryUtil::registerUnloadHandler` 를 구현한다.
+     *          모듈 라이브러리를 언로드하기 전에 그 범위의 콜백을 해제하고, 그 범위에 vtable 이 있는 장치를 등록에서 제거한다(`onModuleUnloading`).
      */
     class SW_API InputManager final : public ISubsystem
     {
@@ -213,7 +213,7 @@ namespace sw
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백(이 관리자의 콜백 네 개와 장치별 콜백)을 해제하고, vtable 이 그 범위에 있는 장치를 등록에서 제거합니다.
          * @details 장치 소멸자는 아직 로드되어 있는 그 이미지의 코드이므로 지금 제거해야 한다. 해제한 개수(콜백 + 장치)를 반환한다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
 
         bool wasAnyInputPressed() const;
         /**
@@ -464,7 +464,7 @@ namespace sw
         [[maybe_unused]] uint8                    _reserved              : 1;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "input callbacks" }, ModuleUnloadFunction::create<&InputManager::onModuleUnloading>( this ) ) };
+        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "input callbacks" }, ModuleUnloadFunction::create<&InputManager::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

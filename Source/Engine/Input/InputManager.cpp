@@ -141,9 +141,9 @@ namespace sw
         return true;
     }
 
-    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
     {
-        (void)outKeepImageMapped;
+        (void)outKeepLibraryMapped;
         uint32 releasedCount{ 0 };
         releasedCount += _onActiveDeviceChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
         releasedCount += _onGamepadConnectionChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
@@ -157,7 +157,7 @@ namespace sw
         vector<IInputDevice*> listModuleDevice;
         for ( const unique_ptr<IInputDevice>& pDevice : _listDevice )
         {
-            if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
+            if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
                 listModuleDevice.push_back( pDevice.get() );
             else
                 releasedCount += pDevice->removeCodeWithin( pBegin, pEnd );

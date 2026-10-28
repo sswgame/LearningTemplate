@@ -1,12 +1,12 @@
 /**
  * @file ModuleManager/ModuleInstanceUtil.h
- * @brief 모듈 이미지에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorModuleManager`)가 같은 절차를 씁니다.
+ * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorModuleManager`)가 같은 절차를 씁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
@@ -19,7 +19,7 @@ namespace sw
 
     /**
      * @struct ModuleAPISymbols
-     * @brief 모듈 이미지에서 API 표를 받는 데 쓰는 심볼 이름입니다. 에디터 · 게임이 같은 절차를 이 이름만 바꿔 씁니다.
+     * @brief 모듈 라이브러리에서 API 표를 받는 데 쓰는 심볼 이름입니다. 에디터 · 게임이 같은 절차를 이 이름만 바꿔 씁니다.
      */
     struct ModuleAPISymbols
     {
@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @struct ModuleInstanceUtil
-     * @brief 모듈 이미지 → API 표 → 인스턴스의 공통 절차입니다. 내리는 순서(타입 등록 해제 뒤 서비스 떼기)가 에디터 · 게임에서 갈라지지 않게 한 곳에 둡니다.
+     * @brief 모듈 라이브러리 → API 표 → 인스턴스의 공통 절차입니다. 내리는 순서(타입 등록 해제 뒤 서비스 떼기)가 에디터 · 게임에서 갈라지지 않게 한 곳에 둡니다.
      */
     struct ModuleInstanceUtil
     {
@@ -48,14 +48,14 @@ namespace sw
         static bool matchesModuleABI( void* pLibraryModule, const ModuleAPISymbols& symbols )
         {
             const PFN_GetModuleAbiVersion pfnVersion =
-                reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
+                reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
             if ( pfnVersion == nullptr || pfnVersion() != kModuleABIVersion )
             {
                 SW_LOG_ERROR( "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );
                 return false;
             }
 
-            const PFN_GetModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
+            const PFN_GetModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
             if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleABIStamp ) == false )
             {
                 SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );
@@ -65,16 +65,16 @@ namespace sw
         }
 
         /**
-         * @brief 모듈 이미지의 ABI 를 대조하고 API 표를 받습니다(에디터 · 게임 공통). 받지 못하면 @p outAPI 는 빈 표입니다.
-         * @details 리로드 전 검사(`is*ImageUsable`)와 바인딩(`bind*API`)이 같은 절차를 씁니다.
+         * @brief 모듈 라이브러리의 ABI 를 대조하고 API 표를 받습니다(에디터 · 게임 공통). 받지 못하면 @p outAPI 는 빈 표입니다.
+         * @details 리로드 전 검사(`is*LibraryUsable`)와 바인딩(`bind*API`)이 같은 절차를 씁니다.
          */
         template <typename TAPI, typename TExportFn>
-        [[nodiscard]] static bool exportAPIFromImage( void* pLibraryModule, const ModuleAPISymbols& symbols, TAPI& outAPI )
+        [[nodiscard]] static bool exportAPIFromLibrary( void* pLibraryModule, const ModuleAPISymbols& symbols, TAPI& outAPI )
         {
             outAPI = {};
             if ( pLibraryModule == nullptr || matchesModuleABI( pLibraryModule, symbols ) == false )
                 return false;
-            const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
+            const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
             if ( pfnExport == nullptr || pfnExport( &outAPI ) == false )
             {
                 outAPI = {};

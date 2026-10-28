@@ -12,7 +12,7 @@
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -52,15 +52,15 @@ namespace sw
         struct GlobalLogListenerUnloadListener final
         {
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
             {
-                (void)outKeepImageMapped;
+                (void)outKeepLibraryMapped;
                 return Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             }
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "log listeners" }, ModuleUnloadFunction::create<&GlobalLogListenerUnloadListener::onModuleUnloading>( this ) ) };
+            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "log listeners" }, ModuleUnloadFunction::create<&GlobalLogListenerUnloadListener::onModuleUnloading>( this ) ) };
         };
 
         GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;

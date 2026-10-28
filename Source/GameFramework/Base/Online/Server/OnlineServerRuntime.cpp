@@ -196,7 +196,7 @@ namespace sw
             vector<const utf8*>          _listDependency; ///< 이 노드가 살아 있는 동안 컬렉션이 읽는다
             OnlineServerKitContext&      _context;
             string&                      _error; ///< 런타임의 기동 오류 칸(컬렉션 오류는 어느 노드인지만 적는다)
-            const utf8*                  _pName; ///< 팩토리의 이름(키트 모듈 이미지의 상수, 노드보다 오래 산다)
+            const utf8*                  _pName; ///< 팩토리의 이름(키트 모듈 라이브러리의 상수, 노드보다 오래 산다)
         };
     } // namespace
 } // namespace sw

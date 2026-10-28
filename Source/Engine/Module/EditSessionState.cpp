@@ -7,7 +7,7 @@ namespace sw
     EditSessionState::EditSessionState()
         : _snapshot{}
         , _bStored{ false }
-        , _bModuleImageKept{ false }
+        , _bModuleLibraryKept{ false }
     {
     }
 

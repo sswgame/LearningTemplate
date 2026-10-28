@@ -98,7 +98,7 @@ namespace sw::editor
         void registerDefaultPopups();
         /** @brief 등록 목록과 맞춥니다. 새 줄은 만들고 사라진 줄의 팝업은 지웁니다. 세대가 같으면 바로 돌아갑니다. */
         void syncWithRegistry();
-        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 팝업을 지웁니다(열려 있으면 닫힌 채로 사라진다). 지운 수를 돌려줍니다. */
+        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 라이브러리) 안인 팝업을 지웁니다(열려 있으면 닫힌 채로 사라진다). 지운 수를 돌려줍니다. */
         uint32 releasePopupsWithin( const void* pBegin, const void* pEnd );
         void   clear();
 

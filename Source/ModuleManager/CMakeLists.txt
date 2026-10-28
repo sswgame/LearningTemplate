@@ -16,8 +16,8 @@ file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.h
 # 핫 리로드 파일 목록은 여기 한 곳이 정본이다. 배포 제외 정규식도, SmokeTest 가 Dev 에서 가져가는 소스도(전역 속성
 # `SW_MODULEMANAGER_HOT_RELOAD_SOURCES`) 이 목록에서 나온다 — 파일을 더하면 이 줄만 고친다.
 set(swHotReloadNames
-	LiveReloadManager ModuleDependencyGraph ModuleShadowCopy DeferredImageUnloadQueue
-	ModuleImagePatch ModuleCallGuard ShadowCopyName)
+	LiveReloadManager ModuleDependencyGraph ModuleShadowCopy DeferredLibraryUnloadQueue
+	ModuleLibraryPatch ModuleCallGuard ShadowCopyName)
 set(swHotReloadSources "")
 foreach(swName IN LISTS swHotReloadNames)
 	list(APPEND swHotReloadSources "${CMAKE_CURRENT_SOURCE_DIR}/${swName}.cpp")

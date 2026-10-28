@@ -166,7 +166,7 @@ namespace sw::engine
             fileIOSettings._pTaskManager = pTaskManager;
             startup.addSubsystem( sw::make_unique<AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
         }
-        // 모듈 이미지 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
+        // 모듈 라이브러리 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
         startup.addSubsystem( sw::make_unique<ModuleUnloadStageSubsystem>( &startup ) );
         startup.addSubsystem( sw::make_unique<ModuleLoadStageSubsystem>( &startup ) );
 #if defined( SW_WITH_CLIENT_CODE )

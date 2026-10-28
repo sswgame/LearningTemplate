@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
@@ -176,7 +176,7 @@ namespace sw::editor
         for ( size_t index = _listPanel.size(); index-- > 0; )
         {
             EditorPanelEntry& entry = _listPanel[index];
-            if ( ModuleImageUtil::isAddressWithin( entry._pRegistration, pBegin, pEnd ) == false )
+            if ( ModuleLibraryUtil::isAddressWithin( entry._pRegistration, pBegin, pEnd ) == false )
                 continue;
             if ( entry._pInstance != nullptr )
             {

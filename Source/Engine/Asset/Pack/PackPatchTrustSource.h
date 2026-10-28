@@ -3,7 +3,7 @@
  * @brief 패치 목록 서명의 신뢰 설정을 기동 앞에서 만드는 자리입니다 — 엔진 설정의 공개 키와 암호 제공자 함수 칸을 묶습니다(`PackPatchTrust`).
  * @details 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 은 링크하지 않는다. 그래서 Engine 이 **함수 칸**(`PackPatchProviderGetter`)을 하나 두고,
  *          GameFramework 가 모듈이 올라올 때(정적 등록자의 생성자) `NetSecurity::getProvider` 로 칸을 채우고 내려갈 때 비운다. 시작 마운트(`AssetManager::mountStartupPacks`)와
- *          패치 만들기(`-make-patch`)가 모두 같은 칸에서 제공자를 받는다 — 게임 인스턴스가 서기 전이어도 닿는다(모듈 이미지는 에셋 마운트보다 먼저 올라온다).
+ *          패치 만들기(`-make-patch`)가 모두 같은 칸에서 제공자를 받는다 — 게임 인스턴스가 서기 전이어도 닿는다(모듈 라이브러리는 에셋 마운트보다 먼저 올라온다).
  *          - **공개 키**는 엔진 설정(`EngineConfig::_patchTrustPublicKeyXHex` · `Y`, ES256 P-256 의 x · y 각 64 자리 16 진)이다. 둘 다 비면 서명을 요구하지 않는다(스팀처럼 스토어가
  *            무결성을 맡는 채널 — 배포가 정한다). 하나만 있거나 형식이 틀리면 오류다.
  *          - 서명을 요구하는데(키가 있는데) 칸이 비었으면 오류로 멈춘다 — 서명을 못 보는 채로 패치를 올리는 폴백은 없다.

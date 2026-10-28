@@ -73,7 +73,7 @@ namespace sw
          * @return 올라간 종류 수입니다(이름이 겹치는 등록은 오류를 남기고 세지 않습니다).
          */
         uint32 registerModuleKinds( string_view moduleName, const AssetDataKindRegistrar* pHead );
-        /** @brief @p moduleName 이 올린 종류를 모두 뺍니다(모듈 이미지를 내리기 전에). 뺀 수를 반환합니다. */
+        /** @brief @p moduleName 이 올린 종류를 모두 뺍니다(모듈 라이브러리를 내리기 전에). 뺀 수를 반환합니다. */
         uint32 unregisterModuleKinds( string_view moduleName );
         /** @brief 이름(대소문자 무시)으로 종류를 찾습니다. */
         const AssetDataKind* findByLabel( string_view label ) const;
@@ -96,7 +96,7 @@ namespace sw
     /**
      * @struct AssetDataKindRegistrar
      * @brief `SW_RESOURCE_DATA_KIND` 가 두는 정적 등록자입니다 — 만들 때 링크 때 목록(`getHead`)에 달리기만 합니다. 레지스트리에는 모듈을 올린 쪽이 걷어 올립니다.
-     * @details 모듈 이미지가 사라지면 등록자도 함께 사라지므로, 걷지 않은 채 이미지를 내리면 목록에 죽은 등록자가 남는다.
+     * @details 모듈 라이브러리가 사라지면 등록자도 함께 사라지므로, 걷지 않은 채 이미지를 내리면 목록에 죽은 등록자가 남는다.
      *          모듈을 올리는 길(`engine::registerModuleTypes`, 핫 리로드의 `ModuleRegistrarHeads`)이 올릴 때마다 목록을 비운다 — 타입 등록자(`TypeRegistrar`)와 같은 규칙이다.
      */
     struct SW_API AssetDataKindRegistrar
