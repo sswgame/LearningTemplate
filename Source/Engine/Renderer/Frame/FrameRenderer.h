@@ -1351,7 +1351,7 @@ namespace sw
         OcclusionTileMailbox    _occlusionMailbox;
         OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount];
         uint64                  _occlusionReadbackSerial;
-        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u3 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
+        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
         GpuAssertMonitor _gpuAssert;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
         GpuNanCheck                 _nanCheck;

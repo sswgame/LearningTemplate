@@ -4,12 +4,12 @@
  * 컴퓨트 셰이더가 조건이 틀리면 (조건 id, 값 하나, 스레드 식별)을 UAV 버퍼에 원자적으로 적는다. CPU 가 몇 프레임 뒤 비동기 되읽기로 읽어 로그로 낸다
  * (C++: Source/Engine/Graphics/Debug/GpuAssert.h `GpuAssertMonitor`). 버퍼 배치와 id 표는 gpuassertids.hlsli.
  *
- * 쓰는 법(컴퓨트 셰이더에서만 — 슬롯 u3 를 쓴다):
+ * 쓰는 법(컴퓨트 셰이더에서만 — 슬롯 u4 를 쓴다):
  *   #include "gpuassert.hlsli"                       // common.hlsli 뒤
  *   SW_GPU_ASSERT_THREAD( dispatchThreadId.x );      // 진입점 처음에 한 번 — 기록에 실리는 스레드 식별
  *   SW_GPU_ASSERT( level < levelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );
  *
- * **퍼뮤테이션이다.** 셰이더에 `SW_GPU_ASSERT_ENABLED` 가 정의될 때만 버퍼를 선언하고 검사를 낸다. 아니면 두 매크로가 비어 코드도 바인딩(u3)도 없다 — Shipping 은 그 define 을
+ * **퍼뮤테이션이다.** 셰이더에 `SW_GPU_ASSERT_ENABLED` 가 정의될 때만 버퍼를 선언하고 검사를 낸다. 아니면 두 매크로가 비어 코드도 바인딩(u4)도 없다 — Shipping 은 그 define 을
  * 붙이지 않는다(`GpuAssertMonitor::isRequested`). 조건 식도 평가하지 않으므로 부작용 있는 식을 넣지 않는다.
  */
 

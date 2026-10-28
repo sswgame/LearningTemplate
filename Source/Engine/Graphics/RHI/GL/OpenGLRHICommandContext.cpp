@@ -430,7 +430,7 @@ namespace sw
 
         if ( record._texture != 0 )
         {
-            // RW 텍스처. u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
+            // RW 텍스처. u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
             if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
             {
                 SW_LOG_WARNING( "bindComputeUav: tried to bind an RW texture to a buffer slot (u%#).", slot );

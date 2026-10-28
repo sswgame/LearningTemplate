@@ -163,7 +163,7 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
         /**
-         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGpuAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u3 에 건다.
+         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGpuAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
          * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GpuAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
         static constexpr uint32 kGpuAssertTarget = SW_BIT( 20 );

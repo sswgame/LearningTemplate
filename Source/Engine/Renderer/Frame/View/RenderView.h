@@ -134,6 +134,12 @@ namespace sw
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );
 
+    /**
+     * @brief 배치 PSO 를 고르는 데 쓰는 보기 모드입니다. 셰이더 define 도 채우기 · 블렌드 변경도 없는 모드(`MarkerSlots`)는 Lit 과 같은 PSO 이므로 Lit 으로 접습니다.
+     * @details 접지 않으면 같은 PSO 를 키만 달리해 하나 더 만들었다(`FrameRenderer::collectFrameViewModeMask` · `psoForBatch` 가 이 값으로 키를 만든다).
+     */
+    inline RenderViewMode getRenderViewModePipelineMode( RenderViewMode viewMode );
+
     /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 번호로 들어온 값(`Count` 표식, 에디터 · 콘솔이 넣은 `gv_viewMode`)은 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
     inline bool isRenderViewModeIndex( int32 value )
     {
@@ -149,6 +155,13 @@ namespace sw
         const uint8 index = static_cast<uint8>( viewMode );
         SW_ASSERT( index < static_cast<uint8>( RenderViewMode::Count ) );
         return kArrRenderViewModeInfo[index];
+    }
+
+    inline RenderViewMode getRenderViewModePipelineMode( RenderViewMode viewMode )
+    {
+        const RenderViewModeInfo& info               = getRenderViewModeInfo( viewMode );
+        const bool                bSamePipelineAsLit = info._pShaderDefine == nullptr && info._bWireframe == false && info._bAdditiveNoDepth == false && info._bOverlay == false;
+        return bSamePipelineAsLit ? RenderViewMode::Lit : viewMode;
     }
 } // namespace sw
 

@@ -5,12 +5,12 @@
  *          조건 id 표는 `gpuassertids.hlsli` 하나다 — HLSL 과 이 파일이 같은 파일을 include 하므로 번호를 두 번 적지 않는다. id 별 심각도 · 메시지는 `GpuAssert.cpp` 의 표가 정한다.
  *
  *          **퍼뮤테이션이다.** 켜는 스위치는 `-gv_gpuAssert=1`(기본 끔)이고, 켜면 assert 를 가진 컴퓨트 패스(표의 `RenderPassTraitFlag::kGpuAssertTarget`)가 셰이더에
- *          `SW_GPU_ASSERT_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서 이 버퍼를 u3 에 건다. Shipping 은 `isRequested` 가 늘 거짓이라
+ *          `SW_GPU_ASSERT_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서 이 버퍼를 u4 에 건다. Shipping 은 `isRequested` 가 늘 거짓이라
  *          define 도 PSO 변형도 바인딩도 생기지 않는다. 필수 값(버퍼)을 만들지 못하면 오류로 멈춘다 — assert 가 켜진 PSO 를 버퍼 없이 돌리는 길은 없다.
  *
  *          버퍼는 상한 있는 링이다. 셰이더가 누적 카운터를 원자적으로 올려 순번을 받고 순번 % 용량 칸에 적는다(지우지 않는다 — 클리어 패스가 필요 없다). CPU 는 지난번 읽은 누적 수와의 차에서
  *          한 바퀴 넘어 덮인 수를 **버려진 수**로 세어 알린다.
- * @note 네 백엔드 모두 컴퓨트 UAV 구조 버퍼 슬롯 u3 로 바인딩된다(DX11 포함 — 컴퓨트 UAV 는 DX11 에서도 된다). 컴퓨트 능력(`RHICapabilities::_bCompute`)이 없는 백엔드는 이 기능을 쓰지 않는다.
+ * @note 네 백엔드 모두 컴퓨트 UAV 구조 버퍼 슬롯 u4 로 바인딩된다(DX11 포함 — 컴퓨트 UAV 는 DX11 에서도 된다). 컴퓨트 능력(`RHICapabilities::_bCompute`)이 없는 백엔드는 이 기능을 쓰지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -84,7 +84,7 @@ namespace sw
         /** @brief 버퍼가 만들어져 있는지입니다. */
         bool isActive() const { return _buffer.isValid(); }
 
-        /** @brief assert 가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. 버퍼를 UAV 상태로 두고 u3 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
+        /** @brief assert 가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. 버퍼를 UAV 상태로 두고 u4 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
         void bind( IRHICommandList& commands );
         /** @brief 이 프레임의 assert 디스패치가 모두 끝난 뒤 한 번 부릅니다. 링 전체를 읽기 버퍼로 복사하는 명령을 넣습니다(프레임 번호가 요청의 tag 다). */
         void requestReadback( IRHICommandList& commands );

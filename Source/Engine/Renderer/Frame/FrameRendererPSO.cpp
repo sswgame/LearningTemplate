@@ -485,7 +485,7 @@ namespace sw
         // 겹침 모드(ShadedWireframe)는 배치를 Lit 으로 한 번 더 그리므로 Lit 변형도 모은다.
         auto viewModeBits = []( RenderViewMode viewMode ) -> uint32
         {
-            const uint32 bit = 1u << static_cast<uint32>( viewMode );
+            const uint32 bit = 1u << static_cast<uint32>( getRenderViewModePipelineMode( viewMode ) );
             return getRenderViewModeInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
         };
         uint32 viewModeMask = viewModeBits( _mainView._settings._viewMode );
@@ -658,6 +658,7 @@ namespace sw
         // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
+        viewMode                   = getRenderViewModePipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
         const bool bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
         const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false;
         if ( bDefaultPassPSO )

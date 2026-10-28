@@ -386,7 +386,7 @@ namespace sw
                 // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
                 addReserved( list, s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
             }
-            // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
+            // 컴퓨트 RW 텍스처 슬롯 u5..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
             static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUavSlotCount; ++slotIndex )
             {
@@ -620,8 +620,21 @@ namespace sw
                         report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
                                                       to_string( reflectedA._bindPoint ) + " 하나로 취급됩니다" );
                     }
+                    checkAssertSlot( reflectedA );
                     checkCollisionsAfter( listReflected, indexA );
                 }
+            }
+
+            /** @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GpuAssertRW) 전용이고, 그 링은 u4 에만 놓인다. */
+            void checkAssertSlot( const Internal::ReflectedBinding& reflected )
+            {
+                if ( reflected._space != 0 || Internal::registerClassOf( reflected._kind ) != Internal::RegisterClass::UnorderedAccess )
+                    return;
+                const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUavBinding0 : 0u );
+                const bool   bAssertName = reflected._name == shaderslot::resname::kGpuAssertRing;
+                const bool   bAssertSlot = reflected._bindPoint == bindOffset + shaderslot::kComputeAssertUav;
+                if ( bAssertName != bAssertSlot )
+                    report( reflected._name, "컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GpuAssertRW) 전용이고 그 링은 u4 에만 놓입니다" );
             }
 
             /**

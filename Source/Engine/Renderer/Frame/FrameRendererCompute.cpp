@@ -266,7 +266,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( programSrv, 1 );
         _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        _gpuAssert.bind( *_pCmd ); // meshmorph.hlsl 의 assert(u3) — assert 변형 PSO 일 때만 버퍼가 있다
+        _gpuAssert.bind( *_pCmd ); // meshmorph.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
             _pCmd->dispatchCompute( morphGroups, 1, 1 );
@@ -567,7 +567,7 @@ namespace sw
         {
             _pCmd->bindComputeUav( view._visibleInstances._uav, 2 );
         }
-        _gpuAssert.bind( *_pCmd ); // gpucull.hlsl 의 assert(u3) — assert 변형 PSO 일 때만 버퍼가 있다
+        _gpuAssert.bind( *_pCmd ); // gpucull.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
         const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
         if ( groups > 0 )
