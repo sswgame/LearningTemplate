@@ -502,6 +502,17 @@ namespace sw
         return submit._result;
     }
 
+    void Texture2D::detachRHI( Texture2DRetiredResource& outRetired )
+    {
+        // 렌더 타깃은 올리는 중인 업로드가 없다(`createRenderTarget` 은 제출하지 않는다) — 위쪽 밉 교체의 새 텍스처가 있으면 이 함수의 대상이 아니다.
+        SW_ASSERT( _upgrade._handle == 0 );
+        outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
+        outRetired._srv    = _srv.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel );
+        _uploadTicket      = RHITransferTicket{};
+        _pDevice           = nullptr;
+        _streamedMipCount  = 0;
+    }
+
     void Texture2D::forgetRHI( IRHIDevice* pDevice )
     {
         if ( _pDevice != pDevice )

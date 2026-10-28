@@ -4891,17 +4891,6 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBa
 }
 
 /**
- * @brief [RenderPassGPUTest] 화면 크기를 알린 텍스처의 위쪽 밉이 읽힌 차례보다 먼저 올라온다 — 4 백엔드
- * @details 밉 요청 우선순위(계획 PreloadAndLod P10). 먼저 읽힌 A 와 나중에 읽힌 B 가 둘 다 아래쪽 밉만 올린 채 줄에 있을 때, B 의 화면 크기를 알리면 한 번의 `updateStreaming`
- *          (한 장)이 B 를 올리고 A 는 아직 아래쪽 밉이다. 알리지 않으면 읽힌 순서(A 먼저)가 옛 동작이다.
- */
-SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScreenFirst, test::listRHIBackendParameter, 0.4 )
-{
-    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    constexpr const utf8* kFirstLoaded  = "engine/textures/particles/kenney_particle/trace_07.dds";
-    constexpr const utf8* kSecondLoaded = "engine/textures/particles/kenney_particle/trace_01.dds";
-
-/**
  * @brief [RenderPassGPUTest] 펌프(`completePendingLoads`)만으로 비동기 텍스처가 제출 → 폴링 → 공개의 세 단계를 거쳐 `Ready` 가 된다 — 4 백엔드
  * @details RhiAsyncUploads U8. `wait()` 를 부르지 않는다 — 제출한 프레임에는 `Ready` 가 아닐 수 있고(DX12 · Vulkan 은 한 프레임 이상), 이후 펌프가 `pollTransfer` 로 `Complete` 를
  *          보고 bindless 에 등록한다. `Ready` 가 되기 전에는 `get()` 이 비어 있고 `Ready` 가 된 뒤에는 SRV 가 유효하다.
@@ -4944,6 +4933,17 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AsyncTextureBecomesReadyThroughTh
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the texture pump test" );
 }
+
+/**
+ * @brief [RenderPassGPUTest] 화면 크기를 알린 텍스처의 위쪽 밉이 읽힌 차례보다 먼저 올라온다 — 4 백엔드
+ * @details 밉 요청 우선순위(계획 PreloadAndLod P10). 먼저 읽힌 A 와 나중에 읽힌 B 가 둘 다 아래쪽 밉만 올린 채 줄에 있을 때, B 의 화면 크기를 알리면 한 번의 `updateStreaming`
+ *          (한 장)이 B 를 올리고 A 는 아직 아래쪽 밉이다. 알리지 않으면 읽힌 순서(A 먼저)가 옛 동작이다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScreenFirst, test::listRHIBackendParameter, 0.4 )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kFirstLoaded  = "engine/textures/particles/kenney_particle/trace_07.dds";
+    constexpr const utf8* kSecondLoaded = "engine/textures/particles/kenney_particle/trace_01.dds";
 
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -9454,6 +9454,8 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenW
         SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
         SW_EXPECT_EQUAL( 128u, width );
         SW_EXPECT_TRUE_MSG( drawn >= 64u * 64u - 128u && drawn <= 64u * 64u + 128u, ( label + "새 크기의 빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
+        // 크기를 바꿀 때 옛 텍스처는 기다리지 않고 지연 해제 줄로 갔다(RhiAsyncUploads U13) — 게임 스레드가 프레임마다 하는 해제를 여기서 한다. 옛 SRV 를 읽는 프레임이 이미 끝났다.
+        sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().releaseRetiredTextures( device.get() );
         renderer.shutdown();
     }
     if ( sweep.getReadyCount() == 0 )

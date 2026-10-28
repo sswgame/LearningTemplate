@@ -135,6 +135,12 @@ namespace sw
         [[nodiscard]] Texture2DUploadStatus finishUpgradeResidency( IRHIDevice* pDevice, bool bBlocking, Texture2DRetiredResource& outRetired );
         /** @brief 위쪽 밉 업로드를 제출했고 아직 `finishUpgradeResidency` 가 끝내지 않았으면 true 입니다. */
         bool hasUpgradeInFlight() const { return _upgrade._ticket.isValid(); }
+        /**
+         * @brief 가진 GPU 텍스처 · SRV 를 해제하지 않고 @p outRetired 로 내놓고 이 객체를 빈 상태(디바이스 없음)로 만듭니다(렌더 타깃 크기 변경 — `TextureCache::resizeRenderTarget`).
+         * @details `releaseRHI` 와 달리 핸들을 반환하지 않는다. 내놓은 자원은 부르는 쪽이 지연 해제 줄(`TextureCache::releaseRetiredTextures`)에 넘겨, 이미 만든 패킷이 끝난 뒤에 해제한다.
+         *          크기 · 포맷 · 렌더 타깃 표시는 남겨 다시 만들 때 쓴다(`releaseRHI` 와 같다). 렌더 타깃 전용이다 — 위쪽 밉을 올리는 중인 텍스처에는 부르지 않는다(assert).
+         */
+        void detachRHI( Texture2DRetiredResource& outRetired );
         /** @brief 품질 설정이 남긴 밉 사슬이 모두 GPU 에 있으면 true 입니다(스트리밍이 아직 위쪽 밉을 올리지 않았으면 false). */
         bool isFullyResident() const { return _streamedMipCount == 0; }
         /** @brief 아직 GPU 에 없는 위쪽 밉 수입니다(품질 설정이 버린 밉은 세지 않는다). */
