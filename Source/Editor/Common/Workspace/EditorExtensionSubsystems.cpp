@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 namespace sw::editor
 {
@@ -69,7 +69,7 @@ namespace sw::editor
         uint32 releasedCount{ 0 };
         for ( size_t index = _listEntry.size(); index-- > 0; )
         {
-            if ( IModuleUnloadListener::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
+            if ( ModuleImageUtil::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
                 continue;
             releaseAt( index );
             ++releasedCount;

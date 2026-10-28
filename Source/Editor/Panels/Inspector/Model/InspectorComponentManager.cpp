@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
@@ -129,7 +129,7 @@ namespace sw::editor
         resetTypeCache( _cacheTypeGeneration ); // 지운 확장을 가리키는 타입별 목록을 버린다
         for ( size_t index = _listEntry.size(); index-- > 0; )
         {
-            if ( IModuleUnloadListener::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
+            if ( ModuleImageUtil::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
                 continue;
             _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index ) );
             ++releasedCount;

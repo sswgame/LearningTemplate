@@ -232,7 +232,7 @@ namespace sw
      * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 조각 하나라도 틀리면(모르는 종류 · 범위 밖 값) 그 레이아웃 전체를 넣지 않는 오류다 — 조각을 빼고 이으면 다른 트랙이 된다.
      */
-    class SW_KIT_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>, public GameCatalog<CoasterLayoutDef>
+    class SW_KIT_API CoasterLayoutCatalog : public GameCatalog<CoasterLayoutDef, XMLCatalog<CoasterLayoutCatalog>>
     {
         friend class XMLCatalog<CoasterLayoutCatalog>;
 

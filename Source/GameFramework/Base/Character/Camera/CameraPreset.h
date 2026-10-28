@@ -462,7 +462,7 @@ namespace sw
      * @endcode
      * @details 모르는 속성, 원소, 열거자 이름과 범위 밖 값은 오류이고 그 프리셋 · 블렌드 줄을 넣지 않는다.
      */
-    class SW_GF_API CameraPresetCatalog : public XMLCatalog<CameraPresetCatalog>, public GameCatalog<CameraPresetDef>
+    class SW_GF_API CameraPresetCatalog : public GameCatalog<CameraPresetDef, XMLCatalog<CameraPresetCatalog>>
     {
         friend class XMLCatalog<CameraPresetCatalog>;
 

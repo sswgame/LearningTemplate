@@ -36,7 +36,7 @@ namespace sw
      * @brief `<SkirmishUnitModels><Model id="marine" model="craft_speeder_a" width="2.1"/></SkirmishUnitModels>` 를 읽습니다.
      * @details 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. 세 속성은 모두 필수다.
      */
-    class SkirmishUnitModelCatalog : public XMLCatalog<SkirmishUnitModelCatalog>, public GameCatalog<SkirmishUnitModel>
+    class SkirmishUnitModelCatalog : public GameCatalog<SkirmishUnitModel, XMLCatalog<SkirmishUnitModelCatalog>>
     {
         friend class XMLCatalog<SkirmishUnitModelCatalog>;
 

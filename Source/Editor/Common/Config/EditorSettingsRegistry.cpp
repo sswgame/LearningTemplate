@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
@@ -197,7 +197,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() != nullptr && IModuleUnloadListener::isAddressWithin( registration._pInstance, pBegin, pEnd ) )
+            if ( registration._pfnGetType() != nullptr && ModuleImageUtil::isAddressWithin( registration._pInstance, pBegin, pEnd ) )
                 return true;
         }
         return false;

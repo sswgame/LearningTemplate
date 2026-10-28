@@ -157,7 +157,7 @@ namespace sw
         vector<IInputDevice*> listModuleDevice;
         for ( const unique_ptr<IInputDevice>& pDevice : _listDevice )
         {
-            if ( isAddressWithin( findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
+            if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
                 listModuleDevice.push_back( pDevice.get() );
             else
                 releasedCount += pDevice->removeCodeWithin( pBegin, pEnd );

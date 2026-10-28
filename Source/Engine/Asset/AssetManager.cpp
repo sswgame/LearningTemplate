@@ -272,8 +272,8 @@ namespace sw
             if ( isBuiltInAssetCache( pCache ) )
                 continue;
             // 캐시 객체가 모듈의 정적 데이터이거나, 모듈 쪽 클래스라 vtable 이 그 이미지에 있으면 이미지와 함께 사라진다.
-            const bool bObjectWithin = IModuleUnloadListener::isAddressWithin( pCache, pBegin, pEnd );
-            const bool bVtableWithin = IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pCache ), pBegin, pEnd );
+            const bool bObjectWithin = ModuleImageUtil::isAddressWithin( pCache, pBegin, pEnd );
+            const bool bVtableWithin = ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pCache ), pBegin, pEnd );
             if ( bObjectWithin || bVtableWithin )
                 listModuleCache.push_back( pCache );
         }

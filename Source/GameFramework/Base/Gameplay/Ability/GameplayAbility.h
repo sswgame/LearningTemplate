@@ -75,7 +75,7 @@ namespace sw
      *          **스레드**: `onTickAbility` 와 작업은 컴포넌트의 틱(병렬 워커)에서 돈다. 그 안에서 **다른 오브젝트**를 바꿀 때는
      *          `applyEffectSpecToTarget` 처럼 프레임워크가 제공하는 함수를 쓴다. 틱 중이면 이 함수들이 적용을 틱 직후로 미룬다. 오브젝트 생성은 `GameObjectManager::executeOrDeferPostTick` 로 한다.
      *
-     *          **핫 리로드**: 게임 모듈의 어빌리티 인스턴스는 모듈을 언로드하기 전에 컴포넌트가 정리한다(`IModuleUnloadListener`). 모듈을 다시 로드하면
+     *          **핫 리로드**: 게임 모듈의 어빌리티 인스턴스는 모듈을 언로드하기 전에 컴포넌트가 정리한다(`ModuleImageUtil::registerUnloadHandler`). 모듈을 다시 로드하면
      *          컴포넌트의 `_abilitySetID` 가 어빌리티를 다시 부여한다. 코드로 준 어빌리티는 게임이 다시 줘야 한다.
      */
     class SW_GF_API GameplayAbility

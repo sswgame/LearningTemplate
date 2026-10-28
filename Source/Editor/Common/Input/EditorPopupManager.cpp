@@ -3,7 +3,7 @@
 #include "Editor/Common/Input/EditorPopupManager.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
 
@@ -128,7 +128,7 @@ namespace sw::editor
         uint32 releasedCount{ 0 };
         for ( size_t index = _listPopup.size(); index-- > 0; )
         {
-            if ( IModuleUnloadListener::isAddressWithin( _listPopup[index]._pRegistration, pBegin, pEnd ) == false )
+            if ( ModuleImageUtil::isAddressWithin( _listPopup[index]._pRegistration, pBegin, pEnd ) == false )
                 continue;
             _listPopup.erase( _listPopup.begin() + static_cast<ptrdiff_t>( index ) );
             ++releasedCount;

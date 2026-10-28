@@ -230,7 +230,7 @@ namespace sw
 
     void CameraPresetCatalog::clear()
     {
-        GameCatalog<CameraPresetDef>::clear();
+        GameCatalog<CameraPresetDef, XMLCatalog<CameraPresetCatalog>>::clear();
         _listBlendRule.clear();
         _defaultBlend = BlendCurveDef{};
     }

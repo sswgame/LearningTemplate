@@ -67,7 +67,7 @@ namespace sw
      * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
      *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
      */
-    class SW_KIT_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>, public GameCatalog<DeckBattleCardDef>
+    class SW_KIT_API DeckBattleCatalog : public GameCatalog<DeckBattleCardDef, XMLCatalog<DeckBattleCatalog>>
     {
         friend class XMLCatalog<DeckBattleCatalog>;
 

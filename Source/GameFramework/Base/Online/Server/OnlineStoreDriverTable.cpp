@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
          *          비우기는 모두 비교 교환이다 — 칸이 그 함수를 들고 있을 때만 비워, 그사이 새 이미지가 묶은 함수를 지우지 않는다.
          *          구독의 id 는 묶은 함수의 주소다(두 칸의 함수 타입이 달라 한 주소는 한 칸에만 있다).
          */
-        class OnlineStoreDriverSlots final : public IModuleUnloadListener, public SubscriptionSource
+        class OnlineStoreDriverSlots final : public SubscriptionSource
         {
         public:
             static OnlineStoreDriverSlots& get()
@@ -32,10 +32,7 @@ namespace sw
                 return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pCreate ) ) );
             }
 
-            const utf8* getModuleUnloadListenerName() const override { return "online store drivers"; }
-            bool        isReleaseExpected() const override { return true; }
-
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
             {
                 (void)outKeepImageMapped;
                 return releaseWithin( _pCreateServiceStore, pBegin, pEnd ) + releaseWithin( _pCreateEphemeralStore, pBegin, pEnd );
@@ -54,8 +51,7 @@ namespace sw
 
         private:
             OnlineStoreDriverSlots()
-                : IModuleUnloadListener{}
-                , SubscriptionSource{}
+                : SubscriptionSource{}
                 , _pCreateServiceStore{ nullptr }
                 , _pCreateEphemeralStore{ nullptr }
             {
@@ -73,10 +69,14 @@ namespace sw
             static uint32 releaseWithin( atomic<TFunction>& slot, const void* pBegin, const void* pEnd )
             {
                 const TFunction pCreate = slot.load( std::memory_order_acquire );
-                if ( isAddressWithin( reinterpret_cast<const void*>( pCreate ), pBegin, pEnd ) == false )
+                if ( ModuleImageUtil::isAddressWithin( reinterpret_cast<const void*>( pCreate ), pBegin, pEnd ) == false )
                     return 0;
                 return release( slot, pCreate ) ? 1 : 0;
             }
+
+        private:
+            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "online store drivers", true }, ModuleUnloadFunction::create<&OnlineStoreDriverSlots::onModuleUnloading>( this ) ) };
         };
     } // namespace
 } // namespace sw

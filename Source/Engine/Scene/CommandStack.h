@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -31,7 +31,7 @@ namespace sw
      *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
      *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
      */
-    class SW_API CommandStack final : public IModuleUnloadListener, public ISubsystem
+    class SW_API CommandStack final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
@@ -67,7 +67,7 @@ namespace sw
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
-        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `IModuleUnloadListener` 의 주의(vtable 의 집)입니다. */
+        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `ModuleImageUtil::registerUnloadHandler` 의 주의(vtable 의 집)입니다. */
         CommandStack();
 
         /** @brief 명령 스택에 새로운 명령을 추가합니다. undo 와 redo 가 비었거나(트랜잭션 묶음 제외) 실행 중이면 버립니다. */
@@ -132,10 +132,8 @@ namespace sw
          */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief 언로드 리스너 목록의 이름입니다. */
-        const utf8* getModuleUnloadListenerName() const override { return "undo commands"; }
         /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
     private:
         /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */
@@ -163,5 +161,9 @@ namespace sw
         uint32 _transactionDepth;
         bool   _bIsExecuting;
         bool   _bHistoryParked; ///< 보관한 내역이 있다
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "undo commands" }, ModuleUnloadFunction::create<&CommandStack::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

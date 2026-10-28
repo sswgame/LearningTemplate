@@ -11,7 +11,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -85,7 +85,7 @@ namespace sw
      *          화면 스택 밖 미리보기는 `UIOffscreenScreens`, 그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수는 `UICanvasPaintState`,
      *          화면 마커의 화면 핸들과 앵커 표는 `UIScreenMarkers` 가 든다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
      */
-    class SW_API UISystem final : public ISubsystem, public IModuleUnloadListener
+    class SW_API UISystem final : public ISubsystem
     {
     public:
         UISystem();
@@ -402,9 +402,8 @@ namespace sw
         /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다. 기동이 엔진 서비스를 넘기고 테스트는 자기 것을 넘깁니다. nullptr 이면 설정 바인딩이 없습니다. 화면 바인딩은 다시 연결됩니다. */
         void setUserSettings( UserSettingsManager* pSettings );
 
-        const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
         /** @brief vtable 이 [@p pBegin, @p pEnd) 안에 있는 화면과 위젯을 가진 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
     private:
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
@@ -511,5 +510,9 @@ namespace sw
         uint8                    _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
         uint8                    _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
         uint8                    _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "ui screens" }, ModuleUnloadFunction::create<&UISystem::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

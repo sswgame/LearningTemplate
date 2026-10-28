@@ -12,7 +12,7 @@
 #include "Core/LogSink/ILogOutput.h"
 #include "Core/LogSink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -49,15 +49,18 @@ namespace sw
          * @struct GlobalLogListenerUnloadListener
          * @brief 전역 로그 리스너(`Logger::registerGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
          */
-        struct GlobalLogListenerUnloadListener final : public IModuleUnloadListener
+        struct GlobalLogListenerUnloadListener final
         {
-            const utf8* getModuleUnloadListenerName() const override { return "log listeners"; }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
             {
                 (void)outKeepImageMapped;
                 return Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             }
+
+        private:
+            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "log listeners" }, ModuleUnloadFunction::create<&GlobalLogListenerUnloadListener::onModuleUnloading>( this ) ) };
         };
 
         GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;

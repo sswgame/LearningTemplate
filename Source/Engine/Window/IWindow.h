@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/DelegateSlot.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Window/CursorShape.h"
@@ -61,7 +61,7 @@ namespace sw
      *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
      *          include 하지 않는 이유입니다(Engine/Window/IRenderSurface.h).
      */
-    class SW_API IWindow : public IRenderSurface, public IModuleUnloadListener
+    class SW_API IWindow : public IRenderSurface
     {
     public:
         /** @brief 빈 창 인터페이스로 만듭니다. */
@@ -316,10 +316,8 @@ namespace sw
          */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief 언로드 리스너 목록의 이름입니다. */
-        const utf8* getModuleUnloadListenerName() const override { return "window handlers"; }
         /** @brief `removeCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();
@@ -401,5 +399,9 @@ namespace sw
         int32  _restoreY;
         uint32 _minClientWidth;  /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
         uint32 _minClientHeight; /**< 위와 같습니다(세로). */
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "window handlers" }, ModuleUnloadFunction::create<&IWindow::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

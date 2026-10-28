@@ -57,7 +57,7 @@ namespace sw
      *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
      * @endcode
      */
-    class SW_GF_API WeatherCatalog : public XMLCatalog<WeatherCatalog>, public GameCatalog<WeatherDef>
+    class SW_GF_API WeatherCatalog : public GameCatalog<WeatherDef, XMLCatalog<WeatherCatalog>>
     {
         friend class XMLCatalog<WeatherCatalog>;
 

@@ -19,7 +19,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -42,7 +42,7 @@ namespace sw
      * @class AssetManager
      * @brief 에셋 식별자, 스키마, 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API AssetManager final : public IModuleUnloadListener, public ISubsystem, private SubscriptionSource
+    class SW_API AssetManager final : public ISubsystem, private SubscriptionSource
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
@@ -164,13 +164,11 @@ namespace sw
          */
         void warnAboutRemainingModuleCaches() const;
 
-        /** @brief 언로드 리스너 목록에 표시할 이름입니다. */
-        const utf8* getModuleUnloadListenerName() const override { return "asset caches"; }
         /**
          * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 등록하고 제거하지 않은 것)를 레지스트리에서 제거합니다. 비우지는 않습니다.
          *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 로드되어 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();
@@ -203,5 +201,9 @@ namespace sw
         RegistrationList<IAssetCache> _registeredAssetCache;
         /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. */
         ContentSource _contentSource;
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "asset caches" }, ModuleUnloadFunction::create<&AssetManager::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

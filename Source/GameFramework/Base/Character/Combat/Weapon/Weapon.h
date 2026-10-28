@@ -73,7 +73,7 @@ namespace sw
 namespace sw
 {
     /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다. 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. */
-    class SW_GF_API WeaponCatalog : public XMLCatalog<WeaponCatalog>, public GameCatalog<WeaponDef>
+    class SW_GF_API WeaponCatalog : public GameCatalog<WeaponDef, XMLCatalog<WeaponCatalog>>
     {
         friend class XMLCatalog<WeaponCatalog>;
 

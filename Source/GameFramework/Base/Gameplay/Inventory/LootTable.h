@@ -102,7 +102,7 @@ namespace sw
      * @details 결과는 `ItemStackList` 에 추가하며 같은 아이템은 합친다. 테이블 안의 테이블은 8 단계까지만 따라간다. 서로를 참조하는 테이블에서 멈추기 위해서다.
      *          난수는 부르는 쪽이 넘긴다. 시드가 같으면 같은 전리품이 나오므로 리플레이와 테스트에 쓸 수 있다.
      */
-    class SW_GF_API LootCatalog : public XMLCatalog<LootCatalog>, public GameCatalog<LootTableDef>
+    class SW_GF_API LootCatalog : public GameCatalog<LootTableDef, XMLCatalog<LootCatalog>>
     {
         friend class XMLCatalog<LootCatalog>;
 

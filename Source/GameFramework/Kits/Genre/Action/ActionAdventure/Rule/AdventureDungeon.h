@@ -138,7 +138,7 @@ namespace sw
      *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
      *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>`
      */
-    class SW_KIT_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>, public GameCatalog<AdventureDungeonDef>
+    class SW_KIT_API AdventureDungeonCatalog : public GameCatalog<AdventureDungeonDef, XMLCatalog<AdventureDungeonCatalog>>
     {
         friend class XMLCatalog<AdventureDungeonCatalog>;
 

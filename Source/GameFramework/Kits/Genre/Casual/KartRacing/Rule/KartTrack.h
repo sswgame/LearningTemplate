@@ -271,7 +271,7 @@ namespace sw
      *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 3개보다 적은 트랙은 경고하고 건너뛴다. 같은 id 가 둘이면 뒤의 것이 이긴다.
      */
-    class SW_KIT_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>, public GameCatalog<KartTrackDef>
+    class SW_KIT_API KartTrackCatalog : public GameCatalog<KartTrackDef, XMLCatalog<KartTrackCatalog>>
     {
         friend class XMLCatalog<KartTrackCatalog>;
 

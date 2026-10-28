@@ -61,7 +61,7 @@ namespace sw
      * @brief `<ReputationCatalog><Faction id="town" min="-1000" max="1000" start="0" decay="0"><Tier name="Hated" min="-1000"/>
      *        <Tier name="Neutral" min="-100"/><Link faction="bandits" ratio="-0.5"/></Faction></ReputationCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ReputationCatalog : public XMLCatalog<ReputationCatalog>, public GameCatalog<FactionDef>
+    class SW_GF_API ReputationCatalog : public GameCatalog<FactionDef, XMLCatalog<ReputationCatalog>>
     {
         friend class XMLCatalog<ReputationCatalog>;
 

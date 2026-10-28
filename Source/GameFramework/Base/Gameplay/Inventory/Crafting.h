@@ -59,7 +59,7 @@ namespace sw
      * @brief `<RecipeCatalog><Recipe id="potion" station="Alchemy" time="2" level="1" known="false"><In item="herb" count="2"/>
      *        <Tool item="mortar"/><Out item="potion" count="1"/></Recipe></RecipeCatalog>` 를 읽습니다.
      */
-    class SW_GF_API RecipeCatalog : public XMLCatalog<RecipeCatalog>, public GameCatalog<RecipeDef>
+    class SW_GF_API RecipeCatalog : public GameCatalog<RecipeDef, XMLCatalog<RecipeCatalog>>
     {
         friend class XMLCatalog<RecipeCatalog>;
 

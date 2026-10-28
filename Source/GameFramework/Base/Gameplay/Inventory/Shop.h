@@ -134,7 +134,7 @@ namespace sw
      *        minSellFactor="0.3" recovery="0.1" refuses="Quest,Key"><Stock item="potion" price="20" count="10" restock="10" requires="flagExpr"/>
      *        </Shop></ShopCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ShopCatalog : public XMLCatalog<ShopCatalog>, public GameCatalog<ShopDef>
+    class SW_GF_API ShopCatalog : public GameCatalog<ShopDef, XMLCatalog<ShopCatalog>>
     {
         friend class XMLCatalog<ShopCatalog>;
 

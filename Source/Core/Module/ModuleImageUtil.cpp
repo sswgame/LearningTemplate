@@ -3,12 +3,14 @@
 #include "Core/Module/ModuleImageUtil.h"
 
 #include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -118,6 +120,99 @@ namespace sw
             }
 #endif
         };
+        /**
+         * @class ModuleUnloadHandlerList
+         * @brief 살아 있는 언로드 처리기 목록과 그 잠금입니다(`ModuleImageUtil::registerUnloadHandler`). 구독이 풀리면 그 처리기를 뺀다.
+         * @details 함수 지역 static 으로 둔다(`getModuleUnloadHandlerList`) — 정적 처리기(로그 리스너)가 정적 초기화 중에 오르므로 목록이 그보다 먼저 서야 하고,
+         *          먼저 선 것이 나중에 사라지므로 정적 처리기의 구독이 죽은 목록을 밟지 않는다(목록이 먼저 사라지면 구독이 무효가 된다).
+         */
+        class ModuleUnloadHandlerList final : public SubscriptionSource
+        {
+        public:
+            /** @brief 처리기 하나를 부른 결과입니다. */
+            struct ReleaseResult
+            {
+                const utf8* _pHandlerName{ nullptr };
+                uint32      _releasedCount{ 0 };
+                bool        _bKeepImageMapped{ false };
+                bool        _bExpected{ false };
+            };
+
+            Subscription add( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
+            {
+                uint64 id = 0;
+                if ( isWalkingThread() )
+                {
+                    id = _nextID++; // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
+                    _listEntry.push_back( Entry{ id, desc, function } );
+                }
+                else
+                {
+                    ScopedLock<mutex> lock{ _mutex };
+                    id = _nextID++;
+                    _listEntry.push_back( Entry{ id, desc, function } );
+                }
+                return issueSubscription( id );
+            }
+
+            /** @brief 살아 있는 모든 처리기에 범위를 넘깁니다. 시작 때의 사본을 돌고, 앞 처리기 안에서 풀린 것은 건너뛴다. */
+            void releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult )
+            {
+                outListResult.clear();
+                ScopedLock<mutex>   lock{ _mutex };
+                const vector<Entry> listSnapshot = _listEntry;
+                _walkingThread                   = std::this_thread::get_id();
+                outListResult.reserve( listSnapshot.size() );
+                for ( const Entry& entry : listSnapshot )
+                {
+                    if ( VectorUtil::findIf( _listEntry, [&entry]( const Entry& live )
+                    { return live._id == entry._id; } ) == nullptr )
+                        continue;
+                    ReleaseResult result{};
+                    result._pHandlerName  = entry._desc._pName;
+                    result._bExpected     = entry._desc._bReleaseExpected;
+                    result._releasedCount = entry._function( pBegin, pEnd, result._bKeepImageMapped );
+                    outListResult.push_back( result );
+                }
+                _walkingThread = std::thread::id{};
+            }
+
+        private:
+            struct Entry
+            {
+                uint64                  _id{ 0 };
+                ModuleUnloadHandlerDesc _desc{};
+                ModuleUnloadFunction    _function{};
+            };
+
+            /** @brief 지금 스레드가 훑기 중인 그 스레드인지 묻습니다(그러면 이미 잠금을 쥐고 있다). */
+            bool isWalkingThread() const { return _walkingThread == std::this_thread::get_id(); }
+
+            void releaseSubscription( const uint64 id ) override
+            {
+                const auto removeEntry = [this, id]()
+                { VectorUtil::removeIf( _listEntry, [id]( const Entry& entry )
+                  { return entry._id == id; } ); };
+                if ( isWalkingThread() )
+                {
+                    removeEntry(); // 훑기 안에서 — 훑기는 사본을 돌고 지워진 것은 건너뛴다
+                    return;
+                }
+                ScopedLock<mutex> lock{ _mutex };
+                removeEntry();
+            }
+
+            mutex           _mutex;
+            vector<Entry>   _listEntry;
+            uint64          _nextID{ 1 };
+            std::thread::id _walkingThread; ///< `releaseAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
+        };
+
+        ModuleUnloadHandlerList& getModuleUnloadHandlerList()
+        {
+            static ModuleUnloadHandlerList s_list;
+            return s_list;
+        }
     } // namespace
 
     string_view ModuleImageUtil::getSharedLibraryPrefix()
@@ -430,21 +525,22 @@ namespace sw
 
         // 모듈은 자기가 등록한 것을 스스로 해제해야 한다 — 등록 API 는 구독(`Subscription`)을 돌려주므로 구독을 든 객체가 사라지면 풀린다.
         // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 이미지는 내린다).
-        vector<IModuleUnloadListener::ReleaseResult> listResult;
-        IModuleUnloadListener::removeAllWithin( pBegin, pEnd, listResult );
+        vector<ModuleUnloadHandlerList::ReleaseResult> listResult;
+        if ( pBegin != nullptr && pEnd != nullptr )
+            getModuleUnloadHandlerList().releaseAllWithin( pBegin, pEnd, listResult );
 
         uint32 releasedCount{ 0 };
-        for ( const IModuleUnloadListener::ReleaseResult& result : listResult )
+        for ( const ModuleUnloadHandlerList::ReleaseResult& result : listResult )
         {
             releasedCount += result._releasedCount;
             if ( result._releasedCount > 0 && result._bExpected )
-                SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pListenerName );
+                SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
             else if ( result._releasedCount > 0 )
-                SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
+                SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
             // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
             if ( result._bKeepImageMapped )
             {
-                SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pListenerName );
+                SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pHandlerName );
                 if ( pOutKeepImageMapped != nullptr )
                     *pOutKeepImageMapped = true;
             }
@@ -510,5 +606,23 @@ namespace sw
         (void)pinDynamicLibraryDependencies( pHandle );
         unloadDynamicLibrary( pHandle );
         return true;
+    }
+
+    Subscription ModuleImageUtil::registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
+    {
+        return getModuleUnloadHandlerList().add( desc, function );
+    }
+
+    bool ModuleImageUtil::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
+    {
+        const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );
+        return code != 0 && reinterpret_cast<uintptr_t>( pBegin ) <= code && code < reinterpret_cast<uintptr_t>( pEnd );
+    }
+
+    const void* ModuleImageUtil::findVtableAddress( const void* pObject )
+    {
+        if ( pObject == nullptr )
+            return nullptr;
+        return *static_cast<const void* const*>( pObject );
     }
 } // namespace sw

@@ -17,9 +17,15 @@ namespace sw
      *        "같은 id 면 바꾸고 아니면 뒤에 붙인다" 와 선형 조회를 한 곳에 둡니다.
      * @details 순서는 읽은 순서 그대로입니다(가게 진열, 블록 번호, 고르기 순환이 그 순서를 쓴다). 조회는 id 에서 인덱스로 가는 해시 맵이라 정의가 많아도
      *          `find` 가 선형이 아닙니다. 인덱스는 바뀌지 않으므로(지우기는 `clear` 뿐) 돌려준 포인터는 다음 `add` 까지 유효합니다.
+     * @tparam TBase 이 목록 아래에 쌓을 기반입니다(XML 로더 `XMLCatalog<TCatalog>` 등). 두 기반을 나란히 상속(다중 상속)하지 않고 한 줄로 쌓는다 —
+     *         `class CropCatalog : public GameCatalog<CropDef, XMLCatalog<CropCatalog>>`. 기반이 필요 없으면 비운다.
      */
-    template <typename TDef>
-    class GameCatalog
+    struct GameCatalogNoBase
+    {
+    };
+
+    template <typename TDef, typename TBase = GameCatalogNoBase>
+    class GameCatalog : public TBase
     {
     public:
         /** @brief 정의를 더하거나(새 id) 바꿉니다(같은 id). 인덱스를 돌려줍니다. id 가 비면 -1 입니다. */

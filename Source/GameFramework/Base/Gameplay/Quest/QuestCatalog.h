@@ -176,7 +176,7 @@ namespace sw
      *     </QuestCatalog>
      * @endcode
      */
-    class SW_GF_API QuestCatalog : public XMLCatalog<QuestCatalog>, public GameCatalog<QuestDef>
+    class SW_GF_API QuestCatalog : public GameCatalog<QuestDef, XMLCatalog<QuestCatalog>>
     {
         friend class XMLCatalog<QuestCatalog>;
 

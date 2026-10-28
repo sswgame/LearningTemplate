@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/UserDataPath.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/RegistrationList.h"
 
 #include "GameFramework/Base/Online/Local/FileLocalSlotStorage.h"
@@ -39,7 +39,7 @@ namespace sw
          * @details 모듈 언로드 리스너라서, 핫 리로드가 이미지를 내리기 전에 그 이미지의 만들기 함수를 지운다.
          *          지우는 것은 정상 경로다 — 키트의 정적 등록 객체는 이미지를 실제로 언로드할 때야 소멸하고, 핫 리로드는 그 언로드를 미룬다.
          */
-        class LocalStoreBackendTable final : public IModuleUnloadListener
+        class LocalStoreBackendTable final
         {
         public:
             static LocalStoreBackendTable& get()
@@ -68,10 +68,7 @@ namespace sw
                 return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
 
-            const utf8* getModuleUnloadListenerName() const override { return "local store backends"; }
-            bool        isReleaseExpected() const override { return true; }
-
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
             {
                 (void)outKeepImageMapped;
                 ScopedLock<mutex> lock{ _mutex };
@@ -79,7 +76,7 @@ namespace sw
                 for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )
                 {
                     const LocalStoreBackend* pBackend = _registeredBackend.getAt( index - 1 );
-                    if ( isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
+                    if ( ModuleImageUtil::isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
                         continue;
                     (void)_registeredBackend.remove( pBackend ); // 방금 목록에서 읽은 항목이라 올라 있다
                     ++releasedCount;
@@ -89,8 +86,7 @@ namespace sw
 
         private:
             LocalStoreBackendTable()
-                : IModuleUnloadListener{}
-                , _mutex{}
+                : _mutex{}
                 , _registeredBackend{ "LocalStoreFactory", RegistrationOrder::Insertion, true }
                 , _fileBackend{ LocalStoreFactory::kFileBackendName, &LocalStoreFactoryInternal::createFileStorage }
                 , _memoryBackend{ LocalStoreFactory::kMemoryBackendName, &LocalStoreFactoryInternal::createMemoryStorage }
@@ -103,6 +99,10 @@ namespace sw
             RegistrationList<const LocalStoreBackend> _registeredBackend SW_GUARDED_BY( _mutex );
             LocalStoreBackend                                            _fileBackend;   ///< 기반 백엔드. 표가 소유하고, 이미지를 내려도 지워지지 않는다(만들기 함수가 기반 이미지에 있다)
             LocalStoreBackend                                            _memoryBackend; ///< 기반 백엔드
+
+        private:
+            /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+            Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "local store backends", true }, ModuleUnloadFunction::create<&LocalStoreBackendTable::onModuleUnloading>( this ) ) };
         };
     } // namespace
 } // namespace sw

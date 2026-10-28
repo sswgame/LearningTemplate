@@ -65,7 +65,7 @@ namespace sw
      * @brief `<SkillTreeCatalog><Tree id="combat"><Skill id="power" maxRank="3" cost="1" level="2" spent="0" requires="basic:1,stance"
      *        group="" ability="PowerStrike"><Stats attack="5"/></Skill></Tree></SkillTreeCatalog>` 를 읽습니다(`<Stats>` 는 랭크 하나에 해당하는 양).
      */
-    class SW_KIT_API SkillTreeCatalog : public XMLCatalog<SkillTreeCatalog>, public GameCatalog<SkillTreeDef>
+    class SW_KIT_API SkillTreeCatalog : public GameCatalog<SkillTreeDef, XMLCatalog<SkillTreeCatalog>>
     {
         friend class XMLCatalog<SkillTreeCatalog>;
 

@@ -56,7 +56,7 @@ namespace sw
      * @details `<Requires>` 하나는 속성 하나이고 조건 하나이다. 속성은 `set="S"`(세트 완성), `set="S" pieces="n"`, `equippedTag="T"`, `characterTag="T"`, `bodyShape="A,B"` 중 하나이다.
      *          세트 이름이 실제로 있는지와 조건 순환은 세트를 아는 쪽(`AppearanceDatabase`)이 검사한다.
      */
-    class SW_GF_API ItemCatalog : public XMLCatalog<ItemCatalog>, public GameCatalog<ItemDef>
+    class SW_GF_API ItemCatalog : public GameCatalog<ItemDef, XMLCatalog<ItemCatalog>>
     {
         friend class XMLCatalog<ItemCatalog>;
 

@@ -13,7 +13,7 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -51,7 +51,7 @@ namespace sw
      *       안에서의 안전성이 깨집니다. 잠금을 재귀로 바꿔 broadcast 전체를 감싸는 방법은, 임의의 콜백이 도는 내내 다른
      *       스레드를 스핀하게 만듭니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
      */
-    class SW_API EventDispatcher final : public IModuleUnloadListener, public ISubsystem
+    class SW_API EventDispatcher final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
@@ -179,13 +179,11 @@ namespace sw
          */
         uint32 countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const;
 
-        /** @brief 언로드 리스너 목록의 이름입니다. */
-        const utf8* getModuleUnloadListenerName() const override { return "event subscriptions"; }
         /**
          * @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다.
          *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 언로드하면 다음 발행이나 디스패처 소멸이 언로드된 코드로 점프하기 때문입니다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
@@ -335,5 +333,9 @@ namespace sw
         LinearAllocator     _arrFrameAllocator[2] SW_GUARDED_BY( _queueSpinLock );
         vector<MemoryBlock> _arrListOverflowAllocation[2] SW_GUARDED_BY( _queueSpinLock ); ///< 프레임 아레나에 못 담은 이벤트의 블록. 목록이 소유한다
         atomic<int32>       _activeAllocatorIndex;
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "event subscriptions" }, ModuleUnloadFunction::create<&EventDispatcher::onModuleUnloading>( this ) ) };
     };
 } // namespace sw

@@ -68,13 +68,13 @@ namespace sw
             /** @brief vtable 이 범위 안에 있는 화면이나 위젯이 하나라도 있으면 true 입니다. */
             static bool usesCodeWithin( const UIScreen& screen, const void* pBegin, const void* pEnd )
             {
-                if ( IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( &screen ), pBegin, pEnd ) )
+                if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( &screen ), pBegin, pEnd ) )
                     return true;
                 vector<Widget*> listWidget;
                 screen.getTree().collectWidgetsInDocumentOrder( listWidget );
                 for ( const Widget* pWidget : listWidget )
                 {
-                    if ( IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pWidget ), pBegin, pEnd ) )
+                    if ( ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pWidget ), pBegin, pEnd ) )
                         return true;
                 }
                 return false;
@@ -86,8 +86,7 @@ namespace sw
 namespace sw
 {
     UISystem::UISystem()
-        : IModuleUnloadListener{}
-        , _listScreen{}
+        : _listScreen{}
         , _offscreen{}
         , _documentCache{}
         , _styleSheetCache{}
@@ -747,7 +746,7 @@ namespace sw
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             const UIViewModel* pViewModel = screen->getViewModel();
-            if ( pViewModel != nullptr && IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pViewModel ), pBegin, pEnd ) )
+            if ( pViewModel != nullptr && ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( pViewModel ), pBegin, pEnd ) )
             {
                 SW_LOG_WARNING( "[UI] Screen %# released its view model for module reload - the game sets it again after the reload", screen->_handle );
                 screen->setViewModel( nullptr );
@@ -762,7 +761,7 @@ namespace sw
             const UIScreen& screen = *_listScreen[index - 1];
             SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds widget code from the unloading module", screen._handle );
             // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈의 것이면 다시 열 수 없다.
-            const bool bScreenClassInModule = IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( &screen ), pBegin, pEnd );
+            const bool bScreenClassInModule = ModuleImageUtil::isAddressWithin( ModuleImageUtil::findVtableAddress( &screen ), pBegin, pEnd );
             if ( screen._documentPath.empty() == false && bScreenClassInModule == false )
                 _listReopenDocument.push_back( screen._documentPath );
             destroyScreenAt( index - 1 );

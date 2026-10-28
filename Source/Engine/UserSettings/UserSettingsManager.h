@@ -12,7 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -132,9 +132,9 @@ namespace sw
      * @class UserSettingsManager
      * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 핸들러 레지스트리를 가집니다.
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
-     *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
+     *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(언로드 처리기).
      */
-    class SW_API UserSettingsManager : public IModuleUnloadListener, public ISubsystem, private SubscriptionSource
+    class SW_API UserSettingsManager : public ISubsystem, private SubscriptionSource
     {
     public:
         UserSettingsManager();
@@ -309,8 +309,7 @@ namespace sw
         /** @brief 실행 중에 바뀐 화면 요청을 꺼냅니다(호스트가 프레임 맨 앞에서). */
         bool consumeDisplayRequest( DisplaySettingsRequest& outRequest ) { return _engineHandlers.consumeDisplayRequest( outRequest ); }
 
-        const utf8* getModuleUnloadListenerName() const override { return "user settings"; }
-        uint32      onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped );
 
     private:
         /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다(@p id 는 맵 주소). 맵을 뗍니다. */
@@ -362,6 +361,10 @@ namespace sw
         bool                                    _bUserFileLoaded;
         bool                                    _bStartupApplied;        ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
         vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
+
+    private:
+        /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
+        Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "user settings" }, ModuleUnloadFunction::create<&UserSettingsManager::onModuleUnloading>( this ) ) };
     };
 
     template <typename T>

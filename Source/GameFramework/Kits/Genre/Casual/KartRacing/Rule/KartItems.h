@@ -134,7 +134,7 @@ namespace sw
      * @details `places` 를 적으면 테이블은 그 인원 기준이다. 실제 인원이 다르면 순위를 그 인원에 맞춰 늘려서 고른다(4명 경기의 4등은 8명 테이블의 8등).
      *          어느 구간에도 들지 않는 순위는 가장 가까운 구간의 테이블을 쓴다.
      */
-    class SW_KIT_API KartItemCatalog : public XMLCatalog<KartItemCatalog>, public GameCatalog<KartItemDef>
+    class SW_KIT_API KartItemCatalog : public GameCatalog<KartItemDef, XMLCatalog<KartItemCatalog>>
     {
         friend class XMLCatalog<KartItemCatalog>;
 

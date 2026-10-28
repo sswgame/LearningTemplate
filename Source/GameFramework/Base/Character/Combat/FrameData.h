@@ -128,7 +128,7 @@ namespace sw
      *         <Hitbox from="10" to="11" x=".." y=".." w=".." h=".." shape="Box"/><Cancel from="12" to="20" moves="a,b" onHit="true"/></Move></MoveCatalog>
      * @endcode
      */
-    class SW_GF_API MoveCatalog : public XMLCatalog<MoveCatalog>, public GameCatalog<MoveFrameData>
+    class SW_GF_API MoveCatalog : public GameCatalog<MoveFrameData, XMLCatalog<MoveCatalog>>
     {
         friend class XMLCatalog<MoveCatalog>;
 
