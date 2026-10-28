@@ -519,7 +519,7 @@ def iterateJsonStringsInternal(value: object, key: str = "") -> Iterator[tuple[s
 
 
 def isTransientReferenceInternal(rule: Rule, value: str) -> bool:
-    """실행 중에만 생기는 임시 리소스 폴더(`transient_folders`, 예: 에디터 시나리오의 `editor/automationtemp/`) 아래를 가리키면 True 입니다."""
+    """실행 중에만 생기는 임시 리소스 폴더(`transient_folders`, 예: 에디터 시나리오의 `scratch/import/`) 아래를 가리키면 True 입니다."""
     listFolder = rule.params.get("transient_folders")
     if not listFolder:
         return False

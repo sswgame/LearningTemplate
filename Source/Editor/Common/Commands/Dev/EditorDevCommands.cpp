@@ -46,8 +46,11 @@ namespace sw::editor
     {
         struct EditorDevCommandsInternal
         {
-            /** @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. `.gitignore` 의 `Resource/editor/automationtemp/` 와 같은 위치입니다. */
-            static constexpr const utf8* kImportTempFolder = "editor/automationtemp";
+            /**
+             * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain`) 아래라 자동화 쓰기 게이트가 허락하고
+             *        `.gitignore` 의 `/Resource/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
+             */
+            static constexpr const utf8* kImportTempFolder = "scratch/import";
 
             /** @brief 낱말을 양의 정수로 읽습니다. 숫자가 아니면 false 입니다. */
             [[nodiscard]] static bool parseCount( const string& text, uint32& outValue )
@@ -554,10 +557,10 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
                     &EditorDevCommandsInternal::runRemoveTempAsset );
-    SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <editor/automationtemp/...folder>",
+    SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <scratch/import/...folder>",
                     "Import a file into a temp resource folder the way Content Browser Import does, without the file dialog",
                     &EditorDevCommandsInternal::runImportAsset );
-    SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <editor/automationtemp/...folder>",
+    SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <scratch/import/...folder>",
                     "Remove a temp resource folder that asset.import filled (with its .meta files)", &EditorDevCommandsInternal::runRemoveImportFolder );
     SW_AUTOMATION_PROBE( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",
                          &EditorDevCommandsInternal::readTempAssetExists );

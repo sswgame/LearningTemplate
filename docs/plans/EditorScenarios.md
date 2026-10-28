@@ -47,10 +47,10 @@
   에디터 저장은 없는 폴더를 만들지 않으므로(오류로 멈춘다), 캡처 · `asset.open` 이 폴더를 만들어 주지 않는 시나리오는 처음에 `asset.makeTempFolder Saved/Automation/<시나리오>` 를 부른다(`tilemapdatalayers`).
 - **누를 위젯이 창의 보이는 영역 밖이면** 클릭 단계가 "outside the visible area" 로 알린다. 시나리오가 위 구역을 눌러 접거나(`retarget` 의 `retarget.section.<제목>`) 창 크기를 키워 닿게 한다.
   콤보 팝업은 기본 8 줄이라 뒤의 항목이 스크롤 아래로 가려진다 — 항목이 많은 콤보는 `ImGuiComboFlags_HeightLarge` 로 연다(`scenereference`). 레이블 글이 붙은 입력은 `EditorSelfTestMarks::noteInputFrame` 으로 입력 칸만 표식으로 남긴다(`inspector.method.arg.*`).
-- **임포트한 에셋**은 리소스 id 가 있어야 씬이 쓰므로 리소스 트리 안의 임시 폴더 `editor/automationtemp/<시나리오>/` 에만 가져온다(`asset.import <원본> <폴더>`).
+- **임포트한 에셋**은 리소스 id 가 있어야 씬이 쓰므로 리소스 트리 안의 임시 폴더 `scratch/import/<시나리오>/` 에만 가져온다(`asset.import <원본> <폴더>`).
   이 폴더는 `.gitignore` 가 무시하고, 시나리오가 처음과 끝에 `asset.removeImportFolder` 로 지운다. 남은 파일이 있으면 같은 이름이 새 이름(`_1`)을 받아 뒤 단계가 어긋난다.
   원본은 작업 폴더 기준 경로나 리소스 id 이고, 모델 원본(glTF)의 변환은 에디터가 아니라 `App --import-models` 가 한다.
-- **에디터가 쓰는 게임 데이터**(캐릭터 편집 창의 데이터 프리셋)도 같은 임시 폴더로 내보낸다. 창의 내보내기 폴더 칸에 `editor/automationtemp/<시나리오>` 를 적으면
+- **에디터가 쓰는 게임 데이터**(캐릭터 편집 창의 데이터 프리셋)도 같은 임시 폴더로 내보낸다. 창의 내보내기 폴더 칸에 `scratch/import/<시나리오>` 를 적으면
   게임 데이터 폴더(`game/<팩>/data/appearance/presets/`)는 그대로이고, 내보내기가 실행 중인 게임의 외형 데이터에 그 파일을 올려 씬이 같은 실행에서 쓴다.
 - **게임 팩의 에디터 창**은 그 팩의 `automation/` 시나리오 루트에 `editor="true"` 를 적는다. `AppScenarioTest` 가 `-game=<게임> -EnableEditor` 와 빈 에디터 상태 폴더로 돌린다.
 

@@ -15,7 +15,7 @@
 	<At frame="105"><DevCommand line="panel.focus charactereditor.retarget"/></At>
 	<!-- 새 프로필: 없는 경로 → 빈 문서 -->
 	<At frame="130"><EditorClick mark="retarget.newPath"/></At>
-	<At frame="140"><EditorText value="editor/automationtemp/scenario_new.retarget.xml"/></At>
+	<At frame="140"><EditorText value="scratch/import/scenario_new.retarget.xml"/></At>
 	<At frame="155"><EditorClick mark="retarget.new"/></At>
 	<At frame="200">
 		<Expect probe="Editor.RetargetChainCount" equals="0"/>

@@ -19,7 +19,7 @@
 
 - **편집 대상은 원본 데이터 파일**이다. 조립 결과(병합 메시, 펼친 외형)는 저장하지 않는다.
 - **씬이 쓰는 결과는 데이터 프리셋이다.** 외형 탭의 "Export data preset" 이 선택을 프리셋 에셋(`<폴더>/<id>.appearance.xml`, 기본 폴더는 외형 폴더의 `presets/`)으로 쓰고 창과 실행 중인 게임의 `AppearanceDatabase` 에 올린다(`loadPresetFile`). 씬의 `CharacterAppearanceComponent` 는 그 id 를 적는다.
-  "Save as preset" 은 플레이어 세이브 형식(`UserAppearancePresetStore`)이라 씬이 읽지 않는다. 확인은 `Resource/game/shooter3d/automation/charactereditorscene.scenario.xml`(내보내기는 임시 폴더 `editor/automationtemp/`)이다.
+  "Save as preset" 은 플레이어 세이브 형식(`UserAppearancePresetStore`)이라 씬이 읽지 않는다. 확인은 `Resource/game/shooter3d/automation/charactereditorscene.scenario.xml`(내보내기는 임시 폴더 `scratch/import/`)이다.
 - **되돌리기는 모델마다 따로** 돈다(창 안에서만). 전역 `CommandStack` 에 섞지 않는다. 미저장 · 저장 · 닫기 확인은 문서 패널 계약(`EditorDocumentPanel`)이고 패널 dirty 는 그리기마다 모델(과 미리보기 창 스택)을 정본으로 다시 맞춘다.
 - **재생할 클립 폴더는 팩 데이터의 필수 칸 `clipFolder` 다**(`charactereditor.xml`, 비면 읽기 오류 — 코드에 기본 폴더를 두지 않는다). 미리보기 몸에는 `SkeletalAnimatorComponent` 가 붙고 클립 이름은 그 폴더의 `.animclip` 파일 이름이다.
 - **미리보기 몸은 창의 외형 데이터만 본다.** 게임 서비스 `AppearanceDatabase` 는 메인 씬의 것이라 미리보기 씬이 쓰지 않으며 외형 데이터를 읽기(`Load data`) 전에는 몸이 없다.
