@@ -1,6 +1,6 @@
 /**
  * @file GameSettings.h
- * @brief 게임플레이 씬 흐름, 다국어, 입력, 세이브 부트스트랩과 커스텀 게임 데이터를 정의합니다.
+ * @brief 게임플레이 씬 흐름, 다국어, 입력, 세이브 팩 설정과 커스텀 게임 데이터를 정의합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@ namespace sw
     class XMLNode;
 
     // ------------------------------------------------------------------------------
-    // 1) GameSettings — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
+    // 1) GameSettings — 씬 흐름 · 입력 · 다국어 · 세이브 팩 설정과 범용 커스텀 설정
     // ------------------------------------------------------------------------------
     /**
      * @brief 씬 흐름, 기본 세이브, 다국어, 입력과 범용 게임플레이 튜닝 설정입니다.
@@ -68,7 +68,7 @@ namespace sw
         PROPERTY()
         DataPath _audioEvents; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
 
-        /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
+        /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
         /** @brief `loadFromAsset` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
@@ -87,17 +87,17 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) BootstrapConfig — 팩 루트 + GameSettings
+    // 2) GamePackConfig — 팩 루트 + GameSettings
     // ------------------------------------------------------------------------------
-    /** @brief Resource 아래 팩 루트와 gamesettings 를 로딩하는 설정입니다. */
+    /** @brief Content 아래 팩 루트와 gamesettings 를 로딩하는 설정입니다. */
     REFLECT()
-    struct SW_GF_API BootstrapConfig
+    struct SW_GF_API GamePackConfig
     {
     public:
         REFLECT_BODY();
 
         PROPERTY( Required )
-        DataPath _packRoot; ///< Resource 상대 팩 폴더 — `GameConfig::_packRoot` 를 그대로 받는다(문자열을 넣을 수 없다)
+        DataPath _packRoot; ///< Content 상대 팩 폴더 — `GameConfig::_packRoot` 를 그대로 받는다(문자열을 넣을 수 없다)
 
         PROPERTY()
         GameSettings _data{}; ///< `{packRoot}/data/gamesettings.xml` 테이블

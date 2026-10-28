@@ -1,5 +1,5 @@
 /**
- * @file Engine/Bootstrap/CommandLineSubsystem.h
+ * @file Engine/CoreServices/CommandLineSubsystem.h
  * @brief 명령줄과 전역 변수 표를 세웁니다 — 엔진 전역 변수를 등록하고, 명령줄 인자로 등록한 뒤 파싱해 값을 넣습니다.
  * @details 둘은 한 서브시스템이다. 전역 변수가 명령줄 인자로 먼저 등록돼야 파싱이 그 값을 바로 넣고(enum 이름은 리플렉션 뒤로 미룬다), 명령줄을 읽는 쪽은
  *          모두 그 결과를 본다 — 둘로 나누면 "초기화됐지만 아직 파싱하지 않은" 명령줄이 생긴다. 인자는 만들 때 받고 초기화 동안만 읽는다(복사하지 않는다).

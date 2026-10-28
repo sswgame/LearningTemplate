@@ -18,7 +18,7 @@ namespace sw
     class EmptyRenderDemo;
 #endif
 
-    /** @brief 부트스트랩만 지정하는 빈 게임 팩 */
+    /** @brief 기동만 지정하는 빈 게임 팩 */
     class EmptyGame : public GameInstanceBase
     {
     public:

@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/ContentRootSubsystem.h"
+#include "Engine/CoreServices/ContentRootSubsystem.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
+#include "Engine/CoreServices/CrashHandlerSubsystem.h"
 
 namespace sw
 {

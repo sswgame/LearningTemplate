@@ -28,7 +28,7 @@ kLayer: dict[str, int] = {
     "pch.h": 0, "pch.cpp": 0, "EngineMinimal.h": 0, "EngineFrameObserver.h": 0,
     # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 모듈 · 관측
     "Reflection": 1, "Curve": 1, "Serialization": 1, "Config": 1, "Profiling": 1, "Observability": 1, "Telemetry": 1,
-    "Bootstrap": 1, "Console": 1,
+    "CoreServices": 1, "Console": 1,
     "Module/ModuleTypeRegistry.h": 1,  # 모듈 이미지의 타입 등록 선언(Core 만) — 구현(.cpp)은 리로드 때 씬을 다시 묶어 맨 위 층이다
     # 2 — 콘텐츠: 에셋 · 글 · 현지화
     "Asset": 2, "Text": 2, "Localization": 2,

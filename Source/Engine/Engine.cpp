@@ -29,10 +29,6 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
-#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -42,6 +38,10 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
+#include "Engine/CoreServices/CrashHandlerSubsystem.h"
+#include "Engine/CoreServices/DiagnosticsSubsystem.h"
+#include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -138,7 +138,7 @@ namespace sw
     SW_LOG_CALLER( "Engine" );
 
     Engine::Engine()
-        : _bootstrap{}
+        : _coreScope{}
         , _services{}
         , _pCommandLineSubsystem{ nullptr }
         , _pEventDispatcher{ nullptr }
@@ -180,35 +180,35 @@ namespace sw
         return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
     }
 
-    // 길이를 나누지 않는다: 기동 순서(부트스트랩 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
+    // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
     // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
     // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 이미지 창구 · 자동화 구동기) 아래로
-        // 부트스트랩(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
+        // 코어(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
         // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
         // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
-        _bootstrap.setParentScope( pHostScope );
+        _coreScope.setParentScope( pHostScope );
 #if defined( SW_DEBUG )
         constexpr bool kDiagnostics = true;
 #else
         constexpr bool kDiagnostics = false;
 #endif
         // 서브시스템 목록은 `EngineSubsystemSet.cpp` 의 한 곳이다 — 테스트 하네스 · 기동 순서 테스트도 같은 함수로 채운다.
-        engine::BootstrapSetup bootstrapSetup;
-        bootstrapSetup._argc                        = argc;
-        bootstrapSetup._ppArgv                      = pArgv;
-        bootstrapSetup._bDiagnostics                = kDiagnostics;
-        bootstrapSetup._bMemoryBudget               = true;
-        const engine::BootstrapParts bootstrapParts = engine::addBootstrapSubsystems( _bootstrap, bootstrapSetup );
-        CrashHandlerSubsystem*       pCrashHandler  = bootstrapParts._pCrashHandler;
-        _pCommandLineSubsystem                      = bootstrapParts._pCommandLine;
-        _pMemoryBudget                              = bootstrapParts._pMemoryBudget;
-        if ( engine::initializeBootstrapSubsystems( _bootstrap, bootstrapParts ) == false )
+        engine::CoreSetup coreSetup;
+        coreSetup._argc                       = argc;
+        coreSetup._ppArgv                     = pArgv;
+        coreSetup._bDiagnostics               = kDiagnostics;
+        coreSetup._bMemoryBudget              = true;
+        const engine::CoreParts coreParts     = engine::addCoreSubsystems( _coreScope, coreSetup );
+        CrashHandlerSubsystem*  pCrashHandler = coreParts._pCrashHandler;
+        _pCommandLineSubsystem                = coreParts._pCommandLine;
+        _pMemoryBudget                        = coreParts._pMemoryBudget;
+        if ( engine::initializeCoreSubsystems( _coreScope, coreParts ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 stderr 에 동기로 쓰고 로거가 있으면 로그에도 남긴다.
-            SW_LOW_LEVEL_ERROR( "Engine bootstrap failed: %s", _bootstrap.getCollection().getError().c_str() );
+            SW_LOW_LEVEL_ERROR( "Engine core scope failed: %s", _coreScope.getCollection().getError().c_str() );
             return false;
         }
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
@@ -237,7 +237,7 @@ namespace sw
         {
             // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
             SW_MEMORY_SCOPE( EngineMisc );
-            _services.setParentScope( &_bootstrap );
+            _services.setParentScope( &_coreScope );
 #if defined( SW_SHIPPING )
             constexpr bool kEditorServices = false; // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행)
 #else
@@ -420,13 +420,13 @@ namespace sw
         _pShaderRecompiler = nullptr;
 #endif
         _pConfigManager = nullptr;
-        // 서비스 범위 → (표 끊기) → 부트스트랩 범위. 테스트 하네스와 같은 끝 정리다.
+        // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
         _services.destroyAll();
         _pEventDispatcher = nullptr;
         engine::unbindEngineServices();
-        // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 이미지 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 부트스트랩보다 먼저 비운다.
+        // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 이미지 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
-        _bootstrap.destroyAll();
+        _coreScope.destroyAll();
         _pCommandLineSubsystem = nullptr;
         _pMemoryBudget         = nullptr;
 

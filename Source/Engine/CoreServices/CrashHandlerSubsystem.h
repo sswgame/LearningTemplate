@@ -1,5 +1,5 @@
 /**
- * @file Engine/Bootstrap/CrashHandlerSubsystem.h
+ * @file Engine/CoreServices/CrashHandlerSubsystem.h
  * @brief 크래시 핸들러를 설치하고 크래시 리포트에 함께 나갈 빌드 값(빌드 · 플랫폼 · 빌드 id)을 적습니다. 명령줄이 크래시 보고 프로세스인지도 판정합니다.
  * @details 로거 다음에 선다 — 이후 어디서 죽든 콜 스택이 남는다. 크래시 보고 프로세스(`-crash-reporter=<폴더>`)면 핸들러를 세우지 않고 그 사실만 적는다 —
  *          핸들러를 세우면 그 프로세스가 죽을 때 보고 프로세스를 또 띄운다(재귀). 호스트는 이 범위가 선 뒤 `isCrashReporterRun` 을 보고 엔진을 세우지 않는다.

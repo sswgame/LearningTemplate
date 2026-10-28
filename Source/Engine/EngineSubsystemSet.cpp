@@ -9,19 +9,19 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
-#include "Engine/Bootstrap/ContentRootSubsystem.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
-#include "Engine/Bootstrap/LoggerSubsystem.h"
-#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
-#include "Engine/Bootstrap/NamePoolSubsystem.h"
-#include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
+#include "Engine/CoreServices/ContentRootSubsystem.h"
+#include "Engine/CoreServices/CrashHandlerSubsystem.h"
+#include "Engine/CoreServices/DiagnosticsSubsystem.h"
+#include "Engine/CoreServices/LoggerSubsystem.h"
+#include "Engine/CoreServices/MemoryBudgetSubsystem.h"
+#include "Engine/CoreServices/NamePoolSubsystem.h"
+#include "Engine/CoreServices/StaticStorageSubsystem.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -71,29 +71,29 @@
 
 namespace sw::engine
 {
-    BootstrapParts addBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapSetup& setup )
+    CoreParts addCoreSubsystems( SubsystemScope& coreScope, const CoreSetup& setup )
     {
-        BootstrapParts parts;
-        parts._pDiagnostics = &bootstrap.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( setup._bDiagnostics ) );
-        bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
-        bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
-        parts._pCommandLine  = &bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
-        parts._pCrashHandler = &bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( parts._pCommandLine ) );
-        bootstrap.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
-        bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+        CoreParts parts;
+        parts._pDiagnostics = &coreScope.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( setup._bDiagnostics ) );
+        coreScope.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
+        coreScope.addSubsystem( sw::make_unique<LoggerSubsystem>() );
+        parts._pCommandLine  = &coreScope.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
+        parts._pCrashHandler = &coreScope.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( parts._pCommandLine ) );
+        coreScope.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
+        coreScope.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
         if ( setup._bMemoryBudget )
-            parts._pMemoryBudget = &bootstrap.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *parts._pCrashHandler ) );
+            parts._pMemoryBudget = &coreScope.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *parts._pCrashHandler ) );
         // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
-        (void)bootstrap.bind( parts._pCommandLine->findCommandLine() );
-        (void)bootstrap.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
+        (void)coreScope.bind( parts._pCommandLine->findCommandLine() );
+        (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
         return parts;
     }
 
-    bool initializeBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapParts& parts )
+    bool initializeCoreSubsystems( SubsystemScope& coreScope, const CoreParts& parts )
     {
-        if ( bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        if ( coreScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             return false;
-        (void)bootstrap.bind( parts._pDiagnostics->findMemoryProfiler() ); // 진단 도구를 껐으면(배포본) 없어(nullptr) 걸지 않는다 — 선택 행이다
+        (void)coreScope.bind( parts._pDiagnostics->findMemoryProfiler() ); // 진단 도구를 껐으면(배포본) 없어(nullptr) 걸지 않는다 — 선택 행이다
         return true;
     }
 

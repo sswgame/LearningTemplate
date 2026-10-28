@@ -1,6 +1,6 @@
 /**
- * @file Engine/Bootstrap/ContentRootSubsystem.h
- * @brief 리소스 루트를 찾고 돌릴 게임을 고릅니다 — 엔진을 세우는 호스트(App · Server · 테스트 하네스)의 부트스트랩 단계입니다.
+ * @file Engine/CoreServices/ContentRootSubsystem.h
+ * @brief 리소스 루트를 찾고 돌릴 게임을 고릅니다 — 엔진을 세우는 호스트(App · Server · 테스트 하네스)의 기동 단계입니다.
  * @details 크래시 핸들러 뒤에 선다 — 루트를 찾지 못했을 때의 진단이 로거에 남고(`AssetPaths::initialize` 는 once_flag 라 첫 호출이 로거 뒤에 와야 한다),
  *          그 사이에 죽어도 콜 스택이 남는다. 게임 선택(Dev `-game=`)은 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 크래시 보고 프로세스는 리소스 루트를
  *          쓰지 않으므로 아무것도 하지 않는다(못 찾아도 서야 한다).

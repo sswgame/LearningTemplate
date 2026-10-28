@@ -1,6 +1,6 @@
 /**
  * @file VulkanRHIDeviceInit.cpp
- * @brief VulkanRHIDevice 부트스트랩입니다(인스턴스 · 서피스 · 물리/논리 디바이스 · 스왑체인 · 동기화 객체).
+ * @brief VulkanRHIDevice 기동입니다(인스턴스 · 서피스 · 물리/논리 디바이스 · 스왑체인 · 동기화 객체).
  * @details 여기 있는 것들은 모두 "한 번 만들고 창 크기가 바뀔 때 다시 만드는" 자원입니다.
  *          프레임마다 도는 코드(VulkanRHIDeviceSubmission.cpp)와 섞여 있으면 어느 쪽을 고치는지 알기 어렵습니다.
  */

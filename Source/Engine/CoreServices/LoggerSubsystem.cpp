@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/CoreServices/LoggerSubsystem.h"
 
 #include "Core/Log/Sink/AsyncLogSink.h"
 
-#include "Engine/Bootstrap/NamePoolSubsystem.h"
+#include "Engine/CoreServices/NamePoolSubsystem.h"
 
 namespace sw
 {

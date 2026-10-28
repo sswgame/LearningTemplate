@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
+#include "Engine/CoreServices/DiagnosticsSubsystem.h"
 
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"

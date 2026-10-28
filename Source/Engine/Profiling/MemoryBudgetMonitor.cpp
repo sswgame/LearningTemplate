@@ -222,7 +222,7 @@ namespace sw
         uint64 platformRequestCount{ 0 };
         if ( MemoryProfiler::getPlatformHeapTotals( platformTotalBytes, platformRequestCount ) )
         {
-            // sw 블록도 CRT 에서 온다(헤더 포함). 추적을 켜기 전(부트스트랩 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
+            // sw 블록도 CRT 에서 온다(헤더 포함). 추적을 켜기 전(기동 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
             const uint64 swCount      = profiler.getTotalAllocationCount();
             const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
             const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;

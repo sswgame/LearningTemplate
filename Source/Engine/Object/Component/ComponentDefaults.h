@@ -29,7 +29,7 @@ namespace sw
 
     /**
      * @class ComponentDefaults
-     * @brief 게임 부트스트랩이 지정한 gamesettings.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
+     * @brief 게임 팩 설정이 지정한 gamesettings.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
      */
     class SW_API ComponentDefaults : public ISubsystem
     {

@@ -58,7 +58,7 @@ namespace sw
     SW_LOG_CALLER( "GameInstanceBase" );
 
     GameInstanceBase::GameInstanceBase()
-        : _bootstrap{}
+        : _packConfig{}
         , _pWindow{ nullptr }
         , _pRHIDevice{ nullptr }
         , _listPendingSceneLoad{}
@@ -158,18 +158,18 @@ namespace sw
         _pWindow        = pWindow;
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
-        configureBootstrap( _bootstrap );
+        configurePackConfig( _packConfig );
         const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
         if ( pGameConfig == nullptr )
         {
             SW_LOG_ERROR( "Game instance cannot start - the required engine service GameConfig is missing from the game services" );
             return false;
         }
-        _bootstrap._packRoot = pGameConfig->_packRoot;
+        _packConfig._packRoot = pGameConfig->_packRoot;
         // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
         if ( loadGameSettings() == false )
         {
-            SW_LOG_ERROR( "Game instance cannot start - gamesettings could not be loaded from pack '%#'", _bootstrap._packRoot.c_str() );
+            SW_LOG_ERROR( "Game instance cannot start - gamesettings could not be loaded from pack '%#'", _packConfig._packRoot.c_str() );
             return false;
         }
         // 이 인스턴스의 범위를 지금 게임 범위로 건다 — 파생의 onInitialize 가 거는 카탈로그와 이 설정을 게임 서비스가 찾는다.
@@ -177,8 +177,8 @@ namespace sw
         if ( game::findGameScope() != &_gameScope )
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
-        bindScopedService( &_bootstrap._data );
-        const bool bBootstrapApplied = applyBootstrap();
+        bindScopedService( &_packConfig._data );
+        const bool bPackConfigApplied = applyPackConfig();
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
@@ -198,7 +198,7 @@ namespace sw
                 pLinkSceneManager->setNetLink( netSession.makeNetLink() );
         }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
+        const bool bInitialized = bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
         if ( _pUISystem != nullptr )
             registerSessionCommands( *_pUISystem );
 
@@ -238,13 +238,13 @@ namespace sw
         // 컴포넌트 기본값 경로의 주인은 엔진 범위의 `ComponentDefaults` 다(정적 칸을 두지 않는다). 선택 조회: 엔진 서비스 없이 도는 하네스에서는 기본값을 쓰지 않는다.
         ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
         if ( pComponentDefaults != nullptr )
-            pComponentDefaults->setPath( _bootstrap.resolve( path::kGameSettingsFile ) );
-        return _bootstrap.load( path::kGameSettingsFile );
+            pComponentDefaults->setPath( _packConfig.resolve( path::kGameSettingsFile ) );
+        return _packConfig.load( path::kGameSettingsFile );
     }
 
-    bool GameInstanceBase::applyBootstrap()
+    bool GameInstanceBase::applyPackConfig()
     {
-        const GameSettings& settings = _bootstrap._data;
+        const GameSettings& settings = _packConfig._data;
 
         // 게임의 로컬라이제이션 프로젝트를 올린다. 엔진 프로젝트는 엔진이 기동 때 올렸다.
         if ( settings._localizationProject.isSet() )
@@ -277,7 +277,7 @@ namespace sw
 
     bool GameInstanceBase::loadAudioEvents()
     {
-        const DataPath& audioEvents = _bootstrap._data._audioEvents;
+        const DataPath& audioEvents = _packConfig._data._audioEvents;
         if ( audioEvents.isSet() == false )
             return true; // 적지 않은 게임은 사운드 이벤트가 없다
         const string& path = audioEvents.get();
@@ -293,9 +293,9 @@ namespace sw
     bool GameInstanceBase::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
-        if ( GamePackDataUtil::tryMakeKindPath( _bootstrap._packRoot.get(), kindLabel, outPath, error ) )
+        if ( GamePackDataUtil::tryMakeKindPath( _packConfig._packRoot.get(), kindLabel, outPath, error ) )
             return true;
-        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _bootstrap._packRoot.c_str(), error.c_str() );
+        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _packConfig._packRoot.c_str(), error.c_str() );
         return false;
     }
 
@@ -318,12 +318,12 @@ namespace sw
         if ( gv_firstScene.empty() == false )
             return gv_firstScene;
         // 시작 맵은 필수 칸이다 — 읽기(`GameSettings::loadRoot`)가 빠진 것을 오류로 멈춘다.
-        return _bootstrap._data._titleScene.isSet() ? _bootstrap._data._titleScene.get() : _bootstrap._data._startMap.get();
+        return _packConfig._data._titleScene.isSet() ? _packConfig._data._titleScene.get() : _packConfig._data._startMap.get();
     }
 
     const string& GameInstanceBase::getEntranceScene() const
     {
-        return _bootstrap._data._entranceScene.isSet() ? _bootstrap._data._entranceScene.get() : _bootstrap._data._startMap.get();
+        return _packConfig._data._entranceScene.isSet() ? _packConfig._data._entranceScene.get() : _packConfig._data._startMap.get();
     }
 
     bool GameInstanceBase::requestFirstScene()
@@ -343,7 +343,7 @@ namespace sw
 
     bool GameInstanceBase::requestTitleScene()
     {
-        const DataPath& titleScene = _bootstrap._data._titleScene;
+        const DataPath& titleScene = _packConfig._data._titleScene;
         if ( titleScene.isSet() == false )
             return false;
         return requestLoadScene( titleScene.get(), "title" );
@@ -352,7 +352,7 @@ namespace sw
     void GameInstanceBase::registerSessionCommands( UISystem& ui )
     {
         // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(창이 없는 호스트는 `initialize` 가 이 함수를 부르지 않는다 — UI 가 없다).
-        if ( _bootstrap._data._titleScene.isSet() == false )
+        if ( _packConfig._data._titleScene.isSet() == false )
             return;
         _returnToTitleRegistration = ui.getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
                                                                              SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
@@ -366,7 +366,7 @@ namespace sw
     void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         if ( requestTitleScene() == false )
-            SW_LOG_ERROR( "Return to title: the title scene '%#' was not requested", _bootstrap._data._titleScene.c_str() );
+            SW_LOG_ERROR( "Return to title: the title scene '%#' was not requested", _packConfig._data._titleScene.c_str() );
     }
 
     bool GameInstanceBase::requestLoadScene( const string& scenePath, const utf8* pWhich )
@@ -744,7 +744,7 @@ namespace sw
 
     bool GameInstanceBase::saveStateToFile( string_view filePath )
     {
-        const DataPath& defaultSavePath = _bootstrap._data._defaultSavePath;
+        const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
         if ( filePath.empty() && defaultSavePath.isSet() == false )
         {
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved" );
@@ -763,7 +763,7 @@ namespace sw
 
     bool GameInstanceBase::loadStateFromFile( string_view filePath )
     {
-        const DataPath& defaultSavePath = _bootstrap._data._defaultSavePath;
+        const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
         if ( filePath.empty() && defaultSavePath.isSet() == false )
         {
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is loaded" );

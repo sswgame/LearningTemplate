@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/CoreServices/LoggerSubsystem.h"
 
 namespace sw
 {

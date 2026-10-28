@@ -1,6 +1,6 @@
 /**
  * @file Engine/EngineSubsystemSet.h
- * @brief 호스트의 세 범위(부트스트랩 · 서비스 · 기동 단계)에 넣을 서브시스템의 **단 하나뿐인 목록**입니다.
+ * @brief 호스트의 세 범위(코어 · 서비스 · 기동 단계)에 넣을 서브시스템의 **단 하나뿐인 목록**입니다.
  *
  * @details 엔진 루프(`Engine::initialize`) · 테스트 하네스(`TestHostRuntime`) · 기동 순서 테스트(`EngineInitSequenceTest`)가 모두 이 세 함수로 범위를 채운다.
  *          서브시스템을 더하거나 빼려면 `EngineSubsystemSet.cpp` 의 목록만 고친다 — 호스트마다 목록을 따로 두지 않으므로 한 곳에서 빠뜨리는 일이 없다.
@@ -41,8 +41,8 @@ namespace sw
 
     namespace engine
     {
-        /** @brief 부트스트랩 범위(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소 · 메모리 예산)의 호스트별 값입니다. */
-        struct BootstrapSetup
+        /** @brief 코어 범위(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소 · 메모리 예산)의 호스트별 값입니다. */
+        struct CoreSetup
         {
             int32  _argc{ 0 };
             utf8** _ppArgv{ nullptr };
@@ -53,8 +53,8 @@ namespace sw
 
     namespace engine
     {
-        /** @brief 부트스트랩 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). */
-        struct BootstrapParts
+        /** @brief 코어 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). */
+        struct CoreParts
         {
             DiagnosticsSubsystem*  _pDiagnostics{ nullptr };
             CommandLineSubsystem*  _pCommandLine{ nullptr };
@@ -120,14 +120,14 @@ namespace sw
             UISystem*                 _pUISystem{ nullptr };
         };
 
-        /** @brief @p bootstrap 에 부트스트랩 서브시스템을 넣고 명령줄 · 전역 변수 표를 겁니다. 초기화는 호출한 쪽이 한다. */
-        SW_API BootstrapParts addBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapSetup& setup );
+        /** @brief @p coreScope 에 코어 서브시스템을 넣고 명령줄 · 전역 변수 표를 겁니다. 초기화는 호출한 쪽이 한다. */
+        SW_API CoreParts addCoreSubsystems( SubsystemScope& coreScope, const CoreSetup& setup );
 
         /**
-         * @brief 부트스트랩 범위를 초기화하고 메모리 프로파일러를 서비스 표에 겁니다. 실패하면 false 이고 이유는 `bootstrap.getCollection().getError()` 입니다.
+         * @brief 코어 범위를 초기화하고 메모리 프로파일러를 서비스 표에 겁니다. 실패하면 false 이고 이유는 `coreScope.getCollection().getError()` 입니다.
          * @details 초기화와 프로파일러 걸기를 한 호출로 묶어 호스트마다 따로 기억하지 않게 한다. 실패 로그는 호스트가 제 방식으로 낸다.
          */
-        [[nodiscard]] SW_API bool initializeBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapParts& parts );
+        [[nodiscard]] SW_API bool initializeCoreSubsystems( SubsystemScope& coreScope, const CoreParts& parts );
 
         /** @brief @p services 에 엔진 범위보다 오래 사는 공용 서비스를 넣습니다. 초기화는 호출한 쪽이 한다. */
         SW_API ServiceParts addServiceSubsystems( SubsystemScope& services, const ServiceSetup& setup );

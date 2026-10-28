@@ -62,7 +62,7 @@ namespace sw
         /** @brief 전역 변수 저장 폴더 이름입니다. */
         inline constexpr const utf8* kGlobalVarsFolder = "globalvars";
 
-        /** @brief 엔진 셸 부트스트랩 XML 입니다(Resource 기준 상대 경로). */
+        /** @brief 엔진 셸 기동 XML 입니다(Content 기준 상대 경로). */
         inline constexpr const utf8* kEngineDefaultAssets = "engine/data/enginedefaultassets.xml";
         /** @brief 팩 상대 게임 설정 파일입니다(`GameSettings`). 게임마다 이 이름 하나다. */
         inline constexpr const utf8* kGameSettingsFile = "data/gamesettings.xml";

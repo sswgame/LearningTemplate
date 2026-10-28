@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/NamePoolSubsystem.h"
+#include "Engine/CoreServices/NamePoolSubsystem.h"
 
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
+#include "Engine/CoreServices/DiagnosticsSubsystem.h"
 
 namespace sw
 {

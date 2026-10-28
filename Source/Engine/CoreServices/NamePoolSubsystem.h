@@ -1,6 +1,6 @@
 /**
- * @file Engine/Bootstrap/NamePoolSubsystem.h
- * @brief 이름 풀(`HashedStringPool`)을 세우고 내립니다. 부트스트랩 범위에서 진단 도구 다음에 섭니다.
+ * @file Engine/CoreServices/NamePoolSubsystem.h
+ * @brief 이름 풀(`HashedStringPool`)을 세우고 내립니다. 코어 범위에서 진단 도구 다음에 섭니다.
  * @details 풀은 hashed_string 을 든 객체가 **모두** 사라진 뒤에 내려야 한다 — 그래서 종료가 아니라 소멸자에서 내린다(소멸은 모든 종료 뒤이고,
  *          같은 범위에서 이것에 기대는 것 · 위 범위의 것이 먼저 소멸한다).
  */

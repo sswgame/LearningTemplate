@@ -85,16 +85,16 @@ namespace sw
          * @brief 서브시스템(창, RHI 포함)을 초기화합니다.
          * @details @p role 이 `DedicatedServer` 면 기동 표의 `Client` 단계(창 · RHI · 렌더러 · 플레이어 설정)를 돌리지 않고 장치 없는 오디오를 씁니다.
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
-         * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 여기서 `IModuleLoader` 를 찾습니다.
+         * @param pHostScope 호스트 범위입니다 — 코어 범위의 부모이고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 여기서 `IModuleLoader` 를 찾습니다.
          *                   범위 객체는 엔진보다 오래 살아야 합니다. 그 안의 서브시스템은 `shutdown` 이 내립니다. nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
          */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );
         /**
          * @brief 매니저들을 종료하고 정리합니다.
-         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 서비스)를 내린 뒤, 부트스트랩 범위보다 **먼저** 비웁니다(`destroyAll`).
-         * @details 부트스트랩의 진단 서브시스템이 소멸하며 종료 누수 창을 닫습니다. 호스트 범위는 기동 뒤에 칸 · 부품 · 종료 순서를 키우므로(`bind`,
+         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 서비스)를 내린 뒤, 코어 범위보다 **먼저** 비웁니다(`destroyAll`).
+         * @details 코어의 진단 서브시스템이 소멸하며 종료 누수 창을 닫습니다. 호스트 범위는 기동 뒤에 칸 · 부품 · 종료 순서를 키우므로(`bind`,
          *          `shutdownDependentsOf`), 창보다 늦게 비우면 그 저장소가 "창 안에서 태어나 살아 있는 블록" 으로 보고됩니다. 호스트의 서브시스템도
-         *          로거 · 이름 풀(부트스트랩)이 아직 있을 때 소멸합니다.
+         *          로거 · 이름 풀(코어)이 아직 있을 때 소멸합니다.
          */
         void shutdown( SubsystemScope& hostScope );
 
@@ -171,7 +171,7 @@ namespace sw
         // Getter (App 이 GameModuleManager 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
         ConfigManager* getConfigManager() const { return _pConfigManager; }
-        /** @brief 부트스트랩 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */
+        /** @brief 코어 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */
         CommandLineManager* getCommandLineManager() const;
         RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
@@ -221,13 +221,13 @@ namespace sw
 
     private:
         /**
-         * @brief 부트스트랩 범위입니다 — 진단 도구 · 이름 풀 · 로거 · 명령줄(전역 변수) · 크래시 핸들러 · 정적 저장소. 가장 먼저 서고 가장 나중에 사라진다.
+         * @brief 코어 범위입니다 — 진단 도구 · 이름 풀 · 로거 · 명령줄(전역 변수) · 크래시 핸들러 · 정적 저장소. 가장 먼저 서고 가장 나중에 사라진다.
          * @details 멤버 중 맨 앞이라 소멸도 맨 마지막이다(기동이 중간에 멈춰 `shutdown` 없이 소멸해도 위 범위가 먼저 사라진다).
          */
-        SubsystemScope _bootstrap;
-        /** @brief 서비스 범위입니다 — 엔진 범위의 어느 것보다 오래 사는 공용 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 …). 부모는 `_bootstrap`. */
+        SubsystemScope _coreScope;
+        /** @brief 서비스 범위입니다 — 엔진 범위의 어느 것보다 오래 사는 공용 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 …). 부모는 `_coreScope`. */
         SubsystemScope _services;
-        /** @brief 부트스트랩 범위의 명령줄 서브시스템입니다(`_bootstrap` 소유 — 빌려 쓴다). */
+        /** @brief 코어 범위의 명령줄 서브시스템입니다(`_coreScope` 소유 — 빌려 쓴다). */
         CommandLineSubsystem* _pCommandLineSubsystem;
         /** @brief 서비스 범위의 이벤트 디스패처입니다(`_services` 소유 — 빌려 쓴다). 프레임마다 큐를 비운다. */
         EventDispatcher* _pEventDispatcher;
@@ -263,7 +263,7 @@ namespace sw
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
-        /** @brief 부트스트랩 범위의 메모리 태그 예산 감시입니다(`_bootstrap` 소유 — 프레임 끝마다 부른다. 배포본에서는 아무 일도 하지 않는다). */
+        /** @brief 코어 범위의 메모리 태그 예산 감시입니다(`_coreScope` 소유 — 프레임 끝마다 부른다. 배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetSubsystem* _pMemoryBudget;
         /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */
         SubsystemScope _startup;

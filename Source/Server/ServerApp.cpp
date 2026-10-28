@@ -1036,7 +1036,7 @@ namespace sw
         _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
-        // 엔진이 엔진 범위를 내린 뒤 부트스트랩(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 이미지 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
+        // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 이미지 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
         Logger::clearClockNumber();

@@ -45,7 +45,7 @@ namespace sw
         static constexpr uint32 kNameArenaBytes = 64u * 1024u;
 
         /**
-         * @brief `-gv_tracy` 를 읽어 켤 출력을 고릅니다. 부트스트랩이 명령줄을 반영한 직후 한 번 부릅니다.
+         * @brief `-gv_tracy` 를 읽어 켤 출력을 고릅니다. 기동이 명령줄을 반영한 직후 한 번 부릅니다.
          * @return 출력을 켰으면 true 입니다.
          */
         [[nodiscard]] static bool initialize();

@@ -1,6 +1,6 @@
 /**
  * @file GameInstanceBase.h
- * @brief IGame 의 공통 수명주기와 BootstrapConfig 배선, 인스턴스 상태 스냅샷 직렬화를 담당합니다.
+ * @brief IGame 의 공통 수명주기와 GamePackConfig 배선, 인스턴스 상태 스냅샷 직렬화를 담당합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -36,19 +36,19 @@ namespace sw
 
     // ------------------------------------------------------------------------------
     // 1) GameInstanceBase — 수명주기는 여기, 파생은 훅만
-    //    파생은 configureBootstrap 과 on* 훅을 오버라이드한다(예: EmptyGame)
+    //    파생은 configurePackConfig 과 on* 훅을 오버라이드한다(예: EmptyGame)
     // ------------------------------------------------------------------------------
-    /** @brief IGame 수명주기를 고정하고 부트스트랩 및 런타임 상태 스냅샷 직렬화를 지원합니다. */
+    /** @brief IGame 수명주기를 고정하고 팩 설정 및 런타임 상태 스냅샷 직렬화를 지원합니다. */
     class SW_GF_API GameInstanceBase : public IGame
     {
     public:
-        /** @brief 윈도우 · RHI · 부트스트랩을 비운 채로 둡니다. */
+        /** @brief 윈도우 · RHI · 팩 설정을 비운 채로 둡니다. */
         GameInstanceBase();
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */
         virtual ~GameInstanceBase() override;
 
         /**
-         * @brief configureBootstrap 으로 부트스트랩을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
+         * @brief configurePackConfig 으로 팩 설정을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
          * @details 팩 루트는 게임 프리셋 `Config/Game/<게임>.json` 의 값이다(그 파일의 유일한 칸). gamesettings 를 못 읽으면 false 다(기본값 폴백 없음).
          *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
          *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
@@ -97,7 +97,7 @@ namespace sw
         [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
 
         // --------------------------------------------------------------------------
-        // 부트스트랩 씬 흐름 (GameSettings 의 씬 칸을 읽는 자리)
+        // 팩 설정 씬 흐름 (GameSettings 의 씬 칸을 읽는 자리)
         // --------------------------------------------------------------------------
         /** @brief 게임이 처음 여는 씬입니다 — `-gv_firstScene` > 타이틀 씬 > 시작 맵(gamesettings). 모두 비었으면 빈 문자열입니다. */
         const string& getFirstScene() const;
@@ -146,11 +146,11 @@ namespace sw
          */
         void registerSessionCommands( UISystem& ui );
         void unregisterSessionCommands( UISystem& ui );
-        /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
-        virtual void configureBootstrap( BootstrapConfig& outConfig ) { (void)outConfig; }
-        /** @brief 팩의 gamesettings 를 `_bootstrap` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
+        /** @brief 파생 클래스가 팩 루트 · 팩 설정을 설정합니다. */
+        virtual void configurePackConfig( GamePackConfig& outConfig ) { (void)outConfig; }
+        /** @brief 팩의 gamesettings 를 `_packConfig` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
         [[nodiscard]] virtual bool loadGameSettings();
-        /** @brief 부트스트랩을 읽은 뒤 부르는 파생 초기화 훅입니다. */
+        /** @brief 팩 설정을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
         /** @brief 파생 종료 훅입니다. */
         virtual void onShutdown() {}
@@ -285,9 +285,9 @@ namespace sw
         /** @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽습니다. */
         [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
-        BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
-        IWindow*        _pWindow;    ///< 호스트 윈도우 (App 이 소유)
-        IRHIDevice*     _pRHIDevice; ///< 활성 RHI 디바이스
+        GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
+        IWindow*       _pWindow;    ///< 호스트 윈도우 (App 이 소유)
+        IRHIDevice*    _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
         /** @brief 상태 스냅샷에 오른 컴포넌트 타입 하나의 일입니다(`register*`). 없는 일은 nullptr 입니다. */
@@ -315,7 +315,7 @@ namespace sw
          * @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 파일을 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다).
          * @return 입력 맵을 적었는데 입력 서비스(`InputManager`)가 없으면 오류를 남기고 false 입니다 — 호스트의 결함이라 조용히 건너뛰지 않는다.
          */
-        [[nodiscard]] bool applyBootstrap();
+        [[nodiscard]] bool applyPackConfig();
         /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
         [[nodiscard]] bool loadAudioEvents();
         /** @brief `loadRequiredData` 의 경로를 만듭니다. 못 만들면 이유를 오류로 남기고 false 입니다. */
@@ -374,7 +374,7 @@ namespace sw
         UISystem*                       _pUISystem;                 ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
         Subscription                    _returnToTitleRegistration; ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
         UserSettingsManager*            _pUserSettings;             ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
-        InputManager*                   _pInput;                    ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyBootstrap`)
+        InputManager*                   _pInput;                    ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyPackConfig`)
         uint8                           _bResumingWorld;            ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

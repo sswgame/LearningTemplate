@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/StaticStorageSubsystem.h"
+#include "Engine/CoreServices/StaticStorageSubsystem.h"
 
 #include "Core/Memory/LifetimeScope.h"
 
-#include "Engine/Bootstrap/ContentRootSubsystem.h"
+#include "Engine/CoreServices/ContentRootSubsystem.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
 namespace sw

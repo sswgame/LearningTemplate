@@ -1,6 +1,6 @@
-Bootstrap/ContentRootSubsystem.cpp -> Engine/Asset/AssetPaths.h
-Bootstrap/MemoryBudgetSubsystem.cpp -> Engine/Asset/AssetPaths.h
-Bootstrap/StaticStorageSubsystem.cpp -> Engine/Graphics/RHI/RHIRenderResource.h
+CoreServices/ContentRootSubsystem.cpp -> Engine/Asset/AssetPaths.h
+CoreServices/MemoryBudgetSubsystem.cpp -> Engine/Asset/AssetPaths.h
+CoreServices/StaticStorageSubsystem.cpp -> Engine/Graphics/RHI/RHIRenderResource.h
 Config/ConfigManager.cpp -> Engine/Asset/AssetPaths.h
 Config/EngineDefaultAssets.cpp -> Engine/Asset/AssetIO.h
 Config/EngineDefaultAssets.cpp -> Engine/Asset/AssetPaths.h

@@ -114,13 +114,13 @@ namespace sw
         return true;
     }
 
-    string BootstrapConfig::resolve( string_view packRelative ) const
+    string GamePackConfig::resolve( string_view packRelative ) const
     {
         const string pack = FileUtil::trimTrailingSlashes( _packRoot.get() );
         return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ) );
     }
 
-    bool BootstrapConfig::load( string_view gameSettingsFileName )
+    bool GamePackConfig::load( string_view gameSettingsFileName )
     {
         return _data.loadFromAsset( AssetID{ resolve( gameSettingsFileName ) } );
     }

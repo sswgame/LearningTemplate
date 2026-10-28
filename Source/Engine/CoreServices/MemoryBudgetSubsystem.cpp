@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
+#include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Bootstrap/ContentRootSubsystem.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/CoreServices/ContentRootSubsystem.h"
+#include "Engine/CoreServices/CrashHandlerSubsystem.h"
 
 namespace sw
 {

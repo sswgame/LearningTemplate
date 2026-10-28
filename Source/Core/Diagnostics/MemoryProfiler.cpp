@@ -307,7 +307,7 @@ namespace sw
             return 0;
         }
 
-        // 기준선 없이는 살아 있는 블록 전부(부트스트랩 몫 포함)가 누수로 보여 진짜 누수를 가린다 — 덤프하지 않고 오류로 알린다.
+        // 기준선 없이는 살아 있는 블록 전부(기동 몫 포함)가 누수로 보여 진짜 누수를 가린다 — 덤프하지 않고 오류로 알린다.
         // 기준선은 기동 끝(`Engine::initialize`) 또는 헤드리스 진입(`HeadlessTaskState::enterHeadless`)에서 잡는다. 거기에 닿기 전에 기동이 멈췄어도 이 줄이 남는다.
         MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — ERROR: no CRT baseline was captured, so leaks cannot be told from live startup blocks (nothing dumped)", pPhase );
         return 1;
@@ -894,7 +894,7 @@ namespace sw
         const utf8* pPhase = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
         if ( report._bValid == false )
         {
-            // 창 없이는 살아 있는 기동 블록(부트스트랩이 할당한 블록)과 누수를 가를 수 없다 — 조용히 넘기지 않고 오류로 알린다.
+            // 창 없이는 살아 있는 기동 블록(기동이 할당한 블록)과 누수를 가를 수 없다 — 조용히 넘기지 않고 오류로 알린다.
             MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ERROR: no leak window was open, so leaks cannot be told from live startup blocks", pPhase );
             return 0;
         }

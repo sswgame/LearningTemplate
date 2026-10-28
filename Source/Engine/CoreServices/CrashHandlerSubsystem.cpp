@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/CoreServices/CrashHandlerSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Module/ModuleBuildID.h"
 
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
-#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
+#include "Engine/CoreServices/LoggerSubsystem.h"
 
 namespace sw
 {
