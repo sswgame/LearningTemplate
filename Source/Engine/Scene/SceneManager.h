@@ -239,6 +239,12 @@ namespace sw
         /** @brief 진행 중인 비동기 씬 로드를 취소하거나 끝날 때까지 기다리고 대기열을 비웁니다(핫 리로드 · 종료 펜스용). */
         void cancelPendingAsyncLoads();
         /**
+         * @brief 앱이 끝나는 중이니 도는 비동기 로드는 일찍 끝내라는 협조 신호를 올립니다(기다리지 않는다). 로드 잡은 시작 앞과 파싱 뒤(인스턴스화 앞)에서 읽고 돌아간다.
+         * @details `cancelPendingAsyncLoads` 와 달리 약속을 채우거나 기다리지 않는다 — 종료의 태스크 비우기(`ModuleHost::drainRenderWorkers`)가 그 앞에서 부른다.
+         *          이미 인스턴스화 중인 로드는 끊지 못하고 끝까지 돈다(`Scene::instantiate` 에 중단 점이 없다). 올린 뒤에는 이 매니저가 새 로드를 받지 않는다 — 종료 경로 전용이다.
+         */
+        void requestAsyncLoadStop();
+        /**
          * @brief 워커에서 짓는 중인 씬 로드가 끝날 때까지 기다립니다. 결과는 버리지 않고 다음 `update` 가 받습니다(언리얼 `FlushAsyncLoading` 자리).
          * @details 로드 잡은 타입 표(`TypeInfo` 의 상속 프로퍼티 · 검증 캐시)를 읽고 고친다. 타입을 등록 · 해제하는 쪽은 모든 타입의 그 캐시를 비우므로
          *          먼저 이것을 불러 둘이 겹치지 않게 한다. 짓는 동안 표가 바뀌지 않으니 세대 비교(`_typeTableGeneration`)의 다시 짓기는 기다린 뒤의 등록에서만 일어난다.

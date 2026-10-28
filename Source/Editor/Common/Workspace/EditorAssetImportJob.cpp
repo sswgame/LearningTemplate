@@ -45,13 +45,15 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        EditorAssetImportResult result;
+        // 종료 신호는 사용자 취소와 같이 다룬다 — 도는 임포트 한 건은 끝내고 남은 원본은 건너뛴다(원본마다 임포트는 중간에 끊을 수 없다).
+        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
+        EditorAssetImportResult              result;
         result._listItem.reserve( input._listItem.size() );
         for ( const EditorAssetImportItem& item : input._listItem )
         {
             EditorAssetImportItemResult& itemResult = result._listItem.emplace_back();
             itemResult._relativePath                = item._relativePath;
-            if ( pCancel->load() )
+            if ( pCancel->load() || isStopRaised( pStop ) )
             {
                 result._bCanceled = true; // 건너뛴 원본은 호출한 쪽이 다시 요청한다
                 continue;

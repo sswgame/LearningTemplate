@@ -360,6 +360,9 @@ namespace sw
             ok = doc.load( ResourceID{ pathStr } );
         }
 
+        if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
+            return; // 종료가 시작됐다 — 인스턴스화(긴 일)를 하지 않고 돌아간다
+
         sw::unique_ptr<Scene> newScene;
         if ( ok )
         {
@@ -401,6 +404,12 @@ namespace sw
             }
             std::this_thread::yield();
         }
+    }
+
+    void SceneManager::requestAsyncLoadStop()
+    {
+        if ( _asyncLoad != nullptr )
+            _asyncLoad->_bAccepting.store( false, std::memory_order_release );
     }
 
     void SceneManager::cancelPendingAsyncLoads()

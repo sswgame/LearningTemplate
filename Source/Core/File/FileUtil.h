@@ -361,8 +361,9 @@ namespace sw
          *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오.
          * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
+         * @param pStop 협조 중단 신호입니다(`TaskHandleTracker::getStopSignal`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. nullptr 이면 끝까지 훑는다.
          */
-        [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive );
+        [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const atomic<bool>* pStop = nullptr );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
     };

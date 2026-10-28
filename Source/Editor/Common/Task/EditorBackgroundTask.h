@@ -173,6 +173,9 @@ namespace sw::editor
             return pState->_pStop;
         }
 
+        /** @brief 워커에서 호출합니다. `readStopSignal` 로 받은 신호가 올라갔으면(nullptr 이면 올라갈 일이 없다) true — 잡은 결과를 싣지 않고 돌아간다. */
+        [[nodiscard]] static bool isStopRaised( const shared_ptr<const atomic<bool>>& pStop ) { return pStop != nullptr && pStop->load( std::memory_order_acquire ); }
+
         /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시하며, 오래된 세대면 버립니다. */
         static void publish( const shared_ptr<State>& pState, uint32 generation, TResult&& result )
         {

@@ -358,6 +358,8 @@ namespace sw
     {
         // 종료의 비우기는 호스트 모듈(에디터)을 내리기 앞이라 에디터의 배경 일이 아직 돈다 — 기다리기 전에 그만 하라고 알린다(`Task fencing timeout` 의 원인이었다).
         onBeforeDrainWorkers( reason );
+        if ( reason == DrainReason::Shutdown && _pSceneManager != nullptr )
+            _pSceneManager->requestAsyncLoadStop(); // 도는 비동기 씬 로드가 인스턴스화까지 가지 않게 한다
         // 비우는 까닭(`DrainReason`)이 곧 장치 대기의 이유다.
         const RHIWaitIdleReason waitReason = reason == DrainReason::BackendSwap ? RHIWaitIdleReason::BackendSwap
                                                                                 : ( reason == DrainReason::Shutdown ? RHIWaitIdleReason::Shutdown : RHIWaitIdleReason::HotReload );

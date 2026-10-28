@@ -54,10 +54,10 @@ namespace sw::editor
         /** @brief 파일 하나를 퀵 런처 항목으로 만듭니다. 리소스 트리 밖이거나 알려진 종류가 아니면 false 이고 항목은 쓰지 않습니다. */
         [[nodiscard]] static bool classifyFile( string_view filePath, EditorResourceIndexEntry& outEntry );
         /** @brief Resource 트리 전체를 분류해 채웁니다. */
-        static void collectEntries( vector<EditorResourceIndexEntry>& outList );
+        static void collectEntries( vector<EditorResourceIndexEntry>& outList, const atomic<bool>* pStop = nullptr );
         /** @brief 파일 목록을 종류별로 셉니다. 종류 테이블의 모든 종류가 한 줄씩 나옵니다(0 개 포함). */
         static void countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts );
         /** @brief Resource 트리 전체를 종류별로 셉니다. */
-        static void collectCatalogCounts( EditorResourceCatalogCounts& outCounts );
+        static void collectCatalogCounts( EditorResourceCatalogCounts& outCounts, const atomic<bool>* pStop = nullptr );
     };
 } // namespace sw::editor
