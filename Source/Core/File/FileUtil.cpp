@@ -80,15 +80,8 @@ namespace sw
             [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size )
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
-                if ( const FileUtil::WriteGate gate = s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
-                {
-                    string reason;
-                    if ( gate( filePath, reason ) == false )
-                    {
-                        SW_LOG_ERROR( "Write to %# was refused: %#", filePath.c_str(), reason.c_str() );
-                        return false;
-                    }
-                }
+                if ( FileUtil::isWriteAllowed( filePath ) == false )
+                    return false;
 #if defined( SW_PLATFORM_WINDOWS )
                 const uint64 processID = static_cast<uint64>( GetCurrentProcessId() );
 #else
@@ -710,6 +703,18 @@ namespace sw
     void FileUtil::setWriteGate( WriteGate gate )
     {
         FileUtilInternal::s_writeCounters._writeGate.store( gate, std::memory_order_release );
+    }
+
+    bool FileUtil::isWriteAllowed( string_view path )
+    {
+        const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire );
+        if ( gate == nullptr )
+            return true;
+        string reason;
+        if ( gate( path, reason ) )
+            return true;
+        SW_LOG_ERROR( "Changing %# was refused: %#", string( path ).c_str(), reason.c_str() );
+        return false;
     }
 
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )

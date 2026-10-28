@@ -40,7 +40,8 @@ namespace sw
                 const string root        = FileUtil::normalizePath( rootPath ) + "/";
                 const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
                 const string target      = FileUtil::normalizePath( absolutePath );
-                if ( StringUtil::startsWith( target, root ) == false || StringUtil::startsWith( target, scratchRoot ) )
+                const bool   bScratch    = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
+                if ( StringUtil::startsWith( target, root ) == false || bScratch )
                     return true;
                 outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
                 return false;

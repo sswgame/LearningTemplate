@@ -238,11 +238,15 @@ namespace sw
         static void noteFileRemoved();
         /**
          * @brief 쓰기 입구 게이트입니다 — 경로를 받아 쓰기를 허락하면 true, 아니면 false 와 이유를 돌려줍니다. 여러 스레드에서 불립니다.
-         * @details 시나리오가 `scratch/` 밖의 추적 파일에 쓰는 것을 형식으로 막는다. 모든 파일 쓰기(`writeFile` · `writeTextFile`)가 이 문 하나를 지나므로 호출처마다 검사를 넣지 않는다.
+         * @details 시나리오가 `scratch/` 밖의 추적 파일을 바꾸는 것을 형식으로 막는다. 파일을 바꾸는 입구(`writeFile` · `writeTextFile` · `copyFile` 의 대상 · `removeFile` ·
+         *          `tryRemoveFile` · `removeDirectory`)가 모두 `isWriteAllowed` 하나를 지나므로 호출처마다 검사를 넣지 않는다. 폴더를 만드는 `ensureDirectoryExists` 는
+         *          이미 있는 폴더에도 참을 돌려주는 흔한 호출이라 막지 않는다(폴더 안 파일은 위 입구가 막는다).
          */
         using WriteGate = bool ( * )( string_view path, string& outReason );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
         static void setWriteGate( WriteGate gate );
+        /** @brief 게이트가 @p path 를 바꾸는 것을 허락하는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다. 게이트가 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다. */
+        [[nodiscard]] static bool isWriteAllowed( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
