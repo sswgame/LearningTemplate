@@ -18,4 +18,5 @@
   좌석 소켓(`_socketName`)은 외형 컴포넌트(`CharacterAppearanceComponent`)의 소켓이라 외형이 없는 말은 좌석 오프셋을 쓴다 — 기수가 말 몸통의 오르내림(0.02 ~ 0.09 m)을 따르지 않는다.
   W3 의 말이 외형 조립(몸 프리셋 · 소켓 파일)을 쓰면 `Saddle` 소켓으로 바꾼다.
 - 에셋 제작 목록(W3): 말 메시(약 2.0 m 길이, 앞 +Z), 클립 다섯(Walk · Trot · Canter · Gallop · Idle, 고리), 소켓 뼈 `Saddle`, 텍스처 하나. 라이선스는 CC0 또는 이 저장소.
-  사람이 모델을 만들거나 라이선스를 확인해 받아야 하는 외부 에셋이라 코드로 풀 수 없다. 풀리는 조건: 위 목록을 맞춘 모델 파일이 `models_raw/` 에 들어온다.
+  사람이 모델을 만들거나 라이선스를 확인해 받아야 하는 외부 에셋이라 코드로 풀 수 없다. 풀리는 조건: 위 목록을 맞춘 모델 파일이 `Resource/game/wildwest/models_raw/` 에 들어온다.
+  확인(2026-10-28): 그 폴더에는 `horse_placeholder.gltf` 뿐이다. 사용자가 BlendSwap "Horse Rigged All Gaits"(CC0 표기)를 받아 이 폴더에 넣으면(BlendSwap 은 로그인이 필요해 에이전트가 받지 못한다), 작가 · 출처 URL · CC0 표기를 `credits.md` 에 적고 `ModelImportConfig.json` 규칙을 더해 임포트한다.
