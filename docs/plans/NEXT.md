@@ -15,11 +15,16 @@
 | 단계 | 결과 |
 |---|---|
 | 1 차 병합 뒤 재검증(`verify-batch --only …`) | Debug `ctest-hostgpu-debug` 통과(3677 s) · Shipping `ctest-hostgpu-shipping` 통과 · Release `app-scenarios-release` 11 중 10 통과 |
-| Release 의 남은 실패 | `AppScenarioTest.RecordsMatchAcrossBackends` — crowd 시나리오가 frame 303 의 `CrowdSoloUnits` · `ActiveUnits` 를 dx11 과 dx12/vk 에서 다르게 기록. `WaitUntil` 이 시계를 붙잡는 동안 실제 프레임이 흘러 전투가 진행되므로 풀린 다음 프레임 값이 백엔드마다 다르다. 3a8dd4e51 이 두 기록을 지웠고 실행으로 확인하지 못했다 |
-| `shooter3d-keyrebind-restart`(Release) | 재검증 때 돌던 중 — 결과를 확인하지 못했다. 앞선 실패는 Release 가 `Empty` 만 지어서였고 469f21b85 가 `Ninja-Release` 에 `SW_GAMES=ALL` 을 줬다 |
-| 2 차 병합 뒤 | 파이썬 단위 테스트 · `verify-batch --check` · `plans --check` 통과. **빌드 · 실행은 안 했다**(컴파일 확인 필요: `FileUtil.h` · `ServiceStore.h` · `NetHost.h` · `RHIStagingBudget` · `Process.h` 환경 변수 · `PosixProcess.cpp`(Linux 전용)) |
+| crowd 기록 불일치(해결) | `WaitUntil` 이 시계를 붙잡는 동안 실제 프레임이 흘러 전투가 진행되므로 풀린 뒤의 군중 수가 백엔드마다 달랐다. 3a8dd4e51 · 5d3613207 이 흔들리는 `<Record>` 를 모두 지웠다. `RecordsMatchAcrossBackends` 단독 159 s 통과, crowd 시나리오 네 백엔드 통과 |
+| `shooter3d-keyrebind-restart`(Release) | 병합된 상태에서 직접 돌리면 통과(두 시나리오 2.4 s · 1.7 s). 검증 도구 안에서 20 분 시간 초과였던 원인은 재현 못 했다(원인 불명 — 다시 나오면 앱 로그부터) |
+| 2 차 병합 뒤(Debug · Release) | 두 구성 빌드 통과. Debug 린트 35/35(`StatusBoard` 재생성) · 파이썬 71/71(`pairedanimnet.scene.xml` 을 엔진 서식으로) 통과. Release 공식 샤드 1 통과(236 s), 샤드 0 · 1 · 5 는 비용표 없이 직접 돌려 통과(57 · 56 · 61 개). **Shipping 빌드, Debug nogpu · race · hostgpu 재실행, Release 샤드 2 · 3 · 5(공식 분배)와 `AppTest_Desktop` 은 아직 안 했다**. 컴파일 확인이 못 본 것: `PosixProcess.cpp`(Linux 전용) |
 
-**첫 일(순서)**: ① `D:/w/integ-v` 에서 Debug · Shipping · Release 빌드(컴파일 오류부터 원인별로) ② `py -3 -m Scripts verify-batch --owner <이름>` 을 `run_in_background` 로(`--owner` 가 필수, `--failed-from` 은 폴더가 아니라 요약 파일을 받는다) ③ 아래 확인 목록 ④ 통과하면 main 에 fast-forward 하고 force 없이 push, push 뒤 `ci-jobs --summary` 한 번(남은 일 17).
+**첫 일(순서)**: ① 푸시했다면 `ci-jobs --summary` 로 Linux 잡(특히 `PosixProcess.cpp` · 쓰기 게이트 · `NetHost` 경고)을 본다 ② 안 했다면 `D:/w/integ-v` 에서 Shipping 빌드 → Debug `nogpu` · `race` · `hostgpu` → Release 공식 샤드 2 · 3 · 5 와 `AppTest_Desktop` ③ 아래 확인 목록 ④ 통과하면 main 에 fast-forward 하고 force 없이 push.
+
+**돌릴 때 알아 둘 것(이번 세션에서 시간을 크게 썼다)**
+- `verify-batch` 는 `--owner <이름>` 이 필수이고 전경에서는 훅이 막는다. `--failed-from` 은 폴더가 아니라 요약 파일을 받는다. 호출 하나는 10 분이 한도라 긴 검증은 `run_in_background`.
+- 시험 실행 파일(`TestBin/AppTest.exe`)을 손으로 돌리려면 `Bin` 을 `PATH` 에 넣어야 `Engine.dll` 을 찾는다. `--test_shard=k/5` 를 비용표(`--test_costs`) 없이 돌리면 분배가 달라 한 샤드에 에디터 체인(200~240 s)이 몰린다 — 공식 분배는 `ctest -R AppTest_HostOnly_Shard<n>`.
+- 샤드 로그의 `exit 143` 은 바깥 `timeout` 이 앱을 끊은 것이라 진짜 실패가 아니다. `GL_CONTEXT_LOST` 로 시작하는 GL 실행은 일시적인 GPU 사건이었고(단독 재실행 통과) 원인은 못 찾았다.
 
 **병합 뒤 확인 목록**
 - 에디터 줄바꿈 변경(`ui-wrap`, `cand-sweep`)이 마크 클릭을 깨지 않는지 — `panels.toolWindowsOpenAtAUsableSize` 와 Console · Sequencer · AnimationGraph · ContentBrowser · MapCheck · Profiler · RenderTarget · UIPreview · Multiplayer · InputMap · Packaging · DataTable · GlobalVariables · GameView · GimmickGraph · MeshModifiers · CharacterEditor 시나리오. 시나리오 11 개가 `CaptureWindow` 대신 `CaptureEditorUI` 로 바뀌었으니 PNG 가 결과 창 · 팝업을 담는지, `toastreveal` · `lightprobebakecancel` 이 `requireForeground` 없이 통과하는지.
