@@ -566,7 +566,7 @@ namespace sw
             outCheckpoint._target = string( StringUtil::trim( spec.substr( firstAt + 1, secondAt == string_view::npos ? string_view::npos : secondAt - firstAt - 1 ) ) );
         if ( secondAt != string_view::npos )
             outCheckpoint._key = string( StringUtil::trim( spec.substr( secondAt + 1 ) ) );
-        const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( outCheckpoint._watch );
+        const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( outCheckpoint._watch );
         if ( pRegistration == nullptr )
         {
             outError = "unknown watch '" + outCheckpoint._watch + "'";
@@ -574,7 +574,7 @@ namespace sw
         }
         const AutomationWatchQuery query = AutomationWatchQuery::make( pManager, outCheckpoint._target, outCheckpoint._key );
         AutomationWatchValue       value{};
-        if ( AutomationWatchs::read( *pRegistration, query, value ) == false )
+        if ( AutomationWatchRegistry::read( *pRegistration, query, value ) == false )
         {
             outError = string( spec ) + " has no value" + ( value._bText ? " (" + value._text + ")" : string() );
             return false;

@@ -162,7 +162,7 @@ namespace sw
                 return LedgerResult::Ok;
             }
 
-            static Delta& findOrAddDelta( vector<Delta>& inoutListDelta, const LedgerHolder& holder, const string& assetID )
+            static Delta& getOrCreateDelta( vector<Delta>& inoutListDelta, const LedgerHolder& holder, const string& assetID )
             {
                 const string holderKey = holder.makeKey();
                 for ( Delta& delta : inoutListDelta )
@@ -186,14 +186,14 @@ namespace sw
                     const LedgerPosting& posting = request._listPosting[postingIndex];
                     if ( posting._from.isSystem() == false )
                     {
-                        Delta& debit = findOrAddDelta( outListDelta, posting._from, posting._assetID );
+                        Delta& debit = getOrCreateDelta( outListDelta, posting._from, posting._assetID );
                         debit._delta -= posting._amount;
                         if ( debit._firstDebitIndex < 0 )
                             debit._firstDebitIndex = static_cast<int32>( postingIndex );
                     }
                     if ( posting._to.isSystem() == false )
                     {
-                        Delta& credit = findOrAddDelta( outListDelta, posting._to, posting._assetID );
+                        Delta& credit = getOrCreateDelta( outListDelta, posting._to, posting._assetID );
                         credit._delta += posting._amount;
                         if ( credit._firstCreditIndex < 0 )
                             credit._firstCreditIndex = static_cast<int32>( postingIndex );

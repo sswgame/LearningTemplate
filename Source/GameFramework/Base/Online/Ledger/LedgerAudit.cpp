@@ -17,7 +17,7 @@ namespace sw
         {
             static constexpr int32 kPageSize = 256;
 
-            static LedgerAssetAudit& findOrAdd( map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetID )
+            static LedgerAssetAudit& getOrCreate( map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetID )
             {
                 LedgerAssetAudit& audit = inoutMapAsset[assetID];
                 audit._assetID          = assetID;
@@ -71,9 +71,9 @@ namespace sw
                 for ( const LedgerPosting& posting : entry._listPosting )
                 {
                     if ( posting._from._kind == LedgerHolderKind::Mint )
-                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetID )._issued += posting._amount;
+                        LedgerAuditInternal::getOrCreate( mapAsset, posting._assetID )._issued += posting._amount;
                     if ( posting._to._kind == LedgerHolderKind::Sink )
-                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetID )._burned += posting._amount;
+                        LedgerAuditInternal::getOrCreate( mapAsset, posting._assetID )._burned += posting._amount;
                 }
             }
             if ( static_cast<int32>( listRecord.size() ) < LedgerAuditInternal::kPageSize )
@@ -105,7 +105,7 @@ namespace sw
                     else
                         ++outReport._negativeEscrowCount;
                 }
-                LedgerAuditInternal::findOrAdd( mapAsset, record._key.substr( slash + 1 ) )._held += amount;
+                LedgerAuditInternal::getOrCreate( mapAsset, record._key.substr( slash + 1 ) )._held += amount;
             }
             if ( static_cast<int32>( listRecord.size() ) < LedgerAuditInternal::kPageSize )
                 break;

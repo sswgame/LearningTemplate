@@ -1,5 +1,5 @@
 /**
- * @file InspectorWatchs.cpp
+ * @file InspectorWatches.cpp
  * @brief 인스펙터가 고치는 주 선택 오브젝트의 프로퍼티 · 컴포넌트 감시 값입니다 — `Editor.SelectedProperty*` · `Editor.SelectedCurveKeyCount` · `Editor.SelectedHandle` · `Editor.SelectedSceneReference` · `Editor.SelectedComponentCount`.
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorWatchSupport.h` 에 있습니다.

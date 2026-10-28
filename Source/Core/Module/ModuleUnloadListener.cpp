@@ -36,7 +36,7 @@ namespace sw
             return list._walkingThread == std::this_thread::get_id();
         }
 
-        void addListener( IModuleUnloadListener* pListener )
+        void registerListener( IModuleUnloadListener* pListener )
         {
             ModuleUnloadListenerList& list = getModuleUnloadListenerList();
             if ( isWalkingThread( list ) )
@@ -48,7 +48,7 @@ namespace sw
             (void)list._registeredListener.addLogged( pListener, "Module unload listener" ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
         }
 
-        void removeListener( IModuleUnloadListener* pListener )
+        void unregisterListener( IModuleUnloadListener* pListener )
         {
             ModuleUnloadListenerList& list = getModuleUnloadListenerList();
             if ( isWalkingThread( list ) )
@@ -66,18 +66,18 @@ namespace sw
 {
     IModuleUnloadListener::IModuleUnloadListener()
     {
-        addListener( this );
+        registerListener( this );
     }
 
     IModuleUnloadListener::IModuleUnloadListener( const IModuleUnloadListener& other )
     {
         (void)other;
-        addListener( this );
+        registerListener( this );
     }
 
     IModuleUnloadListener::~IModuleUnloadListener()
     {
-        removeListener( this );
+        unregisterListener( this );
     }
 
     IModuleUnloadListener& IModuleUnloadListener::operator=( const IModuleUnloadListener& other )

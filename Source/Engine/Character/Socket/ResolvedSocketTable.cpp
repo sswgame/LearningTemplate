@@ -54,7 +54,7 @@ namespace sw
         return hashed_string( string_view( fullName ) );
     }
 
-    SocketID ResolvedSocketTable::findOrAddSlot( const hashed_string& fullName )
+    SocketID ResolvedSocketTable::getOrCreateSlot( const hashed_string& fullName )
     {
         const auto found = _mapNameToSocket.find( fullName );
         if ( found != _mapNameToSocket.end() )
@@ -97,7 +97,7 @@ namespace sw
         for ( uint32 unitSlot = 0; unitSlot < addedUnit._sockets.getSockets().size(); ++unitSlot )
         {
             const SocketDef& def      = addedUnit._sockets.getSockets()[unitSlot];
-            const SocketID   socketID = findOrAddSlot( makeFullName( prefix, def._name ) );
+            const SocketID   socketID = getOrCreateSlot( makeFullName( prefix, def._name ) );
             Slot&            slot     = _listSlot[socketID];
             slot._def                 = def;
             slot._unit                = unitIndex;

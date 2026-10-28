@@ -38,7 +38,7 @@ namespace sw
         }
     }
 
-    void EmptyRenderExtension::setupPasses( ModulePassBuilder& builder, [[maybe_unused]] const ModuleFrameInfo& frame )
+    void EmptyRenderExtension::addPasses( ModulePassBuilder& builder, [[maybe_unused]] const ModuleFrameInfo& frame )
     {
         // 큐브 — 장면 색 · 깊이 위에 깊이 테스트로 그린다. 후처리(피사계 심도) 앞이라 뒤 효과가 큐브에도 걸린다.
         ModulePassParams drawParams;

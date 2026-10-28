@@ -62,7 +62,7 @@ Engine/  (폴더 = 장래 링크 단위, 위가 아래만 include)
 | A5 | 게이트 하나: Engine 폴더 순위 표 + 역방향 include 검사(형식으로 막지 못하는 틈이라 게이트, 원칙 1). `Scripts/lint` 에 두고 `lint` 가 부른다 | 린트 자가 확인 |
 | B | DAG 를 따라 링크 단위로 나눈다: Foundation · RHI · World · 기능별 · Renderer. 서버 빌드의 "렌더러 빼기" 정규식(`SW_UNBUILT_ENGINE_FOLDERS` · `SW_WITH_CLIENT_CODE`)이 모듈 하나 빼기로 바뀐다. 증분 빌드는 고친 단위만 다시 링크 | 전 프리셋 구성 · 빌드, Dev 기동 시간 |
 | C | 키트를 플러그인 묶음으로(`Runtime/` · `Server/` · `Editor/`), 프로그램을 `Source/Programs/` 로 | 전 프리셋 |
-| D | 옮기는 폴더마다 이름 정리: `findOrAdd*` → `getOrCreate*`(약 70 곳, 충돌은 `findOrAddNode` → `getOrCreateNode` 하나가 기존 이름 2 곳과 겹친다), `setupPasses` → `addPasses`, `lookupResolved` → `findResolved`, `ModuleUnloadListener` 의 `add/removeListener` → `register/unregister`. 예외(도메인 용어): io_uring `setupRing`, Recast `alloc` 재정의, 관리 명령 `lookup`, 오디오 `addListener`, 복제 관심 영역 `removeObserver` | include 린트, 빌드 |
+| D | 옮기는 폴더마다 이름 정리: `getOrCreate*` → `getOrCreate*`(약 70 곳, 충돌은 `getOrCreateNode` → `getOrCreateNode` 하나가 기존 이름 2 곳과 겹친다), `addPasses` → `addPasses`, `findResolved` → `findResolved`, `ModuleUnloadListener` 의 `add/removeListener` → `register/unregister`. 예외(도메인 용어): io_uring `setupRing`, Recast `alloc` 재정의, 관리 명령 `lookup`, 오디오 `addListener`, 복제 관심 영역 `removeObserver` | include 린트, 빌드 |
 
 빌드 시간 쪽 남은 것: 첫 초록 빌드 뒤 `.ninja_log` 로 콜드 · 증분(헤더 하나, `.cpp` 하나)을 재고, Debug 링크에 GHASH(`/clang:-gcodeview-ghash` + `/DEBUG:GHASH`)를 A/B 로 잰다. B 의 분할 효과도 같은 방법으로 잰다.
 

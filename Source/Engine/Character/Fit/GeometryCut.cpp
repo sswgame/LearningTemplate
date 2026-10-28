@@ -39,7 +39,7 @@ namespace sw
                 }
             }
 
-            static uint16 findOrAddGroup( AppearanceGeometry& inoutTarget, const hashed_string& name )
+            static uint16 getOrCreateGroup( AppearanceGeometry& inoutTarget, const hashed_string& name )
             {
                 const uint16 found = inoutTarget.findGroup( name );
                 if ( found != CharacterGeometryConstant::kNoGroup )
@@ -176,7 +176,7 @@ namespace sw
             {
                 uint16 group = CharacterGeometryConstant::kNoGroup;
                 if ( source._listVertexGroup.size() == sourceVertexCount && source._listVertexGroup[vertex] < source._listGroupName.size() )
-                    group = GeometryCutInternal::findOrAddGroup( inoutTarget, source._listGroupName[source._listVertexGroup[vertex]] );
+                    group = GeometryCutInternal::getOrCreateGroup( inoutTarget, source._listGroupName[source._listVertexGroup[vertex]] );
                 inoutTarget._listVertexGroup.push_back( group );
             }
         }

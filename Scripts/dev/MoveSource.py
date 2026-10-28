@@ -2,7 +2,7 @@
 소스 파일 · 폴더를 옮기거나 C++ 이름을 바꾸고, 저장소의 참조를 한 번에 고친다 — 구조 개편 단계마다 같은 방법으로 옮기려고 둔다.
 
   py -3 -m Scripts move-source Engine/Object/SceneAnimation=Engine/Animation/Scene Engine/A/B.h=Engine/C/B.h [--dry-run]
-  py -3 -m Scripts rename-symbol findOrAddEntry=getOrCreateEntry [--dry-run]
+  py -3 -m Scripts rename-symbol getOrCreateEntry=getOrCreateEntry [--dry-run]
 
 move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 폴더 포함). 하는 일:
   1. `git mv`
@@ -31,11 +31,16 @@ kScanRoot = ["Source", "Resource", "Tools/ReflectionParser", "Tools/OnlineLoadBo
 kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 
+# 규칙 문서는 "쓰지 말 것" 예로 옛 이름을 일부러 든다 — 이름 바꾸기가 그 예까지 바꾸면 규칙이 거꾸로 된다.
+kNeverRewrite = ("docs/agents/", "docs/04_CodingGuidelines.md")
+
+
 def listTrackedText(root: Path) -> list[Path]:
     result = runGit(["ls-files", "--", *kScanRoot], cwd=root)
     if not result.bSucceeded:
         raise RuntimeError(f"git ls-files 실패: {result.stderr.strip()}")
-    return [root / line for line in result.stdout.splitlines() if Path(line).suffix.lower() in kTextSuffix and (root / line).is_file()]
+    return [root / line for line in result.stdout.splitlines()
+            if Path(line).suffix.lower() in kTextSuffix and not line.startswith(kNeverRewrite) and (root / line).is_file()]
 
 
 def readText(path: Path) -> str:
@@ -146,9 +151,9 @@ def mainMove(argv: list[str]) -> int:
             folder.rmdir()
             folder = folder.parent
 
-    # 전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게.
-    listRule = [(re.compile(r"(?<![\w/])" + re.escape(old) + r"(?![\w.])"), lambda _, new=new: new) for old, new in sorted(mapFile.items(), key=lambda item: -len(item[0]))]
-    listRule += [(re.compile(r"(?<![\w/])" + re.escape(old)), lambda _, new=new: new) for old, new in folderPrefixes(args.pair, source)]
+    # 전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다).
+    listRule = [(re.compile(r"(?<![\w.-])" + re.escape(old) + r"(?![\w.])"), lambda _, new=new: new) for old, new in sorted(mapFile.items(), key=lambda item: -len(item[0]))]
+    listRule += [(re.compile(r"(?<![\w.-])" + re.escape(old)), lambda _, new=new: new) for old, new in folderPrefixes(args.pair, source)]
     # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
     listRule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in mapFile.items() if "/" in old]
     changedCppSet = {source / new for new in mapMovedText} | set(listNeighbourText)

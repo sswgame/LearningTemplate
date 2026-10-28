@@ -578,7 +578,7 @@ namespace sw
          */
         uint32 prepareCascadeCullInputs();
         /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
-        ViewTarget& findOrAddExtraView( uint64 viewID );
+        ViewTarget& getOrCreateExtraView( uint64 viewID );
         /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
         void prepareExtraView( const RenderViewRequest& request );
         /**
@@ -1036,7 +1036,7 @@ namespace sw
 
         // --- 모듈 확장(ModuleRenderPass M3 · M4) — 구현은 FrameRendererModule.cpp ---
         /**
-         * @brief 모듈 구간의 첫 일입니다(`uploadSceneAndSubmit`, `RenderScope` 안). 대기 중인 프록시 갱신을 적용하고, 확장의 `setupPasses` 와 프록시의 `collectDrawElements` 를 부르고,
+         * @brief 모듈 구간의 첫 일입니다(`uploadSceneAndSubmit`, `RenderScope` 안). 대기 중인 프록시 갱신을 적용하고, 확장의 `addPasses` 와 프록시의 `collectDrawElements` 를 부르고,
          *        패스 선언을 검사해 프로그램 PSO · 임시 텍스처를 기록 전에 만들고, 선언이 바뀌었으면 그래프를 다시 묶게 합니다.
          */
         void collectModuleFrame( ModuleRenderPassRegistry& registry );

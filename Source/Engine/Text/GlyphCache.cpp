@@ -29,7 +29,7 @@ namespace sw
     {
     }
 
-    GlyphLookup GlyphCache::findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
+    GlyphLookup GlyphCache::getOrCreateGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
     {
         const uint64 key  = makeKey( face, glyphIndex );
         const auto   iter = _mapGlyph.find( key );

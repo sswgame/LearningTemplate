@@ -1,6 +1,6 @@
 /**
  * @file EditorWatchSupport.h
- * @brief 에디터 감시 값(`Editor.*`)이 각 패널 · 기능 폴더의 `*Watchs.cpp` 로 흩어져 있어, 그 감시 값들이 함께 쓰는 시나리오용 전역 변수와 읽기 보조 함수를 한 곳에 선언합니다.
+ * @brief 에디터 감시 값(`Editor.*`)이 각 패널 · 기능 폴더의 `*Watches.cpp` 로 흩어져 있어, 그 감시 값들이 함께 쓰는 시나리오용 전역 변수와 읽기 보조 함수를 한 곳에 선언합니다.
  * @details 변수는 시나리오가 `<Variable>` 로 정하는 감시 값 대상(오브젝트 이름 · 패널 id …)입니다. 정의는 `EditorWatchSupport.cpp` 에 있습니다.
  */
 #pragma once
@@ -35,5 +35,5 @@ namespace sw::editor
     [[nodiscard]] EditorContext* getWatchContext( const utf8* pWatch );
 
     /** @brief 활성 씬에서 `gv_editorWatchObject` 이름의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
-    [[nodiscard]] const GameObject* findWatchdObject();
+    [[nodiscard]] const GameObject* findWatchedObject();
 } // namespace sw::editor

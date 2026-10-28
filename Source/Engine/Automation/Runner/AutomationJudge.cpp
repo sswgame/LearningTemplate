@@ -70,7 +70,7 @@ namespace sw
     bool AutomationJudge::readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const
     {
         const string&                      watchName     = *step.findAttribute( "watch" );
-        const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( watchName );
+        const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( watchName );
         // 모듈을 언로드했다 로드하면 감시 값이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr )
         {
@@ -86,7 +86,7 @@ namespace sw
             subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
         else if ( pKey != nullptr )
             subject += "(" + *pKey + ")";
-        if ( AutomationWatchs::read( *pRegistration, query, outValue ) == false )
+        if ( AutomationWatchRegistry::read( *pRegistration, query, outValue ) == false )
         {
             const string reason = outValue._bText && outValue._text.empty() == false ? outValue._text : string( "no target in the scene" );
             outMessage          = subject + " has no value (" + reason + ")";
@@ -171,12 +171,12 @@ namespace sw
                 continue;
             const string* pTarget = step.findAttribute( "target" );
             const string* pKey    = step.findAttribute( "key" );
-            WatchWatch    watch{};
+            WatchHistory  watch{};
             watch._watch  = *step.findAttribute( "watch" );
             watch._target = pTarget != nullptr ? *pTarget : string();
             watch._key    = pKey != nullptr ? *pKey : string();
             bool bKnown   = false;
-            for ( const WatchWatch& existing : _listWatch )
+            for ( const WatchHistory& existing : _listWatch )
             {
                 bKnown = bKnown || ( existing._watch == watch._watch && existing._target == watch._target && existing._key == watch._key );
             }
@@ -187,7 +187,7 @@ namespace sw
 
     void AutomationJudge::sampleWatches( AutomationStepContext& context )
     {
-        for ( WatchWatch& watch : _listWatch )
+        for ( WatchHistory& watch : _listWatch )
         {
             AutomationStep step{};
             step._kind = "ExpectVisited";
@@ -210,17 +210,17 @@ namespace sw
 
     void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
-        const string*     pTarget = step.findAttribute( "target" );
-        const string*     pKey    = step.findAttribute( "key" );
-        const string_view watch   = *step.findAttribute( "watch" );
-        const string_view target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
-        const string_view key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
-        const WatchWatch* pWatch  = nullptr;
-        for ( const WatchWatch& watch : _listWatch )
+        const string*       pTarget = step.findAttribute( "target" );
+        const string*       pKey    = step.findAttribute( "key" );
+        const string_view   watch   = *step.findAttribute( "watch" );
+        const string_view   target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
+        const string_view   key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
+        const WatchHistory* pWatch  = nullptr;
+        for ( const WatchHistory& history : _listWatch )
         {
-            const bool bSame = watch._watch == watch && watch._target == target && watch._key == key;
+            const bool bSame = history._watch == watch && history._target == target && history._key == key;
             if ( bSame )
-                pWatch = &watch;
+                pWatch = &history;
         }
         string error;
         uint32 since = 0; // 적지 않으면 처음부터 본다

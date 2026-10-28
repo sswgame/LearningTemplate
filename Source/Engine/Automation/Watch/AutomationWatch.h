@@ -120,11 +120,11 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AutomationWatchs
+     * @class AutomationWatchRegistry
      * @brief 감시 값 레지스트리입니다. 모듈을 언로드하면(핫 리로드) 그 모듈의 감시 값도 빠집니다. 같은 이름이 둘이면 뒤의 것을 거절하고 오류를 남깁니다.
      * @details 레지스트리는 Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다(`GameAutoplay` 와 같은 구조). 게임 스레드와 정적 초기화에서만 쓴다.
      */
-    class SW_API AutomationWatchs
+    class SW_API AutomationWatchRegistry
     {
     public:
         /** @brief 등록합니다. 같은 이름이 이미 있으면 false 이고 등록하지 않습니다. */

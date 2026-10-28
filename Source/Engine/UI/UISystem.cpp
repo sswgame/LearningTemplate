@@ -50,7 +50,7 @@ namespace sw
     SW_LOG_CALLER( "UISystem" );
 
     /// 한 프레임에 새 글리프를 만드는 데 쓸 시간(마이크로초, 0=제한 없음)입니다. 글리프 하나가 2 ms 안팎이라(한글, FreeType sdf) 4 ms 면 두 개 안팎이 프레임마다 나옵니다.
-    /// 예산이 차면 나머지 글리프는 다음 프레임에 그립니다(`GlyphCache::findOrAddGlyph`, 글리프 래스터화 히치 G2).
+    /// 예산이 차면 나머지 글리프는 다음 프레임에 그립니다(`GlyphCache::getOrCreateGlyph`, 글리프 래스터화 히치 G2).
     SW_GLOBAL_VARIABLE( int32, gv_uiGlyphRasterBudgetMicros, 4000, "프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다" );
 
     namespace

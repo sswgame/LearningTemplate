@@ -71,7 +71,7 @@ namespace sw
         return bValid;
     }
 
-    int32 RunMap::findOrAddNode( int32 floor, int32 column )
+    int32 RunMap::getOrCreateNode( int32 floor, int32 column )
     {
         int32& cell = _listCell[static_cast<size_t>( floor * _columnCount + column )];
         if ( cell < 0 )
@@ -151,13 +151,13 @@ namespace sw
                 column = ( column + 1 ) % _columnCount;
             if ( pathIndex == 0 )
                 firstStart = column;
-            int32 nodeIndex = findOrAddNode( 0, column );
+            int32 nodeIndex = getOrCreateNode( 0, column );
             for ( int32 floor = 0; floor + 1 < lastFloor; ++floor )
             {
                 int32 nextColumn = MathUtil::clamp( column + random.nextInt( -1, 1 ), 0, _columnCount - 1 );
                 if ( crossesExisting( floor, column, nextColumn ) )
                     nextColumn = column; // 엇갈리면 곧게 편다
-                const int32    nextIndex = findOrAddNode( floor + 1, nextColumn );
+                const int32    nextIndex = getOrCreateNode( floor + 1, nextColumn );
                 vector<int32>& listNext  = _listNode[static_cast<size_t>( nodeIndex )]._listNext;
                 if ( VectorUtil::contains( listNext, nextIndex ) == false )
                     listNext.push_back( nextIndex );
@@ -166,7 +166,7 @@ namespace sw
             }
         }
         // 마지막 층은 가운데 노드 하나로 모은다.
-        const int32 bossIndex = findOrAddNode( lastFloor, _columnCount / 2 );
+        const int32 bossIndex = getOrCreateNode( lastFloor, _columnCount / 2 );
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._floor == lastFloor - 1 )

@@ -120,7 +120,7 @@ namespace sw
         _pDevice = nullptr;
     }
 
-    uint32 GPUNanCheck::findOrAddSlot( string_view name )
+    uint32 GPUNanCheck::getOrCreateSlot( string_view name )
     {
         for ( uint32 slot = 0; slot < static_cast<uint32>( _listSlotName.size() ); ++slot )
         {
@@ -137,7 +137,7 @@ namespace sw
     {
         if ( isActive() == false || pso == 0 || srv == kInvalidDescriptorIndex || width == 0 || height == 0 )
             return;
-        const uint32 slot = findOrAddSlot( name );
+        const uint32 slot = getOrCreateSlot( name );
         if ( slot >= kMaxSlot )
         {
             SW_LOG_ERROR_ONCE( "NaN check has more than %# outputs - the rest are not scanned", kMaxSlot );

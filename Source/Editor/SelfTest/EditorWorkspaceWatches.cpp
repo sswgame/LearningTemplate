@@ -1,5 +1,5 @@
 /**
- * @file EditorWorkspaceWatchs.cpp
+ * @file EditorWorkspaceWatches.cpp
  * @brief 편집 작업 공간 전체(플레이 상태 · 선택 · 되돌리기 · 씬 변경)를 읽는 에디터 감시 값(`Editor.*`)입니다. 한 패널의 것이 아니라 패널을 넘는 값이라 자체 테스트 폴더에 둡니다(작업 공간 폴더는 ImGui 를 모르는 코어라 EditorTest 도 받는데, 이 감시 값들은 EditorModule 에서만 읽는다).
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorWatchSupport.h` 에 있습니다.
@@ -315,7 +315,7 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 오브젝트 자신의 활성 비트(1 또는 0)입니다. */
         [[nodiscard]] bool readObjectActive( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObject* pObject = findWatchdObject();
+            const GameObject* pObject = findWatchedObject();
             if ( pObject == nullptr )
                 return false;
             outValue = pObject->isActive() ? 1.0 : 0.0;
@@ -325,7 +325,7 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 오브젝트를 에디터에서만 숨겼으면 1 입니다. */
         [[nodiscard]] bool readObjectHiddenInEditor( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObject* pObject = findWatchdObject();
+            const GameObject* pObject = findWatchedObject();
             if ( pObject == nullptr )
                 return false;
             outValue = pObject->isHiddenInEditor() ? 1.0 : 0.0;

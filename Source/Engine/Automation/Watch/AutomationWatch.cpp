@@ -97,7 +97,7 @@ namespace sw
 
 namespace sw
 {
-    bool AutomationWatchs::registerWatch( const AutomationWatchRegistration* pRegistration )
+    bool AutomationWatchRegistry::registerWatch( const AutomationWatchRegistration* pRegistration )
     {
         const bool bInvalidWatchRegistration =
             pRegistration == nullptr || pRegistration->_pName == nullptr || ( pRegistration->_pFunction == nullptr ) == ( pRegistration->_pQueryFunction == nullptr );
@@ -106,17 +106,17 @@ namespace sw
         return AutomationWatchInternal::getRegistrations().addLogged( pRegistration, "Automation watch", pRegistration->_pName ) == RegistrationResult::Added;
     }
 
-    void AutomationWatchs::unregisterWatch( const AutomationWatchRegistration* pRegistration )
+    void AutomationWatchRegistry::unregisterWatch( const AutomationWatchRegistration* pRegistration )
     {
         (void)AutomationWatchInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 감시 값을 빼는 것은 할 일이 없다
     }
 
-    const AutomationWatchRegistration* AutomationWatchs::find( string_view name )
+    const AutomationWatchRegistration* AutomationWatchRegistry::find( string_view name )
     {
         return AutomationWatchInternal::getRegistrations().findByName( name );
     }
 
-    bool AutomationWatchs::read( const AutomationWatchRegistration& registration, const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+    bool AutomationWatchRegistry::read( const AutomationWatchRegistration& registration, const AutomationWatchQuery& query, AutomationWatchValue& outValue )
     {
         if ( registration._pQueryFunction != nullptr )
             return registration._pQueryFunction( query, outValue );
@@ -209,13 +209,13 @@ namespace sw
     }
 
     AutomationWatchRegistrar::AutomationWatchRegistrar( const AutomationWatchRegistration* pRegistration )
-        : _pRegistration{ AutomationWatchs::registerWatch( pRegistration ) ? pRegistration : nullptr }
+        : _pRegistration{ AutomationWatchRegistry::registerWatch( pRegistration ) ? pRegistration : nullptr }
     {
     }
 
     AutomationWatchRegistrar::~AutomationWatchRegistrar()
     {
         if ( _pRegistration != nullptr )
-            AutomationWatchs::unregisterWatch( _pRegistration );
+            AutomationWatchRegistry::unregisterWatch( _pRegistration );
     }
 } // namespace sw

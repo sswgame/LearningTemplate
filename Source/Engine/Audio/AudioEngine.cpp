@@ -764,7 +764,7 @@ namespace sw
 
     void AudioEngine::applyStartSnapshot( const Command& command )
     {
-        SnapshotState* pSnapshot = findOrAddSnapshot( command._name );
+        SnapshotState* pSnapshot = getOrCreateSnapshot( command._name );
         if ( pSnapshot == nullptr )
             return;
         pSnapshot->_target  = 1.0f;
@@ -814,21 +814,21 @@ namespace sw
             }
             case CommandType::SetBusUserVolume:
             {
-                BusUserState& state = findOrAddBusUserState( command._name );
+                BusUserState& state = getOrCreateBusUserState( command._name );
                 state._volume       = MathUtil::clamp( command._value, 0.0f, 1.0f );
                 applyBusUserState( state );
                 break;
             }
             case CommandType::SetBusMuted:
             {
-                BusUserState& state = findOrAddBusUserState( command._name );
+                BusUserState& state = getOrCreateBusUserState( command._name );
                 state._bMuted       = command._bFlag;
                 applyBusUserState( state );
                 break;
             }
             case CommandType::SetBusSolo:
             {
-                BusUserState& state = findOrAddBusUserState( command._name );
+                BusUserState& state = getOrCreateBusUserState( command._name );
                 state._bSolo        = command._bFlag;
                 applyBusUserState( state );
                 break;
@@ -927,7 +927,7 @@ namespace sw
             }
             case CommandType::SetSnapshotIntensity:
             {
-                SnapshotState* pSnapshot = findOrAddSnapshot( command._name );
+                SnapshotState* pSnapshot = getOrCreateSnapshot( command._name );
                 if ( pSnapshot == nullptr )
                     break;
                 pSnapshot->_intensity = command._value;
@@ -1046,7 +1046,7 @@ namespace sw
         return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );
     }
 
-    AudioEngine::BusUserState& AudioEngine::findOrAddBusUserState( const hashed_string& bus )
+    AudioEngine::BusUserState& AudioEngine::getOrCreateBusUserState( const hashed_string& bus )
     {
         for ( BusUserState& state : _listBusUserState )
         {

@@ -1,5 +1,5 @@
 /**
- * @file SceneWatchs.cpp
+ * @file SceneWatches.cpp
  * @brief 씬의 자동화 감시 값입니다(`Scene.*`). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  */
 #include "pch.h"

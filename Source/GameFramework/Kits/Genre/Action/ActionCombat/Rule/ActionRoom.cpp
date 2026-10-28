@@ -210,7 +210,7 @@ namespace sw
 
     void ActionRoom::spawnMonster( const hashed_string& monsterID, const float2& position )
     {
-        const int32 defIndex = findOrAddMonsterDef( monsterID );
+        const int32 defIndex = getOrCreateMonsterDef( monsterID );
         if ( defIndex < 0 )
             return;
         const MonsterDef& def = _listMonsterDef[static_cast<size_t>( defIndex )];
@@ -225,7 +225,7 @@ namespace sw
         _listActor.push_back( actor );
     }
 
-    int32 ActionRoom::findOrAddMonsterDef( const hashed_string& monsterID )
+    int32 ActionRoom::getOrCreateMonsterDef( const hashed_string& monsterID )
     {
         for ( size_t defIndex = 0; defIndex < _listMonsterDef.size(); ++defIndex )
         {
@@ -497,7 +497,7 @@ namespace sw
             hashed_string monsterID;
             if ( StateArchiveUtil::readName( archive, monsterID ) == false )
                 return false;
-            if ( restored.findOrAddMonsterDef( monsterID ) != static_cast<int32>( defIndex ) )
+            if ( restored.getOrCreateMonsterDef( monsterID ) != static_cast<int32>( defIndex ) )
                 return false;
         }
 

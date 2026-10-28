@@ -226,7 +226,7 @@ namespace sw
             }
 
             /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 기억한 뒤 파일이 만들어졌거나(음성 칸) 지워진(양성 칸) 낡은 칸은 없는 것으로 칩니다. */
-            [[nodiscard]] static bool lookupResolved( const string& cacheKey, string& outPath )
+            [[nodiscard]] static bool findResolved( const string& cacheKey, string& outPath )
             {
                 const uint64                                      creationEpoch = FileUtil::getCreationEpoch();
                 const uint64                                      removalEpoch  = FileUtil::getRemovalEpoch();
@@ -617,7 +617,7 @@ namespace sw
         const AssetPathsInternal::PathCacheStamp stamp = AssetPathsInternal::captureStamp();
         {
             string cached;
-            if ( AssetPathsInternal::lookupResolved( cacheKey, cached ) )
+            if ( AssetPathsInternal::findResolved( cacheKey, cached ) )
             {
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )

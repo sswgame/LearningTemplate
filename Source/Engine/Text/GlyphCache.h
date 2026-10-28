@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `GlyphCache::findOrAddGlyph` 의 결과 상태입니다. 실패와 미룸을 가르는 것이 이유입니다 — 미룬 글리프는 다음 프레임에 다시 부르면 만들어지지만 실패는 그렇지 않습니다. */
+    /** @brief `GlyphCache::getOrCreateGlyph` 의 결과 상태입니다. 실패와 미룸을 가르는 것이 이유입니다 — 미룬 글리프는 다음 프레임에 다시 부르면 만들어지지만 실패는 그렇지 않습니다. */
     enum class GlyphLookupStatus : uint8
     {
         Ready,    ///< 글리프가 표에 있다(`_pGlyph` 가 있다)
@@ -37,7 +37,7 @@ namespace sw
         Failed    ///< 래스터화 실패나 아틀라스가 꽉 찼다(다시 불러도 같은 결과일 수 있다)
     };
 
-    /** @brief `GlyphCache::findOrAddGlyph` 의 결과입니다. */
+    /** @brief `GlyphCache::getOrCreateGlyph` 의 결과입니다. */
     struct GlyphLookup
     {
         const CachedGlyph* _pGlyph{ nullptr };                   ///< `Ready` 일 때만 있습니다.
@@ -66,7 +66,7 @@ namespace sw
          *          예산이 되살아나지 않아 새 글리프가 영영 안 만들어졌다 — 켜고 끄는 시계에서 번호를 가져오지 않는다.
          */
         void beginFrame() { ++_frameIndex; }
-        /** @brief 지금 프레임 번호입니다(`beginFrame` 을 부를 때마다 하나 오르며 처음은 0 입니다). `findOrAddGlyph` 의 `frameIndex` 로 넘깁니다. */
+        /** @brief 지금 프레임 번호입니다(`beginFrame` 을 부를 때마다 하나 오르며 처음은 0 입니다). `getOrCreateGlyph` 의 `frameIndex` 로 넘깁니다. */
         uint64 getFrameIndex() const { return _frameIndex; }
 
         /**
@@ -75,12 +75,12 @@ namespace sw
          *          그래도 자리가 없으면(한 프레임이 페이지를 다 쓴다) `Failed` 를 반환하고 경고한다. 그 글자는 이번 프레임에 보이지 않는다. 래스터화가 실패해도 `Failed` 이다.
          *          프레임마다의 래스터화 시간 예산(`setRasterBudgetNanoseconds`)이 이미 찼으면 새 글리프를 만들지 않고 `Deferred` 를 반환한다.
          *          프레임의 첫 새 글리프는 예산이 0 보다 크면 늘 만든다(글리프 하나가 예산을 넘겨도 프레임마다 하나씩은 나아간다).
-         *          돌려준 포인터는 다음 `findOrAddGlyph` 까지만 유효하다(테이블이 늘어나면 위치가 옮겨진다).
+         *          돌려준 포인터는 다음 `getOrCreateGlyph` 까지만 유효하다(테이블이 늘어나면 위치가 옮겨진다).
          */
-        [[nodiscard]] GlyphLookup findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
+        [[nodiscard]] GlyphLookup getOrCreateGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
         /**
          * @brief 한 프레임에 새 글리프를 만드는 데 쓸 수 있는 시간(나노초)입니다. 0 이면 제한이 없습니다(테스트 · 벤치).
-         * @details 프레임은 `findOrAddGlyph` 의 `frameIndex` 로 가른다. 값의 정본은 데이터이며 부르는 쪽(`UISystem`)이 `gv_uiGlyphRasterBudgetMicros` 에서 넣는다.
+         * @details 프레임은 `getOrCreateGlyph` 의 `frameIndex` 로 가른다. 값의 정본은 데이터이며 부르는 쪽(`UISystem`)이 `gv_uiGlyphRasterBudgetMicros` 에서 넣는다.
          */
         void setRasterBudgetNanoseconds( int64 budgetNanoseconds ) { _rasterBudgetNanoseconds = budgetNanoseconds; }
         /** @brief 면 하나의 글리프를 모두 테이블에서 지웁니다(면을 닫을 때). 아틀라스 영역은 페이지를 비울 때 돌아옵니다. */

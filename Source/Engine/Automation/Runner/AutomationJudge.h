@@ -83,10 +83,10 @@ namespace sw
 
     private:
         /**
-         * @struct WatchWatch
+         * @struct WatchHistory
          * @brief `<ExpectVisited>` 가 보는 감시 값 하나(감시 값 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
          */
-        struct WatchWatch
+        struct WatchHistory
         {
             vector<string> _listValue{}; ///< 바뀐 값(끝의 0 을 정리한 글)
             vector<uint32> _listFrame{}; ///< 그 값이 처음 보인 시나리오 프레임
@@ -119,7 +119,7 @@ namespace sw
         vector<string>          _listAllowedLogID; ///< 이 실행에서 허용 항목이 맞은 로그 id
         vector<string>          _listMetricLine;   ///< 보고에 적는 지표 값
         vector<string>          _listRecordLine;   ///< 보고에 적는 기록 값(결정성 대조)
-        vector<WatchWatch>      _listWatch;        ///< `<ExpectVisited>` 가 보는 감시 값 이력
+        vector<WatchHistory>    _listWatch;        ///< `<ExpectVisited>` 가 보는 감시 값 이력
         vector<RememberedValue> _listRemembered;   ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

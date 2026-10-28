@@ -1,5 +1,5 @@
 /**
- * @file WidgetWatchs.cpp
+ * @file WidgetWatches.cpp
  * @brief 화면 마커의 자동화 감시 값입니다(`UI.*`). 감시 값 레지스트리(`Engine/Automation/Watch`)가 UI 보다 아래라 UI 가 자기 감시 값을 등록합니다.
  */
 #include "pch.h"

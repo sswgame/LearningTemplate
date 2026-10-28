@@ -86,7 +86,7 @@ namespace sw
         return shadow._cascadeCount;
     }
 
-    FrameRenderer::ViewTarget& FrameRenderer::findOrAddExtraView( uint64 viewID )
+    FrameRenderer::ViewTarget& FrameRenderer::getOrCreateExtraView( uint64 viewID )
     {
         for ( unique_ptr<ViewTarget>& pExisting : _listExtraView )
         {
@@ -101,7 +101,7 @@ namespace sw
 
     void FrameRenderer::prepareExtraView( const RenderViewRequest& request )
     {
-        ViewTarget& view       = findOrAddExtraView( request._viewID );
+        ViewTarget& view       = getOrCreateExtraView( request._viewID );
         view._bSeenThisFrame   = SW_TRUE;
         view._settings         = request._settings;
         view._outputKind       = request._outputKind;

@@ -231,7 +231,7 @@ namespace sw
     void NetEmulationTransport::setConditions( const NetAddress& to, const NetEmulationConditions& conditions )
     {
         ScopedLock<mutex> lock{ _mutex };
-        LinkState&        link = findOrAddLink( to );
+        LinkState&        link = getOrCreateLink( to );
         link._conditions       = conditions;
         link._bOverride        = SW_TRUE;
     }
@@ -239,7 +239,7 @@ namespace sw
     void NetEmulationTransport::clearConditions( const NetAddress& to )
     {
         ScopedLock<mutex> lock{ _mutex };
-        LinkState&        link = findOrAddLink( to );
+        LinkState&        link = getOrCreateLink( to );
         link._conditions       = _defaultConditions;
         link._bOverride        = SW_FALSE;
     }
@@ -264,7 +264,7 @@ namespace sw
             ++_stats._outageDroppedCount;
             return true;
         }
-        LinkState&                    link       = findOrAddLink( to );
+        LinkState&                    link       = getOrCreateLink( to );
         const NetEmulationConditions& conditions = link._conditions;
         if ( conditions._pDropFilter != nullptr && conditions._pDropFilter( to, pData, size, conditions._pDropFilterContext ) )
         {
@@ -405,7 +405,7 @@ namespace sw
             std::sort( listDue.begin(), listDue.end(), Ascending<&Pending::_deliverTime, &Pending::_order>{} );
             for ( const Pending& pending : listDue )
             {
-                LinkState& link   = findOrAddLink( pending._to );
+                LinkState& link   = getOrCreateLink( pending._to );
                 link._queuedBytes = link._queuedBytes >= pending._buffer.size() ? link._queuedBytes - pending._buffer.size() : 0;
                 ++_stats._sentCount;
             }
@@ -447,7 +447,7 @@ namespace sw
         return total;
     }
 
-    NetEmulationTransport::LinkState& NetEmulationTransport::findOrAddLink( const NetAddress& to )
+    NetEmulationTransport::LinkState& NetEmulationTransport::getOrCreateLink( const NetAddress& to )
     {
         if ( LinkState* pFound = VectorUtil::findBy<&LinkState::_to>( _listLink, to ) )
             return *pFound;

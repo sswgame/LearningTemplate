@@ -1,5 +1,5 @@
 /**
- * @file SessionStateWatchs.cpp
+ * @file SessionStateWatches.cpp
  * @brief 판 상태(`SessionStateComponent`)의 자동화 감시 값입니다. 시계 `Clock.Hour` · `Clock.Day`, 지갑 `Session.Money`, 퀘스트 일지 `Quest.Status` — 활성 씬의 첫 열린 판 상태를 읽습니다.
  * @details 시계를 감는 단계 `AdvanceGameTime` 은 영역을 넘는 단계라 `GameplayAutomationSteps.cpp` 에 있다. `Quest.Status` 가 여기 있는 것은 판 상태(층 2)가 퀘스트(층 1)를 보는 방향이기 때문이다.
  */

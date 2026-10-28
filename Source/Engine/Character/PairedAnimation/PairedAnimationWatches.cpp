@@ -1,5 +1,5 @@
 /**
- * @file PairedAnimationWatchs.cpp
+ * @file PairedAnimationWatches.cpp
  * @brief 짝 애니메이션의 자동화 감시 값입니다. 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다.
  */
 #include "pch.h"

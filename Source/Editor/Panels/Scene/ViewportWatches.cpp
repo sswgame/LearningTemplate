@@ -1,5 +1,5 @@
 /**
- * @file ViewportWatchs.cpp
+ * @file ViewportWatches.cpp
  * @brief 씬 뷰 · 게임 뷰 패널의 자동화 감시 값입니다 — 카메라, 렌더 타깃 요청, 격자, 시각화, 오버레이 바, 선택 상자, 기즈모, 보기 모드.
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorWatchSupport.h` 에 있습니다.
@@ -264,7 +264,7 @@ namespace sw::editor
                 outValue = 0.0;
                 return true;
             }
-            const GameObject* pWatch = findWatchdObject();
+            const GameObject* pWatch = findWatchedObject();
             outValue                 = pWatch != nullptr && pWatch->getObjectID() == hoveredID ? 1.0 : -1.0;
             return true;
         }
@@ -277,7 +277,7 @@ namespace sw::editor
         }
 
         /** @brief `-gv_editorWatchOverlay` 바의 상태를 읽습니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
-        [[nodiscard]] bool findWatchdOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
+        [[nodiscard]] bool findWatchedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
         {
             const EditorViewportClient* pClient = findSceneViewClient();
             if ( pClient == nullptr )
@@ -292,7 +292,7 @@ namespace sw::editor
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchdOverlay( pState, pRuntime ) == false )
+            if ( findWatchedOverlay( pState, pRuntime ) == false )
                 return false;
             outValue = static_cast<float64>( pState->_dock );
             return true;
@@ -303,7 +303,7 @@ namespace sw::editor
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchdOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
                 return false;
             outValue = static_cast<float64>( pRuntime->_lastPosition._x );
             return true;
@@ -314,7 +314,7 @@ namespace sw::editor
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchdOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
                 return false;
             outValue = static_cast<float64>( pRuntime->_lastPosition._y );
             return true;
@@ -325,7 +325,7 @@ namespace sw::editor
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchdOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+            if ( findWatchedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
                 return false;
             outValue = EditorViewportOverlayLayout::isVertical( *pState ) ? 1.0 : 0.0;
             return true;
@@ -336,7 +336,7 @@ namespace sw::editor
         {
             const EditorOverlayBarState*   pState   = nullptr;
             const EditorOverlayBarRuntime* pRuntime = nullptr;
-            if ( findWatchdOverlay( pState, pRuntime ) == false )
+            if ( findWatchedOverlay( pState, pRuntime ) == false )
                 return false;
             outValue = ( pState->_bVisible ? 1.0 : 0.0 ) + ( pState->_bCollapsed ? 10.0 : 0.0 );
             return true;

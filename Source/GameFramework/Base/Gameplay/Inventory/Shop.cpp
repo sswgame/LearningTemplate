@@ -50,7 +50,7 @@ namespace sw
     {
         if ( amount <= 0 || currency.empty() )
             return;
-        WalletBalance& balance = findOrAddBalance( currency );
+        WalletBalance& balance = getOrCreateBalance( currency );
         balance._amount += amount;
         ++_revision;
         _eventBuffer.push( WalletEvent{ currency, amount, balance._amount } );
@@ -64,7 +64,7 @@ namespace sw
             return true;
         if ( canAfford( currency, amount ) == false )
             return false;
-        WalletBalance& balance = findOrAddBalance( currency );
+        WalletBalance& balance = getOrCreateBalance( currency );
         balance._amount -= amount;
         ++_revision;
         _eventBuffer.push( WalletEvent{ currency, -amount, balance._amount } );
@@ -75,7 +75,7 @@ namespace sw
     {
         if ( amount <= 0 || currency.empty() )
             return;
-        WalletBalance& balance = findOrAddBalance( currency );
+        WalletBalance& balance = getOrCreateBalance( currency );
         balance._amount -= amount;
         ++_revision;
         _eventBuffer.push( WalletEvent{ currency, -amount, balance._amount } );
@@ -85,7 +85,7 @@ namespace sw
     {
         if ( currency.empty() )
             return;
-        findOrAddBalance( currency )._amount = MathUtil::max<int64>( 0, amount );
+        getOrCreateBalance( currency )._amount = MathUtil::max<int64>( 0, amount );
         ++_revision;
     }
 
@@ -146,7 +146,7 @@ namespace sw
         return 0;
     }
 
-    WalletBalance& Wallet::findOrAddBalance( const hashed_string& currency )
+    WalletBalance& Wallet::getOrCreateBalance( const hashed_string& currency )
     {
         for ( WalletBalance& balance : _listBalance )
         {

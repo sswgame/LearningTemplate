@@ -37,7 +37,7 @@ namespace sw
             return AutomationStepDependency::StepKind;
 
         const string* pWatch = step.findAttribute( "watch" );
-        if ( pWatch != nullptr && AutomationWatchs::find( *pWatch ) == nullptr )
+        if ( pWatch != nullptr && AutomationWatchRegistry::find( *pWatch ) == nullptr )
         {
             outName = *pWatch;
             return AutomationStepDependency::Watch;

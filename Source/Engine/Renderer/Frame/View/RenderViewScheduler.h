@@ -72,7 +72,7 @@ namespace sw
             uint8   _bSeen{ SW_FALSE };
         };
         /** @brief 뷰의 기록입니다. 없으면 새로 만들어 "한 번도 안 그림"으로 둡니다. */
-        Entry& findOrAddEntry( uint64 viewID );
+        Entry& getOrCreateEntry( uint64 viewID );
 
         vector<Entry>   _listEntry;
         vector<uint32>  _listScratchDue;         ///< 때가 된 후보 번호

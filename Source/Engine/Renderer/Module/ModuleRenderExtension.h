@@ -3,8 +3,8 @@
  * @brief 모듈(게임 · 키트)이 렌더러를 확장하는 계약입니다 — 확장 객체(`IModuleRenderExtension`), 패스 빌더(`ModulePassBuilder`), 패스 실행 컨텍스트(`ModulePassContext`),
  *        씬 프록시(`IModuleSceneProxy`)입니다.
  * @details 언리얼의 `ISceneViewExtension` + `FRDGBuilder::AddPass` + `FPrimitiveSceneProxy` 와 같은 선입니다.
- *          - **확장 훅**: 모듈이 `IModuleRenderExtension` 을 `ModuleRenderExtensionRegistration` 으로 등록하면 렌더 스레드가 프레임마다 `setupPasses` 를 부릅니다.
- *          - **패스 추가**: `setupPasses` 안에서 `ModulePassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
+ *          - **확장 훅**: 모듈이 `IModuleRenderExtension` 을 `ModuleRenderExtensionRegistration` 으로 등록하면 렌더 스레드가 프레임마다 `addPasses` 를 부릅니다.
+ *          - **패스 추가**: `addPasses` 안에서 `ModulePassBuilder::addPass( 이름 · 읽는 첨부 · 쓰는 첨부 · 프로그램, 실행 콜백 )` 로 패스를 넣습니다. 패스는 파이프라인 XML 의 패스와
  *            **같은 `RenderGraph` 에 들어가** 같은 위상 정렬 · 배리어 추론을 탑니다 — 읽기 · 쓰기 선언이 곧 의존성이고, 상태 전이는 엔진이 넣습니다. 임시 텍스처는
  *            `createTexture` 로 요청하면 엔진이 뷰의 트랜지언트 풀에 만듭니다.
  *          - **기하**: 게임 스레드의 컴포넌트와 렌더 스레드의 `IModuleSceneProxy` 가 갈립니다. 게임 스레드는 값을 담은 갱신 함수를 올리고(`ModuleSceneProxyRegistration::update`),
@@ -43,7 +43,7 @@ namespace sw
         PostRenderView, ///< 출력 패스(Present) 앞 — 후처리가 끝난 뒤
     };
 
-    /** @brief 프레임 정보입니다. 렌더 스레드가 `setupPasses` · `collectDrawElements` 에 넘깁니다. */
+    /** @brief 프레임 정보입니다. 렌더 스레드가 `addPasses` · `collectDrawElements` 에 넘깁니다. */
     struct ModuleFrameInfo
     {
         uint32 _outputWidth{ 0 };
@@ -121,7 +121,7 @@ namespace sw
 
     /**
      * @class ModulePassBuilder
-     * @brief `IModuleRenderExtension::setupPasses` 가 패스와 임시 텍스처를 선언하는 곳입니다(언리얼 `FRDGBuilder` 의 `AddPass` · `CreateTexture` 자리).
+     * @brief `IModuleRenderExtension::addPasses` 가 패스와 임시 텍스처를 선언하는 곳입니다(언리얼 `FRDGBuilder` 의 `AddPass` · `CreateTexture` 자리).
      * @details 선언을 모으기만 하고, 검사 · 그래프 편입 · PSO 만들기 · 텍스처 할당은 엔진이 기록 전에 합니다. 선언이 잘못된 패스는 이유를 오류로 남기고 그려지지 않습니다.
      */
     class ModulePassBuilder
@@ -216,7 +216,7 @@ namespace sw
     public:
         virtual ~IModuleRenderExtension() = default;
         /** @brief 이 프레임에 넣을 패스를 선언합니다. 렌더 스레드에서 프레임당 한 번, 기록 전에 불립니다. 이 안에서 등록을 풀거나 레지스트리 잠금을 잡지 않습니다. */
-        virtual void setupPasses( ModulePassBuilder& builder, const ModuleFrameInfo& frame ) = 0;
+        virtual void addPasses( ModulePassBuilder& builder, const ModuleFrameInfo& frame ) = 0;
     };
 
     /**

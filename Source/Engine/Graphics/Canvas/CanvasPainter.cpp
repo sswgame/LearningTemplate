@@ -189,7 +189,7 @@ namespace sw
 
     bool CanvasPainter::drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex )
     {
-        const GlyphLookup lookup = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
+        const GlyphLookup lookup = glyphCache.getOrCreateGlyph( face, glyphIndex, frameIndex );
         if ( lookup._status == GlyphLookupStatus::Deferred )
             ++_deferredGlyphCount;
         const CachedGlyph* pGlyph            = lookup._pGlyph;

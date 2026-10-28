@@ -81,7 +81,7 @@ namespace sw
         struct AutomationReproduceRules
         {
             /** @brief 보고 · 녹화 · 크래시 보고처럼 시나리오의 결과를 바꾸지 않고 사용자 쪽 경로 · 주소를 싣는 인자의 이름(앞의 `-` 없이)입니다. 재현 명령에서 뺀다. */
-            static constexpr string_view kArrDroppedName[] = { "scenario-report", "scenario-record", "scenario-record-watchs", "crash-reporter" };
+            static constexpr string_view kArrDroppedName[] = { "scenario-report", "scenario-record", "scenario-record-watches", "crash-reporter" };
             /** @brief 이름에 이 조각이 들어 있으면(대소문자 무시) 값이 비밀이다 — 이름은 남기고 값을 `REDACTED` 로 가린다. */
             static constexpr string_view kArrSecretFragment[] = { "token", "secret", "password", "passwd", "apikey", "api_key", "api-key", "credential", "auth", "license" };
             /** @brief 비밀 값을 대신하는 글입니다(셸에서 따옴표 없이 써도 뜻이 변하지 않는 글자만). */

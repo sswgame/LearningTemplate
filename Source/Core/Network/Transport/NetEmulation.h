@@ -185,7 +185,7 @@ namespace sw
             uint64        _order{ 0 };
         };
 
-        LinkState& findOrAddLink( const NetAddress& to );
+        LinkState& getOrCreateLink( const NetAddress& to );
         float32    nextRandom() SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 안쪽 전송에서 받은 것을 받는 쪽 조건으로 큐에 넣습니다. */
         void pullIncomingLocked() SW_REQUIRES_LOCK( _mutex );

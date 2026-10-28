@@ -84,7 +84,7 @@ namespace sw
         uint32                       getRevision() const { return _revision; }
 
     private:
-        WalletBalance& findOrAddBalance( const hashed_string& currency );
+        WalletBalance& getOrCreateBalance( const hashed_string& currency );
 
         vector<WalletBalance>    _listBalance{};
         EventBuffer<WalletEvent> _eventBuffer{};

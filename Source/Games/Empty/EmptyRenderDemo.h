@@ -29,7 +29,7 @@ namespace sw
     class EmptyRenderExtension final : public IModuleRenderExtension
     {
     public:
-        void setupPasses( ModulePassBuilder& builder, const ModuleFrameInfo& frame ) override;
+        void addPasses( ModulePassBuilder& builder, const ModuleFrameInfo& frame ) override;
     };
 
     /**

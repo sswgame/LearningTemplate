@@ -1,5 +1,5 @@
 /**
- * @file EditorSelfTestWatchs.cpp
+ * @file EditorSelfTestWatches.cpp
  * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 감시 값 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수.
  * @details 값을 고르는 쪽(인스펙터 콤보, Hierarchy 끌어 놓기, 문서 패널 저장)이 바뀐 결과가 화면이 아니라 데이터에서 읽히게 한다. 대상은 `gv_editorWatchProperty` · `gv_editorWatchObject`
  *          (`EditorWatchSupport.h` 가 선언하는 시나리오용 전역 변수)가 정한다.

@@ -261,7 +261,7 @@ namespace sw
             AABB bounds() const;
         };
 
-        /** @brief 종 @p monsterID 의 적 하나를 @p position 에 스폰합니다. 정의가 없으면 스폰하지 않습니다(`findOrAddMonsterDef` 가 오류를 남깁니다). */
+        /** @brief 종 @p monsterID 의 적 하나를 @p position 에 스폰합니다. 정의가 없으면 스폰하지 않습니다(`getOrCreateMonsterDef` 가 오류를 남깁니다). */
         void spawnMonster( const hashed_string& monsterID, const float2& position );
         /** @brief 싸움을 시작하고 @p listSpawn 의 적을 세웁니다. 배치가 비어 있으면 오류를 남깁니다(@p pKindName 은 로그용 이름). */
         void beginFight( ActionRoomKind kind, const vector<ActionRoomSpawnDef>& listSpawn, const utf8* pKindName );
@@ -269,7 +269,7 @@ namespace sw
          * @brief 이번 싸움의 정의 목록에서 @p monsterID 의 인덱스를 찾습니다. 없으면 카탈로그 서비스에서 찾아 목록에 추가합니다.
          * @return 정의 인덱스입니다. 카탈로그가 없거나 그 id 가 없으면 -1 이고 오류를 남깁니다.
          */
-        int32 findOrAddMonsterDef( const hashed_string& monsterID );
+        int32 getOrCreateMonsterDef( const hashed_string& monsterID );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
         /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p outResult 에 더합니다. */

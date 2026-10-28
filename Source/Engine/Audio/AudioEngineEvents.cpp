@@ -374,7 +374,7 @@ namespace sw
         return getParameterValue( name );
     }
 
-    AudioEngine::SnapshotState* AudioEngine::findOrAddSnapshot( const hashed_string& name )
+    AudioEngine::SnapshotState* AudioEngine::getOrCreateSnapshot( const hashed_string& name )
     {
         for ( SnapshotState& snapshot : _listSnapshot )
         {

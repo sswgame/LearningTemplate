@@ -1,5 +1,5 @@
 /**
- * @file ScheduleWatchs.cpp
+ * @file ScheduleWatches.cpp
  * @brief NPC 일정의 자동화 감시 값입니다. `Schedule.Activity` · `Schedule.Phase` · `Schedule.DistanceToPlace` · `Schedule.DistanceToTarget` · `Schedule.MinuteOfDay` — 살아 있는 일정 시스템에서 NPC id 로 찾습니다.
  */
 #include "pch.h"

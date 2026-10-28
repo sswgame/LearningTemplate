@@ -12,7 +12,7 @@ include_guard(GLOBAL)
 #    규칙 · 출력은 각 생성기 한 자리(ConfigureFiles.py 는 차례로 부를 뿐). ToolchainVars 는 Environment 뒤라 DetectToolchain 이 따로 부른다.
 #    - CookContract.*     : Config/Engine/CookContract.json(RHI 백엔드 · 쿡 접미사) → C++ X-macro 와 CMake(RHI 백엔드의 빌드 칸 — RHIBackends.cmake 가 읽는다).
 #    - ShippingHostDefaults.h : 엔진 설정 + 게임 프리셋 → Shipping/Dev 폴백 호스트 기본값(프리셋이 없으면 건너뛴다 — 아래 3) 이 멈춘다).
-#    팩 레이아웃은 생성하지 않는다 — 원본은 손으로 쓴 C++ 헤더(Source/Engine/Resource/Pack/PackTypes.h)다(StructureSimplification PK1).
+#    팩 레이아웃은 생성하지 않는다 — 원본은 손으로 쓴 C++ 헤더(Source/Engine/Asset/Pack/PackTypes.h)다(StructureSimplification PK1).
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 sw_executePythonScript("Scripts/generate/ConfigureFiles.py"

@@ -74,7 +74,7 @@ namespace sw
 
 namespace sw
 {
-    BoneProportionEntry& BoneProportion::findOrAddEntry( const hashed_string& bone )
+    BoneProportionEntry& BoneProportion::getOrCreateEntry( const hashed_string& bone )
     {
         for ( BoneProportionEntry& entry : _listEntry )
         {
@@ -87,14 +87,14 @@ namespace sw
 
     void BoneProportion::setBone( const hashed_string& bone, const float3& scale, const float3& offset )
     {
-        BoneProportionEntry& entry = findOrAddEntry( bone );
+        BoneProportionEntry& entry = getOrCreateEntry( bone );
         entry._scale               = scale;
         entry._offset              = offset;
     }
 
     void BoneProportion::accumulate( const BoneProportionEntry& entry, float32 weight )
     {
-        BoneProportionEntry& target = findOrAddEntry( entry._bone );
+        BoneProportionEntry& target = getOrCreateEntry( entry._bone );
         const float3         scale  = float3::lerp( float3( 1.0f ), entry._scale, weight );
         target._scale               = float3( target._scale._x * scale._x, target._scale._y * scale._y, target._scale._z * scale._z );
         target._offset += entry._offset * weight;

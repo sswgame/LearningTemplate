@@ -50,7 +50,7 @@ namespace sw::editor
             }
 
             /** @brief 같은 반복의 같은 이름 줄을 찾고 없으면 더합니다. */
-            static EditorTestCaseResult& findOrAddResult( vector<EditorTestCaseResult>& inoutListResult, const string& name, uint32 iteration )
+            static EditorTestCaseResult& getOrCreateResult( vector<EditorTestCaseResult>& inoutListResult, const string& name, uint32 iteration )
             {
                 for ( EditorTestCaseResult& result : inoutListResult )
                 {
@@ -136,7 +136,7 @@ namespace sw::editor
             // 요약 블록의 FAILED 줄("[  FAILED  ] 3 tests, listed below:")은 케이스 이름이 아니다.
             if ( EditorTestOutputParserInternal::isCaseName( name ) == false )
                 continue;
-            EditorTestCaseResult& result = EditorTestOutputParserInternal::findOrAddResult( outListResult, name, iteration );
+            EditorTestCaseResult& result = EditorTestOutputParserInternal::getOrCreateResult( outListResult, name, iteration );
             // 실패가 한 번 적힌 케이스는 뒤의 요약 줄이 OK 로 덮지 않는다(같은 반복 안에서는 끝 줄이 하나다).
             if ( result._state != EditorTestCaseState::Failed )
                 result._state = state;

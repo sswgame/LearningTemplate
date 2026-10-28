@@ -1,5 +1,5 @@
 /**
- * @file TerrainWatchs.cpp
+ * @file TerrainWatches.cpp
  * @brief 지형의 자동화 감시 값입니다. 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다.
  */
 #include "pch.h"

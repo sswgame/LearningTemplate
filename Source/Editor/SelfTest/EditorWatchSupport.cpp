@@ -33,7 +33,7 @@ namespace sw::editor
         return pContext;
     }
 
-    const GameObject* findWatchdObject()
+    const GameObject* findWatchedObject()
     {
         const GameObjectManager* pManager = editor::getActiveObjectManager();
         return pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;

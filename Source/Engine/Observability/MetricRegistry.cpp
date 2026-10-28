@@ -193,13 +193,13 @@ namespace sw
 
     MetricCounter* MetricRegistry::registerCounter( string_view name, string_view help, const vector<MetricLabel>& listLabel )
     {
-        Series* pSeries = findOrAddSeries( Kind::Counter, name, help, listLabel, nullptr );
+        Series* pSeries = getOrCreateSeries( Kind::Counter, name, help, listLabel, nullptr );
         return pSeries != nullptr ? pSeries->_counter.get() : nullptr;
     }
 
     MetricGauge* MetricRegistry::registerGauge( string_view name, string_view help, const vector<MetricLabel>& listLabel )
     {
-        Series* pSeries = findOrAddSeries( Kind::Gauge, name, help, listLabel, nullptr );
+        Series* pSeries = getOrCreateSeries( Kind::Gauge, name, help, listLabel, nullptr );
         return pSeries != nullptr ? pSeries->_gauge.get() : nullptr;
     }
 
@@ -215,12 +215,12 @@ namespace sw
             SW_LOG_ERROR( "Metric histogram '%#' needs strictly ascending bucket bounds", name );
             return nullptr;
         }
-        Series* pSeries = findOrAddSeries( Kind::Histogram, name, help, listLabel, &listUpperBound );
+        Series* pSeries = getOrCreateSeries( Kind::Histogram, name, help, listLabel, &listUpperBound );
         return pSeries != nullptr ? pSeries->_histogram.get() : nullptr;
     }
 
-    MetricRegistry::Series* MetricRegistry::findOrAddSeries( Kind kind, string_view name, string_view help, const vector<MetricLabel>& listLabel,
-                                                             const vector<float64>* pUpperBound )
+    MetricRegistry::Series* MetricRegistry::getOrCreateSeries( Kind kind, string_view name, string_view help, const vector<MetricLabel>& listLabel,
+                                                               const vector<float64>* pUpperBound )
     {
         if ( MetricRegistryInternal::isValidName( name, true ) == false )
         {

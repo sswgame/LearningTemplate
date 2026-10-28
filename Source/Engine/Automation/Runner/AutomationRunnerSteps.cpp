@@ -220,7 +220,7 @@ namespace sw
                 const string* pWatch = step.requireAttribute( "watch", outError );
                 if ( pWatch == nullptr )
                     return false;
-                const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( *pWatch );
+                const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( *pWatch );
                 if ( pRegistration == nullptr )
                 {
                     outError = step.describe() + ": unknown watch '" + *pWatch + "' (is the game that registers it running?)";

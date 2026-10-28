@@ -74,7 +74,7 @@ namespace sw
 
     private:
         /// @brief 슬롯의 이름을 찾거나 새로 잡습니다. 슬롯이 모두 찼으면 kMaxSlot 입니다.
-        uint32 findOrAddSlot( string_view name );
+        uint32 getOrCreateSlot( string_view name );
 
         IRHIDevice*             _pDevice;
         RHIStructuredBufferSlot _buffer;

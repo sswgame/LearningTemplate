@@ -1,5 +1,5 @@
 /**
- * @file AutomationProfilerWatchs.cpp
+ * @file AutomationProfilerWatches.cpp
  * @brief 긴 캡처(`ProfilerTraceExport`)의 자동화 감시 값 `Profiler.TraceRecording` 입니다.
  */
 #include "pch.h"

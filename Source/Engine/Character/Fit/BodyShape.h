@@ -77,7 +77,7 @@ namespace sw
         void applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const;
 
     private:
-        BoneProportionEntry& findOrAddEntry( const hashed_string& bone );
+        BoneProportionEntry& getOrCreateEntry( const hashed_string& bone );
 
     private:
         vector<BoneProportionEntry> _listEntry;

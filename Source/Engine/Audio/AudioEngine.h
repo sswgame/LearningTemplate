@@ -411,7 +411,7 @@ namespace sw
         /** @brief 사용자 상태(볼륨, 음소거, 솔로)를 현재 그래프에 적용합니다. */
         void applyBusUserState( const BusUserState& state );
         /** @brief 이름에 해당하는 사용자 상태 슬롯을 반환합니다. 없으면 만듭니다. */
-        BusUserState& findOrAddBusUserState( const hashed_string& bus );
+        BusUserState& getOrCreateBusUserState( const hashed_string& bus );
         /** @brief 에미터의 가림 값이 이번 블록 동안 목표값을 따라가게 합니다. */
         void updateEmitters();
         /** @brief 보이스 하나의 이번 블록 목표(볼륨, 팬, 피치, 로우패스, 들림)를 정합니다. */
@@ -455,7 +455,7 @@ namespace sw
         /** @brief 그래프가 바뀐 뒤 스냅샷 설명자를 이름으로 다시 찾습니다. */
         void rebindSnapshots();
         /** @brief 이름에 해당하는 스냅샷 슬롯을 반환합니다. 없으면 만들고, 그래프에 없는 이름이면 nullptr 를 반환합니다. */
-        SnapshotState* findOrAddSnapshot( const hashed_string& name );
+        SnapshotState* getOrCreateSnapshot( const hashed_string& name );
         /** @brief 실제로 섞을 보이스를 고르고(우선순위와 들림), 나머지는 가상이나 정지 상태로 둡니다. */
         void selectRealVoices();
         /** @brief 인스턴스의 들림과 거리를 모으고, 보이스가 없는 인스턴스를 비웁니다. */

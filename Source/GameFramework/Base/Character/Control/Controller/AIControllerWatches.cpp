@@ -1,5 +1,5 @@
 /**
- * @file AIControllerWatchs.cpp
+ * @file AIControllerWatches.cpp
  * @brief AI 조종자의 자동화 감시 값입니다. `AI.State`(`AIControllerComponent::setStateName`) · `AI.BehaviorTask` · `AI.MoveStatus` · `AI.DistanceToDestination` · `AI.Blackboard`(key).
  */
 #include "pch.h"

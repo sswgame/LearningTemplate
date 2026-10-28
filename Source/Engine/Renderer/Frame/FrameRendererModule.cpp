@@ -117,7 +117,7 @@ namespace sw
         registry.copyExtensions( listExtension );
         for ( IModuleRenderExtension* pExtension : listExtension )
         {
-            pExtension->setupPasses( builder, frameInfo );
+            pExtension->addPasses( builder, frameInfo );
         }
         ModuleDrawCollector        collector;
         vector<IModuleSceneProxy*> listProxy;

@@ -1,6 +1,6 @@
 /**
- * @file PawnWatchs.cpp
- * @brief 폰의 자동화 감시 값 `Pawn.Controller` 입니다. 좌석 쪽 `Pawn.Seat` 는 탈것 층(`Gameplay/Vehicle/VehicleWatchs.cpp`)에 있다 — 조종 층이 탈것 층을 보지 않는다.
+ * @file PawnWatches.cpp
+ * @brief 폰의 자동화 감시 값 `Pawn.Controller` 입니다. 좌석 쪽 `Pawn.Seat` 는 탈것 층(`Gameplay/Vehicle/VehicleWatches.cpp`)에 있다 — 조종 층이 탈것 층을 보지 않는다.
  */
 #include "pch.h"
 

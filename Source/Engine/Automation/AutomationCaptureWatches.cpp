@@ -1,5 +1,5 @@
 /**
- * @file AutomationCaptureWatchs.cpp
+ * @file AutomationCaptureWatches.cpp
  * @brief 캡처 대기 판정(`AutomationCaptureUtil`)의 자동화 감시 값 `Assets.Pending` 입니다.
  */
 #include "pch.h"

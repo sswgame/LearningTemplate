@@ -1,5 +1,5 @@
 /**
- * @file EditorPanelWatchs.cpp
+ * @file EditorPanelWatches.cpp
  * @brief 패널 매니저(`EditorPanelManager`)의 자동화 감시 값입니다 — `Editor.PanelOpen` · `Editor.PanelDirty` · `Editor.HasPanel`.
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 패널 id 를 정하는 전역 변수 `gv_editorWatchPanel` 은 `EditorWatchSupport.h` 에 있습니다.
  */
@@ -17,7 +17,7 @@ namespace sw::editor
     namespace
     {
         /** @brief `-gv_editorWatchPanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
-        [[nodiscard]] bool readWatchdPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readWatchedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
@@ -30,7 +30,7 @@ namespace sw::editor
         }
 
         /** @brief `-gv_editorWatchPanel` 의 패널 문서에 저장하지 않은 편집이 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
-        [[nodiscard]] bool readWatchdPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] bool readWatchedPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
@@ -68,7 +68,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( editorWatchdPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorWatchPanel is open", &readWatchdPanelOpen );
-    SW_AUTOMATION_WATCH( editorWatchdPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorWatchPanel has unsaved edits", &readWatchdPanelDirty );
+    SW_AUTOMATION_WATCH( editorWatchedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorWatchPanel is open", &readWatchedPanelOpen );
+    SW_AUTOMATION_WATCH( editorWatchedPanelDirty, "Editor.PanelDirty", "1 when the document of the panel named by gv_editorWatchPanel has unsaved edits", &readWatchedPanelDirty );
     SW_AUTOMATION_QUERY_WATCH( editorHasPanel, "Editor.HasPanel", "1 when the panel manager holds a panel whose id is the key, else 0", &readHasPanel, false, true );
 } // namespace sw::editor

@@ -31,7 +31,7 @@ namespace sw
     {
     }
 
-    RenderViewScheduler::Entry& RenderViewScheduler::findOrAddEntry( uint64 viewID )
+    RenderViewScheduler::Entry& RenderViewScheduler::getOrCreateEntry( uint64 viewID )
     {
         for ( Entry& entry : _listEntry )
         {
@@ -59,7 +59,7 @@ namespace sw
         {
             pOutRender[index]          = SW_FALSE;
             const Candidate& candidate = pCandidate[index];
-            Entry&           entry     = findOrAddEntry( candidate._viewID );
+            Entry&           entry     = getOrCreateEntry( candidate._viewID );
             entry._bSeen               = SW_TRUE;
             if ( candidate._bVisible == SW_FALSE )
                 continue;
@@ -116,7 +116,7 @@ namespace sw
         {
             if ( pOutRender[index] == SW_FALSE )
                 continue;
-            Entry& entry          = findOrAddEntry( pCandidate[index]._viewID );
+            Entry& entry          = getOrCreateEntry( pCandidate[index]._viewID );
             entry._lastRenderTime = now;
             ++entry._renderCount;
         }

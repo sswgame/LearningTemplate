@@ -129,7 +129,7 @@ namespace sw
         hashed_string makeFullName( const hashed_string& prefix, const hashed_string& name ) const;
         /** @brief 슬롯의 정의에 체형 보정을 더한 사본입니다. */
         static SocketDef makeCorrectedDef( const Slot& slot );
-        SocketID         findOrAddSlot( const hashed_string& fullName );
+        SocketID         getOrCreateSlot( const hashed_string& fullName );
         const Unit*      findUnit( uint32 unitIndex ) const;
 
     private:

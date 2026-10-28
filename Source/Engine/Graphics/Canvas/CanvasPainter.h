@@ -148,7 +148,7 @@ namespace sw
         /** @brief 지금 자르기가 쌓여 있으면 true 입니다. */
         bool hasClip() const { return _listClip.empty() == false; }
         /**
-         * @brief 지금까지 `drawGlyph` 가 래스터화 예산(`GlyphCache::findOrAddGlyph` 의 `Deferred`) 때문에 못 그린 글리프의 수입니다.
+         * @brief 지금까지 `drawGlyph` 가 래스터화 예산(`GlyphCache::getOrCreateGlyph` 의 `Deferred`) 때문에 못 그린 글리프의 수입니다.
          * @details 그리기 순회가 위젯마다 앞뒤 값을 견줘, 못 그린 글리프가 있는 위젯을 다음 프레임에 다시 칠한다(`UIPaintPass`). 캐시가 빈 글리프 상태로 굳지 않게 하는 길이다.
          */
         uint32 getDeferredGlyphCount() const { return _deferredGlyphCount; }
