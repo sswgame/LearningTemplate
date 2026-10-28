@@ -58,6 +58,19 @@
     <Part name="Axe" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_axe.prefab.xml" socket="Blade"/>
   </ItemVisual>
 
+  <!-- 병합 부품(CharacterAppearance 의 Merge Parts) — 몸과 같은 41 관절 리그에 묶은 스킨드 메시라 skeleton · rig 를 적지 않는다(적으면 따로 그리는 부품이다).
+       models_raw/kaykit/knight_merge_*.glb 는 knight.glb 의 본에 붙은 강체 부품(투구 · 둥근 방패 · 한손검)을 부모 본 하나에 가중치 1 로 묶어 만든 것이고(credits.md),
+       몸과 같은 머티리얼(kaykit_knight)이라 병합 메시에서 한 구간이 된다. 소켓 부품(helmet_knight 등)과 달리 오브젝트가 없고 몸 한 유닛이 한 번에 스키닝한다. -->
+  <ItemVisual id="helmet_knight_merged" tags="Helmet.Full">
+    <Part name="Shell" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_merge_helmet.mesh" material="game/shooter3d/materials/kaykit_knight.material"/>
+  </ItemVisual>
+  <ItemVisual id="shield_round_merged" tags="Shield">
+    <Part name="Shield" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_merge_shield_round.mesh" material="game/shooter3d/materials/kaykit_knight.material"/>
+  </ItemVisual>
+  <ItemVisual id="sword_knight_merged" tags="Weapon.Melee">
+    <Part name="Blade" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_merge_sword.mesh" material="game/shooter3d/materials/kaykit_knight.material"/>
+  </ItemVisual>
+
   <ItemVisual id="blaster_rifle" customization="Blaster" tags="Weapon.Blaster">
     <Part name="Body" kind="SocketPrefab" prefab="game/shooter3d/prefabs/blaster_d.prefab.xml" sockets="game/shooter3d/data/sockets/blaster_d.sockets.xml" socket="Gun"
           offset="0 0.12 0.2"/>

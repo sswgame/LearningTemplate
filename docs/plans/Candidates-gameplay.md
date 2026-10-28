@@ -9,7 +9,7 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 | 절 | 한 줄 설명 | 만들 것 |
 |---|---|---|
-| CharacterAppearanceScreenChecks | 병합 부품이 든 외형 차림 | 데이터 · 프리팹 |
+| CharacterAppearanceScreenChecks | 병합 부품 외형 차림의 화면 확인 | 시나리오 |
 | CameraRendererVisualChecks | 가려져 쉰 뷰 수 탐침 | 탐침 · 시나리오 |
 | PairedAnimationScreenChecks | 페어드 애니메이션 에디터 창 | 에디터 시나리오 |
 | RigEditingScreenChecks | 리그 디버그 창 저장 · 기즈모 | 에디터 시나리오 |
@@ -17,10 +17,10 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 ## 데이터
 
 ### CharacterAppearanceScreenChecks
-제목: 캐릭터 외형의 병합 부품 데이터
-왜 필요한가: 외형 조립 코드와 테스트는 끝났고 합칠 스킨드 부품이 든 차림 데이터와 `Merge Parts` 를 켠 프리팹이 없다(Shooter3D 의 스킨드 부품은 자기 리그가 있는 망토뿐).
+제목: 캐릭터 외형의 병합 부품 화면 확인
+왜 필요한가: 병합 부품 데이터와 프리팹은 만들었다 — `ShooterKnightMerged` 프리셋(투구 · 둥근 방패 · 한손검 `*_merged` 외형, 원본은 `models_raw/kaykit/knight_merge_*.glb`)과 `Merge Parts` 를 켠 `prefabs/kaykit/knight_merged.prefab.xml`.
 착수 조건: 없음.
-남은 첫 일: 그 차림 데이터와 프리팹을 만든다.
+남은 첫 일: `App --import-models`(쿠킹은 사용자) 뒤 그 프리팹을 씬에 놓고 병합 구간 수 탐침(`Appearance.MergedSections`)이 4(몸 · 투구 · 방패 · 검 — 머티리얼이 같아 구간이 하나로 합쳐질 수 있으니 실제 값을 읽어 기대값을 정한다)로 나오는 시나리오를 만든다.
 함정: 떼어 낸 부품 오브젝트의 수명(잔해 정리)을 정하는 곳이 없다. 칸 점유(양손 무기)는 외형만 본다. 나중에: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹 정보를 충돌체로 쓰게 한다.
 
 ## 탐침 · 시나리오

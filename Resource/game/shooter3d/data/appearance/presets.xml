@@ -12,6 +12,13 @@
     <Equip set="Knight"/>
   </CharacterAppearance>
 
+  <!-- 병합 부품 쇼케이스 — 투구 · 방패 · 검이 몸 메시에 합쳐진다(prefabs/kaykit/knight_merged.prefab.xml 이 Merge Parts 를 켠다). 어떤 컴포넌트도 가리키지 않는 외형 전용이다. -->
+  <CharacterAppearance id="ShooterKnightMerged" parent="Adventurer" tags="Faction.Player">
+    <Equip slot="Head" item="helmet_knight_merged"/>
+    <Equip slot="OffHand" item="shield_round_merged"/>
+    <Equip slot="MainHand" item="sword_knight_merged"/>
+  </CharacterAppearance>
+
   <CharacterAppearance id="ShooterArcher" parent="Adventurer" tags="Faction.Player">
     <Equip slot="MainHand" item="bow_long"/>
   </CharacterAppearance>
