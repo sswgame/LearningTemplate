@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Constants import kCppAllExtensions, kLintTargetRelDirs, kNotOurDirNames  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Parallel import flatMapInProcesses  # noqa: E402
+from lint.Parallel import flatMapInProcesses  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 from lint.IncludeOrderRules import buildHeaderLookupMap, inspectText  # noqa: E402

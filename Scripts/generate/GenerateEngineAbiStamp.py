@@ -21,7 +21,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common.GeneratedFile import writeGeneratedFile  # noqa: E402
+from generate.GeneratedFile import writeGeneratedFile  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번

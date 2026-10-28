@@ -33,7 +33,7 @@ from typing import Any, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import Constants as ConfigConstants  # noqa: E402
-from common.GeneratedFile import GeneratorError, formatCMakeSet, runGenerator, writeGeneratedFile  # noqa: E402
+from generate.GeneratedFile import GeneratorError, formatCMakeSet, runGenerator, writeGeneratedFile  # noqa: E402
 
 kTag = "GenerateCMakeConstants"
 

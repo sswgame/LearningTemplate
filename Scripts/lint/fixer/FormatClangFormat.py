@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from lint.LintFixer import FixerFileKind, addFileArguments, selectFixerTargetFiles
 from common.Constants import kShaderSourceExtensions
 from common.ExitCode import ExitCode
-from common.Host import runClangFormatBatch
+from lint.ClangFormatBatch import runClangFormatBatch
 from common.Paths import getProjectRoot
 
 kShaderFileKind = FixerFileKind(suffixes=tuple(sorted(kShaderSourceExtensions)))

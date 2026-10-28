@@ -6,10 +6,6 @@ Scripts/lint/PreCommitLint.py
 Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`gate/CheckIncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
-**병합 커밋은 새 내용만 본다.** 병합 중(`MERGE_HEAD` 가 있다)이면 병합으로 바뀐 파일이 전부 staged 로 잡히는데, 그 대부분은 한쪽 부모와 바이트가 같다 —
-그 부모 커밋을 만들 때 이 훅이 같은 내용을 이미 검사했다. 그래서 staged 내용이 어느 부모의 같은 경로 blob 과도 다른 파일만 검사한다
-(`StagedScope.selectFileScopedStaged`).
-
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
 """
 
@@ -24,9 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Constants import kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Host import getAllStagedFiles, getStagedCppFiles, runClangFormatBatch  # noqa: E402
+from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.StagedScope import selectFileScopedStaged  # noqa: E402
+from lint.ClangFormatBatch import runClangFormatBatch  # noqa: E402
+from lint.GitFiles import getStagedCppFiles  # noqa: E402
 from lint.gate.CheckIncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -41,9 +38,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[PreCommitLint] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
     hasErrors = False
 
-    setFileScoped = set(selectFileScopedStaged(projectRoot, allStagedFiles))
-    stagedCppFiles = [path for path in getStagedCppFiles(projectRoot) if path in setFileScoped]
-    stagedShaderFiles = [path for path in getStagedCppFiles(projectRoot, extensions=kShaderSourceExtensions) if path in setFileScoped]
+    stagedCppFiles = getStagedCppFiles(projectRoot)
+    stagedShaderFiles = getStagedCppFiles(projectRoot, extensions=kShaderSourceExtensions)
 
     # --- include 순서 -------------------------------------------------------------
     if stagedCppFiles:

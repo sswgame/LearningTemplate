@@ -13,7 +13,7 @@ import concurrent.futures
 import os
 from typing import Callable, Iterable, Iterator, Sequence, TypeVar
 
-from .ExitCode import ExitCode
+from common.ExitCode import ExitCode
 
 TItem = TypeVar("TItem")
 TResult = TypeVar("TResult")

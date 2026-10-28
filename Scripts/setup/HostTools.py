@@ -1,5 +1,5 @@
 """
-Scripts/common/HostTools.py
+Scripts/setup/HostTools.py
 
 호스트 SDK/컴파일러 경로 탐색 (MSVC, Windows SDK, DXC, system includes).
 """
@@ -13,13 +13,13 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-from .Archive import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
-from .Config import loadSearchPaths, recordEnginePath
-from .Constants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
-from .Paths import normalizePath, platformKey, sharedLibraryNames
-from .Process import runProcess
-from .Search import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, selectLatestVersion
-from .ToolLocator import ToolSpec, findToolRoot
+from common.Archive import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
+from common.Config import loadSearchPaths, recordEnginePath
+from common.Constants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
+from common.Paths import normalizePath, platformKey, sharedLibraryNames
+from common.Process import runProcess
+from common.Search import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, selectLatestVersion
+from setup.ToolLocator import ToolSpec, findToolRoot
 
 
 def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:

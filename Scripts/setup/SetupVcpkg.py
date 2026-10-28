@@ -29,11 +29,11 @@ from common.Constants import (
     kKeyVcpkgSearchRoots,
     kKeyVcpkgToolsSubdir,
 )
-from common.Host import ensureGitOnPath, runGit
+from common.Git import ensureGitOnPath, runGit
 from common.Paths import platformKey, platformScriptCommand
 from common.Process import runProcess
 from common.Search import isVcpkgRoot
-from common.ToolLocator import ToolSpec, findToolRoot
+from setup.ToolLocator import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 kVcpkgToolSpec = ToolSpec(

@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
-from common.Host import getModifiedCppFiles  # noqa: E402
+from lint.GitFiles import getModifiedCppFiles  # noqa: E402
 from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
 
 

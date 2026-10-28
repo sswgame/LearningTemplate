@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from .ExitCode import ExitCode
+from common.ExitCode import ExitCode
 
 
 def writeGeneratedFile(path: Path, content: str, *, tag: str, summary: str = "", newline: str | None = None,

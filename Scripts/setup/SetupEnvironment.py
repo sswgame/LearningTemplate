@@ -51,7 +51,7 @@ from common.Constants import (
 from common.Paths import getProjectRoot, normalizePath
 from common.Search import getOrFindCached, isVcpkgRoot
 from common.ExitCode import ExitCode  # noqa: E402
-from common.HostTools import (
+from setup.HostTools import (
     findDxcDlls,
     findMsvcPath,
     findWindowsSdkPath,

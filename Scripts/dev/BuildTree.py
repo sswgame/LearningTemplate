@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path
 
-from .Paths import getProjectRoot
+from common.Paths import getProjectRoot
 
 _kConfigPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)")
 _kServerPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)-Server")
