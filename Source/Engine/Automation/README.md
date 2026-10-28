@@ -63,7 +63,7 @@ HarvestValley 의 상점 주인이 10 시에 가게에 있는지 확인하는 �
 1. 프레임 10 에서 일정 탐침이 `pierre` 가 자고 있음을 확인합니다.
 2. 프레임 11 에서 판 상태의 시계를 다음 10 시로 감습니다(지나간 시와 날의 경계는 알림으로 남아 다음 틱의 디렉터와 일정이 받는다).
 3. 한 프레임 뒤 일정상 활동과 위치를 확인하고 그다음 프레임에 몸(`Villager.pierre`)이 가게 위치에 있는지 봅니다(몸은 다음 틱에 따라오므로 한 프레임을 띄운다).
-4. `py -3 -m Scripts scenario schedule --backend dx12` 의 종료 코드 0 이 통과입니다(`App.exe -scenario=…` 를 손으로 조립하지 않는다 — 이 명령이 `<Launch>` 의 기동 변수 · 게임 · 보고 인자를 파일에서 그대로 붙이고 GPU 칸을 잡아 백엔드마다 한 판씩 돌린다. [검증과 측정](../../../docs/08_Verification.md) 1절)(15 면 처리하지 않은 로그가 남은 것이라 "로그 게이트" 를 따라 고칩니다).
+4. `py -3 -m Scripts scenario schedule --backend dx12` 의 종료 코드 0 이 통과입니다(`App.exe -scenario=…` 를 손으로 조립하지 않는다 — 이 명령이 `<Launch>` 의 기동 변수 · 게임 · 보고 인자를 파일에서 그대로 붙이고 GPU 칸을 잡아 백엔드마다 한 판씩 돌린다. [검증과 측정] 1절)(15 면 처리하지 않은 로그가 남은 것이라 "로그 게이트" 를 따라 고칩니다).
 
 단언이 실패하면 로그와 보고에 어느 단계에서 무엇이 달랐는지 한 줄이 남습니다.
 
@@ -151,5 +151,4 @@ AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상�
 
 ## 더 볼 곳
 
-단계 문맥 `AutomationStepContext.h`, 엔진 단계와 실행기 탐침 `AutomationRunner.cpp`, 입력 맵 액션 단계 `AutomationActionSteps.cpp`, 녹화 `ScenarioRecorder.cpp`, 탐침 레지스트리와 대상 고르기 `Engine/Probe/AutomationProbe.cpp`, 시나리오 × 백엔드 실행 `Test/AppTest/TestAppScenario.cpp`, 에디터 UI 캡처 단계 `Editor/SelfTest/EditorCaptureSteps.cpp`.
-검증 절차는 [검증과 측정](../../../docs/08_Verification.md) 3절, 결정은 [결정 기록](../../../docs/09_Decisions.md) 에 있습니다.
+단계 문맥 `AutomationStepContext.h`, 실행기 시작 · 프레임 · 끝맺음 `AutomationRunner.cpp`, 판정(탐침 비교 · 이력 · 로그 · 이미지 · 로그 게이트) `AutomationRunnerJudge.cpp`, 엔진 단계 `AutomationRunnerSteps.cpp`, 판정 단계의 인자 읽기 `AutomationStepArgs.h`, 입력 맵 액션 단계 `Engine/Scenario/AutomationActionSteps.cpp`, 녹화 `Engine/Scenario/ScenarioRecorder.cpp`, 탐침 레지스트리와 대상 고르기 `Engine/Probe/AutomationProbe.cpp`, 시나리오 × 백엔드 실행 `Test/AppTest/TestAppScenario.cpp`, 에디터 UI 캡처 단계 `Editor/SelfTest/EditorCaptureSteps.cpp`.

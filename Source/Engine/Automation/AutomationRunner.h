@@ -179,7 +179,7 @@ namespace sw
         void runExpectVisited( const AutomationStep& step );
         void runRecord( const AutomationStep& step );
         void runRemember( const AutomationStep& step );
-        /** @brief 엔진 단계(`AutomationRunner.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
+        /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
         friend struct AutomationRunnerEngineSteps;
 
         /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */

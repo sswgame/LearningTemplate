@@ -1,0 +1,401 @@
+#include "pch.h"
+
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
+
+#include "Engine/Automation/AutomationCaptureUtil.h"
+#include "Engine/Automation/AutomationExitCode.h"
+#include "Engine/Automation/AutomationImageMetric.h"
+#include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationStepArgs.h"
+#include "Engine/Automation/AutomationThresholdBasis.h"
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/RawInputEvent.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Scenario/AutomationEnvironmentSteps.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
+#include "Engine/Scenario/AutomationStepValidation.h"
+#include "Engine/Scenario/AutomationWindowSteps.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
+
+namespace sw
+{
+    SW_LOG_CALLER( "Automation" );
+
+    void AutomationRunner::runExpect( const AutomationStep& step )
+    {
+        bool   bMatched = false;
+        string message;
+        if ( compareProbe( step, bMatched, message ) == false )
+            recordFailure( step, message );
+        else if ( bMatched == false )
+            recordFailure( step, "Expect " + message );
+    }
+
+    bool AutomationRunner::readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const
+    {
+        const string&                      probeName     = *step.findAttribute( "probe" );
+        const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
+        // 모듈을 언로드했다 로드하면 탐침이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
+        if ( pRegistration == nullptr )
+        {
+            outMessage = probeName + " is no longer registered";
+            return false;
+        }
+        const string*              pTarget = step.findAttribute( "target" );
+        const string*              pKey    = step.findAttribute( "key" );
+        const AutomationProbeQuery query   = AutomationProbeQuery::make( findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
+                                                                       pKey != nullptr ? string_view{ *pKey } : string_view{} );
+          string subject = probeName;
+        if ( pTarget != nullptr )
+            subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
+        else if ( pKey != nullptr )
+            subject += "(" + *pKey + ")";
+        if ( AutomationProbes::read( *pRegistration, query, outValue ) == false )
+        {
+            const string reason = outValue._bText && outValue._text.empty() == false ? outValue._text : string( "no target in the scene" );
+            outMessage          = subject + " has no value (" + reason + ")";
+            return false;
+        }
+        outMessage = subject;
+        return true;
+    }
+
+    bool AutomationRunner::compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    {
+        using Internal = AutomationStepArgsUtil;
+        AutomationProbeValue value{};
+        outMatched = false;
+        if ( readProbeValue( step, value, outMessage ) == false )
+            return false;
+        const string valueText = Internal::makeValueText( value );
+        const string subject   = outMessage;
+        bool         bOk       = true;
+        string       rule;
+        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
+        if ( bNumberRule && value._bText )
+        {
+            outMessage = subject + " is text ('" + value._text + "') - compare it with is=\"…\"";
+            return false;
+        }
+        const string* pSameAs      = step.findAttribute( "sameAs" );
+        const string* pDiffersFrom = step.findAttribute( "differsFrom" );
+        if ( pSameAs != nullptr || pDiffersFrom != nullptr )
+        {
+            // 기억한 값과는 글 그대로 비교한다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
+            const string& name        = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
+            const string* pRemembered = nullptr;
+            for ( const RememberedValue& remembered : _listRemembered )
+            {
+                if ( remembered._name == name )
+                    pRemembered = &remembered._text;
+            }
+            if ( pRemembered == nullptr )
+            {
+                outMessage = subject + ": nothing was remembered as '" + name + "' (add <Remember as=\"" + name + "\"> before this step)";
+                return false;
+            }
+            bOk        = pSameAs != nullptr ? valueText == *pRemembered : valueText != *pRemembered;
+            outMatched = bOk;
+            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pRemembered + "'), got " + valueText;
+            return true;
+        }
+        if ( step.findAttribute( "is" ) != nullptr )
+        {
+            bOk  = valueText == *step.findAttribute( "is" );
+            rule = "is '" + *step.findAttribute( "is" ) + "'";
+        }
+        else
+        {
+            Internal::NumberComparison comparison;
+            string                     error;
+            if ( Internal::parseNumberComparison( step, Internal::kProbeNearTolerance, comparison, error ) == false )
+            {
+                outMessage = error; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                return false;
+            }
+            bOk = Internal::matchesNumber( comparison, value._number, rule );
+        }
+        outMatched = bOk;
+        outMessage = subject + " " + rule + ", got " + valueText;
+        return true;
+    }
+
+    void AutomationRunner::addRecordLine( string line )
+    {
+        SW_LOG_INFO( "[Scenario] record %#", line.c_str() );
+        _reportWriter.addRecordLine( std::move( line ) );
+    }
+
+    void AutomationRunner::prepareWatches()
+    {
+        _listWatch.clear();
+        for ( const AutomationStep& step : _scenario.getSteps() )
+        {
+            if ( string_view{ step._kind } != "ExpectVisited" )
+                continue;
+            const string* pTarget = step.findAttribute( "target" );
+            const string* pKey    = step.findAttribute( "key" );
+            ProbeWatch    watch{};
+            watch._probe  = *step.findAttribute( "probe" );
+            watch._target = pTarget != nullptr ? *pTarget : string();
+            watch._key    = pKey != nullptr ? *pKey : string();
+            bool bKnown   = false;
+            for ( const ProbeWatch& existing : _listWatch )
+            {
+                bKnown = bKnown || ( existing._probe == watch._probe && existing._target == watch._target && existing._key == watch._key );
+            }
+            if ( bKnown == false )
+                _listWatch.push_back( std::move( watch ) );
+        }
+    }
+
+    void AutomationRunner::sampleWatches()
+    {
+        for ( ProbeWatch& watch : _listWatch )
+        {
+            AutomationStep step{};
+            step._kind = "ExpectVisited";
+            step._listAttribute.push_back( AutomationAttribute{ "probe", watch._probe } );
+            if ( watch._target.empty() == false )
+                step._listAttribute.push_back( AutomationAttribute{ "target", watch._target } );
+            if ( watch._key.empty() == false )
+                step._listAttribute.push_back( AutomationAttribute{ "key", watch._key } );
+            AutomationProbeValue value{};
+            string               message;
+            if ( readProbeValue( step, value, message ) == false )
+                continue;
+            string text = AutomationStepArgsUtil::makeValueText( value );
+            if ( watch._listValue.empty() == false && watch._listValue.back() == text )
+                continue;
+            watch._listValue.push_back( std::move( text ) );
+            watch._listFrame.push_back( _frameIndex );
+        }
+    }
+
+    void AutomationRunner::runExpectVisited( const AutomationStep& step )
+    {
+        const string*     pTarget = step.findAttribute( "target" );
+        const string*     pKey    = step.findAttribute( "key" );
+        const string_view probe   = *step.findAttribute( "probe" );
+        const string_view target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
+        const string_view key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
+        const ProbeWatch* pWatch  = nullptr;
+        for ( const ProbeWatch& watch : _listWatch )
+        {
+            const bool bSame = watch._probe == probe && watch._target == target && watch._key == key;
+            if ( bSame )
+                pWatch = &watch;
+        }
+        string error;
+        uint32 since = 0; // 적지 않으면 처음부터 본다
+        if ( AutomationStepArgsUtil::readUint( step, "since", since, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return;
+        }
+        const string*  pIs = step.findAttribute( "is" );
+        vector<string> listWant;
+        if ( pIs != nullptr )
+        {
+            listWant.push_back( *pIs );
+        }
+        else
+        {
+            // `sequence` 는 쉼표로 가른 값 목록이다(앞뒤 공백을 떼고 빈 항목은 버린다).
+            for ( const string_view value : StringUtil::split( *step.findAttribute( "sequence" ), ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            {
+                listWant.emplace_back( value );
+            }
+        }
+        // `since` 프레임에 이미 들어 있던 값(그 앞의 마지막 바뀜)도 거친 것으로 본다.
+        size_t first = 0;
+        for ( size_t index = 0; pWatch != nullptr && index < pWatch->_listFrame.size(); ++index )
+        {
+            if ( pWatch->_listFrame[index] <= since )
+                first = index;
+        }
+        size_t wantIndex = 0;
+        string seen;
+        for ( size_t index = first; pWatch != nullptr && index < pWatch->_listValue.size(); ++index )
+        {
+            seen += seen.empty() ? "" : " > ";
+            seen += pWatch->_listValue[index] + "@" + to_string( pWatch->_listFrame[index] );
+            if ( wantIndex < listWant.size() && pWatch->_listValue[index] == listWant[wantIndex] )
+                ++wantIndex;
+        }
+        if ( wantIndex == listWant.size() )
+            return;
+        string want;
+        for ( const string& value : listWant )
+        {
+            want += want.empty() ? string( value ) : " > " + value;
+        }
+        string subject = string( probe );
+        if ( target.empty() == false || key.empty() == false )
+            subject += "(" + string( target ) + ( target.empty() || key.empty() ? "" : ", " ) + string( key ) + ")";
+        recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
+                                 "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
+    }
+
+    void AutomationRunner::runRecord( const AutomationStep& step )
+    {
+        AutomationProbeValue value{};
+        string               message;
+        if ( readProbeValue( step, value, message ) == false )
+        {
+            recordFailure( step, "Record " + message );
+            return;
+        }
+        addRecordLine( "frame " + to_string( _frameIndex ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
+    }
+
+    void AutomationRunner::runRemember( const AutomationStep& step )
+    {
+        AutomationProbeValue value{};
+        string               message;
+        if ( readProbeValue( step, value, message ) == false )
+        {
+            recordFailure( step, "Remember " + message );
+            return;
+        }
+        const string& name = *step.findAttribute( "as" );
+        string        text = AutomationStepArgsUtil::makeValueText( value );
+        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", _frameIndex, name.c_str(), text.c_str(), message.c_str() );
+        for ( RememberedValue& remembered : _listRemembered )
+        {
+            if ( remembered._name == name )
+            {
+                remembered._text = std::move( text );
+                return;
+            }
+        }
+        _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
+    }
+
+    void AutomationRunner::runExpectLog( const AutomationStep& step )
+    {
+        const string*                         pID     = step.findAttribute( "id" );
+        const string&                         needle  = pID != nullptr ? *pID : *step.findAttribute( "contains" ); // 검사 함수가 둘 중 하나를 요구했다
+        const utf8*                           pTarget = pID != nullptr ? "ExpectLog id '" : "ExpectLog '";
+        string                                error;
+        AutomationStepArgsUtil::ExpectLogArgs args;
+        if ( AutomationStepArgsUtil::parseExpectLog( step, args, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return;
+        }
+        const uint32 matchCount = pID != nullptr ? _logCapture.countLinesWithID( needle, args._since ) : _logCapture.countMatchingLines( needle, args._since );
+        if ( args._bExactCount )
+        {
+            if ( matchCount != args._expected )
+                recordFailure( step, string( pTarget ) + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+            return;
+        }
+        if ( matchCount < args._expected )
+            recordFailure( step, string( pTarget ) + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+    }
+
+    void AutomationRunner::runExpectImage( const AutomationStep& step )
+    {
+        using Internal = AutomationStepArgsUtil;
+        string                    error;
+        Internal::ExpectImageArgs args;
+        if ( Internal::parseExpectImage( step, args, error ) == false )
+        {
+            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            return;
+        }
+        const string* pRegion = step.findAttribute( "region" );
+
+        const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
+        AutomationImage image;
+        AutomationImage reference;
+        const string*   pReference = step.findAttribute( "reference" );
+        if ( AutomationImageMetric::loadPpm( path, image, error ) == false ||
+             ( pReference != nullptr && AutomationImageMetric::loadPpm( resolveOutputPath( *pReference ), reference, error ) == false ) )
+        {
+            recordFailure( step, "could not read the image: " + error );
+            return;
+        }
+        float64 value = 0.0;
+        if ( AutomationImageMetric::measure( image, args._region, args._metric, args._ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
+        {
+            recordFailure( step, error );
+            return;
+        }
+        // 값은 항상 적는다. 임계값을 정할 때 숫자를 보기 위해서다.
+        string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
+                      Internal::formatNumber( value );
+        SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
+        _reportWriter.addMetricLine( std::move( line ) );
+
+        string     rule;
+        const bool bOk = Internal::matchesNumber( args._comparison, value, rule );
+        if ( bOk == false )
+        {
+            recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
+            return;
+        }
+        if ( args._basis._kind == AutomationThresholdBasisKind::Provisional )
+        {
+            // 어림값 문턱이 맞았다 — 통과로 세지 않는다. 위 지표 줄의 잰 값을 `measured` 로 옮기면 확정이다.
+            string unconfirmed = step.describe() + ": " + *step.findAttribute( "metric" ) + " " + rule + " held with " + Internal::formatNumber( value ) +
+                                 " on a provisional threshold (" + args._basis._text + ")";
+            SW_LOG_INFO( "[Scenario] unconfirmed %#", unconfirmed.c_str() );
+            _listUnconfirmed.push_back( std::move( unconfirmed ) );
+        }
+    }
+
+    void AutomationRunner::applyLogGate()
+    {
+        AutomationLogJudgement judgement = _logCapture.judgeLines( _logPolicy );
+        if ( engine::areEngineServicesBound() )
+        {
+            for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
+            {
+                const string line         = "Missing localized text for key '" + key + "'";
+                const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
+                if ( bAlreadySeen || _logPolicy.isDeclared( line ) )
+                    continue;
+                ++judgement._missingIDCount; // 이 줄은 합성이라 id 가 없다 — `<ExpectLog>` 로만 가릴 수 있다
+                judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (no log id) " + line + " (before the scenario started)" );
+            }
+        }
+        _listAllowedLogID = std::move( judgement._listAllowedID );
+        if ( judgement.hasUnhandled() == false )
+            return;
+        _listUnhandledLog = std::move( judgement._listUnhandled );
+        // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
+        if ( _result != AutomationOutcome::Passed )
+            return;
+        for ( const string& line : _listUnhandledLog )
+        {
+            _listFailure.push_back( "unhandled log: " + line );
+        }
+        _result       = AutomationOutcome::UnhandledLog;
+        _finishReason = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
+                        " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
+                        string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+    }
+} // namespace sw

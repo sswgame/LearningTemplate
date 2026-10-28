@@ -101,7 +101,7 @@ namespace sw
 {
     /**
      * @class AutomationStepRegistry
-     * @brief 단계 종류 레지스트리입니다. 엔진 단계(`Tap`, `Expect` 등, `AutomationRunner.cpp`)도 여기 등록하므로 그 이름과 같은 등록은 중복으로 거절합니다.
+     * @brief 단계 종류 레지스트리입니다. 엔진 단계(`Tap`, `Expect` 등, `AutomationRunnerSteps.cpp`)도 여기 등록하므로 그 이름과 같은 등록은 중복으로 거절합니다.
      *        모듈을 언로드하면 그 모듈의 단계도 빠지고, 핫 리로드의 교체 이미지는 같은 이름을 대체합니다(`RegistrationReloadScope`).
      */
     class SW_API AutomationStepRegistry

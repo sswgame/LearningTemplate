@@ -356,7 +356,8 @@ class ArgumentVocabularyTest(unittest.TestCase):
                 self.assertNotIn(literal, text, f"{relPath}: {literal}")
         listEditorFile = ("Source/Editor/Common/Commands/Dev/EditorDevCommands.cpp", "Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp",
                           "Source/Editor/SelfTest/TestRunnerPanel.cpp")
-        for relPath in ("Source/Engine/Automation/AutomationRunner.cpp", "Source/Engine/Scenario/ScenarioRecorder.cpp", "Test/AppTest/AppTestUtil.cpp", *listEditorFile):
+        for relPath in ("Source/Engine/Automation/AutomationRunner.cpp", "Source/Engine/Automation/AutomationRunnerJudge.cpp", "Source/Engine/Automation/AutomationRunnerSteps.cpp",
+                        "Source/Engine/Scenario/ScenarioRecorder.cpp", "Test/AppTest/AppTestUtil.cpp", *listEditorFile):
             self.assertNotIn('"Saved/Automation', (getProjectRoot() / relPath).read_text(encoding="utf-8"), relPath)
         # 에디터가 App 을 띄우는 자리(`TestRunnerPanel`)는 앞에 공백이 든 조각(`" -scenario=`)으로 적었으므로 주석이 아닌 줄에서 인자 글 자체를 찾는다.
         listCodeLine = [line for line in (getProjectRoot() / listEditorFile[2]).read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith(("//", "*", "/*"))]

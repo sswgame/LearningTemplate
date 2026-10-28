@@ -54,7 +54,7 @@ namespace sw
         /**
          * @brief @p step 의 검사가 기대는 이름 가운데 이 프로세스에 등록되지 않은 첫 번째의 종류를 반환합니다. 모두 있으면 `Resolved` 입니다.
          * @param outName 등록되지 않은 이름(단계 종류 · 탐침 · 변수 · 개발 명령)입니다. 모두 있으면 단계 종류를 적습니다.
-         * @details 이름을 묻는 검사 함수는 `validateProbeReference` · `findRequiredVariable`(`AutomationRunner.cpp`)과 `validateDevCommand`(`AutomationEnvironmentSteps.cpp`)다.
+         * @details 이름을 묻는 검사 함수는 `validateProbeReference` · `findRequiredVariable`(`AutomationRunnerSteps.cpp`)과 `validateDevCommand`(`AutomationEnvironmentSteps.cpp`)다.
          *          그 검사에 이름을 묻는 곳이 늘면 여기에도 더한다 — 빠뜨리면 실행기 없는 검사가 "틀렸다" 로 드러나 알려 준다(조용히 통과하지 않는다).
          */
         [[nodiscard]] static AutomationStepDependency findUnresolvedDependency( const AutomationStep& step, string& outName );

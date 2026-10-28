@@ -12,7 +12,7 @@
 ## 2. 사실
 
 - 인게임에서 시나리오 · 탐침 · `VirtualInputScript` 를 읽는 곳은 0 이다(탐침을 읽는 곳은 실행기와 테스트뿐, 자동화가 아닌 사용은 에디터 `InputMapPanel` 의 `InputReplay` 하나).
-- Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있다 — 결정 기록 5-3 "자동화는 Shipping 에서도 쓴다"와 맞는 의도된 상태다. 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다(`SwapBackend` 의 `SW_SHIPPING` 을 맞춤, 2026-10-25). 나머지 단계는 가드가 없는 것이 의도다.
+- Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있다 — 의도된 상태다. 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다(`SwapBackend` 의 `SW_SHIPPING` 을 맞춤, 2026-10-25). 나머지 단계는 가드가 없는 것이 의도다.
 - `-cook-scenes`(`HeadlessSubsystem.cpp` `runCookTask`)에 `SW_SHIPPING` 가드가 없는 것도 의도다 — 쿠킹은 `-cooked-dir` 로 준 폴더에만 쓰는 오프라인 도구이고 `CookAssets` 빌드 타깃과 배포 패키징이 배포 구성 App 으로 부른다(`-cook-shaders` · `-bake-retarget` · `-make-patch` 도 같다).
 
 ## 3. 형식 결함 셋
@@ -28,18 +28,19 @@
 
 ## 5. 단계
 
-티어 테이블 수정이 든 ① 은 층 게이트([결정 기록](../09_Decisions.md) 5-2)와 규칙 파일(`CheckEngineLayers.toml`)을 같이 만지므로 순서를 정한다(Roadmap).
+티어 테이블 수정이 든 ① 은 층 게이트와 규칙 파일(`CheckEngineLayers.toml`)을 같이 만지므로 순서를 정한다(Roadmap).
 
 | 단계 | 내용 | 검증 | 상태 |
 |---|---|---|---|
 | ① 탐침 | 탐침 레지스트리를 티어 10 으로 내리고 Terrain · Character · Scene 탐침을 기능 폴더로(기능이 자기 탐침을 등록) | 층 게이트 4종, 시나리오 네 백엔드 회귀(작업자가 안 돌림 — 정의 위치만 옮겨 동작은 같다) | 완료 — 2026-10-27 GameFramework 허브(`GameplayAutomationSteps.cpp`)의 탐침 16개도 영역 폴더로 옮겼다(`SessionStateProbes`(퀘스트 포함) · `ScheduleProbes` · `AIControllerProbes` · `PawnProbes` · `VehicleProbes`). 허브에는 단계 셋(`AdvanceGameTime` · `Mount` · `Dismount`)만 남음. 같은 날 에디터 허브 `EditorScenarioSteps.cpp` 의 탐침 91개도 패널 · 기능 폴더의 `*Probes.cpp` 로 옮겼다(허브에는 단계 일곱만, 허브의 패널 헤더 include 40여 개가 사라짐). 시나리오용 전역 변수 `gv_editorProbe*` 는 `SelfTest/EditorProbeSupport.h` 에 선언한다. `AutomationRunner.cpp` 의 탐침 12개도 뺐다: `Object.*` 는 `Scene/ObjectProbes.cpp`, `Assets.Pending` 은 `AutomationCaptureProbes.cpp`, `Input.*` 와 `Profiler.TraceRecording` 은 입력(T10) · 프로파일링(T4)이 레지스트리(T10)를 못 봐서 가장 가까운 층인 `AutomationInputProbes.cpp` · `AutomationProfilerProbes.cpp` 에 둔다. 이 뒤로 탐침을 모아 쥔 허브 파일은 없다(`NetSimAutomation.cpp` · `RHIBackendSwitcherAutomation.cpp` 는 자기 기능의 탐침) |
 | ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스(`AutomationStepContext`)를 받게 한다 | 등록자가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현, 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
-| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드) — `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`로 결과 형식과 종료 코드를 갈랐고 테스트 전용 선언을 `AutomationTestOptions`(`getTestOptions()`)로 모았다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
-| ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 결정 기록 5-3 과 부딪히고 GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
+| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드, 컴파일 확인 전) — 2026-10-28 폴더 이동 · 실행기 번역 단위 분할(6절). `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`로 결과 형식과 종료 코드를 갈랐고 테스트 전용 선언을 `AutomationTestOptions`(`getTestOptions()`)로 모았다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
+| ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 자동화를 Shipping 에서도 쓰는 방침과 부딪히고 GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
 
 ## 6. 남은 것과 위험
 
-③ 의 남은 것: 실행기 분할(`AutomationRunner.cpp` 2000 줄 — 타임라인 · 입력 단계 쪽과 판정 · 보고 쪽)과 폴더 이동(`Engine/Scenario`, 파일 서른 개 안팎의 include). 둘 다 컴파일 확인이 가능한 단독 작업으로 하고 시계 잡기 · 사진 대기 순서는 네 백엔드 시나리오 회귀로 본다.
+③ 의 분할 · 이동(2026-10-28, 컴파일 확인 전 — 사용자 지시로 빌드 없이 읽어서만 확인): 폴더 이동은 스물한 파일(형식 · 등록표 · 문맥 · 타임라인 · 입력 · 창 · 백엔드 · 환경 단계 · 녹화 · Scratch · 시간 상수)을 `Engine/Scenario`(티어 11)로 옮겼다. `Scratch` 와 시간 상수는 문서 1절이 테스트 쪽으로 적었지만 형식 헤더(`AutomationScenario.h`)가 그 형식을 들고 있어 Scenario 가 Automation 을 include 하지 않으려면 같이 가야 했다(층 게이트가 막는다). 파일 이름의 `Automation` 접두는 그대로다(개명은 호출부가 없는 일).
+실행기 분할은 `AutomationRunner` 한 클래스를 유지하고 번역 단위만 가른 것이다: `AutomationRunner.cpp`(시작 · 프레임 · 시계 잡기 · 타임라인 · 끝맺음 약 800 줄), `AutomationRunnerJudge.cpp`(탐침 비교 · `ExpectVisited` 이력 · `Record` · `Remember` · `ExpectLog` · `ExpectImage` · 로그 게이트), `AutomationRunnerSteps.cpp`(엔진 단계 등록과 검사 함수), `AutomationStepArgs.h/.cpp`(검사 함수와 판정이 함께 읽는 인자 · 수 비교 — `AutomationStepArgsUtil`). 클래스 자체를 타임라인 클래스와 판정 클래스로 나누는 일은 하지 않았다: 멤버 상태(`_listFailure` · `_frameIndex` · 입력 · 스크린샷 대기열)가 두 쪽에 얽혀 있어 빌드 없이는 위험이 크다(다음 일: 판정이 읽는 상태를 구조체로 묶어 내보내기). 시계 잡기 · 사진 대기 순서는 줄 단위로 옮겨 바뀌지 않았고 네 백엔드 시나리오 회귀로 본다.
 종료 코드: 숫자는 `AutomationExitCode.h` 한 곳이며(`kAutomationExitCodeRunning` 은 `IEngineFrameObserver::kRunning` 그 자체) `AppTestUtil` 은 `getAutomationExitCode` 를 부르고 `RunScenarioLogs.py` 는 그 헤더를 읽는다(`TestScenarioLogs.py` 가 지킨다). "이 기계에서 RHI 를 못 씀" 코드(77)도 C++ `RHIInitResult.h` 가 정본이고 `AppRun.py` 와 `Test/PythonTest/CMakeLists.txt`(`SW_RHI_UNUSABLE_EXIT_CODE`, 못 찾으면 `FATAL_ERROR`)가 읽으며 `TestQaRunners` 가 `ExitCode.Skipped` 와 같은지, `Test/` 아래 `SKIP_RETURN_CODE` 에 숫자 리터럴이 없는지 본다.
 
 데스크톱 전역 상태 단계(2026-10-28): 단계 등록에 `_bUsesDesktop` 표시(`SW_AUTOMATION_STEP_DESKTOP`)를 두고 표시된 단계가 `input="mixed"` 아닌 시나리오에 있으면 실행기 준비와 시나리오 데이터 테스트가 거절한다. 지금 표시는 `ExpectCursorClip` 하나다. 처리(2026-10-28 후속): `CaptureWindow`(화면 복사)도 `SW_AUTOMATION_STEP_DESKTOP` 으로 표시했고 `validateDesktopSteps` 가 루트 `requireForeground="true"` 도 `input="mixed"` 가 아니면 거절한다(OS 에 전경 창은 하나뿐이라 겹쳐 도는 프로세스와 방해한다). `editor/` 시나리오 11 개(assetmanage · contentbrowser · contentthumbnails · dialoguegraph · lightprobebakecancel · mapcheck · packaging · toastreveal · uiscale · componenticons · toolbaricons)는 화면 복사를 이미 있던 창 단위 캡처 `CaptureEditorUI`(에디터 UI 패널 + 플로팅 창을 프로세스 안에서 찍는다)로 바꾸고 `requireForeground` 를 뺐으므로 `_Desktop` 으로 옮기지 않고 겹쳐 돈다. `CaptureWindow` 는 OS 가 합성한 화면 자체가 검사 대상인 시나리오(`mixed`)만 쓴다. 실행 확인 필요: 11 개의 PNG 가 `CaptureEditorUI` 로 같은 내용(결과 창 · 팝업 포함)을 담는지, `requireForeground` 없이 토스트 · 라이트 프로브 취소 시나리오가 통과하는지(통합에서 한 번). 클립보드: UI 클립보드는 `App::installRuntimeUIHooks` 가 OS 훅을 걸 때만 OS 를 쓰고 테스트 · 시나리오는 엔진 안 클립보드를 쓰며(`UITextInputTest`), 에디터 복사 · 붙여넣기(`hierarchyedit` 의 Ctrl+C/V)는 `ObjectCopyBuffer` 라 OS 클립보드를 건드리는 시나리오는 지금 없다. OS 클립보드를 직접 쓰는 `WindowTest` 는 이미 `_Desktop` 이다.
