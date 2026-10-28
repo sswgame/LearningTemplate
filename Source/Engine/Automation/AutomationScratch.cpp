@@ -38,11 +38,11 @@ namespace sw
                 else if ( FileUtil::makeAbsolutePath( path, absolutePath ) == false )
                     return true;
                 const string root        = FileUtil::normalizePath( rootPath ) + "/";
-                const string scratchRoot = root + kScratchDomain + "/";
+                const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
                 const string target      = FileUtil::normalizePath( absolutePath );
                 if ( StringUtil::startsWith( target, root ) == false || StringUtil::startsWith( target, scratchRoot ) )
                     return true;
-                outReason = "an automation run may write under Resource only inside " + string( kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
+                outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
                 return false;
             }
 
