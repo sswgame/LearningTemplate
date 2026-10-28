@@ -97,9 +97,10 @@ namespace sw
         /**
          * @brief 지난 실행이 남긴 크래시 파일을 묶음 폴더(`Saved/CrashReports`)로 묶고 지표 `server_crash_reports` 에 남은 묶음 수를 적습니다.
          * @details 클라이언트의 `Telemetry` 기동 단계(동의는 플레이어 설정)를 서버는 돌지 않으므로 여기서 묶습니다. 동의는 `Local`(기계 안에만)입니다.
-         *          보내기(보고 프로세스)는 운영 설정의 동의와 서버용 보고 경로가 생기면 더합니다.
+         *          동의는 서버 설정 `_crashReportConsent`(`local` 기본 · `send` — 묶자마자 보낼 줄에 선다)이고 서버에 묻는 사람이 없어 `ask` 는 오류입니다.
+         *          묶음 `crash.txt` 끝에는 크래시 시점의 최근 틱 이력이 들어 있습니다(`ServerFrameHistory::writeCrashTail`). 설정이 틀리면 false 입니다.
          */
-        void collectPreviousCrashes();
+        [[nodiscard]] bool collectPreviousCrashes();
         /**
          * @brief 틱 하나를 끝낸 뒤 부릅니다(`_tickCount` 는 이미 올랐다). 프레임 이력(서버 운영 O1)에 남기고, 느린 틱이면 이력을 덤프하고, 틱 사용률 창(O5)에 더합니다.
          * @param tickNanoseconds 틱 본문 시간
@@ -108,10 +109,12 @@ namespace sw
         void onTickFinished( int64 tickNanoseconds, int64 monotonicMs );
         /** @brief 프레임 이력과 메시지 종류별 누적 셈을 `Saved/ServerReports/frames_<세션>_<틱>_<까닭>.txt` 로 씁니다. 이력이 비었거나 폴더를 만들 수 없으면 경고만 남깁니다. */
         void dumpFrameHistory( const utf8* pReason );
-        /** @brief 초마다 부릅니다 — 틱 사용률 지표 · 경고(O5)와, 크래시 보고에 붙는 서버 문맥 한 줄(마지막 틱 · 접속 수)을 갱신합니다. */
-        void updateLoadAndCrashContext( int64 monotonicMs );
+        /** @brief 초마다 부릅니다 — 틱 사용률 지표 · 경고(O5)를 갱신합니다. */
+        void updateLoad( int64 monotonicMs );
         /** @brief 종료 요청이 처음 보였을 때 드레인(서버 운영 O3)을 시작합니다. `/readyz` 를 503 으로 바꾸고 접속이 빌 때까지의 기한을 정합니다. */
         void beginDrain( ShutdownCause cause, int64 monotonicMs );
+        /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenWorkCount`). 0 이면 조용히 내려갈 수 있다. */
+        [[nodiscard]] int32 countDrainBlockers() const;
         /** @brief 드레인이 끝났는지입니다 — 기다릴 이유가 없거나(접속 0 · 기다림 0 초) 기한이 지났으면 true. */
         [[nodiscard]] bool isDrainFinished( int64 monotonicMs ) const;
 #if !defined( SW_SHIPPING )

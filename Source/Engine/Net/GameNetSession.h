@@ -106,13 +106,29 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 서버가 클라이언트에 알리는 끊김 사유입니다(`GameNetSession::sendShutdownNotice`). 값은 와이어 형식이라 바꾸면 `NetWireVersion::kCore` 를 올린다. */
+    enum class GameShutdownReason : uint8
+    {
+        ServerRestart = 0, ///< 오케스트레이터의 종료 신호(재배포 · 스케일 인) — 곧 다시 뜬다. 클라이언트는 다시 접속을 시도해도 된다
+        Maintenance,       ///< 점검으로 내려간다 — 점검이 끝날 때까지 다시 붙지 말라
+        ServerStopped      ///< 운영자가 내렸다(콘솔 · 관리 채널)
+    };
+
+    /** @brief 서버 종료 통지입니다. @p _graceSeconds 는 서버가 남은 접속을 기다려 주는 최대 시간으로 0 이면 바로 내려간다. */
+    struct GameShutdownNotice
+    {
+        GameShutdownReason _reason{ GameShutdownReason::ServerRestart };
+        uint32             _graceSeconds{ 0 };
+    };
+
     /**
      * @struct GameNetSessionMessage
      * @brief 엔진 세션이 쓰는 메시지 종류입니다(영역 `NetMessageRange::kEngine` — 키트 · 게임 영역과 겹치지 않는다). 값은 와이어 형식이라 바꾸면 `NetWireVersion::kCore` 를 올린다.
      */
     struct GameNetSessionMessage
     {
-        static constexpr uint8 kServerTick = NetMessageRange::kEngine + 0x00; ///< 서버 → 모두(비신뢰 순서). 방금 끝낸 서버 틱 번호(varuint)
+        static constexpr uint8 kServerTick     = NetMessageRange::kEngine + 0x00; ///< 서버 → 모두(비신뢰 순서). 방금 끝낸 서버 틱 번호(varuint)
+        static constexpr uint8 kShutdownNotice = NetMessageRange::kEngine + 0x01; ///< 서버 → 모두(신뢰 순서). 서버가 내려가기 시작한다 — 사유(1 바이트 `GameShutdownReason`) + 기다려 주는 시간(varuint 초)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
@@ -218,6 +234,13 @@ namespace sw
          * @details 전용 서버 루프가 틱마다 부른다(상태 해시 이력을 남길 때 — 클라이언트가 같은 번호로 자기 해시를 남긴다).
          */
         void sendServerTick( uint64 tick );
+        /**
+         * @brief 서버가 내려가기 시작함을 모든 클라이언트에 알립니다(신뢰 순서 — 서버 종료 드레인 O3). 서버가 아니면 아무 일도 없습니다.
+         * @details 연결이 끊기기 전에 "왜" 를 전하는 길이다 — 끊김 패킷에는 사유가 실리지 않는다. 클라이언트는 `tryGetShutdownNotice` 로 읽고 사유에 맞게(재접속 · 점검 안내) 움직인다.
+         */
+        void sendShutdownNotice( const GameShutdownNotice& notice );
+        /** @brief 클라이언트가 받은 서버 종료 통지입니다. 받지 못했거나 클라이언트가 아니면 false 입니다. 다시 접속하면 지워집니다. */
+        [[nodiscard]] bool tryGetShutdownNotice( GameShutdownNotice& outNotice ) const;
         /** @brief 클라이언트가 받은 가장 새 서버 틱 번호입니다. 아직 받지 못했거나 클라이언트가 아니면 false 입니다. */
         [[nodiscard]] bool tryGetServerTick( uint64& outTick ) const;
 
@@ -255,7 +278,7 @@ namespace sw
 
         // INetMessageHandler — 클라이언트만 엔진 영역의 서버 틱을 받는다.
         uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
-        uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ); }
+        uint16          getMessageKindMask() const override { return static_cast<uint16>( ( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ) | ( 1u << ( GameNetSessionMessage::kShutdownNotice - NetMessageRange::kEngine ) ) ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
         /** @brief 샤드 하나의 소켓을 열고 회선 흉내(Dev — @p emulationConditions 로 시작)로 감싼 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
@@ -292,6 +315,8 @@ namespace sw
         GameNetRole                  _role;
         uint8                        _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                        _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
+        GameShutdownNotice           _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
+        uint8                        _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                        _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
     };
 } // namespace sw

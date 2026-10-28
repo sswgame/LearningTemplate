@@ -139,6 +139,8 @@ namespace sw
                 return false;
             }
             void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
+            int32         getOpenWorkCount() const { return _kit->getOpenWorkCount(); }
+            void          beginShutdown( const ServerShutdownNotice& notice ) { _kit->beginShutdown( notice ); }
             const string& getKitName() const { return _entry._name; }
 
             /**
@@ -648,6 +650,28 @@ namespace sw
     int32 OnlineServerRuntime::getConnectionCount() const
     {
         return _bInitialized == SW_TRUE ? _parts->_host.getConnectionCount() : 0;
+    }
+
+    int32 OnlineServerRuntime::getOpenWorkCount() const
+    {
+        if ( _bInitialized == SW_FALSE )
+            return 0;
+        int32 count = 0;
+        for ( const OnlineServerKitNode* pKit : _parts->_listKit )
+        {
+            count += pKit->getOpenWorkCount();
+        }
+        return count;
+    }
+
+    void OnlineServerRuntime::beginShutdown( const ServerShutdownNotice& notice )
+    {
+        if ( _bInitialized == SW_FALSE )
+            return;
+        for ( OnlineServerKitNode* pKit : _parts->_listKit )
+        {
+            pKit->beginShutdown( notice );
+        }
     }
 
     void OnlineServerRuntime::collectKitNames( vector<string>& outListName ) const

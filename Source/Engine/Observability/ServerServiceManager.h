@@ -43,6 +43,10 @@ namespace sw
         int32 getRunningCount() const { return static_cast<int32>( _listRunning.size() ); }
         /** @brief 돌고 있는 서비스의 연결 수 합입니다. */
         int32 getConnectionCount() const;
+        /** @brief 돌고 있는 서비스의 진행 중인 일 수 합입니다(`IServerService::getOpenWorkCount`). */
+        int32 getOpenWorkCount() const;
+        /** @brief 돌고 있는 서비스마다 종료 드레인 시작을 알립니다(시작 순서). */
+        void beginShutdown( const ServerShutdownNotice& notice );
 
     private:
         struct RunningService

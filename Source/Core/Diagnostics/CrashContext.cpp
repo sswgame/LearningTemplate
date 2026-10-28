@@ -36,6 +36,10 @@ namespace sw
         constexpr uint32 kDefaultReportDeadlineSeconds = 20;
         atomic<uint32>   s_reportDeadlineSeconds{ kDefaultReportDeadlineSeconds };
 
+        /// @brief 문맥 파일 끝에 글을 붙일 함수와 그 인자입니다(`setCrashExtraTextWriter`). 크래시 경로는 읽기만 한다.
+        atomic<CrashExtraTextWriter> s_pExtraTextWriter{ nullptr };
+        atomic<void*>                s_pExtraTextUser{ nullptr };
+
         /// @brief `CrashTestKind::AssertFailure` 가 거짓으로 만드는 단언 식입니다(컴파일러가 단언을 상수로 접지 못하게 volatile).
         ///        단언이 빠지는 빌드(Release · Shipping)에서는 읽는 곳이 없다.
         [[maybe_unused]] volatile bool s_bAssertProbeHolds{ false };
@@ -258,6 +262,13 @@ namespace sw
         s_reportFolder = folderPath;
     }
 
+    void setCrashExtraTextWriter( CrashExtraTextWriter pWriter, void* pUser )
+    {
+        s_pExtraTextWriter.store( nullptr ); // 인자가 바뀌는 동안 크래시 경로가 옛 함수에 새 인자를 넘기지 않게 먼저 푼다
+        s_pExtraTextUser.store( pUser );
+        s_pExtraTextWriter.store( pWriter );
+    }
+
     uint32 getCrashReportDeadlineSeconds()
     {
         return s_reportDeadlineSeconds.load();
@@ -297,6 +308,14 @@ namespace sw
             appendLine( arrReport, constant::kMaxBuffer8192, length, "%#: %#\n",
                         Fmt( store._arrEntry[entryIndex]._key.c_str(), Format().width( 9 ).leftAlign() ),
                         store._arrEntry[entryIndex]._value.c_str() );
+        }
+
+        // 소유자가 건 글(서버의 최근 틱 이력 등)을 같은 파일 끝에 싣는다 — 새 파일을 쓰지 않는다.
+        CrashExtraTextWriter pExtraWriter = s_pExtraTextWriter.load();
+        if ( pExtraWriter != nullptr && length + 1 < constant::kMaxBuffer8192 )
+        {
+            const uint32 extraLength = pExtraWriter( s_pExtraTextUser.load(), arrReport + length, constant::kMaxBuffer8192 - length );
+            length += extraLength < constant::kMaxBuffer8192 - length ? extraLength : 0;
         }
 
         writeWholeFile( arrPath, arrReport, length );

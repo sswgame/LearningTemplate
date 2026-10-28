@@ -19,6 +19,8 @@
 //   ticketKeySecretEnvironment  게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름. 비우면 Dev 만 개발용 키, Shipping 은 기동 실패.
 //   attemptBurst                주소마다 한꺼번에 받는 로그인 시도 수(부하 봇은 크게).
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — Dev 만, 실제 비용을 재려면 끈다).
+//   seedTestAccounts            `이름:비밀번호` 를 쉼표로 이은 목록. 서버가 서자마자 이 계정들을 가입시켜 둔다(개발 · 두 프로세스 시나리오 `Scripts/net/NetPairRun.py` 용 — 이미 있으면 그대로 둔다).
+//                               **Dev 만** — Shipping 은 기동 실패(비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않는다). 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리다.
 //   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PlatformLoginProviderFactory::readSettings`). 비우면 외부 로그인이 없다.
 //   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
 //   linkSecretKeySecretEnvironment  연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름.
@@ -34,6 +36,7 @@ namespace sw
         {
             [[maybe_unused]] static constexpr uint32 kLightHashMemoryKiB  = 256; ///< 테스트용 가벼운 Argon2id
             [[maybe_unused]] static constexpr uint32 kLightHashIterations = 1;
+            static constexpr uint64                  kSeedRequestTag      = 0; ///< 시드 가입의 요청 태그 — 바인딩의 호출 표에 없어 완료가 조용히 버려진다
         };
 
         /**
@@ -62,13 +65,15 @@ namespace sw
                 string             providersFile;
                 string             trustFile;
                 string             linkSecretKeyEnvironment;
+                string             seedTestAccounts;
                 const bool         bOptionOk = entry.readOptions( {
                                                               {    "ticketKeySecretEnvironment",        ticketKeyEnvironment},
                                                               {                  "attemptBurst", loginSettings._attemptBurst},
                                                               {             "lightPasswordHash",                  bLightHash},
                                                               {         "platformProvidersFile",               providersFile},
                                                               {             "platformTrustFile",                   trustFile},
-                                                              {"linkSecretKeySecretEnvironment",    linkSecretKeyEnvironment}
+                                                              {"linkSecretKeySecretEnvironment",    linkSecretKeyEnvironment},
+                                                              {              "seedTestAccounts",            seedTestAccounts}
                 },
                                                                   outError );
                 if ( bOptionOk == false )
@@ -83,6 +88,8 @@ namespace sw
                     loginSettings._passwordHashParams._iterationCount = Internal::kLightHashIterations;
 #endif
                 }
+                if ( seedTestAccounts.empty() == false && readSeedTestAccounts( seedTestAccounts, outError ) == false )
+                    return false;
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
                 if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
@@ -103,6 +110,19 @@ namespace sw
                 return true;
             }
 
+            void update( UnixMilliseconds nowMs ) override
+            {
+                // 시드 계정은 첫 틱에 가입시킨다 — 서비스 시각이 필요하고, 완료(이미 있음 포함)는 요청 태그가 없어 바인딩이 조용히 버린다. 결과는 로그인으로 드러난다.
+                if ( _listSeedAccount.empty() )
+                    return;
+                for ( const LoginCredential& credential : _listSeedAccount )
+                {
+                    _loginService.registerAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
+                }
+                SW_LOG_INFO( "Seeded %# test account(s) (development option seedTestAccounts)", static_cast<uint32>( _listSeedAccount.size() ) );
+                _listSeedAccount.clear();
+            }
+
             void stop() override {}
 
             void shutdown() override
@@ -115,6 +135,37 @@ namespace sw
             }
 
         private:
+            /** @brief `seedTestAccounts` 옵션(`이름:비밀번호,…`)을 읽어 `_listSeedAccount` 에 둡니다. Shipping 은 거절합니다. */
+            [[nodiscard]] bool readSeedTestAccounts( const string& text, string& outError )
+            {
+#if defined( SW_SHIPPING )
+                (void)text;
+                outError = "seedTestAccounts is a development option and is refused in Shipping";
+                return false;
+#else
+                size_t begin = 0;
+                while ( begin <= text.size() )
+                {
+                    size_t end = text.find( ',', begin );
+                    if ( end == string::npos )
+                        end = text.size();
+                    const string item  = text.substr( begin, end - begin );
+                    const size_t colon = item.find( ':' );
+                    if ( colon == string::npos || colon == 0 || colon + 1 >= item.size() )
+                    {
+                        outError = "seedTestAccounts entries must look like name:password, got '" + item + "'";
+                        return false;
+                    }
+                    LoginCredential credential;
+                    credential._loginName = item.substr( 0, colon );
+                    credential._password  = item.substr( colon + 1 );
+                    _listSeedAccount.push_back( std::move( credential ) );
+                    begin = end + 1;
+                }
+                return true;
+#endif
+            }
+
             /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 겁니다. */
             [[nodiscard]] bool exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError )
             {
@@ -180,6 +231,7 @@ namespace sw
             LoginService             _loginService;
             AccountServer            _accountServer;
             AccountNameIndex         _nameIndex;
+            vector<LoginCredential>  _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`seedTestAccounts`)
         };
     } // namespace
 } // namespace sw

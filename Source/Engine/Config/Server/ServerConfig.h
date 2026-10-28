@@ -160,6 +160,13 @@ namespace sw
         PROPERTY( Min = 0, Max = 36000 )
         int32 _frameHistoryTicks{ 600 };
         /**
+         * @brief 크래시 보고 묶음(`Saved/CrashReports`)을 보낼지입니다(서버 운영 O1): `local` 기계 안에만(기본), `send` 묶자마자 보낼 줄에 세웁니다.
+         * @details 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않는다(기동 오류). 모르는 값도 오류다 — 보내지 않는 쪽으로 조용히 바꾸지 않는다.
+         *          언리얼 서버의 `-NoCrashReport` · 유니티 Cloud Diagnostics 의 서버 켜기 칸과 같은 자리이며 기본은 끔이다(운영자가 동의한 서버만 보낸다).
+         */
+        PROPERTY()
+        string _crashReportConsent{ "local" };
+        /**
          * @brief 틱 사용률(틱 본문 시간 ÷ 틱 주기)이 이 값(퍼센트)을 넘으면 경고합니다(서버 운영 O5). 0 이면 끔.
          * @details 초마다 구간 평균 사용률을 지표 `server_tick_utilization_ratio` 에 적고, 넘으면 로그 경고를 남긴다(경고는 1 분에 한 번). 예 70.
          */

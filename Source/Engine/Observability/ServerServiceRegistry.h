@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/ShutdownSignal.h"
 #include "Core/Time/TimePoint.h"
 
 #include "Engine/Observability/ServiceFactoryList.h"
@@ -43,6 +44,21 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ServerShutdownNotice
+     * @brief 서버가 종료 드레인에 들어가며 서비스 · 키트에 알리는 것입니다(`IServerService::beginShutdown`, 온라인 키트의 `IOnlineServerKit::beginShutdown`).
+     * @details 언리얼 `AGameModeBase::HandleDisconnect` · 유니티 Multiplay 의 "서버가 곧 내려간다" 통지처럼, 키트가 진행 중인 매치 · 거래를 마무리하고 클라이언트에 끊김 사유를
+     *          알릴 기회다. 기다림은 `_graceSeconds`(0 이면 바로 내려간다 — 알리기만 하고 마무리를 기다리지 않는다) 안에서 `getOpenWorkCount` 가 0 이 될 때까지다.
+     */
+    struct ServerShutdownNotice
+    {
+        ShutdownCause _cause{ ShutdownCause::None };
+        uint32        _graceSeconds{ 0 }; ///< 접속이 비기를 기다릴 최대 시간(서버 설정 `_drainWaitSeconds`)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IServerService
      * @brief 서버 프로세스와 함께 사는 서비스 하나입니다. 모든 함수는 서버의 게임 스레드에서 불립니다.
      */
@@ -66,6 +82,13 @@ namespace sw
         virtual void update( UnixMilliseconds nowMs ) = 0;
         /** @brief 이 서비스가 받고 있는 연결 수입니다(지표 `server_service_connections`). */
         virtual int32 getConnectionCount() const { return 0; }
+        /**
+         * @brief 이 서비스가 끝내기를 기다려야 하는 진행 중인 일의 수입니다(매치 · 거래 · 저장 등 — 접속은 `getConnectionCount` 가 센다). 종료 드레인은 이것이 0 이 될 때까지 기다린다.
+         * @details 기본 0 은 "기다릴 일이 없다" 이다. 게임 스레드에서 불린다.
+         */
+        virtual int32 getOpenWorkCount() const { return 0; }
+        /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 클라이언트에 사유를 알립니다. 기본은 아무 일도 하지 않습니다. */
+        virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
     };
 } // namespace sw
 

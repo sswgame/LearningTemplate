@@ -341,6 +341,8 @@ namespace sw
         , _role{ GameNetRole::None }
         , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
+        , _shutdownNotice{}
+        , _bShutdownNoticeKnown{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
     {
     }
@@ -661,6 +663,7 @@ namespace sw
         _role                    = GameNetRole::None;
         _bConnectFailureReported = SW_FALSE;
         _bServerTickKnown        = SW_FALSE;
+        _bShutdownNoticeKnown    = SW_FALSE;
     }
 
     void GameNetSession::update()
@@ -727,6 +730,25 @@ namespace sw
         (void)_tickWriter.broadcast( _peers, NetChannelType::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
+    void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notice )
+    {
+        if ( _role != GameNetRole::Server )
+            return;
+        BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kShutdownNotice );
+        writer.writeBits( static_cast<uint32>( notice._reason ), 8 );
+        writer.writeVarUint( notice._graceSeconds );
+        const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
+        SW_LOG_INFO( "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notice._reason ), notice._graceSeconds );
+    }
+
+    bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotice ) const
+    {
+        if ( _role != GameNetRole::Client || _bShutdownNoticeKnown == SW_FALSE )
+            return false;
+        outNotice = _shutdownNotice;
+        return true;
+    }
+
     bool GameNetSession::tryGetServerTick( uint64& outTick ) const
     {
         if ( _role != GameNetRole::Client || _bServerTickKnown == SW_FALSE )
@@ -737,7 +759,18 @@ namespace sw
 
     NetHandleResult GameNetSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        (void)context;
+        if ( context._kind == GameNetSessionMessage::kShutdownNotice )
+        {
+            const uint32 reasonValue  = static_cast<uint32>( body.readBits( 8 ) );
+            const uint32 graceSeconds = body.readVarUint32();
+            if ( body.hasOverflowed() || reasonValue > static_cast<uint32>( GameShutdownReason::ServerStopped ) )
+                return NetHandleResult::Malformed;
+            _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
+            _shutdownNotice._graceSeconds = graceSeconds;
+            _bShutdownNoticeKnown         = SW_TRUE;
+            SW_LOG_INFO( "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+            return NetHandleResult::Handled;
+        }
         const uint64 tick = body.readVarUint();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;

@@ -20,6 +20,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Observability/ServerServiceRegistry.h"
 #include "Engine/Observability/ServiceFactoryList.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
@@ -120,6 +121,14 @@ namespace sw
         virtual void stop() = 0;
         /** @brief 호스트와 저장소를 종료하고 남은 완료를 돌린 뒤입니다. 저장소 완료가 부르는 로직(로그인 서비스 등)의 마지막 정리를 합니다. */
         virtual void shutdown() {}
+
+        /**
+         * @brief 종료 드레인이 끝나기를 기다려야 하는 이 키트의 진행 중인 일 수입니다(진행 중인 매치 · 거래 · 저장). 키트별 종료 API 의 한 칸 — 접속은 호스트가 센다.
+         * @details 기본 0(기다릴 일이 없다). 서버 루프가 접속 수와 함께 0 이 될 때까지(기한 안에서) 틱을 돌리므로, 키트는 일이 끝나는 대로 줄이기만 하면 된다.
+         */
+        virtual int32 getOpenWorkCount() const { return 0; }
+        /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 접속한 클라이언트에 사유를 알립니다(`ServerShutdownNotice`). 기본은 아무 일도 하지 않습니다. */
+        virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
 
         /** @brief 인터페이스를 `get` 으로 받는 키트 이름(`OnlineServerKitName`)입니다. 설정에 없으면 기동 오류이고, 있으면 이 키트보다 먼저 섭니다. */
         virtual span<const utf8* const> getRequiredKits() const { return {}; }

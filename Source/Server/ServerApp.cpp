@@ -97,6 +97,16 @@ namespace sw
             /** @brief 틱 사용률 경고의 최소 간격입니다(1 분에 한 번). */
             static constexpr int64 kLoadWarningIntervalMs = 60000;
 
+            /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다(문맥 파일 버퍼 8KB 안에서 — 한 줄 70 바이트쯤). */
+            static constexpr uint32 kCrashTailTicks = 40;
+
+            /** @brief 크래시 핸들러가 부르는 글쓰기(`setCrashExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
+            static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
+            {
+                const ServerFrameHistory* pHistory = static_cast<const ServerFrameHistory*>( pUser );
+                return pHistory != nullptr ? pHistory->writeCrashTail( pOutText, capacity, kCrashTailTicks ) : 0u;
+            }
+
             /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
             static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
 #if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
@@ -330,8 +340,7 @@ namespace sw
             }
             case HostPartID::CrashReports:
             {
-                collectPreviousCrashes();
-                return true;
+                return collectPreviousCrashes();
             }
             case HostPartID::ServiceContext:
             {
@@ -450,6 +459,9 @@ namespace sw
         _pTickUtilizationGauge = _metricRegistry->registerGauge( "server_tick_utilization_ratio", "Tick body time divided by wall time over the last second (1.0 = no idle time left)" );
         _frameHistory          = make_unique<ServerFrameHistory>();
         _frameHistory->initialize( static_cast<uint32>( _pServerConfig->_frameHistoryTicks ) );
+        // 크래시 때 이력을 새 파일로 쓰지 않고, 크래시 핸들러가 문맥 파일을 쓰며 이 링 버퍼를 읽어 끝에 싣는다(풀기는 `shutdownObservability`).
+        if ( _frameHistory->getCapacity() > 0 )
+            setCrashExtraTextWriter( &ServerAppInternal::writeFrameCrashTail, _frameHistory.get() );
         _processMetrics = make_unique<ProcessMetrics>();
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
@@ -492,6 +504,7 @@ namespace sw
         _pDroppedTickCounter     = nullptr;
         _pServiceConnectionGauge = nullptr;
         _pTickUtilizationGauge   = nullptr;
+        setCrashExtraTextWriter( nullptr, nullptr ); // 이력을 지우기 전에 푼다 — 크래시 경로가 지운 버퍼를 읽지 않게
         _frameHistory.reset();
         _healthRegistry.reset();
         _metricRegistry.reset();
@@ -504,16 +517,23 @@ namespace sw
         return _serverServices->startAll( _serverServiceContext );
     }
 
-    void ServerApp::collectPreviousCrashes()
+    bool ServerApp::collectPreviousCrashes()
     {
         const string crashFolder = getCrashReportFolder();
         if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
-            return;
+            return true;
         CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
         const string        reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
         crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
-        // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정의 몫이다. 그 설정이 생기기 전에는 기계 안에만 둔다(클라이언트 기본값과 같다).
-        crashReports.setConsent( CrashReportConsent::Local );
+        // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정(`ServerConfig::_crashReportConsent`)의 몫이다 — 기본은 기계 안에만(`local`).
+        // 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않고, 모르는 값은 오류로 기동을 멈춘다(보내지 않는 쪽으로 조용히 바꾸지 않는다).
+        CrashReportConsent consent{ CrashReportConsent::Local };
+        if ( parseCrashReportConsent( _pServerConfig->_crashReportConsent, consent ) == false || consent == CrashReportConsent::Ask )
+        {
+            SW_LOG_ERROR( "Server config _crashReportConsent '%#' must be 'local' or 'send'", _pServerConfig->_crashReportConsent.c_str() );
+            return false;
+        }
+        crashReports.setConsent( consent );
         const uint32               newCount = crashReports.collectNewCrashes();
         vector<CrashReportSummary> listReport;
         crashReports.collectReports( listReport );
@@ -524,6 +544,7 @@ namespace sw
         MetricGauge* pCrashGauge = _metricRegistry->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
         if ( pCrashGauge != nullptr )
             pCrashGauge->set( static_cast<float64>( listReport.size() ) );
+        return true;
     }
 
     void ServerApp::onTickFinished( int64 tickNanoseconds, int64 monotonicMs )
@@ -574,7 +595,7 @@ namespace sw
         SW_LOG_INFO( "Frame history (%#) written to '%#' (%# ticks)", pReason, path.c_str(), _frameHistory->getCount() );
     }
 
-    void ServerApp::updateLoadAndCrashContext( int64 monotonicMs )
+    void ServerApp::updateLoad( int64 monotonicMs )
     {
         const int64 windowMs = monotonicMs - _loadWindowStartMs;
         if ( windowMs <= 0 )
@@ -593,33 +614,44 @@ namespace sw
             SW_LOG_WARNING( "Server tick load is %# percent of the tick budget (warn above %# percent) - the server is close to falling behind", static_cast<int32>( utilization * 100.0 ),
                             _pServerConfig->_tickLoadWarnPercent );
         }
-        // 크래시 보고에 마지막 틱 한 줄을 붙인다. 크래시 시점에는 할당하지 않으므로 지금 고정 버퍼에 복사해 둔다(`CrashHandler::setContextValue`).
-        ServerFrameSample latest;
-        if ( _frameHistory != nullptr && _frameHistory->tryGetLatest( latest ) )
-        {
-            fixed_string<constant::kMaxBuffer128> context{};
-            formatstring( context.data(), context.capacity(), "tick=%# body_us=%# connections=%# dropped=%#", latest._tick, latest._bodyMicroseconds, latest._connectionCount,
-                          latest._droppedTickTotal );
-            CrashHandler::setContextValue( "ServerTick", context.c_str() );
-        }
+    }
+
+    int32 ServerApp::countDrainBlockers() const
+    {
+        // 서비스 연결(로그인 · 채팅 …) + 게임 UDP 접속(복제 키트의 플레이어) + 키트가 끝내야 하는 진행 중인 일(매치 · 거래). 셋이 모두 0 이어야 조용히 내려갈 수 있다.
+        const int32           serviceConnections = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
+        const int32           openWork           = _serverServices != nullptr ? _serverServices->getOpenWorkCount() : 0;
+        const GameNetSession* pNetSession        = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        const int32           gameConnections    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server ? pNetSession->getConnectedCount() : 0;
+        return serviceConnections + gameConnections + openWork;
     }
 
     void ServerApp::beginDrain( ShutdownCause cause, int64 monotonicMs )
     {
         _bDraining = SW_TRUE;
         _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
-        const int64 waitMs = ServerAppInternal::shouldDrainFor( cause ) ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::kMillisecondsPerSecond : 0;
+        const bool  bWait  = ServerAppInternal::shouldDrainFor( cause );
+        const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::kMillisecondsPerSecond : 0;
         _drainDeadlineMs   = monotonicMs + waitMs;
+        // 키트에 종료를 알리고(진행 중인 일 마무리) 게임 접속자에게 끊김 사유를 보낸다. 기다리지 않는 종료(콘솔 · Ctrl+C)는 사유 패킷이 나가기 전에 내려갈 수 있어 최선만 다한다.
+        ServerShutdownNotice notice;
+        notice._cause        = cause;
+        notice._graceSeconds = static_cast<uint32>( waitMs / constant::kMillisecondsPerSecond );
+        if ( _serverServices != nullptr )
+            _serverServices->beginShutdown( notice );
+        GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
+        if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
+            pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notice._graceSeconds } );
         if ( waitMs > 0 )
-            SW_LOG_INFO( "Draining: waiting up to %# s for %# connections to leave (%#)", _pServerConfig->_drainWaitSeconds,
-                         _serverServices != nullptr ? _serverServices->getConnectionCount() : 0, ShutdownSignal::getCauseName( cause ) );
+            SW_LOG_INFO( "Draining: waiting up to %# s for %# connections / open jobs to finish (%#)", _pServerConfig->_drainWaitSeconds, countDrainBlockers(),
+                         ShutdownSignal::getCauseName( cause ) );
     }
 
     bool ServerApp::isDrainFinished( int64 monotonicMs ) const
     {
         if ( monotonicMs >= _drainDeadlineMs )
             return true;
-        return _serverServices == nullptr || _serverServices->getConnectionCount() == 0;
+        return countDrainBlockers() == 0;
     }
 
     void ServerApp::updateProcessMetrics( int64 monotonicMs )
@@ -627,7 +659,7 @@ namespace sw
         if ( monotonicMs < _nextProcessSampleMs )
             return;
         _nextProcessSampleMs = monotonicMs + ServerAppInternal::kProcessSampleIntervalMs;
-        updateLoadAndCrashContext( monotonicMs );
+        updateLoad( monotonicMs );
         if ( _processMetrics != nullptr )
             _processMetrics->update();
         if ( _pServiceConnectionGauge != nullptr && _serverServices != nullptr )

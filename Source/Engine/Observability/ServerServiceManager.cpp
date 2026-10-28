@@ -81,4 +81,22 @@ namespace sw
         }
         return count;
     }
+
+    int32 ServerServiceManager::getOpenWorkCount() const
+    {
+        int32 count = 0;
+        for ( const RunningService& running : _listRunning )
+        {
+            count += running._service->getOpenWorkCount();
+        }
+        return count;
+    }
+
+    void ServerServiceManager::beginShutdown( const ServerShutdownNotice& notice )
+    {
+        for ( RunningService& running : _listRunning )
+        {
+            running._service->beginShutdown( notice );
+        }
+    }
 } // namespace sw

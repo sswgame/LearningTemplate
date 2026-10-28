@@ -3,6 +3,7 @@
 #include "Engine/Observability/ServerFrameHistory.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 
 namespace sw
 {
@@ -44,6 +45,43 @@ namespace sw
     bool ServerFrameHistory::tryGetLatest( ServerFrameSample& outSample ) const
     {
         return _count > 0 && tryGetSample( _count - 1, outSample );
+    }
+
+    uint32 ServerFrameHistory::writeCrashTail( utf8* pOutText, uint32 capacity, uint32 maxTicks ) const
+    {
+        if ( pOutText == nullptr || capacity == 0 )
+            return 0;
+        pOutText[0]        = '\0';
+        const uint32 total = getCapacity();
+        const uint32 count = _count < total ? _count : total; // 읽는 도중 값이 바뀌어도 칸 수는 용량을 넘지 않는다
+        if ( total == 0 || count == 0 )
+            return 0;
+        const uint32 take  = count < maxTicks ? count : maxTicks;
+        const uint32 first = count - take;
+        uint32       length{ 0 };
+        const auto   append = [&]( const ServerFrameSample* pSample )
+        {
+            const uint32 room = capacity - length;
+            if ( room < 2 )
+                return false;
+            if ( pSample == nullptr )
+                formatstring( pOutText + length, room, "ticks    : last %# of %# kept (oldest first)\n", take, count );
+            else
+                formatstring( pOutText + length, room, "tick     : %# body_us=%# connections=%# dropped=%#\n", pSample->_tick, pSample->_bodyMicroseconds, pSample->_connectionCount,
+                              pSample->_droppedTickTotal );
+            length += static_cast<uint32>( StringUtil::strlen( pOutText + length ) );
+            return true;
+        };
+        if ( append( nullptr ) == false )
+            return 0;
+        const uint32 oldestIndex = ( _nextIndex + total - count ) % total;
+        for ( uint32 index = first; index < count; ++index )
+        {
+            const ServerFrameSample sample = _listSample[( oldestIndex + index ) % total];
+            if ( append( &sample ) == false )
+                break;
+        }
+        return length;
     }
 
     void ServerFrameHistory::writeReport( string& outText, string_view reason, string_view sessionID, string_view extraText ) const
