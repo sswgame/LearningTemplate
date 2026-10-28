@@ -5,6 +5,7 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Destruction/FractureComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -146,6 +147,34 @@ namespace sw
     const DestructionReplicationStats& DestructionNetSession::getStats() const
     {
         return _side == DestructionNetSide::Server ? _server.getStats() : _client.getStats();
+    }
+
+    uint64 DestructionNetSession::computeStateHash() const
+    {
+        // 등록 순서가 아니라 번호 순으로 접는다 — 서버와 클라이언트가 번호를 받는 순서가 달라도 같은 값이다.
+        vector<DestructionHashRecord> listEntryHash;
+        listEntryHash.reserve( _listEntry.size() );
+        for ( const Entry& entry : _listEntry )
+        {
+            listEntryHash.push_back( DestructionHashRecord{ entry._pFracture->getState().computeStateHash(), entry._netID, 0 } );
+        }
+        std::sort( listEntryHash.begin(), listEntryHash.end(), []( const DestructionHashRecord& left, const DestructionHashRecord& right )
+        { return left._netID < right._netID; } );
+        StateHashBuilder builder;
+        for ( const DestructionHashRecord& record : listEntryHash )
+        {
+            builder.addUint32( record._netID );
+            builder.addBytes( &record._hash, sizeof( record._hash ) );
+        }
+        return builder.getHash();
+    }
+
+    bool DestructionNetSession::sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const
+    {
+        if ( isActive() == false )
+            return false;
+        outSample = StateHashSample{ hostTick, computeStateHash() };
+        return true;
     }
 
     string_view DestructionNetSession::findObjectName( uint32 netID ) const

@@ -168,6 +168,15 @@ namespace sw::editor
             {
                 if ( listArgument.size() == 2 && listArgument[0] == "objects" )
                     return runObjects( listArgument[1], outReply );
+                if ( listArgument.size() == 2 && listArgument[0] == "channel" )
+                {
+                    EditorStateHashCompare& channelCompare = getCompare();
+                    if ( channelCompare.setHashChannel( listArgument[1] ) )
+                        outReply = "netplay sync reads the hash line '" + channelCompare.getHashChannel() + "'";
+                    else
+                        outReply = channelCompare.getLastError();
+                    return true;
+                }
                 const bool bSave    = listArgument.size() == 2 && listArgument[0] == "save";
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
@@ -203,8 +212,8 @@ namespace sw::editor
                          &MultiplayerSyncTabInternal::readObjectsCompared );
     SW_AUTOMATION_PROBE( editorNetPlaySyncDifferingObjects, "Editor.NetPlaySyncDifferingObjects", "Objects the Sync tab's last 'Which objects differ' found different",
                          &MultiplayerSyncTabInternal::readDifferingObjects );
-    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path> | netplay.sync objects server|client",
-                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick), or list the objects that differ (Which objects differ)",
+    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path> | netplay.sync objects server|client | netplay.sync channel <name>",
+                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick), or list the objects that differ (Which objects differ), or pick the hash line to read (scene, or a kit's such as destruction · rollback)",
                     &MultiplayerSyncTabInternal::runSync );
 } // namespace sw::editor
 
@@ -239,6 +248,7 @@ namespace sw::editor
         /** @brief 기다리는 클라이언트의 오브젝트 해시 답이 왔으면 담고, 두 칸이 모두 모였으면 견줍니다. 프레임마다 부릅니다. */
         void pollObjectReplies();
 
+        fixed_string<constant::kMaxBuffer64>  _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
         fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
         fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
         fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
@@ -258,7 +268,8 @@ namespace sw::editor
 namespace sw::editor
 {
     MultiplayerSyncTab::MultiplayerSyncTab()
-        : _arrPath{}
+        : _arrChannelName{}
+        , _arrPath{}
         , _arrAddress{}
         , _arrToken{}
         , _arrPendingProcess{ -1, -1 }
@@ -291,7 +302,8 @@ namespace sw::editor
             ImGui::BeginDisabled( status._bRunning == false || bWaiting );
             if ( ImGui::Button( status._label.c_str() ) )
             {
-                const string command = "state.hashline " + to_string( MultiplayerSyncTabInternal::kClientHistoryTicks );
+                const string& channel = MultiplayerSyncTabInternal::getCompare().getHashChannel();
+                const string  command = "state.hashline " + to_string( MultiplayerSyncTabInternal::kClientHistoryTicks ) + ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel );
                 if ( session.sendProcessCommand( processIndex, command ) )
                 {
                     _arrPendingProcess[sourceIndex]     = processIndex;
@@ -490,6 +502,18 @@ namespace sw::editor
     {
         pollClientReplies();
         pollObjectReplies();
+        // 어느 줄의 이력을 읽을지 — 씬 줄(`scene`) 말고 키트가 더한 줄(`destruction` · `rollback`)도 같은 비교를 탄다. 읽는 단추를 누를 때 이 이름을 쓴다.
+        if ( _arrChannelName.empty() )
+            _arrChannelName = MultiplayerSyncTabInternal::getCompare().getHashChannel().c_str();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kFieldWidthInFonts );
+        if ( ImGui::InputTextWithHint( "##SyncChannel", "scene | destruction | rollback", _arrChannelName.data(), _arrChannelName.capacity() ) )
+        {
+            if ( MultiplayerSyncTabInternal::getCompare().setHashChannel( _arrChannelName.c_str() ) == false )
+                _errorText = MultiplayerSyncTabInternal::getCompare().getLastError();
+            else
+                _errorText.clear();
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncChannel" ) );
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
             drawSource( sourceIndex );

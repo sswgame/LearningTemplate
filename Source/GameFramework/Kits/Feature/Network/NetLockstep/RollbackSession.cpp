@@ -8,6 +8,8 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Common/StateHashBuilder.h"
+
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 
@@ -92,6 +94,19 @@ namespace sw
             confirmed = MathUtil::min( confirmed, getConfirmedInputFrame( player ) );
         }
         return confirmed;
+    }
+
+    bool RollbackSession::sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const
+    {
+        (void)hostTick; // 롤백의 같은 시각은 호스트 틱이 아니라 프레임 번호다
+        const int32        frame   = getConfirmedFrame();
+        const FrameRecord* pRecord = _pGame != nullptr && frame >= 0 && frame < _frame ? _listRecord.find( static_cast<uint32>( frame ) ) : nullptr;
+        if ( pRecord == nullptr || pRecord->_listState.empty() )
+            return false;
+        StateHashBuilder builder;
+        builder.addBytes( pRecord->_listState.data(), pRecord->_listState.size() );
+        outSample = StateHashSample{ static_cast<uint64>( frame ), builder.getHash() };
+        return true;
     }
 
     int32 RollbackSession::computeFrameLead() const

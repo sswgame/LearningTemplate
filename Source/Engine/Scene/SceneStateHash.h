@@ -14,6 +14,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -80,15 +81,46 @@ namespace sw
 namespace sw
 {
     /**
+     * @class IStateHashProvider
+     * @brief 씬 트랜스폼 말고 키트가 가진 상태(파괴 구조 · 롤백 상태 바이트 …)의 해시를 이력에 이름 붙은 줄로 남기게 하는 제공자입니다.
+     * @details `StateHashHistory::registerChannel` 로 등록하면 이력이 틱을 남길 때(`recordActiveScene`) 같은 호스트 틱에 `sampleStateHash` 를 부른다.
+     *          제공자가 틱 번호를 바꿀 수 있다 — 롤백처럼 호스트 틱이 아니라 자기 프레임 번호가 두 프로세스의 같은 시각인 키트가 그렇게 한다.
+     */
+    class IStateHashProvider
+    {
+    public:
+        IStateHashProvider()          = default;
+        virtual ~IStateHashProvider() = default;
+
+        IStateHashProvider( const IStateHashProvider& )            = default;
+        IStateHashProvider& operator=( const IStateHashProvider& ) = default;
+
+        /** @brief 호스트 틱 @p hostTick 에 남길 샘플을 @p outSample 에 씁니다. 지금 남길 것이 없으면 false 입니다(그 틱은 이 줄에 비어 있다). 게임 스레드에서 불립니다. */
+        [[nodiscard]] virtual bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class StateHashHistory
      * @brief 최근 N 틱의 해시 이력(링 버퍼)입니다. 서버가 틱마다 `record` 하고 개발 명령이 읽습니다.
      * @details 엔진 서비스입니다(`engine::findSubsystem<StateHashHistory>()`) — 서비스 범위가 소유한다. 용량은 서비스가 설 때 실행 인자
      *          `-gv_stateHashHistory=N` 으로 정한다(0 이면 끈 채로 둔다. Shipping 에는 인자가 없어 늘 꺼져 있다).
+     *          씬 해시 줄(기본) 말고 키트가 이름 붙은 줄(`registerChannel`)을 더한다 — 줄마다 같은 용량의 링이고 샘플 형식 · 비교(`findFirstDivergence`)가 같다.
+     *          이름 붙은 줄은 구독이 풀려도(키트 종료) 이력을 남긴다. 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
      */
-    class SW_API StateHashHistory final : public ISubsystem
+    class SW_API StateHashHistory final : public ISubsystem, private SubscriptionSource
     {
     public:
         static constexpr const utf8* kSubsystemName = "StateHashHistory";
+        /** @brief 이름 붙은 줄의 상한입니다(풀린 줄도 센다). 넘으면 등록을 거절합니다. */
+        static constexpr uint32 kMaxChannels = 8;
+
+        /** @brief 이름 붙은 줄의 이름이 맞는지 봅니다(`[a-z0-9_.-]`, 1 ~ 32 자, 씬 줄의 이름 `scene` 은 쓸 수 없다). 명령 인자 · 로그 줄에 그대로 실려 공백이 없어야 한다. */
+        [[nodiscard]] static bool isValidChannelName( string_view name );
+        /** @brief 씬 줄을 뜻하는 이름입니다(명령 인자에서 이름을 생략한 것과 같다). */
+        static constexpr const utf8* kSceneChannelName = "scene";
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
@@ -98,6 +130,22 @@ namespace sw
         void   setCapacity( uint32 capacity );
         uint32 getCapacity() const { return _capacity; }
         bool   isRecording() const { return _capacity > 0; }
+
+        /**
+         * @brief 키트의 상태 해시 줄을 @p name 으로 더합니다. 구독이 살아 있는 동안 `recordActiveScene` 이 @p pProvider 를 불러 같은 이력에 남깁니다.
+         * @return 이름이 형식에 안 맞거나 이미 다른 제공자가 쓰고 있거나 줄이 상한(`kMaxChannels`)을 넘으면 오류를 남기고 빈 구독(`isActive` 가 false)입니다.
+         */
+        [[nodiscard]] Subscription registerChannel( string_view name, const IStateHashProvider* pProvider );
+        /** @brief 등록된 제공자마다 호스트 틱 @p hostTick 의 샘플을 받아 자기 줄에 남깁니다(`recordActiveScene` 이 씬 해시 뒤에 부른다). 켜져 있지 않으면 아무 일도 없습니다. */
+        void recordChannels( uint64 hostTick );
+        /** @brief 이름 붙은 줄의 이름을 등록 순서로 채웁니다(풀린 줄도 이력이 남아 있으면 든다). */
+        void collectChannelNames( vector<string>& outListName ) const;
+        /** @brief 이름 붙은 줄(@p name — `kSceneChannelName` 이면 씬 줄)이 있으면 true 입니다. */
+        [[nodiscard]] bool hasChannel( string_view name ) const;
+        /** @brief `tryGetLatest` 의 이름 붙은 줄 판입니다. 줄이 없거나 비었으면 false 입니다. */
+        [[nodiscard]] bool tryGetLatestChannel( string_view name, StateHashSample& outSample ) const;
+        /** @brief `collect` 의 이름 붙은 줄 판입니다. 줄이 없으면 비웁니다. */
+        void collectChannel( string_view name, uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const;
 
         /** @brief 틱 하나를 남깁니다. 가득 차면 가장 오래된 것을 덮습니다. 켜져 있지 않으면 아무 일도 없습니다. */
         void record( uint64 tick, uint64 hash );
@@ -135,9 +183,34 @@ namespace sw
          */
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );
 
+    protected:
+        void releaseSubscription( uint64 id ) override;
+
     private:
-        vector<StateHashSample> _listSample; ///< 링 버퍼(틱 오름차순으로 쌓이고 가득 차면 `_head` 부터 덮는다)
-        uint32                  _capacity{ 0 };
-        uint32                  _head{ 0 }; ///< 가득 찼을 때 가장 오래된 칸
+        /** @brief 링 버퍼 하나입니다(틱 오름차순으로 쌓이고 가득 차면 `_head` 부터 덮는다). 용량은 이력이 정한다. */
+        struct Ring
+        {
+            vector<StateHashSample> _listSample;
+            uint32                  _head{ 0 }; ///< 가득 찼을 때 가장 오래된 칸
+
+            void               reset( uint32 capacity );
+            void               record( uint32 capacity, const StateHashSample& sample );
+            [[nodiscard]] bool tryGetLatest( uint32 capacity, StateHashSample& outSample ) const;
+            void               collect( uint32 capacity, uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const;
+        };
+
+        /** @brief 이름 붙은 줄 하나입니다. 제공자가 nullptr 이면 구독이 풀렸고 이력만 남은 줄이다. */
+        struct Channel
+        {
+            string                    _name;
+            const IStateHashProvider* _pProvider{ nullptr };
+            Ring                      _ring;
+        };
+
+        const Channel* findChannel( string_view name ) const;
+
+        Ring            _scene; ///< 씬 줄
+        vector<Channel> _listChannel;
+        uint32          _capacity{ 0 };
     };
 } // namespace sw

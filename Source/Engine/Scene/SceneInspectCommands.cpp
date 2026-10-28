@@ -1,7 +1,7 @@
 /**
  * @file SceneInspectCommands.cpp
  * @brief 활성 씬을 글로 읽는 개발 명령입니다(서버 검사기 S3 · 권위 겹쳐 보기 S6 · 어긋남 찾기 S7). Shipping 에는 없습니다.
- * @details 읽기 전용입니다. 값을 바꾸는 일은 기존 개발 명령(`teleport` · `tag.add`)처럼 게임이 정한 경로를 거칩니다(결정 기록 5-10).
+ * @details 읽기 전용입니다. 값을 바꾸는 일은 기존 개발 명령(`teleport` · `tag.add`)처럼 게임이 정한 경로를 거칩니다.
  *          디버그 채널(`DebugChannel`)은 이 명령들을 원격으로 부를 뿐이라, 같은 명령을 표준 입력 콘솔과 에디터 콘솔에서도 씁니다.
  *          - `scene.tree [limit]`: 오브젝트 한 줄씩(`id name parent=… active=… components=…`), ID 순.
  *          - `object.dump <name>`: 이름이 같은 첫 오브젝트의 컴포넌트와 프로퍼티 값(`Type.property = value`).
@@ -239,29 +239,64 @@ namespace sw
                 return true;
             }
 
+            /** @brief 이력의 줄 이름 인자(생략하면 씬 줄)를 @p outChannelName 에 읽습니다. 그 이름의 줄이 없으면 false 이고 까닭을 @p outReply 에 씁니다. */
+            [[nodiscard]] static bool findChannelArgument( const StateHashHistory& history, const vector<string>& listArgument, size_t nameIndex, string_view& outChannelName,
+                                                           string& outReply )
+            {
+                outChannelName = listArgument.size() > nameIndex ? string_view{ listArgument[nameIndex] } : string_view{ StateHashHistory::kSceneChannelName };
+                if ( history.hasChannel( outChannelName ) )
+                    return true;
+                outReply = "no state hash channel '" + string( outChannelName ) + "' - state.hashnames lists them";
+                return false;
+            }
+
             static bool runStateHashes( const vector<string>& listArgument, string& outReply )
             {
                 uint64     fromTick  = 0;
                 uint64     count     = 0;
-                const bool bHasFrom  = listArgument.size() == 2 && StringUtil::parseUint64( listArgument[0], fromTick );
+                const bool bArgCount = listArgument.size() == 2 || listArgument.size() == 3;
+                const bool bHasFrom  = bArgCount && StringUtil::parseUint64( listArgument[0], fromTick );
                 const bool bHasCount = bHasFrom && StringUtil::parseUint64( listArgument[1], count );
                 if ( bHasCount == false )
                     return false;
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
                 if ( pHistory == nullptr )
                     return false;
+                string_view channelName;
+                if ( findChannelArgument( *pHistory, listArgument, 2, channelName, outReply ) == false )
+                    return false;
                 vector<StateHashSample> listSample;
-                pHistory->collect( fromTick, static_cast<uint32>( count ), listSample );
+                pHistory->collectChannel( channelName, fromTick, static_cast<uint32>( count ), listSample );
                 outReply.clear();
                 StateHashHistory::writeReport( listSample, outReply );
                 return true;
             }
 
-            /** @brief `state.hashline <count>` — 가장 최근 @p count 틱의 이력을 한 줄(`StateHashHistory::writeReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭이 쓴다. */
+            /** @brief `state.hashnames` — 해시 이력의 줄 이름(씬 줄 `scene` 과 키트가 더한 줄)을 한 줄에 하나씩 답합니다. */
+            static bool runStateHashNames( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                vector<string> listName;
+                pHistory->collectChannelNames( listName );
+                outReply = StateHashHistory::kSceneChannelName;
+                outReply += '\n';
+                for ( const string& name : listName )
+                {
+                    outReply += name;
+                    outReply += '\n';
+                }
+                return true;
+            }
+
+            /** @brief `state.hashline <count> [name]` — 가장 최근 @p count 틱의 이력(@p name 은 키트의 줄, 생략하면 씬 줄)을 한 줄(`StateHashHistory::writeReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭이 쓴다. */
             static bool runStateHashLine( const vector<string>& listArgument, string& outReply )
             {
                 uint64     count     = 0;
-                const bool bHasCount = listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], count );
+                const bool bHasCount = ( listArgument.size() == 1 || listArgument.size() == 2 ) && StringUtil::parseUint64( listArgument[0], count );
                 if ( bHasCount == false || count == 0 )
                     return false;
                 if ( count > StateHashHistory::kMaxReportLineSamples )
@@ -272,12 +307,15 @@ namespace sw
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
                 if ( pHistory == nullptr )
                     return false;
+                string_view channelName;
+                if ( findChannelArgument( *pHistory, listArgument, 1, channelName, outReply ) == false )
+                    return false;
                 vector<StateHashSample> listSample;
                 StateHashSample         latest;
-                if ( pHistory->tryGetLatest( latest ) )
+                if ( pHistory->tryGetLatestChannel( channelName, latest ) )
                 {
                     const uint64 fromTick = latest._tick + 1 > count ? latest._tick + 1 - count : 0;
-                    pHistory->collect( fromTick, static_cast<uint32>( count ), listSample );
+                    pHistory->collectChannel( channelName, fromTick, static_cast<uint32>( count ), listSample );
                 }
                 if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
                 {
@@ -296,9 +334,13 @@ namespace sw
     SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
     SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
                     &SceneInspectCommandsInternal::runStateObjects );
-    SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count>", "Print the recorded per-tick state hashes (needs -gv_stateHashHistory)",
+    SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count> [channel]",
+                    "Print the recorded per-tick state hashes (needs -gv_stateHashHistory); channel is a kit's hash line from state.hashnames, default the scene",
                     &SceneInspectCommandsInternal::runStateHashes );
-    SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count>", "Print the latest <count> recorded state hashes on one line (the editor Sync tab reads client histories this way)",
+    SW_DEV_COMMAND( StateHashNames, "state.hashnames", "state.hashnames", "List the state hash history's channels (the scene and the lines kits registered, e.g. destruction, rollback)",
+                    &SceneInspectCommandsInternal::runStateHashNames );
+    SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count> [channel]",
+                    "Print the latest <count> recorded state hashes (of a kit's hash line, default the scene) on one line (the editor Sync tab reads client histories this way)",
                     &SceneInspectCommandsInternal::runStateHashLine );
     SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
                     &SceneInspectCommandsInternal::runStateObjectLine );

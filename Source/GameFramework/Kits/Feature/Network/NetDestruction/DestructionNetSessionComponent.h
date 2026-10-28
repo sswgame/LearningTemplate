@@ -52,6 +52,7 @@ namespace sw
         float32 _interpolationDelay;
 
         DestructionNetSession _session;
-        uint8                 _bTickChecked; ///< 서버 — 첫 틱의 델타를 `_tickInterval` 과 견줬다
+        Subscription          _hashSubscription; ///< 해시 이력의 `destruction` 줄 등록. `_session` 보다 뒤에 선언한다 — 먼저 풀린다
+        uint8                 _bTickChecked;     ///< 서버 — 첫 틱의 델타를 `_tickInterval` 과 견줬다
     };
 } // namespace sw

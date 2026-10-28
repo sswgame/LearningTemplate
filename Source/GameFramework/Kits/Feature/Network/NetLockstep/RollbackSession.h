@@ -23,6 +23,7 @@
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Scene/SceneStateHash.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -79,7 +80,7 @@ namespace sw
      * @details 플레이어 번호는 서버가 0이고, 클라이언트는 연결 id + 1이다.
      *          망은 스타 토폴로지이다. 서버가 클라이언트의 메시지를 다른 클라이언트에 그대로 다시 보내며, 확인과 이점도 함께 전달된다.
      */
-    class SW_KIT_API RollbackSession : public INetMessageHandler
+    class SW_KIT_API RollbackSession : public INetMessageHandler, public IStateHashProvider
     {
     public:
         static constexpr int32 kHistorySize = 128;
@@ -115,6 +116,12 @@ namespace sw
         int32 getTimeSyncWaitCount() const { return _timeSyncWaitCount; }
         /** @brief 모든 플레이어의 입력이 확인된 마지막 프레임입니다. 그 이전 프레임은 다시 바뀌지 않습니다. */
         int32 getConfirmedFrame() const;
+        /**
+         * @brief 확인된 프레임 시작 전의 게임 상태 바이트(`IRollbackGame::saveState`)를 접은 해시를 틱 = 그 프레임 번호로 돌려줍니다(해시 이력의 줄 `rollback`).
+         * @details 예측 중인 현재 상태는 상대 입력이 오면 바뀌므로 남기지 않는다 — 확인된 프레임의 상태는 두 쪽에서 같아야 하고, 두 쪽의 이력을 프레임 번호로 견주면 처음 갈린 프레임이 나온다.
+         *          게임이 `StateHashHistory::registerChannel( "rollback", &session )` 로 등록한다. 시작 전이거나 확인된 프레임이 기록 밖이면 false 입니다.
+         */
+        [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override;
         /** @brief 가장 뒤처진 상대보다 앞선 프레임 수의 추정값입니다. (내 이점 − 상대 이점) / 2 의 최댓값이며, 알림을 받은 상대가 없으면 0입니다. */
         int32 computeFrameLead() const;
 

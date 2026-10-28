@@ -2586,6 +2586,12 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMultiplayer.SyncChannel"
+		       source="Which state hash line the buttons read: scene (transforms), or a kit's line - destruction, rollback (state.hashnames lists what the process registered)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.SyncClient"
 		       source="Read this client's state hash history (the latest ticks it recorded under the server tick numbers)">
 			<origins>

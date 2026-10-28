@@ -328,51 +328,193 @@ namespace sw
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
         record( tick, SceneStateHash::compute( *pScene->getObjectManager() ) );
+        recordChannels( tick );
     }
 
-    void StateHashHistory::setCapacity( uint32 capacity )
+    void StateHashHistory::recordChannels( uint64 hostTick )
+    {
+        if ( isRecording() == false )
+            return;
+        // 키트의 줄은 같은 호스트 틱에 남긴다. 제공자가 바꾼 틱이 그 줄의 가장 최근 틱과 같으면 두 번 남기지 않는다(비교가 같은 틱의 두 값을 보지 않게).
+        for ( Channel& channel : _listChannel )
+        {
+            StateHashSample sample;
+            if ( channel._pProvider == nullptr || channel._pProvider->sampleStateHash( hostTick, sample ) == false )
+                continue;
+            StateHashSample channelLatest;
+            if ( channel._ring.tryGetLatest( _capacity, channelLatest ) && channelLatest._tick == sample._tick )
+                continue;
+            channel._ring.record( _capacity, sample );
+        }
+    }
+
+    void StateHashHistory::Ring::reset( uint32 capacity )
     {
         _listSample.clear();
-        _head     = 0;
-        _capacity = capacity;
+        _head = 0;
         if ( capacity > 0 )
             _listSample.reserve( capacity );
     }
 
-    void StateHashHistory::record( uint64 tick, uint64 hash )
+    void StateHashHistory::Ring::record( uint32 capacity, const StateHashSample& sample )
     {
-        if ( _capacity == 0 )
+        if ( capacity == 0 )
             return;
-        const StateHashSample sample{ tick, hash };
-        if ( _listSample.size() < _capacity )
+        if ( _listSample.size() < capacity )
         {
             _listSample.push_back( sample );
             return;
         }
         _listSample[_head] = sample;
-        _head              = ( _head + 1 ) % _capacity;
+        _head              = ( _head + 1 ) % capacity;
     }
 
-    bool StateHashHistory::tryGetLatest( StateHashSample& outSample ) const
+    bool StateHashHistory::Ring::tryGetLatest( uint32 capacity, StateHashSample& outSample ) const
     {
         if ( _listSample.empty() )
             return false;
-        const size_t latest = _listSample.size() < _capacity ? _listSample.size() - 1 : ( _head + _capacity - 1 ) % _capacity;
+        const size_t latest = _listSample.size() < capacity ? _listSample.size() - 1 : ( _head + capacity - 1 ) % capacity;
         outSample           = _listSample[latest];
         return true;
     }
 
-    void StateHashHistory::collect( uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const
+    void StateHashHistory::Ring::collect( uint32 capacity, uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const
     {
         outListSample.clear();
         const size_t size  = _listSample.size();
-        const size_t start = size < _capacity ? 0 : _head;
+        const size_t start = size < capacity ? 0 : _head;
         for ( size_t offset = 0; offset < size && outListSample.size() < count; ++offset )
         {
             const StateHashSample& sample = _listSample[( start + offset ) % size];
             if ( sample._tick >= fromTick )
                 outListSample.push_back( sample );
         }
+    }
+
+    void StateHashHistory::setCapacity( uint32 capacity )
+    {
+        _capacity = capacity;
+        _scene.reset( capacity );
+        for ( Channel& channel : _listChannel )
+        {
+            channel._ring.reset( capacity );
+        }
+    }
+
+    void StateHashHistory::record( uint64 tick, uint64 hash )
+    {
+        _scene.record( _capacity, StateHashSample{ tick, hash } );
+    }
+
+    bool StateHashHistory::tryGetLatest( StateHashSample& outSample ) const
+    {
+        return _scene.tryGetLatest( _capacity, outSample );
+    }
+
+    void StateHashHistory::collect( uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const
+    {
+        _scene.collect( _capacity, fromTick, count, outListSample );
+    }
+
+    bool StateHashHistory::isValidChannelName( string_view name )
+    {
+        constexpr size_t kMaxNameLength = 32;
+        if ( name.empty() || name.size() > kMaxNameLength || name == kSceneChannelName )
+            return false;
+        for ( const utf8 ch : name )
+        {
+            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.' || ch == '-';
+            if ( bAllowed == false )
+                return false;
+        }
+        return true;
+    }
+
+    const StateHashHistory::Channel* StateHashHistory::findChannel( string_view name ) const
+    {
+        for ( const Channel& channel : _listChannel )
+        {
+            if ( channel._name == name )
+                return &channel;
+        }
+        return nullptr;
+    }
+
+    Subscription StateHashHistory::registerChannel( string_view name, const IStateHashProvider* pProvider )
+    {
+        if ( pProvider == nullptr || isValidChannelName( name ) == false )
+        {
+            SW_LOG_ERROR( "StateHashHistory: channel '%#' not registered - the name must be [a-z0-9_.-] (1-32, not 'scene') and the provider must exist", name );
+            return Subscription{};
+        }
+        Channel* pChannel = nullptr;
+        for ( Channel& channel : _listChannel )
+        {
+            pChannel = channel._name == name ? &channel : pChannel;
+        }
+        if ( pChannel != nullptr && pChannel->_pProvider != nullptr )
+        {
+            SW_LOG_ERROR( "StateHashHistory: channel '%#' is already provided by another owner - not registered", name );
+            return Subscription{};
+        }
+        if ( pChannel == nullptr )
+        {
+            if ( _listChannel.size() >= kMaxChannels )
+            {
+                SW_LOG_ERROR( "StateHashHistory: more than %# channels - '%#' not registered", static_cast<int32>( kMaxChannels ), name );
+                return Subscription{};
+            }
+            Channel& added = _listChannel.emplace_back();
+            added._name    = string( name );
+            added._ring.reset( _capacity );
+            pChannel = &added;
+        }
+        pChannel->_pProvider = pProvider;
+        return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pProvider ) ) );
+    }
+
+    void StateHashHistory::releaseSubscription( uint64 id )
+    {
+        const IStateHashProvider* const pProvider = reinterpret_cast<const IStateHashProvider*>( static_cast<uintptr_t>( id ) );
+        for ( Channel& channel : _listChannel )
+        {
+            channel._pProvider = channel._pProvider == pProvider ? nullptr : channel._pProvider; // 이력은 남긴다
+        }
+    }
+
+    void StateHashHistory::collectChannelNames( vector<string>& outListName ) const
+    {
+        outListName.clear();
+        for ( const Channel& channel : _listChannel )
+        {
+            outListName.push_back( channel._name );
+        }
+    }
+
+    bool StateHashHistory::hasChannel( string_view name ) const
+    {
+        return name == kSceneChannelName || findChannel( name ) != nullptr;
+    }
+
+    bool StateHashHistory::tryGetLatestChannel( string_view name, StateHashSample& outSample ) const
+    {
+        if ( name == kSceneChannelName )
+            return tryGetLatest( outSample );
+        const Channel* pChannel = findChannel( name );
+        return pChannel != nullptr && pChannel->_ring.tryGetLatest( _capacity, outSample );
+    }
+
+    void StateHashHistory::collectChannel( string_view name, uint64 fromTick, uint32 count, vector<StateHashSample>& outListSample ) const
+    {
+        outListSample.clear();
+        if ( name == kSceneChannelName )
+        {
+            collect( fromTick, count, outListSample );
+            return;
+        }
+        const Channel* pChannel = findChannel( name );
+        if ( pChannel != nullptr )
+            pChannel->_ring.collect( _capacity, fromTick, count, outListSample );
     }
 
     void StateHashHistory::writeReport( const vector<StateHashSample>& listSample, string& outText )

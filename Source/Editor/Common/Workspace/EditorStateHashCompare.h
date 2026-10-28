@@ -95,6 +95,13 @@ namespace sw::editor
         const vector<string>& getDifferingObjects() const { return _listDifferingObject; }
         /** @brief 마지막 `compareObjects*` 가 끝까지 갔으면 true 입니다(false 면 `getDifferingObjects` 가 비어 있어도 "같다" 가 아니다). */
         bool hasObjectComparison() const { return _bObjectComparison; }
+        /**
+         * @brief 이력을 어느 줄에서 읽을지 정합니다(`StateHashHistory::kSceneChannelName` 이 씬 줄, 아니면 키트가 더한 줄 — 예 `destruction` · `rollback`).
+         * @details 채널로 읽는 서버(`loadFromChannel`)와 탭이 클라이언트에 묻는 `state.hashline` 이 같은 이름을 쓴다. 이름 형식이 틀리면 false 이고 그대로 둔다.
+         *          줄을 바꾸면 이미 담은 칸은 다른 줄의 값이라 비교에서 빼도록 비교 결과를 낡은 것으로 표시한다(칸은 지우지 않는다 — 다시 읽으면 바뀐다).
+         */
+        [[nodiscard]] bool setHashChannel( string_view channelName );
+        const string&      getHashChannel() const { return _hashChannel; }
         /** @brief 이력 파일을 칸에 담습니다. 형식이 다른 줄이 있으면 false 입니다. */
         [[nodiscard]] bool loadFromFile( int32 sourceIndex, string_view path );
         /** @brief 이력 글을 칸에 담습니다(`writeReport` 형식). 형식이 다르거나 비어 있으면 false 입니다. */
@@ -133,6 +140,7 @@ namespace sw::editor
         EditorStateHashComparison _comparison;
         vector<string>            _listDifferingObject;
         string                    _lastError;
+        string                    _hashChannel; ///< 이력을 읽을 줄(`setHashChannel`)
         uint64                    _objectTick;
         bool                      _bComparisonCurrent;
         bool                      _bObjectComparison;

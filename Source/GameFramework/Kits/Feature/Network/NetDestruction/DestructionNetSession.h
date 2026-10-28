@@ -21,6 +21,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Scene/SceneStateHash.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 
@@ -61,7 +63,7 @@ namespace sw
      *     session.shutdown();
      * @endcode
      */
-    class SW_KIT_API DestructionNetSession
+    class SW_KIT_API DestructionNetSession : public IStateHashProvider
     {
     public:
         DestructionNetSession();
@@ -91,6 +93,10 @@ namespace sw
         void                                 collectObjectIDs( vector<uint32>& outListNetID ) const;
         const vector<DestructionHashRecord>& getHashRecords() const { return _listRecord; }
         const DestructionReplicationStats&   getStats() const;
+        /** @brief 등록한 모든 오브젝트의 구조 해시(`DestructionState::computeStateHash`)를 번호 순으로 접은 값입니다. 해시 이력의 `destruction` 줄이 틱마다 남긴다. */
+        uint64 computeStateHash() const;
+        /** @brief 해시 이력의 `destruction` 줄 제공자입니다 — 세션이 멈춰 있으면 남기지 않고, 아니면 호스트 틱에 `computeStateHash` 를 남깁니다. */
+        [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override;
         /** @brief 번호의 오브젝트 이름입니다. 등록하지 않은 번호면 빈 문자열입니다. */
         string_view findObjectName( uint32 netID ) const;
         /** @brief 클라이언트 복제기입니다(테스트의 결함 주입 `skipNextEvent`). 서버면 쓰지 않습니다. */

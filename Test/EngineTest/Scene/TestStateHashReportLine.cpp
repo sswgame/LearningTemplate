@@ -197,3 +197,84 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     SW_EXPECT_TRUE( historyLine.empty() );
     SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " " + string( DebugReplyLine::kMaxBytes, '1' ), parsedSample ) );
 }
+
+namespace
+{
+    /** @brief 호스트 틱에 자기 번호(틱의 두 배)와 정해 둔 해시를 내는 제공자입니다. `bReady` 가 거짓이면 그 틱은 남기지 않습니다. */
+    class FakeStateHashProvider final : public IStateHashProvider
+    {
+    public:
+        uint64 _hash{ 0 };
+        bool   _bReady{ true };
+
+        [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override
+        {
+            outSample = StateHashSample{ hostTick * 2, _hash };
+            return _bReady;
+        }
+    };
+} // namespace
+
+/**
+ * @brief [StateHashReportLineTest] 키트의 해시 줄은 이름 형식을 지키고, 호스트 틱마다 제공자의 샘플을 자기 링에 남기며, 구독이 풀려도 이력이 남고 같은 이름으로 이어 쓴다
+ * @details 서버 디버깅 S7 의 키트별 해시(`destruction` · `rollback`)가 씬 해시와 같은 이력에 다른 이름으로 얹히는 길이다.
+ */
+SW_TEST_CASE( StateHashReportLineTest, KitChannelsRecordPerHostTickAndKeepHistoryAfterTheSubscriptionEnds )
+{
+    SW_EXPECT_TRUE( StateHashHistory::isValidChannelName( "destruction" ) );
+    SW_EXPECT_TRUE( StateHashHistory::isValidChannelName( "rollback.p1-a_2" ) );
+    SW_EXPECT_FALSE( StateHashHistory::isValidChannelName( "" ) );
+    SW_EXPECT_FALSE( StateHashHistory::isValidChannelName( "Has Space" ) );
+    SW_EXPECT_FALSE( StateHashHistory::isValidChannelName( "scene" ) ); // 씬 줄의 이름이다
+
+    StateHashHistory history;
+    history.setCapacity( 4 );
+    FakeStateHashProvider provider;
+    provider._hash = 0xAAu;
+    {
+        Subscription subscription = history.registerChannel( "destruction", &provider );
+        SW_ASSERT_TRUE( subscription.isActive() );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a second owner of the same line and a bad name are refused with errors" );
+            test::ScopedLogCollector log;
+            FakeStateHashProvider    other;
+            SW_EXPECT_FALSE( history.registerChannel( "destruction", &other ).isActive() );
+            SW_EXPECT_FALSE( history.registerChannel( "Bad Name", &other ).isActive() );
+        }
+        history.recordChannels( 1 );
+        provider._hash = 0xBBu;
+        history.recordChannels( 2 );
+        provider._bReady = false;
+        history.recordChannels( 3 ); // 제공자가 남길 것이 없다고 하면 그 틱은 비어 있다
+        provider._bReady = true;
+        history.recordChannels( 4 );
+
+        vector<StateHashSample> list;
+        history.collectChannel( "destruction", 0, 10, list );
+        SW_ASSERT_EQUAL( size_t( 3 ), list.size() );
+        SW_EXPECT_EQUAL( uint64( 2 ), list[0]._tick ); // 호스트 틱 1 의 두 배
+        SW_EXPECT_EQUAL( uint64( 0xAAu ), list[0]._hash );
+        SW_EXPECT_EQUAL( uint64( 8 ), list[2]._tick );
+        StateHashSample latest;
+        SW_ASSERT_TRUE( history.tryGetLatestChannel( "destruction", latest ) );
+        SW_EXPECT_EQUAL( uint64( 8 ), latest._tick );
+    }
+    // 구독이 풀려도 줄과 이력은 남고, 새 샘플은 더 이상 쌓이지 않는다.
+    history.recordChannels( 5 );
+    vector<StateHashSample> afterRelease;
+    history.collectChannel( "destruction", 0, 10, afterRelease );
+    SW_EXPECT_EQUAL( size_t( 3 ), afterRelease.size() );
+    vector<string> listName;
+    history.collectChannelNames( listName );
+    SW_ASSERT_EQUAL( size_t( 1 ), listName.size() );
+    SW_EXPECT_TRUE( listName[0] == "destruction" );
+    SW_EXPECT_TRUE( history.hasChannel( "scene" ) );
+    SW_EXPECT_FALSE( history.hasChannel( "rollback" ) );
+
+    // 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
+    Subscription again = history.registerChannel( "destruction", &provider );
+    SW_ASSERT_TRUE( again.isActive() );
+    history.recordChannels( 6 );
+    history.collectChannel( "destruction", 0, 10, afterRelease );
+    SW_EXPECT_EQUAL( size_t( 4 ), afterRelease.size() );
+}

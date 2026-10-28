@@ -609,6 +609,17 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     }
     SW_EXPECT_EQUAL( 0, mismatchCount );
 
+    // 해시 이력의 `rollback` 줄(서버 디버깅 S7): 틱은 확정 프레임 번호이고, 시작하지 않은 세션은 남기지 않는다.
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        StateHashSample sample;
+        SW_ASSERT_TRUE( arrSession[index].sampleStateHash( 0, sample ) );
+        SW_EXPECT_EQUAL( static_cast<uint64>( arrSession[index].getConfirmedFrame() ), sample._tick );
+    }
+    RollbackSession idleSession;
+    StateHashSample idleSample;
+    SW_EXPECT_FALSE( idleSession.sampleStateHash( 0, idleSample ) );
+
     // 상대가 멈추면(끊긴 것처럼) 최대 예측만큼 가고 멈춘다.
     const int32 before = arrSession[0].getFrame();
     for ( int32 frame = 0; frame < 30; ++frame )

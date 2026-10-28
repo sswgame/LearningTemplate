@@ -7,6 +7,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
@@ -31,6 +32,7 @@ namespace sw
         , _hashInterval{ 1.0f }
         , _interpolationDelay{ 0.1f }
         , _session{}
+        , _hashSubscription{}
         , _bTickChecked{ SW_FALSE }
     {
         setCanEverTick( true );
@@ -56,10 +58,16 @@ namespace sw
         settings._interpolationDelay  = _interpolationDelay;
         const DestructionNetSide side = pNetSession->getRole() == GameNetRole::Server ? DestructionNetSide::Server : DestructionNetSide::Client;
         _session.initialize( pNetSession->getPeers(), pNetSession->getRouter(), *pManager, side, settings );
+        // 해시 이력(`-gv_stateHashHistory`)이 켜져 있으면 파괴 구조 해시를 `destruction` 줄로 같은 틱에 남긴다 — 씬 해시가 같아도 구조가 갈린 틱을 찾는다.
+        StateHashHistory* pHistory       = game::findSubsystem<StateHashHistory>();
+        const bool        bRecordsHashes = pHistory != nullptr && pHistory->isRecording() && _session.isActive();
+        if ( bRecordsHashes )
+            _hashSubscription = pHistory->registerChannel( "destruction", &_session );
     }
 
     void DestructionNetSessionComponent::onEndPlay()
     {
+        _hashSubscription.reset();
         _session.shutdown();
         Component::onEndPlay();
     }

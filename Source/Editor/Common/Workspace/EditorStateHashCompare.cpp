@@ -17,10 +17,23 @@ namespace sw::editor
         , _comparison{}
         , _listDifferingObject{}
         , _lastError{}
+        , _hashChannel{ StateHashHistory::kSceneChannelName }
         , _objectTick{ 0 }
         , _bComparisonCurrent{ false }
         , _bObjectComparison{ false }
     {
+    }
+
+    bool EditorStateHashCompare::setHashChannel( string_view channelName )
+    {
+        if ( channelName != StateHashHistory::kSceneChannelName && StateHashHistory::isValidChannelName( channelName ) == false )
+        {
+            _lastError = "'" + string( channelName ) + "' is not a state hash channel name ([a-z0-9_.-], up to 32 characters)";
+            return false;
+        }
+        _hashChannel        = string( channelName );
+        _bComparisonCurrent = false;
+        return true;
     }
 
     bool EditorStateHashCompare::isSourceIndexValid( int32 sourceIndex )
@@ -78,15 +91,16 @@ namespace sw::editor
             return false;
         }
         string     body;
-        const bool bAnswered = client.request( "state.hashes 0 " + to_string( kMaxRequestedTicks ), kChannelTimeoutMilliseconds, body );
+        const bool bSceneChannel = _hashChannel == StateHashHistory::kSceneChannelName;
+        const bool bAnswered     = client.request( "state.hashes 0 " + to_string( kMaxRequestedTicks ) + ( bSceneChannel ? string{} : " " + _hashChannel ), kChannelTimeoutMilliseconds, body );
         client.disconnect();
         if ( bAnswered == false )
         {
-            // 서버가 이력을 켜지 않았으면 `state.hashes` 가 그 이유를 오류로 답한다.
+            // 서버가 이력을 켜지 않았거나 그 이름의 줄이 없으면 `state.hashes` 가 그 이유를 오류로 답한다.
             _lastError = body.empty() ? "no state.hashes answer from " + remote.toString() : body;
             return false;
         }
-        if ( loadFromReport( sourceIndex, remote.toString(), body ) == false )
+        if ( loadFromReport( sourceIndex, bSceneChannel ? remote.toString() : remote.toString() + " [" + _hashChannel + "]", body ) == false )
             return false;
         _arrChannel[sourceIndex] = ChannelOrigin{ remote, string( token ), true };
         return true;
