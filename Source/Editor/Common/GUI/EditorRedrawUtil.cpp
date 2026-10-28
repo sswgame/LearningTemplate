@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "ModuleAPI/ABI/EditorAPI.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

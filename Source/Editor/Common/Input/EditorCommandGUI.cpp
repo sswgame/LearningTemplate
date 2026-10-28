@@ -38,7 +38,7 @@
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/CommandStack.h"
 
-#include "RuntimeAPI/Service/IModuleCompiler.h"
+#include "ModuleAPI/Service/IModuleCompiler.h"
 
 #include <imgui.h>
 

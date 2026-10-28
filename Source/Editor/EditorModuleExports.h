@@ -10,9 +10,9 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
-#include "RuntimeAPI/ABI/ModuleABI.h"
-#include "RuntimeAPI/Export/ModuleForwardUtil.h"
+#include "ModuleAPI/ABI/EditorAPI.h"
+#include "ModuleAPI/ABI/ModuleABI.h"
+#include "ModuleAPI/Export/ModuleForwardUtil.h"
 
 namespace sw
 {

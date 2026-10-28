@@ -8,9 +8,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "ModuleManager/GameModuleManager.h"
+#include "ModuleAPI/ABI/EditorAPI.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "ModuleManager/GameModuleManager.h"
 
 namespace sw
 {

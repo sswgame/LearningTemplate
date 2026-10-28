@@ -1519,223 +1519,223 @@
 		<entry key="EditorDataTable.AddKeyTip"
 		       source="Add a string with the key typed on the left. Keys already in the table are ignored.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       source="Remove this key from the source table and every translation table when you save.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.KeyTip" source="Context: {context}&#10;Comment: {comment}&#10;Max length: {maxLength}">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.LoadingLocalization" source="Loading localization...">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.NewKeyHint" source="New string key...">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.NoProject" source="(no project)">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.NoRecordsHint" source="No localization records. Add a key or run App --gather-text.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.OverMaxLength" source=" (over the maximum length)">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.ProjectTip"
 		       source="Localization project whose string tables are shown. Save or reload before switching; a project with unsaved edits stays selected.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.RefreshFilesTip"
 		       source="Scan the game data folders again for XML tables added or removed outside the editor.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.ReloadTip" source="Read the project's tables from disk again, discarding unsaved edits.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.RevertTip" source="Discard the edits and read the file from disk again.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.SaveFileTip"
 		       source="Write the edited XML text back to this file. The text is saved as typed, without validation.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.SaveLocalizationTip"
 		       source="Write the source table and every translation table of this project.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.SearchHint" source="Search keys, source or translations...">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.SelectTableHint" source="Select an XML data table from the list on the left.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.StateMissing" source="missing">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.StateReview" source="needs review (translation memory suggestion or fuzzy import)">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.StateStale" source="stale - the source changed after this translation">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.StateTranslated" source="translated">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.TranslationCellTip" source="{context}&#10;State: {state}&#10;Length: {length}{overflow}">
 			<origins>
-				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.AddChoiceTip"
 		       source="Add an option the player can pick. Each option gets its own output pin.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.AddNodeTip"
 		       source="Add a node of this type to the graph. You can also right-click empty canvas to search for one.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.AdvancePreviewTip" source="Move the preview to the next node without waiting.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.CommandExample" source="Ex: give_item:potion:3">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.CommandTip"
 		       source="Command the game runs when the conversation passes this node, written as name:argument:argument.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ConditionExample" source="Ex: boss_defeated &amp;&amp; gold >= 10">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ConditionTip"
 		       source="Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ContextCreateFailed" source="Failed to create Dialogue Node Editor context.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.NoSpeaker" source="(No Speaker)">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.PlayPreviewTip"
 		       source="Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.PreviewChoiceTip" source="Pick this choice and follow its link.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.PreviewFalseTip" source="Treat the condition as not met and follow the False link.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.PreviewTrueTip" source="Treat the condition as met and follow the True link.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ReloadTip" source="Reload the graph from disk, discarding unsaved edits.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.RemoveChoiceTip" source="Remove this choice option.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ResetDefaultTip" source="Replace the whole graph with the sample conversation.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.SaveTip" source="Write the dialogue graph and its node layout to the asset file.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.SpeakerTip" source="Name shown as the speaker of this line.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.StopPreviewTip" source="End the preview.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.TextTip"
 		       source="The line the player reads. On a Choice node it is the prompt shown above the options.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.ZoomFitTip" source="Zoom and pan the canvas so every node is visible.">
 			<origins>
-				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInputMap.ActionConflictTip"

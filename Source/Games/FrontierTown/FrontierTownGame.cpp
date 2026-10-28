@@ -9,7 +9,7 @@
 #include "Games/FrontierTown/FrontierCityDirectorComponent.h"
 #include "Games/FrontierTown/FrontierSkirmishDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

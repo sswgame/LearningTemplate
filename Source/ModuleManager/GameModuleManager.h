@@ -2,7 +2,7 @@
  * @file ModuleManager/GameModuleManager.h
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
- * @note 호스트와 모듈 사이 계약(RuntimeAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
+ * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화는 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다. 의존은 그쪽에서 여기로 한 방향입니다.
  */
 #pragma once
@@ -14,7 +14,7 @@
 
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
-#include "RuntimeAPI/ABI/GameAPI.h"
+#include "ModuleAPI/ABI/GameAPI.h"
 
 namespace sw
 {

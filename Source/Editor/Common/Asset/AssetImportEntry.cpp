@@ -19,7 +19,7 @@
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/ConfigManager.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "ModuleAPI/ABI/EditorAPI.h"
 
 namespace sw::editor
 {

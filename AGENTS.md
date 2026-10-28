@@ -29,8 +29,8 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | --- | --- |
 | `Source/Core` | Foundational utility static library, shared with Engine through object compilation |
 | `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev. Folders are layered (`py -3 -m Scripts engine-layers`); a feature folder owns its components (`Physics/Component`) |
-| `Source/RuntimeAPI` | Header-only `INTERFACE` library: the pure C-ABI contract between App and Editor/Game modules. No implementations |
-| `Source/App` | Thin launcher. Dev links Engine + RuntimeAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `GameModuleManager` (`Source/ModuleManager`, shared with Server) manages game-module loading, hot reload and async-task fencing |
+| `Source/ModuleAPI` | Header-only `INTERFACE` library: the pure C-ABI contract between App and Editor/Game modules. No implementations |
+| `Source/App` | Thin launcher. Dev links Engine + ModuleAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `GameModuleManager` (`Source/ModuleManager`, shared with Server) manages game-module loading, hot reload and async-task fencing |
 | `Source/Editor` | Dev only |
 | `Source/GameFramework` | Genre-common frameworks and kits |
 | `Source/Games` | Concrete games; `SW_ACTIVE_GAME` selects the one to build |
@@ -45,7 +45,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | `SW_KIT_API` | Kit DLL classes, in headers under `GameFramework/Kits` | `SW_KIT_EXPORTS` / `SW_KIT_IMPORTS` |
 | `SW_KIT_SERVER_API` | Server kit (`GF_Server_<X>`, folder `Server/`) classes | `SW_KIT_SERVER_EXPORTS` |
 | `SW_EDITOR_API` | `EditorModule.dll` symbols (registries, widgets, selection, undo) | `SW_EDITOR_EXPORTS` |
-| `SW_GAMESERVICE_API` | The GameService locator (`bindGameService` / `getRawService`) in RuntimeAPI; not a class-export macro | — |
+| `SW_GAMESERVICE_API` | The GameService locator (`bindGameService` / `getRawService`) in ModuleAPI; not a class-export macro | — |
 
 - Never use `SW_GF_API` in a kit header: kit TUs do not define `SW_GF_EXPORTS`, so a Base class would be imported, not re-exported.
 - Server TUs do not define `SW_KIT_EXPORTS`, so a shared-kit header they include stays imported. Pure interfaces (pure virtuals / `= default` only) carry no export macro.

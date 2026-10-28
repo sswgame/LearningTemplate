@@ -34,7 +34,7 @@ target_link_libraries(App
 	PRIVATE
 		ModuleManager
 		Engine
-		RuntimeAPI
+		ModuleAPI
 		sw_global_options
 )
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)

@@ -23,7 +23,7 @@ set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")
 target_link_libraries(ModuleManager
 	PUBLIC
 		Engine
-		RuntimeAPI
+		ModuleAPI
 	PRIVATE
 		sw_global_options
 )

@@ -5,9 +5,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 
-#include "RuntimeAPI/Export/GameFrameworkAPI.h"
+#include "ModuleAPI/Export/GameFrameworkAPI.h"
 
-// SW_GF_API 는 RuntimeAPI/Export/GameFrameworkAPI.h 한 곳에서 정한다(RuntimeAPI 의 게임 서비스 연결 선언도 같은 매크로를 쓴다).
+// SW_GF_API 는 ModuleAPI/Export/GameFrameworkAPI.h 한 곳에서 정한다(ModuleAPI 의 게임 서비스 연결 선언도 같은 매크로를 쓴다).
 // `registerGameFrameworkTypes()` 는 두지 않는다. GameFramework 의 리플렉션 타입은
 // `Engine` 이 서비스를 묶은 직후 `engine::registerModuleTypes( "GameFramework" )` 로
 // 직접 등록한다. 그것이 기준이고 실제로 도는 유일한 경로다. 같은 일을 하는 함수를 여기 하나 더

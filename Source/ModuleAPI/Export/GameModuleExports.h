@@ -9,10 +9,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "RuntimeAPI/ABI/GameAPI.h"
-#include "RuntimeAPI/ABI/ModuleABI.h"
-#include "RuntimeAPI/Export/ModuleForwardUtil.h"
-#include "RuntimeAPI/Service/GameServiceBinding.h"
+#include "ModuleAPI/ABI/GameAPI.h"
+#include "ModuleAPI/ABI/ModuleABI.h"
+#include "ModuleAPI/Export/ModuleForwardUtil.h"
+#include "ModuleAPI/Service/GameServiceBinding.h"
 
 namespace sw
 {

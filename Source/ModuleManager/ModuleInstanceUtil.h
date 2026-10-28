@@ -11,7 +11,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "RuntimeAPI/ABI/ModuleABI.h"
+#include "ModuleAPI/ABI/ModuleABI.h"
 
 namespace sw
 {

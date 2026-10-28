@@ -9,7 +9,7 @@
 #include "Games/HarvestValley/FarmDirectorComponent.h"
 #include "Games/HarvestValley/FarmVillageDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

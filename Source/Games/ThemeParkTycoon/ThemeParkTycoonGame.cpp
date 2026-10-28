@@ -6,7 +6,7 @@
 
 #include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

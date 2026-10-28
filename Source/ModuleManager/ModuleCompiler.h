@@ -13,7 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/GameTimer.h"
 
-#include "RuntimeAPI/Service/IModuleCompiler.h"
+#include "ModuleAPI/Service/IModuleCompiler.h"
 
 namespace sw
 {

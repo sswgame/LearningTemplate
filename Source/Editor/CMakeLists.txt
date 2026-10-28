@@ -198,7 +198,7 @@ endforeach()
 function(sw_applyEditorCoreSettings TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
-	target_link_libraries(${TARGET_NAME} PRIVATE Engine RuntimeAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
+	target_link_libraries(${TARGET_NAME} PRIVATE Engine ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		FOLDER "Source/Editor"
 		EXCLUDE_FROM_ALL ON
@@ -296,7 +296,7 @@ sw_addModuleLibrary(EditorModule
 	LOG_TAG "Editor"
 	FOLDER "Source/Editor"
 	SOURCES ${listEditorSource}
-	LINK_PRIVATE Engine RuntimeAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
+	LINK_PRIVATE Engine ModuleAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
 	UNITY_BATCH 8
 	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).
 	# 코어 폴더의 헤더는 뺀다 — 그쪽은 EditorCoreReflect 가 한 번만 짓는다(두 곳에 있으면 StaticType 이 중복 정의된다).
@@ -312,7 +312,7 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 		sw_addModulePart(EditorTier${tier}View
 			OWNER EditorModule
 			SOURCES ${swEditorTierViewSource_${tier}}
-			LINK Engine RuntimeAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
+			LINK Engine ModuleAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
 		)
 		sw_addEditorLayerStubs(EditorTier${tier}View ${tier})
 		if(TARGET EditorCoreReflect)

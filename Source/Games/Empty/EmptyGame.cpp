@@ -11,7 +11,7 @@
     #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #endif
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

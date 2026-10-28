@@ -9,7 +9,7 @@
 #include "Games/AbilityArena/ArenaAbilities.h"
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

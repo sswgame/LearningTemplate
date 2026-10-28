@@ -1,6 +1,6 @@
 /**
- * @file RuntimeHandles.h
- * @brief App ↔ Editor/Game Runtime API 가 함께 쓰는 불투명 핸들입니다.
+ * @file ModuleHandles.h
+ * @brief App ↔ Editor/Game 모듈 API 가 함께 쓰는 불투명 핸들입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -11,7 +11,7 @@
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "RuntimeAPI/ABI/EditorAPI.h"
+#include "ModuleAPI/ABI/EditorAPI.h"
 
 namespace sw::editor
 {

@@ -1452,212 +1452,212 @@ msgctxt "EditorContentBrowser.TypeFilter"
 msgid "Filter by asset type (texture, scene, prefab, sound, ...)"
 msgstr "특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.AddKeyTip"
 msgid "Add a string with the key typed on the left. Keys already in the table are ignored."
 msgstr "왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.DeleteKeyTip"
 msgid "Remove this key from the source table and every translation table when you save."
 msgstr "저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.KeyTip"
 msgid "Context: {context}\nComment: {comment}\nMax length: {maxLength}"
 msgstr "컨텍스트: {context}\n주석: {comment}\n최대 길이: {maxLength}"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.LoadingLocalization"
 msgid "Loading localization..."
 msgstr "현지화 데이터를 읽는 중..."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.NewKeyHint"
 msgid "New string key..."
 msgstr "새 문자열 키..."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.NoProject"
 msgid "(no project)"
 msgstr "(프로젝트 없음)"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.NoRecordsHint"
 msgid "No localization records. Add a key or run App --gather-text."
 msgstr "현지화 항목이 없습니다. 키를 추가하거나 App --gather-text 를 실행합니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.OverMaxLength"
 msgid " (over the maximum length)"
 msgstr " (최대 길이 초과)"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.ProjectTip"
 msgid "Localization project whose string tables are shown. Save or reload before switching; a project with unsaved edits stays selected."
 msgstr "문자열 테이블을 보여 줄 현지화 프로젝트입니다. 바꾸기 전에 저장하거나 다시 읽습니다. 저장하지 않은 편집이 있으면 프로젝트가 바뀌지 않습니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.RefreshFilesTip"
 msgid "Scan the game data folders again for XML tables added or removed outside the editor."
 msgstr "에디터 밖에서 추가하거나 지운 XML 테이블을 찾으려고 게임 데이터 폴더를 다시 훑습니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.ReloadTip"
 msgid "Read the project's tables from disk again, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 프로젝트의 테이블을 디스크에서 다시 읽습니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.RevertTip"
 msgid "Discard the edits and read the file from disk again."
 msgstr "편집을 버리고 디스크에서 파일을 다시 읽습니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SaveFileTip"
 msgid "Write the edited XML text back to this file. The text is saved as typed, without validation."
 msgstr "편집한 XML 텍스트를 이 파일에 다시 씁니다. 검증 없이 입력한 그대로 저장합니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SaveLocalizationTip"
 msgid "Write the source table and every translation table of this project."
 msgstr "이 프로젝트의 원문 테이블과 모든 번역 테이블을 씁니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SearchHint"
 msgid "Search keys, source or translations..."
 msgstr "키, 원문, 번역 검색..."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SelectTableHint"
 msgid "Select an XML data table from the list on the left."
 msgstr "왼쪽 목록에서 XML 데이터 테이블을 선택합니다."
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.StateMissing"
 msgid "missing"
 msgstr "없음"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.StateReview"
 msgid "needs review (translation memory suggestion or fuzzy import)"
 msgstr "검토 필요(번역 메모리 제안 또는 퍼지 가져오기)"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.StateStale"
 msgid "stale - the source changed after this translation"
 msgstr "오래됨 - 이 번역 뒤에 원문이 바뀌었습니다"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.StateTranslated"
 msgid "translated"
 msgstr "번역됨"
 
-#: Source/Editor/Panels/Data/DataTablePanel.cpp
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.TranslationCellTip"
 msgid "{context}\nState: {state}\nLength: {length}{overflow}"
 msgstr "{context}\n상태: {state}\n길이: {length}{overflow}"
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.AddChoiceTip"
 msgid "Add an option the player can pick. Each option gets its own output pin."
 msgstr "플레이어가 고를 수 있는 선택지를 추가합니다. 선택지마다 출력 핀이 따로 생깁니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.AddNodeTip"
 msgid "Add a node of this type to the graph. You can also right-click empty canvas to search for one."
 msgstr "이 종류의 노드를 그래프에 추가합니다. 캔버스 빈 곳을 오른쪽 클릭해 찾아 넣을 수도 있습니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.AdvancePreviewTip"
 msgid "Move the preview to the next node without waiting."
 msgstr "기다리지 않고 미리보기를 다음 노드로 넘깁니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.CommandExample"
 msgid "Ex: give_item:potion:3"
 msgstr "예: give_item:potion:3"
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.CommandTip"
 msgid "Command the game runs when the conversation passes this node, written as name:argument:argument."
 msgstr "대화가 이 노드를 지날 때 게임이 실행하는 명령으로, 이름:인자:인자 형식입니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ConditionExample"
 msgid "Ex: boss_defeated && gold >= 10"
 msgstr "예: boss_defeated && gold >= 10"
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ConditionTip"
 msgid "Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link."
 msgstr "대화가 이 노드에 닿으면 게임이 평가하는 식입니다. 참이면 True 링크, 거짓이면 False 링크를 따라갑니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ContextCreateFailed"
 msgid "Failed to create Dialogue Node Editor context."
 msgstr "대화 노드 편집기 컨텍스트를 만들지 못했습니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.NoSpeaker"
 msgid "(No Speaker)"
 msgstr "(화자 없음)"
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.PlayPreviewTip"
 msgid "Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear."
 msgstr "Start 노드부터 대화를 진행하며 대사를 뷰포트에 보여 줍니다. 대사는 저절로 넘어가고, 선택지와 조건은 나타나는 버튼을 기다립니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.PreviewChoiceTip"
 msgid "Pick this choice and follow its link."
 msgstr "이 선택지를 골라 그 링크를 따라갑니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.PreviewFalseTip"
 msgid "Treat the condition as not met and follow the False link."
 msgstr "조건이 거짓인 것으로 보고 False 링크를 따라갑니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.PreviewTrueTip"
 msgid "Treat the condition as met and follow the True link."
 msgstr "조건이 참인 것으로 보고 True 링크를 따라갑니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ReloadTip"
 msgid "Reload the graph from disk, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.RemoveChoiceTip"
 msgid "Remove this choice option."
 msgstr "이 선택지를 지웁니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ResetDefaultTip"
 msgid "Replace the whole graph with the sample conversation."
 msgstr "그래프 전체를 예제 대화로 바꿉니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.SaveTip"
 msgid "Write the dialogue graph and its node layout to the asset file."
 msgstr "대화 그래프와 노드 배치를 애셋 파일에 씁니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.SpeakerTip"
 msgid "Name shown as the speaker of this line."
 msgstr "이 대사의 화자로 표시되는 이름입니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.StopPreviewTip"
 msgid "End the preview."
 msgstr "미리보기를 끝냅니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.TextTip"
 msgid "The line the player reads. On a Choice node it is the prompt shown above the options."
 msgstr "플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다."
 
-#: Source/Editor/Panels/Data/DialogueGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.ZoomFitTip"
 msgid "Zoom and pan the canvas so every node is visible."
 msgstr "모든 노드가 보이도록 캔버스를 확대 · 이동합니다."

@@ -42,7 +42,7 @@ SelfTest = 7
 
 # 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
 [prelude]
-"Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · RuntimeAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
+"Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
 "Editor/Common/Workspace/EditorExtensionRegistry.h" = "등록 줄(SW_EDITOR_*)의 공통 기반(등록 세대 · 모듈 범위) — Core 만 include 하는 잎 헤더"
 "Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorService 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
 "Editor/Common/GUI/EditorIconGlyphs.h" = "아이콘 글리프 코드포인트 상수만 — 커맨드 등록 줄이 아이콘을 적는다"

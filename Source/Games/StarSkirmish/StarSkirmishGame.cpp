@@ -6,7 +6,7 @@
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

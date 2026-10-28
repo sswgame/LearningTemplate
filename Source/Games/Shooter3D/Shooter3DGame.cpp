@@ -9,7 +9,7 @@
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

@@ -35,7 +35,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "RuntimeAPI/Service/IModuleCompiler.h"
+#include "ModuleAPI/Service/IModuleCompiler.h"
 
 #include <imgui.h>
 

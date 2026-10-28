@@ -9,11 +9,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "RuntimeAPI/ABI/RuntimeHandles.h"
+#include "ModuleAPI/ABI/ModuleHandles.h"
 
 namespace sw
 {
-    // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다. GameHandle 포함.
+    // 핸들은 ABI/ModuleHandles.h 가 모아 들고 있다. GameHandle 포함.
 
     class ISubsystemLocator;
 

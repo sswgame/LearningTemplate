@@ -18,7 +18,7 @@ target_link_libraries(Server
 	PRIVATE
 		ModuleManager
 		Engine
-		RuntimeAPI
+		ModuleAPI
 		sw_global_options
 )
 target_compile_definitions(Server PRIVATE "SW_LOG_TAG=\"Server\"" SW_APP_INTERNAL)

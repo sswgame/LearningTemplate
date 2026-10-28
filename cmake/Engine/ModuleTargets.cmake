@@ -132,7 +132,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 		sw_addSharedPCHOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-			LINK Engine RuntimeAPI GameFramework sw_global_options
+			LINK Engine ModuleAPI GameFramework sw_global_options
 			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
@@ -345,7 +345,7 @@ function(sw_addGameModule MODULE_NAME)
 		LOG_TAG "Game"
 		FOLDER "Source/Games"
 		SOURCES ${listGameSource}
-		LINK_PRIVATE Engine RuntimeAPI GameFramework ${listKit}
+		LINK_PRIVATE Engine ModuleAPI GameFramework ${listKit}
 		UNITY_BATCH 8
 		REFLECTION_EXCLUDE "/Editor/"
 		MODULE_NAME ${MODULE_NAME}
@@ -413,7 +413,7 @@ function(sw_addEditorExtension TARGET_NAME)
 		LOG_TAG "${TARGET_NAME}"
 		FOLDER "Source/EditorExtensions"
 		SOURCES ${listExtensionSource} "${binderSource}"
-		LINK_PRIVATE EditorModule Engine RuntimeAPI ${listLinkedModule} imgui implot imgui_nodeeditor
+		LINK_PRIVATE EditorModule Engine ModuleAPI ${listLinkedModule} imgui implot imgui_nodeeditor
 	)
 	sw_applyEditorInputBan(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
 	add_dependencies(EditorAll ${TARGET_NAME})

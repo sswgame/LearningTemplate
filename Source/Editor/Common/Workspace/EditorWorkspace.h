@@ -111,7 +111,7 @@ namespace sw::editor
         {
             requestOpenPanelByID( TPanel::kPanelID );
         }
-        /** @brief 실행 중에 들어온 id(콘솔 인자 · 패널 호스트)로 열기를 요청합니다. 코드가 아는 패널은 `requestOpenPanel<T>()` 를 씁니다. */
+        /** @brief 실행 중에 들어온 id(콘솔 인자 · 패널 서비스)로 열기를 요청합니다. 코드가 아는 패널은 `requestOpenPanel<T>()` 를 씁니다. */
         void requestOpenPanelByID( string_view panelID );
         /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`IEditorPanel::getDocumentKind`)을 열기를 요청합니다. */
         void requestOpenDocumentPanel( EditorAssetType kind );

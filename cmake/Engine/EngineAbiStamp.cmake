@@ -27,8 +27,8 @@ function(sw_defineEngineABIStamp)
 		"${CMAKE_SOURCE_DIR}/Source/Engine/*.inl"
 		"${CMAKE_SOURCE_DIR}/Source/Core/*.xxx"
 		"${CMAKE_SOURCE_DIR}/Source/Engine/*.xxx"
-		"${CMAKE_SOURCE_DIR}/Source/RuntimeAPI/*.h"
-		"${CMAKE_SOURCE_DIR}/Source/RuntimeAPI/*.xxx"
+		"${CMAKE_SOURCE_DIR}/Source/ModuleAPI/*.h"
+		"${CMAKE_SOURCE_DIR}/Source/ModuleAPI/*.xxx"
 		# GameFramework 는 Kits 까지 잡히지만 상관없다 — 스크립트가 Kits 를 빼고 해시하고, 결과가 같으면 파일을 다시 쓰지 않는다.
 		"${CMAKE_SOURCE_DIR}/Source/GameFramework/*.h"
 		"${CMAKE_SOURCE_DIR}/Source/GameFramework/*.xxx"

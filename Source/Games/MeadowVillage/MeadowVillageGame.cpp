@@ -10,7 +10,7 @@
 #include "Games/MeadowVillage/MeadowFarmDirectorComponent.h"
 #include "Games/MeadowVillage/MeadowTownDirectorComponent.h"
 
-#include "RuntimeAPI/Export/GameModuleExports.h"
+#include "ModuleAPI/Export/GameModuleExports.h"
 
 namespace sw
 {

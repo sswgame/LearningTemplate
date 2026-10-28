@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "RuntimeAPI/Service/GameServiceBinding.h"
+#include "ModuleAPI/Service/GameServiceBinding.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
             SW_GAMESERVICE_API const ISubsystemLocator* findHostServices();
         } // namespace internal
 
-        // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
+        // bindGameService · unbindGameService 는 ModuleAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 ModuleAPI 안에서 부른다).
 
         /** @brief 지금 게임 범위입니다. 게임 인스턴스가 서기 전이나 내려간 뒤에는 nullptr 입니다. */
         SW_GAMESERVICE_API SubsystemScope* findGameScope();
