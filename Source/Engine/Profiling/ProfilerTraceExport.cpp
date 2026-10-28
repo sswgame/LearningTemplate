@@ -513,6 +513,132 @@ namespace sw
                 }
                 return eventCount;
             }
+
+            /** @brief 파일 머리(표시 단위 · 출처 정보)를 쓰고 `traceEvents` 배열을 연 뒤 프로세스 이름 이벤트를 둡니다. */
+            static void writeHeader( JSONWriter& writer, const ProfilerTraceMeta& meta, int64 pid )
+            {
+                writer.beginObject();
+                writer.key( "displayTimeUnit" );
+                writer.valueString( "ms" );
+                writer.key( "otherData" );
+                writer.beginObject();
+                writer.key( "processName" );
+                writer.valueString( meta._processName );
+                writer.key( "hostName" );
+                writer.valueString( meta._hostName );
+                writer.key( "processID" );
+                writer.valueInt( pid );
+                writer.key( "wallUnixMilliseconds" );
+                writer.valueInt( meta._wallUnixMilliseconds );
+                writer.key( "monotonicNanoseconds" );
+                writer.valueUint( meta._monotonicNanoseconds );
+                writer.key( "truncated" );
+                writer.valueBool( meta._bTruncated );
+                writer.endObject();
+                writer.key( "traceEvents" );
+                writer.beginArray();
+
+                writeTraceNameEvent( writer, "process_name", pid, 0, meta._processName );
+            }
+
+            /** @brief 스레드마다 이름 이벤트와 구간 이벤트(`ph:X`)를 씁니다. 스레드 번호는 1 부터입니다. */
+            static void writeThreadEvents( JSONWriter& writer, const vector<ProfilerTimelineThread>& listThread, const vector<string>& listSlotName, int64 pid )
+            {
+                for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
+                {
+                    const ProfilerTimelineThread& thread = listThread[threadIndex];
+                    const uint64                  tid    = threadIndex + 1;
+                    writeTraceNameEvent( writer, "thread_name", pid, tid, thread._name );
+                    for ( const ProfilerTimelineEvent& event : thread._listEvent )
+                    {
+                        const uint64 duration   = event._endNanos > event._beginNanos ? event._endNanos - event._beginNanos : 0;
+                        const bool   bSlotNamed = event._slot < listSlotName.size() && listSlotName[event._slot].empty() == false;
+                        writer.beginObject();
+                        writer.key( "name" );
+                        if ( bSlotNamed )
+                            writer.valueString( listSlotName[event._slot] );
+                        else
+                            writer.valueString( "slot " + to_string( event._slot ) );
+                        writer.key( "cat" );
+                        writer.valueString( "cpu" );
+                        writer.key( "ph" );
+                        writer.valueString( "X" );
+                        writer.key( "pid" );
+                        writer.valueInt( pid );
+                        writer.key( "tid" );
+                        writer.valueUint( tid );
+                        writer.key( "ts" );
+                        writer.valueFixedPoint( event._beginNanos, kTraceMicrosecondDigits );
+                        writer.key( "dur" );
+                        writer.valueFixedPoint( duration, kTraceMicrosecondDigits );
+                        writer.endObject();
+                    }
+                }
+            }
+
+            /** @brief 예산을 넘어 뒤가 잘렸다 — 뷰어에서도 보이게 전역 표식을 마지막 시각에 둡니다. */
+            static void writeTruncatedMarker( JSONWriter& writer, const vector<ProfilerTimelineThread>& listThread, int64 pid )
+            {
+                uint64 lastNanos = 0;
+                for ( const ProfilerTimelineThread& thread : listThread )
+                {
+                    for ( const ProfilerTimelineEvent& event : thread._listEvent )
+                    {
+                        lastNanos = event._endNanos > lastNanos ? event._endNanos : lastNanos;
+                    }
+                }
+                writeTraceInstantEvent( writer, "TRUNCATED (event budget reached)", "trace", pid, lastNanos );
+            }
+
+            /**
+             * @brief 흐름은 스레드 줄 뒤의 한 줄("Net messages")에 모읍니다. 흐름 이벤트는 감싸는 구간에 묶여야 뷰어가 그리므로(`bp:e`) 사건마다 1 us 구간을 함께 둡니다.
+             * @details id 는 16 진 글입니다 — 53 비트 안이지만 글로 두면 뷰어 · 합치기가 수로 바꾸지 않는다.
+             */
+            static void writeFlowEvents( JSONWriter& writer, const vector<NetFlowEvent>& listFlow, uint64 tid, int64 pid )
+            {
+                writeTraceNameEvent( writer, "thread_name", pid, tid, "Net messages" );
+                for ( const NetFlowEvent& flow : listFlow )
+                {
+                    writer.beginObject();
+                    writer.key( "name" );
+                    writer.valueString( string( flow._bReceive ? "recv " : "send " ) + makeHexText( flow._kind, 2 ) );
+                    writer.key( "cat" );
+                    writer.valueString( "net" );
+                    writer.key( "ph" );
+                    writer.valueString( "X" );
+                    writer.key( "pid" );
+                    writer.valueInt( pid );
+                    writer.key( "tid" );
+                    writer.valueUint( tid );
+                    writer.key( "ts" );
+                    writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
+                    writer.key( "dur" );
+                    writer.valueUint( 1 );
+                    writer.endObject();
+
+                    writer.beginObject();
+                    writer.key( "name" );
+                    writer.valueString( "net" );
+                    writer.key( "cat" );
+                    writer.valueString( "net" );
+                    writer.key( "ph" );
+                    writer.valueString( flow._bReceive ? "f" : "s" );
+                    if ( flow._bReceive )
+                    {
+                        writer.key( "bp" );
+                        writer.valueString( "e" );
+                    }
+                    writer.key( "id" );
+                    writer.valueString( makeHexText( flow._id, 1 ) );
+                    writer.key( "pid" );
+                    writer.valueInt( pid );
+                    writer.key( "tid" );
+                    writer.valueUint( tid );
+                    writer.key( "ts" );
+                    writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
+                    writer.endObject();
+                }
+            }
         };
     } // namespace
 
@@ -531,73 +657,11 @@ namespace sw
         JSONWriter  writer{ json };
         const int64 pid = meta._processID;
 
-        writer.beginObject();
-        writer.key( "displayTimeUnit" );
-        writer.valueString( "ms" );
-        writer.key( "otherData" );
-        writer.beginObject();
-        writer.key( "processName" );
-        writer.valueString( meta._processName );
-        writer.key( "hostName" );
-        writer.valueString( meta._hostName );
-        writer.key( "processID" );
-        writer.valueInt( pid );
-        writer.key( "wallUnixMilliseconds" );
-        writer.valueInt( meta._wallUnixMilliseconds );
-        writer.key( "monotonicNanoseconds" );
-        writer.valueUint( meta._monotonicNanoseconds );
-        writer.key( "truncated" );
-        writer.valueBool( meta._bTruncated );
-        writer.endObject();
-        writer.key( "traceEvents" );
-        writer.beginArray();
-
-        writeTraceNameEvent( writer, "process_name", pid, 0, meta._processName );
-
-        for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
-        {
-            const ProfilerTimelineThread& thread = listThread[threadIndex];
-            const uint64                  tid    = threadIndex + 1;
-            writeTraceNameEvent( writer, "thread_name", pid, tid, thread._name );
-            for ( const ProfilerTimelineEvent& event : thread._listEvent )
-            {
-                const uint64 duration   = event._endNanos > event._beginNanos ? event._endNanos - event._beginNanos : 0;
-                const bool   bSlotNamed = event._slot < listSlotName.size() && listSlotName[event._slot].empty() == false;
-                writer.beginObject();
-                writer.key( "name" );
-                if ( bSlotNamed )
-                    writer.valueString( listSlotName[event._slot] );
-                else
-                    writer.valueString( "slot " + to_string( event._slot ) );
-                writer.key( "cat" );
-                writer.valueString( "cpu" );
-                writer.key( "ph" );
-                writer.valueString( "X" );
-                writer.key( "pid" );
-                writer.valueInt( pid );
-                writer.key( "tid" );
-                writer.valueUint( tid );
-                writer.key( "ts" );
-                writer.valueFixedPoint( event._beginNanos, kTraceMicrosecondDigits );
-                writer.key( "dur" );
-                writer.valueFixedPoint( duration, kTraceMicrosecondDigits );
-                writer.endObject();
-            }
-        }
-
+        using Internal = ProfilerTraceExportInternal;
+        Internal::writeHeader( writer, meta, pid );
+        Internal::writeThreadEvents( writer, listThread, listSlotName, pid );
         if ( meta._bTruncated )
-        {
-            // 예산을 넘어 뒤가 잘렸다 — 뷰어에서도 보이게 전역 표식을 마지막 시각에 둔다.
-            uint64 lastNanos = 0;
-            for ( const ProfilerTimelineThread& thread : listThread )
-            {
-                for ( const ProfilerTimelineEvent& event : thread._listEvent )
-                {
-                    lastNanos = event._endNanos > lastNanos ? event._endNanos : lastNanos;
-                }
-            }
-            writeTraceInstantEvent( writer, "TRUNCATED (event budget reached)", "trace", pid, lastNanos );
-        }
+            Internal::writeTruncatedMarker( writer, listThread, pid );
 
         for ( const ProfilerTraceMarker& marker : meta._listMarker )
         {
@@ -610,53 +674,7 @@ namespace sw
         }
 
         if ( meta._listFlow.empty() == false )
-        {
-            // 흐름은 스레드 줄 뒤의 한 줄("Net messages")에 모은다. 흐름 이벤트는 감싸는 구간에 묶여야 뷰어가 그리므로(`bp:e`) 사건마다 1 us 구간을 함께 둔다.
-            // id 는 16 진 글이다 — 53 비트 안이지만 글로 두면 뷰어 · 합치기가 수로 바꾸지 않는다.
-            const uint64 tid = listThread.size() + 1;
-            writeTraceNameEvent( writer, "thread_name", pid, tid, "Net messages" );
-            for ( const NetFlowEvent& flow : meta._listFlow )
-            {
-                writer.beginObject();
-                writer.key( "name" );
-                writer.valueString( string( flow._bReceive ? "recv " : "send " ) + makeHexText( flow._kind, 2 ) );
-                writer.key( "cat" );
-                writer.valueString( "net" );
-                writer.key( "ph" );
-                writer.valueString( "X" );
-                writer.key( "pid" );
-                writer.valueInt( pid );
-                writer.key( "tid" );
-                writer.valueUint( tid );
-                writer.key( "ts" );
-                writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
-                writer.key( "dur" );
-                writer.valueUint( 1 );
-                writer.endObject();
-
-                writer.beginObject();
-                writer.key( "name" );
-                writer.valueString( "net" );
-                writer.key( "cat" );
-                writer.valueString( "net" );
-                writer.key( "ph" );
-                writer.valueString( flow._bReceive ? "f" : "s" );
-                if ( flow._bReceive )
-                {
-                    writer.key( "bp" );
-                    writer.valueString( "e" );
-                }
-                writer.key( "id" );
-                writer.valueString( makeHexText( flow._id, 1 ) );
-                writer.key( "pid" );
-                writer.valueInt( pid );
-                writer.key( "tid" );
-                writer.valueUint( tid );
-                writer.key( "ts" );
-                writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
-                writer.endObject();
-            }
-        }
+            Internal::writeFlowEvents( writer, meta._listFlow, listThread.size() + 1, pid );
         writer.endArray();
         writer.endObject();
         SW_ASSERT( writer.isComplete() );
