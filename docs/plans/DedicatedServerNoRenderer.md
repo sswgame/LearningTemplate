@@ -18,8 +18,8 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | S1 | 위 설계대로 렌더러 폴더를 Server 타깃에서 뺀다 | 완료(Debug-Server 빌드) |
-| S2 | `Ninja-Debug-Server` · `Ninja-Shipping-Server` 빌드로 링크 오류를 잡고 `ServerTest` · `EngineTest_NoGPU` 를 돌리고 실행 파일 크기 · 링크 시간을 전후로 잰다 | Debug-Server 끝(2026-10-22): `all AllTests` 경고 0, ServerTest 16 / 16, EngineTest_NoGPU 다섯 샤드, 크기 Engine.dll 22.6 MB · GameFramework.dll 8.5 MB · Server.exe 1.2 MB. 남음: Shipping-Server 빌드(CI `CI-Shipping-Server` 두 잡)와 "전" 크기 · 링크 시간(S1 앞 커밋으로 Server 를 한 번 더 지어야 해서 하지 않았다) |
-| S3 | 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 · `ServerTest` — CI 리눅스 잡 몫(로컬 WSL 빌드는 하지 않는다, 사용자 결정) | CI 단계 넣음 — `Dedicated server has no X11 dependency (Linux)`(처음이라 continue-on-error), 첫 실행을 기다림 |
+| S2 | `Ninja-Debug-Server` · `Ninja-Shipping-Server` 빌드로 링크 오류를 잡고 `ServerTest` · `EngineTest_NoGPU` 를 돌리고 실행 파일 크기 · 링크 시간을 전후로 잰다 | Debug-Server 끝(2026-10-22): `all AllTests` 경고 0, ServerTest 16 / 16, EngineTest_NoGPU 다섯 샤드, 크기 Engine.dll 22.6 MB · GameFramework.dll 8.5 MB · Server.exe 1.2 MB. Shipping-Server 구성은 코드로 끝났다(빌드는 안 돌렸다) — 프리셋 `Ninja-Shipping-Server` · `WSL-Shipping-Server` · `CI-Shipping-Server`(`CMakePresets.json`, 각 빌드 프리셋 포함)와 빌드 구성 분기(`BuildLayout.cmake`: 서버 배포본은 Info 로그를 남긴다, `Source/Engine/CMakeLists.txt` 5절: RHI 백엔드를 하나도 링크하지 않는다, `AssetAndToolTargets.cmake`: 쿠킹 호스트가 Server, `Source/Server/CMakeLists.txt`)이 이미 있다. 남음: 그 구성을 실제로 짓는 일(CI `CI-Shipping-Server` 두 잡이 처음 짓는다)과 선택 항목 "전" 크기 · 링크 시간(S1 앞 커밋으로 Server 를 한 번 더 지어야 해서 하지 않았다) |
+| S3 | 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 · `ServerTest` — CI 리눅스 잡 몫(로컬 WSL 빌드는 하지 않는다, 사용자 결정) | CI 쪽은 끝났다 — 잡 `Build Linux Dedicated Server Shipping (Clang)`(`CI-Shipping-Server`)이 짓고 `-L nogpu` 테스트(ServerTest 포함)를 돌리며 단계 `Dedicated server has no X11 dependency (Linux)`(처음이라 continue-on-error)가 `readelf -d` 로 `Bin` 의 Server · .so 의 libX11 · libxcb 요구를 본다. 첫 실행을 기다림(초록이 이어지면 단계의 `continue-on-error` 를 지운다). 2026-10-28: 작업 트리에서 `.github/` 가 지워진 상태(다른 작업자의 미커밋 삭제)라 이 문서는 HEAD 의 ci.yml 을 가리킨다 |
 
 ## 남은 것
 
