@@ -52,7 +52,7 @@ namespace sw
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING( "Leaderboard kit: neither a catalog nor a board option - no boards are registered" );
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
-                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IAccountStatSource>( context, entry, _service, outError );
+                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IAccountStatSource>( context, entry, _service, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override

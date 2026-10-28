@@ -34,7 +34,7 @@ namespace sw
     class EphemeralStoreRouter;
     class IClock;
     class IEphemeralStore;
-    class IOnlineHostService;
+    class IOnlineServerService;
     class IServiceStore;
     class MetricRegistry;
     class OnlineServiceHost;
@@ -111,7 +111,7 @@ namespace sw
         IOnlineServerKit( const IOnlineServerKit& )            = delete;
         IOnlineServerKit& operator=( const IOnlineServerKit& ) = delete;
 
-        /** @brief 호스트를 띄우기 전입니다. 로직과 바인딩을 만들고 `registerHostService` 로 올리며, 다른 키트가 쓸 인터페이스를 `exposeInterface` 로 겁니다. */
+        /** @brief 호스트를 띄우기 전입니다. 로직과 바인딩을 만들고 `registerServerService` 로 올리며, 다른 키트가 쓸 인터페이스를 `exposeInterface` 로 겁니다. */
         [[nodiscard]] virtual bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) = 0;
         /** @brief 모든 키트의 `initialize` 와 호스트 기동 뒤입니다. 라우터와 다른 키트의 인터페이스로 로직을 시작합니다. */
         [[nodiscard]] virtual bool start( OnlineServerKitContext& context, string& outError ) = 0;
@@ -147,7 +147,7 @@ namespace sw
         bool isStarted() const { return _bStarted; }
 
         /** @brief @p pService 를 문맥의 호스트에 등록합니다. 메서드 영역이 겹치면 false 와 키트 이름이 포함된 @p outError 입니다(겹친 번호는 호스트가 로그에 남긴다). */
-        [[nodiscard]] static bool registerHostService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineHostService* pService, string& outError );
+        [[nodiscard]] static bool registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService, string& outError );
 
         /**
          * @brief @p object 를 인터페이스 @p TInterface 로 문맥의 지역 범위에 겁니다. 다른 키트가 이미 같은 인터페이스를 걸었으면 false 와 까닭입니다.

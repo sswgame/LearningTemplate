@@ -95,7 +95,7 @@ namespace sw
                     outError = "matchmaking option reconnectGraceMs must be 0 or more";
                     return false;
                 }
-                if ( registerHostService( context, entry, &_server, outError ) == false )
+                if ( registerServerService( context, entry, &_server, outError ) == false )
                     return false;
                 if ( _bGameServer == false )
                     return true;

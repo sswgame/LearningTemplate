@@ -209,11 +209,11 @@ namespace sw
         if ( startHostServices( _hostServices, kArrClientHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &App::startHostService, this ),
                                 SW_DELEGATE_METHOD( HostServiceStopDelegate, &App::stopHostService, this ) ) == false )
         {
-            SW_LOG_ERROR( "Host parts failed to start: %#", _hostServices.getError().c_str() );
+            SW_LOG_ERROR( "Host services failed to start: %#", _hostServices.getError().c_str() );
             splash.dismiss();
             return false;
         }
-        SW_LOG_INFO( "Host parts up: %#", describeHostServiceOrder( _hostServices ).c_str() );
+        SW_LOG_INFO( "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
         [[maybe_unused]] const int64 modulesEndMicro = MonotonicClock::nowMicroseconds();
 
         warnUnknownGlobalOverrides();
@@ -375,7 +375,7 @@ namespace sw
                 break;
             }
         }
-        SW_LOG_ERROR( "Host part %# is not a client part", HostService::getName( id ) );
+        SW_LOG_ERROR( "Host service %# is not a client service", HostService::getName( id ) );
         return false;
     }
 
@@ -385,7 +385,7 @@ namespace sw
         {
             case HostServiceID::Game:
             {
-                // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 부품은 엔진 종료 앞에서 내려간다.
+                // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
                 _gameModuleManager->shutdown();
                 _gameModuleManager.reset();
                 return;
@@ -510,10 +510,10 @@ namespace sw
 
     void App::shutdown()
     {
-        // 호스트 서비스을 선 순서의 역순으로 내린다(순서는 `HostService` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
+        // 호스트 서비스를 선 순서의 역순으로 내린다(순서는 `HostService` 의 의존 선언 — 게임에 기대는 콘솔 · 교체기가 게임보다 먼저, 게임이 엔진보다 먼저).
         // 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostServices.destroyAll();
-        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
+        // 헤드리스 부팅은 이미지만 올리고 호스트 서비스(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).

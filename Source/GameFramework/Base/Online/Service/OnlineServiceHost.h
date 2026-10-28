@@ -2,7 +2,7 @@
  * @file OnlineServiceHost.h
  * @brief 프로세스 하나의 서비스 호스트를 정의합니다.
  * @details 호스트는 스트림 엔드포인트와 요청 서버를 갖는다.
- *          스키마 해시 비교, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineHostService`)로 요청을 넘긴다.
+ *          스키마 해시 비교, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineServerService`)로 요청을 넘긴다.
  *          언리얼 Online Services 의 인터페이스 그룹, gRPC 서버의 서비스 등록과 같은 구조이다.
  *
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
@@ -10,7 +10,7 @@
  *          - **캐시 앞과 서버 버스의 소비자는 호스트 하나이다.**
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
- *          - 메서드 영역이 겹치는 서비스는 `registerHostService` 가 거절한다.
+ *          - 메서드 영역이 겹치는 서비스는 `registerServerService` 가 거절한다.
  *          - **GM 리슨**(`_pAdminTransport`)을 주면 리슨이 둘이 된다. 호스트 안의 묶음 전송(`ListenerTransport`)이 연결 핸들에 리슨 번호를 섞어 두 전송을 전송 하나로 보이므로
  *            엔드포인트 · 요청 서버 · 계정 표는 하나다(GM 이 GM 포트에서 로그인해도 같은 계정 표). 서비스의 노출(`getExposure`)과 연결이 들어온 리슨이 맞지 않는 요청은
  *            없는 메서드와 같은 `kInvalidRequest` 로 답한다(영역이 있는지 드러내지 않는다). Hello · Ping 은 두 리슨 모두 받는다(OnlineKits I6).
@@ -69,7 +69,7 @@ namespace sw
 {
     /**
      * @brief 서비스가 어느 리슨의 연결에서 요청을 받는지입니다(노출 면).
-     * @details `Admin` 서비스는 GM 리슨(`OnlineServiceHostConfig::_pAdminTransport`)의 연결만 받는다. GM 리슨 없이 `Admin` 서비스를 올리면 `initialize` · `registerHostService` 가
+     * @details `Admin` 서비스는 GM 리슨(`OnlineServiceHostConfig::_pAdminTransport`)의 연결만 받는다. GM 리슨 없이 `Admin` 서비스를 올리면 `initialize` · `registerServerService` 가
      *          거절한다 — 플레이어 포트가 GM 서비스를 받는 숨은 폴백은 두지 않는다(GM 도구를 공용 포트에 여는 설정 실수를 기동에서 잡는다).
      */
     enum class OnlineServiceExposure : uint8
@@ -83,17 +83,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IOnlineHostService
+     * @class IOnlineServerService
      * @brief 메서드 영역 하나를 맡은 서비스입니다. 모든 콜백은 호스트 `tick` 스레드에서 불립니다.
      */
-    class SW_GF_API IOnlineHostService
+    class SW_GF_API IOnlineServerService
     {
     public:
-        IOnlineHostService()          = default;
-        virtual ~IOnlineHostService() = default;
+        IOnlineServerService()          = default;
+        virtual ~IOnlineServerService() = default;
 
-        IOnlineHostService( const IOnlineHostService& )            = delete;
-        IOnlineHostService& operator=( const IOnlineHostService& ) = delete;
+        IOnlineServerService( const IOnlineServerService& )            = delete;
+        IOnlineServerService& operator=( const IOnlineServerService& ) = delete;
 
         /** @brief 이 서비스의 키트 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
         virtual const OnlineProtocolEntry& getProtocol() const = 0;
@@ -184,7 +184,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 서비스를 등록합니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 등록하지 않습니다. */
-        [[nodiscard]] bool registerHostService( IOnlineHostService* pService );
+        [[nodiscard]] bool registerServerService( IOnlineServerService* pService );
         /** @brief 엔드포인트 pump, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
         void update( UnixMilliseconds nowMs );
 
@@ -227,7 +227,7 @@ namespace sw
          * @details 같은 주제를 둘이 구독해도 버스에는 한 번만 구독한다. 버스가 없거나(서버 한 대 · `initialize` 전) 같은 서비스가 같은 주제를 이미 구독했으면
          *          오류를 남기고 빈 구독을 돌려준다 — 서버 한 대인지는 부르는 쪽이 `getServerBus` 로 먼저 가른다. 호스트가 `shutdown` 하면 남은 구독은 무효가 된다.
          */
-        [[nodiscard]] Subscription subscribeServerBus( string_view topic, IOnlineHostService* pService );
+        [[nodiscard]] Subscription subscribeServerBus( string_view topic, IOnlineServerService* pService );
 
         RemoteConfig* getRemoteConfig() const { return _settings._pRemoteConfig; }
         /** @brief 버스의 타입 있는 앞입니다. 버스가 없으면(서버 한 대) nullptr 입니다. `initialize` 뒤부터 있습니다. */
@@ -263,9 +263,9 @@ namespace sw
 
         struct BusSubscription
         {
-            string              _topic{};
-            IOnlineHostService* _pService{ nullptr };
-            uint64              _subscriptionID{ 0 }; ///< 이 항목을 소유하는 구독(`Subscription`)이 찾는 번호
+            string                _topic{};
+            IOnlineServerService* _pService{ nullptr };
+            uint64                _subscriptionID{ 0 }; ///< 이 항목을 소유하는 구독(`Subscription`)이 찾는 번호
         };
 
         /** @brief 구독 @p id 가 풀렸습니다. 그 항목을 지우고, 주제를 듣는 서비스가 더 없으면 버스 구독을 닫습니다. */
@@ -276,11 +276,11 @@ namespace sw
          * @brief `[kVersionMismatch u16][서버 스키마 해시 u64]` 로 답합니다. 둘 다 리틀 엔디언 고정 형식입니다.
          * @details `respondError` 는 자세한 몸을 `BitWriter` 로 받아 비트 배치를 그 형식에 맡깁니다. 이 답은 어느 빌드도 바이트로 읽어야 하므로 `LittleEndianUtil` 로 직접 씁니다.
          */
-        void                respondVersionMismatch( const NetRequestToken& token );
-        IOnlineHostService* findService( uint16 method ) const;
-        bool                sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
-        void                dispatchServerBusMessage( const ServerBusMessage& message );
-        void                notifyAccountLeft( AccountID accountID );
+        void                  respondVersionMismatch( const NetRequestToken& token );
+        IOnlineServerService* findService( uint16 method ) const;
+        bool                  sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
+        void                  dispatchServerBusMessage( const ServerBusMessage& message );
+        void                  notifyAccountLeft( AccountID accountID );
         /** @brief Hello 를 `_helloTimeoutMs` 안에 끝내지 않은 연결을 닫습니다. `update` 가 부르며 `kHelloSweepIntervalMs` 마다 한 번 표를 돈다. */
         void closeExpiredHelloConnections();
 
@@ -290,7 +290,7 @@ namespace sw
         EphemeralStoreRouter                             _ephemeralRouter;
         TokenBucketMap                                   _accountBucket;
         TokenBucketMap                                   _remoteBucket;
-        vector<IOnlineHostService*>                      _listService;
+        vector<IOnlineServerService*>                    _listService;
         vector<BusSubscription>                          _listBusSubscription;
         vector<ServerBusMessage>                         _listBusScratch;
         vector<uint8>                                    _responseBytes;

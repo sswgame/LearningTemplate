@@ -1,6 +1,6 @@
 /**
  * @file ServicePendingTable.h
- * @brief 응답 대기 테이블입니다. 서비스 로직에 넘긴 요청의 티켓과 `NetRequestToken` 을 짝짓습니다. 바인딩(`IOnlineHostService`)이 요청을 받을 때 `add` 해 티켓으로 로직에 넘기고,
+ * @brief 응답 대기 테이블입니다. 서비스 로직에 넘긴 요청의 티켓과 `NetRequestToken` 을 짝짓습니다. 바인딩(`IOnlineServerService`)이 요청을 받을 때 `add` 해 티켓으로 로직에 넘기고,
  *        로직의 완료를 거둘 때 `take` 해 `host.respondOk` · `respondError` 합니다.
  * @details - 서비스 스레드 하나(호스트 `tick`)에서 쓴다. 티켓은 1 부터 오르는 수다(0 은 쓰지 않으므로 로직이 "티켓 없음" 으로 쓸 수 있다).
  *          - 연결이 닫혀도 지우지 않는다. 완료가 오면 꺼내 답하고, 닫힌 연결의 답은 호스트가 버린다(`respond*` 가 false).

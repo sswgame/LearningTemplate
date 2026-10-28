@@ -25,9 +25,9 @@ namespace sw
 
 namespace sw
 {
-    bool IOnlineServerKit::registerHostService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineHostService* pService, string& outError )
+    bool IOnlineServerKit::registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService, string& outError )
     {
-        if ( context._pHost->registerHostService( pService ) )
+        if ( context._pHost->registerServerService( pService ) )
             return true;
         outError = "the method range of kit '" + entry._name + "' is already taken";
         return false;

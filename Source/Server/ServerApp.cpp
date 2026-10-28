@@ -240,12 +240,12 @@ namespace sw
         if ( startHostServices( _hostServices, kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
                                 SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ) ) == false )
         {
-            SW_LOG_ERROR( "Host parts failed to start: %#", _hostServices.getError().c_str() );
+            SW_LOG_ERROR( "Host services failed to start: %#", _hostServices.getError().c_str() );
             return false;
         }
-        SW_LOG_INFO( "Host parts up: %#", describeHostServiceOrder( _hostServices ).c_str() );
-        // 서버 서비스는 부품이 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
-        // `shutdown` 이 부품보다 먼저 멈춘다.
+        SW_LOG_INFO( "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
+        // 서버 서비스는 호스트 서비스가 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
+        // `shutdown` 이 호스트 서비스보다 먼저 멈춘다.
         if ( startServerServices() == false )
             return false;
         // 게임 포트가 접속 티켓을 요구하는데 확인할 조립이 서지 않았으면 모든 접속을 거절하는 서버가 된다 — 그런 서버로 뜨지 않는다.
@@ -387,7 +387,7 @@ namespace sw
                 break;
             }
         }
-        SW_LOG_ERROR( "Host part %# is not a dedicated server part", HostService::getName( id ) );
+        SW_LOG_ERROR( "Host service %# is not a dedicated server service", HostService::getName( id ) );
         return false;
     }
 
@@ -1022,17 +1022,17 @@ namespace sw
 
     void ServerApp::shutdown()
     {
-        // 서버 서비스는 모듈 코드이고 부품이 아니다 — 부품(게임 · 모듈)이 내려가기 전에 멈춘다.
+        // 서버 서비스는 모듈 코드이고 호스트 서비스가 아니다 — 호스트 서비스(게임 · 모듈)이 내려가기 전에 멈춘다.
         if ( _serverServices != nullptr )
         {
             _serverServices->stopAll();
             _serverServices.reset();
         }
         _reloadStopsServices.reset();
-        // 호스트 서비스을 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
+        // 호스트 서비스를 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
         // 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostServices.destroyAll();
-        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
+        // 헤드리스 부팅은 이미지만 올리고 호스트 서비스(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
         _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );

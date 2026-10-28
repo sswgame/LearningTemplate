@@ -79,7 +79,7 @@ namespace sw
                     outError = "social: guildLevelExperience: " + tableError;
                     return false;
                 }
-                return registerHostService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );
+                return registerServerService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override

@@ -106,7 +106,7 @@ namespace sw
                     return false;
                 }
                 // 원장 정책은 우편함 · GM · 거래가, 잔액 변경 알림은 GM 키트가 지급 · 회수 뒤에 쓴다.
-                const bool bExposed = registerHostService( context, entry, &_service, outError ) && exposeInterface<ILedgerPolicy>( context, entry, _currencyCatalog, outError ) && exposeInterface<IBalanceNotice>( context, entry, _service, outError );
+                const bool bExposed = registerServerService( context, entry, &_service, outError ) && exposeInterface<ILedgerPolicy>( context, entry, _currencyCatalog, outError ) && exposeInterface<IBalanceNotice>( context, entry, _service, outError );
                 if ( bExposed == false )
                 {
                     stop();

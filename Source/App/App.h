@@ -75,7 +75,7 @@ namespace sw
          * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했다).
          */
         [[nodiscard]] bool startHostService( HostServiceID id );
-        /** @brief `startHostService` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
+        /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
         void stopHostService( HostServiceID id );
         /**
          * @brief 모듈이 모두 로드된 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
@@ -152,7 +152,7 @@ namespace sw
         IWindow* _pWindow;
 
         FixedTimestep _fixedTimestep;
-        /** @brief 백엔드 교체기입니다. 부품 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
+        /** @brief 백엔드 교체기입니다. 호스트 서비스 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
 
@@ -168,7 +168,7 @@ namespace sw
         int64 _initializeStartMicro;
         /**
          * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(게임 · 교체기 · 사용자 설정 · 런타임 UI 훅 · 개발 콘솔)입니다. 순서는 `HostService` 의 의존 선언이 정한다.
-         * @details 부품의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다). `shutdown` 이 엔진 종료 앞에서 내린다.
+         * @details 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다). `shutdown` 이 엔진 종료 앞에서 내린다.
          */
         SubsystemCollection _hostServices;
 

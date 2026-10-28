@@ -1,9 +1,9 @@
 /**
  * @file Engine/HostServices.h
- * @brief 호스트(App · Server)가 엔진 **뒤에** 세우고 엔진 **앞에서** 내리는 부품의 공용 집합과 그 의존 선언입니다.
- * @details 두 실행 파일이 종료 순서를 손으로 적어 주석으로 맞추던 것을 데이터로 바꾼다. 부품마다 먼저 서야 하는 부품을 이 파일 한 곳에 적고,
+ * @brief 호스트(App · Server)가 엔진 **뒤에** 세우고 엔진 **앞에서** 내리는 서비스의 공용 집합과 그 의존 선언입니다.
+ * @details 두 실행 파일이 종료 순서를 손으로 적어 주석으로 맞추던 것을 데이터로 바꾼다. 서비스마다 먼저 서야 하는 서비스을 이 파일 한 곳에 적고,
  *          `SubsystemCollection` 이 위상 순서(동점은 이름 순)로 세우고 역순으로 멈춘 뒤 내린다 — 언리얼에서 게임 인스턴스 서브시스템 묶음이 엔진 뒤에
- *          서고 앞에 내려가는 자리다. 부품의 몸통(세우기 · 내리기)은 호스트가 함수 둘(`HostServiceStartDelegate` · `HostServiceStopDelegate`)로 준다.
+ *          서고 앞에 내려가는 자리다. 서비스의 몸통(세우기 · 내리기)은 호스트가 함수 둘(`HostServiceStartDelegate` · `HostServiceStopDelegate`)로 준다.
  *          - 게임(`Game`)이 축이다. 게임보다 먼저 서는 것(서버 관측 · 서버 문맥)은 게임이 내려간 뒤까지 살고, 게임에 기대는 것(교체기 · 콘솔)은 게임보다 먼저 내려간다.
  *          - 엔진보다 오래 살아야 하는 것(모듈 라이브러리 창구 · 자동화 구동기 · 종료 신호)은 여기가 아니라 호스트 범위(`SubsystemScope`)에 둔다.
  *          - 서버 서비스(`ServerServiceManager`)는 넣지 않는다 — 모듈 리로드마다 멈췄다 다시 서는 수명이라 한 번의 세우기 · 내리기 짝과 맞지 않는다.
@@ -34,7 +34,7 @@ namespace sw
         DebugChannel,    ///< 원격 개발 명령 채널(Server Dev)
     };
 
-    /** @brief 부품 이름입니다. 의존 칸도 이 상수를 가리킨다 — 철자가 틀리면 컴파일 오류다. */
+    /** @brief 서비스 이름입니다. 의존 칸도 이 상수를 가리킨다 — 철자가 틀리면 컴파일 오류다. */
     namespace HostServiceName
     {
         inline constexpr const utf8* kObservability   = "Observability";
@@ -49,15 +49,15 @@ namespace sw
         inline constexpr const utf8* kDebugChannel    = "DebugChannel";
     } // namespace HostServiceName
 
-    /** @brief 부품 @p id 를 세웁니다. 못 세우면 false 입니다(기동 실패 — 이미 세운 것은 역순으로 내린다). */
+    /** @brief 서비스 @p id 를 세웁니다. 못 세우면 false 입니다(기동 실패 — 이미 세운 것은 역순으로 내린다). */
     SW_DECLARE_DELEGATE( bool, HostServiceStartDelegate, HostServiceID );
-    /** @brief 부품 @p id 를 내립니다. 세우기에 성공한 부품에만 불립니다. */
+    /** @brief 서비스 @p id 를 내립니다. 세우기에 성공한 서비스에만 불립니다. */
     SW_DECLARE_DELEGATE( void, HostServiceStopDelegate, HostServiceID );
 
-    /** @brief 플레이어 실행 파일(App)이 세우는 부품입니다. */
+    /** @brief 플레이어 실행 파일(App)이 세우는 서비스입니다. */
     inline constexpr HostServiceID kArrClientHostService[] = { HostServiceID::Game, HostServiceID::BackendSwitcher, HostServiceID::UserSettings, HostServiceID::RuntimeUIHooks,
                                                                HostServiceID::DevConsole };
-    /** @brief 전용 서버(Server)가 세우는 부품입니다. */
+    /** @brief 전용 서버(Server)가 세우는 서비스입니다. */
     inline constexpr HostServiceID kArrServerHostService[] = { HostServiceID::Observability, HostServiceID::CrashReports, HostServiceID::ServiceContext, HostServiceID::Game,
                                                                HostServiceID::StandardInput, HostServiceID::DevConsole, HostServiceID::DebugChannel };
 } // namespace sw
@@ -78,7 +78,7 @@ namespace sw
         {
         }
 
-        /** @brief 부품의 이름입니다(의존 칸 · 로그 · 테스트가 부르는 식별자). */
+        /** @brief 서비스의 이름입니다(의존 칸 · 로그 · 테스트가 부르는 식별자). */
         static const utf8* getName( HostServiceID id )
         {
             switch ( id )
@@ -118,7 +118,7 @@ namespace sw
         }
         const utf8* getSubsystemName() const override { return getName( _id ); }
 
-        /** @brief 먼저 서야 하는 부품입니다 — 이 집합에 반드시 있어야 한다(없으면 정렬 오류). */
+        /** @brief 먼저 서야 하는 서비스입니다 — 이 집합에 반드시 있어야 한다(없으면 정렬 오류). */
         span<const utf8* const> getSubsystemDependencies() const override
         {
             static constexpr const utf8* kArrNeedsObservability[] = { HostServiceName::kObservability };
@@ -144,7 +144,7 @@ namespace sw
             return {};
         }
 
-        /** @brief 이것 **뒤에** 서야 하는 부품입니다 — 그 호스트에 없으면 건너뛴다(App 의 게임은 서버 문맥 없이 선다). */
+        /** @brief 이것 **뒤에** 서야 하는 서비스입니다 — 그 호스트에 없으면 건너뛴다(App 의 게임은 서버 문맥 없이 선다). */
         span<const utf8* const> getSubsystemDependents() const override
         {
             static constexpr const utf8* kArrBeforeGame[] = { HostServiceName::kGame };
@@ -165,7 +165,7 @@ namespace sw
 {
     /**
      * @brief @p listPart 를 @p outParts 에 더하고 의존 순서로 세웁니다. 엔진 기동이 끝난 뒤 한 번 부릅니다.
-     * @return 모두 섰으면 true 입니다. 아니면 `outParts.getError()` 에 어느 부품인지 남고, 세운 것은 `outParts.destroyAll()` 이 역순으로 내립니다.
+     * @return 모두 섰으면 true 입니다. 아니면 `outParts.getError()` 에 어느 서비스인지 남고, 세운 것은 `outParts.destroyAll()` 이 역순으로 내립니다.
      */
     [[nodiscard]] inline bool startHostServices( SubsystemCollection& outParts, vector_reference<const HostServiceID> listPart, const HostServiceStartDelegate& start, const HostServiceStopDelegate& stop )
     {
@@ -177,7 +177,7 @@ namespace sw
         return outParts.initializeAll( SubsystemHostMask::All );
     }
 
-    /** @brief 지금 서 있는 부품을 선 순서대로 `A > B > C` 로 적습니다(기동 로그 — 서버 부팅 테스트가 읽는다). */
+    /** @brief 지금 서 있는 서비스을 선 순서대로 `A > B > C` 로 적습니다(기동 로그). */
     inline string describeHostServiceOrder( const SubsystemCollection& parts )
     {
         string text;

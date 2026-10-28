@@ -75,7 +75,7 @@ namespace sw
                     outError = "the trade kit needs at least one tradable option (an asset id prefix)";
                     return false;
                 }
-                if ( registerHostService( context, entry, &_server, outError ) == false )
+                if ( registerServerService( context, entry, &_server, outError ) == false )
                     return false;
                 return true;
             }

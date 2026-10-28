@@ -7,7 +7,7 @@
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 라이브러리 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
  *          호스트 서비스(`HostService` 의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
- *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 부품 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
+ *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 호스트 서비스 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
  *          한 틱은 게임 고정 스텝 하나이며, 델타는 항상 `1 / _tickRateHz` 다. 그래서 서버 시뮬레이션이 실제 시계의 흔들림을 받지 않는다.
  *          다음 틱 마감까지 잠을 자고, 밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아서 돌고 그 이상은 버린다(경고를 남긴다).
  *
@@ -85,7 +85,7 @@ namespace sw
         [[nodiscard]] bool loadServerConfig();
         /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */
         [[nodiscard]] bool startHostService( HostServiceID id );
-        /** @brief `startHostService` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
+        /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
         void stopHostService( HostServiceID id );
         /** @brief 지표와 상태 레지스트리를 만들고, 설정이 켜면 운영 HTTP 엔드포인트를 엽니다. 켰는데 열지 못하면 false 를 반환합니다(기동 실패). */
         [[nodiscard]] bool initializeObservability();
@@ -195,7 +195,7 @@ namespace sw
         int64                             _nextProcessSampleMs; ///< 프로세스 지표를 다시 읽을 단조 밀리초
         /**
          * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 표준 입력 · 개발 콘솔 · 디버그 채널)입니다.
-         * @details 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 부품의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
+         * @details 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
          */
         SubsystemCollection _hostServices;
 

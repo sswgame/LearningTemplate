@@ -39,7 +39,7 @@ namespace sw
                 if ( _settings._listServerKind.empty() )
                     _settings._listServerKind.push_back( "game" );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
-                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IServerDirectoryControl>( context, entry, _service, outError );
+                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IServerDirectoryControl>( context, entry, _service, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override

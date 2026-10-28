@@ -52,7 +52,7 @@ namespace sw
 namespace sw
 {
     /** @class AdminService @brief GM 명령 처리기입니다. */
-    class SW_KIT_SERVER_API AdminService final : public IOnlineHostService
+    class SW_KIT_SERVER_API AdminService final : public IOnlineServerService
     {
     public:
         using ReplyDelegate = Delegate<void( const AdminReply& )>;
@@ -74,7 +74,7 @@ namespace sw
         void seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs );
         void update( UnixMilliseconds nowMs );
 
-        // IOnlineHostService
+        // IOnlineServerService
         const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
         /** @brief GM 리슨(서버 설정 `_adminServicePort`)이 있으면 그 연결만 받습니다 — 플레이어 포트에서는 없는 영역과 같은 답입니다. */
         OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::Admin; }

@@ -8,7 +8,7 @@
  *          - 키트는 Shared `.cpp` 의 이름 공간 범위 객체로 `OnlineProtocolEntry` 하나를 두고 메서드 표(`XxxMethod`, `OnlineMethodTable`)와 같은 목록을 넘깁니다.
  *            객체를 만들면 레지스트리에 등록되고, 모듈이 언로드되며 파괴되면 제거됩니다. 그래서 메시지를 쓰는 목록과 해시에 섞는 목록이 같은 선언 하나이고,
  *            키트가 해시용 목록을 따로 적는 곳은 없습니다.
- *          - 키트 서비스(클라이언트 `IOnlineClientService` · 서버 `IOnlineHostService`)는 `getProtocol` 로 이 항목을 돌려줘야 합니다.
+ *          - 키트 서비스(클라이언트 `IOnlineClientService` · 서버 `IOnlineServerService`)는 `getProtocol` 로 이 항목을 돌려줘야 합니다.
  *            그래서 항목 없이는 서비스를 만들 수 없고, 서비스를 가진 키트는 빠짐없이 해시에 섞입니다.
  *          - 해시는 이 빌드에 올라온 항목 전부의 영역, 메서드 테이블의 이름 순서, 메시지 타입마다의 스키마 해시(`FixedLayout::getSchemaHash`)를 섞습니다.
  *            필드, 순서, 범위 키, 열거자가 바뀌면 손 버전 없이 해시가 바뀝니다. 클라이언트가 키트 일부만 올려도 서버와 같은 값이 나와야 하므로 빌드 전체를 섞습니다.

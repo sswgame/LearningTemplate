@@ -85,7 +85,7 @@ namespace sw
                     }
                     _listSeed.push_back( seed );
                 }
-                if ( registerHostService( context, entry, &_service, outError ) == false )
+                if ( registerServerService( context, entry, &_service, outError ) == false )
                     return false;
                 return true;
             }

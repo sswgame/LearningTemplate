@@ -4,7 +4,7 @@
  * @details - 메서드(uint16) = 영역 + 0x00..0x7F, 알림 종류(Message 프레임 `[종류 u16][몸]`) = 영역 + 0x80..0xFF. 키트 오류 = 영역 + n(공통 0..255 는 `OnlineError`).
  *          - 영역 값은 와이어 형식이다. 바꾸면 `OnlineProtocolConstant::kBaseVersion` 을 올린다. 키트의 메서드와 알림 번호는 `OnlineMethodTable` 의 열거자 순서에서 나오고,
  *            그 이름 순서가 온라인 스키마 해시에 섞인다(`OnlineProtocolRegistry.h`).
- *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerHostService` 가 거절한다(조립 실수를 기동에서 잡는다).
+ *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerServerService` 가 거절한다(조립 실수를 기동에서 잡는다).
  */
 #pragma once
 #include "Core/Common/Types.h"

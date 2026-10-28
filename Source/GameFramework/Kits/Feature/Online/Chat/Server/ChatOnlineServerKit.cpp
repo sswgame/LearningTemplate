@@ -103,7 +103,7 @@ namespace sw
                 if ( bannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
                     _settings._bannedWordsPath = bannedWords;
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
-                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
+                return registerServerService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override

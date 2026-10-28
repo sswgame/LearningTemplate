@@ -1,6 +1,6 @@
 /**
  * @file AccountServer.h
- * @brief 계정 서비스의 스트림 바인딩입니다. `IOnlineHostService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
+ * @brief 계정 서비스의 스트림 바인딩입니다. `IOnlineServerService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
  * @details 로그인이나 재접속에 성공하면 호스트에 계정을 연결한다. 세션이 밀려나거나 운영 조치로 끊기면 알림(`kPushRevoked`)을 보낸 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작한다.
  *          - 연결의 세션 토큰은 이 객체가 메모리에 보관한다. 로그인 응답으로 클라이언트에 준 토큰이다. 로그아웃, 연동, 티켓 발급은 연결의 주체로 처리하므로 클라이언트가 비밀을 다시 보내지 않는다.
  *          - 이미 로그인한 연결이 로그인, 게스트 로그인, 외부 로그인, 재접속을 요청하면 `kInvalidRequest` 로 거절한다. 한 연결에는 계정 하나만 쓰고, 다른 계정은 새 연결로 접속해야 한다.
@@ -57,7 +57,7 @@ namespace sw
      * @class AccountServer
      * @brief 계정 서비스 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API AccountServer final : public IOnlineHostService, public IAccountSessionControl
+    class SW_KIT_SERVER_API AccountServer final : public IOnlineServerService, public IAccountSessionControl
     {
     public:
         AccountServer();
@@ -66,7 +66,7 @@ namespace sw
         void initialize( LoginService* pLoginService, const AccountServerConfig& settings );
         void shutdown();
 
-        // IOnlineHostService
+        // IOnlineServerService
         const OnlineProtocolEntry& getProtocol() const override;
         /** @brief 두 리슨 모두에서 받습니다 — GM 도구도 GM 포트에서 로그인합니다. */
         OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::PlayerAndAdmin; }

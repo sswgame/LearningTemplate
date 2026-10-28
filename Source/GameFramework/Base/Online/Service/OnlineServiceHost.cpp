@@ -41,7 +41,7 @@ namespace sw
             }
 
             /** @brief GM 리슨 없이 GM 서비스(`Admin`)를 올리려 하면 오류 문장을 채우고 false 입니다. 플레이어 포트로 받는 숨은 폴백은 두지 않는다. */
-            [[nodiscard]] static bool checkExposure( const IOnlineHostService& service, bool bHasAdminListener, string& outError )
+            [[nodiscard]] static bool checkExposure( const IOnlineServerService& service, bool bHasAdminListener, string& outError )
             {
                 if ( bHasAdminListener || service.getExposure() != OnlineServiceExposure::Admin )
                     return true;
@@ -257,7 +257,7 @@ namespace sw
             releaseTransportSide();
             return false;
         }
-        for ( IOnlineHostService* pService : _listService )
+        for ( IOnlineServerService* pService : _listService )
         {
             if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), outError ) == false )
             {
@@ -266,7 +266,7 @@ namespace sw
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ); // registerHostService 가 겹침을 이미 봤다
+                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ); // registerServerService 가 겹침을 이미 봤다
             }
         }
         if ( _listenerTransport->initialize( &_endpoint, settings._transportSettings ) == false || _listenerTransport->listen( settings._listenAddress ) == false )
@@ -327,7 +327,7 @@ namespace sw
         _listenerTransport.reset(); // 엔드포인트가 내려간 뒤 — 엔드포인트는 이 묶음을 전송으로 들고 있었다
     }
 
-    bool OnlineServiceHost::registerHostService( IOnlineHostService* pService )
+    bool OnlineServiceHost::registerServerService( IOnlineServerService* pService )
     {
         SW_ASSERT( pService != nullptr );
         const uint16 range = pService->getMethodRange();
@@ -336,7 +336,7 @@ namespace sw
             SW_LOG_ERROR( "Online service range %# is not a range base (a multiple of 0x100 above the host range)", static_cast<uint32>( range ) );
             return false;
         }
-        for ( const IOnlineHostService* pExisting : _listService )
+        for ( const IOnlineServerService* pExisting : _listService )
         {
             if ( pExisting->getMethodRange() == range )
             {
@@ -389,7 +389,7 @@ namespace sw
         }
         if ( _settings._pServiceStore != nullptr )
             (void)_settings._pServiceStore->pollCompletions(); // 끝난 저장 일의 complete 가 맡긴 서비스를 부른다 — 서비스 틱보다 먼저
-        for ( IOnlineHostService* pService : _listService )
+        for ( IOnlineServerService* pService : _listService )
         {
             pService->onServiceTick( *this, nowMs );
         }
@@ -426,7 +426,7 @@ namespace sw
         _requestServer.setPrincipal( connection, accountID ); // 멱등 범위 = 계정(재접속한 재시도도 잡힌다)
         if ( bNewlyBound )
         {
-            for ( IOnlineHostService* pService : _listService )
+            for ( IOnlineServerService* pService : _listService )
             {
                 pService->onAccountJoined( *this, accountID );
             }
@@ -481,7 +481,7 @@ namespace sw
         return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr;
     }
 
-    Subscription OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
+    Subscription OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineServerService* pService )
     {
         // 버스가 없을 때 조용히 넘기면 `initialize` 전에 부른 구독이 소리 없이 사라진다 — 서버 한 대인지는 부르는 쪽이 가른다.
         if ( _settings._pServerBusTransport == nullptr || _bInitialized == SW_FALSE )
@@ -640,8 +640,8 @@ namespace sw
             (void)respondOk( context._token, body );
             return;
         }
-        IOnlineHostService* pService = findService( method );
-        const bool          bServed  = pService != nullptr && OnlineServiceHostInternal::isServedOn( pService->getExposure(), connection._bAdminListener == SW_TRUE );
+        IOnlineServerService* pService = findService( method );
+        const bool            bServed  = pService != nullptr && OnlineServiceHostInternal::isServedOn( pService->getExposure(), connection._bAdminListener == SW_TRUE );
         if ( bServed == false )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
@@ -702,10 +702,10 @@ namespace sw
         (void)_requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
     }
 
-    IOnlineHostService* OnlineServiceHost::findService( uint16 method ) const
+    IOnlineServerService* OnlineServiceHost::findService( uint16 method ) const
     {
         const uint16 range = OnlineMethodRange::getRangeBase( method );
-        return VectorUtil::findBy<&IOnlineHostService::getMethodRange>( _listService, range );
+        return VectorUtil::findBy<&IOnlineServerService::getMethodRange>( _listService, range );
     }
 
     bool OnlineServiceHost::sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body )
@@ -720,13 +720,13 @@ namespace sw
     void OnlineServiceHost::dispatchServerBusMessage( const ServerBusMessage& message )
     {
         // 서비스가 메시지를 받는 동안 구독을 바꿀 수 있다 — 대상 목록을 먼저 뽑는다.
-        vector<IOnlineHostService*> listTarget;
+        vector<IOnlineServerService*> listTarget;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
             if ( subscription._topic == message.getTopic() )
                 listTarget.push_back( subscription._pService );
         }
-        for ( IOnlineHostService* pService : listTarget )
+        for ( IOnlineServerService* pService : listTarget )
         {
             pService->onServerBusMessage( *this, message );
         }
@@ -734,7 +734,7 @@ namespace sw
 
     void OnlineServiceHost::notifyAccountLeft( AccountID accountID )
     {
-        for ( IOnlineHostService* pService : _listService )
+        for ( IOnlineServerService* pService : _listService )
         {
             pService->onAccountLeft( *this, accountID );
         }

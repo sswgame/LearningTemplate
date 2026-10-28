@@ -35,7 +35,7 @@ namespace sw
                                         outError ) == false )
                     return false;
                 _settings._sweepIntervalMs = sweepIntervalMs;
-                if ( registerHostService( context, entry, &_service, outError ) == false )
+                if ( registerServerService( context, entry, &_service, outError ) == false )
                     return false;
                 return true;
             }

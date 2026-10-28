@@ -1,6 +1,6 @@
 /**
  * @file TradeServer.h
- * @brief 거래 서비스의 스트림 바인딩입니다. `IOnlineHostService`(영역 `kTrade`)를 구현합니다.
+ * @brief 거래 서비스의 스트림 바인딩입니다. `IOnlineServerService`(영역 `kTrade`)를 구현합니다.
  * @details 요청을 `TradeService` 에 맡기고 완료는 응답으로, 바뀐 거래는 두 당사자에게 알림으로 보낸다.
  *          - 상대는 표시 이름으로 찾는다. 이 프로세스에 접속한 계정은 `IAccountDirectory`(계정 키트)에서 찾고, 없으면 접속 상태 관리자(`IAccountPresence`)에 묻는다. 서버가 여러 대일 때 쓰며 비동기이다.
  *          - 상대가 이 프로세스에 없으면 알림을 접속 상태 관리자에 맡긴다(버스). 상태가 저장소에 있으므로 상대 서버의 바인딩이 같은 레코드를 바꾼다. 주인 서버를 거치지 않는다.
@@ -28,7 +28,7 @@ namespace sw
      * @class TradeServer
      * @brief 거래 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API TradeServer final : public IOnlineHostService
+    class SW_KIT_SERVER_API TradeServer final : public IOnlineServerService
     {
     public:
         TradeServer();
