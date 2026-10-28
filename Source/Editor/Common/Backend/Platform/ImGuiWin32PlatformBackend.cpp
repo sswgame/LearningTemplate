@@ -88,6 +88,12 @@ namespace sw::editor
         return make_unique<ImGuiWin32PlatformBackend>();
     }
 
+    unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )
+    {
+        (void)window; // Windows 는 창 시스템이 Win32 하나다 — 창이 Win32 가 아니면 `initialize` 가 오류로 멈춘다
+        return createPlatformBackend();
+    }
+
     void* IImGuiPlatformBackend::tryGetViewportWin32Handle( const ImGuiViewport* pViewport )
     {
         if ( pViewport == nullptr || ImGui::GetCurrentContext() == nullptr )

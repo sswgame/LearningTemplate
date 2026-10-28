@@ -20,7 +20,7 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief ImGui 창 · 입력 백엔드입니다(Win32 / X11). */
+    /** @brief ImGui 창 · 입력 백엔드입니다(Win32 / X11 / Wayland). */
     class IImGuiPlatformBackend
     {
     public:
@@ -48,6 +48,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 현재 플랫폼용 ImGui 플랫폼 백엔드를 생성합니다. */
         static unique_ptr<IImGuiPlatformBackend> createPlatformBackend();
+        /**
+         * @brief @p window 의 창 시스템에 맞는 플랫폼 백엔드를 생성합니다. 리눅스는 창이 Wayland 면 Wayland 백엔드, 아니면 X11 백엔드이고 Windows 는 늘 Win32 백엔드입니다.
+         * @details 에디터는 이것을 쓴다(창 종류를 모르는 `createPlatformBackend()` 는 현재 플랫폼의 기본 창 시스템용이다 — X11 · Win32).
+         */
+        static unique_ptr<IImGuiPlatformBackend> createPlatformBackendFor( const IWindow& window );
 
         /**
          * @brief 뷰포트 창이 X11 창이면 서버 연결(`Display*`)과 창 ID 를 @p outHandles 에 담고 true 입니다. 정의는 리눅스 X11 백엔드에 있습니다.

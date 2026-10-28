@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Image/DDSLoader.h"
@@ -73,8 +74,8 @@ namespace sw
         static unique_ptr<ISplashWindow> createPlatformSplash();
 
         /**
-         * @brief 이 세션에서 스플래시 창을 띄울 수 있는지입니다(능력 질의). Windows 는 항상 true 이고, 리눅스는 X 서버(`DISPLAY`)가 있어야 한다 —
-         *        순수 Wayland 세션에는 스플래시 창 구현이 아직 없어 false 이다(XWayland 가 있으면 true). false 면 호출 쪽이 알리고 스플래시 없이 기동한다.
+         * @brief 이 세션에서 스플래시 창을 띄울 수 있는지입니다(능력 질의). Windows 는 항상 true 이고, 리눅스는 메인 창과 같은 계층(`SW_WINDOW_BACKEND`)의 서버가 있어야 한다 —
+         *        X11 은 `DISPLAY`, Wayland 는 `WAYLAND_DISPLAY`(와 `SW_ENABLE_WAYLAND` 로 지은 빌드). false 면 호출 쪽이 알리고 스플래시 없이 기동한다.
          */
         [[nodiscard]] static bool isPlatformSupported();
 
@@ -93,9 +94,17 @@ namespace sw
          */
         void normalizeSplashToBgra();
 
+        /**
+         * @brief 스플래시 이미지를 **창 크기(`_width` × `_height`)로** 줄여 `_listScaledPixel` 에 담습니다. 이미지가 없으면 비웁니다.
+         * @details X11 의 `XPutImage` 와 Wayland 의 공유 메모리 버퍼는 **1:1 로만** 찍습니다. 줄이지 않으면 1376×768 원본이 480×280 창에 **좌상단만** 그려집니다.
+         *          `loadSplashImage` 와 창 크기를 정한 뒤 부릅니다.
+         */
+        void createScaledImage();
+
     protected:
         string                 _status;
         DDSImageData           _splashData;
+        vector<uint8>          _listScaledPixel; /**< 창 크기로 줄인 BGRA 픽셀. 비어 있으면 그리지 않음. */
         float32                _progress;
         uint32                 _width;
         uint32                 _height;

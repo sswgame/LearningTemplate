@@ -578,7 +578,12 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializePlatformBackend()
     {
         SW_LOG_TRACE( "Creating Platform Backend" );
-        _platformBackend = IImGuiPlatformBackend::createPlatformBackend();
+        if ( _pWindow == nullptr )
+        {
+            SW_LOG_ERROR( "Failed to create platform backend: the editor has no window" );
+            return SubsystemInitResult::Failed;
+        }
+        _platformBackend = IImGuiPlatformBackend::createPlatformBackendFor( *_pWindow );
         if ( _platformBackend == nullptr )
         {
             SW_LOG_ERROR( "Failed to create platform backend" );

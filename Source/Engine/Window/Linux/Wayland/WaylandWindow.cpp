@@ -52,22 +52,23 @@ namespace sw
     /** @brief 라이브러리 객체와 리스너가 쌓은 것입니다. 리스너는 C 콜백이라 이 값의 주소를 사용자 값으로 받는다. */
     struct WaylandWindow::State
     {
-        wl_display*      _pDisplay{ nullptr };
-        wl_registry*     _pRegistry{ nullptr };
-        wl_compositor*   _pCompositor{ nullptr };
-        wl_shm*          _pShm{ nullptr };
-        xdg_wm_base*     _pWmBase{ nullptr };
-        wl_seat*         _pSeat{ nullptr };
-        wl_keyboard*     _pKeyboard{ nullptr };
-        wl_pointer*      _pPointer{ nullptr };
-        wl_surface*      _pSurface{ nullptr };
-        xdg_surface*     _pXdgSurface{ nullptr };
-        xdg_toplevel*    _pToplevel{ nullptr };
-        xkb_context*     _pXkbContext{ nullptr };
-        xkb_keymap*      _pKeymap{ nullptr };
-        xkb_state*       _pXkbState{ nullptr };
-        wl_cursor_theme* _pCursorTheme{ nullptr };
-        wl_surface*      _pCursorSurface{ nullptr };
+        wl_display*       _pDisplay{ nullptr };
+        wl_registry*      _pRegistry{ nullptr };
+        wl_compositor*    _pCompositor{ nullptr };
+        wl_subcompositor* _pSubcompositor{ nullptr }; ///< 개발 콘솔 덧그림(서브표면)이 쓴다 — 없으면 그 덧그림만 못 세운다
+        wl_shm*           _pShm{ nullptr };
+        xdg_wm_base*      _pWmBase{ nullptr };
+        wl_seat*          _pSeat{ nullptr };
+        wl_keyboard*      _pKeyboard{ nullptr };
+        wl_pointer*       _pPointer{ nullptr };
+        wl_surface*       _pSurface{ nullptr };
+        xdg_surface*      _pXdgSurface{ nullptr };
+        xdg_toplevel*     _pToplevel{ nullptr };
+        xkb_context*      _pXkbContext{ nullptr };
+        xkb_keymap*       _pKeymap{ nullptr };
+        xkb_state*        _pXkbState{ nullptr };
+        wl_cursor_theme*  _pCursorTheme{ nullptr };
+        wl_surface*       _pCursorSurface{ nullptr };
 
         wl_data_device_manager* _pDataDeviceManager{ nullptr };
         wl_data_device*         _pDataDevice{ nullptr };
@@ -163,11 +164,12 @@ namespace sw
             using State = WaylandWindow::State;
 
             /** @brief 바인드할 판 상한입니다 — 리스너 구조체가 이 판까지의 이벤트만 채운다. */
-            static constexpr uint32 kCompositorVersion = 4;
-            static constexpr uint32 kSeatVersion       = 5;
-            static constexpr uint32 kShmVersion        = 1;
-            static constexpr uint32 kWmBaseVersion     = 1;
-            static constexpr uint32 kOutputVersion     = 2; ///< 2 에서 `scale` 이벤트가 생긴다
+            static constexpr uint32 kCompositorVersion    = 4;
+            static constexpr uint32 kSeatVersion          = 5;
+            static constexpr uint32 kShmVersion           = 1;
+            static constexpr uint32 kSubcompositorVersion = 1;
+            static constexpr uint32 kWmBaseVersion        = 1;
+            static constexpr uint32 kOutputVersion        = 2; ///< 2 에서 `scale` 이벤트가 생긴다
             /** @brief 1 로 바인드해 끌어다 놓기(판 3) 이벤트가 오지 않게 한다 — 선택(클립보드)만 쓴다. */
             static constexpr uint32 kDataDeviceManagerVersion = 1;
             /** @brief 세 확장은 모두 판 1 만 있다 — 리스너 구조체도 판 1 의 이벤트를 모두 채운다. 판이 오르면 여기와 리스너를 함께 올린다(컴파일러가 알려 주지 않는다). */
@@ -215,6 +217,8 @@ namespace sw
                 State& state = *static_cast<State*>( pData );
                 if ( std::strcmp( pInterface, wl_compositor_interface.name ) == 0 )
                     state._pCompositor = static_cast<wl_compositor*>( wl_registry_bind( pRegistry, name, &wl_compositor_interface, version < kCompositorVersion ? version : kCompositorVersion ) );
+                else if ( std::strcmp( pInterface, wl_subcompositor_interface.name ) == 0 )
+                    state._pSubcompositor = static_cast<wl_subcompositor*>( wl_registry_bind( pRegistry, name, &wl_subcompositor_interface, kSubcompositorVersion ) );
                 else if ( std::strcmp( pInterface, wl_shm_interface.name ) == 0 )
                     state._pShm = static_cast<wl_shm*>( wl_registry_bind( pRegistry, name, &wl_shm_interface, kShmVersion ) );
                 else if ( std::strcmp( pInterface, xdg_wm_base_interface.name ) == 0 )
@@ -1073,6 +1077,8 @@ namespace sw
             xdg_wm_base_destroy( state._pWmBase );
         if ( state._pShm != nullptr )
             wl_shm_destroy( state._pShm );
+        if ( state._pSubcompositor != nullptr )
+            wl_subcompositor_destroy( state._pSubcompositor );
         if ( state._pCompositor != nullptr )
             wl_compositor_destroy( state._pCompositor );
         if ( state._pRegistry != nullptr )
@@ -1216,6 +1222,21 @@ namespace sw
     bool WaylandWindow::supportsFractionalScale() const
     {
         return _pState->_pFractionalScaleManager != nullptr;
+    }
+
+    bool WaylandWindow::tryGetOverlayHandles( WaylandOverlayHandles& outHandles ) const
+    {
+        outHandles                = WaylandOverlayHandles{};
+        const State& state        = *_pState;
+        const bool   bUnavailable = state._pDisplay == nullptr || state._pCompositor == nullptr || state._pSubcompositor == nullptr || state._pShm == nullptr || state._pSurface == nullptr;
+        if ( bUnavailable )
+            return false;
+        outHandles._pDisplay       = state._pDisplay;
+        outHandles._pCompositor    = state._pCompositor;
+        outHandles._pSubcompositor = state._pSubcompositor;
+        outHandles._pShm           = state._pShm;
+        outHandles._pParentSurface = state._pSurface;
+        return true;
     }
 
     bool WaylandWindow::supportsPointerLock() const
@@ -1469,6 +1490,12 @@ namespace sw
 
     bool WaylandWindow::supportsFractionalScale() const
     {
+        return false;
+    }
+
+    bool WaylandWindow::tryGetOverlayHandles( WaylandOverlayHandles& outHandles ) const
+    {
+        outHandles = WaylandOverlayHandles{};
         return false;
     }
 

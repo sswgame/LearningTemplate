@@ -16,21 +16,7 @@ namespace sw
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11Pixmap{ 0 }
-        , _listScaledPixel{}
     {
-    }
-
-    void X11SplashWindow::createScaledImage()
-    {
-        _listScaledPixel.clear();
-        if ( _splashData.isValid() == false || _splashData.getPixels() == nullptr )
-            return;
-        if ( _width == 0 || _height == 0 )
-            return;
-
-        _listScaledPixel.assign( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) * 4u, 0 );
-        scaleBgraImage( _splashData.getPixels(), _splashData._width, _splashData._height,
-                        _listScaledPixel.data(), _width, _height );
     }
 
     X11SplashWindow::~X11SplashWindow()

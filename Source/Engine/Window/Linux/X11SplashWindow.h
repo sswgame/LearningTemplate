@@ -23,17 +23,8 @@ namespace sw
         void               dismiss() override;
 
     private:
-        /**
-         * @brief 스플래시 이미지를 **창 크기로** 줄여 `_listScaledPixel` 에 담습니다.
-         * @details X11 에는 `StretchDIBits` 같은 것이 없습니다. `XPutImage` 는 **1:1 로만** 찍습니다.
-         *          줄이지 않으면 1376×768 원본이 480×280 창에 **좌상단만** 그려집니다.
-         */
-        void createScaledImage();
-
-    private:
         [[maybe_unused]] void*  _pX11Display;
         [[maybe_unused]] uint64 _x11Window;
-        [[maybe_unused]] uint64 _x11Pixmap;       /**< 창 배경으로 설정해 두는 이미지입니다. 서버가 알아서 다시 그립니다. */
-        vector<uint8>           _listScaledPixel; /**< 창 크기로 줄인 BGRA 픽셀. 비어 있으면 그리지 않음. */
+        [[maybe_unused]] uint64 _x11Pixmap; /**< 창 배경으로 설정해 두는 이미지입니다. 서버가 알아서 다시 그립니다. */
     };
 } // namespace sw

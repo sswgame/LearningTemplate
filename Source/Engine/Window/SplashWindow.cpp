@@ -34,7 +34,7 @@ namespace sw
         // 스플래시가 없는 세션은 폴백 없이 스플래시 없이 기동하는 것이 정상 경로이지만 조용히 지나가지 않고 한 번 알린다.
         if ( ISplashWindow::isPlatformSupported() == false )
         {
-            SW_LOG_INFO( "Splash window: this session cannot show one (Linux needs an X server - DISPLAY; a Wayland-only session has no splash window yet) - starting without it" );
+            SW_LOG_INFO( "Splash window: this session cannot show one (Linux needs the display server of the chosen window backend - DISPLAY for x11, WAYLAND_DISPLAY for wayland) - starting without it" );
             return false;
         }
         _pImpl = ISplashWindow::createPlatformSplash();

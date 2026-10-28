@@ -15,6 +15,8 @@
     #include "Core/Log/Logger.h"
 
     #include "Engine/Window/IWindow.h"
+    #include "Engine/Window/Linux/Wayland/WaylandDevConsoleWindow.h"
+    #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
     #include "Core/Common/PlatformOsHeaders.h"
     #include "Core/Common/X11Headers.h"
@@ -222,11 +224,13 @@ namespace sw
 
     unique_ptr<IDevConsoleWindow> IDevConsoleWindow::createPlatform( IWindow& owner )
     {
-        // 이 콘솔은 X11 자식 창이다 — Wayland 창에서는 만들지 않고, 콘솔은 그리지 않은 채 입력만 받는다(Wayland 연결을 Display* 로 읽으면 죽는다: `IWindow::tryGetX11Surface`).
+        // Wayland 창이면 서브표면 판이다(`WaylandDevConsoleWindow`). 이 X11 판은 자식 창이라 Wayland 연결을 Display* 로 읽으면 죽는다(`IWindow::tryGetX11Surface`).
+        if ( WaylandWindow* pWaylandOwner = WaylandWindow::tryCast( &owner ) )
+            return createWaylandDevConsoleWindow( *pWaylandOwner );
         X11SurfaceHandles x11Surface;
         if ( owner.tryGetX11Surface( x11Surface ) == false )
         {
-            SW_LOG_INFO( "Dev console: the X11 console window is not created without an X11 owner window - input only" );
+            SW_LOG_INFO( "Dev console: the console window needs an X11 or a Wayland owner window - input only" );
             return nullptr;
         }
         Display*                        pDisplay    = static_cast<Display*>( x11Surface._pDisplay );
