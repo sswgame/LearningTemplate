@@ -16,11 +16,11 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
-#include "Engine/UI/Base/UIFocusManager.h"
-#include "Engine/UI/Base/UIPointerState.h"
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/UIFocusManager.h"
+#include "Engine/UI/WidgetTree/UIPointerState.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

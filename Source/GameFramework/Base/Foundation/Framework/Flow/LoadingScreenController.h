@@ -11,9 +11,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Serialization/Base/DataPath.h"
-#include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"

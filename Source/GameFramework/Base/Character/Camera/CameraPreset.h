@@ -21,8 +21,8 @@
 
 #include "GameFramework/Base/Character/Camera/CameraBlend.h"
 #include "GameFramework/Base/Character/Camera/CameraPose.h"
-#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Base/World/Spline/SplinePath.h"
 #include "GameFramework/GameFrameworkExports.h"
 

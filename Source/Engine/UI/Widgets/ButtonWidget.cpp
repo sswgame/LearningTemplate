@@ -5,9 +5,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
-#include "Engine/UI/Base/UIEvents.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

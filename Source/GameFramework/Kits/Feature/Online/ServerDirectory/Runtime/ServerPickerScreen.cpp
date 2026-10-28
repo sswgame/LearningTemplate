@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 

@@ -14,12 +14,12 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Serialization/Base/SerializePurpose.h"
+#include "Engine/Serialization/Serializer/SerializePurpose.h"
 
-#include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Base/Foundation/GameData/GameSettings.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

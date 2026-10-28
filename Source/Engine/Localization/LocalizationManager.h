@@ -23,7 +23,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
-#include "Engine/Serialization/Base/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
 {

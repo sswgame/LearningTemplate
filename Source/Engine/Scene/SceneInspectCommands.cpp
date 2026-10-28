@@ -26,7 +26,7 @@
     #include "Engine/Scene/AuthorityGhost.h"
     #include "Engine/Scene/SceneManager.h"
     #include "Engine/Scene/SceneStateHash.h"
-    #include "Engine/Serialization/Base/SerializerUtil.h"
+    #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
     #include <algorithm>
     #include <charconv>

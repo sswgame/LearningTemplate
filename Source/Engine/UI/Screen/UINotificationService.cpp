@@ -5,10 +5,10 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 

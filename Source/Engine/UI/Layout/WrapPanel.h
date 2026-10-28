@@ -8,8 +8,8 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
 
 namespace sw
 {

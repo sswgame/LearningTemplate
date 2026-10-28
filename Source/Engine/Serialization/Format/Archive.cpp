@@ -12,11 +12,11 @@
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 
 namespace sw
 {

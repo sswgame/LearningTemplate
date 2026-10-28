@@ -18,9 +18,9 @@
 #include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Character/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Character/Input/TimingJudge.h"
-#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

@@ -17,7 +17,7 @@
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Base/DataPath.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {

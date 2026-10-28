@@ -9,11 +9,11 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/UI/Base/UIFocusManager.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/UIFocusManager.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

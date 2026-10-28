@@ -7,13 +7,13 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Style/UIStylePass.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw

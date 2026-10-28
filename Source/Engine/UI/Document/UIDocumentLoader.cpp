@@ -12,13 +12,13 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/Widgets/UserWidget.h"
 
 namespace sw

@@ -14,7 +14,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Serialization/Base/SerializePurpose.h"
+#include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include <optional>
 

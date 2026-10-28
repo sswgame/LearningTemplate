@@ -7,8 +7,8 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIViewModel.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

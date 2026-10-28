@@ -13,11 +13,11 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/UI/Base/UIFocusManager.h"
-#include "Engine/UI/Base/UIPointerState.h"
-#include "Engine/UI/Base/WidgetNavigation.h"
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Input/UIInputConsumption.h"
+#include "Engine/UI/WidgetTree/UIFocusManager.h"
+#include "Engine/UI/WidgetTree/UIPointerState.h"
+#include "Engine/UI/WidgetTree/WidgetNavigation.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

@@ -17,7 +17,7 @@
 
 #include "GameFramework/Base/Character/Combat/FrameData.h"
 #include "GameFramework/Base/Character/Input/InputCommandBuffer.h"
-#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

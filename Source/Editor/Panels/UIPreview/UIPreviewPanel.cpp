@@ -42,10 +42,6 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetNavigation.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
@@ -53,6 +49,10 @@
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetNavigation.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include <imgui.h>

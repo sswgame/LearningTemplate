@@ -43,7 +43,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

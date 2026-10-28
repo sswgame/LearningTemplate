@@ -15,8 +15,8 @@
 #include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>

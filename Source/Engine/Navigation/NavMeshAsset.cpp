@@ -14,7 +14,7 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Serialization/Base/BinaryStream.h"
+#include "Engine/Serialization/Serializer/BinaryStream.h"
 
 namespace sw
 {

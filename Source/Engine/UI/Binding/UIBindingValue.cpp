@@ -11,8 +11,8 @@
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
 {

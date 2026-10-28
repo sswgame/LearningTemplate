@@ -7,8 +7,6 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Screen/KeyRebindScreen.h"
@@ -16,6 +14,8 @@
 #include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"

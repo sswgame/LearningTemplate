@@ -7,8 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

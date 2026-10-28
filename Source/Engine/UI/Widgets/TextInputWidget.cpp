@@ -12,11 +12,11 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
-#include "Engine/UI/Base/UIEvents.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw

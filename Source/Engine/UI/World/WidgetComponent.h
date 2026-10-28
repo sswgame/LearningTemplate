@@ -14,8 +14,8 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Base/UIPointerState.h"
-#include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/WidgetTree/UIPointerState.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/UI/World/WorldWidgetPick.h"
 
 namespace sw

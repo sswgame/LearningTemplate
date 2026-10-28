@@ -5,10 +5,10 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {

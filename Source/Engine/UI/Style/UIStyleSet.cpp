@@ -4,8 +4,8 @@
 
 #include "Core/Common/HashUtil.h"
 
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {

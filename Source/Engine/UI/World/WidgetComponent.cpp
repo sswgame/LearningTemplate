@@ -18,11 +18,11 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Render/UIPaintPass.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

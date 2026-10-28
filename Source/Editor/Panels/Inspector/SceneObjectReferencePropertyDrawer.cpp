@@ -24,7 +24,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
 

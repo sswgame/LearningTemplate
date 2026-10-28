@@ -20,7 +20,6 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -41,6 +40,7 @@
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/UI/World/UIWorldPointerRouter.h"
 
 namespace sw

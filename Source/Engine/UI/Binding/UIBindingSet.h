@@ -10,11 +10,11 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Binding/UIBindingExpression.h"
 #include "Engine/UI/Binding/UIBindingValue.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

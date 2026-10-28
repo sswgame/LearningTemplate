@@ -2,10 +2,10 @@
 
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/OptionsMenuScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

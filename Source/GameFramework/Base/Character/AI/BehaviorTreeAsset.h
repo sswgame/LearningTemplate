@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 
 #include "GameFramework/Base/Character/AI/BehaviorTree.h"
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

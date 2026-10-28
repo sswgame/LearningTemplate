@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
-#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 

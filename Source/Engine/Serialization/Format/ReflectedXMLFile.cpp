@@ -4,8 +4,8 @@
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
 {

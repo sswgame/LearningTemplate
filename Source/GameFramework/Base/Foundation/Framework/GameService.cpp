@@ -5,7 +5,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineScope.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataCache.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataCache.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 SW_LOG_CALLER( "GameService" );

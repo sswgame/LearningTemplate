@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Serialization/Base/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
 {

@@ -9,12 +9,12 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/UI/Base/UIEventRouter.h"
-#include "Engine/UI/Base/UIEvents.h"
-#include "Engine/UI/Base/UINavigationSolver.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/UIEventRouter.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
+#include "Engine/UI/WidgetTree/UINavigationSolver.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

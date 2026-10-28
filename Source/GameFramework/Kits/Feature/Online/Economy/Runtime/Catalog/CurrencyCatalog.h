@@ -15,7 +15,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 

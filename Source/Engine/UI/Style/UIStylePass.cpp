@@ -6,11 +6,11 @@
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/WidgetStyle.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {

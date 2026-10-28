@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw
 {

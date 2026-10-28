@@ -10,7 +10,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
-#include "Engine/Serialization/Base/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
 {

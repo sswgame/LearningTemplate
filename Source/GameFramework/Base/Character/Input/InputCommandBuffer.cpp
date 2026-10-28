@@ -6,7 +6,7 @@
 
 #include "Engine/Reflection/ReflectionValidation.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/UI/Base/UIEvents.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
 
 namespace sw
 {

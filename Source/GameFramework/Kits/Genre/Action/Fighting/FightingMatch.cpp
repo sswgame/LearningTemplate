@@ -7,10 +7,10 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 

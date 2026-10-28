@@ -9,9 +9,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"
 #include "GameFramework/GameFrameworkExports.h"
 

@@ -7,10 +7,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/UI/Base/UIEventRouter.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/UIEventRouter.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw

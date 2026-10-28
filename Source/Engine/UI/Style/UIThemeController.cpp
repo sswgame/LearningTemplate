@@ -5,11 +5,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {

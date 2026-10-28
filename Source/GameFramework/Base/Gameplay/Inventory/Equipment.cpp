@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
-#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw

@@ -6,8 +6,8 @@
 #pragma once
 #include "Engine/Asset/AssetID.h"
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw
 {

@@ -6,11 +6,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Style/WidgetStyle.h"
+#include "Engine/UI/WidgetTree/PanelWidget.h"
+#include "Engine/UI/WidgetTree/Widget.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include <cstdlib>
 

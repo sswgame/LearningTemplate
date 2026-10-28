@@ -16,7 +16,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"

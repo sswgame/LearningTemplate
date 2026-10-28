@@ -7,9 +7,9 @@
 
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/UI/Base/Widget.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {

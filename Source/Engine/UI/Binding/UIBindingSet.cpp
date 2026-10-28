@@ -10,9 +10,9 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIViewModel.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw

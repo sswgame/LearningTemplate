@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/UI/HUD/HUDControllerComponent.h"
 
-#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/WidgetTree.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 

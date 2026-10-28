@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/UI/Base/UIEvents.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/World/WorldWidgetPick.h"
 
 namespace sw

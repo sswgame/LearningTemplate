@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
-#include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

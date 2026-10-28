@@ -9,9 +9,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Base/StringPool.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/StringPool.h"
 
 namespace sw
 {

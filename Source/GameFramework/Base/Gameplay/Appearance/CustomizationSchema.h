@@ -12,7 +12,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"
+#include "GameFramework/Base/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

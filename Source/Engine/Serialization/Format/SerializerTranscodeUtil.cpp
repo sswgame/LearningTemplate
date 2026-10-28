@@ -3,10 +3,10 @@
 #include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
 {

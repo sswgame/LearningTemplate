@@ -11,7 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"
+#include "GameFramework/Base/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

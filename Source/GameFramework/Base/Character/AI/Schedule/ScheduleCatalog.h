@@ -18,8 +18,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleCondition.h"
-#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

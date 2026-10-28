@@ -5,9 +5,9 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw
 {

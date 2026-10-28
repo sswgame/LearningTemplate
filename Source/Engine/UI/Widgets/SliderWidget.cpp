@@ -8,7 +8,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
-#include "Engine/UI/Base/UIEvents.h"
+#include "Engine/UI/WidgetTree/UIEvents.h"
 
 namespace sw
 {

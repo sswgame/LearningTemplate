@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
-#include "Engine/Serialization/Base/DataPath.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include <imgui.h>
 

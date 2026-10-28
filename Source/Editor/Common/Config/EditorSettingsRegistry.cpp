@@ -11,8 +11,8 @@
 #include "Editor/Common/Config/EditorUserFile.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw::editor
 {

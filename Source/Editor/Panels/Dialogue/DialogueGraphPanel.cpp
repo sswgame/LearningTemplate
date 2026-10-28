@@ -1,0 +1,770 @@
+#include "pch.h"
+
+#include "Editor/Panels/Dialogue/DialogueGraphPanel.h"
+
+#include "Core/Common/Defines.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
+#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/Widgets/EditorNodeGraphID.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
+
+#include "Engine/Dialogue/DialogueCursor.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Localization/LocText.h"
+
+#include <imgui.h>
+#include <imgui-node-editor/imgui_node_editor.h>
+
+namespace ed = ax::NodeEditor;
+
+namespace sw::editor
+{
+    namespace
+    {
+        /**
+         * @brief 핀 번호의 원본은 `DialogueGraphAsset` 입니다. 여기서는 이름만 짧게 가져다 씁니다.
+         * @details 오프셋 상수와 인코딩의 복사본을 여기 두지 않는다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
+         *          대화가 조용히 엉뚱한 분기로 간다.
+         */
+        struct DialogueGraphPanelInternal
+        {
+            static constexpr Color kSelectedNodeText{ 0.2f, 0.8f, 1.0f, 1.0f };
+            static constexpr Color kTrueBranchText{ 0.3f, 1.0f, 0.4f, 1.0f };
+            static constexpr Color kFalseBranchText{ 1.0f, 0.4f, 0.4f, 1.0f };
+
+            static constexpr int32 kPinInputOffset  = DialogueGraphAsset::kPinOffsetIn;
+            static constexpr int32 kPinOutputOffset = DialogueGraphAsset::kPinOffsetOut;
+            static constexpr int32 kPinTrueOffset   = DialogueGraphAsset::kPinOffsetTrue;
+            static constexpr int32 kPinFalseOffset  = DialogueGraphAsset::kPinOffsetFalse;
+
+            static int32 pinIn( int32 nodeID )
+            {
+                return DialogueGraphAsset::encodePin( nodeID, kPinInputOffset );
+            }
+
+            static int32 pinOut( int32 nodeID )
+            {
+                return DialogueGraphAsset::encodePin( nodeID, kPinOutputOffset );
+            }
+
+            static int32 pinBranchTrue( int32 nodeID )
+            {
+                return DialogueGraphAsset::encodePin( nodeID, kPinTrueOffset );
+            }
+
+            static int32 pinBranchFalse( int32 nodeID )
+            {
+                return DialogueGraphAsset::encodePin( nodeID, kPinFalseOffset );
+            }
+
+            static int32 pinChoice( int32 nodeID, int32 choiceIndex )
+            {
+                return DialogueGraphAsset::encodeChoicePin( nodeID, choiceIndex );
+            }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    SW_LOG_CALLER( "DialogueGraphPanel" );
+    SW_EDITOR_PANEL( DialogueGraphPanel, DialogueGraphPanel::kPanelID, EditorPanelCategory::Tool, 1200 );
+
+    DialogueGraphPanel::DialogueGraphPanel()
+        : EditorGraphDocumentPanel{ EditorAssetType::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }
+        , _selectedNodeID{ 0 }
+        , _previewNodeID{ 0 }
+    {
+        _nodeGraph.setPinTypeColors( {
+            Color{ 0.85f, 0.85f, 0.90f, 1.0f }
+        } ); // 흐름 핀 하나
+    }
+
+    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    {
+        _nodeGraph.shutdown();
+    }
+
+    void DialogueGraphPanel::drawDocumentContent()
+    {
+        updateFocusedDocument();
+        ensureDocumentLoaded();
+
+        updatePreview( ImGui::GetIO().DeltaTime );
+
+        drawGraphToolbar();
+
+        // 노드를 선택하면 오른쪽에 인스펙터가 붙으므로 캔버스가 그만큼 좁아진다.
+        const float32 availWidth  = ImGui::GetContentRegionAvail().x;
+        const float32 canvasWidth = _selectedNodeID > 0 ? availWidth * 0.72f : availWidth;
+        drawGraphCanvas( canvasWidth );
+
+        if ( _selectedNodeID > 0 )
+        {
+            ImGui::SameLine();
+            drawSelectedNodeInspector();
+        }
+    }
+
+    void DialogueGraphPanel::drawGraphToolbar()
+    {
+        if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
+        {
+            for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
+            {
+                if ( info._bAddable == false )
+                    continue;
+                fixed_string<constant::kMaxBuffer64> label;
+                formatstring( label.data(), label.capacity(), "+ %#", info._pName );
+                if ( ImGui::Button( label.c_str() ) )
+                {
+                    addNode( info._type );
+                    notifyDocumentEdited( "Add Dialogue Node" );
+                }
+                fixed_string<constant::kMaxBuffer64> markKey;
+                formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
+                EditorSelfTestMarks::note( markKey.c_str() );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddNodeTip" ) );
+                ImGui::SameLine();
+            }
+            EditorWidgets::drawToolbarSeparator();
+            if ( ImGui::Button( "Save" ) )
+                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+            EditorSelfTestMarks::note( "dialogueGraph.save" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
+            if ( ImGui::Button( "Reload" ) )
+                reloadDocument();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ReloadTip" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Default" ) );
+            if ( ImGui::Button( "Reset Default" ) )
+            {
+                _graph._listNode.clear();
+                _graph._listLink.clear();
+                ensureDefaults();
+                _nodeGraph.requestContentFit();
+                notifyDocumentEdited( "Reset Dialogue Graph" );
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ResetDefaultTip" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom Fit" ) );
+            if ( ImGui::Button( "Zoom Fit" ) )
+                _nodeGraph.requestContentFit();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ZoomFitTip" ) );
+            drawPreviewToolbar();
+
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(Nodes: %zu, Links: %zu)", _graph._listNode.size(), _graph._listLink.size() );
+        }
+        EditorChrome::endToolbar();
+    }
+
+    void DialogueGraphPanel::drawGraphCanvas( float32 canvasWidth )
+    {
+        editor::EditorSectionDesc canvasDesc{};
+        canvasDesc._pID       = "DialogueCanvasRegion";
+        canvasDesc._kind      = editor::EditorSectionKind::Child;
+        canvasDesc._childSize = float2{ canvasWidth, 0.0f };
+        canvasDesc._flags     = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
+        EditorChrome::beginSection( canvasDesc );
+
+        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorPaths::kDialogueGraphCanvasFileName ) == false )
+        {
+            if ( _nodeGraph.hasContext() == false )
+                ImGui::TextUnformatted( SW_LOCKEY( "EditorDialogueGraph", "ContextCreateFailed" ) );
+            EditorChrome::endSection();
+            return;
+        }
+
+        drawGraphNodes();
+
+        // 링크 렌더링
+        for ( const DialogueLink& link : _graph._listLink )
+        {
+            ed::Link( toLinkID( link._id ), toPinID( link._fromPin ), toPinID( link._toPin ) );
+        }
+
+        updateNodeIssues();
+        _nodeGraph.drawNodeIssues();
+        handleCanvasInteractions();
+        // 선택 노드 추적
+        ed::NodeId  selectedNodes[1];
+        const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
+        if ( count > 0 )
+            _selectedNodeID = static_cast<int32>( selectedNodes[0].Get() );
+
+        _nodeGraph.applyContentFitIfNeeded();
+        cacheNodeLayout();
+
+        endGraphCanvas();
+        EditorChrome::endSection();
+    }
+
+    void DialogueGraphPanel::drawGraphNodes()
+    {
+        // 노드 렌더링
+        for ( DialogueNode& node : _graph._listNode )
+        {
+            const ed::NodeId nodeID = toNodeID( node._id );
+            ed::BeginNode( nodeID );
+
+            drawNodeBody( node );
+
+            ed::EndNode();
+
+            if ( _nodeGraph.needsContentFit() )
+                ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
+            applyNodePlacement( node._id );
+        }
+    }
+
+    void DialogueGraphPanel::handleCanvasInteractions()
+    {
+        // 새 링크. 방향(나가는 핀에서 들어오는 핀)과 타입 판정, 거절 표시는 프레임워크(`EditorNodeGraph::queryNewLink`)가 한다.
+        int32 fromPin{ 0 };
+        int32 toPin{ 0 };
+        if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &DialogueGraphPanel::findGraphPin, this ), fromPin, toPin ) )
+        {
+            DialogueLink newLink{};
+            newLink._id      = nextLinkID();
+            newLink._fromPin = fromPin;
+            newLink._toPin   = toPin;
+            _graph._listLink.push_back( newLink );
+            notifyDocumentEdited( "Link Dialogue Nodes" );
+        }
+
+        // 빈 곳을 오른쪽 클릭하면 노드 검색 팝업이 열린다. 고른 노드는 오른쪽 클릭한 위치에 놓는다.
+        vector<EditorGraphNodeKind> listKind;
+        for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
+        {
+            if ( info._bAddable )
+                listKind.push_back( EditorGraphNodeKind{ info._pName, "Dialogue", static_cast<uint32>( info._type ) } );
+        }
+        uint32 kindID{ 0 };
+        float2 canvasPosition{};
+        if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
+        {
+            placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeType>( kindID ) ), canvasPosition );
+            notifyDocumentEdited( "Add Dialogue Node" );
+        }
+
+        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 해석해서 판단한다. 핀을 해석하는 원본은 `DialogueGraphAsset` 이다.
+        // 핀을 해석하는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 직접 해석하면
+        // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
+        processCanvasDeletions(
+            []( const DialogueLink& link, int32 nodeID )
+        { return DialogueGraphAsset::decodePinNodeID( link._fromPin ) == nodeID || DialogueGraphAsset::decodePinNodeID( link._toPin ) == nodeID; },
+            [this]( int32 nodeID )
+        {
+            if ( _selectedNodeID == nodeID )
+                _selectedNodeID = 0;
+        },
+            "Delete Dialogue Link", "Delete Dialogue Node" );
+    }
+
+    void DialogueGraphPanel::drawSelectedNodeInspector()
+    {
+        editor::EditorSectionDesc inspectorDesc{};
+        inspectorDesc._pID   = "DialogueNodeInspector";
+        inspectorDesc._kind  = editor::EditorSectionKind::Child;
+        inspectorDesc._flags = editor::EditorSectionFlags::Border;
+        EditorChrome::beginSection( inspectorDesc );
+
+        DialogueNode* pSelectedNode{ nullptr };
+        for ( DialogueNode& node : _graph._listNode )
+        {
+            if ( node._id == _selectedNodeID )
+            {
+                pSelectedNode = &node;
+                break;
+            }
+        }
+
+        if ( pSelectedNode != nullptr )
+        {
+            ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kSelectedNodeText ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
+            ImGui::Separator();
+
+            const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
+            if ( pInfo != nullptr )
+                drawNodeFields( *pSelectedNode, *pInfo );
+        }
+
+        EditorChrome::endSection();
+    }
+
+    void DialogueGraphPanel::ensureDefaults()
+    {
+        _graph._listNode.clear();
+        _graph._listLink.clear();
+
+        DialogueNode startNode{};
+        startNode._id          = 1;
+        startNode._type        = DialogueAssetNodeType::Start;
+        startNode._position._x = 50.0f;
+        startNode._position._y = 100.0f;
+        _graph._listNode.push_back( startNode );
+
+        DialogueNode dialogueNode{};
+        dialogueNode._id          = 2;
+        dialogueNode._type        = DialogueAssetNodeType::Dialogue;
+        dialogueNode._speaker     = "Elder";
+        dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
+        dialogueNode._position._x = 250.0f;
+        dialogueNode._position._y = 100.0f;
+        _graph._listNode.push_back( dialogueNode );
+
+        DialogueNode choiceNode{};
+        choiceNode._id          = 3;
+        choiceNode._type        = DialogueAssetNodeType::Choice;
+        choiceNode._text        = "How do you respond?";
+        choiceNode._listChoice  = { "I am ready for any challenge!", "Could you give me some supplies first?" };
+        choiceNode._position._x = 650.0f;
+        choiceNode._position._y = 100.0f;
+        _graph._listNode.push_back( choiceNode );
+
+        DialogueNode actionNode{};
+        actionNode._id            = 4;
+        actionNode._type          = DialogueAssetNodeType::Action;
+        actionNode._actionCommand = "give_item:healing_potion:3";
+        actionNode._position._x   = 1050.0f;
+        actionNode._position._y   = 220.0f;
+        _graph._listNode.push_back( actionNode );
+
+        DialogueNode endNode{};
+        endNode._id          = 5;
+        endNode._type        = DialogueAssetNodeType::End;
+        endNode._position._x = 1350.0f;
+        endNode._position._y = 120.0f;
+        _graph._listNode.push_back( endNode );
+
+        // 기본 링크 연결
+        _graph._listLink.push_back( DialogueLink{ 1, DialogueGraphPanelInternal::pinOut( 1 ), DialogueGraphPanelInternal::pinIn( 2 ) } );
+        _graph._listLink.push_back( DialogueLink{ 2, DialogueGraphPanelInternal::pinOut( 2 ), DialogueGraphPanelInternal::pinIn( 3 ) } );
+        _graph._listLink.push_back( DialogueLink{ 3, DialogueGraphPanelInternal::pinChoice( 3, 0 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+        _graph._listLink.push_back( DialogueLink{ 4, DialogueGraphPanelInternal::pinChoice( 3, 1 ), DialogueGraphPanelInternal::pinIn( 4 ) } );
+        _graph._listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+    }
+
+    ToolAssetLoadResult DialogueGraphPanel::loadDocument()
+    {
+        DialogueGraphAsset        data;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
+        adoptLoadedGraph( std::move( data ), result );
+        _previewNodeID = 0;
+        return result;
+    }
+
+    bool DialogueGraphPanel::saveGraphData()
+    {
+        DialogueGraphAsset data = captureGraphData();
+        // 실패하면 아무것도 지우지 않는다. AnimationGraphPanel 쪽 주석을 참고한다.
+        if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
+            return false;
+
+        clearDocumentDirty();
+        syncDocumentUndoBaseline();
+        return true;
+    }
+
+    bool DialogueGraphPanel::saveDocument()
+    {
+        return saveGraphData();
+    }
+
+    void DialogueGraphPanel::drawPreviewToolbar()
+    {
+        ImGui::SameLine();
+        EditorWidgets::drawToolbarSeparator();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play Preview" ) );
+        if ( ImGui::Button( "Play Preview" ) )
+        {
+            const DialogueGraphAsset asset  = captureGraphData();
+            const DialogueAssetNode* pStart = asset.findStartNode();
+            _bPreviewPlaying                = SW_TRUE;
+            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PlayPreviewTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance Preview" ) );
+        if ( ImGui::Button( "Advance Preview" ) )
+            previewStep( DialogueStepInput{} );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AdvancePreviewTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop Preview" ) );
+        if ( ImGui::Button( "Stop Preview" ) )
+        {
+            _bPreviewPlaying = SW_FALSE;
+            _previewNodeID   = 0;
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "StopPreviewTip" ) );
+        if ( _previewNodeID <= 0 )
+            return;
+
+        ImGui::SameLine();
+        ImGui::TextDisabled( "Preview node #%d", _previewNodeID );
+        const DialogueGraphAsset asset = captureGraphData();
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
+            return;
+
+        // 기다리는 노드만 사람이 선택한다. 선택한 값은 러너와 같은 `DialogueCursor::step` 의 입력이 된다.
+        if ( pInfo->_flow == DialogueNodeFlow::WaitChoice )
+        {
+            for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
+            {
+                fixed_string<constant::kMaxBuffer64> label;
+                formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) ); // 선택지 수는 노드가 정한다 — 좁은 패널에서 뒤 단추가 창 밖에 놓이지 않게 줄을 바꾼다
+                if ( ImGui::SmallButton( label.c_str() ) )
+                {
+                    DialogueStepInput input{};
+                    input._choiceIndex = choiceIndex;
+                    previewStep( input );
+                }
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewChoiceTip" ) );
+            }
+        }
+        if ( pInfo->_flow == DialogueNodeFlow::Condition )
+        {
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "True" ) );
+            if ( ImGui::SmallButton( "True" ) )
+            {
+                DialogueStepInput input{};
+                input._bConditionMet = true;
+                previewStep( input );
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewTrueTip" ) );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "False" ) );
+            if ( ImGui::SmallButton( "False" ) )
+                previewStep( DialogueStepInput{} );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewFalseTip" ) );
+        }
+    }
+
+    void DialogueGraphPanel::updatePreview( float32 deltaSeconds )
+    {
+        if ( _bPreviewPlaying == SW_FALSE || _previewNodeID <= 0 )
+            return;
+        const DialogueGraphAsset asset = captureGraphData();
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
+        {
+            _bPreviewPlaying = SW_FALSE;
+            return;
+        }
+
+        switch ( pInfo->_flow )
+        {
+            case DialogueNodeFlow::PassThrough:
+            {
+                previewStep( DialogueStepInput{} );
+                return;
+            }
+            case DialogueNodeFlow::WaitAdvance:
+            {
+                _previewHoldSeconds += deltaSeconds;
+                if ( _previewHoldSeconds < 0.9f )
+                    return;
+                previewStep( DialogueStepInput{} );
+                return;
+            }
+            case DialogueNodeFlow::Finish:
+            {
+                _bPreviewPlaying = SW_FALSE;
+                return;
+            }
+            case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 선택한다
+            case DialogueNodeFlow::Condition:
+            {
+                return;
+            }
+        }
+    }
+
+    void DialogueGraphPanel::previewStep( const DialogueStepInput& input )
+    {
+        const DialogueGraphAsset asset = captureGraphData();
+        if ( _previewNodeID <= 0 )
+        {
+            const DialogueAssetNode* pStart = asset.findStartNode();
+            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
+            return;
+        }
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
+        enterPreviewNode( asset, pNode != nullptr ? DialogueCursor::step( asset, *pNode, input ) : 0 );
+    }
+
+    void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeID )
+    {
+        _previewHoldSeconds            = 0.0f;
+        const DialogueAssetNode* pNode = asset.findNode( nodeID );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
+        {
+            _bPreviewPlaying = SW_FALSE;
+            return;
+        }
+
+        _previewNodeID = nodeID;
+        // 러너가 알리는 노드(대사, 선택지)만 뷰포트에 보인다.
+        if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
+            EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
+        if ( pInfo->_flow == DialogueNodeFlow::Finish )
+            _bPreviewPlaying = SW_FALSE;
+    }
+
+    int32 DialogueGraphPanel::addNode( DialogueAssetNodeType type )
+    {
+        DialogueNode node = DialogueCursor::makeNode( type, nextNodeID() );
+        node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
+        node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
+        _selectedNodeID   = node._id;
+        _graph._listNode.push_back( std::move( node ) );
+        return _selectedNodeID;
+    }
+
+    bool DialogueGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const
+    {
+        const int32 nodeID = DialogueGraphAsset::decodePinNodeID( pinID );
+        bool        bKnown = false;
+        for ( const DialogueNode& node : _graph._listNode )
+        {
+            bKnown = bKnown || node._id == nodeID;
+        }
+        if ( bKnown == false )
+            return false;
+        outInfo._type   = 0;
+        outInfo._bInput = DialogueGraphAsset::decodePinOffset( pinID ) == DialogueGraphPanelInternal::kPinInputOffset;
+        return true;
+    }
+
+    bool DialogueGraphPanel::isPinLinked( int32 pinID ) const
+    {
+        for ( const DialogueLink& link : _graph._listLink )
+        {
+            if ( link._fromPin == pinID || link._toPin == pinID )
+                return true;
+        }
+        return false;
+    }
+
+    void DialogueGraphPanel::updateNodeIssues()
+    {
+        vector<int32> listInputNode;
+        for ( const DialogueNode& node : _graph._listNode )
+        {
+            const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+            if ( pInfo != nullptr && pInfo->_bHasInputPin )
+                listInputNode.push_back( node._id );
+        }
+        vector<EditorGraphEdge> listEdge;
+        listEdge.reserve( _graph._listLink.size() );
+        for ( const DialogueLink& link : _graph._listLink )
+        {
+            listEdge.push_back( EditorGraphEdge{ DialogueGraphAsset::decodePinNodeID( link._fromPin ), DialogueGraphAsset::decodePinNodeID( link._toPin ) } );
+        }
+        vector<EditorGraphNodeIssue> listIssue;
+        EditorNodeGraphRules::collectUnreachableNodes( listInputNode, listEdge, listIssue );
+        _nodeGraph.setNodeIssues( std::move( listIssue ) );
+    }
+
+    void DialogueGraphPanel::drawNodeBody( const DialogueNode& node )
+    {
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+        if ( pInfo == nullptr )
+        {
+            ImGui::TextDisabled( "[Unknown %u]", static_cast<uint32>( node._type ) );
+            return;
+        }
+
+        const ImVec4 headerColor( pInfo->_color._x, pInfo->_color._y, pInfo->_color._z, pInfo->_color._w );
+        if ( pInfo->_bHasSpeaker )
+            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, node._speaker.empty() ? SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ) : node._speaker.c_str() );
+        else
+            ImGui::TextColored( headerColor, "[%s]", pInfo->_pName );
+
+        if ( pInfo->_bHasInputPin )
+            drawInputPin( node._id );
+
+        switch ( pInfo->_output )
+        {
+            case DialogueNodeOutput::Next:
+            {
+                if ( pInfo->_bHasInputPin )
+                    ImGui::SameLine();
+                drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
+                break;
+            }
+            case DialogueNodeOutput::Branch:
+            {
+                ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
+                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
+                ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kTrueBranchText ), "True ->" );
+                ed::EndPin();
+                ImGui::SameLine();
+                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
+                ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kFalseBranchText ), "False ->" );
+                ed::EndPin();
+                return;
+            }
+            case DialogueNodeOutput::Choice:
+            {
+                // 선택지가 없으면 기본 출력 핀 하나를 보여 준다. 연결되지 않은 선택지는 기본 출력 핀으로 간다(`DialogueCursor::step`).
+                if ( node._listChoice.empty() )
+                {
+                    drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Choice 0 ->" );
+                    return;
+                }
+                for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
+                {
+                    ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+                    ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
+                    ed::EndPin();
+                }
+                return;
+            }
+            case DialogueNodeOutput::None:
+            {
+                break;
+            }
+        }
+
+        switch ( pInfo->_body )
+        {
+            case DialogueNodeBody::Text:
+            {
+                if ( node._text.empty() )
+                    break;
+                if ( node._text.size() > 40 )
+                {
+                    StringBuilder<constant::kMaxBuffer64> previewBuilder;
+                    previewBuilder.append( string_view{ node._text.data(), 37 } );
+                    previewBuilder.append( "..." );
+                    ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );
+                }
+                else
+                {
+                    ImGui::TextDisabled( "\"%s\"", node._text.c_str() );
+                }
+                break;
+            }
+            case DialogueNodeBody::Action:
+            {
+                ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
+                break;
+            }
+            case DialogueNodeBody::Condition:
+            case DialogueNodeBody::None:
+            {
+                break;
+            }
+        }
+    }
+
+    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info )
+    {
+        if ( info._bHasSpeaker )
+        {
+            EditorWidgets::drawTextField( "Speaker", node._speaker );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerTip" ) );
+        }
+
+        switch ( info._body )
+        {
+            case DialogueNodeBody::Text:
+            {
+                fixed_string<constant::kMaxBuffer512> textBuf{ node._text.c_str() };
+                if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                    node._text = textBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "TextTip" ) );
+                break;
+            }
+            case DialogueNodeBody::Condition:
+            {
+                EditorWidgets::drawTextField( "Condition", node._condition );
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ConditionTip" ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "ConditionExample" ) );
+                break;
+            }
+            case DialogueNodeBody::Action:
+            {
+                EditorWidgets::drawTextField( "Command", node._actionCommand );
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "CommandExample" ) );
+                break;
+            }
+            case DialogueNodeBody::None:
+            {
+                break;
+            }
+        }
+
+        if ( info._output != DialogueNodeOutput::Choice )
+            return;
+
+        ImGui::Text( "Choices (%zu):", node._listChoice.size() );
+        for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
+        {
+            ImGui::PushID( static_cast<int32>( choiceIndex ) );
+            EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
+            if ( ImGui::Button( "X" ) )
+            {
+                node._listChoice.erase( node._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );
+                notifyDocumentEdited( "Edit Dialogue Node" );
+                ImGui::PopID();
+                break;
+            }
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "RemoveChoiceTip" ) );
+            ImGui::PopID();
+        }
+
+        if ( ImGui::Button( "+ Add Choice Option" ) )
+        {
+            node._listChoice.push_back( "New choice option" );
+            notifyDocumentEdited( "Edit Dialogue Node" );
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddChoiceTip" ) );
+    }
+
+    void DialogueGraphPanel::drawInputPin( int32 nodeID )
+    {
+        const int32 pinID = DialogueGraphPanelInternal::pinIn( nodeID );
+        ed::BeginPin( toPinID( pinID ), ed::PinKind::Input );
+        _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "In" );
+        ed::EndPin();
+    }
+
+    void DialogueGraphPanel::drawOutputPin( int32 pinID, const utf8* pLabel )
+    {
+        ed::BeginPin( toPinID( pinID ), ed::PinKind::Output );
+        ImGui::TextUnformatted( pLabel );
+        ImGui::SameLine();
+        _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
+        ed::EndPin();
+    }
+} // namespace sw::editor

@@ -26,12 +26,12 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 namespace sw

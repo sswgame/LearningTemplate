@@ -21,7 +21,7 @@
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Base/ReloadOutcome.h"
+#include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
 {

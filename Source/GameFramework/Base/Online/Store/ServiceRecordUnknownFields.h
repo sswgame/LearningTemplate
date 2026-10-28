@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 
-#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 
 namespace sw
 {

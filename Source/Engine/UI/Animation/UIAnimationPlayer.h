@@ -12,7 +12,7 @@
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
 #include "Engine/UI/Animation/UIAnimation.h"
-#include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {

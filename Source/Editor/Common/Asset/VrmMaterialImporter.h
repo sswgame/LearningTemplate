@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Serialization/Base/DataPath.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {

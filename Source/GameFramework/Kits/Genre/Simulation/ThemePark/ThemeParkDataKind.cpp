@@ -2,7 +2,7 @@
 
 #include "Engine/Asset/AssetDataKind.h"
 
-#include "GameFramework/Base/Foundation/Data/GamePackDataUtil.h"
+#include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 

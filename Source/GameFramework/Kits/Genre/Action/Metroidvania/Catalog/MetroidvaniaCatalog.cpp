@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
 
 namespace sw

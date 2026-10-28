@@ -9,7 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataCache.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataCache.h"
 
 namespace sw
 {

@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Animation/AnimationRewindPanel.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
-#include "Editor/Panels/Data/DataTablePanel.h"
+#include "Editor/Panels/DataTable/DataTablePanel.h"
 #include "Editor/Panels/InputMap/InputMapPanel.h"
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"

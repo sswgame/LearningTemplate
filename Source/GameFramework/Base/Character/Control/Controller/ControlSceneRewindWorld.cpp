@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Character/Control/Controller/ControlSceneRewindWorld.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Base/SerializePurpose.h"
+#include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/Base/Character/Control/ControlSystem.h"
 #include "GameFramework/Base/Character/Control/Controller/IntentPlayback.h"

@@ -24,7 +24,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"

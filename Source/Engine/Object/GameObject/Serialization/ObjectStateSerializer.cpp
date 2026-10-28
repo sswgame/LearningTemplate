@@ -20,11 +20,11 @@
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Base/BinaryStream.h"
-#include "Engine/Serialization/Base/Serializer.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/BinaryStream.h"
+#include "Engine/Serialization/Serializer/Serializer.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
 {

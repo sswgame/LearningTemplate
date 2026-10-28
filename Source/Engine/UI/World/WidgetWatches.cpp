@@ -7,8 +7,8 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
 namespace sw

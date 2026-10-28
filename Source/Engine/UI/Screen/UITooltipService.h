@@ -6,8 +6,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/Window/CursorShape.h"
 
 namespace sw

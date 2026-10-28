@@ -8,7 +8,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 
 namespace sw

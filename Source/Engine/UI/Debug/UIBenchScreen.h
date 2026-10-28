@@ -9,8 +9,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_benchUiWidgets );
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_benchUiChurn );

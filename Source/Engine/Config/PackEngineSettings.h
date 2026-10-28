@@ -18,7 +18,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Base/DataPath.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
