@@ -4,6 +4,8 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Graphics/Debug/GpuAssert.h"
+
 namespace sw
 {
     namespace
@@ -269,7 +271,7 @@ namespace sw
                     case RenderPassType::GPUCull:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGpuAssertTarget;
                         break;
                     }
                     case RenderPassType::InstanceAnimation:
@@ -289,7 +291,7 @@ namespace sw
                     case RenderPassType::MeshMorph:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
-                        info._flags          = Flag::kCompute;
+                        info._flags          = Flag::kCompute | Flag::kGpuAssertTarget;
                         break;
                     }
                     case RenderPassType::MeshSkin:
@@ -370,7 +372,7 @@ namespace sw
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
-                        info._flags          = Flag::kCompute;
+                        info._flags          = Flag::kCompute | Flag::kGpuAssertTarget;
                         break;
                     }
                     case RenderPassType::ProbeUpdate:
@@ -472,6 +474,9 @@ namespace sw
             if ( VectorUtil::contains( selection._listDefine, passDefine ) == false )
                 selection._listDefine.push_back( passDefine );
         }
+        // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
+        if ( info.hasFlag( RenderPassTraitFlag::kGpuAssertTarget ) && GpuAssertMonitor::isRequested() )
+            selection._listDefine.push_back( kGpuAssertDefine );
         return selection;
     }
 

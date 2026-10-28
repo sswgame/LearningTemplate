@@ -26,8 +26,11 @@ namespace sw
         /** @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다. */
         virtual RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) = 0;
 
-        /** @brief 컴퓨트 파이프라인 상태(PSO)를 만듭니다. */
-        virtual RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {} ) = 0;
+        /**
+         * @brief 컴퓨트 파이프라인 상태(PSO)를 만듭니다.
+         * @param listDefine 컴파일 매크로("NAME" 또는 "NAME=VALUE")입니다 — 그래픽스 PSO 의 `RHIPipelineStateDesc::_listShaderDefine` 과 같은 퍼뮤테이션입니다(셰이더 assert 변형이 쓴다).
+         */
+        virtual RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {}, const vector<string>& listDefine = {} ) = 0;
 
         /** @brief 파이프라인 상태 객체를 해제합니다. */
         virtual void destroyPipelineState( RHIPipelineStateHandle pso ) = 0;

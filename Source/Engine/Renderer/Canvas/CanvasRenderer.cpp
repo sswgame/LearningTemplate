@@ -10,6 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Debug/GpuAssert.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -234,7 +235,8 @@ namespace sw
         _bMarkerReadsInstances = bAnyInstanceSlot;
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv )
+    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv,
+                                                 GpuAssertMonitor& inoutAssert )
     {
         if ( _markerCount == 0 )
             return;
@@ -266,6 +268,7 @@ namespace sw
             cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
         cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSrv : placeholderSrv, 1 );
         cmd.bindComputeUav( _quadBuffer._uav, 0 );
+        inoutAssert.bind( cmd ); // canvasmarker.hlsl 의 assert(u3) — assert 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::ShaderResource );
     }

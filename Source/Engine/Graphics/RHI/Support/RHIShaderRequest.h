@@ -46,6 +46,9 @@ namespace sw
          */
         static RHIGraphicsShaderRequest resolveGraphics( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
 
+        /** @brief 매크로 목록("NAME" 또는 "NAME=VALUE")을 컴파일 요청의 define 에 붙입니다. 컴퓨트 PSO 가 씁니다(그래픽스는 `resolveGraphics` 가 같은 규칙으로 붙인다). */
+        static void appendDefines( ShaderCompileDesc& inoutDesc, const vector<string>& listDefine );
+
         /** @brief 엔진 서비스가 바인딩되어 있으면 ShaderCache 를, 아니면(테스트와 툴) 컴파일러를 직접 씁니다. */
         static ShaderCompileResult compile( const ShaderCompileDesc& desc );
 

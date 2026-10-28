@@ -128,17 +128,18 @@ namespace sw
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }
 
-    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint )
+    RHIPipelineStateHandle D3D11RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(다른 백엔드와 같다)
             return 0;
         {
             ShaderCompileDesc csDesc{};
-            csDesc._filePath        = shaderPath;
-            csDesc._entryPoint      = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-            csDesc._stage           = ShaderStage::Compute;
-            csDesc._targetFormat    = ShaderTargetFormat::DXBC_D3D11;
+            csDesc._filePath     = shaderPath;
+            csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
+            csDesc._stage        = ShaderStage::Compute;
+            csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
+            RHIShaderRequest::appendDefines( csDesc, listDefine );
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
                 return 0;

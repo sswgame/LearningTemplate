@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Debug/GpuAssert.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
@@ -1344,6 +1345,8 @@ namespace sw
         OcclusionTileMailbox    _occlusionMailbox;
         OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount];
         uint64                  _occlusionReadbackSerial;
+        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u3 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
+        GpuAssertMonitor _gpuAssert;
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
         RenderPSOCache _psoCache;

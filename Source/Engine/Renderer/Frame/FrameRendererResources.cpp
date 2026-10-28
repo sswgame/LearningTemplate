@@ -46,6 +46,10 @@ namespace sw
                 SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
         }
 
+        // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
+        if ( _gpuAssert.initialize( _pDevice ) == false )
+            SW_FATAL( "gv_gpuAssert is on but the GPU assert ring could not be created - see the log above" );
+
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
         // 캐시에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 캐시를 함께 쓰고(`_pPSOCache`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
@@ -76,7 +80,9 @@ namespace sw
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) ? caps._bGPUCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable == false )
                     continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
-                pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                // 셰이더 경로와 define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다).
+                const RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+                pso                                           = _pDevice->getResourceFactory()->createComputePipelineState( computeShader._shaderPath, {}, computeShader._listDefine );
             }
             else
             {
@@ -184,6 +190,7 @@ namespace sw
         _occlusionTilesPlaceholder.release( _pDevice );
         _occlusionReadback.shutdown();
         _occlusionMailbox.clear();
+        _gpuAssert.shutdown();
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );

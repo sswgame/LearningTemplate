@@ -111,7 +111,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint )
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
@@ -120,10 +120,11 @@ namespace sw
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
         ShaderCompileDesc csDesc{};
-        csDesc._filePath             = shaderPath;
-        csDesc._entryPoint           = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-        csDesc._stage                = ShaderStage::Compute;
-        csDesc._targetFormat         = ShaderTargetFormat::SPIRV_OpenGL;
+        csDesc._filePath     = shaderPath;
+        csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
+        csDesc._stage        = ShaderStage::Compute;
+        csDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
+        RHIShaderRequest::appendDefines( csDesc, listDefine );
         ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
 
         if ( csResult._bSuccess )

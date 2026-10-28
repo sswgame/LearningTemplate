@@ -122,16 +122,17 @@ namespace sw
         return _pDevice->_pipelineStates.insert( { pso } );
     }
 
-    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint )
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
         if ( shaderPath.empty() == false )
         {
             ShaderCompileDesc csDesc{};
-            csDesc._filePath        = shaderPath;
-            csDesc._entryPoint      = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-            csDesc._stage           = ShaderStage::Compute;
-            csDesc._targetFormat    = ShaderTargetFormat::DXIL_D3D12;
+            csDesc._filePath     = shaderPath;
+            csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
+            csDesc._stage        = ShaderStage::Compute;
+            csDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
+            RHIShaderRequest::appendDefines( csDesc, listDefine );
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess )
             {

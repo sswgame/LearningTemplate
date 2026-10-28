@@ -55,6 +55,14 @@ namespace sw
         return request;
     }
 
+    void RHIShaderRequest::appendDefines( ShaderCompileDesc& inoutDesc, const vector<string>& listDefine )
+    {
+        for ( const string& define : listDefine )
+        {
+            inoutDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
+        }
+    }
+
     ShaderCompileResult RHIShaderRequest::compile( const ShaderCompileDesc& desc )
     {
         if ( engine::areEngineServicesBound() )

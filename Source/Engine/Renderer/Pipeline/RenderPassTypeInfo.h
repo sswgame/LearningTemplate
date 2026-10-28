@@ -99,6 +99,9 @@ namespace sw
      */
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
+    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpuassert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGpuAssertTarget` 패스에만 붙는다. */
+    inline constexpr const utf8* kGpuAssertDefine = "SW_GPU_ASSERT_ENABLED";
+
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
     inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::CanvasMarker ) + 1;
 
@@ -159,6 +162,11 @@ namespace sw
          *          파이프라인에서 Swapchain 을 출력으로 적을 수 있는 패스는 이 비트가 있는 패스뿐이다(`RenderPipelineAsset::validate`).
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
+        /**
+         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGpuAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u3 에 건다.
+         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GpuAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
+         */
+        static constexpr uint32 kGpuAssertTarget = SW_BIT( 20 );
     };
 } // namespace sw
 
