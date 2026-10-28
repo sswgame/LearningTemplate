@@ -50,6 +50,8 @@ namespace sw::editor
      *          - `initialize` 가 씬을 만들고(`SceneManager::createPreviewScene`) 조명 환경을 스폰한다. `shutdown` 이 씬과 타깃을 놓으며, 창이 닫히기 전에 부른다.
      *          - `draw` 는 **보이는 프레임에만** 부른다. 부른 프레임만 호스트에 뷰가 전달되고, 부르지 않은 프레임에는 그리지 않는다. 렌더러도 그 씬의 리소스를 정리한다.
      *          - 카메라는 대상, 거리, 요, 피치로 정하는 오빗 카메라다. 창이 포커스이거나 마우스가 올라가 있으면 왼쪽 끌기로 회전하고 휠로 거리를 바꾼다.
+     *          - `setFreeCamera` 로 자유 카메라로 바꿀 수 있다 — 눈 위치와 요 · 피치로 정하고, 왼쪽 끌기는 그 자리에서 둘러보고 휠은 시선 방향으로 움직이며 가운데 끌기는 평행 이동한다.
+     *            카메라 프리셋(Fixed · Follow · Dolly) 창처럼 대상 둘레를 돌지 않는 시점을 보일 때 쓴다(`setOrbit`/`frameSphere` 가 오빗으로 되돌린다).
      *          - 결과 이미지는 한 프레임 늦다. 호스트가 다음 엔진 틱에 그리기 때문이다. 처음 열린 프레임은 클리어 색이다.
      */
     class SW_EDITOR_API EditorPreviewViewport
@@ -98,6 +100,14 @@ namespace sw::editor
 
         /** @brief 오빗 카메라를 정합니다. 각은 라디안입니다. */
         void setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch );
+        /**
+         * @brief 자유 카메라로 바꿉니다. @p eye 는 눈 위치, 각은 라디안이며 요 · 피치의 방향 규약은 오빗과 같다(요 0 · 피치 0 이면 -Z 를 본다).
+         * @param fieldOfViewY 세로 시야각(라디안). 0 이하이면 지금 값을 둔다.
+         */
+        void setFreeCamera( const float3& eye, float32 yaw, float32 pitch, float32 fieldOfViewY );
+        /** @brief 자유 카메라를 끄고 오빗 카메라로 돌아갑니다(대상 · 거리는 마지막 오빗 값이다). */
+        void clearFreeCamera() { _bFreeCamera = false; }
+        bool isFreeCamera() const { return _bFreeCamera; }
         /** @brief 반지름 @p radius 의 구가 화면에 들어오게 거리를 맞추고 대상을 @p center 로 둡니다. */
         void frameSphere( const float3& center, float32 radius );
         /** @brief 이 비율로 본 오빗 카메라의 뷰-투영 행렬과 눈 위치를 계산합니다. */
@@ -121,6 +131,7 @@ namespace sw::editor
         float2  _imagePosition;
         float2  _imageSize;
         float3  _orbitTarget;
+        float3  _freeEye; ///< 자유 카메라의 눈 위치(`_bFreeCamera` 일 때만 쓴다). 각은 오빗의 요 · 피치를 같이 쓴다
         float32 _orbitDistance;
         float32 _orbitYaw;
         float32 _orbitPitch;
@@ -128,6 +139,7 @@ namespace sw::editor
         uint32  _sceneKey;
         uint32  _targetID;
         uint32  _submittedFrameCount;
-        bool    _bOwnsScene; ///< `initialize` 가 만든 씬이다(`attachScene` 으로 붙인 씬은 거짓 — 내리지 않는다)
+        bool    _bFreeCamera; ///< 자유 카메라 모드다(`setFreeCamera`)
+        bool    _bOwnsScene;  ///< `initialize` 가 만든 씬이다(`attachScene` 으로 붙인 씬은 거짓 — 내리지 않는다)
     };
 } // namespace sw::editor

@@ -46,6 +46,8 @@ namespace sw::editor
             static constexpr float32 kMinDistance           = 0.2f;
             static constexpr float32 kMaxPitch              = 1.5f;
             static constexpr float32 kRotateRadiansPerPixel = 0.01f;
+            /** @brief 자유 카메라에서 휠 한 칸이 시선 방향으로 옮기는 거리(m)입니다. */
+            static constexpr float32 kFreeMoveMetersPerWheel = 0.5f;
             /** @brief 스크린샷을 찍기 전에 그릴 프레임 수입니다 — 첫 프레임은 클리어 색이고 렌더러 · PSO 를 준비하는 데 몇 프레임 걸린다. */
             static constexpr uint32 kScreenshotWarmupFrames = 30;
         };
@@ -61,6 +63,7 @@ namespace sw::editor
         , _imagePosition{}
         , _imageSize{}
         , _orbitTarget{ 0.0f, 0.0f, 0.0f }
+        , _freeEye{ 0.0f, 0.0f, 0.0f }
         , _orbitDistance{ EditorPreviewViewportInternal::kDefaultDistance }
         , _orbitYaw{ EditorPreviewViewportInternal::kDefaultYaw }
         , _orbitPitch{ EditorPreviewViewportInternal::kDefaultPitch }
@@ -68,6 +71,7 @@ namespace sw::editor
         , _sceneKey{ kInvalidSceneKey }
         , _targetID{ 0 }
         , _submittedFrameCount{ 0 }
+        , _bFreeCamera{ false }
         , _bOwnsScene{ false }
     {
     }
@@ -134,10 +138,21 @@ namespace sw::editor
 
     void EditorPreviewViewport::setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch )
     {
+        _bFreeCamera   = false;
         _orbitTarget   = target;
         _orbitDistance = MathUtil::max( EditorPreviewViewportInternal::kMinDistance, distance );
         _orbitYaw      = yaw;
         _orbitPitch    = MathUtil::clamp( pitch, -EditorPreviewViewportInternal::kMaxPitch, EditorPreviewViewportInternal::kMaxPitch );
+    }
+
+    void EditorPreviewViewport::setFreeCamera( const float3& eye, float32 yaw, float32 pitch, float32 fieldOfViewY )
+    {
+        _bFreeCamera = true;
+        _freeEye     = eye;
+        _orbitYaw    = yaw;
+        _orbitPitch  = MathUtil::clamp( pitch, -EditorPreviewViewportInternal::kMaxPitch, EditorPreviewViewportInternal::kMaxPitch );
+        if ( fieldOfViewY > 0.0f )
+            _fieldOfViewY = fieldOfViewY;
     }
 
     void EditorPreviewViewport::frameSphere( const float3& center, float32 radius )
@@ -158,9 +173,11 @@ namespace sw::editor
     {
         const float3 toCamera{ MathUtil::sin( _orbitYaw ) * MathUtil::cos( _orbitPitch ), MathUtil::sin( _orbitPitch ),
                                MathUtil::cos( _orbitYaw ) * MathUtil::cos( _orbitPitch ) };
-        outEye        = _orbitTarget + toCamera * _orbitDistance;
-        outView       = float4x4::makeLookAt( outEye, _orbitTarget, float3{ 0.0f, 1.0f, 0.0f } );
-        outProjection = float4x4::makePerspectiveFieldOfView( _fieldOfViewY, aspectRatio, EditorPreviewViewportInternal::kNearPlane, EditorPreviewViewportInternal::kFarPlane );
+        // 자유 카메라는 눈이 고정이고 오빗 대상 자리에 눈 + 시선(= -toCamera)을 둔다.
+        outEye                  = _bFreeCamera ? _freeEye : _orbitTarget + toCamera * _orbitDistance;
+        const float3 lookTarget = _bFreeCamera ? _freeEye - toCamera : _orbitTarget;
+        outView                 = float4x4::makeLookAt( outEye, lookTarget, float3{ 0.0f, 1.0f, 0.0f } );
+        outProjection           = float4x4::makePerspectiveFieldOfView( _fieldOfViewY, aspectRatio, EditorPreviewViewportInternal::kNearPlane, EditorPreviewViewportInternal::kFarPlane );
     }
 
     void EditorPreviewViewport::draw( const float2& size, bool bInputActive )
@@ -196,7 +213,13 @@ namespace sw::editor
                                                -EditorPreviewViewportInternal::kMaxPitch, EditorPreviewViewportInternal::kMaxPitch );
             }
             // 씬 뷰와 같은 휠 줌과 가운데 단추 팬이다(`EditorOrbitMath`). 궤도 중심이 같이 움직여 이어지는 회전이 같은 점을 돈다.
-            if ( pointer._wheel != 0.0f )
+            if ( pointer._wheel != 0.0f && _bFreeCamera )
+            {
+                // 자유 카메라의 휠은 시선 방향으로 움직인다(줌인 = 앞으로, 휠 한 눈금 고정 거리).
+                const float3 forward{ -MathUtil::sin( _orbitYaw ) * MathUtil::cos( _orbitPitch ), -MathUtil::sin( _orbitPitch ), -MathUtil::cos( _orbitYaw ) * MathUtil::cos( _orbitPitch ) };
+                _freeEye += forward * ( pointer._wheel * EditorPreviewViewportInternal::kFreeMoveMetersPerWheel );
+            }
+            else if ( pointer._wheel != 0.0f )
                 _orbitDistance = EditorOrbitMath::dolly( _orbitDistance, pointer._wheel, EditorPreviewViewportInternal::kMinDistance );
             if ( pointer.isDown( EditorMouseButton::Middle ) )
             {
@@ -205,7 +228,10 @@ namespace sw::editor
                 const float3  right = float3{ forward._z, 0.0f, -forward._x }.normalize();
                 const float3  up{ forward._y * right._z, forward._z * right._x - forward._x * right._z, -forward._y * right._x };
                 const float32 scale = EditorOrbitMath::panWorldPerPixel( _orbitDistance, _fieldOfViewY, size._y );
-                _orbitTarget += right * ( -pointer._delta._x * scale ) + up * ( pointer._delta._y * scale );
+                const float3  pan   = right * ( -pointer._delta._x * scale ) + up * ( pointer._delta._y * scale );
+                _orbitTarget += pan;
+                if ( _bFreeCamera )
+                    _freeEye += pan;
             }
         }
 
