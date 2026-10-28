@@ -47,6 +47,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.AppRun import (kBackendSwitch, kStartupRe, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall,  # noqa: E402
                            runApp, splitRunSeconds)
 from common.ProcessLimits import ProcessLimits  # noqa: E402
+from common.QualityPreset import describeQualityMismatch, writePresetSettingsFile  # noqa: E402
 from common.ScenarioFile import readLoadSpec  # noqa: E402
 
 kLoadFolder = "Test/Load"
@@ -249,17 +250,6 @@ def addTimingMetricsInternal(metrics: dict[str, float], seconds: float) -> None:
         metrics["measure_seconds"] = measureSeconds
 
 
-def readScalabilityPresetInternal(repositoryRoot: Path, quality: str) -> dict[str, str]:
-    """엔진 설정 스키마(`Resource/engine/settings/engine.settings.xml` 의 <Scalability>)에서 품질 프리셋이 묶는 설정 값들 — 프리셋 표를 여기 다시 적지 않는다."""
-    root = ElementTree.parse(repositoryRoot / "Resource/engine/settings/engine.settings.xml").getroot()
-    for scalability in root.iter("Scalability"):
-        for preset in scalability.findall("Preset"):
-            if preset.get("name") == quality:
-                mapValue = {value.attrib["setting"]: value.attrib["value"] for value in preset.findall("Value")}
-                return {scalability.attrib["setting"]: quality, **mapValue}
-    raise ValueError(f"quality '{quality}' is not a preset in engine.settings.xml")
-
-
 def makeAppArgumentsInternal(declaration: LoadDeclaration, profile: HardwareProfile, backend: str, gameTable: dict, settingsPath: Path) -> list[str]:
     data = profile.data
     listArgument = [f"-game={declaration.gameName}", kBackendSwitch[backend], f"-scenario={declaration.resourceID}",
@@ -301,7 +291,7 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
         settingsPath = Path(temporaryFolder) / "usersettings.json"
         quality = qualityOverride or profile.data["quality"]
         if quality and quality != "auto":
-            settingsPath.write_text(json.dumps({"version": 1, "values": readScalabilityPresetInternal(getProjectRoot(), quality)}) + "\n", encoding="utf-8")
+            writePresetSettingsFile(getProjectRoot(), quality, settingsPath)
         listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath) + list(listExtraArgument or [])
         measurement.command = [str(appPath), *listArgument]
         timeoutSeconds = declaration.durationSeconds * 2.0 + 240.0
@@ -484,9 +474,12 @@ def makeToleranceInternal(metricName: str) -> tuple[float, float] | None:
     return None
 
 
-def judgeBaseline(entry: dict | None, summary: dict[str, dict[str, float]]) -> tuple[list[str], list[str]]:
+def judgeBaseline(entry: dict | None, summary: dict[str, dict[str, float]], quality: str) -> tuple[list[str], list[str]]:
     if entry is None:
         return [], ["no baseline for this machine - record one with --record"]
+    mismatch = describeQualityMismatch(entry.get("quality"), quality)
+    if mismatch:
+        return [mismatch], []   # 다른 품질로 뜬(또는 품질을 모르는) 기준과 견주면 회귀도 개선도 아니다 — 거절
     listRegression: list[str] = []
     listNote: list[str] = []
     for metricName, baseline in sorted(entry.get("metrics", {}).items()):
@@ -550,7 +543,7 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
     machineKey = makeMachineKey()
     baselineKey = f"{scenarioName}|{profileName}|{backend}{f'|{qualityOverride}' if qualityOverride else ''}"
     machineEntry = catalog.baselines["machines"].setdefault(machineKey, {})
-    baselineFailure, baselineNote = judgeBaseline(machineEntry.get(baselineKey), summary)
+    baselineFailure, baselineNote = judgeBaseline(machineEntry.get(baselineKey), summary, qualityOverride or profile.data["quality"])
     if not bJudged:
         budgetNote.append(f"{buildType} build - budgets and baselines are reported, not judged (Release only)")
     listVerdictFailure = listFailure + (budgetFailure + baselineFailure if bJudged else [])
@@ -565,7 +558,7 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
     }
     if args.record and not listFailure:
         keep = {name: values for name, values in summary.items() if makeToleranceInternal(name) is not None or name in budget}
-        machineEntry[baselineKey] = {"recorded": result["time"], "commit": result["commit"], "build": tree.name, "runs": len(listMeasurement),
+        machineEntry[baselineKey] = {"recorded": result["time"], "quality": result["quality"], "commit": result["commit"], "build": tree.name, "runs": len(listMeasurement),
                                      "emulated": profile.bEmulated, "metrics": keep}
     for line in budgetNote + baselineNote:
         print(f"[Load] note {label}: {line}", flush=True)

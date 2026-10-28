@@ -24,6 +24,7 @@ from common.AppRun import AppRunResult, kAppRhiUnusableExitCode, readRhiUnusable
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
 from common.AppRun import kStartupRe, splitRunSeconds  # noqa: E402
+from common.QualityPreset import describeQualityMismatch, readScalabilityPreset, readTableQuality, writePresetSettingsFile  # noqa: E402
 from qa.GoldenImages import formatCaseLine  # noqa: E402
 from qa.PerfRegression import compareInternal  # noqa: E402
 
@@ -222,6 +223,44 @@ class GameTableTest(unittest.TestCase):
             self.assertEqual(game["arguments"], record["capture"]["arguments"], referencePath)
             self.assertEqual(game["settled_frames"], record["capture"]["settled_frames"], referencePath)
             self.assertTrue(referencePath.with_suffix(".png").is_file(), referencePath)
+
+
+class QualityPresetTest(unittest.TestCase):
+    """골든 · 기준을 뜨는 러너는 품질 프리셋을 표에서 읽어 설정 파일로 명시하고, 기준의 프리셋과 다르거나 없으면 거절한다."""
+
+    def testTableNamesAnExistingPreset(self) -> None:
+        table = loadGameTable(kRepositoryRoot)
+        self.assertEqual("high", readTableQuality(table))   # 스키마 기본값이 high 라 기존 골든의 그림이 바뀌지 않는다
+        self.assertEqual("high", readScalabilityPreset(kRepositoryRoot, readTableQuality(table))["graphics.quality"])
+
+    def testTableWithoutQualityStopsInsteadOfFallingBack(self) -> None:
+        with self.assertRaises(KeyError):
+            readTableQuality({"games": {}})
+
+    def testUnknownPresetIsAnError(self) -> None:
+        with self.assertRaises(ValueError):
+            readScalabilityPreset(kRepositoryRoot, "no-such-preset")
+
+    def testWrittenSettingsFileCarriesThePresetAndIsPassedToApp(self) -> None:
+        import json
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "usersettings.json"
+            listArgument = writePresetSettingsFile(kRepositoryRoot, "low", path)
+            self.assertEqual([f"-gv_userSettingsFile={path.as_posix()}"], listArgument)
+            document = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual("low", document["values"]["graphics.quality"])
+            self.assertEqual("0.75", document["values"]["graphics.renderScale"])
+
+    def testMismatchOrMissingRecordedQualityIsRejected(self) -> None:
+        self.assertEqual("", describeQualityMismatch("high", "high"))
+        self.assertIn("'low'", describeQualityMismatch("low", "high"))
+        self.assertIn("does not record", describeQualityMismatch(None, "high"))
+
+    def testLoadBaselineRejectsOtherQuality(self) -> None:
+        from qa.Load import judgeBaseline
+        listRegression, _ = judgeBaseline({"quality": "low", "metrics": {}}, {}, "high")
+        self.assertEqual(1, len(listRegression))
+        self.assertEqual(([], []), judgeBaseline({"quality": "high", "metrics": {}}, {}, "high"))
 
 
 if __name__ == "__main__":
