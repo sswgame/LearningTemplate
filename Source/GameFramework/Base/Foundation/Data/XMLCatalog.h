@@ -64,7 +64,6 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. */
         [[nodiscard]] bool loadFromResource( const ResourceID& resourceID )
         {
-            const string_view path = resourceID.view();
             return XMLCatalogLoader::loadFile( this, &XMLCatalog::readRoot, resourceID, TCatalog::kXMLRootName );
         }
         /** @brief XML 문자열을 읽습니다. 테스트와 에디터 미리보기가 씁니다. @p sourceName 은 경고에 쓰는 이름입니다. */

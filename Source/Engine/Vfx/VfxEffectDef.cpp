@@ -22,8 +22,7 @@ namespace sw
             /** @brief 효과 파일을 읽는 로더 모양입니다(데이터 종류 표가 부릅니다). */
             [[nodiscard]] static bool loadKind( const ResourceID& id )
             {
-                const string& resourceID = id.str();
-                VfxEffectDef  effect;
+                VfxEffectDef effect;
                 return effect.loadFromResource( id );
             }
 

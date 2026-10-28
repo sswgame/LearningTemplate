@@ -46,7 +46,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool AutosaveSettings::loadFromResource( const ResourceID& resourceID )
     {
-        const string_view path = resourceID.view();
         return GameDataXML::loadFile( *this, &AutosaveSettings::loadRoot, resourceID, "Autosave" );
     }
 

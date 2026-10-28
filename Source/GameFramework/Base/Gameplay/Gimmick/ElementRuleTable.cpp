@@ -192,10 +192,9 @@ namespace sw
 
     bool ElementRuleTable::loadFromResource( const ResourceID& resourceID )
     {
-        const string_view path = resourceID.view();
-        XMLDocument       doc;
-        XMLNode           root;
-        string            sourceName;
+        XMLDocument doc;
+        XMLNode     root;
+        string      sourceName;
         if ( XMLReadUtil::loadRootOrWarn( doc, resourceID, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
             return false;
         return loadRoot( root, sourceName );

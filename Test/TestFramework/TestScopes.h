@@ -289,7 +289,8 @@ namespace test
         // 단언이 멈추지 않는 구성에는 가로채기 창구(`sw::internal::beginAssertCapture`)가 없다 — 이 스코프는 아무것도 하지 않는다.
         static constexpr bool kAssertsAreActive = false;
 
-        ScopedAssertCapture()                                        = default;
+        ScopedAssertCapture() = default;
+        ~ScopedAssertCapture() {} // 사용자 정의 소멸자 — Debug 와 같은 RAII 가드로 보여 이름만 둔 스코프가 -Wunused-variable 에 걸리지 않는다
         ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
         ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
 

@@ -69,7 +69,6 @@ namespace sw
 {
     XMLRootStatus XMLReadUtil::loadRoot( XMLDocument& outDocument, const ResourceID& resourceID, const utf8* pRootName, XMLNode& outRoot, string* pOutAbsPath )
     {
-        const string_view path = resourceID.view();
         if ( outDocument.loadResource( resourceID, pOutAbsPath ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );

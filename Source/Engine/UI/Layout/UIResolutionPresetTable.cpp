@@ -13,7 +13,6 @@ namespace sw
     {
         [[nodiscard]] bool loadTable( const ResourceID& id )
         {
-            const string&           resourceID = id.str();
             UIResolutionPresetTable table;
             return table.loadFromResource( id );
         }
