@@ -133,6 +133,7 @@ namespace sw::editor
         , _presetStore{}
         , _port{ 0 }
         , _debugChannelPort{ 0 }
+        , _bReplayServer{ false }
         , _bMergedTraceUnopened{ false }
     {
     }
@@ -249,6 +250,31 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorNetPlaySession::startReplayServer( const string& intentFilePath )
+    {
+        if ( intentFilePath.empty() )
+        {
+            SW_LOG_WARNING( "A replay server needs an intent recording (.swintent) path" );
+            return false;
+        }
+        EditorNetPlaySettings settings = _pendingSettings;
+        settings._mode                 = EditorNetMode::DedicatedServer;
+        settings._clientCount          = 0; // 클라이언트 없이 서버 하나만 — 의도 재생이 폰을 움직이고 에디터는 그 서버만 본다
+        _bReplayServer                 = true;
+        const bool bStarted            = start( settings );
+        _bReplayServer                 = false;
+        if ( bStarted == false )
+            return false;
+        // 서버는 멈춘 채 떴다(`-gv_serverStartPaused`). 틱 0 에서 재생을 건다 — 다음 `step N` 이 목표 틱까지 정확히 진행한다.
+        if ( sendServerCommand( "intent.play " + intentFilePath ) == false )
+        {
+            SW_LOG_ERROR( "Could not send intent.play to the replay server" );
+            (void)stop();
+            return false;
+        }
+        return true;
+    }
+
     bool EditorNetPlaySession::start( const EditorNetPlaySettings& settings )
     {
         if ( isRunning() )
@@ -256,7 +282,7 @@ namespace sw::editor
             SW_LOG_WARNING( "A multiplayer session is already running - stop it first" );
             return false;
         }
-        if ( settings._mode == EditorNetMode::Standalone || settings._clientCount < 1 )
+        if ( settings._mode == EditorNetMode::Standalone || ( settings._clientCount < 1 && _bReplayServer == false ) )
         {
             SW_LOG_WARNING( "Net mode %# with %# player(s) needs no processes - play in the editor instead", toString( settings._mode ), settings._clientCount );
             return false;
@@ -318,6 +344,8 @@ namespace sw::editor
             _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
             vector<string> listServerArgument{ "-gv_netListenPort=" + port, "-gv_debugChannelPort=" + to_string( _debugChannelPort ),
                                                "-gv_debugChannelToken=" + _debugChannelToken, "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) };
+            if ( _bReplayServer )
+                listServerArgument.push_back( "-gv_serverStartPaused=1" );
             bLaunched = launchChild( "Server", serverPath, std::move( listServerArgument ), makeTracePath( "server" ) );
         }
         else

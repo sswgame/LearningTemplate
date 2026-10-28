@@ -33,6 +33,8 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
+            /** @brief 재생 서버 진행 틱 수 칸의 너비(글자 크기 배수)입니다. */
+            static constexpr float32 kStepFieldWidthInFonts = 6.0f;
             /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`DebugReplyLine::kMaxBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
             static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
@@ -247,6 +249,11 @@ namespace sw::editor
         void startObjectCompare();
         /** @brief 기다리는 클라이언트의 오브젝트 해시 답이 왔으면 담고, 두 칸이 모두 모였으면 견줍니다. 프레임마다 부릅니다. */
         void pollObjectReplies();
+        /**
+         * @brief 되감기 줄(서버 디버깅 S7 · O7)입니다. 세션이 없으면 `.swintent` 로 멈춘 재생 서버를 띄우고, 재생 서버가 떠 있으면 `step N` 으로 한 틱씩 진행합니다.
+         * @details 어긋난 틱을 안 뒤 새 서버를 틱 0 에서 멈춘 채 띄워(`startReplayServer`) 그 틱까지 정확히 진행하면, 같은 틱에서 Which objects differ · Inspector 로 볼 수 있다.
+         */
+        void drawReplay();
 
         fixed_string<constant::kMaxBuffer64>  _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
         fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
@@ -262,6 +269,8 @@ namespace sw::editor
         Stopwatch                             _arrPendingWatch[EditorStateHashCompare::kSourceCount];         ///< 슬롯마다 이력 질의를 보낸 뒤 지난 시간 — 상한(`getReplyTimeoutMilliseconds`)을 넘으면 오류로 끝낸다
         Stopwatch                             _objectWatch;                                                   ///< 오브젝트 해시 질의를 보낸 뒤 지난 시간(위와 같다)
         string                                _errorText;                                                     ///< 마지막 질의 오류(시간 초과 포함). 새 질의가 시작되면 비운다
+        fixed_string<constant::kMaxPathSize>  _arrReplayPath;                                                 ///< 재생할 `.swintent` 경로(편집 필드)
+        int32                                 _replayStepCount;                                               ///< 재생 서버를 한 번에 진행할 틱 수(편집 필드)
     };
 } // namespace sw::editor
 
@@ -282,6 +291,8 @@ namespace sw::editor
         , _arrPendingWatch{}
         , _objectWatch{}
         , _errorText{}
+        , _arrReplayPath{}
+        , _replayStepCount{ 1 }
     {
         static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
     }
@@ -498,6 +509,27 @@ namespace sw::editor
         ImGui::PopID();
     }
 
+    void MultiplayerSyncTab::drawReplay()
+    {
+        EditorNetPlaySession& session = MultiplayerSyncTabInternal::getSession();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kPathWidthInFonts );
+        ImGui::InputTextWithHint( "##SyncReplayPath", "<name>.swintent", _arrReplayPath.data(), _arrReplayPath.capacity() );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Replay server" ) );
+        ImGui::BeginDisabled( session.isRunning() || _arrReplayPath.empty() );
+        if ( ImGui::Button( "Replay server" ) && session.startReplayServer( _arrReplayPath.c_str() ) == false )
+            _errorText = "The replay server could not start - see the Output Log";
+        ImGui::EndDisabled();
+        // 한 틱씩 진행은 떠 있는 서버가 있을 때만 — 전용 서버는 멈춘 채 떠서 `step` 만큼만 돈다.
+        ImGui::BeginDisabled( session.isRunning() == false );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kStepFieldWidthInFonts );
+        ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
+        _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Step" ) );
+        if ( ImGui::Button( "Step" ) && session.sendServerCommand( "step " + to_string( _replayStepCount ) ) == false )
+            _errorText = "The server did not take the step command";
+        ImGui::EndDisabled();
+    }
+
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
         pollClientReplies();
@@ -519,6 +551,7 @@ namespace sw::editor
             drawSource( sourceIndex );
         }
         ImGui::Separator();
+        drawReplay();
         if ( _errorText.empty() == false )
             EditorThemeUtil::textError( _errorText.c_str() );
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();

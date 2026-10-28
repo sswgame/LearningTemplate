@@ -115,6 +115,12 @@ namespace sw::editor
         /** @brief 프로세스들을 실행합니다. 이미 실행 중이거나 하나라도 실행하지 못하면 이미 실행한 것을 종료하고 false 를 반환합니다. 이유는 로그에 남습니다. */
         [[nodiscard]] bool start( const EditorNetPlaySettings& settings );
         /**
+         * @brief 서버 하나만 멈춘 채(`-gv_serverStartPaused=1`) 띄우고 `intent.play <파일>` 을 겁니다(서버 디버깅 S7 되감기 · O7 운영에서 개발로).
+         * @details 클라이언트는 없다. 서버가 틱 0 에서 멈춰 있으므로 부른 쪽이 `sendServerCommand( "step N" )` 으로 목표 틱까지 정확히 진행한다.
+         *          구성은 `getSettings` 를 따르되 모드는 전용 서버로 고정한다. 실패하면 띄운 프로세스를 끄고 false 입니다.
+         */
+        [[nodiscard]] bool startReplayServer( const string& intentFilePath );
+        /**
          * @brief 모든 프로세스를 정상 종료시키고(시한을 넘으면 강제 종료) 읽기 스레드를 정리합니다. 트레이스를 켰으면 합칩니다.
          * @return 합친 트레이스 경로입니다. 트레이스가 꺼져 있거나 둘 미만이면 빈 문자열입니다.
          */
@@ -207,6 +213,7 @@ namespace sw::editor
         EditorNetPlayPresetStore         _presetStore;
         uint16                           _port;
         uint16                           _debugChannelPort;     ///< 전용 서버의 디버그 채널 TCP 포트. 채널이 없으면 0
+        bool                             _bReplayServer;        ///< `startReplayServer` 가 `start` 를 부르는 동안만 참 — 클라이언트 0 을 허용하고 서버를 멈춘 채 띄운다
         bool                             _bMergedTraceUnopened; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
     };
 } // namespace sw::editor

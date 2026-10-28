@@ -62,6 +62,12 @@ namespace sw
     /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
     SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
+    /**
+     * @brief `-gv_serverStartPaused=1`: 첫 틱을 돌기 전에 멈춘 채로 기동합니다(서버 디버깅 S7 되감기).
+     * @details 명령(`intent.play` · `step N`)은 기동 뒤 표준 입력이나 디버그 채널로 오므로 그 사이 틱이 돌면 목표 틱에서 정확히 멈출 수 없다. 멈춘 채 뜨면 틱 0 에서
+     *          재생을 걸고 `step` 으로 한 틱씩 진행할 수 있다(언리얼 `-pause` · 유니티 Play Mode 의 Pause On Start 와 같은 쓰임). Shipping 에는 없다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_serverStartPaused, false, "첫 틱 전에 멈춘 채 기동 (재생 서버를 틱 0 에서 잡는다)" );
 } // namespace sw
 
 namespace sw
@@ -235,6 +241,13 @@ namespace sw
             return false;
         }
 
+#if SW_DEV_COMMANDS_ENABLED
+        if ( gv_serverStartPaused )
+        {
+            _bPaused = SW_TRUE;
+            SW_LOG_INFO( "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount );
+        }
+#endif
         _bReady            = SW_TRUE;
         _loadWindowStartMs = ServerAppInternal::nowMonotonicMs();
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.

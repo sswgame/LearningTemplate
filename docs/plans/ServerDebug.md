@@ -14,7 +14,7 @@
 | S4 | Conditions 탭 — 프리셋 · 클라이언트별 슬라이더 · 끊기 · 재접속 · 스파이크 | 끝 |
 | S5 | Profiler 탭 — 바이트 · 패킷 · 재전송 · RTT · 손실 시간축, 메시지 종류별 비중, 복제 빈도 | 끝(남은 것은 아래) |
 | S6 | 권위 겹쳐 보기(서버 위치 고스트) | 끝(눈 확인 · 일부 빌드 전) |
-| S7 | Sync 탭 — 틱별 해시 이력 두 벌과 처음 어긋난 틱 | 끝(되감기는 남음) |
+| S7 | Sync 탭 — 틱별 해시 이력 두 벌과 처음 어긋난 틱 | 끝(되감기 코드 끝, 빌드 전) |
 | S8 | In process 탭 — 한 프로세스 가상 서버 | 끝(실제 게임 구현은 남음) |
 | O1 | 사고 기록 — 프레임 이력 링 버퍼 · 느린 틱 덤프 | 코드 끝, 빌드 전. 크래시 폴더 묶기 · 서버용 동의 남음 |
 | O2 | 서버 로그 JSON lines | 끝(빌드 전) |
@@ -22,7 +22,7 @@
 | O4 | 관리 채널(재시작 없는 설정 · 제재 · 점검) | 남음(S3 디버그 채널의 Shipping 판 · 인증을 먼저 정한 뒤) |
 | O5 | 부하 기준선 | 코드 끝, 빌드 전. 봇 1000 · 5000 측정 남음 |
 | O6 | 배포(컨테이너 · 쿠버네티스 예시) | 일부(Agones · 빌드 판 협상 · 이중 키 기간 남음) |
-| O7 | 운영에서 개발로 — 운영 서버의 의도 기록(`.swintent`)을 Sync 탭에서 재생 | 남음(S7 되감기에 기댐) |
+| O7 | 운영에서 개발로 — 운영 서버의 의도 기록(`.swintent`)을 Sync 탭에서 재생 | 코드 끝, 빌드 전(S7 되감기와 같은 길) |
 
 **첫 일:** 빌드한 뒤 S5~S7 의 빌드 전 항목을 확인한다. 순서는 S6 · S7 남은 것 → S8 남은 것 → S5 남은 것이고, 운영 단위는 O1 → O2 + O3 → O5 → O4 → O6 → O7(운영 가치 ÷ 비용).
 
@@ -60,7 +60,7 @@
 - **한 줄 답 상한:** POSIX 파이프 줄 버퍼(4096)가 가장 작아 3500 을 쓰기 · 읽기가 같이 본다. 오브젝트가 많아 `state.objectline` 이 넘으면 클라이언트 칸은 쓸 수 없다.
 - **키트별 해시(빌드 전):** 키트가 `IStateHashProvider` 를 `StateHashHistory::registerChannel( 이름, &제공자 )` 로 등록하면(8 줄까지, 구독이 풀려도 이력은 남음) 같은 호스트 틱에 제공자를 부른다. `destruction` 줄은 `DestructionNetSession`, `rollback` 줄은 `RollbackSession`(틱 = 프레임 번호, 쓰는 게임은 아직 없음)이 낸다. 읽기 명령은 줄 이름을 받고 Sync 탭의 줄 이름 칸이 고른다. 오브젝트별 짚기는 씬 줄만이다.
 - **한계:** 클라이언트 질의가 오류 응답을 받으면 탭이 답을 기다린 채 남는다(시간 초과 없음).
-- **되감기(못 함):** 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행하려 했다. 재생 바닥(`IntentPlayback` · `intent.play` · `step N`)은 있으나 새 서버를 처음부터 멈춘 채로 띄우는 길이 없어(명령은 기동 뒤 표준 입력으로 가므로 그 사이 틱이 돈다) 목표 틱에서 정확히 멈출 수 없다. 다음 일: `Source/Server` 에 시작 일시정지 인자를 더하고, 에디터가 재생 서버 하나를 따로 띄워 `intent.play` → `step` 한다.
+- **되감기(빌드 전):** 의도 기록(`.swintent`)으로 새 서버를 틱 0 에서 멈춘 채 띄워 목표 틱까지 한 틱씩 진행한다. `Source/Server` 가 `-gv_serverStartPaused=1` 로 첫 틱 전에 멈춘 채 뜨고(Dev 전용, 서버 `pause` 와 같은 상태), `EditorNetPlaySession::startReplayServer( .swintent 경로 )` 가 클라이언트 없는 전용 서버 하나를 그 인자로 띄워 `intent.play` 를 걸며, Sync 탭의 "Replay server" · "Step" 줄이 `step N` 을 보낸다. 재생 서버에 디버그 채널이 같이 열려 같은 틱에서 Which objects differ · Inspector 로 볼 수 있다. 운영 서버가 `intent.record` · `intent.save` 로 남긴 파일도 같은 길이다(O7). 언리얼 `-pause` · 유니티 Play Mode 의 Pause On Start 와 같은 쓰임이다. 남은 것: 재생 씬이 기록 때와 같은 씬 · 같은 고정 프레임 시간이어야 같은 궤적이라는 한계(`ControlIntentHistory`)를 눈으로 확인한다.
 
 ## S8 — 한 프로세스 가상 서버
 
@@ -84,7 +84,7 @@
 | O4 관리 채널 | 하지 않음 | 재시작 없이 설정 바꾸기 · 접속자 목록 · 내보내기 · 제재 · 점검 모드 · 공지. S3 의 디버그 채널과 같은 채널 · 토큰 · 루프백 규칙을 쓴다(중복을 만들지 않는다). 그 채널의 Shipping 판 · 인증을 먼저 정한 뒤 |
 | O5 부하 기준선 | 틱 사용률 지표 `server_tick_utilization_ratio`(`_tickLoadWarnPercent` 를 넘으면 1 분에 한 번 경고), 대시보드 예시 `deploy/dashboards/server-overview.json` | Release 서버 한 대에 봇 1000 · 5000 으로 수용 연결 수 · 틱 p99 · 메시지 p99 를 재서 기준선을 남긴다 |
 | O6 배포 | `deploy/docker/Dockerfile`, `deploy/kubernetes/server.yaml`(`/readyz` · `/healthz`, 종료 유예, 비밀은 `secretKeyRef`), `deploy/README.md`(종료 · 드레인, 비밀 교체 절차) | Agones 연결(클라우드 계정 · SDK 필요), 빌드 판 협상(프로토콜 판이 다르면 "업데이트 필요"), 서명 키 이중 키 기간 |
-| O7 운영에서 개발로 | 하지 않음 | 운영 서버가 기록한 `.swintent` 를 Sync 탭에서 열어 같은 틱을 재생. S7 의 되감기가 서야 한다 |
+| O7 운영에서 개발로 | Sync 탭의 Replay server 줄(S7 되감기)이 운영 서버가 기록한 `.swintent` 를 멈춘 서버에서 재생한다(빌드 전) | 운영 서버가 의도를 기록해 파일로 내는 길(`intent.record` · `intent.save` 를 관리 채널로 부르기)은 O4 가 선 뒤 |
 
 ## 지키는 것
 
