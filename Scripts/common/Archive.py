@@ -123,27 +123,6 @@ def extractZipSafe(archivePath: Path, destPath: Path) -> None:
             zipHandle.extract(info, destResolved)
 
 
-def extractTarSafe(archivePath: Path, destPath: Path, *, mode: str = "r:*") -> None:
-    """
-    Tar 아카이브(.tar.gz, .tar.xz 등)를 대상 디렉터리에 안전하게 압축 해제합니다.
-
-    Args:
-        archivePath: 해제할 Tar 파일 경로
-        destPath: 저장할 대상 디렉터리 경로
-        mode: tarfile 모드 (기본값: "r:*")
-    """
-    import tarfile  # 풀 때만
-    destPath.mkdir(parents=True, exist_ok=True)
-    destResolved = destPath.resolve()
-    with tarfile.open(archivePath, mode) as tarHandle:
-        members = [
-            member
-            for member in tarHandle.getmembers()
-            if isSafeArchiveMember(member.name, destResolved)
-        ]
-        tarHandle.extractall(path=destResolved, members=members)
-
-
 def ensureCachedDownload(url: str,
                          destPath: Path,
                          *,

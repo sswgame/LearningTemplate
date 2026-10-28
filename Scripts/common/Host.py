@@ -16,7 +16,7 @@ from .ClangFormat import resolveClangFormat
 from .Constants import kCppAllExtensions
 from .ExitCode import ExitCode
 from .Parallel import runUntilNonZero
-from .Paths import getProjectRoot, normalizePath
+from .Paths import getProjectRoot
 from .Process import ProcessResult, runProcess
 
 

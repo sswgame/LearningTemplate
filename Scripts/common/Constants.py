@@ -35,24 +35,15 @@ kFileModuleBuildStamp = "ModuleBuild.stamp"
 kDirBinGames = "Games"
 # 사람이 쓰는 에디터 도구 값 — 기본값과 다른 값이 있을 때만 만든다(없으면 기본값).
 kFileRuntimeEditorToolDefaults = "Config/Editor/editortooldefaults.json"
-kFilePackConfig = "Config/Engine/PackConfig.json"
 
 # =============================================================================
 # --- 2. Project Source & Reflection Architecture (소스 레이아웃 & 리플렉션 SSOT) -
 # =============================================================================
 
 kDirSourceEngine = "Source/Engine"
-kDirSourceGames = "Source/Games"
-kDirSourceGameFramework = "Source/GameFramework"
-kDirSourceApp = "Source/App"
-kDirSourceModuleHost = "Source/ModuleHost"
 kDirSourceEditor = "Source/Editor"
-kDirSourceCore = "Source/Core"
-kDirSourceRuntimeAPI = "Source/RuntimeAPI"
-kDirSourceServer = "Source/Server"
 
 kFileReflectBuiltins = "Source/Engine/Reflection/ReflectBuiltins.xxx"
-kFileEngineServices = "Engine/Common/EngineServices.h"
 kFileAnnotationMeta = "Source/Core/Predefined/AnnotationMeta.txt"
 kFileTplBuiltinHeader = "BuiltinFileHeader.tpl"
 kFileTplBuiltinRegistrar = "BuiltinTypeRegistrar.tpl"
@@ -61,8 +52,7 @@ kFileTplBuiltinFooter = "BuiltinFileFooter.tpl"
 kTargetGameModule = "SWGame"
 kTargetEditorModule = "EditorModule"
 
-# C++ 파일 확장자 집합 (헤더 / 소스 / 전체)
-kCppHeaderExtensions: set[str] = {".h", ".hpp", ".inl"}
+# C++ 파일 확장자 집합 (소스 / 전체)
 kCppSourceExtensions: set[str] = {".c", ".cpp", ".cc", ".cxx"}
 kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"}
 #: 셰이더 소스 확장자 — 셰이더를 고르는 스크립트는 모두 이것을 쓴다(파일마다 튜플을 따로 두면 갈라진다).
@@ -79,7 +69,6 @@ kShaderSourceExtensions: set[str] = {".hlsl", ".hlsli"}
 kMinimumPythonVersion: tuple[int, int] = (3, 10)
 
 kDirToolsCache = "Tools/_cache"
-kDirToolsLlvm = "Tools/LLVM"
 kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 
 # =============================================================================
@@ -95,8 +84,6 @@ kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 # =============================================================================
 
 # Target / Platform
-kKeyTargetPlatform = "target_platform"
-kKeyTargetArch = "target_arch"
 
 # Reflection Parser (parser_config.json)
 kKeyParserArgsSection = "parser_args"
@@ -114,8 +101,6 @@ kKeyLlvmPath = "llvm_path"
 kKeyLibclangDllPath = "libclang_dll_path"
 kKeyWindowsSdkDir = "windows_sdk_dir"
 kKeyWindowsSdkVersion = "windows_sdk_version"
-kKeyDxcDllPath = "dxc_dll_path"
-kKeyDxilDllPath = "dxil_dll_path"
 kKeyMsvcToolsDir = "msvc_tools_dir"
 kKeyVcpkgRoot = "vcpkg_root"
 kKeyNinjaPath = "ninja_path"
@@ -156,9 +141,6 @@ kLintTargetRelDirs: tuple[str, ...] = (
     "Tools/OnlineLoadBot",
 )
 
-#: `kLintTargetRelDirs` 에서 테스트를 뺀 뿌리 — 제품 코드(엔진 · 도구)만 보는 규칙이 쓴다.
-kLintProductRelDirs: tuple[str, ...] = tuple(root for root in kLintTargetRelDirs if root != "Test")
-
 #: `kLintTargetRelDirs` 의 맨 앞 폴더 이름(`Source` · `Test` · `Tools`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.
 kLintTargetBaseDirNames: tuple[str, ...] = tuple(dict.fromkeys(root.split("/")[0] for root in kLintTargetRelDirs))
 
@@ -181,10 +163,6 @@ kNotOurDirNames: frozenset[str] = frozenset({
     "graphify-out",  # graphify 가 코드 폴더(`Source/`) 안에 남기는 그래프 산출물(.gitignore 대상) — 폴더마다 빌드 소속을 묻는 게이트가 이 폴더를 소속 없는 코드로 본다
     "worktrees",  # 에이전트 격리 워크트리(`.claude/worktrees/<이름>/`) — 저장소 전체의 사본이라 훑으면 같은 파일이 여러 번 잡힌다
 })
-
-#: 저장소에 있지만 우리 코드가 아닌 것까지 뺀 이름 — 내려받은 도구 · 빌드(`kNotOurDirNames`) + 저장소 안 서드파티.
-#: 파일 종류만 보는 게이트(널 바이트 · 파이썬 판)는 이것으로 뺀다. `Tools` 를 통째로 빼지 않는다 — 우리 도구가 그 아래 있다.
-kNotOurCodeDirNames: frozenset[str] = kNotOurDirNames | frozenset({"ThirdParty"})
 
 #: 저장소 기준 경로로 못 박은 생성물 폴더 — .gitignore 대상이라 저장소에 들어 있지 않고, 테스트와 실행이 셰이더 · 텍스처 캐시 수만 개를 쌓는다.
 #: 이름만으로 빼면 같은 이름의 추적 폴더(`Source/Engine/Resource/Cache/`)까지 빠지므로 경로로 뺀다. 파일 걷기(`collectRepositoryFiles` · `resolveFileArguments`)가 건너뛴다.

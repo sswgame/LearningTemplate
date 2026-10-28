@@ -91,28 +91,3 @@ def runProcess(command: Sequence[str | Path],
     except subprocess.TimeoutExpired as error:
         partial = error.stdout.decode("utf-8", "replace") if isinstance(error.stdout, bytes) else (error.stdout or "")
         return ProcessResult(returnCode=-1, stdout=partial, stderr=f"{timeoutSeconds} 초를 넘겼다", bTimedOut=True)
-
-
-def isProcessAlive(processId: int) -> bool:
-    """
-    프로세스 번호가 살아 있는지 봅니다(잠금 · 워크트리 주인 기록이 버려졌는지 가를 때). 권한이 없어 열지 못한 프로세스는 살아 있다고 본다.
-    """
-    if processId <= 0:
-        return False
-    if os.name == "nt":
-        import ctypes
-
-        kQueryLimited = 0x1000
-        kAccessDenied = 5
-        handle = ctypes.windll.kernel32.OpenProcess(kQueryLimited, False, processId)
-        if not handle:
-            return ctypes.windll.kernel32.GetLastError() == kAccessDenied
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-    try:
-        os.kill(processId, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True

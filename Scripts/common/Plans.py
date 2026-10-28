@@ -44,7 +44,6 @@ kListPlanArea: tuple[str, ...] = ("engine", "graphics", "editor", "gameplay", "a
 #: 후보 문서의 상태.
 kCandidateStatus = "후보"
 
-_kNone = "없음"
 _kHeaderRe = re.compile(r"^> 상태: (.+?) · 선행: (.+?) · 영역: (.+?)(?: · 옛번호: .+?)? · 진행: (.+)$")
 _kProgressRe = re.compile(r"^(\d+)/(\d+)$")
 _kNoProgress = "해당없음"

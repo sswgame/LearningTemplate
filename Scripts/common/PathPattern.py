@@ -44,11 +44,6 @@ def _matchesSegmentsInternal(listPattern: tuple[re.Pattern[str] | None, ...], pa
     return textIndex == len(listText)
 
 
-def splitSegments(path: str) -> list[str]:
-    """역슬래시를 `/` 로 맞추고 빈 마디를 버린 경로 마디 목록."""
-    return [segment for segment in path.replace("\\", "/").split("/") if segment]
-
-
 def matchesPattern(pattern: str, path: str) -> bool:
     """패턴 하나가 경로(`/` 구분)에 맞는가."""
     bNameOnly, listCompiled = _compilePatternInternal(pattern)
@@ -58,5 +53,3 @@ def matchesPattern(pattern: str, path: str) -> bool:
     return _matchesSegmentsInternal(listCompiled, 0, listText, 0)
 
 
-def matchesAnyPattern(listPattern: list[str], path: str) -> bool:
-    return any(matchesPattern(pattern, path) for pattern in listPattern)

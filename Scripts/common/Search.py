@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
 from .Constants import kCppAllExtensions, kGeneratedRelDirs, kLintTargetRelDirs, kNotOurDirNames
-from .Parallel import mapConcurrent
 from .Paths import expandPathTemplate, platformKey
 
 _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}
@@ -134,38 +133,6 @@ def resolveFileArguments(repositoryRoot: Path,
             continue
         resultSet.add(path)
     return sorted(resultSet)
-
-
-def readTextFiles(listPath: Iterable[Path],
-                  *,
-                  encoding: str = "utf-8",
-                  errors: str = "replace",
-                  mustContain: str | None = None) -> list[tuple[Path, str]]:
-    """
-    파일들을 **동시에** 읽어 `(경로, 내용)` 을 넘긴 순서대로 돌려줍니다. 훑는 사이에 지워진 파일만 빼고,
-    그 밖의 읽기 실패(권한 · 잠금)는 `OSError` 로 올립니다 — 못 읽은 파일을 말없이 빼면 검사가 그 파일을 본 척한다.
-
-    `mustContain` 을 주면 그 문자열이 없는 파일도 뺍니다 — 저장소를 훑는 린트는 대개 한두 파일에만 있는 표식(매크로 이름 · 함수 이름)을
-    찾으므로, 비싼 정규식 앞에서 걸러 두면 나머지 천여 파일에는 정규식을 돌리지 않는다. 윈도우는 파일 열기가 느려(파일당 ~0.5 ms, 필터
-    드라이버를 거친다) 천 개를 차례로 열면 그것만 0.5 초다. 스레드 풀로 여는 것은 입출력이라 GIL 에 막히지 않는다.
-    """
-    listTarget = list(listPath)
-
-    def readOneInternal(index: int) -> tuple[int, Path, str] | None:
-        path = listTarget[index]
-        try:
-            text = path.read_text(encoding=encoding, errors=errors)
-        except FileNotFoundError:
-            return None    # 훑는 사이에 지워진 파일 — 볼 것이 없다
-        except OSError as exception:
-            raise OSError(f"읽기 실패: {path}: {exception}") from exception
-        if mustContain is not None and mustContain not in text:
-            return None
-        return index, path, text
-
-    listRead = [result for result in mapConcurrent(readOneInternal, range(len(listTarget))) if result is not None]
-    listRead.sort(key=lambda result: result[0])
-    return [(path, text) for _, path, text in listRead]
 
 
 def getOrFindCached(existing: dict[str, Any],

@@ -39,9 +39,6 @@ kKindInteger = "integer"
 kKindTextList = "textList"
 _kTableKinds = (kKindReason, kKindText, kKindInteger)
 
-#: 예외 표의 키.
-kExemptionKey = "exemption"
-
 
 class RuleDataError(Exception):
     """규칙 데이터 파일을 읽을 수 없거나 모양이 스키마와 다르다."""
@@ -50,11 +47,6 @@ class RuleDataError(Exception):
 def getRuleFilePath(name: str) -> Path:
     """`rules/<name>.toml` 의 경로."""
     return kRuleDataDir / f"{name}.toml"
-
-
-def listRuleFiles() -> list[Path]:
-    """`rules/` 의 TOML 파일 전부(이름 순)."""
-    return sorted(kRuleDataDir.glob("*.toml"))
 
 
 def readRuleFile(name: str, schema: Mapping[str, str], *, requiredKeys: Iterable[str] = (),
@@ -308,9 +300,3 @@ class _TomlSubsetReader:
             self.failInternal("문자열이 줄 안에서 닫히지 않는다")
         self._position = end + 1
         return self._text[start:end]
-
-
-__all__ = [
-    "RuleDataError", "getRuleFilePath", "kExemptionKey", "kKindInteger", "kKindReason", "kKindText", "kKindTextList", "kRuleDataDir",
-    "kRuleDataRelDir", "listRuleFiles", "readRuleFile", "readTomlSubset", "readTomlText",
-]

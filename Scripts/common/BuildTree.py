@@ -1,29 +1,18 @@
 """
-빌드 폴더 하나(`build/<프리셋>`) — 거기서 읽는 것(컴파일 DB · CMakeCache · 짓지 않는 소스 목록 · Bin)은 전부 여기서 읽는다.
-
-빌드 폴더를 고르는 규칙은 셋이다(스크립트마다 따로 정하지 않는다):
-1. 사람이 고른다 — `--preset <이름>`(→ `build/<이름>`) 또는 `--build-dir <경로>`(CMake · CTest 가 `${CMAKE_BINARY_DIR}` 를 넘길 때.
-   상대 경로는 저장소 루트 기준).
-2. 기본 — `.clangd` 의 `CompilationDatabase` 가 가리키는 폴더(편집기가 보는 것과 같은 트리), 없으면 `Ninja-Debug`.
-3. App 이 필요한 도구 — `CMakePresets.json` 의 configure 프리셋 순서대로 App 이 있는 첫 폴더(손 목록을 들지 않는다).
+빌드 폴더(`build/<프리셋>`) — 프리셋 이름 표(`CMakePresets.json` 이 정본)와 그 폴더의 `Bin` 자리.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import sys
-from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterator, Sequence
 
 from .Paths import getProjectRoot
 
 kDefaultPreset = "Ninja-Debug"
 _kConfigPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)")
-
-
 _kServerPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)-Server")
 
 
@@ -36,226 +25,23 @@ def readPresetsByPattern(repositoryRoot: Path, pattern: re.Pattern[str], descrip
     return mapPreset
 
 
-def readConfigPresets(repositoryRoot: Path) -> dict[str, str]:
-    """구성 이름 → 빌드 폴더 프리셋(`build/<프리셋>`). 정본은 `CMakePresets.json` 의 `Ninja-<구성>` configure 프리셋이다. 하나도 없으면 `sys.exit`."""
-    return readPresetsByPattern(repositoryRoot, _kConfigPresetRe, "Ninja-<구성>")
-
-
-def readServerPresets(repositoryRoot: Path) -> dict[str, str]:
-    """구성 이름 → 전용 서버 프리셋. `Ninja-<구성>-Server` 변형이라 구성 표(`readConfigPresets`)와 따로 읽는다 — 섞으면 변형 이름이 구성 표를 오염시킨다."""
-    return readPresetsByPattern(repositoryRoot, _kServerPresetRe, "Ninja-<구성>-Server")
-
-
 #: 구성 이름 → 프리셋 표(Debug · Release · Shipping). 프리셋 이름을 코드에 적는 도구는 이 표에서 구성 이름으로 고른다.
-kMapConfigPreset: dict[str, str] = readConfigPresets(getProjectRoot())
-#: 구성 이름 → 전용 서버 프리셋 표(Debug · Shipping).
-kMapServerPreset: dict[str, str] = readServerPresets(getProjectRoot())
-kCompileDatabaseFileName = "compile_commands.json"
-kCMakeCacheFileName = "CMakeCache.txt"
-#: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
-kUnbuiltSourceListRelPath = "generated/sw/config/UnbuiltSources.txt"
-kAppExecutableNames: tuple[str, ...] = ("App.exe", "App")
-#: CMake 유니티 묶음 파일(`<빌드>/…/Unity/unity_0_cxx.cxx` · `unity_0_c.c`)과 그 안의 `#include "<소스 절대 경로>"` 줄.
-_kUnityBundleRe = re.compile(r"/unity_\d+_(?:cxx\.cxx|c\.c)$")
-_kUnityIncludeRe = re.compile(r'^\s*#include\s+"([^"]+)"', re.MULTILINE)
-#: 테스트까지 짓는 타깃 — 기본 `all` 은 테스트 실행 파일을 짓지 않는다(`Test/` 는 `EXCLUDE_FROM_ALL`, `cmake/Engine/TestTargets.cmake` 의 `AllTests`).
-kTestBuildTargets: tuple[str, ...] = ("all", "AllTests")
-
-
-class BuildTreeError(Exception):
-    """빌드 폴더가 그 일을 할 수 없는 상태 — 무엇을 돌리면 되는지 문장에 든다."""
+kMapConfigPreset: dict[str, str] = readPresetsByPattern(getProjectRoot(), _kConfigPresetRe, "Ninja-<구성>")
+#: 구성 이름 → 전용 서버 프리셋 표(Debug · Shipping). `Ninja-<구성>-Server` 변형이라 구성 표와 따로 읽는다 — 섞으면 변형 이름이 구성 표를 오염시킨다.
+kMapServerPreset: dict[str, str] = readPresetsByPattern(getProjectRoot(), _kServerPresetRe, "Ninja-<구성>-Server")
 
 
 class BuildTree:
-    """빌드 폴더 하나. 만들기만 해서는 디스크를 보지 않는다(`bConfigured` 로 묻는다)."""
+    """빌드 폴더 하나. 만들기만 해서는 디스크를 보지 않는다."""
 
     def __init__(self, path: Path) -> None:
         self.path = Path(path).resolve()
-
-    # --- 고르기 --------------------------------------------------------------------
 
     @classmethod
     def fromPreset(cls, preset: str, repositoryRoot: Path | None = None) -> BuildTree:
         return cls((repositoryRoot or getProjectRoot()) / "build" / preset)
 
-    @classmethod
-    def fromArguments(cls, args: argparse.Namespace, repositoryRoot: Path | None = None) -> BuildTree:
-        """`addBuildTreeArguments` 가 더한 인자에서. `--build-dir` 이 `--preset` 보다 앞선다."""
-        root = repositoryRoot or getProjectRoot()
-        buildDir = getattr(args, "build_dir", None)
-        if buildDir:
-            path = Path(buildDir)
-            return cls(path if path.is_absolute() else root / path)
-        preset = getattr(args, "preset", None)
-        if isinstance(preset, list):
-            preset = preset[0] if preset else None
-        if preset:
-            return cls.fromPreset(preset, root)
-        return cls.findDefault(root)
-
-    @classmethod
-    def findDefault(cls, repositoryRoot: Path | None = None) -> BuildTree:
-        """`.clangd` 가 가리키는 트리, 없으면 `build/Ninja-Debug`."""
-        root = repositoryRoot or getProjectRoot()
-        clangdFile = root / ".clangd"
-        if clangdFile.is_file():
-            for line in clangdFile.read_text(encoding="utf-8", errors="replace").splitlines():
-                stripped = line.strip()
-                if stripped.startswith("CompilationDatabase:"):
-                    value = stripped.split(":", 1)[1].strip().strip("\"'")
-                    if value:
-                        return cls(root / value)
-        return cls.fromPreset(kDefaultPreset, root)
-
-    @classmethod
-    def ofApp(cls, appPath: Path) -> BuildTree:
-        """`<빌드>/Bin/App.exe` · `<빌드>/TestBin/…` → `<빌드>`(CMakeCache.txt 가 있는 가장 가까운 위 폴더)."""
-        resolved = Path(appPath).resolve()
-        for parent in resolved.parents:
-            if (parent / kCMakeCacheFileName).is_file():
-                return cls(parent)
-        return cls(resolved.parent.parent)
-
-    @classmethod
-    def iterConfigured(cls, repositoryRoot: Path | None = None) -> Iterator[BuildTree]:
-        """`CMakePresets.json` 의 configure 프리셋 순서대로, 구성된(CMakeCache.txt 가 있는) 폴더."""
-        root = repositoryRoot or getProjectRoot()
-        # CMakePresets.json 은 저장소에 늘 있다 — 없거나 깨졌으면 멈춘다(빈 목록이면 "구성된 트리 없음" 으로 보인다).
-        data = json.loads((root / "CMakePresets.json").read_text(encoding="utf-8"))
-        listName = [preset["name"] for preset in data["configurePresets"] if not preset.get("hidden")]
-        for name in listName:
-            tree = cls.fromPreset(name, root)
-            if tree.bConfigured:
-                yield tree
-
-    @classmethod
-    def findAppExecutable(cls, repositoryRoot: Path | None = None) -> Path | None:
-        """App 이 있는 첫 구성된 폴더의 App(프리셋 순서). 없으면 None — 아직 빌드하지 않았다."""
-        for tree in cls.iterConfigured(repositoryRoot):
-            appPath = tree.appExecutable
-            if appPath is not None:
-                return appPath
-        return None
-
-    # --- 자리 ------------------------------------------------------------------------
-
-    @property
-    def name(self) -> str:
-        return self.path.name
-
     @property
     def binDir(self) -> Path:
-        """실행 파일 · 테스트의 작업 폴더(테스트 실행 파일은 모든 구성에서 `TestBin` 에 있다)."""
+        """실행 파일의 작업 폴더."""
         return self.path / "Bin"
-
-    @property
-    def testBinDir(self) -> Path:
-        """테스트 실행 파일이 있는 폴더 — `TestBin`(없으면 `Bin` — 테스트를 `Bin` 에 내던 옛 빌드 폴더)."""
-        testBin = self.path / "TestBin"
-        return testBin if testBin.is_dir() else self.binDir
-
-    @property
-    def bConfigured(self) -> bool:
-        return (self.path / kCMakeCacheFileName).is_file()
-
-    @property
-    def appExecutable(self) -> Path | None:
-        for name in kAppExecutableNames:
-            candidate = self.binDir / name
-            if candidate.is_file():
-                return candidate
-        return None
-
-    # --- 읽기 ------------------------------------------------------------------------
-
-    @cached_property
-    def mapCacheValue(self) -> dict[str, str]:
-        """CMakeCache.txt 의 `이름:종류=값` → {이름: 값}. 구성 안 된 폴더면 빈 dict."""
-        cachePath = self.path / kCMakeCacheFileName
-        if not cachePath.is_file():
-            return {}
-        mapValue: dict[str, str] = {}
-        for line in cachePath.read_text(encoding="utf-8", errors="replace").splitlines():
-            if not line or line.startswith(("#", "//")) or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            if ":" not in key:
-                continue
-            mapValue[key.split(":", 1)[0]] = value.strip()
-        return mapValue
-
-    def readCacheValue(self, name: str) -> str | None:
-        return self.mapCacheValue.get(name)
-
-    @property
-    def bShipping(self) -> bool:
-        return (self.readCacheValue("SW_SHIPPING_BUILD") or "").upper() in ("ON", "TRUE", "1")
-
-    @property
-    def compileDatabasePath(self) -> Path:
-        return self.path / kCompileDatabaseFileName
-
-    @property
-    def bHasCompileDatabase(self) -> bool:
-        return self.compileDatabasePath.is_file()
-
-    def readCompileDatabase(self) -> list[dict[str, Any]]:
-        """컴파일 DB 항목. 없거나 깨졌으면 `BuildTreeError`(무엇을 돌리면 되는지 든다)."""
-        if not self.bHasCompileDatabase:
-            raise BuildTreeError(f"{self.compileDatabasePath.as_posix()} 가 없다 — `cmake --preset {self.name}` 를 먼저 돌린다")
-        try:
-            return json.loads(self.compileDatabasePath.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:
-            raise BuildTreeError(f"{self.compileDatabasePath.as_posix()} 를 읽지 못했다: {error}") from error
-
-    def readCompiledSourceFiles(self) -> list[str]:
-        """
-        이 구성이 컴파일하는 소스 파일 경로(컴파일 DB 의 `file`). **유니티 묶음은 풀어서** 묶음 파일(`unity_N_cxx.cxx`)이 아니라 그 안이
-        `#include` 한 소스를 낸다 — CI 프리셋은 묶음으로 짓고, 묶음 이름만 보면 개별 소스가 지어지는지 알 수 없다.
-        DB 가 없거나 깨졌거나 묶음 파일을 읽지 못하면 `BuildTreeError`.
-        """
-        listFile: list[str] = []
-        for entry in self.readCompileDatabase():
-            filePath = Path(entry["file"])
-            if not filePath.is_absolute():
-                filePath = Path(entry.get("directory", self.path)) / filePath
-            if _kUnityBundleRe.search(filePath.as_posix()) is None:
-                listFile.append(str(filePath))
-                continue
-            try:
-                text = filePath.read_text(encoding="utf-8", errors="replace")
-            except OSError as error:
-                raise BuildTreeError(f"유니티 묶음 {filePath.as_posix()} 를 읽지 못했다: {error} — 그 프리셋을 다시 configure 한다") from error
-            listFile += _kUnityIncludeRe.findall(text)
-        return listFile
-
-    def readUnbuiltSources(self) -> set[str] | None:
-        """이 구성이 일부러 짓지 않는 소스(저장소 기준 경로, 소문자). 목록 파일이 없으면 None — 그 목록 전에 구성한 트리다."""
-        listPath = self.path / kUnbuiltSourceListRelPath
-        if not listPath.is_file():
-            return None
-        lines = listPath.read_text(encoding="utf-8", errors="replace").splitlines()
-        return {line.strip().replace("\\", "/").lower() for line in lines if line.strip()}
-
-    def buildCommand(self, listTarget: Sequence[str] = kTestBuildTargets, jobCount: int | None = None) -> list[str]:
-        """이 트리를 짓는 명령(`cmake --build <폴더> --target …`). 기본은 테스트까지(`kTestBuildTargets`)."""
-        command = ["cmake", "--build", str(self.path), "--target", *listTarget]
-        if jobCount:
-            command += ["-j", str(jobCount)]
-        return command
-
-
-def addBuildTreeArguments(parser: argparse.ArgumentParser, *, defaultPreset: str | None = kDefaultPreset, bMultiple: bool = False) -> None:
-    """
-    빌드 폴더 인자 둘 — 모든 스크립트가 같은 철자를 쓴다.
-
-    - `--preset <이름>` : `build/<이름>`. `bMultiple` 이면 여러 번 줄 수 있다(구성마다 도는 보고서 — 기본값은 부르는 쪽이 정한다).
-    - `--build-dir <경로>` : 빌드 폴더를 경로로(CMake · CTest 가 `${CMAKE_BINARY_DIR}` 를 넘길 때). 상대 경로는 저장소 루트 기준.
-    `defaultPreset=None` 이면 둘 다 없을 때 `BuildTree.findDefault`(`.clangd`)를 쓴다.
-    """
-    if bMultiple:
-        parser.add_argument("--preset", action="append", default=None, help="빌드 프리셋 — build/<이름> (여러 번 줄 수 있다)")
-    else:
-        parser.add_argument("--preset", default=defaultPreset,
-                            help=f"빌드 프리셋 — build/<이름> (기본 {defaultPreset or '.clangd 가 가리키는 트리'})")
-    parser.add_argument("--build-dir", default=None, help="빌드 폴더 경로(--preset 보다 앞선다, 상대 경로는 저장소 루트 기준)")

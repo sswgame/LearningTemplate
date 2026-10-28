@@ -43,19 +43,6 @@ def normalizePath(pathString: PathLike) -> str:
     return Path(pathString).as_posix()
 
 
-def startsWithPathComponent(path: PathLike, component: PathLike) -> bool:
-    """
-    path가 component 자체이거나 `component/` 로 시작하는지 (경로 세그먼트 경계).
-    """
-    pathPosix = normalizePath(path)
-    componentPosix = normalizePath(component).rstrip("/")
-    if not componentPosix:
-        return False
-    if pathPosix == componentPosix:
-        return True
-    return pathPosix.startswith(componentPosix + "/")
-
-
 def expandPathTemplate(template: str, extras: dict[str, str] | None = None) -> str:
     """
     경로 템플릿 내의 예약된 변수(${sourceDir}, ${ProjectRoot})와
