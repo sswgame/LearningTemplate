@@ -2,7 +2,7 @@
  * @file Engine/Renderer/RenderThreadSubsystem.h
  * @brief 기동 순서에서 RenderThread 를 맡는 서브시스템입니다. 렌더 스레드를 디바이스와 렌더러에 연결하고 소유합니다.
  * @details 렌더 스레드 객체는 처음 시작할 때 만들고, 백엔드 교체로 다시 시작할 때는 같은 객체에 붙입니다. 호스트가 건 프레젠트 훅과 렌더 스레드 포인터
- *          (ModuleHost)가 그대로 남습니다. 전용 서버는 이 서브시스템을 돌리지 않으므로 객체도 만들지 않습니다.
+ *          (GameModuleManager)가 그대로 남습니다. 전용 서버는 이 서브시스템을 돌리지 않으므로 객체도 만들지 않습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

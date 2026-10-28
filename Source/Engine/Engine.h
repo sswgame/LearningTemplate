@@ -167,7 +167,7 @@ namespace sw
         InputMap* getShellInputMap() const { return _shellActions.getInputMap(); }
 
         // ----------------------------------------------------------------------
-        // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
+        // Getter (App 이 GameModuleManager 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
         ConfigManager* getConfigManager() const { return _pConfigManager; }
         /** @brief 부트스트랩 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */

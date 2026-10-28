@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file CMakeLists.txt
+# @file ModuleManager/CMakeLists.txt
 # @brief SW Engine 최상위 루트 빌드 스크립트
 # @note cmake/ 의 계층과 각 파일의 역할은 cmake/README.md 가 원본이다.
 # ==============================================================================
@@ -75,13 +75,13 @@ include(cmake/Engine/AssetAndToolTargets.cmake)
 # 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
 sw_resolveModuleManifests()
 
-# 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → RuntimeAPI → Editor → ModuleHost → App · Server → GameFramework/Games.
+# 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → RuntimeAPI → Editor → ModuleManager → App · Server → GameFramework/Games.
 add_subdirectory(Source/Core)
 add_subdirectory(Tools/ReflectionParser)
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)
-add_subdirectory(Source/ModuleHost)
+add_subdirectory(Source/ModuleManager)
 add_subdirectory(Source/App)
 add_subdirectory(Source/Server)
 

@@ -27,7 +27,7 @@ namespace sw::editor
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
     /**
      * @brief 에디터가 낸 모든 잡에게 "종료가 시작됐다"는 협조 신호를 올립니다. 잡 본문(긴 스캔 · 파싱)이 `readStopSignal` 로 받은 신호를 읽고 일찍 끝낸다.
-     * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`ModuleHost::drainRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
+     * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`GameModuleManager::drainRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
      *          끝까지 돌아 다른 GPU · 빌드 작업과 겹칠 때 그 대기 시한을 넘겼다(`Task fencing timeout`). 에디터 컨텍스트가 없으면(테스트) 아무것도 하지 않는다.
      */
     void requestEditorBackgroundStop();

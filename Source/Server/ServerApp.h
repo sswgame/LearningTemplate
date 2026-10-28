@@ -1,7 +1,7 @@
 /**
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
- * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/ModuleHost` 의 것 —
+ * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/GameModuleManager` 의 것 —
  *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
@@ -31,9 +31,9 @@
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 
-#include "ModuleHost/HostPart.h"
-#include "ModuleHost/ModuleReloadDriver.h"
-#include "ModuleHost/StandardInputCommands.h"
+#include "ModuleManager/HostPart.h"
+#include "ModuleManager/ModuleReloadDriver.h"
+#include "ModuleManager/StandardInputCommands.h"
 
 namespace sw
 {
@@ -48,7 +48,7 @@ namespace sw
     class MetricGauge;
     class MetricHistogram;
     class MetricRegistry;
-    class ModuleHost;
+    class GameModuleManager;
     class ModuleImageHostSubsystem;
     class OpsHTTPEndpoint;
     class ProcessMetrics;
@@ -149,9 +149,9 @@ namespace sw
          */
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
-        ModuleImageHostSubsystem* _pModuleImageHost;
-        Engine                    _engine;
-        unique_ptr<ModuleHost>    _moduleHost;
+        ModuleImageHostSubsystem*     _pModuleImageHost;
+        Engine                        _engine;
+        unique_ptr<GameModuleManager> _gameModuleManager;
         /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
 #if !defined( SW_SHIPPING )

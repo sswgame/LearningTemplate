@@ -774,7 +774,7 @@ namespace sw::editor
         // 네이티브 대화상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
         FileUtil::cancelFileDialogResults();
 
-        // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤이므로
+        // 기다리지 않는다. 여기로 오는 경로(GameModuleManager::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤이므로
         // 기다릴 대상이 없다.
         abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )

@@ -2,7 +2,7 @@
 
 #include "App/AppHeadlessTasks.h"
 
-#include "App/EditorModuleHost.h"
+#include "App/EditorModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
@@ -47,7 +47,7 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                return EditorModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                return EditorModuleManager::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
             }
 
             /**
@@ -74,12 +74,12 @@ namespace sw
                 if ( bGatherText || bCheckText )
                 {
                     const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                    bSucceeded                              = EditorModuleHost::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                    bSucceeded                              = EditorModuleManager::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
                 }
                 if ( importPoPath.empty() == false )
-                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                    bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
                 if ( bExportPo )
-                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                    bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
                 return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
             }
 

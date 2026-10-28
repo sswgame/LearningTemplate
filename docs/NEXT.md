@@ -2,74 +2,45 @@
 
 > 질문: 지금 어디까지 왔고, 구조 개편을 어떤 순서로 이어 가는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 확장성과 빌드 시간의 근본 원인은 Engine 안 폴더 19 개가 한 순환 덩어리라는 것이다(층 단위로만 DAG). 먼저 빌드를 세우고, Engine 폴더 그래프를 DAG 로 만든 뒤(A), 그 선을 따라 링크 단위로 나누고(B), 키트를 플러그인 묶음으로 모은다(C). 이름 정리는 옮기는 단계에서 같이 한다(D).
+> 결론: Ninja-Debug(활성 게임 Empty, 모듈 11 개)는 오류 0 으로 빌드된다. 용어 · 약어 · 폴더 정리는 끝났고, Engine 폴더의 역방향 include 는 190 → 50 이다. 남은 것은 A2(씬이 기능을 모르게) · A3(낮은 층 파일 읽기를 인터페이스로) → B(링크 단위 분할) → C(키트를 플러그인 묶음으로, Tools 를 Source/Programs 로) 순서다.
 
-2026-10-29 에 옛 계획 문서(`docs/plans`)를 모두 지웠다. 코딩 규칙은 `docs/agents/` 와 `docs/04_CodingGuidelines.md` 만 남았다.
+## 1. 지금 상태 (2026-10-29)
 
-## 0. 먼저 — 첫 빌드
+- **빌드**: `cmake --preset Ninja-Debug` + `cmake --build --preset Ninja-Debug` 오류 0. 모든 게임 · 키트(`Ninja-Release`)는 이 세션 끝에 돌렸다 — 결과는 아래 4 절.
+- **기본 프리셋**: Ninja-Debug 는 활성 게임과 그 게임이 쓰는 키트만 짓는다(76 → 11 모듈). 전체는 Ninja-Release(`SW_GAMES=ALL`, `SW_BUILD_UNUSED_KITS=ON`).
+- **층 게이트**: `py -3 -m Scripts engine-layers`(커밋 훅도 부른다). 층 표는 `Scripts/lint/EngineLayers.py` 의 `kLayer` 하나, 남은 역방향 50 줄은 `Scripts/lint/rules/EngineLayersBaseline.txt`(래칫 — 고쳐서 줄면 `--update-baseline`, 늘리지 않는다).
+- **도구**: `move-source`(파일 · 폴더 이동 + 모든 참조 · include 순서 · clang-format), `rename-symbol`(낱말 경계, `--regex` 로 이름 일부), `acronym-case`(약어 대문자, 바깥 이름은 `Scripts/dev/AcronymExternalNames.txt`), `engine-layers`. 규칙 문서(`docs/agents` · `04_CodingGuidelines`)는 이름 도구가 고치지 않는다(나쁜 예를 일부러 든다).
+- **Windows 대소문자**: git 이 대소문자를 무시하므로 대소문자만 바꾼 경로는 `git rm --cached` + `git add` 로 다시 올려야 한다(`acronym-case` 커밋에서 한 방법).
 
-코드는 10-28 묶음 이후 한 번도 컴파일되지 않았다. 구조 개편의 행동 변경(A2 부터)은 초록 빌드 위에서만 한다 — 원래 있던 오류와 개편 오류가 섞이면 가르지 못한다. 순수 이동(A1)은 include 린트 + configure 로 확인하고 들어가도 된다.
+## 2. 이번 세션에 정한 규칙
 
-- `cmake --preset Ninja-Debug` 는 선다(활성 게임 `Empty`, 모듈 11 개). 다음은 `cmake --build --preset Ninja-Debug` 로 오류를 묶음별로 잡는다.
-- 모든 게임 · 키트 컴파일 확인은 `Ninja-Release`(`SW_GAMES=ALL`, `SW_BUILD_UNUSED_KITS=ON`).
-- 없는 스크립트를 부르는 곳: 에디터 에셋 검증(`Scripts/qa/ValidateAssets.py`), 프로젝트 설정 창(`GenerateConfigReference.py`, 옛 `ConfigReference.json`), 아이콘 폰트(`GenerateEditorIcons.py`), `BuildLayout.cmake` · `BuildCaches.json` 의 `RunBuildBaseline.py`. 새로 쓰거나 호출 쪽을 지운다.
-- `Source` 주석 21 곳이 지운 `docs/plans/*` 를 가리킨다 — 그 파일을 고칠 때 같이 걷는다.
+| 규칙 | 근거 |
+|---|---|
+| Asset = 콘텐츠(`Engine/Asset`, `AssetID` · `AssetPaths` · `AssetIO`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만(`RHIRenderResource`, `Renderer/Frame/Resource`) | 언리얼 Content · AssetManager · FRenderResource |
+| Pack(`.pack`, `PackManager` · `PackReader` · `PackWriter`) | 확장자 · 폴더와 같은 철자 |
+| 자동화 감시 값은 Watch(`Engine/Automation/Watch`, `SW_AUTOMATION_WATCH`, `*Watches.cpp`). Probe 는 라이트 · 리플렉션 프로브와 물리 sweep · 픽셀 검사에만 | 디버거 감시식 |
+| 씬 컨테이너는 Scene(`SceneSettings` · `SceneStreamingSubsystem` · `StreamingCell*`). World 는 월드 공간 뜻에만 | 엔진 용어 하나 |
+| 기능 폴더가 자기 컴포넌트를 든다(`Physics/Component` · `Animation/Component` · `Navigation/Component` · `Audio/Component` · `TileMap/Component`). `Object` 는 컴포넌트 모델 코어와 렌더 컴포넌트(서버도 씬을 읽어야 하므로 Renderer 로 보내지 않는다) | Unity 패키지 · Godot 모듈, 언리얼 UStaticMeshComponent 는 Engine |
+| 자동화는 `Engine/Automation/{Watch,Scenario,Runner}`, `SW_ENABLE_AUTOMATION=OFF` 는 `Runner/` 폴더째 뺀다 | 언리얼 AutomationWorker · Controller |
+| GameFramework 의 `Base/Character`(옛 Actor), `Plugin`(옛 PlugIn, 모듈 `GF_EditorPlugin_*`) | Actor 클래스가 없었다 |
+| 약어 대문자(`GPU` · `ID` · `JSON` · `VFX` …), 첫 낱말은 소문자(`gpuTime`) | NamingCpp Acronyms |
+| 금지 동사 정리: `getOrCreate*`(옛 findOrAdd), `addPasses`(옛 setupPasses), `findResolved` | NamingCpp |
 
-## 1. 측정 (2026-10-29)
-
-| 항목 | 값 | 뜻 |
-|---|---|---|
-| Engine 폴더 의존 | 37 폴더 중 19 개가 한 강결합 요소(SCC) | 기능 하나를 빼거나 갈아 끼울 수 없고 모듈로 나눌 수 없다 |
-| 거꾸로 올라가는 include | 190 개 / 31 쌍. 129 개가 `Object` → Animation 47 · Physics 41 · Navigation 26 · Audio 12 · TileMap 3 | `Object` 가 컴포넌트 모델 코어와 기능 컴포넌트를 함께 든다 |
-| `Scene.cpp` | `ScenePhysics` · `SceneNavigation` · `SceneAudio` · `MeshComponent` · `DirectionalLightComponent` 를 직접 부른다 | 씬이 기능을 하드코딩한다(언리얼은 `UWorldSubsystem` 등록) |
-| 그 밖의 역방향 | Serialization · Config · Telemetry · Bootstrap · Profiling → Resource(`AssetID` · `AssetPaths` · `AssetIO`), Module → Scene · Audio · Input · Object, Reflection → Object · Localization, Window → Graphics(`IRenderSurface`), Graphics → Physics, Resource → Physics | 낮은 층이 쓰는 타입이 높은 폴더에 있다 |
-| 헤더 무게 | TU 당 프로젝트 헤더 평균 86, `Engine/pch.h` 전이 55 개, `Component.h` fan-in 449 TU | 헤더는 무겁지 않다 — 빌드 시간의 주범이 아니다 |
-| 빌드 구성(10-22 전체 Dev 빌드, CPU 합) | 컴파일 약 9,100 s(Engine 847 TU 평균 3.1 s 가 최대), 리플렉션 코드젠 모듈 66 개 합 171 s, 링크 · lib 약 1,000 s | 넓이(TU · DLL 수)가 비용이다 |
-| 기본 프리셋 | 고쳤다: 76 → 11 모듈, 컴파일 대상 2,893 → 2,252 | 일상 빌드는 활성 게임과 그 키트만 |
-
-측정 스크립트(폴더 SCC · 역방향 include · fan-in · ninja 로그 분해)는 세션 스크래치에 있었다 — 다시 쓸 때는 `Scripts/dev/` 에 하나로 두고 A5 게이트가 같은 코드를 쓴다.
-
-## 2. 목표 구조 (상용 엔진 비교)
-
-언리얼은 `Core → CoreUObject → Engine → Renderer` 와 `RHI` · `PhysicsCore` · `AudioMixer` · `NavigationSystem` 을 따로 둔 모듈 DAG 이고, 기능 컴포넌트는 그 기능 모듈 안에 있다. Godot 은 `core → servers → scene` 이고 물리 · 오디오가 서버다. 여기서의 목표:
-
-```
-Engine/  (폴더 = 장래 링크 단위, 위가 아래만 include)
-  Foundation   Common · Curve · Compression · Reflection · Serialization · Config · Module · Profiling · Observability · Telemetry · Console · Bootstrap
-               + 리소스 식별자 · 경로 · IO(Resource 에서 내린다)
-  Asset        Resource(캐시 · 쿠킹) · Text · Localization
-  Platform     Window · Input
-  RHI          Graphics
-  World        Object(컴포넌트 모델 코어만) · Scene(씬 서브시스템 등록으로 기능을 모른다)
-  Features     Physics · Audio · Animation · Navigation · TileMap · Vfx · Sequencer · Dialogue · Environment · Destruction · Character · UI · Net · UserSettings
-               각자 자기 컴포넌트(`<기능>/Component/`)와 씬 서브시스템을 든다
-  Renderer     Renderer + 렌더 컴포넌트(Mesh · Light · Camera · Sprite)
-  Automation   Probe(최하위 등록표) · Scenario · Runner
-```
-
-키트: `GameFramework/Kits/<묶음>/<키트>` 의 런타임 · 서버 모듈과 `GameFramework/PlugIn/Editor/<키트>` 의 에디터 모듈이 다른 나무에 있다. 언리얼 플러그인(`.uplugin` 하나에 Runtime · Editor 모듈)처럼 키트 폴더 하나에 `Runtime/` · `Server/` · `Editor/` 를 모은다. `Tools/ReflectionParser` · `Tools/OnlineLoadBot` 은 언리얼 `Source/Programs` 처럼 `Source/Programs/` 로.
-
-## 3. 단계
-
-단계마다 코드 → 린트 → 커밋, 묶음 끝에 빌드 한 번(원칙 2). 옮기는 단계는 기계적 include 재작성 스크립트로 하고 `py -3 -m Scripts format-includes --files …` 로 순서를 맞춘다.
+## 3. 남은 일 (순서대로)
 
 | 단계 | 내용 | 확인 |
 |---|---|---|
-| A1 | 기능 컴포넌트를 기능 폴더로: `Object/Component/{Physics,Navigation,Audio}` → `<기능>/Component`, `Object/SceneAnimation` → `Animation/Scene`, 3D 의 스켈레탈 · 얼굴 · 리타깃 → `Animation/Component`, 2D 의 `TileMapRendererComponent` → `TileMap` | include 린트, configure, 역방향 수 재측정 |
-| A2 | `Scene` 이 기능을 모르게: 씬 서브시스템 등록(언리얼 `UWorldSubsystem`) — `Scene` 은 등록된 서브시스템을 단계별로 돌리고, Physics · Navigation · Audio 가 스스로 등록. 메시 · 방향광 조회는 Renderer 쪽 서브시스템으로 | 첫 빌드 뒤. 씬 열기 · 플레이 |
-| A3 | 낮은 층이 쓰는 타입 내리기: `AssetID` · `AssetPaths` · `AssetIO` → Foundation, `IRenderSurface` → Window 와 Graphics 사이의 계약, `PhysicsMeshShapeCache` · Reflection → Object 두 줄 · Module → Scene/Audio/Input/Object 를 등록 · 인터페이스로 | 역방향 0 |
-| A4 | 렌더 컴포넌트(Mesh · Light · Camera · Sprite · 2D 조명)를 Renderer 쪽으로, `Object` 는 코어만 | 역방향 0, SCC 없음 |
-| A5 | 게이트 하나: Engine 폴더 순위 표 + 역방향 include 검사(형식으로 막지 못하는 틈이라 게이트, 원칙 1). `Scripts/lint` 에 두고 `lint` 가 부른다 | 린트 자가 확인 |
-| B | DAG 를 따라 링크 단위로 나눈다: Foundation · RHI · World · 기능별 · Renderer. 서버 빌드의 "렌더러 빼기" 정규식(`SW_UNBUILT_ENGINE_FOLDERS` · `SW_WITH_CLIENT_CODE`)이 모듈 하나 빼기로 바뀐다. 증분 빌드는 고친 단위만 다시 링크 | 전 프리셋 구성 · 빌드, Dev 기동 시간 |
-| C | 키트를 플러그인 묶음으로(`Runtime/` · `Server/` · `Editor/`), 프로그램을 `Source/Programs/` 로 | 전 프리셋 |
-| D | 옮기는 폴더마다 이름 정리: `getOrCreate*` → `getOrCreate*`(약 70 곳, 충돌은 `getOrCreateNode` → `getOrCreateNode` 하나가 기존 이름 2 곳과 겹친다), `addPasses` → `addPasses`, `findResolved` → `findResolved`, `ModuleUnloadListener` 의 `add/removeListener` → `register/unregister`. 예외(도메인 용어): io_uring `setupRing`, Recast `alloc` 재정의, 관리 명령 `lookup`, 오디오 `addListener`, 복제 관심 영역 `removeObserver` | include 린트, 빌드 |
+| A2 | 씬이 기능을 모르게 — 이미 있는 `SceneServiceRegistry`(언리얼 UWorldSubsystem 자리)로 옮긴다: ① `Scene::update` 끝의 `SceneAudio::update` 호출을 늦은 프레임 단계 서비스로 ② `SceneNavigation::setSourcePath` 를 `ISceneService` 의 씬 로드 훅으로 ③ `SceneManager` 의 물리 고정 스텝 정책 ④ `SceneDebugDraw` 의 물리 · 내비 그리기를 서비스별 `drawDebug` 로. 기준선의 `Scene -> Physics/Navigation/Audio/Animation` 15 줄이 사라진다 | 씬 열기 · 플레이 · 디버그 그리기 |
+| A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · Bootstrap · Profiling 이 `AssetIO` · `AssetPaths` · `AssetID` 를 부른다(약 24 줄). 언리얼 `IPlatformFile` 체인처럼 낮은 층(0~1)에 읽기 인터페이스를 두고 Asset 이 구현을 등록한다. `AssetID.h` 는 Core 만 쓰므로 낮은 층으로 내릴 수 있다. 그 밖에 `Object -> Animation/Sprite`(스프라이트 클립), `Graphics -> Physics`(`MeshCache` 의 셰이프 캐시 무효화 → 콜백), `Asset -> Physics`, `Telemetry -> UserSettings`, `Bootstrap -> RHIRenderResource`, `Reflection -> Localization` | `engine-layers` 기준선 0 |
+| B | 층을 따라 Engine 을 링크 단위로 나눈다(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기(`SW_UNBUILT_ENGINE_FOLDERS` · `SW_WITH_CLIENT_CODE`)가 모듈 하나 빼기로 바뀐다 | 전 프리셋, 증분 빌드 시간(`.ninja_log`) |
+| C | 키트 폴더 하나에 `Runtime/` · `Server/` · `Editor/`(지금 에디터 확장은 `GameFramework/Plugin/Editor/<키트>` 로 떨어져 있다), `Tools/ReflectionParser` · `Tools/OnlineLoadBot` → `Source/Programs/` | 전 프리셋 |
 
-빌드 시간 쪽 남은 것: 첫 초록 빌드 뒤 `.ninja_log` 로 콜드 · 증분(헤더 하나, `.cpp` 하나)을 재고, Debug 링크에 GHASH(`/clang:-gcodeview-ghash` + `/DEBUG:GHASH`)를 A/B 로 잰다. B 의 분할 효과도 같은 방법으로 잰다.
+그 밖에:
+- 없는 스크립트를 부르는 곳: 에디터 에셋 검증(`Scripts/qa/ValidateAssets.py`), 프로젝트 설정 창(`GenerateConfigReference.py`), 아이콘 폰트(`GenerateEditorIcons.py`), `BuildLayout.cmake` · `BuildCaches.json` 의 `RunBuildBaseline.py`.
+- `Source` 주석 약 21 곳이 지운 `docs/plans/*` 를 가리킨다. 주석의 '리소스' 낱말도 콘텐츠 뜻이면 '에셋' 으로.
+- 셰이더는 이름이 바뀌었으니(약어 · Content 경로) 다시 쿠킹해야 한다(`App --cook-shaders`). 이 세션은 쿠킹 · 실행을 하지 않았다.
+- 테스트 · 시나리오 틀은 아직 없다(옛 것은 10-28 에 지웠다).
 
-## 4. 이번 세션에 끝낸 것
+## 4. 이 세션 끝의 Ninja-Release 결과
 
-- `RuntimeAPI` → `Editor` 역방향 제거(`EditorModuleExports.h` 를 `Editor/` 로).
-- 테스트가 없어 소비자가 없는 `sw_addEditorExtensionModel` 과 호출 5 곳 제거.
-- `ReflectionSubsystem` → `Engine/Reflection`, `Engine/Utility` 해체(`FloatCurve` → `Engine/Curve`, `EditSessionState` → `Engine/Module`, `EngineFrameObserver` → `Engine/`).
-- 자동화를 `Engine/Automation/{Probe,Scenario,Runner}` 로. `SW_ENABLE_AUTOMATION=OFF` 는 파일 이름 14 개 정규식 대신 `Runner/` 폴더째 뺀다.
-- 기본 개발 프리셋을 활성 게임과 그 키트만 짓게.
+(세션 끝에 채운다)

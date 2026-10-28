@@ -2,12 +2,12 @@
 
 #include "Server/ServerApp.h"
 
-#include "ModuleHost/ModuleCatalogLoader.h"
-#include "ModuleHost/ModuleHost.h"
-#include "ModuleHost/ModuleImageHostSubsystem.h"
+#include "ModuleManager/GameModuleManager.h"
+#include "ModuleManager/ModuleCatalogLoader.h"
+#include "ModuleManager/ModuleImageHostSubsystem.h"
 
 #if !defined( SW_SHIPPING )
-    #include "ModuleHost/LiveReloadManager.h"
+    #include "ModuleManager/LiveReloadManager.h"
 #endif
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -150,7 +150,7 @@ namespace sw
         : _host{}
         , _pModuleImageHost{ nullptr }
         , _engine{}
-        , _moduleHost{ nullptr }
+        , _gameModuleManager{ nullptr }
         , _moduleReload{}
 #if !defined( SW_SHIPPING )
         , _devConsole{ nullptr }
@@ -281,8 +281,8 @@ namespace sw
         // 리로드 구동기(App 과 같은 것)가 매니저를 만들고 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다.
         _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
-        _moduleHost = make_unique<ModuleHost>();
-        if ( _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+        _gameModuleManager = make_unique<GameModuleManager>();
+        if ( _gameModuleManager->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
 #if !defined( SW_SHIPPING )
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저).
@@ -354,9 +354,9 @@ namespace sw
             }
             case HostPartID::Game:
             {
-                if ( _moduleHost == nullptr )
-                    _moduleHost = make_unique<ModuleHost>();
-                const bool bStarted = _moduleHost->initializeDedicatedServer( _moduleReload.getLiveReloadManager() );
+                if ( _gameModuleManager == nullptr )
+                    _gameModuleManager = make_unique<GameModuleManager>();
+                const bool bStarted = _gameModuleManager->initializeDedicatedServer( _moduleReload.getLiveReloadManager() );
                 if ( bStarted == false )
                     SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
                 return bStarted;
@@ -413,8 +413,8 @@ namespace sw
             }
             case HostPartID::Game:
             {
-                _moduleHost->shutdown();
-                _moduleHost.reset();
+                _gameModuleManager->shutdown();
+                _gameModuleManager.reset();
                 return;
             }
             case HostPartID::StandardInput:
@@ -782,14 +782,14 @@ namespace sw
     {
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
         _engine.beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
-        _moduleHost->beginFrame();
+        _gameModuleManager->beginFrame();
         {
             SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
-            _moduleHost->fixedUpdateGame( deltaSeconds );
+            _gameModuleManager->fixedUpdateGame( deltaSeconds );
         }
         {
             SW_PROFILE_SCOPE( "GT.Game.update" );
-            _moduleHost->updateGame( deltaSeconds );
+            _gameModuleManager->updateGame( deltaSeconds );
         }
         _moduleReload.update();
 #if !defined( SW_SHIPPING )
@@ -801,7 +801,7 @@ namespace sw
                 SW_LOG_ERROR( "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
 #endif
-        const ModuleFrameState& frameState = _moduleHost->getFrameState();
+        const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
         _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engine.endFrame();
     }
@@ -1033,7 +1033,7 @@ namespace sw
         // 순서는 `HostPart` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostParts.destroyAll();
         // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
-        _moduleHost.reset();
+        _gameModuleManager.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 부트스트랩(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 이미지 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).

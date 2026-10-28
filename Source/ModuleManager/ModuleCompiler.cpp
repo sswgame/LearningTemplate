@@ -1,0 +1,255 @@
+#include "pch.h"
+
+#include "ModuleManager/ModuleCompiler.h"
+
+#include "Core/Concurrency/thread.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
+#include "Core/Process/ThreadCrashStack.h"
+
+#include "ModuleManager/LiveReloadManager.h"
+
+namespace sw
+{
+    SW_LOG_CALLER( "ModuleCompiler" );
+
+    ModuleCompiler::ModuleCompiler( LiveReloadManager* pLiveReloadManager )
+        : _pLiveReloadManager{ pLiveReloadManager }
+        , _pCurrentProcess{ nullptr }
+        , _workerThread{}
+        , _buildTimer{}
+        , _targetName{}
+        , _mutex{}
+        , _buildState{ BuildState::Idle }
+        , _bBlockedByLoadedBinary{ 0 }
+        , _lastExitCode{ 0 }
+        , _lastDurationSec{ 0.0f }
+        , _bIsCompiling{ false }
+    {
+    }
+
+    ModuleCompiler::~ModuleCompiler()
+    {
+        shutdown();
+    }
+
+    void ModuleCompiler::shutdown()
+    {
+        ModuleCompiler::cancel();
+        if ( _workerThread.joinable() )
+            _workerThread.join();
+    }
+
+    bool ModuleCompiler::compileModule( string_view targetName )
+    {
+        if ( _bIsCompiling.load( std::memory_order_relaxed ) )
+        {
+            SW_LOG_WARNING( "Compilation is already in progress (target: %#)", getTargetName().c_str() ); // 이름은 잠금 아래에서 복사한다
+            return false;
+        }
+
+        if ( _workerThread.joinable() )
+            _workerThread.join();
+
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _targetName = string( targetName );
+        }
+
+        _bBlockedByLoadedBinary.store( 0, std::memory_order_relaxed );
+        _bIsCompiling.store( true, std::memory_order_relaxed );
+        _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
+        _buildTimer.resetTimer();
+        _buildTimer.startTimer();
+#if !defined( SW_SHIPPING )
+        // 빌드가 쓰는 모듈을 하나씩 올리지 않게 감시를 멈춘다 — 끝나면 `runBuildThread` 가 결과를 넘긴다.
+        if ( _pLiveReloadManager != nullptr )
+            _pLiveReloadManager->notifyBuildStarted();
+#endif
+
+        _workerThread = sw::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
+        return true;
+    }
+
+    bool ModuleCompiler::compileAll()
+    {
+        return compileModule( "" );
+    }
+
+    void ModuleCompiler::cancel()
+    {
+        if ( _bIsCompiling.load( std::memory_order_relaxed ) == false )
+            return;
+
+        _workerThread.request_stop(); // 빌드 스레드가 결과를 "취소" 로 적는다
+
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _pCurrentProcess != nullptr )
+            _pCurrentProcess->terminate( 1 );
+    }
+
+    float32 ModuleCompiler::getElapsedTimeSec() const
+    {
+        if ( _bIsCompiling.load( std::memory_order_relaxed ) == false )
+            return _lastDurationSec.load( std::memory_order_relaxed );
+
+        return _buildTimer.getTotalTime();
+    }
+
+    string ModuleCompiler::getTargetName() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _targetName;
+    }
+
+    string ModuleCompiler::findBuildDirectory() const
+    {
+        string       resultDir = FileUtil::getBinaryDirectory();
+        const string parentDir = FileUtil::getDirectoryPart( resultDir ); // Bin 의 상위 폴더
+
+        if ( FileUtil::exists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
+             FileUtil::exists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
+            resultDir = parentDir;
+
+        return resultDir;
+    }
+
+    void ModuleCompiler::failBeforeBuild( const string& targetName )
+    {
+        _buildState.store( BuildState::Failed, std::memory_order_relaxed );
+        _lastExitCode.store( -1, std::memory_order_relaxed );
+        notifyBuildFinished( false, targetName );
+        _bIsCompiling.store( false, std::memory_order_relaxed );
+    }
+
+    void ModuleCompiler::relayBuildOutput()
+    {
+        string outputLine;
+        while ( _pCurrentProcess != nullptr && _pCurrentProcess->readOutputLine( outputLine ) )
+        {
+            if ( outputLine.empty() )
+                continue;
+
+            // 이미 로드된 DLL 을 다시 링크하려다 막힌 경우다. 링커 메시지만으로는 원인이 보이지 않으므로 따로 표시해 두고, 아래에서
+            // 사람이 읽을 수 있는 설명을 남긴다. 핫 리로드로 고칠 수 없는 상황(엔진 자체가 바뀜)이라 다시 시작해야 한다는 것이 요점이다.
+            if ( outputLine.find( "failed to write output" ) != string::npos && outputLine.find( "permission denied" ) != string::npos )
+                _bBlockedByLoadedBinary.store( 1, std::memory_order_relaxed );
+
+            const bool bIsErrorLine = outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos;
+            if ( bIsErrorLine )
+                SW_LOG_ERROR( "%#", outputLine.c_str() );
+            else if ( outputLine.find( "warning:" ) != string::npos || outputLine.find( "Warning" ) != string::npos )
+                SW_LOG_WARNING( "%#", outputLine.c_str() );
+            else
+                SW_LOG_INFO( "%#", outputLine.c_str() );
+        }
+    }
+
+    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName, const ThreadStopToken& stopToken )
+    {
+        int32 exitCode = -1;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _pCurrentProcess != nullptr )
+            {
+                exitCode = _pCurrentProcess->waitForExit();
+                _pCurrentProcess.reset();
+            }
+        }
+
+        _buildTimer.stopTimer();
+        const float32 durationSec = _buildTimer.getTotalTime();
+
+        _lastDurationSec.store( durationSec, std::memory_order_relaxed );
+        _lastExitCode.store( exitCode, std::memory_order_relaxed );
+
+        if ( stopToken.stop_requested() )
+        {
+            _buildState.store( BuildState::Failed, std::memory_order_relaxed );
+            SW_LOG_WARNING( "Compilation was cancelled by user." );
+            return false;
+        }
+        if ( exitCode == 0 )
+        {
+            _buildState.store( BuildState::Success, std::memory_order_relaxed );
+            SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
+            return true;
+        }
+        _buildState.store( BuildState::Failed, std::memory_order_relaxed );
+        if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
+        {
+            SW_LOG_ERROR( "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
+                          "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
+                          targetDisplayName.c_str() );
+        }
+        else
+        {
+            SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+        }
+        return false;
+    }
+
+    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag, ThreadStopToken stopToken )
+    {
+        // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
+        const ScopedMemoryTag threadMemoryTag{ memoryTag };
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
+        const string buildDir = findBuildDirectory();
+        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
+        {
+            SW_LOG_ERROR( "Failed to find build directory for compilation!" );
+            failBeforeBuild( targetName );
+            return;
+        }
+
+        const string targetDisplayName = targetName.empty() ? "all" : targetName;
+        SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
+
+        ProcessCommand command{
+            "cmake",
+            { "--build", buildDir }
+        };
+        if ( targetName.empty() == false )
+        {
+            command._listArgument.push_back( "--target" );
+            command._listArgument.push_back( targetName );
+        }
+
+        ProcessOptions options{};
+        options._workingDirectory = buildDir;
+        options._bCreateWindow    = false;
+
+        unique_ptr<Process> pProcess = make_unique<Process>();
+        if ( pProcess->launch( command, options ) == false )
+        {
+            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", command.toCommandLine() );
+            failBeforeBuild( targetName );
+            return;
+        }
+
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _pCurrentProcess = std::move( pProcess );
+        }
+
+        relayBuildOutput();
+        const bool bSucceeded = recordBuildResult( targetDisplayName, stopToken );
+        notifyBuildFinished( bSucceeded, targetName );
+        _bIsCompiling.store( false, std::memory_order_relaxed );
+    }
+
+    void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& targetName )
+    {
+#if !defined( SW_SHIPPING )
+        // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `LiveReloadManager::update` 가 처리한다.
+        if ( _pLiveReloadManager != nullptr )
+            _pLiveReloadManager->notifyBuildFinished( bSucceeded, targetName );
+#else
+        (void)bSucceeded;
+        (void)targetName;
+#endif
+    }
+} // namespace sw

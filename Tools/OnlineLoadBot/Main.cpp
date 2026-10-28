@@ -28,7 +28,7 @@
 
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
-#include "ModuleHost/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleImageHostSubsystem.h"
 
 #include "OnlineLoadBot/LoadBotLocalServer.h"
 #include "OnlineLoadBot/LoadBotRunner.h"

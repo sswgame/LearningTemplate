@@ -40,8 +40,8 @@ sw_configurePCH(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBotCore PROPERTIES FOLDER "Tools")
 
 add_executable(OnlineLoadBot Main.cpp)
-# ModuleHost: 호스트 범위의 모듈 이미지 창구(`ModuleImageHostSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
-target_link_libraries(OnlineLoadBot PRIVATE OnlineLoadBotCore ModuleHost sw_global_options)
+# ModuleManager: 호스트 범위의 모듈 이미지 창구(`ModuleImageHostSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
+target_link_libraries(OnlineLoadBot PRIVATE OnlineLoadBotCore ModuleManager sw_global_options)
 target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"")
 sw_configurePCH(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBot PROPERTIES FOLDER "Tools")

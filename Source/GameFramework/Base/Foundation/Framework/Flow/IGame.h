@@ -15,7 +15,7 @@ namespace sw
 
     // ------------------------------------------------------------------------------
     // 1) IGame — SWGame MODULE 이 구현하는 수명주기
-    //    App(ModuleHost)이 GameAPI 로 만들고 initialize / update / shutdown 을 부른다
+    //    App(GameModuleManager)이 GameAPI 로 만들고 initialize / update / shutdown 을 부른다
     // ------------------------------------------------------------------------------
     /** @brief SWGame 모듈이 구현하는 게임 로직 인터페이스입니다. */
     class SW_GF_API IGame

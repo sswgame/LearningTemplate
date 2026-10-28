@@ -16,7 +16,7 @@ set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server
 	PRIVATE
-		ModuleHost
+		ModuleManager
 		Engine
 		RuntimeAPI
 		sw_global_options

@@ -4,7 +4,7 @@
 
 #include "App/AppAssertDialog.h"
 #include "App/AppHeadlessTasks.h"
-#include "App/EditorModuleHost.h"
+#include "App/EditorModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -44,8 +44,8 @@
 #include "Engine/Window/PlatformClipboard.h"
 #include "Engine/Window/SplashWindow.h"
 
-#include "ModuleHost/ModuleCatalogLoader.h"
-#include "ModuleHost/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleCatalogLoader.h"
+#include "ModuleManager/ModuleImageHostSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -114,7 +114,7 @@ namespace sw
         , _engine{}
         , _moduleReload{}
         , _devConsole{}
-        , _moduleHost{ nullptr }
+        , _gameModuleManager{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
         , _backendSwap{}
@@ -313,7 +313,7 @@ namespace sw
 
     bool App::loadModuleImages()
     {
-        // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 ModuleHost 가 에디터와 게임 태그를 걸어 처리한다.
+        // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 GameModuleManager 가 에디터와 게임 태그를 걸어 처리한다.
         SW_MEMORY_SCOPE( EngineMisc );
 #if !defined( SW_SHIPPING )
         // 무엇을 로드할지는 모듈 매니페스트가 정한다. App 은 빌드가 담은 모든 대상을 로드한다(Game 은 클라이언트와 리슨 서버용 서버 모듈,
@@ -321,13 +321,13 @@ namespace sw
         if ( ModuleCatalogLoader::loadAndResolve( ModuleCatalog::getBuildTargetMask(), _moduleCatalog, _moduleResolution ) == false )
             return false;
 
-        // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
+        // 모듈 감시자는 모듈을 로드하는 GameModuleManager 보다 먼저 있어야 한다. GameModuleManager 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
         // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 감시 값 `Module.*` 가 찾는다).
         _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
 
-        _moduleHost = make_unique<EditorModuleHost>();
-        return _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        _gameModuleManager = make_unique<EditorModuleManager>();
+        return _gameModuleManager->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startHostPart( HostPartID id )
@@ -337,17 +337,17 @@ namespace sw
         {
             case HostPartID::Game:
             {
-                if ( _moduleHost == nullptr )
-                    _moduleHost = make_unique<EditorModuleHost>();
+                if ( _gameModuleManager == nullptr )
+                    _gameModuleManager = make_unique<EditorModuleManager>();
                 const bool bStarted =
-                    _moduleHost->initialize( _moduleReload.getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
+                    _gameModuleManager->initialize( _moduleReload.getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
                 if ( bStarted == false )
-                    SW_LOG_ERROR( "ModuleHost initialization failed." );
+                    SW_LOG_ERROR( "GameModuleManager initialization failed." );
                 return bStarted;
             }
             case HostPartID::BackendSwitcher:
             {
-                _backendSwap.initialize( &_engine, _moduleHost.get(), bEnableEditor );
+                _backendSwap.initialize( &_engine, _gameModuleManager.get(), bEnableEditor );
                 // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
                 return _host.bind( &_backendSwap );
             }
@@ -386,8 +386,8 @@ namespace sw
             case HostPartID::Game:
             {
                 // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 부품은 엔진 종료 앞에서 내려간다.
-                _moduleHost->shutdown();
-                _moduleHost.reset();
+                _gameModuleManager->shutdown();
+                _gameModuleManager.reset();
                 return;
             }
             case HostPartID::BackendSwitcher:
@@ -514,7 +514,7 @@ namespace sw
         // 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
         _hostParts.destroyAll();
         // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
-        _moduleHost.reset();
+        _gameModuleManager.reset();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
@@ -587,7 +587,7 @@ namespace sw
             _engine.beginFrame( frameTime._deltaTime, frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
             // 모든 단계가 같은 답을 본다.
-            _moduleHost->beginFrame();
+            _gameModuleManager->beginFrame();
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 둘이 읽는다. Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
 #if !defined( SW_SHIPPING )
@@ -602,19 +602,19 @@ namespace sw
                 SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
                 for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
                 {
-                    _moduleHost->fixedUpdateGame( frameTime._fixedDeltaTime );
+                    _gameModuleManager->fixedUpdateGame( frameTime._fixedDeltaTime );
                 }
             }
 
             {
                 SW_PROFILE_SCOPE( "GT.Game.update" );
-                _moduleHost->updateGame( frameTime._deltaTime );
+                _gameModuleManager->updateGame( frameTime._deltaTime );
             }
 
             {
                 // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰와 씬 뷰 RT, 씬 틱 여부를 확정한다.
                 SW_PROFILE_SCOPE( "GT.Editor.updateUI" );
-                _moduleHost->updateEditorUI( frameTime._deltaTime );
+                _gameModuleManager->updateEditorUI( frameTime._deltaTime );
             }
 
             // 이번 프레임의 페이싱 상태를 정한다 — 에디터가 이번 프레임의 다시 그릴 까닭을 정한 뒤다. 실행 인자(`-gv_framePacing` · 시나리오 · 프로파일 · 리슨 포트)가
@@ -625,7 +625,7 @@ namespace sw
                 pacingInputs._bListenHost    = bListenHost;
                 pacingInputs._bMinimized     = _pWindow->isMinimized();
                 pacingInputs._bFocused       = _pWindow->hasFocus();
-                pacingInputs._bEditorQuiet   = _moduleHost->getFrameState()._bEditorQuiet == SW_TRUE;
+                pacingInputs._bEditorQuiet   = _gameModuleManager->getFrameState()._bEditorQuiet == SW_TRUE;
                 framePacer.beginFrame( pacingInputs );
             }
 
@@ -635,9 +635,9 @@ namespace sw
             // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
             _moduleReload.update();
 
-            const ModuleFrameState& frameState = _moduleHost->getFrameState();
+            const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
             _engine.update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
-            _moduleHost->endEditorFrame();
+            _gameModuleManager->endEditorFrame();
 
             // 클라이언트는 씬이 이번 프레임을 마친 뒤 서버가 알린 틱 번호로 해시를 남긴다 — 서버 이력과 같은 틱끼리 비교한다(같은 틱은 한 번만 남는다).
             // 클라이언트 쪽 상태 해시 이력(서버 디버깅 S7)은 `-gv_stateHashHistory=N` 일 때만 켜진다(서비스가 설 때 용량을 정한다).
@@ -754,8 +754,8 @@ namespace sw
         if ( engine::areEngineServicesBound() && engine::getSubsystem<InputManager>().shouldDropNativeEvent( event ) )
             return false;
 
-        // 이벤트를 ModuleHost(ImGui 등)에 먼저 보낸다.
-        const bool bConsumedByEditor = ( _moduleHost != nullptr && _moduleHost->onWindowMessage( event ) );
+        // 이벤트를 GameModuleManager(ImGui 등)에 먼저 보낸다.
+        const bool bConsumedByEditor = ( _gameModuleManager != nullptr && _gameModuleManager->onWindowMessage( event ) );
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.
         if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
@@ -767,24 +767,24 @@ namespace sw
 
     CameraComponent* App::getSceneViewCamera()
     {
-        return _moduleHost != nullptr ? _moduleHost->getSceneViewCamera() : nullptr;
+        return _gameModuleManager != nullptr ? _gameModuleManager->getSceneViewCamera() : nullptr;
     }
 
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        // 이 훅은 렌더 스레드가 부른다. ModuleHost 가 사라진 뒤에는 불리지 않는다. shutdown 이 ModuleHost 를 지우기 전에
+        // 이 훅은 렌더 스레드가 부른다. GameModuleManager 가 사라진 뒤에는 불리지 않는다. shutdown 이 GameModuleManager 를 지우기 전에
         // drainRenderWorkers 로 큐를 비우고, 그 시점에는 메인 루프가 이미 끝나 새 프레임이 들어오지 않는다. 훅 델리게이트 자체를
         // 여기서 끊는 것은 오히려 위험하다. RenderThread::setPresentHook 은 잠금 없는 대입이라, 렌더 스레드가 도는 중에 바꾸면
         // 레이스가 된다(실제로 종료할 때 크래시가 났다). 아래 검사는 그 불변 조건이 깨졌을 때 죽는 대신 조용히 넘어가기 위한 것이다.
-        if ( _moduleHost == nullptr )
+        if ( _gameModuleManager == nullptr )
             return;
-        _moduleHost->renderEditor( renderDevice );
+        _gameModuleManager->renderEditor( renderDevice );
     }
 
     void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        if ( _moduleHost == nullptr )
+        if ( _gameModuleManager == nullptr )
             return;
-        _moduleHost->postPresentEditor( renderDevice );
+        _gameModuleManager->postPresentEditor( renderDevice );
     }
 } // namespace sw

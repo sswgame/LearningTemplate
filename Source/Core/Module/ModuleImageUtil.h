@@ -2,9 +2,9 @@
  * @file ModuleImageUtil.h
  * @brief 동적 라이브러리(모듈 이미지)를 다루는 유일한 진입점입니다.
  * @details 이름 만들기, 로드, 심볼 조회, 이미지 범위 조회, 의존 이미지 고정을 제공합니다. 이미지의 코드를 가리키는 등록을 해제하고 언로드하는 일도 여기서 합니다.
- *          게임과 에디터 모듈(`ModuleHost`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
+ *          게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
  *          레지스트리 목록은 `IModuleUnloadListener` 가 보관합니다. 이 구조체는 그 목록을 순회하고 결과를 로그로 남긴 뒤 이미지를 언로드합니다.
- *          섀도 복사본의 **파일 바이트**를 고치는 `ModuleImagePatch` 는 핫 리로드만 쓰므로 `ModuleHost/ModuleImagePatch` 에 있습니다.
+ *          섀도 복사본의 **파일 바이트**를 고치는 `ModuleImagePatch` 는 핫 리로드만 쓰므로 `GameModuleManager/ModuleImagePatch` 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

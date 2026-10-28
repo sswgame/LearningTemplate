@@ -2,7 +2,7 @@
 
 #include "App/RHIBackendSwitcher.h"
 
-#include "App/EditorModuleHost.h"
+#include "App/EditorModuleManager.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -35,7 +35,7 @@ namespace sw
 
     RHIBackendSwitcher::RHIBackendSwitcher()
         : _pEngine{ nullptr }
-        , _pModuleHost{ nullptr }
+        , _pGameModuleManager{ nullptr }
         , _failedSwapCount{ 0 }
         , _startBackend{}
         , _bEnableEditor{ SW_FALSE }
@@ -105,11 +105,11 @@ namespace sw
         return true;
     }
 
-    void RHIBackendSwitcher::initialize( Engine* pEngine, EditorModuleHost* pModuleHost, bool bEnableEditor )
+    void RHIBackendSwitcher::initialize( Engine* pEngine, EditorModuleManager* pGameModuleManager, bool bEnableEditor )
     {
-        _pEngine       = pEngine;
-        _pModuleHost   = pModuleHost;
-        _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
+        _pEngine            = pEngine;
+        _pGameModuleManager = pGameModuleManager;
+        _bEnableEditor      = bEnableEditor ? SW_TRUE : SW_FALSE;
 
         GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
         if ( pBackendVariable != nullptr )
@@ -124,8 +124,8 @@ namespace sw
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};
 
-        _pEngine     = nullptr;
-        _pModuleHost = nullptr;
+        _pEngine            = nullptr;
+        _pGameModuleManager = nullptr;
     }
 
     void RHIBackendSwitcher::applyIfPending()
@@ -170,7 +170,7 @@ namespace sw
 
     bool RHIBackendSwitcher::applyPendingChange()
     {
-        if ( _pEngine == nullptr || _pModuleHost == nullptr )
+        if ( _pEngine == nullptr || _pGameModuleManager == nullptr )
             return false;
 
         // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
@@ -178,9 +178,9 @@ namespace sw
         void* pEditorModule{ nullptr };
         void* pGameModule{ nullptr };
 #if !defined( SW_SHIPPING )
-        // 모듈 수명은 ModuleHost 가 안다. 여기서 리로드 내부를 직접 뒤지지 않는다.
-        pEditorModule = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetEditorModule );
-        pGameModule   = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetGameModule );
+        // 모듈 수명은 GameModuleManager 가 안다. 여기서 리로드 내부를 직접 뒤지지 않는다.
+        pEditorModule = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetEditorModule );
+        pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
 #endif
 
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
@@ -190,7 +190,7 @@ namespace sw
         if ( pEditSession != nullptr )
             pEditSession->setModuleImageKept( true );
 #endif
-        _pModuleHost->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
+        _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
 #if !defined( SW_SHIPPING )
         if ( pEditSession != nullptr )
             pEditSession->setModuleImageKept( false );
@@ -204,7 +204,7 @@ namespace sw
             return false;
         }
 
-        const bool bReinitOk = _pModuleHost->reinitializeAfterRHISwap( pEditorModule, pGameModule );
+        const bool bReinitOk = _pGameModuleManager->reinitializeAfterRHISwap( pEditorModule, pGameModule );
         if ( bReinitOk == false )
             SW_LOG_ERROR( "reinitializeAfterRHISwap failed." );
         if ( bSwapOk == false )

@@ -220,7 +220,7 @@ namespace sw
         GameObject* findActiveObject( const hashed_string& name ) const;
         /**
          * @brief 월드가 플레이 중인지 정합니다. 바뀌면 활성 씬의 오브젝트 매니저에 `beginPlay` · `endPlay` 를 부릅니다.
-         * @details 플레이 중에 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작합니다. 에디터가 없으면 App 이 켜고(`ModuleHost`),
+         * @details 플레이 중에 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작합니다. 에디터가 없으면 App 이 켜고(`GameModuleManager`),
          *          에디터가 있으면 Play · Stop 이 켜고 끕니다. App · Shipping 에서도 켜야 onBeginPlay 가 불립니다(시퀀스 자동 재생 ·
          *          대화 그래프 로드 · 물리 동기화가 거기에 기댄다).
          */
@@ -240,7 +240,7 @@ namespace sw
         void cancelPendingAsyncLoads();
         /**
          * @brief 앱이 끝나는 중이니 도는 비동기 로드는 일찍 끝내라는 협조 신호를 올립니다(기다리지 않는다). 로드 잡은 시작 앞과 파싱 뒤(인스턴스화 앞)에서 읽고 돌아간다.
-         * @details `cancelPendingAsyncLoads` 와 달리 약속을 채우거나 기다리지 않는다 — 종료의 태스크 비우기(`ModuleHost::drainRenderWorkers`)가 그 앞에서 부른다.
+         * @details `cancelPendingAsyncLoads` 와 달리 약속을 채우거나 기다리지 않는다 — 종료의 태스크 비우기(`GameModuleManager::drainRenderWorkers`)가 그 앞에서 부른다.
          *          이미 인스턴스화 중인 로드는 끊지 못하고 끝까지 돈다(`Scene::instantiate` 에 중단 점이 없다). 올린 뒤에는 이 매니저가 새 로드를 받지 않는다 — 종료 경로 전용이다.
          */
         void requestAsyncLoadStop();
