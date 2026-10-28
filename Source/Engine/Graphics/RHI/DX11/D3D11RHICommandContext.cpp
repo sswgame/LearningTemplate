@@ -235,7 +235,27 @@ namespace sw
         // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
         // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(예: 인스턴스 버퍼 t4).
         // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
-        const bool bNoUavToRelease = _pContext == nullptr || _pState == nullptr || buffer == 0 || newState == RHIBufferState::UnorderedAccess;
+        // 상태마다 뗄지를 열거로 정한다 — `default:` 가 없어 새 상태가 생기면 이 switch 가 컴파일 경고(-Werror=switch)로 결정을 요구한다.
+        bool bReleasesUav{ true };
+        switch ( newState )
+        {
+            case RHIBufferState::UnorderedAccess:
+            {
+                bReleasesUav = false; // 쓰기로 돌아갈 때는 bindComputeUav 가 다시 건다
+                break;
+            }
+            case RHIBufferState::Common:
+            case RHIBufferState::ShaderResource:
+            case RHIBufferState::IndirectArgument:
+            case RHIBufferState::CopyDest:
+            case RHIBufferState::VertexOrConstant:
+            case RHIBufferState::Index:
+            case RHIBufferState::CopySource:
+            {
+                break; // 읽기 · 복사 상태는 UAV 에서 뗀다
+            }
+        }
+        const bool bNoUavToRelease = _pContext == nullptr || _pState == nullptr || buffer == 0 || bReleasesUav == false;
         if ( bNoUavToRelease )
             return;
 

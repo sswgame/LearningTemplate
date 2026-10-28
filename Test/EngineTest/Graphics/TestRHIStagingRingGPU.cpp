@@ -10,7 +10,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 스테이징 링을 쓰는 GL · Vulkan · DX12 전송을 실제 디바이스로 본다. 링 장부의 규칙은 TestRHIStagingRing.cpp 가 GPU 없이 본다.
+// 스테이징 링을 쓰는 GL · Vulkan · DX12 전송과 바이트 예산을 쓰는 DX11 전송을 실제 디바이스로 본다. 링 장부와 예산의 규칙은 TestRHIStagingRing.cpp 가 GPU 없이 본다.
 
 SW_TEST_REQUIRES_HOST( RHIStagingRingGPUTest, "creates a real OpenGL, Vulkan or DirectX 12 device" );
 
@@ -78,11 +78,14 @@ namespace
      * @details 4096×4352 RGBA8(68 MiB)은 업로드 링과 되읽기 링을 모두 넘는다 — 둘 다 `Rejected` 가 아니라 링이 빌 때 혼자 들어가야 하고(단독 상한 기본 512 MiB),
      *          읽은 바이트가 올린 바이트와 같아야 한다. 이어 4 MiB 구간 업로드와 그 텍스처의 읽기가 다시 들어가는지(단독 구간을 돌려받았는지) 본다.
      *          돌려받지 않았으면 `Busy` 가 시간 초과까지 이어져 실패한다.
+     * @param bStagingRing 백엔드가 업로드 링을 갖는지입니다. DX11 은 업로드마다 스테이징 텍스처를 만들어 링이 없다(능력 비트 거짓) — 링 대신 바이트 예산(`RHIStagingBudget`)이
+     *        64 MiB 이고, 그보다 큰 한 장이 예산 전부를 잡고 혼자 들어가야 한다.
      * @param bReadbackRing 백엔드가 되읽기 링을 갖는지입니다. DX12 는 읽기마다 자기 읽기 힙 버퍼를 만들어 링이 없다(능력 비트 거짓) — 큰 읽기도 그대로 받아야 한다.
      */
-    void transferLargerThanTheRingAlone( test::RHITestDevice& device, bool bReadbackRing )
+    void transferLargerThanTheRingAlone( test::RHITestDevice& device, bool bStagingRing, bool bReadbackRing )
     {
-        SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentStagingRing != SW_FALSE, "the backend did not create its persistent staging ring" );
+        if ( bStagingRing )
+            SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentStagingRing != SW_FALSE, "the backend did not create its persistent staging ring" );
         if ( bReadbackRing )
             SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentReadbackRing != SW_FALSE, "the backend did not create its persistent readback ring" );
 
@@ -263,7 +266,20 @@ SW_TEST_CASE( RHIStagingRingGPUTest, OpenGLTransferLargerThanTheRingIsAcceptedAl
     test::RHITestDevice device( sw::RHIBackend::OpenGL );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No OpenGL device for the staging ring test" );
-    transferLargerThanTheRingAlone( device, true );
+    transferLargerThanTheRingAlone( device, true, true );
+}
+
+/**
+ * @brief [RHIStagingRingGPUTest] DX11 은 업로드 스테이징 예산(기본 64 MiB)보다 큰 업로드 한 장을 `Busy` 로 거절하지 않고 예산 전부를 잡아 혼자 받는다(`transferLargerThanTheRingAlone`)
+ * @details 링이 없는 백엔드라 능력 비트 두 개는 거짓이다. 변이: 예산보다 큰 요청을 `Rejected` 로 돌리면 업로드 헬퍼가 실패하고, 끝난 전송을 모아 예산을 돌려받지 않으면(`UploadStaging`
+ *          소멸자가 놓지 않으면) 뒤의 4 MiB 구간 업로드가 끝없이 `Busy` 이며, 예약이 풀리지 않으면(`RHIStagingBudget`) 뒤의 작은 업로드가 못 들어간다.
+ */
+SW_TEST_CASE( RHIStagingRingGPUTest, DirectX11TransferLargerThanTheBudgetIsAcceptedAlone )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX11 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No DirectX 11 device for the staging budget test" );
+    transferLargerThanTheRingAlone( device, false, false );
 }
 
 /**
@@ -275,7 +291,7 @@ SW_TEST_CASE( RHIStagingRingGPUTest, DirectX12TransferLargerThanTheRingIsAccepte
     test::RHITestDevice device( sw::RHIBackend::DirectX12 );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No DirectX 12 device for the staging ring test" );
-    transferLargerThanTheRingAlone( device, false );
+    transferLargerThanTheRingAlone( device, true, false );
 }
 
 /**
@@ -288,7 +304,7 @@ SW_TEST_CASE( RHIStagingRingGPUTest, VulkanTransferLargerThanTheRingIsAcceptedAl
     test::RHITestDevice device( sw::RHIBackend::Vulkan );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No Vulkan device for the staging ring test" );
-    transferLargerThanTheRingAlone( device, true );
+    transferLargerThanTheRingAlone( device, true, true );
 }
 
 /**
