@@ -9,7 +9,7 @@
 
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
-#include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
 
 namespace sw
 {

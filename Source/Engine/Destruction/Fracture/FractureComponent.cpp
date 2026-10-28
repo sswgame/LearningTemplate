@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureComponent.h"
+#include "Engine/Destruction/Fracture/FractureComponent.h"
 
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureAssetCache.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureAssetCache.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureAssetCache.h"
+#include "Engine/Destruction/Fracture/FractureAssetCache.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
 
 namespace sw
 {

@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Destruction/Fracture2DComponent.h"
+#include "Engine/Destruction/Fracture/Fracture2DComponent.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureRenderUtil.h"
-#include "Engine/Destruction/PolygonFracture.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureRenderUtil.h"
+#include "Engine/Destruction/Fracture/PolygonFracture.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

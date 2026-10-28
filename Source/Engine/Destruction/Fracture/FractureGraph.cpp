@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
 
 #include "Core/Container/UnionFindUtil.h"
 #include "Core/Math/MathUtil.h"

@@ -8,7 +8,7 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Destruction/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 

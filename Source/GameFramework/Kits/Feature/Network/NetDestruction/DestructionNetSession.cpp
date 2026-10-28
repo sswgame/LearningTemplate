@@ -6,7 +6,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/StateHashBuilder.h"
-#include "Engine/Destruction/FractureComponent.h"
+#include "Engine/Destruction/Fracture/FractureComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"

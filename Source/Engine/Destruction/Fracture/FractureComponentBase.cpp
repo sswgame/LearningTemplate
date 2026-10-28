@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -10,9 +10,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/DestructionRandom.h"
-#include "Engine/Destruction/FractureAnchor.h"
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureRenderUtil.h"
+#include "Engine/Destruction/Fracture/FractureAnchor.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"

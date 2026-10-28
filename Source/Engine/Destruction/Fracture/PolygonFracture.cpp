@@ -1,16 +1,16 @@
 #include "pch.h"
 
-#include "Engine/Destruction/PolygonFracture.h"
+#include "Engine/Destruction/Fracture/PolygonFracture.h"
 
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Destruction/DestructionRandom.h"
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureGraph.h"
-#include "Engine/Destruction/FractureSiteUtil.h"
-#include "Engine/Destruction/MeshFracture.h"
-#include "Engine/Destruction/PolygonTriangulation.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureSiteUtil.h"
+#include "Engine/Destruction/Fracture/MeshFracture.h"
+#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 namespace sw
 {

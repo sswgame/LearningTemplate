@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureNetworkSync.h"
+#include "Engine/Destruction/Fracture/FractureNetworkSync.h"
 
 #include "Core/Serialization/BitStream.h"
 

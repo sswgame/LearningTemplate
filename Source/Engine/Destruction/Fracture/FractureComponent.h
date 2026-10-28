@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 
-#include "Engine/Destruction/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

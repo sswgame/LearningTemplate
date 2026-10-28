@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"

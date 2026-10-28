@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/MeshFracture.h"
+#include "Engine/Destruction/Fracture/MeshFracture.h"
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
@@ -12,10 +12,10 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/GeometryCut.h"
 #include "Engine/Destruction/DestructionRandom.h"
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureGraph.h"
-#include "Engine/Destruction/FractureSiteUtil.h"
-#include "Engine/Destruction/PolygonTriangulation.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureSiteUtil.h"
+#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 namespace sw
 {

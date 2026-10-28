@@ -38,7 +38,7 @@
 #include "Core/Network/Replication/NetClock.h"
 
 #include "Engine/Destruction/DestructionDamage.h"
-#include "Engine/Destruction/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"

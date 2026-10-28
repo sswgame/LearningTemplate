@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Destruction/FractureComponentBase.h"
-#include "Engine/Destruction/MeshFracture.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/MeshFracture.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

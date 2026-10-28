@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Destruction/PolygonTriangulation.h"
+#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 #include "Core/Math/MathUtil.h"
 

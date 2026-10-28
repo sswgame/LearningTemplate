@@ -30,7 +30,7 @@
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"

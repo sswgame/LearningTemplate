@@ -12,7 +12,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
 #include <algorithm>

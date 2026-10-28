@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Destruction/FractureAnchor.h"
+#include "Engine/Destruction/Fracture/FractureAnchor.h"
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Destruction/FractureComponentBase.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureComponentBase.h"
 
 namespace sw
 {

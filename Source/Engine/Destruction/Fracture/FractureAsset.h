@@ -17,7 +17,7 @@
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

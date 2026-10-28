@@ -14,7 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
 
 namespace sw
 {
