@@ -15,6 +15,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -26,7 +27,7 @@ namespace sw
      * @class MemoryEphemeralDatabase
      * @brief 키별 값과 만료, 정렬 집합, 채널 구독과 받은편지함입니다. 잠금 하나로 모든 호출을 직렬화합니다(프런트 여럿이 같이 쓴다).
      */
-    class SW_GF_API MemoryEphemeralDatabase : private SubscriptionSource
+    class SW_GF_API MemoryEphemeralDatabase
     {
     public:
         /**
@@ -69,7 +70,7 @@ namespace sw
         };
 
         /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
         /** @brief 만료됐으면 지우고, 살아 있는 값이면 그것입니다. */
         ValueEntry*    findValue( const string& key, int64 nowMs ) SW_REQUIRES_LOCK( _mutex );
         ScoreSetEntry* findScoreSet( const string& key, int64 nowMs ) SW_REQUIRES_LOCK( _mutex );
@@ -86,6 +87,10 @@ namespace sw
         unordered_map<string, ScoreSetEntry> _mapScoreSet SW_GUARDED_BY( _mutex );
         unordered_map<uint64, Inbox> _mapInbox            SW_GUARDED_BY( _mutex );
         IDAllocator<uint64> _inboxIDAllocator             SW_GUARDED_BY( _mutex );
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&MemoryEphemeralDatabase::releaseSubscription>( this ) };
     };
 } // namespace sw
 

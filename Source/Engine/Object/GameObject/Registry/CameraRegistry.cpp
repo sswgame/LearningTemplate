@@ -21,7 +21,7 @@ namespace sw
         if ( _registeredCamera.addLogged( pCamera, "Camera" ) != RegistrationResult::Added )
             return {};
         _registrySerial.fetch_add( 1, std::memory_order_relaxed );
-        return issueSubscription( reinterpret_cast<uint64>( pCamera ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pCamera ) );
     }
 
     void CameraRegistry::releaseSubscription( uint64 id )

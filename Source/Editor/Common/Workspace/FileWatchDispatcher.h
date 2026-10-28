@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/File/IFileWatcher.h"
 
 namespace sw
@@ -25,7 +26,7 @@ namespace sw
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.
      * @note Windows 는 ReadDirectoryChangesW, Linux 는 inotify, 그 밖의 플랫폼은 mtime 폴링으로 대신합니다.
      */
-    class FileWatchDispatcher : private SubscriptionSource
+    class FileWatchDispatcher
     {
     public:
         /** @brief 워치 목록을 비운 채 시작합니다. */
@@ -94,7 +95,7 @@ namespace sw
         /** @brief mtime 폴백으로 변경을 모읍니다. */
         void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
         /** @brief 감시 구독 @p id 가 풀렸습니다. 그 감시를 뺍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
         /** @brief 파일 확장자가 감시 허용 목록에 있으면 true 입니다. */
         bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
@@ -104,5 +105,9 @@ namespace sw
         unordered_map<string, uint64> _mapPollMtime;
         uint64                        _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
         bool                          _bUseMtimePoll{ false };
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&FileWatchDispatcher::releaseSubscription>( this ) };
     };
 } // namespace sw

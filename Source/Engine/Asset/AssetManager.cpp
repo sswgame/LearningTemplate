@@ -190,7 +190,7 @@ namespace sw
     {
         if ( addAssetCache( pCache ) == false )
             return {};
-        return issueSubscription( reinterpret_cast<uint64>( pCache ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pCache ) );
     }
 
     bool AssetManager::addAssetCache( IAssetCache* pCache )

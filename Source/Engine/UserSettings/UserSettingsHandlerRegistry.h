@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -46,7 +47,7 @@ namespace sw
      *          등록은 돌려준 구독(`Subscription`)이 소유한다 — 구독이 사라지면 그 줄이 빠지고, 레지스트리가 먼저 사라지면 구독이 무효가 된다.
      *          게임 스레드에서만 쓴다(설정 적용 · 메뉴 · 등록이 모두 게임 스레드라 잠금을 두지 않는다).
      */
-    class SW_API UserSettingsHandlerRegistry : private SubscriptionSource
+    class SW_API UserSettingsHandlerRegistry
     {
     public:
         UserSettingsHandlerRegistry();
@@ -94,11 +95,15 @@ namespace sw
         const HandlerEntry*  findHandlerEntry( const hashed_string& name ) const;
         const ProviderEntry* findProviderEntry( const hashed_string& name ) const;
         /** @brief 구독 @p id 가 풀렸습니다. 그 번호의 핸들러 · 공급자 줄을 지웁니다(바뀐 줄이면 번호가 달라 남는다). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
     private:
         vector<HandlerEntry>  _listHandler;
         vector<ProviderEntry> _listProvider;
         uint64                _nextSubscriptionID; ///< 다음 구독 번호(0 은 쓰지 않는다)
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UserSettingsHandlerRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw

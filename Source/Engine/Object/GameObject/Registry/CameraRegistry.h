@@ -15,6 +15,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Object/GameObject/Registry/CameraShakeChannel.h"
@@ -31,7 +32,7 @@ namespace sw
      * @note 락은 `ComponentRegistry` 와 같이 가장 안쪽입니다. 목록은 공통 등록 목록(`RegistrationList`)이라 등록 순서를 지킵니다(순서를 지키며
      *       뺍니다). 선택 규칙은 그 순서에 기대지 않습니다 — 우선순위가 같으면 컴포넌트 id 가 큰(나중에 만든) 카메라입니다.
      */
-    class SW_API CameraRegistry : private SubscriptionSource
+    class SW_API CameraRegistry
     {
     public:
         /** @brief 빈 레지스트리를 만듭니다. */
@@ -105,7 +106,7 @@ namespace sw
 
     private:
         /** @brief 카메라 등록 구독이 풀렸습니다(@p id 는 카메라 주소). 순서를 지키며 빼고 컷 카메라였으면 풉니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
@@ -117,5 +118,9 @@ namespace sw
         uint32             _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
         float32            _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
         CameraShakeChannel _shakeChannel;          ///< 흔들림 요청 채널(`getShakeChannel`). 자기 잠금을 쓴다
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CameraRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw

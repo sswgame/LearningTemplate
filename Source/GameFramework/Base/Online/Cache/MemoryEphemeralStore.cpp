@@ -126,7 +126,7 @@ namespace sw
             outInboxID            = _inboxIDAllocator.allocate();
             _mapInbox[outInboxID] = Inbox{};
         }
-        return issueSubscription( outInboxID );
+        return _subscriptions.issue( outInboxID );
     }
 
     void MemoryEphemeralDatabase::releaseSubscription( uint64 id )

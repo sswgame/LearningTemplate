@@ -94,7 +94,7 @@ namespace sw
         }
         _listHandler.push_back( pHandler );
         rebuildKindTable();
-        return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pHandler ) ) );
+        return _subscriptions.issue( static_cast<uint64>( reinterpret_cast<uintptr_t>( pHandler ) ) );
     }
 
     void NetMessageRouter::releaseSubscription( uint64 id )

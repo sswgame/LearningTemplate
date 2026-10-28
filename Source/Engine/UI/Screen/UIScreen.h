@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -77,7 +78,7 @@ namespace sw
      *          **애니메이션**: 화면마다 재생기 하나(`getAnimationPlayer`)가 문서의 `<_listAnimation>` 을 가진다. `Open` 은 올릴 때, `Close` 는 닫을 때
      *          재생하고, 닫기는 `Close` 가 끝난 뒤에 실제로 지운다(그동안 화면은 입력과 포커스를 받지 않는다).
      */
-    class SW_API UIScreen : private SubscriptionSource
+    class SW_API UIScreen
     {
     public:
         UIScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
@@ -177,7 +178,7 @@ namespace sw
         };
 
         /** @brief 명령 등록 구독 @p id 가 풀렸습니다. 그 명령의 지금 등록이 이 구독이면 해제합니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         WidgetTree                                                          _tree;
         UIScreenDesc                                                        _desc;
@@ -196,5 +197,9 @@ namespace sw
         uint8                                                               _bClosing;
         uint8                                                               _bHiddenByLayer;            ///< 레이어 가시성 요청이 숨기는 중이다(`UISystem` 이 적는다)
         uint8                                                               _bReportsUnhandledCommands; ///< 처리하지 않은 명령을 경고로 남긴다(`setReportsUnhandledCommands`)
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UIScreen::releaseSubscription>( this ) };
     };
 } // namespace sw

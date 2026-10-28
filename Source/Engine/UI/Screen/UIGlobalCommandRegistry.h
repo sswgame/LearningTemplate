@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
@@ -27,7 +28,7 @@ namespace sw
      *          게임 흐름(`GameInstanceBase`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 함수가 모듈 이미지 안에 있으면 그 모듈이 언로드될 때 `UISystem` 이 제거한다(`removeCodeWithin`).
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UIGlobalCommandRegistry : private SubscriptionSource
+    class SW_API UIGlobalCommandRegistry
     {
     public:
         static constexpr utf8 kReturnToTitle[] = "ReturnToTitle"; ///< 일시정지 메뉴의 "타이틀로" 명령입니다.
@@ -56,10 +57,14 @@ namespace sw
         };
 
         /** @brief 등록 구독 @p id 가 풀렸습니다. 그 명령의 지금 등록이 이 구독이면 거둡니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         NameRegistry<UICommandDelegate> _registry;
         vector<CommandOwner>            _listOwner;   ///< 명령마다 지금 등록의 구독 번호(명령은 몇 개뿐이다)
         uint64                          _nextOwnerID; ///< 다음 등록 구독 번호(0 은 쓰지 않는다)
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UIGlobalCommandRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw

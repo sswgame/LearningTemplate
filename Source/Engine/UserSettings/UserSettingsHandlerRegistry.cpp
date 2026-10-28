@@ -25,11 +25,11 @@ namespace sw
                 entry._handler        = handler;
                 entry._filter         = filter;
                 entry._subscriptionID = subscriptionID;
-                return issueSubscription( subscriptionID );
+                return _subscriptions.issue( subscriptionID );
             }
         }
         _listHandler.push_back( HandlerEntry{ name, handler, filter, subscriptionID } );
-        return issueSubscription( subscriptionID );
+        return _subscriptions.issue( subscriptionID );
     }
 
     bool UserSettingsHandlerRegistry::hasHandler( const hashed_string& name ) const
@@ -64,11 +64,11 @@ namespace sw
             {
                 entry._provider       = provider;
                 entry._subscriptionID = subscriptionID;
-                return issueSubscription( subscriptionID );
+                return _subscriptions.issue( subscriptionID );
             }
         }
         _listProvider.push_back( ProviderEntry{ name, provider, subscriptionID } );
-        return issueSubscription( subscriptionID );
+        return _subscriptions.issue( subscriptionID );
     }
 
     void UserSettingsHandlerRegistry::releaseSubscription( uint64 id )
@@ -125,7 +125,7 @@ namespace sw
 
     void UserSettingsHandlerRegistry::clear()
     {
-        detachAllSubscriptions();
+        _subscriptions.detachAll();
         _listHandler.clear();
         _listProvider.clear();
     }

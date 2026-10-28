@@ -470,7 +470,7 @@ namespace sw
             pChannel = &added;
         }
         pChannel->_pProvider = pProvider;
-        return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pProvider ) ) );
+        return _subscriptions.issue( static_cast<uint64>( reinterpret_cast<uintptr_t>( pProvider ) ) );
     }
 
     void StateHashHistory::releaseSubscription( uint64 id )

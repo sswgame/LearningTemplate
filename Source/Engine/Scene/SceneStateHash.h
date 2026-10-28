@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -110,7 +111,7 @@ namespace sw
      *          씬 해시 줄(기본) 말고 키트가 이름 붙은 줄(`registerChannel`)을 더한다 — 줄마다 같은 용량의 링이고 샘플 형식 · 비교(`findFirstDivergence`)가 같다.
      *          이름 붙은 줄은 구독이 풀려도(키트 종료) 이력을 남긴다. 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
      */
-    class SW_API StateHashHistory final : public ISubsystem, private SubscriptionSource
+    class SW_API StateHashHistory final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "StateHashHistory";
@@ -184,7 +185,7 @@ namespace sw
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );
 
     protected:
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
     private:
         /** @brief 링 버퍼 하나입니다(틱 오름차순으로 쌓이고 가득 차면 `_head` 부터 덮는다). 용량은 이력이 정한다. */
@@ -212,5 +213,9 @@ namespace sw
         Ring            _scene; ///< 씬 줄
         vector<Channel> _listChannel;
         uint32          _capacity{ 0 };
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&StateHashHistory::releaseSubscription>( this ) };
     };
 } // namespace sw

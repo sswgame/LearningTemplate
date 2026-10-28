@@ -24,6 +24,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -94,7 +95,7 @@ namespace sw
 namespace sw
 {
     /** @class SceneNavigation @brief 파일 머리말 참고. */
-    class SW_API SceneNavigation : public ISceneService, private SubscriptionSource
+    class SW_API SceneNavigation : public ISceneService
     {
     public:
         /** @brief 레지스트리에 없는 자리입니다. */
@@ -248,7 +249,7 @@ namespace sw
         static constexpr uint64    kRegistrationKindMask = 7;
         [[nodiscard]] Subscription issueRegistration( const void* pItem, RegistrationKind kind );
         /** @brief 등록 구독이 풀렸습니다. 종류에 맞춰 뺍니다(기하 소스는 순서를 지키며, 나머지는 각자의 해제). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
         void unregisterAgent( NavMeshAgentComponent* pAgent );
         void unregisterSurface( NavMeshSurfaceComponent* pSurface );
         void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
@@ -261,5 +262,9 @@ namespace sw
         GameObjectManager*                   _pManager;
         bool                                 _bSettingsLoaded;
         bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&SceneNavigation::releaseSubscription>( this ) };
     };
 } // namespace sw

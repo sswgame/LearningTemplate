@@ -20,6 +20,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -30,7 +31,7 @@ namespace sw
      * @class EphemeralStoreRouter
      * @brief 캐시 프런트의 답과 메시지를 요청 id 와 채널로 나눠 줍니다.
      */
-    class SW_GF_API EphemeralStoreRouter : private SubscriptionSource
+    class SW_GF_API EphemeralStoreRouter
     {
     public:
         using ReplyDelegate   = Delegate<void( const EphemeralReply& )>;
@@ -61,7 +62,7 @@ namespace sw
          * @brief 답 델리게이트 주인의 몫을 엽니다. 주인이 멤버로 들고, 놓으면(소멸 · `reset`) 그 몫으로 맡긴 기다리는 요청의 델리게이트를 모두 지웁니다.
          * @details 요청 자체는 캐시에서 이미 실행됐을 수 있다 — 답만 버린다. 라우터가 먼저 내려가면(`shutdown`) 몫은 무효가 된다.
          */
-        [[nodiscard]] Subscription openReplyOwner() { return issueSubscription( _subscriptionIDAllocator.allocate() ); }
+        [[nodiscard]] Subscription openReplyOwner() { return _subscriptions.issue( _subscriptionIDAllocator.allocate() ); }
         /**
          * @brief @p channel 을 구독하고 그 구독을 돌려줍니다. 구독이 사라지면 빠지고, 채널의 마지막 구독자면 앞의 구독도 닫습니다.
          * @details 초기화 전이거나 델리게이트가 비었으면 오류를 남기고 빈 구독을 돌려줍니다(예전에는 0 을 조용히 돌려줬다).
@@ -86,7 +87,7 @@ namespace sw
 
         bool hasChannelSubscriber( string_view channel ) const;
         /** @brief 구독 @p id 가 풀렸습니다. 채널 구독이면 줄을 지우고 채널의 마지막 구독자였으면 앞의 구독을 닫습니다. 주인 몫이면 그 몫의 기다리는 답을 지웁니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         vector<EphemeralReply>              _listReplyScratch;
         vector<EphemeralMessage>            _listMessageScratch;
@@ -95,5 +96,9 @@ namespace sw
         unordered_map<uint64, PendingReply> _mapRequestToReply;
         IEphemeralStore*                    _pStore;
         IDAllocator<uint64>                 _subscriptionIDAllocator;
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&EphemeralStoreRouter::releaseSubscription>( this ) };
     };
 } // namespace sw

@@ -93,7 +93,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( _listener.addLogged( pListener, "Audio listener" ) != RegistrationResult::Added )
             return {};
-        return issueSubscription( reinterpret_cast<uint64>( pListener ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pListener ) );
     }
 
     Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
@@ -106,7 +106,7 @@ namespace sw
         }
         if ( _emitter.add( pEmitter ) == false )
             return {}; // 이미 올라 있다 — 먼저 받은 구독이 쥔다
-        return issueSubscription( reinterpret_cast<uint64>( pEmitter ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pEmitter ) );
     }
 
     Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
@@ -114,7 +114,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( _zone.addLogged( pZone, "Audio reverb zone" ) != RegistrationResult::Added )
             return {};
-        return issueSubscription( reinterpret_cast<uint64>( pZone ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pZone ) );
     }
 
     void SceneAudio::releaseSubscription( uint64 id )

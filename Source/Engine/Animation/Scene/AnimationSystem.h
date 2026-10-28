@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
@@ -443,7 +444,7 @@ namespace sw
      *          (4) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
-    class SW_API AnimationSystem final : public ISceneService, private SubscriptionSource
+    class SW_API AnimationSystem final : public ISceneService
     {
     public:
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
@@ -600,7 +601,7 @@ namespace sw
         AnimationComponentSet                       _componentAll;           ///< 모든 유닛의 성분이다(평가 순서 — 외톨이 해제는 지름길로 뺀다)
         AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다). 단계를 처리하는 유닛 전부다
         /** @brief LOD 클라이언트 구독이 풀렸습니다(@p id 는 클라이언트 주소). 목록에서 뺍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         AnimationOrderedList<IAnimationLODClient> _lodClientList; ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<AnimationLODView>                  _listLODView;
@@ -641,5 +642,9 @@ namespace sw
         uint8              _bCrowdSettingsFailed; ///< 군중 테이블 파일을 못 읽었다 — 군중을 묶지 않는다
         uint8              _bHasLODViewPosition;  ///< 거리 LOD 기준점을 정했다
         uint8              _bHasPendingLODView;   ///< 대기 뷰가 있다
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AnimationSystem::releaseSubscription>( this ) };
     };
 } // namespace sw

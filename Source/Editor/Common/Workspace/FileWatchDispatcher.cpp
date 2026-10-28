@@ -171,7 +171,7 @@ namespace sw
         _listWatch.push_back( entry );
 
         SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
-        return issueSubscription( entry._id );
+        return _subscriptions.issue( entry._id );
     }
 
     void FileWatchDispatcher::releaseSubscription( uint64 id )

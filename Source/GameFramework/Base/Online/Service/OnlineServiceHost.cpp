@@ -300,7 +300,7 @@ namespace sw
             _listService[index - 1]->onHostShutdown( *this );
         }
         // 서비스가 풀지 않은 구독은 무효로 만들고 버스 구독을 닫는다(같은 주제의 항목이 여럿이어도 버스에는 한 번 구독했다).
-        detachAllSubscriptions();
+        _subscriptions.detachAll();
         vector<string> listOpenTopic;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
@@ -509,7 +509,7 @@ namespace sw
             _settings._pServerBusTransport->subscribe( topic );
         const uint64 subscriptionID = _nextBusSubscriptionID++;
         _listBusSubscription.push_back( BusSubscription{ string( topic ), pService, subscriptionID } );
-        return issueSubscription( subscriptionID );
+        return _subscriptions.issue( subscriptionID );
     }
 
     void OnlineServiceHost::releaseSubscription( uint64 id )

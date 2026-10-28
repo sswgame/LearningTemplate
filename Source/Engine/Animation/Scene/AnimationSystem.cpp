@@ -240,7 +240,7 @@ namespace sw
     {
         if ( pClient == nullptr || _lodClientList.add( pClient ) == false )
             return {}; // 이미 있으면 먼저 받은 구독이 쥔다
-        return issueSubscription( reinterpret_cast<uint64>( pClient ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pClient ) );
     }
 
     void AnimationSystem::releaseSubscription( uint64 id )

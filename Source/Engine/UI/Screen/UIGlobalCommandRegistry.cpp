@@ -42,7 +42,7 @@ namespace sw
             pOwner->_id = id; // 교체 — 옛 구독은 이제 아무것도 거두지 않는다
         else
             _listOwner.push_back( CommandOwner{ command, id } );
-        return issueSubscription( id );
+        return _subscriptions.issue( id );
     }
 
     void UIGlobalCommandRegistry::releaseSubscription( uint64 id )

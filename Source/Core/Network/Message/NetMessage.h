@@ -14,6 +14,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
@@ -158,7 +159,7 @@ namespace sw
      *     router.pump( host, &listUnhandled );                                    // 매 틱 host.update 뒤
      * @endcode
      */
-    class SW_API NetMessageRouter : private SubscriptionSource
+    class SW_API NetMessageRouter
     {
     public:
         static constexpr int32 kKindCount = NetMessageKindTallyTable::kKindCount;
@@ -198,7 +199,7 @@ namespace sw
 
     private:
         /** @brief 구독 @p id(처리기 주소)가 풀렸습니다. 그 처리기를 뺍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
         void rebuildKindTable();
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
         void dispatchNotice( const NetDeliveryNotice& notice );
@@ -210,5 +211,9 @@ namespace sw
         NetInbound                  _inbound;                      ///< `pump` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
         uint64                      _unclaimedNoticeCount;
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&NetMessageRouter::releaseSubscription>( this ) };
     };
 } // namespace sw

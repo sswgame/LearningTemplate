@@ -32,7 +32,7 @@ namespace sw
     {
         if ( _pStore == nullptr )
             return;
-        detachAllSubscriptions(); // 남은 구독은 무효로 — 뒤늦은 해제가 내린 앞을 부르지 않는다
+        _subscriptions.detachAll(); // 남은 구독은 무효로 — 뒤늦은 해제가 내린 앞을 부르지 않는다
         vector<string> listChannel;
         for ( const ChannelSubscriber& subscriber : _listSubscriber )
         {
@@ -107,7 +107,7 @@ namespace sw
     {
         if ( _pStore == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
-        const uint64 ownerID = findIssuedID( owner );
+        const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 || onReply.isBound() == false )
         {
             SW_LOG_ERROR( "EphemeralStoreRouter: submit %# - nothing is submitted", ownerID == 0 ? "without a live reply owner of this router" : "with an empty delegate" );
@@ -133,7 +133,7 @@ namespace sw
         subscriber._channel           = string( channel );
         subscriber._onMessage         = onMessage;
         subscriber._subscriptionID    = _subscriptionIDAllocator.allocate();
-        return issueSubscription( subscriber._subscriptionID );
+        return _subscriptions.issue( subscriber._subscriptionID );
     }
 
     void EphemeralStoreRouter::releaseSubscription( uint64 id )

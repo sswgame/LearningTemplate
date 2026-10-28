@@ -17,6 +17,7 @@
 #include "Core/Container/IndexedPtrList.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Math/Math.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
@@ -36,7 +37,7 @@ namespace sw
     class IAudioService;
 
     /** @class SceneAudio @brief 씬 하나의 오디오 묶기입니다. 파일 머리말 참고. */
-    class SW_API SceneAudio final : public ISceneService, private SubscriptionSource
+    class SW_API SceneAudio final : public ISceneService
     {
     public:
         /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
@@ -103,7 +104,7 @@ namespace sw
         };
 
         /** @brief 등록 구독이 풀렸습니다(@p id 는 컴포넌트 주소). 세 목록은 서로 다른 컴포넌트 종류라 주소가 겹치지 않으므로 든 목록에서 뺍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         // `update` 의 단계들 — 잠금을 잡은 채로 부른다.
         /** @brief 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬). 지난 프레임에 켰는데 이번에 없는 칸은 끈다. */
@@ -132,5 +133,9 @@ namespace sw
         uint32                                             _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
         bool                                               _bHasLastCameraPosition;  /**< `_lastCameraPosition` 이 유효한지입니다. */
         bool                                               _bUpdateEnabled;          /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&SceneAudio::releaseSubscription>( this ) };
     };
 } // namespace sw

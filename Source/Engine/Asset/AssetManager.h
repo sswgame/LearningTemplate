@@ -18,6 +18,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/RegistrationList.h"
@@ -42,7 +43,7 @@ namespace sw
      * @class AssetManager
      * @brief 에셋 식별자, 스키마, 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API AssetManager final : public ISubsystem, private SubscriptionSource
+    class SW_API AssetManager final : public ISubsystem
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
@@ -184,7 +185,7 @@ namespace sw
         /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. */
         bool addAssetCache( IAssetCache* pCache );
         /** @brief 캐시 등록 구독이 풀렸습니다(@p id 는 캐시 주소). 목록에서 뺍니다. 언로드 훑기가 먼저 뺐으면 할 일이 없다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
 
@@ -205,5 +206,9 @@ namespace sw
     private:
         /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
         Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "asset caches" }, ModuleUnloadFunction::create<&AssetManager::onModuleUnloading>( this ) ) };
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AssetManager::releaseSubscription>( this ) };
     };
 } // namespace sw

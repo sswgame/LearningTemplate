@@ -387,7 +387,7 @@ namespace sw
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
-        detachAllSubscriptions();
+        _subscriptions.detachAll();
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
         _runTitle.reset(); // 프레임마다 모은 창 제목도 같다
 #if SW_DEV_COMMANDS_ENABLED
@@ -478,7 +478,7 @@ namespace sw
             return {};
         }
         _listFrameObserver.push_back( pObserver );
-        return issueSubscription( reinterpret_cast<uint64>( pObserver ) );
+        return _subscriptions.issue( reinterpret_cast<uint64>( pObserver ) );
     }
 
     void Engine::releaseSubscription( uint64 id )

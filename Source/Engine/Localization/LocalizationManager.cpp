@@ -950,7 +950,7 @@ namespace sw
             callbackID               = _callbackIDAllocator.allocate();
             _mapCallback[callbackID] = std::move( callback );
         }
-        return issueSubscription( callbackID );
+        return _subscriptions.issue( callbackID );
     }
 
     void LocalizationManager::releaseSubscription( uint64 id )

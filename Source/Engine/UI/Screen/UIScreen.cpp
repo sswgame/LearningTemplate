@@ -108,7 +108,7 @@ namespace sw
     {
         const uint64 id               = _nextCommandID++;
         _mapCommandToHandler[command] = CommandEntry{ handler, id };
-        return issueSubscription( id );
+        return _subscriptions.issue( id );
     }
 
     void UIScreen::releaseSubscription( uint64 id )

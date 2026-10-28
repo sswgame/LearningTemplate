@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -57,7 +58,7 @@ namespace sw
      *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
      *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
-    class SW_API LocalizationManager : public ISubsystem, private SubscriptionSource
+    class SW_API LocalizationManager : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
@@ -243,7 +244,7 @@ namespace sw
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
         /** @brief 콜백 구독 @p id 가 풀렸습니다. 표에서 지웁니다(`_mutex`). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
     private:
         mutable shared_mutex                                            _mutex;
@@ -264,5 +265,9 @@ namespace sw
 
         std::atomic<uint32> _textRevision;
         IDAllocator<uint32> _callbackIDAllocator;
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalizationManager::releaseSubscription>( this ) };
     };
 } // namespace sw

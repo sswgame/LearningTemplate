@@ -132,7 +132,7 @@ namespace sw
     {
         const uint64 address = reinterpret_cast<uint64>( pItem );
         SW_ASSERT( ( address & kRegistrationKindMask ) == 0 );
-        return issueSubscription( address | static_cast<uint64>( kind ) );
+        return _subscriptions.issue( address | static_cast<uint64>( kind ) );
     }
 
     Subscription SceneNavigation::registerAgent( NavMeshAgentComponent* pAgent )

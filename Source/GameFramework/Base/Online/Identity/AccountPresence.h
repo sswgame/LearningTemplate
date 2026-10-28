@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
@@ -42,7 +43,7 @@ namespace sw
      * @details 찾기는 주인 몫(`openFindOwner` 의 구독)과 함께 맡긴다. 주인이 몫을 놓으면 그 몫으로 맡긴 찾기의 델리게이트는 불리지 않는다 —
      *          주인이 이 인터페이스보다 먼저 내려가도 사라진 객체를 부르지 않는다. 구현은 `releaseSubscription( 몫 번호 )` 에서 그 찾기를 지운다.
      */
-    class IAccountPresence : protected SubscriptionSource
+    class IAccountPresence
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
@@ -53,7 +54,7 @@ namespace sw
         IAccountPresence& operator=( const IAccountPresence& ) = delete;
 
         /** @brief 찾기 주인의 몫을 엽니다. 주인이 멤버로 들고, 놓으면(소멸 · `reset`) 그 몫으로 맡긴 찾기의 델리게이트가 불리지 않습니다. */
-        [[nodiscard]] Subscription openFindOwner() { return issueSubscription( _nextFindOwnerID++ ); }
+        [[nodiscard]] Subscription openFindOwner() { return _subscriptions.issue( _nextFindOwnerID++ ); }
         /**
          * @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다.
          * @details @p owner 가 이 인터페이스가 연 살아 있는 몫이 아니면 맡지 않고 0 입니다.
@@ -82,5 +83,9 @@ namespace sw
 
     private:
         uint64 _nextFindOwnerID{ 1 };
+
+    protected:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&IAccountPresence::releaseSubscription>( this ) };
     };
 } // namespace sw

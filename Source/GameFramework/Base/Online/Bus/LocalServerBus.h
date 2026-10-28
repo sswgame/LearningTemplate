@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,7 +22,7 @@ namespace sw
      * @class LocalServerBusHub
      * @brief 프로세스 안 버스들의 배달부입니다.
      */
-    class SW_GF_API LocalServerBusHub : private SubscriptionSource
+    class SW_GF_API LocalServerBusHub
     {
     public:
         LocalServerBusHub();
@@ -45,11 +46,15 @@ namespace sw
         };
 
         /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         mutable mutex                          _mutex;
         unordered_map<uint64, Inbox> _mapInbox SW_GUARDED_BY( _mutex );
         IDAllocator<uint64> _inboxIDAllocator  SW_GUARDED_BY( _mutex );
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalServerBusHub::releaseSubscription>( this ) };
     };
 } // namespace sw
 

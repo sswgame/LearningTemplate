@@ -15,6 +15,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -36,7 +37,7 @@ namespace sw
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
      *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
      */
-    class SW_API AsyncLogSink final : public ILogSink, private SubscriptionSource
+    class SW_API AsyncLogSink final : public ILogSink
     {
     public:
         /** @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다. */
@@ -108,7 +109,7 @@ namespace sw
          */
         void rebuildListenerSnapshot() SW_REQUIRES_LOCK( _mutex );
         /** @brief 리스너 구독 @p id 가 풀렸습니다. 항목을 떼고 그 전에 시작한 방송이 끝나기를 기다립니다(`waitForRetiredBroadcasts`). */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
@@ -154,5 +155,9 @@ namespace sw
          *          생산자는 깨우기 전에 `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 확인과 잠들기 사이에 있을 때 깨우기를 놓치지 않게 합니다.
          */
         atomic<bool> _bWorkerSleeping;
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AsyncLogSink::releaseSubscription>( this ) };
     };
 } // namespace sw

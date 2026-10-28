@@ -175,7 +175,7 @@ namespace sw
 
     uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner )
     {
-        const uint64 ownerID = findIssuedID( owner );
+        const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 )
         {
             SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
@@ -196,7 +196,7 @@ namespace sw
 
     uint64 OnlinePresence::submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner )
     {
-        const uint64 ownerID = findIssuedID( owner );
+        const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 )
         {
             SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );

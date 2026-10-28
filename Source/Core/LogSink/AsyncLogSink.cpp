@@ -263,7 +263,7 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _onLogWritten.removeAll();
             _listListenerSubscription.clear(); // removeAll 이 이미 무효로 만들었다 — 푸는 일 없이 비운다
-            detachAllSubscriptions();          // 바깥 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
+            _subscriptions.detachAll();        // 바깥 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
             rebuildListenerSnapshot();
         }
         _bInitialized = false;
@@ -286,7 +286,7 @@ namespace sw
         const DelegateHandle handle = DelegateHandle::allocate();
         _listListenerSubscription.emplace_back( handle, _onLogWritten.add( listener ) );
         rebuildListenerSnapshot();
-        return issueSubscription( handle._id );
+        return _subscriptions.issue( handle._id );
     }
 
     /**

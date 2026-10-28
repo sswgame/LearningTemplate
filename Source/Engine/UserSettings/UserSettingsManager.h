@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -134,7 +135,7 @@ namespace sw
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(언로드 처리기).
      */
-    class SW_API UserSettingsManager : public ISubsystem, private SubscriptionSource
+    class SW_API UserSettingsManager : public ISubsystem
     {
     public:
         UserSettingsManager();
@@ -313,7 +314,7 @@ namespace sw
 
     private:
         /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다(@p id 는 맵 주소). 맵을 뗍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
         /** @brief 설정 하나의 값 상태입니다. `UserSettingsSchema::getSettings` 와 같은 순번입니다. */
         struct SettingState
@@ -365,6 +366,10 @@ namespace sw
     private:
         /** @brief 모듈 언로드 처리기 구독(`ModuleImageUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
         Subscription _moduleUnloadSubscription{ ModuleImageUtil::registerUnloadHandler( { "user settings" }, ModuleUnloadFunction::create<&UserSettingsManager::onModuleUnloading>( this ) ) };
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UserSettingsManager::releaseSubscription>( this ) };
     };
 
     template <typename T>

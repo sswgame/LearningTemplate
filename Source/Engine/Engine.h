@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -71,7 +72,7 @@ namespace sw
      * @class Engine
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
      */
-    class SW_API Engine : private SubscriptionSource
+    class SW_API Engine
     {
     public:
         Engine();
@@ -216,7 +217,7 @@ namespace sw
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. Server 타깃에는 렌더러가 없어 아무 일도 하지 않습니다. */
         void submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
         /** @brief 프레임 관찰자 구독이 풀렸습니다(@p id 는 관찰자 주소). 목록에서 뗍니다. */
-        void releaseSubscription( uint64 id ) override;
+        void releaseSubscription( uint64 id );
 
     private:
         /**
@@ -297,5 +298,9 @@ namespace sw
 #if !defined( SW_SHIPPING )
         ShaderRecompiler* _pShaderRecompiler;
 #endif
+
+    private:
+        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&Engine::releaseSubscription>( this ) };
     };
 } // namespace sw
