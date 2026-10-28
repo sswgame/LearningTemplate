@@ -41,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
+from common.ScenarioFile import readScenarioXmlFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.
@@ -324,14 +325,10 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
     listScenarioPath = LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",), accept=lambda candidate: candidate.name.endswith(".scenario.xml"))
-    for path in listScenarioPath:
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            root = ElementTree.parse(path).getroot()
-        except ElementTree.ParseError as error:
-            # 깨진 시나리오를 건너뛰면 그 시나리오의 이름 검사가 빠진 채 통과한다 — 다른 규칙(xml-parses)이 알리더라도 이 게이트가 본 것은 위반으로 낸다.
-            listViolation.append(f"[NameReference/ScenarioXml] {relative}: XML 을 읽지 못해 단계 · 탐침 · 개발 명령 이름을 검사하지 못했습니다 — {error}")
-            continue
+    # 깨진 시나리오는 공통 입구가 오류 줄로 돌려준다 — 건너뛰면 그 시나리오의 이름 검사가 빠진 채 통과한다.
+    listScenarioRoot, listReadError = readScenarioXmlFiles(repositoryRoot, listScenarioPath)
+    listViolation += [f"[NameReference/ScenarioXml] {error}" for error in listReadError]
+    for relative, root in listScenarioRoot:
         scenarioCount += 1
         for at in root.iter("At"):
             for step in at:

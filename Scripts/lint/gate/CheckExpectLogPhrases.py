@@ -38,6 +38,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
+from common.ScenarioFile import readScenarioXmlFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kCppSuffixes = {".cpp", ".h", ".inl"}
@@ -241,19 +242,16 @@ def collectTranslationText(repositoryRoot: Path) -> str:
     return "\n".join(text for _, text in LintGate.readFiles(listPath))
 
 
-def collectScenarioLogSteps(repositoryRoot: Path) -> list[tuple[str, dict[str, str], str]]:
-    """(시나리오 위치, `<ExpectLog>` 속성, 그 시나리오가 직접 쓰는 글) — 깨진 XML 은 에셋 검증 규칙이 알린다."""
+def collectScenarioLogSteps(repositoryRoot: Path) -> tuple[list[tuple[str, dict[str, str], str]], list[str]]:
+    """((시나리오 위치, `<ExpectLog>` 속성, 그 시나리오가 직접 쓰는 글) 목록, 읽지 못한 시나리오의 위반 줄들) — 깨진 XML 을 건너뛰면 그 시나리오의 단언이 검사에서 빠진다."""
     listStep: list[tuple[str, dict[str, str], str]] = []
-    for path in (path for path in LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            root = ElementTree.parse(path).getroot()
-        except ElementTree.ParseError:
-            continue
+    listPath = [path for path in LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",)) if path.name.endswith(".scenario.xml")]
+    listScenarioRoot, listReadError = readScenarioXmlFiles(repositoryRoot, listPath)
+    for relative, root in listScenarioRoot:
         # 시나리오가 `<DevCommand line="log …">` 처럼 스스로 내는 로그의 글 — `<ExpectLog>` 밖 엘리먼트의 속성값이다.
         ownText = "\n".join(value for element in root.iter() if element.tag != "ExpectLog" for value in element.attrib.values())
         listStep.extend((relative, dict(element.attrib), ownText) for element in root.iter("ExpectLog"))
-    return listStep
+    return listStep, [f"[ExpectLog/ScenarioXml] {error}" for error in listReadError]
 
 
 def isWholeBody(phrase: str, pieces: list[str]) -> bool:
@@ -400,13 +398,21 @@ class CheckExpectLogPhrasesGate(LintGate):
                 "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><ExpectLog id=\"Probe.Clamped\" contains=\"clamped\" atLeast=\"1\"/></At></Scenario>\n",
             },
         },
+        {
+            "name": "깨진 시나리오 XML 은 건너뛰지 않고 위반이다",
+            "expectedViolation": "[ExpectLog/ScenarioXml] Resource/engine/automation/broken.scenario.xml: XML 을 읽지 못해",
+            "files": {
+                "Source/Engine/Probe.cpp": "void f() { SW_LOG_WARNING_ID( \"Probe.Clamped\", \"clamped\" ); }\n",
+                "Resource/engine/automation/broken.scenario.xml": "<Scenario><At frame=\"1\"></Scenario>\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         pass
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listStep = collectScenarioLogSteps(repositoryRoot)
+        listStep, listReadViolation = collectScenarioLogSteps(repositoryRoot)
         listTemplate: list[LogTemplate] = []
         listGeneric: list[LogTemplate] = []
         listPath = LintGate.walkSources([repositoryRoot / root for root in _kScanRoots if (repositoryRoot / root).is_dir()], _kCppSuffixes, what="로그 호출 걷기", bMustFind=True)
@@ -417,7 +423,7 @@ class CheckExpectLogPhrasesGate(LintGate):
         if listStep and not listTemplate:
             raise GateError("소스에서 로그 호출을 하나도 찾지 못했습니다 — SW_LOG_* 모양이 바뀌었나요?")
         listViolation = findExpectLogViolations(listStep, TemplateIndex(listTemplate), TemplateIndex(listGeneric), collectTranslationText(repositoryRoot))
-        return GateResult(listViolation=sorted(set(listViolation)),
+        return GateResult(listViolation=sorted(set(listViolation + listReadViolation)),
                           summary=f"<ExpectLog> {len(listStep)}곳, 소스의 로그 호출 {len(listTemplate)}개")
 
 

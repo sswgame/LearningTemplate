@@ -12,6 +12,9 @@ from __future__ import annotations
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
+
+from .Paths import normalizePath
 
 kScenarioSuffix = ".scenario.xml"
 #: 시나리오가 놓이는 폴더 모양(리소스 루트 기준).
@@ -95,6 +98,23 @@ def listScenarioIds(resourceRoot: Path) -> list[str]:
     for pattern in kScenarioGlobPatterns:
         setId.update(path.relative_to(resourceRoot).as_posix() for path in resourceRoot.glob(pattern))
     return sorted(setId)
+
+
+def readScenarioXmlFiles(repositoryRoot: Path, listPath: Iterable[Path]) -> tuple[list[tuple[str, ElementTree.Element]], list[str]]:
+    """
+    시나리오 XML 들을 읽어 (저장소 기준 경로, 루트) 목록과 **읽지 못한 파일의 오류 줄**을 함께 돌려준다 — 시나리오 XML 을 걷는 린트 게이트의 공통 입구.
+
+    읽지 못한 파일을 `continue` 로 건너뛰면 그 시나리오가 검사에서 빠진 채 통과한다. 오류 줄을 같이 돌려줘 호출한 게이트가 위반으로 내게 한다.
+    """
+    listRoot: list[tuple[str, ElementTree.Element]] = []
+    listError: list[str] = []
+    for path in listPath:
+        label = normalizePath(str(path.relative_to(repositoryRoot)))
+        try:
+            listRoot.append((label, ElementTree.parse(path).getroot()))
+        except (OSError, ElementTree.ParseError) as error:
+            listError.append(f"{label}: XML 을 읽지 못해 이 시나리오를 검사하지 못했습니다 — {error}")
+    return listRoot, listError
 
 
 def readRootName(path: Path) -> str:
