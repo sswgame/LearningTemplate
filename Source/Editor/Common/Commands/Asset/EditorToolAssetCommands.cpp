@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"

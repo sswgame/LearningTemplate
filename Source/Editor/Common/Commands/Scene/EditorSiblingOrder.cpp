@@ -5,8 +5,8 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

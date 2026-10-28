@@ -8,7 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/GUI/EditorComponentIcon.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
 
 namespace sw
 {

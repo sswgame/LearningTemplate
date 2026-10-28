@@ -14,7 +14,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 

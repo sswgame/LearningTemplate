@@ -3,9 +3,9 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
-#include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
 #include <imgui.h>
 

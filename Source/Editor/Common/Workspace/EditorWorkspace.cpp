@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"

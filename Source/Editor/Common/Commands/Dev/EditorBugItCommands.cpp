@@ -6,7 +6,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 

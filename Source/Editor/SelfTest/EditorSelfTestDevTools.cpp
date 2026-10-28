@@ -11,10 +11,10 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/GUI/EditorDockLayout.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"

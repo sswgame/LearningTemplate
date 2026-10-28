@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Asset/AssetID.h"
 

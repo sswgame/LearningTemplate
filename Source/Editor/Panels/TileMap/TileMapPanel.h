@@ -10,8 +10,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"

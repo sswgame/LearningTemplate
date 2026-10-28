@@ -7,11 +7,11 @@
 #include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

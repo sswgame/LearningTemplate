@@ -8,8 +8,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw
 {

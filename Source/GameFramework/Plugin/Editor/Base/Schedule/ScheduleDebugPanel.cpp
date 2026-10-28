@@ -3,8 +3,8 @@
 #include "GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorTextExtentImGui.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"

@@ -12,7 +12,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"

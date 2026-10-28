@@ -6,9 +6,9 @@
 
 #include "Core/Math/MatrixMath.h"
 
-#include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 

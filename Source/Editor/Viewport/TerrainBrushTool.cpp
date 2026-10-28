@@ -10,10 +10,10 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportProjection.h"

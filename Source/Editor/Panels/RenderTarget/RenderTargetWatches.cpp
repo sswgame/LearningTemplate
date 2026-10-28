@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"

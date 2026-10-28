@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/EditorGraphDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
 #include "Editor/Panels/Animation/AnimationGraphLayerEditor.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"

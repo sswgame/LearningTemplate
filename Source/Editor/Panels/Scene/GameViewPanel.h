@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 

@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw
 {

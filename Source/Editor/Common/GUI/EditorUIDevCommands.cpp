@@ -7,10 +7,10 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 
-#include "Editor/Common/GUI/EditorDockLayout.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"

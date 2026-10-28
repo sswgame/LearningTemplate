@@ -133,7 +133,7 @@ msgctxt "EdCommon.DeleteLayout"
 msgid "Delete this saved layout."
 msgstr "저장된 레이아웃을 지웁니다."
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.DocumentOpen"
 msgid "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)."
 msgstr "이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)"
@@ -233,7 +233,7 @@ msgctxt "EdCommon.NoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.NoAssetsOfKind"
 msgid "No assets of this kind under Content/."
 msgstr "Content/ 아래에 이 종류의 에셋이 없습니다."
@@ -243,7 +243,7 @@ msgctxt "EdCommon.NoComponentTypes"
 msgid "No registered component types."
 msgstr "등록된 컴포넌트 타입이 없습니다."
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.NoDocument"
 msgid "(no document)"
 msgstr "(문서 없음)"
@@ -268,7 +268,7 @@ msgctxt "EdCommon.NoNodeMatches"
 msgid "No node matches."
 msgstr "일치하는 노드가 없습니다."
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.NoRecentDocuments"
 msgid "No recent documents"
 msgstr "최근에 연 문서가 없습니다"
@@ -551,7 +551,7 @@ msgctxt "EdCommon.RHISwitch"
 msgid "Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl"
 msgstr "실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl"
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.RecentDocuments"
 msgid "Recently opened documents. Pick one to open it again."
 msgstr "최근에 연 문서"
@@ -586,7 +586,7 @@ msgctxt "EdCommon.SaveLayout"
 msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
-#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+#: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.SearchAssetsHint"
 msgid "Search assets"
 msgstr "에셋 검색"
@@ -622,37 +622,37 @@ msgctxt "EdCommon.SurfaceSnap"
 msgid "Surface snap: objects you drag land on the surface under the cursor."
 msgstr "표면 스냅: 끄는 오브젝트가 커서 아래 표면에 놓입니다."
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeAccentColor"
 msgid "The accent color used for buttons, selection highlights, folders and active items."
 msgstr "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상"
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeAccentSwatch"
 msgid "A recommended accent color. Click to apply it."
 msgstr "추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다."
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeFrameRounding"
 msgid "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
 msgstr "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)"
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemePreset"
 msgid "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Content/editor/theme."
 msgstr "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Content/editor/theme 의 토큰 파일입니다."
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeReset"
 msgid "Drop your accent and rounding changes and use the values of the current theme."
 msgstr "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeTabRounding"
 msgid "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)."
 msgstr "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px, 0 ~ 8)"
 
-#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+#: Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeWindowRounding"
 msgid "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)."
 msgstr "에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)"

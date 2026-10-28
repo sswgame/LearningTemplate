@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorStatusBar.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Status/EditorStatusBar.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"

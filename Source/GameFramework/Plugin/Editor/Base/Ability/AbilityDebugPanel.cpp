@@ -2,12 +2,12 @@
 
 #include "GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"

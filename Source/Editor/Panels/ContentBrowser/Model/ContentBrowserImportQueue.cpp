@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw::editor
 {

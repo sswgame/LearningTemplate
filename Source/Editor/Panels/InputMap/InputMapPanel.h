@@ -7,7 +7,7 @@
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/InputMap/Model/InputMapConflicts.h"
 

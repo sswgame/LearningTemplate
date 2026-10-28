@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"

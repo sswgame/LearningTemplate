@@ -1,0 +1,199 @@
+#include "pch.h"
+
+#include "Editor/Common/Asset/Texture/ImageUtil.h"
+
+#include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief stb_image 의 할당 훅(`STBI_MALLOC` · `STBI_REALLOC_SIZED` · `STBI_FREE`)입니다. 디코드 버퍼가 sw 할당자를 지나 메모리 태그에 세입니다. */
+        struct ImageUtilInternal
+        {
+            static void* allocate( size_t size ) { return Memory::allocate( size ); }
+
+            /** @brief 새 블록을 잡아 앞쪽 `min( oldSize, newSize )` 바이트를 옮기고 옛 블록을 풉니다. 실패하면 옛 블록을 그대로 두고 nullptr 입니다. */
+            static void* reallocate( void* pOld, size_t oldSize, size_t newSize )
+            {
+                void* pNew = Memory::allocate( newSize );
+                if ( pNew == nullptr )
+                    return nullptr;
+                if ( pOld != nullptr )
+                {
+                    Memory::copy( pNew, pOld, oldSize < newSize ? oldSize : newSize );
+                    Memory::free( pOld );
+                }
+                return pNew;
+            }
+
+            static void free( void* pAddress ) { Memory::free( pAddress ); }
+        };
+    } // namespace
+} // namespace sw::editor
+
+#define STBI_MALLOC( size )                          sw::editor::ImageUtilInternal::allocate( size )
+#define STBI_REALLOC_SIZED( pOld, oldSize, newSize ) sw::editor::ImageUtilInternal::reallocate( pOld, oldSize, newSize )
+#define STBI_FREE( pAddress )                        sw::editor::ImageUtilInternal::free( pAddress )
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+namespace sw::editor
+{
+    SW_LOG_CALLER( "ImageUtil" );
+
+    bool ImageUtil::loadImage( string_view filePath, RawImageData& outImage )
+    {
+        vector<uint8> bytes;
+        if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
+        {
+            SW_LOG_ERROR( "Failed to read image file: %#", filePath );
+            return false;
+        }
+
+        return loadImageFromMemory( bytes.data(), bytes.size(), outImage );
+    }
+
+    bool ImageUtil::loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage )
+    {
+        // 실패하면 출력에 아무것도 남기지 않는다. `DDSLoader::loadFromMemory` 와 같은 약속이다.
+        outImage = RawImageData{};
+
+        if ( pBuffer == nullptr || bufferSize == 0 )
+        {
+            SW_LOG_ERROR( "Image buffer is null or empty." );
+            return false;
+        }
+
+        // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 **뒷부분이 없는 것처럼** 읽혀 디코딩이 엉뚱하게 성공하거나 실패하므로,
+        // 넘기기 전에 거절한다.
+        if ( bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+        {
+            SW_LOG_ERROR( "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
+            return false;
+        }
+
+        int32 width    = 0;
+        int32 height   = 0;
+        int32 channels = 0;
+
+        uint8* pDecoded = stbi_load_from_memory(
+            pBuffer,
+            static_cast<int32>( bufferSize ),
+            &width,
+            &height,
+            &channels,
+            RawImageData::kChannelCount );
+
+        if ( pDecoded == nullptr )
+        {
+            SW_LOG_ERROR( "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+            return false;
+        }
+
+        // stb 는 요청한 채널 수로 펼쳐 주고 `channels` 에는 원본 파일의 채널 수를 돌려준다. 범위 밖이면 원본을 알 수 없으므로 실패로 멈춘다.
+        if ( channels < 1 || RawImageData::kChannelCount < channels )
+        {
+            SW_LOG_ERROR( "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
+            stbi_image_free( pDecoded );
+            return false;
+        }
+
+        const size_t totalBytes = static_cast<size_t>( width ) * static_cast<size_t>( height ) * RawImageData::kChannelCount;
+        outImage._bytes.resize( totalBytes );
+        Memory::copy( outImage._bytes.data(), pDecoded, totalBytes );
+        outImage._width              = width;
+        outImage._height             = height;
+        outImage._sourceChannelCount = channels;
+
+        stbi_image_free( pDecoded );
+        return true;
+    }
+
+    bool ImageUtil::loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight )
+    {
+        outListSample.clear();
+        outWidth                       = 0;
+        outHeight                      = 0;
+        const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
+        if ( bInvalidImageBuffer )
+        {
+            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            return false;
+        }
+        int32   width    = 0;
+        int32   height   = 0;
+        int32   channels = 0;
+        uint16* pDecoded = stbi_load_16_from_memory( pBuffer, static_cast<int32>( bufferSize ), &width, &height, &channels, 1 );
+        if ( pDecoded == nullptr )
+        {
+            SW_LOG_ERROR( "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
+            return false;
+        }
+        outListSample.assign( pDecoded, pDecoded + static_cast<size_t>( width ) * static_cast<size_t>( height ) );
+        outWidth  = width;
+        outHeight = height;
+        stbi_image_free( pDecoded );
+        return true;
+    }
+
+    bool ImageUtil::loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight )
+    {
+        outListTexel.clear();
+        outWidth                       = 0;
+        outHeight                      = 0;
+        const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
+        if ( bInvalidImageBuffer )
+        {
+            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            return false;
+        }
+        const int32 byteCount = static_cast<int32>( bufferSize );
+        int32       width     = 0;
+        int32       height    = 0;
+        int32       channels  = 0;
+        if ( stbi_is_hdr_from_memory( pBuffer, byteCount ) != 0 )
+        {
+            float32* pDecoded = stbi_loadf_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
+            if ( pDecoded == nullptr )
+            {
+                SW_LOG_ERROR( "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
+                return false;
+            }
+            const size_t texelCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
+            outListTexel.resize( texelCount );
+            for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
+            {
+                outListTexel[texelIndex] = float4{ pDecoded[texelIndex * 4 + 0], pDecoded[texelIndex * 4 + 1], pDecoded[texelIndex * 4 + 2], pDecoded[texelIndex * 4 + 3] };
+            }
+            stbi_image_free( pDecoded );
+        }
+        else
+        {
+            uint8* pDecoded = stbi_load_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
+            if ( pDecoded == nullptr )
+            {
+                SW_LOG_ERROR( "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+                return false;
+            }
+            constexpr float32 kByteToUnit = 1.0f / 255.0f;
+            const size_t      texelCount  = static_cast<size_t>( width ) * static_cast<size_t>( height );
+            outListTexel.resize( texelCount );
+            for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
+            {
+                outListTexel[texelIndex] = float4{ static_cast<float32>( pDecoded[texelIndex * 4 + 0] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 1] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 2] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 3] ) * kByteToUnit };
+            }
+            stbi_image_free( pDecoded );
+        }
+        outWidth  = width;
+        outHeight = height;
+        return true;
+    }
+} // namespace sw::editor

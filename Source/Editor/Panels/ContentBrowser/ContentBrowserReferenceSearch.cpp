@@ -7,8 +7,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Asset/AssetPaths.h"
 

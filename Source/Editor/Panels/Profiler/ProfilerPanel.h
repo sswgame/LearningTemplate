@@ -13,7 +13,7 @@
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"

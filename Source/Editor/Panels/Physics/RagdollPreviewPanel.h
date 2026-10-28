@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
 #include "Engine/Physics/PhysicsTypes.h"
 

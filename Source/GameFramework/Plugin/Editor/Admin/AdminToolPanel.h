@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 

@@ -8,9 +8,9 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorTextExtentImGui.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"

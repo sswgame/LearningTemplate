@@ -46,7 +46,7 @@ namespace sw::editor
                   addParam( MeshModifierParamDef{ "Frame", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
                                                  "Static frame texture - webcam is runtime only, so a still frame stands in" }
                                 .withLayout( "Frame", "Webcam input is runtime only, so a static frame texture stands in" )
-                                // 확장자 목록은 Editor/Common/Workspace/EditorAssetType.cpp 의 kArrTextureExt 와 같다.
+                                // 확장자 목록은 Editor/Common/Workspace/Asset/EditorAssetType.cpp 의 kArrTextureExt 와 같다.
                                 .withAssetFilter( ".png,.jpg,.jpeg,.tga,.dds,.hdr,.bmp" ) )
         },
             _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Distance moved along the normal per unit height", "m" ) ) },

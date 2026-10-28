@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 #include "Engine/Audio/AudioEngineState.h"
 

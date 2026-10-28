@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
 #include "GameFramework/Plugin/Editor/Base/AI/BehaviorTreeEditModel.h"

@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"

@@ -18,7 +18,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"

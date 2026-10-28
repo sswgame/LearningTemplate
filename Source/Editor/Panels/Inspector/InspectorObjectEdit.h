@@ -8,8 +8,8 @@
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 namespace sw::editor
 {

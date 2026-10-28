@@ -8,7 +8,7 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"

@@ -5,7 +5,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/InspectorPanel.h"

@@ -7,7 +7,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/Viewport/EditorViewportClient.h"

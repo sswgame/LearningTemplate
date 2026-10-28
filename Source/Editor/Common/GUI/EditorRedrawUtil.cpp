@@ -4,12 +4,12 @@
 
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
-#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 

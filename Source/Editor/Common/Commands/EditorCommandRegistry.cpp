@@ -9,7 +9,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 namespace sw::editor
 {

@@ -19,7 +19,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"

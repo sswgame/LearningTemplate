@@ -7,7 +7,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"

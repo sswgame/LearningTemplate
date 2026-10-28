@@ -9,7 +9,7 @@
 
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
 namespace sw
 {

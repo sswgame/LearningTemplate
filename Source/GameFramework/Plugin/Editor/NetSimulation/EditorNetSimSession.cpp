@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/NetSimulation/EditorNetSimSession.h"
 
-#include "Editor/Common/GUI/EditorPreviewViewport.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"

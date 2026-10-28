@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"

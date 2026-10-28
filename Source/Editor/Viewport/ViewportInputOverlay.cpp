@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"

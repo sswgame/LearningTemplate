@@ -11,7 +11,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
 
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

@@ -13,9 +13,9 @@
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"

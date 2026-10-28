@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
 namespace sw

@@ -3,7 +3,7 @@
  * @brief Park Layout 패널을 구현합니다. 배치 파일의 놀이기구 목록(비용, 정원, 탑승 시간)을 보여 주며, 더블클릭하면 에디터 카메라를 그 놀이기구로 옮깁니다.
  */
 #pragma once
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw::editor
 {

@@ -1,0 +1,357 @@
+#include "pch.h"
+
+#include "Editor/Common/Workspace/HotReload/FileWatchDispatcher.h"
+
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Asset/AssetPaths.h"
+
+#if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/File/Windows/WindowsFileWatcher.h"
+#elif defined( SW_PLATFORM_LINUX )
+    #include "Core/Foundation/PlatformOSHeaders.h"
+    #include "Core/File/Linux/LinuxFileWatcher.h"
+#endif
+
+namespace sw
+{
+    namespace
+    {
+        void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
+        {
+            if ( FileUtil::exists( filePath ) == false )
+                return;
+
+            const string filename           = FileUtil::getFileNamePart( filePath );
+            bool         isExtensionAllowed = listExtension.empty();
+            if ( isExtensionAllowed == false )
+            {
+                for ( const string& allowed : listExtension )
+                {
+                    if ( FileUtil::hasExtension( filename, allowed ) )
+                    {
+                        isExtensionAllowed = true;
+                        break;
+                    }
+                }
+            }
+            if ( isExtensionAllowed == false )
+                return;
+
+            const uint64 mtime = FileUtil::getFileTimestamp( filePath );
+            if ( mtime == 0 )
+                return;
+
+            const string                                  normalized = FileUtil::normalizePath( filePath );
+            const unordered_map<string, uint64>::iterator it         = mapPollMtime.find( normalized );
+            if ( it == mapPollMtime.end() )
+            {
+                mapPollMtime.emplace( normalized, mtime );
+                return;
+            }
+
+            if ( it->second != mtime )
+            {
+                it->second = mtime;
+                FileChangeEvent changeEvent{};
+                changeEvent._action    = FileWatcherAction::Modified;
+                changeEvent._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
+                changeEvent._filename  = filename;
+                outListEvent.push_back( std::move( changeEvent ) );
+            }
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_LOG_CALLER( "FileWatchDispatcher" );
+
+    FileWatchDispatcher::FileWatchDispatcher() = default;
+
+    FileWatchDispatcher::~FileWatchDispatcher()
+    {
+        shutdown();
+    }
+
+    bool FileWatchDispatcher::initialize( string_view watchRootPath )
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        _fileWatcher = make_unique<WindowsFileWatcher>();
+#elif defined( SW_PLATFORM_LINUX )
+        _fileWatcher = make_unique<LinuxFileWatcher>();
+#endif
+
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
+        const string rootPath = watchRootPath.empty() ? AssetPaths::getRootFolderPath() : string( watchRootPath );
+        // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
+        // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
+        if ( rootPath.empty() )
+        {
+            SW_LOG_WARNING( "FileWatchDispatcher: the watch root is empty (no content root folder) - hot reload is off" );
+            _fileWatcher.reset();
+            return false;
+        }
+        if ( _fileWatcher->startWatching( rootPath, true ) == false )
+        {
+            SW_LOG_ERROR( "FileWatchDispatcher: failed to start watching %#", rootPath );
+            _fileWatcher.reset();
+            return false;
+        }
+#else
+        _bUseMtimePoll = true;
+        SW_LOG_INFO( "FileWatchDispatcher: Using mtime poll fallback (no native file watcher)." );
+#endif
+        _lastDrainTimestamp = FileUtil::getCurrentFileTimestamp();
+        return true;
+    }
+
+    void FileWatchDispatcher::shutdown()
+    {
+        _listWatch.clear();
+        _mapPollMtime.clear();
+        _bUseMtimePoll = false;
+        if ( _fileWatcher )
+        {
+            _fileWatcher->stopWatching();
+            _fileWatcher.reset();
+        }
+    }
+
+    void FileWatchDispatcher::update()
+    {
+        vector<FileChangeEvent> listEvent;
+
+        // 잃은 알림은 "직전 비우기 이후" 에 일어났다. 그 시각을 이번 비우기의 시각으로 바꾸기 전에 붙잡아 둔다.
+        const uint64 sinceTimestamp = _lastDrainTimestamp;
+        _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
+
+        if ( _fileWatcher )
+        {
+            const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
+            if ( poll._bWatchLost )
+            {
+                // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 해제하고, 마지막 리스캔은 아래에서 처리한다.
+                SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
+                _fileWatcher->stopWatching();
+                _fileWatcher.reset();
+            }
+        }
+        else if ( _bUseMtimePoll )
+            pollMtimeFallback( listEvent );
+        else
+            return;
+
+        if ( listEvent.empty() )
+            return;
+
+        expandRescanEvents( listEvent, sinceTimestamp );
+        if ( listEvent.empty() )
+            return;
+
+        // 감시 트리의 파일이 바뀌었다 — 바깥 도구(git, 바깥 편집기, 기다리지 않은 쿠커 자식)가 만들거나 지운 파일은 이 프로세스의 `FileUtil` 이 몰라 경로 캐시의
+        // "없음" · "있음" 이 낡았을 수 있다. 받는 쪽이 새 경로를 묻기 전에 한 번 비운다(사건마다가 아니라 한 번 비울 때 몇 건이든 같다).
+        AssetPaths::clearPathCache();
+        dispatchEvents( listEvent );
+    }
+
+    Subscription FileWatchDispatcher::registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch )
+    {
+        WatchEntry entry{};
+        entry._id = _watchIDAllocator.allocate();
+        // mtime 폴링 · 네이티브 감시자에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
+        entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
+        // 맞춰 볼 때 쓰는 형태로 **여기서 한 번** 만들어 둔다.
+        entry._normalizedPrefix = FileUtil::normalizePath( entry._pathPrefix );
+        entry._listExtension    = listExtension;
+        entry._onMatch          = onMatch;
+        _listWatch.push_back( entry );
+
+        SW_LOG_TRACE( "Registered watch %# (ext count %#)", entry._pathPrefix, static_cast<uint32>( listExtension.size() ) );
+        return _subscriptions.issue( entry._id );
+    }
+
+    void FileWatchDispatcher::releaseSubscription( uint64 id )
+    {
+        VectorUtil::removeIf( _listWatch, [id]( const WatchEntry& entry )
+        { return entry._id == id; } ); // `shutdown` 이 목록을 비웠으면 할 일이 없다
+    }
+
+    bool FileWatchDispatcher::matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
+                                            string_view normalizedFullPath ) const
+    {
+        // 정규화는 둘 다 **이미 끝나 있다.** 접두사는 등록할 때, 전체 경로는 이벤트마다 한 번 한다.
+        if ( FileUtil::startsWithPathComponent( normalizedFullPath, entry._normalizedPrefix ) == false )
+            return false;
+
+        return isExtensionAllowed( entry, changeEvent._filename );
+    }
+
+    void FileWatchDispatcher::dispatchEvents( const vector<FileChangeEvent>& listEvent )
+    {
+        for ( const FileChangeEvent& changeEvent : listEvent )
+        {
+            // **이벤트당 한 번** 만든다(`matchesWatch` 안에서 만들면 감시 수만큼 다시 만든다).
+            const string normalizedFullPath =
+                FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
+
+            bool bAnyMatch{ false };
+            // **콜백이 감시를 등록 · 해제할 수 있다.** 리로드 콜백이 자기 감시를 다시 걸면
+            // `_listWatch` 가 순회 도중 재할당되고, 범위 for 가 보관하고 있던 참조가 해제된 메모리를
+            // 가리킨다. 인덱스로 돌면서 델리게이트를 **부르기 전에 복사**한다.
+            // `MulticastDelegate::broadcast` 도 같은 이유로 같은 모양을 쓴다.
+            //
+            // 순회 도중 앞쪽 감시가 빠지면 뒤의 하나가 당겨져 건너뛰어질 수 있는데, 이 방식이
+            // 원래 감수하는 부분이다(부르는 도중 목록을 바꾼 쪽의 책임이다).
+            for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
+            {
+                if ( matchesWatch( _listWatch[watchIndex], changeEvent, normalizedFullPath ) == false )
+                    continue;
+
+                bAnyMatch                            = true;
+                const FileWatchMatchDelegate onMatch = _listWatch[watchIndex]._onMatch;
+                if ( onMatch.isBound() )
+                    onMatch( changeEvent );
+            }
+
+            if ( bAnyMatch )
+            {
+// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. "Shipping 아님" 으로 가르면
+// Release(Trace 를 컴파일하지 않는다)에서 문자열만 만들고 아무도 쓰지 않는다.
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
+                // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
+                // 보이지만, 열거자가 늘면 이 값이 로그에 남아야 한다.
+                // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+                const utf8* pActionStr = "Unknown";
+                switch ( changeEvent._action )
+                {
+                    case FileWatcherAction::Added:
+                    {
+                        pActionStr = "Added";
+                        break;
+                    }
+                    case FileWatcherAction::Removed:
+                    {
+                        pActionStr = "Removed";
+                        break;
+                    }
+                    case FileWatcherAction::Modified:
+                    {
+                        pActionStr = "Modified";
+                        break;
+                    }
+                    case FileWatcherAction::RenamedOldName:
+                    {
+                        pActionStr = "RenamedOld";
+                        break;
+                    }
+                    case FileWatcherAction::RenamedNewName:
+                    {
+                        pActionStr = "RenamedNew";
+                        break;
+                    }
+                }
+                SW_LOG_TRACE( "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
+#endif
+            }
+        }
+    }
+
+    void FileWatchDispatcher::expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp )
+    {
+        // 파일 이름이 빈 Modified 는 감시자의 **리스캔 신호**다. 큐 상한이나 버퍼 오버플로로 개별 알림을
+        // 잃었다는 뜻이다(브랜치 전환 · 쿠킹 · 대량 임포트). OS 는 잃은 알림을 돌려주지 않으므로, 무엇이
+        // 바뀌었는지는 상태를 대조해서만 알 수 있다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
+        // 직전 비우기 이후 mtime 인 파일만 stat 으로 확인하고 끝낸다. 평소에는 폴링이 없다.
+        // 받는 쪽은 평소와 같은 파일 단위 이벤트만 받고, 리스캔이 있었는지 알 필요가 없다.
+        const size_t rescanSignalCount = VectorUtil::removeIf( outListEvent, []( const FileChangeEvent& event )
+        { return event._filename.empty(); } );
+        if ( rescanSignalCount == 0 )
+            return;
+
+        // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다. 리로드는 멱등이지만 두 번 할 이유는 없다.
+        // 체크아웃 한 번에 수천 건이 되므로 중복 검사는 해시 집합으로 한다(목록 검색이면 O(N^2)).
+        unordered_set<string> uniqueSetEmittedPath;
+        for ( const FileChangeEvent& changeEvent : outListEvent )
+        {
+            uniqueSetEmittedPath.insert( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+        }
+
+        // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
+        // 그 구성에서는 쓰이지 않는 변수가 된다.
+        [[maybe_unused]] uint32 found{ 0 };
+        for ( const WatchEntry& entry : _listWatch )
+        {
+            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
+                continue;
+
+            vector<string> listFile;
+            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._pathPrefix );
+            for ( const string& filePath : listFile )
+            {
+                if ( isExtensionAllowed( entry, filePath ) == false )
+                    continue;
+                if ( FileUtil::getFileTimestamp( filePath ) < sinceTimestamp )
+                    continue;
+
+                const string normalized = FileUtil::normalizePath( filePath );
+                if ( uniqueSetEmittedPath.insert( normalized ).second == false )
+                    continue;
+
+                string relative{};
+                if ( FileUtil::makeRelativePath( entry._pathPrefix, filePath, relative ) == false || relative.empty() )
+                    continue;
+
+                FileChangeEvent changeEvent{};
+                changeEvent._action    = FileWatcherAction::Modified;
+                changeEvent._directory = entry._pathPrefix;
+                changeEvent._filename  = relative;
+                outListEvent.push_back( std::move( changeEvent ) );
+                ++found;
+            }
+        }
+        SW_LOG_INFO( "A burst of file changes made the watcher drop individual notifications - recovered %# by diffing the watch tree.", found );
+    }
+
+    void FileWatchDispatcher::pollMtimeFallback( vector<FileChangeEvent>& outListEvent )
+    {
+        for ( const WatchEntry& entry : _listWatch )
+        {
+            // 파일 하나를 지켜보면 그 파일을, 폴더면 그 아래 파일을 본다. 예전에는 `exists` 로 갈라 폴더도 파일 분기로 가서 폴더 아래 분기에 닿지 못했다.
+            if ( FileUtil::isRegularFile( entry._pathPrefix ) )
+            {
+                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
+                continue;
+            }
+            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
+                continue;
+
+            vector<string> listFile;
+            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not polled", entry._pathPrefix );
+            for ( const string& filePath : listFile )
+            {
+                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
+            }
+        }
+    }
+
+    bool FileWatchDispatcher::isExtensionAllowed( const WatchEntry& entry, string_view filename ) const
+    {
+        if ( entry._listExtension.empty() )
+            return true;
+
+        // **접미사**로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
+        // 접미사가 걸리지 않는다(프리팹 핫 리로드가 등록은 되는데 이벤트를 받지 못한다).
+        for ( const string& allowed : entry._listExtension )
+        {
+            if ( StringUtil::endsWith( filename, allowed, true ) )
+                return true;
+        }
+        return false;
+    }
+} // namespace sw

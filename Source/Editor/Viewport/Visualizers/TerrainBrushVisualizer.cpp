@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/TerrainBrushTool.h"
 

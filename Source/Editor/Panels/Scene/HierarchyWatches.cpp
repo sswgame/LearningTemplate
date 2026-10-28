@@ -8,8 +8,8 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/EditorComponentIcon.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"

@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Asset/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/ImageUtil.h"
 
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"

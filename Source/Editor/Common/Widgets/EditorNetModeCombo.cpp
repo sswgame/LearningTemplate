@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"

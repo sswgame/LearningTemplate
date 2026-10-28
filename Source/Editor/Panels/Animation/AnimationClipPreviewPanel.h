@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
 namespace sw
 {

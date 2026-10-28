@@ -16,7 +16,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Asset/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/ImageUtil.h"
 
 #include "Engine/Asset/AssetPaths.h"
 

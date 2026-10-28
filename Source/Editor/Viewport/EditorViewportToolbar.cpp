@@ -9,8 +9,8 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"

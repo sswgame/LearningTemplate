@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"

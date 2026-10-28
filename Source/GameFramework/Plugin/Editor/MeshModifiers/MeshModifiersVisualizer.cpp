@@ -17,7 +17,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"

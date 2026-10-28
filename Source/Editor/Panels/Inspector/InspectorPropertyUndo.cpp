@@ -3,12 +3,12 @@
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

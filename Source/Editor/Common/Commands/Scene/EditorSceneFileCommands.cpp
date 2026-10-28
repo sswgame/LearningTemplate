@@ -6,14 +6,14 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
-#include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"

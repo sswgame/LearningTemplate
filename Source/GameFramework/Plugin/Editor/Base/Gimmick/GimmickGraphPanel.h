@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 

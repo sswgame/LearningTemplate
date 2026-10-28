@@ -9,11 +9,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
-#include "Editor/Common/Asset/HeightfieldImporter.h"
-#include "Editor/Common/Asset/ModelImportConfig.h"
-#include "Editor/Common/Asset/ModelImporter.h"
-#include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Asset/Model/ModelImportConfig.h"
+#include "Editor/Common/Asset/Model/ModelImporter.h"
+#include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
+#include "Editor/Common/Asset/Texture/TextureImportConfig.h"
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetPaths.h"

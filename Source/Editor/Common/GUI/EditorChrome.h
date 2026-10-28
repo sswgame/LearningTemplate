@@ -9,7 +9,7 @@
 
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/GUI/EditorTextExtent.h"
+#include "Editor/Common/GUI/Theme/EditorTextExtent.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

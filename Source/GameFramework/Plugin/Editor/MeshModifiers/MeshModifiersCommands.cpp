@@ -5,8 +5,8 @@
 #include "pch.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h"

@@ -132,7 +132,7 @@
 		<entry key="EdCommon.DocumentOpen"
 		       source="Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser).">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.GizmoLocalSpace"
@@ -239,7 +239,7 @@
 		</entry>
 		<entry key="EdCommon.NoAssetsOfKind" source="No assets of this kind under Content/.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NoComponentTypes" source="No registered component types.">
@@ -249,7 +249,7 @@
 		</entry>
 		<entry key="EdCommon.NoDocument" source="(no document)">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NoMatches" source="No matches.">
@@ -274,7 +274,7 @@
 		</entry>
 		<entry key="EdCommon.NoRecentDocuments" source="No recent documents">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NoSavedLayouts" source="No saved layouts.">
@@ -564,7 +564,7 @@
 		</entry>
 		<entry key="EdCommon.RecentDocuments" source="Recently opened documents. Pick one to open it again.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RenderDocCapture" source="Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)">
@@ -601,7 +601,7 @@
 		</entry>
 		<entry key="EdCommon.SearchAssetsHint" source="Search assets">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+				<item>Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SearchClear" source="Clear the search text.">
@@ -639,41 +639,41 @@
 		<entry key="EdCommon.ThemeAccentColor"
 		       source="The accent color used for buttons, selection highlights, folders and active items.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeAccentSwatch" source="A recommended accent color. Click to apply it.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeFrameRounding"
 		       source="Corner rounding of buttons, input fields and control frames, in pixels (0 to 8).">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemePreset"
 		       source="Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Content/editor/theme.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeReset"
 		       source="Drop your accent and rounding changes and use the values of the current theme.">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeTabRounding" source="Corner rounding of dock tabs and panel tabs, in pixels (0 to 8).">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeWindowRounding"
 		       source="Corner rounding of editor windows and popup dialogs, in pixels (0 to 12).">
 			<origins>
-				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.UnknownPin" source="Unknown pin">

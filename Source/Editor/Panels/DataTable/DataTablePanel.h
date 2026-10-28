@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 

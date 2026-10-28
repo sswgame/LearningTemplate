@@ -8,13 +8,13 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPaths.h"

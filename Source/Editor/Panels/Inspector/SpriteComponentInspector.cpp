@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"

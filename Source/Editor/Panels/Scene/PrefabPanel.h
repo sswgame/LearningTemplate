@@ -5,8 +5,8 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw::editor
 {

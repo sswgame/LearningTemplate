@@ -2,7 +2,7 @@
 #include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
 namespace sw
 {

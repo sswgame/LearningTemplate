@@ -6,8 +6,8 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 

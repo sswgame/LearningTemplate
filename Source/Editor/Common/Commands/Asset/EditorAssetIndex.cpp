@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Asset/AssetPaths.h"
 

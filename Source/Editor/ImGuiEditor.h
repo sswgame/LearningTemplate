@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Backend/DrawSnapshotHandoff.h"
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
-#include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

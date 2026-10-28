@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorDockLayout.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Panel/EditorDockLayout.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"

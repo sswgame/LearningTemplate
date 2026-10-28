@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/GUI/EditorPreviewViewport.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"

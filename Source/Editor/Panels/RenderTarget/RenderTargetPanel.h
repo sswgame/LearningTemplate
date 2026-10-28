@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"

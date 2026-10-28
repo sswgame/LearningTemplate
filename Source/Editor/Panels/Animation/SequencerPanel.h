@@ -5,7 +5,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Animation/Model/SequenceTimingUtil.h"
 

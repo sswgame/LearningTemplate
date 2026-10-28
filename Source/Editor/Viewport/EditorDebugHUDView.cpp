@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Profiling/FrameProfiler.h"

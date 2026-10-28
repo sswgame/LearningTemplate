@@ -3,7 +3,7 @@
 #include "Editor/EditorModuleUnloadListener.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
