@@ -294,6 +294,24 @@ class SettingsIsolationEntranceTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             checkSettingsIsolation(SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"], {"OTHER": "x"})
 
+    def testNoCodeLaunchesTheAppBehindRunAppsBack(self) -> None:
+        """App 실행 파일을 `runProcess` · `subprocess` 로 직접 띄우는 코드가 없다 — `runApp` 을 거쳐야 설정 격리 선언을 강제로 받는다.
+        `BuildTree.appExecutable` 에서 받은 이름 · `--app` 인자(`args.app`/`appPath`)가 그 호출의 앞부분에 보이면 지는 근사 검사다."""
+        import re
+        listLaunch = re.compile(r"(?<![\w.])(?:runProcess|subprocess\.(?:run|Popen|call|check_call|check_output))\(([^)]*)")
+        listViolation = []
+        for path in sorted((kRepositoryRoot / "Scripts").rglob("*.py")):
+            if path.name in ("AppRun.py", "Process.py"):
+                continue
+            text = path.read_text(encoding="utf-8")
+            listAppName = {match.group(1) for match in re.finditer(r"(\w+)\s*=\s*[\w.()]*\.appExecutable\b", text)} | {"appPath", "args.app"}
+            for match in listLaunch.finditer(text):
+                firstArguments = match.group(1)
+                bNamedApp = any(re.search(rf"(?<![\w.]){re.escape(name)}\b", firstArguments) for name in listAppName)
+                if bNamedApp or "appExecutable" in firstArguments:
+                    listViolation.append(f"{path.relative_to(kRepositoryRoot)}: {text.count(chr(10), 0, match.start()) + 1}")
+        self.assertEqual([], listViolation)
+
     def testEveryRunAppCallerStatesItsIsolation(self) -> None:
         """Scripts 의 `runApp(` 호출이 모두 `settings=` 를 적는다(새 호출자가 빠뜨리면 여기서 알린다 — 런타임 TypeError 의 정적 짝)."""
         import re
