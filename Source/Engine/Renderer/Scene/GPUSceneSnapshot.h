@@ -3,7 +3,7 @@
  * @brief 게임 스레드가 만들고 렌더 스레드가 받는 씬 스냅샷입니다. 두 스레드가 공유하는 **유일한** 타입입니다.
  * @details 만드는 쪽은 `GPUSceneBuilder`(GT)이고, 받아서 GPU 에 올리는 쪽은 `GPUScene`(RT)이다. 두 클래스는 서로를 모르고
  *          이 구조체만 안다. 그래서 "GT 가 RT 의 값을 덮어쓴다", "RT 가 씬을 읽는다" 같은 실수는 컴파일되지 않는다.
- *          소유 규칙(shared_ptr 로 소유권을 함께 싣는다)은 `GPUSceneSnapshot` 주석과 Scripts/lint/gate/CheckRenderOwnership.py 를 참고한다.
+ *          소유 규칙(shared_ptr 로 소유권을 함께 싣는다)은 `GPUSceneSnapshot` 주석을 참고한다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -404,7 +404,6 @@ namespace sw
      *            배치의 GPU 필드(`_vertexBuffer`, `_materialCb` 등)는 RT 가 받은 사본에 덧쓰는 값이다.
      *          - 모듈(게임 DLL)이 만든 객체를 엔진이 마지막까지 가질 수 있으므로, 싣는 객체는 Engine 의
      *            create() 팩토리로 만든다(제어 블록이 Engine.dll 에 있다).
-     *          검사는 Scripts/lint/gate/CheckRenderOwnership.py 가 한다.
      */
     struct GPUSceneSnapshot
     {

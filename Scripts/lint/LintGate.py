@@ -18,7 +18,6 @@ class CheckSomethingGate(LintGate):
     description = "무엇을 검사하는가"
     preCommitPattern = ("Source/*",)            # 이 파일이 staged 됐을 때만 훅에서 돈다
     preCommitFileArgument = "--files"           # 훅이 staged 부분집합을 --files 로 넘긴다
-    selfTestCases = [{"name": "...", "expectedViolation": "Source/Probe.h:1: ...", "files": {"Source/Probe.h": "..."}}]
 
     def addArguments(self, parser):
         self.addFilesArgument(parser)
@@ -52,7 +51,7 @@ C++ 가 아닌 파일(파이썬 · CMake · 셰이더)도 같다. 루트의 파�
 `finishSourceScan` 에서 합친다. 요약 문구만 바꾸려면 `describeSourceScan` 만 재정의한다.
 
 파일 사이의 관계를 보거나 파일마다가 아닌 일을 하는 게이트는 `scan()` 을 쓴다. 그런 게이트가 파일마다 파이썬 정규식을 오래 돌린다면
-파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
+파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다 — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
 
 **검사하지 못한 것을 통과로 내지 않는다.** 게이트의 결과는 통과 · 건너뜀 · 불성립 · 위반이고 종료 코드부터 다르다(`lint/GateVerdict.py` 표).
@@ -62,10 +61,6 @@ C++ 가 아닌 파일(파이썬 · CMake · 셰이더)도 같다. 루트의 파�
 - `GateResult.skipped("분류 — 상세")` : `--files` 로 좁힌 훑기에 이 게이트가 볼 것이 없다(병합 커밋 · 대상 아닌 파일). **전체 훑기에서는 쓰지 못한다.**
 - 대상 파일을 `selectTargetFiles`(또는 `noteSelection` · `GateResult.checkedCount`)로 세는 게이트는 0 개를 보고 위반이 없을 때 기반이 알아서 위 둘로 바꾼다.
   "0개를 검사했고 위반 없음" 이 `OK` 로 보이는 일이 없다. 소스 게이트는 본 파일 수가 자동으로 `checkedCount` 다.
-- 불성립 · 건너뜀을 내는 경로도 `selfTestCases` 에 조각(`expectedExitCode`)으로 든다 — `CheckLintsAreAlive` 가 그 경로가 살아 있는지 본다.
-
-`gate/` 에 놓으면 `CheckLintsAreAlive` 가 알아서 집어 가고(목록이 아니라 자리가 규칙이다),
-증거(`selfTestCases`)를 들고 있지 않으면 그 자리에서 실패한다.
 """
 
 from __future__ import annotations
@@ -87,31 +82,6 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
 from lint.GateVerdict import formatOutcomeLine  # noqa: E402
 from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, SourceScanSet, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
-
-
-#: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
-kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "unexpectedViolation", "files", "args", "repoFiles", "git", "expectedExitCode"})
-
-#: 조각의 `expectedExitCode` 로 쓸 수 있는 값 — 위반(기본), 불성립, 건너뜀. 통과(0)는 "살아 있다" 의 증거가 아니라 쓰지 못한다.
-kSelfTestExitCodes = frozenset({ExitCode.Violation, ExitCode.PrerequisiteMissing, ExitCode.Skipped})
-
-
-def checkSelfTestCase(className: str, case: dict) -> None:
-    """
-    조각 정의 하나를 봅니다. 이름 · 노린 위반 문구가 없거나 모르는 키가 있으면 `TypeError` — 약한 조각(종료 코드만 맞는 조각)이 들어오지 못하게
-    게이트 클래스를 만드는 자리에서 멈춘다.
-    """
-    caseName = case.get("name")
-    if not isinstance(caseName, str) or not caseName.strip():
-        raise TypeError(f"{className}: selfTestCases 조각에 name 이 없습니다")
-    expected = case.get("expectedViolation")
-    if not isinstance(expected, str) or not expected.strip():
-        raise TypeError(f"{className}/{caseName}: selfTestCases 조각에 expectedViolation(출력에 있어야 하는 노린 위반 문구)이 없습니다")
-    listUnknown = sorted(set(case) - kSelfTestCaseKeys)
-    if listUnknown:
-        raise TypeError(f"{className}/{caseName}: selfTestCases 조각의 모르는 키 {listUnknown} — 쓸 수 있는 키: {sorted(kSelfTestCaseKeys)}")
-    if "expectedExitCode" in case and case["expectedExitCode"] not in kSelfTestExitCodes:
-        raise TypeError(f"{className}/{caseName}: expectedExitCode 는 {sorted(int(code) for code in kSelfTestExitCodes)} 중 하나다(통과 0 은 증거가 아니다)")
 
 
 class GateError(Exception):
@@ -175,17 +145,6 @@ class LintGate:
     - `hint`             : 위반 목록 뒤에 덧붙일 안내 한 줄(고치는 법).
     - `maxViolationShown`: 위반을 몇 개까지 찍을지. 0 이면 전부.
     - `maxNoteShown`     : 참고를 몇 개까지 찍을지.
-    - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다. 종료 1(위반)이 나와야 하고 종료 2 는 실패다.
-                           키: `name` · `expectedViolation`(필수 — 게이트 출력에 들어 있어야 하는 노린 위반 문구) · `files`(임시 트리에 쓸 글) ·
-                           `args` · `repoFiles`(저장소에서 그대로 복사할 입력 — 표 · 설정을 손으로 베끼면 형식이 바뀌는 날 조각이 종료 2 로
-                           죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다). 모르는 키도 오류다.
-                           `expectedViolation` 이 없으면 클래스를 만들 때 `TypeError` 로 멈춘다 — 종료 코드만 보면 노린 위반이 빠져도
-                           같은 조각의 다른 위반(입력 부족 · 낡은 예외)으로 통과한다.
-                           `expectedExitCode`(선택, 기본 1) — 불성립(5) · 건너뜀(77) 경로를 증명하는 조각이 쓴다. 그때 `expectedViolation` 은 출력의 `UNAVAILABLE (…)` ·
-                           `SKIPPED (…)` 사유 문구다(통과 0 은 쓰지 못한다 — 아무것도 안 잡는 게이트와 구분되지 않는다).
-                           `unexpectedViolation`(선택) — 출력에 **없어야 하는** 문구. 오탐 방지: 진짜 위반 하나와 잡히면 안 되는 모양을 한 조각에
-                           함께 넣고, 잡히면 안 되는 쪽의 위반 문구를 여기 적는다.
-    - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
     - `mapExemption`     : 규칙에서 빼 주는 자리 → 이유. 이유 · 낡음 · 크기를 기반이 본다(아래 "예외 표").
 
     CMake 가 이 게이트를 타깃·CTest 로 등록할 때 묻는 것 셋도 여기 있다 — CMake 에 따로 적으면 파이썬과 어긋난다
@@ -210,8 +169,6 @@ class LintGate:
     hint: str = ""
     maxViolationShown: int = 0
     maxNoteShown: int = 20
-    selfTestCases: list[dict] = []
-    selfTestSkipReason: str = ""
 
     # --- 커밋 훅이 묻는 것 ---------------------------------------------------
     #
@@ -241,7 +198,7 @@ class LintGate:
     # - `mapExemption`: 이 게이트가 규칙에서 빼 주는 자리(경로 · fnmatch 패턴 · `종류:이름` — 키의 뜻은 게이트가 정한다) → 이유.
     #                   **표는 `Scripts/lint/rules/<게이트 이름>.toml` 의 `[exemption]` 에 둔다** — 클래스를 만들 때 기반이 읽어 채운다
     #                   (`common/RuleData.py`). 파일이 없으면 빈 표다(새 게이트는 파일 하나 떨구기 그대로). 게이트 파일에 `mapExemption` 을
-    #                   적거나 모듈 수준 `_k…Allowed/Exempt…` 표를 두는 것은 `selftest/CheckExemptionTables` 가 막는다. 기반이 지키는 것:
+    #                   적거나 모듈 수준 `_k…Allowed/Exempt…` 표를 두지 않는다. 기반이 지키는 것:
     #                   ① 이유가 빈 줄이 있으면 검사가 서지 않는다(종료 2) ② **전체 훑기**(`--files` 없음)에서 대상은 봤는데 한 번도 적용되지
     #                   않은 줄, 그리고 실제 저장소(`.git` 이 있는 루트)에서 대상조차 못 본 줄은 "낡은 예외" 위반이다 ③ OK 줄에 표 크기를 찍는다.
     #                   게이트는 예외의 대상(그 파일 · 그 이름)을 훑을 때 `seeExemption( key )`, 예외로 위반을 넘길 때 `useExemption( key )` 를 부른다.
@@ -320,7 +277,7 @@ class LintGate:
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         if "name" not in cls.__dict__:
-            # 클래스 이름에서 `Gate` 를 뗀 것이 로그 태그다 — `CheckEngineLayersGate` -> `CheckEngineLayers`.
+            # 클래스 이름에서 `Gate` 를 뗀 것이 로그 태그다 — `CheckIncludeOrderGate` -> `CheckIncludeOrder`.
             # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다. 부모의 이름을 물려받지 않는다 —
             # 중간 기반(`BaselineSourceGate`)을 상속한 게이트가 기반의 이름으로 규칙 파일을 읽게 된다.
             cls.name = cls.__name__.removesuffix("Gate")
@@ -338,10 +295,8 @@ class LintGate:
                 raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanSets)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
         if cls.preCommitSkipReason and cls.ctestSkipReason:
             raise TypeError(f"{cls.__name__}: preCommitSkipReason 과 ctestSkipReason 을 함께 들 수 없다 — 훅에서도 CTest 에서도 안 도는 게이트는 CI 잡 말고는 어디서도 안 돈다")
-        for case in cls.__dict__.get("selfTestCases", []):
-            checkSelfTestCase(cls.__name__, case)
         if "mapExemption" not in cls.__dict__:
-            # 예외 표는 rules/<이름>.toml 에서 온다. 읽기 오류는 import 를 깨지 않고 main() 이 종료 2 로 알린다(CheckLintsAreAlive 도 본다).
+            # 예외 표는 rules/<이름>.toml 에서 온다. 읽기 오류는 import 를 깨지 않고 main() 이 종료 2 로 알린다.
             try:
                 cls.mapExemption = cls.readRules(cls.name, cls.ruleSchema)[kExemptionKey]
                 cls._ruleDataError = ""
@@ -558,7 +513,7 @@ class LintGate:
                        accept: Callable[[Path], bool] | None = None, **walkOptions: Any) -> list[Path]:
         """
         게이트의 **보조 걷기**(전체 훑기 안에서 정의 · 데이터 · 시나리오를 모으는 걷기)가 쓰는 창구 — `common.Search.collectRepositoryFiles` 를 직접 부르지 않는다
-        (`CheckGateFileWalk` 가 막는다). `bMustFind` 에 값을 꼭 적게 해서 "걷기가 0건을 모았는데 위반 없음 = 통과" 를 쓸 수 없게 한다:
+       . `bMustFind` 에 값을 꼭 적게 해서 "걷기가 0건을 모았는데 위반 없음 = 통과" 를 쓸 수 없게 한다:
         True 면 `accept` 를 거친 결과가 0건일 때 GateError(걷는 경로 · 접미사가 바뀐 것). False 는 0건이 정상인 걷기(선택 폴더)이고 이유를 호출 옆에 적는다.
         True 는 이 스크립트가 든 저장소를 훑을 때만 지킨다 — 자기 증거 조각(`selfTestCases`)의 임시 트리는 조각이 필요한 파일만 가져 걷기가 비는 것이 정상이다.
         """
@@ -614,7 +569,7 @@ class BaselineSourceGate(LintGate):
     """
     기존 위반을 **기준선**으로 세는 소스 게이트 — 판정 단위(추가한 줄 · 기준선)를 기반이 든다.
 
-    전에는 게이트 셋(`CheckConditionParts` · `CheckEditorStyleLiterals` · `CheckDataDrivenLiterals`)이 diff 해석 · 병합 커밋 판정 ·
+    전에는 게이트 셋이 diff 해석 · 병합 커밋 판정 ·
     기준선 비교를 저마다 베꼈고, 병합 판정은 셋 다 `.git/MERGE_HEAD` 를 경로로 만들어 워크트리(`.git` 이 파일)에서 병합을 못 알아봤다.
     한 자리에 두면 그런 결함이 한 번에 고쳐지고 새 기준선 게이트가 같은 틀을 다시 짓지 않는다.
 

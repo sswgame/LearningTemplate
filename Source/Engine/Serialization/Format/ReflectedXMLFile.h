@@ -8,7 +8,7 @@
  * 다른 쪽이 조용히 다르게 동작합니다.
  *
  * [왜 여기인가]
- * 렌더러와 무관한 일이라 직렬화에 둡니다. `Resource/ResourcePaths.h` 는 어느 티어에서든 쓸 수 있는 경로 헬퍼입니다(`CheckEngineLayers` 의
+ * 렌더러와 무관한 일이라 직렬화에 둡니다. `Resource/ResourcePaths.h` 는 어느 티어에서든 쓸 수 있는 경로 헬퍼입니다(층 표의
  * 예외). 언리얼 `FJsonObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리입니다.
  */
 #pragma once
@@ -45,7 +45,7 @@ namespace sw
          * @param diskPath 디스크 경로(쿠커가 소스 트리를 훑어 얻은 경로 · 테스트의 임시 파일).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 도구 · 테스트용 입구입니다. 같은 경로를 `loadDesc` 에 넣으면 리소스 루트 안 절대 경로라
          *          팩 전용 구성(Shipping)의 낱개 파일 거절에 걸립니다 — 디스크를 읽는다는 뜻을 이름으로 드러내 런타임 읽기와 가릅니다.
-         *          게임 런타임 코드는 쓰지 않습니다(`CheckRuntimeResourceDiskAccess`).
+         *          게임 런타임 코드는 쓰지 않습니다.
          */
         template <typename DescType>
         [[nodiscard]] static bool loadDescFromDiskFile( string_view diskPath, DescType& outDesc )

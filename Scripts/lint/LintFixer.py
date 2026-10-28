@@ -147,7 +147,7 @@ class FixPass:
     곧 계약이다.
 
     **조각 둘은 변환과 같은 자리에 있다.** 게이트가 `selfTestCases` 를 들고 다니는 것과 같은 이유다 —
-    규칙과 그 증거가 떨어져 있으면 언제든 어긋난다. `CheckFixersAreAlive` 가 읽어 간다.
+    규칙과 그 증거가 떨어져 있으면 언제든 어긋난다.
     `goodSample` 이 특히 중요하다: 픽서는 **파일을 고쳐 쓰므로**, 잡아선 안 될 것을 잡으면
     게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
     """
@@ -163,7 +163,7 @@ class FixPass:
     inspect: Callable[[SourceFile], FileFindings] | None = None
 
     def __post_init__(self) -> None:
-        """조각 셋은 필수다 — 비었거나 고친 결과가 원래 조각과 같으면 픽서를 만들 때 `TypeError` 로 멈춘다(`CheckFixersAreAlive` 가 돌릴 증거가 없다)."""
+        """조각 셋은 필수다 — 비었거나 고친 결과가 원래 조각과 같으면 픽서를 만들 때 `TypeError` 로 멈춘다(돌릴 증거가 없다)."""
         if (self.transform is None) == (self.inspect is None):
             raise TypeError(f"FixPass '{self.done}': `transform` 과 `inspect` 중 하나만 적습니다")
         if not self.problem or not self.done:

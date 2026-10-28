@@ -37,8 +37,6 @@ endif()
 
 # ------------------------------------------------------------------------------
 # 2) 스크립트 타겟 — 에셋 쿠킹, Engine 레이어/GLOB 린트
-# CheckEngineLayers: Engine → Editor/GameFramework/Games 금지 include
-# CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
 # ------------------------------------------------------------------------------
 # 파이썬은 PythonUtils.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
 # 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.

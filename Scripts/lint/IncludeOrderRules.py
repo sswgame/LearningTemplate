@@ -4,7 +4,7 @@ Scripts/lint/IncludeOrderRules.py
 include 순서 규칙 — `computeIncludeOrderInternal`(판정)과 `fixText`(고침). 게이트 `CheckIncludeOrder` 와 픽서 `FormatIncludeOrder` 가 같이 읽는다.
 
 판정을 린트 틀 층(층 1)에 두는 까닭: 게이트 · 픽서 · 보고서(층 2)가 서로의 모듈을 import 하면 명령끼리 의존한다.
-(`docs/decisions/5-2_Build.md`, 층 게이트 `CheckScriptLayers`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
+(`docs/decisions/5-2_Build.md`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def computeIncludeOrderInternal(text: str, relativeFilePath: str,
         boundaryIndex = len(lines)
 
     # 경계 줄에 빈 줄 없이 붙은 주석(doc 블록 · 구획 주석)은 그 코드의 것이다 — 아래 본문으로 넘긴다. 상단 영역에 두면 "include 영역과
-    # 본문 사이 한 줄" 이 주석과 그것이 설명하는 코드 사이에 끼어 doc 블록이 떨어진다(`CheckTestSuites` 7) 규칙과 부딪친다).
+    # 본문 사이 한 줄" 이 주석과 그것이 설명하는 코드 사이에 끼어 doc 블록이 떨어진다 규칙과 부딪친다).
     while boundaryIndex > 0 and boundaryIndex < len(lines):
         previous = lines[boundaryIndex - 1].strip()
         if previous == "" or previous.startswith(('#include', '#pragma', '#if', '#endif', '#else', '#elif')):

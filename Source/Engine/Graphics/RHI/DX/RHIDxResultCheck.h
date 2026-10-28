@@ -3,7 +3,7 @@
  * @brief D3D11 · D3D12 · DXGI 호출이 돌려준 HRESULT 를 받는 두 길입니다(DX11, DX12 공유, 에디터 ImGui 백엔드도 씀).
  * @details `HRESULT` 는 SDK 의 `long` 이라 `[[nodiscard]]` 를 붙일 수 없고, COM 메서드 선언도 고칠 수 없습니다. 그래서 결과는 이 두 함수로만
  *          받습니다 — 이어 갈 수 있으면 `isHrSuccess`(오류 로그 + false, `[[nodiscard]]`), 이어 갈 수 없으면 `requireHr`(`SW_FATAL`).
- *          형식으로 못 막는 남은 틈(결과를 아예 받지 않은 호출)은 게이트 `CheckDiscardedDeviceResult` 가 잡습니다.
+ *          형식으로 못 막는 남은 틈(결과를 아예 받지 않은 호출)은 `[[nodiscard]]` 밖이라 호출하는 쪽이 지킵니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -243,7 +243,7 @@ namespace sw
          *          폴더를 만드는 `ensureDirectoryExists` 는 이미 있는 폴더에도 참을 돌려주는 흔한 호출이라 막지 않는다(폴더 안 파일은 위 입구가 막는다).
          *          속성 · 시각만 바꾸는 `setWritable` · `setFileWriteTime` 도 내용이 그대로라 막지 않는다.
          *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
-         *          그런 호출과 OS · C 런타임의 직접 쓰기는 `CheckFacilityBypass` 의 `fileMutate` · `libraryWrite` 규칙이 센다.
+         *          그런 호출과 OS · C 런타임의 직접 쓰기는 이 쓰기 경로를 우회한 것이다.
          */
         using WriteGate = bool ( * )( string_view path, string& outReason );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */

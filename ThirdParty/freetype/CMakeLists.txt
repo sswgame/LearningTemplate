@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file ThirdParty/freetype/CMakeLists.txt
 # @brief FreeType(FTL — 배포물 고지는 THIRD_PARTY_NOTICES). 글리프 윤곽 읽기 · SDF 래스터화를 Engine 의 글자 백엔드
-#        (`Source/Engine/Text/FreeType`)만 쓴다 — 경계는 `CheckThirdPartyIsolation` 이 지킨다. 에디터 ImGui 는 imgui 포트가 같은 포트를 따로 링크한다.
+#        (`Source/Engine/Text/FreeType`)만 쓴다 — 이 경계를 넘지 않는다. 에디터 ImGui 는 imgui 포트가 같은 포트를 따로 링크한다.
 #        vcpkg 설정 파일이 임포트 타깃 `freetype`(x64-windows 는 freetype.dll, x64-linux 는 정적)과 `Freetype::Freetype` 를 만든다.
 # ==============================================================================
 

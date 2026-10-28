@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatNamespaceBlocks.py
 
-한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다 — 규칙과 판정은 `lint/NamespaceBlockRules.py` 한 자리(게이트 `CheckNamespaceBlocks` 도 읽는다).
+한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다 — 규칙과 판정은 `lint/NamespaceBlockRules.py` 한 자리.
 고친 글은 게이트가 쓰는 같은 `inspectSource` 의 `FileFindings.fixedText` 다(`SourceScan.fixedTextOf`) — 판정과 고치기가 갈리지 않는다.
 
   py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files Source/Engine/Scene/Scene.h

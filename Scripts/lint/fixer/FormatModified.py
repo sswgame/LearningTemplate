@@ -25,7 +25,7 @@ from common.Host import getModifiedCppFiles, runClangFormatBatch
 from common.Paths import getProjectRoot
 
 #: 이 파일은 `LintFixer` 가 아니다 — 자기 변환이 없고, 다른 픽서 셋과 clang-format 을 **순서대로**
-#: 부르는 조율자다. `CheckFixersAreAlive` 가 이 이유를 읽고 건너뛴다 (이유 없는 예외는 없다).
+#: 부르는 조율자다. 이유 없는 예외는 없다.
 kFixerSkipReason = "픽서가 아니라 픽서 넷(include 순서 · namespace 블록 · 전방 선언 · 분기 중괄호)과 clang-format 을 순서대로 부르는 조율자다"
 
 

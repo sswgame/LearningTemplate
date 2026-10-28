@@ -13,8 +13,8 @@ sw_filterPlatformSources(listCoreSource)
 # ------------------------------------------------------------------------------
 # 2) 소스를 티어로 가른다 — 낮은 티어(티어 표에서 `Log` 보다 아래인 폴더)는 따로 짓는다.
 #    낮은 티어의 `.cpp` 는 `Logger.h` 가 없는 전용 pch(`pchLow.h`)로 컴파일되어 pch 가 몰래 넣어 주던 위 티어 선언(`SW_LOG_*` · `StringBuilder` ·
-#    `FileUtil` …)을 쓰면 컴파일이 실패한다. 폴더 목록을 CMake 에 또 적지 않고 `CheckCoreLayers` 의 티어 표(`[tier]`)를 그대로 읽는다 —
-#    표에 없는 폴더는 구성이 선다(린트 규칙 3 과 같은 뜻). 린트 규칙 4(`SW_LOG_*` 금지)는 이 구성이 못 막는 곳(낮은 티어 **헤더** — 위 티어 pch 로
+#    `FileUtil` …)을 쓰면 컴파일이 실패한다. 폴더 목록을 CMake 에 또 적지 않고 `Scripts/lint/rules/CheckCoreLayers.toml` 의 티어 표(`[tier]`)를 그대로 읽는다 —
+#    표에 없는 폴더는 구성이 선다. 린트 규칙 4(`SW_LOG_*` 금지)는 이 구성이 못 막는 곳(낮은 티어 **헤더** — 위 티어 pch 로
 #    컴파일되는 TU 가 포함한다 — 와 pch 를 끈 구성의 방어)과 빠른 피드백을 맡는다.
 # ------------------------------------------------------------------------------
 set(swCoreTierTable "${CMAKE_SOURCE_DIR}/Scripts/lint/rules/CheckCoreLayers.toml")

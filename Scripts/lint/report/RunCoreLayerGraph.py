@@ -11,8 +11,8 @@ Core 폴더 간 include 그래프를 파일 단위로 뽑아 **강결합 묶음�
 (가중치 = include 건수, 삽입 이동으로 국소 개선) 끊어야 할 간선을 파일 단위로 찍는다.
 
 [게이트와의 관계]
-`Check*` 이 막고 `Run*` 은 보고한다. 방향 위반은 `Scripts/lint/gate/CheckCoreLayers.py` 가 막는다. 여기서 계산한 티어가
-게이트의 티어 표(`Scripts/lint/rules/CheckCoreLayers.toml` 의 `[tier]`)와 다르면 표가 낡은 것이다.
+`Run*` 은 보고한다. 여기서 계산한 티어가
+티어 표(`Scripts/lint/rules/CheckCoreLayers.toml` 의 `[tier]`)와 다르면 표가 낡은 것이다.
 
 [규칙]
 - 노드는 `Core/` 바로 아래 폴더다. 루트 파일(`CoreMinimal.h` · `pch.h`)은 모아 주는 헤더라 노드가 아니다 — 대신 폴더 안 파일이

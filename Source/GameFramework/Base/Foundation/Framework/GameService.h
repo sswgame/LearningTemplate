@@ -34,7 +34,7 @@ namespace sw
          * @brief 게임 서비스를 찾습니다. **없으면 nullptr 입니다.** 받는 쪽이 확인해야 합니다.
          * @details 지금 게임 범위(그 상위 범위까지)에서 먼저 찾고, 없으면 호스트 서비스 표를 본다. 서비스가 없어도 `SW_ASSERT` 로 멈추지 않는다 —
          *          `SW_ASSERT` 는 Debug 의 디버거 브레이크라, 여기 두면 "없으면 nullptr" 계약이 Debug 에서만 프로세스를 멈추는 계약이 된다.
-         *          `CheckNullableServiceUse` 린트가 받는 쪽의 널 검사를 강제한다. 짝인 `editor::findSubsystem<T>()` · `engine::findSubsystem<T>()` 와 같은 계약이다.
+         *          받는 쪽은 널을 검사해야 한다. 짝인 `editor::findSubsystem<T>()` · `engine::findSubsystem<T>()` 와 같은 계약이다.
          */
         template <typename T>
         T* findSubsystem()

@@ -333,7 +333,7 @@ namespace sw
 //                                   등록되지 않아** 기본값으로만 읽힌다(실행 인자로도 에디터로도 못 바꾼다).
 // `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 테스트용인데 Shipping 에도 등록된다. 배포 실행 파일을 스크립트가 조종하는 스위치(`gv_profileFrames` ·
 //                                   `gv_screenshot*` · `gv_crashTest` …)만 이것으로 둔다.
-// `SW_EXTERN_GLOBAL_VARIABLE`       다른 TU 에서 참조한다. 종류와 상관없이 같다. 타입이 정의와 어긋나면 `CheckGlobalVariableKinds` 게이트가 막는다.
+// `SW_EXTERN_GLOBAL_VARIABLE`       다른 TU 에서 참조한다. 종류와 상관없이 같다. 타입이 정의와 어긋나면 안 된다.
 //
 //     SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "…" );
 //     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::DirectX12, "…" );   // enum — `#type` 이 리플렉션 enum 이름이다

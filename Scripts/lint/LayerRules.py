@@ -1,5 +1,5 @@
 """
-C++ 폴더 층 규칙의 공용 자리 — 게이트(`gate/CheckEngineLayers.py` · `gate/CheckCoreLayers.py`)와 그래프 보고서(`report/RunEngineLayerGraph.py` ·
+C++ 폴더 층 규칙의 공용 자리 — 그래프 보고서(`report/RunEngineLayerGraph.py` ·
 `report/RunCoreLayerGraph.py`)가 같은 표와 같은 레이어 판정을 쓴다.
 
 규칙 데이터는 `rules/CheckEngineLayers.toml` · `rules/CheckCoreLayers.toml` 이다. 보고서가 게이트 모듈의 비공개 이름을 import 하면

@@ -377,10 +377,9 @@ _kProseSuffix: tuple[str, ...] = (".md", ".cmake", ".py", ".txt", ".natvis", ".y
 
 #: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 테스트 · 계획 문서.
 _kTextExcludedRel: frozenset[str] = frozenset({
-    "Scripts/common/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
+    "Scripts/common/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py",
     "Test/PythonTest/TestAcronymSpelling.py", "docs/04_CodingGuidelines.md",
-    "Scripts/lint/gate/CheckFunctionVocabulary.py",
-    "Scripts/lint/rules/AcronymRegistry.toml", "Scripts/lint/rules/CheckFunctionVocabulary.toml", "Scripts/lint/rules/CheckProductNames.toml",
+    "Scripts/lint/rules/AcronymRegistry.toml",
 })
 
 _kIncludeLineRe = re.compile(r"^[ \t]*#[ \t]*include\b")

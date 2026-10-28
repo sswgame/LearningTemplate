@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file .clang-tidy
-# @brief 버그를 찾는 검사만 켠다. 스타일은 CheckCodeConventions.py 와 clang-format 이 본다.
+# @brief 버그를 찾는 검사만 켠다. 스타일은 clang-format 이 본다.
 #
 # 실행: py -3 Scripts/lint/report/RunClangTidy.py
 #

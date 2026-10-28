@@ -3,7 +3,7 @@ Scripts/lint/AcronymSpellingRules.py
 
 약어 철자 코드모드의 파일 하나 판정 — Pascal 낱말로 쓴 약어를 대문자로 고친 완성 글. 픽서 `FormatAcronymSpelling` 이 읽는다.
 
-철자 규칙은 `Scripts/common/AcronymRegistry.py` 한 자리다 — 게이트 `CheckAcronymSpelling` 과 이 판정이 **같은 이름 자리 목록**(`AcronymRegistry.findNameSites` — 남의 이름을 뺀 것)과
+철자 규칙은 `Scripts/common/AcronymRegistry.py` 한 자리다 — 픽서와 이 판정이 **같은 이름 자리 목록**(`AcronymRegistry.findNameSites` — 남의 이름을 뺀 것)과
 같은 철자 판정(`respellName`)을 부른다. 게이트는 막을 약어(`kEnforced`)로 그 목록을 거르고, 코드모드는 고를 약어(`--acronym`)로 고친다.
 
 판정과 고침은 한 함수다: 파일 하나(`SourceFile`)를 받아 고친 완성 글을 `FileFindings.fixedText` 로 돌려준다. 줄 끝(CRLF) · BOM 은 `SourceFile.restore` 가 지킨다.

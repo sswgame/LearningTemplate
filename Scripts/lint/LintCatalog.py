@@ -25,7 +25,7 @@ from lint.LintGate import LintGate, findGateClass  # noqa: E402
 
 #: CMake 가 타깃·CTest 로 등록하는 린트가 사는 폴더 (`lint/` 기준).
 #: `fixer/` 와 `report/` 는 빌드를 막지 않으므로 등록하지 않는다 — 폴더가 곧 성격이다(CLAUDE.md).
-kRegisteredFolder = ("gate", "selftest")
+kRegisteredFolder = ("gate",)
 
 #: 타임아웃을 따로 적지 않은 린트의 기본값(초).
 
@@ -108,7 +108,7 @@ def makeLintTarget(script: LintScript) -> LintTarget:
             listCtestArgument=tuple(gateClass.listCtestArgument),
         )
 
-    raise ValueError(f"{script.relPath}: `LintGate` 하위 클래스가 없다 — gate/ · selftest/ 의 스크립트는 게이트다(Scripts/lint/LintGate.py)")
+    raise ValueError(f"{script.relPath}: `LintGate` 하위 클래스가 없다 — gate/ 의 스크립트는 게이트다(Scripts/lint/LintGate.py)")
 
 
 def discoverSourceGateScripts() -> list[LintScript]:

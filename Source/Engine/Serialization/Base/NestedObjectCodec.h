@@ -4,7 +4,7 @@
  * @details `SerializerUtil` 의 칸 경로(구조체 칸 · 소유 포인터 원소 · 텍스트 칸)는 구조체 본문을 형식 직렬화기에 맡겨야 한다. Base 가 Format 의
  *          `BinarySerializer` · `JSONSerializer` 를 include 하면 층이 거꾸로 되므로, Base 는 이 선언만 알고 몸통은 각 형식의 `.cpp` 가 정의한다
  *          (바이너리 둘은 `BinarySerializer.cpp`, JSON 둘은 `JSONSerializer.cpp`). 실행 중에 갈아 끼우는 표(가변 전역)는 두지 않는다 —
- *          형식은 빌드마다 하나뿐이고, 새 가변 전역은 `CheckMutableStatics` 가 막는다. 몸통이 없으면 링크가 실패하므로 빠뜨릴 수 없다.
+ *          형식은 빌드마다 하나뿐이고, 새 가변 전역은 만들지 않는다. 몸통이 없으면 링크가 실패하므로 빠뜨릴 수 없다.
  */
 #pragma once
 #include "Core/Common/Types.h"

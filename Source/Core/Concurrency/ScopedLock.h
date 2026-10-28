@@ -2,7 +2,7 @@
  * @file ScopedLock.h
  * @brief 잠금 계약 분석(clang `-Wthread-safety`)이 알아보는 잠금 가드입니다 — `ScopedLock` · `ScopedSharedLock` · `UniqueLock` · `ScopedLockPair` · `ScopedOptionalLock`.
  * @details `std::scoped_lock` · `lock_guard` · `unique_lock` · `shared_lock` 은 MSVC STL 에 능력 주석이 없어 분석이 그 범위를 잠긴 범위로 보지 못한다.
- *          그래서 엔진 코드는 이 가드로 잠그고, `std::` 가드 직접 사용은 `CheckStdMutex` 가 막는다. 잠금 타입(`sw::mutex` · `sw::shared_mutex` · `SpinLock`)과
+ *          그래서 엔진 코드는 이 가드로 잠그고, `std::` 가드는 직접 쓰지 않는다. 잠금 타입(`sw::mutex` · `sw::shared_mutex` · `SpinLock`)과
  *          함께 쓴다 — `lock` · `unlock`(공유는 `lock_shared` · `unlock_shared`)이 있는 타입이면 된다.
  */
 #pragma once

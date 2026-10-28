@@ -1,7 +1,7 @@
 /**
  * @file HashUtil.h
  * @brief 해시 · 씨앗을 섞는 상수(황금비 · splitmix64 · FNV-1a)와 도우미, 해시 컨테이너의 기본 해시 `DefaultHash` 입니다.
- * @details 같은 상수를 파일마다 16 진 리터럴로 다시 적지 않는다(`CheckWellKnownConstants` 가 막는다). 값을 바꾸면 프로세스 밖으로 나가는
+ * @details 같은 상수를 파일마다 16 진 리터럴로 다시 적지 않는다. 값을 바꾸면 프로세스 밖으로 나가는
  *          해시(네트워크 비교 · 쿠킹 산출물)가 갈라지므로 여기 값은 바꾸지 않는다.
  *          키 구조체마다 `XxxKeyHash` 구조체를 따로 만들지 않는다. 키에 `computeHash() const` 를 두면 `sw::unordered_map` · `sw::unordered_set`
  *          의 기본 해시(`DefaultHash`)가 그것을 부르고, 여러 칸을 섞는 본문은 `HashUtil::makeHash( _a, _b )` 한 줄이다.

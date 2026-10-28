@@ -38,7 +38,7 @@ endfunction()
 #
 # X11 은 `Convex` · `None` · `KeyPress` 같은 흔한 단어를 매크로로 정의한다. 그 TU 가 묶음에 들어가면 매크로가 같은 묶음의
 # 뒤 TU(서드파티 헤더 포함)로 샌다. 목록이 아니라 **소스의 include 줄**로 고른다 — X11 헤더는 .cpp 에서만 include 한다는
-# 규칙을 `CheckX11Isolation.py` 가 지키므로 .cpp 의 직접 include 만 보면 된다.
+# 규칙이므로 .cpp 의 직접 include 만 보면 된다.
 # ------------------------------------------------------------------------------
 function(sw_skipUnityForX11Sources TARGET_NAME)
 	if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")

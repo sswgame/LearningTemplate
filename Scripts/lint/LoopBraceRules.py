@@ -1,10 +1,10 @@
 """
 Scripts/lint/LoopBraceRules.py
 
-반복문 중괄호 규칙 — `findUnbracedLoops`(판정)와 `braceLoopsInternal`(고침), 둘을 묶은 `inspectSource`. 게이트 `CheckLoopBraces` 와 픽서 `FormatBranchBraces` 가 같이 읽는다.
+반복문 중괄호 규칙 — `findUnbracedLoops`(판정)와 `braceLoopsInternal`(고침), 둘을 묶은 `inspectSource`. 픽서 `FormatBranchBraces` 가 같이 읽는다.
 
 판정을 린트 틀 층(층 1)에 두는 까닭: 게이트 · 픽서 · 보고서(층 2)가 서로의 모듈을 import 하면 명령끼리 의존한다.
-(`docs/decisions/5-2_Build.md`, 층 게이트 `CheckScriptLayers`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
+(`docs/decisions/5-2_Build.md`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
 """
 
 from __future__ import annotations
@@ -237,7 +237,7 @@ def braceLoopsInternal(text: str, listLoop: list[UnbracedLoop]) -> str:
 
 def inspectSource(source: SourceFile) -> FileFindings:
     """
-    파일 하나의 판정과 고친 글 — 게이트 `CheckLoopBraces.checkSourceFile` 과 픽서(`FormatBranchBraces` 의 반복문 패스)가 **같은 이 함수**를 부른다.
+    파일 하나의 판정과 고친 글 — 픽서(`FormatBranchBraces` 의 반복문 패스)가 **같은 이 함수**를 부른다.
     위반은 중괄호 없는 반복문 전부(픽서가 못 고치는 것은 "손으로" 라고 적는다), 고친 글은 고칠 수 있는 것만 감싼 완성 글이다(줄 끝 · BOM 은 `SourceFile.restore`).
     """
     listLoop = findUnbracedLoops(source.text, source.masked, source.noComment)

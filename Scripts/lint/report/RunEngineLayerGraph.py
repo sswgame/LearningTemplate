@@ -11,7 +11,7 @@ Engine 폴더 간 include 그래프를 다시 측정해서 **강결합 묶음과
 표가 낡은 것이다.
 
 [게이트가 아니다]
-`Run*` 은 보고하고 `Check*` 이 막는다. 방향 위반은 `CheckEngineLayers.py` 가 막고, 여기는 "묶음이
+`Run*` 은 보고한다. 여기는 "묶음이
 생겼나 · 티어가 바뀌었나" 를 보여 준다. 묶음은 없다(DAG) — 이 스크립트가 묶음을
 하나라도 찍으면 누군가 위층 것을 아래층에 들여온 것이다.
 
@@ -25,7 +25,7 @@ Engine 폴더 간 include 그래프를 다시 측정해서 **강결합 묶음과
 `--apply` 가 계산값을 그대로 쓰면 위층 것을 아래층에 들인 위반(= 계산 티어 상승)이 표 재계산으로 흡수되어 게이트가 통과한다.
 그래서 `--apply` 는 **내리기 · 같은 값만** 쓰고, 올리기는 `--raise-reason` 사유가 있을 때만 쓰며 사유를 그 줄 위 주석으로 남긴다.
 `[tierReason]`(계산값보다 일부러 높게 둔 폴더 → 이유)에 있는 폴더는 사람이 정한 값이라 `--apply` 가 건드리지 않는다.
-이 막이 못 막는 틈: 사유 글 자체가 맞는지(리뷰의 몫)와 표를 손으로 고치는 것 — 후자는 `CheckEngineLayers` 의 "표 = 계산값" 검사가 잡는다.
+이 막이 못 막는 틈: 사유 글 자체가 맞는지(리뷰의 몫)와 표를 손으로 고치는 것 — 후자는 이 보고서의 표 대 계산값 비교로 본다.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ from lint.LayerRules import engineFileEdges, kEngineRootLayerName, readEngineLay
 
 #: 규칙 데이터는 스크립트 트리의 것이다(`common.RuleData` 가 읽는 자리와 같다).
 kRulePath = Path(__file__).resolve().parents[1] / "rules" / "CheckEngineLayers.toml"
-kSourceSuffix = tuple(sorted(kCppAllExtensions | {".xxx"}))   # 게이트(`CheckEngineLayers.sourceSuffixes`)와 같은 파일
+kSourceSuffix = tuple(sorted(kCppAllExtensions | {".xxx"}))   # C++ 소스 확장자 전부
 
 
 def collectEdgesInternal(repositoryRoot: Path) -> dict[str, dict[str, list[str]]]:
@@ -126,7 +126,7 @@ class RunEngineLayerGraphReport(LintReport):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")
         parser.add_argument("--apply", action="store_true",
-                            help="게이트 티어 표(rules/CheckEngineLayers.toml)를 계산값으로 고쳐 쓴다 — 내리기 · 같은 값만(폴더를 옮긴 뒤)")
+                            help="티어 표(rules/CheckEngineLayers.toml)를 계산값으로 고쳐 쓴다 — 내리기 · 같은 값만(폴더를 옮긴 뒤)")
         parser.add_argument("--raise-reason", default="",
                             help="--apply 가 티어를 올리는 것까지 쓰게 한다 — 사유가 그 줄 위 주석으로 남는다(사유 없이는 올리지 않는다)")
 

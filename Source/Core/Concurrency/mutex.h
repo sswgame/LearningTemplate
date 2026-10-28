@@ -5,7 +5,7 @@
  *          - 형식: 잠금 타입은 `SW_CAPABILITY` 이고(`ThreadSafety.h`), clang 빌드는 `-Wthread-safety` 로 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` 계약을 컴파일 때 본다.
  *          - 실행(Debug): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
  *          - 교착 검출(`SW_ENABLE_DEADLOCK_DETECTION`): 독점 잠금의 시도 · 획득 · 해제를 관찰자에 알린다.
- *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 `CheckStdMutex` 게이트가 막는다.
+ *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 직접 쓰지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

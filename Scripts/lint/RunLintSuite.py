@@ -185,7 +185,7 @@ def writeStepSummaryInternal(listTiming: list[LintTiming], totalSeconds: float, 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="린트 전체(게이트 + 셀프테스트)를 동시에 돌리고 린트마다 걸린 시간을 남긴다")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--build-dir", type=Path, default=None, help="빌드 폴더가 필요한 린트(CheckSourceGlob)까지 돌릴 때 (상대 경로는 저장소 루트 기준)")
+    parser.add_argument("--build-dir", type=Path, default=None, help="빌드 폴더가 필요한 린트까지 돌릴 때 (상대 경로는 저장소 루트 기준)")
     parser.add_argument("--json", type=Path, default=None, help="시간 기록을 JSON 으로")
     parser.add_argument("--verbose", action="store_true", help="린트마다 한 줄을 모두 보인다(기본은 한 줄 요약과 실패 상세)")
     parser.add_argument("--hook-sample", default="", help="커밋 훅을 staged 파일 수별로 잰다 (예: 1,10)")
@@ -205,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         listJob.append((target, listArgument))
 
-    # 린트는 대개 한 코어를 쓰고 `CheckCodeConventions` · `CheckLintsAreAlive` 는 스스로 여럿을 쓴다 — 코어 수의 절반만 함께 띄운다.
+    # 린트는 대개 한 코어를 쓰고  함께 띄운다.
     start = time.perf_counter()
     listTiming = list(mapConcurrent(lambda job: runLintInternal(job[0], repositoryRoot, job[1]), listJob,
                                     workerCount=max(1, getCpuCount() // 2)))

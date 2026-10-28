@@ -3,7 +3,7 @@
     "Resource/engine/textures_raw 의 sky · surfaces · ui/kenney_* · particles · pixel CC0 텍스처 원본 목록. 정본이다 — 파일을 더하거나 바꾸면 이 표를 먼저 고친다(칸은 Resource/common/audio.sources.json 과 같다).",
     "license 는 CC0 1.0 만 쓴다. license_quote 는 license_source(묶음 안 파일 또는 page) 원문에서 옮긴 것이다.",
     "변환은 없다 — sha256 은 받은 바이트이자 저장소 파일의 해시다. download_sha256 은 묶음(zip)의 해시다. folder 는 이 파일이 있는 도메인(Resource/engine) 기준이다.",
-    "py -3 -I Scripts/dev/MakeCc0Import.py verify 가 해시 · 목록을, fetch 가 다운로드부터 다시 만든다. 린트 CheckResourceCredits 도 해시 · 목록 밖 파일을 대조한다.",
+    "py -3 -I Scripts/dev/MakeCc0Import.py verify 가 해시 · 목록을, fetch 가 다운로드부터 다시 만든다.",
     "textures_raw/sky: Poly Haven HDRI 2K — 맑은 낮 · 흐림 · 석양 · 야간",
     "textures_raw/ui/kenney_*: Kenney — 규칙에 맞는 PNG(Default 크기)만 꺼낸다. Double · 벡터 · 글꼴 · 소리 · Unity 패키지는 넣지 않는다.",
     "textures_raw/pixel/kenney_roguelike: 픽셀 아트 16 px 세트(탑다운 RPG) — 필터 · 밉 없이 R8G8B8A8 로 굽는다(TextureImportConfig 의 Pixel_Art 규칙).",

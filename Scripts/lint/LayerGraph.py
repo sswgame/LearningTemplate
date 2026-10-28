@@ -1,5 +1,5 @@
 """
-폴더 층 그래프의 공용 계산 — 게이트(`gate/CheckEngineLayers.py` · `gate/CheckCoreLayers.py`)와 그래프 보고서(`report/RunEngineLayerGraph.py` ·
+폴더 층 그래프의 공용 계산 — 그래프 보고서(`report/RunEngineLayerGraph.py` ·
 `report/RunCoreLayerGraph.py`)가 같은 묶음(SCC) · 티어 계산과 같은 "표 = 계산값" 판정을 쓴다.
 
 왜 필요한가: 티어 표는 `RunEngineLayerGraph.py --apply` 의 출력이기도 해서, 위반이 생겨도 표를 다시 계산하면 흡수된다. 게이트가 방향만 보면

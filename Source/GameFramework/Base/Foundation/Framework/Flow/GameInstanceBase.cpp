@@ -116,7 +116,7 @@ namespace sw
     GameObjectManager* GameInstanceBase::findActiveObjectManager()
     {
         // `findSubsystem<SceneManager>()` 가 바로 이 서비스를 보므로 아래 널 검사에는 사실상 닿지 않는다.
-        // 그래도 `game::findSubsystem<T>()` 는 nullptr 을 반환할 수 있어서 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
+        // 그래도 `game::findSubsystem<T>()` 는 nullptr 을 반환할 수 있어서 받는 쪽이 널을 검사하는 모양을 지킨다.
         if ( game::findSubsystem<SceneManager>() == nullptr )
             return nullptr;
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
