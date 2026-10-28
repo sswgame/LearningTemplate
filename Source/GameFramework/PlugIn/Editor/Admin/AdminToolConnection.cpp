@@ -60,11 +60,10 @@ namespace sw::editor
             _state = AdminToolConnectionState::Failed;
             return false;
         }
-        OnlineServiceClientConfig settings;
-        settings._endpointSettings._security._pTLSContext = _tlsContext.get();
-        settings._transportSettings._ioThreadCount        = 0; // 에디터 프레임의 update 가 전송을 돌린다
-        settings._serverAddress                           = serverAddress;
-        settings._gameBuild                               = string( gameBuild );
+        OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };
+        settings._transportSettings._ioThreadCount = 0; // 에디터 프레임의 update 가 전송을 돌린다
+        settings._serverAddress                    = serverAddress;
+        settings._gameBuild                        = string( gameBuild );
         if ( _client.initialize( _pTransport.get(), settings, outError ) == false )
         {
             _state = AdminToolConnectionState::Failed;

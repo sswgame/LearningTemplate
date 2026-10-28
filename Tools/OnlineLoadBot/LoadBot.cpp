@@ -163,7 +163,7 @@ namespace sw
     {
         _bConnecting     = SW_FALSE;
         _bConnectionOpen = SW_TRUE;
-        OnlineServiceClientConfig settings;
+        OnlineServiceClientConfig settings{ OnlineClientSecurity::sharedEndpoint() }; // TLS 는 실행기의 공유 엔드포인트가 정한다
         settings._gameBuild = LoadBotInternal::kGameBuild;
         if ( _client.initializeOnSharedEndpoint( pEndpoint, pRequestClient, handle, settings ) == false )
             stop();

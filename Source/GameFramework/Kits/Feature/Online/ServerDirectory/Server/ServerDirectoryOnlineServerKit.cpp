@@ -58,6 +58,9 @@ namespace sw
                 return true;
             }
 
+            /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 서버 등록 · 배정 요청. */
+            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+
             void stop() override
             {
                 if ( isStarted() == false )

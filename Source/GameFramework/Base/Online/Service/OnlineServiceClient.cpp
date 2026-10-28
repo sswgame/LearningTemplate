@@ -25,7 +25,7 @@ namespace sw
 namespace sw
 {
     OnlineServiceClient::OnlineServiceClient()
-        : _settings{}
+        : _settings{ OnlineClientSecurity::sharedEndpoint() }
         , _listService{}
         , _listQueuedCall{}
         , _listDrainingCall{}
@@ -117,12 +117,19 @@ namespace sw
     bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
-        _settings                        = settings;
-        _pTransport                      = pTransport;
-        _schemaHash                      = OnlineProtocolRegistry::computeSchemaHash();
-        _ownedEndpoint                   = sw::make_unique<StreamMessageEndpoint>();
-        _ownedRequestClient              = sw::make_unique<NetRequestClient>();
-        const bool bTransportStartFailed = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, settings._endpointSettings ) == false ||
+        if ( settings._security._kind == OnlineClientSecurity::Kind::SharedEndpoint )
+        {
+            outError = "online service client owns its endpoint - choose OnlineClientSecurity::tls (or plaintextForTests), not sharedEndpoint";
+            return false;
+        }
+        _settings                               = settings;
+        StreamEndpointConfig endpointSettings   = settings._endpointSettings;
+        endpointSettings._security._pTLSContext = settings._security._pTLSContext; // 보안 선택이 컨텍스트의 유일한 길이다
+        _pTransport                             = pTransport;
+        _schemaHash                             = OnlineProtocolRegistry::computeSchemaHash();
+        _ownedEndpoint                          = sw::make_unique<StreamMessageEndpoint>();
+        _ownedRequestClient                     = sw::make_unique<NetRequestClient>();
+        const bool bTransportStartFailed        = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, endpointSettings ) == false ||
                                            pTransport->initialize( _ownedEndpoint.get(), settings._transportSettings ) == false;
         if ( bTransportStartFailed )
         {
@@ -142,7 +149,7 @@ namespace sw
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         const bool bInvalidClientArguments = pEndpoint == nullptr || pRequestClient == nullptr || handle.isValid() == false;
-        if ( bInvalidClientArguments )
+        if ( bInvalidClientArguments || settings._security._kind != OnlineClientSecurity::Kind::SharedEndpoint )
             return false;
         _settings        = settings;
         _schemaHash      = OnlineProtocolRegistry::computeSchemaHash();

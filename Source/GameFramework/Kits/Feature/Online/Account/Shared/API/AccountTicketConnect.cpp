@@ -91,11 +91,10 @@ namespace sw
         _tlsContext = NetSecurity::createClientTLSContext( request._tlsTrustFile, "", outError );
         if ( _tlsContext == nullptr )
             return false;
-        OnlineServiceClientConfig settings;
-        settings._endpointSettings._security._pTLSContext = _tlsContext.get();
-        settings._transportSettings._ioThreadCount        = 0; // 이 함수의 `update` 가 전송을 돌린다
-        settings._serverAddress                           = loginAddress;
-        settings._gameBuild                               = request._gameBuild;
+        OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };
+        settings._transportSettings._ioThreadCount = 0; // 이 함수의 `update` 가 전송을 돌린다
+        settings._serverAddress                    = loginAddress;
+        settings._gameBuild                        = request._gameBuild;
         if ( _client.initialize( _pTransport.get(), settings, outError ) == false )
             return false;
 

@@ -104,8 +104,47 @@ namespace sw
         HandshakeFailed  ///< Hello 응답이 예상 밖이다(다른 오류 코드, 깨진 답). 같은 빌드에서는 결함이므로 다시 연결하지 않는다
     };
 
+    /**
+     * @struct OnlineClientSecurity
+     * @brief 서비스 연결의 보안 선택입니다 — 설정을 만들 때 반드시 하나를 고른다(기본값이 없다).
+     * @details 전용 서버의 서비스 스트림은 늘 TLS 1.3 이다. 컨텍스트 칸이 선택(기본 비움)이면 새 연결기가 그것을 빠뜨려 평문으로 붙는 결함이 생긴다
+     *          (`AccountTicketConnector` · `AdminToolConnection` 이 그랬다). 그래서 TLS · 공유 엔드포인트 · 시험용 평문 중 하나를 이름 있는 만듦 함수로만 고르게 한다.
+     */
+    struct OnlineClientSecurity
+    {
+        enum class Kind : uint8
+        {
+            Tls,
+            SharedEndpoint,
+            PlaintextForTests
+        };
+
+        /** @brief 이 컨텍스트로 모든 연결을 TLS 로 맺는다. 컨텍스트는 클라이언트보다 오래 산다. */
+        static OnlineClientSecurity tls( ITLSContext& context ) { return OnlineClientSecurity{ Kind::Tls, &context }; }
+        /** @brief 연결을 호출하는 쪽의 공유 엔드포인트가 맺는다(`initializeOnSharedEndpoint`) — TLS 는 그 엔드포인트의 설정이 정한다. */
+        static OnlineClientSecurity sharedEndpoint() { return OnlineClientSecurity{ Kind::SharedEndpoint, nullptr }; }
+        /** @brief 평문 — 루프백 테스트 서버(`_bTLS` 끔)에만 쓴다. */
+        static OnlineClientSecurity plaintextForTests() { return OnlineClientSecurity{ Kind::PlaintextForTests, nullptr }; }
+
+        Kind         _kind;
+        ITLSContext* _pTLSContext;
+
+    private:
+        OnlineClientSecurity( Kind kind, ITLSContext* pContext )
+            : _kind{ kind }
+            , _pTLSContext{ pContext }
+        {
+        }
+    };
+
     struct OnlineServiceClientConfig
     {
+        explicit OnlineServiceClientConfig( OnlineClientSecurity security )
+            : _security{ security }
+        {
+        }
+
+        OnlineClientSecurity  _security;
         StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드. `_ioThreadCount == 0` 이면 `tick` 이 전송을 처리한다
         StreamEndpointConfig  _endpointSettings{};
         NetAddress            _serverAddress{};
@@ -226,7 +265,7 @@ namespace sw
         void        dispatchPush( const uint8* pBody, int32 bodySize );
         void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
-        OnlineServiceClientConfig          _settings;
+        OnlineServiceClientConfig          _settings; ///< `initialize` 전에는 자리표시(공유 엔드포인트 값)다
         vector<IOnlineClientService*>      _listService;
         vector<QueuedCall>                 _listQueuedCall;
         vector<vector<QueuedCall>*>        _listDrainingCall; ///< `flushQueuedCalls` · `failQueuedCalls` 가 꺼내 도는 지역 목록(겹쳐 불리면 여럿)
