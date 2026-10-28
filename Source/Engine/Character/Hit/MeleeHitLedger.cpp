@@ -80,6 +80,8 @@ namespace sw
     {
         SceneFrameAccess access{};
         access._writes = { SceneDataKind::HitRecord };
+        // 기록 장부 안의 목록만 만진다(씬 · 싱글턴 · 게임 스레드 전용 API 를 부르지 않는다) — 접근이 겹치지 않는 시스템과 워커 레인에서 같이 돌아도 된다.
+        access._bLaneSafe = true;
         return access;
     }
 

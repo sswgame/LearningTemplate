@@ -1,9 +1,9 @@
 /**
  * @file SceneFrameAccess.h
  * @brief 프레임 시스템(`ISceneFrameSystem`)이 씬 데이터의 어떤 종류를 읽고 쓰는지 말하는 선언의 형식입니다. 종류는 표(`SceneDataKindList.xxx`)의 줄입니다.
- * @details 지금 프레임 시스템은 붙인 순서대로 직렬로 돕니다. 그 순서가 뜻을 갖는 곳(쓰는 시스템이 먼저, 읽는 시스템이 나중)을 코드로 말하는 것이 이 선언이고,
+ * @details 프레임 시스템은 붙인 순서가 의미입니다(겹치는 접근은 그 순서로 돈다). 그 순서가 뜻을 갖는 곳(쓰는 시스템이 먼저, 읽는 시스템이 나중)을 코드로 말하는 것이 이 선언이고,
  *          `GameObjectManager::addFrameSystem` 이 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다. 같은 선언이 나중에 시스템을 병렬로 돌릴 때
- *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력이 됩니다(지금 병렬 실행기는 없습니다).
+ *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemLanePlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 `_bLaneSafe` 인 것을 워커로 보낸다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -99,5 +99,11 @@ namespace sw
         SceneDataKindSet _writes{};
         SceneDataKindSet _reads{};
         SceneDataKindSet _readsPrevious{};
+        /**
+         * @brief true 면 `runBeforeTick` 를 워커 스레드에서 불러도 된다는 선언입니다(기본 false — 게임 스레드에서만).
+         * @details 같은 파도(`FrameSystemLanePlan`)에 든 시스템 중 이것이 true 인 것만 `TaskManager` 로 보냅니다. true 의 조건: 선언한 종류 밖의 공유 가변 상태(싱글턴 · 입력 ·
+         *          그리기 큐 · 게임 스레드 전용 API)를 만지지 않고, 프레임 시스템을 붙이거나 떼지 않는다. 확신이 없으면 false 로 둔다(조용한 데이터 경합보다 직렬이 낫다).
+         */
+        bool _bLaneSafe{ false };
     };
 } // namespace sw

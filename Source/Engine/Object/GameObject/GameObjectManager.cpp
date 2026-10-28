@@ -113,6 +113,9 @@ namespace sw
         , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}
+        , _frameSystemLanePlan{}
+        , _listFrameAccess{}
+        , _listLaneJob{}
         , _listRetiredFrameSystem{}
         , _services{ services }
         , _bRunningFrameSystems{ false }

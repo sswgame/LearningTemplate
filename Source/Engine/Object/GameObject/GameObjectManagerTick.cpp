@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,6 +19,25 @@
 namespace sw
 {
     SW_LOG_CALLER( "GameObjectManager" );
+
+    namespace
+    {
+        /** @brief 같은 파도의 워커 레인 묶음입니다 — 구간마다 시스템의 `runBeforeTick` 을 부른다. */
+        struct FrameSystemLaneJob
+        {
+            GameObjectManager*  _pManager;
+            ISceneFrameSystem** _arrSystem;
+            float32             _deltaTime;
+
+            void runRange( uint32 start, uint32 end ) const
+            {
+                for ( uint32 jobIndex = start; jobIndex < end; ++jobIndex )
+                {
+                    _arrSystem[jobIndex]->runBeforeTick( *_pManager, _deltaTime );
+                }
+            }
+        };
+    } // namespace
 
     void GameObjectManager::update( float32 deltaTime )
     {
@@ -73,11 +93,34 @@ namespace sw
         // 시스템이 시스템을 붙이거나 뗄 수 있다 — 붙인 것은 다음 프레임부터(개수를 먼저 센다), 뗀 것은 빈 칸으로 남았다가 끝에 걷힌다.
         _bRunningFrameSystems = true;
         const size_t count    = _listFrameSystem.size();
+        // 파도 계획 — 붙인 순서를 지키되 접근이 겹치지 않는 시스템끼리 한 파도에 묶는다(`FrameSystemLanePlan`). 뗀 칸은 빈 접근이라 아무와도 겹치지 않는다.
+        // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 `_bLaneSafe` 시스템은 `TaskManager` 가 병렬로 돌린다.
+        _listFrameAccess.clear();
         for ( size_t systemIndex = 0; systemIndex < count; ++systemIndex )
         {
-            ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
-            if ( pSystem != nullptr )
-                pSystem->runBeforeTick( *this, deltaTime );
+            const ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
+            _listFrameAccess.push_back( pSystem != nullptr ? pSystem->getFrameAccess() : SceneFrameAccess{} );
+        }
+        buildFrameSystemLanePlan( span<const SceneFrameAccess>( _listFrameAccess.data(), _listFrameAccess.size() ), _frameSystemLanePlan );
+        for ( const FrameSystemWave& wave : _frameSystemLanePlan._listWave )
+        {
+            _listLaneJob.clear();
+            for ( const uint32 systemIndex : wave._listSystem )
+            {
+                ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
+                if ( pSystem == nullptr )
+                    continue;
+                // 워커로 보내지 않는 것은 이 스레드가 먼저 돈다 — 같은 파도의 다른 시스템과 접근이 겹치지 않으므로 순서는 결과에 영향이 없다.
+                if ( _listFrameAccess[systemIndex]._bLaneSafe )
+                    _listLaneJob.push_back( pSystem );
+                else
+                    pSystem->runBeforeTick( *this, deltaTime );
+            }
+            if ( _listLaneJob.empty() )
+                continue;
+            // 레인 하나뿐이면 나눌 일이 없다(`serialThreshold` 2). 본문은 시스템 포인터만 읽는다 — 이 목록은 파도가 끝날 때까지 바뀌지 않는다.
+            FrameSystemLaneJob job{ this, _listLaneJob.data(), deltaTime };
+            engine::runParallel( static_cast<uint32>( _listLaneJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemLaneJob::runRange, &job ) );
         }
         _bRunningFrameSystems = false;
         if ( _listRetiredFrameSystem.empty() )

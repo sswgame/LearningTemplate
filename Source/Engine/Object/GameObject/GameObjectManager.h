@@ -26,6 +26,7 @@
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Tick/FrameSystemLanePlan.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
@@ -595,6 +596,10 @@ namespace sw
         DelegateSlot<FrameStepObserver> _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
         vector<FrameSystemEntry> _listFrameSystem;
+        /** @brief `FrameSystems` 단계의 파도 계획과 그 계산용 칸입니다 — 프레임마다 다시 만들고(선언은 늘 같은 답이다) 용량만 둡니다. */
+        FrameSystemLanePlan        _frameSystemLanePlan;
+        vector<SceneFrameAccess>   _listFrameAccess;
+        vector<ISceneFrameSystem*> _listLaneJob;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
         /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */

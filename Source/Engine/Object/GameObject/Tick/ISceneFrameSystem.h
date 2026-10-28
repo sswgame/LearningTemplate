@@ -21,7 +21,7 @@ namespace sw
      *          엔진 · GameFramework 기반의 것만 붙이고, 그것도 자기 컴포넌트가 모두 빠지면 뗍니다(모듈을 내리면 컴포넌트가 먼저 지워진다).
      *
      *          **붙인 순서가 의미입니다.** 그 의미를 말하는 것이 `getFrameAccess` 입니다 — 시스템마다 `runBeforeTick` 이 씬 데이터의 어떤 종류(`SceneDataKind`)를
-     *          읽고 쓰는지 선언하고, 매니저는 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다(`addFrameSystem`). 지금은 순서만 지키고 직렬로 돕니다.
+     *          읽고 쓰는지 선언하고, 매니저는 읽는 시스템 뒤에 쓰는 시스템을 붙이는 등록을 거절합니다(`addFrameSystem`). 접근이 겹치지 않고 `_bLaneSafe` 를 선언한 시스템끼리는 워커 레인에서 같이 돌고(`FrameSystemLanePlan`), 겹치는 것은 붙인 순서의 파도로 차례로 돕니다.
      */
     class SW_API ISceneFrameSystem
     {
