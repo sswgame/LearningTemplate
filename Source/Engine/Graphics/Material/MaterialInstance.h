@@ -113,7 +113,7 @@ namespace sw
          * @details 렌더 스레드가 `updateRHI` 뒤에 부른다(GPUScene). 슬롯 바인딩 백엔드는 배치마다 슬롯을 바인딩하고, 인스턴스가 있는 배치는 그
          *          인스턴스의 것이다(합치기는 네이티브 bindless 에서만 켜진다).
          */
-        void collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
+        void collectTextureSlotSRVs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
         /** @brief 캐시된 셰이더 define 의 사본입니다 — 캐시는 `_overrideMutex` 아래이고 렌더 · 게임 스레드가 함께 고치므로 참조를 잠금 밖으로 내주지 않습니다. */
         vector<string> getCachedShaderDefines() const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. */
@@ -168,7 +168,7 @@ namespace sw
         MaterialInstanceDesc _desc;
 
         /**
-         * @brief 덮어쓰기 목록과 더티 비트를 게임 스레드 세터와 렌더 스레드의 `updateRHI`, `collectTextureSlotSrvs` 가 나눠 쓰는 락입니다.
+         * @brief 덮어쓰기 목록과 더티 비트를 게임 스레드 세터와 렌더 스레드의 `updateRHI`, `collectTextureSlotSRVs` 가 나눠 쓰는 락입니다.
          * @details 지형, 식생, 물처럼 매 틱 값을 넣는 컴포넌트가 있어, 렌더 스레드가 목록을 읽는 동안 세터가 목록을 다시 잡을 수 있다.
          */
         mutable mutex _overrideMutex;

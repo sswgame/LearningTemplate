@@ -34,7 +34,7 @@ namespace sw::editor
     /** @brief 곡선 하나입니다. */
     struct CatalogCurve
     {
-        string                  _label{};   ///< 소유 원소 아래 경로(`VfxEmitterDef(Smoke)/_colorOverLife/_red`)
+        string                  _label{};   ///< 소유 원소 아래 경로(`VFXEmitterDef(Smoke)/_colorOverLife/_red`)
         string                  _channel{}; ///< 곡선 원소의 이름(`_red`)
         int32                   _elementIndex{ -1 };
         int32                   _parentIndex{ -1 };

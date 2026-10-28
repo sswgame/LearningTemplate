@@ -233,7 +233,7 @@ namespace sw
             return;
         }
         const JSONValue root  = document.getRoot();
-        result._transactionID = Internal::readText( root, "orderId" );
+        result._transactionID = Internal::readText( root, "orderID" );
         int64 purchaseMs      = 0;
         if ( StringUtil::parseInt64( Internal::readText( root, "purchaseTimeMillis" ), purchaseMs ) )
             result._purchaseTimeMs = purchaseMs;
@@ -290,7 +290,7 @@ namespace sw
         for ( size_t index = 0; voided.isArray() && index < voided.size(); ++index )
         {
             const JSONValue entry   = voided.at( index );
-            const string    orderID = Internal::readText( entry, "orderId" );
+            const string    orderID = Internal::readText( entry, "orderID" );
             if ( orderID.empty() || _uniqueSetNotifiedRefund.count( orderID ) != 0 )
                 continue;
             if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )

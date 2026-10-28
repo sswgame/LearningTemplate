@@ -21,7 +21,7 @@ namespace sw::editor
             static void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
             {
                 ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
-                if ( pSelf == nullptr || pSelf->allocateSrvDescriptor( pOutCPU, pOutGPU ) == false )
+                if ( pSelf == nullptr || pSelf->allocateSRVDescriptor( pOutCPU, pOutGPU ) == false )
                 {
                     pOutCPU->ptr = 0;
                     pOutGPU->ptr = 0;
@@ -32,7 +32,7 @@ namespace sw::editor
             {
                 ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
                 if ( pSelf != nullptr )
-                    pSelf->freeSrvDescriptor( cpu, gpu );
+                    pSelf->freeSRVDescriptor( cpu, gpu );
             }
         };
     } // namespace
@@ -66,7 +66,7 @@ namespace sw::editor
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvHeap;
         if ( isHrSuccess( pDevice->CreateDescriptorHeap( &desc, IID_PPV_ARGS( &srvHeap ) ), "CreateDescriptorHeap" ) == false )
             return false;
-        _d3d12SrvHeap.set( std::move( srvHeap ) ); // 힙 · 크기는 여기서 한 번 정하고 shutdown 까지 바뀌지 않는다(어느 스레드든 잠금 없이 읽는다)
+        _d3d12SRVHeap.set( std::move( srvHeap ) ); // 힙 · 크기는 여기서 한 번 정하고 shutdown 까지 바뀌지 않는다(어느 스레드든 잠금 없이 읽는다)
 
         _descriptorSize.set( pDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
         {
@@ -83,7 +83,7 @@ namespace sw::editor
         initInfo.CommandQueue            = static_cast<ID3D12CommandQueue*>( handles._pGraphicsQueue );
         initInfo.NumFramesInFlight       = kImGuiDrawBufferRingSize;
         initInfo.RTVFormat               = DXGI_FORMAT_R8G8B8A8_UNORM;
-        initInfo.SrvDescriptorHeap       = _d3d12SrvHeap.get().Get();
+        initInfo.SrvDescriptorHeap       = _d3d12SRVHeap.get().Get();
         initInfo.UserData                = this;
         initInfo.SrvDescriptorAllocFn    = &ImGuiDX12RendererBackendInternal::ImGuiAllocSrv;
         initInfo.SrvDescriptorFreeFn     = &ImGuiDX12RendererBackendInternal::ImGuiFreeSrv;
@@ -96,7 +96,7 @@ namespace sw::editor
             _viewportSizeGuard.install();
             return true;
         }
-        _d3d12SrvHeap.reset(); // 다시 initialize 할 수 있게 한 번 정한 칸을 비운다
+        _d3d12SRVHeap.reset(); // 다시 initialize 할 수 있게 한 번 정한 칸을 비운다
         _descriptorSize.reset();
         return false;
     }
@@ -108,7 +108,7 @@ namespace sw::editor
         _viewportSizeGuard.clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX12_Shutdown();
-        _d3d12SrvHeap.reset();
+        _d3d12SRVHeap.reset();
         {
             ScopedLock<mutex> lock{ _descriptorMutex };
             _nextDescriptor = 0;
@@ -148,17 +148,17 @@ namespace sw::editor
             return;
         }
 
-        if ( pDrawData == nullptr || _d3d12SrvHeap.get() == nullptr )
+        if ( pDrawData == nullptr || _d3d12SRVHeap.get() == nullptr )
             return;
         // 프레임 스트림의 활성 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 리스트라 콜백 밖으로 들고 나가지 않는다.
         // 백엔드는 위 queryNativeHandles 가 확인했다.
-        ID3D12DescriptorHeap* const pSrvHeap = _d3d12SrvHeap.get().Get();
-        (void)pRHIDevice->withNativeContext( RHIBackend::DirectX12, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData, pSrvHeap]( void* pContext )
+        ID3D12DescriptorHeap* const pSRVHeap = _d3d12SRVHeap.get().Get();
+        (void)pRHIDevice->withNativeContext( RHIBackend::DirectX12, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData, pSRVHeap]( void* pContext )
         {
             ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pContext );
             if ( pCmdList == nullptr )
                 return;
-            ID3D12DescriptorHeap* heaps[] = { pSrvHeap };
+            ID3D12DescriptorHeap* heaps[] = { pSRVHeap };
             pCmdList->SetDescriptorHeaps( 1, heaps );
             ImGui_ImplDX12_RenderDrawData( pDrawData, pCmdList );
         } ) );
@@ -166,7 +166,7 @@ namespace sw::editor
 
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle texture )
     {
-        const bool bCannotRegisterTexture = texture == 0 || _d3d12SrvHeap.get() == nullptr || _pRHIDevice.get() == nullptr;
+        const bool bCannotRegisterTexture = texture == 0 || _d3d12SRVHeap.get() == nullptr || _pRHIDevice.get() == nullptr;
         if ( bCannotRegisterTexture )
             return nullptr;
 
@@ -181,7 +181,7 @@ namespace sw::editor
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        if ( allocateSrvDescriptor( &cpuHandle, &gpuHandle ) == false )
+        if ( allocateSRVDescriptor( &cpuHandle, &gpuHandle ) == false )
             return nullptr;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -200,11 +200,11 @@ namespace sw::editor
 
     void ImGuiDX12RendererBackend::unregisterTexture( void* pTextureID )
     {
-        const bool bCannotUnregisterTexture = pTextureID == nullptr || _d3d12SrvHeap.get() == nullptr || _descriptorSize.get() == 0;
+        const bool bCannotUnregisterTexture = pTextureID == nullptr || _d3d12SRVHeap.get() == nullptr || _descriptorSize.get() == 0;
         if ( bCannotUnregisterTexture )
             return;
 
-        const SIZE_T gpuStart = _d3d12SrvHeap.get()->GetGPUDescriptorHandleForHeapStart().ptr;
+        const SIZE_T gpuStart = _d3d12SRVHeap.get()->GetGPUDescriptorHandleForHeapStart().ptr;
         const SIZE_T gpuPtr   = reinterpret_cast<SIZE_T>( pTextureID );
         if ( gpuPtr < gpuStart )
             return;
@@ -215,18 +215,18 @@ namespace sw::editor
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
-        cpuHandle.ptr = _d3d12SrvHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
+        cpuHandle.ptr = _d3d12SRVHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
         gpuHandle.ptr = gpuPtr;
 
         // 반환한 칸은 다음 registerTexture 가 곧바로 덮어쓴다. 이미 낸 draw 스냅샷이 이 칸을 아직 그릴 수 있으므로, 그것을 그린 마지막 프레임의
         // GPU 완료 뒤에 반환한다.
         getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, cpuHandle, gpuHandle]()
-        { freeSrvDescriptor( cpuHandle, gpuHandle ); } ) );
+        { freeSRVDescriptor( cpuHandle, gpuHandle ); } ) );
     }
 
-    bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
+    bool ImGuiDX12RendererBackend::allocateSRVDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
     {
-        const bool bCannotAllocateDescriptor = _d3d12SrvHeap.get() == nullptr || pOutCPU == nullptr || pOutGPU == nullptr;
+        const bool bCannotAllocateDescriptor = _d3d12SRVHeap.get() == nullptr || pOutCPU == nullptr || pOutGPU == nullptr;
         if ( bCannotAllocateDescriptor )
             return false;
 
@@ -247,17 +247,17 @@ namespace sw::editor
             index = _nextDescriptor++;
         }
 
-        pOutCPU->ptr = _d3d12SrvHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
-        pOutGPU->ptr = _d3d12SrvHeap.get()->GetGPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
+        pOutCPU->ptr = _d3d12SRVHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
+        pOutGPU->ptr = _d3d12SRVHeap.get()->GetGPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize.get();
         return true;
     }
 
-    void ImGuiDX12RendererBackend::freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/ )
+    void ImGuiDX12RendererBackend::freeSRVDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE /*gpu*/ )
     {
-        if ( _d3d12SrvHeap.get() == nullptr || _descriptorSize.get() == 0 )
+        if ( _d3d12SRVHeap.get() == nullptr || _descriptorSize.get() == 0 )
             return;
 
-        const SIZE_T start = _d3d12SrvHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr;
+        const SIZE_T start = _d3d12SRVHeap.get()->GetCPUDescriptorHandleForHeapStart().ptr;
         if ( cpu.ptr < start )
             return;
 

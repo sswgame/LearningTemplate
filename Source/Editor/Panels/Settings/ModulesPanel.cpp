@@ -149,9 +149,9 @@ namespace sw::editor
                 continue;
             if ( ImGui::BeginTable( ModulesPanelInternal::getKindName( kind ), 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) == false )
                 continue;
-            ImGui::TableSetupColumn( "On", ImGuiTableColumnFlags_WidthFixed, 32.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "On", ImGuiTableColumnFlags_WidthFixed, 32.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Module" );
-            ImGui::TableSetupColumn( "Version", ImGuiTableColumnFlags_WidthFixed, 64.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Version", ImGuiTableColumnFlags_WidthFixed, 64.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Status" );
             for ( const ModuleManifest& manifest : _catalog.getManifests() )
             {
@@ -249,7 +249,7 @@ namespace sw::editor
 
     void ModulesPanel::drawFilters()
     {
-        const float32 comboWidth = 140.0f * EditorThemeUtil::getDpiScale();
+        const float32 comboWidth = 140.0f * EditorThemeUtil::getDPIScale();
         ImGui::SetNextItemWidth( comboWidth );
         const utf8* pKindPreview = _kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesPanelInternal::getKindName( static_cast<ModuleKind>( _kindFilter ) );
         if ( ImGui::BeginCombo( "##ModuleKindFilter", pKindPreview ) )

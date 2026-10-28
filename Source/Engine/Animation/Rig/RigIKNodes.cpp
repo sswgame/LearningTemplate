@@ -201,10 +201,10 @@ namespace sw
         {
         public:
             /** @brief FABRIK 인지 CCD 인지 정합니다(만들 때 한 번). */
-            void setFabrik( bool bFabrik ) { _bFabrik = bFabrik ? SW_TRUE : SW_FALSE; }
+            void setFABRIK( bool bFABRIK ) { _bFABRIK = bFABRIK ? SW_TRUE : SW_FALSE; }
 
             unique_ptr<RigNode> clone() const override { return make_unique<RigChainIKNode>( *this ); }
-            const utf8*         getTypeName() const override { return _bFabrik == SW_TRUE ? "FabrikChain" : "CcdChain"; }
+            const utf8*         getTypeName() const override { return _bFABRIK == SW_TRUE ? "FABRIKChain" : "CCDChain"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -213,7 +213,7 @@ namespace sw
                 bool    bOk            = reader.readNameList( "bones", _listBoneName, true ) && reader.readName( "target", _targetName, true ) &&
                            reader.readUint( "iterations", _settings._iterationCount, false ) && reader.readFloat( "tolerance", _settings._tolerance, false ) &&
                            reader.readBool( "match_rotation", bMatch, false );
-                if ( _bFabrik == SW_FALSE )
+                if ( _bFABRIK == SW_FALSE )
                     bOk = bOk && reader.readFloat( "max_step_degrees", maxStepDegrees, false );
                 _settings._maxStepAngle = maxStepDegrees * MathUtil::kDegreeToRadian;
                 _bMatchRotation         = bMatch ? SW_TRUE : SW_FALSE;
@@ -239,10 +239,10 @@ namespace sw
                 quaternion     targetRotation{};
                 if ( context._pInstance->resolveTarget( _target, pose, targetPosition, targetRotation ) == false )
                     return;
-                if ( _bFabrik == SW_TRUE )
-                    (void)RigIKSolver::solveFabrik( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
+                if ( _bFABRIK == SW_TRUE )
+                    (void)RigIKSolver::solveFABRIK( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
                 else
-                    (void)RigIKSolver::solveCcd( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
+                    (void)RigIKSolver::solveCCD( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
                 if ( _bMatchRotation == SW_TRUE )
                     pose.setModelRotation( _listBone.back(), targetRotation );
             }
@@ -257,7 +257,7 @@ namespace sw
             hashed_string                         _targetName{};
             RigChainSettings                      _settings{};
             uint32                                _target{ 0 };
-            uint8                                 _bFabrik{ SW_TRUE };
+            uint8                                 _bFABRIK{ SW_TRUE };
             uint8                                 _bMatchRotation{ SW_FALSE };
         };
 
@@ -817,7 +817,7 @@ namespace sw
                     quaternion targetRotation{};
                     if ( context._pInstance->resolveTarget( chain._target, pose, chain._targetPosition, targetRotation ) == false )
                         continue;
-                    (void)RigIKSolver::solveFabrik( pose, chain._listBone, chain._targetPosition, span<const RigJointLimit>{}, _settings, *context._pSpace );
+                    (void)RigIKSolver::solveFABRIK( pose, chain._listBone, chain._targetPosition, span<const RigJointLimit>{}, _settings, *context._pSpace );
                     if ( chain._bMatchRotation == SW_TRUE )
                         pose.setModelRotation( chain._listBone.back(), targetRotation );
                 }
@@ -858,12 +858,12 @@ namespace sw
         {
             static unique_ptr<RigNode> createFullBody() { return make_unique<RigFullBodyIKNode>(); }
             static unique_ptr<RigNode> createTwoBone() { return make_unique<RigTwoBoneIKNode>(); }
-            static unique_ptr<RigNode> createFabrik() { return createChain( true ); }
-            static unique_ptr<RigNode> createCcd() { return createChain( false ); }
-            static unique_ptr<RigNode> createChain( bool bFabrik )
+            static unique_ptr<RigNode> createFABRIK() { return createChain( true ); }
+            static unique_ptr<RigNode> createCCD() { return createChain( false ); }
+            static unique_ptr<RigNode> createChain( bool bFABRIK )
             {
                 unique_ptr<RigChainIKNode> node = make_unique<RigChainIKNode>();
-                node->setFabrik( bFabrik );
+                node->setFABRIK( bFABRIK );
                 return node;
             }
             static unique_ptr<RigNode> createAim() { return make_unique<RigAimNode>(); }
@@ -878,8 +878,8 @@ namespace sw
     void RigNodeLibrary::registerIKNodes( RigNodeRegistry& registry )
     {
         registry.registerNode( "TwoBoneIK", &RigIKNodesFactory::createTwoBone );
-        registry.registerNode( "FabrikChain", &RigIKNodesFactory::createFabrik );
-        registry.registerNode( "CcdChain", &RigIKNodesFactory::createCcd );
+        registry.registerNode( "FABRIKChain", &RigIKNodesFactory::createFABRIK );
+        registry.registerNode( "CCDChain", &RigIKNodesFactory::createCCD );
         registry.registerNode( "Aim", &RigIKNodesFactory::createAim );
         registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement );
         registry.registerNode( "StrideWarping", &RigIKNodesFactory::createStrideWarping );

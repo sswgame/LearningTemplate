@@ -120,7 +120,7 @@ namespace sw
         return MathUtil::saturate( 1.0f - ( _dashCooldown.getRemaining() / _settings._dashCooldownSeconds ) );
     }
 
-    float32 ActionRoom::getBossHpFill() const
+    float32 ActionRoom::getBossHPFill() const
     {
         if ( _kind != ActionRoomKind::Boss )
             return 0.0f;
@@ -130,7 +130,7 @@ namespace sw
         for ( const Actor& actor : _listActor )
         {
             hp += actor._hp;
-            hpMax += static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._maxHp );
+            hpMax += static_cast<float32>( _listMonsterDef[actor._defIndex]._stats._maxHP );
         }
         if ( hpMax <= 0.0f )
             return 0.0f;

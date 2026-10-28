@@ -82,10 +82,10 @@ namespace sw
         static bool solveTwoBone( RigPoseBuffer& pose, uint32 rootBone, uint32 midBone, uint32 endBone, const float3& target, const float3* pPole,
                                   const RigSolveSpace& space );
         /** @brief FABRIK 입니다. 위치를 앞뒤로 번갈아 맞춘 뒤 회전으로 옮깁니다. 제한이 있으면 반복마다 회전을 제한하고 위치를 다시 읽습니다. */
-        static bool solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+        static bool solveFABRIK( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                  const RigChainSettings& settings, const RigSolveSpace& space );
         /** @brief CCD 입니다. 끝에서 루트 방향으로 관절마다 끝을 목표 쪽으로 돌립니다(관절마다 제한을 바로 적용합니다). */
-        static bool solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+        static bool solveCCD( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                               const RigChainSettings& settings, const RigSolveSpace& space );
         /**
          * @brief 본의 로컬 축(@p localAxis)이 목표를 향하게 돌립니다. 현재(애니메이션) 방향에서 @p maxAngle 을 넘으면 그 각까지만 돕니다.

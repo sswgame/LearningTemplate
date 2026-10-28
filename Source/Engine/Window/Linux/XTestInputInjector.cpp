@@ -7,7 +7,7 @@
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
     #include "Core/Common/X11Headers.h"
 
     #include <X11/extensions/XTest.h>

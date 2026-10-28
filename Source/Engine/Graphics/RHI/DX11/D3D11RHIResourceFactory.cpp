@@ -97,7 +97,7 @@ namespace sw
         srvDesc.ViewDimension       = D3D11_SRV_DIMENSION_BUFFER;
         srvDesc.Buffer.FirstElement = 0;
         srvDesc.Buffer.NumElements  = elementCount;
-        return _pDevice->storeBufferWithSrv( std::move( buffer ), srvDesc );
+        return _pDevice->storeBufferWithSRV( std::move( buffer ), srvDesc );
     }
 
     RHIBufferHandle D3D11RHIResourceFactory::createBuffer( const RHIBufferDesc& desc )
@@ -148,7 +148,7 @@ namespace sw
         srvDesc.BufferEx.FirstElement = 0;
         srvDesc.BufferEx.NumElements  = sizeBytes / 4;
         srvDesc.BufferEx.Flags        = D3D11_BUFFEREX_SRV_FLAG_RAW;
-        return _pDevice->storeBufferWithSrv( std::move( buffer ), srvDesc );
+        return _pDevice->storeBufferWithSRV( std::move( buffer ), srvDesc );
     }
 
     void D3D11RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
@@ -269,12 +269,12 @@ namespace sw
             releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree,
                                   static_cast<uint32>( bindlessIndex ), RHIBufferHandle{ 0 } );
         }
-        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
+        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUAVSourceBuffer.size(); ++bufferIndex )
         {
-            if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
+            if ( _pDevice->_listUAVSourceBuffer[bufferIndex] != buffer )
                 continue;
             _pDevice->_listRegisteredUAV[bufferIndex].Reset();
-            releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree,
+            releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree,
                                   static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
@@ -667,7 +667,7 @@ namespace sw
                 if ( slice == 0 )
                     record._rtv = rtv;
                 if ( bSliced )
-                    record._listSliceRtv.push_back( std::move( rtv ) );
+                    record._listSliceRTV.push_back( std::move( rtv ) );
             }
         }
 
@@ -690,7 +690,7 @@ namespace sw
                 if ( slice == 0 )
                     record._dsv = dsv;
                 if ( bSliced )
-                    record._listSliceDsv.push_back( std::move( dsv ) );
+                    record._listSliceDSV.push_back( std::move( dsv ) );
             }
         }
 

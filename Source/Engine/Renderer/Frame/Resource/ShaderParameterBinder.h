@@ -44,7 +44,7 @@ namespace sw
          * @param bNativeBindless true 면 텍스처 인덱스는 이미 CB 에 기록되어 따로 바인딩할 필요가 없습니다(DX12/VK).
          *        구조버퍼는 텍스처와 달리 네이티브 bindless 여도 백엔드별로 명시 바인딩이 필요할 수 있어
          *        이 플래그로 건너뛰지 않습니다(각 백엔드의 bindStructuredBuffer 가 스스로 판단합니다).
-         * @param pMaterialTexSrv 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
+         * @param pMaterialTexSRV 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
          *        bNativeBindless 가 false 일 때만 쓰이며 t16..t31 에 바인딩됩니다. 없으면 nullptr.
          * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조 버퍼와 텍스처 슬롯)가 살아 있는
          *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug 와 Dev 전용). Shipping 에서는 무시됩니다.
@@ -56,7 +56,7 @@ namespace sw
                                   const EngineConstantBufferSlot& engineCb,
                                   RHIDescriptorIndex              materialCb,
                                   bool                            bNativeBindless,
-                                  const RHIDescriptorIndex*       pMaterialTexSrv   = nullptr,
+                                  const RHIDescriptorIndex*       pMaterialTexSRV   = nullptr,
                                   bool                            bEngineCbUpToDate = false,
                                   const BindlessIndexCheckSite*   pIndexCheck       = nullptr );
     };

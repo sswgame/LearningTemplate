@@ -35,7 +35,7 @@ namespace sw
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
-        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
@@ -55,7 +55,7 @@ namespace sw
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerId ) override;
+        void writeBreadcrumb( uint32 markerID ) override;
         void endEventMarker() override;
         void setPipelineState( RHIPipelineStateHandle pso ) override;
         void setComputePipelineState( RHIPipelineStateHandle pso ) override;
@@ -76,10 +76,10 @@ namespace sw
          * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 설정합니다(세트는 flushSlotSet 이 확정합니다).
          * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스입니다. 둘은 독립입니다.
          * @param bindingIndex 세트 0 의 binding (종류별 시프트 + 레지스터 번호).
-         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리입니다.
+         * @param bUAV true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리입니다.
          * @param bConstantBuffer true 면 링 상수 버퍼의 이번 프레임 슬롯 오프셋과 크기를 씁니다.
          */
-        void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUav, bool bConstantBuffer );
+        void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer );
 
         /**
          * @brief 현재 활성 그래픽스 PSO(없으면 오프스크린/기본 파이프라인)를 바인딩합니다.

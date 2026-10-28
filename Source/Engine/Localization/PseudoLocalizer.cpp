@@ -68,9 +68,9 @@ namespace sw
                 result.push_back( character );
                 continue;
             }
-            StringUtil::appendUtf8( result, codepoint );
+            StringUtil::appendUTF8( result, codepoint );
             if ( PseudoLocalizerInternal::isVowel( character ) )
-                StringUtil::appendUtf8( result, codepoint );
+                StringUtil::appendUTF8( result, codepoint );
         }
         return result;
     }
@@ -81,22 +81,22 @@ namespace sw
             return string( pattern );
         string result;
         if ( mode == PseudoLocaleMode::Mirrored )
-            StringUtil::appendUtf8( result, kRightToLeftOverride );
+            StringUtil::appendUTF8( result, kRightToLeftOverride );
         result.push_back( '[' );
         const string mapped = TextFormatter::mapLiteralText( pattern, &PseudoLocalizer::accentLiteral );
         if ( mapped.empty() == false && mapped.front() == '[' )
-            StringUtil::appendUtf8( result, PseudoLocalizerInternal::kZeroWidthSpace );
+            StringUtil::appendUTF8( result, PseudoLocalizerInternal::kZeroWidthSpace );
         result.append( mapped );
         result.push_back( ']' );
         if ( mode == PseudoLocaleMode::Mirrored )
-            StringUtil::appendUtf8( result, kPopDirectionalFormat );
+            StringUtil::appendUTF8( result, kPopDirectionalFormat );
         return result;
     }
 
     bool PseudoLocalizer::isPseudoText( string_view text )
     {
         string rightToLeftOverride;
-        StringUtil::appendUtf8( rightToLeftOverride, kRightToLeftOverride );
+        StringUtil::appendUTF8( rightToLeftOverride, kRightToLeftOverride );
         if ( StringUtil::startsWith( text, rightToLeftOverride ) )
             text.remove_prefix( rightToLeftOverride.size() );
         return text.empty() == false && text.front() == '[' && text.find( ']' ) != string_view::npos;

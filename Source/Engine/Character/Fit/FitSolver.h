@@ -22,7 +22,7 @@
 
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitOperator.h"
-#include "Engine/Character/Fit/SurfaceBvh.h"
+#include "Engine/Character/Fit/SurfaceBVH.h"
 
 namespace sw
 {
@@ -160,7 +160,7 @@ namespace sw
     struct SW_API FitSolveState
     {
         vector<FitPartState>      _listPart{};
-        vector<SurfaceBvh>        _listLayerSurface{}; ///< 겹마다 표면 BVH(삼각형의 `_part` 는 부품 번호)
+        vector<SurfaceBVH>        _listLayerSurface{}; ///< 겹마다 표면 BVH(삼각형의 `_part` 는 부품 번호)
         FitReport*                _pReport{ nullptr };
         const FitTables*          _pTables{ nullptr };
         const CharacterBoneArray* _pBindBones{ nullptr };
@@ -168,7 +168,7 @@ namespace sw
         /** @brief 정점 변위를 쌓습니다(반복 끝에 평균). */
         void addDisplacement( uint32 part, uint32 vertex, const float3& displacement );
         /** @brief 부품의 겹 표면입니다. */
-        const SurfaceBvh& getLayerSurface( uint32 part ) const { return _listLayerSurface[_listPart[part]._layerIndex]; }
+        const SurfaceBVH& getLayerSurface( uint32 part ) const { return _listLayerSurface[_listPart[part]._layerIndex]; }
     };
 } // namespace sw
 

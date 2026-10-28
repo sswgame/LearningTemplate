@@ -8,24 +8,24 @@
 struct PSInput
 {
     float4               _position : SV_POSITION;
-    nointerpolation uint _vertexId : TEXCOORD1;
+    nointerpolation uint _vertexID : TEXCOORD1;
 };
 
-PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 {
     PSInput output;
-    float2  clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
     output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._vertexId     = vertexId;
+    output._vertexID     = vertexID;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     // 정점 0 = 빨강, 1 = 초록, 2 = 파랑. FIRST 면 화면 전체가 빨강, LAST 면 파랑이다.
-    if ( input._vertexId == 0 )
+    if ( input._vertexID == 0 )
         return float4( 1.0f, 0.0f, 0.0f, 1.0f );
-    if ( input._vertexId == 1 )
+    if ( input._vertexID == 1 )
         return float4( 0.0f, 1.0f, 0.0f, 1.0f );
     return float4( 0.0f, 0.0f, 1.0f, 1.0f );
 }

@@ -4,42 +4,42 @@
 #include "vfxsimulate.hlsli"
 
 /**
- * vfxsimulate.hlsl — 입자 시뮬레이션의 GPU 쪽 (컴퓨트). CPU `VfxCPUSimulation` 과 같은 모듈 의미로 돌린다(언리얼 Niagara GPU Compute Sim).
+ * vfxsimulate.hlsl — 입자 시뮬레이션의 GPU 쪽 (컴퓨트). CPU `VFXCPUSimulation` 과 같은 모듈 의미로 돌린다(언리얼 Niagara GPU Compute Sim).
  *
  * 그룹 하나 = 방출기 하나(디스패치 하나). 디스패치 하나가 이번 프레임의 단계를 차례로 돌고, 단계 하나는 CPU 와 같은 순서다.
- *   1) 생성 — 일정(C++ VfxEmitterClock 이 정한 단계마다의 수와 첫 번호)대로 풀 한도까지 살아 있는 끝에 붙인다. 버린 수는 인자 버퍼에 쌓는다.
+ *   1) 생성 — 일정(C++ VFXEmitterClock 이 정한 단계마다의 수와 첫 번호)대로 풀 한도까지 살아 있는 끝에 붙인다. 버린 수는 인자 버퍼에 쌓는다.
  *      난수는 CPU 와 같은 splitmix64 수열이다(64 비트 정수가 없는 SM5 를 위해 uint2 로 흉내 낸다 — x 가 아래 32 비트).
  *   2) 적분 · 깊이 충돌 · 수명 제거 — 중력 · 속도 · 나이를 더하고, 깊이 충돌(SW_VFX_FLAG_COLLIDE_*)이면 주 시점의 지난 프레임 깊이와 견줘 튀거나 없앤다.
  *      살아남은 입자를 다른 반쪽에 **안정 압축**한다(덩어리마다 그룹 공유 메모리의 접두사 합). 버퍼는 늘 태어난 순서다 — 띠가 정렬하지 않고 이웃을 잇는다.
  * 단계가 끝나면 살아 있는 입자의 렌더 입력(GPUParticle — 크기 · 색은 수명 커브, 커브는 키와 접선을 올려 C++ FloatCurve 와 같은 식)을 쓰고,
  * 간접 인자(정점 수, 인스턴스 수)와 다음 디스패치가 읽을 살아 있는 수 · 지금 반쪽을 쓴다. 메시 방출기는 같은 렌더 입력을 vfxmeshinstance.hlsl 이 인스턴스 칸으로 옮긴다.
  *
- * 깊이 충돌(VfxCollisionMethod::SceneDepth): 입자의 월드 점을 히스토리 시점의 뷰-투영으로 투영해 그 텍셀의 깊이보다 뒤이고 깊이 면에서 두께 안쪽이면
- * 닿은 것이다. 법선은 이웃 텍셀 둘의 깊이 점이 이루는 면이다(눈 쪽으로 돌린다). 화면 밖 · 카메라 뒤는 보지 않는다(VfxCollisionDef 설명의 한계).
+ * 깊이 충돌(VFXCollisionMethod::SceneDepth): 입자의 월드 점을 히스토리 시점의 뷰-투영으로 투영해 그 텍셀의 깊이보다 뒤이고 깊이 면에서 두께 안쪽이면
+ * 닿은 것이다. 법선은 이웃 텍셀 둘의 깊이 점이 이루는 면이다(눈 쪽으로 돌린다). 화면 밖 · 카메라 뒤는 보지 않는다(VFXCollisionDef 설명의 한계).
  * 히스토리는 R32 실수 RW 텍스처다 — 컴퓨트가 에뮬 백엔드(DX11 · GL)에서 샘플 텍스처를 읽지 못해 UAV 로 읽는다(Bindless::loadRwTexture2D).
  *
  * DX11: 간접 인자 버퍼는 구조 버퍼가 될 수 없어(DRAWINDIRECT_ARGS 와 BUFFER_STRUCTURED 를 함께 못 건다) RAW UAV 다 — 그래서 인자를 바이트 주소로 쓴다.
  * 나머지 백엔드는 uint 구조 버퍼다. 입자 상태와 렌더 입력은 따로 둔 구조 버퍼라 복사 단계가 필요 없다.
  *
- * 파티클 라이트(VfxLightDef, VfxGpuLights.md L3): 렌더 입력을 쓸 때 같은 입자로 라이트 버퍼(씬 라이트 목록과 같은 버퍼 — 라이트 그리드 생산자 lightgrid.hlsl 이 이어서 읽는다)의
+ * 파티클 라이트(VFXLightDef, VFXGPULights.md L3): 렌더 입력을 쓸 때 같은 입자로 라이트 버퍼(씬 라이트 목록과 같은 버퍼 — 라이트 그리드 생산자 lightgrid.hlsl 이 이어서 읽는다)의
  * GPU 구간에 점광을 쓴다. 방출기가 받은 슬롯 범위(SW_VFX_PARAM_ROW_LIGHT)의 슬롯 i 는 살아 있는 입자 i 의 빛이고(앞의 슬롯 수 개 — CPU 방출기와 같은 규칙), 입자가 모자란 슬롯은
  * 반경 0 의 죽은 점광을 쓴다(그리드에 들지 않는다 — 지난 프레임의 빛이 남지 않는다). 색은 입자 색(rgb), 세기는 방출기 세기 × 입자 알파, 반경은 C++ 가 방출기 배율을 곱해 올린다.
  *
- * 바인딩 계약: 읽기 t0 매개변수(g_VfxParams), 쓰기 u0 입자 상태(풀 크기 × 2 — 두 반쪽), u1 렌더 입력(풀 크기), u2 간접 인자, u3 라이트 버퍼(라이트를 쓰는 방출기만 건다),
- * 깊이 히스토리는 RW 텍스처 슬롯 0(SW_SLOT_COMPUTE_TEXUAV0, 네이티브는 bindless 번호). 루트 상수 g_VfxParamBase · g_VfxPass. C++: VfxGPUSimulation::recordDispatches — 방출기마다 풀이 작으면 dispatchCompute( 1, 1, 1 ) 하나, 크면 패스마다 하나.
+ * 바인딩 계약: 읽기 t0 매개변수(g_VFXParams), 쓰기 u0 입자 상태(풀 크기 × 2 — 두 반쪽), u1 렌더 입력(풀 크기), u2 간접 인자, u3 라이트 버퍼(라이트를 쓰는 방출기만 건다),
+ * 깊이 히스토리는 RW 텍스처 슬롯 0(SW_SLOT_COMPUTE_TEXUAV0, 네이티브는 bindless 번호). 루트 상수 g_VFXParamBase · g_VFXPass. C++: VFXGPUSimulation::recordDispatches — 방출기마다 풀이 작으면 dispatchCompute( 1, 1, 1 ) 하나, 크면 패스마다 하나.
  *
- * 두 경로(같은 PSO - 루트 상수 g_VfxPass 가 고른다. 결과는 같다): 풀이 SW_VFX_MULTI_GROUP_MIN_POOL 보다 작으면 위 그대로 그룹 하나가 한 디스패치로 모든 단계를 돈다(SW_VFX_PASS_SINGLE).
+ * 두 경로(같은 PSO - 루트 상수 g_VFXPass 가 고른다. 결과는 같다): 풀이 SW_VFX_MULTI_GROUP_MIN_POOL 보다 작으면 위 그대로 그룹 하나가 한 디스패치로 모든 단계를 돈다(SW_VFX_PASS_SINGLE).
  * 크면 단계마다 디스패치 셋 + 앞뒤 하나다(언리얼 Niagara GPU 의 입자 압축 · 유니티 VFX Graph 의 dead list 와 같은 선 - 그룹마다 생존 수를 세고 접두사 합으로 시작 위치를 받아 쓴다):
  *   BEGIN(그룹 1) 재생 시작이면 수를 지운다 -> 단계마다 [INTEGRATE(그룹 = 풀 / 256 올림) -> SCAN(그룹 1) -> COMPACT(그룹 = 풀 / 256 올림)] -> OUTPUT(렌더 입력 · 라이트).
  *   INTEGRATE: 슬롯 하나가 스레드 하나다. 살아 있던 슬롯은 원본 반쪽에서 읽고, 새 슬롯(살아 있는 수 이후)은 같은 난수 수열(입자 번호 + 씨앗)로 바로 만든다 - 생성 결과를 메모리에 쓰고 다시 읽는
  *     것과 값이 같고 그룹 사이 동기화가 필요 없다. 적분한 상태를 같은 슬롯에 되쓰고 생존 여부를 `_particleIndex.z` 에 남기며 그룹의 생존 수를 간접 인자 버퍼 단어(SW_VFX_ARGS_WORD_GROUP_FIRST + 그룹)에 쓴다.
  *   SCAN: 그룹 수를 256 개씩 접두사 합(그룹 번호 순)해 단어를 시작 위치로 덮고, 살아 있는 수 · 반쪽 · 버린 수 · 간접 인자를 단계마다 갱신한다(압축 전 수는 SCRATCH_TOTAL).
  *   COMPACT: 그룹이 자기 슬롯에서 살아 있는 것을 슬롯 순서(= 원래 인덱스 순서, 안정)로 다른 반쪽의 시작 위치부터 쓴다. 한 단계의 입자 값 · 순서가 그룹 하나 경로와 같다.
- * 디스패치 사이는 C++ 가 UAV 장벽을 둔다(VfxGPUSimulation::recordDispatches). DX11 은 간접 인자가 RAW UAV 라 Load/Store 단어 주소 그대로다.
+ * 디스패치 사이는 C++ 가 UAV 장벽을 둔다(VFXGPUSimulation::recordDispatches). DX11 은 간접 인자가 RAW UAV 라 Load/Store 단어 주소 그대로다.
  */
 
 /** @brief 입자 하나의 시뮬레이션 상태입니다(float4 SW_VFX_STATE_FLOAT4_COUNT 개 — C++ 는 크기만 안다). */
-struct VfxParticleState
+struct VFXParticleState
 {
     float4 _positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
     float4 _velocityLifetime; // xyz 속도, w 수명(초)
@@ -53,20 +53,20 @@ struct GPUParticle
     float4 _rotationLife;
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VfxParams, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( VfxParticleState, g_VfxStateRW, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( GPUParticle, g_VfxParticlesRW, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VFXParams, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( VFXParticleState, g_VFXStateRW, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( GPUParticle, g_VFXParticlesRW, 1 );
 #if defined( DX11 )
-SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_VfxArgsRW, 2 );
+SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_VFXArgsRW, 2 );
 #else
-SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VfxArgsRW, 2 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VFXArgsRW, 2 );
 #endif
-SW_DECLARE_RW_STRUCTURED_BUFFER( LightData, g_VfxLightsRW, 3 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( LightData, g_VFXLightsRW, 3 );
 
 SW_ROOT_CONSTANTS_BEGIN
 {
-    uint g_VfxParamBase; // 이 방출기 매개변수 구간의 첫 행
-    uint g_VfxPass;      // 패스 번호 | ( 단계 번호 << SW_VFX_PASS_STEP_SHIFT ) - SW_VFX_PASS_*
+    uint g_VFXParamBase; // 이 방출기 매개변수 구간의 첫 행
+    uint g_VFXPass;      // 패스 번호 | ( 단계 번호 << SW_VFX_PASS_STEP_SHIFT ) - SW_VFX_PASS_*
 };
 SW_ROOT_CONSTANTS_END
 
@@ -75,24 +75,24 @@ groupshared uint s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT];
 uint loadArgsWord( uint word )
 {
 #if defined( DX11 )
-    return g_VfxArgsRW.Load( word * 4u );
+    return g_VFXArgsRW.Load( word * 4u );
 #else
-    return g_VfxArgsRW[word];
+    return g_VFXArgsRW[word];
 #endif
 }
 
 void storeArgsWord( uint word, uint value )
 {
 #if defined( DX11 )
-    g_VfxArgsRW.Store( word * 4u, value );
+    g_VFXArgsRW.Store( word * 4u, value );
 #else
-    g_VfxArgsRW[word] = value;
+    g_VFXArgsRW[word] = value;
 #endif
 }
 
 uint4 loadParamRow( uint row )
 {
-    return g_VfxParams[SW_ROOT( g_VfxParamBase ) + row];
+    return g_VFXParams[SW_ROOT( g_VFXParamBase ) + row];
 }
 
 /** @brief 행 @p firstRow 부터의 행렬(행벡터 규약)로 점을 옮깁니다(w 로 나누지 않는다). */
@@ -160,7 +160,7 @@ uint2 mixUint64( uint2 value )
     return xorShiftRightUint64( value, 31u );
 }
 
-/** @brief 수열의 다음 값을 [0, 1) 로 돌려줍니다 — 위 24 비트(C++ VfxCPUSimulationInternal::nextUnitFloat 와 같다). */
+/** @brief 수열의 다음 값을 [0, 1) 로 돌려줍니다 — 위 24 비트(C++ VFXCPUSimulationInternal::nextUnitFloat 와 같다). */
 float nextUnitFloat( inout uint2 inoutState, uint2 goldenRatio )
 {
     inoutState        = addUint64( inoutState, goldenRatio );
@@ -184,7 +184,7 @@ float lerpFloat( float from, float to, float ratio )
 // ------------------------------------------------------------------------------
 // 수명 커브 — C++ FloatCurve::evaluate 와 같은 식(양 끝은 끝 키 값, 구간은 상수 · 직선 · 에르미트).
 // 이른 반환 없이 끝에서 한 번에 고른다 — 이른 반환 판은 DXC -O3 SPIR-V(spirv-opt --simplify-instructions 를 거친 것)에서 Vulkan · GL 이
-// 첫 키 값을 냈다(DXIL · -Od SPIR-V 는 맞음, Vfx.md V5). RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage 가 지킨다.
+// 첫 키 값을 냈다(DXIL · -Od SPIR-V 는 맞음, VFX.md V5). RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage 가 지킨다.
 // ------------------------------------------------------------------------------
 float evaluateCurve( uint firstRow, uint keyCount, float time )
 {
@@ -219,14 +219,14 @@ float evaluateCurve( uint firstRow, uint keyCount, float time )
 }
 
 /** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서). */
-VfxParticleState makeParticle( uint2 particleIndex )
+VFXParticleState makeParticle( uint2 particleIndex )
 {
     const uint4  seedRow     = loadParamRow( SW_VFX_PARAM_ROW_SEED );
     const float4 velocityMin = asfloat( loadParamRow( SW_VFX_PARAM_ROW_VELOCITY_MIN ) );
     const float4 velocityMax = asfloat( loadParamRow( SW_VFX_PARAM_ROW_VELOCITY_MAX ) );
     uint2        state       = combineUint64( seedRow.xy, particleIndex, seedRow.zw );
 
-    VfxParticleState particle;
+    VFXParticleState particle;
     particle._velocityLifetime.w = lerpFloat( velocityMin.w, velocityMax.w, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.x = lerpFloat( velocityMin.x, velocityMax.x, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.y = lerpFloat( velocityMin.y, velocityMax.y, nextUnitFloat( state, seedRow.zw ) );
@@ -253,7 +253,7 @@ float3 computeDepthWorldPoint( int2 texel, float2 size, uint historyIndex )
  * @brief 입자 하나의 깊이 충돌입니다. 닿지 않았으면 그대로 두고, 없애기면 @p outKilled 를 켜고, 튀기면 위치 · 속도를 고칩니다(방출기 로컬).
  * @details 튀기는 CPU 와 같은 식이다 — 법선 성분을 반발 계수만큼 뒤집고 접선 성분을 마찰만큼 줄인다. 면에서 멀어지는 중이면 튀기지 않는다(같은 면에 다시 걸린다).
  */
-void resolveDepthCollision( inout VfxParticleState inoutParticle, uint flags, out bool outKilled )
+void resolveDepthCollision( inout VFXParticleState inoutParticle, uint flags, out bool outKilled )
 {
     outKilled          = false;
     const float3 world = transformPoint4( SW_VFX_PARAM_ROW_WORLD, inoutParticle._positionAge.xyz ).xyz;
@@ -310,7 +310,7 @@ void resolveDepthCollision( inout VfxParticleState inoutParticle, uint flags, ou
 }
 
 /** @brief 입자 하나의 한 단계(중력 · 속도 · 나이 · 깊이 충돌)와 생존 판정입니다. 두 경로가 같이 쓴다. */
-bool integrateParticle( inout VfxParticleState inoutParticle, float4 gravity, uint flags, bool bCollideDepth )
+bool integrateParticle( inout VFXParticleState inoutParticle, float4 gravity, uint flags, bool bCollideDepth )
 {
     inoutParticle._velocityLifetime.xyz += gravity.xyz * gravity.w;
     inoutParticle._positionAge.xyz += inoutParticle._velocityLifetime.xyz * gravity.w;
@@ -334,7 +334,7 @@ void inclusiveScanGroup( uint thread )
 }
 
 /**
- * @brief 렌더 입력 · 파티클 라이트를 씁니다 — 크기 · 색은 수명 비율의 커브다(CPU VfxCPUSimulation::writeParticles 와 같다).
+ * @brief 렌더 입력 · 파티클 라이트를 씁니다 — 크기 · 색은 수명 비율의 커브다(CPU VFXCPUSimulation::writeParticles 와 같다).
  * @param firstIndex 이 스레드의 첫 출력 번호, @p stride 다음 번호까지의 간격(그룹 하나 경로는 스레드 수, 다중 그룹은 그룹 수 x 스레드 수).
  * @details 파티클 라이트 - 슬롯 i 는 입자 i 의 빛이라 같은 반복에서 쓴다(슬롯 수가 살아 있는 수보다 크면 남는 슬롯은 죽은 빛). 슬롯 수 0 이면 반복 범위가 살아 있는 수 그대로다.
  */
@@ -356,13 +356,13 @@ void writeRenderOutput( uint firstIndex, uint stride, uint poolSize, uint aliveC
         output._rotationLife = float4( 0.0f, 0.0f, 0.0f, 0.0f );
         if ( bAlive )
         {
-            const VfxParticleState particle  = g_VfxStateRW[currentBase + outputIndex];
+            const VFXParticleState particle  = g_VFXStateRW[currentBase + outputIndex];
             const float            lifeRatio = particle._positionAge.w / particle._velocityLifetime.w;
             output._positionSize             = float4( particle._positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
             output._color                    = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
                                                        evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) );
             output._rotationLife             = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
-            g_VfxParticlesRW[outputIndex]    = output;
+            g_VFXParticlesRW[outputIndex]    = output;
         }
         if ( outputIndex < lightCount )
         {
@@ -372,7 +372,7 @@ void writeRenderOutput( uint firstIndex, uint stride, uint poolSize, uint aliveC
             light._directionType                    = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_POINT );
             light._params                           = float4( 0.0f, 0.0f, 0.0f, 0.0f );
             light._extra                            = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-            g_VfxLightsRW[lightRow.x + outputIndex] = light;
+            g_VFXLightsRW[lightRow.x + outputIndex] = light;
         }
     }
 }
@@ -415,7 +415,7 @@ void simulateSingleGroup( uint thread )
         droppedCount += spawn.x - createdCount;
         for ( uint spawnIndex = thread; spawnIndex < createdCount; spawnIndex += SW_VFX_SIMULATE_THREAD_COUNT )
         {
-            g_VfxStateRW[sourceBase + aliveCount + spawnIndex] = makeParticle( addUint64( spawn.yz, uint2( spawnIndex, 0u ) ) );
+            g_VFXStateRW[sourceBase + aliveCount + spawnIndex] = makeParticle( addUint64( spawn.yz, uint2( spawnIndex, 0u ) ) );
         }
         DeviceMemoryBarrierWithGroupSync();
 
@@ -434,13 +434,13 @@ void simulateSingleGroup( uint thread )
         {
             const uint       slot   = chunkFirst + thread;
             bool             bAlive = false;
-            VfxParticleState particle;
+            VFXParticleState particle;
             particle._positionAge      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
             particle._velocityLifetime = float4( 0.0f, 0.0f, 0.0f, 1.0f );
             particle._particleIndex    = uint4( 0u, 0u, 0u, 0u );
             if ( slot < totalCount )
             {
-                particle = g_VfxStateRW[sourceBase + slot];
+                particle = g_VFXStateRW[sourceBase + slot];
                 bAlive   = integrateParticle( particle, gravity, flags, bCollideDepth );
             }
             // 포함 접두사 합. 읽기와 쓰기 사이에 동기화를 둔다.
@@ -448,7 +448,7 @@ void simulateSingleGroup( uint thread )
             GroupMemoryBarrierWithGroupSync();
             inclusiveScanGroup( thread );
             if ( bAlive )
-                g_VfxStateRW[targetBase + written + s_arrScan[thread] - 1u] = particle;
+                g_VFXStateRW[targetBase + written + s_arrScan[thread] - 1u] = particle;
             written += s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT - 1u];
             GroupMemoryBarrierWithGroupSync();
         }
@@ -504,14 +504,14 @@ void passIntegrate( uint thread, uint group, uint stepIndex )
     bool bAlive = false;
     if ( slot < totalCount )
     {
-        VfxParticleState particle;
+        VFXParticleState particle;
         if ( slot < aliveCount )
-            particle = g_VfxStateRW[sourceBase + slot];
+            particle = g_VFXStateRW[sourceBase + slot];
         else
             particle = makeParticle( addUint64( spawn.yz, uint2( slot - aliveCount, 0u ) ) );
         bAlive                          = integrateParticle( particle, gravity, flags, bCollideDepth );
         particle._particleIndex.z       = bAlive ? 1u : 0u; // 압축 패스가 읽는 생존 표시(칸의 빈칸)
-        g_VfxStateRW[sourceBase + slot] = particle;
+        g_VFXStateRW[sourceBase + slot] = particle;
     }
     s_arrScan[thread] = bAlive ? 1u : 0u;
     GroupMemoryBarrierWithGroupSync();
@@ -574,13 +574,13 @@ void passCompact( uint thread, uint group )
     const uint targetBase = newHalf * poolSize;
 
     bool             bAlive = false;
-    VfxParticleState particle;
+    VFXParticleState particle;
     particle._positionAge      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     particle._velocityLifetime = float4( 0.0f, 0.0f, 0.0f, 1.0f );
     particle._particleIndex    = uint4( 0u, 0u, 0u, 0u );
     if ( slot < totalOld )
     {
-        particle = g_VfxStateRW[sourceBase + slot];
+        particle = g_VFXStateRW[sourceBase + slot];
         bAlive   = particle._particleIndex.z != 0u;
     }
     s_arrScan[thread] = bAlive ? 1u : 0u;
@@ -589,7 +589,7 @@ void passCompact( uint thread, uint group )
     if ( bAlive )
     {
         particle._particleIndex.z                                  = 0u;
-        g_VfxStateRW[targetBase + offset + s_arrScan[thread] - 1u] = particle;
+        g_VFXStateRW[targetBase + offset + s_arrScan[thread] - 1u] = particle;
     }
 }
 
@@ -602,20 +602,20 @@ void passOutput( uint thread, uint group )
 }
 
 SW_NUMTHREADS( SW_VFX_SIMULATE_THREAD_COUNT, 1, 1 )
-void CSMain( uint3 groupThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID )
+void CSMain( uint3 groupThreadID : SV_GroupThreadID, uint3 groupId : SV_GroupID )
 {
-    const uint passKind  = SW_ROOT( g_VfxPass ) & ( ( 1u << SW_VFX_PASS_STEP_SHIFT ) - 1u );
-    const uint stepIndex = SW_ROOT( g_VfxPass ) >> SW_VFX_PASS_STEP_SHIFT;
+    const uint passKind  = SW_ROOT( g_VFXPass ) & ( ( 1u << SW_VFX_PASS_STEP_SHIFT ) - 1u );
+    const uint stepIndex = SW_ROOT( g_VFXPass ) >> SW_VFX_PASS_STEP_SHIFT;
     if ( passKind == SW_VFX_PASS_BEGIN )
-        passBegin( groupThreadId.x );
+        passBegin( groupThreadID.x );
     else if ( passKind == SW_VFX_PASS_INTEGRATE )
-        passIntegrate( groupThreadId.x, groupId.x, stepIndex );
+        passIntegrate( groupThreadID.x, groupId.x, stepIndex );
     else if ( passKind == SW_VFX_PASS_SCAN )
-        passScan( groupThreadId.x, stepIndex );
+        passScan( groupThreadID.x, stepIndex );
     else if ( passKind == SW_VFX_PASS_COMPACT )
-        passCompact( groupThreadId.x, groupId.x );
+        passCompact( groupThreadID.x, groupId.x );
     else if ( passKind == SW_VFX_PASS_OUTPUT )
-        passOutput( groupThreadId.x, groupId.x );
+        passOutput( groupThreadID.x, groupId.x );
     else
-        simulateSingleGroup( groupThreadId.x );
+        simulateSingleGroup( groupThreadID.x );
 }

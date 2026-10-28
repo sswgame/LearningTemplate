@@ -72,12 +72,12 @@ namespace sw
         [[nodiscard]] bool readSplatWeights( vector<SurfaceLayerWeights>& outListWeight ) const;
         /**
          * @brief 스플랫 평면 @p plane(0 = 레이어 0..3, 1 = 레이어 4..7)의 사각형 @p rect(텍셀 좌표)를 RGBA8 로 뽑습니다 - GPU 스플랫 텍스처 한 장의 내용입니다.
-         * @param outRgbaBytes (너비 × 높이 × 4) 바이트, 사각형 안에서 행 우선
-         * @return 스플랫이 없거나 평면 번호가 `SurfaceLayerWeights::kPlaneCount` 이상이거나 @p rect 가 비었거나 벗어나면 false 이고 @p outRgbaBytes 는 비어 있습니다.
+         * @param outRGBABytes (너비 × 높이 × 4) 바이트, 사각형 안에서 행 우선
+         * @return 스플랫이 없거나 평면 번호가 `SurfaceLayerWeights::kPlaneCount` 이상이거나 @p rect 가 비었거나 벗어나면 false 이고 @p outRGBABytes 는 비어 있습니다.
          */
-        [[nodiscard]] bool makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRgbaBytes ) const;
+        [[nodiscard]] bool makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRGBABytes ) const;
         /** @brief 스플랫 평면 @p plane 전체를 RGBA8 로 뽑습니다(`makeSplatPlane` 의 전체 사각형). */
-        [[nodiscard]] bool makeFullSplatPlane( uint32 plane, vector<uint8>& outRgbaBytes ) const;
+        [[nodiscard]] bool makeFullSplatPlane( uint32 plane, vector<uint8>& outRGBABytes ) const;
         /** @brief 셀 구멍 마스크 전부((N-1)², 행 우선, 0 이 아니면 구멍)를 채웁니다. 마스크가 비었으면 모두 0 입니다. 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool readHoleCells( vector<uint8>& outListHole ) const;
         /**

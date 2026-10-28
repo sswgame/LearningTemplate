@@ -160,18 +160,18 @@ namespace sw
             SW_LOG_ERROR( "Material parameter '%#' has an unreadable bound (min '%#', max '%#')", prop._name, minStr, maxStr );
             return false;
         }
-        bool       bHdr{ false };
-        bool       bSrgb{ false };
+        bool       bHDR{ false };
+        bool       bSRGB{ false };
         bool       bHidden{ false };
         bool       bAdvanced{ false };
-        const bool bFlagsRead = MaterialUtil::parseOptionalBoolField( item, "bHdr", false, bHdr ) &&
-                                MaterialUtil::parseOptionalBoolField( item, "bSrgb", true, bSrgb ) &&
+        const bool bFlagsRead = MaterialUtil::parseOptionalBoolField( item, "bHDR", false, bHDR ) &&
+                                MaterialUtil::parseOptionalBoolField( item, "bSRGB", true, bSRGB ) &&
                                 MaterialUtil::parseOptionalBoolField( item, "bHidden", false, bHidden ) &&
                                 MaterialUtil::parseOptionalBoolField( item, "bAdvanced", false, bAdvanced );
         if ( bFlagsRead == false )
             return false;
-        prop._bHdr      = bHdr;
-        prop._bSrgb     = bSrgb;
+        prop._bHDR      = bHDR;
+        prop._bSRGB     = bSRGB;
         prop._bHidden   = bHidden;
         prop._bAdvanced = bAdvanced;
         MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry );
@@ -467,11 +467,11 @@ namespace sw
             }
             if ( prop._type == MaterialPropertyType::Color )
             {
-                MaterialUtil::appendBoolAttribute( item, "bHdr", prop._bHdr );
-                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSrgb );
+                MaterialUtil::appendBoolAttribute( item, "bHDR", prop._bHDR );
+                MaterialUtil::appendBoolAttribute( item, "bSRGB", prop._bSRGB );
             }
             if ( MaterialUtil::isTextureType( prop._type ) )
-                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSrgb );
+                MaterialUtil::appendBoolAttribute( item, "bSRGB", prop._bSRGB );
             if ( prop._bHidden )
                 MaterialUtil::appendBoolAttribute( item, "bHidden", true );
             if ( prop._bAdvanced )

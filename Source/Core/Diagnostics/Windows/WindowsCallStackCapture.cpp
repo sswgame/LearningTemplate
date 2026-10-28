@@ -10,7 +10,7 @@
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
                 wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
             wcscat_s( arrSearchPath, constant::kMaxBuffer4096, arrModulePath );
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
-            const wstring symbolFolder = StringUtil::utf8ToUtf16(
+            const wstring symbolFolder = StringUtil::utf8ToUTF16(
                 FileUtil::toNativeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), ModuleImageUtil::kSymbolFolder ) ).c_str() );
             if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::kMaxBuffer4096 )
             {

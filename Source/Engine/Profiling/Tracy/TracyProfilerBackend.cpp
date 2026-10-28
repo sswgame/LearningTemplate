@@ -13,7 +13,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PROFILER_TRACY )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <tracy/TracyC.h>
 #endif

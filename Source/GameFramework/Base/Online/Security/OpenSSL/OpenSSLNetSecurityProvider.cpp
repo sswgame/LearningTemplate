@@ -68,7 +68,7 @@ namespace sw
                 return listCertificate;
             }
 
-            static bool computeSha256Hex( X509* pCertificate, string& outHex )
+            static bool computeSHA256Hex( X509* pCertificate, string& outHex )
             {
                 uint8  arrDigest[EVP_MAX_MD_SIZE];
                 uint32 digestSize = 0;
@@ -109,7 +109,7 @@ namespace sw
                 utf8          arrGroup[] = "prime256v1";
                 const utf8*   pKeyType   = "RSA";
                 bool          bBuilt     = false;
-                if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
+                if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256 )
                 {
                     pModulus  = BN_bin2bn( publicKey._modulus.data(), static_cast<int32>( publicKey._modulus.size() ), nullptr );
                     pExponent = BN_bin2bn( publicKey._exponent.data(), static_cast<int32>( publicKey._exponent.size() ), nullptr );
@@ -224,7 +224,7 @@ namespace sw
                     return false;
                 if ( EVP_PKEY_is_a( pKey, "RSA" ) == 1 )
                 {
-                    outPublicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1Sha256;
+                    outPublicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1SHA256;
                     return readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_N, outPublicKey._modulus ) && readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_E, outPublicKey._exponent );
                 }
                 if ( EVP_PKEY_is_a( pKey, "EC" ) != 1 )
@@ -357,41 +357,41 @@ namespace sw
         class OpenSSLSession final : public ITLSSession
         {
         public:
-            OpenSSLSession( SSL_CTX* pContext, TLSRole role, const string& serverName, const string& pinnedSha256Hex )
+            OpenSSLSession( SSL_CTX* pContext, TLSRole role, const string& serverName, const string& pinnedSHA256Hex )
                 : _pendingBytes{}
-                , _pinnedSha256Hex{ pinnedSha256Hex }
+                , _pinnedSHA256Hex{ pinnedSHA256Hex }
                 , _failureText{}
-                , _pSsl{ SSL_new( pContext ) }
+                , _pSSL{ SSL_new( pContext ) }
                 , _pReadBio{ BIO_new( BIO_s_mem() ) }
                 , _pWriteBio{ BIO_new( BIO_s_mem() ) }
                 , _state{ TLSSessionState::Handshaking }
             {
-                const bool bSslSetupFailed = _pSsl == nullptr || _pReadBio == nullptr || _pWriteBio == nullptr;
-                if ( bSslSetupFailed )
+                const bool bSSLSetupFailed = _pSSL == nullptr || _pReadBio == nullptr || _pWriteBio == nullptr;
+                if ( bSSLSetupFailed )
                 {
                     (void)fail( "SSL_new failed" );
                     return;
                 }
-                SSL_set_bio( _pSsl, _pReadBio, _pWriteBio ); // BIO 는 SSL 이 소유한다
+                SSL_set_bio( _pSSL, _pReadBio, _pWriteBio ); // BIO 는 SSL 이 소유한다
                 if ( role == TLSRole::Server )
                 {
-                    SSL_set_accept_state( _pSsl );
+                    SSL_set_accept_state( _pSSL );
                     return;
                 }
-                SSL_set_connect_state( _pSsl );
+                SSL_set_connect_state( _pSSL );
                 if ( serverName.empty() == false )
                 {
-                    (void)SSL_set_tlsext_host_name( _pSsl, serverName.c_str() );
-                    (void)SSL_set1_host( _pSsl, serverName.c_str() ); // 인증서 이름(SAN)이 같아야 검증이 통과한다
+                    (void)SSL_set_tlsext_host_name( _pSSL, serverName.c_str() );
+                    (void)SSL_set1_host( _pSSL, serverName.c_str() ); // 인증서 이름(SAN)이 같아야 검증이 통과한다
                 }
                 advanceHandshake(); // ClientHello
             }
 
             ~OpenSSLSession() override
             {
-                if ( _pSsl != nullptr )
+                if ( _pSSL != nullptr )
                 {
-                    SSL_free( _pSsl );
+                    SSL_free( _pSSL );
                     return;
                 }
                 BIO_free( _pReadBio ); // SSL 에 넘기지 못한 BIO
@@ -422,13 +422,13 @@ namespace sw
                 uint8 arrBuffer[constant::kMaxBuffer8192];
                 for ( ;; )
                 {
-                    const int32 read = SSL_read( _pSsl, arrBuffer, static_cast<int32>( sizeof( arrBuffer ) ) );
+                    const int32 read = SSL_read( _pSSL, arrBuffer, static_cast<int32>( sizeof( arrBuffer ) ) );
                     if ( read > 0 )
                     {
                         outBytes.insert( outBytes.end(), arrBuffer, arrBuffer + read );
                         continue;
                     }
-                    const int32 error = SSL_get_error( _pSsl, read );
+                    const int32 error = SSL_get_error( _pSSL, read );
                     if ( error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE )
                         return true;
                     if ( error == SSL_ERROR_ZERO_RETURN )
@@ -468,18 +468,18 @@ namespace sw
             void close() override
             {
                 if ( _state == TLSSessionState::Established )
-                    (void)SSL_shutdown( _pSsl );
+                    (void)SSL_shutdown( _pSSL );
                 if ( _state != TLSSessionState::Failed )
                     _state = TLSSessionState::Closed;
             }
 
             string getNegotiatedProtocol() const override
             {
-                if ( _pSsl == nullptr || _state != TLSSessionState::Established )
+                if ( _pSSL == nullptr || _state != TLSSessionState::Established )
                     return {};
                 const uint8* pProtocol = nullptr;
                 uint32       length    = 0;
-                SSL_get0_alpn_selected( _pSsl, &pProtocol, &length );
+                SSL_get0_alpn_selected( _pSSL, &pProtocol, &length );
                 if ( pProtocol == nullptr )
                     return {};
                 return string( reinterpret_cast<const utf8*>( pProtocol ), length );
@@ -498,7 +498,7 @@ namespace sw
                 int32 offset = 0;
                 while ( offset < size )
                 {
-                    const int32 written = SSL_write( _pSsl, pData + offset, size - offset ); // 메모리 BIO 라 늘 다 받는다
+                    const int32 written = SSL_write( _pSSL, pData + offset, size - offset ); // 메모리 BIO 라 늘 다 받는다
                     if ( written <= 0 )
                         return fail( OpenSSLNetSecurityInternal::takeErrorText() );
                     offset += written;
@@ -508,10 +508,10 @@ namespace sw
 
             void advanceHandshake()
             {
-                const int32 result = SSL_do_handshake( _pSsl );
+                const int32 result = SSL_do_handshake( _pSSL );
                 if ( result == 1 )
                 {
-                    if ( _pinnedSha256Hex.empty() == false && matchesPin() == false )
+                    if ( _pinnedSHA256Hex.empty() == false && matchesPin() == false )
                     {
                         (void)fail( "server certificate does not match the pinned SHA-256" );
                         return;
@@ -525,29 +525,29 @@ namespace sw
                     }
                     return;
                 }
-                const int32 error = SSL_get_error( _pSsl, result );
+                const int32 error = SSL_get_error( _pSSL, result );
                 if ( error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE )
                     return;
-                const bool bVerifyFailed = SSL_get_verify_result( _pSsl ) != X509_V_OK;
-                (void)fail( bVerifyFailed ? string( X509_verify_cert_error_string( SSL_get_verify_result( _pSsl ) ) ) : OpenSSLNetSecurityInternal::takeErrorText() );
+                const bool bVerifyFailed = SSL_get_verify_result( _pSSL ) != X509_V_OK;
+                (void)fail( bVerifyFailed ? string( X509_verify_cert_error_string( SSL_get_verify_result( _pSSL ) ) ) : OpenSSLNetSecurityInternal::takeErrorText() );
                 ERR_clear_error();
             }
 
             bool matchesPin() const
             {
-                X509* pPeer = SSL_get1_peer_certificate( _pSsl );
+                X509* pPeer = SSL_get1_peer_certificate( _pSSL );
                 if ( pPeer == nullptr )
                     return false;
                 string     hex;
-                const bool bComputed = OpenSSLNetSecurityInternal::computeSha256Hex( pPeer, hex );
+                const bool bComputed = OpenSSLNetSecurityInternal::computeSHA256Hex( pPeer, hex );
                 X509_free( pPeer );
-                return bComputed && hex == _pinnedSha256Hex;
+                return bComputed && hex == _pinnedSHA256Hex;
             }
 
             vector<uint8>   _pendingBytes;
-            string          _pinnedSha256Hex;
+            string          _pinnedSHA256Hex;
             string          _failureText;
-            SSL*            _pSsl;
+            SSL*            _pSSL;
             BIO*            _pReadBio;
             BIO*            _pWriteBio;
             TLSSessionState _state;
@@ -558,18 +558,18 @@ namespace sw
         public:
             OpenSSLContext( SSL_CTX* pContext, const TLSContextConfig& settings )
                 : _serverName{ settings._serverName }
-                , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
-                , _alpnWire{ makeAlpnWire( settings._alpnProtocol ) }
+                , _pinnedSHA256Hex{ settings._pinnedCertificateSHA256Hex }
+                , _alpnWire{ makeALPNWire( settings._alpnProtocol ) }
                 , _pContext{ pContext }
                 , _role{ settings._role }
             {
                 // 콜백 인자가 이 객체의 멤버라 객체가 선 뒤에 건다(복사 · 이동이 막혀 주소가 바뀌지 않는다)
                 if ( _role == TLSRole::Server && _alpnWire.empty() == false )
-                    SSL_CTX_set_alpn_select_cb( _pContext, &selectAlpn, &_alpnWire );
+                    SSL_CTX_set_alpn_select_cb( _pContext, &selectALPN, &_alpnWire );
             }
 
             /** @brief ALPN 와이어 형식(길이 1 바이트 + 이름)입니다. 이름이 비었거나 255 바이트를 넘으면 빈 문자열. */
-            static string makeAlpnWire( const string& protocol )
+            static string makeALPNWire( const string& protocol )
             {
                 if ( protocol.empty() || protocol.size() > 255 )
                     return {};
@@ -582,14 +582,14 @@ namespace sw
             OpenSSLContext( const OpenSSLContext& )            = delete;
             OpenSSLContext& operator=( const OpenSSLContext& ) = delete;
 
-            unique_ptr<ITLSSession> createSession() override { return sw::make_unique<OpenSSLSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
+            unique_ptr<ITLSSession> createSession() override { return sw::make_unique<OpenSSLSession>( _pContext, _role, _serverName, _pinnedSHA256Hex ); }
             TLSRole                 getRole() const override { return _role; }
 
         private:
             /** @brief 서버의 ALPN 선택 — 클라이언트가 제시한 목록에 설정한 이름이 있으면 고르고 없으면 ALPN 없이 진행한다(거절은 부르는 쪽이 협상 결과를 보고 정한다). */
-            static int32 selectAlpn( SSL* pSsl, const uint8** ppOut, uint8* pOutLength, const uint8* pIn, uint32 inLength, void* pArg )
+            static int32 selectALPN( SSL* pSSL, const uint8** ppOut, uint8* pOutLength, const uint8* pIn, uint32 inLength, void* pArg )
             {
-                (void)pSsl;
+                (void)pSSL;
                 const string* pWire   = static_cast<const string*>( pArg );
                 uint8*        pPicked = nullptr;
                 const int32   result  = SSL_select_next_proto( &pPicked, pOutLength, reinterpret_cast<const uint8*>( pWire->data() ),
@@ -601,7 +601,7 @@ namespace sw
             }
 
             string   _serverName;
-            string   _pinnedSha256Hex;
+            string   _pinnedSHA256Hex;
             string   _alpnWire;
             SSL_CTX* _pContext;
             TLSRole  _role;
@@ -652,7 +652,7 @@ namespace sw
         return bDerived;
     }
 
-    bool OpenSSLNetSecurityProvider::computeHkdfSha256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
+    bool OpenSSLNetSecurityProvider::computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
                                                         uint8* pOut, int32 outSize )
     {
         EVP_KDF*     pKdf     = EVP_KDF_fetch( nullptr, OSSL_KDF_NAME_HKDF, nullptr );
@@ -711,7 +711,7 @@ namespace sw
 
     unique_ptr<INetAead> OpenSSLNetSecurityProvider::createAead( NetAeadAlgorithm algorithm, const uint8* pKey )
     {
-        const EVP_CIPHER*       pCipher = algorithm == NetAeadAlgorithm::Aes256Gcm ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
+        const EVP_CIPHER*       pCipher = algorithm == NetAeadAlgorithm::AES256Gcm ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
         unique_ptr<OpenSSLAead> aead    = sw::make_unique<OpenSSLAead>( pCipher, pKey );
         if ( aead->isValid() == false )
         {
@@ -762,7 +762,7 @@ namespace sw
             // 신뢰 목록에 포함된 끝 인증서(개발용 자체 서명 · 고정한 서버 인증서)를 CA 없이 그대로 믿는다.
             X509_VERIFY_PARAM_set_flags( SSL_CTX_get0_param( pContext ), X509_V_FLAG_PARTIAL_CHAIN );
             SSL_CTX_set_verify( pContext, SSL_VERIFY_PEER, nullptr );
-            const string alpnWire = OpenSSLContext::makeAlpnWire( settings._alpnProtocol );
+            const string alpnWire = OpenSSLContext::makeALPNWire( settings._alpnProtocol );
             if ( alpnWire.empty() == false )
                 bReady = SSL_CTX_set_alpn_protos( pContext, reinterpret_cast<const uint8*>( alpnWire.data() ), static_cast<uint32>( alpnWire.size() ) ) == 0; // 0 이 성공
         }
@@ -839,10 +839,10 @@ namespace sw
         return bSigned;
     }
 
-    bool OpenSSLNetSecurityProvider::computeCertificateSha256( const string& certificatePem, string& outHex )
+    bool OpenSSLNetSecurityProvider::computeCertificateSHA256( const string& certificatePem, string& outHex )
     {
         vector<X509*> listCertificate = OpenSSLNetSecurityInternal::readCertificates( certificatePem );
-        const bool    bComputed       = listCertificate.empty() == false && OpenSSLNetSecurityInternal::computeSha256Hex( listCertificate[0], outHex );
+        const bool    bComputed       = listCertificate.empty() == false && OpenSSLNetSecurityInternal::computeSHA256Hex( listCertificate[0], outHex );
         for ( X509* pCertificate : listCertificate )
         {
             X509_free( pCertificate );
@@ -850,7 +850,7 @@ namespace sw
         return bComputed;
     }
 
-    bool OpenSSLNetSecurityProvider::computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
+    bool OpenSSLNetSecurityProvider::computeSHA256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
     {
         const bool bInvalidDigestArguments = pOutDigest == nullptr || dataSize < 0 || ( pData == nullptr && dataSize > 0 );
         if ( bInvalidDigestArguments )
@@ -871,7 +871,7 @@ namespace sw
             ERR_clear_error();
             return false;
         }
-        const bool    bRsa      = publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256;
+        const bool    bRsa      = publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256;
         const bool    bStrongOk = bRsa == false || EVP_PKEY_get_bits( pKey ) >= Internal::kMinRsaBits;
         vector<uint8> derSignatureBytes;
         const bool    bShapeOk    = bRsa || Internal::convertRawToDer( pSignature, signatureSize, derSignatureBytes );
@@ -892,14 +892,14 @@ namespace sw
         outPublicKey            = NetPublicKey{};
         outPublicKey._algorithm = algorithm;
         utf8       arrCurve[]   = "P-256";
-        const bool bRsa         = algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256;
+        const bool bRsa         = algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256;
         EVP_PKEY*  pKey         = nullptr;
         if ( bRsa )
             pKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "RSA", static_cast<size_t>( Internal::kMinRsaBits ) );
         else
             pKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
         bool bMade = pKey != nullptr;
-        if ( bMade && algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
+        if ( bMade && algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256 )
         {
             bMade = Internal::readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_N, outPublicKey._modulus ) &&
                     Internal::readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_E, outPublicKey._exponent );
@@ -941,7 +941,7 @@ namespace sw
             return false;
         BIO*        pKeyBio    = BIO_new_mem_buf( privateKeyPem.data(), static_cast<int32>( privateKeyPem.size() ) );
         EVP_PKEY*   pKey       = pKeyBio != nullptr ? PEM_read_bio_PrivateKey( pKeyBio, nullptr, nullptr, nullptr ) : nullptr;
-        const bool  bTypeOk    = pKey != nullptr && EVP_PKEY_is_a( pKey, algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 ? "RSA" : "EC" ) == 1;
+        const bool  bTypeOk    = pKey != nullptr && EVP_PKEY_is_a( pKey, algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256 ? "RSA" : "EC" ) == 1;
         EVP_MD_CTX* pDigest    = EVP_MD_CTX_new();
         size_t      signedSize = 0;
         bool        bSigned    = bTypeOk && pDigest != nullptr && EVP_DigestSignInit( pDigest, nullptr, EVP_sha256(), nullptr, pKey ) == 1 &&

@@ -59,8 +59,8 @@ namespace sw
     {
         const uint64 key = makeKey( face, glyphIndex );
 
-        const bool bRasterized = _atlas.getFieldKind() == GlyphFieldKind::Msdf ? _rasterizer.rasterizeMsdf( face, glyphIndex, _rasterParams, _scratchBitmap )
-                                                                               : _rasterizer.rasterizeSdf( face, glyphIndex, _rasterParams, _scratchBitmap );
+        const bool bRasterized = _atlas.getFieldKind() == GlyphFieldKind::MSDF ? _rasterizer.rasterizeMSDF( face, glyphIndex, _rasterParams, _scratchBitmap )
+                                                                               : _rasterizer.rasterizeSDF( face, glyphIndex, _rasterParams, _scratchBitmap );
         if ( bRasterized == false )
             return nullptr;
         SW_PROFILE_COUNT( "Text.GlyphsRasterized", 1 );

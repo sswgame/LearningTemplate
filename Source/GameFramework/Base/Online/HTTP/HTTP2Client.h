@@ -2,7 +2,7 @@
  * @file HTTP2Client.h
  * @brief HTTP/2 클라이언트입니다(온라인 키트 H2-4). `HTTPClient` 와 같은 모양(`submitRequest` · `update` · `pollResponses`)이라 제공자가 같은 방식으로 쓰고, 안은 호스트마다 하나의 TLS(ALPN `h2`) 연결을 오래 열어 두고 요청을 스트림으로 다중화합니다.
  * @details - 연결은 호스트 · 포트마다 하나이고 처음 요청이 올 때 맺는다. 푸시 서버(APNs)처럼 연결을 오래 쓰는 상대를 위한 구조다 — 연결이 닫히면 날아가던 요청은 전송 실패로 끝나고 다음 요청이 새 연결을 맺는다.
- *          - `https://` 만 받는다(평문 h2c 는 없다). 그 호스트에 `registerTLSContext` 한 컨텍스트(`TLSContextConfig::_alpnProtocol` = `kAlpnProtocol`)가 있어야 하고, 핸드셰이크 뒤 협상된 프로토콜이 `h2` 가 아니면 그 연결은 실패다.
+ *          - `https://` 만 받는다(평문 h2c 는 없다). 그 호스트에 `registerTLSContext` 한 컨텍스트(`TLSContextConfig::_alpnProtocol` = `kALPNProtocol`)가 있어야 하고, 핸드셰이크 뒤 협상된 프로토콜이 `h2` 가 아니면 그 연결은 실패다.
  *          - 이름 해석 · 시한 · 응답 상한은 `HTTPClient` 와 같다(해석은 전용 스레드, 시한은 요청한 때부터, 상한을 넘으면 전송 실패). 시한이 넘은 스트림은 RST_STREAM(CANCEL)으로 취소하고 연결은 둔다.
  *          - 프로토콜 상태(스트림 · 흐름 제어 · SETTINGS · GOAWAY)는 `HTTP2Connection` 이 맡고 이 클래스는 전송 · TLS · 요청 id · 시한을 잇는다. GOAWAY 를 받은 연결은 새 요청을 받지 않고 남은 스트림이 끝나면 닫는다.
  *          I/O 스레드가 없는 전송(루프백 테스트)은 `update` 가 `pollIO` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
@@ -49,7 +49,7 @@ namespace sw
     {
     public:
         /** @brief TLS 컨텍스트가 협상해야 하는 ALPN 이름입니다(`NetSecurity::createClientTLSContext` 의 마지막 인자). */
-        static constexpr const utf8* kAlpnProtocol = "h2";
+        static constexpr const utf8* kALPNProtocol = "h2";
 
         /** @param clock 시한을 재는 단조 시계입니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
         explicit HTTP2Client( const IClock& clock );

@@ -694,7 +694,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
         EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
         if ( _traceStatus.empty() == false )
             ImGui::TextDisabled( "%s", _traceStatus.c_str() );
@@ -761,7 +761,7 @@ namespace sw::editor
 
     ProfilerPanel::TimelineGeometry ProfilerPanel::layoutTimeline( const vector<ProfilerTimelineThread>& listThread )
     {
-        const float32    dpiScale = EditorThemeUtil::getDpiScale();
+        const float32    dpiScale = EditorThemeUtil::getDPIScale();
         TimelineGeometry geometry;
         geometry._labelWidth = ProfilerPanelInternal::kTimelineLabelWidth * dpiScale;
         geometry._laneHeight = ImGui::GetTextLineHeight() + 4.0f * dpiScale;
@@ -1057,11 +1057,11 @@ namespace sw::editor
             }
         }
         const float32 avgMs  = sumMs / 120.0f;
-        const float32 avgFps = ( avgMs > 0.0f ) ? ( 1000.0f / avgMs ) : 0.0f;
+        const float32 avgFPS = ( avgMs > 0.0f ) ? ( 1000.0f / avgMs ) : 0.0f;
 
         ImGui::Text( "Current FPS: %.1f (%.2f ms)", static_cast<float64>( fps ), static_cast<float64>( frameTimeMs ) );
         ImGui::Text( "Average FPS: %.1f (Avg: %.2f ms, Min: %.2f ms, Max: %.2f ms)",
-                     static_cast<float64>( avgFps ), static_cast<float64>( avgMs ),
+                     static_cast<float64>( avgFPS ), static_cast<float64>( avgMs ),
                      static_cast<float64>( minMs ), static_cast<float64>( maxMs ) );
 
         ImGui::PlotLines( "Frame Time (ms)", _arrFrameTimeHistory, 120, static_cast<int32>( _historyOffset ),
@@ -1164,7 +1164,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Engine Ledger By Kind", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            if ( ImGui::BeginTable( "GpuMemoryTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
+            if ( ImGui::BeginTable( "GPUMemoryTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
             {
                 ImGui::TableSetupColumn( "Kind" );
                 ImGui::TableSetupColumn( "Live Bytes" );

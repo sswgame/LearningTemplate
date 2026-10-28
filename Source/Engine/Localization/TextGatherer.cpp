@@ -280,7 +280,7 @@ namespace sw
                     ++_position;
                 }
                 if ( bCodepoint )
-                    StringUtil::appendUtf8( outValue, value );
+                    StringUtil::appendUTF8( outValue, value );
                 else
                     outValue.push_back( static_cast<utf8>( value ) );
             }

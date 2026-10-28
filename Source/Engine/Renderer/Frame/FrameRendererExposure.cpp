@@ -63,9 +63,9 @@ namespace sw
         {
             view._arrAutoExposure[slot] = pFactory->createTexture2D( desc );
             if ( view._arrAutoExposure[slot] != 0 )
-                view._arrAutoExposureSrv[slot] = pFactory->registerBindlessTexture( view._arrAutoExposure[slot] );
+                view._arrAutoExposureSRV[slot] = pFactory->registerBindlessTexture( view._arrAutoExposure[slot] );
         }
-        const bool bCreated = view._arrAutoExposureSrv[0] != kInvalidDescriptorIndex && view._arrAutoExposureSrv[1] != kInvalidDescriptorIndex;
+        const bool bCreated = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
         if ( bCreated == false )
             SW_LOG_ERROR( "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
     }
@@ -75,12 +75,12 @@ namespace sw
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
             // SRV 등록을 먼저 놓고 텍스처를 지운다(레지스트리에 죽은 핸들을 남기지 않는다 — 깊이 히스토리와 같은 순서).
-            if ( _pDevice != nullptr && view._arrAutoExposureSrv[slot] != kInvalidDescriptorIndex )
-                _pDevice->getResourceFactory()->unregisterBindlessTexture( view._arrAutoExposureSrv[slot] );
+            if ( _pDevice != nullptr && view._arrAutoExposureSRV[slot] != kInvalidDescriptorIndex )
+                _pDevice->getResourceFactory()->unregisterBindlessTexture( view._arrAutoExposureSRV[slot] );
             if ( _pDevice != nullptr && view._arrAutoExposure[slot] != 0 )
                 _pDevice->getResourceFactory()->destroyTexture( view._arrAutoExposure[slot] );
             view._arrAutoExposure[slot]    = 0;
-            view._arrAutoExposureSrv[slot] = kInvalidDescriptorIndex;
+            view._arrAutoExposureSRV[slot] = kInvalidDescriptorIndex;
         }
         view._bAutoExposureThisFrame = SW_FALSE;
         view._bAutoExposureMeasured  = SW_FALSE;
@@ -97,7 +97,7 @@ namespace sw
             inoutExposureScale *= MathUtil::pow( 2.0f, -post._autoExposureMinEv );
             return;
         }
-        const bool bHasHistory = view._arrAutoExposureSrv[0] != kInvalidDescriptorIndex && view._arrAutoExposureSrv[1] != kInvalidDescriptorIndex;
+        const bool bHasHistory = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
         const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && getEnginePSO( RenderPassType::AutoExposure ) != 0;
         if ( bMeasures == false )
             return;
@@ -155,7 +155,7 @@ namespace sw
         const bool                                   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererExposureInternal::RootConstants constants{};
         constants._source   = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._history  = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSrv[readSlot] ) : 0u;
+        constants._history  = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
         constants._minEv    = view._autoExposureParams._x;
         constants._maxEv    = view._autoExposureParams._y;
         constants._rateUp   = view._autoExposureParams._z;
@@ -163,7 +163,7 @@ namespace sw
         if ( bNativeBindless == false )
         {
             cmd.bindShaderResource( source._srv, shaderslot::kEngineTexture0 );
-            cmd.bindShaderResource( view._arrAutoExposureSrv[readSlot], shaderslot::kEngineTexture0 + 1u );
+            cmd.bindShaderResource( view._arrAutoExposureSRV[readSlot], shaderslot::kEngineTexture0 + 1u );
         }
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
@@ -171,6 +171,6 @@ namespace sw
         cmd.prepareTextureForShaderRead( target );
         // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
         context.resetBindingCache();
-        context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSrv[writeSlot] );
+        context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, view._arrAutoExposureSRV[writeSlot] );
     }
 } // namespace sw

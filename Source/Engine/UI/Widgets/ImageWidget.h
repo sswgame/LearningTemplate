@@ -20,7 +20,7 @@ namespace sw
     /**
      * @class ImageWidget
      * @brief 브러시(색, 둥근 모서리, 9-슬라이스)로 이미지를 칠합니다. 이미지가 없으면 브러시 색의 상자입니다.
-     * @details 원하는 크기는 `_imageSize` 다(0 이면 텍스처 픽셀 크기, 이미지도 없으면 0 이며 슬롯 덮어쓰기로 정한다). `_bMirrorInRtl` 이면 오른쪽에서 왼쪽 배치에서
+     * @details 원하는 크기는 `_imageSize` 다(0 이면 텍스처 픽셀 크기, 이미지도 없으면 0 이며 슬롯 덮어쓰기로 정한다). `_bMirrorInRTL` 이면 오른쪽에서 왼쪽 배치에서
      *          이미지를 좌우로 뒤집는다(화살표나 진행 방향 아이콘용이며, UMG 의 Flip For Right To Left Flow Direction 에 해당).
      *          이미지는 둘 중 하나다. 코드가 넘기는 텍스처 객체(`setImage`)이거나 경로(`_imagePath`, 문서 또는 `setImagePath`)다. 경로는 게임 스레드에서 해석하지 않고
      *          그리기 목록에 경로로 실어 렌더 스레드의 캔버스 렌더러가 `TextureCache` 로 해석한다(머티리얼 텍스처와 같은 경로). 경로 이미지는 크기를 모르므로
@@ -51,8 +51,8 @@ namespace sw
         /** @brief 원하는 크기를 정합니다(0 이면 텍스처 크기). kLayout 입니다. */
         void setImageSize( const float2& imageSize );
         /** @brief 오른쪽에서 왼쪽 배치에서 좌우로 뒤집을지 바꿉니다. kPaint 입니다. */
-        void setMirrorInRtl( bool bMirror );
-        bool isMirroredInRtl() const { return _bMirrorInRtl; }
+        void setMirrorInRTL( bool bMirror );
+        bool isMirroredInRTL() const { return _bMirrorInRTL; }
 
     protected:
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
@@ -67,6 +67,6 @@ namespace sw
         PROPERTY( DisplayName = "Image Size", Tooltip = "Desired size; 0 uses the texture size", Meta = "Units=ui" )
         float2 _imageSize;
         PROPERTY( DisplayName = "Mirror In Right To Left", Tooltip = "Flip horizontally when the flow direction is right to left" )
-        bool _bMirrorInRtl;
+        bool _bMirrorInRTL;
     };
 } // namespace sw

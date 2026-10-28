@@ -72,7 +72,7 @@ namespace sw
         _pDevice->bindBindlessRootState( _pCmdList );
     }
 
-    D3D12_GPU_VIRTUAL_ADDRESS D3D12RHICommandContext::resolveBufferAddress( RHIDescriptorIndex index, bool bUav, bool bConstantBuffer ) const
+    D3D12_GPU_VIRTUAL_ADDRESS D3D12RHICommandContext::resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const
     {
         if ( index == kInvalidDescriptorIndex )
             return 0;
@@ -82,7 +82,7 @@ namespace sw
         // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
         ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
-            bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+            bUAV ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
             return 0;
         const D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
@@ -101,14 +101,14 @@ namespace sw
         return address;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHICommandContext::resolveOfflineView( RHIDescriptorIndex index, bool bUav ) const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHICommandContext::resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const
     {
         if ( index == kInvalidDescriptorIndex )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
         // resolveBufferAddress 와 같은 이유로 짧은 읽기 락을 잡는다.
         ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
-            bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+            bUAV ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
         const D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
@@ -164,25 +164,25 @@ namespace sw
             return false;
         D3D12SlotTableState& state = _pState->_arrSlotState[bCompute ? 1 : 0];
 
-        if ( state._bSrvDirty != SW_FALSE )
+        if ( state._bSRVDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
-            if ( writeSlotTable( state._arrSrv, shaderslot::kSrvSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSrvIndex ), table ) == false )
+            if ( writeSlotTable( state._arrSRV, shaderslot::kSRVSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullSRVIndex ), table ) == false )
                 return false;
             if ( bCompute )
-                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
+                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kSRVTableParam, table );
             else
-                commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSrvTableParam, table );
-            state._bSrvDirty = SW_FALSE;
+                commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSRVTableParam, table );
+            state._bSRVDirty = SW_FALSE;
         }
         // u 테이블은 컴퓨트만 쓴다. 그래픽스 스테이지에는 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
-        if ( bCompute && state._bUavDirty != SW_FALSE )
+        if ( bCompute && state._bUAVDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
-            if ( writeSlotTable( state._arrUav, shaderslot::kComputeUavSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUavIndex ), table ) == false )
+            if ( writeSlotTable( state._arrUAV, shaderslot::kComputeUAVSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUAVIndex ), table ) == false )
                 return false;
-            commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUavTableParam, table );
-            state._bUavDirty = SW_FALSE;
+            commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
+            state._bUAVDirty = SW_FALSE;
         }
         return true;
     }
@@ -321,7 +321,7 @@ namespace sw
             return;
 
         D3D12RHIDevice::OffscreenTargetView srcView{};
-        if ( _pDevice->findOffscreenTargetView( src, 0, srcView ) == false || srcView._bHasDsv != SW_FALSE )
+        if ( _pDevice->findOffscreenTargetView( src, 0, srcView ) == false || srcView._bHasDSV != SW_FALSE )
             return;
 
         _pDevice->reportBarrierDuringRecording( "blitTexture(src)" );
@@ -345,7 +345,7 @@ namespace sw
             if ( pDstResource == nullptr )
                 return;
             D3D12RHIDevice::OffscreenTargetView dstView{};
-            if ( _pDevice->findOffscreenTargetView( dst, 0, dstView ) == false || dstView._bHasDsv != SW_FALSE )
+            if ( _pDevice->findOffscreenTargetView( dst, 0, dstView ) == false || dstView._bHasDSV != SW_FALSE )
                 return;
             dstStateBefore = dstView._state;
         }
@@ -408,7 +408,7 @@ namespace sw
     {
         // 그래픽스 t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 직전 flushSlotTables 가 굳힌다.
         // 뷰라서 버퍼든 텍스처든 같은 경로다(루트 SRV 는 raw/구조 버퍼만 받는다).
-        const bool bCannotBindShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount;
+        const bool bCannotBindShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSRVSlotCount;
         if ( bCannotBindShaderResource )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
@@ -419,10 +419,10 @@ namespace sw
         // 디스크립터 10 개를 온라인 힙에 복사하고 테이블을 다시 걸게 된다.
         // 언리얼 FD3D12DescriptorCache 도 테이블 내용이 그대로면 이미 건 테이블을 그대로 쓴다.
         D3D12SlotTableState& state = _pState->_arrSlotState[0];
-        if ( state._arrSrv[slot].ptr == view.ptr )
+        if ( state._arrSRV[slot].ptr == view.ptr )
             return;
-        state._arrSrv[slot] = view;
-        state._bSrvDirty    = SW_TRUE;
+        state._arrSRV[slot] = view;
+        state._bSRVDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
@@ -433,7 +433,7 @@ namespace sw
         D3D12RHIDevice::OffscreenTargetView view{};
         if ( _pDevice->findOffscreenTargetView( texture, 0, view ) == false )
             return;
-        if ( view._bHasRtv == SW_FALSE && view._bHasDsv == SW_FALSE )
+        if ( view._bHasRTV == SW_FALSE && view._bHasDSV == SW_FALSE )
             return;
 
         _pDevice->reportBarrierDuringRecording( "prepareTextureForShaderRead" );
@@ -467,25 +467,25 @@ namespace sw
             const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it == _pDevice->_mapOffscreenTexture.end() )
                 return;
-            bDepth = it->second._bHasDsv != SW_FALSE;
+            bDepth = it->second._bHasDSV != SW_FALSE;
         }
         transitionTexture( texture, bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET );
     }
 
-    void D3D12RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
+    void D3D12RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessBufferUav)의 것. 디스패치 직전 굳힌다.
-        const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount;
+        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것. 디스패치 직전 굳힌다.
+        const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUAVSlotCount;
         if ( bCannotBindUnorderedAccess )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
-        if ( state._arrUav[slot].ptr == view.ptr )
+        if ( state._arrUAV[slot].ptr == view.ptr )
             return;
-        state._arrUav[slot] = view;
-        state._bUavDirty    = SW_TRUE;
+        state._arrUAV[slot] = view;
+        state._bUAVDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -496,22 +496,22 @@ namespace sw
         const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
-        commandListForRecord()->SetComputeRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
+        commandListForRecord()->SetComputeRootConstantBufferView( D3D12RHIDevice::kCBVRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        const bool bCannotBindComputeShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount;
+        const bool bCannotBindComputeShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSRVSlotCount;
         if ( bCannotBindComputeShaderResource )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
-        if ( state._arrSrv[slot].ptr == view.ptr )
+        if ( state._arrSRV[slot].ptr == view.ptr )
             return;
-        state._arrSrv[slot] = view;
-        state._bSrvDirty    = SW_TRUE;
+        state._arrSRV[slot] = view;
+        state._bSRVDirty    = SW_TRUE;
     }
 
     void D3D12RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
@@ -596,7 +596,7 @@ namespace sw
         const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
             return;
-        commandListForRecord()->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCbvRootParam0 + slot, address );
+        commandListForRecord()->SetGraphicsRootConstantBufferView( D3D12RHIDevice::kCBVRootParam0 + slot, address );
     }
 
     void D3D12RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -742,7 +742,7 @@ namespace sw
         commandListForRecord()->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 
-    void D3D12RHICommandContext::writeBreadcrumb( uint32 markerId )
+    void D3D12RHICommandContext::writeBreadcrumb( uint32 markerID )
     {
     #if !defined( SW_SHIPPING )
         if ( _pCmdList == nullptr || _pDevice->_breadcrumbAddress == 0 )
@@ -751,12 +751,12 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
         if ( FAILED( commandListForRecord()->QueryInterface( IID_PPV_ARGS( list2.GetAddressOf() ) ) ) )
             return;
-        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress, markerId };
+        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress, markerID };
         // MARKER_IN: 앞선 명령이 **시작**하는 시점에 쓴다 - 소실 뒤 값은 GPU 가 시작한 마지막 패스다.
         const D3D12_WRITEBUFFERIMMEDIATE_MODE mode = D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
         list2->WriteBufferImmediate( 1, &param, &mode );
     #else
-        (void)markerId;
+        (void)markerID;
     #endif
     }
 
@@ -851,7 +851,7 @@ namespace sw
                 if ( attachmentIndex > 0 || _pDevice->_swapChain.isBackBufferReady() == false )
                     break;
                 _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
-                rtv                                     = _pDevice->_swapChain.getCurrentRtv();
+                rtv                                     = _pDevice->_swapChain.getCurrentRTV();
                 bValid                                  = true;
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
@@ -860,7 +860,7 @@ namespace sw
             {
                 const uint32                        slice = beginInfo._arrColorTargetSlice[attachmentIndex];
                 D3D12RHIDevice::OffscreenTargetView view{};
-                if ( _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRtv == SW_FALSE )
+                if ( _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRTV == SW_FALSE )
                 {
                     if ( attachmentIndex > 0 )
                         break;
@@ -890,20 +890,20 @@ namespace sw
             rtvHandles[rtCount++] = rtv;
         }
 
-        D3D12_CPU_DESCRIPTOR_HANDLE* pDsv{ nullptr };
+        D3D12_CPU_DESCRIPTOR_HANDLE* pDSV{ nullptr };
         D3D12_CPU_DESCRIPTOR_HANDLE  dsvHandle{};
         _pState->_activeDepthTarget = 0;
         if ( bHasDepth )
         {
             D3D12RHIDevice::OffscreenTargetView depthView{};
             const bool                          bDepthFound          = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, depthView );
-            const bool                          bDepthTargetWritable = bDepthFound && depthView._bHasDsv != SW_FALSE && depthView._bSliceInRange != SW_FALSE;
+            const bool                          bDepthTargetWritable = bDepthFound && depthView._bHasDSV != SW_FALSE && depthView._bSliceInRange != SW_FALSE;
             if ( bDepthTargetWritable )
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
                 dsvHandle                   = depthView._dsvHandle;
-                pDsv                        = &dsvHandle;
+                pDSV                        = &dsvHandle;
                 _pState->_activeDepthTarget = beginInfo._depthTarget;
                 if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )
                     commandListForRecord()->ClearDepthStencilView( dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
@@ -912,9 +912,9 @@ namespace sw
         }
 
         if ( rtCount > 0 )
-            commandListForRecord()->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDsv );
-        else if ( pDsv != nullptr )
-            commandListForRecord()->OMSetRenderTargets( 0, nullptr, FALSE, pDsv );
+            commandListForRecord()->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDSV );
+        else if ( pDSV != nullptr )
+            commandListForRecord()->OMSetRenderTargets( 0, nullptr, FALSE, pDSV );
 
         const uint32   vpW = beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth();
         const uint32   vpH = beginInfo._height > 0 ? beginInfo._height : _pDevice->_swapChain.getHeight();

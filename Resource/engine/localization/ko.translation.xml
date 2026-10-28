@@ -107,9 +107,9 @@
 		<entry key="EdSchedule.EmptyPlan" text="오늘 계획이 없습니다" sourceHash="b3a79d044bf5027f" />
 		<entry key="EdSchedule.FollowClock" text="게임 시계 따라가기" sourceHash="9331e1eca52eafa8" />
 		<entry key="EdSchedule.GameTime" text="게임 시각" sourceHash="312a78762d9ad9a4" />
-		<entry key="EdSchedule.NpcListTitle" text="NPC 목록" sourceHash="578931c5a8afe279" />
+		<entry key="EdSchedule.NPCListTitle" text="NPC 목록" sourceHash="578931c5a8afe279" />
 		<entry key="EdSchedule.RawTimeline" text="타임라인 원문" sourceHash="60d9224c1e5f1898" />
-		<entry key="EdSchedule.SelectNpcHint" text="왼쪽에서 NPC 를 고르세요" sourceHash="2d4aa57458132d18" />
+		<entry key="EdSchedule.SelectNPCHint" text="왼쪽에서 NPC 를 고르세요" sourceHash="2d4aa57458132d18" />
 		<entry key="EdSchedule.SystemIndex" text="일정 시스템" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="지금 왜 이 행동인가" sourceHash="998a39497efff850" />
 		<entry key="Keep" text="유지" sourceHash="d60a7dde73859828" />

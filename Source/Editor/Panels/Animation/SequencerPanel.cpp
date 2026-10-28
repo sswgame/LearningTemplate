@@ -250,7 +250,7 @@ namespace sw::editor
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
-        ImGui::InputTextMultiline( "Cinematic Note", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDpiScale() ) );
+        ImGui::InputTextMultiline( "Cinematic Note", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDPIScale() ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
@@ -318,7 +318,7 @@ namespace sw::editor
             return;
         }
 
-        const float32 labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDpiScale();
+        const float32 labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDPIScale();
         for ( int32 trackIndex = 0; trackIndex < static_cast<int32>( _listTrack.size() ); ++trackIndex )
         {
             const SequenceKeyTrack& track = _listTrack[static_cast<size_t>( trackIndex )];
@@ -356,7 +356,7 @@ namespace sw::editor
         }
 
         ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
-        const float32 radius    = SequencerPanelInternal::kKeyMarkerRadius * EditorThemeUtil::getDpiScale();
+        const float32 radius    = SequencerPanelInternal::kKeyMarkerRadius * EditorThemeUtil::getDPIScale();
         const float32 centerY   = origin.y + height * 0.5f;
         pDrawList->AddRectFilled( origin, ImVec2( origin.x + width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_FrameBg ) );
         track.collectKeyFrames( _listKeyFrame );

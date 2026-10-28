@@ -7,7 +7,7 @@
 # 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
 include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
-sw_findLibclang(swLibclangLib swLibclangIncludeDir swLibclangDll)
+sw_findLibclang(swLibclangLib swLibclangIncludeDir swLibclangDLL)
 if(NOT swLibclangLib)
 	return()
 endif()
@@ -25,7 +25,7 @@ target_include_directories(ReflectionParser PUBLIC
 	"${CMAKE_SOURCE_DIR}/Tools"
 	"${CMAKE_SOURCE_DIR}/Source"
 )
-sw_addPchEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
+sw_addPCHEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
@@ -41,7 +41,7 @@ target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"" SW_TOO
 if(WIN32)
 	target_compile_definitions(ReflectionParser PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
-sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+sw_configurePCH(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 
 set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 sw_setUnityBuild(ReflectionParser OFF)
@@ -60,11 +60,11 @@ target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedR
 # ------------------------------------------------------------------------------
 # 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사
 # ------------------------------------------------------------------------------
-if(swLibclangDll)
+if(swLibclangDLL)
 	add_custom_command(
 		TARGET ReflectionParser POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${swLibclangDll}"
+		"${swLibclangDLL}"
 		"$<TARGET_FILE_DIR:ReflectionParser>"
 		COMMENT "[ReflectionParser] Copying libclang.dll..."
 		VERBATIM

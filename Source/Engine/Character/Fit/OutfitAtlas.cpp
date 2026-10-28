@@ -140,7 +140,7 @@ namespace sw
         outListPixel.assign( static_cast<size_t>( atlasSize ) * atlasSize * OutfitAtlasInternal::kChannelCount, 0 );
     }
 
-    bool OutfitAtlasComposer::blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRgba, uint32 textureWidth, uint32 textureHeight,
+    bool OutfitAtlasComposer::blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth, uint32 textureHeight,
                                     vector<uint8>& inoutAtlas, string* pOutError )
     {
         using Internal = OutfitAtlasInternal;
@@ -148,7 +148,7 @@ namespace sw
             return Internal::fail( pOutError, string( "texture of part '" ) + rect._part.c_str() + "' is " + to_string( textureWidth ) + "x" + to_string( textureHeight ) + " but its atlas slot is " + to_string( rect._width ) + "x" + to_string( rect._height ) );
         const size_t expectedBytes = static_cast<size_t>( textureWidth ) * textureHeight * Internal::kChannelCount;
         const size_t atlasBytes    = static_cast<size_t>( atlasSize ) * atlasSize * Internal::kChannelCount;
-        const bool   bTextureShort = textureRgba.size() < expectedBytes;
+        const bool   bTextureShort = textureRGBA.size() < expectedBytes;
         const bool   bAtlasShort   = inoutAtlas.size() < atlasBytes;
         const bool   bOutside      = rect._x < padding || rect._y < padding || rect._x + rect._width + padding > atlasSize || rect._y + rect._height + padding > atlasSize;
         const bool   bBadBuffer    = bTextureShort || bAtlasShort;
@@ -170,7 +170,7 @@ namespace sw
                 const size_t to      = ( static_cast<size_t>( atlasY ) * atlasSize + static_cast<size_t>( atlasX ) ) * Internal::kChannelCount;
                 for ( uint32 channel = 0; channel < Internal::kChannelCount; ++channel )
                 {
-                    inoutAtlas[to + channel] = textureRgba[from + channel];
+                    inoutAtlas[to + channel] = textureRGBA[from + channel];
                 }
             }
         }

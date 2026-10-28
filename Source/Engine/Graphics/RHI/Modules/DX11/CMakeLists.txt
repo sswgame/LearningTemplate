@@ -3,4 +3,4 @@
 # @brief RHI_DX11 MODULE — Direct3D 11 백엔드
 # ==============================================================================
 
-sw_addRhiBackendModule(DirectX11)
+sw_addRHIBackendModule(DirectX11)

@@ -835,7 +835,7 @@ namespace sw
         size_t offset = 0;
         while ( offset < name.size() )
         {
-            const uint32 codepoint = StringUtil::decodeUtf8( name, offset );
+            const uint32 codepoint = StringUtil::decodeUTF8( name, offset );
             const bool   bBad      = codepoint == GuildServiceInternal::kReplacementChar || codepoint < GuildServiceInternal::kFirstPrintable ||
                               codepoint == GuildServiceInternal::kDeleteChar;
             if ( bBad )

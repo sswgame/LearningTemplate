@@ -247,7 +247,7 @@ namespace sw::editor
         drawBodyTable( pRagdoll );
 
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDpiScale();
+        const float32 minHeight = RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
         const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         drawOverlay( pRagdoll );
@@ -259,7 +259,7 @@ namespace sw::editor
     {
         if ( _listBodyRow.empty() )
             return;
-        const float32 height = RagdollPreviewPanelInternal::kTableHeight * EditorThemeUtil::getDpiScale();
+        const float32 height = RagdollPreviewPanelInternal::kTableHeight * EditorThemeUtil::getDPIScale();
         if ( ImGui::BeginTable( "##ragdollPreview.bodies", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp,
                                 ImVec2( 0.0f, height ) ) )
         {

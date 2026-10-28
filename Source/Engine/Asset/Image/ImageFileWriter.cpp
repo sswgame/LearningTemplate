@@ -43,7 +43,7 @@ namespace sw
                 }
                 typeAndDataBytes.insert( typeAndDataBytes.end(), dataBytes.begin(), dataBytes.end() );
                 inoutBytes.insert( inoutBytes.end(), typeAndDataBytes.begin(), typeAndDataBytes.end() );
-                appendUint32Be( inoutBytes, StringUtil::computeCrc32( typeAndDataBytes.data(), typeAndDataBytes.size() ) );
+                appendUint32Be( inoutBytes, StringUtil::computeCRC32( typeAndDataBytes.data(), typeAndDataBytes.size() ) );
             }
 
             static bool isSizeValid( const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
@@ -56,7 +56,7 @@ namespace sw
 
 namespace sw
 {
-    bool ImageFileWriter::writeDDSRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writeDDSRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         using Internal = ImageFileWriterInternal;
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
@@ -101,7 +101,7 @@ namespace sw
         return true;
     }
 
-    void ImageFileWriter::encodePngRgba8( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, vector<uint8>& outBytes )
+    void ImageFileWriter::encodePNGRGBA8( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, vector<uint8>& outBytes )
     {
         using Internal = ImageFileWriterInternal;
         outBytes.clear();
@@ -161,10 +161,10 @@ namespace sw
         Internal::appendChunk( outBytes, "IEND", vector<uint8>{} );
     }
 
-    bool ImageFileWriter::writePngRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writePNGRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         vector<uint8> bytes;
-        encodePngRgba8( rgbaBytes, width, height, bytes );
+        encodePNGRGBA8( rgbaBytes, width, height, bytes );
         if ( bytes.empty() )
             return false;
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )

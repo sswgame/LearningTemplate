@@ -247,7 +247,7 @@ namespace sw
                 // 여러 바이트 글자: 올바르면 그대로 둔 채 지나가고, 잘못된 바이트만 U+FFFD 로 바꾼다.
                 const size_t charBegin = offset;
                 uint32       codepoint = 0;
-                if ( StringUtil::tryDecodeUtf8( text, offset, codepoint ) )
+                if ( StringUtil::tryDecodeUTF8( text, offset, codepoint ) )
                     continue;
                 append( text.substr( runBegin, charBegin - runBegin ) );
                 append( Internal::kReplacement );

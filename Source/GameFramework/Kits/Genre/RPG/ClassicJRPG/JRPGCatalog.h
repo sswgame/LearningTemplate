@@ -21,11 +21,11 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 능력치입니다. XML 속성 이름은 `hp mp str agi vit intellect luck` 이고, 성장치는 `growHp` 처럼 씁니다. */
+    /** @brief 능력치입니다. XML 속성 이름은 `hp mp str agi vit intellect luck` 이고, 성장치는 `growHP` 처럼 씁니다. */
     enum class JRPGStat : uint8
     {
-        MaxHp = 0,
-        MaxMp,
+        MaxHP = 0,
+        MaxMP,
         Strength,
         Agility,
         Vitality,
@@ -243,9 +243,9 @@ namespace sw
     /**
      * @class JRPGCatalog
      * @brief 다음 구조의 XML 을 읽는 카탈로그입니다. `<JRPGCatalog><ExperienceCurve .../><Class/><Spell/><Combo/><Manual><Stage/></Manual><Enemy/><Area><Group/></Area></JRPGCatalog>`
-     * @details 칸은 각 Def 의 `PROPERTY` 가 스키마다(기본값 = 초기값, 범위 = Min · Max, 이름 `name` 은 필수). 능력치(`hp` ~ `luck`, `growHp` ~ `growLuck`)는
+     * @details 칸은 각 Def 의 `PROPERTY` 가 스키마다(기본값 = 초기값, 범위 = Min · Max, 이름 `name` 은 필수). 능력치(`hp` ~ `luck`, `growHP` ~ `growLuck`)는
      *          0 이상의 정수이고 적지 않으면 Def 의 초기값이다. 예시는 다음과 같다.
-     *          `<Class id="mage" name="Mage" hp="18" mp="12" str="4" intellect="14" growMp="4" attackType="Blunt" requires=""><Learn level="1" spell="frizz"/></Class>`
+     *          `<Class id="mage" name="Mage" hp="18" mp="12" str="4" intellect="14" growMP="4" attackType="Blunt" requires=""><Learn level="1" spell="frizz"/></Class>`
      *          `<Spell id="frizz" kind="Damage" mp="2" power="12" type="Fire" target="One"/>`, `<Spell id="pine_cut" manual="pine_sword" inner="20" power="20" type="Sword" proficiency="10"/>`
      *          `<Combo id="eclipse" members="zale,valere" points="3" power="40" types="Sun,Moon" target="All"/>`
      *          `<Manual id="pine_sword"><Stage proficiency="0" technique="pine_cut"/><Stage proficiency="30" technique="pine_storm"/></Manual>`

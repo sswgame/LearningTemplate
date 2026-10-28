@@ -73,14 +73,14 @@ namespace sw
          *          런타임이 **SRV 쪽을 조용히 NULL 로 강제한다**(경고만 나온다). 그래서 어느 슬롯에
          *          어떤 버퍼가 바인딩되어 있는지 기록해 두고, transitionBuffer 가 읽기 상태로 돌릴 때 해제한다.
          */
-        RHIBufferHandle _arrComputeUavBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+        RHIBufferHandle _arrComputeUAVBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
         /**
          * @brief PS SRV 슬롯마다 지금 바인딩되어 있는 텍스처입니다(0이면 없음이거나 버퍼).
          * @details 같은 리소스를 입력(SRV)과 출력(RTV, DSV)에 동시에 바인딩하면 `OMSetRenderTargets` 가 **SRV 를 NULL 로 강제하고** 경고만 낸다.
          *          `prepareTextureForRenderTarget` 가 이 테이블을 보고 그 텍스처가 바인딩된 슬롯만 해제한다(언리얼 D3D11 RHI 의
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
-        RHITextureHandle _arrPixelSrvTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+        RHITextureHandle _arrPixelSRVTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
     };
 } // namespace sw
 
@@ -341,8 +341,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   _dsv;
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
             /// @brief 면(배열 원소, 큐브 면)마다의 RTV 와 DSV 입니다. 면이 하나면 비어 있고 `_rtv` 와 `_dsv` 를 씁니다(`_rtv` 와 `_dsv` 는 항상 면 0 입니다).
-            vector<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>> _listSliceRtv;
-            vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> _listSliceDsv;
+            vector<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>> _listSliceRTV;
+            vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> _listSliceDSV;
             uint32                                                 _width;
             uint32                                                 _height;
             uint32                                                 _arraySize; ///< 면 수
@@ -353,8 +353,8 @@ namespace sw
             uint8          _reserved : 7;
             /** @brief 빈 텍스처 레코드로 만듭니다. */
             TextureRecord()
-                : _listSliceRtv{}
-                , _listSliceDsv{}
+                : _listSliceRTV{}
+                , _listSliceDSV{}
                 , _width{ 0 }
                 , _height{ 0 }
                 , _arraySize{ 1 }
@@ -364,18 +364,18 @@ namespace sw
                 , _reserved{ 0 } {}
 
             /** @brief 면 `slice` 의 RTV 입니다. 없으면 nullptr 입니다. */
-            ID3D11RenderTargetView* findSliceRtv( uint32 slice ) const
+            ID3D11RenderTargetView* findSliceRTV( uint32 slice ) const
             {
-                if ( _listSliceRtv.empty() )
+                if ( _listSliceRTV.empty() )
                     return slice == 0 ? _rtv.Get() : nullptr;
-                return slice < _listSliceRtv.size() ? _listSliceRtv[slice].Get() : nullptr;
+                return slice < _listSliceRTV.size() ? _listSliceRTV[slice].Get() : nullptr;
             }
             /** @brief 면 `slice` 의 DSV 입니다. 없으면 nullptr 입니다. */
-            ID3D11DepthStencilView* findSliceDsv( uint32 slice ) const
+            ID3D11DepthStencilView* findSliceDSV( uint32 slice ) const
             {
-                if ( _listSliceDsv.empty() )
+                if ( _listSliceDSV.empty() )
                     return slice == 0 ? _dsv.Get() : nullptr;
-                return slice < _listSliceDsv.size() ? _listSliceDsv[slice].Get() : nullptr;
+                return slice < _listSliceDSV.size() ? _listSliceDSV[slice].Get() : nullptr;
             }
         };
 
@@ -392,7 +392,7 @@ namespace sw
         /** @brief 인덱스의 텍스처 핸들입니다. 범위 밖이면 0 입니다. */
         RHITextureHandle bindlessTextureAt( RHIDescriptorIndex index ) const;
         /** @brief 인덱스의 UAV 입니다(참조를 하나 올려 반환합니다). 범위 밖이면 nullptr 입니다. */
-        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUavAt( RHIDescriptorIndex index ) const;
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> bindlessUAVAt( RHIDescriptorIndex index ) const;
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들입니다(없으면 0). SRV/UAV 해저드를 해소할 때 씁니다. */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
 
@@ -413,7 +413,7 @@ namespace sw
          * @brief 불투명 버퍼 핸들의 SRV 입니다(없으면 nullptr). 락 없이 읽습니다. 레코드는 핸들 테이블의 슬롯에 있어 위치가 바뀌지 않습니다.
          * @note 버퍼를 지우는 일(`destroyBuffer`)이 기록과 겹치면 안 됩니다. 다른 스레드는 `IRHIDevice::releaseHandle` 로 해제합니다.
          */
-        ID3D11ShaderResourceView* resolveBufferSrv( RHIBufferHandle handle ) const;
+        ID3D11ShaderResourceView* resolveBufferSRV( RHIBufferHandle handle ) const;
         /**
          * @brief 버퍼(와 있으면 SRV)를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 항목에 크기(`ByteWidth`)를 올리는 유일한 지점입니다.
          * @details SRV 는 넣기 **전에** 레코드에 싣는다. 넣은 뒤에 붙이면 다른 스레드가 SRV 없는 레코드를 볼 수 있다.
@@ -423,7 +423,7 @@ namespace sw
          * @brief 버퍼에 `srvDesc` 로 SRV 를 만들어 버퍼와 함께 핸들 테이블에 넣습니다. SRV 를 만들지 못하면 버퍼만 넣습니다.
          * @details 구조 버퍼와 인다이렉트 인자 버퍼 생성이 함께 쓴다(뷰 설명만 다르다).
          */
-        RHIBufferHandle storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc );
+        RHIBufferHandle storeBufferWithSRV( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc );
         /** @brief 불투명 텍스처 핸들로 TextureRecord 를 찾습니다. */
         TextureRecord*       resolveTexture( RHITextureHandle handle );
         const TextureRecord* resolveTexture( RHITextureHandle handle ) const;
@@ -472,7 +472,7 @@ namespace sw
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> _vertexBuffer; ///< 풀스크린 삼각형(정점 3개). 메시 정점 버퍼가 없는 드로우가 쓴다.
 
-        /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSrv`).
+        /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
         RHIHandleTable<BufferRecord>  _gpuBuffers;
         RHIHandleTable<TextureRecord> _gpuTextures;
 
@@ -535,8 +535,8 @@ namespace sw
         vector<uint32>           _listTextureFree;
 
         vector<Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView>> _listRegisteredUAV;
-        vector<RHIBufferHandle>                                   _listUavSourceBuffer;
-        vector<uint32>                                            _listUavFree;
+        vector<RHIBufferHandle>                                   _listUAVSourceBuffer;
+        vector<uint32>                                            _listUAVFree;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

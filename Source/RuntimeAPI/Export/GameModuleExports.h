@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "RuntimeAPI/ABI/GameAPI.h"
-#include "RuntimeAPI/ABI/ModuleAbi.h"
+#include "RuntimeAPI/ABI/ModuleABI.h"
 #include "RuntimeAPI/Export/ModuleForwardUtil.h"
 #include "RuntimeAPI/Service/GameServiceBinding.h"
 
@@ -32,13 +32,13 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                                \
-    extern "C" SW_MODULE_API uint32 getGameModuleAbiVersion()                                                                                                                                                \
+    extern "C" SW_MODULE_API uint32 getGameModuleABIVersion()                                                                                                                                                \
     {                                                                                                                                                                                                        \
-        return sw::kModuleAbiVersion;                                                                                                                                                                        \
+        return sw::kModuleABIVersion;                                                                                                                                                                        \
     }                                                                                                                                                                                                        \
-    extern "C" SW_MODULE_API const utf8* getGameModuleAbiStamp()                                                                                                                                             \
+    extern "C" SW_MODULE_API const utf8* getGameModuleABIStamp()                                                                                                                                             \
     {                                                                                                                                                                                                        \
-        return sw::kModuleAbiStamp;                                                                                                                                                                          \
+        return sw::kModuleABIStamp;                                                                                                                                                                          \
     }                                                                                                                                                                                                        \
     extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI )                                                                                                                                      \
     {                                                                                                                                                                                                        \

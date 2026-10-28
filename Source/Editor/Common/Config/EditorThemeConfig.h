@@ -74,9 +74,9 @@ namespace sw::editor
         /** @brief 폴더에서 읽어 둔 토큰 벌입니다(`EditorThemeUtil` 이 처음 쓸 때 채운다). */
         vector<EditorThemeConfig>& getAvailable() { return _listAvailable; }
 
-        /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 기록하고, 적용할 때 이 값을 곱한다. 1 이 기본입니다. */
-        float32 getDpiScale() const { return _dpiScale; }
-        void    setDpiScale( float32 dpiScale ) { _dpiScale = dpiScale; }
+        /** @brief DPI 배율입니다(`EditorThemeUtil::setDPIScale`). 테마는 96 DPI 기준 크기로 기록하고, 적용할 때 이 값을 곱한다. 1 이 기본입니다. */
+        float32 getDPIScale() const { return _dpiScale; }
+        void    setDPIScale( float32 dpiScale ) { _dpiScale = dpiScale; }
 
         /** @brief 토큰 파일이 바뀌었다고 알립니다(핫 리로드 — 에셋 테이블의 처리기가 부른다). 다음 UI 프레임이 다시 읽는다. */
         void markTokensChanged() { _bTokensChanged = SW_TRUE; }

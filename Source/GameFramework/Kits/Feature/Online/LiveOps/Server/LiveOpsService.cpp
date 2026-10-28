@@ -260,7 +260,7 @@ namespace sw
     uint64 LiveOpsService::computeOpenHash( UnixMilliseconds nowMs ) const
     {
         using Internal = LiveOpsServiceInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
+        uint64 hash    = HashUtil::kFNVOffset64;
         if ( isKillSwitchOff() )
             return hash;
         if ( _dependencies._pRemoteConfig != nullptr )

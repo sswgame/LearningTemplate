@@ -369,7 +369,7 @@ namespace sw
             /**
              * @brief 5) 패스 x (머티리얼 없음 + 머티리얼) x 뷰 모드: 런타임이 실제로 요구하는 조합입니다.
              * @details FrameRenderer::createMaterialPSOVariant 는 패스 PSO 의 define 위에 머티리얼 define 을, 그 위에 뷰 모드 define 을 얹어 변형 PSO 를
-             *          만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPSOs 의 퍼뮤테이션 없는 요청)도 패스 define 위에
+             *          만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPSOS 의 퍼뮤테이션 없는 요청)도 패스 define 위에
              *          뷰 모드를 얹는다. 쿠킹하지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나 **조용히 Lit 으로** 그려지거나(뷰 모드)
              *          드로우가 사라진다(머티리얼). 뷰 모드 define 은 런타임과 같은 FrameRendererUtil::findViewModeDefine 에서 얻는다. Wireframe 처럼
              *          래스터라이저 상태만 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.

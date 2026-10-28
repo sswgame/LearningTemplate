@@ -646,7 +646,7 @@ namespace sw
         {
             const bool bDigit = '0' <= character && character <= '9';
             if ( bDigit && _numeralSystem != NumeralSystem::Latin )
-                StringUtil::appendUtf8( inoutText, CultureInfoInternal::getDigitZeroCodePoint( _numeralSystem ) + static_cast<uint32>( character - '0' ) );
+                StringUtil::appendUTF8( inoutText, CultureInfoInternal::getDigitZeroCodePoint( _numeralSystem ) + static_cast<uint32>( character - '0' ) );
             else
                 inoutText.push_back( character );
         }
@@ -908,7 +908,7 @@ namespace sw
         string      error;
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
         {
             if ( pOutError != nullptr )
             {

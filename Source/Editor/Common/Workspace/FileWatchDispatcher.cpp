@@ -12,7 +12,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
     #include "Core/File/Linux/LinuxFileWatcher.h"
 #endif
 

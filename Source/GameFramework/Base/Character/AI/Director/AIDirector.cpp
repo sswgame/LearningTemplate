@@ -554,7 +554,7 @@ namespace sw
     uint64 AIDirector::computeStateHash() const
     {
         using Internal = AIDirectorInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
+        uint64 hash    = HashUtil::kFNVOffset64;
         hash           = Internal::hashValue( hash, _time );
         hash           = Internal::hashValue( hash, _phaseTime );
         hash           = Internal::hashValue( hash, _intensity );

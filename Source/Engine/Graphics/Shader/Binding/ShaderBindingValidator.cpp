@@ -134,7 +134,7 @@ namespace sw
                 }
             }
 
-            static bool isSpirv( ShaderTargetFormat target )
+            static bool isSPIRV( ShaderTargetFormat target )
             {
                 return target == ShaderTargetFormat::SPIRV_Vulkan || target == ShaderTargetFormat::SPIRV_OpenGL;
             }
@@ -148,7 +148,7 @@ namespace sw
             {
                 if ( expected == actual )
                     return true;
-                if ( isSpirv( target ) )
+                if ( isSPIRV( target ) )
                 {
                     const bool bExpectedStorage = ( expected == ShaderBindingKind::StructuredBuffer || expected == ShaderBindingKind::RwStructuredBuffer );
                     const bool bActualStorage   = ( actual == ShaderBindingKind::StructuredBuffer || actual == ShaderBindingKind::RwStructuredBuffer );
@@ -353,15 +353,15 @@ namespace sw
             // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
-            addReserved( list, shaderslot::resname::kLightGridRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
+            addReserved( list, shaderslot::resname::kLightGridRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
-            addReserved( list, shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
-            addReserved( list, shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kUShift, 1 ), slotAt( 0, shaderslot::gl::kUavBinding0 + 1 ) );
-            addReserved( list, shaderslot::resname::kCullLodState, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 2 ), slotAt( 0, 2 ), slotAt( vk::kUShift, 2 ), slotAt( 0, shaderslot::gl::kUavBinding0 + 2 ) );
+            addReserved( list, shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
+            addReserved( list, shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kUShift, 1 ), slotAt( 0, shaderslot::gl::kUAVBinding0 + 1 ) );
+            addReserved( list, shaderslot::resname::kCullLODState, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 2 ), slotAt( 0, 2 ), slotAt( vk::kUShift, 2 ), slotAt( 0, shaderslot::gl::kUAVBinding0 + 2 ) );
             // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
-            addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
+            addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
             static string s_arrEngineName[shaderslot::kEngineTextureCount];
             static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
@@ -387,11 +387,11 @@ namespace sw
                 addReserved( list, s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
             }
             // 컴퓨트 RW 텍스처 슬롯 u5..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
-            static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
-            for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUavSlotCount; ++slotIndex )
+            static string s_arrRwTextureName[shaderslot::kComputeTextureUAVSlotCount];
+            for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUAVSlotCount; ++slotIndex )
             {
                 s_arrRwTextureName[slotIndex] = string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex );
-                addReserved( list, s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUav0 + slotIndex ), none(), none(),
+                addReserved( list, s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUAV0 + slotIndex ), none(), none(),
                              slotAt( 0, shaderslot::gl::kImageUnit0 + slotIndex ) );
             }
             // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
@@ -489,12 +489,12 @@ namespace sw
                     }
                     case Internal::RegisterClass::ShaderResource:
                     {
-                        limit = shaderslot::kSrvSlotCount;
+                        limit = shaderslot::kSRVSlotCount;
                         break;
                     }
                     case Internal::RegisterClass::UnorderedAccess:
                     {
-                        limit = shaderslot::kComputeUavSlotCount;
+                        limit = shaderslot::kComputeUAVSlotCount;
                         break;
                     }
                     case Internal::RegisterClass::Sampler:
@@ -625,16 +625,16 @@ namespace sw
                 }
             }
 
-            /** @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GpuAssertRW) 전용이고, 그 링은 u4 에만 놓인다. */
+            /** @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고, 그 링은 u4 에만 놓인다. */
             void checkAssertSlot( const Internal::ReflectedBinding& reflected )
             {
                 if ( reflected._space != 0 || Internal::registerClassOf( reflected._kind ) != Internal::RegisterClass::UnorderedAccess )
                     return;
-                const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUavBinding0 : 0u );
-                const bool   bAssertName = reflected._name == shaderslot::resname::kGpuAssertRing;
-                const bool   bAssertSlot = reflected._bindPoint == bindOffset + shaderslot::kComputeAssertUav;
+                const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
+                const bool   bAssertName = reflected._name == shaderslot::resname::kGPUAssertRing;
+                const bool   bAssertSlot = reflected._bindPoint == bindOffset + shaderslot::kComputeAssertUAV;
                 if ( bAssertName != bAssertSlot )
-                    report( reflected._name, "컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GpuAssertRW) 전용이고 그 링은 u4 에만 놓입니다" );
+                    report( reflected._name, "컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고 그 링은 u4 에만 놓입니다" );
             }
 
             /**

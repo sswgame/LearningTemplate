@@ -49,7 +49,7 @@ namespace sw
     {
         string _name;              ///< 스폰한 오브젝트의 이름. 비면 원본 프리팹의 이름
         string _prefabPath;        ///< 원본 프리팹 경로
-        string _prefabGuid;        ///< 원본 프리팹 GUID. 데이터베이스에 있으면 로드할 때 경로보다 먼저 쓴다(원본을 옮겨도 이어진다)
+        string _prefabGUID;        ///< 원본 프리팹 GUID. 데이터베이스에 있으면 로드할 때 경로보다 먼저 쓴다(원본을 옮겨도 이어진다)
         string _attachKey;         ///< 부모 오브젝트에서 붙을 씬 컴포넌트의 키(`이름#n`, `ComponentStableKey`). 비면 부모의 primary 씬 컴포넌트
         string _overrideXML;       ///< 원본과 다른 점(`<PrefabOverrides>`). 비면 원본 그대로
         string _resolvedStateXML;  ///< 쿠킹본만: 오버라이드를 얹은 최종 오브젝트 상태. 있으면 원본을 읽지 않고, 원본의 중첩 인스턴스는 뒤 노드로 펼쳐져 있다
@@ -84,7 +84,7 @@ namespace sw
 
         /**
          * @brief XML 에서 프리팹을 로드합니다(`<Prefab formatVersion="0" name="..."><GameObject …/><PrefabInstance …/></Prefab>`. 저장하는 형태 하나만 받습니다).
-         * @details 중첩 인스턴스는 `<PrefabInstance name prefab prefabGuid attach>` 이고 안에 `<PrefabOverrides>` 와 그 인스턴스에 붙는 `<PrefabInstance>` 를 둔다.
+         * @details 중첩 인스턴스는 `<PrefabInstance name prefab prefabGUID attach>` 이고 안에 `<PrefabOverrides>` 와 그 인스턴스에 붙는 `<PrefabInstance>` 를 둔다.
          */
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */

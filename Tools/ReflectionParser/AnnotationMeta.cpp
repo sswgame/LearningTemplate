@@ -31,7 +31,7 @@ namespace sw
     uint64 AnnotationMeta::hashScopeAndKey( string_view scope, string_view key ) noexcept
     {
         const uint64 scopeHash = HashUtil::computeStringHash64( scope, false );
-        const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * HashUtil::kFnvPrime64;
+        const uint64 delimHash = ( scopeHash ^ static_cast<uint64>( ':' ) ) * HashUtil::kFNVPrime64;
         return HashUtil::computeStringHash64( key, false, delimHash );
     }
 

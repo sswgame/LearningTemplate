@@ -60,7 +60,7 @@ namespace sw::editor
         /** @brief 프레임 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) - 구독이 풀리면 빈다. 에디터 확장이 inline 으로 부르므로 이 함수는 헤더에 둔다. */
         [[nodiscard]] Subscription bindFrameHook( FrameHook hook ) { return _onFrame.bind( std::move( hook ) ); }
 
-        /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGmLogin::setCredentials` 가 그 모양이다). */
+        /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGMLogin::setCredentials` 가 그 모양이다). */
         using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
         /**
          * @brief 계정 이름 · 비밀번호를 넘길 처리기를 겁니다. 에디터 확장은 계정 키트를 include 할 수 없어 로그인은 조립 쪽이 한다 — 조립 쪽은 이 처리기와 `getConnection().bindLoginHook` 을 함께 건다.

@@ -178,7 +178,7 @@ namespace sw
         static constexpr int64 kMaxAbsScore         = 1ll << 53;  ///< 캐시 점수(배정밀도)가 정확하게 표현되는 범위이다
         static constexpr int32 kMaxStatCount        = 256;        ///< 계정 하나의 통계 수이며 조회의 상한이다
         static constexpr int32 kMaxAchievementCount = 1024;       ///< 계정 하나의 업적 수이며 조회의 상한이다
-        static constexpr int64 kNameTtlMs           = 2592000000; ///< 30일이며 표시 이름 캐시의 시한이다
+        static constexpr int64 kNameTTLMs           = 2592000000; ///< 30일이며 표시 이름 캐시의 시한이다
         static constexpr int32 kMaxScoresOfCount    = 201;        ///< 계정 목록 조회의 상한이다. 친구 200 명과 나이다(`SocialLimit::kMaxFriend` + 1)
     };
 } // namespace sw

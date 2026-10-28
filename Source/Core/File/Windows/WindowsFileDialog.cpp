@@ -2,7 +2,7 @@
 
 #include "Core/File/Windows/WindowsFileDialog.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -13,7 +13,7 @@ namespace sw
     wstring WindowsFileDialog::makeFilterText( const FileDialogParams& params )
     {
         // 널이 구분자인 다중 문자열이다 — 널을 데이터로 담으므로 길이를 따로 보관하는 `wstring` 으로 만든다(`fixed_string` 은 첫 널에서 끝난다).
-        wstring filterText = StringUtil::utf8ToUtf16( params._description.empty() ? "All Files" : params._description.c_str() );
+        wstring filterText = StringUtil::utf8ToUTF16( params._description.empty() ? "All Files" : params._description.c_str() );
         filterText.push_back( L'\0' );
 
         bool bHasPattern{ false };
@@ -24,7 +24,7 @@ namespace sw
             if ( bHasPattern )
                 filterText.push_back( L';' );
             filterText.append( ext[0] == '.' ? L"*" : L"*." );
-            filterText.append( StringUtil::utf8ToUtf16( ext.c_str() ) );
+            filterText.append( StringUtil::utf8ToUTF16( ext.c_str() ) );
             bHasPattern = true;
         }
         if ( bHasPattern == false )
@@ -50,7 +50,7 @@ namespace sw
         wstring titleW;
         if ( params._title.empty() == false )
         {
-            titleW         = StringUtil::utf8ToUtf16( params._title.c_str() );
+            titleW         = StringUtil::utf8ToUTF16( params._title.c_str() );
             ofn.lpstrTitle = titleW.c_str();
         }
 
@@ -58,7 +58,7 @@ namespace sw
         if ( params._initialDirectory.empty() == false )
         {
             const string initialDirNt = FileUtil::normalizePath( params._initialDirectory );
-            initialDirW               = StringUtil::utf8ToUtf16( initialDirNt.c_str() );
+            initialDirW               = StringUtil::utf8ToUTF16( initialDirNt.c_str() );
             ofn.lpstrInitialDir       = initialDirW.c_str();
         }
 
@@ -94,14 +94,14 @@ namespace sw
         const wstring first( pCurrent );
         pCurrent += first.size() + 1;
         if ( *pCurrent == L'\0' )
-            outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUtf8( first.c_str() ) ) );
+            outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ) );
         else
         {
-            const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUtf8( first.c_str() ) );
+            const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) );
             while ( *pCurrent != L'\0' )
             {
                 const wstring fileNameW( pCurrent );
-                outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUtf8( fileNameW.c_str() ) ) ) );
+                outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUTF8( fileNameW.c_str() ) ) ) );
                 pCurrent += fileNameW.size() + 1;
             }
         }

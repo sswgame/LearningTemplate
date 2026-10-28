@@ -103,8 +103,8 @@ namespace sw
         uint32             _size;
         RHIDescriptorIndex _textureIndex;
 
-        uint8 _bHdr      : 1;
-        uint8 _bSrgb     : 1;
+        uint8 _bHDR      : 1;
+        uint8 _bSRGB     : 1;
         uint8 _bHidden   : 1;
         uint8 _bAdvanced : 1;
         uint8 _reserved  : 4;

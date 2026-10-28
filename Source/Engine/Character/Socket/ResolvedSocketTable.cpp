@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/SurfaceBvh.h"
+#include "Engine/Character/Fit/SurfaceBVH.h"
 
 namespace sw
 {
@@ -92,7 +92,7 @@ namespace sw
         _listUnit.push_back( std::move( unit ) );
         const Unit& addedUnit = _listUnit.back();
 
-        SurfaceBvh bindSurface;
+        SurfaceBVH bindSurface;
         bool       bSurfaceBuilt = false;
         for ( uint32 unitSlot = 0; unitSlot < addedUnit._sockets.getSockets().size(); ++unitSlot )
         {

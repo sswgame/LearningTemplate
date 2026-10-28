@@ -11,7 +11,7 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/MeshMerger.h"
-#include "Engine/Character/Fit/SurfaceBvh.h"
+#include "Engine/Character/Fit/SurfaceBVH.h"
 #include "Engine/Character/Fit/SurfaceTransfer.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
@@ -421,7 +421,7 @@ namespace sw
         }
         AppearanceGeometry bodyGeometry;
         makeWeldedGeometry( body, bodyGeometry );
-        SurfaceBvh bodySurface;
+        SurfaceBVH bodySurface;
         (void)bodySurface.addSurface( 0, bodyGeometry._listPosition, bodyGeometry._listIndex );
         bodySurface.build();
 

@@ -71,8 +71,8 @@ namespace sw
         void prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky, bool bPipelineReady );
         /** @brief 이번 프레임에 컴퓨트가 도는지입니다. */
         [[nodiscard]] bool isActive() const { return _bActive == SW_TRUE; }
-        /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSrv 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
-        void dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSrv );
+        /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
+        void dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 

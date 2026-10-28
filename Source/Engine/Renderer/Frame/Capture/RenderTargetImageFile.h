@@ -24,9 +24,9 @@ namespace sw
          *        단일 채널(깊이 읽기 레이아웃 `kRHIDepthReadbackFormat` = R32_FLOAT 는 [0,1] 을 0..255 로, R8 은 그대로)은 회색이고, 그 밖의 3 채널 미만 포맷이면 false 입니다.
          * @details **half 첨부를 바이트로 읽으면 안 됩니다.** HDR 첨부(R16G16B16A16_FLOAT)를 8비트로 가정하고 앞 세 바이트를 집으면
          *          가수 하위 바이트가 색이 되어 무의미한 이미지가 나옵니다(bytesPerPixel 은 8 이라 크기 검사도 통과합니다). 디퍼드 파이프라인은
-         *          LitColor 부터 TaaColor 까지 넷이 이 포맷입니다. HDR 은 [0,1] 로 자르고 톤매핑은 하지 않습니다. "무엇이 들어 있나"를 보는 덤프입니다.
+         *          LitColor 부터 TAAColor 까지 넷이 이 포맷입니다. HDR 은 [0,1] 로 자르고 톤매핑은 하지 않습니다. "무엇이 들어 있나"를 보는 덤프입니다.
          */
-        static bool unpackRgba8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRgbaBytes );
+        static bool unpackRGBA8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRGBABytes );
         /** @brief 읽어 온 바이트를 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)입니다. */
         [[nodiscard]] static bool writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
     };

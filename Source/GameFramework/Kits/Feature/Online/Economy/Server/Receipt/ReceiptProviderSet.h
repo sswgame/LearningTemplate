@@ -3,9 +3,9 @@
  * @brief 설정 목록(`ReceiptProviderConfig`)에서 실제 영수증 검증 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다(OnlineKits H3).
  * @details - 설정 파일은 `{"providers":[{"kind":"steam","appId":"480","keySecretEnvironment":"<변수>","sandbox":false,"reportPollSeconds":3600},
  *            {"kind":"google","packageName":"com.example.game","serviceAccountEnvironment":"<변수>","voidedPollSeconds":3600},
- *            {"kind":"apple","issuerId":"<발급자 id>","keyId":"<키 id>","bundleId":"com.example.game","signingKeySecretEnvironment":"<변수>","rootCertificateFile":"Config/AppleRootCA-G3.pem","historyPollSeconds":3600}]}` 이다. 자격(퍼블리셔 키, 서비스 계정 키)은
+ *            {"kind":"apple","issuerID":"<발급자 id>","keyId":"<키 id>","bundleId":"com.example.game","signingKeySecretEnvironment":"<변수>","rootCertificateFile":"Config/AppleRootCA-G3.pem","historyPollSeconds":3600}]}` 이다. 자격(퍼블리셔 키, 서비스 계정 키)은
  *            파일에 쓰지 않고 환경 변수에서 읽는다. 변수가 없거나 자격이 틀리면 **서버 기동이 실패한다**(가짜로 대신 뜨지 않는다). 설정 파일이 없으면 실제 제공자를 만들지 않는다.
- *          - `baseUrl` · `tokenUrl` 은 비우면 제공자의 공식 주소이고, 가짜 서버(테스트)를 가리킬 때만 쓴다. `https://` 주소가 있는데 신뢰 파일(CA 번들 PEM)이 없으면 오류다.
+ *          - `baseUrl` · `tokenURL` 은 비우면 제공자의 공식 주소이고, 가짜 서버(테스트)를 가리킬 때만 쓴다. `https://` 주소가 있는데 신뢰 파일(CA 번들 PEM)이 없으면 오류다.
  *          - 제공자는 응답을 자기만 회수하므로 제공자마다 HTTP 클라이언트 하나를 둔다. 경제 서비스와 레지스트리를 내린 뒤에 `shutdown` 해야 한다(레지스트리가 제공자를 빌려 쓴다).
  *          제품 이름(`steam` · `google` · `apple`)은 이 설정의 `kind` 값과 `Provider/<제품>/` 안에만 쓴다. 애플은 응답 JWS 의 `x5c` 사슬을 설정의 루트 인증서 파일까지 이어 확인한다.
  */

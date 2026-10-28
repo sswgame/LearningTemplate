@@ -77,7 +77,7 @@ namespace sw::editor
                 const bool                            bHasMark       = EditorSelfTestMarks::find( pMarkKey, mark );
                 const ImGuiWindow*                    pHoveredWindow = imguiContext.HoveredWindow;
                 fixed_string<constant::kMaxBuffer512> text;
-                formatstring( text.data(), text.capacity(), "active=%u field=%u hoveredId=%u hoveredWindow=%s wantTextInput=%d",
+                formatstring( text.data(), text.capacity(), "active=%u field=%u hoveredID=%u hoveredWindow=%s wantTextInput=%d",
                               static_cast<uint32>( imguiContext.ActiveId ), bHasMark ? mark._itemID : 0u, static_cast<uint32>( imguiContext.HoveredId ),
                               pHoveredWindow != nullptr && pHoveredWindow->Name != nullptr ? pHoveredWindow->Name : "(none)",
                               ImGui::GetIO().WantTextInput ? 1 : 0 );

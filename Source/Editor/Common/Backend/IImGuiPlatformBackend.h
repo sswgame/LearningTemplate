@@ -41,7 +41,7 @@ namespace sw::editor
         virtual bool processEvent( const NativeWindowEvent& event ) = 0;
 
         /** @brief 메인 창이 놓인 모니터의 DPI 배율(96 DPI = 1)입니다. 모르는 플랫폼은 1 입니다. `initialize` 뒤에 부릅니다. */
-        virtual float32 getDpiScale() const { return 1.0f; }
+        virtual float32 getDPIScale() const { return 1.0f; }
 
         // ------------------------------------------------------------------------------
         // 2) 팩토리 (현재 플랫폼 구현)

@@ -85,7 +85,7 @@ namespace sw
     /** @brief 전투 설정입니다. */
     struct DeckBattleSettings
     {
-        int32 _playerHp{ 50 };
+        int32 _playerHP{ 50 };
         int32 _energyPerTurn{ 3 };
         int32 _drawPerTurn{ 5 };
         int32 _handLimit{ 10 }; ///< 손이 넘치게 뽑은 패는 바로 버린 더미로 간다
@@ -148,7 +148,7 @@ namespace sw
         const CardPile&          getDiscardPile() const { return _discardPile; }
         const CardPile&          getExhaustPile() const { return _exhaustPile; }
         const DeckBattleEnemy&   getEnemy() const { return _enemy; }
-        int32                    getPlayerHp() const { return _playerHp; }
+        int32                    getPlayerHP() const { return _playerHP; }
         int32                    getPlayerBlock() const { return _playerBlock; }
         int32                    getEnergy() const { return _energy; }
         int32                    getTurn() const { return _turn; }
@@ -168,7 +168,7 @@ namespace sw
         DeckBattleSettings       _settings;
         GameRandom               _random;
         const DeckBattleCatalog* _pCatalog;
-        int32                    _playerHp;
+        int32                    _playerHP;
         int32                    _playerBlock;
         int32                    _energy;
         int32                    _turn;

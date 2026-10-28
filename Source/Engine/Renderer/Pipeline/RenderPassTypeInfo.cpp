@@ -4,8 +4,8 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Graphics/Debug/GpuAssert.h"
-#include "Engine/Graphics/Debug/GpuNanCheck.h"
+#include "Engine/Graphics/Debug/GPUAssert.h"
+#include "Engine/Graphics/Debug/GPUNanCheck.h"
 
 namespace sw
 {
@@ -112,7 +112,7 @@ namespace sw
                     case RenderPassType::SSAO:
                     {
                         // 꺼지면(후처리를 끈 뷰 · 품질) 기록하지 않고 출력이 없다 — 읽는 쪽은 AO 역할을 바인딩하지 않아 가림 없음(1)이다(kOmittedWhenOff).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderSSAO;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
                         break;
@@ -147,8 +147,8 @@ namespace sw
                     {
                         // 기록은 깊이로 지난 프레임 자리에 재투영하고 이번 원본의 이웃 범위로 자른다(taa.hlsl) — 깊이가 없으면 움직일 때 앞 그림이 겹친다.
                         // 후처리를 끈 뷰(CCTV)에서는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource, 출력은 원본과 같은 형식 — 검증 3-6).
-                        // 일반 풀스크린 패스가 아니라 실행은 executeTaaPass 이고, 출력 타깃은 셋업이 기록 형식으로 읽으므로 늘 만든다(ensureTaaHistory).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderTaa;
+                        // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 출력 타깃은 셋업이 기록 형식으로 읽으므로 늘 만든다(ensureTAAHistory).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderTAA;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
                         info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
@@ -272,7 +272,7 @@ namespace sw
                     case RenderPassType::GPUCull:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGpuAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUAssertTarget;
                         break;
                     }
                     case RenderPassType::InstanceAnimation:
@@ -292,7 +292,7 @@ namespace sw
                     case RenderPassType::MeshMorph:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
-                        info._flags          = Flag::kCompute | Flag::kGpuAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
                         break;
                     }
                     case RenderPassType::MeshSkin:
@@ -308,17 +308,17 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
-                    case RenderPassType::VfxSimulation:
+                    case RenderPassType::VFXSimulation:
                     {
                         // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVfxSimulation;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXSimulation;
                         info._flags          = Flag::kCompute;
                         break;
                     }
-                    case RenderPassType::VfxMeshInstance:
+                    case RenderPassType::VFXMeshInstance:
                     {
                         // 인스턴스 버퍼 UAV 에 쓰고 구조 버퍼만 읽는다 — 간접 인자 능력과 무관하다(컬링이 없는 DX11 은 CPU 개수로 모두 그린다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVfxMeshInstance;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXMeshInstance;
                         info._flags          = Flag::kCompute;
                         break;
                     }
@@ -350,7 +350,7 @@ namespace sw
                     {
                         // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(createOutputPSOVariants). 엔진 PSO 는 쓰지 않는다.
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
-                        info._pPassDefine      = kPassFsrRcasDefine;
+                        info._pPassDefine      = kPassFSRRcasDefine;
                         info._colorTargetCount = 1;
                         info._flags            = Flag::kOutputPass;
                         break;
@@ -373,7 +373,7 @@ namespace sw
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
-                        info._flags          = Flag::kCompute | Flag::kGpuAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
                         break;
                     }
                     case RenderPassType::NanCheck:
@@ -433,7 +433,7 @@ namespace sw
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
                         return false;
-                    // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTaaPass)이 본다.
+                    // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTAAPass)이 본다.
                     // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
                     const bool bExecutorHonorsSelection =
                         row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) );
@@ -483,8 +483,8 @@ namespace sw
                 selection._listDefine.push_back( passDefine );
         }
         // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
-        if ( info.hasFlag( RenderPassTraitFlag::kGpuAssertTarget ) && GpuAssertMonitor::isRequested() )
-            selection._listDefine.push_back( kGpuAssertDefine );
+        if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
+            selection._listDefine.push_back( kGPUAssertDefine );
         return selection;
     }
 
@@ -496,7 +496,7 @@ namespace sw
         switch ( type )
         {
             case RenderPassType::NanCheck:
-                return GpuNanCheck::isRequested();
+                return GPUNanCheck::isRequested();
             default:
                 return false;
         }

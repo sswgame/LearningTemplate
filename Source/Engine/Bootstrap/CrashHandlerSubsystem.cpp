@@ -44,9 +44,9 @@ namespace sw
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.
         const ModuleBuildID executableID = ModuleBuildID::find( nullptr );
         const ModuleBuildID engineID     = ModuleBuildID::find( reinterpret_cast<const void*>( &CrashHandler::setContextValue ) );
-        CrashHandler::setContextValue( "BuildId", executableID._id );
+        CrashHandler::setContextValue( "BuildID", executableID._id );
         if ( engineID._id != executableID._id )
-            CrashHandler::setContextValue( "EngineBuildId", engineID._id );
+            CrashHandler::setContextValue( "EngineBuildID", engineID._id );
         return SubsystemInitResult::Succeeded;
     }
 

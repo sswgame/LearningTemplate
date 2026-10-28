@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
     #include "Core/Common/X11Headers.h"
 #endif
 

@@ -139,7 +139,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        token;
         const bool                    bSigned = payload.has_value() &&
-                             JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
+                             JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the APNs provider token with the key '%#' - check the authentication key", _settings._keyID.c_str() );

@@ -28,7 +28,7 @@ namespace sw
     bool NetSecurityLoginCrypto::computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize )
     {
         // HKDF-SHA256 을 쓴다. 키를 비밀(IKM)로 삼고 솔트는 없으며(RFC 5869: 해시 길이만큼의 0), 정보는 라벨 뒤에 본문을 붙인 값이다.
-        return _pProvider != nullptr && _pProvider->computeHkdfSha256( pKey, keySize, nullptr, 0, pInfo, infoSize, pOut, outSize );
+        return _pProvider != nullptr && _pProvider->computeHkdfSHA256( pKey, keySize, nullptr, 0, pInfo, infoSize, pOut, outSize );
     }
 
     bool NetSecurityLoginCrypto::isPasswordHashSupported( const NetPasswordHashParams& params )

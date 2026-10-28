@@ -316,7 +316,7 @@ namespace sw::editor
             return false;
         }
 
-        float32 getDpiScale() const override
+        float32 getDPIScale() const override
         {
             if ( _pWindow == nullptr )
                 return 1.0f;
@@ -377,7 +377,7 @@ namespace sw::editor
             monitor.MainSize = ImVec2( static_cast<float32>( _pWindow->getWidth() ), static_cast<float32>( _pWindow->getHeight() ) );
             monitor.WorkPos  = monitor.MainPos;
             monitor.WorkSize = monitor.MainSize;
-            monitor.DpiScale = getDpiScale();
+            monitor.DpiScale = getDPIScale();
             platformIO.Monitors.push_back( monitor );
         }
 

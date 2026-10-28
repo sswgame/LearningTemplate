@@ -212,7 +212,7 @@ namespace sw
         uint8 _bHasUIMinRange          : 1;
         uint8 _bHasUIMaxRange          : 1;
         uint8 _bEditConditionHides     : 1;
-        uint8 _bColorHdr               : 1;
+        uint8 _bColorHDR               : 1;
         uint8 _bMultiline              : 1;
         uint8 _bHasStep                : 1;
         uint8 _bHasMaxCount            : 1;
@@ -275,7 +275,7 @@ namespace sw
             , _bHasUIMinRange{ SW_FALSE }
             , _bHasUIMaxRange{ SW_FALSE }
             , _bEditConditionHides{ SW_FALSE }
-            , _bColorHdr{ SW_FALSE }
+            , _bColorHDR{ SW_FALSE }
             , _bMultiline{ SW_FALSE }
             , _bHasStep{ SW_FALSE }
             , _bHasMaxCount{ SW_FALSE }

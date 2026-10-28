@@ -10,7 +10,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 #endif
 
 namespace sw
@@ -77,7 +77,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         utf16 windowsDirectory[constant::kMaxPathSize];
         if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDirectory ), constant::kMaxPathSize ) != 0 )
-            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDirectory ), "Fonts" ) );
+            SystemFontLocatorInternal::appendIfDirectory( listDirectory, FileUtil::joinPath( StringUtil::utf16ToUTF8( windowsDirectory ), "Fonts" ) );
         // 관리자 권한 없이 설치한 글꼴(Windows 10 1809+)은 사용자 폴더에 있다.
         string localAppData;
         if ( ProcessEnvironment::tryReadNonEmpty( "LOCALAPPDATA", localAppData ) ) // 빈 값이면 현재 폴더 아래 상대 경로를 뒤지게 되므로 없는 것으로 본다

@@ -59,10 +59,10 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 
 // 정렬할 값은 인스턴스 번호 하나다 — 번호가 곧 CPU 가 정한 그리는 순서다(위 주석).
-groupshared uint s_arrId[SW_SORT_MAX_ELEMENTS];
+groupshared uint s_arrID[SW_SORT_MAX_ELEMENTS];
 
 SW_NUMTHREADS( SW_SORT_THREADS, 1, 1 )
-void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID )
+void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID )
 {
     const uint batchIndex = groupId.x;
     if ( batchIndex >= g_BatchCount )
@@ -92,7 +92,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
     // 인스턴스 번호가 범위를 벗어나도(있어선 안 되지만) 값 그대로 정렬된다 — 그리는 쪽이 g_SwInstanceCount 로 막는다.
     // 추가 뷰는 키 = (그 뷰의 순번 << 9) | 배치 안 번호다(배치 안 번호는 SW_SORT_MAX_ELEMENTS 미만 — 9 비트). 되쓸 때 아래 9 비트로 번호를 되찾는다.
     // 정렬하는 배치(sortMode 2)는 투명 배치뿐이고 그 인스턴스는 모두 꼬리라 순번이 있다.
-    for ( uint loadIndex = groupThreadId.x; loadIndex < (uint)SW_SORT_MAX_ELEMENTS; loadIndex += SW_SORT_THREADS )
+    for ( uint loadIndex = groupThreadID.x; loadIndex < (uint)SW_SORT_MAX_ELEMENTS; loadIndex += SW_SORT_THREADS )
     {
         uint key = 0xFFFFFFFFu;
         if ( loadIndex < count )
@@ -108,7 +108,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
                 key = instanceId;
             }
         }
-        s_arrId[loadIndex] = key;
+        s_arrID[loadIndex] = key;
     }
     GroupMemoryBarrierWithGroupSync();
 
@@ -119,19 +119,19 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         for ( uint compareDistance = blockSize >> 1u; compareDistance > 0u; compareDistance >>= 1u )
         {
             // sortLength 를 넘는 단계는 할 일이 없다 — 분기 안에 배리어가 없으므로 가변 값으로 걸러도 된다.
-            for ( uint elementIndex = groupThreadId.x; elementIndex < sortLength && blockSize <= sortLength; elementIndex += SW_SORT_THREADS )
+            for ( uint elementIndex = groupThreadID.x; elementIndex < sortLength && blockSize <= sortLength; elementIndex += SW_SORT_THREADS )
             {
                 const uint partner = elementIndex ^ compareDistance;
                 if ( partner > elementIndex )
                 {
                     // (elementIndex & blockSize) == 0 이면 이 구간은 오름차순으로 맞춘다.
                     const bool bAscending = ( ( elementIndex & blockSize ) == 0u );
-                    const bool bSwap      = bAscending ? ( s_arrId[elementIndex] > s_arrId[partner] ) : ( s_arrId[elementIndex] < s_arrId[partner] );
+                    const bool bSwap      = bAscending ? ( s_arrID[elementIndex] > s_arrID[partner] ) : ( s_arrID[elementIndex] < s_arrID[partner] );
                     if ( bSwap )
                     {
-                        const uint swapId     = s_arrId[elementIndex];
-                        s_arrId[elementIndex] = s_arrId[partner];
-                        s_arrId[partner]      = swapId;
+                        const uint swapID     = s_arrID[elementIndex];
+                        s_arrID[elementIndex] = s_arrID[partner];
+                        s_arrID[partner]      = swapID;
                     }
                 }
             }
@@ -139,9 +139,9 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         }
     }
 
-    for ( uint storeIndex = groupThreadId.x; storeIndex < count; storeIndex += SW_SORT_THREADS )
+    for ( uint storeIndex = groupThreadID.x; storeIndex < count; storeIndex += SW_SORT_THREADS )
     {
-        const uint key                           = s_arrId[storeIndex];
+        const uint key                           = s_arrID[storeIndex];
         g_VisibleInstanceIDs[slots + storeIndex] = ( g_UseViewRank != 0u ) ? ( base + ( key & 0x1FFu ) ) : key;
     }
 }

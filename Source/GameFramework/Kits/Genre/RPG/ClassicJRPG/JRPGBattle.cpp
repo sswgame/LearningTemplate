@@ -83,7 +83,7 @@ namespace sw
                 continue;
             JRPGEnemyState state;
             state._enemyID = enemyID;
-            state._hp      = pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHp )];
+            state._hp      = pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHP )];
             _listEnemy.push_back( state );
         }
         _listCommand.assign( static_cast<size_t>( pParty->getMemberCount() ), JRPGCommand{} );
@@ -342,7 +342,7 @@ namespace sw
         }
         if ( member._mp < pSpell->_mpCost )
         {
-            pushEvent( JRPGBattleEvent::Kind::NotEnoughMp, false, memberIndex, command._target, 0, command._id );
+            pushEvent( JRPGBattleEvent::Kind::NotEnoughMP, false, memberIndex, command._target, 0, command._id );
             return;
         }
         const bool bUsesInner = _settings._bWuxia && pSpell->_innerCost > 0;
@@ -397,12 +397,12 @@ namespace sw
             if ( pSpell->_kind == JRPGSpellKind::Heal && ally.isAlive() )
             {
                 const int32 before = ally._hp;
-                ally._hp           = MathUtil::min( ally.getStat( JRPGStat::MaxHp ), ally._hp + pSpell->_power + member.getStat( JRPGStat::Intellect ) / 2 );
+                ally._hp           = MathUtil::min( ally.getStat( JRPGStat::MaxHP ), ally._hp + pSpell->_power + member.getStat( JRPGStat::Intellect ) / 2 );
                 pushEvent( JRPGBattleEvent::Kind::Healed, false, memberIndex, target, ally._hp - before, pSpell->_id );
             }
             else if ( pSpell->_kind == JRPGSpellKind::Revive && ally.isAlive() == false )
             {
-                ally._hp = MathUtil::max( 1, ally.getStat( JRPGStat::MaxHp ) / 2 );
+                ally._hp = MathUtil::max( 1, ally.getStat( JRPGStat::MaxHP ) / 2 );
                 pushEvent( JRPGBattleEvent::Kind::Revived, false, memberIndex, target, ally._hp, pSpell->_id );
             }
         }

@@ -476,22 +476,22 @@ static const float kDielectricSpecular = 0.04f;  // 유전체의 수직 반사�
 static const float kMinRoughness       = 0.045f; // 거칠기 0 의 GGX 는 점 하나라 반짝임이 사라지고 나눗셈이 터진다(필라멘트의 하한)
 
 /** @brief PBR 표면 — 금속도가 기본 색을 확산색과 F0 로 나눈다(언리얼 DiffuseColor · SpecularColor). */
-struct SurfacePbr
+struct SurfacePBR
 {
     float3 _diffuseColor;
     float3 _specularColor; // F0
     float  _roughness;     // 지각 거칠기(하한을 건 값)
     float  _alpha;         // GGX α = 거칠기²
 
-    static SurfacePbr make( float3 baseColor, float roughness, float metallic );
+    static SurfacePBR make( float3 baseColor, float roughness, float metallic );
     float3 evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight );
     float3 computeEnvironmentSpecular( float normalDotView );
 };
 
-static SurfacePbr SurfacePbr::make( float3 baseColor, float roughness, float metallic )
+static SurfacePBR SurfacePBR::make( float3 baseColor, float roughness, float metallic )
 {
     const float clampedMetallic = saturate( metallic );
-    SurfacePbr  surface;
+    SurfacePBR  surface;
     surface._diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
     surface._specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
     surface._roughness     = max( saturate( roughness ), kMinRoughness );
@@ -513,7 +513,7 @@ static float3 View::computeToView( float3 worldPosition )
 }
 
 /** @brief 빛 하나의 반사 BRDF × π(엔진 단위) × N·L 입니다. 언리얼 `SpecularGGX` 의 D_GGX · Vis_SmithJointApprox · F_Schlick 과 같다. */
-float3 SurfacePbr::evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight )
+float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight )
 {
     const float3 halfway       = normalize( toView + toLight );
     const float  normalDotHalf = saturate( dot( normal, halfway ) );
@@ -535,7 +535,7 @@ float3 SurfacePbr::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
  * @brief 고른 환경광 아래의 반사 비율(반구 적분)의 근사입니다 — 언리얼 모바일 `EnvBRDFApprox`(Karis 2014).
  * @details 환경 반사의 빛은 반사 프로브(IndirectLighting.md P4)가 덮는 곳은 그 프로브의 빛, 아니면 앰비언트 색 하나다. 이 비율을 곱해야 금속이 그늘에서 검게 죽지 않는다.
  */
-float3 SurfacePbr::computeEnvironmentSpecular( float normalDotView )
+float3 SurfacePBR::computeEnvironmentSpecular( float normalDotView )
 {
     const float4 c0        = float4( -1.0f, -0.0275f, -0.572f, 0.022f );
     const float4 c1        = float4( 1.0f, 0.0425f, 1.04f, -0.04f );
@@ -572,7 +572,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
 {
     // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
     albedo                         = ViewMode::overrideLightingAlbedo( albedo );
-    const SurfacePbr surface       = SurfacePbr::make( albedo, roughness, metallic );
+    const SurfacePBR surface       = SurfacePBR::make( albedo, roughness, metallic );
     const float3     toView        = View::computeToView( worldPosition );
     const float      normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
     // 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.

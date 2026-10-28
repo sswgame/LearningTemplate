@@ -241,7 +241,7 @@ namespace sw::editor
             return;
         }
 
-        const float32 side     = 256.0f * EditorThemeUtil::getDpiScale();
+        const float32 side     = 256.0f * EditorThemeUtil::getDPIScale();
         const ImVec2  imageMin = ImGui::GetCursorScreenPos();
         ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2( side, side ) );
         const bool bHovered = ImGui::IsItemHovered();

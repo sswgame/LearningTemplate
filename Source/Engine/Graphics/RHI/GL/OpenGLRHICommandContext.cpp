@@ -409,7 +409,7 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
         // 레코드가 말해 준다. 다른 레지스트리를 넘겨짚지 않는다.
@@ -422,7 +422,7 @@ namespace sw
 
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
         {
-            SW_LOG_WARNING( "bindComputeUav: index %# is not a registered UAV.", index );
+            SW_LOG_WARNING( "bindComputeUAV: index %# is not a registered UAV.", index );
             return;
         }
 
@@ -431,22 +431,22 @@ namespace sw
         if ( record._texture != 0 )
         {
             // RW 텍스처. u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
-            if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
+            if ( slot < shaderslot::kComputeTextureUAV0 || slot >= shaderslot::kComputeTextureUAV0 + shaderslot::kComputeTextureUAVSlotCount )
             {
-                SW_LOG_WARNING( "bindComputeUav: tried to bind an RW texture to a buffer slot (u%#).", slot );
+                SW_LOG_WARNING( "bindComputeUAV: tried to bind an RW texture to a buffer slot (u%#).", slot );
                 return;
             }
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( record._texture );
             if ( pRecord == nullptr || pRecord->_texture == 0 )
                 return;
-            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUav0 ), pRecord->_texture, 0,
+            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUAV0 ), pRecord->_texture, 0,
                                 GL_FALSE, 0, GL_READ_WRITE, pRecord->_internalFormat );
             return;
         }
 
         if ( record._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindComputeUav: the UAV record at index %# is empty.", index );
+            SW_LOG_WARNING( "bindComputeUAV: the UAV record at index %# is empty.", index );
             return;
         }
 
@@ -454,7 +454,7 @@ namespace sw
         if ( ssbo == 0 )
             return;
         // u# → 계약 SSBO 번호. `-fvk-u-shift`(= SW_GL_UAV_BINDING0) 와 반드시 같아야 한다.
-        glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUavBinding0 + slot, ssbo );
+        glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUAVBinding0 + slot, ssbo );
     }
 
     void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -914,10 +914,10 @@ namespace sw
         glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
     }
 
-    void OpenGLRHICommandContext::writeBreadcrumb( uint32 markerId )
+    void OpenGLRHICommandContext::writeBreadcrumb( uint32 markerID )
     {
-        // OpenGL 은 컨텍스트를 잃은 뒤 GPU 가 닿은 자리를 읽을 길이 없다(`RHICapabilities::_bGpuBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
-        (void)markerId;
+        // OpenGL 은 컨텍스트를 잃은 뒤 GPU 가 닿은 자리를 읽을 길이 없다(`RHICapabilities::_bGPUBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
+        (void)markerID;
     }
 
     void OpenGLRHICommandContext::beginEventMarker( const utf8* pName )

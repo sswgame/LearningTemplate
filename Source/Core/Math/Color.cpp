@@ -51,7 +51,7 @@ namespace sw
     const Color Color::kGray{ 0.5f, 0.5f, 0.5f, 1.0f };
     const Color Color::kTransparent{ 0.0f, 0.0f, 0.0f, 0.0f };
 
-    Color Color::fromRgba( const uint32 packed ) noexcept
+    Color Color::fromRGBA( const uint32 packed ) noexcept
     {
         return Color{ ColorInternal::fromByte( BitUtil::getByte( packed, 3 ) ), ColorInternal::fromByte( BitUtil::getByte( packed, 2 ) ), ColorInternal::fromByte( BitUtil::getByte( packed, 1 ) ), ColorInternal::fromByte( BitUtil::getByte( packed, 0 ) ) };
     }
@@ -100,7 +100,7 @@ namespace sw
         return true;
     }
 
-    uint32 Color::toRgba() const noexcept
+    uint32 Color::toRGBA() const noexcept
     {
         return BitUtil::packBytes( ColorInternal::toByte( _r ), ColorInternal::toByte( _g ), ColorInternal::toByte( _b ), ColorInternal::toByte( _a ) );
     }
@@ -118,7 +118,7 @@ namespace sw
     void Color::toHex( utf8 ( &outText )[10] ) const noexcept
     {
         outText[0] = '#';
-        HexDigitUtil::writeDigits( outText + 1, toRgba(), 8, HexCase::Upper );
+        HexDigitUtil::writeDigits( outText + 1, toRGBA(), 8, HexCase::Upper );
         outText[9] = '\0';
     }
 
@@ -132,7 +132,7 @@ namespace sw
         return Color{ ColorInternal::srgbToLinear( _r ), ColorInternal::srgbToLinear( _g ), ColorInternal::srgbToLinear( _b ), _a };
     }
 
-    Color Color::toSrgb() const noexcept
+    Color Color::toSRGB() const noexcept
     {
         return Color{ ColorInternal::linearToSRGB( _r ), ColorInternal::linearToSRGB( _g ), ColorInternal::linearToSRGB( _b ), _a };
     }

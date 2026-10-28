@@ -30,7 +30,7 @@ namespace sw
     /** @struct AutomationImage @brief 8 비트 RGB 이미지 한 장입니다(PPM P6 를 읽은 값). */
     struct AutomationImage
     {
-        vector<uint8> _listRgb{}; ///< 행 우선이며 픽셀마다 R, G, B 순서입니다.
+        vector<uint8> _listRGB{}; ///< 행 우선이며 픽셀마다 R, G, B 순서입니다.
         uint32        _width{ 0 };
         uint32        _height{ 0 };
     };

@@ -16,7 +16,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
+#include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
 
 #include <algorithm>
 
@@ -136,7 +136,7 @@ namespace sw
              *          않습니다 — 다시 쓰게 되면 gl_InstanceID 는 startInstance 를 빼고 센다는 점(Vulkan InstanceIndex 와 다르다)에
              *          주의하십시오. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
              */
-            static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
+            static void patchSPIRVBuiltinsForOpenGL( vector<uint8>& ioBytecode )
             {
                 if ( ioBytecode.size() < 20 || ( ioBytecode.size() % 4 ) != 0 )
                     return;
@@ -300,7 +300,7 @@ namespace sw
 
                 Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
                 Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-                wstring                          wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
+                wstring                          wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
 
                 vector<D3D_SHADER_MACRO> listMacro;
                 listMacro.reserve( desc._listDefine.size() + 3 );
@@ -368,18 +368,18 @@ namespace sw
              *          전이 include 도 DXC 가 이 처리기를 거쳐 읽으므로 모두 잡힌다. 참조 수로 사는 COM 객체다 — `make_unique(...).release()` 로 만들어
              *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다.
              */
-            class RecordingDxcInclude final : public IDxcIncludeHandler
+            class RecordingDXCInclude final : public IDxcIncludeHandler
             {
             public:
-                explicit RecordingDxcInclude( DxcComPtr<IDxcIncludeHandler> pInner )
+                explicit RecordingDXCInclude( DxcComPtr<IDxcIncludeHandler> pInner )
                     : _pInner{ std::move( pInner ) }
                     , _listIncludedFile{}
                     , _refCount{ 1 }
                 {
                 }
 
-                RecordingDxcInclude( const RecordingDxcInclude& )            = delete;
-                RecordingDxcInclude& operator=( const RecordingDxcInclude& ) = delete;
+                RecordingDXCInclude( const RecordingDXCInclude& )            = delete;
+                RecordingDXCInclude& operator=( const RecordingDXCInclude& ) = delete;
 
                 /** @brief 지금까지 연 파일을 정렬 · 중복 제거해 돌려주고 기록을 비웁니다. */
                 [[nodiscard]] vector<string> takeIncludedFiles() { return sortUniqueIncludedFile( std::move( _listIncludedFile ) ); }
@@ -392,7 +392,7 @@ namespace sw
                     const HRESULT hr      = _pInner->LoadSource( pFilename, ppIncludeSource );
                     const bool    bLoaded = SUCCEEDED( hr ) && *ppIncludeSource != nullptr;
                     if ( bLoaded )
-                        _listIncludedFile.push_back( FileUtil::normalizeSeparators( StringUtil::utf16ToUtf8( pFilename ) ) ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
+                        _listIncludedFile.push_back( FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) ) ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
                     return hr;
                 }
 
@@ -429,7 +429,7 @@ namespace sw
              * @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다.
              * @details 핸들은 일부러 내리지 않는다 — 만든 DXC 객체(COM)가 프로세스 끝까지 쓰일 수 있고 함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
              */
-            static DxcCreateInstanceProc findDxcCreateInstance()
+            static DxcCreateInstanceProc findDXCCreateInstance()
             {
                 static auto s_getDxCompilerHandle = []() -> void*
                 {
@@ -453,20 +453,20 @@ namespace sw
                     return ModuleImageUtil::loadDynamicLibrary( libName );
                 };
                 static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
-                static DxcCreateInstanceProc s_fnDxcCreateInstance = ( s_pDxCompiler != nullptr )
+                static DxcCreateInstanceProc s_fnDXCCreateInstance = ( s_pDxCompiler != nullptr )
                                                                        ? reinterpret_cast<DxcCreateInstanceProc>( ModuleImageUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
                                                                        : nullptr;
-                return s_fnDxcCreateInstance;
+                return s_fnDXCCreateInstance;
             }
 
             /** @brief 타깃(SPIR-V 레이아웃 · 레지스터 시프트, 타깃 매크로)과 스테이지에 따른 DXC 인자를 더합니다. 넣는 글은 모두 정적 수명입니다. */
-            static void appendDxcTargetArguments( const ShaderCompileDesc& desc, vector<LPCWSTR>& listArgument )
+            static void appendDXCTargetArguments( const ShaderCompileDesc& desc, vector<LPCWSTR>& listArgument )
             {
                 if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                 {
                     // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
                     // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
-                    static const wstring s_targetEnv = StringUtil::utf8ToUtf16(
+                    static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
                         ( string( "-fspv-target-env=vulkan" ) + to_string( constant::kVulkanRequiredMajor ) + "." +
                           to_string( constant::kVulkanRequiredMinor ) )
                             .c_str() );
@@ -478,9 +478,9 @@ namespace sw
                     listArgument.push_back( L"-fvk-use-dx-layout" );
                     // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
                     // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
-                    static const wstring s_bShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kBShift ).c_str() );
-                    static const wstring s_tShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kTShift ).c_str() );
-                    static const wstring s_uShift = StringUtil::utf8ToUtf16( to_string( shaderslot::vk::kUShift ).c_str() );
+                    static const wstring s_bShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kBShift ).c_str() );
+                    static const wstring s_tShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kTShift ).c_str() );
+                    static const wstring s_uShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kUShift ).c_str() );
                     listArgument.push_back( L"-fvk-b-shift" );
                     listArgument.push_back( s_bShift.c_str() );
                     listArgument.push_back( L"0" );
@@ -502,7 +502,7 @@ namespace sw
                     listArgument.push_back( L"0" );
                     // GL 의 u# → SSBO binding 은 계약(SW_GL_UAV_BINDING0)이 정한다. common.hlsli 의 OPENGL 용
                     // RW 버퍼 매크로가 명시 binding 을 두지 않아 이 시프트가 적용된다. b/t 는 명시 binding 이라 시프트와 무관하다.
-                    static const wstring s_uavShift = StringUtil::utf8ToUtf16( to_string( shaderslot::gl::kUavBinding0 ).c_str() );
+                    static const wstring s_uavShift = StringUtil::utf8ToUTF16( to_string( shaderslot::gl::kUAVBinding0 ).c_str() );
                     listArgument.push_back( L"-fvk-u-shift" );
                     listArgument.push_back( s_uavShift.c_str() );
                     listArgument.push_back( L"0" );
@@ -540,10 +540,10 @@ namespace sw
              * @brief DXC 로 DXIL · SPIR-V 를 컴파일합니다. 성공하면 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
              * @details 생성 · 소스 읽기 · 인자 · 컴파일 · 결과 읽기의 순서가 곧 의미이고 인자 글의 수명이 이 함수 안이라 더 나누지 않는다.
              */
-            static DxcOutcome compileDxc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
+            static DxcOutcome compileDXC( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
             {
-                DxcCreateInstanceProc fnDxcCreateInstance = findDxcCreateInstance();
-                if ( fnDxcCreateInstance == nullptr )
+                DxcCreateInstanceProc fnDXCCreateInstance = findDXCCreateInstance();
+                if ( fnDXCCreateInstance == nullptr )
                 {
                     SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
                     return DxcOutcome::NoOutput;
@@ -556,15 +556,15 @@ namespace sw
                 // 다른 구성은 그대로 병렬이다. 이 구성에서는 DXC 안쪽의 경쟁을 검사하지 않는다.
                 // libdxcompiler 를 부르는 다른 자리 `ShaderReflectionDx`(DXIL 리플렉션)는 Windows 전용 파일이고 TSan 구성은 리눅스 전용(Sanitizer.cmake)이라 그 구성에 없다.
                 // 리눅스에서 DXIL 리플렉션을 켜면 이 직렬화를 두 호출처가 함께 쓰는 한 함수로 올린다(뮤텍스를 하나 더 두면 서로를 막지 못한다).
-                static mutex      s_mutexDxcSerial;
-                ScopedLock<mutex> dxcSerialLock{ s_mutexDxcSerial };
+                static mutex      s_mutexDXCSerial;
+                ScopedLock<mutex> dxcSerialLock{ s_mutexDXCSerial };
     #endif
 
                 DxcComPtr<IDxcUtils>     utils;
                 DxcComPtr<IDxcCompiler3> compiler;
-                HRESULT                  hrInit = fnDxcCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
+                HRESULT                  hrInit = fnDXCCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
                 if ( SUCCEEDED( hrInit ) )
-                    fnDxcCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
+                    fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
                 else
                     SW_LOG_ERROR( "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
@@ -579,11 +579,11 @@ namespace sw
                     SW_LOG_ERROR( "DXC CreateDefaultIncludeHandler failed: 0x%#", hrInclude );
                     return DxcOutcome::NoOutput;
                 }
-                RecordingDxcInclude*          pIncludeRecorder = make_unique<RecordingDxcInclude>( std::move( defaultIncludeHandler ) ).release();
+                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( std::move( defaultIncludeHandler ) ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
                 includeHandler.Attach( pIncludeRecorder );
 
-                wstring                     wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
+                wstring                     wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
                 DxcComPtr<IDxcBlobEncoding> sourceBlob;
                 HRESULT                     hrLoad = utils->LoadFile( wPath.c_str(), nullptr, dxcAddressOf( sourceBlob ) );
                 if ( FAILED( hrLoad ) )
@@ -592,8 +592,8 @@ namespace sw
                     return DxcOutcome::NoOutput;
                 }
 
-                wstring wEntryPoint = StringUtil::utf8ToUtf16( desc._entryPoint.c_str() );
-                wstring wProfile    = StringUtil::utf8ToUtf16( profile.c_str() );
+                wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
+                wstring wProfile    = StringUtil::utf8ToUTF16( profile.c_str() );
 
                 // 인자 글의 수명: 아래 지역 벡터(경로 · 매크로)와 정적 글이 Compile 이 끝날 때까지 산다.
                 vector<LPCWSTR> listArgument;
@@ -617,12 +617,12 @@ namespace sw
                 listIncludeDirW.reserve( listIncludeDir.size() );
                 for ( const string& dir : listIncludeDir )
                 {
-                    listIncludeDirW.push_back( StringUtil::utf8ToUtf16( dir.c_str() ) );
+                    listIncludeDirW.push_back( StringUtil::utf8ToUTF16( dir.c_str() ) );
                     listArgument.push_back( L"-I" );
                     listArgument.push_back( listIncludeDirW.back().c_str() );
                 }
 
-                appendDxcTargetArguments( desc, listArgument );
+                appendDXCTargetArguments( desc, listArgument );
 
                 for ( const ShaderMacroDefine& def : desc._listDefine )
                 {
@@ -631,7 +631,7 @@ namespace sw
                     string defineStr = def._name;
                     defineStr += "=";
                     defineStr += def._value;
-                    listDefineArg.push_back( StringUtil::utf8ToUtf16( defineStr.c_str() ) );
+                    listDefineArg.push_back( StringUtil::utf8ToUTF16( defineStr.c_str() ) );
                     listArgument.push_back( L"-D" );
                     listArgument.push_back( listDefineArg.back().c_str() );
                 }
@@ -682,7 +682,7 @@ namespace sw
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
                 if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                    patchSpirvBuiltinsForOpenGL( outResult._bytecode );
+                    patchSPIRVBuiltinsForOpenGL( outResult._bytecode );
                 outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
                 outResult._bSuccess         = true;
     #if defined( SW_DEBUG )
@@ -771,7 +771,7 @@ namespace sw
         }
     }
 
-    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& requestDesc )
+    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
     {
         using Internal = ShaderCompilerInternal;
         // 에뮬 슬롯 표(shaderslot::emulated)를 `SW_EMU_SLOT_<이름>=<슬롯>` 로 모든 컴파일에 더한다 — binding.hlsli 의 Bindless::sampleIndex 가 읽는다.
@@ -859,7 +859,7 @@ namespace sw
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-        const Internal::DxcOutcome outcome = Internal::compileDxc( desc, absPathStr, profile, result );
+        const Internal::DxcOutcome outcome = Internal::compileDXC( desc, absPathStr, profile, result );
         if ( outcome == Internal::DxcOutcome::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );

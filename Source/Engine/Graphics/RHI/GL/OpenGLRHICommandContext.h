@@ -22,7 +22,7 @@ namespace sw
         /** @brief OpenGL 은 리소스 상태를 추적하지 않습니다. 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
-        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
@@ -42,7 +42,7 @@ namespace sw
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerId ) override;
+        void writeBreadcrumb( uint32 markerID ) override;
         void endEventMarker() override;
         void setPipelineState( RHIPipelineStateHandle pso ) override;
         void setComputePipelineState( RHIPipelineStateHandle pso ) override;

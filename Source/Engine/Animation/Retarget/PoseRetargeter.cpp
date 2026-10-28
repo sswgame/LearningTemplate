@@ -315,7 +315,7 @@ namespace sw
             if ( chain._listTargetBone.size() == 3 )
                 (void)RigIKSolver::solveTwoBone( _targetBuffer, chain._listTargetBone[0], chain._listTargetBone[1], targetEnd, _listGoal[chainIndex], nullptr, space );
             else
-                (void)RigIKSolver::solveFabrik( _targetBuffer, chain._listTargetBone, _listGoal[chainIndex], {}, settings, space );
+                (void)RigIKSolver::solveFABRIK( _targetBuffer, chain._listTargetBone, _listGoal[chainIndex], {}, settings, space );
             _targetBuffer.setModelRotation( targetEnd, endRotation );
         }
 

@@ -65,7 +65,7 @@ namespace sw
         {
             const RHIPipelineStateHandle animationPSO        = getEnginePSO( RenderPassType::InstanceAnimation );
             const bool                   bSpinAnimationReady = animationPSO != 0 && _deform._instanceAnimationCb.isValid() &&
-                                             _gpuScene.getInstanceUav() != kInvalidDescriptorIndex;
+                                             _gpuScene.getInstanceUAV() != kInvalidDescriptorIndex;
             if ( bSpinAnimationReady )
             {
                 FrameRendererUtil::GPUAnimationParams animationParams{};
@@ -83,7 +83,7 @@ namespace sw
                 _pCmd->setComputePipelineState( animationPSO );
                 // AnimationParams(b0) / g_InstancesRW(u0). instanceanimation.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _deform._instanceAnimationCb._index, 0 );
-                _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
+                _pCmd->bindComputeUAV( _gpuScene.getInstanceUAV(), 0 );
                 const uint32 animationGroups = ( instanceCount + 63u ) / 64u;
                 if ( animationGroups > 0 )
                     _pCmd->dispatchCompute( animationGroups, 1, 1 );
@@ -243,8 +243,8 @@ namespace sw
         }
 
         const RHIPipelineStateHandle morphPSO         = getEnginePSO( RenderPassType::MeshMorph );
-        const RHIDescriptorIndex     programSrv       = _deform._meshMorphPool.getDeformProgramBuffer()._srv;
-        const bool                   bMissingResource = morphPSO == 0 || _deform._meshMorphCb.isValid() == false || programSrv == kInvalidDescriptorIndex;
+        const RHIDescriptorIndex     programSRV       = _deform._meshMorphPool.getDeformProgramBuffer()._srv;
+        const bool                   bMissingResource = morphPSO == 0 || _deform._meshMorphCb.isValid() == false || programSRV == kInvalidDescriptorIndex;
         if ( bMissingResource )
             return;
 
@@ -264,8 +264,8 @@ namespace sw
         _pCmd->bindComputeConstantBuffer( _deform._meshMorphCb._index, 0 );
         // MorphParams(b0) / g_RestVertices(t0) / g_DeformPrograms(t1, 칸 표 + 변형 프로그램) / g_MorphVerticesRW(u0). meshmorph.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getRestBuffer()._srv, 0 );
-        _pCmd->bindComputeShaderResource( programSrv, 1 );
-        _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
+        _pCmd->bindComputeShaderResource( programSRV, 1 );
+        _pCmd->bindComputeUAV( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         _gpuAssert.bind( *_pCmd ); // meshmorph.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
@@ -306,21 +306,21 @@ namespace sw
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinWeightBuffer()._srv, 1 );
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
-        _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
+        _pCmd->bindComputeUAV( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
         if ( skinGroups > 0 )
             _pCmd->dispatchCompute( skinGroups, 1, 1 );
         _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
-    void FrameRenderer::computeLodFadeStep()
+    void FrameRenderer::computeLODFadeStep()
     {
         // 전환 진행량은 렌더 프레임 간격(벽시계)에서 센다 — 진행이 게임 시간이 아니라 화면에서 보이는 시간이다. 간격이 길어도(정지 · 히치) 한 프레임에 끝내지 않도록 0.1 초로 막는다.
         constexpr float32 kMaxFrameSeconds = 0.1f;
         const int64       nowNanoseconds   = MonotonicClock::nowNanoseconds();
         const float32     frameSeconds     = ( _lodFadePreviousNanoseconds == 0 ) ? 0.0f : static_cast<float32>( nowNanoseconds - _lodFadePreviousNanoseconds ) * 1.0e-9f;
         _lodFadePreviousNanoseconds        = nowNanoseconds;
-        const float32 fadeSeconds          = _gpuScene.getLodCrossfadeSeconds();
+        const float32 fadeSeconds          = _gpuScene.getLODCrossfadeSeconds();
         if ( fadeSeconds <= 0.0f )
         {
             _lodFadeStep = 0;
@@ -341,12 +341,12 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        const bool bCullingUnavailable = getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
-                                         _gpuScene.getBatchInfoSrv() == kInvalidDescriptorIndex;
+        const bool bCullingUnavailable = getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
+                                         _gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex;
         if ( bCullingUnavailable )
             return;
 
-        computeLodFadeStep();
+        computeLODFadeStep();
         bool bAllViewsCulled = true;
         // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿 타일이 없으면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
         const bool bMainShadowSlotUnused = _cascadeCullCount > 0 && _frameShadow._listLocalTile.empty();
@@ -390,7 +390,7 @@ namespace sw
         // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). lightgrid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
         _pCmd->bindComputeShaderResource( _lightBuffer.getBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _lightBuffer.getGPUGridViewBuffer()._srv, 1 );
-        _pCmd->bindComputeUav( gridBuffer._uav, 0 );
+        _pCmd->bindComputeUAV( gridBuffer._uav, 0 );
         // 그룹 하나 = 뷰 하나. 그룹 안에서 세기 · 접두사 합 · 채우기를 그룹 동기화로 잇는다.
         _pCmd->dispatchCompute( viewCount, 1, 1 );
         // 조명 패스(포워드 · 디퍼드 · 투명)가 t12 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 예전 그리드를 읽는다).
@@ -399,7 +399,7 @@ namespace sw
 
     bool FrameRenderer::canCopyDepthHistory( const ViewTarget& view ) const
     {
-        const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUav != kInvalidDescriptorIndex;
+        const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
         if ( bHasSource == false || getEnginePSO( RenderPassType::DepthHistory ) == 0 )
             return false;
         return view._transientPool.find( attachmentNames()._sceneDepth.view() )._texture != 0;
@@ -475,25 +475,25 @@ namespace sw
         }
     }
 
-    VfxSimulationFrameInput FrameRenderer::makeVfxSimulationInput() const
+    VFXSimulationFrameInput FrameRenderer::makeVFXSimulationInput() const
     {
-        VfxSimulationFrameInput input{};
-        input._bSimulationPipelineReady = getEnginePSO( RenderPassType::VfxSimulation ) != 0;
-        input._bMeshPipelineReady       = getEnginePSO( RenderPassType::VfxMeshInstance ) != 0;
+        VFXSimulationFrameInput input{};
+        input._bSimulationPipelineReady = getEnginePSO( RenderPassType::VFXSimulation ) != 0;
+        input._bMeshPipelineReady       = getEnginePSO( RenderPassType::VFXMeshInstance ) != 0;
         input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         input._instanceBuffer           = _gpuScene.getInstanceBuffer();
-        input._instanceUav              = _gpuScene.getInstanceUav();
+        input._instanceUAV              = _gpuScene.getInstanceUAV();
         // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다. 구간이 없는 프레임(요청 없음 · 생산자가 GPU 가 아님)은 슬롯 수 0 이라 쓰지 않는다.
         input._lightBuffer    = _lightBuffer.getBuffer()._buffer;
-        input._lightUav       = _lightBuffer.getGPULightUav();
+        input._lightUAV       = _lightBuffer.getGPULightUAV();
         input._lightBase      = _lightBuffer.getGPULightBase();
         input._lightSlotCount = _lightBuffer.getGPULightCount();
-        // 깊이 충돌은 주 시점의 지난 깊이만 본다(VfxCollisionDef 설명의 한계). 옮길 수 없는 프레임(첫 프레임 · 크기가 바뀐 프레임)은 히스토리가 없다.
+        // 깊이 충돌은 주 시점의 지난 깊이만 본다(VFXCollisionDef 설명의 한계). 옮길 수 없는 프레임(첫 프레임 · 크기가 바뀐 프레임)은 히스토리가 없다.
         if ( canCopyDepthHistory( _mainView ) )
         {
             const TransientAttachmentPool::Attachment depth = _mainView._transientPool.find( attachmentNames()._sceneDepth.view() );
             input._depth._texture                           = _mainView._depthHistory;
-            input._depth._uav                               = _mainView._depthHistoryUav;
+            input._depth._uav                               = _mainView._depthHistoryUAV;
             input._depth._width                             = depth._width;
             input._depth._height                            = depth._height;
             input._depth._viewProj                          = _mainView._depthHistoryViewProj;
@@ -521,24 +521,24 @@ namespace sw
         // 인스턴스 LOD 선택은 그 뷰를 그리는 카메라로 한다. 추가 뷰는 자기 카메라, 그림자 슬롯과 주 시점은 주 카메라다(그림자는 가장 고운 단계가 아니라 카메라가 보는 단계로 그린다).
         // 절두체 밖의 가림 물체는 화면 크기가 0 이 아니라 거리에서 나온 값을 받는다 — CPU 선택(`AnimationLODUtil::computeScreenSize`)은 그 경우 가장 낮은 단계였다.
         const RenderView& lodView = ( pExtraView != nullptr ) ? pExtraView->_cullInput : _arrView[static_cast<uint32>( RenderViewType::Main )];
-        AnimationLODUtil::computeProjectionTerms( lodView._viewProj, cullParams._arrLodDepthRow, cullParams._arrLodView[3] );
-        cullParams._arrLodView[0]    = lodView._position._x;
-        cullParams._arrLodView[1]    = lodView._position._y;
-        cullParams._arrLodView[2]    = lodView._position._z;
-        cullParams._arrLodControl[0] = 1u;
+        AnimationLODUtil::computeProjectionTerms( lodView._viewProj, cullParams._arrLODDepthRow, cullParams._arrLODView[3] );
+        cullParams._arrLODView[0]    = lodView._position._x;
+        cullParams._arrLODView[1]    = lodView._position._y;
+        cullParams._arrLODView[2]    = lodView._position._z;
+        cullParams._arrLODControl[0] = 1u;
         // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다). 컷 · 처음 그리는 프레임은 상태를 비워 단계를 바로 맞춘다.
-        const bool        bHasLodState = _gpuScene.hasLodState( cullViewIndex );
+        const bool        bHasLODState = _gpuScene.hasLODState( cullViewIndex );
         const ViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _mainView;
         const bool        bViewCut     = lodTarget._bHasHistory == SW_FALSE || lodTarget._settings._bCut == SW_TRUE;
-        const bool        bResetState  = _gpuScene.takeLodStateReset( cullViewIndex ) || bViewCut;
-        cullParams._arrLodControl[1]   = bResetState ? 1u : 0u;
-        cullParams._arrLodControl[2]   = bHasLodState ? _lodFadeStep : 0u;
+        const bool        bResetState  = _gpuScene.takeLODStateReset( cullViewIndex ) || bViewCut;
+        cullParams._arrLODControl[1]   = bResetState ? 1u : 0u;
+        cullParams._arrLODControl[2]   = bHasLODState ? _lodFadeStep : 0u;
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
         const ViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
         if ( pOcclusionView != nullptr )
             fillOcclusionParams( *pOcclusionView, cullParams );
         const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;
-        const RHIDescriptorIndex occlusionSrv = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusionTilesPlaceholder._srv;
+        const RHIDescriptorIndex occlusionSRV = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusionTilesPlaceholder._srv;
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
@@ -548,24 +548,24 @@ namespace sw
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::GPUCull ) );
-        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
+        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
         // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
-        _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
-        _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
-        if ( occlusionSrv != kInvalidDescriptorIndex )
-            _pCmd->bindComputeShaderResource( occlusionSrv, 2 );
-        _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
-        _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
+        _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSRV(), 0 );
+        _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSRV(), 1 );
+        if ( occlusionSRV != kInvalidDescriptorIndex )
+            _pCmd->bindComputeShaderResource( occlusionSRV, 2 );
+        _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
+        _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
         // 전환 상태(u2)는 크로스페이드가 켜졌을 때만 읽고 쓴다. 없으면 자리만 채운다 — 셰이더가 진행량 0 이면 건드리지 않는다.
-        if ( bHasLodState )
+        if ( bHasLODState )
         {
             _pCmd->transitionBuffer( view._lodState._buffer, RHIBufferState::UnorderedAccess );
-            _pCmd->bindComputeUav( view._lodState._uav, 2 );
+            _pCmd->bindComputeUAV( view._lodState._uav, 2 );
         }
         else
         {
-            _pCmd->bindComputeUav( view._visibleInstances._uav, 2 );
+            _pCmd->bindComputeUAV( view._visibleInstances._uav, 2 );
         }
         _gpuAssert.bind( *_pCmd ); // gpucull.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
@@ -595,19 +595,19 @@ namespace sw
             sortParams._batchCount           = cullParams._batchCount;
             sortParams._bUseViewRank         = bViewRank ? 1u : 0u;
             sortParams._transparentTailBase  = bViewRank ? pExtraView->_transparentTailBase : 0u;
-            const RHIDescriptorIndex rankSrv = bViewRank ? pExtraView->_transparentRank._srv : _transparentRankPlaceholder._srv;
+            const RHIDescriptorIndex rankSRV = bViewRank ? pExtraView->_transparentRank._srv : _transparentRankPlaceholder._srv;
             // 정렬 상수 버퍼도 **뷰마다 자기 것**이다. 뷰마다 다른 값(눈 위치)을 싣으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
             _pCmd->setComputePipelineState( sortPSO );
             // 바인딩 위치는 컬링과 같다. 인자와 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 테이블이고, 그 밖의 뷰는 자리 표시용이다.
             _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
-            _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
-            _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
-            if ( rankSrv != kInvalidDescriptorIndex )
-                _pCmd->bindComputeShaderResource( rankSrv, 2 );
-            _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
-            _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
+            _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSRV(), 0 );
+            _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSRV(), 1 );
+            if ( rankSRV != kInvalidDescriptorIndex )
+                _pCmd->bindComputeShaderResource( rankSRV, 2 );
+            _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
+            _pCmd->bindComputeUAV( view._visibleInstances._uav, 1 );
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
         }

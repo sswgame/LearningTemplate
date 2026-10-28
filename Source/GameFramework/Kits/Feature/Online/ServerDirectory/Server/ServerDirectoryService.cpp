@@ -287,7 +287,7 @@ namespace sw
     uint64 ServerDirectoryService::computeVisibleHash( UnixMilliseconds nowMs ) const
     {
         using Internal = ServerDirectoryServiceInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
+        uint64 hash    = HashUtil::kFNVOffset64;
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
             if ( window.isActive( nowMs.count() ) == false )

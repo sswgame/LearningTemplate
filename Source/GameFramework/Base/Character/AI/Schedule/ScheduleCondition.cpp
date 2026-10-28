@@ -128,9 +128,9 @@ namespace sw
 
             static bool hasTag( const ScheduleConditionContext& context, const TagID& tag )
             {
-                const bool bNpc   = context._pNpcTags != nullptr && context._pNpcTags->hasTag( tag );
+                const bool bNPC   = context._pNPCTags != nullptr && context._pNPCTags->hasTag( tag );
                 const bool bWorld = context._pWorldTags != nullptr && context._pWorldTags->hasTag( tag );
-                return bNpc || bWorld;
+                return bNPC || bWorld;
             }
 
             static void mark( ScheduleConditionResult& inoutResult, ScheduleConditionClause clause, bool bPassed )

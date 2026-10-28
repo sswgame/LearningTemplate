@@ -9,7 +9,7 @@
 namespace sw
 {
     bool RHIStructuredBufferSlot::ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
-                                                  bool bNeedsSrv, bool bNeedsUav, const void* pInitialData )
+                                                  bool bNeedsSRV, bool bNeedsUAV, const void* pInitialData )
     {
         if ( pDevice == nullptr || elementSize == 0 )
             return false;
@@ -41,10 +41,10 @@ namespace sw
             return false;
         }
 
-        if ( bNeedsSrv )
-            _srv = pDevice->getResourceFactory()->registerBindlessBufferSrv( _buffer );
-        if ( bNeedsUav )
-            _uav = pDevice->getResourceFactory()->registerBindlessBufferUav( _buffer );
+        if ( bNeedsSRV )
+            _srv = pDevice->getResourceFactory()->registerBindlessBufferSRV( _buffer );
+        if ( bNeedsUAV )
+            _uav = pDevice->getResourceFactory()->registerBindlessBufferUAV( _buffer );
         _capacityElements = elementCount;
         _elementSize      = elementSize;
         return true;
@@ -70,7 +70,7 @@ namespace sw
         if ( _srv != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessResource( _srv );
         if ( _uav != kInvalidDescriptorIndex )
-            pDevice->getResourceFactory()->unregisterBindlessUav( _uav );
+            pDevice->getResourceFactory()->unregisterBindlessUAV( _uav );
         pDevice->getResourceFactory()->destroyBuffer( _buffer );
         *this = RHIStructuredBufferSlot{};
     }

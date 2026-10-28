@@ -51,12 +51,12 @@ namespace sw
         (void)VectorUtil::removeValue( _listExtension, pExtension );
     }
 
-    ModuleSceneProxyId ModuleRenderPassRegistry::addProxy( unique_ptr<IModuleSceneProxy> pProxy )
+    ModuleSceneProxyID ModuleRenderPassRegistry::addProxy( unique_ptr<IModuleSceneProxy> pProxy )
     {
         if ( pProxy == nullptr )
             return 0;
         ScopedLock<mutex>        lock{ _mutex };
-        const ModuleSceneProxyId id = _nextProxyId++;
+        const ModuleSceneProxyID id = _nextProxyID++;
         ProxyEntry               entry;
         entry._id     = id;
         entry._pProxy = std::move( pProxy );
@@ -64,7 +64,7 @@ namespace sw
         return id;
     }
 
-    void ModuleRenderPassRegistry::removeProxy( ModuleSceneProxyId id )
+    void ModuleRenderPassRegistry::removeProxy( ModuleSceneProxyID id )
     {
         unique_ptr<IModuleSceneProxy> pRemoved;
         vector<PendingUpdate>         listDroppedUpdate;
@@ -98,7 +98,7 @@ namespace sw
         listDroppedUpdate.clear();
     }
 
-    bool ModuleRenderPassRegistry::enqueueProxyUpdate( ModuleSceneProxyId id, ModuleProxyUpdateFn update )
+    bool ModuleRenderPassRegistry::enqueueProxyUpdate( ModuleSceneProxyID id, ModuleProxyUpdateFn update )
     {
         if ( update.isBound() == false )
             return false;

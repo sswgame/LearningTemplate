@@ -76,12 +76,12 @@ float3 computeFogLocalLight( LightData light, float3 worldPosition, float3 viewD
 }
 
 SW_NUMTHREADS( 8, 8, 1 )
-void CSMain( uint3 dispatchId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchID : SV_DispatchThreadID )
 {
     const float4   farSlices       = g_FogParams[kRowFarSlices];
     const uint     dimX            = (uint)farSlices.z;
     const uint     dimY            = (uint)farSlices.w;
-    const bool     bInside         = dispatchId.x < dimX && dispatchId.y < dimY;
+    const bool     bInside         = dispatchID.x < dimX && dispatchID.y < dimY;
     const float    farDistance     = farSlices.x;
     const uint     sliceCount      = (uint)farSlices.y;
     const float4   eyeNear         = g_FogParams[kRowEyeNear];
@@ -96,7 +96,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     const float4x4 viewProj        = float4x4( g_FogParams[kRowViewProj], g_FogParams[kRowViewProj + 1u], g_FogParams[kRowViewProj + 2u], g_FogParams[kRowViewProj + 3u] );
 
     // 이 칸의 시선 — 원근은 눈에서, 직교는 화면 점의 가까운 면 점에서 쏜다(fog.hlsl 과 같다).
-    const float2 uv              = ( float2( (float)dispatchId.x, (float)dispatchId.y ) + 0.5f ) / float2( (float)max( dimX, 1u ), (float)max( dimY, 1u ) );
+    const float2 uv              = ( float2( (float)dispatchID.x, (float)dispatchID.y ) + 0.5f ) / float2( (float)max( dimX, 1u ), (float)max( dimY, 1u ) );
     const float2 ndcXy           = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
     const float4 nearHomogeneous = mul( float4( ndcXy, 0.0f, 1.0f ), inverseViewProj );
     const float4 farHomogeneous  = mul( float4( ndcXy, 1.0f, 1.0f ), inverseViewProj );
@@ -151,7 +151,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 
             accumulated.rgb += accumulated.a * fogColorDens.rgb * lighting * ( 1.0f - sliceTransmit );
             accumulated.a *= sliceTransmit;
-            g_FogVolumeRW[( slice * dimY + dispatchId.y ) * dimX + dispatchId.x] = accumulated;
+            g_FogVolumeRW[( slice * dimY + dispatchID.y ) * dimX + dispatchID.x] = accumulated;
         }
     }
 }

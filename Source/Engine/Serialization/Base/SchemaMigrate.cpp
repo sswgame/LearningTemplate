@@ -56,7 +56,7 @@ namespace sw
             }
 
             /**
-             * @brief 스칼라(정수, 실수, bool) 타입 이름인지 확인합니다. `formatWirePodToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
+             * @brief 스칼라(정수, 실수, bool) 타입 이름인지 확인합니다. `formatWirePODToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
              * @details 미리 정의된 이름만 본다. 타입 레지스트리에 기대지 않으므로 원시 타입을 등록하기 전에도 같은 결과를 낸다.
              */
             static bool isScalarTypeName( hashed_string typeName )
@@ -115,7 +115,7 @@ namespace sw
             }
 
             template <typename T>
-            [[nodiscard]] static bool readPod( const uint8* pPayload, size_t payloadSize, T& out )
+            [[nodiscard]] static bool readPOD( const uint8* pPayload, size_t payloadSize, T& out )
             {
                 if ( payloadSize != sizeof( T ) )
                     return false;
@@ -125,10 +125,10 @@ namespace sw
 
             /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다(`to_string` 오버로드가 네 개뿐이기 때문입니다). */
             template <typename ReadType, typename PrintType>
-            static bool formatPodAs( const uint8* pPayload, size_t payloadSize, string& out )
+            static bool formatPODAs( const uint8* pPayload, size_t payloadSize, string& out )
             {
                 ReadType value{};
-                if ( readPod( pPayload, payloadSize, value ) == false )
+                if ( readPOD( pPayload, payloadSize, value ) == false )
                     return false;
                 out = sw::to_string( static_cast<PrintType>( value ) );
                 return true;
@@ -142,55 +142,55 @@ namespace sw
              *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 가지고 있다.
              * @return 기록 타입을 모르거나, 스칼라가 아니거나, payload 크기가 그 타입과 다르면 false 입니다.
              */
-            static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
+            static bool formatWirePODToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
             {
                 if ( wireTypeName.empty() )
                     return false;
 
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_float32 ) )
-                    return formatPodAs<float32, float32>( pPayload, payloadSize, out );
+                    return formatPODAs<float32, float32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_float64 ) )
-                    return formatPodAs<float64, float64>( pPayload, payloadSize, out );
+                    return formatPODAs<float64, float64>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_bool ) )
                 {
                     // 바이트로 읽어 0 과 1 로 접는다. bool 로 memcpy 하면 0 과 1 이 아닌 바이트가 정의되지 않은 값이 된다.
                     uint8 byteValue{ 0 };
-                    if ( readPod( pPayload, payloadSize, byteValue ) == false )
+                    if ( readPOD( pPayload, payloadSize, byteValue ) == false )
                         return false;
                     out = sw::to_string( static_cast<int32>( byteValue != 0 ? 1 : 0 ) );
                     return true;
                 }
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int8 ) )
-                    return formatPodAs<int8, int32>( pPayload, payloadSize, out );
+                    return formatPODAs<int8, int32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int16 ) )
-                    return formatPodAs<int16, int32>( pPayload, payloadSize, out );
+                    return formatPODAs<int16, int32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int32 ) )
-                    return formatPodAs<int32, int32>( pPayload, payloadSize, out );
+                    return formatPODAs<int32, int32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_int64 ) )
-                    return formatPodAs<int64, int64>( pPayload, payloadSize, out );
+                    return formatPODAs<int64, int64>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint8 ) )
-                    return formatPodAs<uint8, uint32>( pPayload, payloadSize, out );
+                    return formatPODAs<uint8, uint32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint16 ) )
-                    return formatPodAs<uint16, uint32>( pPayload, payloadSize, out );
+                    return formatPODAs<uint16, uint32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint32 ) )
-                    return formatPodAs<uint32, uint32>( pPayload, payloadSize, out );
+                    return formatPODAs<uint32, uint32>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_uint64 ) )
-                    return formatPodAs<uint64, uint64>( pPayload, payloadSize, out );
+                    return formatPODAs<uint64, uint64>( pPayload, payloadSize, out );
                 return false;
             }
 
             /**
              * @brief 기록 타입을 모를 때 크기로 짐작합니다.
              * @warning 정수와 실수를 **가를 수 없습니다**(크기가 같습니다). 정수로 읽습니다. 기록 타입을 아는
-             *          스칼라는 `formatWirePodToString` 이 먼저 처리하므로, 여기까지 오는 것은 기록 타입을 모르거나
+             *          스칼라는 `formatWirePODToString` 이 먼저 처리하므로, 여기까지 오는 것은 기록 타입을 모르거나
              *          스칼라가 아닌(열거형 등) payload 뿐입니다.
              */
-            static bool formatPodToString( const uint8* pPayload, size_t payloadSize, string& out )
+            static bool formatPODToString( const uint8* pPayload, size_t payloadSize, string& out )
             {
                 if ( payloadSize == sizeof( int32 ) )
-                    return formatPodAs<int32, int32>( pPayload, payloadSize, out );
+                    return formatPODAs<int32, int32>( pPayload, payloadSize, out );
                 if ( payloadSize == sizeof( int64 ) )
-                    return formatPodAs<int64, int64>( pPayload, payloadSize, out );
+                    return formatPODAs<int64, int64>( pPayload, payloadSize, out );
                 return false;
             }
 
@@ -352,7 +352,7 @@ namespace sw
             string     wireText;
             const bool bWireEnum  = SchemaMigrateInternal::findOtherWireEnum( targetTypeName, wireTypeName ) != nullptr;
             const bool bFormatted = bWireEnum ? SchemaMigrateInternal::formatWireEnumToString( pPayload, payloadSize, wireTypeName, context, wireVersion, wireText )
-                                              : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
+                                              : SchemaMigrateInternal::formatWirePODToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
                 return FieldReadResult::FieldFailed;
             return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, wireText, context ) );
@@ -386,7 +386,7 @@ namespace sw
         if ( SchemaMigrateInternal::isStringType( targetTypeName ) )
         {
             string asText;
-            if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
+            if ( SchemaMigrateInternal::formatPODToString( pPayload, payloadSize, asText ) )
                 return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, asText, context ) );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다

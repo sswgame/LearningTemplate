@@ -1,6 +1,6 @@
 /**
  * @file AudioVorbisDecode.cpp
- * @brief `AudioClipDecoder::decodeOgg` 입니다. stb_vorbis 구현을 이 TU 하나에만 넣습니다.
+ * @brief `AudioClipDecoder::decodeOGG` 입니다. stb_vorbis 구현을 이 TU 하나에만 넣습니다.
  * @note stb_vorbis.c 는 `L`, `C`, `R`, `CHECK`, `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 가 오염되지 않게
  *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 마세요.
  *       주의: `TRUE` 와 `FALSE` 는 stb_vorbis 가 없을 때만 정의합니다. Windows 에서는 `windows.h` 의 정의라서 지우면, 유니티 묶음의 뒤쪽 파일
@@ -75,7 +75,7 @@ namespace sw
          *          실패 뒤 정리(`vorbis_deinit`)가 아직 채우지 않은 주석 필드까지 `free` 해서 프로세스가 죽는다(CVE-2023-45675, 45676, 45677 계열이며 `LoaderFuzzTest` 가 찾았다).
          *          서드파티를 고치지 않고 입구에서 막는다. 길이가 패킷 밖을 가리키는 파일은 어차피 망가진 파일이다.
          */
-        struct OggCommentHeaderGuard
+        struct OGGCommentHeaderGuard
         {
             /** @brief 첫 논리 스트림의 @p packetIndex 번째 패킷을 페이지를 건너 모읍니다. 페이지가 잘렸거나 패킷이 끝나지 않으면 false 입니다. */
             [[nodiscard]] static bool collectPacket( const uint8* pBytes, size_t byteCount, uint32 packetIndex, vector<uint8>& outPacketBytes )
@@ -86,7 +86,7 @@ namespace sw
                 uint32           currentPacket   = 0;
                 while ( pageOffset + kPageHeaderSize <= byteCount )
                 {
-                    if ( Memory::compare( pBytes + pageOffset, "OggS", 4 ) != 0 )
+                    if ( Memory::compare( pBytes + pageOffset, "OGGS", 4 ) != 0 )
                         return false;
                     const size_t segmentCount = pBytes[pageOffset + 26];
                     if ( pageOffset + kPageHeaderSize + segmentCount > byteCount )
@@ -154,17 +154,17 @@ namespace sw
          * @details stb 는 깨진 헤더의 오류 경로에서 `setup_temp_malloc` 으로 잡은 임시 버퍼를 해제하지 않는데(변이한 Ogg 로 재현된다), 우리 버퍼 안이면 함께 버려진다.
          *          조작한 헤더가 수백 MB 를 요구하는 경우도 여기서 막힌다. 열린 디코더는 @p inoutListArena 를 닫을 때까지 써서 호출한 쪽이 디코더와 같이 쥐어야 한다.
          */
-        struct OggOpenUtil
+        struct OGGOpenUtil
         {
             static constexpr size_t kInitialArenaBytes = 256 * 1024;
             static constexpr size_t kMaxArenaBytes     = 64 * constant::kBytesPerMegabyte;
 
             static stb_vorbis* openWithArena( const uint8* pBytes, size_t byteCount, vector<uint8>& inoutListArena )
             {
-                const bool bInvalidOggBytes = pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0;
-                if ( bInvalidOggBytes )
+                const bool bInvalidOGGBytes = pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OGGS", 4 ) != 0;
+                if ( bInvalidOGGBytes )
                     return nullptr;
-                if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
+                if ( OGGCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
                     return nullptr;
                 stb_vorbis* pVorbis = nullptr;
                 for ( size_t arenaBytes = kInitialArenaBytes; arenaBytes <= kMaxArenaBytes; arenaBytes *= 2 )
@@ -181,10 +181,10 @@ namespace sw
         };
 
         /** @brief stb_vorbis 로 OGG 를 앞으로 가며 float 로 푸는 스트리밍 디코더입니다. 채널은 파일 그대로(1 ~ 8, Vorbis 순서)이며 다운믹스는 스트림 창이 합니다. */
-        class OggStreamDecoder final : public IAudioStreamDecoder
+        class OGGStreamDecoder final : public IAudioStreamDecoder
         {
         public:
-            OggStreamDecoder( stb_vorbis* pVorbis, vector<uint8>&& listArena, int32 channelCount, uint32 frameCount )
+            OGGStreamDecoder( stb_vorbis* pVorbis, vector<uint8>&& listArena, int32 channelCount, uint32 frameCount )
                 : _listArena{ std::move( listArena ) }
                 , _pVorbis{ pVorbis }
                 , _frameCount{ frameCount }
@@ -192,7 +192,7 @@ namespace sw
             {
             }
 
-            ~OggStreamDecoder() override
+            ~OGGStreamDecoder() override
             {
                 if ( _pVorbis != nullptr )
                     stb_vorbis_close( _pVorbis );
@@ -221,10 +221,10 @@ namespace sw
         };
     } // namespace
 
-    unique_ptr<IAudioStreamDecoder> AudioClipDecoder::openOggStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo )
+    unique_ptr<IAudioStreamDecoder> AudioClipDecoder::openOGGStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo )
     {
         vector<uint8> listArena;
-        stb_vorbis*   pVorbis = OggOpenUtil::openWithArena( pBytes, byteCount, listArena );
+        stb_vorbis*   pVorbis = OGGOpenUtil::openWithArena( pBytes, byteCount, listArena );
         if ( pVorbis == nullptr )
             return nullptr;
         const stb_vorbis_info info                     = stb_vorbis_get_info( pVorbis );
@@ -238,14 +238,14 @@ namespace sw
         outInfo._sampleRate   = info.sample_rate;
         outInfo._frameCount   = frameCount;
         outInfo._channelCount = static_cast<uint16>( info.channels );
-        return sw::make_unique<OggStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
+        return sw::make_unique<OGGStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
     }
 
-    bool AudioClipDecoder::decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    bool AudioClipDecoder::decodeOGG( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
-        // 디코더 메모리는 우리 버퍼 한 덩어리에서 나눠 준다(`OggOpenUtil::openWithArena`).
+        // 디코더 메모리는 우리 버퍼 한 덩어리에서 나눠 준다(`OGGOpenUtil::openWithArena`).
         vector<uint8> listArena;
-        stb_vorbis*   pVorbis = OggOpenUtil::openWithArena( pBytes, byteCount, listArena );
+        stb_vorbis*   pVorbis = OGGOpenUtil::openWithArena( pBytes, byteCount, listArena );
         if ( pVorbis == nullptr )
             return false;
 

@@ -49,8 +49,8 @@ namespace sw
         FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
         void heal20() { heal( 20 ); }
 
-        int32 getHp() const { return _hp; }
-        int32 getMaxHp() const { return _maxHp; }
+        int32 getHP() const { return _hp; }
+        int32 getMaxHP() const { return _maxHP; }
         int32 getAttack() const { return _attack; }
         int32 getDefense() const { return _defense; }
         /** @brief 기본 이동 속도입니다. 단위는 초당 월드 유닛(m/s)이며, 이동 코드는 프레임 시간을 곱해서 씁니다(`getMoveSpeed() * deltaTime`). */
@@ -60,7 +60,7 @@ namespace sw
         HealthReading getHealthReading() const override;
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(변화 연출 없이). */
-        void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
+        void setStats( int32 hp, int32 maxHP, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
         /** @brief 몬스터 카탈로그의 한 종의 스탯(`MonsterDef::_stats`)으로 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
         void setStats( const MonsterStatsDef& monsterStats );
 
@@ -83,7 +83,7 @@ namespace sw
         PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP" )
         int32 _hp;
         PROPERTY( Category = "Stats", DisplayName = "Max HP", Tooltip = "Maximum Health Points", Min = 1.0, Meta = "Units=HP" )
-        int32 _maxHp;
+        int32 _maxHP;
         PROPERTY( Category = "Stats", DisplayName = "Attack", Tooltip = "Attack power", Min = 0.0 )
         int32 _attack;
         PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0 )

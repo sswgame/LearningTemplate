@@ -843,7 +843,7 @@ namespace sw::editor
         ImGui::BeginGroup();
         ImGui::Text( "%s", pLabel );
         const ImVec2  pos    = ImGui::GetCursorScreenPos();
-        const float32 radius = 50.0f * EditorThemeUtil::getDpiScale();
+        const float32 radius = 50.0f * EditorThemeUtil::getDPIScale();
         const ImVec2  center = ImVec2( pos.x + radius, pos.y + radius );
 
         ImDrawList* pDraw = ImGui::GetWindowDrawList();
@@ -852,7 +852,7 @@ namespace sw::editor
         pDraw->AddCircle( center, radius * deadzone, EditorColorUtil::toImU32( InputMapPanelInternal::kStickDeadzone ) );
 
         const ImVec2 dotPos = ImVec2( center.x + stickX * radius, center.y - stickY * radius );
-        pDraw->AddCircleFilled( dotPos, 6.0f * EditorThemeUtil::getDpiScale(), EditorColorUtil::toImU32( InputMapPanelInternal::kStickDot ) );
+        pDraw->AddCircleFilled( dotPos, 6.0f * EditorThemeUtil::getDPIScale(), EditorColorUtil::toImU32( InputMapPanelInternal::kStickDot ) );
 
         ImGui::Dummy( ImVec2( radius * 2.0f, radius * 2.0f ) );
         ImGui::Text( "X: %+.2f  Y: %+.2f", static_cast<float64>( stickX ), static_cast<float64>( stickY ) );

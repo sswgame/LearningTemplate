@@ -97,7 +97,7 @@ namespace sw
         , _settings{}
         , _random{}
         , _pCatalog{ nullptr }
-        , _playerHp{ 0 }
+        , _playerHP{ 0 }
         , _playerBlock{ 0 }
         , _energy{ 0 }
         , _turn{ 0 }
@@ -117,7 +117,7 @@ namespace sw
         _hand.clear();
         _discardPile.clear();
         _exhaustPile.clear();
-        _playerHp    = settings._playerHp;
+        _playerHP    = settings._playerHP;
         _playerBlock = 0;
         _turn        = 0;
         if ( pCatalog == nullptr )
@@ -241,14 +241,14 @@ namespace sw
             {
                 const int32 absorbed = MathUtil::min( _playerBlock, intent._amount );
                 _playerBlock -= absorbed;
-                _playerHp = MathUtil::max( 0, _playerHp - ( intent._amount - absorbed ) );
+                _playerHP = MathUtil::max( 0, _playerHP - ( intent._amount - absorbed ) );
             }
             else if ( intent._kind == DeckBattleEffectKind::Block )
             {
                 _enemy._block += intent._amount;
             }
         }
-        if ( _playerHp <= 0 )
+        if ( _playerHP <= 0 )
         {
             _phase = DeckBattlePhase::Lost;
             return;
@@ -277,7 +277,7 @@ namespace sw
         outArchive << _enemy._block;
         outArchive << _enemy._intentIndex;
         StateArchiveUtil::writeRandom( outArchive, _random );
-        outArchive << _playerHp;
+        outArchive << _playerHP;
         outArchive << _playerBlock;
         outArchive << _energy;
         outArchive << _turn;
@@ -329,7 +329,7 @@ namespace sw
         if ( StateArchiveUtil::readRandom( archive, battle._random ) == false )
             return false;
         uint8 phase = 0;
-        archive >> battle._playerHp;
+        archive >> battle._playerHP;
         archive >> battle._playerBlock;
         archive >> battle._energy;
         archive >> battle._turn;

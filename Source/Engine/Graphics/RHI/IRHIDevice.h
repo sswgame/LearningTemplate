@@ -33,7 +33,7 @@ namespace sw
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     enum class RHIHandleKind : uint8
     {
-        BindlessResource = 0, ///< `registerBindlessBufferSrv` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
+        BindlessResource = 0, ///< `registerBindlessBufferSRV` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
         BindlessTexture,      ///< `registerBindlessTexture` 가 돌려준 인덱스이며 `unregisterBindlessTexture` 로 해제한다.
         Buffer,               ///< `createBuffer` 가 돌려준 핸들이며 `destroyBuffer` 로 해제한다.
         Texture               ///< `createTexture` 가 돌려준 핸들이며 `destroyTexture` 로 해제한다.
@@ -43,7 +43,7 @@ namespace sw
     enum class RHIBindlessIndexSpace : uint8
     {
         Texture = 0, ///< `registerBindlessTexture` 가 준 텍스처 SRV 인덱스
-        Buffer       ///< `registerBindlessBufferSrv` 가 준 버퍼(구조 버퍼 SRV · 상수 버퍼) 인덱스
+        Buffer       ///< `registerBindlessBufferSRV` 가 준 버퍼(구조 버퍼 SRV · 상수 버퍼) 인덱스
     };
 
     /** @brief `RHINativeHandles` 의 버전 번호입니다. 필드, 순서, 의미가 바뀌면 올립니다. */
@@ -165,7 +165,7 @@ namespace sw
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
          *          이 문제를 가리므로, 이 경로는 에디터가 없는 빌드(Shipping)로 확인한다.
-         * @param reason 기다리는 이유(필수, RhiAsyncUploads U14). 프레임마다 도는 경로에는 맞는 이유가 없다 — 이름이 있어야 호출처가 "왜" 를 적고 새 호출이 눈에 띈다(`RHIWaitIdleReason`).
+         * @param reason 기다리는 이유(필수, RHIAsyncUploads U14). 프레임마다 도는 경로에는 맞는 이유가 없다 — 이름이 있어야 호출처가 "왜" 를 적고 새 호출이 눈에 띈다(`RHIWaitIdleReason`).
          */
         void waitIdle( RHIWaitIdleReason reason );
 
@@ -187,12 +187,12 @@ namespace sw
         virtual bool debugRemoveDevice() { return false; }
         /**
          * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 하나, Vulkan 은 파이프라인 단계마다 하나씩이다.
-         * @param pOutId   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
-         * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGpuBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
+         * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
+         * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGPUBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
          */
-        virtual uint32 readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+        virtual uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
         {
-            (void)pOutId;
+            (void)pOutID;
             (void)capacity;
             return 0;
         }

@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include <linux/futex.h>
     #include <sys/syscall.h>

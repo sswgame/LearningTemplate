@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Linux/X11Window.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
@@ -320,7 +320,7 @@ namespace sw
         float32           dpi{ 0.0f };
         if ( StringUtil::parseFloat( rest.substr( 0, rest.find( '\n' ) ), dpi ) == false || dpi <= 0.0f )
             return 1.0f; // 줄이 숫자가 아니면 키가 없는 것과 같이 본다(위 주석)
-        return dpi / kReferenceDpi;
+        return dpi / kReferenceDPI;
     }
 
     bool X11Window::processMessages()

@@ -44,7 +44,7 @@ namespace sw
     RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        return index < _listUavSourceBuffer.size() ? _listUavSourceBuffer[index] : RHIBufferHandle{ 0 };
+        return index < _listUAVSourceBuffer.size() ? _listUAVSourceBuffer[index] : RHIBufferHandle{ 0 };
     }
 
     // 길이 유지(긴 함수 정리 기준): 세트 레이아웃 · 파이프라인 레이아웃 · 풀 · 세트 생성의 순서가 곧 의미라 나누지 않는다.
@@ -387,7 +387,7 @@ namespace sw
         // 세트 하나가 b/t/u 슬롯을 모두 걸 수 있게 잡는다. 종류별로 덜 잡으면 컴퓨트 패스가 많을 때 maxSets 전에 바닥난다.
         VkDescriptorPoolSize arrPoolSize[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                             kSlotSetsPerPool * shaderslot::kConstantBufferSlotCount},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSlotSetsPerPool * ( shaderslot::kSrvSlotCount + shaderslot::kComputeUavSlotCount )},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSlotSetsPerPool * ( shaderslot::kSRVSlotCount + shaderslot::kComputeUAVSlotCount )},
         };
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

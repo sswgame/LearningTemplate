@@ -253,7 +253,7 @@ namespace sw
             key._colorCount = kMaxColorAttachments;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            VkFormat colorFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._arrRtvFormat[colorIndex] );
+            VkFormat colorFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._arrRTVFormat[colorIndex] );
             if ( colorFmt == VK_FORMAT_UNDEFINED )
                 colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
             key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );

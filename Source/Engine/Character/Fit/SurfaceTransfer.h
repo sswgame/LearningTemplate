@@ -16,7 +16,7 @@ namespace sw
 {
     struct AppearanceGeometry;
 
-    class SurfaceBvh;
+    class SurfaceBVH;
 
     /** @brief 한 점이 원본 표면에 연결된 위치입니다. */
     struct SurfaceBinding
@@ -35,9 +35,9 @@ namespace sw
     struct SW_API SurfaceTransferUtil
     {
         /**
-         * @brief 점마다 원본(@p source)의 가장 가까운 삼각형을 찾아 연결합니다(@p maxDistance 밖은 연결하지 않습니다). @p sourceBvh 는 원본 하나로 만든 것입니다.
+         * @brief 점마다 원본(@p source)의 가장 가까운 삼각형을 찾아 연결합니다(@p maxDistance 밖은 연결하지 않습니다). @p sourceBVH 는 원본 하나로 만든 것입니다.
          */
-        static void bindPoints( const AppearanceGeometry& source, const SurfaceBvh& sourceBvh, vector_reference<const float3> listPoint, float32 maxDistance,
+        static void bindPoints( const AppearanceGeometry& source, const SurfaceBVH& sourceBVH, vector_reference<const float3> listPoint, float32 maxDistance,
                                 vector<SurfaceBinding>& outListBinding );
         /** @brief 연결된 위치를 원본(@p source, 모프를 적용한 원본이어도 같은 위상)의 현재 위치로 계산합니다. */
         static float3 evaluatePoint( const AppearanceGeometry& source, const SurfaceBinding& binding );

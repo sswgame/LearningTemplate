@@ -88,7 +88,7 @@
 
 // GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIDs).
 // 정점 셰이더가 g_SwVisibleInstanceIDs[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
-// 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(kInvalidIndex)
+// 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIDBuffer 와 같은 자리. 안 걸려 있으면(kInvalidIndex)
 // 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV 6
 
@@ -173,7 +173,7 @@
 
 // 쓰기 버퍼 슬롯은 둘로 나뉜다 — u0..u3 은 컴퓨트 셰이더가 제 버퍼로 쓰고(셰이더 소유, 최대 4 개 — vfxsimulate 가 4 개를 다 쓴다), u4 는 어느 셰이더든 같은 번호로 쓰는
 // 셰이더 assert 링(gpuassert.hlsli)이다. 그래서 assert 를 가진 컴퓨트는 쓰기 버퍼를 4 개까지 가질 수 있고 슬롯이 겹치지 않는다. 겹침은 ShaderBindingSlots.h 의 static_assert 와
-// ShaderBindingValidator(쿠킹된 바이너리의 u4 를 g_GpuAssertRW 만 쓰는지)가 본다. DX11 의 컴퓨트 UAV 는 u0..u7 여덟 개뿐이라 이 다섯 + RW 텍스처 셋이 꽉 찬 값이다.
+// ShaderBindingValidator(쿠킹된 바이너리의 u4 를 g_GPUAssertRW 만 쓰는지)가 본다. DX11 의 컴퓨트 UAV 는 u0..u7 여덟 개뿐이라 이 다섯 + RW 텍스처 셋이 꽉 찬 값이다.
 #define SW_COMPUTE_SHADER_UAV_SLOT_COUNT 4
 #define SW_SLOT_COMPUTE_ASSERT_UAV       4
 
@@ -210,7 +210,7 @@
 #define SW_MATERIAL_TEXTURE_SAMPLER 0
 
 // DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 엔진 슬롯 결합 샘플러(s0..s3, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
-// 초기화 때 한 번 걸어 두고 셰이더는 Bindless::sampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
+// 초기화 때 한 번 걸어 두고 셰이더는 Bindless::sampleIndexWith 의 samplerID 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
 // 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은
 // SW_SAMPLER_* 를 DX11 도 존중하게 한 것이다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 세트가 없다.
 #define SW_DX11_STATIC_SAMPLER0        9

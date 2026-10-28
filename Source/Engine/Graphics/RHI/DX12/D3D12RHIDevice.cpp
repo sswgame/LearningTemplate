@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
@@ -50,10 +50,10 @@ namespace sw
         , _resourceStateMutex{}
         , _mapStructuredBufferState{}
         , _mapOffscreenTexture{}
-        , _nextOffscreenRtvIndex{ 0 }
-        , _nextOffscreenDsvIndex{ 0 }
-        , _listFreeOffscreenRtvIndex{}
-        , _listFreeOffscreenDsvIndex{}
+        , _nextOffscreenRTVIndex{ 0 }
+        , _nextOffscreenDSVIndex{ 0 }
+        , _listFreeOffscreenRTVIndex{}
+        , _listFreeOffscreenDSVIndex{}
         , _mapCbAlignedSize{}
         , _mapCbMapped{}
         , _constantBufferMirror{}
@@ -149,39 +149,39 @@ namespace sw
         outView                              = OffscreenTargetView{};
         outView._state                       = record._state;
         outView._format                      = record._format;
-        outView._bHasRtv                     = record._bHasRtv;
-        outView._bHasDsv                     = record._bHasDsv;
+        outView._bHasRTV                     = record._bHasRTV;
+        outView._bHasDSV                     = record._bHasDSV;
         if ( slice >= record._arraySize )
             return true;
 
         // 면 0 은 레코드의 첫 뷰, 면 1.. 은 추가 인덱스다. 디스크립터가 바닥나 만들다 멈춘 면은 목록에 없다.
         const size_t extraIndex = static_cast<size_t>( slice ) - 1u;
-        if ( record._bHasRtv != SW_FALSE )
+        if ( record._bHasRTV != SW_FALSE )
         {
             if ( slice == 0 )
                 outView._rtvHandle = record._rtvHandle;
-            else if ( extraIndex < record._listExtraRtvIndex.size() )
-                outView._rtvHandle = getOffscreenRtvHandle( record._listExtraRtvIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraRTVIndex.size() )
+                outView._rtvHandle = getOffscreenRTVHandle( record._listExtraRTVIndex[extraIndex] );
         }
-        if ( record._bHasDsv != SW_FALSE )
+        if ( record._bHasDSV != SW_FALSE )
         {
             if ( slice == 0 )
                 outView._dsvHandle = record._dsvHandle;
-            else if ( extraIndex < record._listExtraDsvIndex.size() )
-                outView._dsvHandle = getOffscreenDsvHandle( record._listExtraDsvIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraDSVIndex.size() )
+                outView._dsvHandle = getOffscreenDSVHandle( record._listExtraDSVIndex[extraIndex] );
         }
         outView._bSliceInRange = ( outView._rtvHandle.ptr != 0 || outView._dsvHandle.ptr != 0 ) ? SW_TRUE : SW_FALSE;
         return true;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRtvHandle( uint32 rtvIndex ) const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRTVHandle( uint32 rtvIndex ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
         handle.ptr += static_cast<SIZE_T>( rtvIndex ) * _rtvDescriptorSize;
         return handle;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenDsvHandle( uint32 dsvIndex ) const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenDSVHandle( uint32 dsvIndex ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle = _dsvHeap->GetCPUDescriptorHandleForHeapStart();
         handle.ptr += static_cast<SIZE_T>( dsvIndex ) * _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
@@ -423,9 +423,9 @@ namespace sw
         {
             _bDeviceRemovedLogged.store( SW_TRUE, std::memory_order_relaxed );
             // 마지막으로 GPU 가 닿은 패스 - 우리 표지(WriteBufferImmediate)를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다.
-            uint32       arrBreadcrumb[GpuBreadcrumbs::kMaxReported]{};
-            const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GpuBreadcrumbs::kMaxReported );
-            GpuBreadcrumbs::reportDeviceLost( "Direct3D 12", arrBreadcrumb, breadcrumbCount );
+            uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
+            const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
+            GPUBreadcrumbs::reportDeviceLost( "Direct3D 12", arrBreadcrumb, breadcrumbCount );
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
             if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
             {

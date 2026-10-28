@@ -50,7 +50,7 @@ namespace sw
         void acquireNextImage( ID3D11Device* pDevice );
 
         /** @brief 백버퍼 RTV 를 놓습니다. */
-        void releaseBackBufferRtv();
+        void releaseBackBufferRTV();
 
         /**
          * @brief 화면에 표시합니다.
@@ -65,14 +65,14 @@ namespace sw
         uint32 getHeight() const { return _height; }
 
         /** @brief 현재 백버퍼의 RTV 를 반환합니다. 아직 잡지 않았으면 nullptr 입니다. */
-        ID3D11RenderTargetView* getBackBufferRtv() const { return _backBufferRtv.Get(); }
+        ID3D11RenderTargetView* getBackBufferRTV() const { return _backBufferRTV.Get(); }
 
         /** @brief 백버퍼 텍스처를 새로 얻습니다(복사 대상용). 실패하면 nullptr 입니다. */
         Microsoft::WRL::ComPtr<ID3D11Texture2D> getBackBufferTexture() const;
 
     private:
         Microsoft::WRL::ComPtr<IDXGISwapChain>         _swapChain;
-        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> _backBufferRtv;
+        Microsoft::WRL::ComPtr<ID3D11RenderTargetView> _backBufferRTV;
 
         HWND   _pHWnd{ nullptr };
         uint32 _width{ 0 };

@@ -47,7 +47,7 @@ namespace sw
         constexpr uint32 kDxgiFormatBC5Unorm          = 83;
         constexpr uint32 kDxgiFormatR8G8B8A8Unorm     = 28;
         constexpr uint32 kDxgiFormatB8G8R8A8Unorm     = 87;
-        constexpr uint32 kDxgiFormatB8G8R8A8UnormSrgb = 91;
+        constexpr uint32 kDxgiFormatB8G8R8A8UnormSRGB = 91;
         constexpr uint32 kDxgiFormatB8G8R8X8Unorm     = 88;
         constexpr uint32 kDxgiFormatR32G32B32A32Float = 2;
         constexpr uint32 kDxgiFormatR16G16B16A16Float = 10;
@@ -102,7 +102,7 @@ namespace sw
 
         struct DDSLoaderInternal
         {
-            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
+            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DDSFormats.json` 이고 테스트가 이 표와 견준다. */
             static constexpr DDSLegacyFourCc kArrFourCcRow[] = {
                 {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
                 {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
@@ -134,10 +134,10 @@ namespace sw
 
             /**
              * @brief 옛 머리의 비트 수 · 채널 마스크가 가리키는 DXGI 포맷의 표입니다. 마스크는 다섯 칸이 모두 같아야 맞는다(비슷한 모양을 어림하지 않는다).
-             * @details 이름의 정본은 `Config/Editor/DdsFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
+             * @details 이름의 정본은 `Config/Editor/DDSFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
              *          R8G8B8A8 로 읽는다(알파 바이트는 그 파일이 쓴 값이다).
              */
-            static constexpr DDSLegacyRgbMask kArrRgbMaskRow[] = {
+            static constexpr DDSLegacyRGBMask kArrRGBMaskRow[] = {
                 {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, kDxgiFormatR8G8B8A8Unorm},
                 {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x00000000, kDxgiFormatR8G8B8A8Unorm},
                 {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, kDxgiFormatB8G8R8A8Unorm},
@@ -148,9 +148,9 @@ namespace sw
              * @brief 옛 머리의 RGB 마스크를 DXGI 포맷으로 바꿉니다. 표에 없는 모양은 `kDxgiFormatUnknown` 입니다.
              * @details BGRA 계열이면 호출한 쪽이 포맷으로 `_bIsBgra` 를 켠다(`bBgraFormat`) — 여기서 따로 정하지 않는다.
              */
-            static uint32 findDxgiFormatOfRgbMasks( const DDSPixelFormatHeader& pixelFormat )
+            static uint32 findDxgiFormatOfRGBMasks( const DDSPixelFormatHeader& pixelFormat )
             {
-                for ( const DDSLegacyRgbMask& row : kArrRgbMaskRow )
+                for ( const DDSLegacyRGBMask& row : kArrRGBMaskRow )
                 {
                     const bool bSame = row._bitCount == pixelFormat._rgbBitCount && row._rMask == pixelFormat._rBitMask && row._gMask == pixelFormat._gBitMask &&
                                        row._bMask == pixelFormat._bBitMask && row._aMask == pixelFormat._aBitMask;
@@ -248,9 +248,9 @@ namespace sw
             // 모르는 코드는 포맷을 정하지 않는다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
             image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfFourCc( pHeader->_pixelFormat._fourCC );
         }
-        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRgbFlag ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRGBFlag ) != 0 )
         {
-            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfRgbMasks( pHeader->_pixelFormat );
+            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfRGBMasks( pHeader->_pixelFormat );
         }
 
         const bool bIsBc1To5 = ( 70 <= image._dxgiFormat && image._dxgiFormat <= 84 );
@@ -258,7 +258,7 @@ namespace sw
         image._bCompressed   = ( bIsBc1To5 || bIsBc6Or7 ) ? SW_TRUE : SW_FALSE;
 
         const bool bBgraFormat = image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
-                                 image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb;
+                                 image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSRGB;
         if ( bBgraFormat )
             image._bIsBgra = SW_TRUE;
 
@@ -298,10 +298,10 @@ namespace sw
         return listRow;
     }
 
-    vector<DDSLegacyRgbMask> DDSLoader::getLegacyRgbMaskTable()
+    vector<DDSLegacyRGBMask> DDSLoader::getLegacyRGBMaskTable()
     {
-        vector<DDSLegacyRgbMask> listRow;
-        for ( const DDSLegacyRgbMask& row : DDSLoaderInternal::kArrRgbMaskRow )
+        vector<DDSLegacyRGBMask> listRow;
+        for ( const DDSLegacyRGBMask& row : DDSLoaderInternal::kArrRGBMaskRow )
         {
             listRow.push_back( row );
         }

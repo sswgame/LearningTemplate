@@ -69,7 +69,7 @@ namespace sw
          * @brief GPU 투영(`CanvasMarkerRecord`)으로 올린 마커들이 함께 쓰는 카메라입니다. 프레임의 첫 GPU 마커의 관리자가 정하고, 다른 관리자의 마커는 CPU 투영으로 남는다
          *        (패킷의 마커 공용 값이 하나라서다).
          */
-        const GameObjectManager* _pGpuManager{ nullptr };
+        const GameObjectManager* _pGPUManager{ nullptr };
         float4x4                 _gpuViewProjection{};
         float3                   _gpuCameraPosition{};
     };
@@ -116,7 +116,7 @@ namespace sw
         void          setDrawSize( const float2& drawSize )
         {
             _drawSize      = drawSize;
-            _bGpuSlotDirty = SW_TRUE;
+            _bGPUSlotDirty = SW_TRUE;
         }
         const float2& getPivot() const { return _pivot; }
         const float2& getWorldSize() const { return _worldSize; }
@@ -124,7 +124,7 @@ namespace sw
         void          setPivot( const float2& pivot )
         {
             _pivot         = pivot;
-            _bGpuSlotDirty = SW_TRUE;
+            _bGPUSlotDirty = SW_TRUE;
         }
         void          setScreenOffset( const float2& offset ) { _screenOffset = offset; }
         const float3& getWorldOffset() const { return _worldOffset; }
@@ -137,7 +137,7 @@ namespace sw
          * @details CPU 가 위치를 알아야 하는 것: 물리 가림(`_bOccludedByPhysics`), 놓인 자리를 읽는 파생 클래스(`needsMarkerPlacement`), 그리기 크기가 없는(원하는 크기로 피벗을 맞추는) 마커.
          *          언리얼 위젯 컴포넌트의 일괄 월드 UI · 유니티 UI Toolkit 월드 스페이스처럼 위치는 GPU 가 투영하고 위젯은 한 번 배치한다.
          */
-        bool isGpuProjected() const;
+        bool isGPUProjected() const;
         void setClampToScreenEdge( bool bClamp ) { _bClampToScreenEdge = bClamp; }
         void setMaxDistance( float32 maxDistance ) { _maxDistance = maxDistance; }
         void setScaleWithDistance( bool bScale, float32 referenceDistance );
@@ -163,10 +163,10 @@ namespace sw
         void updateScreenMarker( const UIViewport& viewport, WidgetMarkerView& inoutView );
         /**
          * @brief 이번 프레임 GPU 투영 마커의 공용 값을 만듭니다(`UISystem::update` 가 마커 갱신 뒤 한 번 부른다). 투영 · 거리 배율의 상수는 CPU 투영(`computeMarkerPlacement`)과 같은 값이다.
-         * @param view 마커 갱신이 채운 카메라입니다(`_pGpuManager` 가 nullptr 이면 GPU 마커가 없어 `outView` 는 비어 있다).
+         * @param view 마커 갱신이 채운 카메라입니다(`_pGPUManager` 가 nullptr 이면 GPU 마커가 없어 `outView` 는 비어 있다).
          * @param viewportSize UI 뷰포트 크기(UI 단위)입니다. 배율(`_uiScale`)은 `UIScreenMarkers::publishCanvasAnchors` 가 채운다.
          */
-        static void makeGpuMarkerView( const WidgetMarkerView& view, const float2& viewportSize, CanvasMarkerView& outView );
+        static void makeGPUMarkerView( const WidgetMarkerView& view, const float2& viewportSize, CanvasMarkerView& outView );
         /** @brief 계산한 위치를 마커 위젯의 화면 앵커에 적습니다(테스트가 카메라 없이 부릅니다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
         void applyPlacement( const WidgetMarkerPlacement& placement );
         /**
@@ -236,9 +236,9 @@ namespace sw
         /** @brief 마커 위젯을 떼어 지웁니다. */
         void detachMarker();
         /** @brief GPU 투영 마커의 한 프레임분입니다 — 보이기 규칙은 CPU 가 정하고(상태가 바뀔 때만 위젯을 만진다), 월드 점만 앵커 기록에 싣는다. */
-        void updateGpuMarker( const SceneComponent* pScene, bool bMarkerHidden );
+        void updateGPUMarker( const SceneComponent* pScene, bool bMarkerHidden );
         /** @brief GPU 투영 마커가 CPU 로 돌아가거나 떼질 때 앵커 기록을 내리고 상태를 되돌립니다. */
-        void releaseGpuMarker();
+        void releaseGPUMarker();
         /** @brief 마커 위젯의 슬롯(고정 크기 · 피벗)을 정합니다 — `applyPlacement` 와 GPU 투영이 같은 규칙을 쓴다. */
         void applyMarkerSlot( Widget& marker );
         /** @brief World 사각형(자식 오브젝트: 스프라이트 사각형 메시와, 렌더 텍스처를 읽는 프리멀티플라이 스프라이트 머티리얼 인스턴스)을 만듭니다. */
@@ -265,7 +265,7 @@ namespace sw
         uint32                 _gpuAnchor;           ///< GPU 투영 마커의 앵커 번호입니다(`_gpuState` 가 `Off` 가 아닐 때 뜻이 있다).
         uint8                  _bHidden;             ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
         uint8                  _gpuState;            ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
-        uint8                  _bGpuSlotDirty;       ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
+        uint8                  _bGPUSlotDirty;       ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
         string _documentPath;
         PROPERTY( DisplayName = "Space" )

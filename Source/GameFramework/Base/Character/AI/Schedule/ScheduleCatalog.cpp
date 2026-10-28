@@ -26,7 +26,7 @@ namespace sw
             static constexpr const utf8* kArrInterruptAttribute[]   = { "id", "priority", "timeout" };
             static constexpr const utf8* kArrAppointmentAttribute[] = { "id", "place", "start", "end", "wait", "priority" };
             static constexpr const utf8* kArrArchetypeAttribute[]   = { "id", "parent" };
-            static constexpr const utf8* kArrNpcAttribute[]         = { "id", "archetype", "home", "speed", "idle", "tags" };
+            static constexpr const utf8* kArrNPCAttribute[]         = { "id", "archetype", "home", "speed", "idle", "tags" };
             static constexpr const utf8* kArrRoutineAttribute[]     = { "id", "priority" };
             static constexpr const utf8* kArrEventAttribute[]       = { "id", "priority", "npcs", "archetypes" };
             static constexpr const utf8* kArrBlockAttribute[]       = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every", "overnight" };
@@ -44,7 +44,7 @@ namespace sw
                 {  "Interrupt", 0},
                 {"Appointment", 1},
                 {  "Archetype", 2},
-                {        "Npc", 3},
+                {        "NPC", 3},
                 {      "Event", 3},
             };
 
@@ -161,7 +161,7 @@ namespace sw
         return _pActivityRegistry != nullptr ? *_pActivityRegistry : ScheduleActivityRegistry::getBuiltin();
     }
 
-    bool ScheduleCatalog::isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeID ) const
+    bool ScheduleCatalog::isNPCOfArchetype( const ScheduleNPCDef& npc, const hashed_string& archetypeID ) const
     {
         hashed_string current = npc._archetype;
         // 순환은 읽을 때 끊었지만 묶음 수만큼만 걷는다.
@@ -194,7 +194,7 @@ namespace sw
         }
         resolveReferences( sourceName );
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <Npc> entries", sourceName );
+            SW_LOG_WARNING( "%#: no <NPC> entries", sourceName );
         return loadedCount;
     }
 
@@ -219,8 +219,8 @@ namespace sw
             loadAppointment( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Archetype" ) )
             loadArchetype( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Npc" ) )
-            return loadNpc( node, sourceName, pID ) ? 1 : 0;
+        else if ( StringUtil::equals( pName, "NPC" ) )
+            return loadNPC( node, sourceName, pID ) ? 1 : 0;
         else
             loadEvent( node, sourceName, pID );
         return 0;
@@ -339,16 +339,16 @@ namespace sw
         (void)_archetypeCatalog.add( archetype );
     }
 
-    bool ScheduleCatalog::loadNpc( const XMLNode& node, string_view sourceName, const utf8* pID )
+    bool ScheduleCatalog::loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrNpcAttribute, false, sourceName );
-        ScheduleNpcDef npc;
+        Internal::warnUnknownAttributes( node, Internal::kArrNPCAttribute, false, sourceName );
+        ScheduleNPCDef npc;
         npc._id           = hashed_string( pID );
         npc._archetype    = hashed_string( node.getAttributeText( "archetype" ) );
         npc._home         = hashed_string( node.getAttributeText( "home" ) );
         npc._idleActivity = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
-        if ( XMLReadUtil::readOptionalNumber( node, "speed", sourceName, ScheduleNpcDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
+        if ( XMLReadUtil::readOptionalNumber( node, "speed", sourceName, ScheduleNPCDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
         {
             SW_LOG_ERROR( "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
             return false;
@@ -374,7 +374,7 @@ namespace sw
         ScheduleEventDef event;
         event._id   = hashed_string( pID );
         bool bValid = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, event._priority );
-        ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNpc );
+        ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNPC );
         ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
         bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
@@ -593,7 +593,7 @@ namespace sw
         vector<vector<hashed_string>> listAttendeePerAppointment( _appointmentCatalog.getCount() );
         for ( size_t npcIndex = 0; npcIndex < _npcCatalog.getCount(); ++npcIndex )
         {
-            ScheduleNpcDef npc = _npcCatalog.getAt( npcIndex );
+            ScheduleNPCDef npc = _npcCatalog.getAt( npcIndex );
             if ( npc._archetype.empty() == false && findArchetype( npc._archetype ) == nullptr )
                 SW_LOG_WARNING( "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
             vector<hashed_string> listRoutineID;
@@ -641,9 +641,9 @@ namespace sw
         }
         for ( const ScheduleEventDef& event : _eventCatalog.getAll() )
         {
-            for ( const hashed_string& npcID : event._listNpc )
+            for ( const hashed_string& npcID : event._listNPC )
             {
-                if ( findNpc( npcID ) == nullptr )
+                if ( findNPC( npcID ) == nullptr )
                     SW_LOG_WARNING( "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcID.c_str() );
             }
         }

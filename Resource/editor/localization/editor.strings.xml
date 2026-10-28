@@ -3552,7 +3552,7 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTileMap.AtlasIdTip" source="Atlas cell index to paint, 0 to 255.">
+		<entry key="EditorTileMap.AtlasIDTip" source="Atlas cell index to paint, 0 to 255.">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
@@ -3731,7 +3731,7 @@
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTip.CameraFov"
+		<entry key="EditorTip.CameraFOV"
 		       source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>

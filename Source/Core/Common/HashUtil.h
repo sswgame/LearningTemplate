@@ -7,7 +7,7 @@
  *          의 기본 해시(`DefaultHash`)가 그것을 부르고, 여러 칸을 섞는 본문은 `HashUtil::makeHash( _a, _b )` 한 줄이다.
  */
 #pragma once
-#include "Core/Common/AsciiUtil.h"
+#include "Core/Common/ASCIIUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 
@@ -55,13 +55,13 @@ namespace sw
         /** @brief splitmix64 마무리의 둘째 곱수입니다. */
         static constexpr uint64 kSplitMixMultiplier1 = 0x94D049BB133111EBull;
         /** @brief FNV-1a 32 비트 기저값입니다. */
-        static constexpr uint32 kFnvOffset32 = 2166136261u;
+        static constexpr uint32 kFNVOffset32 = 2166136261u;
         /** @brief FNV-1a 32 비트 소수입니다. */
-        static constexpr uint32 kFnvPrime32 = 16777619u;
+        static constexpr uint32 kFNVPrime32 = 16777619u;
         /** @brief FNV-1a 64 비트 기저값입니다. */
-        static constexpr uint64 kFnvOffset64 = 14695981039346656037ull;
+        static constexpr uint64 kFNVOffset64 = 14695981039346656037ull;
         /** @brief FNV-1a 64 비트 소수입니다. */
-        static constexpr uint64 kFnvPrime64 = 1099511628211ull;
+        static constexpr uint64 kFNVPrime64 = 1099511628211ull;
 
         /** @brief splitmix64 의 마무리 섞기입니다. 비트를 고르게 퍼뜨립니다. */
         [[nodiscard]] static constexpr uint64 mix64( uint64 value ) noexcept
@@ -79,13 +79,13 @@ namespace sw
         }
 
         /** @brief FNV-1a 32 비트의 한 걸음입니다 — @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. 바이트가 아닌 값(헤더 · 칸 필드)을 하나씩 섞을 때 씁니다. */
-        [[nodiscard]] static constexpr uint32 fnvStep32( const uint32 hash, const uint32 value ) noexcept { return ( hash ^ value ) * kFnvPrime32; }
+        [[nodiscard]] static constexpr uint32 fnvStep32( const uint32 hash, const uint32 value ) noexcept { return ( hash ^ value ) * kFNVPrime32; }
 
         /** @brief FNV-1a 64 비트의 한 걸음입니다 — @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. */
-        [[nodiscard]] static constexpr uint64 fnvStep64( const uint64 hash, const uint64 value ) noexcept { return ( hash ^ value ) * kFnvPrime64; }
+        [[nodiscard]] static constexpr uint64 fnvStep64( const uint64 hash, const uint64 value ) noexcept { return ( hash ^ value ) * kFNVPrime64; }
 
         /**
-         * @brief FNV-1a 32 비트로 바이트열을 이어 섞습니다. 처음이면 @p hash 에 `kFnvOffset32` 를 넘기고, 이어 섞을 때는 앞 결과를 넘깁니다.
+         * @brief FNV-1a 32 비트로 바이트열을 이어 섞습니다. 처음이면 @p hash 에 `kFNVOffset32` 를 넘기고, 이어 섞을 때는 앞 결과를 넘깁니다.
          * @details 바이트를 낮은 주소부터 하나씩 섞습니다. 패킷 체크섬 · 압축 체크섬이 쓰므로 순서와 상수를 바꾸지 않습니다.
          */
         [[nodiscard]] static uint32 appendBytes32( uint32 hash, const void* pData, const size_t byteCount ) noexcept
@@ -99,7 +99,7 @@ namespace sw
         }
 
         /**
-         * @brief FNV-1a 64 비트로 바이트열을 이어 섞습니다. 처음이면 @p hash 에 `kFnvOffset64` 를 넘기고, 이어 섞을 때는 앞 결과를 넘깁니다.
+         * @brief FNV-1a 64 비트로 바이트열을 이어 섞습니다. 처음이면 @p hash 에 `kFNVOffset64` 를 넘기고, 이어 섞을 때는 앞 결과를 넘깁니다.
          * @details 바이트를 낮은 주소부터 하나씩 `xor` 한 뒤 소수를 곱합니다. 저장 · 네트워크로 나가는 상태 해시가 쓰므로 순서와 상수를 바꾸지 않습니다.
          *          객체의 바이트가 곧 해시 입력이라 패딩이 있는 구조체에는 쓰지 않습니다.
          */
@@ -131,12 +131,12 @@ namespace sw
          *          @p bIgnoreCase 가 참이면 ASCII 대문자를 소문자로 바꿔 섞는다(기본값이 참이다 — 대소문자를 구분하려면 거짓을 넘긴다).
          */
         template <typename CharT>
-        [[nodiscard]] static constexpr uint64 computeStringHash64( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint64 seed = kFnvOffset64 ) noexcept
+        [[nodiscard]] static constexpr uint64 computeStringHash64( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint64 seed = kFNVOffset64 ) noexcept
         {
             uint64 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                const uint64 c = static_cast<uint64>( static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? AsciiUtil::toLower( pStr[charIndex] ) : pStr[charIndex] ) );
+                const uint64 c = static_cast<uint64>( static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? ASCIIUtil::toLower( pStr[charIndex] ) : pStr[charIndex] ) );
                 hash           = fnvStep64( hash, c );
             }
             return hash;
@@ -144,19 +144,19 @@ namespace sw
 
         /** @brief 64 비트 FNV-1a 문자열 해시입니다(string · string_view · fixed_string 등 `data()` · `size()` 를 가진 형식). */
         template <typename StringType, typename = std::enable_if_t<std::is_class_v<StringType>>>
-        [[nodiscard]] static constexpr uint64 computeStringHash64( const StringType& str, const bool bIgnoreCase = true, const uint64 seed = kFnvOffset64 ) noexcept
+        [[nodiscard]] static constexpr uint64 computeStringHash64( const StringType& str, const bool bIgnoreCase = true, const uint64 seed = kFNVOffset64 ) noexcept
         {
             return computeStringHash64( str.data(), str.size(), bIgnoreCase, seed );
         }
 
         /** @brief 32 비트 FNV-1a 문자열 해시입니다(포인터 + 길이). 64 비트 쪽과 **같은 규칙**이다(@p bIgnoreCase 경로 포함) — 다르면 같은 문자열이 두 경로에서 다르게 해시된다. */
         template <typename CharT>
-        [[nodiscard]] static constexpr uint32 computeStringHash32( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint32 seed = kFnvOffset32 ) noexcept
+        [[nodiscard]] static constexpr uint32 computeStringHash32( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint32 seed = kFNVOffset32 ) noexcept
         {
             uint32 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                const uint32 c = static_cast<uint32>( static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? AsciiUtil::toLower( pStr[charIndex] ) : pStr[charIndex] ) );
+                const uint32 c = static_cast<uint32>( static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? ASCIIUtil::toLower( pStr[charIndex] ) : pStr[charIndex] ) );
                 hash           = fnvStep32( hash, c );
             }
             return hash;
@@ -164,7 +164,7 @@ namespace sw
 
         /** @brief 32 비트 FNV-1a 문자열 해시입니다(string · string_view · fixed_string 등). */
         template <typename StringType, typename = std::enable_if_t<std::is_class_v<StringType>>>
-        [[nodiscard]] static constexpr uint32 computeStringHash32( const StringType& str, const bool bIgnoreCase = true, const uint32 seed = kFnvOffset32 ) noexcept
+        [[nodiscard]] static constexpr uint32 computeStringHash32( const StringType& str, const bool bIgnoreCase = true, const uint32 seed = kFNVOffset32 ) noexcept
         {
             return computeStringHash32( str.data(), str.size(), bIgnoreCase, seed );
         }

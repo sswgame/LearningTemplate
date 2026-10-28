@@ -75,7 +75,7 @@ namespace sw
                                                   string& outError )
             {
                 XMLNode root;
-                if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, pRootName, root ) != XMLRootStatus::Found )
+                if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, pRootName, root ) != XMLRootStatus::Found )
                 {
                     outError = document.getLastError();
                     if ( outError.empty() )
@@ -432,7 +432,7 @@ namespace sw
         XMLDocument document;
         string      error;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "LocalizationProject", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "LocalizationProject", root ) != XMLRootStatus::Found )
         {
             error = document.getLastError();
             if ( error.empty() )

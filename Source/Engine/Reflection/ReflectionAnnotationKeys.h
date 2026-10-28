@@ -217,8 +217,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey EditCondition{};
         /** @brief flag.EditConditionHides — 단독 토큰 `EditConditionHides` 또는 `EditConditionHides = true`. */
         static constexpr AnnotationKey EditConditionHides{};
-        /** @brief flag.ColorHdr — 단독 토큰 `ColorHdr` 또는 `ColorHdr = true`. float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다 */
-        static constexpr AnnotationKey ColorHdr{};
+        /** @brief flag.ColorHDR — 단독 토큰 `ColorHDR` 또는 `ColorHDR = true`. float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다 */
+        static constexpr AnnotationKey ColorHDR{};
         /** @brief flag.Multiline — 단독 토큰 `Multiline` 또는 `Multiline = true`. 여러 줄 글 칸(string) */
         static constexpr AnnotationKey Multiline{};
         /** @brief string.FileFilter — `FileFilter = "…"`. 경로 칸이 받는 파일: "*.png;*.dds". 끌어다 놓은 경로가 맞지 않으면 받지 않는다 */
@@ -311,7 +311,7 @@ namespace sw::reflect::attr
         "Units",
         "EditCondition",
         "EditConditionHides",
-        "ColorHdr",
+        "ColorHDR",
         "Multiline",
         "FileFilter",
         "Replicated",

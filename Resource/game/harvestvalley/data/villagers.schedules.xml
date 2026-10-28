@@ -31,7 +31,7 @@
     </Routine>
   </Archetype>
 
-  <Npc id="pierre" archetype="villager" home="pierre_house" speed="12" tags="Job.Shopkeeper">
+  <NPC id="pierre" archetype="villager" home="pierre_house" speed="12" tags="Job.Shopkeeper">
     <Routine id="weekday" days="Mon,Tue,Thu,Fri,Sat">
       <Block start="9:00" end="17:00" activity="WorkAt" place="general_store" animation="Sweep"/>
       <Block start="17:00" end="19:00" activity="UseObject" objectKind="Bench" place="town_square"/>
@@ -43,9 +43,9 @@
     <Routine id="rain_indoors" priority="10" weathers="rain">
       <Block start="17:00" end="22:00" activity="StayHome"/>
     </Routine>
-  </Npc>
+  </NPC>
 
-  <Npc id="harvey" archetype="villager" home="harvey_house" speed="10" tags="Job.Doctor">
+  <NPC id="harvey" archetype="villager" home="harvey_house" speed="10" tags="Job.Doctor">
     <Routine id="clinic" days="Mon,Tue,Wed,Thu,Fri">
       <Block start="9:00" end="15:00" activity="WorkAt" place="clinic"/>
       <Block start="15:00" end="17:00" activity="GoTo" place="river" phases="Day"/>
@@ -54,14 +54,14 @@
     <Routine id="weekend" days="Sat,Sun">
       <Block start="10:00" end="13:00" activity="UseObject" objectKind="FishingSpot" place="river"/>
     </Routine>
-  </Npc>
+  </NPC>
 
-  <Npc id="linus" archetype="villager" home="linus_tent" speed="8" idle="StayHome">
+  <NPC id="linus" archetype="villager" home="linus_tent" speed="8" idle="StayHome">
     <Routine id="forage">
       <Block start="8:00" end="12:00" activity="Wander" place="river" every="40"/>
       <Block start="18:00" end="21:00" activity="Wander" place="town_square" every="20" flags="metLinus"/>
     </Routine>
-  </Npc>
+  </NPC>
 
   <Event id="egg_festival" priority="100" seasons="Spring" daysOfSeason="13" archetypes="villager">
     <Block start="9:00" end="14:00" activity="Attend" place="town_square"/>

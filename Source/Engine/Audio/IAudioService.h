@@ -174,9 +174,9 @@ namespace sw
         float32 getMusicVolume() const { return _musicVolume; }
 
         /** @brief 효과음(SFX) 볼륨을 설정합니다. 0~1 밖의 값은 잘립니다. */
-        void setSfxVolume( float32 volume );
+        void setSFXVolume( float32 volume );
         /** @brief 현재 효과음 볼륨입니다. */
-        float32 getSfxVolume() const { return _sfxVolume; }
+        float32 getSFXVolume() const { return _sfxVolume; }
 
         /**
          * @brief 전체 음소거 여부를 설정합니다.

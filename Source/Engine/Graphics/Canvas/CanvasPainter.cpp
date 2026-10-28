@@ -198,7 +198,7 @@ namespace sw
             return false;
 
         // 래스터 픽셀 → UI 단위 → 물리 픽셀. 글리프 비트맵은 윤곽 둘레로 spread 만큼 넓고, 베어링은 그 비트맵의 왼쪽 위다(기준선 위가 +).
-        const SdfRasterParams& rasterParams  = glyphCache.getRasterParams();
+        const SDFRasterParams& rasterParams  = glyphCache.getRasterParams();
         const float32          rasterToUI    = style._fontSize / static_cast<float32>( rasterParams._pixelSize );
         const float32          rasterToPixel = rasterToUI * _uiScale;
         const GlyphAtlasRect&  atlasRect     = pGlyph->_rect;
@@ -215,7 +215,7 @@ namespace sw
         quad._color                    = style._color;
         quad._borderColor              = style._outlineColor;
         // 아틀라스 값 0..1 은 윤곽에서 ±spread 래스터 픽셀 — 셰이더가 (값 − 0.5) × 이 배율로 화면 픽셀 거리를 만든다.
-        if ( glyphCache.getFieldKind() == GlyphFieldKind::Msdf )
+        if ( glyphCache.getFieldKind() == GlyphFieldKind::MSDF )
             quad._flags |= CanvasQuadFlag::kMultiChannelGlyph;
         quad._params._x = 2.0f * static_cast<float32>( rasterParams._spreadPx ) * rasterToPixel;
         quad._params._y = style._outlineWidth * _uiScale;
@@ -447,7 +447,7 @@ namespace sw
         size_t  offset                 = 0;
         while ( offset < text.size() )
         {
-            const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
+            const uint32     codepoint  = StringUtil::decodeUTF8( text, offset );
             uint32           glyphIndex = 0;
             const FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
             if ( face == kInvalidFontFaceID )

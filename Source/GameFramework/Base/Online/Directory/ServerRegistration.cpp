@@ -73,7 +73,7 @@ namespace sw
     {
         _status._heartbeatMs               = nowMs.count();
         const ServerDescriptor& descriptor = _status._descriptor;
-        _pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ) );
+        _pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTTLMs ) );
         _pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
                                                           nowMs.toSeconds() ) );
         _lastWrittenMs = nowMs;

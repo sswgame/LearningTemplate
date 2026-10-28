@@ -164,7 +164,7 @@ namespace sw::editor
 
         applySelectedPresetToViewport();
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = CameraPresetPanelInternal::kMinViewportHeight * EditorThemeUtil::getDpiScale();
+        const float32 minHeight = CameraPresetPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
         const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorWidgets::drawPanelStatus( _status.c_str() );

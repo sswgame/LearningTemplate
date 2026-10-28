@@ -18,7 +18,7 @@ namespace sw
      * @param dlcAppID 확인할 DLC 식별자
      * @return 소유가 확인되면 true, 구매하지 않았으면 false
      */
-    SW_DECLARE_DELEGATE( bool, DlcEntitlementDelegate, uint32 );
+    SW_DECLARE_DELEGATE( bool, DLCEntitlementDelegate, uint32 );
 
     /**
      * @struct MountedPack
@@ -120,7 +120,7 @@ namespace sw
         /**
          * @brief DLC 소유권 검증 콜백을 등록합니다.
          */
-        void setDlcEntitlementValidator( DlcEntitlementDelegate validator );
+        void setDLCEntitlementValidator( DLCEntitlementDelegate validator );
 
         /**
          * @brief 낱개 파일(loose file)을 먼저 읽을지 설정합니다(모딩 · 개발 편의용).
@@ -175,7 +175,7 @@ namespace sw
 
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
-        DlcEntitlementDelegate               _dlcValidator;
+        DLCEntitlementDelegate               _dlcValidator;
         atomic<bool>                         _bAllowLooseFiles; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
         PackPatchTrust                       _patchTrust;       ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
     };

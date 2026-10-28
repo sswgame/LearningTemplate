@@ -130,7 +130,7 @@ namespace sw
             string privateKeyPath;
             if ( ensureDevCertificate( trustPath, privateKeyPath, outError ) == false || Internal::readPem( trustPath, settings._trustPem, outError ) == false )
                 return nullptr;
-            if ( getProvider().computeCertificateSha256( settings._trustPem, settings._pinnedCertificateSha256Hex ) == false )
+            if ( getProvider().computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
             {
                 outError = "cannot compute the SHA-256 of the development certificate";
                 return nullptr;

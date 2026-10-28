@@ -25,9 +25,9 @@ namespace sw
             static constexpr string_view kFallbackFonts[] = { "NotoSansCJK-Regular.ttc", "NotoSansCJKkr-Regular.otf", "NotoSansKR-Regular.otf", "NanumGothic.ttf", "NanumBarunGothic.ttf", "DroidSansFallbackFull.ttf" };
             /** @brief 윤곽 둘레로 거리값을 담는 픽셀 수입니다(덮임 비율을 구하는 데 1 픽셀이면 된다). */
             static constexpr uint32 kSpreadPx = 2;
-            /** @brief SDF 바이트에서 윤곽(거리 0)의 값과 거리 한 칸(spread 픽셀)이 바이트 몇을 움직이는지입니다(`SdfGlyphBitmap`: 128 = 윤곽, 큰 값 = 안쪽). */
-            static constexpr float32 kSdfEdgeValue    = 128.0f;
-            static constexpr float32 kSdfValueSpan    = 127.0f;
+            /** @brief SDF 바이트에서 윤곽(거리 0)의 값과 거리 한 칸(spread 픽셀)이 바이트 몇을 움직이는지입니다(`SDFGlyphBitmap`: 128 = 윤곽, 큰 값 = 안쪽). */
+            static constexpr float32 kSDFEdgeValue    = 128.0f;
+            static constexpr float32 kSDFValueSpan    = 127.0f;
             static constexpr float32 kCoverageMaxByte = 255.0f;
         };
     } // namespace
@@ -116,11 +116,11 @@ namespace sw
         }
         if ( glyphIndex == 0 )
             return false; // 두 글꼴 어디에도 없다
-        SdfRasterParams params{};
+        SDFRasterParams params{};
         params._pixelSize = _pixelSize;
         params._spreadPx  = WaylandTextPainterInternal::kSpreadPx;
-        SdfGlyphBitmap bitmap{};
-        if ( _pRasterizer->rasterizeSdf( face, glyphIndex, params, bitmap ) == false )
+        SDFGlyphBitmap bitmap{};
+        if ( _pRasterizer->rasterizeSDF( face, glyphIndex, params, bitmap ) == false )
             return false;
         outGlyph._advance = static_cast<int32>( bitmap._advancePx + 0.5f );
         outGlyph._width   = bitmap._width;
@@ -129,10 +129,10 @@ namespace sw
         outGlyph._top     = static_cast<int32>( bitmap._bearingPx._y );
         outGlyph._listCoverage.resize( bitmap._bytes.size() );
         // 거리 d(픽셀, 안쪽 +)는 바이트 128 + 127 * d / spread 다 — 가장자리 픽셀의 덮임 비율은 0.5 + d 를 0 ~ 1 로 자른 값이다.
-        const float32 slope = static_cast<float32>( WaylandTextPainterInternal::kSpreadPx ) / WaylandTextPainterInternal::kSdfValueSpan;
+        const float32 slope = static_cast<float32>( WaylandTextPainterInternal::kSpreadPx ) / WaylandTextPainterInternal::kSDFValueSpan;
         for ( size_t index = 0; index < bitmap._bytes.size(); ++index )
         {
-            float32 coverage              = 0.5f + ( static_cast<float32>( bitmap._bytes[index] ) - WaylandTextPainterInternal::kSdfEdgeValue ) * slope;
+            float32 coverage              = 0.5f + ( static_cast<float32>( bitmap._bytes[index] ) - WaylandTextPainterInternal::kSDFEdgeValue ) * slope;
             coverage                      = coverage < 0.0f ? 0.0f : ( coverage > 1.0f ? 1.0f : coverage );
             outGlyph._listCoverage[index] = static_cast<uint8>( coverage * WaylandTextPainterInternal::kCoverageMaxByte + 0.5f );
         }
@@ -166,7 +166,7 @@ namespace sw
         size_t offset = 0;
         while ( offset < text.size() )
         {
-            const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+            const uint32 codepoint = StringUtil::decodeUTF8( text, offset );
             const Glyph& glyph     = findGlyph( codepoint );
             if ( glyph._bAvailable == false )
                 continue; // 글꼴에 없는 글자는 건너뛴다

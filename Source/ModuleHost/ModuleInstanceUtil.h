@@ -11,7 +11,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "RuntimeAPI/ABI/ModuleAbi.h"
+#include "RuntimeAPI/ABI/ModuleABI.h"
 
 namespace sw
 {
@@ -43,22 +43,22 @@ namespace sw
          * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
          *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** `create != nullptr && destroy != nullptr`
          *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
-         *          어긋남이 생기는 바로 그 상황입니다. RHI 경계의 `RHIModuleAbi.h` 와 같은 대조입니다.
+         *          어긋남이 생기는 바로 그 상황입니다. RHI 경계의 `RHIModuleABI.h` 와 같은 대조입니다.
          */
-        static bool matchesModuleAbi( void* pLibraryModule, const ModuleAPISymbols& symbols )
+        static bool matchesModuleABI( void* pLibraryModule, const ModuleAPISymbols& symbols )
         {
             const PFN_GetModuleAbiVersion pfnVersion =
                 reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
-            if ( pfnVersion == nullptr || pfnVersion() != kModuleAbiVersion )
+            if ( pfnVersion == nullptr || pfnVersion() != kModuleABIVersion )
             {
-                SW_LOG_ERROR( "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleAbiVersion );
+                SW_LOG_ERROR( "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );
                 return false;
             }
 
             const PFN_GetModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
-            if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleAbiStamp ) == false )
+            if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleABIStamp ) == false )
             {
-                SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleAbiStamp );
+                SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );
                 return false;
             }
             return true;
@@ -72,7 +72,7 @@ namespace sw
         [[nodiscard]] static bool exportAPIFromImage( void* pLibraryModule, const ModuleAPISymbols& symbols, TAPI& outAPI )
         {
             outAPI = {};
-            if ( pLibraryModule == nullptr || matchesModuleAbi( pLibraryModule, symbols ) == false )
+            if ( pLibraryModule == nullptr || matchesModuleABI( pLibraryModule, symbols ) == false )
                 return false;
             const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
             if ( pfnExport == nullptr || pfnExport( &outAPI ) == false )

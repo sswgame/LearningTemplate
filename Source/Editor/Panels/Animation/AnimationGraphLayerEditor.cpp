@@ -84,7 +84,7 @@ namespace sw::editor
 
             static void drawRowLabel( const utf8* pLabel )
             {
-                EditorWidgets::drawPropertyRowLabel( pLabel, kLabelWidth * EditorThemeUtil::getDpiScale() );
+                EditorWidgets::drawPropertyRowLabel( pLabel, kLabelWidth * EditorThemeUtil::getDPIScale() );
             }
 
             /** @brief 목록 순서를 한 항목 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
@@ -422,7 +422,7 @@ namespace sw::editor
 
         // 프리셋 파일을 고르면 그 파일을 읽어 항목을 채우고, 비우면 지금 항목을 그래프에 바로 적는다.
         string presetPath = inoutMask._filePath;
-        if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.xml", AnimationGraphLayerEditorInternal::kLabelWidth * EditorThemeUtil::getDpiScale() ) )
+        if ( EditorWidgets::drawAssetSlot( "Preset", presetPath, ".bonemask.xml", AnimationGraphLayerEditorInternal::kLabelWidth * EditorThemeUtil::getDPIScale() ) )
         {
             AnimationBoneMaskDef loaded{};
             loaded._name = inoutMask._name;

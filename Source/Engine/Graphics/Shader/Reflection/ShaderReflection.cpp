@@ -27,7 +27,7 @@ namespace sw
 #endif
             case ShaderTargetFormat::SPIRV_Vulkan:
             case ShaderTargetFormat::SPIRV_OpenGL:
-                return ShaderReflectionUtil::reflectSpirv( bytecode );
+                return ShaderReflectionUtil::reflectSPIRV( bytecode );
             case ShaderTargetFormat::Count:
                 break;
         }

@@ -53,7 +53,7 @@ namespace sw
     bool AutomationLogPolicy::parseAllowList( string_view jsonText, string_view sourceName, string& outError )
     {
         JSONDocument document;
-        if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
+        if ( document.parse( FileUtil::skipUTF8Bom( jsonText ), sourceName ) == false )
         {
             outError = string( sourceName ) + ": not valid JSON";
             return false;

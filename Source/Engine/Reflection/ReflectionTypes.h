@@ -992,7 +992,7 @@ namespace sw
         bool isPrimitive() const noexcept { return _bPrimitive != SW_FALSE; }
 
         /** @brief 직렬화나 복사에서 memcpy POD 경로를 쓸 수 있으면 true 입니다. */
-        bool usesPodCopyFastPath() const;
+        bool usesPODCopyFastPath() const;
         /**
          * @brief 상속한 기반까지 포함해 `SaveGame` 프로퍼티가 하나라도 있으면 true 입니다. 세이브 직렬화가 그 프로퍼티만 쓰는 타입(옵트인)인지 나타냅니다.
          * @details 상속 목록 캐시와 함께 비우고 다시 구한다(`clearInheritedProperties`).

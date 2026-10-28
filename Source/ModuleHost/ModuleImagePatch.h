@@ -34,9 +34,9 @@ namespace sw
             Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT). 로더가 로드할 때 바인딩한다
             Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT). 첫 호출이 썽크를 지나 바인딩한다
         };
-        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`EngineAbiStamp.py` 와 같아야 한다). */
-        static constexpr const utf8* kEngineAbiStampMarker = "swEngineAbiStamp:";
-        static constexpr uint32      kEngineAbiStampDigits = 40;
+        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`EngineABIStamp.py` 와 같아야 한다). */
+        static constexpr const utf8* kEngineABIStampMarker = "swEngineABIStamp:";
+        static constexpr uint32      kEngineABIStampDigits = 40;
 
         /** @brief 동적 섹션의 DT_SONAME 을 읽습니다. ELF64 LE 가 아니거나 SONAME 이 없으면 false 입니다. */
         [[nodiscard]] static bool readSoname( const vector<uint8>& bytes, string& outSoname );
@@ -60,7 +60,7 @@ namespace sw
          * @brief PE32+ 이미지 @p bytes 의 @p table 에 적힌 DLL 이름을 순서대로 모읍니다.
          * @return PE32+ 로 읽었으면 true(표가 없으면 빈 목록). PE32+ 가 아니거나 잘렸으면 false 입니다.
          */
-        [[nodiscard]] static bool readImportDllNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDllName );
+        [[nodiscard]] static bool readImportDLLNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDLLName );
 
         /** @brief PE32+ 이미지 @p bytes 의 데이터 디렉터리에 @p table 이 있으면(RVA 가 0 이 아니면) true 입니다. 담긴 서술자 수와 무관합니다. */
         [[nodiscard]] static bool hasImportDirectory( const vector<uint8>& bytes, ImportTable table );
@@ -69,14 +69,14 @@ namespace sw
          * @brief PE32+ 이미지의 일반 import 표에서 DLL 이름이 @p from 인 항목(대소문자 무시)을 @p to 로 바꾸고, 바꾼 항목 수를 반환합니다.
          * @details @p to 는 @p from 과 길이가 같아야 합니다(이름 문자열을 제자리로 덮습니다). 다르거나 PE32+ 가 아니면 0 입니다.
          */
-        static uint32 replaceImportDllName( vector<uint8>& inoutBytes, string_view from, string_view to );
+        static uint32 replaceImportDLLName( vector<uint8>& inoutBytes, string_view from, string_view to );
 
         /**
-         * @brief 모듈 파일 바이트에서 엔진 ABI 스탬프(`swEngineAbiStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
+         * @brief 모듈 파일 바이트에서 엔진 ABI 스탬프(`swEngineABIStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
          * @details 핫 리로드는 **모듈 코드가 한 줄도 돌기 전에**(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
          *          찾지 않고 파일에서 표식 문자열을 찾습니다.
          * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).
          */
-        [[nodiscard]] static bool findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp );
+        [[nodiscard]] static bool findEngineABIStamp( const vector<uint8>& bytes, string& outStamp );
     };
 } // namespace sw

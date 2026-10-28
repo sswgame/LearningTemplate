@@ -43,17 +43,17 @@ namespace sw
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 내용을 채워 바인드 용도 하나(정점 또는 인덱스)의 기본 버퍼를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
         /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. */
-        RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
+        RHIDescriptorIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer );
         D3D11RHIDevice*    _pDevice;
     };
 } // namespace sw

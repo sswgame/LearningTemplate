@@ -33,7 +33,7 @@ namespace sw
     {
         None          = 0,
         HasStringPool = SW_BIT( 0 ), ///< 항목 경로 목록(스트링 풀)을 담았는지. 폴더 나열이 이 목록을 읽으므로 쿠커는 늘 담고, 리더는 없는 팩을 거절한다
-        HasCrc32      = SW_BIT( 1 ), ///< 파일별 CRC32 체크섬을 담았는지
+        HasCRC32      = SW_BIT( 1 ), ///< 파일별 CRC32 체크섬을 담았는지
         Encrypted     = SW_BIT( 2 ), ///< FAT 와 페이로드를 암호화했는지
     };
 

@@ -38,8 +38,8 @@
  * 깊이 패스(SW_PASS_SHADOW · SW_PASS_DEPTH_PREPASS)에서 알파 컷오프가 아니면 정점 → 픽셀 칸은 위치(와 등장 디더)뿐이다 — 그림자 맵은 패스마다 모든 메시를 그리므로
  * 쓰이지 않는 색 · 노멀 · 사용자 칸을 정점 단계가 내보내지 않는다.
  *
- * 훅 안에서 이른 반환(중간 `return`)을 쓰지 않는다. 뼈대는 출구가 하나이고 훅이 인라인되어도 그래야 한다 — Vfx V5 에서 드라이버가 이른 반환 모양을 틀리게
- * 컴파일했을 가능성이 있다(docs/plans/Vfx.md V4 남은 확인). 형식으로 막지 못하는 틈이라 리뷰가 본다.
+ * 훅 안에서 이른 반환(중간 `return`)을 쓰지 않는다. 뼈대는 출구가 하나이고 훅이 인라인되어도 그래야 한다 — VFX V5 에서 드라이버가 이른 반환 모양을 틀리게
+ * 컴파일했을 가능성이 있다(docs/plans/VFX.md V4 남은 확인). 형식으로 막지 못하는 틈이라 리뷰가 본다.
  */
 
 #ifndef SW_ENGINE_MATERIALSHADER_HLSLI
@@ -107,7 +107,7 @@ struct VertexContext
 {
     VertexInput  _input; ///< 입력 스트림 그대로(색 · UV · 탄젠트)
     InstanceData _instance;
-    uint         _vertexId;
+    uint         _vertexID;
     float3       _localPosition; ///< 모프 · 스킨 · VAT 가 적용된 로컬 위치
     float3       _localNormal;
     float3       _worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
@@ -151,7 +151,7 @@ struct MaterialInterpolants
     MaterialVaryings _user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
 #endif
     SW_APPEARANCE_VARYING   // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
-        SW_LODDEBUG_VARYING // 보기 모드 LodLevel · LodFade 만 가시 항목을 넘긴다(binding.hlsli 보기 모드 절)
+        SW_LODDEBUG_VARYING // 보기 모드 LODLevel · LODFade 만 가시 항목을 넘긴다(binding.hlsli 보기 모드 절)
 
         // 정점 진입점이 칸을 채우는 단계와 픽셀 진입점의 본문(materialshadermain.hlsli). 패스 · 기능 스위치에 맞는 정의만 있다.
         void

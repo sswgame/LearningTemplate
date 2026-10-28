@@ -338,13 +338,13 @@ namespace sw::editor
     {
         const string assetID = AssetPaths::toAssetID( assetPath );
         AssetMeta    meta;
-        meta._guid       = makeImportedGuid( assetID );
+        meta._guid       = makeImportedGUID( assetID );
         meta._sourcePath = assetID;
         meta._bImported  = true;
         return FileUtil::writeTextFile( assetPath + path::kMetaExtension, meta.toXML() );
     }
 
-    string ModelImportUtil::makeImportedGuid( string_view assetID )
+    string ModelImportUtil::makeImportedGUID( string_view assetID )
     {
         const uint64 high = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false );
         const uint64 low  = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false, high ^ HashUtil::kGoldenRatio64 );

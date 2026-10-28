@@ -177,8 +177,8 @@ namespace sw::editor
                 style.IndentSpacing    = spacing._indent * density;
                 style.ScrollbarSize    = spacing._scrollbarSize;
                 style.GrabMinSize      = spacing._grabMinSize;
-                // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
-                const float32 dpiScale = getSubsystem<EditorTheme>().getDpiScale();
+                // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDPIScale`).
+                const float32 dpiScale = getSubsystem<EditorTheme>().getDPIScale();
                 if ( dpiScale != 1.0f )
                     style.ScaleAllSizes( dpiScale );
                 // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
@@ -313,21 +313,21 @@ namespace sw::editor
         EditorThemeInternal::applyPalette( config, style );
     }
 
-    void EditorThemeUtil::setDpiScale( float32 dpiScale )
+    void EditorThemeUtil::setDPIScale( float32 dpiScale )
     {
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
         EditorTheme&  theme = getSubsystem<EditorTheme>();
-        if ( theme.getDpiScale() == scale )
+        if ( theme.getDPIScale() == scale )
             return;
         // 테마는 96 DPI 기준 값을 보관하고 있으므로 새 배율로 다시 적용하면 된다.
-        theme.setDpiScale( scale );
+        theme.setDPIScale( scale );
         applyTheme( getActiveTheme() );
         ImGui::GetStyle().FontScaleDpi = scale;
     }
 
-    float32 EditorThemeUtil::getDpiScale()
+    float32 EditorThemeUtil::getDPIScale()
     {
-        return getSubsystem<EditorTheme>().getDpiScale();
+        return getSubsystem<EditorTheme>().getDPIScale();
     }
 
     bool EditorThemeUtil::loadFromConfig()

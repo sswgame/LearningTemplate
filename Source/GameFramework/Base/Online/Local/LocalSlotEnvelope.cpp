@@ -17,7 +17,7 @@ namespace sw
         struct LocalSlotEnvelopeInternal
         {
             static constexpr uint8  kArrMagic[4] = { 'S', 'W', 'L', 'S' };
-            static constexpr size_t kCrcSize     = 4;
+            static constexpr size_t kCRCSize     = 4;
             static constexpr size_t kKeyIDSize   = 8;
             static constexpr utf8   kSealInfo[]  = "swls-seal-v1";
             static constexpr utf8   kKeyIDInfo[] = "swls-key-id-v1";
@@ -59,10 +59,10 @@ namespace sw
                 if ( context._pKeyProvider->getSealKey( arrDeviceKey ) == false )
                     return LocalStoreResult::IOError;
                 uint8      arrKeyID[kKeyIDSize] = {};
-                const bool bDerived             = context._pSecurityProvider->computeHkdfSha256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                const bool bDerived             = context._pSecurityProvider->computeHkdfSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                                  reinterpret_cast<const uint8*>( kSealInfo ), sizeof( kSealInfo ) - 1, outSealKey,
                                                                                                  NetSecurityConstant::kAeadKeySize ) &&
-                                      context._pSecurityProvider->computeHkdfSha256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                                      context._pSecurityProvider->computeHkdfSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                      reinterpret_cast<const uint8*>( kKeyIDInfo ), sizeof( kKeyIDInfo ) - 1, arrKeyID,
                                                                                      static_cast<int32>( kKeyIDSize ) );
                 std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
@@ -155,13 +155,13 @@ namespace sw
         if ( options._seal == LocalStoreSeal::None )
         {
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
-            uint8 arrCrc[Internal::kCrcSize] = {};
-            LittleEndianUtil::writeUint32( arrCrc, StringUtil::computeCrc32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
-            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrCrc, arrCrc + Internal::kCrcSize );
+            uint8 arrCRC[Internal::kCRCSize] = {};
+            LittleEndianUtil::writeUint32( arrCRC, StringUtil::computeCRC32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrCRC, arrCRC + Internal::kCRCSize );
             return LocalStoreResult::Ok;
         }
 
-        unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::Aes256Gcm, arrSealKey );
+        unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::AES256Gcm, arrSealKey );
         std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
         uint8 arrNonce[NetSecurityConstant::kAeadNonceSize] = {};
         if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAeadNonceSize ) == false )
@@ -213,10 +213,10 @@ namespace sw
         {
             case LocalStoreSeal::None:
             {
-                if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCrcSize )
+                if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCRCSize )
                     return LocalStoreResult::Corrupt;
-                const uint32 storedCrc = LittleEndianUtil::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
-                if ( StringUtil::computeCrc32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCrc )
+                const uint32 storedCRC = LittleEndianUtil::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
+                if ( StringUtil::computeCRC32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCRC )
                     return LocalStoreResult::Corrupt;
                 pBody = pEnvelopeBytes + kHeaderSize;
                 break;
@@ -237,7 +237,7 @@ namespace sw
                     std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                     return LocalStoreResult::WrongKey;
                 }
-                unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::Aes256Gcm, arrSealKey );
+                unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::AES256Gcm, arrSealKey );
                 std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                 if ( aead == nullptr )
                     return LocalStoreResult::IOError;

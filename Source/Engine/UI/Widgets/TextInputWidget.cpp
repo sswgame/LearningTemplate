@@ -43,7 +43,7 @@ namespace sw
                 size_t offset = 0;
                 while ( offset < text.size() )
                 {
-                    (void)StringUtil::decodeUtf8( text, offset );
+                    (void)StringUtil::decodeUTF8( text, offset );
                     ++count;
                 }
                 return count;
@@ -54,7 +54,7 @@ namespace sw
             {
                 if ( byte >= text.size() )
                     return static_cast<uint32>( text.size() );
-                return static_cast<uint32>( StringUtil::floorToUtf8Boundary( text, byte ) );
+                return static_cast<uint32>( StringUtil::floorToUTF8Boundary( text, byte ) );
             }
 
             /** @brief @p byte 앞 코드 포인트의 시작 바이트입니다(0 이면 0). */
@@ -71,7 +71,7 @@ namespace sw
                 if ( byte >= text.size() )
                     return static_cast<uint32>( text.size() );
                 size_t offset = byte;
-                (void)StringUtil::decodeUtf8( text, offset );
+                (void)StringUtil::decodeUTF8( text, offset );
                 return static_cast<uint32>( offset );
             }
 
@@ -82,7 +82,7 @@ namespace sw
                 uint32 taken  = 0;
                 while ( offset < text.size() && taken < count )
                 {
-                    (void)StringUtil::decodeUtf8( text, offset );
+                    (void)StringUtil::decodeUTF8( text, offset );
                     ++taken;
                 }
                 return offset;
@@ -102,7 +102,7 @@ namespace sw
                 while ( offset < text.size() )
                 {
                     const size_t start     = offset;
-                    const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+                    const uint32 codepoint = StringUtil::decodeUTF8( text, offset );
                     if ( isControlCodepoint( codepoint ) )
                         continue;
                     result.append( text.data() + start, offset - start );
@@ -465,7 +465,7 @@ namespace sw
         while ( offset < event._text.size() )
         {
             const size_t start     = offset;
-            const uint32 codepoint = StringUtil::decodeUtf8( event._text, offset );
+            const uint32 codepoint = StringUtil::decodeUTF8( event._text, offset );
             if ( codepoint == '\r' || codepoint == '\n' )
             {
                 if ( pending.empty() == false )
@@ -513,15 +513,15 @@ namespace sw
         const WidgetGeometry& display   = _pDisplay->getGeometry();
         const WidgetGeometry& self      = getGeometry();
         const bool            bEmpty    = _text.empty() && _composition.empty();
-        const bool            bRtl      = isRightToLeft();
+        const bool            bRTL      = isRightToLeft();
         const float32         localLeft = display._position._x - self._position._x;
         const float32         textWidth = bEmpty ? 0.0f : _pDisplay->getDesiredSize()._x;
-        const float32         startX    = bRtl ? localLeft + display._size._x : localLeft;
-        const float32         endX      = bRtl ? localLeft + display._size._x - textWidth : localLeft + textWidth;
+        const float32         startX    = bRTL ? localLeft + display._size._x : localLeft;
+        const float32         endX      = bRTL ? localLeft + display._size._x - textWidth : localLeft + textWidth;
         if ( bEmpty || displayByte == 0 )
             return startX;
         const vector<LaidOutGlyph>& listGlyph = _pDisplay->getLastLayout()._listGlyph;
-        if ( bRtl == false )
+        if ( bRTL == false )
         {
             // 글리프는 보이는 순서이고 왼쪽에서 오른쪽 글에서는 논리 순서와 같다. 그 바이트 위치 이후 첫 글리프의 왼쪽 변이 경계다.
             for ( const LaidOutGlyph& glyph : listGlyph )

@@ -682,7 +682,7 @@ namespace sw
             order._bReady      = SW_TRUE;
             cook._taskCustomer = -1;
             _eventBuffer.push( RestaurantEvent{ order._dishID, order._quality, order._customerID, RestaurantEvent::Kind::DishCooked } );
-            grantXp( cook, _settings._cookXp );
+            grantXP( cook, _settings._cookXP );
             order._cook = -1;
         }
 
@@ -726,13 +726,13 @@ namespace sw
                 const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeID );
                 customer._eatRemaining       = pType != nullptr ? pType->_eatMinutes : 0.0f;
                 customer._state              = customer._eatRemaining > 0.0f ? CustomerState::Eating : CustomerState::WaitingCheckout;
-                grantXp( staff, _settings._serveXp );
+                grantXP( staff, _settings._serveXP );
             }
             else if ( customer._bCheckingOut != SW_FALSE )
             {
                 customer._bCheckingOut = SW_FALSE;
                 settlePayment( customer );
-                grantXp( staff, _settings._checkoutXp );
+                grantXP( staff, _settings._checkoutXP );
             }
         }
     }
@@ -966,11 +966,11 @@ namespace sw
             _listSatisfaction.erase( _listSatisfaction.begin(), _listSatisfaction.begin() + static_cast<ptrdiff_t>( _listSatisfaction.size() - window ) );
     }
 
-    void RestaurantSimulation::grantXp( StaffMember& staff, int64 amount )
+    void RestaurantSimulation::grantXP( StaffMember& staff, int64 amount )
     {
         if ( _pStaffCurve == nullptr || amount <= 0 )
             return;
-        if ( staff._level.addXp( *_pStaffCurve, amount ) > 0 )
+        if ( staff._level.addXP( *_pStaffCurve, amount ) > 0 )
             _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), -1, RestaurantEvent::Kind::StaffLevelUp } );
     }
 

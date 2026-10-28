@@ -144,8 +144,8 @@ if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE ST
 			# 캐시 폴더 이름은 `BuildCaches.json` 이 정한다 — 콜드 측정(`RunBuildBaseline.py`)이 같은 파일로 이 폴더를 지운다. 빌드 폴더 밖이면 구성을 세운다.
 			set(sw_build_caches_file "${CMAKE_CURRENT_LIST_DIR}/../Config/BuildCaches.json")
 			set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${sw_build_caches_file}")
-			sw_requireJsonValue(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
-			sw_requireJsonValue(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
+			sw_requireJSONValue(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
+			sw_requireJSONValue(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
 
 			if(NOT sw_lto_cache_base STREQUAL "build")
 				message(FATAL_ERROR "[BuildConfig] ${sw_build_caches_file}: cold_clear.lto_link_cache.base must be 'build' (got '${sw_lto_cache_base}')")
@@ -277,7 +277,7 @@ endfunction()
 function(sw_deployRuntimeDependencies TARGET_NAME)
 	cmake_parse_arguments(ARG "ALWAYS_DXC" "" "" ${ARGN})
 	if(ARG_ALWAYS_DXC OR NOT SW_SHIPPING_BUILD)
-		sw_copyDxcDlls(${TARGET_NAME})
+		sw_copyDXCDLLs(${TARGET_NAME})
 	endif()
 	if(sw_vulkan_validation)
 		sw_copyVulkanValidationRuntime(${TARGET_NAME})
@@ -289,7 +289,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDLLs`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
 #      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).

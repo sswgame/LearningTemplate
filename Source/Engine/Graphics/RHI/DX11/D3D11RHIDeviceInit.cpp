@@ -242,8 +242,8 @@ namespace sw
         _listRegisteredTexture.clear();
         _listTextureFree.clear();
         _listRegisteredUAV.clear();
-        _listUavSourceBuffer.clear();
-        _listUavFree.clear();
+        _listUAVSourceBuffer.clear();
+        _listUAVFree.clear();
         _recordingState = D3D11RecordingState{};
         _idleQuery.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )
@@ -270,7 +270,7 @@ namespace sw
         // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다: 백버퍼 RTV, Immediate Context 의
         // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨리면 창 크기 변경이
         // 매번 조용히 실패한다.
-        _swapChain.releaseBackBufferRtv();
+        _swapChain.releaseBackBufferRTV();
         {
             ScopedLock<mutex> lock{ _liveCmdListMutex };
             for ( D3D11RHICommandList* pLiveList : _listLiveCmd )

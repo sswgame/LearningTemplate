@@ -97,7 +97,7 @@ namespace sw
          * @brief 텍스처(RGBA8, 빈틈없는 행)를 @p rect 에 복사하고, 사방 @p padding 픽셀을 가장자리 픽셀로 채웁니다(밉 · 필터링이 이웃 텍스처 색을 끌어오지 않게).
          * @return 텍스처 크기가 사각형과 다르거나 사각형이 아틀라스를 벗어나면 까닭을 @p pOutError 에 남기고 false 입니다.
          */
-        [[nodiscard]] static bool blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRgba, uint32 textureWidth, uint32 textureHeight,
+        [[nodiscard]] static bool blit( uint32 atlasSize, const OutfitAtlasRect& rect, uint32 padding, const vector<uint8>& textureRGBA, uint32 textureWidth, uint32 textureHeight,
                                         vector<uint8>& inoutAtlas, string* pOutError );
     };
 } // namespace sw

@@ -46,7 +46,7 @@ namespace sw
          * @note 하나라도 실패하면 **전부 비웁니다.** 일부만 null 인 채로 두면 크기는 정상이라
          *       범위 검사를 통과해버리고, null 리소스가 그대로 배리어에 들어가 GPU PageFault 가 됩니다.
          */
-        void createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRtvHeap, uint32 rtvDescriptorSize );
+        void createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRTVHeap, uint32 rtvDescriptorSize );
 
         /** @brief 백버퍼만 놓습니다 (스왑체인은 유지). ResizeBuffers 전에 반드시 필요합니다. */
         void releaseBackBuffers();
@@ -115,7 +115,7 @@ namespace sw
         ID3D12Resource* getCurrentBackBuffer() const;
 
         /** @brief 현재 백버퍼의 RTV 를 반환합니다. 준비 안 됐으면 `{ 0 }` 입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE getCurrentRtv() const;
+        D3D12_CPU_DESCRIPTOR_HANDLE getCurrentRTV() const;
 
         D3D12_RESOURCE_STATES getState() const;
 
@@ -123,7 +123,7 @@ namespace sw
         Microsoft::WRL::ComPtr<IDXGISwapChain3>                        _swapChain;
         ThreadRole                                                     _renderThread; ///< 렌더 스레드 역할 — 백 버퍼 목록 · 인덱스는 프레임 진행(렌더 스레드와 그 병렬 기록 태스크)만 만지고 인덱스는 기록 밖(acquireNextImage)에서만 바뀐다(잠금이 아니라 분석용 능력)
         vector<Microsoft::WRL::ComPtr<ID3D12Resource>> _listBackBuffer SW_GUARDED_BY( _renderThread );
-        vector<D3D12_CPU_DESCRIPTOR_HANDLE>                            _listBackBufferRtv;
+        vector<D3D12_CPU_DESCRIPTOR_HANDLE>                            _listBackBufferRTV;
 
         /// @brief 소유하지 않는 감시자입니다(setBarrierWatcher 참고).
         const IRHIDevice* _pBarrierWatcher{ nullptr };

@@ -45,7 +45,7 @@ namespace sw::editor
         return FileUtil::joinPath( stateDirectory, kFolderName );
     }
 
-    string EditorLayoutStore::makeImguiIniPath( string_view folder, string_view name )
+    string EditorLayoutStore::makeImguiINIPath( string_view folder, string_view name )
     {
         return FileUtil::joinPath( folder, string( name ) + kImguiSuffix );
     }
@@ -72,20 +72,20 @@ namespace sw::editor
         std::sort( outListName.begin(), outListName.end() );
     }
 
-    bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiIniText, const EditorPanelVisibility& panelVisibility )
+    bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )
     {
         if ( FileUtil::ensureDirectoryExists( folder ) == false )
             return false;
-        if ( FileUtil::writeTextFile( makeImguiIniPath( folder, name ), string( imguiIniText ) ) == false )
+        if ( FileUtil::writeTextFile( makeImguiINIPath( folder, name ), string( imguiINIText ) ) == false )
             return false;
         return panelVisibility.saveFile( makeVisibilityPath( folder, name ) );
     }
 
-    bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiIniText, EditorPanelVisibility& outPanelVisibility )
+    bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility )
     {
         outPanelVisibility._mapOpen.clear();
-        const string imguiPath = makeImguiIniPath( folder, name );
-        if ( FileUtil::exists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiIniText ) == false )
+        const string imguiPath = makeImguiINIPath( folder, name );
+        if ( FileUtil::exists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiINIText ) == false )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
         if ( outPanelVisibility.loadFile( visibilityPath ) == ConfigReadResult::Invalid )
@@ -98,7 +98,7 @@ namespace sw::editor
 
     bool EditorLayoutStore::remove( string_view folder, string_view name )
     {
-        const bool bImguiRemoved      = FileUtil::removeFile( makeImguiIniPath( folder, name ) );
+        const bool bImguiRemoved      = FileUtil::removeFile( makeImguiINIPath( folder, name ) );
         const bool bVisibilityRemoved = FileUtil::removeFile( makeVisibilityPath( folder, name ) );
         return bImguiRemoved && bVisibilityRemoved;
     }

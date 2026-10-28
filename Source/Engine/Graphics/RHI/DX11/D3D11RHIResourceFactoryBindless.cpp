@@ -45,9 +45,9 @@ namespace sw
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSrv" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
 
@@ -73,9 +73,9 @@ namespace sw
         releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
@@ -106,52 +106,52 @@ namespace sw
         if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pResource, &uavDesc, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
-        return registerUavView( uav.Get(), buffer );
+        return registerUAVView( uav.Get(), buffer );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr )
             return kInvalidDescriptorIndex;
 
-        // 텍스처 UAV: bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 바인딩한다.
+        // 텍스처 UAV: bindComputeUAV( index, kComputeTextureUAV0 + 서수 ) 가 CSSetUnorderedAccessViews 로 바인딩한다.
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
         if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
-        return registerUavView( uav.Get(), RHIBufferHandle{ 0 } );
+        return registerUAVView( uav.Get(), RHIBufferHandle{ 0 } );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer )
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        if ( _pDevice->_listUavFree.empty() == false )
+        if ( _pDevice->_listUAVFree.empty() == false )
         {
-            const RHIDescriptorIndex index = _pDevice->_listUavFree.back();
-            _pDevice->_listUavFree.pop_back();
-            _pDevice->_listRegisteredUAV[index]   = pUav;
-            _pDevice->_listUavSourceBuffer[index] = sourceBuffer;
+            const RHIDescriptorIndex index = _pDevice->_listUAVFree.back();
+            _pDevice->_listUAVFree.pop_back();
+            _pDevice->_listRegisteredUAV[index]   = pUAV;
+            _pDevice->_listUAVSourceBuffer[index] = sourceBuffer;
             return index;
         }
         const RHIDescriptorIndex index = static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() );
-        _pDevice->_listRegisteredUAV.push_back( pUav );
-        _pDevice->_listUavSourceBuffer.push_back( sourceBuffer );
+        _pDevice->_listRegisteredUAV.push_back( pUAV );
+        _pDevice->_listUAVSourceBuffer.push_back( sourceBuffer );
         return index;
     }
 
-    void D3D11RHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
+    void D3D11RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUav" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( index >= _pDevice->_listRegisteredUAV.size() || _pDevice->_listRegisteredUAV[index] == nullptr )
             return;
         _pDevice->_listRegisteredUAV[index].Reset();
-        _pDevice->_listUavSourceBuffer[index] = RHIBufferHandle{ 0 };
-        _pDevice->_listUavFree.push_back( index );
+        _pDevice->_listUAVSourceBuffer[index] = RHIBufferHandle{ 0 };
+        _pDevice->_listUAVFree.push_back( index );
     }
 } // namespace sw
 #endif

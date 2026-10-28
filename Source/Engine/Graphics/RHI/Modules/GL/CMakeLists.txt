@@ -3,4 +3,4 @@
 # @brief RHI_GL MODULE — OpenGL 백엔드
 # ==============================================================================
 
-sw_addRhiBackendModule(OpenGL)
+sw_addRHIBackendModule(OpenGL)

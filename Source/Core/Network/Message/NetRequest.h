@@ -116,7 +116,7 @@ namespace sw
     {
         int32   _maxInFlightPerConnection{ 64 }; ///< 진행 중인 요청이 이 수를 넘으면 Overloaded 로 응답한다.
         int32   _maxIdempotencyEntries{ 100000 };
-        float64 _idempotencyTtlSeconds{ 600.0 }; ///< 응답을 기억하는 시간. 재접속과 재시도 윈도우보다 길게 잡는다.
+        float64 _idempotencyTTLSeconds{ 600.0 }; ///< 응답을 기억하는 시간. 재접속과 재시도 윈도우보다 길게 잡는다.
     };
 } // namespace sw
 

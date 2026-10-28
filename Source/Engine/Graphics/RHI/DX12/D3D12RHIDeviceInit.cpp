@@ -2,7 +2,7 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
@@ -36,7 +36,7 @@ namespace sw
     #if !defined( SW_SHIPPING )
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
         // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
-        if ( GpuBreadcrumbs::isEnabled() )
+        if ( GPUBreadcrumbs::isEnabled() )
         {
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )
@@ -69,7 +69,7 @@ namespace sw
                 if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
                 {
                     utf8         arrName[constant::kMaxBuffer256]{};
-                    const string name = StringUtil::utf16ToUtf8( adapterDesc.Description );
+                    const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
                     formatstring( arrName, constant::kMaxBuffer256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
                                   adapterDesc.VendorId, adapterDesc.DeviceId,
                                   static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::kBytesPerMegabyte ) );
@@ -148,7 +148,7 @@ namespace sw
         // 백버퍼와 오프스크린 렌더 타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
         // 그 뒤가 오프스크린이다. 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRtvs;
+        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRTVs;
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         if ( isHrSuccess( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
@@ -157,7 +157,7 @@ namespace sw
         _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
 
         D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc{};
-        dsvHeapDesc.NumDescriptors = kMaxOffscreenDsvs;
+        dsvHeapDesc.NumDescriptors = kMaxOffscreenDSVs;
         dsvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         if ( isHrSuccess( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
@@ -184,20 +184,20 @@ namespace sw
         if ( isHrSuccess( _device->CreateDescriptorHeap( &offlineHeapDesc, IID_PPV_ARGS( _offlineViewHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
         {
-            D3D12_SHADER_RESOURCE_VIEW_DESC nullSrv{};
-            nullSrv.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
-            nullSrv.Format                  = DXGI_FORMAT_R32_TYPELESS;
-            nullSrv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            nullSrv.Buffer.NumElements      = 1;
-            nullSrv.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
-            _device->CreateShaderResourceView( nullptr, &nullSrv, offlineDescriptorAt( kOfflineNullSrvIndex ) );
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullSRV{};
+            nullSRV.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+            nullSRV.Format                  = DXGI_FORMAT_R32_TYPELESS;
+            nullSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullSRV.Buffer.NumElements      = 1;
+            nullSRV.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+            _device->CreateShaderResourceView( nullptr, &nullSRV, offlineDescriptorAt( kOfflineNullSRVIndex ) );
 
-            D3D12_UNORDERED_ACCESS_VIEW_DESC nullUav{};
-            nullUav.ViewDimension      = D3D12_UAV_DIMENSION_BUFFER;
-            nullUav.Format             = DXGI_FORMAT_R32_TYPELESS;
-            nullUav.Buffer.NumElements = 1;
-            nullUav.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
-            _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUav, offlineDescriptorAt( kOfflineNullUavIndex ) );
+            D3D12_UNORDERED_ACCESS_VIEW_DESC nullUAV{};
+            nullUAV.ViewDimension      = D3D12_UAV_DIMENSION_BUFFER;
+            nullUAV.Format             = DXGI_FORMAT_R32_TYPELESS;
+            nullUAV.Buffer.NumElements = 1;
+            nullUAV.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
+            _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUAV, offlineDescriptorAt( kOfflineNullUAVIndex ) );
 
             // 레지스트리 0 번 = null Texture2D SRV(kNullTextureBindlessIndex). 등록은 그 다음 칸부터 받는다 — 0 으로 남은 텍스처 인덱스가
             // 상수버퍼 · 구조버퍼 뷰를 Texture2D 로 읽지 않고 0 을 읽는다.
@@ -247,7 +247,7 @@ namespace sw
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _fenceValue = 1;
-        // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
+        // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RHIAsyncUploads).
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
         _transferFenceValue = 0;
@@ -271,7 +271,7 @@ namespace sw
     #if !defined( SW_SHIPPING )
     void D3D12RHIDevice::createBreadcrumbBuffer()
     {
-        if ( GpuBreadcrumbs::isEnabled() == false || _device == nullptr )
+        if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
             return;
         // 읽기 힙(CPU 가 읽는 시스템 메모리) 4 바이트 - GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
         const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
@@ -296,20 +296,20 @@ namespace sw
         SW_LOG_INFO( "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
     }
 
-    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
-        if ( _pBreadcrumbMapped == nullptr || pOutId == nullptr || capacity == 0 )
+        if ( _pBreadcrumbMapped == nullptr || pOutID == nullptr || capacity == 0 )
             return 0;
         const uint32 marker = *_pBreadcrumbMapped;
         if ( marker == 0 )
             return 0;
-        pOutId[0] = marker;
+        pOutID[0] = marker;
         return 1;
     }
     #else
-    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
-        (void)pOutId;
+        (void)pOutID;
         (void)capacity;
         return 0;
     }
@@ -334,7 +334,7 @@ namespace sw
         _gpuBuffers.clear();
         _gpuTextures.clear();
         _frameStreamState          = D3D12RecordingState{};
-        _nextOffscreenRtvIndex     = 0;
+        _nextOffscreenRTVIndex     = 0;
         _allocatedDescriptorsCount = 0;
 
         _swapChain.shutdown();
@@ -352,7 +352,7 @@ namespace sw
         }
         _dsvHeap.Reset();
         _rtvHeap.Reset();
-        _nextOffscreenDsvIndex = 0;
+        _nextOffscreenDSVIndex = 0;
         _commandList.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
         {

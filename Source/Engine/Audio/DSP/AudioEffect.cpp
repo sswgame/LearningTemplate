@@ -10,7 +10,7 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
-#include "Engine/Audio/DSP/AudioFft.h"
+#include "Engine/Audio/DSP/AudioFFT.h"
 
 namespace sw
 {
@@ -533,7 +533,7 @@ namespace sw
             /** @brief 조각 하나의 프레임 수(블록 길이)입니다. */
             static constexpr uint32 kPartitionFrames = audio::kBlockFrameCount;
             /** @brief FFT 크기(조각 둘)입니다. */
-            static constexpr uint32 kFftSize = kPartitionFrames * 2;
+            static constexpr uint32 kFFTSize = kPartitionFrames * 2;
             /** @brief 받는 가장 긴 임펄스 응답(초)입니다. 3 초면 조각 563 개, 블록마다 젖은 채널당 복소 곱 약 29 만 번입니다. */
             static constexpr float32 kMaxImpulseSeconds = 3.0f;
 
@@ -580,13 +580,13 @@ namespace sw
                     SW_LOG_ERROR( "ConvolutionReverb impulse response '%#' is longer than %# s", path.get(), kMaxImpulseSeconds );
                     return false;
                 }
-                if ( _fft.initialize( kFftSize ) == false )
+                if ( _fft.initialize( kFFTSize ) == false )
                     return false;
                 _partitionCount = MathUtil::max( 1u, ( frameCount + kPartitionFrames - 1 ) / kPartitionFrames );
                 for ( uint32 impulseChannel = 0; impulseChannel < channelCount; ++impulseChannel )
                 {
                     vector<AudioComplex>& spectrum = _arrImpulseSpectrum[impulseChannel];
-                    spectrum.assign( static_cast<size_t>( _partitionCount ) * kFftSize, AudioComplex{} );
+                    spectrum.assign( static_cast<size_t>( _partitionCount ) * kFFTSize, AudioComplex{} );
                     for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
                     {
                         const float64 source   = static_cast<float64>( frameIndex ) * ratio;
@@ -597,11 +597,11 @@ namespace sw
                         const float32 sampleB  = clip._listSample[static_cast<size_t>( next ) * channelCount + impulseChannel];
                         const uint32  part     = frameIndex / kPartitionFrames;
                         // 조각마다 앞 절반에 응답, 뒤 절반은 0(overlap-save 의 영 채우기)이다.
-                        spectrum[static_cast<size_t>( part ) * kFftSize + frameIndex % kPartitionFrames]._real = sampleA + ( sampleB - sampleA ) * fraction;
+                        spectrum[static_cast<size_t>( part ) * kFFTSize + frameIndex % kPartitionFrames]._real = sampleA + ( sampleB - sampleA ) * fraction;
                     }
                     for ( uint32 part = 0; part < _partitionCount; ++part )
                     {
-                        _fft.forward( spectrum.data() + static_cast<size_t>( part ) * kFftSize );
+                        _fft.forward( spectrum.data() + static_cast<size_t>( part ) * kFFTSize );
                     }
                 }
                 for ( uint32 channel = 0; channel < _channelCount; ++channel )
@@ -612,14 +612,14 @@ namespace sw
                     WetChannel wet;
                     wet._channelIndex   = channel;
                     wet._impulseChannel = static_cast<uint32>( _listWet.size() ) % channelCount;
-                    wet._listHistory.assign( static_cast<size_t>( _partitionCount ) * kFftSize, AudioComplex{} );
+                    wet._listHistory.assign( static_cast<size_t>( _partitionCount ) * kFFTSize, AudioComplex{} );
                     wet._listInput.assign( kPartitionFrames, 0.0f );
                     wet._listPrevious.assign( kPartitionFrames, 0.0f );
                     wet._listOutput.assign( kPartitionFrames, 0.0f );
                     _listWet.push_back( std::move( wet ) );
                 }
-                _listWork.assign( kFftSize, AudioComplex{} );
-                _listAccumulate.assign( kFftSize, AudioComplex{} );
+                _listWork.assign( kFFTSize, AudioComplex{} );
+                _listAccumulate.assign( kFFTSize, AudioComplex{} );
                 return true;
             }
 
@@ -691,8 +691,8 @@ namespace sw
                         _listWork[index + kPartitionFrames] = AudioComplex{ wet._listInput[index], 0.0f };
                     }
                     _fft.forward( _listWork.data() );
-                    AudioComplex* pSlot = wet._listHistory.data() + static_cast<size_t>( _historyCursor ) * kFftSize;
-                    Memory::copy( pSlot, _listWork.data(), sizeof( AudioComplex ) * kFftSize );
+                    AudioComplex* pSlot = wet._listHistory.data() + static_cast<size_t>( _historyCursor ) * kFFTSize;
+                    Memory::copy( pSlot, _listWork.data(), sizeof( AudioComplex ) * kFFTSize );
 
                     for ( AudioComplex& value : _listAccumulate )
                     {
@@ -702,9 +702,9 @@ namespace sw
                     for ( uint32 part = 0; part < _partitionCount; ++part )
                     {
                         const uint32        slot     = ( _historyCursor + _partitionCount - part ) % _partitionCount;
-                        const AudioComplex* pInput   = wet._listHistory.data() + static_cast<size_t>( slot ) * kFftSize;
-                        const AudioComplex* pImpulse = impulse.data() + static_cast<size_t>( part ) * kFftSize;
-                        for ( uint32 bin = 0; bin < kFftSize; ++bin )
+                        const AudioComplex* pInput   = wet._listHistory.data() + static_cast<size_t>( slot ) * kFFTSize;
+                        const AudioComplex* pImpulse = impulse.data() + static_cast<size_t>( part ) * kFFTSize;
+                        for ( uint32 bin = 0; bin < kFFTSize; ++bin )
                         {
                             _listAccumulate[bin]._real += pInput[bin]._real * pImpulse[bin]._real - pInput[bin]._imaginary * pImpulse[bin]._imaginary;
                             _listAccumulate[bin]._imaginary += pInput[bin]._real * pImpulse[bin]._imaginary + pInput[bin]._imaginary * pImpulse[bin]._real;
@@ -720,7 +720,7 @@ namespace sw
                 _historyCursor = ( _historyCursor + 1 ) % _partitionCount;
             }
 
-            AudioFft             _fft;                                            /**< 크기 `kFftSize` 의 FFT 표입니다. */
+            AudioFFT             _fft;                                            /**< 크기 `kFFTSize` 의 FFT 표입니다. */
             vector<AudioComplex> _arrImpulseSpectrum[audio::kStereoChannelCount]; /**< 응답 채널마다 조각 스펙트럼(조각 수 × FFT 크기)입니다. */
             vector<AudioComplex> _listWork;                                       /**< 입력 FFT 작업 버퍼입니다. */
             vector<AudioComplex> _listAccumulate;                                 /**< 조각 곱의 합입니다. */

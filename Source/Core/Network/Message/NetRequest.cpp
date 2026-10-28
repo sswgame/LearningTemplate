@@ -512,7 +512,7 @@ namespace sw
                 entry._body.assign( pBody, pBody + bodySize );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
-                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings->_idempotencyTtlSeconds * constant::kNanosecondsPerSecond );
+                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings->_idempotencyTTLSeconds * constant::kNanosecondsPerSecond );
                 listWaiter.swap( entry._listWaiter );
                 _listExpiry.emplace_back( inFlight._scope, entry._expireNanoseconds );
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );

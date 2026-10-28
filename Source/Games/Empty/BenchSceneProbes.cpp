@@ -87,7 +87,7 @@ namespace sw
                 {
                     if ( index > 0 && ( index % kHangulWordLength ) == 0 )
                         text.push_back( ' ' );
-                    StringUtil::appendUtf8( text, kHangulFirst + ( index * kHangulStride ) % kHangulCount );
+                    StringUtil::appendUTF8( text, kHangulFirst + ( index * kHangulStride ) % kHangulCount );
                 }
                 return text;
             }

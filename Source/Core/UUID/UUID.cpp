@@ -14,7 +14,7 @@ namespace sw
         // 난수는 운영체제에서 곧바로 받는다(`SecureRandom` — Windows 는 BCryptGenRandom, 리눅스는 getrandom). 32 비트 씨앗 하나로
         // 시작한 mt19937_64 에서 뽑으면 서로 다른 실행이 같은 씨앗을 뽑을 때 **같은 GUID 열**이 다시 나온다(씨앗이 2^32 가지뿐이라 편집기를 수만
         // 번 열면 일어난다). 에셋 GUID 는 여러 사람의 작업이 저장소에서 합쳐지므로 겹치면 참조가 엉뚱한 에셋으로 풀린다. 언리얼의
-        // FGuid::NewGuid 도 OS 의 GUID 를 쓴다.
+        // FGUID::NewGUID 도 OS 의 GUID 를 쓴다.
         UUID uuid{};
         SecureRandom::fill( uuid._arrBytes, sizeof( uuid._arrBytes ) );
 

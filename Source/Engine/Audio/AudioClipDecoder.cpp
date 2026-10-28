@@ -24,7 +24,7 @@ namespace sw
 
 namespace sw
 {
-    bool AudioClipDecoder::parseWavLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize )
+    bool AudioClipDecoder::parseWAVLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize )
     {
         using Internal = AudioClipDecoderInternal;
         if ( pBytes == nullptr || byteCount < 44 )
@@ -91,12 +91,12 @@ namespace sw
         return true;
     }
 
-    bool AudioClipDecoder::decodeWav( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    bool AudioClipDecoder::decodeWAV( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
         AudioPcm pcm;
         size_t   dataOffset{ 0 };
         uint32   dataSize{ 0 };
-        if ( parseWavLayout( pBytes, byteCount, pcm, dataOffset, dataSize ) == false )
+        if ( parseWAVLayout( pBytes, byteCount, pcm, dataOffset, dataSize ) == false )
             return false;
         pcm._listData.assign( pBytes + dataOffset, pBytes + dataOffset + dataSize );
         outPcm = std::move( pcm );
@@ -111,16 +111,16 @@ namespace sw
     bool AudioClipDecoder::decode( string_view path, const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
         if ( FileUtil::hasExtension( path, ".wav" ) )
-            return decodeWav( pBytes, byteCount, outPcm );
+            return decodeWAV( pBytes, byteCount, outPcm );
         if ( FileUtil::hasExtension( path, ".ogg" ) )
-            return decodeOgg( pBytes, byteCount, outPcm );
+            return decodeOGG( pBytes, byteCount, outPcm );
         return false;
     }
 } // namespace sw
 
 namespace sw
 {
-    void AudioWavEncoder::encodeFloat32( const float32* pInterleaved, uint32 frameCount, uint32 channelCount, uint32 channelMask, uint32 sampleRate, vector<uint8>& outBytes )
+    void AudioWAVEncoder::encodeFloat32( const float32* pInterleaved, uint32 frameCount, uint32 channelCount, uint32 channelMask, uint32 sampleRate, vector<uint8>& outBytes )
     {
         using Internal                  = AudioClipDecoderInternal;
         constexpr uint32 kFmtSize       = 40; // WAVEFORMATEXTENSIBLE

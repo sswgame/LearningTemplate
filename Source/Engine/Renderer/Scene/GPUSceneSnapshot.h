@@ -17,7 +17,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Vfx/VfxParticle.h"
+#include "Engine/VFX/VFXParticle.h"
 
 #include <variant>
 
@@ -77,8 +77,8 @@ namespace sw
 
 namespace sw
 {
-    /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULodGroup`).
-    inline constexpr uint32 kGPULodMaxLevels = 8;
+    /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULODGroup`).
+    inline constexpr uint32 kGPULODMaxLevels = 8;
 
     static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instancedata.hlsli) byte for byte" );
 
@@ -166,7 +166,7 @@ namespace sw
          *          끼우지 않고, 배치마다 이 버퍼를 리플렉션 슬롯에 한 번 바인딩한다.
          */
         RHIBufferHandle    _materialBuffer{ 0 };
-        RHIDescriptorIndex _materialSrv = kInvalidDescriptorIndex;
+        RHIDescriptorIndex _materialSRV = kInvalidDescriptorIndex;
         /** @brief 그룹 버퍼의 원소 수입니다. 드로우 루트 상수 g_SwMaterialCount 로 넘겨 셰이더가 인덱스를 클램프하게 합니다. */
         uint32 _materialCount{ 0 };
         /**
@@ -175,12 +175,12 @@ namespace sw
          *          렌더 스레드는 씬을 볼 수 없으므로(Material* 를 따라갈 수 없다) 값으로 실어 보낸다.
          * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다. 칸 수가 바뀌면 아래 static_assert 가 먼저 멈춘다.
          */
-        RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
+        RHIDescriptorIndex _arrMaterialTexSRV[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-        static_assert( shaderslot::kMaterialTextureCount == 16, "_arrMaterialTexSrv 의 초기값을 칸 수만큼 적는다" );
+        static_assert( shaderslot::kMaterialTextureCount == 16, "_arrMaterialTexSRV 의 초기값을 칸 수만큼 적는다" );
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRHI 합니다. 이 shared_ptr 이 수명을 잡고 있어 패킷이 살아 있는 동안 유지됩니다. */
         shared_ptr<MaterialInstance> _materialInstance;
 
@@ -199,14 +199,14 @@ namespace sw
          */
         static bool canShareMaterialBinding( const GPUMeshBatch& head, const GPUMeshBatch& other, bool bShaderBindsMaterialCb )
         {
-            const bool bDifferentMaterialBinding = other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCount != head._materialCount;
+            const bool bDifferentMaterialBinding = other._materialBuffer != head._materialBuffer || other._materialSRV != head._materialSRV || other._materialCount != head._materialCount;
             if ( bDifferentMaterialBinding )
                 return false;
             if ( bShaderBindsMaterialCb && other._materialCb != head._materialCb )
                 return false;
             for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
             {
-                if ( other._arrMaterialTexSrv[texIndex] != head._arrMaterialTexSrv[texIndex] )
+                if ( other._arrMaterialTexSRV[texIndex] != head._arrMaterialTexSRV[texIndex] )
                     return false;
             }
             return true;
@@ -371,23 +371,23 @@ namespace sw
 {
     /**
      * @struct GPUParticleBatch
-     * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 사이의 제자리(`GPUTransparentParticleSlot`)에 빌보드로 그립니다(`VfxParticleRenderer`).
-     * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자의 출처는 방출기의 시뮬레이션 대상(`VfxSimulationTarget`)마다 하나다 —
-     *          CPU 방출기는 입자 배열을 **공유합니다**(방출기가 단계마다 새 배열을 내므로 RT 가 읽는 동안 GT 가 고쳐 쓰지 않는다 — `VfxComponent`),
-     *          GPU 방출기는 누적 단계 수의 요청을 싣고 RT 가 컴퓨트로 입자를 만들어 간접 인자로 그린다(`VfxGPUSimulation`).
+     * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 사이의 제자리(`GPUTransparentParticleSlot`)에 빌보드로 그립니다(`VFXParticleRenderer`).
+     * @details 입자는 방출기 로컬 좌표이고 `_world` 가 월드로 옮깁니다. 입자의 출처는 방출기의 시뮬레이션 대상(`VFXSimulationTarget`)마다 하나다 —
+     *          CPU 방출기는 입자 배열을 **공유합니다**(방출기가 단계마다 새 배열을 내므로 RT 가 읽는 동안 GT 가 고쳐 쓰지 않는다 — `VFXComponent`),
+     *          GPU 방출기는 누적 단계 수의 요청을 싣고 RT 가 컴퓨트로 입자를 만들어 간접 인자로 그린다(`VFXGPUSimulation`).
      *          텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
      */
     struct GPUParticleBatch
     {
         /** @brief 입자의 출처입니다 — CPU 시뮬레이션의 입자 배열(비지 않는다 — 빈 방출기는 싣지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
-        using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VfxGPUEmitterRequest>;
+        using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VFXGPUEmitterRequest>;
 
         Source        _source{};              ///< 입자의 출처(위)
         float4x4      _world{};               ///< 방출기 행렬(행벡터 규약)
         hashed_string _texturePath{};         ///< 입자 텍스처(리소스 id)
         float32       _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
-        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VfxBlendMode::Additive`)면 SW_TRUE
-        uint8         _bRibbon{ SW_FALSE };   ///< 띠(`VfxRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
+        uint8         _bRibbon{ SW_FALSE };   ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
 
         /** @brief CPU 시뮬레이션의 입자입니다. GPU 시뮬레이션이면 nullptr 입니다. */
         const vector<GPUParticle>* findCPUParticles() const
@@ -396,21 +396,21 @@ namespace sw
             return pShared != nullptr ? pShared->get() : nullptr;
         }
         /** @brief GPU 시뮬레이션의 요청입니다. CPU 시뮬레이션이면 nullptr 입니다. */
-        const VfxGPUEmitterRequest* findGPURequest() const { return std::get_if<VfxGPUEmitterRequest>( &_source ); }
+        const VFXGPUEmitterRequest* findGPURequest() const { return std::get_if<VFXGPUEmitterRequest>( &_source ); }
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @struct GPUVfxMeshEmitter
+     * @struct GPUVFXMeshEmitter
      * @brief GPU 로 시뮬레이션하는 메시 방출기 하나입니다. 입자 그리기가 아니라 메시 인스턴스 배치(`MeshInstanceWriter::GPU`)의 인스턴스 칸에 쓴다.
      * @details GT 는 배치 항목마다 그 프레임의 인스턴스 칸(`getInstances()` 의 번호, 불투명 구간)을 찾아 싣는다 — 칸은 배치 구성이 바뀔 때마다 옮겨진다.
      *          RT 는 시뮬레이션 뒤 · 인스턴스 애니메이션과 컬링 앞에 그 칸들의 행렬 · 바운드 · 색을 쓰고(vfxmeshinstance.hlsl), 컬링이 간접 인자를 만든다.
      */
-    struct GPUVfxMeshEmitter
+    struct GPUVFXMeshEmitter
     {
-        VfxGPUEmitterRequest             _request;            ///< 시뮬레이션 요청(`GPUParticleBatch` 의 GPU 출처와 같은 뜻)
+        VFXGPUEmitterRequest             _request;            ///< 시뮬레이션 요청(`GPUParticleBatch` 의 GPU 출처와 같은 뜻)
         shared_ptr<const vector<uint32>> _pListInstanceSlot;  ///< 풀 자리마다 인스턴스 칸(`invalid_index::kUint32` 면 이번 프레임에 실리지 않았다)
         float4x4                         _world{};            ///< 방출기 행렬(행벡터 규약)
         float32                          _meshRadius{ 0.0f }; ///< 메시 원점에서 가장 먼 바운드 모서리(크기 1)
@@ -480,7 +480,7 @@ namespace sw
          */
         uint32 _instanceLayoutGeneration{ 0 };
         /**
-         * @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 전환 없이 바로 바꾼다(`GPUSceneBuilder::setGPUInstanceLodCrossfadeSeconds`).
+         * @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 전환 없이 바로 바꾼다(`GPUSceneBuilder::setGPUInstanceLODCrossfadeSeconds`).
          * @details 빌더가 정하고 스냅샷이 싣는다 — 같은 값이 후보의 디더 변형 여부(GT)와 컬링의 전환 진행량(RT)을 가른다. 어긋나면 디더 변형이 없는 배치가 상보 값을 받는다.
          */
         float32 _lodCrossfadeSeconds{ 0.0f };
@@ -512,14 +512,14 @@ namespace sw
          */
         vector<GPUTransparentParticleSlot> _listParticleSlot;
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
-        vector<GPUVfxMeshEmitter> _listVfxMeshEmitter;
+        vector<GPUVFXMeshEmitter> _listVFXMeshEmitter;
 
         /** @brief 입자 그리기 · 그 자리 · GPU 메시 방출기를 함께 비웁니다(앞의 둘은 길이 · 순서가 같아야 한다). */
         void clearParticles()
         {
             _listParticleBatch.clear();
             _listParticleSlot.clear();
-            _listVfxMeshEmitter.clear();
+            _listVFXMeshEmitter.clear();
         }
 
         /** @brief 인스턴스 배열을 반환합니다. 아직 발행 전이면 빈 배열입니다. */
@@ -572,7 +572,7 @@ namespace sw
         /** @brief 다음에 붙일 배치의 가시 구간 시작입니다(= 지금까지의 가시 칸 수). */
         uint32 getNextVisibleBase() const { return getVisibleSlotCount(); }
         /** @brief LOD 그룹(`GPUMeshBatch::_lodLevelCount`)이 하나라도 있으면 true 입니다. 불투명 배치만 훑는다. */
-        bool hasLodGroups() const
+        bool hasLODGroups() const
         {
             for ( const GPUMeshBatch& batch : getOpaqueBatches() )
             {

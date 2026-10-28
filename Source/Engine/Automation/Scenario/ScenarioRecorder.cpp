@@ -285,7 +285,7 @@ namespace sw
             /** @brief 글자 입력 이벤트를 `Text` 단계로 씁니다. */
             static void writeTextStep( XMLWriter& writer, const RawInputEvent& event, ScenarioRecordOutput& outResult )
             {
-                const utf8* pText  = event._payload._textData._arrUtf8;
+                const utf8* pText  = event._payload._textData._arrUTF8;
                 size_t      length = 0;
                 while ( length < constant::kMaxBuffer32 && pText[length] != '\0' )
                 {

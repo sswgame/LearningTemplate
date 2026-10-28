@@ -110,7 +110,7 @@ namespace sw
     uint32 NavMeshLinkComponent::computeLinkID( const float3& start, const float3& end, const hashed_string& linkType )
     {
         using Internal = NavMeshLinkComponentInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
+        uint64 hash    = HashUtil::kFNVOffset64;
         for ( const float32 value : { start._x, start._y, start._z, end._x, end._y, end._z } )
         {
             hash = HashUtil::combine( hash, Internal::quantize( value ) );

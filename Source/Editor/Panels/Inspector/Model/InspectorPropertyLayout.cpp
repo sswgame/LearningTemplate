@@ -177,7 +177,7 @@ namespace sw::editor
 
     bool InspectorPropertyLayout::isColorRequested( const PropertyInfo& prop )
     {
-        if ( prop._metadata->_bColorHdr != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+        if ( prop._metadata->_bColorHDR != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
             return true;
         return StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr;
     }

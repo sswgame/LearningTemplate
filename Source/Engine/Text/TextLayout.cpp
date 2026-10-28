@@ -458,7 +458,7 @@ namespace sw
                         glyph._fontSize         = glyphSize;
                         glyph._glyphIndex       = shaped._glyphIndex;
                         glyph._cluster          = shaped._cluster;
-                        glyph._colorRgba        = view._listColor[index];
+                        glyph._colorRGBA        = view._listColor[index];
                         glyph._face             = shaped._face;
                         glyph._bFauxBold        = ( fauxBits & kFauxBoldBit ) != 0 ? SW_TRUE : SW_FALSE;
                         glyph._bFauxItalic      = ( fauxBits & kFauxItalicBit ) != 0 ? SW_TRUE : SW_FALSE;
@@ -529,7 +529,7 @@ namespace sw
         using Internal                   = TextLayoutInternal;
         const FontFaceChain segmentChain = pSpan != nullptr ? _fontService.getFaceChain( Internal::makeSpanFont( style._font, *pSpan ) ) : chain;
         const float32       fontSize     = pSpan != nullptr ? style._fontSize * pSpan->_sizeScale : style._fontSize;
-        const uint32        colorRgba    = pSpan != nullptr ? pSpan->_colorRgba : 0xFFFFFFFFu;
+        const uint32        colorRGBA    = pSpan != nullptr ? pSpan->_colorRGBA : 0xFFFFFFFFu;
         const uint8         fauxBits     = Internal::makeFauxBits( segmentChain );
         const size_t        firstGlyph   = _listShapedScratch.size();
         TextItemizer::itemize( _fontService, segmentChain, text.substr( segmentStart, segmentEnd - segmentStart ), _listRunScratch );
@@ -542,7 +542,7 @@ namespace sw
         for ( size_t index = firstGlyph; index < _listShapedScratch.size(); ++index )
         {
             _listSizeScratch.push_back( fontSize );
-            _listColorScratch.push_back( colorRgba );
+            _listColorScratch.push_back( colorRGBA );
             _listFauxScratch.push_back( fauxBits );
         }
     }
@@ -600,7 +600,7 @@ namespace sw
         size_t offset          = 0;
         while ( offset < text.size() )
         {
-            const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+            const uint32 codepoint = StringUtil::decodeUTF8( text, offset );
             bAnyRightToLeft        = bAnyRightToLeft || TextItemizer::isStrongRightToLeft( codepoint ) || codepoint == PseudoLocalizer::kRightToLeftOverride;
             _listCodepointScratch.push_back( codepoint );
         }
@@ -611,14 +611,14 @@ namespace sw
         // 클러스터는 논리 순서라 줄어들지 않는다. 코드 포인트를 앞으로만 민다. codepointEnd 는 지금 코드 포인트 다음 바이트다.
         size_t codepointIndex = 0;
         size_t codepointEnd   = 0;
-        (void)StringUtil::decodeUtf8( text, codepointEnd );
+        (void)StringUtil::decodeUTF8( text, codepointEnd );
         bool bAnyLevel = false;
         for ( size_t glyphIndex = 0; glyphIndex < _listShapedScratch.size(); ++glyphIndex )
         {
             const uint32 cluster = _listShapedScratch[glyphIndex]._cluster;
             while ( codepointEnd <= cluster && codepointEnd < text.size() )
             {
-                (void)StringUtil::decodeUtf8( text, codepointEnd );
+                (void)StringUtil::decodeUTF8( text, codepointEnd );
                 ++codepointIndex;
             }
             const uint8 level                  = _listLevelScratch[codepointIndex];
@@ -723,7 +723,7 @@ namespace sw
             for ( const RichTextSpan& span : *pListSpan )
             {
                 context = HashUtil::combine( context, ( static_cast<uint64>( span._firstByte ) << 32 ) | span._byteCount );
-                context = HashUtil::combine( context, span._colorRgba );
+                context = HashUtil::combine( context, span._colorRGBA );
                 context = Internal::hashFloat( context, span._sizeScale );
                 context = HashUtil::combine( context, ( static_cast<uint64>( span._bBold ) << 1 ) | span._bItalic );
             }

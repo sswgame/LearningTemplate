@@ -2,7 +2,7 @@
 
 #include "Core/LogSink/ConsoleLogOutput.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 

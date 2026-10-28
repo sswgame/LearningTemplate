@@ -19,7 +19,7 @@ namespace sw::editor
         /** @brief Saved/Editor 아래의 imgui.ini 와 windows.json 경로를 정합니다. */
         void initializePersistencePaths();
         /** @brief 정한 imgui.ini 경로를 ImGui IO 에 연결합니다. */
-        void applyIniFilename() const;
+        void applyINIFilename() const;
         /** @brief windows.json 에서 패널 열림 상태를 복원합니다. */
         void loadPanelVisibility();
         /** @brief 패널 가시성과 ImGui 도크 레이아웃을 저장합니다. */
@@ -67,9 +67,9 @@ namespace sw::editor
          */
         void scaleDockSizeToViewport( uint32 dockspaceID );
 
-        string                 _imguiIniPath;
+        string                 _imguiINIPath;
         string                 _panelVisibilityPath;
-        string                 _pendingLayoutIni; ///< 다음 프레임 시작에 적용할 레이아웃의 ImGui 설정 문자열
+        string                 _pendingLayoutINI; ///< 다음 프레임 시작에 적용할 레이아웃의 ImGui 설정 문자열
         EditorPanelVisibility  _pendingLayoutVisibility;
         float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기다. 0 이면 다음 프레임이 저장된 크기에서 시작한다
         float32                _lastDockspaceHeight; ///< 위와 같다(세로)

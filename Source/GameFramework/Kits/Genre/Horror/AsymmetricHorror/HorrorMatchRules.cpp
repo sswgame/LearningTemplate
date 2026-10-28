@@ -169,7 +169,7 @@ namespace sw
         survivor._activityTarget = -1;
     }
 
-    void HorrorMatch::dropCarried( bool bStunKiller, float32 stunTime )
+    void HorrorMatch::dropCarried( bool bSTUNKiller, float32 stunTime )
     {
         const int32 survivorIndex = _killer._carrying;
         if ( isValidSurvivor( survivorIndex ) == false )
@@ -178,7 +178,7 @@ namespace sw
         HorrorSurvivor& survivor = _listSurvivor[static_cast<size_t>( survivorIndex )];
         restoreInjured( survivor );
         survivor._position = _killer._position;
-        if ( bStunKiller )
+        if ( bSTUNKiller )
             stunKiller( stunTime );
     }
 

@@ -204,7 +204,7 @@ function(sw_applyEditorCoreSettings TARGET_NAME)
 		EXCLUDE_FROM_ALL ON
 		POSITION_INDEPENDENT_CODE ON
 		INTERPROCEDURAL_OPTIMIZATION FALSE)
-	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePCH(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
 endfunction()
 

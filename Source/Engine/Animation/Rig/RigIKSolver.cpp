@@ -132,7 +132,7 @@ namespace sw
         return bReached;
     }
 
-    bool RigIKSolver::solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+    bool RigIKSolver::solveFABRIK( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                    const RigChainSettings& settings, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listChainBone.size() );
@@ -193,7 +193,7 @@ namespace sw
         return ( pose.getModelPosition( listChainBone[count - 1] ) - goal ).getLength() <= settings._tolerance;
     }
 
-    bool RigIKSolver::solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+    bool RigIKSolver::solveCCD( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                 const RigChainSettings& settings, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listChainBone.size() );

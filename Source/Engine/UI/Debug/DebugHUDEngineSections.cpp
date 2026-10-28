@@ -97,7 +97,7 @@ namespace sw
                 return "?";
             }
 
-            static void writeFps( DebugHUDSectionWriter& writer )
+            static void writeFPS( DebugHUDSectionWriter& writer )
             {
                 const uint32 count = writer.getFrameHistoryCount();
                 if ( count == 0 )
@@ -225,7 +225,7 @@ namespace sw
                     writer.addLineFormat( "mouse", "%#, %#%#", position._x, position._y, input.isMouseLockActive() ? " (locked)" : "" );
                 }
                 if ( input.isVirtualInputAttached() )
-                    writer.addLine( "virtual", input.isOsInputSuppressed() ? "exclusive" : "mixed" );
+                    writer.addLine( "virtual", input.isOSInputSuppressed() ? "exclusive" : "mixed" );
             }
 
             static void writeCamera( DebugHUDSectionWriter& writer )
@@ -265,7 +265,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEBUG_HUD_SECTION( fps, "fps", "Frame rate", 0, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeFps );
+    SW_DEBUG_HUD_SECTION( fps, "fps", "Frame rate", 0, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeFPS );
     SW_DEBUG_HUD_SECTION( timing, "timing", "Thread times", 10, DebugHUDSectionFlag::kDefaultOn | DebugHUDSectionFlag::kUsesFrameProfiler,
                           &DebugHUDEngineSectionsInternal::writeTiming );
     SW_DEBUG_HUD_SECTION( draw, "draw", "Rendering", 20, DebugHUDSectionFlag::kUsesFrameProfiler, &DebugHUDEngineSectionsInternal::writeDraw );

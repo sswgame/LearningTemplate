@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
@@ -411,11 +411,11 @@ namespace sw
             _pDevice->_listBindlessSourceBuffer[bufferIndex] = RHIBufferHandle{ 0 };
             deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), false );
         }
-        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUavSourceBuffer.size(); ++bufferIndex )
+        for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listUAVSourceBuffer.size(); ++bufferIndex )
         {
-            if ( _pDevice->_listUavSourceBuffer[bufferIndex] != buffer )
+            if ( _pDevice->_listUAVSourceBuffer[bufferIndex] != buffer )
                 continue;
-            _pDevice->_listUavSourceBuffer[bufferIndex] = RHIBufferHandle{ 0 };
+            _pDevice->_listUAVSourceBuffer[bufferIndex] = RHIBufferHandle{ 0 };
             deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), true );
         }
 
@@ -601,7 +601,7 @@ namespace sw
         return handle;
     }
 
-    // 전송(RhiAsyncUploads U6): 소스를 업로드 링에 복사하고, 전송 작업 하나에 기록해 펜스와 함께 낸 뒤 기다리지 않고 티켓을 준다. 완료는 pollTransfer 가 펜스로 본다.
+    // 전송(RHIAsyncUploads U6): 소스를 업로드 링에 복사하고, 전송 작업 하나에 기록해 펜스와 함께 낸 뒤 기다리지 않고 티켓을 준다. 완료는 pollTransfer 가 펜스로 본다.
     // 길이 유지(긴 함수 정리 기준): 검사 · 링 복사 · 기록 · 제출 · 레코드 갱신의 순서가 곧 의미라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
@@ -891,7 +891,7 @@ namespace sw
         return true;
     }
 
-    // 전송(RhiAsyncUploads U6): 되읽기 링의 구간에 복사를 기록해 펜스와 함께 내고 기다리지 않는다. 결과는 takeTextureReadback 이 링에서 복사해 간다.
+    // 전송(RHIAsyncUploads U6): 되읽기 링의 구간에 복사를 기록해 펜스와 함께 내고 기다리지 않는다. 결과는 takeTextureReadback 이 링에서 복사해 간다.
     // 길이 유지(긴 함수 정리 기준): 검사 · 링 할당 · 기록 · 제출 · 보관의 순서가 곧 의미라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {

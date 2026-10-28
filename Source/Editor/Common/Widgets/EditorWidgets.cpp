@@ -109,7 +109,7 @@ namespace sw::editor
         ImGui::PushID( pLabel );
 
         ImGui::Columns( 2 );
-        ImGui::SetColumnWidth( 0, columnWidth * EditorThemeUtil::getDpiScale() );
+        ImGui::SetColumnWidth( 0, columnWidth * EditorThemeUtil::getDPIScale() );
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( pLabel );
         ImGui::NextColumn();

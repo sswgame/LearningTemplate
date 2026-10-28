@@ -139,7 +139,7 @@ namespace sw
              * @brief `.meta`(이미 사본 id 로 바꾼 글)를 `AssetMeta` 로 읽어 guid 를 새로 만든 글을 돌려줍니다. 원본과 사본이 같은 guid 를 가지면 안 된다.
              * @details 글자 찾기로 고치지 않는다 — 형식이 바뀌면(키=값 → XML) 조용히 그대로 복사됐다. 읽지 못하면 오류다.
              */
-            [[nodiscard]] static bool renewMetaGuid( string_view text, const string& sourceFile, string& outText, string& outError )
+            [[nodiscard]] static bool renewMetaGUID( string_view text, const string& sourceFile, string& outText, string& outError )
             {
                 AssetMeta meta;
                 if ( meta.parseXML( text, sourceFile.c_str() ) == false )
@@ -267,7 +267,7 @@ namespace sw
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             string            text  = rebaseText( sourceText, folder._sourceID, folder._scratchID );
             const bool        bMeta = StringUtil::endsWith( FileUtil::normalizePath( targetFile ), ".meta" );
-            if ( bMeta && AutomationScratchInternal::renewMetaGuid( string( text ), sourceFile, text, outError ) == false )
+            if ( bMeta && AutomationScratchInternal::renewMetaGUID( string( text ), sourceFile, text, outError ) == false )
                 return false;
             if ( FileUtil::writeTextFile( targetFile, text ) == false )
             {

@@ -45,10 +45,10 @@ namespace sw
      */
     struct D3D12SlotTableState
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE _arrSrv[shaderslot::kSrvSlotCount]{};        ///< t# 의 오프라인 뷰. ptr 이 0이면 바인딩되지 않은 슬롯이다.
-        D3D12_CPU_DESCRIPTOR_HANDLE _arrUav[shaderslot::kComputeUavSlotCount]{}; ///< u# 의 오프라인 뷰. ptr 이 0이면 바인딩되지 않은 슬롯이다.
-        uint8                       _bSrvDirty{ SW_TRUE };                       ///< 새 리스트는 테이블이 없으므로 첫 드로우에서 반드시 확정한다.
-        uint8                       _bUavDirty{ SW_TRUE };
+        D3D12_CPU_DESCRIPTOR_HANDLE _arrSRV[shaderslot::kSRVSlotCount]{};        ///< t# 의 오프라인 뷰. ptr 이 0이면 바인딩되지 않은 슬롯이다.
+        D3D12_CPU_DESCRIPTOR_HANDLE _arrUAV[shaderslot::kComputeUAVSlotCount]{}; ///< u# 의 오프라인 뷰. ptr 이 0이면 바인딩되지 않은 슬롯이다.
+        uint8                       _bSRVDirty{ SW_TRUE };                       ///< 새 리스트는 테이블이 없으므로 첫 드로우에서 반드시 확정한다.
+        uint8                       _bUAVDirty{ SW_TRUE };
     };
 } // namespace sw
 
@@ -182,7 +182,7 @@ namespace sw
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool   debugRemoveDevice() override;
-        uint32 readLastBreadcrumbs( uint32* pOutId, uint32 capacity ) override;
+        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
         uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
@@ -238,7 +238,7 @@ namespace sw
             // 텍스처 업로드는 영속 매핑 스테이징 링으로만 간다(링이 없으면 초기화가 실패한다). 되읽기는 읽기마다 자기 읽기 힙 버퍼를 만들어 되읽기 링이 없다.
             caps._bPersistentStagingRing = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
     #if !defined( SW_SHIPPING )
-            caps._bGpuBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
     #endif
             return caps;
         }
@@ -367,9 +367,9 @@ namespace sw
          */
         [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView );
         /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
-        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRtvHandle( uint32 rtvIndex ) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRTVHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDsvHandle( uint32 dsvIndex ) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDSVHandle( uint32 dsvIndex ) const;
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
@@ -425,22 +425,22 @@ namespace sw
         static void CALLBACK onValidationMessage( D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR pDescription,
                                                   void* pContext );
 
-        static constexpr uint32 kMaxOffscreenRtvs = 128; ///< 면마다 하나씩 쓴다. 큐브 하나가 여섯을 쓴다.
-        static constexpr uint32 kMaxOffscreenDsvs = 64;
+        static constexpr uint32 kMaxOffscreenRTVs = 128; ///< 면마다 하나씩 쓴다. 큐브 하나가 여섯을 쓴다.
+        static constexpr uint32 kMaxOffscreenDSVs = 64;
         // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다. b# 는 루트 CBV(GPU 주소)이고, t#/u# 슬롯은 **디스크립터 테이블**이다
         // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 바인딩한다. FD3D12DescriptorCache). 텍스처 배열(t0 space1)은 힙 시작을
         // 가리키는 테이블이다. 예산은 shaderslot::dx12 (25/64 dword)이고, 슬롯을 늘려도 테이블 안이라 예산이 늘지 않는다.
         // 슬롯 번호는 bindingslots.hlsli(shaderslot)가 정한다. 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
-        static constexpr uint32 kCbvRootParam0             = 0;                                                     ///< b0..b(N-1) 루트 CBV
-        static constexpr uint32 kSrvTableParam             = kCbvRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) space0 테이블
-        static constexpr uint32 kUavTableParam             = kSrvTableParam + 1;                                    ///< u0..u(N-1) space0 테이블
-        static constexpr uint32 kBindlessTextureTableParam = kUavTableParam + 1;                                    ///< t0/u0 space1 무제한 텍스처 배열 테이블
+        static constexpr uint32 kCBVRootParam0             = 0;                                                     ///< b0..b(N-1) 루트 CBV
+        static constexpr uint32 kSRVTableParam             = kCBVRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) space0 테이블
+        static constexpr uint32 kUAVTableParam             = kSRVTableParam + 1;                                    ///< u0..u(N-1) space0 테이블
+        static constexpr uint32 kBindlessTextureTableParam = kUAVTableParam + 1;                                    ///< t0/u0 space1 무제한 텍스처 배열 테이블
         static constexpr uint32 kRootConstantsParam        = kBindlessTextureTableParam + 1;                        ///< b0 space2 32비트 루트 상수 (set*RootConstants)
         static constexpr uint32 kRootParameterCount        = kRootConstantsParam + 1;
-        static_assert( kRootParameterCount == shaderslot::dx12::kRootCbvCount + shaderslot::dx12::kRootTableCount + 1,
+        static_assert( kRootParameterCount == shaderslot::dx12::kRootCBVCount + shaderslot::dx12::kRootTableCount + 1,
                        "루트 파라미터 배치가 shaderslot::dx12 예산 계산과 어긋난다" );
         /// @brief 슬롯 테이블 하나의 최대 원소 수입니다(t 테이블과 u 테이블 중 큰 쪽).
-        static constexpr uint32 kMaxSlotTableSize = shaderslot::kSrvSlotCount > shaderslot::kComputeUavSlotCount ? shaderslot::kSrvSlotCount : shaderslot::kComputeUavSlotCount;
+        static constexpr uint32 kMaxSlotTableSize = shaderslot::kSRVSlotCount > shaderslot::kComputeUAVSlotCount ? shaderslot::kSRVSlotCount : shaderslot::kComputeUAVSlotCount;
 
         /// @brief 오프스크린 텍스처와 RTV, SRV 핸들입니다.
         struct OffscreenTextureRecord
@@ -454,12 +454,12 @@ namespace sw
             uint32                      _width{ 0 };
             uint32                      _height{ 0 };
             /// @brief 면 1부터의 RTV, DSV 힙 인덱스입니다(면 0 은 `_rtvIndex`, `_dsvIndex`). 면이 하나면 비어 있습니다.
-            vector<uint32>      _listExtraRtvIndex;
-            vector<uint32>      _listExtraDsvIndex;
+            vector<uint32>      _listExtraRTVIndex;
+            vector<uint32>      _listExtraDSVIndex;
             uint32              _arraySize{ 1 };
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
-            uint8               _bHasRtv  : 1;
-            uint8               _bHasDsv  : 1;
+            uint8               _bHasRTV  : 1;
+            uint8               _bHasDSV  : 1;
             uint8               _reserved : 6;
         };
 
@@ -470,8 +470,8 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};                          ///< 고른 면의 DSV(없으면 0)
             D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 다시 잠그고 처리한다)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
-            uint8                       _bHasRtv{ SW_FALSE };
-            uint8                       _bHasDsv{ SW_FALSE };
+            uint8                       _bHasRTV{ SW_FALSE };
+            uint8                       _bHasDSV{ SW_FALSE };
             uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 면이 면 수 안에 있고 그 면의 뷰가 있다.
         };
 
@@ -488,8 +488,8 @@ namespace sw
         static constexpr uint32 kBindlessDescriptorCapacity  = 32768;
         static constexpr uint32 kOnlineBlockDescriptorCount  = 512;
         static constexpr uint32 kOnlineBlockCount            = ( kMaxShaderVisibleDescriptors - kBindlessDescriptorCapacity ) / kOnlineBlockDescriptorCount;
-        static constexpr uint32 kOfflineNullSrvIndex         = kBindlessDescriptorCapacity;     ///< 바인딩되지 않은 t 슬롯을 채우는 null 버퍼 SRV
-        static constexpr uint32 kOfflineNullUavIndex         = kBindlessDescriptorCapacity + 1; ///< 바인딩되지 않은 u 슬롯을 채우는 null 버퍼 UAV
+        static constexpr uint32 kOfflineNullSRVIndex         = kBindlessDescriptorCapacity;     ///< 바인딩되지 않은 t 슬롯을 채우는 null 버퍼 SRV
+        static constexpr uint32 kOfflineNullUAVIndex         = kBindlessDescriptorCapacity + 1; ///< 바인딩되지 않은 u 슬롯을 채우는 null 버퍼 UAV
         static constexpr uint32 kOfflineDescriptorCount      = kBindlessDescriptorCapacity + 2;
         /// @brief 레지스트리 0번은 null Texture2D SRV 로 비워 둡니다. 등록은 1번부터 받습니다.
         /// @details 이 힙은 CBV, 버퍼 SRV, 텍스처 SRV, UAV 가 한 인덱스 공간을 씁니다. 0 으로 초기화된 텍스처 인덱스(머티리얼 없는 배치의 폴백 원소 등)가
@@ -714,10 +714,10 @@ namespace sw
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
         unordered_map<RHITextureHandle, OffscreenTextureRecord> _mapOffscreenTexture;
-        uint32                                                  _nextOffscreenRtvIndex;
-        uint32                                                  _nextOffscreenDsvIndex;
-        vector<uint32>                                          _listFreeOffscreenRtvIndex;
-        vector<uint32>                                          _listFreeOffscreenDsvIndex;
+        uint32                                                  _nextOffscreenRTVIndex;
+        uint32                                                  _nextOffscreenDSVIndex;
+        vector<uint32>                                          _listFreeOffscreenRTVIndex;
+        vector<uint32>                                          _listFreeOffscreenDSVIndex;
         unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
         RHIConstantBufferMirror _constantBufferMirror           SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.

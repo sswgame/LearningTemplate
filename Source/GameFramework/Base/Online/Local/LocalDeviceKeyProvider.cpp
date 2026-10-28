@@ -9,7 +9,7 @@
 #include <cstring>
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <dpapi.h>
 #elif defined( SW_PLATFORM_LINUX )

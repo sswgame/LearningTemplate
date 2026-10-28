@@ -287,7 +287,7 @@ void packProbeElement( float coefficient[28], out float4 outElement[7] )
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchID : SV_DispatchThreadID )
 {
     const uint4 header      = asuint( g_ProbeParams[kRowHeader] );
     const uint  volumeCount = header.x;
@@ -301,7 +301,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     {
         const uint  row     = kRowFirstVolume + volumeIndex * kVolumeRowCount;
         const uint4 history = asuint( g_ProbeParams[row + kVolHistory] );
-        if ( dispatchId.x >= history.y && dispatchId.x < history.y + history.z )
+        if ( dispatchID.x >= history.y && dispatchID.x < history.y + history.z )
         {
             volumeBase = row;
             bFound     = true;
@@ -318,7 +318,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     const uint4  history      = asuint( g_ProbeParams[volumeBase + kVolHistory] );
     const uint4  schedule     = asuint( g_ProbeParams[volumeBase + kVolSchedule] );
 
-    const uint probe     = dispatchId.x - history.y;
+    const uint probe     = dispatchID.x - history.y;
     const uint historyAt = history.x + probe * kProbeFloat4Count;
     const uint outAt     = counts.w + probe * kProbeFloat4Count;
     const uint period    = max( schedule.x, 1u );
@@ -352,7 +352,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
         const float  weight   = 4.0f * kPi / (float)rayCount;
 
         // 방향 수열: 피보나치 구를 프로브 · 갱신 횟수마다 회전한다(Cranley-Patterson). 갱신마다 방향이 달라 기록과 섞이며 평균된다.
-        const uint  seed       = hashUint( dispatchId.x * 747796405u + ( frameIndex / period ) * 2891336453u );
+        const uint  seed       = hashUint( dispatchID.x * 747796405u + ( frameIndex / period ) * 2891336453u );
         const float heightOff  = hashToUnit( seed );
         const float azimuthOff = hashToUnit( hashUint( seed + 1u ) ) * 2.0f * kPi;
 

@@ -1,6 +1,6 @@
 /**
  * @file AutomationInputWatchs.cpp
- * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OsDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY`.
+ * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY`.
  * @details 입력 층(티어 10)은 감시 값 레지스트리(티어 10)를 볼 수 없어 레지스트리를 볼 수 있는 가장 가까운 층인 Automation 이 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
  */
 #include "pch.h"
@@ -14,13 +14,13 @@ namespace sw
 {
     namespace
     {
-        /** @brief 감시 값 `Input.OsDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
-        [[nodiscard]] bool readOsDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
+        /** @brief 감시 값 `Input.OSDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
+        [[nodiscard]] bool readOSDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
             if ( engine::areEngineServicesBound() == false )
                 return false;
-            outValue = engine::getSubsystem<InputManager>().isOsDeviceInputBlocked() ? 1.0 : 0.0;
+            outValue = engine::getSubsystem<InputManager>().isOSDeviceInputBlocked() ? 1.0 : 0.0;
             return true;
         }
 
@@ -58,8 +58,8 @@ namespace sw
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
-                         &readOsDeviceInputBlocked );
+    SW_AUTOMATION_WATCH( inputOSDeviceInputBlocked, "Input.OSDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
+                         &readOSDeviceInputBlocked );
     SW_AUTOMATION_WATCH( inputVirtualCursorEnabled, "Input.VirtualCursorEnabled", "1 while the gamepad virtual cursor is on (command directors turn it on for play)",
                          &readVirtualCursorEnabled );
     SW_AUTOMATION_WATCH( inputMouseX, "Input.MouseX", "Mouse pointer X in window client pixels (the gamepad virtual cursor moves it too)", &readMouseX );

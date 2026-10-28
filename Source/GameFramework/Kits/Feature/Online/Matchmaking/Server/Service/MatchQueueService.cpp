@@ -202,8 +202,8 @@ namespace sw
             return;
         const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
-                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTtlMs )
-                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTtlMs, EphemeralCondition::IfAbsent );
+                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
+                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );
         state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ), _replyOwner );
         state._leaseAttemptMs                         = nowMs.count();
         state._bLeaseAttempted                        = SW_TRUE;

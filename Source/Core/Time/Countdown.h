@@ -26,7 +26,7 @@ namespace sw
      *         _fireCooldown.restart( _fireInterval ); // 늦음을 다음 간격으로 넘긴다
      *     }
      *     if ( _stun.tick( deltaTime ) )
-     *         pushEvent( StunEnded );                  // 끝난 스텝에 한 번
+     *         pushEvent( STUNEnded );                  // 끝난 스텝에 한 번
      * @endcode
      */
     struct Countdown

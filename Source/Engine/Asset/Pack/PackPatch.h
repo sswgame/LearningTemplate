@@ -68,8 +68,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [packSha256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
-     * @details `packSha256`(패치 팩 파일의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
+     * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [packSHA256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
+     * @details `packSHA256`(패치 팩 파일의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
      *          내용(`PackPatchUtil::makeSigningPayload`)에 걸고, 팩의 바이트는 그 안의 해시가 묶는다. 서명이 없는 목록은 시작 마운트가 신뢰 설정을 받았을 때만 거절한다.
      */
     struct PackPatchManifest
@@ -78,7 +78,7 @@ namespace sw
         string         _toBuild{};         ///< 얹은 뒤의 빌드
         string         _packFileName{};    ///< 패치 팩 파일 이름(목록 파일과 같은 폴더)
         vector<string> _listRemovedPath{}; ///< 지운 경로(가상 상대 경로)
-        string         _packSha256Hex{};   ///< 패치 팩 파일의 SHA-256. 서명하지 않은 목록은 비어 있다
+        string         _packSHA256Hex{};   ///< 패치 팩 파일의 SHA-256. 서명하지 않은 목록은 비어 있다
         string         _signatureHex{};    ///< 목록 내용의 ES256 서명. 서명하지 않은 목록은 비어 있다
     };
 } // namespace sw
@@ -141,7 +141,7 @@ namespace sw
          */
         static string makeSigningPayload( const PackPatchManifest& manifest );
         /**
-         * @brief 패치 팩의 SHA-256 을 목록에 적고 목록 내용에 ES256 으로 서명합니다(@p inOutManifest 의 `_packSha256Hex` · `_signatureHex` 를 채운다).
+         * @brief 패치 팩의 SHA-256 을 목록에 적고 목록 내용에 ES256 으로 서명합니다(@p inOutManifest 의 `_packSHA256Hex` · `_signatureHex` 를 채운다).
          * @param privateKeyPem 개인 키(PKCS#8 PEM) — 저장소에 두지 않고 부르는 쪽이 저장소 밖 파일에서 읽어 넘긴다.
          * @return 팩이 2 GiB 이상이거나(제공자의 해시가 32 비트 크기를 받는다) · 줄바꿈이 든 필드가 있거나 · 서명에 실패하면 이유를 남기고 false 입니다.
          */

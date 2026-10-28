@@ -379,7 +379,7 @@ namespace sw
 
     uint32 ElementGrid::computeStateHash() const
     {
-        uint32 hash = HashUtil::kFnvOffset32;
+        uint32 hash = HashUtil::kFNVOffset32;
         for ( const Cell& cell : _listCell )
         {
             hash = HashUtil::fnvStep32( hash, cell._material );

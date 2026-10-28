@@ -83,7 +83,7 @@ namespace sw
         const PkceLoginProviderConfig* findSettings( string_view provider ) const;
         [[nodiscard]] bool             makeRandomText( int32 byteCount, string& outText );
         void                           finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
-        string                         makeRedirectUri() const;
+        string                         makeRedirectURI() const;
 
         HTTPServer                        _redirectServer;
         HTTPClient                        _httpClient;

@@ -25,6 +25,6 @@ namespace sw
         /** @brief 픽셀 형식 플래그 DDPF_FOURCC 입니다. */
         static constexpr uint32 kPixelFormatFourCcFlag = 0x4u;
         /** @brief 픽셀 형식 플래그 DDPF_RGB 입니다. */
-        static constexpr uint32 kPixelFormatRgbFlag = 0x40u;
+        static constexpr uint32 kPixelFormatRGBFlag = 0x40u;
     };
 } // namespace sw

@@ -32,7 +32,7 @@ namespace sw
     class SW_KIT_SERVER_API MatchServerAgent final : public IConnectAdmission
     {
     public:
-        static constexpr int64 kExpectTtlMs = 120000; ///< 2분이다. 오지 않은 사람은 지운다
+        static constexpr int64 kExpectTTLMs = 120000; ///< 2분이다. 오지 않은 사람은 지운다
 
         MatchServerAgent();
 

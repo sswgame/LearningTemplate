@@ -45,7 +45,7 @@ namespace sw
         /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
         {
-            uint32 hash = HashUtil::kFnvOffset32;
+            uint32 hash = HashUtil::kFNVOffset32;
             for ( const uint32 version : listVersion )
             {
                 for ( int32 shift = 0; shift < 32; shift += 8 )

@@ -40,13 +40,13 @@ namespace sw
         _listActive.clear();
     }
 
-    int32 InteractionInterruptionSystem::resolveNpc( const GameObject& target ) const
+    int32 InteractionInterruptionSystem::resolveNPC( const GameObject& target ) const
     {
         if ( _pSchedule == nullptr )
             return -1;
         if ( _pResolver != nullptr )
             return _pResolver( *_pSchedule, target );
-        return _pSchedule->findNpcIndex( target.getName() );
+        return _pSchedule->findNPCIndex( target.getName() );
     }
 
     void InteractionInterruptionSystem::update( GameObjectManager& manager )
@@ -87,7 +87,7 @@ namespace sw
             }
             if ( bDuplicate )
                 continue;
-            const int32 npcIndex = resolveNpc( *pTarget );
+            const int32 npcIndex = resolveNPC( *pTarget );
             if ( npcIndex < 0 )
                 continue;
             Active now;

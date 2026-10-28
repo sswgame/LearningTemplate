@@ -13,8 +13,8 @@
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Debug/GpuAssert.h"
-#include "Engine/Graphics/Debug/GpuNanCheck.h"
+#include "Engine/Graphics/Debug/GPUAssert.h"
+#include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
@@ -42,7 +42,7 @@
 #include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
-#include "Engine/Renderer/Vfx/VfxParticleRenderer.h"
+#include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
 #include <optional>
 
@@ -242,7 +242,7 @@ namespace sw
         /**
          * @brief 주 출력(게임 창, 에디터 게임 뷰)의 보기 모드를 정합니다. `-gv_viewMode` 와 테스트가 씁니다.
          * @details 보기 모드는 뷰마다 갖는 설정(`RenderViewSettings::_viewMode`)이다. 이 값은 주 출력 뷰의 설정에 들어가고,
-         *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 쓴다. 다음 프레임의 `ensureMaterialPSOs` 가 그 프레임 뷰들의 모드로
+         *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 쓴다. 다음 프레임의 `ensureMaterialPSOS` 가 그 프레임 뷰들의 모드로
          *          PSO 변형을 만들고, 드로우는 지금 그리는 뷰의 모드로 변형을 고른다. 모드를 바꾼 프레임에는 셰이더 컴파일이 한 번 끼어든다.
          */
         void setViewMode( RenderViewMode viewMode );
@@ -270,7 +270,7 @@ namespace sw
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /**
          * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형이 있으면 그것을, 없으면 패스 PSO 를 그대로 반환합니다.
-         * @details 드로우 경로가 배치마다 부르는 읽기 전용 조회다. 캐시는 `ensureMaterialPSOs` 가 기록 전에 채운다.
+         * @details 드로우 경로가 배치마다 부르는 읽기 전용 조회다. 캐시는 `ensureMaterialPSOS` 가 기록 전에 채운다.
          *          거울 변환을 건 배치(`GPUMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그린다.
          *          변형이 `Ready` 가 아니면(만드는 중 · 실패 · 없음) 0 이고, 이유는 @p pOutState 가 답한다.
          * @param viewMode 이 드로우의 보기 모드입니다. 보통 지금 그리는 뷰의 설정이고, 겹침 모드(ShadedWireframe)의 첫 드로우는 Lit 입니다.
@@ -290,7 +290,7 @@ namespace sw
          */
         [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
-        RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
+        RHITextureHandle getTAAHistory() const { return _mainView._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
         const TransientAttachmentPool& getMainViewPool() const { return _mainView._transientPool; }
         /**
@@ -408,15 +408,15 @@ namespace sw
             Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 쓰는 렌더 텍스처(`TextureCache`)
             RHITextureHandle            _hostTarget{ 0 };           ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
             uint64                      _viewID{ 0 };
-            RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
-            RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
+            RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
+            RHIDescriptorIndex          _taaHistorySRV{ kInvalidDescriptorIndex };
             /**
              * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
              * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
              *          장면 깊이 첨부는 프레임 사이에 그대로 남아 있으므로 옮기는 때는 다음 프레임의 컴퓨트 프리패스다(복사본을 프레임 끝에 따로 만들지 않는다).
              */
             RHITextureHandle   _depthHistory{ 0 };
-            RHIDescriptorIndex _depthHistoryUav{ kInvalidDescriptorIndex };
+            RHIDescriptorIndex _depthHistoryUAV{ kInvalidDescriptorIndex };
             float4x4           _depthHistoryViewProj{};           ///< 장면 깊이를 그린 프레임의 뷰-투영(그 프레임 끝에 적는다)
             float3             _depthHistoryEye{};                ///< 그 프레임의 눈 위치
             uint8              _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
@@ -456,7 +456,7 @@ namespace sw
              * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
              */
             RHITextureHandle   _arrAutoExposure[2]{};
-            RHIDescriptorIndex _arrAutoExposureSrv[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
+            RHIDescriptorIndex _arrAutoExposureSRV[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
             /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
             float4  _autoExposureParams{};
             float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 측정한 렌더러 시각(초, `getAnimationTime`)
@@ -465,7 +465,7 @@ namespace sw
              * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.
              */
             RHITextureHandle     _upscaleIntermediate{ 0 };
-            RHIDescriptorIndex   _upscaleIntermediateSrv{ kInvalidDescriptorIndex };
+            RHIDescriptorIndex   _upscaleIntermediateSRV{ kInvalidDescriptorIndex };
             uint32               _upscaleWidth{ 0 };
             uint32               _upscaleHeight{ 0 };
             RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
@@ -481,16 +481,16 @@ namespace sw
             /**
              * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
              * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
-             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTaaHistoryReset` 을 본다.
+             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTAAHistoryReset` 을 본다.
              */
             uint8 _bHistoryReset{ SW_TRUE };
             /**
-             * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(TAA 가 빠진 프레임, `_bTaaHistoryWritten`).
+             * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(TAA 가 빠진 프레임, `_bTAAHistoryWritten`).
              * @details 빠진 TAA(후처리를 끈 뷰 · 품질 · 읽는 쪽 없음)는 출력이 원본을 가리키거나 없고 기록을 쓰지 않는다. 다시 도는 첫 프레임의 기록은 그 앞 화면이라 섞으면 그동안 움직인 것의 가장자리에 옛 그림이 남는다.
              *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
              */
-            uint8 _bTaaHistoryReset{ SW_TRUE };
-            uint8 _bTaaHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
+            uint8 _bTAAHistoryReset{ SW_TRUE };
+            uint8 _bTAAHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
             uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
             uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
             uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
@@ -603,13 +603,13 @@ namespace sw
          *          다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다. 파이프라인이 TAA 를
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 알 수 있다.
          */
-        void ensureTaaHistory( ViewTarget& view );
+        void ensureTAAHistory( ViewTarget& view );
         /**
-         * @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 **셋업 단계에서** 풀 크기로 만들어 둡니다(`ensureTaaHistory` 와 같은 이유). 풀을 새로 만들었으니 지난 깊이는 없다.
+         * @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 **셋업 단계에서** 풀 크기로 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 풀을 새로 만들었으니 지난 깊이는 없다.
          * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
          */
         void ensureDepthHistory( ViewTarget& view );
-        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다(`ensureTaaHistory` 와 같은 이유). 톤맵하는 패스가 없으면 만들지 않습니다. */
+        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 톤맵하는 패스가 없으면 만들지 않습니다. */
         void ensureAutoExposureHistory( ViewTarget& view );
         /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseAutoExposureHistory( ViewTarget& view );
@@ -653,7 +653,7 @@ namespace sw
         /** @brief 뷰의 가림 타일 버퍼를 **셋업 단계에서** 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면(2D 파이프라인) 만들지 않습니다. */
         void ensureOcclusionTiles( ViewTarget& view );
         /**
-         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GpuNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
+         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
          */
         void scanPassOutputsForNan( IRHIDevice* pDevice );
@@ -680,7 +680,7 @@ namespace sw
          */
         void beginViewHistory( ViewTarget& view );
         /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
-        VfxSimulationFrameInput makeVfxSimulationInput() const;
+        VFXSimulationFrameInput makeVFXSimulationInput() const;
         /** @brief 트랜지언트 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번만 바인딩합니다. */
@@ -700,7 +700,7 @@ namespace sw
         void onGraphLevelPrologue( const RenderGraphLevelContext& context );
         /**
          * @brief 패스 타입에 맞는 실행 함수를 부릅니다. 공통 입력(`PassExecuteInput`)을 한 번 정하고 패스별 `execute*Pass` 로 나눠 줍니다.
-         * @details 패스 서술을 참조로 받는다 — 서술 없이 원본 이름(SceneColor · TaaColor 등)으로 타깃을 짐작하던 길을 형식으로 막았다.
+         * @details 패스 서술을 참조로 받는다 — 서술 없이 원본 이름(SceneColor · TAAColor 등)으로 타깃을 짐작하던 길을 형식으로 막았다.
          *          컬러 타깃은 서술의 `_listResolvedColorOutput` 이고 로드가 그 선언을 요구한다(`RenderPassTraitFlag::kDrawsDeclaredColor`).
          */
         void executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc );
@@ -736,7 +736,7 @@ namespace sw
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
-        void executeTaaPass( const PassExecuteInput& input );
+        void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
         void executePresentPass( const PassExecuteInput& input );
         /** @brief 화면 2D 를 주 출력에 그립니다. 주 출력에 마지막으로 그리는 뷰만 그립니다. */
@@ -841,7 +841,7 @@ namespace sw
         void setIdentityWorld( FramePassContext& context );
         /** @brief 드로우 직전에 리플렉션 기반으로 바인딩합니다. PassCB, MaterialCB, 텍스처, 인스턴스 버퍼가 대상입니다. */
         void bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                          const RHIDescriptorIndex* pMaterialTexSrv = nullptr );
+                          const RHIDescriptorIndex* pMaterialTexSRV = nullptr );
         /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr 입니다. */
         const ShaderBindingLayout* layoutForPSO( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 PSO 핸들에 연결합니다. */
@@ -903,7 +903,7 @@ namespace sw
         void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso );
         /**
          * @brief 입자 그리기 구간 @p listSlot 을 지금 열린 투명 패스에 그 순서로 그립니다.
-         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VfxParticleRenderer::drawBatches` 로 넘긴다. PSO · 정점 버퍼 슬롯을 바꾸므로
+         * @details 입자 PSO(`ensureParticlePSO`)를 걸고 PassCB 를 바인딩한 뒤 `VFXParticleRenderer::drawBatches` 로 넘긴다. PSO · 정점 버퍼 슬롯을 바꾸므로
          *          메시 드로우로 돌아가는 쪽(`drawGPUBatches`)이 그 상태를 다시 건다.
          * @return 입자 상태를 걸었으면 true 입니다(그릴 것이 없거나 PSO 가 없으면 false — 상태도 그대로다)
          */
@@ -1023,11 +1023,11 @@ namespace sw
 
         /**
          * @brief 패스 종류 테이블(RenderPassTypeInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
-         * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변형). nullptr 이면 테이블의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
+         * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변형). nullptr 이면 테이블의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
          */
-        RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );
+        RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRTVFormatOverride = nullptr );
         /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
-        RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormatOverride );
+        RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
         /**
          * @brief 모듈 확장 패스의 프로그램(`ModuleProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
@@ -1058,14 +1058,14 @@ namespace sw
          * @details 기록 중에는 PSO 를 만들 수 없다. 상수 버퍼 용량을 미리 늘리는 것과 같은 이유다. 패스는
          *          병렬로 기록되므로 그때 만들면 백엔드마다 다른 방식으로 깨진다.
          */
-        void ensureMaterialPSOs();
+        void ensureMaterialPSOS();
         /**
-         * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLod P6). 주 렌더러만 합니다.
-         * @details 씬에 든 머티리얼은 `ensureMaterialPSOs` 가 배치마다(보이든 아니든) 만들므로 대기 뷰에 보일 것은 이미 준비돼 있다. 아직 씬에 없는 머티리얼(다음 레벨 · 컷에
+         * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLOD P6). 주 렌더러만 합니다.
+         * @details 씬에 든 머티리얼은 `ensureMaterialPSOS` 가 배치마다(보이든 아니든) 만들므로 대기 뷰에 보일 것은 이미 준비돼 있다. 아직 씬에 없는 머티리얼(다음 레벨 · 컷에
          *          나올 것)만 이 길로 데운다 — 그 머티리얼이 씬에 들어오는 프레임에 DX12 PSO 생성 히치가 없게. 이번 프레임 보기 모드의 불투명 또는 투명 패스마다, 등장 디더
          *          변형까지 만든다.
          */
-        void warmPinnedMaterialPSOs();
+        void warmPinnedMaterialPSOS();
         /**
          * @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(머티리얼 변형 캐시에 둔다 — 해제 순서가 같다).
          * @details 투명 패스 PSO 의 렌더 상태(블렌드 · 깊이 테스트 · RT 포맷)를 물려받고 셰이더만 `EngineDefaultAssets::_shaderParticle` 로 바꾼다. 컬링은 끄고
@@ -1100,7 +1100,7 @@ namespace sw
         void ensurePassCbCapacityForFrame();
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
-         * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSrv` 는 bindless 레지스트리를 바꾸는데,
+         * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSRV` 는 bindless 레지스트리를 바꾸는데,
          *          패스 콜백은 태스크 워커에서 병렬로 돈다(`requireRegistryMutableNow` 가 감시하는 규칙).
          *          그래서 PSO 를 모두 등록한 뒤 여기서 한 번에 만든다.
          */
@@ -1169,20 +1169,20 @@ namespace sw
             uint32 _shaderPermutation{ kInvalidShaderPermutation };
             uint8  _bReverseCulling{ SW_FALSE };
         };
-        /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
+        /// @brief `ensureMaterialPSOS` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
-        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
+        /// @brief `warmPinnedMaterialPSOS` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
         vector<shared_ptr<Material>> _listPSOWarmMaterialScratch;
         /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
         uint32 collectFrameViewModeMask() const;
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        [[nodiscard]] bool ensureRequestMaterialPSOS( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
-         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
+         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOS`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
@@ -1191,7 +1191,7 @@ namespace sw
          * @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를 씁니다.
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나(둘 다 없음) 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.
          */
-        [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
+        [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormats, uint32 numRenderTargets ) const;
         /** @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · 파이프라인의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다. */
         bool hasRenderTargetFormatSource( RenderPassType passType ) const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
@@ -1236,7 +1236,7 @@ namespace sw
         vector<float4x4> _listScratchGridViewProj;     ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         vector<uint8>    _listScratchNeededAttachment; ///< 뷰의 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(`applyViewPassSelection`, 뷰마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
-        vector<VfxGPULightRange> _listScratchGPULightRange;
+        vector<VFXGPULightRange> _listScratchGPULightRange;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
         /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
@@ -1310,7 +1310,7 @@ namespace sw
          */
         bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
-        void computeLodFadeStep();
+        void computeLODFadeStep();
         /**
          * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
          * @details DX12 에서 아무것도 바인딩하지 않은 t5 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로
@@ -1352,9 +1352,9 @@ namespace sw
         OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount];
         uint64                  _occlusionReadbackSerial;
         /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
-        GpuAssertMonitor _gpuAssert;
+        GPUAssertMonitor _gpuAssert;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
-        GpuNanCheck                 _nanCheck;
+        GPUNanCheck                 _nanCheck;
         unique_ptr<IRHICommandList> _nanCheckCommandList;
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
@@ -1386,7 +1386,7 @@ namespace sw
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer;
         /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.
-        VfxParticleRenderer _particleRenderer;
+        VFXParticleRenderer _particleRenderer;
         /// @brief 이번 프레임 입자 PSO 의 변형 캐시 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 0 입니다.
         uint64 _particlePSOKey;
         /// @brief 그릴 캔버스입니다. 패킷과 `setCanvasFrame` 에서 맞바꾸기로 받으며, 기록 중에는 읽기만 합니다.

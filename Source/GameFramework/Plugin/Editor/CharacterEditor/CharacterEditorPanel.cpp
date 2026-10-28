@@ -485,9 +485,9 @@ namespace sw::editor
                              selection._basePresetID.empty() ? _previewPresetID.c_str() : selection._basePresetID.c_str(), pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u );
         _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
         const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
+        const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale();
         // 뷰포트가 남은 높이를 모두 차지하면 슬라이더가 늘 접힌 아래로 밀려 스크롤 없이는 닿지 못한다 — 펼쳐졌을 때는 아래 몇 줄 자리를 남긴다.
-        const float32 reserve        = _bCustomizationOpen ? CharacterEditorPanelInternal::kCustomizationReserve * EditorThemeUtil::getDpiScale() : 0.0f;
+        const float32 reserve        = _bCustomizationOpen ? CharacterEditorPanelInternal::kCustomizationReserve * EditorThemeUtil::getDPIScale() : 0.0f;
         const float32 viewportHeight = available._y - reserve;
         syncBoneGizmo();
         drawPreviewViewport( float2{ available._x, viewportHeight > minHeight ? viewportHeight : minHeight }, _gizmo.hasMouse() );

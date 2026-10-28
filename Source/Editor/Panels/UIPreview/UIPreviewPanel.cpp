@@ -924,7 +924,7 @@ namespace sw::editor
     void UIPreviewPanel::drawToolbar( UISystem& ui )
     {
         const string previous = _documentPath.get();
-        if ( _documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDpiScale() ) )
+        if ( _documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
         {
             if ( isDocumentDirty() )
                 SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
@@ -1230,7 +1230,7 @@ namespace sw::editor
         if ( pSlotProp == nullptr )
             return;
         const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
-        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
+        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
         const float2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
         struct HandleRow
         {
@@ -1298,7 +1298,7 @@ namespace sw::editor
         if ( pParent == nullptr || ( pBox == nullptr && pGrid == nullptr ) )
             return;
         const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
-        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
+        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
         const ImVec2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
         const ImU32   color = EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() );
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );

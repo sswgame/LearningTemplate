@@ -381,10 +381,10 @@ namespace sw::editor
                 baseColor = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
             const cgltf_texture* pTexture  = pbr.base_color_texture.texture;
             const bool           bHasImage = pTexture != nullptr && pTexture->image != nullptr;
-            if ( bHasImage && inoutMesh._baseColorTextureUri.empty() )
+            if ( bHasImage && inoutMesh._baseColorTextureURI.empty() )
             {
                 const utf8* pUri               = pTexture->image->uri != nullptr ? pTexture->image->uri : pTexture->image->name;
-                inoutMesh._baseColorTextureUri = pUri != nullptr ? pUri : "(embedded image)";
+                inoutMesh._baseColorTextureURI = pUri != nullptr ? pUri : "(embedded image)";
             }
         }
         return baseColor;

@@ -141,7 +141,7 @@ namespace sw
                 const bool bInput = index + 1 == _listLine.size();
                 const bool bError = index < _listErrorFlag.size() && _listErrorFlag[index] != 0;
                 SetTextColor( hDC, bInput ? RGB( 255, 220, 120 ) : ( bError ? RGB( 255, 120, 110 ) : RGB( 215, 220, 230 ) ) );
-                const wstring text = StringUtil::utf8ToUtf16( _listLine[index].c_str() );
+                const wstring text = StringUtil::utf8ToUTF16( _listLine[index].c_str() );
                 TextOutW( hDC, Win32DevConsoleWindowInternal::kPadding, lineY, text.c_str(), static_cast<int32>( text.size() ) );
                 lineY += Win32DevConsoleWindowInternal::kFontHeight + 2;
             }

@@ -562,7 +562,7 @@ namespace sw::editor
                 if ( stepIndex + 1 - probe._openStep < kSettleStepCount )
                     return EditorSelfTestStep::Continue;
 
-                const float32      dpiScale  = EditorThemeUtil::getDpiScale();
+                const float32      dpiScale  = EditorThemeUtil::getDPIScale();
                 const float32      minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
                 const float32      minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
                 const ImGuiWindow* pWindow   = ImGui::FindWindowByName( pPanel->getPanelTitle() );

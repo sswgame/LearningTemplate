@@ -23,7 +23,7 @@ namespace sw
                 while ( offset < text.size() )
                 {
                     const size_t start     = offset;
-                    const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+                    const uint32 codepoint = StringUtil::decodeUTF8( text, offset );
                     if ( codepoint == kReplacementCodepoint && text.substr( start, offset - start ) != "\xEF\xBF\xBD" )
                         return false;
                     outListCodepoint.push_back( codepoint );
@@ -208,7 +208,7 @@ namespace sw
         outText.clear();
         for ( size_t index = 0; index < listCodepoint.size(); ++index )
         {
-            StringUtil::appendUtf8( outText, listMasked[index] != 0 ? ChatWordFilterInternal::kMaskCodepoint : listCodepoint[index] );
+            StringUtil::appendUTF8( outText, listMasked[index] != 0 ? ChatWordFilterInternal::kMaskCodepoint : listCodepoint[index] );
         }
         return ChatFilterVerdict::Masked;
     }

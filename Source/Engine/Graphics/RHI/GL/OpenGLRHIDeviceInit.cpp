@@ -148,10 +148,10 @@ namespace sw
             glGetIntegerv( GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSsbo );
             SW_LOG_INFO( "OpenGL SSBO limits: vertex %#, fragment %#, compute %#", static_cast<int32>( maxVertexSsbo ),
                          static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
-            if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSrvSlotCount ) )
+            if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSRVSlotCount ) )
             {
                 SW_LOG_WARNING( "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
-                                static_cast<int32>( maxVertexSsbo ), shaderslot::kSrvSlotCount );
+                                static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
             }
             // 머티리얼 텍스처는 텍스처 유닛 16..31 이다(bindingslots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
             GLint       maxFragmentTextureUnit{ 0 };
@@ -470,7 +470,7 @@ namespace sw
         _listRegisteredTexture.clear();
         _listTextureFree.clear();
         _listBindlessFree.clear();
-        _listUavFree.clear();
+        _listUAVFree.clear();
         Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 
         _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )

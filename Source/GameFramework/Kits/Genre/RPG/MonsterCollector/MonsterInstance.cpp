@@ -124,7 +124,7 @@ namespace sw
     {
         const int32 clampedLevel = MathUtil::clamp( level, 1, MonsterCollectorCatalog::kMaxLevel );
         const int32 core         = ( 2 * baseStat + MathUtil::clamp( iv, 0, kMaxIv ) + MathUtil::clamp( ev, 0, kMaxEvPerStat ) / 4 ) * clampedLevel / 100;
-        if ( stat == MonsterStat::Hp )
+        if ( stat == MonsterStat::HP )
             return core + clampedLevel + 10;
         return ( core + 5 ) * naturePercent / 100;
     }
@@ -135,7 +135,7 @@ namespace sw
         if ( pSpecies == nullptr )
             return;
         const MonsterNatureDef* pNature  = catalog.findNature( inoutMonster._natureID );
-        const int32             oldMaxHp = inoutMonster.getMaxHp();
+        const int32             oldMaxHP = inoutMonster.getMaxHP();
         for ( int32 index = 0; index < kMonsterStatCount; ++index )
         {
             const MonsterStat stat          = static_cast<MonsterStat>( index );
@@ -144,7 +144,7 @@ namespace sw
                                                            inoutMonster._level, naturePercent );
         }
         if ( inoutMonster._hp > 0 )
-            inoutMonster._hp = MathUtil::clamp( inoutMonster._hp + inoutMonster.getMaxHp() - oldMaxHp, 1, inoutMonster.getMaxHp() );
+            inoutMonster._hp = MathUtil::clamp( inoutMonster._hp + inoutMonster.getMaxHP() - oldMaxHP, 1, inoutMonster.getMaxHP() );
     }
 
     MonsterInstance MonsterRules::createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random )
@@ -197,7 +197,7 @@ namespace sw
 
         monster._hp = 1;
         recomputeStats( catalog, monster );
-        monster._hp = monster.getMaxHp();
+        monster._hp = monster.getMaxHP();
         return monster;
     }
 
@@ -313,7 +313,7 @@ namespace sw
 
     void MonsterRules::restore( MonsterInstance& inoutMonster )
     {
-        inoutMonster._hp          = inoutMonster.getMaxHp();
+        inoutMonster._hp          = inoutMonster.getMaxHP();
         inoutMonster._status      = MonsterStatus::None;
         inoutMonster._statusTurns = 0;
         for ( MonsterMoveSlot& slot : inoutMonster._arrMove )

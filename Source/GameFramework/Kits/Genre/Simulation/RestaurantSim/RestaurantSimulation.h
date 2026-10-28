@@ -51,9 +51,9 @@ namespace sw
         int32         _reputationPerServe{ 10 };                 ///< 만족도가 1 이면 이 값만큼 오르고, 0 이면 이 값만큼 내린다
         int32         _walkoutPenalty{ 15 };                     ///< 기다리다 떠나면 평판에서 이만큼 뺀다
         int32         _seatCount{ 4 };
-        int64         _cookXp{ 10 };
-        int64         _serveXp{ 5 };
-        int64         _checkoutXp{ 5 };
+        int64         _cookXP{ 10 };
+        int64         _serveXP{ 5 };
+        int64         _checkoutXP{ 5 };
         uint32        _randomSeed{ 5150u }; ///< 손님 성향, 요리 고르기, 시세에 쓰는 난수 시드
     };
 } // namespace sw
@@ -290,7 +290,7 @@ namespace sw
         void settlePayment( RestaurantCustomer& customer );
         void leaveCustomer( RestaurantCustomer& customer, bool bWalkout );
         void pushSatisfaction( float32 satisfaction );
-        void grantXp( StaffMember& staff, int64 amount );
+        void grantXP( StaffMember& staff, int64 amount );
         void rollMarketPrices();
 
         int32            findCustomerIndex( int32 customerID ) const;

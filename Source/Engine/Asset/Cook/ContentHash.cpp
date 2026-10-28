@@ -49,7 +49,7 @@ namespace sw
     {
         // CR 을 건너뛰며 바로 섞는다 — CR 을 뺀 사본을 만들지 않는다(출력 해시는 팩 하나가 수십 MB 이고 항목마다 부른다).
         // 값은 사본을 `computeStringHash64( ..., bIgnoreCase = false )` 로 섞던 것과 같다: 같은 시작값에 CR 아닌 바이트를 차례로 `fnvStep64` 한다.
-        uint64 hash = HashUtil::kFnvOffset64;
+        uint64 hash = HashUtil::kFNVOffset64;
         for ( size_t index = 0; index < size; ++index )
         {
             const uint8 byte = pData[index];

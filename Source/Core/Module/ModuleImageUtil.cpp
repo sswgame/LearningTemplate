@@ -2,7 +2,7 @@
 
 #include "Core/Module/ModuleImageUtil.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -92,11 +92,11 @@ namespace sw
                 return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
             }
 
-            /** @brief 이름이 @p pDllName 인 DLL 이 로드돼 있으면 프로세스 끝까지 언로드되지 않게 고정합니다. 고정했으면 true 를 반환합니다. */
-            static bool pinLoadedModule( const utf8* pDllName )
+            /** @brief 이름이 @p pDLLName 인 DLL 이 로드돼 있으면 프로세스 끝까지 언로드되지 않게 고정합니다. 고정했으면 true 를 반환합니다. */
+            static bool pinLoadedModule( const utf8* pDLLName )
             {
                 HMODULE       hModule  = nullptr;
-                const wstring wideName = StringUtil::utf8ToUtf16( pDllName );
+                const wstring wideName = StringUtil::utf8ToUTF16( pDLLName );
                 return GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, wideName.c_str(), &hModule ) != FALSE;
             }
 
@@ -110,7 +110,7 @@ namespace sw
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
                         if ( FileUtil::isDirectory( directory ) )
-                            (void)AddDllDirectory( StringUtil::utf8ToUtf16( directory.c_str() ).c_str() ); // 실패하면 아래 옛 검색 순서가 찾는다
+                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 아래 옛 검색 순서가 찾는다
                     }
                     return true;
                 }();
@@ -236,10 +236,10 @@ namespace sw
             const string nativePath = FileUtil::toNativeSeparators( absPath );
 
             // 경로는 UTF-8 이다. W 버전 함수에 UTF-16 으로 넘긴다(A 버전은 ANSI 코드 페이지로 읽어, 매니페스트가 UTF-8 로 바꿔 두지 않은 호스트에서 한글 경로가 깨진다).
-            const wstring widePath = StringUtil::utf8ToUtf16( nativePath.c_str() );
-            const wstring wideDir  = StringUtil::utf8ToUtf16( FileUtil::getDirectoryPart( nativePath ).c_str() );
-            utf16         arrPreviousDllDir[constant::kMaxPathSize]{};
-            const DWORD   previousDllDirLen = GetDllDirectoryW( static_cast<DWORD>( constant::kMaxPathSize ), arrPreviousDllDir );
+            const wstring widePath = StringUtil::utf8ToUTF16( nativePath.c_str() );
+            const wstring wideDir  = StringUtil::utf8ToUTF16( FileUtil::getDirectoryPart( nativePath ).c_str() );
+            utf16         arrPreviousDLLDir[constant::kMaxPathSize]{};
+            const DWORD   previousDLLDirLen = GetDllDirectoryW( static_cast<DWORD>( constant::kMaxPathSize ), arrPreviousDLLDir );
             if ( wideDir.empty() == false )
                 SetDllDirectoryW( wideDir.c_str() );
 
@@ -254,8 +254,8 @@ namespace sw
             if ( hModule == nullptr )
                 hModule = LoadLibraryW( widePath.c_str() );
 
-            if ( previousDllDirLen > 0 && previousDllDirLen < constant::kMaxPathSize )
-                SetDllDirectoryW( arrPreviousDllDir );
+            if ( previousDLLDirLen > 0 && previousDLLDirLen < constant::kMaxPathSize )
+                SetDllDirectoryW( arrPreviousDLLDir );
             else
                 SetDllDirectoryW( nullptr );
 
@@ -263,7 +263,7 @@ namespace sw
                 return hModule;
         }
         const string  nativeName = FileUtil::toNativeSeparators( libraryName );
-        const HMODULE hModule    = LoadLibraryW( StringUtil::utf8ToUtf16( nativeName.c_str() ).c_str() );
+        const HMODULE hModule    = LoadLibraryW( StringUtil::utf8ToUTF16( nativeName.c_str() ).c_str() );
         if ( hModule == nullptr )
         {
             // 실패 이유는 GetLastError 하나뿐이다. 남기지 않으면 부르는 쪽은 "로드 실패"밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).

@@ -435,7 +435,7 @@ msgid "Game time"
 msgstr "게임 시각"
 
 #: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
-msgctxt "EdSchedule.NpcListTitle"
+msgctxt "EdSchedule.NPCListTitle"
 msgid "NPCs"
 msgstr "NPC 목록"
 
@@ -445,7 +445,7 @@ msgid "Raw timeline"
 msgstr "타임라인 원문"
 
 #: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
-msgctxt "EdSchedule.SelectNpcHint"
+msgctxt "EdSchedule.SelectNPCHint"
 msgid "Select an NPC on the left"
 msgstr "왼쪽에서 NPC 를 고르세요"
 

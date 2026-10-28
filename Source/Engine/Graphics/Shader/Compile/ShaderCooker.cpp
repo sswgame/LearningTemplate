@@ -90,7 +90,7 @@ namespace sw
 
         std::sort( listSorted.begin(), listSorted.end() );
 
-        uint64 hash{ HashUtil::kFnvOffset64 }; // FNV-1a 64비트 오프셋 기저값
+        uint64 hash{ HashUtil::kFNVOffset64 }; // FNV-1a 64비트 오프셋 기저값
         for ( const string& define : listSorted )
         {
             if ( define.empty() )
@@ -223,7 +223,7 @@ namespace sw
             }
         }
 
-        ShaderCompileResult compileResult = ShaderCompiler::compileHlsl( desc );
+        ShaderCompileResult compileResult = ShaderCompiler::compileHLSL( desc );
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
             SW_LOG_WARNING( "Failed to compile shader '%#' [%#] for %#: %#",

@@ -52,11 +52,11 @@ namespace sw::editor
             {
                 if ( ImGui::BeginTable( pID, 5, flags, ImVec2( 0.0f, outerHeight ) ) == false )
                     return false;
-                ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f * EditorThemeUtil::getDpiScale() );
-                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f * EditorThemeUtil::getDpiScale() );
-                ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f * EditorThemeUtil::getDpiScale() );
+                ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f * EditorThemeUtil::getDPIScale() );
+                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f * EditorThemeUtil::getDPIScale() );
+                ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 60.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
-                ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDpiScale() );
+                ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableHeadersRow();
                 return true;
             }

@@ -2,7 +2,7 @@
  * @file fsr1.hlsl
  * @brief AMD FidelityFX Super Resolution 1(FSR 1)입니다 — EASU(가장자리 적응 공간 업샘플)와 RCAS(대비 적응 선명화). Present 가 해상도 배율로 그린 뷰를
  *        출력 크기로 키울 때 선형 블릿 대신 쓴다(사용자 설정 graphics.upscaler = spatial, `gv_upscaler` 1).
- * @details 원본은 AMD GPUOpen-Effects/FidelityFX-FSR v1.20210629 의 ffx_fsr1.h 32 비트 판(FsrEasuCon · FsrEasuF · FsrRcasF)과 ffx_a.h 의 근사 역수(APrx*)이고
+ * @details 원본은 AMD GPUOpen-Effects/FidelityFX-FSR v1.20210629 의 ffx_fsr1.h 32 비트 판(FSREasuCon · FSREasuF · FSRRcasF)과 ffx_a.h 의 근사 역수(APrx*)이고
  *          MIT 라이선스다(아래 고지, 전문은 ThirdParty/fidelityfx-fsr1/LICENSE.md). 이 엔진의 셰이더 규칙(이름 · 루트 상수 · bindless/에뮬 읽기)에 맞춰 옮겼고 계산은 같다.
  *          두 단계는 퍼뮤테이션으로 고른다 — 기본은 EASU(배율 크기 원본 → 출력 크기 중간 RT), `SW_PASS_FSR_RCAS` 는 RCAS(중간 RT → Present 대상의 뷰포트).
  *          EASU 는 톤맵 뒤 지각 공간의 [0,1] 색을 받아야 한다(AMD 권고) — 그래서 Present 가 톤맵하지 않는 파이프라인에서만 쓴다(FrameRenderer::prepareUpscale).
@@ -23,14 +23,14 @@
 
 SW_ROOT_CONSTANTS_BEGIN
 {
-    uint  g_FsrSource;     // 원본(EASU: 배율 크기 장면, RCAS: 중간 RT)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
-    float g_FsrInputWidth; // EASU: 원본 픽셀 크기
-    float g_FsrInputHeight;
-    float g_FsrOutputWidth; // EASU: 출력(중간 RT) 픽셀 크기
-    float g_FsrOutputHeight;
-    float g_FsrViewportX; // RCAS: Present 대상에서 뷰포트 왼쪽 위(px) — 대상 픽셀 위치를 중간 RT 픽셀로 옮긴다
-    float g_FsrViewportY;
-    float g_FsrSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness)
+    uint  g_FSRSource;     // 원본(EASU: 배율 크기 장면, RCAS: 중간 RT)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    float g_FSRInputWidth; // EASU: 원본 픽셀 크기
+    float g_FSRInputHeight;
+    float g_FSROutputWidth; // EASU: 출력(중간 RT) 픽셀 크기
+    float g_FSROutputHeight;
+    float g_FSRViewportX; // RCAS: Present 대상에서 뷰포트 왼쪽 위(px) — 대상 픽셀 위치를 중간 RT 픽셀로 옮긴다
+    float g_FSRViewportY;
+    float g_FSRSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness)
 };
 SW_ROOT_CONSTANTS_END
 
@@ -42,11 +42,11 @@ struct PSInput
     float4 _position : SV_POSITION;
 };
 
-PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 {
     PSInput output;
     input._position           = input._position;
-    const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
+    const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
     output._position          = float4( clipPosition, 0.0f, 1.0f );
     return output;
 }
@@ -81,17 +81,17 @@ float min3( float first, float second, float third )
 // ---- 원본 읽기 ----
 float4 gatherSourceChannel( float2 uv, uint channel )
 {
-    return Bindless::gatherEngineChannel( SW_ROOT( g_FsrSource ), 0u, channel, uv );
+    return Bindless::gatherEngineChannel( SW_ROOT( g_FSRSource ), 0u, channel, uv );
 }
 
 float3 loadSourceClamped( int2 texel )
 {
-    const int2 size    = int2( Bindless::getEngineTextureSize( SW_ROOT( g_FsrSource ), 0u ) );
+    const int2 size    = int2( Bindless::getEngineTextureSize( SW_ROOT( g_FSRSource ), 0u ) );
     const int2 clamped = clamp( texel, int2( 0, 0 ), size - int2( 1, 1 ) );
-    return Bindless::loadEngineTexel( SW_ROOT( g_FsrSource ), 0u, clamped ).rgb;
+    return Bindless::loadEngineTexel( SW_ROOT( g_FSRSource ), 0u, clamped ).rgb;
 }
 
-// ---- EASU (ffx_fsr1.h FsrEasuTapF · FsrEasuSetF · FsrEasuF) ----
+// ---- EASU (ffx_fsr1.h FSREasuTapF · FSREasuSetF · FSREasuF) ----
 
 /** @brief 탭 하나를 근사 lanczos(2) 무게로 더합니다. offset 은 해석 위치에서 탭까지, direction 은 기울기 방향, stretch 는 방향별 길이 배율이다. */
 void accumulateEasuTap( inout float3 inoutColor, inout float inoutWeight, float2 offset, float2 direction, float2 stretch, float negativeLobe, float clipPoint, float3 tapColor )
@@ -137,10 +137,10 @@ void accumulateEasuDirection( inout float2 inoutDirection, inout float inoutEdge
 
 float3 computeEasu( uint2 outputPixel )
 {
-    const float2 inputSize  = float2( SW_ROOT( g_FsrInputWidth ), SW_ROOT( g_FsrInputHeight ) );
-    const float2 outputSize = float2( SW_ROOT( g_FsrOutputWidth ), SW_ROOT( g_FsrOutputHeight ) );
+    const float2 inputSize  = float2( SW_ROOT( g_FSRInputWidth ), SW_ROOT( g_FSRInputHeight ) );
+    const float2 outputSize = float2( SW_ROOT( g_FSROutputWidth ), SW_ROOT( g_FSROutputHeight ) );
     const float2 inputTexel = 1.0f / inputSize;
-    // FsrEasuCon — 출력 정수 위치를 원본 픽셀 위치로(con0), 'F' 탭의 왼쪽 위와 게더 넷의 가운데(con1 · con2 · con3).
+    // FSREasuCon — 출력 정수 위치를 원본 픽셀 위치로(con0), 'F' 탭의 왼쪽 위와 게더 넷의 가운데(con1 · con2 · con3).
     const float2 scale       = inputSize / outputSize;
     float2       position    = float2( outputPixel ) * scale + ( 0.5f * scale - 0.5f );
     const float2 floorCorner = floor( position );
@@ -237,7 +237,7 @@ float3 computeEasu( uint2 outputPixel )
     return min( maximum, max( minimum, accumulatedColor * rcp( accumulatedWeight ) ) );
 }
 
-// ---- RCAS (ffx_fsr1.h FsrRcasF — 잡음 제거 · 알파 통과는 끈 기본형) ----
+// ---- RCAS (ffx_fsr1.h FSRRcasF — 잡음 제거 · 알파 통과는 끈 기본형) ----
 
 float3 computeRcas( int2 pixel )
 {
@@ -256,9 +256,9 @@ float3 computeRcas( int2 pixel )
     const float2 peak       = float2( 1.0f, -1.0f * 4.0f );
     const float3 hitMinimum = min( ringMinimum, colorE ) * rcp( 4.0f * ringMaximum );
     const float3 hitMaximum = ( peak.x - max( ringMaximum, colorE ) ) * rcp( 4.0f * ringMinimum + peak.y );
-    const float3 lobeRgb    = max( -hitMinimum, hitMaximum );
-    const float  sharpness  = exp2( -SW_ROOT( g_FsrSharpness ) );
-    const float  lobe       = max( -kRcasLimit, min( max3( lobeRgb.r, lobeRgb.g, lobeRgb.b ), 0.0f ) ) * sharpness;
+    const float3 lobeRGB    = max( -hitMinimum, hitMaximum );
+    const float  sharpness  = exp2( -SW_ROOT( g_FSRSharpness ) );
+    const float  lobe       = max( -kRcasLimit, min( max3( lobeRGB.r, lobeRGB.g, lobeRGB.b ), 0.0f ) ) * sharpness;
     // 해석 — 톤이 바뀌지 않게 중간 정밀도 근사 역수.
     const float resolveScale = approximateReciprocalMedium( 4.0f * lobe + 1.0f );
     return ( lobe * colorB + lobe * colorD + lobe * colorH + lobe * colorF + colorE ) * resolveScale;
@@ -267,7 +267,7 @@ float3 computeRcas( int2 pixel )
 #if defined( SW_PASS_FSR_RCAS )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const int2 pixel = int2( floor( input._position.xy - float2( SW_ROOT( g_FsrViewportX ), SW_ROOT( g_FsrViewportY ) ) ) );
+    const int2 pixel = int2( floor( input._position.xy - float2( SW_ROOT( g_FSRViewportX ), SW_ROOT( g_FSRViewportY ) ) ) );
     return float4( computeRcas( pixel ), 1.0f );
 }
 #else

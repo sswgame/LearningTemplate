@@ -10,32 +10,32 @@
 # CMAKE_CXX_COMPILER_ARCHITECTURE_ID 가 안다 — CMake 가 컴파일러로 식별 소스를 지어 그 내장 매크로에서 읽은 값이다.
 # MSVC 계열은 x64 · ARM64, 나머지는 x86_64 · aarch64 로 적는다. 오래된 CMake 는 GNU 계열에서 이 값을
 # 비워 두므로 그때만 CMAKE_SYSTEM_PROCESSOR 로 물러선다.
-set(swArchitectureId "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
+set(swArchitectureID "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
 
-if(NOT swArchitectureId)
-	set(swArchitectureId "${CMAKE_SYSTEM_PROCESSOR}")
+if(NOT swArchitectureID)
+	set(swArchitectureID "${CMAKE_SYSTEM_PROCESSOR}")
 endif()
 
 # 매크로는 빌드 트리 하나에 값 하나다. 아키텍처 여럿을 한 번에 짓는 구성(값이 `arm64;x86_64` 같은 목록)은
 # 한쪽 조각이 틀린 매크로로 컴파일되므로 받지 않는다.
-list(LENGTH swArchitectureId swArchitectureCount)
+list(LENGTH swArchitectureID swArchitectureCount)
 
 if(swArchitectureCount GREATER 1)
-	message(FATAL_ERROR "[Architecture] One build tree targets one architecture, got '${swArchitectureId}'. "
+	message(FATAL_ERROR "[Architecture] One build tree targets one architecture, got '${swArchitectureID}'. "
 		"Configure one build directory per architecture.")
 endif()
 
 # 엔진은 64 비트만 짓는다 — 32 비트(x86 · armv7)와 ARM64EC 는 판정하지 않는다.
-if(swArchitectureId MATCHES "^(x64|x86_64|AMD64|amd64)$")
+if(swArchitectureID MATCHES "^(x64|x86_64|AMD64|amd64)$")
 	set(sw_target_architecture "x64")
-elseif(swArchitectureId MATCHES "^(ARM64|arm64|aarch64|AArch64)$")
+elseif(swArchitectureID MATCHES "^(ARM64|arm64|aarch64|AArch64)$")
 	set(sw_target_architecture "arm64")
 else()
-	message(FATAL_ERROR "[Architecture] Unsupported target architecture '${swArchitectureId}'. "
+	message(FATAL_ERROR "[Architecture] Unsupported target architecture '${swArchitectureID}'. "
 		"The engine builds x64 and arm64 only.")
 endif()
 
-message(STATUS "[Architecture] ${sw_target_architecture} (compiler architecture id: '${swArchitectureId}')")
+message(STATUS "[Architecture] ${sw_target_architecture} (compiler architecture id: '${swArchitectureID}')")
 
-unset(swArchitectureId)
+unset(swArchitectureID)
 unset(swArchitectureCount)

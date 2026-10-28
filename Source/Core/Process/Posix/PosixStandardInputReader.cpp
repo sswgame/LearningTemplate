@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Process/StandardInputReader.h"
 
 #if !defined( SW_PLATFORM_WINDOWS )

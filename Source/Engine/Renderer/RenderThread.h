@@ -163,7 +163,7 @@ namespace sw
         void writeRequestedScreenshot();
         /**
          * @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 레지스트리에 보관합니다. `endFrame` 뒤에 부릅니다.
-         * @details 읽기 티켓은 요청한 프레임에 기다리지 않고(RhiAsyncUploads U9) 이후 프레임의 호출이 `pollTransfer` 로 보고 `Complete` 일 때 가져갑니다. 읽는 중에는 새 요청을
+         * @details 읽기 티켓은 요청한 프레임에 기다리지 않고(RHIAsyncUploads U9) 이후 프레임의 호출이 `pollTransfer` 로 보고 `Complete` 일 때 가져갑니다. 읽는 중에는 새 요청을
          *          레지스트리에 둔 채 받지 않고(레지스트리가 최신 요청 하나만 쥔다), 스테이징이 차서 `Busy` 면 같은 요청을 다음 프레임에 다시 냅니다.
          */
         void readRequestedRenderTarget();

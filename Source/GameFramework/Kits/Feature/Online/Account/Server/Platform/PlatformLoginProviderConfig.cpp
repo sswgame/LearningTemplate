@@ -17,11 +17,11 @@ namespace sw
     {
         struct PlatformLoginProviderSettingsInternal
         {
-            static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksUrl",
-                                                          "clientIds", "requireNonce", "profileUrl", "subjectPath",
+            static constexpr const utf8* kKnownKeys[] = { "name", "kind", "issuer", "jwksURL",
+                                                          "clientIDs", "requireNonce", "profileURL", "subjectPath",
                                                           "displayNamePath", "ticketParam", "keyParam", "keySecretEnvironment",
-                                                          "resultPath", "resultValue", "teamId", "signingKeyId",
-                                                          "tokenUrl", "revokeUrl" };
+                                                          "resultPath", "resultValue", "teamID", "signingKeyID",
+                                                          "tokenURL", "revokeURL" };
 
             static bool isKnownKey( string_view key ) { return VectorUtil::contains( kKnownKeys, key ); }
 
@@ -103,8 +103,8 @@ namespace sw
                 return false;
             }
             settings._issuer               = Internal::readText( entry, "issuer", "" );
-            settings._jwksURL              = Internal::readText( entry, "jwksUrl", "" );
-            settings._profileURL           = Internal::readText( entry, "profileUrl", "" );
+            settings._jwksURL              = Internal::readText( entry, "jwksURL", "" );
+            settings._profileURL           = Internal::readText( entry, "profileURL", "" );
             settings._subjectPath          = Internal::readText( entry, "subjectPath", ( settings._kind == PlatformLoginProviderKind::Oidc || settings._kind == PlatformLoginProviderKind::AppleSignIn ) ? "sub" : "id" );
             settings._displayNamePath      = Internal::readText( entry, "displayNamePath", "" );
             settings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
@@ -112,10 +112,10 @@ namespace sw
             settings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
             settings._resultPath           = Internal::readText( entry, "resultPath", "" );
             settings._resultValue          = Internal::readText( entry, "resultValue", "" );
-            settings._teamID               = Internal::readText( entry, "teamId", "" );
-            settings._signingKeyID         = Internal::readText( entry, "signingKeyId", "" );
-            settings._tokenURL             = Internal::readText( entry, "tokenUrl", "" );
-            settings._revokeURL            = Internal::readText( entry, "revokeUrl", "" );
+            settings._teamID               = Internal::readText( entry, "teamID", "" );
+            settings._signingKeyID         = Internal::readText( entry, "signingKeyID", "" );
+            settings._tokenURL             = Internal::readText( entry, "tokenURL", "" );
+            settings._revokeURL            = Internal::readText( entry, "revokeURL", "" );
             bool bRequireNonce             = settings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
             if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
             {
@@ -123,7 +123,7 @@ namespace sw
                 return false;
             }
             settings._bRequireNonce   = bRequireNonce ? SW_TRUE : SW_FALSE;
-            const JSONValue clientIDs = entry.get( "clientIds" );
+            const JSONValue clientIDs = entry.get( "clientIDs" );
             for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
             {
                 settings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );

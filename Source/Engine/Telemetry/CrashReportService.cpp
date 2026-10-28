@@ -309,13 +309,13 @@ namespace sw
         // 자주 보는 칸은 맨 위에 — 받는 쪽 목록 화면이 컨텍스트를 풀지 않고 보인다.
         // 값을 먼저 꺼낸다 — 루트에 칸을 더하면 루트의 멤버 저장소가 옮겨 가 앞서 받은 핸들(context)이 낡는다.
         const string reason   = context.get( "reason" ).asString();
-        const string buildID  = context.get( "BuildId" ).asString();
+        const string buildID  = context.get( "BuildID" ).asString();
         const string build    = context.get( "Build" ).asString();
         const string platform = context.get( "Platform" ).asString();
         const string rhi      = context.get( "RHI" ).asString();
         const string gpu      = context.get( "GPU" ).asString();
         root.set( "reason" ).setString( reason );
-        root.set( "buildId" ).setString( buildID );
+        root.set( "buildID" ).setString( buildID );
         root.set( "build" ).setString( build );
         root.set( "platform" ).setString( platform );
         root.set( "rhi" ).setString( rhi );
@@ -443,7 +443,7 @@ namespace sw
             summary._sessionID = root.get( "session" ).asString();
             summary._folder    = folder;
             summary._reason    = root.get( "reason" ).asString();
-            summary._buildID   = root.get( "buildId" ).asString();
+            summary._buildID   = root.get( "buildID" ).asString();
             summary._crashTime = *crashTime;
             summary._attempts  = *attempts;
             summary._state     = Internal::getState( manifest );

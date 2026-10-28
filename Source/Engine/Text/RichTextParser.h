@@ -19,7 +19,7 @@ namespace sw
     {
         uint32  _firstByte{ 0 };           ///< 표기를 뺀 텍스트 기준의 시작 바이트입니다.
         uint32  _byteCount{ 0 };           ///< 바이트 수
-        uint32  _colorRgba{ 0xFFFFFFFFu }; ///< 0xRRGGBBAA 입니다. 0xFFFFFFFF 는 위젯 색 그대로입니다.
+        uint32  _colorRGBA{ 0xFFFFFFFFu }; ///< 0xRRGGBBAA 입니다. 0xFFFFFFFF 는 위젯 색 그대로입니다.
         float32 _sizeScale{ 1.0f };        ///< 폰트 크기 배율입니다.
         uint16  _colorToken{ 0 };          ///< `[color=이름]` 입니다. `RichTextParseResult::_listColorName` 의 번호 + 1 이며 스타일 변수가 해석합니다. 0 이면 없습니다.
         uint8   _bBold{ SW_FALSE };        ///< 굵게입니다.

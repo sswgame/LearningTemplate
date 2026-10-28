@@ -74,7 +74,7 @@ namespace sw
         /** @brief 참 HP 비율입니다. */
         float32 getTargetRatio() const { return _targetRatio; }
         /** @brief 채움 막대의 비율입니다. */
-        float32 getHpRatio() const { return _hpRatio; }
+        float32 getHPRatio() const { return _hpRatio; }
         /** @brief 피해 흔적의 끝 비율입니다(채움보다 짧지 않습니다). */
         float32 getRemainRatio() const { return _remainRatio; }
 

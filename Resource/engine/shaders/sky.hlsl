@@ -29,11 +29,11 @@ static const float kCloudHorizonFadeRange = 0.18f;   // 이 폭으로 서서히 
 static const float kCloudSunStepKm        = 0.35f;   // 그늘을 읽으려고 해 쪽으로 옮기는 평면 거리(km)
 static const uint  kCloudOctaveCount      = 4u;
 
-PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 {
     PSInput output;
     input._position     = input._position;
-    const float2 clipXy = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    const float2 clipXy = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
     // z = w 라 깊이가 1 이다(네 백엔드 모두 0~1 깊이 — GL 은 glClipControl ZERO_TO_ONE).
     output._position = float4( clipXy, 1.0f, 1.0f );
     output._clipXy   = clipXy;

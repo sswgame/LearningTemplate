@@ -28,7 +28,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
-#include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
+#include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
@@ -70,13 +70,13 @@ namespace sw
 #endif
 
     /**
-     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LodLevel, LodFadeCode, MarkerSlots).
+     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LODLevel, LODFadeCode, MarkerSlots).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
      *          명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
-    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LodLevel / LodFadeCode / MarkerSlots)" );
+    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe / LODLevel / LODFadeCode / MarkerSlots)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -464,8 +464,8 @@ namespace sw
         _nanCheck.poll();
         recordDepthHistories();
         // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
-        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VfxGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
-        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VfxSimulation ), getEnginePSO( RenderPassType::VfxMeshInstance ) );
+        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
+        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VFXSimulation ), getEnginePSO( RenderPassType::VFXMeshInstance ) );
         const uint32 animationInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animationInstanceCount );
         dispatchMeshMorph();
@@ -478,7 +478,7 @@ namespace sw
         // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
         dispatchRealtimeProbes();
         // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _canvasRenderer.recordMarkerProjection( *_pCmd, getEnginePSO( RenderPassType::CanvasMarker ), _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv(), _transparentRankPlaceholder._srv,
+        _canvasRenderer.recordMarkerProjection( *_pCmd, getEnginePSO( RenderPassType::CanvasMarker ), _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
                                                 _gpuAssert, _mainView._settings._viewMode == RenderViewMode::MarkerSlots );
         // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
         _gpuAssert.requestReadback( *_pCmd );
@@ -773,7 +773,7 @@ namespace sw
         }
         // GPU 방출기의 파티클 라이트 — 방출기가 요청한 슬롯의 합이 라이트 버퍼의 GPU 구간 크기다(GPU 생산자가 아니면 버퍼가 거절하고 오류를 남긴다).
         // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
-        const VfxGPULightAssignment lightAssignment = VfxGPUSimulation::assignLightRanges( _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), _listScratchGPULightRange );
+        const VFXGPULightAssignment lightAssignment = VFXGPUSimulation::assignLightRanges( _gpuScene.getParticleBatches(), _gpuScene.getVFXMeshEmitters(), _listScratchGPULightRange );
         _lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
     }
 
@@ -854,9 +854,9 @@ namespace sw
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         // 만드는 일은 빌더 스레드가 한다(`MaterialPSOBuilder`) — 먼저 지난 프레임까지 끝난 결과를 캐시에 합치고, 이번 프레임에 필요한 키를 줄에 넣는다.
         pumpMaterialPSOBuilds();
-        ensureMaterialPSOs();
+        ensureMaterialPSOS();
         // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄).
-        warmPinnedMaterialPSOs();
+        warmPinnedMaterialPSOS();
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
         pumpMaterialPSOBuilds();
 
@@ -864,7 +864,7 @@ namespace sw
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, *_pPSOCache );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         ensureParticlePSO();
-        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), makeVfxSimulationInput() );
+        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVFXMeshEmitters(), makeVFXSimulationInput() );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;

@@ -615,10 +615,10 @@ namespace sw
             // 비용 곡선이 샘플 · 블렌드(BasePose) · 부착 · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다(스레드를 더한 값이라 벽시계보다 클 수 있다).
             SW_PROFILE_SCOPE( "GT.Animation.phasePose" );
             static const uint32 s_arrCounterSlot[AnimationSystemInternal::kPosePhaseCount]{
-                FrameProfiler::registerEngineCounter( "GT.Animation.phaseBasePoseCpuNanos" ),
-                FrameProfiler::registerEngineCounter( "GT.Animation.phaseAttachmentCpuNanos" ),
-                FrameProfiler::registerEngineCounter( "GT.Animation.phasePostProcessCpuNanos" ),
-                FrameProfiler::registerEngineCounter( "GT.Animation.phaseSkinPaletteCpuNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseBasePoseCPUNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseAttachmentCPUNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phasePostProcessCPUNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseSkinPaletteCPUNanos" ),
             };
             AnimationSystemInternal::PoseJob job{};
             job._pComponent   = &_componentActive;

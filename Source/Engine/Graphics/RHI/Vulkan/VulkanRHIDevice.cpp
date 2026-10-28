@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -98,9 +98,9 @@ namespace sw
         , _mapCbSlotSize{}
         , _constantBufferMirror{}
         , _listBindlessSourceBuffer{}
-        , _listUavSourceBuffer{}
-        , _listUavSourceTexture{}
-        , _listUavFree{}
+        , _listUAVSourceBuffer{}
+        , _listUAVSourceTexture{}
+        , _listUAVFree{}
         , _gpuTextures{}
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _renderPassCache{}
@@ -180,7 +180,7 @@ namespace sw
                 string execDir = FileUtil::getBinaryDirectory();
                 if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
-                    const wstring wideExecDir = StringUtil::utf8ToUtf16( execDir.c_str() );
+                    const wstring wideExecDir = StringUtil::utf8ToUTF16( execDir.c_str() );
                     SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", wideExecDir.c_str() );
                     SetEnvironmentVariableW( L"VK_LAYER_PATH", wideExecDir.c_str() );
                 }
@@ -190,7 +190,7 @@ namespace sw
                     if ( ProcessEnvironment::tryReadNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
                     {
                         string sdkBinPath = FileUtil::joinPath( vulkanSdkEnv, "Bin" );
-                        SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUtf16( sdkBinPath.c_str() ).c_str() );
+                        SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUTF16( sdkBinPath.c_str() ).c_str() );
                     }
                 }
             }
@@ -401,7 +401,7 @@ namespace sw
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
             _releaseQueue.flushAll();
             _listBindlessSourceBuffer.clear();
-            _listUavSourceBuffer.clear();
+            _listUAVSourceBuffer.clear();
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
             _renderPassCache.destroyAll( _device, _renderPass );
             _listTextureUsed.clear();

@@ -160,7 +160,7 @@ namespace sw
         , _bHasUIMinRange{ SW_FALSE }
         , _bHasUIMaxRange{ SW_FALSE }
         , _bEditConditionHides{ SW_FALSE }
-        , _bColorHdr{ SW_FALSE }
+        , _bColorHDR{ SW_FALSE }
         , _bMultiline{ SW_FALSE }
         , _reservedDisplay{ 0 }
         , _defaultValue{}
@@ -616,7 +616,7 @@ namespace sw
         return bHasSaveGame;
     }
 
-    bool TypeInfo::usesPodCopyFastPath() const
+    bool TypeInfo::usesPODCopyFastPath() const
     {
         if ( _bIsPODCalculated == SW_TRUE )
             return _bIsPODFastPath == SW_TRUE;
@@ -633,8 +633,8 @@ namespace sw
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
             // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 위치를 찾는 슬롯 번호가 복사돼 두 객체가 한 위치를 나눠 쓴다).
-            const bool bNotPodProperty = prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor();
-            if ( bNotPodProperty )
+            const bool bNotPODProperty = prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor();
+            if ( bNotPODProperty )
             {
                 _bIsPODFastPath = SW_FALSE;
                 break;

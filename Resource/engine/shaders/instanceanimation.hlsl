@@ -10,7 +10,7 @@
  * 백엔드마다 다른 각도가 나오고, 정지·재개가 불가능해진다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 인스턴스 읽기·쓰기 버퍼는 u0(RW).
- * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUav( instanceUav, 0 ).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUAV( instanceUAV, 0 ).
  */
 
 // 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 128 바이트를 통째로 옮긴다.
@@ -49,9 +49,9 @@ float hashToUnit( uint hash )
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    const uint instanceIndex = dispatchThreadId.x;
+    const uint instanceIndex = dispatchThreadID.x;
     if ( instanceIndex >= g_AnimationInstanceCount )
         return;
 

@@ -51,7 +51,7 @@ namespace sw
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
 
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
-    inline constexpr const utf8* kPassFsrRcasDefine = "SW_PASS_FSR_RCAS=1";
+    inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
@@ -99,8 +99,8 @@ namespace sw
      */
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
-    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpuassert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGpuAssertTarget` 패스에만 붙는다. */
-    inline constexpr const utf8* kGpuAssertDefine = "SW_GPU_ASSERT_ENABLED";
+    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpuassert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGPUAssertTarget` 패스에만 붙는다. */
+    inline constexpr const utf8* kGPUAssertDefine = "SW_GPU_ASSERT_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
     inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::NanCheck ) + 1;
@@ -133,7 +133,7 @@ namespace sw
         static constexpr uint32 kSkipsWithoutPostProcess = SW_BIT( 14 );
         /**
          * @brief 파이프라인이 선언한 컬러 출력에 그린다 — 선언이 없으면 로드가 실패한다(`RenderPipelineAsset::validate` 3-1).
-         * @details 실행은 이름(SceneColor · TaaColor 등)으로 타깃을 짐작하지 않는다. 짐작하던 길은 없는 첨부의 핸들 0(백버퍼)을 열었다.
+         * @details 실행은 이름(SceneColor · TAAColor 등)으로 타깃을 짐작하지 않는다. 짐작하던 길은 없는 첨부의 핸들 0(백버퍼)을 열었다.
          *          `kGenericFullscreen` 패스도 같은 규칙이다(표의 `makeInfo` 가 함께 붙인다).
          */
         static constexpr uint32 kDrawsDeclaredColor = SW_BIT( 15 );
@@ -163,10 +163,10 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
         /**
-         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGpuAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
-         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GpuAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
+         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGPUAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
+         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
-        static constexpr uint32 kGpuAssertTarget = SW_BIT( 20 );
+        static constexpr uint32 kGPUAssertTarget = SW_BIT( 20 );
         /**
          * @brief 진단 패스다 — 요청한 실행에서만 PSO 를 만든다(`isDiagnosticPassRequested`). 요청하지 않은 실행(Shipping 은 늘)에서는 PSO 도 디스패치도 없다.
          */

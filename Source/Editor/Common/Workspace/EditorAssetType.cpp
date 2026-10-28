@@ -52,7 +52,7 @@
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
-#include "Engine/Vfx/VfxEffectDef.h"
+#include "Engine/VFX/VFXEffectDef.h"
 
 namespace sw::editor
 {
@@ -93,7 +93,7 @@ namespace sw::editor
         /**
          * @brief 에디터가 종류 표에 올리지 않는 엔진 에셋 종류의 이름입니다(`X::kAssetType._name` 으로 적어 종류 이름이 바뀌면 컴파일이 깨진다).
          * @details 엔진에 에셋 종류가 새로 등록되면 규칙 표(`kArrAssetMatch`)에 올리거나 여기에 적어야 한다 — 둘 다 없으면 `EditorAssetTypeTest.EveryEngineAssetTypeIsAccountedFor` 가 막는다.
-         *          여기 있는 종류는 두 가지다: ① 저작 문서지만 전용 에디터 종류가 없어 `.xml` · `.json` 규칙(Data)으로 보이거나 전용 창이 직접 연다(`Vfx` · 페어드 애니메이션 · 얼굴 · 리타깃 등),
+         *          여기 있는 종류는 두 가지다: ① 저작 문서지만 전용 에디터 종류가 없어 `.xml` · `.json` 규칙(Data)으로 보이거나 전용 창이 직접 연다(`VFX` · 페어드 애니메이션 · 얼굴 · 리타깃 등),
          *          ② 쿠킹 산출물 · 에디터가 열지 않는 바이너리(셰이더 바이너리 · 내비 메시 · 라이트 프로브 · 지역화 바이너리)다.
          *          이름을 쓰는 것은 정의의 주소가 상수식이 아니라서다(정의는 엔진 DLL 에서 오는 `static constexpr` 멤버라 주소를 constexpr 표에 담을 수 없다).
          */
@@ -104,7 +104,7 @@ namespace sw::editor
             RetargetProfile::kAssetType._name,
             SkeletonBoneLOD::kAssetType._name,
             PairedAnimationDef::kAssetType._name,
-            VfxEffectDef::kAssetType._name,
+            VFXEffectDef::kAssetType._name,
             MeshVertexAnimation::kAssetType._name,
             CultureTable::kAssetType._name,
             TranslationMemory::kAssetType._name,

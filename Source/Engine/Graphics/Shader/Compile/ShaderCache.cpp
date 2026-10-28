@@ -339,7 +339,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다(makeLiveCompileDesc). RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
         // 쿠커는 이 경로를 타지 않으므로 쿠킹된 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
-        ShaderCompileResult compiledResult = ShaderCompiler::compileHlsl( liveDesc );
+        ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( liveDesc );
         if ( compiledResult._bSuccess )
         {
             (void)storeLocalCache( liveDesc, compiledResult ); // 바뀌었는지는 재컴파일(ShaderRecompiler)만 센다

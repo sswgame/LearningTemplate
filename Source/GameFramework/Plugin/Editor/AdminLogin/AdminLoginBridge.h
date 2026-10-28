@@ -1,9 +1,9 @@
 /**
  * @file AdminLoginBridge.h
- * @brief GM 도구 로그인 조립입니다 - GM Tool 패널(`GF_EditorPlugin_Admin`)의 계정 이름 · 비밀번호 칸을 계정 키트의 로그인 도우미(`AccountGmLogin`)에 잇습니다.
+ * @brief GM 도구 로그인 조립입니다 - GM Tool 패널(`GF_EditorPlugin_Admin`)의 계정 이름 · 비밀번호 칸을 계정 키트의 로그인 도우미(`AccountGMLogin`)에 잇습니다.
  * @details GM 연결도 일반 계정 로그인을 거친다. Admin 확장은 자기 키트(GM)만 알아 계정 키트를 모르므로, 두 키트를 함께 아는 이 확장이 이어 붙인다(OnlineKits I6):
- *          - 패널이 연결을 누르면 `AdminToolSession::connectWithLogin` 이 입력 칸의 값을 이 서브시스템의 처리기(`acceptCredentials`)에 넘긴다 → `AccountGmLogin::setCredentials`.
- *          - 연결이 Ready 가 될 때마다(`AdminToolConnection::bindLoginHook`) `AccountGmLogin::onReady` 가 로그인을 보낸다. 다시 연결된 경우는 계정 클라이언트가 보관한 토큰으로 스스로 재접속한다.
+ *          - 패널이 연결을 누르면 `AdminToolSession::connectWithLogin` 이 입력 칸의 값을 이 서브시스템의 처리기(`acceptCredentials`)에 넘긴다 → `AccountGMLogin::setCredentials`.
+ *          - 연결이 Ready 가 될 때마다(`AdminToolConnection::bindLoginHook`) `AccountGMLogin::onReady` 가 로그인을 보낸다. 다시 연결된 경우는 계정 클라이언트가 보관한 토큰으로 스스로 재접속한다.
  *          - 프레임마다(`AdminToolSession::bindFrameHook`) 응답을 꺼내 상태를 갱신한다. 비밀번호는 응답을 받으면 지운다.
  *          한 계정은 연결 하나에만 붙으므로 GM 계정은 일반 플레이어 계정과 따로 쓴다. 계정 클라이언트 정보는 플랫폼 `editor` · 빌드 `1.0.0` 이다 - 서버의 빌드 확인은 플랫폼별 설정이 있을 때만 걸리고
  *          `editor` 플랫폼에는 운영이 최소 빌드를 두지 않는다.
@@ -16,7 +16,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountGmLogin.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountGMLogin.h"
 
 namespace sw
 {
@@ -36,8 +36,8 @@ namespace sw::editor
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief GM 도구 계정 클라이언트 정보의 플랫폼 · 빌드입니다(파일 머리말). */
-        static constexpr const utf8* kGmToolPlatform = "editor";
-        static constexpr const utf8* kGmToolBuild    = "1.0.0";
+        static constexpr const utf8* kGMToolPlatform = "editor";
+        static constexpr const utf8* kGMToolBuild    = "1.0.0";
 
         AdminLoginBridge();
         AdminLoginBridge( const AdminLoginBridge& )            = delete; // 서비스 클라이언트가 계정 클라이언트를 가리킨다
@@ -49,15 +49,15 @@ namespace sw::editor
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
 
-        AccountGmLogin&       getLogin() { return _login; }
-        const AccountGmLogin& getLogin() const { return _login; }
+        AccountGMLogin&       getLogin() { return _login; }
+        const AccountGMLogin& getLogin() const { return _login; }
 
     private:
         bool acceptCredentials( string_view loginName, string_view password );
         void onReady( OnlineServiceClient& client );
         void onFrame();
 
-        AccountGmLogin _login;
+        AccountGMLogin _login;
         Subscription   _credentialsSubscription;
         Subscription   _loginHookSubscription;
         Subscription   _frameHookSubscription;

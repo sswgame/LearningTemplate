@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
@@ -226,7 +226,7 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice.get() != nullptr )
         {
-            // GLX 디바이스의 디바이스 칸은 컨텍스트를 만든 Display* 다(GlxPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
+            // GLX 디바이스의 디바이스 칸은 컨텍스트를 만든 Display* 다(GLXPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
             // 종류 확인과 값 확인은 `queryNativeHandles` 한 곳에서 한다(디바이스 칸이 비면 false).
             // 검사는 지역 변수에서 하고 정적 칸에는 값을 한 번만 쓴다 — 검사 뒤 채우기(`lazyFill`) 모양이 아니다.
             RHINativeHandles glNative{};

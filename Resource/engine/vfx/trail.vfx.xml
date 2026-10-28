@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 엔진 표본 효과 — 띠(위로 오르는 꼬리)와 메시 입자(튀는 큐브 파편, 물리 충돌 · 파티클 라이트). VfxComponentTest 가 읽는다. 텍스처는 Kenney 파티클 팩(CC0).
      띠 텍스처는 u 가 길이 · v 가 폭이라 둥근 circle_05 를 쓴다(머리 · 꼬리가 흐려진다). 세로 줄인 trace_01 은 한 열만 읽혀 띠가 보이지 않았다. -->
-<VfxEffectDef>
+<VFXEffectDef>
 	<_listEmitter>
-		<VfxEmitterDef _name="Trail" _renderMode="Ribbon" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		<VFXEmitterDef _name="Trail" _renderMode="Ribbon" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
 		               _maxParticles="32" _duration="1" _spawnRate="30" _lifetimeMin="0.8" _lifetimeMax="0.8"
 		               _velocityMin="0, 1.5, 0" _velocityMax="0, 1.5, 0" _gravity="0, 0, 0">
 			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.3" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.05" _interpolation="Linear"/></_listKey></_sizeOverLife>
@@ -13,12 +13,12 @@
 				<_blue><_listKey><FloatCurveKey _time="0" _value="2" _interpolation="Linear"/></_listKey></_blue>
 				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
 			</_colorOverLife>
-		</VfxEmitterDef>
-		<VfxEmitterDef _name="Debris" _renderMode="Mesh" _bLooping="true"
+		</VFXEmitterDef>
+		<VFXEmitterDef _name="Debris" _renderMode="Mesh" _bLooping="true"
 		               _maxParticles="16" _duration="1.5" _spawnRate="0" _lifetimeMin="1.2" _lifetimeMax="1.5"
 		               _velocityMin="-1.5, 3, -1.5" _velocityMax="1.5, 5, 1.5" _gravity="0, -9.8, 0">
 			<_mesh _meshID="Cube" _materialPath=""/>
-			<_listBurst><VfxBurstDef _time="0" _count="12"/></_listBurst>
+			<_listBurst><VFXBurstDef _time="0" _count="12"/></_listBurst>
 			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.15" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.05" _interpolation="Linear"/></_listKey></_sizeOverLife>
 			<_colorOverLife>
 				<_red><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_red>
@@ -28,6 +28,6 @@
 			</_colorOverLife>
 			<_collision _mode="Bounce" _restitution="0.4" _friction="0.2"/>
 			<_light _maxLights="4" _radius="2" _intensity="3"/>
-		</VfxEmitterDef>
+		</VFXEmitterDef>
 	</_listEmitter>
-</VfxEffectDef>
+</VFXEffectDef>

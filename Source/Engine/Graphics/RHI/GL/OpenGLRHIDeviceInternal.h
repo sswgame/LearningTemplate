@@ -4,7 +4,7 @@
  * @details `OpenGLRHIDevice.cpp` 를 초기화, 제출, 코어로 나누면서 세 TU 가 같은 WGL 상수와
  *          같은 도우미를 쓰게 됐습니다. 익명 네임스페이스에 두면 TU 마다 복사되어 "정의만 하고 쓰지 않는"
  *          경고가 나고, 실제로 그렇게 됐습니다.
- * @note 백엔드 내부 전용입니다. GLX(X11)는 여기 두지 않고, 그것을 쓰는 `GlxPlatformContext.cpp` 만 include 합니다
+ * @note 백엔드 내부 전용입니다. GLX(X11)는 여기 두지 않고, 그것을 쓰는 `GLXPlatformContext.cpp` 만 include 합니다
  *       (X11 매크로가 GL 백엔드의 다른 TU 로 번지지 않게 하려는 것으로).
  */
 #pragma once

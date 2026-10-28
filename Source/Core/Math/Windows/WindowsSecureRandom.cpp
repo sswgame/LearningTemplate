@@ -3,7 +3,7 @@
 #include "Core/Math/SecureRandom.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <bcrypt.h>
     #include <cstdlib>

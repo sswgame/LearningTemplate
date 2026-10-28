@@ -191,7 +191,7 @@ namespace sw
          *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
          */
         bool   debugRemoveDevice() override;
-        uint32 readLastBreadcrumbs( uint32* pOutId, uint32 capacity ) override;
+        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
         /**
          * @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다.
          * @details 저장소는 `_transferSerials` 의 손실 표시 하나다. 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만
@@ -253,7 +253,7 @@ namespace sw
             caps._bMultiDrawIndirect = _bMultiDrawIndirect;
             caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill     = _bFillModeNonSolid;
-            caps._bGpuBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
             // 텍스처 업로드 · 되읽기는 영속 매핑 링으로만 간다(링이 없으면 초기화가 실패한다).
             caps._bPersistentStagingRing  = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
             caps._bPersistentReadbackRing = _readbackRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
@@ -726,10 +726,10 @@ namespace sw
 
         /// @brief SRV/CB 버퍼 인덱스에서 원본 버퍼를 찾는 목록입니다(0이면 빈 슬롯). 인덱스 공간의 기준이며 프리리스트와 짝을 이룹니다.
         vector<RHIBufferHandle> _listBindlessSourceBuffer;
-        vector<RHIBufferHandle> _listUavSourceBuffer;
+        vector<RHIBufferHandle> _listUAVSourceBuffer;
         /// @brief UAV 인덱스에서 원본 텍스처를 찾는 목록입니다(RW 텍스처 배열 원소, 0이면 버퍼 또는 빈 슬롯). 버퍼 UAV 와 같은 인덱스 공간을 씁니다.
-        vector<RHITextureHandle> _listUavSourceTexture;
-        vector<uint32>           _listUavFree;
+        vector<RHITextureHandle> _listUAVSourceTexture;
+        vector<uint32>           _listUAVFree;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;

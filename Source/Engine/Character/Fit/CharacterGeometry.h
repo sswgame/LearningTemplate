@@ -130,7 +130,7 @@ namespace sw
         float32 _distance{ 0.0f };       ///< 광선 시작에서의 거리다.
         float32 _baryU{ 0.0f };          ///< 무게중심 좌표다(두 번째 정점 가중치).
         float32 _baryV{ 0.0f };          ///< 무게중심 좌표다(세 번째 정점 가중치).
-        uint16  _part{ 0 };              ///< 삼각형이 속한 표면(부품) 번호다. `SurfaceBvh::addSurface` 에 준 값이다.
+        uint16  _part{ 0 };              ///< 삼각형이 속한 표면(부품) 번호다. `SurfaceBVH::addSurface` 에 준 값이다.
         uint8   _bFrontFace{ SW_FALSE }; ///< 광선이 면의 앞(법선 쪽)에서 들어왔는지 나타낸다.
     };
 } // namespace sw

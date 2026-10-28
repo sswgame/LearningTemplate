@@ -55,7 +55,7 @@ namespace sw
         while ( offset < text.size() )
         {
             const size_t  start     = offset;
-            const uint32  codepoint = StringUtil::decodeUtf8( text, offset );
+            const uint32  codepoint = StringUtil::decodeUTF8( text, offset );
             FontFaceID    face      = kInvalidFontFaceID;
             TextDirection direction = bHasRun ? current._direction : TextDirection::LeftToRight;
             const bool    bNeutral  = isNeutral( codepoint );

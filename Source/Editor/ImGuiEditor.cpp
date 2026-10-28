@@ -94,15 +94,15 @@ namespace sw::editor
             static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
 
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
-            static constexpr float32 kDpiFollowTolerance = 0.001f;
+            static constexpr float32 kDPIFollowTolerance = 0.001f;
 
             /// @brief ImGui 는 io.DeltaTime 이 0 이하이면 단언한다. 엔진 경과가 0 인 프레임(일시 정지 직후)에도 이 값 아래로 내리지 않는다.
             static constexpr float32 kMinDeltaTime = 0.00001f;
 
             /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다. 이때 플랫폼 백엔드가 ImGui 에 넣는 실제 커서와 키를 지웁니다. */
-            static bool isOsDeviceInputBlocked()
+            static bool isOSDeviceInputBlocked()
             {
-                return editor::getSubsystem<const InputManager>().isOsDeviceInputBlocked(); // 필수 - 에디터 프레임마다 묻는다
+                return editor::getSubsystem<const InputManager>().isOSDeviceInputBlocked(); // 필수 - 에디터 프레임마다 묻는다
             }
 
             /** @brief 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 호스트 형식으로 씁니다. @p pView 가 없으면 빈 값이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
@@ -554,7 +554,7 @@ namespace sw::editor
         // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
         _dockLayout.setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
         _dockLayout.initializePersistencePaths();
-        _dockLayout.applyIniFilename();
+        _dockLayout.applyINIFilename();
 
         // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
         if ( EditorFontSetup::apply( *_editorToolDefaults ) == false )
@@ -706,10 +706,10 @@ namespace sw::editor
         // 우선순위는 스위치(자동화), 환경설정(General 의 UI 배율), 모니터 DPI 순이다. 배율이 0 이면 다음 순위로 넘어간다.
         const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
         const bool    bFixedUIScale = fixedUIScale > 0.0f;
-        EditorThemeUtil::setDpiScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDpiScale() );
+        EditorThemeUtil::setDPIScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDPIScale() );
         ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
         ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
-        SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
+        SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI",
                      ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
@@ -971,7 +971,7 @@ namespace sw::editor
         if ( _platformBackend != nullptr )
         {
             // 셸이 이미 장치 이벤트를 버리지만(`InputManager::shouldDropNativeEvent`), 비클라이언트 이벤트와 떠남 이벤트(WM_NCMOUSEMOVE, WM_MOUSELEAVE)도 커서 위치를 넣는다.
-            const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
+            const ScopedImGuiOSInputFilter osInputFilter{ ImGuiEditorInternal::isOSDeviceInputBlocked() };
             _platformBackend->processEvent( event );
         }
 
@@ -1076,7 +1076,7 @@ namespace sw::editor
         {
             // 무인 자동화 중이면 플랫폼이 조회한 실제 커서를 지운다. Win32 는 GetCursorPos 와 커서 아래 뷰포트, X11 은 XQueryPointer 의 위치와 버튼이 해당한다.
             // 테스트가 커서를 놓은 프레임(버튼을 놓는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 버튼 놓기를 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
-            const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
+            const ScopedImGuiOSInputFilter osInputFilter{ ImGuiEditorInternal::isOSDeviceInputBlocked() };
             _platformBackend->newFrame();
         }
         // 자체 테스트가 만든 가상 입력은 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 우선한다. ImGui 는 큐를 순서대로 처리하기 때문이다.
@@ -1092,25 +1092,25 @@ namespace sw::editor
         // 그러지 않으면 150 % 모니터에서 글자만 커지고 위젯 크기는 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮어쓰지 않으므로 여기서도 건드리지 않는다.
         // 이 프레임의 위젯은 아직 그리지 않았다. 스타일 크기는 그릴 때 읽힌다.
         {
-            const float32 fontScaleDpi = ImGui::GetStyle().FontScaleDpi;
-            const bool    bDpiMoved    = ImGui::GetIO().ConfigDpiScaleFonts && fontScaleDpi > 0.0f &&
-                                   MathUtil::abs( fontScaleDpi - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
-            if ( bDpiMoved )
-                EditorThemeUtil::setDpiScale( fontScaleDpi );
+            const float32 fontScaleDPI = ImGui::GetStyle().FontScaleDpi;
+            const bool    bDPIMoved    = ImGui::GetIO().ConfigDpiScaleFonts && fontScaleDPI > 0.0f &&
+                                   MathUtil::abs( fontScaleDPI - EditorThemeUtil::getDPIScale() ) > ImGuiEditorInternal::kDPIFollowTolerance;
+            if ( bDPIMoved )
+                EditorThemeUtil::setDPIScale( fontScaleDPI );
         }
         // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔, 시나리오 `<Variable>`, gv 패널) 바로 반영한다. 0 으로 되돌리면 다시 모니터 DPI 를 따른다.
         {
             const bool    bFixedUIScale = gv_editorUiScale > 0.0f;
-            const float32 wantedScale   = bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
+            const float32 wantedScale   = bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDPIScale()
                                                                                                                                  : 1.0f;
             const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUIScale;
-            const bool    bFixedMoved   = bFixedUIScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            const bool    bFixedMoved   = bFixedUIScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDPIScale() ) > ImGuiEditorInternal::kDPIFollowTolerance;
             if ( bModeChanged || bFixedMoved )
             {
                 ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
                 ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
-                EditorThemeUtil::setDpiScale( wantedScale );
-                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
+                EditorThemeUtil::setDPIScale( wantedScale );
+                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
             }
         }
         ImGuizmo::BeginFrame();

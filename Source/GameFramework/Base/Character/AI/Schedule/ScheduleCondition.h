@@ -48,7 +48,7 @@ namespace sw
     struct ScheduleConditionContext
     {
         const GameFlags*             _pFlags{ nullptr };
-        const TagContainer*          _pNpcTags{ nullptr };   ///< NPC 자신의 태그(관계, 퀘스트 진행)
+        const TagContainer*          _pNPCTags{ nullptr };   ///< NPC 자신의 태그(관계, 퀘스트 진행)
         const TagContainer*          _pWorldTags{ nullptr }; ///< 세계 태그(축제 중, 경보)
         hashed_string                _weekday{};
         hashed_string                _season{};
@@ -56,7 +56,7 @@ namespace sw
         int32                        _day{ 0 };                ///< 0 부터 센 전체 날. 확률 굴림의 키로 쓴다
         const vector<hashed_string>* _pSeasonOrder{ nullptr }; ///< 한 해의 계절 순서(날짜 범위가 비교한다). 없으면 날짜 범위 절은 거짓이다.
         int32                        _dayOfSeason{ 0 };        ///< 1 부터
-        int32                        _affinity{ 0 };           ///< NPC 의 호감도(관계 단계). 게임이 `ScheduleSystem::setNpcAffinity` 로 넣는다.
+        int32                        _affinity{ 0 };           ///< NPC 의 호감도(관계 단계). 게임이 `ScheduleSystem::setNPCAffinity` 로 넣는다.
         uint32                       _chanceKey{ 0 };          ///< 확률 굴림의 키. 시드, NPC, 루틴을 섞은 값이다
         DayPhase                     _phase{ DayPhase::Day };
     };

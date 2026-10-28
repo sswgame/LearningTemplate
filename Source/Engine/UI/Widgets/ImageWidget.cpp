@@ -14,7 +14,7 @@ namespace sw
         , _imagePath{}
         , _brush{}
         , _imageSize{}
-        , _bMirrorInRtl{ false }
+        , _bMirrorInRTL{ false }
     {
     }
 
@@ -55,11 +55,11 @@ namespace sw
         invalidate( WidgetDirty::kLayout );
     }
 
-    void ImageWidget::setMirrorInRtl( bool bMirror )
+    void ImageWidget::setMirrorInRTL( bool bMirror )
     {
-        if ( _bMirrorInRtl == bMirror )
+        if ( _bMirrorInRTL == bMirror )
             return;
-        _bMirrorInRtl = bMirror;
+        _bMirrorInRTL = bMirror;
         invalidate( WidgetDirty::kPaint );
     }
 
@@ -84,7 +84,7 @@ namespace sw
         CanvasBrush brush = _brush.makeCanvasBrush( _image );
         if ( bImagePath )
             brush._imagePath = hashed_string( _imagePath );
-        if ( _bMirrorInRtl && isRightToLeft() )
+        if ( _bMirrorInRTL && isRightToLeft() )
         {
             const float32 u0 = brush._uvRect._x;
             brush._uvRect._x = brush._uvRect._z;

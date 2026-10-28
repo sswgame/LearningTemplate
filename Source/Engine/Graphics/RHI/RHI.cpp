@@ -89,7 +89,7 @@ namespace sw
         , _fillMode{ RHIFillMode::Solid }
         , _cullMode{ RHICullMode::None }
         , _numRenderTargets{ 1 }
-        , _arrRtvFormat{}
+        , _arrRTVFormat{}
         , _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
         , _depthBias{ 0 }
         , _slopeScaledDepthBias{ 0.0f }
@@ -101,7 +101,7 @@ namespace sw
     {
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {
-            _arrRtvFormat[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
+            _arrRTVFormat[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
         }
     }
 

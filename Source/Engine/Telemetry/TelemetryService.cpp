@@ -507,7 +507,7 @@ namespace sw
         root.set( "session" ).setString( _context->_sessionID );
         root.set( "build" ).setString( _context->_buildConfig );
         root.set( "platform" ).setString( _context->_platform );
-        root.set( "buildId" ).setString( _context->_buildID );
+        root.set( "buildID" ).setString( _context->_buildID );
         root.set( "game" ).setString( _context->_game );
         root.set( "file" ).setUint( _fileIndex );
         return doc.dump( -1 );

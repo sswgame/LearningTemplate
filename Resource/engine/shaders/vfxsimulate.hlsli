@@ -1,12 +1,12 @@
 /**
- * vfxsimulate.hlsli — GPU 입자 시뮬레이션(vfxsimulate.hlsl · vfxmeshinstance.hlsl)과 C++ `VfxGPUSimulation` 이 함께 읽는 계약이다. 숫자 #define 만 둔다(C++ 가 그대로 include 한다).
+ * vfxsimulate.hlsli — GPU 입자 시뮬레이션(vfxsimulate.hlsl · vfxmeshinstance.hlsl)과 C++ `VFXGPUSimulation` 이 함께 읽는 계약이다. 숫자 #define 만 둔다(C++ 가 그대로 include 한다).
  *
- * 매개변수 버퍼(StructuredBuffer<uint4> g_VfxParams, t0)에 방출기마다 한 구간이 이어 붙고, 루트 상수 g_VfxParamBase 가 그 첫 행이다. 실수는 비트 그대로 담는다(asfloat).
+ * 매개변수 버퍼(StructuredBuffer<uint4> g_VFXParams, t0)에 방출기마다 한 구간이 이어 붙고, 루트 상수 g_VFXParamBase 가 그 첫 행이다. 실수는 비트 그대로 담는다(asfloat).
  * 행 번호는 구간 첫 행 기준이다. 해시 상수(splitmix64)와 충돌의 띄움 거리도 C++ 가 올린다 — 셰이더에 같은 값을 다시 적지 않는다.
  * 행렬은 행벡터 규약의 행 넷(C++ float4x4 의 _11.._14 가 첫 행)이다 — 점은 x·행0 + y·행1 + z·행2 + 행3.
- * 간접 인자 버퍼(g_VfxArgsRW, u2)는 32 비트 단어 SW_VFX_ARGS_WORD_COUNT 개다 — [0..3] RHIDrawIndirectCommand, 그 뒤 살아 있는 수 · 지금 반쪽(다음 디스패치가 읽는다) ·
+ * 간접 인자 버퍼(g_VFXArgsRW, u2)는 32 비트 단어 SW_VFX_ARGS_WORD_COUNT 개다 — [0..3] RHIDrawIndirectCommand, 그 뒤 살아 있는 수 · 지금 반쪽(다음 디스패치가 읽는다) ·
  * 풀이 차서 버린 입자의 누적 수.
- * 파티클 라이트(VfxLightDef)는 라이트 버퍼(g_VfxLightsRW, u3 — 씬 라이트 목록과 같은 버퍼)의 GPU 구간에 쓴다. 방출기가 받은 슬롯 범위는 SW_VFX_PARAM_ROW_LIGHT 행이 알려 주고,
+ * 파티클 라이트(VFXLightDef)는 라이트 버퍼(g_VFXLightsRW, u3 — 씬 라이트 목록과 같은 버퍼)의 GPU 구간에 쓴다. 방출기가 받은 슬롯 범위는 SW_VFX_PARAM_ROW_LIGHT 행이 알려 주고,
  * 슬롯 하나가 살아 있는 입자 하나다(앞의 슬롯 수 개 — CPU 방출기와 같은 규칙). 입자가 모자란 슬롯은 반경 0 의 죽은 점광으로 덮어쓴다(그리드에 들지 않는다).
  */
 
@@ -17,7 +17,7 @@
 #define SW_VFX_SIMULATE_THREAD_COUNT 256u
 // 메시 인스턴스 쓰기(vfxmeshinstance.hlsl)의 그룹 크기 — 풀 자리 하나가 스레드 하나다.
 #define SW_VFX_MESH_INSTANCE_THREAD_COUNT 64u
-// 입자 상태 원소(VfxParticleState)의 float4 수 — 위치와 나이, 속도와 수명, 입자 번호(uint2)와 빈칸.
+// 입자 상태 원소(VFXParticleState)의 float4 수 — 위치와 나이, 속도와 수명, 입자 번호(uint2)와 빈칸.
 #define SW_VFX_STATE_FLOAT4_COUNT 3u
 // 디스패치 하나가 도는 단계의 상한. 렌더 스레드가 늦어 더 밀리면 남은 단계는 다음 프레임에 돈다.
 #define SW_VFX_MAX_STEPS_PER_DISPATCH 32u
@@ -49,7 +49,7 @@
 #define SW_VFX_FLAG_COLLIDE_KILL   8u  // 깊이 충돌 — 닿으면 사라진다
 #define SW_VFX_FLAG_DEPTH_READY    16u // 이번 프레임에 깊이 히스토리가 있다(없으면 충돌을 보지 않는다 — 첫 프레임 · 크기가 바뀐 프레임)
 
-// 메시 인스턴스 쓰기(vfxmeshinstance.hlsl)의 구간 — 같은 매개변수 버퍼의 다른 구간이고, 루트 상수 g_VfxMeshParamBase 가 첫 행이다.
+// 메시 인스턴스 쓰기(vfxmeshinstance.hlsl)의 구간 — 같은 매개변수 버퍼의 다른 구간이고, 루트 상수 g_VFXMeshParamBase 가 첫 행이다.
 #define SW_VFX_MESH_ROW_HEADER     0u // (풀 크기, 0, 메시 반지름, 방출기 최대 축 배율) — 뒤 둘은 실수
 #define SW_VFX_MESH_ROW_WORLD      1u // 방출기 행렬 행 넷(1..4)
 #define SW_VFX_MESH_ROW_FIRST_SLOT 5u // 풀 자리마다 인스턴스 칸(행 하나에 넷, SW_VFX_INVALID_SLOT 이면 쓰지 않는다)
@@ -65,7 +65,7 @@
 
 // 다중 그룹 경로: 풀 크기가 이 수 이상이면 단계마다 디스패치 셋(적분 · 접두사 합 · 압축)으로 돈다. 아니면 그룹 하나가 한 디스패치로 모든 단계를 돈다(두 경로는 같은 결과다).
 #define SW_VFX_MULTI_GROUP_MIN_POOL 4096u
-// 루트 상수 g_VfxPass = 패스 번호 | ( 단계 번호 << SW_VFX_PASS_STEP_SHIFT ).
+// 루트 상수 g_VFXPass = 패스 번호 | ( 단계 번호 << SW_VFX_PASS_STEP_SHIFT ).
 #define SW_VFX_PASS_SINGLE     0u // 한 디스패치가 모든 단계와 렌더 입력까지(풀이 작을 때)
 #define SW_VFX_PASS_BEGIN      1u // (그룹 1, 다중 그룹) 재생 시작이면 살아 있는 수 · 반쪽 · 버린 수를 지우고 인자를 비운다
 #define SW_VFX_PASS_INTEGRATE  2u // (그룹 = 풀 / 스레드 수 올림) 단계의 생성 · 적분 · 생존 표시와 그룹별 살아 있는 수

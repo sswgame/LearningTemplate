@@ -34,7 +34,7 @@ namespace sw
         }
 
         /** @brief 이름 하나의 32 비트 키입니다(64 비트 해시의 아래 32 비트). */
-        [[nodiscard]] static uint32 computeNameKey( const hashed_string& name ) { return static_cast<uint32>( appendName( HashUtil::kFnvOffset64, name ) ); }
+        [[nodiscard]] static uint32 computeNameKey( const hashed_string& name ) { return static_cast<uint32>( appendName( HashUtil::kFNVOffset64, name ) ); }
 
         /** @brief 두 32 비트 키를 섞습니다(순서가 있다). */
         [[nodiscard]] static uint32 mixKey( const uint32 lhs, const uint32 rhs ) { return GameHash::mix32( lhs * 0x9e3779b1u ^ GameHash::mix32( rhs + 0x7f4a7c15u ) ); }
@@ -42,7 +42,7 @@ namespace sw
         /** @brief 구간의 식별 키입니다. 출처, 블록, 시간, 위치, 출발이 같으면 같은 값입니다. 사건, 경로 캐시, 계획 비교가 씁니다. 0 은 쓰지 않습니다. */
         [[nodiscard]] static uint64 computeSegmentKey( const ScheduleSegment& segment )
         {
-            uint64 hash = HashUtil::kFnvOffset64;
+            uint64 hash = HashUtil::kFNVOffset64;
             hash        = appendName( hash, segment._sourceID );
             hash        = appendName( hash, segment._activity );
             hash        = HashUtil::appendValue64( hash, segment._startMinute );

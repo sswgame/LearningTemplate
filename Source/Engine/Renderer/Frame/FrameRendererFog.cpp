@@ -181,7 +181,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( lights, 0 );
         _pCmd->bindComputeShaderResource( _fogVolumeParamBuffer._srv, 1 );
         _pCmd->bindComputeShaderResource( grid, 2 );
-        _pCmd->bindComputeUav( _fogVolumeBuffer._uav, 0 );
+        _pCmd->bindComputeUAV( _fogVolumeBuffer._uav, 0 );
         constexpr uint32 kGroupSize = SW_FOG_VOLUME_GROUP_SIZE;
         _pCmd->dispatchCompute( ( SW_FOG_VOLUME_DIM_X + kGroupSize - 1u ) / kGroupSize, ( SW_FOG_VOLUME_DIM_Y + kGroupSize - 1u ) / kGroupSize, 1 );
         // 안개 패스(그래프)가 t11 로 읽는다. 쓰기가 끝났음을 알린다.

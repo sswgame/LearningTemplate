@@ -92,7 +92,7 @@ namespace sw::editor
         const string markPrefix = string{ pMarkPrefix } + ".open.";
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCKEY( "EdCommon", "SearchAssetsHint" ), 360.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCKEY( "EdCommon", "SearchAssetsHint" ), 360.0f * EditorThemeUtil::getDPIScale(), false );
         EditorSelfTestMarks::note( ( markPrefix + "search" ).c_str() );
 
         const EditorListFilter filter{ _openFilter.c_str() };

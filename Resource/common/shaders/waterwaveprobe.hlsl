@@ -2,7 +2,7 @@
 // water.hlsl 이 정점을 옮기는 **같은 함수**(gerstner.hlsli 의 Gerstner::computeDisplacement)를 표본 자리마다 부르고, 변위 (x, y, z) 의 float 비트를
 // RGBA8 텍스처에 그대로 싣는다 — 표본 하나 = 한 행의 텍셀 여섯(성분마다 16 비트 둘). 16 비트는 G(위 바이트) · A(아래 바이트)에 싣는다:
 // 백엔드가 RGBA 를 BGRA 로 돌려줘도 G · A 는 자리가 같다.
-// 바인딩 계약: 대상 텍스처는 registerBindlessTextureUav 인덱스(DX12/Vulkan) 또는 SW_SLOT_COMPUTE_TEXUAV0 슬롯 서수(DX11/GL)를 루트 상수로 받는다.
+// 바인딩 계약: 대상 텍스처는 registerBindlessTextureUAV 인덱스(DX12/Vulkan) 또는 SW_SLOT_COMPUTE_TEXUAV0 슬롯 서수(DX11/GL)를 루트 상수로 받는다.
 #include "binding.hlsli"
 #include "gerstner.hlsli"
 
@@ -25,9 +25,9 @@ float4 encodeHalfWord( uint word )
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    const uint sampleIndex = dispatchThreadId.x;
+    const uint sampleIndex = dispatchThreadID.x;
     if ( sampleIndex >= SW_ROOT( g_SampleCount ) )
         return;
     // 표본 자리 — 시험의 CPU 쪽과 같은 식이다.

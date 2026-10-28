@@ -304,16 +304,16 @@ namespace sw
         bool                 isVirtualInputAttached() const { return _pVirtualInput != nullptr; }
         IVirtualInputSource* getVirtualInput() const { return _pVirtualInput; }
         /** @brief 배타 가상 입력이 붙어 OS 입력을 무시하는 중이면 true 입니다. */
-        bool isOsInputSuppressed() const { return _pVirtualInput != nullptr && _virtualInputMode == VirtualInputMode::Exclusive; }
+        bool isOSInputSuppressed() const { return _pVirtualInput != nullptr && _virtualInputMode == VirtualInputMode::Exclusive; }
         /**
          * @brief 무인 자동화(시나리오 `input="exclusive"`)가 사람의 마우스와 키보드 입력을 창 메시지 단계에서 버리게 합니다. 언리얼의 `-unattended` 와 같은 의미입니다.
-         * @details `isOsInputSuppressed` 는 게임 입력(이 매니저의 장치)만 막는다. 이 표시는 그보다 앞 단계인 창 메시지 분배 셸과 에디터 UI(ImGui 플랫폼 백엔드의 커서 조회)까지 막는다.
+         * @details `isOSInputSuppressed` 는 게임 입력(이 매니저의 장치)만 막는다. 이 표시는 그보다 앞 단계인 창 메시지 분배 셸과 에디터 UI(ImGui 플랫폼 백엔드의 커서 조회)까지 막는다.
          *          창 이벤트(닫기, 크기, 포커스)는 그대로 둔다. 배타 가상 입력이 붙어 있을 때만 켜지고, `attachVirtualInput` 과 `detachVirtualInput` 이 끈다.
          *          입력 리플레이처럼 사람이 에디터를 계속 조작하는 배타 재생에서는 켜지 않는다.
          */
-        void setOsDeviceInputBlocked( bool bBlocked );
-        /** @brief 사람의 마우스, 키보드 이벤트를 버리는 중이면 true 입니다(`setOsDeviceInputBlocked`). */
-        bool isOsDeviceInputBlocked() const { return _bOsDeviceInputBlocked == SW_TRUE; }
+        void setOSDeviceInputBlocked( bool bBlocked );
+        /** @brief 사람의 마우스, 키보드 이벤트를 버리는 중이면 true 입니다(`setOSDeviceInputBlocked`). */
+        bool isOSDeviceInputBlocked() const { return _bOSDeviceInputBlocked == SW_TRUE; }
         /** @brief 창 메시지 @p event 를 입력 계층 앞에서 버려야 하면 true 입니다. 버리는 중인 마우스와 키보드 이벤트가 해당합니다. */
         bool shouldDropNativeEvent( const NativeWindowEvent& event ) const;
         /** @brief 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
@@ -462,7 +462,7 @@ namespace sw
         uint8                                     _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
         uint8                                     _bAltHeld              : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
         uint8                                     _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
-        uint8                                     _bOsDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOsDeviceInputBlocked`). */
+        uint8                                     _bOSDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
         [[maybe_unused]] uint8                    _reserved              : 1;
     };
 } // namespace sw

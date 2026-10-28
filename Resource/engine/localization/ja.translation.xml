@@ -113,9 +113,9 @@
 		<entry key="EdSchedule.EmptyPlan" text="今日の予定はありません" sourceHash="b3a79d044bf5027f" />
 		<entry key="EdSchedule.FollowClock" text="ゲーム時計に合わせる" sourceHash="9331e1eca52eafa8" />
 		<entry key="EdSchedule.GameTime" text="ゲーム時刻" sourceHash="312a78762d9ad9a4" />
-		<entry key="EdSchedule.NpcListTitle" text="NPC" sourceHash="578931c5a8afe279" />
+		<entry key="EdSchedule.NPCListTitle" text="NPC" sourceHash="578931c5a8afe279" />
 		<entry key="EdSchedule.RawTimeline" text="生のタイムライン" sourceHash="60d9224c1e5f1898" />
-		<entry key="EdSchedule.SelectNpcHint" text="左で NPC を選択してください" sourceHash="2d4aa57458132d18" />
+		<entry key="EdSchedule.SelectNPCHint" text="左で NPC を選択してください" sourceHash="2d4aa57458132d18" />
 		<entry key="EdSchedule.SystemIndex" text="スケジュールシステム" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="今この行動をする理由" sourceHash="998a39497efff850" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />

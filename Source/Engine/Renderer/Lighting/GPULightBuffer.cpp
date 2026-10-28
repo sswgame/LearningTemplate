@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Vfx/VfxComponent.h"
+#include "Engine/VFX/VFXComponent.h"
 
 namespace sw
 {
@@ -35,7 +35,7 @@ namespace sw
     namespace
     {
         constexpr RHIBufferUsage kLightBufferUsage        = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        constexpr RHIBufferUsage kLightBufferUsageWithUav = kLightBufferUsage | RHIBufferUsage::UnorderedAccess;
+        constexpr RHIBufferUsage kLightBufferUsageWithUAV = kLightBufferUsage | RHIBufferUsage::UnorderedAccess;
 
         struct GPULightBufferInternal
         {
@@ -195,10 +195,10 @@ namespace sw
         }
 
         // 파티클 라이트(점광, 그림자 없음)는 라이트 컴포넌트 뒤 · 2D 가림막 앞에 붙는다. 그리드는 종류를 묻지 않고 같은 목록에서 만든다(LightGrid).
-        for ( const VfxComponent* pVfx : registry.getAll<VfxComponent>() )
+        for ( const VFXComponent* pVFX : registry.getAll<VFXComponent>() )
         {
-            if ( pVfx != nullptr && pVfx->isPendingDestroy() == false )
-                pVfx->appendGPULights( outList );
+            if ( pVFX != nullptr && pVFX->isPendingDestroy() == false )
+                pVFX->appendGPULights( outList );
         }
 
         // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다. 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
@@ -331,23 +331,23 @@ namespace sw
 
         const GPULight* pUpload    = _listUploadScratch.data();
         const uint32    totalCount = static_cast<uint32>( _listUploadScratch.size() );
-        const bool      bNeedsUav  = _gpuLightCount > 0;
+        const bool      bNeedsUAV  = _gpuLightCount > 0;
         const uint32    stride     = static_cast<uint32>( sizeof( GPULight ) );
         // UAV 없이 잡혀 있던 버퍼는 용량이 충분해도 다시 잡는다(ensureCapacity 는 용량만 본다). 백엔드가 UAV 를 거절한 버퍼는 다시 잡아도 같으니 한 번만 해 본다.
-        const bool bLacksUav = bNeedsUav && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
-        if ( bLacksUav && _bUavDenied == SW_FALSE )
+        const bool bLacksUAV = bNeedsUAV && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bLacksUAV && _bUAVDenied == SW_FALSE )
             _buffer.release( pDevice );
-        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUav ? kLightBufferUsageWithUav : kLightBufferUsage, true, bNeedsUav, pUpload ) == false )
+        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUAV ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bNeedsUAV, pUpload ) == false )
         {
             _count         = 0;
             _cpuCount      = 0;
             _gpuLightCount = 0;
             return false;
         }
-        const bool bUavDeniedNow = bNeedsUav && _buffer._uav == kInvalidDescriptorIndex;
-        if ( bUavDeniedNow && _bUavDenied == SW_FALSE )
+        const bool bUAVDeniedNow = bNeedsUAV && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bUAVDeniedNow && _bUAVDenied == SW_FALSE )
         {
-            _bUavDenied = SW_TRUE;
+            _bUAVDenied = SW_TRUE;
             SW_LOG_ERROR( "Light buffer has no UAV - GPU particle lights stay dead" );
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );
@@ -364,17 +364,17 @@ namespace sw
         const uint32 probeStride       = static_cast<uint32>( sizeof( float4 ) );
         // 실시간 볼륨이 있으면 프로브 갱신 컴퓨트가 이 버퍼를 쓴다 — UAV 가 있는 버퍼로 잡는다(UAV 없이 잡혀 있던 버퍼는 다시 잡는다. 백엔드가 거절한 버퍼는 한 번만 다시 해 본다).
         const bool bWritable      = _bProbeWritable == SW_TRUE;
-        const bool bLacksProbeUav = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
-        if ( bLacksProbeUav && _bProbeUavDenied == SW_FALSE )
+        const bool bLacksProbeUAV = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
+        if ( bLacksProbeUAV && _bProbeUAVDenied == SW_FALSE )
             _probeBuffer.release( pDevice );
-        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUav : kLightBufferUsage, true, bWritable, _listProbeScratch.data() ) )
+        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bWritable, _listProbeScratch.data() ) )
         {
             _probeBuffer.upload( pDevice, _listProbeScratch.data(), probeElementCount * probeStride );
             _probeElementCount      = probeElementCount;
             const bool bNewlyDenied = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
-            if ( bNewlyDenied && _bProbeUavDenied == SW_FALSE )
+            if ( bNewlyDenied && _bProbeUAVDenied == SW_FALSE )
             {
-                _bProbeUavDenied = SW_TRUE;
+                _bProbeUAVDenied = SW_TRUE;
                 SW_LOG_ERROR( "Light probe buffer has no UAV - realtime probe volumes stay black" );
             }
         }
@@ -514,7 +514,7 @@ namespace sw
         _count             = 0;
         _cpuCount          = 0;
         _gpuLightCount     = 0;
-        _bUavDenied        = SW_FALSE;
+        _bUAVDenied        = SW_FALSE;
         _gpuGridViewCount  = 0;
         _gridProducer      = LightGridProducer::None;
         _listGridBase.clear();

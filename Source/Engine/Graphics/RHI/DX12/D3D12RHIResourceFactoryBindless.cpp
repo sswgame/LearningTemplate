@@ -102,9 +102,9 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSrv" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -190,10 +190,10 @@ namespace sw
 
     void D3D12RHIResourceFactory::releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index )
     {
-        const bool bUav = ( registry == BindlessRegistry::UnorderedAccess );
+        const bool bUAV = ( registry == BindlessRegistry::UnorderedAccess );
 
         UniqueLock<shared_mutex>                        lock{ _pDevice->_bindlessMutex };
-        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUAV ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= listRegistry.size() )
             return;
 
@@ -203,7 +203,7 @@ namespace sw
         if ( bSlotAlreadyFree )
         {
             SW_LOG_ERROR( "%# index %# is already free; ignoring the duplicate release.",
-                          bUav ? "Bindless UAV" : "Bindless", index );
+                          bUAV ? "Bindless UAV" : "Bindless", index );
             return;
         }
 
@@ -245,9 +245,9 @@ namespace sw
                                                    _pDevice->_fenceValue );
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -291,9 +291,9 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
         ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
@@ -320,9 +320,9 @@ namespace sw
         return index;
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
+    void D3D12RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUav" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 

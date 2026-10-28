@@ -54,7 +54,7 @@ namespace sw
             /** @brief 로컬 포즈와 모프 가중치의 바이트 지문입니다 — `ReadsOnly` 를 선언한 작업이 단계 뒤에도 이 값을 그대로 두었는지 `runTasks` 가 본다. */
             static uint64 fingerprintPose( const Pose& pose, const vector<float32>& listMorphWeight )
             {
-                uint64 hash = HashUtil::kFnvOffset64;
+                uint64 hash = HashUtil::kFNVOffset64;
                 hash        = HashUtil::appendBytes64( hash, pose.getTranslations().data(), pose.getTranslations().size() * sizeof( float3 ) );
                 hash        = HashUtil::appendBytes64( hash, pose.getRotations().data(), pose.getRotations().size() * sizeof( quaternion ) );
                 hash        = HashUtil::appendBytes64( hash, pose.getScales().data(), pose.getScales().size() * sizeof( float3 ) );

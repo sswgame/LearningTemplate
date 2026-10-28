@@ -417,7 +417,7 @@ namespace sw
         request._actorID    = accountID;
         request._partyID    = allocateID();
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), PartyLobbyLimit::kPartyTtlMs,
+        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), PartyLobbyLimit::kPartyTTLMs,
                                                EphemeralCondition::IfAbsent ),
                     StepKind::IndexReserve, request );
     }
@@ -582,12 +582,12 @@ namespace sw
 
     void PartyLobbyService::startPartyMutation( const Request& request )
     {
-        _updater.update( makePartyKey( request._partyID ), PartyLobbyLimit::kPartyTtlMs, make_unique<PartyMutation>( this, request ) );
+        _updater.update( makePartyKey( request._partyID ), PartyLobbyLimit::kPartyTTLMs, make_unique<PartyMutation>( this, request ) );
     }
 
     void PartyLobbyService::startLobbyMutation( const Request& request )
     {
-        _updater.update( makeLobbyKey( request._lobbyID ), PartyLobbyLimit::kLobbyTtlMs, make_unique<LobbyMutation>( this, request ) );
+        _updater.update( makeLobbyKey( request._lobbyID ), PartyLobbyLimit::kLobbyTTLMs, make_unique<LobbyMutation>( this, request ) );
     }
 
     void PartyLobbyService::onStepReply( const EphemeralReply& reply )
@@ -628,7 +628,7 @@ namespace sw
                     break;
                 }
                 submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorID ), MatchmakingProtocol::encodeID( step._request._partyID ),
-                                                       PartyLobbyLimit::kPartyTtlMs, EphemeralCondition::IfAbsent ),
+                                                       PartyLobbyLimit::kPartyTTLMs, EphemeralCondition::IfAbsent ),
                             StepKind::IndexReserve, step._request );
                 break;
             }
@@ -776,7 +776,7 @@ namespace sw
                 if ( request._operation == PartyLobbyOperation::PartyAccept )
                 {
                     submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorID, request._partyID ) ) );
-                    refreshIndexTtl( party );
+                    refreshIndexTTL( party );
                 }
                 notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 보낸다. 클라이언트의 "내 파티" 는 알림이 원본이기 때문이다
                 break;
@@ -786,14 +786,14 @@ namespace sw
                 if ( result != MatchmakingResult::Ok )
                     break;
                 submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetID, request._partyID ), MatchmakingProtocol::encodeID( request._actorID ),
-                                                                PartyLobbyLimit::kInviteTtlMs ) );
+                                                                PartyLobbyLimit::kInviteTTLMs ) );
                 PartyLobbyNotification notification;
                 notification._recipientID       = request._targetID;
                 notification._pushKind          = MatchmakingMethod::kPushPartyInvite;
                 notification._invite._partyID   = request._partyID;
                 notification._invite._inviterID = request._actorID;
                 _notificationBuffer.push( std::move( notification ) );
-                refreshIndexTtl( party );
+                refreshIndexTTL( party );
                 break;
             }
             case PartyLobbyOperation::PartyLeave:
@@ -812,7 +812,7 @@ namespace sw
                 submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( removedID ), indexValue ) );
                 if ( brokenTicketID != 0 )
                     _brokenTicketBuffer.push( brokenTicketID );
-                refreshIndexTtl( party );
+                refreshIndexTTL( party );
                 notifyParty( party, removedID );
                 break;
             }
@@ -872,18 +872,18 @@ namespace sw
                 }
             }
             if ( bErased == false ) // 목록도 살아 있는 로비만큼만 유지한다
-                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), PartyLobbyLimit::kLobbyTtlMs ) );
+                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), PartyLobbyLimit::kLobbyTTLMs ) );
         }
         if ( request._operation == PartyLobbyOperation::LobbyReopen )
             return; // 완료는 없다
         completeLobby( request, result, lobby );
     }
 
-    void PartyLobbyService::refreshIndexTtl( const PartySnapshot& party )
+    void PartyLobbyService::refreshIndexTTL( const PartySnapshot& party )
     {
         for ( const AccountID memberID : party._listMemberID )
         {
-            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장한다
+            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTTLMs ) ); // 파티 기록과 함께 연장한다
         }
     }
 

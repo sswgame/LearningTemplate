@@ -3359,7 +3359,7 @@ msgid "Resize the map to the width and height above. This clears every layer."
 msgstr "맵을 위의 너비와 높이로 바꿉니다. 모든 레이어가 지워집니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
-msgctxt "EditorTileMap.AtlasIdTip"
+msgctxt "EditorTileMap.AtlasIDTip"
 msgid "Atlas cell index to paint, 0 to 255."
 msgstr "칠할 아틀라스 칸 인덱스(0~255)입니다."
 
@@ -3529,7 +3529,7 @@ msgid "Farthest distance the camera draws. Geometry beyond this is clipped."
 msgstr "카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다."
 
 #: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraFov"
+msgctxt "EditorTip.CameraFOV"
 msgid "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."
 msgstr "세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다."
 

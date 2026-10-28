@@ -108,7 +108,7 @@ namespace sw::editor
 
     void CatalogTableEditor::drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton )
     {
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::PushID( group._name.c_str() );
         StringBuilder<constant::kMaxBuffer64> subtitle;
         subtitle.appendFormat( "%# rows", group._listRow.size() );
@@ -374,7 +374,7 @@ namespace sw::editor
         for ( const CatalogCurveKey& key : curve._listKey )
         {
             ImGui::PushID( key._elementIndex );
-            ImGui::PushItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::PushItemWidth( 110.0f * EditorThemeUtil::getDPIScale() );
             drawCell( document, key._elementIndex, "_time", false );
             ImGui::SameLine();
             drawCell( document, key._elementIndex, "_value", false );

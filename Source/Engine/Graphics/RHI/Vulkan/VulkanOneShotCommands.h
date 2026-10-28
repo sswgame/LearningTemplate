@@ -3,7 +3,7 @@
  * @brief 프레임 밖 일회성 커맨드 버퍼(할당, 기록, 제출, 대기, 해제)입니다. Vulkan 백엔드 내부 전용입니다.
  */
 #pragma once
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 
@@ -77,7 +77,7 @@ namespace sw
         VkCommandBuffer get() const { return _commandBuffer; }
 
         /**
-         * @brief 기록을 끝내고 제출한 뒤 **이 제출의 펜스**가 신호할 때까지 기다립니다(RhiAsyncUploads U2).
+         * @brief 기록을 끝내고 제출한 뒤 **이 제출의 펜스**가 신호할 때까지 기다립니다(RHIAsyncUploads U2).
          * @details 큐 전체를 비우는 `vkQueueWaitIdle` 대신 제출에 단 `VkFence` 를 기다린다. 대기 범위가 큐에 쌓인 이전 프레임 전체에서 내 제출로 줄고, 큐 락은 제출하는
          *          동안만 쥐며 대기는 락 밖에서 한다(다른 스레드의 프레임 제출을 막지 않는다). 일회성 풀 락은 커맨드 버퍼 기록과 해제에 필요하므로(Vulkan 사양의 외부 동기화 규칙)
          *          제출이 끝나면 놓고 대기한 뒤 다시 잡는다 — 해제는 소멸자가 한다.

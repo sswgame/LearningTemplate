@@ -20,10 +20,10 @@ SW_ROOT_CONSTANTS_END
 SW_DECLARE_RW_STRUCTURED_BUFFER( float, g_OcclusionTilesRW, 0 );
 
 SW_NUMTHREADS( 8, 8, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    const uint column = dispatchThreadId.x;
-    const uint row    = dispatchThreadId.y;
+    const uint column = dispatchThreadID.x;
+    const uint row    = dispatchThreadID.y;
     if ( column >= SW_ROOT( g_OcclusionColumnCount ) || row >= SW_ROOT( g_OcclusionRowCount ) )
         return;
     const uint2 first    = uint2( column, row ) * SW_ROOT( g_OcclusionTileSize );

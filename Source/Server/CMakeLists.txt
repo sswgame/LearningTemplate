@@ -22,7 +22,7 @@ target_link_libraries(Server
 		sw_global_options
 )
 target_compile_definitions(Server PRIVATE "SW_LOG_TAG=\"Server\"" SW_APP_INTERNAL)
-sw_configurePch(Server "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePCH(Server "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 # Windows 서비스 제어(SCM)는 advapi32. 콘솔 서브시스템이어야 콘솔 제어 처리기 · 표준 입력이 있다(WIN32 를 붙이지 않는다).
 if(WIN32)

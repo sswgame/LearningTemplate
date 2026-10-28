@@ -137,7 +137,7 @@ namespace sw::editor
         applyLODChoice();
 
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDpiScale();
+        const float32 minHeight = MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
         const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "mesh.previewScene" );

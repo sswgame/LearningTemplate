@@ -223,22 +223,22 @@ namespace sw
              * @brief 머티리얼 텍스처 인덱스를 검사하고, 에뮬 백엔드(DX11 · GL)면 t16..t31 에 서수대로 겁니다.
              * @details 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 걸 필요가 없지만, 같은 번호가 머티리얼 데이터에 들어가 있어 검사는 네 백엔드 모두 한다.
              */
-            static void bindMaterialTextures( IRHICommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSrv,
+            static void bindMaterialTextures( IRHICommandList& cmd, bool bNativeBindless, const RHIDescriptorIndex* pMaterialTexSRV,
                                               const BindlessIndexCheckSite* pIndexCheck, bool bCheckIndex )
             {
-                if ( pMaterialTexSrv == nullptr )
+                if ( pMaterialTexSRV == nullptr )
                     return;
                 static const hashed_string s_materialTextureName{ "MaterialTexture" };
                 for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
                 {
-                    checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSrv[texIndex], s_materialTextureName, texIndex );
+                    checkIndex( pIndexCheck, bCheckIndex, RHIBindlessIndexSpace::Texture, pMaterialTexSRV[texIndex], s_materialTextureName, texIndex );
                 }
                 if ( bNativeBindless )
                     return;
                 for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
                 {
-                    if ( pMaterialTexSrv[texIndex] != kInvalidDescriptorIndex )
-                        cmd.bindShaderResource( pMaterialTexSrv[texIndex], shaderslot::kMaterialTexture0 + texIndex );
+                    if ( pMaterialTexSRV[texIndex] != kInvalidDescriptorIndex )
+                        cmd.bindShaderResource( pMaterialTexSRV[texIndex], shaderslot::kMaterialTexture0 + texIndex );
                 }
             }
 
@@ -282,7 +282,7 @@ namespace sw
                                               const EngineConstantBufferSlot& engineCb,
                                               RHIDescriptorIndex              materialCb,
                                               bool                            bNativeBindless,
-                                              const RHIDescriptorIndex*       pMaterialTexSrv,
+                                              const RHIDescriptorIndex*       pMaterialTexSRV,
                                               bool                            bEngineCbUpToDate,
                                               const BindlessIndexCheckSite*   pIndexCheck )
     {
@@ -297,7 +297,7 @@ namespace sw
         if ( bUploadEngineCb )
             Internal::uploadEngineConstantBuffer( cmd, layout, registry, values, engineCb, pIndexCheck, bCheckIndex );
         Internal::bindReservedConstantBuffers( cmd, layout, engineCb, materialCb, pIndexCheck, bCheckIndex );
-        Internal::bindMaterialTextures( cmd, bNativeBindless, pMaterialTexSrv, pIndexCheck, bCheckIndex );
+        Internal::bindMaterialTextures( cmd, bNativeBindless, pMaterialTexSRV, pIndexCheck, bCheckIndex );
 
         // 3) 등록 내용이 그대로면 이미 걸린 것과 같은 자원을 다시 거는 셈이라 건너뛴다(같은 패스 안의 두 번째
         //    드로우부터가 대부분 그렇다). 백엔드도 값이 같으면 더럽힘 표시를 안 하지만, 여기서 끊으면

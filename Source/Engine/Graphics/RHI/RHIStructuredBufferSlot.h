@@ -44,7 +44,7 @@ namespace sw
          * @return 요청한 용량을 확보했으면 true 입니다.
          */
         [[nodiscard]] bool ensureCapacity( IRHIDevice* pDevice, uint32 elementSize, uint32 elementCount, RHIBufferUsage usage,
-                                           bool bNeedsSrv, bool bNeedsUav, const void* pInitialData );
+                                           bool bNeedsSRV, bool bNeedsUAV, const void* pInitialData );
 
         /** @brief `byteOffset` 부터 byteSize 만큼 업로드합니다(버퍼가 없으면 아무것도 하지 않습니다). */
         void upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset = 0 ) const;

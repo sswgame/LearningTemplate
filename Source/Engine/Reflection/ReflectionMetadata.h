@@ -84,7 +84,7 @@ namespace sw
         uint8                  _bHasUIMinRange      : 1;
         uint8                  _bHasUIMaxRange      : 1;
         uint8                  _bEditConditionHides : 1; ///< 조건이 거짓이면 막지 않고 숨긴다
-        uint8                  _bColorHdr           : 1; ///< 색을 HDR 로 편집한다. 1 을 넘는 값을 허용한다
+        uint8                  _bColorHDR           : 1; ///< 색을 HDR 로 편집한다. 1 을 넘는 값을 허용한다
         uint8                  _bMultiline          : 1; ///< 여러 줄 텍스트 필드
         [[maybe_unused]] uint8 _reservedDisplay     : 3;
 #endif

@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Config/JsonValue.cmake
-# @brief JSON 파일에서 값 읽기 — 필수(sw_requireJsonValue)와 선택(sw_readOptionalJsonValue) 둘뿐
+# @brief JSON 파일에서 값 읽기 — 필수(sw_requireJSONValue)와 선택(sw_readOptionalJSONValue) 둘뿐
 # ==============================================================================
 #
 # CMake 가 JSON 을 읽는 곳은 모두 이 둘을 거친다. `string(JSON … ERROR_VARIABLE …)` 을 곳마다 적으면 오류 변수를 읽지 않거나,
@@ -10,16 +10,16 @@
 #   파일이 없거나 JSON 이 아니거나 경로가 문자열 속으로 들어가는 것(형식 오류)은 선택 읽기에서도 구성을 세운다.
 #
 # 키 앞에 `LENGTH` · `TYPE` · `MEMBER` 를 두면 `string(JSON)` 의 그 하위 명령이 된다(없으면 GET). MEMBER 는 마지막 키가 순번이다.
-#   sw_requireJsonValue( swName "${manifest}" _name )
-#   sw_requireJsonValue( swCount "${manifest}" LENGTH _listTarget )
-#   sw_readOptionalJsonValue( swMinVersion "${manifest}" _listDependency 0 _minVersion )
+#   sw_requireJSONValue( swName "${manifest}" _name )
+#   sw_requireJSONValue( swCount "${manifest}" LENGTH _listTarget )
+#   sw_readOptionalJSONValue( swMinVersion "${manifest}" _listDependency 0 _minVersion )
 #
 # 파일 내용은 configure 한 번에 한 번만 읽어 전역 속성에 둔다 — 매니페스트 하나에 키를 열 번 넘게 묻는다.
 # 그래서 configure 도중에 다시 쓰는 파일은 쓴 **뒤에** 처음 읽어야 한다(`toolchain_config.json` 은 DetectToolchain 이 먼저 쓴다).
 include_guard(GLOBAL)
 
 # 파일 내용(OUT_VAR). 없거나 JSON 이 아니면 구성을 세운다.
-function(sw_readJsonFileText JSON_FILE OUT_VAR)
+function(sw_readJSONFileText JSON_FILE OUT_VAR)
 	get_property(swCached GLOBAL PROPERTY "SW_JSON_TEXT:${JSON_FILE}" SET)
 
 	if(NOT swCached)
@@ -42,8 +42,8 @@ function(sw_readJsonFileText JSON_FILE OUT_VAR)
 endfunction()
 
 # 두 함수의 몸통. 결과는 swValue · swError(성공이면 NOTFOUND) · swMode · swKeyPath 로 부른 쪽 스코프에 둔다.
-macro(sw_queryJsonInternal JSON_FILE)
-	sw_readJsonFileText("${JSON_FILE}" swJsonText)
+macro(sw_queryJSONInternal JSON_FILE)
+	sw_readJSONFileText("${JSON_FILE}" swJSONText)
 	set(swKeys ${ARGN})
 	set(swMode GET)
 
@@ -57,12 +57,12 @@ macro(sw_queryJsonInternal JSON_FILE)
 	endif()
 
 	list(JOIN swKeys "." swKeyPath)
-	string(JSON swValue ERROR_VARIABLE swError ${swMode} "${swJsonText}" ${swKeys})
+	string(JSON swValue ERROR_VARIABLE swError ${swMode} "${swJSONText}" ${swKeys})
 endmacro()
 
 # 필수 값 하나를 OUT_VAR 에. 없으면 구성을 세운다.
-function(sw_requireJsonValue OUT_VAR JSON_FILE)
-	sw_queryJsonInternal("${JSON_FILE}" ${ARGN})
+function(sw_requireJSONValue OUT_VAR JSON_FILE)
+	sw_queryJSONInternal("${JSON_FILE}" ${ARGN})
 
 	if(NOT swError STREQUAL "NOTFOUND")
 		message(FATAL_ERROR "[Json] ${JSON_FILE}: ${swMode} '${swKeyPath}' — ${swError}")
@@ -72,8 +72,8 @@ function(sw_requireJsonValue OUT_VAR JSON_FILE)
 endfunction()
 
 # 선택 값 하나를 OUT_VAR 에. 키가 없으면 OUT_VAR 를 정의하지 않는다. 형식 오류는 구성을 세운다.
-function(sw_readOptionalJsonValue OUT_VAR JSON_FILE)
-	sw_queryJsonInternal("${JSON_FILE}" ${ARGN})
+function(sw_readOptionalJSONValue OUT_VAR JSON_FILE)
+	sw_queryJSONInternal("${JSON_FILE}" ${ARGN})
 
 	if(swError STREQUAL "NOTFOUND")
 		set(${OUT_VAR} "${swValue}" PARENT_SCOPE)

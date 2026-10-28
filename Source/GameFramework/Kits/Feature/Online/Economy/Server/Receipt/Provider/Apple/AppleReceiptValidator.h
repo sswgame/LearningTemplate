@@ -82,7 +82,7 @@ namespace sw
         /** @brief 거래 id(1~20 자리 십진 숫자)면 true 입니다. 경로에 그대로 싣기 전의 검사다. */
         static bool isTransactionID( string_view text );
         /** @brief JWS 를 확인합니다 — `x5c` 사슬이 애플 루트까지 이어지고 리프 키로 서명이 맞아야 본문이 담긴 값이고, 아니면 비어 있다. */
-        [[nodiscard]] std::optional<JwtVerified> verifyJws( string_view compact, int64 unixSeconds ) const;
+        [[nodiscard]] std::optional<JWTVerified> verifyJws( string_view compact, int64 unixSeconds ) const;
 
         string makeTransactionURL( string_view transactionID ) const;
         string makeHistoryURL( string_view paginationToken ) const;

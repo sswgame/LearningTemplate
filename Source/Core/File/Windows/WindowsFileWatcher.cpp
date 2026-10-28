@@ -2,7 +2,7 @@
 
 #include "Core/File/Windows/WindowsFileWatcher.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Process/ThreadCrashStack.h"
@@ -63,7 +63,7 @@ namespace sw
         stopWatching(); // 워커가 오류로 끝났으면 남은 핸들 · 스레드를 거둔다
 
         const string dirNt( directoryPath );
-        wstring      wDir = StringUtil::utf8ToUtf16( dirNt.c_str() );
+        wstring      wDir = StringUtil::utf8ToUTF16( dirNt.c_str() );
         _hDirectory       = CreateFileW(
             wDir.c_str(),
             FILE_LIST_DIRECTORY,
@@ -211,7 +211,7 @@ namespace sw
         while ( pNotify != nullptr )
         {
             const wstring wFileName( pNotify->FileName, pNotify->FileNameLength / sizeof( WCHAR ) );
-            const string  fileName = StringUtil::utf16ToUtf8( wFileName.c_str() );
+            const string  fileName = StringUtil::utf16ToUTF8( wFileName.c_str() );
             // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
             // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
             // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).

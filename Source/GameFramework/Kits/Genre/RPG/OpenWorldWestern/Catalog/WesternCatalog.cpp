@@ -200,13 +200,13 @@ namespace sw
         std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), WesternCatalogInternal::isLowerLevel<WesternBondLevelDef> );
         std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), WesternCatalogInternal::isLowerLevel<WesternDeadEyeLevelDef> );
         // 유대 단계는 기반 레벨 진행으로 센다. 단계 사이의 임계값 차이가 경험치 테이블이 된다(첫 단계가 시작점이다).
-        vector<int64> listXpToNext;
+        vector<int64> listXPToNext;
         for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )
         {
             const float32 gap = _listBondLevel[bondIndex]._experience - _listBondLevel[bondIndex - 1]._experience;
-            listXpToNext.push_back( MathUtil::max( int64{ 1 }, static_cast<int64>( MathUtil::round( gap ) ) ) );
+            listXPToNext.push_back( MathUtil::max( int64{ 1 }, static_cast<int64>( MathUtil::round( gap ) ) ) );
         }
-        _bondCurve.setTable( listXpToNext );
+        _bondCurve.setTable( listXPToNext );
         return loadedCount;
     }
 

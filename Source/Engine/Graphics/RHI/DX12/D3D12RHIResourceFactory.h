@@ -44,11 +44,11 @@ namespace sw
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 내용을 채워 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
@@ -60,8 +60,8 @@ namespace sw
          * @details 여기서 잠그지 않고 이미 잡은 잠금을 받는 이유는, 인덱스를 가져오는 것과 **그 자리에 뷰를 만드는 것**이
          *          한 임계 구역이어야 합니다. 여기서 잠갔다 풀면 그 틈에 다른 스레드가 같은 인덱스를 받습니다.
          *          선언의 `SW_REQUIRES_LOCK` 이 그 전제를 컴파일러(`-Wthread-safety`)에게도 부르는 쪽에게도 보입니다.
-         * @note 네 등록 함수(`registerBindlessTexture`, `registerBindlessBufferSrv`, `registerBindlessBufferUav`,
-         *       `registerBindlessTextureUav`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
+         * @note 네 등록 함수(`registerBindlessTexture`, `registerBindlessBufferSRV`, `registerBindlessBufferUAV`,
+         *       `registerBindlessTextureUAV`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
          *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
          */
         RHIDescriptorIndex acquireBindlessIndex( UniqueLock<shared_mutex>& lock ) SW_REQUIRES_LOCK( lock );

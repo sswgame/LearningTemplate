@@ -20,7 +20,7 @@ namespace sw
     {
         struct AdminStoreLogicInternal
         {
-            static constexpr const utf8* kGmSenderName = "mail.sender.gm";
+            static constexpr const utf8* kGMSenderName = "mail.sender.gm";
 
             static AdminResult finish( AdminReply& outReply, AdminResult result )
             {
@@ -67,7 +67,7 @@ namespace sw
                 return AdminResult::Unavailable;
             }
 
-            static ServiceMailMessage makeGmMail( const AdminCommand& command, AccountID recipient, string idempotencyKey )
+            static ServiceMailMessage makeGMMail( const AdminCommand& command, AccountID recipient, string idempotencyKey )
             {
                 const AdminRequest& request = command._request;
                 ServiceMailMessage  message;
@@ -75,7 +75,7 @@ namespace sw
                 message._listAttachment     = request._listAttachment;
                 message._titleKey           = request._titleKey;
                 message._body               = request._body;
-                message._senderName         = kGmSenderName;
+                message._senderName         = kGMSenderName;
                 message._bLiteralText       = SW_TRUE;
                 message._fundingHolder      = LedgerHolder::makeMint();
                 message._actorID            = command._adminID;
@@ -158,7 +158,7 @@ namespace sw
                     string             key = "bulk." + ServiceKeyUtil::makeHex64( request._batchID ) + "." + ServiceKeyUtil::makeHex64( recipient );
                     string             mailKey;
                     bool               bReplayed = false;
-                    const LedgerResult staged    = ServiceMail::stageSend( connection, makeGmMail( command, recipient, std::move( key ) ), inoutTransaction, mailKey, bReplayed );
+                    const LedgerResult staged    = ServiceMail::stageSend( connection, makeGMMail( command, recipient, std::move( key ) ), inoutTransaction, mailKey, bReplayed );
                     if ( staged != LedgerResult::Ok )
                         return toAdminResult( staged );
                     outReply._processedCount += bReplayed ? 0 : 1;
@@ -242,7 +242,7 @@ namespace sw
                         string             mailKey;
                         bool               bReplayed = false;
                         const string       key       = "gm." + ServiceKeyUtil::makeHex64( command._adminID ) + "." + ServiceKeyUtil::makeHex64( command._keyLow );
-                        const LedgerResult sent      = ServiceMail::stageSend( connection, makeGmMail( command, request._accountID, key ), inoutTransaction, mailKey, bReplayed );
+                        const LedgerResult sent      = ServiceMail::stageSend( connection, makeGMMail( command, request._accountID, key ), inoutTransaction, mailKey, bReplayed );
                         staged                       = toAdminResult( sent );
                         audit._action                = "admin.mail";
                         audit._after                 = mailKey;
@@ -260,7 +260,7 @@ namespace sw
                         campaign._listAttachment = request._listAttachment;
                         campaign._titleKey       = request._titleKey;
                         campaign._body           = request._body;
-                        campaign._senderName     = kGmSenderName;
+                        campaign._senderName     = kGMSenderName;
                         campaign._bLiteralText   = SW_TRUE;
                         campaign._startMs        = request._startMs;
                         campaign._endMs          = request._endMs;

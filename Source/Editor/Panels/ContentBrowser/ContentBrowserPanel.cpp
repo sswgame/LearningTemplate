@@ -821,7 +821,7 @@ namespace sw::editor
         }
 
         constexpr ImGuiTableFlags kTableFlags  = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        const float32             dpiScale     = EditorThemeUtil::getDpiScale();
+        const float32             dpiScale     = EditorThemeUtil::getDPIScale();
         const size_t              visibleCount = std::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
         const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
         string                    openPath;
@@ -1441,7 +1441,7 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##cb_list", 3, flags, ImGui::GetContentRegionAvail() ) )
         {
             ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 90.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 90.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Path", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableHeadersRow();
 

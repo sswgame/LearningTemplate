@@ -31,10 +31,10 @@ namespace sw
         };
 
         /** @brief WAV 의 16 비트 정수나 32 비트 float 샘플을 바이트 안에서 바로 읽는 디코더입니다. */
-        class WavStreamDecoder final : public IAudioStreamDecoder
+        class WAVStreamDecoder final : public IAudioStreamDecoder
         {
         public:
-            WavStreamDecoder( shared_ptr<const vector<uint8>> pBytes, size_t dataOffset, uint32 frameCount, uint16 channelCount, bool bFloat )
+            WAVStreamDecoder( shared_ptr<const vector<uint8>> pBytes, size_t dataOffset, uint32 frameCount, uint16 channelCount, bool bFloat )
                 : _pBytes{ std::move( pBytes ) }
                 , _dataOffset{ dataOffset }
                 , _frameCount{ frameCount }
@@ -196,7 +196,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".ogg" ) )
         {
             AudioStreamInfo                 info;
-            unique_ptr<IAudioStreamDecoder> pProbe = AudioClipDecoder::openOggStream( inoutBytes.data(), inoutBytes.size(), info );
+            unique_ptr<IAudioStreamDecoder> pProbe = AudioClipDecoder::openOGGStream( inoutBytes.data(), inoutBytes.size(), info );
             if ( pProbe == nullptr )
                 return nullptr;
             pSource->_info           = info;
@@ -216,7 +216,7 @@ namespace sw
             AudioPcm format;
             size_t   dataOffset{ 0 };
             uint32   dataBytes{ 0 };
-            if ( AudioClipDecoder::parseWavLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
+            if ( AudioClipDecoder::parseWAVLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
                 return nullptr;
             const bool bChannelsOk              = 1 <= format._channelCount && format._channelCount <= AudioDownmix::kMaxSourceChannelCount;
             const bool bPcm16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
@@ -232,7 +232,7 @@ namespace sw
             pSource->_info._frameCount   = dataBytes / format.getBlockAlign();
             pSource->_dataOffset         = dataOffset;
             pSource->_dataBytes          = dataBytes;
-            pSource->_format             = bFloat32 ? Format::WavFloat32 : Format::WavPcm16;
+            pSource->_format             = bFloat32 ? Format::WAVFloat32 : Format::WAVPcm16;
         }
         else
         {
@@ -253,11 +253,11 @@ namespace sw
         if ( _format == Format::Vorbis )
         {
             AudioStreamInfo                 info;
-            unique_ptr<IAudioStreamDecoder> pInner = AudioClipDecoder::openOggStream( _pBytes->data(), _pBytes->size(), info );
+            unique_ptr<IAudioStreamDecoder> pInner = AudioClipDecoder::openOGGStream( _pBytes->data(), _pBytes->size(), info );
             if ( pInner == nullptr )
                 return nullptr;
             return sw::make_unique<OwningStreamDecoder>( _pBytes, std::move( pInner ) );
         }
-        return sw::make_unique<WavStreamDecoder>( _pBytes, _dataOffset, _info._frameCount, _info._channelCount, _format == Format::WavFloat32 );
+        return sw::make_unique<WAVStreamDecoder>( _pBytes, _dataOffset, _info._frameCount, _info._channelCount, _format == Format::WAVFloat32 );
     }
 } // namespace sw

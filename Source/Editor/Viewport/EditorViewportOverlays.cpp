@@ -173,7 +173,7 @@ namespace sw::editor
 
     float2 EditorViewportOverlays::pushOutOfPlacedBars( EditorOverlayDock dock, const float2& position, const float2& size ) const
     {
-        const float32 spacing = 4.0f * EditorThemeUtil::getDpiScale();
+        const float32 spacing = 4.0f * EditorThemeUtil::getDPIScale();
         float2        moved   = position;
         // 바 수만큼만 되풀이한다 — 한 번 밀 때마다 겹친 바 하나를 넘는다.
         for ( size_t pass = 0; pass <= _listPlaced.size(); ++pass )
@@ -225,7 +225,7 @@ namespace sw::editor
     {
         const EditorViewportOverlaysInternal::BarDesc* pDesc   = EditorViewportOverlaysInternal::findDesc( state._id );
         EditorOverlayBarRuntime&                       runtime = getRuntime( state._id );
-        const float32                                  scale   = EditorThemeUtil::getDpiScale();
+        const float32                                  scale   = EditorThemeUtil::getDPIScale();
         // 가장자리에 붙은 바는 테두리에서 조금 띄운다 — 뷰포트 안쪽 영역(여백을 뺀 크기)에서 위치를 계산한다.
         const float32 margin = EditorViewportOverlaysInternal::kEdgeMargin * scale;
         const float2  innerSize{ MathUtil::max( canvasSize._x - margin * 2.0f, 1.0f ), MathUtil::max( canvasSize._y - margin * 2.0f, 1.0f ) };

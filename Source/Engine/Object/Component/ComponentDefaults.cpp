@@ -111,7 +111,7 @@ namespace sw
                 const TypeInfo* pFieldType = registry.findType( prop._typeName );
                 if ( pFieldType == nullptr || pFieldType->_size == 0 )
                     return false;
-                if ( pFieldType->isPrimitive() == false && pFieldType->usesPodCopyFastPath() == false )
+                if ( pFieldType->isPrimitive() == false && pFieldType->usesPODCopyFastPath() == false )
                     return false;
                 outSize = pFieldType->_size;
                 return true;

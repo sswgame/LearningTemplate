@@ -133,7 +133,7 @@ namespace sw
         , _defaultLocator{}
         , _defaultPathing{}
         , _settings{}
-        , _listNpc{}
+        , _listNPC{}
         , _eventBuffer{}
         , _listAppointmentCheck{}
         , _listBrokenAppointment{}
@@ -195,11 +195,11 @@ namespace sw
         if ( _pCatalog == nullptr )
             return true;
 
-        const vector<ScheduleNpcDef>& listDef = _pCatalog->getNpcs();
+        const vector<ScheduleNPCDef>& listDef = _pCatalog->getNPCs();
         for ( int32 defIndex = 0; defIndex < static_cast<int32>( listDef.size() ); ++defIndex )
         {
-            const ScheduleNpcDef& def = listDef[static_cast<size_t>( defIndex )];
-            NpcRuntime            npc;
+            const ScheduleNPCDef& def = listDef[static_cast<size_t>( defIndex )];
+            NPCRuntime            npc;
             npc._defIndex = defIndex;
             for ( const TagID& tag : def._listTag )
             {
@@ -209,12 +209,12 @@ namespace sw
             if ( pHome != nullptr )
                 npc._origin = ScheduleLocation{ pHome->_position, pHome->_area };
             npc._held = npc._origin;
-            _listNpc.push_back( npc );
+            _listNPC.push_back( npc );
         }
         _bSuppressEvents = SW_TRUE; // 처음 상태는 사건이 아니다
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            planNpc( npcIndex, _minute, _listNpc[static_cast<size_t>( npcIndex )]._origin );
+            planNPC( npcIndex, _minute, _listNPC[static_cast<size_t>( npcIndex )]._origin );
         }
         _bSuppressEvents = SW_FALSE;
         rebuildAppointmentChecks( getDay() );
@@ -223,7 +223,7 @@ namespace sw
 
     void ScheduleSystem::shutdown()
     {
-        for ( NpcRuntime& npc : _listNpc )
+        for ( NPCRuntime& npc : _listNPC )
         {
             for ( const ScheduleSegment& segment : npc._listSegment )
             {
@@ -231,7 +231,7 @@ namespace sw
                     _pLocator->release( segment._reservationID );
             }
         }
-        _listNpc.clear();
+        _listNPC.clear();
         _eventBuffer.clear();
         _listAppointmentCheck.clear();
         _listBrokenAppointment.clear();
@@ -247,14 +247,14 @@ namespace sw
     {
         _pPlanning = pPlanning != nullptr ? pPlanning : &_defaultPathing;
         _pFine     = pFine != nullptr ? pFine : _pPlanning;
-        if ( _listNpc.empty() == false )
+        if ( _listNPC.empty() == false )
             _bConditionsDirty = SW_TRUE;
     }
 
     void ScheduleSystem::setActivityLocator( IScheduleActivityLocator* pLocator )
     {
         _pLocator = pLocator != nullptr ? pLocator : &_defaultLocator;
-        if ( _listNpc.empty() == false )
+        if ( _listNPC.empty() == false )
             _bConditionsDirty = SW_TRUE;
     }
 
@@ -303,7 +303,7 @@ namespace sw
                 if ( check._bDone == SW_FALSE )
                     next = MathUtil::min( next, check._minute );
             }
-            for ( const NpcRuntime& npc : _listNpc )
+            for ( const NPCRuntime& npc : _listNPC )
             {
                 next = MathUtil::min( next, npc._wakeMinute );
             }
@@ -324,32 +324,32 @@ namespace sw
         applyConditionChanges();
         _bSuppressEvents = SW_TRUE;
         // 잠 — 끼어들기는 모두 끝난다. 끼어든 자리에서 지금 칸으로 돌아간 뒤 건너뛴다.
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+            NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
             if ( npc._listInterruption.empty() )
                 continue;
             npc._listInterruption.clear();
-            resumeNpc( npcIndex );
+            resumeNPC( npcIndex );
         }
         advanceTo( absoluteMinute );
         _bSuppressEvents = SW_FALSE;
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
             emitSnapped( npcIndex );
         }
     }
 
-    void ScheduleSystem::setNpcLOD( int32 npcIndex, ScheduleLOD lod )
+    void ScheduleSystem::setNPCLOD( int32 npcIndex, ScheduleLOD lod )
     {
-        if ( isValidNpc( npcIndex ) == false )
+        if ( isValidNPC( npcIndex ) == false )
             return;
-        NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+        NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
         if ( npc._lod == lod )
             return;
         npc._lod = lod;
         // 화면 안으로 — 굵은 간격으로 미뤄 둔 사건을 지금 맞추고, 그 시각 자리로 옮긴다(계획은 LOD 와 상관없어 그대로다).
-        refreshNpc( npcIndex );
+        refreshNPC( npcIndex );
         if ( lod == ScheduleLOD::Near )
         {
             npc._routeKey = 0;
@@ -358,52 +358,52 @@ namespace sw
         }
     }
 
-    ScheduleLOD ScheduleSystem::getNpcLOD( int32 npcIndex ) const
+    ScheduleLOD ScheduleSystem::getNPCLOD( int32 npcIndex ) const
     {
-        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._lod : ScheduleLOD::Far;
+        return isValidNPC( npcIndex ) ? _listNPC[static_cast<size_t>( npcIndex )]._lod : ScheduleLOD::Far;
     }
 
-    void ScheduleSystem::addNpcTag( int32 npcIndex, const TagID& tag )
+    void ScheduleSystem::addNPCTag( int32 npcIndex, const TagID& tag )
     {
-        const bool bHasTag = isValidNpc( npcIndex ) && _listNpc[static_cast<size_t>( npcIndex )]._tags.hasTag( tag, true );
-        if ( isValidNpc( npcIndex ) == false || bHasTag )
+        const bool bHasTag = isValidNPC( npcIndex ) && _listNPC[static_cast<size_t>( npcIndex )]._tags.hasTag( tag, true );
+        if ( isValidNPC( npcIndex ) == false || bHasTag )
             return;
-        _listNpc[static_cast<size_t>( npcIndex )]._tags.addTag( tag );
-        _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
+        _listNPC[static_cast<size_t>( npcIndex )]._tags.addTag( tag );
+        _listNPC[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
     }
 
-    void ScheduleSystem::removeNpcTag( int32 npcIndex, const TagID& tag )
+    void ScheduleSystem::removeNPCTag( int32 npcIndex, const TagID& tag )
     {
-        if ( isValidNpc( npcIndex ) == false || _listNpc[static_cast<size_t>( npcIndex )]._tags.hasTag( tag, true ) == false )
+        if ( isValidNPC( npcIndex ) == false || _listNPC[static_cast<size_t>( npcIndex )]._tags.hasTag( tag, true ) == false )
             return; // 없는 NPC · 없는 태그
-        _listNpc[static_cast<size_t>( npcIndex )]._tags.removeTag( tag );
-        _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
+        _listNPC[static_cast<size_t>( npcIndex )]._tags.removeTag( tag );
+        _listNPC[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
     }
 
-    void ScheduleSystem::setNpcAffinity( int32 npcIndex, int32 affinity )
+    void ScheduleSystem::setNPCAffinity( int32 npcIndex, int32 affinity )
     {
-        if ( isValidNpc( npcIndex ) == false || _listNpc[static_cast<size_t>( npcIndex )]._affinity == affinity )
+        if ( isValidNPC( npcIndex ) == false || _listNPC[static_cast<size_t>( npcIndex )]._affinity == affinity )
             return;
-        _listNpc[static_cast<size_t>( npcIndex )]._affinity   = affinity;
-        _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
+        _listNPC[static_cast<size_t>( npcIndex )]._affinity   = affinity;
+        _listNPC[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
     }
 
-    int32 ScheduleSystem::getNpcAffinity( int32 npcIndex ) const
+    int32 ScheduleSystem::getNPCAffinity( int32 npcIndex ) const
     {
-        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._affinity : 0;
+        return isValidNPC( npcIndex ) ? _listNPC[static_cast<size_t>( npcIndex )]._affinity : 0;
     }
 
     bool ScheduleSystem::pushInterruption( int32 npcIndex, const hashed_string& interruptID )
     {
-        if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
+        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return false;
         const ScheduleInterruptDef* pDef = _pCatalog->findInterrupt( interruptID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "unknown interruption '%#' for npc '%#' - ignored", interruptID.c_str(), getNpcID( npcIndex ).c_str() );
+            SW_LOG_WARNING( "unknown interruption '%#' for npc '%#' - ignored", interruptID.c_str(), getNPCID( npcIndex ).c_str() );
             return false;
         }
-        NpcRuntime& npc          = _listNpc[static_cast<size_t>( npcIndex )];
+        NPCRuntime& npc          = _listNPC[static_cast<size_t>( npcIndex )];
         const int32 expireMinute = pDef->_timeoutMinutes > 0 ? _minute + pDef->_timeoutMinutes : -1;
         for ( Interruption& interruption : npc._listInterruption )
         {
@@ -416,9 +416,9 @@ namespace sw
         }
         if ( npc._listInterruption.empty() )
         {
-            refreshNpc( npcIndex ); // 끼어들기 앞까지의 사건을 맞춘다
+            refreshNPC( npcIndex ); // 끼어들기 앞까지의 사건을 맞춘다
             npc._held = computeLogicLocation( npcIndex, _minute );
-            if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNpcPhase::Performing )
+            if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNPCPhase::Performing )
                 emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceID );
             npc._bEmitted = SW_FALSE;
         }
@@ -440,16 +440,16 @@ namespace sw
 
     bool ScheduleSystem::popInterruption( int32 npcIndex, const hashed_string& interruptID )
     {
-        if ( isValidNpc( npcIndex ) == false )
+        if ( isValidNPC( npcIndex ) == false )
             return false;
-        NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+        NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
         for ( size_t interruptionIndex = 0; interruptionIndex < npc._listInterruption.size(); ++interruptionIndex )
         {
             if ( npc._listInterruption[interruptionIndex]._id != interruptID )
                 continue;
             npc._listInterruption.erase( npc._listInterruption.begin() + static_cast<ptrdiff_t>( interruptionIndex ) );
             if ( npc._listInterruption.empty() )
-                resumeNpc( npcIndex );
+                resumeNPC( npcIndex );
             else
                 npc._wakeMinute = computeWakeMinute( npcIndex );
             return true;
@@ -459,34 +459,34 @@ namespace sw
 
     void ScheduleSystem::reportInterruptedLocation( int32 npcIndex, const ScheduleLocation& location )
     {
-        if ( isValidNpc( npcIndex ) == false || _listNpc[static_cast<size_t>( npcIndex )]._listInterruption.empty() )
+        if ( isValidNPC( npcIndex ) == false || _listNPC[static_cast<size_t>( npcIndex )]._listInterruption.empty() )
             return;
-        _listNpc[static_cast<size_t>( npcIndex )]._held = location;
+        _listNPC[static_cast<size_t>( npcIndex )]._held = location;
     }
 
-    int32 ScheduleSystem::findNpcIndex( const hashed_string& npcID ) const
+    int32 ScheduleSystem::findNPCIndex( const hashed_string& npcID ) const
     {
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            if ( getNpcID( npcIndex ) == npcID )
+            if ( getNPCID( npcIndex ) == npcID )
                 return npcIndex;
         }
         return -1;
     }
 
-    hashed_string ScheduleSystem::getNpcID( int32 npcIndex ) const
+    hashed_string ScheduleSystem::getNPCID( int32 npcIndex ) const
     {
-        if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
+        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return hashed_string{};
-        return _pCatalog->getNpcs()[static_cast<size_t>( _listNpc[static_cast<size_t>( npcIndex )]._defIndex )]._id;
+        return _pCatalog->getNPCs()[static_cast<size_t>( _listNPC[static_cast<size_t>( npcIndex )]._defIndex )]._id;
     }
 
-    ScheduleNpcView ScheduleSystem::getNpcView( int32 npcIndex ) const
+    ScheduleNPCView ScheduleSystem::getNPCView( int32 npcIndex ) const
     {
-        ScheduleNpcView view;
-        if ( isValidNpc( npcIndex ) == false )
+        ScheduleNPCView view;
+        if ( isValidNPC( npcIndex ) == false )
             return view;
-        const NpcRuntime& npc         = _listNpc[static_cast<size_t>( npcIndex )];
+        const NPCRuntime& npc         = _listNPC[static_cast<size_t>( npcIndex )];
         const float32     minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay ) + _minuteFraction;
         view._lod                     = npc._lod;
         view._segmentIndex            = ScheduleSystemInternal::findActiveSegment( npc._listSegment, minuteOfDay );
@@ -505,17 +505,17 @@ namespace sw
         view._phase                    = computePhase( npc, view._segmentIndex, minuteOfDay, view._travelFraction );
         switch ( view._phase )
         {
-            case ScheduleNpcPhase::Interrupted:
+            case ScheduleNPCPhase::Interrupted:
             {
                 view._location = npc._held;
                 break;
             }
-            case ScheduleNpcPhase::Performing:
+            case ScheduleNPCPhase::Performing:
             {
                 view._location = segment._target;
                 break;
             }
-            case ScheduleNpcPhase::Traveling:
+            case ScheduleNPCPhase::Traveling:
             {
                 view._location               = computePlanningLocationOnRoute( npc, view._segmentIndex, view._travelFraction );
                 const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleHash::computeSegmentKey( segment );
@@ -530,7 +530,7 @@ namespace sw
     const vector<ScheduleSegment>& ScheduleSystem::getPlan( int32 npcIndex ) const
     {
         static const vector<ScheduleSegment> s_empty;
-        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._listSegment : s_empty;
+        return isValidNPC( npcIndex ) ? _listNPC[static_cast<size_t>( npcIndex )]._listSegment : s_empty;
     }
 
     bool ScheduleSystem::isAppointmentMet( const hashed_string& appointmentID ) const
@@ -545,7 +545,7 @@ namespace sw
             return false;
         for ( const hashed_string& attendee : appointment._listAttendee )
         {
-            if ( isAttendeePresent( findNpcIndex( attendee ), appointmentIndex ) == false )
+            if ( isAttendeePresent( findNPCIndex( attendee ), appointmentIndex ) == false )
                 return false;
         }
         return true;

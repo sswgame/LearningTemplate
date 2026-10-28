@@ -105,9 +105,9 @@ extern "C"
     // 2) export — EditorModule 이 채우는 진입점
     // ------------------------------------------------------------------------------
     /** @brief 이 모듈이 빌드된 표 버전입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint32 getEditorModuleAbiVersion();
+    SW_MODULE_API uint32 getEditorModuleABIVersion();
     /** @brief 이 모듈이 빌드된 표 지문입니다. 버전과 함께 대조합니다. */
-    SW_MODULE_API const utf8* getEditorModuleAbiStamp();
+    SW_MODULE_API const utf8* getEditorModuleABIStamp();
 
     /** @brief EditorModule API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI );

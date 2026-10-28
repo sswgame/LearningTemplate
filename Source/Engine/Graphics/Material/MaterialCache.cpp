@@ -244,9 +244,9 @@ namespace sw
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         // 이미 올라갔거나(`Ready`) 올리려다 실패했거나(`Failed`, 핫 리로드만 다시 시도한다) 줄에 든(`Pending`) 것은 다시 넣지 않는다.
-        if ( it == _impl->_mapEntry.end() || it->second._material->getGpuState() != MaterialGpuState::NotRequested )
+        if ( it == _impl->_mapEntry.end() || it->second._material->getGPUState() != MaterialGPUState::NotRequested )
             return;
-        it->second._material->setGpuState( MaterialGpuState::Pending );
+        it->second._material->setGPUState( MaterialGPUState::Pending );
         _impl->_listPendingKey.push_back( key );
         _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
     }
@@ -284,7 +284,7 @@ namespace sw
                     continue; // 그 사이에 해제됐다
                 material = it->second._material;
             }
-            if ( material->getGpuState() == MaterialGpuState::Ready )
+            if ( material->getGPUState() == MaterialGPUState::Ready )
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
             if ( material->initialize( pDevice, AssetID{ key } ) == false )
@@ -378,13 +378,13 @@ namespace sw
         while ( keyIndex < _impl->_listPSOWarmKey.size() )
         {
             const auto             it    = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
-            const MaterialGpuState state = it != _impl->_mapEntry.end() ? it->second._material->getGpuState() : MaterialGpuState::Failed;
-            if ( state == MaterialGpuState::NotRequested || state == MaterialGpuState::Pending )
+            const MaterialGPUState state = it != _impl->_mapEntry.end() ? it->second._material->getGPUState() : MaterialGPUState::Failed;
+            if ( state == MaterialGPUState::NotRequested || state == MaterialGPUState::Pending )
             {
                 ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
                 continue;
             }
-            if ( state == MaterialGpuState::Ready )
+            if ( state == MaterialGPUState::Ready )
                 outListMaterial.push_back( it->second._material ); // 실패(`Failed`)한 것과 캐시에서 빠진 것은 버린다
             VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
         }

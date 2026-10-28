@@ -3,7 +3,7 @@
 #include "App/AppAssertDialog.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
@@ -49,7 +49,7 @@ namespace sw
                 text.appendFormat( "Assertion failed: %s\n%s\n\n%s(%d)\n\n"
                                    "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
                                    pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
-                const wstring wideText = StringUtil::utf8ToUtf16( text.c_str() );
+                const wstring wideText = StringUtil::utf8ToUTF16( text.c_str() );
                 const int32   result   = MessageBoxW( nullptr, wideText.c_str(), L"SW Engine - Assertion", MB_CANCELTRYCONTINUE | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND );
                 switch ( result )
                 {

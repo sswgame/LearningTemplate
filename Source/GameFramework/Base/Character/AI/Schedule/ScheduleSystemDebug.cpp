@@ -47,15 +47,15 @@ namespace sw
 
 namespace sw
 {
-    void ScheduleSystem::explainNpc( int32 npcIndex, string& outText ) const
+    void ScheduleSystem::explainNPC( int32 npcIndex, string& outText ) const
     {
         using Internal = ScheduleSystemDebugInternal;
         outText.clear();
-        if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
+        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return;
-        const NpcRuntime&                       npc     = _listNpc[static_cast<size_t>( npcIndex )];
-        const ScheduleNpcDef&                   def     = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
-        const ScheduleNpcView                   view    = getNpcView( npcIndex );
+        const NPCRuntime&                       npc     = _listNPC[static_cast<size_t>( npcIndex )];
+        const ScheduleNPCDef&                   def     = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
+        const ScheduleNPCView                   view    = getNPCView( npcIndex );
         const ScheduleConditionContext          context = makeContext( npcIndex, npc._planDay, 0 );
         const int32                             now     = Internal::toMinuteOfDay( _minute );
         StringBuilder<constant::kMaxBuffer4096> text;
@@ -134,11 +134,11 @@ namespace sw
     {
         using Internal = ScheduleSystemDebugInternal;
         outText.clear();
-        if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
+        if ( _pCatalog == nullptr || isValidNPC( npcIndex ) == false )
             return;
-        const NpcRuntime&                       npc = _listNpc[static_cast<size_t>( npcIndex )];
+        const NPCRuntime&                       npc = _listNPC[static_cast<size_t>( npcIndex )];
         StringBuilder<constant::kMaxBuffer4096> text;
-        text.appendFormat( "timeline '%#' day %# (planned at ", getNpcID( npcIndex ).c_str(), npc._planDay );
+        text.appendFormat( "timeline '%#' day %# (planned at ", getNPCID( npcIndex ).c_str(), npc._planDay );
         Internal::appendClock( text, Internal::toMinuteOfDay( npc._originMinute ) );
         text.append( ")\n" );
         for ( const ScheduleSegment& segment : npc._listSegment )
@@ -169,11 +169,11 @@ namespace sw
             return;
         const bool bAll = _lastTraceRequest == "*";
         string     text;
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            if ( bAll == false && getNpcID( npcIndex ) != hashed_string( _lastTraceRequest ) )
+            if ( bAll == false && getNPCID( npcIndex ) != hashed_string( _lastTraceRequest ) )
                 continue;
-            explainNpc( npcIndex, text );
+            explainNPC( npcIndex, text );
             SW_LOG_INFO( "[Schedule] %#", text );
             dumpTimeline( npcIndex, text );
             SW_LOG_INFO( "[Schedule] %#", text );

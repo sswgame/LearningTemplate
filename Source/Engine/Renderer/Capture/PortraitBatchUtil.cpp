@@ -53,9 +53,9 @@ namespace sw
                 continue;
             }
             const string base = directory + "/" + string( makeFileStem( path ) ) + ".portrait";
-            const bool   bDDS = ImageFileWriter::writeDDSRgba8( base + ".dds", rgbaBytes, request._width, request._height );
-            const bool   bPng = ImageFileWriter::writePngRgba8( base + ".png", rgbaBytes, request._width, request._height );
-            bAllSucceeded     = bAllSucceeded && bDDS && bPng;
+            const bool   bDDS = ImageFileWriter::writeDDSRGBA8( base + ".dds", rgbaBytes, request._width, request._height );
+            const bool   bPNG = ImageFileWriter::writePNGRGBA8( base + ".png", rgbaBytes, request._width, request._height );
+            bAllSucceeded     = bAllSucceeded && bDDS && bPNG;
             SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", string( path ).c_str(), base.c_str(), request._width, request._height );
         }
         portrait.shutdown();

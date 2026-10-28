@@ -164,7 +164,7 @@ namespace sw
             static void applySurface( FitSolveState& state, const FitPairContext& pair, float32 strength, float32 margin, float32 search, float32 falloffWidth )
             {
                 const FitPartState&    inner   = state._listPart[pair._innerPart];
-                const SurfaceBvh&      surface = state.getLayerSurface( pair._outerPart );
+                const SurfaceBVH&      surface = state.getLayerSurface( pair._outerPart );
                 vector<float32>        listAmount( inner._listPosition.size(), 0.0f );
                 vector<GeometryRayHit> listHit;
                 for ( uint32 vertex = 0; vertex < inner._listPosition.size(); ++vertex )
@@ -211,7 +211,7 @@ namespace sw
                 const float32     distance     = FitOperatorInternal::findArgumentOr( pair, "distance", outer._pProfile->_pushDistance );
                 const float32     search       = FitOperatorInternal::findArgumentOr( pair, "searchDistance", FitOperatorInternal::kDefaultSearchDistance );
                 const float32     falloffWidth = FitOperatorInternal::findArgumentOr( pair, "falloffWidth", outer._pProfile->_falloffWidth );
-                const SurfaceBvh& surface      = state.getLayerSurface( pair._innerPart );
+                const SurfaceBVH& surface      = state.getLayerSurface( pair._innerPart );
                 const uint16      innerFilter  = static_cast<uint16>( pair._innerPart );
                 vector<float32>   listAmount( outer._listPosition.size(), 0.0f );
                 for ( uint32 vertex = 0; vertex < outer._listPosition.size(); ++vertex )
@@ -258,7 +258,7 @@ namespace sw
             {
                 FitPartState&             inner    = state._listPart[pair._innerPart];
                 const float32             distance = FitOperatorInternal::findArgumentOr( pair, "distance", inner._pProfile->_coverageDistance );
-                const SurfaceBvh&         surface  = state.getLayerSurface( pair._outerPart );
+                const SurfaceBVH&         surface  = state.getLayerSurface( pair._outerPart );
                 const AppearanceGeometry& geometry = *inner._pInput->_pGeometry;
                 vector<uint8>             listVertexCovered( inner._listPosition.size(), SW_FALSE );
                 for ( uint32 vertex = 0; vertex < inner._listPosition.size(); ++vertex )
@@ -319,7 +319,7 @@ namespace sw
             static void countInside( const FitSolveState& state, uint32 testedPart, uint32 surfacePart, float32 tolerance, float32 search, FitPenetration& inoutPenetration )
             {
                 const FitPartState& tested  = state._listPart[testedPart];
-                const SurfaceBvh&   surface = state.getLayerSurface( surfacePart );
+                const SurfaceBVH&   surface = state.getLayerSurface( surfacePart );
                 for ( const float3& position : tested._listPosition )
                 {
                     GeometryClosestPoint closest;

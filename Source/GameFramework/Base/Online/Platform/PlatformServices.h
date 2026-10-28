@@ -5,7 +5,7 @@
  *          - **스토어 이름**(`getStoreName`)이 서버 쪽 영수증 검증 제공자의 이름(`IReceiptValidator::getStoreName`, 경제 키트)과 **같은 글**이다 — 클라이언트가 결제 영수증을 서버로 보낼 때
  *            이 이름을 `storeName` 에 실으면 그 스토어의 검증기가 받는다(`PlatformStoreName`). 이름이 어긋나면 서버가 모르는 스토어로 거절한다.
  *          - **로그인 티켓**(`requestAuthTicket`)은 서버 로그인 키트의 플랫폼 로그인 제공자(`ticketQuery` 등)에 넘기는 스토어 인증 글이다.
- *          - 외부 SDK 는 이 파일도 구현도 링크하지 않는다. SDK 를 쥔 쪽(별도 플러그인 모듈)이 SDK 호출 묶음(`ISteamApiBridge`)을 구현해 넘긴다.
+ *          - 외부 SDK 는 이 파일도 구현도 링크하지 않는다. SDK 를 쥔 쪽(별도 플러그인 모듈)이 SDK 호출 묶음(`ISteamAPIBridge`)을 구현해 넘긴다.
  *          - 동기 호출 모양이다(결과는 이번 프레임에 돌아오고 스토어에 쓰는 것은 SDK 가 비동기로 한다). `update` 를 프레임마다 부른다(SDK 콜백 펌프).
  */
 #pragma once

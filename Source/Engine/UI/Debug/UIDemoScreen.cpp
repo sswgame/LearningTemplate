@@ -64,7 +64,7 @@ namespace sw
             }
 
             /**
-             * @brief 그리기 샘플 줄입니다. 둥근 상자(`RoundBox`), 자르기(`ClipBox`, 넓은 빨간 자식을 자릅니다), 9-슬라이스(`NineSlice`), 오른쪽에서 왼쪽 텍스트(`RtlSample`)를 둡니다.
+             * @brief 그리기 샘플 줄입니다. 둥근 상자(`RoundBox`), 자르기(`ClipBox`, 넓은 빨간 자식을 자릅니다), 9-슬라이스(`NineSlice`), 오른쪽에서 왼쪽 텍스트(`RTLSample`)를 둡니다.
              * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 확인하므로, 이름을 바꾸면 그 테스트도 바꿔야 한다.
              */
             static unique_ptr<BoxPanel> makeSamples()
@@ -102,7 +102,7 @@ namespace sw
                 (void)row->addChild( std::move( nineSlice ) );
 
                 unique_ptr<TextWidget> rtl = makeText( "\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D \xD7\xA2\xD7\x95\xD7\x9C\xD7\x9D", 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ); // "שלום עולם"
-                rtl->setName( hashed_string( "RtlSample" ) );
+                rtl->setName( hashed_string( "RTLSample" ) );
                 WidgetLayoutSlot rtlSlot   = rtl->getLayoutSlot();
                 rtlSlot._verticalAlignment = UIAlignment::Center;
                 rtl->setLayoutSlot( rtlSlot );

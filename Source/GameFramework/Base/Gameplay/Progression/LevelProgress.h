@@ -27,19 +27,19 @@ namespace sw
 
         /** @brief 공식을 정합니다. @p base 가 음수이거나 @p maxLevel 이 1 미만이면 오류를 남기고 false 입니다(조용히 맞추지 않습니다). */
         [[nodiscard]] bool setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel );
-        void               setTable( const vector<int64>& listXpToNext );
+        void               setTable( const vector<int64>& listXPToNext );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 표(`<Level xp>`) 또는 공식 속성을 읽습니다. 깨진 값 · 범위 밖 값이면 오류를 남기고 곡선을 바꾸지 않은 채 false 입니다. */
         [[nodiscard]] bool loadFromNode( const XMLNode& node, string_view sourceName );
 
         /** @brief @p level 에서 다음 레벨까지 필요한 경험치입니다. 최고 레벨이면 0 입니다. */
-        int64 getXpToNext( int32 level ) const;
+        int64 getXPToNext( int32 level ) const;
         /** @brief 레벨 1 에서 @p level 이 되기까지 필요한 경험치의 합입니다. */
-        int64 computeTotalXp( int32 level ) const;
+        int64 computeTotalXP( int32 level ) const;
         int32 getMaxLevel() const { return _maxLevel; }
 
     private:
-        vector<int64> _listXpToNext;
+        vector<int64> _listXPToNext;
         float32       _base;
         float32       _exponent;
         float32       _linear;
@@ -54,15 +54,15 @@ namespace sw
     {
     public:
         /** @brief 경험치를 더하고 오른 레벨 수를 반환합니다. 최고 레벨이면 경험치는 0 에 머뭅니다. */
-        int32 addXp( const ExperienceCurve& curve, int64 amount );
+        int32 addXP( const ExperienceCurve& curve, int64 amount );
         /** @brief 레벨을 정합니다. 세이브와 치트에 씁니다. 경험치는 0 이 됩니다. */
         void setLevel( const ExperienceCurve& curve, int32 level );
         /** @brief 이 레벨 안에서 찬 비율(0..1)입니다. 최고 레벨이면 1 이며, 경험치 막대에 씁니다. */
         float32 computeRatio( const ExperienceCurve& curve ) const;
 
         int32 getLevel() const { return _level; }
-        int64 getXp() const { return _xp; }
-        int64 getTotalXp() const { return _totalXp; }
+        int64 getXP() const { return _xp; }
+        int64 getTotalXP() const { return _totalXP; }
 
         /** @brief xp, 총 xp, 레벨을 씁니다. 곡선은 호출하는 쪽이 줍니다. */
         void writeState( Archive& outArchive ) const;
@@ -71,7 +71,7 @@ namespace sw
 
     private:
         int64 _xp{ 0 };      ///< 이 레벨 안에서 모은 경험치
-        int64 _totalXp{ 0 }; ///< 누적한 전체 경험치
+        int64 _totalXP{ 0 }; ///< 누적한 전체 경험치
         int32 _level{ 1 };
     };
 } // namespace sw

@@ -66,13 +66,13 @@ uint selectTexture( uint slot )
     return kInvalidIndex;
 }
 
-PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
+PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID, uint instanceId : SV_InstanceID )
 {
     PSInput output;
     input._position            = input._position;
     const uint       quadIndex = SW_ROOT( g_SwCanvasQuadBase ) + instanceId;
     const CanvasQuad quad      = g_SwCanvasQuads[quadIndex];
-    const float2     corner    = kCornerTable[vertexId % 6u];
+    const float2     corner    = kCornerTable[vertexID % 6u];
     // 모양을 셰이더가 깎는 종류(사각형 · 그림자)는 가장자리 계단 없애기 1 px · 흐림만큼 넓힌다. 텍스처 종류는 UV 가 밖으로 새지 않게 넓히지 않는다.
     float expand = 0.0f;
     if ( quad._kind == kCanvasQuadRect )

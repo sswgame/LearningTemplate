@@ -157,12 +157,12 @@ namespace sw
          */
         void onAfterGameReload( void* pLibraryModule );
         /** @brief GameFramework 와 키트 DLL 을 언로드하기 직전에 불립니다. 게임과 같은 절차를 밟습니다. */
-        void onBeforeGameplayDllReload();
+        void onBeforeGameplayDLLReload();
         /**
          * @brief 키트 DLL 이 다시 로드된 직후에 불립니다. 씬이 캐시한 TypeInfo 포인터를 새 DLL 의 것으로 바꿉니다.
          * @details 이 작업을 빠뜨리면 살아 있는 오브젝트가 언로드된 DLL 의 TypeInfo 를 가리킵니다.
          */
-        void onAfterGameplayDllReload( void* pLibraryModule );
+        void onAfterGameplayDLLReload( void* pLibraryModule );
         /**
          * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 게임 쪽 모듈(SWGame · GameFramework · 키트)이 섞여 있으면 게임을 먼저 언로드합니다.
          * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugin_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아

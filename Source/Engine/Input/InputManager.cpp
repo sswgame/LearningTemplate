@@ -99,7 +99,7 @@ namespace sw
         , _bMouseLockEngaged{ SW_FALSE }
         , _bAltHeld{ SW_FALSE }
         , _bCursorHiddenApplied{ SW_FALSE }
-        , _bOsDeviceInputBlocked{ SW_FALSE }
+        , _bOSDeviceInputBlocked{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -377,13 +377,13 @@ namespace sw
 
         // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다.
         //    패드 폴링(XInput, 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮어쓰기 때문이다.
-        const bool bOsSuppressed = isOsInputSuppressed();
+        const bool bOSSuppressed = isOSInputSuppressed();
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
             {
                 pDev->onFrameBegin( deltaSeconds );
-                if ( bOsSuppressed == false )
+                if ( bOSSuppressed == false )
                     pDev->poll( deltaSeconds );
                 pDev->onPolled();
             }
@@ -397,7 +397,7 @@ namespace sw
         _queueRawEvent.drain( _listDrainedEvent );
         // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
         // 에디터 UI 가 ImGui 키를 넘긴 이벤트(`_bEditorUI`)는 OS 입력이 아니라 에디터의 것이라 남긴다 — 시나리오가 ImGui 에 넣은 키가 같은 길로 닿는다.
-        if ( bOsSuppressed )
+        if ( bOSSuppressed )
         {
             (void)VectorUtil::removeIf( _listDrainedEvent, []( const RawInputEvent& event )
             { return event._bEditorUI == SW_FALSE; } ); // 지운 수는 쓰지 않는다
@@ -635,13 +635,13 @@ namespace sw
 
             case RawInputEventType::TextInput:
             {
-                onTextInput( rawEvent._payload._textData._arrUtf8 );
+                onTextInput( rawEvent._payload._textData._arrUTF8 );
                 break;
             }
 
             case RawInputEventType::TextComposition:
             {
-                onTextComposition( rawEvent._payload._textData._arrUtf8 );
+                onTextComposition( rawEvent._payload._textData._arrUTF8 );
                 break;
             }
 
@@ -910,7 +910,7 @@ namespace sw
     bool InputManager::isPointerOwnedByGame() const
     {
         // 배타 가상 입력 중에는 게임이 OS 포인터를 잡지 않는다(사람이 같은 기계를 쓴다). 잠금 모드(장치 상태)는 남겨 두고, 가상 입력을 떼면 `syncMouseLock` 이 다시 건다.
-        if ( isOsInputSuppressed() )
+        if ( isOSInputSuppressed() )
             return false;
         const bool bInputWindowInactive = _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game;
         if ( bInputWindowInactive )
@@ -1041,9 +1041,9 @@ namespace sw
             detachVirtualInput();
             return;
         }
-        const bool bWasExclusive = isOsInputSuppressed();
+        const bool bWasExclusive = isOSInputSuppressed();
         _pVirtualInput           = pSource;
-        _bOsDeviceInputBlocked   = SW_FALSE; // 붙이는 쪽(자동화 실행기)이 다시 켠다
+        _bOSDeviceInputBlocked   = SW_FALSE; // 붙이는 쪽(자동화 실행기)이 다시 켠다
         _virtualInputMode        = mode;
         _virtualFrameIndex       = 0;
         // 사람이 누르고 있던 입력과 큐에 남은 OS 이벤트가 첫 프레임에 새지 않게 지운다.
@@ -1068,9 +1068,9 @@ namespace sw
     {
         if ( _pVirtualInput == nullptr )
             return;
-        const bool bWasExclusive = isOsInputSuppressed();
+        const bool bWasExclusive = isOSInputSuppressed();
         _pVirtualInput           = nullptr;
-        _bOsDeviceInputBlocked   = SW_FALSE;
+        _bOSDeviceInputBlocked   = SW_FALSE;
         if ( bResetState )
             resetAllDeviceState();
         if ( bWasExclusive )
@@ -1079,18 +1079,18 @@ namespace sw
         SW_LOG_INFO( "Virtual input detached after %# frame(s)", _virtualFrameIndex );
     }
 
-    void InputManager::setOsDeviceInputBlocked( bool bBlocked )
+    void InputManager::setOSDeviceInputBlocked( bool bBlocked )
     {
         // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 넣지 못한다. 붙어 있을 때만 켠다.
-        const bool bApply = bBlocked && isOsInputSuppressed();
+        const bool bApply = bBlocked && isOSInputSuppressed();
         if ( bBlocked && bApply == false )
             SW_LOG_WARNING( "OS device input stays live: blocking needs an exclusive virtual input source" );
-        _bOsDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
+        _bOSDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
     }
 
     bool InputManager::shouldDropNativeEvent( const NativeWindowEvent& event ) const
     {
-        return _bOsDeviceInputBlocked == SW_TRUE && ( event.isMouseInput() || event.isKeyboardInput() );
+        return _bOSDeviceInputBlocked == SW_TRUE && ( event.isMouseInput() || event.isKeyboardInput() );
     }
 
     void InputManager::setGamepadVirtualSession( bool bVirtual )

@@ -34,7 +34,7 @@ namespace sw
     public:
         /**
          * @enum MaterialPSOState
-         * @brief 머티리얼 변형 PSO 하나의 준비 상태입니다(RhiAsyncUploads 2.4).
+         * @brief 머티리얼 변형 PSO 하나의 준비 상태입니다(RHIAsyncUploads 2.4).
          * @details "아직 없음" · "만드는 중" · "됐음" · "실패" 를 핸들 0 이나 항목 없음으로 흉내 내지 않고 데이터로 둔다. 드로우 경로는 `Ready` 의 핸들만 쓰고,
          *          `Building` 은 그 배치를 이번 프레임에 그리지 않으며(`RT.PSO.pendingBatches`), `Failed` 는 만들 때 오류를 한 번 남기고 그리지 않는다.
          */
@@ -108,7 +108,7 @@ namespace sw
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findEnginePSO( RenderPassType passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOS() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
         void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
@@ -162,7 +162,7 @@ namespace sw
         /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
         [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
         /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */
-        [[nodiscard]] size_t countMaterialPSOs( MaterialPSOState state ) const;
+        [[nodiscard]] size_t countMaterialPSOS( MaterialPSOState state ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 수명

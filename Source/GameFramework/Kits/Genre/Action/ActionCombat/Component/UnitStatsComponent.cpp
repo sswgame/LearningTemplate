@@ -52,7 +52,7 @@ namespace sw
     UnitStatsComponent::UnitStatsComponent()
         : _damageAppliedMulticast{}
         , _hp{ 0 }
-        , _maxHp{ 0 }
+        , _maxHP{ 0 }
         , _attack{ 0 }
         , _defense{ 0 }
         , _moveSpeed{ 0.0f }
@@ -64,10 +64,10 @@ namespace sw
     {
     }
 
-    void UnitStatsComponent::setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
+    void UnitStatsComponent::setStats( int32 hp, int32 maxHP, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime )
     {
         _hp                   = hp;
-        _maxHp                = maxHp;
+        _maxHP                = maxHP;
         _attack               = attack;
         _defense              = defense;
         _moveSpeed            = moveSpeed;
@@ -77,7 +77,7 @@ namespace sw
 
     void UnitStatsComponent::setStats( const MonsterStatsDef& monsterStats )
     {
-        setStats( monsterStats._hp, monsterStats._maxHp, monsterStats._atk, monsterStats._def, monsterStats._speed, monsterStats._invincibility );
+        setStats( monsterStats._hp, monsterStats._maxHP, monsterStats._atk, monsterStats._def, monsterStats._speed, monsterStats._invincibility );
     }
 
     void UnitStatsComponent::onBeginPlay()
@@ -164,7 +164,7 @@ namespace sw
         event._instigator  = instigator;
         event._target      = ( pOwner != nullptr ) ? pOwner->getHandle() : GameObjectHandle{};
         event._amount      = actualDamage;
-        event._remainingHp = _hp;
+        event._remainingHP = _hp;
         event._bKilled     = _bIsDead ? SW_TRUE : SW_FALSE;
         _damageAppliedMulticast.broadcast( event );
         GameEventUtil::send( event );
@@ -180,8 +180,8 @@ namespace sw
             return;
 
         _hp += amount;
-        if ( _hp > _maxHp )
-            _hp = _maxHp;
+        if ( _hp > _maxHP )
+            _hp = _maxHP;
         notifyHealthChanged( false );
     }
 
@@ -189,7 +189,7 @@ namespace sw
     {
         HealthReading reading;
         reading._health    = static_cast<float32>( _hp );
-        reading._maxHealth = static_cast<float32>( _maxHp );
+        reading._maxHealth = static_cast<float32>( _maxHP );
         reading._bDead     = _bIsDead ? SW_TRUE : SW_FALSE;
         return reading;
     }

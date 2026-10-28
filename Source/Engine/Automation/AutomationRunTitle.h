@@ -70,7 +70,7 @@ namespace sw
          */
         [[nodiscard]] static string makeReproduceCommand( const AutomationReproduceInput& input );
         /** @brief 글이 @p maxBytes 를 넘으면 UTF-8 글자 경계에서 자르고 `…` 를 붙입니다. */
-        [[nodiscard]] static string truncateUtf8( string_view text, uint32 maxBytes );
+        [[nodiscard]] static string truncateUTF8( string_view text, uint32 maxBytes );
     };
 } // namespace sw
 

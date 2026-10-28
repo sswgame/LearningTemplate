@@ -42,7 +42,7 @@ namespace sw::editor
             static void drawUsageBar( const utf8* pLabel, uint32 count, uint32 limit, float32 usage, bool bLimitReached )
             {
                 ImGui::TextUnformatted( pLabel );
-                ImGui::SameLine( 160.0f * EditorThemeUtil::getDpiScale() );
+                ImGui::SameLine( 160.0f * EditorThemeUtil::getDPIScale() );
                 utf8 arrOverlay[64]{};
                 if ( limit == 0 )
                     (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%u / -", count );
@@ -280,7 +280,7 @@ namespace sw::editor
         AudioEventBrowserUtil::makeEventFieldRows( eventDesc, attenuation, _listFieldRow );
         if ( ImGui::BeginTable( "##AudioEventFields", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) )
         {
-            ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnField" ), ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnField" ), ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnValue" ), ImGuiTableColumnFlags_WidthStretch );
             for ( const AudioEventFieldRow& row : _listFieldRow )
             {

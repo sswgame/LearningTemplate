@@ -48,7 +48,7 @@ namespace sw
             uint64 _fileID{ 0 };
             string _name;
             string _prefab;
-            string _prefabGuid;
+            string _prefabGUID;
             string _embeddedXML;
             /**
              * @brief 쿠킹된 리플렉션 바이너리 상태입니다. **비어 있지 않으면 XML 대신 이것을 씁니다.**

@@ -34,7 +34,7 @@ namespace sw
     {
         if ( _pSecurity == nullptr )
             return false;
-        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::Aes256Gcm, _arrKey );
+        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::AES256Gcm, _arrKey );
         if ( aead == nullptr )
             return false;
         uint8 arrNonce[NetSecurityConstant::kAeadNonceSize];
@@ -57,7 +57,7 @@ namespace sw
         const bool       bShapeOk    = _pSecurity != nullptr && listSealed.size() >= kHeaderSize + NetSecurityConstant::kAeadTagSize;
         if ( bShapeOk == false || listSealed[0] != kFormatVersion )
             return false;
-        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::Aes256Gcm, _arrKey );
+        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::AES256Gcm, _arrKey );
         if ( aead == nullptr )
             return false;
         const int32   cipherSize = static_cast<int32>( listSealed.size() - kHeaderSize );

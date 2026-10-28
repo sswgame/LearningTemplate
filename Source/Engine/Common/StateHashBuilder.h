@@ -47,6 +47,6 @@ namespace sw
         uint64 getHash() const { return _hash; }
 
     private:
-        uint64 _hash{ HashUtil::kFnvOffset64 };
+        uint64 _hash{ HashUtil::kFNVOffset64 };
     };
 } // namespace sw

@@ -95,9 +95,9 @@ namespace sw
         vector<WaylandOutput>     _listOutput;                   ///< 바인드한 출력과 그 배율
         vector<WaylandInputEvent> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
         uint32                    _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
-        bool                      _bIntroducedHasUtf8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지
+        bool                      _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지
         bool                      _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain
-        bool                      _bSelectionHasUtf8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다)
+        bool                      _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다)
         bool                      _bSelectionHasPlain{ false };
         uint32                    _pointerSerial{ 0 };   ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
         int32                     _configuredWidth{ 0 }; ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
@@ -124,7 +124,7 @@ namespace sw
             if ( _pIntroducedOffer != nullptr && _pIntroducedOffer != _pSelectionOffer )
                 wl_data_offer_destroy( _pIntroducedOffer );
             _pIntroducedOffer    = nullptr;
-            _bIntroducedHasUtf8  = false;
+            _bIntroducedHasUTF8  = false;
             _bIntroducedHasPlain = false;
         }
 
@@ -148,7 +148,7 @@ namespace sw
             if ( _pIntroducedOffer == _pSelectionOffer )
                 _pIntroducedOffer = nullptr;
             _pSelectionOffer    = nullptr;
-            _bSelectionHasUtf8  = false;
+            _bSelectionHasUTF8  = false;
             _bSelectionHasPlain = false;
         }
     };
@@ -201,7 +201,7 @@ namespace sw
             /** @brief `wp_fractional_scale_v1.preferred_scale` 의 분모입니다(배율 = 값 / 120). */
             static constexpr float32 kFractionalScaleDenominator = 120.0f;
             /** @brief 클립보드 글 형식입니다(우선순위 순서). */
-            static constexpr const utf8* kMimeUtf8  = "text/plain;charset=utf-8";
+            static constexpr const utf8* kMimeUTF8  = "text/plain;charset=utf-8";
             static constexpr const utf8* kMimePlain = "text/plain";
             /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
             static constexpr int32 kClipboardWaitMs = 200;
@@ -305,8 +305,8 @@ namespace sw
                 State& state = *static_cast<State*>( pData );
                 if ( pOffer != state._pIntroducedOffer )
                     return; // 낡은 제안의 형식이다 — 버려진 뒤에는 오지 않지만 순서가 뒤집힌 알림을 믿지 않는다
-                if ( std::strcmp( pMime, kMimeUtf8 ) == 0 )
-                    state._bIntroducedHasUtf8 = true;
+                if ( std::strcmp( pMime, kMimeUTF8 ) == 0 )
+                    state._bIntroducedHasUTF8 = true;
                 else if ( std::strcmp( pMime, kMimePlain ) == 0 )
                     state._bIntroducedHasPlain = true;
             }
@@ -376,7 +376,7 @@ namespace sw
                 if ( pOffer == nullptr )
                     return; // 선택이 비었다
                 state._pSelectionOffer    = pOffer;
-                state._bSelectionHasUtf8  = state._bIntroducedHasUtf8;
+                state._bSelectionHasUTF8  = state._bIntroducedHasUTF8;
                 state._bSelectionHasPlain = state._bIntroducedHasPlain;
             }
 
@@ -390,7 +390,7 @@ namespace sw
             static void onDataSourceSend( void* pData, wl_data_source* pSource, const utf8* pMime, int32 fd )
             {
                 State&     state      = *static_cast<State*>( pData );
-                const bool bKnownMime = std::strcmp( pMime, kMimeUtf8 ) == 0 || std::strcmp( pMime, kMimePlain ) == 0;
+                const bool bKnownMime = std::strcmp( pMime, kMimeUTF8 ) == 0 || std::strcmp( pMime, kMimePlain ) == 0;
                 if ( pSource != state._pDataSource || bKnownMime == false )
                 {
                     close( fd );
@@ -1286,7 +1286,7 @@ namespace sw
             outText = state._clipboardText; // 우리가 주인이다 — 컴포지터를 거치지 않는다
             return true;
         }
-        const utf8* pMime = state._bSelectionHasUtf8 ? Internal::kMimeUtf8 : ( state._bSelectionHasPlain ? Internal::kMimePlain : nullptr );
+        const utf8* pMime = state._bSelectionHasUTF8 ? Internal::kMimeUTF8 : ( state._bSelectionHasPlain ? Internal::kMimePlain : nullptr );
         if ( state._pSelectionOffer == nullptr || pMime == nullptr )
             return false; // 선택이 없거나 글 형식이 없다(이미지 등)
 
@@ -1338,7 +1338,7 @@ namespace sw
             return false;
         wl_data_source* const pSource = wl_data_device_manager_create_data_source( state._pDataDeviceManager );
         wl_data_source_add_listener( pSource, &Internal::s_dataSourceListener, &state );
-        wl_data_source_offer( pSource, Internal::kMimeUtf8 );
+        wl_data_source_offer( pSource, Internal::kMimeUTF8 );
         wl_data_source_offer( pSource, Internal::kMimePlain );
         // 이전 원천은 컴포지터가 `cancelled` 로 알려 콜백이 지운다(현재 원천이 아니라 글을 건드리지 않는다).
         state._pDataSource = pSource;

@@ -150,7 +150,7 @@ namespace sw
         virtual float32 getContentScale() const { return 1.0f; }
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
-        static constexpr float32 kReferenceDpi = 96.0f;
+        static constexpr float32 kReferenceDPI = 96.0f;
 
         // ---- 창이 스스로 하는 포인터 동작(리눅스 입력 관리자가 읽는다) ----
         // 입력 관리자는 창 종류가 아니라 이 질의로 가른다. 커서 모양 · 숨기기는 두 창 모두 스스로 한다(커서는 창의 Display 리소스라 창이 소유하고 창과 함께 내린다).

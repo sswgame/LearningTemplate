@@ -52,7 +52,7 @@ namespace sw
         int32           _statusTurns{ 0 }; ///< 수면의 남은 턴, 맹독의 n
         MonsterStatus   _status{ MonsterStatus::None };
 
-        int32 getMaxHp() const { return _arrStat[static_cast<size_t>( MonsterStat::Hp )]; }
+        int32 getMaxHP() const { return _arrStat[static_cast<size_t>( MonsterStat::HP )]; }
         int32 getStat( MonsterStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
         bool  isFainted() const { return _hp <= 0; }
         int32 countMoves() const;

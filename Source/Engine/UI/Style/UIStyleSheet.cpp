@@ -361,21 +361,21 @@ namespace sw
         const XMLNode          root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName ) == false )
         {
-            outError = Internal::makeError( path, 1, "the root element must be <UiStyleSheet>" );
+            outError = Internal::makeError( path, 1, "the root element must be <UIStyleSheet>" );
             return false;
         }
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
-                return Internal::fail( context, root, string( "UiStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
+                return Internal::fail( context, root, string( "UIStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIStyleSheetAsset::kVersion ) )
                 return Internal::fail( context, root, string( "_schemaVersion '" ) + attribute.getValue() + "' is not supported (expected " + to_string( UIStyleSheetAsset::kVersion ) + ")" );
             bVersioned = true;
         }
         if ( bVersioned == false )
-            return Internal::fail( context, root, "UiStyleSheet needs _schemaVersion" );
+            return Internal::fail( context, root, "UIStyleSheet needs _schemaVersion" );
 
         // 변수는 시트 안 어디에 적든 쓸 수 있으므로 먼저 모은다.
         for ( XMLNode child = root.findChild( Internal::kVariableElement ); child.isValid(); child = child.findNextSibling( Internal::kVariableElement ) )
@@ -392,7 +392,7 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kVariableElement ) )
                 continue;
             if ( StringUtil::equals( pName, Internal::kRuleElement ) == false )
-                return Internal::fail( context, child, string( "UiStyleSheet has unknown element <" ) + pName + ">" );
+                return Internal::fail( context, child, string( "UIStyleSheet has unknown element <" ) + pName + ">" );
             if ( Internal::parseRule( context, child ) == false )
                 return false;
         }

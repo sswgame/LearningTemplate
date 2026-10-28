@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/NativeWindowEvent.h"

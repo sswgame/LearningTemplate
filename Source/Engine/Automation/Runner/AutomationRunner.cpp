@@ -216,7 +216,7 @@ namespace sw
             if ( bBlockWhileWaiting )
             {
                 input.attachVirtualInput( &_inputScript, VirtualInputMode::Exclusive );
-                input.setOsDeviceInputBlocked( true );
+                input.setOSDeviceInputBlocked( true );
             }
             // 전경이 필요한 시나리오는 첫 프레임부터 창을 전경으로 가져오고, 얻을 때까지 시작하지 않는다 — 게임이 시작하며 켜는 상태(1인칭 커서 잠금)가
             // 전경에서 켜지게. 시작 뒤의 단계로는 늦다(게임의 첫 틱이 먼저 돈다). 시작 시한까지 얻지 못하면 이 세션에서 볼 수 없는 시나리오라 건너뛴다.
@@ -246,7 +246,7 @@ namespace sw
             _bStarted = SW_TRUE;
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
-            input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
+            input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();
@@ -446,7 +446,7 @@ namespace sw
             text += ')';
         }
         // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
-        CrashHandler::setContextValue( "Scenario", AutomationRunTitleUtil::truncateUtf8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        CrashHandler::setContextValue( "Scenario", AutomationRunTitleUtil::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
         publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
     }
 

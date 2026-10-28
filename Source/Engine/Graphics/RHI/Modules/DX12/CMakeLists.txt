@@ -3,4 +3,4 @@
 # @brief RHI_DX12 MODULE — Direct3D 12 백엔드
 # ==============================================================================
 
-sw_addRhiBackendModule(DirectX12)
+sw_addRHIBackendModule(DirectX12)

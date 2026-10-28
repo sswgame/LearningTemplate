@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 

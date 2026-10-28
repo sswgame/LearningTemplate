@@ -22,7 +22,7 @@ namespace sw
     struct CanvasQuad;
     struct CanvasTextureRef;
 
-    class GpuAssertMonitor;
+    class GPUAssertMonitor;
     class IRHICommandList;
     class IRHIDevice;
     class IRHIResourceFactory;
@@ -79,14 +79,14 @@ namespace sw
         /**
          * @brief 화면 마커 투영 컴퓨트(`canvasmarker.hlsl`)를 기록합니다. 마커 입력(`CanvasFrameData::_listMarker`)이 있는 프레임에만 돌고, 렌더 패스 밖(컴퓨트 프리패스)에서 부릅니다 —
          *        `prepareFrame` 이 사각형 버퍼에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
-         * @param instanceBuffer GPUScene 인스턴스 버퍼와 그 SRV 입니다(`GPUScene::getInstanceBuffer` · `getInstanceSrv`). 인스턴스 칸을 읽는 마커가 있으면 읽기 상태로 전환해 바인딩한다. 없으면 @p placeholderSrv 를 건다(읽지 않는다).
+         * @param instanceBuffer GPUScene 인스턴스 버퍼와 그 SRV 입니다(`GPUScene::getInstanceBuffer` · `getInstanceSRV`). 인스턴스 칸을 읽는 마커가 있으면 읽기 상태로 전환해 바인딩한다. 없으면 @p placeholderSRV 를 건다(읽지 않는다).
          * @param pso `RenderPassType::CanvasMarker` 의 엔진 PSO 입니다. 0 이면(셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드) 오류를 한 번 남기고 아무것도 하지 않습니다 —
          *        그 마커는 CPU 가 앵커 배율을 0 으로 올렸으므로 그려지지 않는다(CPU 투영으로 대신하지 않는다).
          * @param bShowInstanceSlots 보기 모드 `MarkerSlots` 입니다 — 참이면 컴퓨트가 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 써 캔버스가 마커 위젯을 칠한다.
          * @param inoutAssert 셰이더 assert 링입니다. assert 변형 PSO 일 때 디스패치 앞에서 u4 에 겁니다(꺼져 있으면 아무것도 하지 않는다).
          */
-        void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv,
-                                     GpuAssertMonitor& inoutAssert, bool bShowInstanceSlots );
+        void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+                                     GPUAssertMonitor& inoutAssert, bool bShowInstanceSlots );
         /** @brief 마지막 `drawTargets` 가 다시 그린 렌더 텍스처 대상 수입니다(테스트와 진단용). */
         uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
@@ -173,7 +173,7 @@ namespace sw
         /** @brief 경로로 대상 상태를 찾습니다. 이번 목록과 순서가 같지 않으므로 경로로 찾습니다. 없으면 nullptr 입니다. */
         TargetState* findTarget( const hashed_string& path );
         /** @brief 일괄 텍스처 하나의 SRV 입니다. 없으면 kInvalidDescriptorIndex 입니다. */
-        RHIDescriptorIndex findTextureSrv( const CanvasTextureRef& texture ) const;
+        RHIDescriptorIndex findTextureSRV( const CanvasTextureRef& texture ) const;
         /** @brief 목록의 경로 이미지를 `TextureCache` 에서 빌립니다(처음 보는 경로만). 엔진 서비스가 없으면(테스트 하네스 밖) 아무것도 하지 않습니다. */
         void acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list );
 

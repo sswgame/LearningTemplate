@@ -235,7 +235,7 @@ namespace sw::editor
         const float32 buttonWidth = ImGui::GetFrameHeight();
         const float32 spacing     = ImGui::GetStyle().ItemSpacing.x;
         // drawSearchField 는 width 뒤에 지우기 단추(22 * dpi)를 더 그린다 — 둘을 빼야 보기 옵션 단추가 패널 오른쪽 밖으로 밀려나지 않는다.
-        const float32 clearWidth = 22.0f * EditorThemeUtil::getDpiScale();
+        const float32 clearWidth = 22.0f * EditorThemeUtil::getDPIScale();
         const float32 fieldWidth = MathUtil::max( ImGui::GetContentRegionAvail().x - buttonWidth - clearWidth - spacing * 2.0f, 1.0f );
         EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), fieldWidth );
         if ( pFieldTooltip != nullptr )
@@ -418,7 +418,7 @@ namespace sw::editor
 
             if ( ImGui::BeginTable( category.c_str(), 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg ) )
             {
-                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 150.0f * EditorThemeUtil::getDpiScale() );
+                ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 150.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
 
                 for ( const PropertyInfo* prop : props )

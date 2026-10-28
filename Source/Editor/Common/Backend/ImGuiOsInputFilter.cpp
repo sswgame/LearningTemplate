@@ -7,7 +7,7 @@
 
 namespace sw::editor
 {
-    ScopedImGuiOsInputFilter::ScopedImGuiOsInputFilter( bool bActive )
+    ScopedImGuiOSInputFilter::ScopedImGuiOSInputFilter( bool bActive )
         : _firstIndex{ -1 }
     {
         const ImGuiContext* pContext = ImGui::GetCurrentContext();
@@ -15,7 +15,7 @@ namespace sw::editor
             _firstIndex = pContext->InputEventsQueue.Size;
     }
 
-    ScopedImGuiOsInputFilter::~ScopedImGuiOsInputFilter()
+    ScopedImGuiOSInputFilter::~ScopedImGuiOSInputFilter()
     {
         ImGuiContext* pContext = ImGui::GetCurrentContext();
         if ( _firstIndex < 0 || pContext == nullptr )

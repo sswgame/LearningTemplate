@@ -48,7 +48,7 @@ namespace sw
             GPUSpriteInstanceData data{};
             data._uvStart = makeUnorm16x2( uvRect._x, uvRect._y );
             data._uvEnd   = makeUnorm16x2( uvRect._x + uvRect._z, uvRect._y + uvRect._w );
-            data._tint    = makeRgba8( tint );
+            data._tint    = makeRGBA8( tint );
             return data;
         }
 
@@ -61,7 +61,7 @@ namespace sw
         }
 
         /** @brief 색을 [0, 1] 로 제한해 RGBA8 로 담습니다(r 이 하위 바이트). */
-        static uint32 makeRgba8( const float4& color )
+        static uint32 makeRGBA8( const float4& color )
         {
             const uint32 red   = static_cast<uint32>( MathUtil::saturate( color._x ) * 255.0f + 0.5f );
             const uint32 green = static_cast<uint32>( MathUtil::saturate( color._y ) * 255.0f + 0.5f );

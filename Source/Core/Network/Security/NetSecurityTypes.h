@@ -18,7 +18,7 @@ namespace sw
         static constexpr int32 kAeadKeySize   = 32; ///< AES-256-GCM과 ChaCha20-Poly1305 모두 32.
         static constexpr int32 kAeadNonceSize = 12;
         static constexpr int32 kAeadTagSize   = 16;
-        static constexpr int32 kSha256Size    = 32;
+        static constexpr int32 kSHA256Size    = 32;
         static constexpr int32 kMaxTokenSize  = 64; ///< UDP 연결 때 제시하는 세션 토큰의 상한.
     };
 } // namespace sw
@@ -28,7 +28,7 @@ namespace sw
     /** @brief AEAD 알고리즘입니다. 양쪽이 같아야 하며 협상하지 않습니다. */
     enum class NetAeadAlgorithm : uint8
     {
-        Aes256Gcm = 0,   ///< AES-NI 가 있는 x64 의 기본값.
+        AES256Gcm = 0,   ///< AES-NI 가 있는 x64 의 기본값.
         ChaCha20Poly1305 ///< AES 가속이 없는 장치.
     };
 
@@ -74,7 +74,7 @@ namespace sw
     /** @brief 서명 알고리즘입니다(외부 로그인 ID 토큰, 클라이언트 비밀 JWT). JWS 이름은 RS256과 ES256입니다. */
     enum class NetSignatureAlgorithm : uint8
     {
-        RsaPkcs1Sha256 = 0, ///< RS256. RSASSA-PKCS1-v1_5와 SHA-256.
+        RsaPkcs1SHA256 = 0, ///< RS256. RSASSA-PKCS1-v1_5와 SHA-256.
         EcdsaP256Sha256     ///< ES256. P-256과 SHA-256이며, 서명은 r과 s를 이은 값이다(각 32바이트, JWS 형식이고 DER 이 아니다).
     };
 
@@ -85,7 +85,7 @@ namespace sw
         vector<uint8>         _exponent{}; ///< RSA e
         vector<uint8>         _x{};        ///< EC P-256 x(32바이트).
         vector<uint8>         _y{};        ///< EC P-256 y(32바이트).
-        NetSignatureAlgorithm _algorithm{ NetSignatureAlgorithm::RsaPkcs1Sha256 };
+        NetSignatureAlgorithm _algorithm{ NetSignatureAlgorithm::RsaPkcs1SHA256 };
     };
 } // namespace sw
 
@@ -94,7 +94,7 @@ namespace sw
     /** @brief 로그인 키트가 발급한 세션 비밀입니다. UDP 키 유도의 솔트가 되어 세션 키를 토큰에 묶습니다. */
     struct NetSessionSecret
     {
-        uint8 _arrByte[NetSecurityConstant::kSha256Size]{};
+        uint8 _arrByte[NetSecurityConstant::kSHA256Size]{};
     };
 } // namespace sw
 
@@ -128,7 +128,7 @@ namespace sw
         string     _privateKeyPassphrase{};       ///< 서버 전용. 키가 암호로 잠겼을 때만 쓴다(비우면 암호 없는 키). 다 쓰면 부르는 쪽이 비운다.
         string     _trustPem{};                   ///< 클라이언트 전용. 이 인증서로 서버 체인을 검증한다(CA 번들 또는 서버 인증서 자체).
         string     _serverName{};                 ///< 클라이언트 전용. SNI 와 이름 검사에 쓴다(비우면 이름 검사 없이 체인만 검증한다).
-        string     _pinnedCertificateSha256Hex{}; ///< 클라이언트 전용. 있으면 서버 끝 인증서의 SHA-256(소문자 16진 64자)이 같아야 한다.
+        string     _pinnedCertificateSHA256Hex{}; ///< 클라이언트 전용. 있으면 서버 끝 인증서의 SHA-256(소문자 16진 64자)이 같아야 한다.
         string     _alpnProtocol{};               ///< ALPN 프로토콜 이름 하나(예: "h2"). 비우면 협상하지 않는다. 서버는 이 이름을 제시한 클라이언트만 고르고, 클라이언트는 이 이름만 제시한다.
         TLSRole    _role{ TLSRole::Server };
         TLSVersion _minVersion{ TLSVersion::TLS13 }; ///< 1.3 만 쓴다. 낮추는 것은 다운그레이드 테스트 용도뿐이다.

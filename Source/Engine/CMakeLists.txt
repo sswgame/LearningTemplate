@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 종류 · 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(Modules/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RhiBackends.cmake 가 백엔드 폴더로 안다).
+# RHI MODULE 엔트리(Modules/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RHIBackends.cmake 가 백엔드 폴더로 안다).
 # Dev 는 RHI_* MODULE 이, Shipping 은 아래 5) 가 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
@@ -32,8 +32,8 @@ foreach(exPattern IN LISTS coreExclude)
 endforeach()
 
 # RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 5) 가 고른 하나를 가져간다.
-sw_getAllRhiBackendSources(listRhiBackendSource)
-list(REMOVE_ITEM ENGINE_SOURCES ${listRhiBackendSource})
+sw_getAllRHIBackendSources(listRHIBackendSource)
+list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 
 # 셰이더 라이브 리로드는 개발 도구다. Shipping 은 쿠킹된 셰이더만 읽으므로 감시할 것이 없다.
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
@@ -75,16 +75,16 @@ sw_findEngineCompressionLibraries(listEngineCompressionLib)
 # ------------------------------------------------------------------------------
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
-# 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 박는다.
-sw_defineEngineAbiStamp()
-add_dependencies(Engine SwEngineAbiStamp)
+# 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
+sw_defineEngineABIStamp()
+add_dependencies(Engine SwEngineABIStamp)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineAbiStamp.cpp" PROPERTIES
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.cpp" PROPERTIES
 	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
 )
 
 # `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
-sw_addPchEntryDirectory(Engine PUBLIC engine "Engine/pch.h")
+sw_addPCHEntryDirectory(Engine PUBLIC engine "Engine/pch.h")
 # 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
 target_link_libraries(Engine
@@ -96,7 +96,7 @@ target_link_libraries(Engine
 )
 
 target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
-sw_configurePch(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+sw_configurePCH(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
@@ -112,7 +112,7 @@ foreach(coreObjects IN LISTS listCoreObjects)
 	add_dependencies(Engine ${coreObjects})
 endforeach()
 
-sw_configureDllExports(Engine ${coreLibType} ENGINE)
+sw_configureDLLExports(Engine ${coreLibType} ENGINE)
 sw_keepImportLibraryIfUnchanged(Engine)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
@@ -185,28 +185,28 @@ endif()
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
 	message(STATUS "[Engine] Dedicated server: no RHI backend linked")
-	sw_declareUnbuiltSources(${listRhiBackendSource})
+	sw_declareUnbuiltSources(${listRHIBackendSource})
 elseif(SW_SHIPPING_BUILD)
-	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRhiBackend).
+	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRHIBackend).
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
-	sw_resolveShippingRhiBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
+	sw_resolveShippingRHIBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
 	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
 	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표).
-	sw_readOptionalJsonValue(swEngineConfigRhi "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
-	if(DEFINED swEngineConfigRhi AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
-		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${swShippingBackend}'")
+	sw_readOptionalJSONValue(swEngineConfigRHI "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
+	if(DEFINED swEngineConfigRHI AND NOT swEngineConfigRHI STREQUAL swShippingBackend)
+		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRHI}' but Shipping links only '${swShippingBackend}'")
 	endif()
 
 	message(STATUS "[Engine] Shipping monolithic RHI backend: ${swShippingBackend}")
-	sw_getRhiBackendSources(${swShippingBackend} listShippingRhiSource)
-	target_sources(Engine PRIVATE ${listShippingRhiSource})
+	sw_getRHIBackendSources(${swShippingBackend} listShippingRHISource)
+	target_sources(Engine PRIVATE ${listShippingRHISource})
 	target_link_libraries(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_GRAPHICS_LIBS})
 	target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
 
 	# 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다.
-	set(listUnbuiltRhiSource ${listRhiBackendSource})
-	list(REMOVE_ITEM listUnbuiltRhiSource ${listShippingRhiSource})
-	sw_declareUnbuiltSources(${listUnbuiltRhiSource})
+	set(listUnbuiltRHISource ${listRHIBackendSource})
+	list(REMOVE_ITEM listUnbuiltRHISource ${listShippingRHISource})
+	sw_declareUnbuiltSources(${listUnbuiltRHISource})
 endif()
 
 # ------------------------------------------------------------------------------

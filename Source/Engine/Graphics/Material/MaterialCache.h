@@ -66,7 +66,7 @@ namespace sw
         void requestInitialize( string_view relativePath );
         /**
          * @brief 표시된 머티리얼 중 아직 GPU 에 없는 것을 @p pDevice 로 최대 @p maxCount 개 초기화합니다(파일을 읽고 버퍼를 만듭니다). 디바이스가 없으면 표시를 그대로 둡니다.
-         * @details 프레임 경로의 호출자는 렌더 스레드의 셋업 구간(`FrameRenderer`, 기록 전)이고 `kMaxInitsPerFrame` 로 상한을 둡니다(`GpuState` 가 `Ready` 가 된
+         * @details 프레임 경로의 호출자는 렌더 스레드의 셋업 구간(`FrameRenderer`, 기록 전)이고 `kMaxInitsPerFrame` 로 상한을 둡니다(`GPUState` 가 `Ready` 가 된
          *          머티리얼부터 패킷 빌더가 그립니다 — RHI 비동기 업로드 U10). 상한을 넘은 키는 줄에 남아 다음 프레임에 이어집니다. 다른 스레드가 초기화하는 중이면 그 프레임은 넘깁니다.
          *          스튜디오 · 베이커처럼 프레임 없이 한 번에 올리는 호출처는 기본값(전부)을 씁니다.
          */
@@ -96,7 +96,7 @@ namespace sw
          */
         shared_ptr<const void> pinAsset( string_view relativePath ) override;
         /**
-         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FrameRenderer::warmPinnedMaterialPSOs`).
+         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FrameRenderer::warmPinnedMaterialPSOS`).
          * @details 고정(`pinAsset`)이 줄에 넣는다. 아직 초기화하지 않은 것(셰이더 경로 · define 을 모른다)은 줄에 남고, 놓여 캐시에서 빠진 것은 버린다.
          *          씬에 이미 든 머티리얼은 렌더러가 배치마다 PSO 를 만들므로, 이 줄은 아직 씬에 없는(다음 레벨 · 컷에 나올) 머티리얼의 PSO 생성 히치를 미리 치른다.
          */

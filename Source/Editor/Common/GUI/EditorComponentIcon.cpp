@@ -178,7 +178,7 @@ namespace sw::editor
         constexpr uint32 kMaxBasicPlaneCodepoint = 0xFFFF; // 아이콘 글리프 범위(`kArrGlyphRange`)는 기본 다국어 평면이다
         size_t           offset                  = 0;
         uint32           codepoint               = 0;
-        if ( StringUtil::tryDecodeUtf8( string_view( pGlyph ), offset, codepoint ) == false || codepoint > kMaxBasicPlaneCodepoint )
+        if ( StringUtil::tryDecodeUTF8( string_view( pGlyph ), offset, codepoint ) == false || codepoint > kMaxBasicPlaneCodepoint )
             return 0;
         return codepoint;
     }

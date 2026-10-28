@@ -18,7 +18,7 @@
     #include "Engine/Window/Linux/Wayland/WaylandDevConsoleWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
     #include "Core/Common/X11Headers.h"
 
     #include <X11/Xft/Xft.h>

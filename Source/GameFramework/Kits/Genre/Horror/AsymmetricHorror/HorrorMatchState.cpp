@@ -22,7 +22,7 @@ namespace sw
         outSnapshot._tick              = _tick;
         outSnapshot._phase             = _match.getPhase();
         outSnapshot._killerPosition    = _killer._position;
-        outSnapshot._killerStun        = _killer._stunRemaining.getRemaining();
+        outSnapshot._killerSTUN        = _killer._stunRemaining.getRemaining();
         outSnapshot._killerCooldown    = _killer._attackCooldown.getRemaining();
         outSnapshot._killerCarrying    = _killer._carrying;
         outSnapshot._collapseRemaining = _collapseRemaining.getRemaining();

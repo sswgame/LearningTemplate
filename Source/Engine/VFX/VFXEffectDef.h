@@ -1,0 +1,347 @@
+/**
+ * @file VFXEffectDef.h
+ * @brief 파티클 효과의 데이터(`*.vfx.xml`)입니다. 효과 하나가 방출기 목록을 갖고, 방출기 하나가 입자 한 종류의 방출 · 수명 · 모양을 적습니다.
+ * @details 시뮬레이션이 CPU(`VFXCPUSimulation`)든 GPU든 같은 형식을 읽습니다(렌더 입력 형식 `GPUParticle` 도 하나).
+ *          유니티 ParticleSystem 의 모듈, 언리얼 Niagara 의 방출기에 해당하는 고정 모듈 묶음입니다. 다형 목록과 그래프는 두지 않습니다.
+ *
+ *          파일은 리플렉션 구조체로 읽는다(`ReflectedXMLFile` — 모르는 이름 · 읽지 못한 값 · 범위 밖 값은 오류). 필수 칸의 기본값은 **틀린 값**
+ *          (비어 있거나 0)이라 파일에서 빠지면 `validate` 가 로드를 실패시킨다. 코드에 내장 효과나 기본 텍스처가 없다.
+ *          좌표는 방출기 로컬이고, 커브의 시간은 입자 수명의 비율(0..1)이다.
+ */
+#pragma once
+#include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
+
+#include "Engine/Asset/AssetID.h"
+#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Curve/FloatCurve.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 입자를 그릴 때 색을 섞는 방식입니다. 방출기 하나가 투명 정렬 후보 하나이므로 방출기마다 하나입니다. */
+    ENUM()
+    enum class VFXBlendMode : uint8
+    {
+        Alpha,    ///< SrcAlpha / InvSrcAlpha
+        Additive, ///< SrcAlpha / One — 불꽃 · 빛줄기
+    };
+
+    /** @brief 방출기의 입자를 그리는 모양입니다(Niagara 의 렌더러 · 유니티 ParticleSystemRenderer 의 Render Mode). */
+    ENUM()
+    enum class VFXRenderMode : uint8
+    {
+        Billboard, ///< 카메라를 보는 사각형 하나(`particle.hlsl`)
+        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠 — 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로). 텍스처 u 는 길이(수명 비율), v 는 폭이다(언리얼 · 유니티 띠와 같다) — 세로로 그린 줄 텍스처(Kenney `trace_*`)는 한 열만 읽혀 보이지 않는다
+        Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
+    };
+
+    /**
+     * @brief 방출기 하나를 시뮬레이션하는 곳입니다(언리얼 Niagara 방출기의 Sim Target).
+     * @details 데이터가 정한다 — 모듈마다 돌 수 있는 곳(`VFXSimulationTargetSet`)을 선언하고, 방출기의 대상은 그 교집합이다
+     *          (`VFXEmitterDef::computeSupportedTargets`). 둘 다 되는 방출기만 Shipping 에서 GPU, 개발 빌드에서 `gv_vfxSimulation` 이 고른다(`VFXComponent`).
+     *          두 곳은 같은 형식(`GPUParticle`)을 낸다. 방출기 데이터의 칸이 아니다 — 고를 수 있는 것은 모듈이 정하므로 칸을 두면 틀린 조합만 하나 더 생긴다.
+     */
+    ENUM()
+    enum class VFXSimulationTarget : uint8
+    {
+        CPU, ///< `VFXCPUSimulation` — 게임 스레드가 입자 배열을 낸다
+        GPU, ///< vfxsimulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VFXGPUSimulation`)
+    };
+
+    /** @brief 입자가 무엇에 닿았을 때 반응하는지입니다. */
+    ENUM()
+    enum class VFXCollisionMode : uint8
+    {
+        None,   ///< 닿음을 보지 않는다
+        Bounce, ///< 닿은 면에서 튄다(`_restitution` · `_friction`)
+        Kill,   ///< 닿으면 사라진다
+    };
+
+    /**
+     * @brief 충돌을 무엇으로 찾는지입니다. 방법이 시뮬레이션 대상을 정한다(언리얼 Niagara 의 CPU 레이 트레이스 · GPU 깊이 버퍼 충돌).
+     */
+    ENUM()
+    enum class VFXCollisionMethod : uint8
+    {
+        PhysicsRaycast, ///< 물리 씬(3D)에 한 단계의 선분을 쏜다 — CPU 전용(게임 스레드의 물리 씬)
+        SceneDepth,     ///< 주 시점의 지난 프레임 깊이와 비교한다 — GPU 전용. 화면 밖 · 가려진 면은 못 본다(`VFXCollisionDef` 설명)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct VFXSimulationTargetSet
+     * @brief 시뮬레이션 대상의 집합입니다. 모듈마다 자기가 돌 수 있는 곳을 이 값으로 선언하고, 방출기는 교집합을 씁니다.
+     */
+    struct VFXSimulationTargetSet
+    {
+        uint8 _bits{ 0 };
+
+        /** @brief CPU 와 GPU 둘 다입니다. */
+        static constexpr VFXSimulationTargetSet makeAll() { return VFXSimulationTargetSet{ static_cast<uint8>( makeBit( VFXSimulationTarget::CPU ) | makeBit( VFXSimulationTarget::GPU ) ) }; }
+        /** @brief @p target 하나뿐입니다. */
+        static constexpr VFXSimulationTargetSet makeOnly( VFXSimulationTarget target ) { return VFXSimulationTargetSet{ makeBit( target ) }; }
+
+        /** @brief @p target 이 들어 있으면 true 입니다. */
+        constexpr bool has( VFXSimulationTarget target ) const { return ( _bits & makeBit( target ) ) != 0; }
+        /** @brief 비었으면(어느 곳에서도 돌 수 없으면) true 입니다. */
+        constexpr bool isEmpty() const { return _bits == 0; }
+        /** @brief 두 집합의 교집합입니다. */
+        constexpr VFXSimulationTargetSet intersect( VFXSimulationTargetSet other ) const { return VFXSimulationTargetSet{ static_cast<uint8>( _bits & other._bits ) }; }
+
+    private:
+        static constexpr uint8 makeBit( VFXSimulationTarget target ) { return static_cast<uint8>( 1u << static_cast<uint32>( target ) ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 메시 입자(`VFXRenderMode::Mesh`)의 메시와 머티리얼입니다. */
+    REFLECT()
+    struct SW_API VFXMeshRenderDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset path or built-in shape id of each particle (required for Mesh render mode)" )
+        string _meshID{};
+        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of the particle meshes; empty uses the scene default" )
+        string _materialPath{};
+
+        /**
+         * @brief 메시 입자는 CPU · GPU 둘 다 돈다. GPU 는 배치의 인스턴스 구간에 행렬을 쓰고 컬링이 간접 인자를 만든다(`VFXGPUSimulation`).
+         * @details 머티리얼의 블렌드는 머티리얼을 읽어야 알 수 있어 여기서 가르지 않는다 — GPU 메시는 불투명 머티리얼만 받고, 투명이면
+         *          컴포넌트가 오류로 그리지 않는다(`VFXComponent` 의 `isGPUMeshBlendSupported` — 투명 정렬은 CPU 행렬로 한다).
+         */
+        VFXSimulationTargetSet getSupportedTargets() const { return VFXSimulationTargetSet::makeAll(); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 입자 충돌입니다. 방법(`_method`)이 시뮬레이션 대상을 정합니다.
+     * @details `PhysicsRaycast`(CPU): 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응한다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
+     *          좌표는 방출기 로컬이고 월드 변환은 부르는 쪽이 한다(`IVFXCollisionScene`).
+     *          `SceneDepth`(GPU): 입자를 주 시점의 **지난 프레임** 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
+     *          들어가면 닿은 것으로 본다. 법선은 깊이의 이웃 텍셀 기울기다(언리얼 Niagara GPU 깊이 버퍼 충돌). 한계: 화면 밖과 가려진 면(다른 물체 뒤)은
+     *          보지 못하고, 깊이 두께보다 빨리 지나가면 뚫고, 한 프레임 늦은 깊이라 빠르게 움직이는 면은 어긋난다. 추가 뷰의 깊이는 쓰지 않는다.
+     *          두 방법 모두 입자 크기는 보지 않는다(점 충돌).
+     */
+    REFLECT()
+    struct SW_API VFXCollisionDef
+    {
+        REFLECT_BODY();
+
+        /** @brief 튄 입자를 닿은 면에서 띄우는 거리(미터)입니다. 다음 단계가 같은 면에서 시작해 다시 닿지 않게 한다. CPU · GPU 충돌이 같은 값을 쓴다(GPU 는 매개변수로 받는다). */
+        static constexpr float32 kSurfaceSkin = 0.001f;
+
+        PROPERTY( Tooltip = "What a particle does when it hits something" )
+        VFXCollisionMode _mode{ VFXCollisionMode::None };
+        PROPERTY( Tooltip = "How hits are found: PhysicsRaycast (CPU simulation) or SceneDepth (GPU simulation, last frame's main view depth)" )
+        VFXCollisionMethod _method{ VFXCollisionMethod::PhysicsRaycast };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "SceneDepth: how far behind the depth surface still counts as a hit (required above 0 for SceneDepth)" )
+        float32 _depthThickness{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the normal speed kept after a bounce (0 = stops on the surface)" )
+        float32 _restitution{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Share of the tangent speed lost on a bounce" )
+        float32 _friction{ 0.0f };
+        PROPERTY( Tooltip = "Physics layers the particles collide with (bit per layer, PhysicsRaycast only)" )
+        uint32 _layerMask{ 0xFFFFFFFFu };
+
+        /** @brief 충돌이 꺼져 있으면 둘 다, 켜져 있으면 방법이 정한 곳 하나입니다. */
+        VFXSimulationTargetSet getSupportedTargets() const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 파티클 라이트입니다. 살아 있는 입자 중 앞의 `_maxLights` 개가 점광 하나씩을 냅니다(언리얼 Niagara Light Renderer).
+     * @details 빛 색은 입자 색(RGB), 세기는 `_intensity` × 입자 알파, 반경은 `_radius` × 방출기 배율이다. `_maxLights` 가 0 이면 빛을 내지 않는다.
+     *          CPU 방출기의 빛은 게임 스레드가 씬 라이트 목록에 붙이고(`collectSceneLights`), GPU 방출기의 빛은 시뮬레이션 컴퓨트가 라이트 버퍼의 GPU 구간에
+     *          쓴다(`GPULightBuffer` 의 구간, vfxsimulate.hlsl). 둘 다 점광이고 그림자가 없으며 라이트 그리드(`LightGrid`)에 들어간다.
+     *          GPU 방출기의 빛은 **GPU 라이트 그리드 생산자**(`gv_lightCulling=GPU`, Shipping 은 고정)에서만 그려진다 — 다른 생산자에서는 오류를 한 번 남기고 그리지 않는다.
+     *          GPU 구간이 받는 슬롯 합에는 상한(`GPULightBuffer::kMaxGPULight`)이 있다 — 넘는 방출기는 빛이 없고 오류를 한 번 남긴다.
+     */
+    REFLECT()
+    struct SW_API VFXLightDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0, Tooltip = "Particles that emit a point light (0 = no lights)" )
+        uint32 _maxLights{ 0 };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Light radius in emitter space (required when _maxLights is above 0)" )
+        float32 _radius{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Light intensity, multiplied by the particle alpha (required when _maxLights is above 0)" )
+        float32 _intensity{ 0.0f };
+
+        /**
+         * @brief 어느 쪽에서도 돕니다 — CPU 는 씬 라이트 목록에, GPU 는 라이트 버퍼의 GPU 구간에 빛을 냅니다.
+         * @details 옛 규칙(빛을 내면 CPU 전용)은 깊이 충돌(GPU 전용)과 한 방출기에 둘 수 없었다. 이제 한 방출기에 둘 다 있으면 GPU 로 돈다.
+         */
+        VFXSimulationTargetSet getSupportedTargets() const { return VFXSimulationTargetSet::makeAll(); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 한 번에 터뜨리는 입자 묶음입니다. */
+    REFLECT()
+    struct SW_API VFXBurstDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Emitter time the burst fires at (seconds since the emitter started or looped)" )
+        float32 _time{ 0.0f };
+        PROPERTY( Min = 0, Tooltip = "Particles spawned at once" )
+        uint32 _count{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 색 네 채널의 수명 커브입니다. 입력은 입자 수명의 비율(0..1), 출력은 0..1 의 채널 값입니다. 네 커브 모두 키가 있어야 합니다. */
+    REFLECT()
+    struct SW_API VFXColorCurveDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Red over particle life ratio" )
+        FloatCurve _red{};
+        PROPERTY( Tooltip = "Green over particle life ratio" )
+        FloatCurve _green{};
+        PROPERTY( Tooltip = "Blue over particle life ratio" )
+        FloatCurve _blue{};
+        PROPERTY( Tooltip = "Alpha over particle life ratio" )
+        FloatCurve _alpha{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct VFXEmitterDef
+     * @brief 방출기 하나입니다. 생성률과 버스트로 입자를 만들고, 수명 · 초기 속도 범위 · 중력으로 움직이며, 크기와 색은 수명 커브를 따릅니다.
+     * @details 풀 크기(`_maxParticles`)는 데이터가 정합니다 — 풀은 고정 크기이고, 차면 새 입자를 만들지 않습니다(`VFXCPUSimulation`).
+     */
+    REFLECT()
+    struct SW_API VFXEmitterDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Emitter name, unique inside the effect" )
+        string _name{};
+        PROPERTY( Tooltip = "Shape each particle draws as" )
+        VFXRenderMode _renderMode{ VFXRenderMode::Billboard };
+        PROPERTY( AssetPath, AssetType = "Texture", Tooltip = "Particle texture (required for Billboard and Ribbon, must be empty for Mesh)" )
+        string _texturePath{};
+        PROPERTY( Tooltip = "How particle colour blends with the scene (Billboard and Ribbon; Mesh uses its material)" )
+        VFXBlendMode _blendMode{ VFXBlendMode::Alpha };
+        PROPERTY( Tooltip = "Mesh and material of each particle (Mesh render mode only)" )
+        VFXMeshRenderDef _mesh{};
+        PROPERTY( Tooltip = "The emitter restarts after _duration instead of stopping" )
+        bool _bLooping{ false };
+
+        PROPERTY( Min = 1, Tooltip = "Fixed pool size; no new particles are made while the pool is full (required)" )
+        uint32 _maxParticles{ 0 };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Emission length in seconds (required)" )
+        float32 _duration{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Particles per second while emitting" )
+        float32 _spawnRate{ 0.0f };
+        PROPERTY( Tooltip = "Particle bursts at fixed emitter times" )
+        vector<VFXBurstDef> _listBurst{};
+
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Shortest particle life (required)" )
+        float32 _lifetimeMin{ 0.0f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest particle life (required)" )
+        float32 _lifetimeMax{ 0.0f };
+        PROPERTY( Tooltip = "Per-axis lower bound of the initial velocity" )
+        float3 _velocityMin{};
+        PROPERTY( Tooltip = "Per-axis upper bound of the initial velocity" )
+        float3 _velocityMax{};
+        PROPERTY( Tooltip = "Acceleration added to every particle (metres per second squared)" )
+        float3 _gravity{};
+
+        PROPERTY( Tooltip = "Particle size over life ratio (required)" )
+        FloatCurve _sizeOverLife{};
+        PROPERTY( Tooltip = "Particle colour over life ratio (required)" )
+        VFXColorCurveDef _colorOverLife{};
+
+        PROPERTY( Tooltip = "Collision with the 3D physics scene" )
+        VFXCollisionDef _collision{};
+        PROPERTY( Tooltip = "Point lights carried by the particles" )
+        VFXLightDef _light{};
+
+        /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
+        void sortCurves();
+        /**
+         * @brief 이 방출기가 돌 수 있는 곳 — 모든 모듈 칸이 선언한 대상의 교집합입니다. 비면 검증이 로드를 실패시킵니다.
+         * @details 칸마다 한 줄인 모듈 표(VFXEffectDef.cpp)가 원본이다. 칸을 더하고 줄을 빠뜨리면 `VFXEffectDefTest.EveryEmitterFieldDeclaresItsTargets` 가 진다
+         *          (리플렉션의 칸 목록과 표를 맞춘다). 언리얼 Niagara 의 라이트 렌더러는 CPU 전용이지만 이 엔진은 GPU 구간으로 GPU 방출기의 빛도 낸다(`VFXLightDef`).
+         */
+        [[nodiscard]] VFXSimulationTargetSet computeSupportedTargets() const;
+        /** @brief @p target 을 지원하지 않는 첫 모듈 칸의 이름입니다(로그용). 모두 지원하면 nullptr 입니다. */
+        [[nodiscard]] const utf8* findModuleExcluding( VFXSimulationTarget target ) const;
+        /**
+         * @brief 모든 모듈이 입자의 수명을 `_lifetimeMax` 보다 늘리지 않으면 true 입니다(줄이는 것 — 충돌의 없애기 — 은 된다).
+         * @details GPU 방출기가 입자 수를 모른 채 "끝났다" 를 일정에서 구하는 근거다(`VFXGPUEmitter::isFinished`). 모듈 표의 줄이 선언한다.
+         */
+        [[nodiscard]] bool isLifetimeBoundedByMax() const;
+        /** @brief 모듈 표에 @p fieldName 칸의 줄이 있으면 true 입니다(테스트가 리플렉션 칸 목록과 맞춘다). */
+        [[nodiscard]] static bool hasModuleRow( string_view fieldName );
+        /** @brief 칸 하나하나의 값을 봅니다. 틀린 곳마다 @p sourceLabel 과 방출기 이름을 붙여 오류를 남기고, 하나라도 틀리면 false 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct VFXEffectDef
+     * @brief `*.vfx.xml` 하나입니다. 방출기 목록을 갖습니다.
+     * @details 읽다가 틀리면 빈 효과가 남습니다(반쯤 찬 효과를 남기지 않는다).
+     * @code
+     *     <VFXEffectDef>
+     *       <_listEmitter>
+     *         <VFXEmitterDef _name="Sparks" _texturePath="game/vfx/spark.png" _blendMode="Additive" _maxParticles="64" _duration="1"
+     *                        _spawnRate="40" _lifetimeMin="0.4" _lifetimeMax="0.8" _velocityMin="-1, 2, -1" _velocityMax="1, 4, 1" _gravity="0, -9.8, 0">
+     *           <_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.1"/><FloatCurveKey _time="1" _value="0"/></_listKey></_sizeOverLife>
+     *           ...
+     *         </VFXEmitterDef>
+     *       </_listEmitter>
+     *     </VFXEffectDef>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_API VFXEffectDef
+    {
+        REFLECT_BODY();
+
+        /** @brief 효과 파일의 접미사입니다. 데이터 종류 표(`SW_RESOURCE_DATA_KIND`)가 이 값으로 파일을 찾습니다. */
+        static constexpr string_view kExtension = ".vfx.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `VFXEffectDef.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "VFXEffectDef", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
+        PROPERTY( Tooltip = "Emitters; each one is a separate transparent sort candidate" )
+        vector<VFXEmitterDef> _listEmitter{};
+
+        /** @brief 리소스 상대 경로의 효과를 읽습니다. 모르는 이름 · 범위 밖 값 · 필수 칸 누락이면 오류를 남기고 false 이며 효과가 빕니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 디스크 파일의 효과를 읽습니다(도구 · 테스트용, `ReflectedXMLFile::loadDescFromDiskFile`). 실패하면 효과가 빕니다. */
+        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        /** @brief 방출기가 하나 이상이고 이름이 겹치지 않으며 방출기마다 `VFXEmitterDef::validate` 를 통과하면 true 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
+
+    private:
+        /** @brief 읽기가 끝난 효과의 커브를 정렬하고 값을 봅니다. 틀리면 효과를 비웁니다. */
+        [[nodiscard]] bool finishLoad( bool bRead, string_view sourceLabel );
+    };
+} // namespace sw

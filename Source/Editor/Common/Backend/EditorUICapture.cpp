@@ -94,14 +94,14 @@ namespace sw::editor
             }
 
             /** @brief RGBA8 행을 위아래로 뒤집습니다(OpenGL FBO 는 0 행이 아래쪽이다). */
-            static void flipRows( vector<uint8>& inoutRgbaBytes, uint32 width, uint32 height )
+            static void flipRows( vector<uint8>& inoutRGBABytes, uint32 width, uint32 height )
             {
                 const size_t  rowBytes = static_cast<size_t>( width ) * 4u;
                 vector<uint8> rowBytesTemp( rowBytes );
                 for ( uint32 row = 0; row < height / 2u; ++row )
                 {
-                    uint8* const pTop    = inoutRgbaBytes.data() + static_cast<size_t>( row ) * rowBytes;
-                    uint8* const pBottom = inoutRgbaBytes.data() + static_cast<size_t>( height - 1u - row ) * rowBytes;
+                    uint8* const pTop    = inoutRGBABytes.data() + static_cast<size_t>( row ) * rowBytes;
+                    uint8* const pBottom = inoutRGBABytes.data() + static_cast<size_t>( height - 1u - row ) * rowBytes;
                     std::memcpy( rowBytesTemp.data(), pTop, rowBytes );
                     std::memcpy( pTop, pBottom, rowBytes );
                     std::memcpy( pBottom, rowBytesTemp.data(), rowBytes );
@@ -232,7 +232,7 @@ namespace sw::editor
         RHITextureMipSpan          layout{};
         vector<uint8>              rgbaBytes;
         const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture, 0, 0, bytes, layout ) &&
-                           RenderTargetImageFile::unpackRgba8( bytes, layout, device.getBackBufferFormat(), rgbaBytes );
+                           RenderTargetImageFile::unpackRGBA8( bytes, layout, device.getBackBufferFormat(), rgbaBytes );
         if ( bRead )
         {
             if ( device.getBackendType() == RHIBackend::OpenGL )

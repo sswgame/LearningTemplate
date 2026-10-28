@@ -3,7 +3,7 @@
 #include "Core/Process/StandardInputReader.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
     #include "Core/Container/StringUtil.h"
 
 namespace sw
@@ -76,7 +76,7 @@ namespace sw
                         return false;
                     }
                     arrBuffer[readCount] = L'\0';
-                    _partialLine += StringUtil::utf16ToUtf8( arrBuffer );
+                    _partialLine += StringUtil::utf16ToUTF8( arrBuffer );
                     break;
                 }
                 case WindowsStandardInputReaderInternal::InputKind::Pipe:

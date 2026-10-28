@@ -45,7 +45,7 @@ namespace sw
                 engine::registerModuleTypes( sw::config::kTargetEditorModule );
 
                 bool bSucceeded = false;
-                if ( ModuleInstanceUtil::matchesModuleAbi( pLibraryModule, symbols ) )
+                if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
                 {
                     const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
                     if ( pfnEntry == nullptr )

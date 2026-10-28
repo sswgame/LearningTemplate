@@ -421,7 +421,7 @@
 				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdSchedule.NpcListTitle" source="NPCs">
+		<entry key="EdSchedule.NPCListTitle" source="NPCs">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
@@ -431,7 +431,7 @@
 				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdSchedule.SelectNpcHint" source="Select an NPC on the left">
+		<entry key="EdSchedule.SelectNPCHint" source="Select an NPC on the left">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>

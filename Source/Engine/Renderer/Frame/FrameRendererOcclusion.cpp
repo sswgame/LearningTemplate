@@ -93,15 +93,15 @@ namespace sw
         _pCmd->setComputePipelineState( pso );
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
-        constants._depthIndex  = _pDevice->supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUav ) : 0u;
+        constants._depthIndex  = _pDevice->supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
         constants._depthWidth  = depth._width;
         constants._depthHeight = depth._height;
         constants._columnCount = target._occlusionColumns;
         constants._rowCount    = target._occlusionRows;
         constants._tileSize    = FrameRendererUtil::kOcclusionTileSize;
         // g_OcclusionTilesRW(u0) / 깊이 히스토리(RW 슬롯 0 — 에뮬만). occlusiontiles.hlsl 레지스터와 1:1 이다.
-        _pCmd->bindComputeUav( target._occlusionTiles._uav, 0 );
-        _pCmd->bindComputeUav( target._depthHistoryUav, shaderslot::kComputeTextureUav0 );
+        _pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
+        _pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
         _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         _pCmd->dispatchCompute( Internal::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), Internal::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).

@@ -10,7 +10,7 @@
  * 모프 다음 스키닝), 본 넷의 팔레트 행렬로 섞어 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길(MorphPool::loadVertex)로 결과를 읽는다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 읽기 t0..t3, 쓰기 u0.
- * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( rest, 0 ) / ( weights, 1 ) / ( palette, 2 ) / ( instances, 3 ) / bindComputeUav( morph, 0 ).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( rest, 0 ) / ( weights, 1 ) / ( palette, 2 ) / ( instances, 3 ) / bindComputeUAV( morph, 0 ).
  */
 
 // 결과 · 레스트 · 가중치 · 팔레트 · 인스턴스 표의 원소 배치(SW_MORPH_FLOAT4_PER_VERTEX · SW_SKIN_*)는 bindingslots.hlsli 10 절 — C++ 와 같은 정의다.
@@ -78,9 +78,9 @@ uint findInstance( uint skinIndex )
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    const uint skinIndex = dispatchThreadId.x;
+    const uint skinIndex = dispatchThreadID.x;
     if ( skinIndex >= g_SkinVertexCount )
         return;
 

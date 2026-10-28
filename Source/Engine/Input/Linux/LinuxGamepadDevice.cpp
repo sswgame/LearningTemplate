@@ -33,7 +33,7 @@ namespace sw
 } // namespace sw
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <fcntl.h>

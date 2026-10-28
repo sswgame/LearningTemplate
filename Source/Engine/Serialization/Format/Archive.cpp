@@ -239,7 +239,7 @@ namespace sw
         if ( _pData == nullptr || _dataSize == 0 )
             return 0;
 
-        return StringUtil::computeCrc32( _pData, _dataSize );
+        return StringUtil::computeCRC32( _pData, _dataSize );
     }
 
     void Archive::writeChecksum()
@@ -255,7 +255,7 @@ namespace sw
 
         uint32 storedChecksum = 0;
         Memory::copy( &storedChecksum, _pData + _dataSize - sizeof( uint32 ), sizeof( uint32 ) );
-        const uint32 computed = StringUtil::computeCrc32( _pData, _dataSize - sizeof( uint32 ) );
+        const uint32 computed = StringUtil::computeCRC32( _pData, _dataSize - sizeof( uint32 ) );
         return storedChecksum == computed;
     }
 

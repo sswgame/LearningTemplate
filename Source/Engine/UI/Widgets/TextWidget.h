@@ -127,7 +127,7 @@ namespace sw
         mutable float32             _layoutFontSize; ///< 그 배치의 폰트 크기입니다(글자 배율 포함).
         mutable const void*         _pLayoutStyle;   ///< 그 배치를 만든 계산된 스타일입니다(바뀌면 폰트가 바뀌므로 다시 배치합니다).
         mutable bool                _bLayoutValid;   ///< 배치 캐시가 지금 텍스트와 스타일의 것인지 나타냅니다.
-        mutable bool                _bLayoutRtl;     ///< 그 배치의 문단 방향입니다.
+        mutable bool                _bLayoutRTL;     ///< 그 배치의 문단 방향입니다.
         mutable bool                _bRichParsed;    ///< `_richText` 가 지금 텍스트의 것인지 나타냅니다.
     };
 } // namespace sw

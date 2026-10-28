@@ -32,7 +32,7 @@ struct PSInput
     SW_APPEARANCE_VARYING
 };
 
-PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 {
     PSInput      output;
     InstanceData instance = InstanceData::load( input._instanceSlot );
@@ -46,7 +46,7 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
     }
     float3 localPosition;
     float3 localNormal;
-    MorphPool::loadVertex( instance._meshBatchIndex, vertexId, input._position, input._normal, localPosition, localNormal );
+    MorphPool::loadVertex( instance._meshBatchIndex, vertexID, input._position, input._normal, localPosition, localNormal );
     const float4 worldPosition = Transform::computeWorldPosition( localPosition, instance._world );
     const float3 worldNormal   = Transform::computeWorldNormal( localNormal, instance._world );
     float4       clipPosition  = Transform::computeClipPosition( worldPosition, g_ViewProj );

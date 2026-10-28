@@ -7,7 +7,7 @@
  */
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
@@ -80,9 +80,9 @@ namespace sw
         return descriptorIndex;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSrv" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -97,7 +97,7 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
-        // 넣으면 다음 registerBindlessBufferSrv 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
+        // 넣으면 다음 registerBindlessBufferSRV 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
         {
@@ -108,15 +108,15 @@ namespace sw
         deferFreeBufferIndex( index, false );
     }
 
-    void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUav )
+    void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV )
     {
         // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
         // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
         VulkanRHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUav]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
-            ( bUav ? pDevice->_listUavFree : pDevice->_listBindlessFree ).push_back( index );
+            ( bUAV ? pDevice->_listUAVFree : pDevice->_listBindlessFree ).push_back( index );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
     }
@@ -164,22 +164,22 @@ namespace sw
         record._bindlessIndex = kInvalidDescriptorIndex;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, buffer );
-        if ( index >= _pDevice->_listUavSourceTexture.size() )
-            _pDevice->_listUavSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
-        _pDevice->_listUavSourceTexture[index] = RHITextureHandle{ 0 };
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, buffer );
+        if ( index >= _pDevice->_listUAVSourceTexture.size() )
+            _pDevice->_listUAVSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
+        _pDevice->_listUAVSourceTexture[index] = RHITextureHandle{ 0 };
         return index;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
         VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
@@ -189,32 +189,32 @@ namespace sw
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, RHIBufferHandle{ 0 } );
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )
         {
             SW_LOG_ERROR( "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
-            releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, index, RHIBufferHandle{ 0 } );
+            releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, index, RHIBufferHandle{ 0 } );
             return kInvalidDescriptorIndex;
         }
-        if ( index >= _pDevice->_listUavSourceTexture.size() )
-            _pDevice->_listUavSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
-        _pDevice->_listUavSourceTexture[index] = texture;
+        if ( index >= _pDevice->_listUAVSourceTexture.size() )
+            _pDevice->_listUAVSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
+        _pDevice->_listUAVSourceTexture[index] = texture;
         _pDevice->writeBindlessStorageImageSlot( index, pResolved->_imageView );
         return index;
     }
 
-    void VulkanRHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
+    void VulkanRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUav" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const bool               bBuffer  = index < _pDevice->_listUavSourceBuffer.size() && _pDevice->_listUavSourceBuffer[index] != 0;
-        const bool               bTexture = index < _pDevice->_listUavSourceTexture.size() && _pDevice->_listUavSourceTexture[index] != 0;
+        const bool               bBuffer  = index < _pDevice->_listUAVSourceBuffer.size() && _pDevice->_listUAVSourceBuffer[index] != 0;
+        const bool               bTexture = index < _pDevice->_listUAVSourceTexture.size() && _pDevice->_listUAVSourceTexture[index] != 0;
         if ( bBuffer == false && bTexture == false )
             return;
         if ( bBuffer )
-            _pDevice->_listUavSourceBuffer[index] = RHIBufferHandle{ 0 };
+            _pDevice->_listUAVSourceBuffer[index] = RHIBufferHandle{ 0 };
         if ( bTexture )
-            _pDevice->_listUavSourceTexture[index] = RHITextureHandle{ 0 };
+            _pDevice->_listUAVSourceTexture[index] = RHITextureHandle{ 0 };
         deferFreeBufferIndex( index, true );
     }
 } // namespace sw

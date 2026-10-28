@@ -198,7 +198,7 @@ namespace sw::editor
 
     float32 EditorViewportBillboard::getDiameter()
     {
-        return EditorViewportBillboardInternal::kDiameter * EditorThemeUtil::getDpiScale();
+        return EditorViewportBillboardInternal::kDiameter * EditorThemeUtil::getDPIScale();
     }
 
     uint32 EditorViewportBillboard::findDrawnGlyph( const GameObject& object )

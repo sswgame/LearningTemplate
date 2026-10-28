@@ -203,7 +203,7 @@ namespace sw::editor
     void PackagingPanel::drawOptionRows( bool bBusy )
     {
         using Internal         = PackagingPanelInternal;
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        const float32 dpiScale = EditorThemeUtil::getDPIScale();
 
         ImGui::BeginDisabled( bBusy );
         Internal::drawOptionCombo( "Target", 120.0f * dpiScale, Internal::kArrTarget[_targetIndex], static_cast<uint32>( std::size( Internal::kArrTarget ) ),

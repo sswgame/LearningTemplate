@@ -188,7 +188,7 @@ namespace sw
          *          (`ModuleShadowCopy::writeShadowCopy`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 **먼저 로드된**
          *          이미지에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 이미지를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
-         *          Windows 는 import 테이블 첫 항목이 가리키는 이미지로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineAbiStamp_<이름>`,
+         *          Windows 는 import 테이블 첫 항목이 가리키는 이미지로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineABIStamp_<이름>`,
          *          `sw_registerDynamicModule` 이 넣는다)의 주소로 판단한다.
          */
         bool verifyModuleBindings() const;

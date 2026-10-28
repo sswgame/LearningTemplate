@@ -34,7 +34,7 @@ namespace sw
                         continue;
                     batch._materialCb = batch._materialInstance->getDescriptorIndex();
                     // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처를 얹는다(렌더 스레드가 빌린 것이라 여기서).
-                    batch._materialInstance->collectTextureSlotSrvs( batch._arrMaterialTexSrv, shaderslot::kMaterialTextureCount );
+                    batch._materialInstance->collectTextureSlotSRVs( batch._arrMaterialTexSRV, shaderslot::kMaterialTextureCount );
                 }
             }
 
@@ -241,7 +241,7 @@ namespace sw
         }
 
         // 가시 인스턴스 ID 버퍼. 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해
-        // 넣고(언리얼 FInstanceCullingContext 의 InstanceIdBuffer), 정점 셰이더가 그 순서로 읽는다.
+        // 넣고(언리얼 FInstanceCullingContext 의 InstanceIDBuffer), 정점 셰이더가 그 순서로 읽는다.
         // **뷰마다 하나씩**이다. 목록은 절두체에 종속이라 메인 카메라로 거른 것을 그림자가 쓰면 안 된다.
         constexpr RHIBufferUsage kVisibleUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
@@ -255,20 +255,20 @@ namespace sw
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
                 SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
-        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIdMask`).
+        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIDMask`).
         SW_ASSERT( instanceCount <= 0x00FFFFFFu );
-        ensureLodStateBuffers( pDevice, instanceCount );
+        ensureLODStateBuffers( pDevice, instanceCount );
     }
 
-    void GPUScene::ensureLodStateBuffers( IRHIDevice* pDevice, uint32 instanceCount )
+    void GPUScene::ensureLODStateBuffers( IRHIDevice* pDevice, uint32 instanceCount )
     {
         // 전환 상태는 LOD 그룹이 있을 때만 필요하다. 없으면 놓아 인스턴스 수만큼의 메모리를 뷰마다 들고 있지 않는다.
-        const uint32             stateCount     = _snapshot.hasLodGroups() ? instanceCount : 0u;
-        constexpr RHIBufferUsage kLodStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
+        const uint32             stateCount     = _snapshot.hasLODGroups() ? instanceCount : 0u;
+        constexpr RHIBufferUsage kLODStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
         for ( GPUCullViewResources& view : _listCullView )
         {
             const RHIBufferHandle bufferBefore = view._lodState._buffer;
-            const bool            bEnsured     = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLodStateUsage, false, true, nullptr );
+            const bool            bEnsured     = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLODStateUsage, false, true, nullptr );
             if ( bEnsured == false && stateCount > 0 )
                 SW_LOG_ERROR_ONCE( "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
             // 새 버퍼의 내용은 정해져 있지 않다 — 다음 컬링이 비운다.
@@ -277,7 +277,7 @@ namespace sw
         }
     }
 
-    bool GPUScene::takeLodStateReset( uint32 cullViewIndex )
+    bool GPUScene::takeLODStateReset( uint32 cullViewIndex )
     {
         if ( cullViewIndex >= _listCullView.size() )
             return false;
@@ -484,7 +484,7 @@ namespace sw
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
             batch._materialBuffer = 0;
-            batch._materialSrv    = kInvalidDescriptorIndex;
+            batch._materialSRV    = kInvalidDescriptorIndex;
         }
         // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
@@ -618,13 +618,13 @@ namespace sw
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
             batch._materialBuffer = 0;
-            batch._materialSrv    = kInvalidDescriptorIndex;
+            batch._materialSRV    = kInvalidDescriptorIndex;
             batch._materialCount  = 0;
             if ( batch._materialGroup == kInvalidMaterialGroup || batch._materialGroup >= groupCount )
                 continue;
             const ResolvedGroup& resolved = listResolved[batch._materialGroup];
             batch._materialBuffer         = resolved._buffer;
-            batch._materialSrv            = resolved._srv;
+            batch._materialSRV            = resolved._srv;
             batch._materialCount          = resolved._elementCount;
         }
     }

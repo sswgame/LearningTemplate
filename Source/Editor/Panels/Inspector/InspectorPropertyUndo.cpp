@@ -35,7 +35,7 @@ namespace sw::editor
             vector<PendingEdit>                 _listFinished; ///< 위젯이 풀린 편집
         };
 
-        /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 테이블을 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
+        /** @brief 편집 중인 위젯 표입니다. trackPOD 와 trackString 이 **같은 테이블을 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
         unordered_map<ImGuiID, PendingEdit>& getPendingEdits()
         {
             return getEditorState<InspectorPropertyUndoState>()._mapPending;
@@ -99,7 +99,7 @@ namespace sw::editor
         }
     } // namespace
 
-    void InspectorPropertyUndo::trackPod( const MutableValueAddress value, size_t size, const PropertyInfo& prop )
+    void InspectorPropertyUndo::trackPOD( const MutableValueAddress value, size_t size, const PropertyInfo& prop )
     {
         // value 는 유효성 가드로만 쓴다. 스냅샷은 값이 아니라 오브젝트 XML 로 뜬다.
         const bool bUntrackableEdit = value.get() == nullptr || size == 0 || size > 512;

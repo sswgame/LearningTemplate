@@ -445,7 +445,7 @@ namespace sw
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listBindlessFree;
         vector<BindlessResourceRecord> _listRegisteredUAV;
-        vector<uint32>                 _listUavFree;
+        vector<uint32>                 _listUAVFree;
 
         RHIHandleTable<OpenGLTextureRecord>                         _gpuTextures;
         unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;

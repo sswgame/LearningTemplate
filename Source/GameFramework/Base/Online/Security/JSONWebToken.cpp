@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr int32 kMaxCompactSize = 16 * 1024;
 
-            static const utf8* getAlgorithmName( NetSignatureAlgorithm algorithm ) { return algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 ? "RS256" : "ES256"; }
+            static const utf8* getAlgorithmName( NetSignatureAlgorithm algorithm ) { return algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256 ? "RS256" : "ES256"; }
 
             [[nodiscard]] static bool decodeJSON( string_view encoded, JSONDocument& outDocument )
             {
@@ -42,29 +42,29 @@ namespace sw
 
 namespace sw
 {
-    JwtUnverified::JwtUnverified()
+    JWTUnverified::JWTUnverified()
         : _payload{ make_unique<JSONDocument>() }
         , _listCertificateDer{}
         , _signatureBytes{}
         , _signingInput{}
         , _keyID{}
-        , _algorithm{ NetSignatureAlgorithm::RsaPkcs1Sha256 }
+        , _algorithm{ NetSignatureAlgorithm::RsaPkcs1SHA256 }
     {
     }
 
-    JwtUnverified::~JwtUnverified() = default;
+    JWTUnverified::~JWTUnverified() = default;
 
-    JwtVerified::JwtVerified( unique_ptr<JSONDocument> payload, string keyID )
+    JWTVerified::JWTVerified( unique_ptr<JSONDocument> payload, string keyID )
         : _payload{ std::move( payload ) }
         , _keyID{ std::move( keyID ) }
     {
     }
 
-    JwtVerified::~JwtVerified()                                         = default;
-    JwtVerified::JwtVerified( JwtVerified&& other ) noexcept            = default;
-    JwtVerified& JwtVerified::operator=( JwtVerified&& other ) noexcept = default;
+    JWTVerified::~JWTVerified()                                         = default;
+    JWTVerified::JWTVerified( JWTVerified&& other ) noexcept            = default;
+    JWTVerified& JWTVerified::operator=( JWTVerified&& other ) noexcept = default;
 
-    bool JwtUnverified::parse( string_view compact )
+    bool JWTUnverified::parse( string_view compact )
     {
         using Internal = JSONWebTokenInternal;
         if ( compact.empty() || compact.size() > static_cast<size_t>( Internal::kMaxCompactSize ) )
@@ -85,7 +85,7 @@ namespace sw
             return false;
         const string algorithmName = algorithm.asString();
         if ( algorithmName == "RS256" )
-            _algorithm = NetSignatureAlgorithm::RsaPkcs1Sha256;
+            _algorithm = NetSignatureAlgorithm::RsaPkcs1SHA256;
         else if ( algorithmName == "ES256" )
             _algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
         else
@@ -112,7 +112,7 @@ namespace sw
         return true;
     }
 
-    std::optional<JwtVerified> JwtUnverified::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JwtClaimRule& rule ) &&
+    std::optional<JWTVerified> JWTUnverified::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JWTClaimRule& rule ) &&
     {
         if ( _signingInput.empty() || publicKey._algorithm != _algorithm )
             return std::nullopt; // 읽지 않았거나 키 알고리즘이 머리와 다르다
@@ -120,7 +120,7 @@ namespace sw
                                                        _signatureBytes.data(), static_cast<int32>( _signatureBytes.size() ) );
         if ( bSigned == false )
             return std::nullopt;
-        JwtVerified verified( std::move( _payload ), std::move( _keyID ) );
+        JWTVerified verified( std::move( _payload ), std::move( _keyID ) );
         _payload = make_unique<JSONDocument>(); // 넘긴 뒤에도 객체는 쓸 수 있는 빈 상태로 둔다
         _signingInput.clear();
         if ( rule._bCheckClaims == SW_FALSE )
@@ -143,7 +143,7 @@ namespace sw
         return verified;
     }
 
-    bool JwtVerified::findText( string_view claim, string& outValue ) const
+    bool JWTVerified::findText( string_view claim, string& outValue ) const
     {
         const JSONValue value = _payload->getRoot().get( claim );
         if ( value.isString() == false )
@@ -152,7 +152,7 @@ namespace sw
         return true;
     }
 
-    bool JwtVerified::findTextPath( string_view path, string& outValue ) const
+    bool JWTVerified::findTextPath( string_view path, string& outValue ) const
     {
         JSONValue current = _payload->getRoot();
         while ( path.empty() == false )
@@ -172,7 +172,7 @@ namespace sw
         return true;
     }
 
-    bool JwtVerified::findInteger( string_view claim, int64& outValue ) const
+    bool JWTVerified::findInteger( string_view claim, int64& outValue ) const
     {
         // 시각 클레임(NumericDate)은 소수 초도 허용된다(RFC 7519 2절) — 실수로 읽어 초 단위로 버린다. 값은 2^53 보다 작다.
         const JSONValue              value  = _payload->getRoot().get( claim );
@@ -183,7 +183,7 @@ namespace sw
         return true;
     }
 
-    bool JwtVerified::hasAudience( string_view audience ) const
+    bool JWTVerified::hasAudience( string_view audience ) const
     {
         const JSONValue value = _payload->getRoot().get( "aud" );
         if ( value.isString() )
@@ -199,7 +199,7 @@ namespace sw
         return false;
     }
 
-    bool JwtUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload,
+    bool JWTUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload,
                               const string& privateKeyPem, string& outCompact )
     {
         using Internal = JSONWebTokenInternal;
@@ -233,7 +233,7 @@ namespace sw
         writer.valueString( keyID );
         writer.key( "use" );
         writer.valueString( "sig" );
-        if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
+        if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1SHA256 )
         {
             writer.key( "kty" );
             writer.valueString( "RSA" );
@@ -293,7 +293,7 @@ namespace sw
             bool         bRead    = false;
             if ( typeName == "RSA" )
             {
-                entry._publicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1Sha256;
+                entry._publicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1SHA256;
                 bRead                       = Internal::decodeField( key, "n", entry._publicKey._modulus ) && Internal::decodeField( key, "e", entry._publicKey._exponent );
             }
             else if ( typeName == "EC" && key.get( "crv" ).asString() == "P-256" )

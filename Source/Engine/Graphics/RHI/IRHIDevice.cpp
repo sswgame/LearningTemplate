@@ -342,7 +342,7 @@ namespace sw
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
     // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다).
     SW_TEST_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
-    // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
+    // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RHIAsyncUploads 2.2, M1 이 조정한다).
     // GL · Vulkan 링보다 큰 업로드 하나는 링이 빌 때 혼자 일회성 버퍼로 들어간다(gv_rhiStagingSingleMaxMegabytes 까지). DX11 은 스테이징을 업로드마다 만들어, 이보다 큰 업로드 하나가
     // 예산 전부를 잡고 혼자 들어간다.
     SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64,
@@ -356,7 +356,7 @@ namespace sw
                         "링보다 큰 업로드 · 텍스처 읽기 한 장을 일회성 버퍼로 받는 상한(MiB). 넘으면 Rejected, 0 이면 링보다 큰 한 장은 모두 Rejected 다(GL · Vulkan)" );
     // DX11 은 이 크기 이하의 업로드를 스테이징 없이 UpdateSubresource 로 올린다(소스 복사가 즉시 컨텍스트 잠금 안에서 일어난다).
     // 256 KiB 는 측정값이 아니라 추정이다: 잠금 안의 복사가 수십 µs(메모리 복사 5 ~ 10 GB/s)라 프레임(16.6 ms)에 비해 작고, 스테이징 한 장의 생성 · 추가 복사 명령의
-    // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RhiAsyncUploads 측정)이 조정한다.
+    // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RHIAsyncUploads 측정)이 조정한다.
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
 
     bool IRHIDevice::initialize()
@@ -420,9 +420,9 @@ namespace sw
         _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )
         {
-            bool bCliVSync{ false };
-            if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
-                swapChainDesc._bVSync = bCliVSync;
+            bool bCLIVSync{ false };
+            if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::VSYNC, bCLIVSync ) )
+                swapChainDesc._bVSync = bCLIVSync;
         }
         // 채택값을 디바이스에 되돌려 적는다. 프레젠트 경로(`RenderThread`)가 이것을 읽는다.
         _bPreferredVSync = swapChainDesc._bVSync;

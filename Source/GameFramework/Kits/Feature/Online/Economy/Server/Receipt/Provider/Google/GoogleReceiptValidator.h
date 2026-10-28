@@ -4,10 +4,10 @@
  * @details - 영수증은 `<상품 id>|<구매 토큰>` 입니다. 서버가 서비스 계정 OAuth 토큰(범위 `androidpublisher`, `ServiceAccountTokenSource`)으로
  *            `purchases.products.get` 을 불러 확인합니다. 서비스 계정 JSON 은 설정 파일에 쓰지 않고 환경 변수에서 읽습니다(`ReceiptProviderSet`).
  *          - 상태 대응: `purchaseState` 0(구매됨) Valid, 1(취소됨) Refunded, 2(보류) Retry. 404 · 410 · 400(모르는 토큰) Invalid, 401 · 403(토큰 거절 · 권한 없음)은 토큰을 버리고 Retry,
- *            429 · 5xx · 전송 실패 Retry. `purchaseType` 0 은 라이선스 테스트 구매라 샌드박스로 표시한다. 거래 id 는 `orderId` 다.
+ *            429 · 5xx · 전송 실패 Retry. `purchaseType` 0 은 라이선스 테스트 구매라 샌드박스로 표시한다. 거래 id 는 `orderID` 다.
  *          - 구매 확인(acknowledge): 확인 상태가 0 인 Valid 결과를 낸 뒤 `:acknowledge` 를 한 번 보낸다. 3 일 안에 확인하지 않으면 구글이 환불하기 때문이다. 실패하면 같은 토큰을
  *            다시 확인할 때 다시 보낸다(확인 상태가 아직 0 이다). 소비 가능 상품의 소비(consume)는 게임이 지급을 마친 뒤의 일이라 여기서 하지 않는다.
- *          - 환불은 `purchases.voidedpurchases.list` 를 주기적으로 조회해(`_voidedPollIntervalMs`) 무효가 된 주문(`orderId`)을 알린다. 실시간 알림(RTDN)은 Pub/Sub 구독 기반 시설이 있어야
+ *          - 환불은 `purchases.voidedpurchases.list` 를 주기적으로 조회해(`_voidedPollIntervalMs`) 무효가 된 주문(`orderID`)을 알린다. 실시간 알림(RTDN)은 Pub/Sub 구독 기반 시설이 있어야
  *            하므로 쓰지 않고, 같은 정보를 조회로 받는다. 지난 조회 시각에서 `_voidedLookbackMs` 만큼 겹쳐 읽고 겹친 주문은 한 번만 알린다.
  *          시계를 읽지 않는다 — HTTP 시한 · 토큰(JWT `iat`) · 조회 주기 · 취소 목록 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */

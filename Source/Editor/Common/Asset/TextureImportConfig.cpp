@@ -245,9 +245,9 @@ namespace sw::editor
 
         // 적지 않은 칸은 상속받은(또는 규칙 초기) 값 그대로다. 불리언이 아닌 값은 규칙째 거절한다(읽기가 키와 함께 알린다).
         bool       bGenerateMips = inoutRule._bGenerateMips != SW_FALSE;
-        bool       bSrgb         = inoutRule._bSrgb != SW_FALSE;
+        bool       bSRGB         = inoutRule._bSRGB != SW_FALSE;
         bool       bInvertGreen  = inoutRule._bInvertGreen != SW_FALSE;
-        const bool bFlagsRead    = jsonValue.readOptionalInto( "generate_mips", bGenerateMips ) && jsonValue.readOptionalInto( "srgb", bSrgb ) &&
+        const bool bFlagsRead    = jsonValue.readOptionalInto( "generate_mips", bGenerateMips ) && jsonValue.readOptionalInto( "srgb", bSRGB ) &&
                                 jsonValue.readOptionalInto( "invert_green", bInvertGreen );
         if ( bFlagsRead == false )
         {
@@ -255,7 +255,7 @@ namespace sw::editor
             return false;
         }
         inoutRule._bGenerateMips = bGenerateMips ? SW_TRUE : SW_FALSE;
-        inoutRule._bSrgb         = bSrgb ? SW_TRUE : SW_FALSE;
+        inoutRule._bSRGB         = bSRGB ? SW_TRUE : SW_FALSE;
         inoutRule._bInvertGreen  = bInvertGreen ? SW_TRUE : SW_FALSE;
 
         inoutRule._filter.parse( jsonValue );
@@ -280,10 +280,10 @@ namespace sw::editor
         return findFormatEntryInternal( format )._dxgiName;
     }
 
-    uint32 TextureImportFormatUtil::getDxgiFormat( TextureImportFormat format, bool bSrgb )
+    uint32 TextureImportFormatUtil::getDxgiFormat( TextureImportFormat format, bool bSRGB )
     {
         const TextureImportFormatName& entry = findFormatEntryInternal( format );
-        return bSrgb ? entry._srgbDxgiFormat : entry._dxgiFormat;
+        return bSRGB ? entry._srgbDxgiFormat : entry._dxgiFormat;
     }
 
     vector<string_view> TextureImportFormatUtil::getWrittenFormatNames()

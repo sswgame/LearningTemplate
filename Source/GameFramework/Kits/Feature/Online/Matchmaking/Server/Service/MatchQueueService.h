@@ -60,7 +60,7 @@ namespace sw
     /** @brief 대기열 상수입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
     struct MatchQueueLimit
     {
-        static constexpr int64  kLeaseTtlMs       = 10000;
+        static constexpr int64  kLeaseTTLMs       = 10000;
         static constexpr int64  kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
         static constexpr int64  kNoServerGiveUpMs = 30000;
         static constexpr int64  kResultGraceMs    = 10000;

@@ -53,7 +53,7 @@ namespace sw::editor
             settings.collectSettings( category._id, listSetting );
             if ( ImGui::BeginTable( "##UserSettingsTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY ) )
             {
-                ImGui::TableSetupColumn( "Setting", ImGuiTableColumnFlags_WidthFixed, 240.0f * EditorThemeUtil::getDpiScale() );
+                ImGui::TableSetupColumn( "Setting", ImGuiTableColumnFlags_WidthFixed, 240.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
                 for ( const UserSettingDef* pDef : listSetting )
                 {

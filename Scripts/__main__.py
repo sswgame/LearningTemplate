@@ -57,7 +57,8 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("net-pair", "net.NetPairRun", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check)"),
     Subcommand("move-source", "dev.MoveSource:mainMove", "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"),
     Subcommand("rename-symbol", "dev.MoveSource:mainRename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
-    Subcommand("destruction-net","dev.DestructionNetPair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
+    Subcommand("acronym-case", "dev.AcronymCase", "식별자 안의 약어 혼합형(Gpu · Json · Id)을 대문자로 — 코드 · 셰이더 · 데이터에 같은 표"),
+    Subcommand("destruction-net", "dev.DestructionNetPair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )
 
 _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command in _kSubcommand}

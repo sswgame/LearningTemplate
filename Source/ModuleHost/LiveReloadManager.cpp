@@ -2,7 +2,7 @@
 
 #include "ModuleHost/LiveReloadManager.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/IFileWatcher.h"
@@ -12,7 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Module/EngineAbiStamp.h"
+#include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -69,7 +69,7 @@ namespace sw
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;
-                const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
+                const string stampSymbolName = string{ "sw_moduleEngineABIStamp_" } + string{ dependencyName };
                 pOutExpected                 = ModuleImageUtil::getDynamicSymbol( pExpected, stampSymbolName );
                 pOutActual                   = nullptr;
                 // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
@@ -225,10 +225,10 @@ namespace sw
             return false;
         }
         string moduleStamp;
-        if ( ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp() )
+        if ( ModuleImagePatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
         {
             SW_LOG_ERROR( "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
-                          moduleName, moduleStamp, engine::getEngineAbiStamp() );
+                          moduleName, moduleStamp, engine::getEngineABIStamp() );
             return false;
         }
         if ( ModuleShadowCopy::rejectsDelayImports( moduleName, modulePath, bytes ) )

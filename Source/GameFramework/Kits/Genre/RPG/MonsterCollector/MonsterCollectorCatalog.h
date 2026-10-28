@@ -26,7 +26,7 @@ namespace sw
     ENUM()
     enum class MonsterStat : uint8
     {
-        Hp = 0,
+        HP = 0,
         Attack,
         Defense,
         SpecialAttack,

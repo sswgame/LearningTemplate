@@ -17,15 +17,15 @@ namespace sw
         [[nodiscard]] bool      fillRandomBytes( uint8* pOut, int32 size ) override;
         [[nodiscard]] bool      makeX25519KeyPair( NetX25519KeyPair& outKeyPair ) override;
         [[nodiscard]] bool      computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret ) override;
-        [[nodiscard]] bool      computeHkdfSha256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
+        [[nodiscard]] bool      computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
                                                    int32 outSize ) override;
         [[nodiscard]] bool      computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
                                                      uint8* pOut, int32 outSize ) override;
         unique_ptr<INetAead>    createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override;
         unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) override;
         [[nodiscard]] bool      createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override;
-        [[nodiscard]] bool      computeCertificateSha256( const string& certificatePem, string& outHex ) override;
-        [[nodiscard]] bool      computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override;
+        [[nodiscard]] bool      computeCertificateSHA256( const string& certificatePem, string& outHex ) override;
+        [[nodiscard]] bool      computeSHA256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override;
         [[nodiscard]] bool      verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override;
         [[nodiscard]] bool      createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override;
         [[nodiscard]] bool      signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) override;

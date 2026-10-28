@@ -267,7 +267,7 @@ namespace sw::editor
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
                     const string diskPath = toDiskPath( spec._listMap[mapIndex]._output );
-                    if ( ImageFileWriter::writePngRgba8( diskPath, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    if ( ImageFileWriter::writePNGRGBA8( diskPath, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
                     {
                         SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", diskPath.c_str() );
                         return false;

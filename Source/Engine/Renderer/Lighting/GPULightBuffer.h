@@ -112,7 +112,7 @@ namespace sw
         GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
 
         /**
-         * @brief GPU 구간(`getGpuLightBase` 부터 `getGpuLightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
+         * @brief GPU 구간(`getGPULightBase` 부터 `getGPULightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
          * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfxsimulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
          *          셰이더가 보는 라이트 수(`g_SwLightCount`)에 든다 — 라이트 그리드 생산자(lightgrid.hlsl)와 조명 커서가 구간을 따로 알 필요가 없다.
          *          CPU 라이트 수는 이 구간만큼 줄여 CPU + GPU 가 `shaderslot::kMaxFrameLight` 를 넘지 않게 한다.
@@ -124,7 +124,7 @@ namespace sw
          * @brief GPU 구간으로 받을 수 있는 슬롯 수를 정합니다. **GPU 생산자만 받습니다.**
          * @details GPU 구간은 GPU 에서 채워져 CPU 가 내용을 모른다. CPU 생산자(`LightGrid::populate`)는 CPU 가 가진 목록만 그리드에 넣고, 그리드 없는 경로는
          *          구간의 죽은 슬롯까지 도므로, 둘 다 GPU 라이트를 제대로 그리지 못한다. 그래서 조용히 생산자를 바꾸지 않고 0 을 돌려준다(`update` 가 오류를 남기고 그리지 않는다).
-         * @param requestedSlotCount 방출기들이 요청한 슬롯의 합(`VfxGPUSimulation::assignLightRanges`, 이미 `kMaxGpuLight` 안이다).
+         * @param requestedSlotCount 방출기들이 요청한 슬롯의 합(`VFXGPUSimulation::assignLightRanges`, 이미 `kMaxGPULight` 안이다).
          */
         [[nodiscard]] static uint32 selectGPULightSlotCount( LightGridProducer producer, uint32 requestedSlotCount );
 
@@ -142,7 +142,7 @@ namespace sw
          * @param listGridViewProj 그리드를 만들 뷰의 뷰-투영(셰이더의 `g_ViewProj` 와 같은 값). 순서가 그리드 번호입니다.
          * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FrameRenderer::dispatchLightGrid`.
          *                 None 이면 그리드 없이 올립니다.
-         * @param requestedGpuLightSlotCount GPU 방출기들이 요청한 파티클 라이트 슬롯의 합. 생산자가 GPU 가 아니면 오류를 한 번 남기고 0 으로 받는다(`selectGpuLightSlotCount`).
+         * @param requestedGPULightSlotCount GPU 방출기들이 요청한 파티클 라이트 슬롯의 합. 생산자가 GPU 가 아니면 오류를 한 번 남기고 0 으로 받는다(`selectGPULightSlotCount`).
          * @details 용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 그리드를 만들지 못한 뷰(투영이 깨졌다)와 GPU 그리드 버퍼를 만들지 못한 프레임은
          *          오류를 한 번 남기고 그리드 없이 그립니다(셰이더는 목록 전체를 돈다 — 그림은 같고 비용만 다르다).
          *          GPU 구간이 있으면 라이트 버퍼는 UAV 가 있는 기본 힙 버퍼이고, 구간은 **죽은 라이트**(점광, 반경 0 — 그리드에 들지 않는다)로 채워 올린다.
@@ -159,7 +159,7 @@ namespace sw
         /** @brief 이번 프레임에 받은 GPU 구간의 슬롯 수입니다. 0 이면 GPU 라이트를 쓰지 않는 프레임(또는 생산자가 GPU 가 아니라 거절한 프레임)입니다. */
         uint32 getGPULightCount() const { return _gpuLightCount; }
         /** @brief GPU 구간을 쓰는 컴퓨트의 UAV 입니다. 구간이 없거나 UAV 를 만들지 못했으면 `kInvalidDescriptorIndex` 입니다. */
-        RHIDescriptorIndex getGPULightUav() const { return _gpuLightCount > 0 ? _buffer._uav : kInvalidDescriptorIndex; }
+        RHIDescriptorIndex getGPULightUAV() const { return _gpuLightCount > 0 ? _buffer._uav : kInvalidDescriptorIndex; }
         /** @brief `update` 에 준 뷰 @p gridIndex 의 그리드 첫 단어입니다(PassCB `g_SwLightGridBase`). 그리드가 없으면 `invalid_index::kUint32` 입니다. */
         uint32 getGridBase( uint32 gridIndex ) const { return gridIndex < _listGridBase.size() ? _listGridBase[gridIndex] : invalid_index::kUint32; }
         /** @brief 이번 프레임의 그리드 버퍼(t12)입니다. 생산자가 CPU 면 동적 버퍼, GPU 면 기본 힙 버퍼입니다. 그리드가 없으면 nullptr 입니다. */
@@ -169,7 +169,7 @@ namespace sw
         /** @brief 라이트 프로브 SH9 버퍼(t13)입니다. 이번 프레임에 쓸 프로브가 없으면 nullptr 입니다(볼륨 원소도 목록에 없다). */
         const RHIStructuredBufferSlot* findProbeBuffer() const;
         /** @brief 프로브 갱신 컴퓨트가 프로브 버퍼를 쓰는 UAV 입니다. 이번 프레임에 쓸 수 없으면(실시간 볼륨이 없다 · 버퍼가 없다 · 백엔드가 UAV 를 거절했다) `kInvalidDescriptorIndex` 입니다. */
-        RHIDescriptorIndex getProbeUav() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
+        RHIDescriptorIndex getProbeUAV() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
 
         /** @brief GPU 생산자가 이번 프레임에 채울 뷰 수입니다. 0 이면 디스패치할 것이 없습니다. */
         uint32 getGPUGridViewCount() const { return _gpuGridViewCount; }
@@ -224,7 +224,7 @@ namespace sw
         /// @brief GPU 구간을 거절한 오류를 한 번만 남기기 위한 표시입니다.
         uint8 _bWarnedGPULightRefused{ SW_FALSE };
         /// @brief 백엔드가 라이트 버퍼의 UAV 를 거절했습니다(다시 잡아 봐야 같다 — 오류도 한 번만).
-        uint8 _bUavDenied{ SW_FALSE };
-        uint8 _bProbeUavDenied{ SW_FALSE }; ///< 프로브 버퍼의 UAV 를 백엔드가 거절했다(한 번만 알리고 다시 잡지 않는다)
+        uint8 _bUAVDenied{ SW_FALSE };
+        uint8 _bProbeUAVDenied{ SW_FALSE }; ///< 프로브 버퍼의 UAV 를 백엔드가 거절했다(한 번만 알리고 다시 잡지 않는다)
     };
 } // namespace sw

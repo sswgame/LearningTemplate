@@ -122,7 +122,7 @@ namespace sw
         size_t offset         = 0;
         while ( offset < text.size() )
         {
-            (void)StringUtil::decodeUtf8( text, offset );
+            (void)StringUtil::decodeUTF8( text, offset );
             ++characterCount;
         }
         return MathUtil::max( kMinReadingSeconds, static_cast<float32>( characterCount ) * kReadingSecondsPerCharacter );

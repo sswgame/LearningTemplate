@@ -61,7 +61,7 @@ namespace sw
                     glyph._face       = run._face;
                     glyph._glyphIndex = pInfo[source].codepoint; // 셰이핑 뒤의 codepoint 칸은 글리프 번호다
                     glyph._cluster    = run._byteOffset + pInfo[source].cluster;
-                    glyph._codepoint  = cursor < run._text.size() ? StringUtil::decodeUtf8( run._text, cursor ) : 0u;
+                    glyph._codepoint  = cursor < run._text.size() ? StringUtil::decodeUTF8( run._text, cursor ) : 0u;
                     glyph._advance    = static_cast<float32>( pPosition[source].x_advance ) * invUpem;
                     glyph._offset     = float2{ static_cast<float32>( pPosition[source].x_offset ) * invUpem, -static_cast<float32>( pPosition[source].y_offset ) * invUpem };
                     inoutListGlyph.push_back( glyph );

@@ -4,7 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HexDigitUtil.h"
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/HexUtil.h"
@@ -32,7 +32,7 @@ namespace sw
                 DWORD _signature; ///< 'RSDS'
                 GUID  _guid;
                 DWORD _age;
-                utf8  _arrPdbPath[1];
+                utf8  _arrPDBPath[1];
             };
 
             static constexpr DWORD kRsdsSignature = FourCcUtil::make( "RSDS" );
@@ -117,7 +117,7 @@ namespace sw
             return result;
         utf16 arrPath[constant::kMaxPathSize]{};
         if ( GetModuleFileNameW( hModule, arrPath, constant::kMaxPathSize ) > 0 )
-            result._modulePath = StringUtil::utf16ToUtf8( arrPath );
+            result._modulePath = StringUtil::utf16ToUTF8( arrPath );
         const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
         const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
         if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
@@ -143,7 +143,7 @@ namespace sw
             Internal::appendHex( text, pRecord->_guid.Data4, sizeof( pRecord->_guid.Data4 ), true );
             text.appendFormat( "%#", Fmt( static_cast<uint32>( pRecord->_age ), Format().hexUpper() ) );
             result._id        = text.c_str();
-            result._debugFile = pRecord->_arrPdbPath;
+            result._debugFile = pRecord->_arrPDBPath;
             break;
         }
 #elif defined( SW_PLATFORM_LINUX )

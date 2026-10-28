@@ -93,7 +93,7 @@ namespace sw
         float32    _fontSize{ 0.0f };           ///< 이 글리프의 폰트 크기입니다(리치 텍스트 크기 배율 포함).
         uint32     _glyphIndex{ 0 };            ///< 면 안의 글리프 번호(0 = 두부)
         uint32     _cluster{ 0 };               ///< 원문 바이트 위치입니다.
-        uint32     _colorRgba{ 0xFFFFFFFFu };   ///< 리치 텍스트 색입니다. 0xFFFFFFFF 는 위젯 색 그대로입니다.
+        uint32     _colorRGBA{ 0xFFFFFFFFu };   ///< 리치 텍스트 색입니다. 0xFFFFFFFF 는 위젯 색 그대로입니다.
         FontFaceID _face{ kInvalidFontFaceID }; ///< 글리프를 가진 면입니다.
         uint8      _bFauxBold{ SW_FALSE };      ///< SDF 임계값을 옮겨 굵게 그립니다.
         uint8      _bFauxItalic{ SW_FALSE };    ///< 기울여 그립니다.
@@ -146,7 +146,7 @@ namespace sw
         /**
          * @brief 너비 @p maxWidth(0 이하면 무한) 안에 배치합니다. @p outResult 는 앞을 비우고 채웁니다.
          * @param pListSpan 리치 텍스트 구간입니다(`RichTextParser`이며 @p text 는 표기를 뺀 평문입니다). 구간 경계에서도 런을 끊고, 굵게와 기울임은 그 굵기와 기울기의 연쇄를,
-         *                  크기 배율은 글리프 크기를, 색은 `LaidOutGlyph::_colorRgba` 를 바꿉니다. nullptr 이면 스타일 하나를 씁니다.
+         *                  크기 배율은 글리프 크기를, 색은 `LaidOutGlyph::_colorRGBA` 를 바꿉니다. nullptr 이면 스타일 하나를 씁니다.
          */
         void layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult, const vector<RichTextSpan>* pListSpan = nullptr );
         /**

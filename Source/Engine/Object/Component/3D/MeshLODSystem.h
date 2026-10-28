@@ -6,7 +6,7 @@
  *          대기 뷰(컷 프리롤의 카메라, `CameraManagerComponent`)가 있으면 그 시점의 화면 크기도 본다 — 컷 첫 프레임에 그 시점의 단계로 바로 그린다.
  *          단계를 바꾸면 컴포넌트가 렌더 상태를 더티로 표시하고, 렌더 수집이 그 단계의 정점 범위로 배치를 나눈다(`MeshComponent::findDrawSection`).
  *          지금은 컴포넌트마다 CPU 에서 고른다 — 인스턴스마다 GPU 컬링이 고르는 경로(`gpucull.hlsl` 의 간접 인자)와 단계 사이 디더 크로스페이드는 계획
- *          PreloadAndLod P9 의 남은 일이다(셰이더).
+ *          PreloadAndLOD P9 의 남은 일이다(셰이더).
  */
 #pragma once
 #include "Core/Common/Macros.h"

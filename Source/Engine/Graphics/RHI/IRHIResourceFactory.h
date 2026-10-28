@@ -169,7 +169,7 @@ namespace sw
         virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
 
         // ------------------------------------------------------------------------------
-        // 전송: 제출 → 티켓 → 폴링 (docs/plans/RhiAsyncUploads.md 2.2)
+        // 전송: 제출 → 티켓 → 폴링 (docs/plans/RHIAsyncUploads.md 2.2)
         // ------------------------------------------------------------------------------
         // 규칙: 이 인터페이스에는 GPU 완료를 기다리는 가상 함수를 새로 만들지 않는다. 기다리는 변형은 Engine 의 `RHITransferUtil::...AndWait` 헬퍼이고
         //       vtable 밖에 있다. 소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에야 텍스처를 bindless 에 등록한다 — 백엔드가 레코드의 마지막 전송 시리얼로
@@ -273,27 +273,27 @@ namespace sw
         virtual void unregisterBindlessTexture( RHIDescriptorIndex index ) = 0;
 
         /** @brief Bindless 테이블에 버퍼를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessBufferSrv( RHIBufferHandle buffer ) = 0;
+        virtual RHIDescriptorIndex registerBindlessBufferSRV( RHIBufferHandle buffer ) = 0;
 
         /**
-         * @brief registerBindlessBufferSrv 가 발급한 **버퍼** 인덱스를 해제합니다.
+         * @brief registerBindlessBufferSRV 가 발급한 **버퍼** 인덱스를 해제합니다.
          * @details 이미 비어 있는 슬롯(다른 종류의 인덱스, 이중 해제)은 프리리스트에 다시 넣지 않는다.
          *          한 번이라도 넣으면 같은 인덱스가 두 리소스에 발급되어 조용히 엉뚱한 버퍼가 바인딩된다.
          */
         virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
 
         /** @brief bindless UAV 를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessBufferUav( RHIBufferHandle buffer ) = 0;
+        virtual RHIDescriptorIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) = 0;
 
         /**
          * @brief 텍스처(생성 시 _bIsUnorderedAccess)를 컴퓨트 RW 텍스처로 등록하고 인덱스를 발급합니다.
          * @details DX12 와 Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D)의 원소 인덱스라 셰이더가 그 값으로 고른다(루트 상수 등으로 넘긴다).
-         *          DX11 과 GL 은 bindComputeUav( index, shaderslot::kComputeTextureUav0 + 서수 ) 로 슬롯에 바인딩하고 셰이더는 서수를 쓴다.
-         *          해제는 unregisterBindlessUav 이고, 버퍼 UAV 와 같은 인덱스 공간을 쓴다.
+         *          DX11 과 GL 은 bindComputeUAV( index, shaderslot::kComputeTextureUAV0 + 서수 ) 로 슬롯에 바인딩하고 셰이더는 서수를 쓴다.
+         *          해제는 unregisterBindlessUAV 이고, 버퍼 UAV 와 같은 인덱스 공간을 쓴다.
          */
-        virtual RHIDescriptorIndex registerBindlessTextureUav( RHITextureHandle texture ) = 0;
+        virtual RHIDescriptorIndex registerBindlessTextureUAV( RHITextureHandle texture ) = 0;
 
         /** @brief bindless UAV 등록을 해제합니다. */
-        virtual void unregisterBindlessUav( RHIDescriptorIndex index ) = 0;
+        virtual void unregisterBindlessUAV( RHIDescriptorIndex index ) = 0;
     };
 } // namespace sw

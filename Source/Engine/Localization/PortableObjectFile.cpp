@@ -227,8 +227,8 @@ namespace sw
             string_view line = text.substr( lineStart, lineEnd - lineStart );
             lineStart        = lineEnd + 1;
             ++lineNumber;
-            const bool bUtf8Bom = lineNumber == 1 && line.size() >= 3 && static_cast<uint8>( line[0] ) == 0xEF;
-            if ( bUtf8Bom )
+            const bool bUTF8Bom = lineNumber == 1 && line.size() >= 3 && static_cast<uint8>( line[0] ) == 0xEF;
+            if ( bUTF8Bom )
                 line.remove_prefix( 3 ); // UTF-8 BOM
             line = StringUtil::trim( line );
             if ( line.empty() )

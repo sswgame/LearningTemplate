@@ -8,7 +8,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
@@ -44,7 +44,7 @@ namespace sw
         if ( _transferSerials.markLost() )
         {
             SW_LOG_ERROR( "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
-            GpuBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
+            GPUBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
         }
     }
 
@@ -278,7 +278,7 @@ namespace sw
         _swapChain.acquireNextImage( _device.Get() );
         // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다. 프레임마다 다시 건다(값싸다).
         bindStaticSamplers( context.get() );
-        if ( _swapChain.getBackBufferRtv() == nullptr )
+        if ( _swapChain.getBackBufferRTV() == nullptr )
             return;
 
         // beginFrame 은 프레임 수명주기만 맡고 백버퍼를 바인딩하거나 클리어하지 않는다. 백버퍼를 타깃으로
@@ -325,7 +325,7 @@ namespace sw
         if ( _swapChain.isValid() == false )
             return;
 
-        _swapChain.releaseBackBufferRtv();
+        _swapChain.releaseBackBufferRTV();
 
         if ( bPresent )
         {

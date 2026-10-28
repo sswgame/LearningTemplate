@@ -339,9 +339,9 @@ namespace sw
         static constexpr int32 kMaxSettingValueSize = 64;
         static constexpr int32 kMaxLobbyNameSize    = 48;
         static constexpr int32 kMaxLobbyList        = 50;
-        static constexpr int64 kPartyTtlMs          = 1800000; ///< 30분이며 바뀔 때마다 연장한다
-        static constexpr int64 kLobbyTtlMs          = 7200000; ///< 2시간이다
-        static constexpr int64 kInviteTtlMs         = 300000;  ///< 5 분
+        static constexpr int64 kPartyTTLMs          = 1800000; ///< 30분이며 바뀔 때마다 연장한다
+        static constexpr int64 kLobbyTTLMs          = 7200000; ///< 2시간이다
+        static constexpr int64 kInviteTTLMs         = 300000;  ///< 5 분
     };
 } // namespace sw
 

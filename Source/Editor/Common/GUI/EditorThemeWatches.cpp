@@ -33,7 +33,7 @@ namespace sw::editor
 
         [[nodiscard]] bool readUIScale( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
+            outValue = static_cast<float64>( EditorThemeUtil::getDPIScale() );
             return true;
         }
     } // namespace

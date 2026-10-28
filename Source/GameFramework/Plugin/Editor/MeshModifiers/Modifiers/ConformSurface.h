@@ -1,7 +1,7 @@
 /**
  * @file ConformSurface.h
  * @brief Conform 계열이 쓰는 삼각형 표면 BVH 입니다. 질의가 상태 없이 const 라서 정점 덩어리마다 다른 스레드에서 물을 수 있고, 같은 삼각형 목록이면 BVH 를 다시 만들지 않습니다.
- * @details 엔진의 `SurfaceBvh` 는 질의 후보를 멤버 스크래치에 받아 한 스레드만 묻는다. 이 클래스는 같은 규칙(상자 여유 · 양면 교차 · 최근접점)을 쓰되
+ * @details 엔진의 `SurfaceBVH` 는 질의 후보를 멤버 스크래치에 받아 한 스레드만 묻는다. 이 클래스는 같은 규칙(상자 여유 · 양면 교차 · 최근접점)을 쓰되
  *          후보 목록을 부르는 쪽이 넘기게 해서 그 제약을 없앴다. 모디파이어 인스턴스마다 하나를 가지고(`mutable`), 적용 때마다
  *          `assign` 으로 삼각형을 넘기면 지난번과 한 바이트도 다르지 않을 때만 BVH 를 재사용한다 — 해시가 아니라 값 비교라 충돌로 낡은 BVH 를 쓰는 일이 없다.
  *          `assign` 은 한 스레드에서(적용 시작에), 질의는 여러 스레드에서 부른다.
@@ -64,7 +64,7 @@ namespace sw::editor
 
         /**
          * @brief 가장 가까운 교차를 찾습니다(양면). @p inoutListScratch 는 부르는 스레드가 가진 후보 버퍼입니다.
-         * @details `SurfaceBvh::findNearestHit` 와 같은 규칙이다. 상태를 바꾸지 않으므로 스크래치만 다르면 여러 스레드가 동시에 물어도 된다.
+         * @details `SurfaceBVH::findNearestHit` 와 같은 규칙이다. 상태를 바꾸지 않으므로 스크래치만 다르면 여러 스레드가 동시에 물어도 된다.
          */
         [[nodiscard]] bool findNearestHit( const float3& origin, const float3& direction, float32 maxDistance, vector<SlotHandle>& inoutListScratch, GeometryRayHit& outHit ) const
         {
@@ -132,7 +132,7 @@ namespace sw::editor
         }
 
     private:
-        /** @brief 평평한 삼각형도 부피가 있게 상자를 조금 키운다(광선 슬랩 판정의 0 두께 모서리). `SurfaceBvh` 와 같은 값이다. */
+        /** @brief 평평한 삼각형도 부피가 있게 상자를 조금 키운다(광선 슬랩 판정의 0 두께 모서리). `SurfaceBVH` 와 같은 값이다. */
         static constexpr float32 kBoundsPadding = 1.0e-4f;
 
         void getTriangle( uint32 triangle, float3& outA, float3& outB, float3& outC ) const

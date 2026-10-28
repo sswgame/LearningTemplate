@@ -23,7 +23,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 function(sw_findLlvmBin OUT_VAR)
 	get_filename_component(swRepoRoot "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.." ABSOLUTE)
 	set(swConfigFile "${swRepoRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
-	sw_requireJsonValue(swLlvmPath "${swConfigFile}" "${SW_KEY_LLVM_PATH}")
+	sw_requireJSONValue(swLlvmPath "${swConfigFile}" "${SW_KEY_LLVM_PATH}")
 
 	if(swLlvmPath STREQUAL "" OR NOT IS_DIRECTORY "${swLlvmPath}/bin")
 		message(FATAL_ERROR

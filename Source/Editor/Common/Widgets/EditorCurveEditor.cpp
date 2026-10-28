@@ -78,7 +78,7 @@ namespace sw::editor
             {
                 const ImU32                          lineColor = ImGui::GetColorU32( ImGuiCol_Border );
                 const ImU32                          textColor = ImGui::GetColorU32( ImGuiCol_TextDisabled );
-                const float32                        scale     = EditorThemeUtil::getDpiScale();
+                const float32                        scale     = EditorThemeUtil::getDPIScale();
                 const float32                        left      = view._frameMin._x;
                 const float32                        top       = view._frameMin._y;
                 const float32                        right     = left + view._frameSize._x;
@@ -125,7 +125,7 @@ namespace sw::editor
                 }
                 FloatCurveKey& key       = curve._listKey[state._selectedKey];
                 bool           bFinished = false;
-                const float32  width     = 110.0f * EditorThemeUtil::getDpiScale();
+                const float32  width     = 110.0f * EditorThemeUtil::getDPIScale();
                 // 이름을 필드 앞에 둔다(ImGui 기본은 필드 뒤라 "0.000 Time 0.240 Value" 처럼 이름과 값이 어긋나 읽힌다).
                 ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted( "Time" );
@@ -217,9 +217,9 @@ namespace sw::editor
                 const EditorPointerState pointer      = EditorInputGUI::readPointer();
                 FloatCurve&              curve        = state._working;
                 EditorCurveView&         view         = state._view;
-                const float32            pickRadius   = kPickRadius * EditorThemeUtil::getDpiScale();
+                const float32            pickRadius   = kPickRadius * EditorThemeUtil::getDPIScale();
                 const float2             mouse        = pointer._position;
-                const float32            handleLength = kTangentLength * EditorThemeUtil::getDpiScale();
+                const float32            handleLength = kTangentLength * EditorThemeUtil::getDPIScale();
 
                 if ( bHovered && pointer.wasPressed( EditorMouseButton::Left ) )
                 {
@@ -351,7 +351,7 @@ namespace sw::editor
         EditorCurveEditorInternal::drawGrid( drawList, view );
         EditorCurveEditorInternal::drawCurveLine( drawList, view, state._working, ImGui::GetColorU32( ImGuiCol_PlotLines ), 2.0f, 2.0f );
 
-        const float32                        scale        = EditorThemeUtil::getDpiScale();
+        const float32                        scale        = EditorThemeUtil::getDPIScale();
         const ImU32                          keyColor     = ImGui::GetColorU32( ImGuiCol_Text );
         const ImU32                          selectColor  = ImGui::GetColorU32( ImGuiCol_PlotLinesHovered );
         const float32                        keyRadius    = EditorCurveEditorInternal::kKeyRadius * scale;

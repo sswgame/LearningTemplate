@@ -246,7 +246,7 @@ namespace sw
 
     bool HTTP2Client::establishLocked( Session& session )
     {
-        if ( session._link.getNegotiatedProtocol() != kAlpnProtocol )
+        if ( session._link.getNegotiatedProtocol() != kALPNProtocol )
         {
             failSessionLocked( session, "server did not negotiate h2" );
             return false;

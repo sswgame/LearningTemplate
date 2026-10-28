@@ -78,7 +78,7 @@ namespace sw
             }
             applyMouseLock( input, _bMouseLockRequested == SW_TRUE && bUIWantsCursor == false );
             // 잠금이 실제로 걸린 동안만 시선을 쌓는다. 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않으니 잠금 요청만 본다.
-            bLook = bLook && _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOsInputSuppressed() );
+            bLook = bLook && _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOSInputSuppressed() );
         }
         // 모달 · 로딩 화면이 떠 있으면 게임 입력이 없다 — 의도는 0, 조종 회전은 그대로.
         if ( pUI != nullptr && pUI->isGameInputBlocked() )

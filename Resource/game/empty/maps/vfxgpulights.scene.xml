@@ -59,7 +59,7 @@
 		<entity id="4" name="Effect">
 			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
 				<_listComponent>
-					<VfxComponent _localPosition="0,0.5,2"
+					<VFXComponent _localPosition="0,0.5,2"
 					              _localRotation="0,0,0"
 					              _localScale="1,1,1"
 					              _attachOwner="None"

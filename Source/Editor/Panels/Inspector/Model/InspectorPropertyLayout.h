@@ -139,7 +139,7 @@ namespace sw::editor
         /** @brief 값을 허용 범위 안으로 제한합니다. 범위가 적힌 쪽만 제한합니다. */
         static float64 clampToAllowedRange( const InspectorNumericRange& range, float64 value );
 
-        /** @brief 색 선택기로 그릴지 정합니다. `ColorHdr` 이거나 `Meta = "Color"` 이거나 이름에 color 가 들어간 float3, float4 이면 true 입니다. */
+        /** @brief 색 선택기로 그릴지 정합니다. `ColorHDR` 이거나 `Meta = "Color"` 이거나 이름에 color 가 들어간 float3, float4 이면 true 입니다. */
         static bool isColorRequested( const PropertyInfo& prop );
 
         /**

@@ -5,7 +5,7 @@
 #include "Core/Process/Process.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <shellapi.h>
     #include <shlobj.h>
@@ -87,7 +87,7 @@ namespace sw
                 {
                     if ( entry._name.empty() || entry._name.find( '=' ) != string::npos )
                         return false;
-                    const wstring   name = StringUtil::utf8ToUtf16( entry._name.c_str() );
+                    const wstring   name = StringUtil::utf8ToUTF16( entry._name.c_str() );
                     vector<wstring> listKept;
                     for ( const wstring& line : listLine )
                     {
@@ -97,7 +97,7 @@ namespace sw
                         if ( bSameName == false )
                             listKept.push_back( line );
                     }
-                    listKept.push_back( StringUtil::utf8ToUtf16( ( entry._name + "=" + entry._value ).c_str() ) );
+                    listKept.push_back( StringUtil::utf8ToUTF16( ( entry._name + "=" + entry._value ).c_str() ) );
                     listLine = std::move( listKept );
                 }
                 std::sort( listLine.begin(), listLine.end(), []( const wstring& left, const wstring& right )
@@ -269,8 +269,8 @@ namespace sw
             return false;
 
         const string cmdStr     = command.toCommandLine();
-        wstring      wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
-        wstring      wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
+        wstring      wsCmdLine  = StringUtil::utf8ToUTF16( cmdStr.c_str() );
+        wstring      wsBuildDir = StringUtil::utf8ToUTF16( options._workingDirectory.c_str() );
 
         Internal::InheritedHandleList inheritedHandles;
         if ( inheritedHandles.initialize( pipes ) == false )
@@ -340,8 +340,8 @@ namespace sw
             return false;
         }
         const string  cmdStr      = command.toCommandLine();
-        wstring       wsCmdLine   = StringUtil::utf8ToUtf16( cmdStr.c_str() );
-        const wstring wsDirectory = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
+        wstring       wsCmdLine   = StringUtil::utf8ToUTF16( cmdStr.c_str() );
+        const wstring wsDirectory = StringUtil::utf8ToUTF16( options._workingDirectory.c_str() );
 
         STARTUPINFOW startupInfo{};
         startupInfo.cb = sizeof( STARTUPINFOW );
@@ -364,7 +364,7 @@ namespace sw
     bool Process::launchURL( string_view url )
     {
         const WindowsProcessInternal::ScopedShellCom com;
-        const wstring                                wideURL = StringUtil::utf8ToUtf16( string( url ).c_str() );
+        const wstring                                wideURL = StringUtil::utf8ToUTF16( string( url ).c_str() );
         // 32 이하는 오류 코드다(ShellExecute 의 옛 계약).
         const INT_PTR result = reinterpret_cast<INT_PTR>( ShellExecuteW( nullptr, L"open", wideURL.c_str(), nullptr, nullptr, SW_SHOWNORMAL ) );
         if ( result <= 32 )
@@ -385,7 +385,7 @@ namespace sw
                 character = '\\';
         }
         const WindowsProcessInternal::ScopedShellCom com;
-        const wstring                                widePath = StringUtil::utf8ToUtf16( windowsPath.c_str() );
+        const wstring                                widePath = StringUtil::utf8ToUTF16( windowsPath.c_str() );
         PIDLIST_ABSOLUTE                             pItem    = ILCreateFromPathW( widePath.c_str() );
         if ( pItem == nullptr )
         {
@@ -508,7 +508,7 @@ namespace sw
         DWORD length = static_cast<DWORD>( MAX_COMPUTERNAME_LENGTH + 1 );
         if ( GetComputerNameW( arrBuffer, &length ) == FALSE )
             return {};
-        return StringUtil::utf16ToUtf8( arrBuffer );
+        return StringUtil::utf16ToUTF8( arrBuffer );
     }
 
     bool Process::isDebuggerPresent()

@@ -3,13 +3,13 @@
  * @brief UTF 변환 · 해시 · 분할 · 트림 같은 문자열 유틸리티입니다(입력은 널 종료 utf8* / utf16*).
  */
 #pragma once
-#include "Core/Common/AsciiUtil.h"
+#include "Core/Common/ASCIIUtil.h"
 #include "Core/Common/Defines.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/Utf8Util.h"
+#include "Core/Container/UTF8Util.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -55,10 +55,10 @@ namespace sw
 
 namespace sw
 {
-    namespace StringUtilCrcInternal
+    namespace StringUtilCRCInternal
     {
         /** @brief IEEE 802.3 CRC32 테이블을 컴파일 타임에 만듭니다. */
-        constexpr array<uint32, constant::kMaxBuffer256> makeCrc32TableInternal() noexcept
+        constexpr array<uint32, constant::kMaxBuffer256> makeCRC32TableInternal() noexcept
         {
             array<uint32, constant::kMaxBuffer256> arrTable{};
             for ( uint32 index = 0; index < constant::kMaxBuffer256; ++index )
@@ -72,7 +72,7 @@ namespace sw
             }
             return arrTable;
         }
-    } // namespace StringUtilCrcInternal
+    } // namespace StringUtilCRCInternal
 
     // ------------------------------------------------------------------------------
     // 2) StringUtil — UTF 변환 · 해시 · 분할 · 트림(모두 static)
@@ -88,42 +88,42 @@ namespace sw
         static bool isNullOrEmpty( const utf16* pStr );
 
         /** @brief 바이트열이 올바른 UTF-8 인지 검사합니다. */
-        static bool isValidUtf8( const utf8* pInput );
+        static bool isValidUTF8( const utf8* pInput );
         /**
          * @brief 올바른 UTF-8 은 그대로 두고, 잘못된 바이트만 백슬래시 + `xNN`(16진 두 자리) 넉 자로 바꿉니다. 결과는 늘 올바른 UTF-8 입니다.
          * @details 로그가 이것을 쓴다. 한 바이트만 틀려도 **줄 전체**를 로캘 변환하면, `setlocale` 을 부르는 곳이 없어 C 로캘이라
          *          Windows 에서는 멀쩡한 한글까지 깨지고 glibc 에서는 줄이 통째로 빈다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
          */
-        static string escapeInvalidUtf8( string_view text );
+        static string escapeInvalidUTF8( string_view text );
         /**
          * @brief @p text 의 @p inoutOffset 위치에서 UTF-8 글자 하나를 읽어 코드 포인트를 돌려주고, 오프셋을 그 글자 뒤로 옮깁니다.
          * @details 잘못된 바이트는 U+FFFD 로 읽고 한 바이트 이상 넘깁니다(무한 반복이 없습니다). 오프셋이 끝이면 0 을 돌려주고 옮기지 않습니다.
          */
-        static uint32 decodeUtf8( string_view text, size_t& inoutOffset );
+        static uint32 decodeUTF8( string_view text, size_t& inoutOffset );
         /**
          * @brief @p text 를 바이트 @p cut 에서 자를 때 글자 한가운데가 아닌 가장 가까운 앞 경계(글자 시작)를 돌려줍니다.
          * @details @p cut 이 @p text 길이 이상이면 길이를 돌려준다. UTF-8 글자는 최대 4 바이트라 이어지는 바이트(10xxxxxx)를 세 번까지만 물린다(잘못된 UTF-8 을 끝없이 거슬러 가지 않는다).
          */
-        [[nodiscard]] static constexpr size_t floorToUtf8Boundary( string_view text, size_t cut )
+        [[nodiscard]] static constexpr size_t floorToUTF8Boundary( string_view text, size_t cut )
         {
             if ( cut >= text.size() )
                 return text.size();
-            return Utf8Util::backOffToCharacterStart( text.data(), cut );
+            return UTF8Util::backOffToCharacterStart( text.data(), cut );
         }
         /**
-         * @brief `decodeUtf8` 와 같게 글자 하나를 읽되, 올바른 UTF-8 이었는지 돌려줍니다(false 면 @p outCodepoint 는 U+FFFD).
-         * @details 오프셋이 끝이면 false 이고 옮기지 않습니다. 잘못된 시퀀스는 `decodeUtf8` 가 정한 길이만큼 넘어간다(글자마다 직접 비트를 풀지 말고 이것을 쓴다).
+         * @brief `decodeUTF8` 와 같게 글자 하나를 읽되, 올바른 UTF-8 이었는지 돌려줍니다(false 면 @p outCodepoint 는 U+FFFD).
+         * @details 오프셋이 끝이면 false 이고 옮기지 않습니다. 잘못된 시퀀스는 `decodeUTF8` 가 정한 길이만큼 넘어간다(글자마다 직접 비트를 풀지 말고 이것을 쓴다).
          */
-        [[nodiscard]] static bool tryDecodeUtf8( string_view text, size_t& inoutOffset, uint32& outCodepoint );
+        [[nodiscard]] static bool tryDecodeUTF8( string_view text, size_t& inoutOffset, uint32& outCodepoint );
         /** @brief @p text 가 올바른 글자 정확히 하나(그 밖의 바이트 없음)이면 그 코드 포인트를 @p outCodepoint 에 담고 true 입니다. 빈 글 · 두 글자 이상 · 잘못된 UTF-8 은 false 입니다. */
         [[nodiscard]] static bool tryDecodeSingleCodepoint( string_view text, uint32& outCodepoint );
         /**
          * @brief UTF-8 글을 UCS-2(16 비트 코드 단위, 기본 다국어 평면)로 바꿉니다. 평면 밖(이모지 등)과 잘못된 바이트는 U+FFFD 한 글자가 됩니다.
-         * @details UCS-2 글꼴만 받는 경로(X11 코어 글꼴의 `XDrawString16`)용이다. 서로게이트 쌍으로 늘리는 `utf8ToUtf16` 와 다르다.
+         * @details UCS-2 글꼴만 받는 경로(X11 코어 글꼴의 `XDrawString16`)용이다. 서로게이트 쌍으로 늘리는 `utf8ToUTF16` 와 다르다.
          */
         static void utf8ToUcs2( string_view text, vector<uint16>& outListUnit );
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
-        static void appendUtf8( string& inoutText, uint32 codepoint );
+        static void appendUTF8( string& inoutText, uint32 codepoint );
         /**
          * @brief 바이트 오프셋이 몇째 줄 · 몇째 글자인지 셉니다(둘 다 1 부터). 열은 바이트가 아니라 UTF-8 글자 수입니다.
          * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 형식을 눌러 그 위치로 간다. 오프셋이 글 밖이면 끝 위치입니다.
@@ -131,18 +131,18 @@ namespace sw
         static void getLineAndColumn( string_view text, size_t byteOffset, uint32& outLine, uint32& outColumn );
 
         /** @brief UTF-8 문자열을 UTF-16(sw::wstring)으로 바꿉니다. */
-        static wstring utf8ToUtf16( const utf8* pInput );
+        static wstring utf8ToUTF16( const utf8* pInput );
         /** @brief UTF-16 문자열을 UTF-8(sw::string)로 바꿉니다. */
-        static string utf16ToUtf8( const utf16* pInput );
+        static string utf16ToUTF8( const utf16* pInput );
 
         /** @brief ASCII 숫자('0'~'9')인지 봅니다. */
         static constexpr bool isDigitChar( const utf8 ch ) { return '0' <= ch && ch <= '9'; }
 
         /** @brief UTF-8 문자 하나를 소문자로 바꿉니다(ASCII 만). */
-        static constexpr utf8 toLowerChar( const utf8 ch ) { return AsciiUtil::toLower( ch ); }
+        static constexpr utf8 toLowerChar( const utf8 ch ) { return ASCIIUtil::toLower( ch ); }
 
         /** @brief UTF-16 문자 하나를 소문자로 바꿉니다(ASCII 만). */
-        static constexpr utf16 toLowerChar( const utf16 ch ) { return AsciiUtil::toLower( ch ); }
+        static constexpr utf16 toLowerChar( const utf16 ch ) { return ASCIIUtil::toLower( ch ); }
 
         /** @brief UTF-8 문자 하나를 대문자로 바꿉니다(ASCII 만). */
         static constexpr utf8 toUpperChar( const utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) ? static_cast<utf8>( ch - ( 'a' - 'A' ) ) : ch; }
@@ -439,11 +439,11 @@ namespace sw
         }
 
     private:
-        static constexpr array<uint32, constant::kMaxBuffer256> kArrCrc32Table = StringUtilCrcInternal::makeCrc32TableInternal();
+        static constexpr array<uint32, constant::kMaxBuffer256> kArrCRC32Table = StringUtilCRCInternal::makeCRC32TableInternal();
 
     public:
         /** @brief 임의의 바이너리 버퍼에 대한 IEEE 802.3 CRC32 체크섬을 테이블 조회로 빠르게 계산합니다. */
-        static constexpr uint32 computeCrc32( const void* pData, const size_t length ) noexcept
+        static constexpr uint32 computeCRC32( const void* pData, const size_t length ) noexcept
         {
             if ( pData == nullptr || length == 0 )
                 return 0;
@@ -452,7 +452,7 @@ namespace sw
             uint32       crc    = 0xFFFFFFFFu;
             for ( size_t byteIndex = 0; byteIndex < length; ++byteIndex )
             {
-                crc = ( crc >> 8 ) ^ kArrCrc32Table[( crc ^ pBytes[byteIndex] ) & 0xFFu];
+                crc = ( crc >> 8 ) ^ kArrCRC32Table[( crc ^ pBytes[byteIndex] ) & 0xFFu];
             }
             return ~crc;
         }

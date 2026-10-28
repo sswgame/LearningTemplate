@@ -36,7 +36,7 @@ namespace sw
 {
     struct ScheduleBlockDef;
     struct ScheduleConditionContext;
-    struct ScheduleNpcDef;
+    struct ScheduleNPCDef;
     struct ScheduleSaveState;
 
     class GameFlags;
@@ -52,7 +52,7 @@ namespace sw
 
     /** @brief NPC 가 지금 하는 일입니다. */
     ENUM()
-    enum class ScheduleNpcPhase : uint8
+    enum class ScheduleNPCPhase : uint8
     {
         Traveling = 0, ///< 다음 블록의 위치로 가는 중
         Performing,    ///< 블록의 위치에서 활동 중
@@ -99,7 +99,7 @@ namespace sw
 namespace sw
 {
     /** @brief 게임이 읽는 NPC 의 지금 모습입니다. */
-    struct ScheduleNpcView
+    struct ScheduleNPCView
     {
         ScheduleLocation _location{}; ///< Near 면 고운 경로 위, Far 면 계획 경로 위
         ScheduleLocation _target{};
@@ -108,7 +108,7 @@ namespace sw
         hashed_string    _interruption{}; ///< 맨 위 끼어들기(없으면 빈 이름)
         int32            _segmentIndex{ -1 };
         float32          _travelFraction{ 1.0f };
-        ScheduleNpcPhase _phase{ ScheduleNpcPhase::Performing };
+        ScheduleNPCPhase _phase{ ScheduleNPCPhase::Performing };
         ScheduleLOD      _lod{ ScheduleLOD::Far };
     };
 } // namespace sw
@@ -226,9 +226,9 @@ namespace sw
      *     schedules.setFlags( &flags );
      *     // 매 프레임
      *     schedules.setWeather( weather.getCurrent() );
-     *     schedules.setNpcLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
+     *     schedules.setNPCLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
      *     schedules.update( clock );
-     *     const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동, 애니메이션
+     *     const ScheduleNPCView view = schedules.getNPCView( npcIndex ); // 위치, 활동, 애니메이션
      * @endcode
      */
     class SW_GF_API ScheduleSystem
@@ -269,16 +269,16 @@ namespace sw
         /** @brief 게임이 조건 입력(세계 태그 등)을 바꿨음을 알립니다. 지금 시각에 계획을 모두 다시 세웁니다. */
         void notifyConditionsChanged() { _bConditionsDirty = SW_TRUE; }
 
-        void        setNpcLOD( int32 npcIndex, ScheduleLOD lod );
-        ScheduleLOD getNpcLOD( int32 npcIndex ) const;
-        void        addNpcTag( int32 npcIndex, const TagID& tag );
-        void        removeNpcTag( int32 npcIndex, const TagID& tag );
+        void        setNPCLOD( int32 npcIndex, ScheduleLOD lod );
+        ScheduleLOD getNPCLOD( int32 npcIndex ) const;
+        void        addNPCTag( int32 npcIndex, const TagID& tag );
+        void        removeNPCTag( int32 npcIndex, const TagID& tag );
         /**
          * @brief NPC 의 호감도(하트 수 같은 정수 관계 단계)를 정합니다. 조건의 `minAffinity` 와 `maxAffinity` 가 읽습니다. 값이 바뀌면 그 NPC 의 계획을 다시 세웁니다.
-         * @details 기본은 0 입니다. 저장 상태에 실립니다(`ScheduleNpcSaveState::_affinity`).
+         * @details 기본은 0 입니다. 저장 상태에 실립니다(`ScheduleNPCSaveState::_affinity`).
          */
-        void  setNpcAffinity( int32 npcIndex, int32 affinity );
-        int32 getNpcAffinity( int32 npcIndex ) const;
+        void  setNPCAffinity( int32 npcIndex, int32 affinity );
+        int32 getNPCAffinity( int32 npcIndex ) const;
 
         /** @brief 끼어들기(카탈로그 `<Interrupt>` id)를 쌓습니다. 모르는 id 면 경고하고 false, 이미 있으면 만료만 다시 셉니다. */
         bool pushInterruption( int32 npcIndex, const hashed_string& interruptID );
@@ -287,10 +287,10 @@ namespace sw
         /** @brief 끼어든 동안 몸이 옮겨진 위치를 알립니다(도망, 전투). 끼어든 중이 아니면 무시합니다. */
         void reportInterruptedLocation( int32 npcIndex, const ScheduleLocation& location );
 
-        int32           getNpcCount() const { return static_cast<int32>( _listNpc.size() ); }
-        int32           findNpcIndex( const hashed_string& npcID ) const;
-        hashed_string   getNpcID( int32 npcIndex ) const;
-        ScheduleNpcView getNpcView( int32 npcIndex ) const;
+        int32           getNPCCount() const { return static_cast<int32>( _listNPC.size() ); }
+        int32           findNPCIndex( const hashed_string& npcID ) const;
+        hashed_string   getNPCID( int32 npcIndex ) const;
+        ScheduleNPCView getNPCView( int32 npcIndex ) const;
         /** @brief 오늘 계획입니다. */
         const vector<ScheduleSegment>& getPlan( int32 npcIndex ) const;
         bool                           isAppointmentMet( const hashed_string& appointmentID ) const;
@@ -312,7 +312,7 @@ namespace sw
         uint64 computeStateHash() const;
 
         /** @brief "왜 여기 있나"에 답하는 추적 문자열입니다. 지금 구간과 그 출처, 후보 루틴/행사/약속의 조건 결과, 끼어들기 스택을 담습니다. */
-        void explainNpc( int32 npcIndex, string& outText ) const;
+        void explainNPC( int32 npcIndex, string& outText ) const;
         /** @brief 오늘 계획의 시간표(출발, 도착, 구간, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
         void dumpTimeline( int32 npcIndex, string& outText ) const;
         /** @brief 지금 살아 있는 일정 시스템을 모두 모읍니다. 생성자가 목록에 등록하고 소멸자가 해제합니다. 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다. */
@@ -327,7 +327,7 @@ namespace sw
             int32         _expireMinute{ -1 };
         };
 
-        struct NpcRuntime
+        struct NPCRuntime
         {
             TagContainer            _tags{};
             ScheduleLocation        _origin{};
@@ -342,7 +342,7 @@ namespace sw
             int32                   _planDay{ -1 };
             int32                   _affinity{ 0 }; ///< 호감도(관계 단계). 바뀌면 `_bTagsDirty` 로 계획을 다시 세운다
             int32                   _wakeMinute{ 0 };
-            ScheduleNpcPhase        _emittedPhase{ ScheduleNpcPhase::Performing };
+            ScheduleNPCPhase        _emittedPhase{ ScheduleNPCPhase::Performing };
             ScheduleLOD             _lod{ ScheduleLOD::Far };
             uint8                   _bTagsDirty{ SW_FALSE }; ///< 태그나 호감도가 바뀌었다. 다음 시간 흐름에서 계획을 다시 세운다
             uint8                   _bEmitted{ SW_FALSE };   ///< `_emittedSegment` 가 유효한가
@@ -371,8 +371,8 @@ namespace sw
         };
 
         // 계획
-        void                     planNpc( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin );
-        void                     replanNpc( int32 npcIndex, int32 minute, bool bKeepOriginIfSame );
+        void                     planNPC( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin );
+        void                     replanNPC( int32 npcIndex, int32 minute, bool bKeepOriginIfSame );
         void                     makePlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment );
         void                     collectCandidates( int32 npcIndex, int32 day, vector<BlockCandidate>& outListCandidate ) const;
         void                     resolveTarget( int32 npcIndex, int32 day, const BlockCandidate* pCandidate, int32 startMinute, int32 endMinute, vector<ScheduleSegment>& outListSegment );
@@ -384,23 +384,23 @@ namespace sw
 
         // 상태
         ScheduleLocation        computeLogicLocation( int32 npcIndex, int32 absoluteMinute ) const;
-        ScheduleNpcPhase        computePhase( const NpcRuntime& npc, int32 segmentIndex, float32 minuteOfDay, float32& outFraction ) const;
-        ScheduleLocation        computePlanningLocationOnRoute( const NpcRuntime& npc, int32 segmentIndex, float32 fraction ) const;
+        ScheduleNPCPhase        computePhase( const NPCRuntime& npc, int32 segmentIndex, float32 minuteOfDay, float32& outFraction ) const;
+        ScheduleLocation        computePlanningLocationOnRoute( const NPCRuntime& npc, int32 segmentIndex, float32 fraction ) const;
         bool                    isAttendeePresent( int32 npcIndex, int32 appointmentIndex ) const;
-        bool                    isValidNpc( int32 npcIndex ) const { return 0 <= npcIndex && npcIndex < getNpcCount(); }
-        const ScheduleLocation& getStartLocation( const NpcRuntime& npc, int32 segmentIndex ) const;
+        bool                    isValidNPC( int32 npcIndex ) const { return 0 <= npcIndex && npcIndex < getNPCCount(); }
+        const ScheduleLocation& getStartLocation( const NPCRuntime& npc, int32 segmentIndex ) const;
 
         // 시간 · 사건
         void  processMinute( int32 minute );
         void  processAppointmentCheck( AppointmentCheck& inoutCheck );
-        void  refreshNpc( int32 npcIndex );
+        void  refreshNPC( int32 npcIndex );
         int32 computeWakeMinute( int32 npcIndex ) const;
         void  emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceID );
         void  emitSnapped( int32 npcIndex );
         void  applyConditionChanges();
         void  updateNearRoutes();
         void  popExpiredInterruptions( int32 npcIndex, int32 minute );
-        void  resumeNpc( int32 npcIndex );
+        void  resumeNPC( int32 npcIndex );
         void  logTraceRequest();
 
         const ScheduleCatalog*     _pCatalog;
@@ -413,7 +413,7 @@ namespace sw
         ScheduleSpotLocator        _defaultLocator; ///< 카탈로그 `<Spot>` 제공자
         StraightSchedulePathing    _defaultPathing; ///< 곧은 선
         ScheduleSystemSettings     _settings;
-        vector<NpcRuntime>         _listNpc;
+        vector<NPCRuntime>         _listNPC;
         EventBuffer<ScheduleEvent> _eventBuffer;
         vector<AppointmentCheck>   _listAppointmentCheck;
         vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속의 인덱스

@@ -55,7 +55,7 @@ namespace sw::editor
         _viewportSizeGuard.clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_Shutdown();
-        _listRegisteredSrv.clear();
+        _listRegisteredSRV.clear();
         _pRHIDevice.reset();
     }
 
@@ -132,9 +132,9 @@ namespace sw::editor
             return nullptr;
         }
 
-        ID3D11ShaderResourceView* pSrvPtr = srv.Get();
-        _listRegisteredSrv.push_back( std::move( srv ) );
-        return pSrvPtr;
+        ID3D11ShaderResourceView* pSRVPtr = srv.Get();
+        _listRegisteredSRV.push_back( std::move( srv ) );
+        return pSRVPtr;
     }
 
     void ImGuiDX11RendererBackend::unregisterTexture( void* pTextureID )
@@ -144,12 +144,12 @@ namespace sw::editor
 
         // 곧바로 놓아도 된다. D3D11 런타임은 컨텍스트에 걸려 있거나 GPU 가 아직 쓰는 뷰를 그 작업이 끝날 때까지 살려 둔다 — 여기서 놓는 것은
         // 이 백엔드의 참조 하나다. 그래서 Vulkan · DX12 와 달리 해제 큐에 맡기지 않는다.
-        ID3D11ShaderResourceView* pSrv = static_cast<ID3D11ShaderResourceView*>( pTextureID );
-        for ( auto it = _listRegisteredSrv.begin(); it != _listRegisteredSrv.end(); ++it )
+        ID3D11ShaderResourceView* pSRV = static_cast<ID3D11ShaderResourceView*>( pTextureID );
+        for ( auto it = _listRegisteredSRV.begin(); it != _listRegisteredSRV.end(); ++it )
         {
-            if ( it->Get() == pSrv )
+            if ( it->Get() == pSRV )
             {
-                _listRegisteredSrv.erase( it );
+                _listRegisteredSRV.erase( it );
                 return;
             }
         }

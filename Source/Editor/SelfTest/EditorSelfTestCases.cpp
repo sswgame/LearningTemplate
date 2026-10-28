@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 
@@ -55,7 +55,7 @@ namespace sw::editor
                        isNear( left._a, right._a, kTolerance );
             }
 
-            static bool isSameRgb( const ImVec4& left, const Color& right )
+            static bool isSameRGB( const ImVec4& left, const Color& right )
             {
                 constexpr float32 kTolerance = 0.0001f;
                 return isNear( left.x, right._r, kTolerance ) && isNear( left.y, right._g, kTolerance ) && isNear( left.z, right._b, kTolerance );
@@ -113,12 +113,12 @@ namespace sw::editor
                 const int32         colorDepth   = imguiContext.ColorStack.Size;
 
                 EditorThemeUtil::pushAccentButton();
-                (void)context.expect( isSameRgb( ImGui::GetStyleColorVec4( ImGuiCol_Button ), EditorThemeUtil::getAccentColor() ), "pushAccentButton does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Button ), EditorThemeUtil::getAccentColor() ), "pushAccentButton does not use the accent colour" );
                 EditorThemeUtil::popAccentButton();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentButton/popAccentButton do not balance" );
 
                 EditorThemeUtil::pushAccentHeader();
-                (void)context.expect( isSameRgb( ImGui::GetStyleColorVec4( ImGuiCol_Header ), EditorThemeUtil::getAccentColor() ), "pushAccentHeader does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Header ), EditorThemeUtil::getAccentColor() ), "pushAccentHeader does not use the accent colour" );
                 EditorThemeUtil::popAccentHeader();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentHeader/popAccentHeader do not balance" );
 
@@ -139,10 +139,10 @@ namespace sw::editor
             static EditorSelfTestStep runThemeReapplyKeepsSizes( EditorSelfTestContext& context )
             {
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
-                const float32           savedScale = EditorThemeUtil::getDpiScale();
+                const float32           savedScale = EditorThemeUtil::getDPIScale();
                 const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다. 그래서 모니터 배율과 무관하게 1 이 아닌 값을 쓴다
                 (void)context.expect( EditorThemeUtil::applyThemeByName( EditorConfig{}._themeName ), "the default theme token set is missing" );
-                EditorThemeUtil::setDpiScale( probeScale );
+                EditorThemeUtil::setDPIScale( probeScale );
                 const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
                 for ( uint32 applyIndex = 0; applyIndex < 3; ++applyIndex )
                 {
@@ -156,7 +156,7 @@ namespace sw::editor
                 (void)context.expect( style.WindowBorderHoverPadding == ImTrunc( defaults.WindowBorderHoverPadding * probeScale ),
                                       "re-applying the theme compounds the DPI scale into the window border hover padding" );
 
-                EditorThemeUtil::setDpiScale( savedScale );
+                EditorThemeUtil::setDPIScale( savedScale );
                 EditorThemeUtil::applyTheme( savedTheme );
                 return EditorSelfTestStep::Done;
             }
@@ -749,23 +749,23 @@ namespace sw::editor
             // dpi.monitorScaleFollows: 창 DPI 가 0.5 커지면(100 % 에서 150 %) 글자, 여백, 테마 배율이 함께 따르고, Windows 에서는 WM_DPICHANGED 로 창과 백버퍼가 권장 사각형을 따르는지 확인한다.
             // 실제 150 % 모니터를 대신하는 테스트다(이 PC 는 96 DPI). 글자 래스터의 선명도는 이 테스트로 확인할 수 없다. 끝나면 원래 DPI 와 창 크기로 되돌린다.
             // ------------------------------------------------------------------------------
-            struct DpiProbe
+            struct DPIProbe
             {
-                float32 ( *_pfnSavedDpiScale )( ImGuiViewport* ){ nullptr };
+                float32 ( *_pfnSavedDPIScale )( ImGuiViewport* ){ nullptr };
                 float32 _baseScale{ 1.0f };
                 float32 _fakeScale{ 1.5f }; ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
                 float32 _basePaddingX{ 0.0f };
-                bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDpiScale` 로 바꿔 둔 동안 true
+                bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 true
 #if defined( SW_PLATFORM_WINDOWS )
                 RECT _originalRect{};
                 RECT _suggestedRect{};
 #endif
                 /** @brief 테스트가 어떻게 끝나든(시간 초과 · 실행 중단 포함) 콜백이 원래대로 돌아오도록 소멸자가 되돌립니다. 콜백은 이 객체가 있는 동안에만 걸려 있다. */
-                ~DpiProbe() { restorePlatformCallback(); }
+                ~DPIProbe() { restorePlatformCallback(); }
 
                 void installFake( ImGuiPlatformIO& platformIO, float32 ( *pfnFake )( ImGuiViewport* ) )
                 {
-                    _pfnSavedDpiScale                     = platformIO.Platform_GetWindowDpiScale;
+                    _pfnSavedDPIScale                     = platformIO.Platform_GetWindowDpiScale;
                     platformIO.Platform_GetWindowDpiScale = pfnFake;
                     _bFakeInstalled                       = true;
                 }
@@ -776,39 +776,39 @@ namespace sw::editor
                         return;
                     _bFakeInstalled = false;
                     if ( ImGui::GetCurrentContext() != nullptr ) // 에디터가 내려가며 ImGui 컨텍스트가 먼저 사라졌으면 되돌릴 곳도 없다
-                        ImGui::GetPlatformIO().Platform_GetWindowDpiScale = _pfnSavedDpiScale;
+                        ImGui::GetPlatformIO().Platform_GetWindowDpiScale = _pfnSavedDPIScale;
                 }
             };
 
             /** @brief ImGui 의 `Platform_GetWindowDpiScale` 자리에 거는 콜백입니다. 함수 포인터라 상태를 받지 못하므로 지금 도는 테스트의 프로브를 실행기에서 찾습니다. */
-            static float32 fakeWindowDpiScale( ImGuiViewport* pViewport )
+            static float32 fakeWindowDPIScale( ImGuiViewport* pViewport )
             {
                 (void)pViewport;
                 EditorSelfTestContext* pContext = EditorSelfTestRunner::findRunningContext();
-                const DpiProbe*        pProbe   = pContext != nullptr ? pContext->findTestState<DpiProbe>() : nullptr;
+                const DPIProbe*        pProbe   = pContext != nullptr ? pContext->findTestState<DPIProbe>() : nullptr;
                 if ( pProbe == nullptr ) // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
                     ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
                 return pProbe->_fakeScale;
             }
 
-            static EditorSelfTestStep runDpiMonitorScaleFollows( EditorSelfTestContext& context )
+            static EditorSelfTestStep runDPIMonitorScaleFollows( EditorSelfTestContext& context )
             {
                 // 단계 테이블. 교체한 DPI 를 NewFrame 이 읽고 테마가 따르는 데 몇 프레임, 창 메시지가 펌프와 리사이즈를 거치는 데 몇 프레임이 걸리는지 나타낸다.
                 constexpr uint32 kCheckScaleStep   = 4;
                 constexpr uint32 kCheckWindowStep  = 12;
                 constexpr uint32 kCheckRestoreStep = 20;
 
-                DpiProbe&        probe      = context.getTestState<DpiProbe>();
+                DPIProbe&        probe      = context.getTestState<DPIProbe>();
                 ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
                 const uint32     stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
                     if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
                         return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않으므로 확인할 것이 없다
-                    probe._baseScale    = EditorThemeUtil::getDpiScale();
+                    probe._baseScale    = EditorThemeUtil::getDPIScale();
                     probe._basePaddingX = ImGui::GetStyle().FramePadding.x;
                     probe._fakeScale    = probe._baseScale + 0.5f;
-                    probe.installFake( platformIO, &fakeWindowDpiScale );
+                    probe.installFake( platformIO, &fakeWindowDPIScale );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < kCheckScaleStep )
@@ -818,7 +818,7 @@ namespace sw::editor
                     const float32 expectedPadding = probe._basePaddingX / probe._baseScale * probe._fakeScale;
                     (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
                     (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
-                    (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
+                    (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
                     (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), "frame padding stayed at the old DPI while fonts grew" );
                     probe.restorePlatformCallback();
 #if defined( SW_PLATFORM_WINDOWS )
@@ -864,7 +864,7 @@ namespace sw::editor
                 if ( stepIndex < kCheckRestoreStep )
                     return EditorSelfTestStep::Continue;
                 // 실제 DPI 로 돌아왔으므로 테마도 따라 돌아와야 한다. 모니터를 옮겼다가 돌아오는 것과 같다.
-                (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
+                (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -919,5 +919,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( SceneViewResize, "sceneView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runSceneViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGPUMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGPUMemoryTabDrawsTheLedger );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
-    SW_EDITOR_SELF_TEST( DpiMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDpiMonitorScaleFollows );
+    SW_EDITOR_SELF_TEST( DPIMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDPIMonitorScaleFollows );
 } // namespace sw::editor

@@ -399,7 +399,7 @@ namespace sw::editor
          * @brief BVH(`ConformSurface`)로 한 점을 표면에 맞춥니다 — `tryConformPoint` 의 전수 탐색과 같은 규칙이고 질의가 대상 삼각형 수에 로그로 늘어난다.
          * @details 질의가 상태 없는 const 라서 스레드마다 @p inoutListScratch 만 따로 가지면 여러 스레드가 같은 표면을 물을 수 있다.
          */
-        [[nodiscard]] static bool tryConformPointBvh( const ConformSurface& surface, const float3& point, const float3& rayDirection, ConformMode mode, float32 offset,
+        [[nodiscard]] static bool tryConformPointBVH( const ConformSurface& surface, const float3& point, const float3& rayDirection, ConformMode mode, float32 offset,
                                                       float32 maxDistance, vector<SlotHandle>& inoutListScratch, float3& outPosition )
         {
             float3 bestPoint{ 0.0f, 0.0f, 0.0f };
@@ -458,7 +458,7 @@ namespace sw::editor
                     if ( _mode == ConformMode::Normal && _pNormal != nullptr )
                         direction = MeshModifierUtil::normalizeOr( _pNormal[index] * -1.0f, _axisDirection );
                     float3 target{ 0.0f, 0.0f, 0.0f };
-                    if ( tryConformPointBvh( *_pSurface, point, direction, _mode, _offset, _maxDistance, listScratch, target ) == false )
+                    if ( tryConformPointBVH( *_pSurface, point, direction, _mode, _offset, _maxDistance, listScratch, target ) == false )
                         continue;
                     const float32 weight                                      = _pWeight != nullptr ? _pWeight[index] : 1.0f;
                     _pPosition[index]                                         = float3::lerp( point, target, MathUtil::saturate( _amount * weight ) );

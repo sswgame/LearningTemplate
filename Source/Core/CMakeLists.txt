@@ -66,7 +66,7 @@ function(sw_addCoreObjects TARGET_NAME PCH_ENTRY_NAME PCH_FILE)
 	)
 
 	# `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 Core 진입 헤더로 푼다.
-	sw_addPchEntryDirectory(${TARGET_NAME} PRIVATE ${PCH_ENTRY_NAME} "Core/${PCH_FILE}")
+	sw_addPCHEntryDirectory(${TARGET_NAME} PRIVATE ${PCH_ENTRY_NAME} "Core/${PCH_FILE}")
 	target_link_libraries(${TARGET_NAME} PUBLIC sw_public_source_includes)
 	target_link_libraries(${TARGET_NAME} PUBLIC sw_third_party_includes)
 
@@ -78,7 +78,7 @@ function(sw_addCoreObjects TARGET_NAME PCH_ENTRY_NAME PCH_FILE)
 		target_link_libraries(${TARGET_NAME} PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 	endif()
 
-	sw_configurePch(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${PCH_FILE}")
+	sw_configurePCH(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${PCH_FILE}")
 	if(SW_UNITY_BATCH_CORE)
 		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE ${SW_UNITY_BATCH_CORE})
 	endif()

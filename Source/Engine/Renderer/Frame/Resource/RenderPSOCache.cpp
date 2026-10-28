@@ -144,7 +144,7 @@ namespace sw
         return ( it != _mapMaterialPSO.end() ) ? it->second._state : MaterialPSOState::Absent;
     }
 
-    size_t RenderPSOCache::countMaterialPSOs( MaterialPSOState state ) const
+    size_t RenderPSOCache::countMaterialPSOS( MaterialPSOState state ) const
     {
         ScopedLock<mutex> lock{ _materialPSOMutex };
         size_t            count = 0;

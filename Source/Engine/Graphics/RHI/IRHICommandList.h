@@ -100,7 +100,7 @@ namespace sw
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수를 쓰고, DX11 과 GL 은 계약 슬롯 b2 의 상수 버퍼로 흉내 낸다.
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
-        virtual void bindComputeUav( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
+        virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
         virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                         = 0;
 
         // ------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ namespace sw
          *          |---|---|---|---|---|
          *          | Common | 컴퓨트 UAV 를 뗀다 | COMMON | 0 / TOP_OF_PIPE | 없음 |
          *          | ShaderResource | UAV 를 뗀다 | NON_PIXEL · PIXEL_SHADER_RESOURCE | SHADER_READ / 정점 · 프래그먼트 · 컴퓨트 | SHADER_STORAGE · SHADER_IMAGE_ACCESS |
-         *          | UnorderedAccess | 없음(`bindComputeUav` 가 건다) | UNORDERED_ACCESS | SHADER_WRITE · READ / 컴퓨트 · 프래그먼트 | SHADER_STORAGE |
+         *          | UnorderedAccess | 없음(`bindComputeUAV` 가 건다) | UNORDERED_ACCESS | SHADER_WRITE · READ / 컴퓨트 · 프래그먼트 | SHADER_STORAGE |
          *          | IndirectArgument | UAV 를 뗀다 | INDIRECT_ARGUMENT | INDIRECT_COMMAND_READ / DRAW_INDIRECT | SHADER_STORAGE · COMMAND |
          *          | CopyDest | UAV 를 뗀다 | COPY_DEST | TRANSFER_WRITE / TRANSFER | BUFFER_UPDATE |
          *          | CopySource | UAV 를 뗀다 | COPY_SOURCE | TRANSFER_READ / TRANSFER | BUFFER_UPDATE |
@@ -250,10 +250,10 @@ namespace sw
         virtual void beginEventMarker( const utf8* pName ) = 0;
         virtual void endEventMarker()                      = 0;
         /**
-         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerId 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GpuBreadcrumbs::mark` 가 패스 이름 표의 id 로 부른다).
+         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerID 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GPUBreadcrumbs::mark` 가 패스 이름 표의 id 로 부른다).
          * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
-         *          아무것도 하지 않는다(`RHICapabilities::_bGpuBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다.
+         *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다.
          */
-        virtual void writeBreadcrumb( uint32 markerId ) = 0;
+        virtual void writeBreadcrumb( uint32 markerID ) = 0;
     };
 } // namespace sw

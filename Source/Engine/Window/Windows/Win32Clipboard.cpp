@@ -72,7 +72,7 @@ namespace sw
         const utf16* pText = static_cast<const utf16*>( GlobalLock( hData ) );
         if ( pText == nullptr )
             return false;
-        outText = StringUtil::utf16ToUtf8( pText );
+        outText = StringUtil::utf16ToUTF8( pText );
         GlobalUnlock( hData );
         return true;
     }
@@ -85,7 +85,7 @@ namespace sw
             SW_LOG_WARNING( "Clipboard write needs an active window to own the clipboard - not written" );
             return false;
         }
-        const wstring                           wide = StringUtil::utf8ToUtf16( string( text ).c_str() );
+        const wstring                           wide = StringUtil::utf8ToUTF16( string( text ).c_str() );
         const Win32ClipboardInternal::OpenScope scope( owner );
         if ( scope.isOpen() == false || EmptyClipboard() == FALSE )
         {

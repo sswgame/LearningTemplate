@@ -219,7 +219,7 @@ namespace sw
                 listTable.push_back( table );
         }
         std::sort( listTable.begin(), listTable.end(), HashedStringLexicalLess{} );
-        uint64 hash = HashUtil::kFnvOffset64;
+        uint64 hash = HashUtil::kFNVOffset64;
         for ( const hashed_string& table : listTable )
         {
             hash = MemoryServiceStoreInternal::mixHash( hash, table.c_str(), table.size() );

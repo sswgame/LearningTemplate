@@ -34,7 +34,7 @@ namespace sw
             {
                 string_view _name{};
                 float32     _sizeScale{ 1.0f };
-                uint32      _colorRgba{ kDefaultColor };
+                uint32      _colorRGBA{ kDefaultColor };
                 uint16      _colorToken{ 0 };
                 TagKind     _kind{ TagKind::Unknown };
             };
@@ -53,7 +53,7 @@ namespace sw
             }
 
             /** @brief `#rrggbb` 와 `#rrggbbaa` 를 0xRRGGBBAA 로 읽습니다. */
-            [[nodiscard]] static bool parseHexColor( string_view value, uint32& outRgba )
+            [[nodiscard]] static bool parseHexColor( string_view value, uint32& outRGBA )
             {
                 if ( value.empty() || value.front() != '#' )
                     return false;
@@ -63,7 +63,7 @@ namespace sw
                 uint64 parsed = 0;
                 if ( StringUtil::parseUint64( digits, parsed, 16 ) == false )
                     return false;
-                outRgba = digits.size() == kShortHexLength ? ( static_cast<uint32>( parsed ) << 8 ) | kOpaqueAlpha : static_cast<uint32>( parsed );
+                outRGBA = digits.size() == kShortHexLength ? ( static_cast<uint32>( parsed ) << 8 ) | kOpaqueAlpha : static_cast<uint32>( parsed );
                 return true;
             }
 
@@ -100,7 +100,7 @@ namespace sw
                     }
                     case TagKind::Color:
                     {
-                        if ( parseHexColor( token._value, outTag._colorRgba ) )
+                        if ( parseHexColor( token._value, outTag._colorRGBA ) )
                             return true;
                         if ( isColorName( token._value ) == false )
                             return false;
@@ -150,7 +150,7 @@ namespace sw
                         }
                         case TagKind::Color:
                         {
-                            outSpan._colorRgba  = tag._colorRgba;
+                            outSpan._colorRGBA  = tag._colorRGBA;
                             outSpan._colorToken = tag._colorToken;
                             break;
                         }
@@ -170,7 +170,7 @@ namespace sw
 
             static bool hasSameStyle( const RichTextSpan& a, const RichTextSpan& b )
             {
-                return a._colorRgba == b._colorRgba && a._sizeScale == b._sizeScale && a._colorToken == b._colorToken && a._bBold == b._bBold && a._bItalic == b._bItalic;
+                return a._colorRGBA == b._colorRGBA && a._sizeScale == b._sizeScale && a._colorToken == b._colorToken && a._bBold == b._bBold && a._bItalic == b._bItalic;
             }
 
             /** @brief 평문 뒤에 @p text 를 붙이고, 스타일이 있으면 구간을 잇거나 새로 엽니다. */

@@ -88,7 +88,7 @@ namespace sw
         /** @brief 지금 유대 단계를 반환합니다(카탈로그의 `level`). */
         int32 getBondLevel() const;
         /** @brief 모은 유대 경험치를 반환합니다(정수 경험치에 아직 1이 안 된 소수를 더한 값). */
-        float32 getBondExperience() const { return static_cast<float32>( _bond.getTotalXp() ) + _bondXpCarry; }
+        float32 getBondExperience() const { return static_cast<float32>( _bond.getTotalXP() ) + _bondXPCarry; }
         bool    hasAbility( const hashed_string& abilityID ) const;
         float32 getHealthCore() const { return _healthCore; }
         float32 getStaminaCore() const { return _staminaCore; }
@@ -118,7 +118,7 @@ namespace sw
         float32                        _healthCore;
         float32                        _staminaCore;
         LevelProgress                  _bond;        ///< 유대 단계다. 레벨 L 은 카탈로그 단계의 L − 1 번째다(`WesternCatalog::getBondCurve`)
-        float32                        _bondXpCarry; ///< 아직 1이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
+        float32                        _bondXPCarry; ///< 아직 1이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
         float32                        _fear;
         float32                        _hoursSinceBrush;
         uint8                          _bRidden;

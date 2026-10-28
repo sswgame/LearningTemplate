@@ -5,7 +5,7 @@
  * @code
  *     <MonsterCatalog>
  *       <Monster id="boss" name="Boss" archetype="RangedShooter">
- *         <Stats hp="220" maxHp="220" atk="12" def="16" speed="0.9" radius="0.7" invincibility="0"/>
+ *         <Stats hp="220" maxHP="220" atk="12" def="16" speed="0.9" radius="0.7" invincibility="0"/>
  *         <AI patrolRange="4" detectRange="8" attackRange="1" coolTime="1.6" firstDelay="1.2" projectilePrefab=""/>
  *         <Shot angle="0" speed="4.5" life="2.5" radius="0.22" damage="10"/>
  *         <Shot angle="1.5708" speed="3.2" life="1.8" radius="0.22" damage="10"/>
@@ -81,8 +81,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Min = 1 )
-        int32 _maxHp{ 100 };
-        PROPERTY( Min = 1, Max = "_maxHp" )
+        int32 _maxHP{ 100 };
+        PROPERTY( Min = 1, Max = "_maxHP" )
         int32 _hp{ 100 }; ///< 처음 HP(범위 필드는 앞에 선언해야 고정 레이아웃 읽기가 먼저 안다)
         PROPERTY( Min = 0 )
         int32 _atk{ 10 }; ///< 공격력. 액션 룸에서는 닿은 플레이어에게 주는 피해다

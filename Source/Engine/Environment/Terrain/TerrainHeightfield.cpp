@@ -121,39 +121,39 @@ namespace sw
         return true;
     }
 
-    bool TerrainHeightfield::makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRgbaBytes ) const
+    bool TerrainHeightfield::makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRGBABytes ) const
     {
-        outRgbaBytes.clear();
+        outRGBABytes.clear();
         const bool bCanRead    = _splatWidth > 0 && _splatHeight > 0 && plane < SurfaceLayerWeights::kPlaneCount;
         const bool bRectInside = rect.isEmpty() == false && rect._maxX < _splatWidth && rect._maxZ < _splatHeight;
         if ( bCanRead == false || bRectInside == false )
             return false;
         const uint32 width  = rect._maxX - rect._minX + 1;
         const uint32 height = rect._maxZ - rect._minZ + 1;
-        outRgbaBytes.resize( static_cast<size_t>( width ) * height * 4 );
+        outRGBABytes.resize( static_cast<size_t>( width ) * height * 4 );
         for ( uint32 row = 0; row < height; ++row )
         {
             for ( uint32 column = 0; column < width; ++column )
             {
                 const size_t source = ( static_cast<size_t>( rect._minZ + row ) * _splatWidth + rect._minX + column ) * SurfaceLayerWeights::kLayerCount + static_cast<size_t>( plane ) * 4;
                 const size_t target = ( static_cast<size_t>( row ) * width + column ) * 4;
-                Memory::copy( outRgbaBytes.data() + target, _splatBytes.data() + source, 4 );
+                Memory::copy( outRGBABytes.data() + target, _splatBytes.data() + source, 4 );
             }
         }
         return true;
     }
 
-    bool TerrainHeightfield::makeFullSplatPlane( uint32 plane, vector<uint8>& outRgbaBytes ) const
+    bool TerrainHeightfield::makeFullSplatPlane( uint32 plane, vector<uint8>& outRGBABytes ) const
     {
         if ( _splatWidth == 0 || _splatHeight == 0 )
         {
-            outRgbaBytes.clear();
+            outRGBABytes.clear();
             return false;
         }
         TerrainSampleRect all{};
         all.include( 0, 0 );
         all.include( _splatWidth - 1, _splatHeight - 1 );
-        return makeSplatPlane( plane, all, outRgbaBytes );
+        return makeSplatPlane( plane, all, outRGBABytes );
     }
 
     bool TerrainHeightfield::readHoleCells( vector<uint8>& outListHole ) const

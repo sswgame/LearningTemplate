@@ -11,7 +11,7 @@ namespace sw
         , _listMarker{}
         , _markerView{}
         , _activeMarkerCount{ 0 }
-        , _pGpuManager{ nullptr }
+        , _pGPUManager{ nullptr }
         , _listCanvasAnchor{}
         , _listFreeAnchor{}
         , _screen{ kInvalidUIScreenHandle }
@@ -46,7 +46,7 @@ namespace sw
         entry._scale        = scale;
     }
 
-    void UIScreenMarkers::setGpuMarker( uint32 anchor, const CanvasMarkerRecord& record )
+    void UIScreenMarkers::setGPUMarker( uint32 anchor, const CanvasMarkerRecord& record )
     {
         SW_ASSERT( anchor < _listAnchor.size() ); // 마커 위젯이 살아 있는 동안만 부른다(번호는 `allocateAnchor` 가 줬다)
         if ( anchor >= _listAnchor.size() )
@@ -61,7 +61,7 @@ namespace sw
             ++_activeMarkerCount;
     }
 
-    void UIScreenMarkers::clearGpuMarker( uint32 anchor )
+    void UIScreenMarkers::clearGPUMarker( uint32 anchor )
     {
         if ( anchor >= _listMarker.size() || _listMarker[anchor]._bActive == 0 )
             return;
@@ -80,8 +80,8 @@ namespace sw
             CanvasAnchor&       target = _listCanvasAnchor[index];
             target._position           = float2{ MathUtil::round( source._position._x * uiScale ), MathUtil::round( source._position._y * uiScale ) };
             // GPU 가 투영하는 마커는 컴퓨트가 덮어쓰기 전까지 접어 둔다 — 컴퓨트가 돌지 못하면(셰이더 없음 · 능력 없음) 왼쪽 위에 쌓여 보이지 않고 그려지지 않는다.
-            const bool bGpuProjected = index < _listMarker.size() && _listMarker[index]._bActive != 0;
-            target._scale            = bGpuProjected ? 0.0f : source._scale;
+            const bool bGPUProjected = index < _listMarker.size() && _listMarker[index]._bActive != 0;
+            target._scale            = bGPUProjected ? 0.0f : source._scale;
         }
     }
 

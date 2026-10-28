@@ -32,7 +32,7 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct ModuleHostInternal
         {
-            static constexpr ModuleAPISymbols kGameSymbols{ "getGameModuleAbiVersion", "getGameModuleAbiStamp", "exportGameAPI", "Game" };
+            static constexpr ModuleAPISymbols kGameSymbols{ "getGameModuleABIVersion", "getGameModuleABIStamp", "exportGameAPI", "Game" };
 
             /** @brief `StateBufferSink::allocate` — @p pContext 의 바이트 벡터를 @p size 로 맞춰 그 메모리를 돌려준다. */
             static void* allocateStateBuffer( void* pContext, uint32 size )
@@ -120,9 +120,9 @@ namespace sw
                 return false;
             }
             holdReloadSubscription(
-                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) ) );
+                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDLLReload, this ) ) );
             holdReloadSubscription(
-                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) ) );
+                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDLLReload, this ) ) );
             listGameModule.push_back( moduleName );
         }
 
@@ -295,12 +295,12 @@ namespace sw
     // LiveReload 콜백. GameFramework 와 키트 DLL 연쇄 교체.
     // ======================================================================
 
-    void ModuleHost::onBeforeGameplayDllReload()
+    void ModuleHost::onBeforeGameplayDLLReload()
     {
         onBeforeGameReload();
     }
 
-    void ModuleHost::onAfterGameplayDllReload( void* /*hLibraryModule*/ )
+    void ModuleHost::onAfterGameplayDLLReload( void* /*hLibraryModule*/ )
     {
         if ( engine::areEngineServicesBound() == false )
             return;

@@ -52,7 +52,7 @@ namespace sw
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
          *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다.
          *          슬롯은 Vulkan t 밴드(`vk::kRangeSize`) 전체의 **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모르고(선언도 에뮬 백엔드뿐이다),
-         *          SRV 띠(`kSrvSlotCount`)가 밴드 끝까지 자라도 이 슬롯은 움직이지 않는다.
+         *          SRV 띠(`kSRVSlotCount`)가 밴드 끝까지 자라도 이 슬롯은 움직이지 않는다.
          */
         inline constexpr uint32 kMaterialTexture0     = SW_SLOT_MATERIAL_TEX0;
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
@@ -70,7 +70,7 @@ namespace sw
         /**
          * @brief GPU 컬링이 만든 가시 인스턴스 ID 목록(g_SwVisibleInstanceIDs)입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스 번호를 배치 구간에 압축해 넣고, 정점 셰이더가 이 순서로
-         *          읽는다. 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 에 해당한다.
+         *          읽는다. 언리얼 FInstanceCullingContext 의 InstanceIDBuffer 에 해당한다.
          */
         inline constexpr uint32 kVisibleInstanceBuffer = SW_SLOT_VISIBLE_INSTANCE_SRV;
         inline constexpr uint32 kMorphVertexBuffer     = SW_SLOT_MORPH_VERTEX_SRV;
@@ -109,7 +109,7 @@ namespace sw
          */
         inline constexpr uint32 kLightProbeBuffer      = SW_SLOT_LIGHT_PROBE_SRV;
         inline constexpr uint32 kLightProbeFloat4Count = SW_LIGHT_PROBE_FLOAT4_COUNT;
-        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
+        inline constexpr uint32 kSRVSlotCount          = SW_SRV_SLOT_COUNT;
         /**
          * @brief G버퍼 머티리얼 칸(금속도 · 거칠기)의 엔진 텍스처 슬롯 t15 입니다(에뮬 백엔드 DX11 · GL 만). 디퍼드 조명이 t0..t3 의 넷과 함께 다섯째로 읽습니다.
          * @details t0..t3 과 떨어져 있어 `kEngineTextureCount` 에 들지 않는다. DX11 은 s15 가 정적 샘플러 세트라 이 슬롯에 샘플러를 걸지 않고(셰이더가 정적 세트로 읽는다),
@@ -227,15 +227,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트와 샘플러
         // ------------------------------------------------------------------------------
-        inline constexpr uint32 kComputeSrvSlotCount = SW_COMPUTE_SRV_SLOT_COUNT;
-        inline constexpr uint32 kComputeUavSlotCount = SW_COMPUTE_UAV_SLOT_COUNT;
+        inline constexpr uint32 kComputeSRVSlotCount = SW_COMPUTE_SRV_SLOT_COUNT;
+        inline constexpr uint32 kComputeUAVSlotCount = SW_COMPUTE_UAV_SLOT_COUNT;
         /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯 수입니다(u0..u3).
-        inline constexpr uint32 kComputeShaderUavSlotCount = SW_COMPUTE_SHADER_UAV_SLOT_COUNT;
+        inline constexpr uint32 kComputeShaderUAVSlotCount = SW_COMPUTE_SHADER_UAV_SLOT_COUNT;
         /// @brief 셰이더 assert 링의 쓰기 슬롯(u4)입니다 — 셰이더 소유 슬롯 바로 뒤, RW 텍스처 슬롯 바로 앞이라 어느 컴퓨트와도 겹치지 않습니다.
-        inline constexpr uint32 kComputeAssertUav = SW_SLOT_COMPUTE_ASSERT_UAV;
-        /// @brief 컴퓨트 RW 텍스처 슬롯 u5..u7 입니다. DX11 과 GL 만 실제 슬롯이고, DX12 와 Vulkan 은 배열 인덱스라 bindComputeUav 가 무시합니다.
-        inline constexpr uint32 kComputeTextureUav0         = SW_SLOT_COMPUTE_TEXUAV0;
-        inline constexpr uint32 kComputeTextureUavSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
+        inline constexpr uint32 kComputeAssertUAV = SW_SLOT_COMPUTE_ASSERT_UAV;
+        /// @brief 컴퓨트 RW 텍스처 슬롯 u5..u7 입니다. DX11 과 GL 만 실제 슬롯이고, DX12 와 Vulkan 은 배열 인덱스라 bindComputeUAV 가 무시합니다.
+        inline constexpr uint32 kComputeTextureUAV0         = SW_SLOT_COMPUTE_TEXUAV0;
+        inline constexpr uint32 kComputeTextureUAVSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
         inline constexpr uint32 kStaticSamplerCount         = SW_STATIC_SAMPLER_COUNT;
         inline constexpr uint32 kStaticSamplerArrayCount    = SW_STATIC_SAMPLER_ARRAY_COUNT;
         inline constexpr uint32 kSamplerShadowCmp           = SW_SAMPLER_SHADOW_CMP;
@@ -295,16 +295,16 @@ namespace sw
             inline constexpr uint32 kRootBudgetDwords     = 64;
             inline constexpr uint32 kRootDescriptorDwords = 2;
             inline constexpr uint32 kRootTableDwords      = 1;
-            inline constexpr uint32 kRootCbvCount         = kConstantBufferSlotCount; ///< b0..b(N-1) 루트 CBV
+            inline constexpr uint32 kRootCBVCount         = kConstantBufferSlotCount; ///< b0..b(N-1) 루트 CBV
             inline constexpr uint32 kRootTableCount       = 3;                        ///< t 슬롯 테이블, u 슬롯 테이블, 텍스처 배열 테이블
-            inline constexpr uint32 kRootSignatureDwords  = kRootCbvCount * kRootDescriptorDwords + kRootTableCount * kRootTableDwords + kRootConstantDwords;
+            inline constexpr uint32 kRootSignatureDwords  = kRootCBVCount * kRootDescriptorDwords + kRootTableCount * kRootTableDwords + kRootConstantDwords;
             static_assert( kRootSignatureDwords <= kRootBudgetDwords, "DX12 루트 시그니처가 64 dword 예산을 넘는다" );
         } // namespace dx12
 
         /// @brief OpenGL SSBO 번호입니다. u# 는 t# 와 겹치지 않게 SW_GL_UAV_BINDING0 부터 셉니다(DXC -fvk-u-shift 값이기도 합니다).
         namespace gl
         {
-            inline constexpr uint32 kUavBinding0 = SW_GL_UAV_BINDING0;
+            inline constexpr uint32 kUAVBinding0 = SW_GL_UAV_BINDING0;
             inline constexpr uint32 kImageUnit0  = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u5..u7이 이미지 유닛 0..2 에 대응한다.
         } // namespace gl
 
@@ -333,7 +333,7 @@ namespace sw
             inline constexpr const utf8* kSamplers                     = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
             inline constexpr const utf8* kSamplerSlot                  = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
             inline constexpr const utf8* kShadowSampler                = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
-            inline constexpr const utf8* kGpuAssertRing                = "g_GpuAssertRW";          ///< 셰이더 assert 링(컴퓨트 쓰기 슬롯 u4, gpuassert.hlsli).
+            inline constexpr const utf8* kGPUAssertRing                = "g_GPUAssertRW";          ///< 셰이더 assert 링(컴퓨트 쓰기 슬롯 u4, gpuassert.hlsli).
             inline constexpr const utf8* kRwTextureSlot                = "g_SwRWSlot";             ///< 뒤에 0..2 가 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
             inline constexpr const utf8* kVisibleInstances             = "g_SwVisibleInstanceIDs"; ///< t6(그래픽스). 컬링이 만든 가시 목록
             inline constexpr const utf8* kMorphVertices                = "g_SwMorphVertices";      ///< t7(그래픽스). GPU 가 변형한 정점 풀
@@ -357,14 +357,14 @@ namespace sw
             inline constexpr const utf8* kCullBatchInfo                = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs             = "g_IndirectArgs";
             inline constexpr const utf8* kCullVisibleIDs               = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
-            inline constexpr const utf8* kCullLodState                 = "g_LodState";           ///< 컬링 u2. 인스턴스마다의 LOD 전환 상태(크로스페이드)
+            inline constexpr const utf8* kCullLODState                 = "g_LODState";           ///< 컬링 u2. 인스턴스마다의 LOD 전환 상태(크로스페이드)
             inline constexpr const utf8* kAnimationInstancesRw         = "g_InstancesRW";        ///< instanceanimation u0. 월드 행렬을 고쳐 쓴다.
         } // namespace resname
 
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.
         static_assert( kInstanceBuffer == kEngineTexture0 + kEngineTextureCount, "인스턴스 버퍼는 엔진 텍스처 슬롯 바로 다음이어야 한다" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
-        static_assert( kMaterialTexture0 == vk::kRangeSize && kSrvSlotCount <= kMaterialTexture0,
+        static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
         static_assert( SW_SLOT_MATERIAL_TEX1 == SW_SLOT_MATERIAL_TEX0 + 1 && SW_SLOT_MATERIAL_TEX2 == SW_SLOT_MATERIAL_TEX0 + 2 &&
                            SW_SLOT_MATERIAL_TEX3 == SW_SLOT_MATERIAL_TEX0 + 3 && SW_SLOT_MATERIAL_TEX4 == SW_SLOT_MATERIAL_TEX0 + 4 &&
@@ -383,7 +383,7 @@ namespace sw
         static_assert( kVertexAnimationBuffer == kBatchBuffer + 1, "VAT 표는 배치 표 다음이다" );
         static_assert( kPassBuffer == kVertexAnimationBuffer + 1, "패스 전용 버퍼는 VAT 표 다음이다" );
         static_assert( kLightGridBuffer == kPassBuffer + 1, "라이트 그리드는 패스 전용 버퍼 다음이다" );
-        static_assert( kLightProbeBuffer == kLightGridBuffer + 1 && kLightProbeBuffer + 1 == kSrvSlotCount, "라이트 프로브는 라이트 그리드 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kLightProbeBuffer == kLightGridBuffer + 1 && kLightProbeBuffer + 1 == kSRVSlotCount, "라이트 프로브는 라이트 그리드 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
                            kLightTypeFreeform2D < kLightTypeCount && kLightTypeShadow2D >= kLightTypeCount && kLightTypeProbeVolume >= kLightTypeCount &&
@@ -395,7 +395,7 @@ namespace sw
         /**
          * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯 표입니다 — 이 표가 **유일한 원본**입니다.
          * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 코드가 거는 쿠키 · 노출). 한 슬롯을 여러 이름이 나눠 쓴다.
-         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<슬롯>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHlsl`) `binding.hlsli` 의
+         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<슬롯>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHLSL`) `binding.hlsli` 의
          *          `Bindless::emulatedSlot` 이 그 매크로를 읽는다 — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
          *          C++ 의 역할 → 슬롯(`getEmulatedTextureSlot`)과 실행의 슬롯 바인딩도 이 표를 따른다.
          */
@@ -447,14 +447,14 @@ namespace sw
         } // namespace emulated
 
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
-        static_assert( kEngineGBufferMaterialTexture >= kSrvSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,
+        static_assert( kEngineGBufferMaterialTexture >= kSRVSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,
                        "G버퍼 머티리얼 슬롯(에뮬)은 SRV 띠 위, Vulkan t 밴드 안, 머티리얼 슬롯 앞이어야 한다 — 띠가 자라 닿으면 DX11 · GL 에서 버퍼와 텍스처가 한 레지스터를 다툰다" );
         static_assert( kEngineGBufferMaterialTexture >= dx11::kStaticSampler0 && kEngineGBufferMaterialTexture < dx11::kStaticSampler0 + kStaticSamplerArrayCount,
                        "G버퍼 머티리얼 슬롯의 같은 번호 샘플러가 DX11 정적 세트가 아니면 짝 샘플러를 둘 수 있다 — binding.hlsli 의 DX11 선언 · D3D11 bindShaderResource 를 다시 본다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,
                        "예약 CB 슬롯은 백엔드가 마련한 b# 자리 안이어야 한다" );
-        static_assert( kSrvSlotCount <= vk::kRangeSize && kComputeUavSlotCount <= vk::kRangeSize && kConstantBufferSlotCount <= vk::kRangeSize,
+        static_assert( kSRVSlotCount <= vk::kRangeSize && kComputeUAVSlotCount <= vk::kRangeSize && kConstantBufferSlotCount <= vk::kRangeSize,
                        "슬롯 수가 Vulkan 세트 0 의 종류별 범위 크기을 넘는다" );
         static_assert( vk::kTShift == vk::kBShift + vk::kRangeSize && vk::kUShift == vk::kTShift + vk::kRangeSize &&
                            vk::kSlotBindingCount == vk::kUShift + vk::kRangeSize,
@@ -462,22 +462,22 @@ namespace sw
         static_assert( kRootConstantSpace != 0 && kRootConstantSpace != bindless::kTextureSpace, "루트 상수 space 가 슬롯/텍스처 배열과 겹친다" );
         static_assert( kRootConstantEmulationSlot < kConstantBufferSlotCount && kRootConstantEmulationSlot != kPassConstantBuffer && kRootConstantEmulationSlot != kMaterialConstantBuffer,
                        "루트 상수 에뮬 슬롯은 예약 CB 와 겹치지 않는 b# 자리여야 한다" );
-        static_assert( kComputeTextureUav0 == kComputeUavSlotCount && kComputeTextureUav0 + kComputeTextureUavSlotCount <= vk::kRangeSize,
+        static_assert( kComputeTextureUAV0 == kComputeUAVSlotCount && kComputeTextureUAV0 + kComputeTextureUAVSlotCount <= vk::kRangeSize,
                        "컴퓨트 RW 텍스처 슬롯은 버퍼 UAV 슬롯 바로 다음이어야 한다" );
         static_assert( SW_SLOT_COMPUTE_TEXUAV1 == SW_SLOT_COMPUTE_TEXUAV0 + 1 && SW_SLOT_COMPUTE_TEXUAV2 == SW_SLOT_COMPUTE_TEXUAV0 + 2 &&
                            SW_COMPUTE_TEXUAV_SLOT_COUNT == 3 && SW_GL_IMAGE_UNIT1 == SW_GL_IMAGE_UNIT0 + 1 && SW_GL_IMAGE_UNIT2 == SW_GL_IMAGE_UNIT0 + 2,
                        "RW 텍스처 슬롯/이미지 유닛은 연속이어야 한다 (셰이더가 서수로 고른다)" );
         // 컴퓨트 쓰기 슬롯 지도: 셰이더 소유 u0..u3 | assert 링 u4 | RW 텍스처 u5..u7. 셋이 겹치지 않고 빈틈이 없어야 한다 — assert 를 새 컴퓨트에 쓰려는 사람이 슬롯을 따로 잡을 필요가 없다는 근거다.
-        static_assert( kComputeAssertUav == kComputeShaderUavSlotCount && kComputeUavSlotCount == kComputeShaderUavSlotCount + 1 && kComputeAssertUav < kComputeUavSlotCount,
+        static_assert( kComputeAssertUAV == kComputeShaderUAVSlotCount && kComputeUAVSlotCount == kComputeShaderUAVSlotCount + 1 && kComputeAssertUAV < kComputeUAVSlotCount,
                        "assert 링 슬롯은 셰이더 소유 쓰기 슬롯 바로 뒤이고 쓰기 버퍼 슬롯 수의 마지막이어야 한다" );
-        /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯의 수(u0 부터 연속)를 셰이더별로 등록합니다. 하나라도 `kComputeShaderUavSlotCount` 를 넘으면 assert 링(u4)과 겹치므로 컴파일이 막습니다.
+        /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯의 수(u0 부터 연속)를 셰이더별로 등록합니다. 하나라도 `kComputeShaderUAVSlotCount` 를 넘으면 assert 링(u4)과 겹치므로 컴파일이 막습니다.
         ///        값은 각 .hlsl 의 `SW_DECLARE_RW_STRUCTURED_BUFFER` / `SW_DECLARE_RW_BYTE_ADDRESS_BUFFER` 선언 수다(ShaderBindingValidator 가 쿠킹된 바이너리로도 u4 점유를 검사한다).
-        struct ComputeUavUsage
+        struct ComputeUAVUsage
         {
             const utf8* _pShader;
             uint32      _bufferCount;
         };
-        inline constexpr ComputeUavUsage kArrComputeUavUsage[] = {
+        inline constexpr ComputeUAVUsage kArrComputeUAVUsage[] = {
             {          "gpucull", 3},
             {"instanceanimation", 1},
             {     "instancesort", 2},
@@ -491,18 +491,18 @@ namespace sw
             {      "vfxsimulate", 4},
             {    "volumetricfog", 1},
         };
-        constexpr bool allComputeUavUsageFits()
+        constexpr bool allComputeUAVUsageFits()
         {
-            for ( const ComputeUavUsage& usage : kArrComputeUavUsage )
+            for ( const ComputeUAVUsage& usage : kArrComputeUAVUsage )
             {
-                if ( usage._bufferCount > kComputeShaderUavSlotCount )
+                if ( usage._bufferCount > kComputeShaderUAVSlotCount )
                     return false;
             }
             return true;
         }
-        static_assert( allComputeUavUsageFits(), "컴퓨트 셰이더가 셰이더 소유 쓰기 슬롯(u0..u3)을 넘어 assert 링 슬롯(u4)을 침범한다" );
+        static_assert( allComputeUAVUsageFits(), "컴퓨트 셰이더가 셰이더 소유 쓰기 슬롯(u0..u3)을 넘어 assert 링 슬롯(u4)을 침범한다" );
         static_assert( kStaticSamplerArrayCount + 1 == kStaticSamplerCount && kSamplerShadowCmp == kStaticSamplerArrayCount,
                        "비교 샘플러는 샘플러 배열 바로 다음 번호(마지막)여야 한다" );
-        static_assert( gl::kUavBinding0 >= kSrvSlotCount && gl::kUavBinding0 >= kComputeSrvSlotCount, "GL UAV SSBO 번호가 SRV 번호와 겹친다" );
+        static_assert( gl::kUAVBinding0 >= kSRVSlotCount && gl::kUAVBinding0 >= kComputeSRVSlotCount, "GL UAV SSBO 번호가 SRV 번호와 겹친다" );
     } // namespace shaderslot
 } // namespace sw

@@ -186,7 +186,7 @@ namespace sw::editor
             std::sort( listEntry.begin(), listEntry.end() );
             const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
             const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
-            uint64                    hash  = HashUtil::kFnvOffset64;
+            uint64                    hash  = HashUtil::kFNVOffset64;
             for ( const std::pair<string, uint64>& entry : listEntry )
             {
                 hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );

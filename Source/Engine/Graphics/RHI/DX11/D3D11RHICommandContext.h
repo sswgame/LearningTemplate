@@ -38,7 +38,7 @@ namespace sw
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { (void)texture; }
-        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
@@ -72,7 +72,7 @@ namespace sw
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerId ) override;
+        void writeBreadcrumb( uint32 markerID ) override;
         void endEventMarker() override;
         void setPipelineState( RHIPipelineStateHandle pso ) override;
         void setComputePipelineState( RHIPipelineStateHandle pso ) override;
@@ -87,7 +87,7 @@ namespace sw
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
         /** @brief bindless 인덱스가 가리키는 구조 버퍼의 SRV 를 반환합니다. 범위 밖이거나 미등록이면 nullptr 입니다. 그래픽스와 컴퓨트 바인딩이 같은 조회를 씁니다. */
-        ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
+        ID3D11ShaderResourceView* findBindlessBufferSRV( RHIDescriptorIndex index ) const;
         /**
          * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수 버퍼를 다시 채워 바인딩합니다.
          * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트 진입점이 이것을 함께 쓰고, 다른 점은 어느

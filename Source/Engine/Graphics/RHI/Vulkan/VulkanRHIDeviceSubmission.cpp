@@ -2,7 +2,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -79,9 +79,9 @@ namespace sw
             return;
         SW_LOG_ERROR( "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
         // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
-        uint32       arrBreadcrumb[GpuBreadcrumbs::kMaxReported]{};
-        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GpuBreadcrumbs::kMaxReported );
-        GpuBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
+        uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
+        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
+        GPUBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
         reportDeviceFault();
     }
 
@@ -95,10 +95,10 @@ namespace sw
         return true;
     }
 
-    uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
 #if !defined( SW_SHIPPING )
-        if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutId == nullptr || capacity == 0 )
+        if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutID == nullptr || capacity == 0 )
             return 0;
         uint32                               dataCount            = 0;
         const PFN_vkGetQueueCheckpointDataNV pfnGetCheckpointData = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>( _pGetCheckpointData );
@@ -115,19 +115,19 @@ namespace sw
         uint32 filled = 0;
         for ( uint32 index = 0; index < dataCount && filled < capacity; ++index )
         {
-            const uint32 markerId = static_cast<uint32>( reinterpret_cast<uintptr_t>( listData[index].pCheckpointMarker ) );
-            bool         bKnown   = markerId == 0;
+            const uint32 markerID = static_cast<uint32>( reinterpret_cast<uintptr_t>( listData[index].pCheckpointMarker ) );
+            bool         bKnown   = markerID == 0;
             for ( uint32 knownIndex = 0; knownIndex < filled; ++knownIndex )
             {
-                if ( pOutId[knownIndex] == markerId )
+                if ( pOutID[knownIndex] == markerID )
                     bKnown = true;
             }
             if ( bKnown == false )
-                pOutId[filled++] = markerId;
+                pOutID[filled++] = markerID;
         }
         return filled;
 #else
-        (void)pOutId;
+        (void)pOutID;
         (void)capacity;
         return 0;
 #endif

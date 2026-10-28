@@ -21,7 +21,7 @@ namespace sw
     struct CachedGlyph
     {
         GlyphAtlasRect _rect{};               ///< 빈 글리프(공백)는 크기 0
-        float2         _bearingPx{};          ///< 원점에서 비트맵 왼쪽 위까지입니다(래스터 픽셀이며 SdfRasterParams::_pixelSize 기준, y 는 기준선 위가 +).
+        float2         _bearingPx{};          ///< 원점에서 비트맵 왼쪽 위까지입니다(래스터 픽셀이며 SDFRasterParams::_pixelSize 기준, y 는 기준선 위가 +).
         float32        _advancePx{ 0.0f };    ///< 래스터 픽셀 전진
         uint32         _atlasGeneration{ 0 }; ///< 올린 때의 아틀라스 세대입니다. 다르면 페이지가 비워졌을 수 있습니다.
     };
@@ -90,7 +90,7 @@ namespace sw
         GlyphAtlas&       getAtlas() { return _atlas; }
         const GlyphAtlas& getAtlas() const { return _atlas; }
         /** @brief 래스터화 인자입니다(래스터 픽셀 → em 비율 환산에 `_pixelSize`). */
-        const SdfRasterParams& getRasterParams() const { return _rasterParams; }
+        const SDFRasterParams& getRasterParams() const { return _rasterParams; }
         /** @brief 글리프를 담는 거리장 종류입니다. */
         GlyphFieldKind getFieldKind() const { return _atlas.getFieldKind(); }
         /** @brief 표의 글리프 수입니다. */
@@ -107,8 +107,8 @@ namespace sw
         IFontRasterizer&                   _rasterizer;
         GlyphAtlas                         _atlas;
         unordered_map<uint64, CachedGlyph> _mapGlyph;                ///< 키 = makeKey
-        SdfRasterParams                    _rasterParams;            ///< 래스터화 인자(모든 글리프 같은 크기)
-        SdfGlyphBitmap                     _scratchBitmap;           ///< 래스터 결과를 받는 재사용 버퍼입니다.
+        SDFRasterParams                    _rasterParams;            ///< 래스터화 인자(모든 글리프 같은 크기)
+        SDFGlyphBitmap                     _scratchBitmap;           ///< 래스터 결과를 받는 재사용 버퍼입니다.
         int64                              _rasterBudgetNanoseconds; ///< 프레임당 새 글리프 시간 예산입니다(0 이면 제한 없음).
         int64                              _spentNanoseconds;        ///< `_budgetFrameIndex` 프레임에 새 글리프에 쓴 시간입니다.
         uint64                             _budgetFrameIndex;        ///< `_spentNanoseconds` 가 센 프레임입니다(다른 프레임 번호가 오면 0 으로 되돌립니다).

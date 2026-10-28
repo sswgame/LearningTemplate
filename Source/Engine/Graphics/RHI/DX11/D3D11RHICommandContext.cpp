@@ -136,7 +136,7 @@ namespace sw
         if ( _pContext == nullptr )
             return;
 
-        ID3D11RenderTargetView* arrRtv[kMaxColorAttachments]{};
+        ID3D11RenderTargetView* arrRTV[kMaxColorAttachments]{};
         uint32                  rtCount{ 0 };
         if ( beginInfo._bBindColor != SW_FALSE )
         {
@@ -144,41 +144,41 @@ namespace sw
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
             {
                 const RHITextureHandle  colorHandle = beginInfo._arrColorTarget[attachmentIndex];
-                ID3D11RenderTargetView* pRtv{ nullptr };
+                ID3D11RenderTargetView* pRTV{ nullptr };
                 if ( colorHandle == 0 )
-                    pRtv = ( attachmentIndex == 0 ) ? _pDevice->_swapChain.getBackBufferRtv() : nullptr;
+                    pRTV = ( attachmentIndex == 0 ) ? _pDevice->_swapChain.getBackBufferRTV() : nullptr;
                 else
                 {
                     D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( colorHandle );
                     if ( pTexture != nullptr )
-                        pRtv = pTexture->findSliceRtv( beginInfo._arrColorTargetSlice[attachmentIndex] );
+                        pRTV = pTexture->findSliceRTV( beginInfo._arrColorTargetSlice[attachmentIndex] );
                 }
-                if ( pRtv == nullptr && attachmentIndex > 0 )
+                if ( pRTV == nullptr && attachmentIndex > 0 )
                     break;
-                arrRtv[rtCount++] = pRtv;
+                arrRTV[rtCount++] = pRTV;
 
                 const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
                 const float32*            pClear = &beginInfo._arrClearColor[attachmentIndex]._x;
-                if ( loadOp == RHIRenderPassLoadOp::Clear && pRtv != nullptr )
-                    _pContext->ClearRenderTargetView( pRtv, pClear );
+                if ( loadOp == RHIRenderPassLoadOp::Clear && pRTV != nullptr )
+                    _pContext->ClearRenderTargetView( pRTV, pClear );
             }
         }
 
-        ID3D11DepthStencilView* pDsv{ nullptr };
+        ID3D11DepthStencilView* pDSV{ nullptr };
         if ( beginInfo._depthTarget != 0 )
         {
             D3D11RHIDevice::TextureRecord* pDepthTex = _pDevice->resolveTexture( beginInfo._depthTarget );
             if ( pDepthTex != nullptr )
-                pDsv = pDepthTex->findSliceDsv( beginInfo._depthTargetSlice );
+                pDSV = pDepthTex->findSliceDSV( beginInfo._depthTargetSlice );
         }
 
-        if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear && pDsv != nullptr )
-            _pContext->ClearDepthStencilView( pDsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, beginInfo._clearDepth, 0 );
+        if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear && pDSV != nullptr )
+            _pContext->ClearDepthStencilView( pDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, beginInfo._clearDepth, 0 );
 
         if ( rtCount > 0 )
-            _pContext->OMSetRenderTargets( rtCount, arrRtv, pDsv );
+            _pContext->OMSetRenderTargets( rtCount, arrRTV, pDSV );
         else
-            _pContext->OMSetRenderTargets( 0, nullptr, pDsv );
+            _pContext->OMSetRenderTargets( 0, nullptr, pDSV );
 
         // 깊이 · 블렌드 상태는 PSO 의 것만 쓴다(setPipelineState 가 건다). 전역 깊이 상태로 대신하지 않는다 — PSO 없이 그리면
         // bindGraphicsPipelineForDraw 가 멈춘다. 패스 앞에 이미 PSO 가 걸려 있으면 그 상태를 다시 건다.
@@ -214,7 +214,7 @@ namespace sw
      *            않고 그리는 에디터 ImGui 백엔드가 표준 GL 규약을 가정하기 때문입니다).
      *          - **DX12** 는 배리어 판단에 쓰는 자기 추적 상태(활성 컬러 · 깊이 타깃)를 지웁니다.
      *          D3D11 은 즉시 모드라 패스 객체가 없다. 렌더 타깃도 그대로 둔다 — 에디터 ImGui 가 마지막 패스의 백버퍼 바인딩 위에 그린다.
-     *          끝난 타깃을 컴퓨트 UAV 로 거는 해저드는 `bindComputeUav` 가 RT 를 떼서 막는다.
+     *          끝난 타깃을 컴퓨트 UAV 로 거는 해저드는 `bindComputeUAV` 가 RT 를 떼서 막는다.
      *          `D3D11RecordingState` 가 들고 있는 것(메시 VB, 루트 상수 그림자)은 **패스 경계를
      *          넘어 유지되어야 하는 것**이라 여기서 지우면 오히려 틀립니다.
      */
@@ -247,12 +247,12 @@ namespace sw
         // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(예: 인스턴스 버퍼 t4).
         // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
         // 상태마다 뗄지를 열거로 정한다 — `default:` 가 없어 새 상태가 생기면 이 switch 가 컴파일 경고(-Werror=switch)로 결정을 요구한다.
-        bool bReleasesUav{ true };
+        bool bReleasesUAV{ true };
         switch ( newState )
         {
             case RHIBufferState::UnorderedAccess:
             {
-                bReleasesUav = false; // 쓰기로 돌아갈 때는 bindComputeUav 가 다시 건다
+                bReleasesUAV = false; // 쓰기로 돌아갈 때는 bindComputeUAV 가 다시 건다
                 break;
             }
             case RHIBufferState::Common:
@@ -266,17 +266,17 @@ namespace sw
                 break; // 읽기 · 복사 상태는 UAV 에서 뗀다
             }
         }
-        const bool bNoUavToRelease = _pContext == nullptr || _pState == nullptr || buffer == 0 || bReleasesUav == false;
-        if ( bNoUavToRelease )
+        const bool bNoUAVToRelease = _pContext == nullptr || _pState == nullptr || buffer == 0 || bReleasesUAV == false;
+        if ( bNoUAVToRelease )
             return;
 
         ID3D11UnorderedAccessView* pNull{ nullptr };
         for ( uint32 slot = 0; slot < D3D11_PS_CS_UAV_REGISTER_COUNT; ++slot )
         {
-            if ( _pState->_arrComputeUavBuffer[slot] != buffer )
+            if ( _pState->_arrComputeUAVBuffer[slot] != buffer )
                 continue;
             _pContext->CSSetUnorderedAccessViews( slot, 1, &pNull, nullptr );
-            _pState->_arrComputeUavBuffer[slot] = 0;
+            _pState->_arrComputeUAVBuffer[slot] = 0;
         }
     }
 
@@ -291,18 +291,18 @@ namespace sw
         _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
     }
 
-    void D3D11RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
+    void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUavAt( index );
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
         if ( _pContext != nullptr && uav != nullptr )
         {
             // 컴퓨트는 렌더 패스 밖에서 돈다 — 앞 패스의 렌더 타깃이 이 UAV 의 텍스처면(깊이 히스토리) 런타임이 RT 를 강제로 떼며 오류를 낸다. 먼저 뗀다.
             _pContext->OMSetRenderTargets( 0, nullptr, nullptr );
-            ID3D11UnorderedAccessView* pUav = uav.Get();
-            _pContext->CSSetUnorderedAccessViews( slot, 1, &pUav, nullptr );
+            ID3D11UnorderedAccessView* pUAV = uav.Get();
+            _pContext->CSSetUnorderedAccessViews( slot, 1, &pUAV, nullptr );
             // 어느 버퍼가 어느 슬롯에 걸렸는지 남긴다. transitionBuffer 가 이것을 보고 뗀다.
             if ( _pState != nullptr && slot < D3D11_PS_CS_UAV_REGISTER_COUNT )
-                _pState->_arrComputeUavBuffer[slot] = _pDevice->uavSourceBufferAt( index );
+                _pState->_arrComputeUAVBuffer[slot] = _pDevice->uavSourceBufferAt( index );
         }
     }
 
@@ -311,17 +311,17 @@ namespace sw
         const RHITextureHandle texture = _pDevice->bindlessTextureAt( index );
         if ( _pContext == nullptr || texture == 0 )
             return;
-        ID3D11ShaderResourceView*      pSrv{ nullptr };
+        ID3D11ShaderResourceView*      pSRV{ nullptr };
         D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture != nullptr )
-            pSrv = pTexture->_srv.Get();
-        _pContext->PSSetShaderResources( slot, 1, &pSrv );
+            pSRV = pTexture->_srv.Get();
+        _pContext->PSSetShaderResources( slot, 1, &pSRV );
         // 머티리얼 텍스처는 정점 셰이더도 읽는다(툰 외곽선 두께 텍스처 — MToon 이 정점에서 읽는다). 다른 세 백엔드는 모든 스테이지가 본다.
         const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
         if ( bMaterialSlot )
-            _pContext->VSSetShaderResources( slot, 1, &pSrv );
+            _pContext->VSSetShaderResources( slot, 1, &pSRV );
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
-            _pState->_arrPixelSrvTexture[slot] = ( pSrv != nullptr ) ? texture : 0;
+            _pState->_arrPixelSRVTexture[slot] = ( pSRV != nullptr ) ? texture : 0;
         // 엔진 슬롯(t0..t3 — 풀스크린 입력 · 그림자 맵)만 샘플러를 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
         // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 샘플러는 shaderslot::kEngineTextureSampler(선형 · 클램프) — 네이티브 bindless 가 고르는 것과 같다.
         // 머티리얼 슬롯(t16..t31)은 짝 샘플러가 없다 — DX11 샘플러 슬롯은 16 개뿐이라 셰이더가 정적 세트의 머티리얼 샘플러(s9 + kMaterialTextureSampler)로 읽는다.
@@ -476,12 +476,12 @@ namespace sw
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );
     }
 
-    ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSrv( RHIDescriptorIndex index ) const
+    ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
     {
         if ( index == kInvalidDescriptorIndex )
             return nullptr;
         // 레지스트리는 공유 락으로 읽고(범위 밖이면 핸들 0), SRV 는 버퍼 레코드에서 락 없이 읽는다(핸들 0 은 nullptr).
-        return _pDevice->resolveBufferSrv( _pDevice->bindlessBufferAt( index ) );
+        return _pDevice->resolveBufferSRV( _pDevice->bindlessBufferAt( index ) );
     }
 
     void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
@@ -490,14 +490,14 @@ namespace sw
         // 리플렉션 t 슬롯에 바인딩한다.
         if ( _pContext == nullptr )
             return;
-        ID3D11ShaderResourceView* pSrv = findBindlessBufferSrv( index );
-        if ( pSrv == nullptr )
+        ID3D11ShaderResourceView* pSRV = findBindlessBufferSRV( index );
+        if ( pSRV == nullptr )
             return;
-        _pContext->VSSetShaderResources( slot, 1, &pSrv );
-        _pContext->PSSetShaderResources( slot, 1, &pSrv );
+        _pContext->VSSetShaderResources( slot, 1, &pSRV );
+        _pContext->PSSetShaderResources( slot, 1, &pSRV );
         // 버퍼가 그 슬롯의 텍스처를 덮는다.
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
-            _pState->_arrPixelSrvTexture[slot] = 0;
+            _pState->_arrPixelSRVTexture[slot] = 0;
     }
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -517,10 +517,10 @@ namespace sw
         // gpucull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
         if ( _pContext == nullptr )
             return;
-        ID3D11ShaderResourceView* pSrv = findBindlessBufferSrv( index );
-        if ( pSrv == nullptr )
+        ID3D11ShaderResourceView* pSRV = findBindlessBufferSRV( index );
+        if ( pSRV == nullptr )
             return;
-        _pContext->CSSetShaderResources( slot, 1, &pSrv );
+        _pContext->CSSetShaderResources( slot, 1, &pSRV );
     }
 
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
@@ -674,31 +674,31 @@ namespace sw
         if ( _pContext == nullptr )
             return;
 
-        ID3D11ShaderResourceView* arrNullSrv[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
-        _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSrv );
+        ID3D11ShaderResourceView* arrNullSRV[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
+        _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSRV );
         // 머티리얼 슬롯은 정점 셰이더에도 걸린다(bindShaderResource) — 같은 범위만 뗀다(정점 셰이더의 구조버퍼 t4..t11 은 그대로 둔다).
-        _pContext->VSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSrv );
+        _pContext->VSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
         if ( _pState != nullptr )
-            Memory::set( _pState->_arrPixelSrvTexture, 0, sizeof( _pState->_arrPixelSrvTexture ) );
+            Memory::set( _pState->_arrPixelSRVTexture, 0, sizeof( _pState->_arrPixelSRVTexture ) );
     }
 
     void D3D11RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
     {
         // D3D11 은 상태를 전이하지 않는다. 대신 같은 리소스가 입력과 출력에 함께 걸리면 OMSetRenderTargets 가 SRV 쪽을 NULL 로
         // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼(0)는 SRV 로 걸리지 않는다.
-        const bool bNoSrvToRelease = _pContext == nullptr || _pState == nullptr || texture == 0;
-        if ( bNoSrvToRelease )
+        const bool bNoSRVToRelease = _pContext == nullptr || _pState == nullptr || texture == 0;
+        if ( bNoSRVToRelease )
             return;
         ID3D11ShaderResourceView* pNull{ nullptr };
         for ( uint32 slot = 0; slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT; ++slot )
         {
-            if ( _pState->_arrPixelSrvTexture[slot] != texture )
+            if ( _pState->_arrPixelSRVTexture[slot] != texture )
                 continue;
             _pContext->PSSetShaderResources( slot, 1, &pNull );
             const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
             if ( bMaterialSlot )
                 _pContext->VSSetShaderResources( slot, 1, &pNull );
-            _pState->_arrPixelSrvTexture[slot] = 0;
+            _pState->_arrPixelSRVTexture[slot] = 0;
         }
     }
 
@@ -714,10 +714,10 @@ namespace sw
         return _annotation.Get();
     }
 
-    void D3D11RHICommandContext::writeBreadcrumb( uint32 markerId )
+    void D3D11RHICommandContext::writeBreadcrumb( uint32 markerID )
     {
-        // DX11 은 소실 뒤에도 읽을 수 있는 디바이스측 쓰기 수단이 없다(`RHICapabilities::_bGpuBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
-        (void)markerId;
+        // DX11 은 소실 뒤에도 읽을 수 있는 디바이스측 쓰기 수단이 없다(`RHICapabilities::_bGPUBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
+        (void)markerID;
     }
 
     void D3D11RHICommandContext::beginEventMarker( const utf8* pName )
@@ -729,10 +729,10 @@ namespace sw
         {
             // 주의: 고정 배열에 `MultiByteToWideChar` 로 옮기지 말 것. 그 API 는 이름이 버퍼보다 길면
             // **0 을 반환하고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에 넘기면 배열 밖까지
-            // 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUtf16` 은 잘라 담을 일도, 다중바이트 시퀀스가
+            // 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUTF16` 은 잘라 담을 일도, 다중바이트 시퀀스가
             // 중간에서 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
             // 널이 아니다) 여기서 한 번 할당하는 비용은 캡처 비용에 묻힌다.
-            const wstring wideName = StringUtil::utf8ToUtf16( pName );
+            const wstring wideName = StringUtil::utf8ToUTF16( pName );
             pAnnotation->BeginEvent( wideName.c_str() );
         }
     }

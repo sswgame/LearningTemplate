@@ -164,7 +164,7 @@ namespace sw
         if ( FileUtil::readTextFile( FileUtil::joinPath( directory, kInfoFileName ), text ) == false )
             return false;
         outReport              = BugItReport{};
-        const string_view body = FileUtil::skipUtf8Bom( text );
+        const string_view body = FileUtil::skipUTF8Bom( text );
         StringUtil::forEachLine( body, [&]( string_view line )
         {
             string_view key;

@@ -37,7 +37,7 @@ namespace sw::editor
                 float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
                 if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
                     pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFov" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFOV" ) );
 
                 float32 nearZ = pCameraComp->getNearPlane();
                 if ( ImGui::DragFloat( "Near Plane", &nearZ, 0.01f, 0.001f, 10.0f ) )

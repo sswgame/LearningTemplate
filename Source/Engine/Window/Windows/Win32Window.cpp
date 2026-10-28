@@ -33,7 +33,7 @@ namespace sw
         _height = height;
         if ( storeTitle( pTitle ) == false )
             return false; // 오류는 storeTitle 이 남겼다
-        const wstring titleW = StringUtil::utf8ToUtf16( _arrTitle );
+        const wstring titleW = StringUtil::utf8ToUTF16( _arrTitle );
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
@@ -91,7 +91,7 @@ namespace sw
     void Win32Window::applyTitle()
     {
         if ( _hWnd != nullptr )
-            SetWindowTextW( _hWnd, StringUtil::utf8ToUtf16( _arrTitle ).c_str() );
+            SetWindowTextW( _hWnd, StringUtil::utf8ToUTF16( _arrTitle ).c_str() );
     }
 
     void Win32Window::applyWindowVisibility( bool bShow )
@@ -122,7 +122,7 @@ namespace sw
         if ( _hWnd == nullptr )
             return 1.0f;
         const UINT dpi = GetDpiForWindow( _hWnd );
-        return dpi > 0 ? static_cast<float32>( dpi ) / kReferenceDpi : 1.0f;
+        return dpi > 0 ? static_cast<float32>( dpi ) / kReferenceDPI : 1.0f;
     }
 
     bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )

@@ -9,8 +9,8 @@ SW_GLOBAL_VARIABLE( int32, gv_upscaler, 0, "업스케일 필터 0 선형 1 FSR 1
 SW_GLOBAL_VARIABLE( int32, gv_shadowMapResolution, 2048, "그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue)" );
 SW_GLOBAL_VARIABLE( int32, gv_postQuality, 2, "후처리 품질 0~3 — 패스의 _minPostQuality 보다 낮으면 건너뛴다 (사용자 설정 graphics.postQuality)" );
 SW_GLOBAL_VARIABLE( bool, gv_motionBlur, true, "모션 블러 (사용자 설정 graphics.motionBlur, MotionBlur 패스가 읽는다)" );
-// 아래 층(Object · Graphics · Vfx)이 읽는 설정 변수는 읽는 쪽에 둔다 — 그 층은 이 층을 include 하지 못한다:
-// gv_viewDistanceScale(CameraComponent.cpp) · gv_textureMipDrop(Texture2D.cpp) · gv_effectsSpawnScale(VfxComponent.cpp).
+// 아래 층(Object · Graphics · VFX)이 읽는 설정 변수는 읽는 쪽에 둔다 — 그 층은 이 층을 include 하지 못한다:
+// gv_viewDistanceScale(CameraComponent.cpp) · gv_textureMipDrop(Texture2D.cpp) · gv_effectsSpawnScale(VFXComponent.cpp).
 
 SW_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView, 70.0f, "카메라 시야각(도) (사용자 설정 gameplay.fieldOfView)" );
 SW_GLOBAL_VARIABLE( float32, gv_cameraShakeScale, 1.0f, "카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake)" );

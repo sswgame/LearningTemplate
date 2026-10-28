@@ -88,7 +88,7 @@ namespace sw::editor
 
         syncPreviewRoles();
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight = PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDpiScale();
+        const float32 minHeight = PairedAnimationPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
         const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
         drawPreviewViewport( viewSize, _gizmo.hasMouse() );
         _gizmo.draw( *this );

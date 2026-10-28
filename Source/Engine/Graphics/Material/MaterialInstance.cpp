@@ -298,7 +298,7 @@ namespace sw
         {
             if ( texture._pTexture == nullptr )
                 continue;
-            const uint32 textureBinding = bNativeBindless ? texture._pTexture->getSrv() : findTextureSlot( texture._name );
+            const uint32 textureBinding = bNativeBindless ? texture._pTexture->getSRV() : findTextureSlot( texture._name );
             if ( textureBinding != kInvalidDescriptorIndex && textureBinding != Material::kInvalidTextureSlot )
                 _pParentMaterial->packTextureIntoBuffer( texture._name, textureBinding, _bytes );
         }
@@ -325,7 +325,7 @@ namespace sw
             if ( constantBuffer == 0 )
                 return false;
             _constant.adopt( pRHI, constantBuffer );
-            _descriptorIndex  = pRHI->getResourceFactory()->registerBindlessBufferSrv( constantBuffer );
+            _descriptorIndex  = pRHI->getResourceFactory()->registerBindlessBufferSRV( constantBuffer );
             _constantByteSize = size;
         }
         pRHI->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
@@ -399,7 +399,7 @@ namespace sw
         if ( parentSlot != Material::kInvalidTextureSlot )
             return parentSlot;
         // 부모에 없는 프로퍼티는 부모 슬롯 뒤에 덮어쓰기 순서대로 잇는다. 지울 것(빈 경로)은 자리를 차지하지 않는다.
-        uint32 slot = static_cast<uint32>( _pParentMaterial->getMaterialTextureSrvs().size() );
+        uint32 slot = static_cast<uint32>( _pParentMaterial->getMaterialTextureSRVs().size() );
         for ( const TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._assetPath.empty() || _pParentMaterial->findTextureSlot( texture._name ) != Material::kInvalidTextureSlot )
@@ -411,15 +411,15 @@ namespace sw
         return Material::kInvalidTextureSlot;
     }
 
-    void MaterialInstance::collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
+    void MaterialInstance::collectTextureSlotSRVs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const
     {
         ScopedLock<mutex> lock{ _overrideMutex };
         if ( pOutSlot == nullptr || _pParentMaterial == nullptr )
             return;
-        const vector<RHIDescriptorIndex>& listParentSrv = _pParentMaterial->getMaterialTextureSrvs();
+        const vector<RHIDescriptorIndex>& listParentSRV = _pParentMaterial->getMaterialTextureSRVs();
         for ( uint32 slot = 0; slot < slotCount; ++slot )
         {
-            pOutSlot[slot] = slot < listParentSrv.size() ? listParentSrv[slot] : kInvalidDescriptorIndex;
+            pOutSlot[slot] = slot < listParentSRV.size() ? listParentSRV[slot] : kInvalidDescriptorIndex;
         }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
@@ -427,7 +427,7 @@ namespace sw
                 continue;
             const uint32 slot = findTextureSlot( texture._name );
             if ( slot < slotCount )
-                pOutSlot[slot] = texture._pTexture->getSrv();
+                pOutSlot[slot] = texture._pTexture->getSRV();
         }
     }
 

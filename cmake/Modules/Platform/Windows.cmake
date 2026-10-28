@@ -12,7 +12,7 @@ add_library(sw_platform_windows INTERFACE)
 # ------------------------------------------------------------------------------
 # 1) OS 매크로 · 소켓
 # ------------------------------------------------------------------------------
-# NOMINMAX · WIN32_LEAN_AND_MEAN 은 컴파일 정의로 모든 TU 에 준다 — 헤더(`Core/Common/PlatformOsHeaders.h`)에서만 정의하면 그보다 먼저
+# NOMINMAX · WIN32_LEAN_AND_MEAN 은 컴파일 정의로 모든 TU 에 준다 — 헤더(`Core/Common/PlatformOSHeaders.h`)에서만 정의하면 그보다 먼저
 # `windows.h` 를 include 한 TU(서드파티 헤더가 먼저 오는 파일 · PCH 를 쓰지 않는 파일)에는 min/max 매크로가 생긴다.
 target_compile_definitions(sw_platform_windows INTERFACE
 	SW_PLATFORM_WINDOWS

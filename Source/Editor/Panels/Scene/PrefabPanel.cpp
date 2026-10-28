@@ -181,11 +181,11 @@ namespace sw::editor
     {
         if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
-            ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDpiScale() );
-            ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDPIScale() );
+            ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Template Default", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableSetupColumn( "Instance Value", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableHeadersRow();
 
             for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )

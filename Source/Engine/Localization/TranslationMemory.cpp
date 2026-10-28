@@ -21,7 +21,7 @@ namespace sw
                 outListCodepoint.clear();
                 for ( size_t offset = 0; offset < text.size(); )
                 {
-                    outListCodepoint.push_back( StringUtil::decodeUtf8( text, offset ) );
+                    outListCodepoint.push_back( StringUtil::decodeUTF8( text, offset ) );
                 }
             }
 
@@ -40,7 +40,7 @@ namespace sw
         XMLDocument document;
         string      error;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "TranslationMemory", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "TranslationMemory", root ) != XMLRootStatus::Found )
         {
             error = document.getLastError();
             if ( error.empty() )

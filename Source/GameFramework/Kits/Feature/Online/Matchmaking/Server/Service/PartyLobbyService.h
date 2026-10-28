@@ -207,7 +207,7 @@ namespace sw
         void   handleListGet( uint64 listID, int32 slot, const EphemeralReply& reply );
         void   startPartyMutation( const Request& request );
         void   startLobbyMutation( const Request& request );
-        void   refreshIndexTtl( const PartySnapshot& party );
+        void   refreshIndexTTL( const PartySnapshot& party );
         void   notifyParty( const PartySnapshot& party, AccountID removedID );
         void   notifyLobby( const LobbySnapshot& lobby, AccountID removedID );
         void   completeParty( const Request& request, MatchmakingResult result, const PartySnapshot& party );

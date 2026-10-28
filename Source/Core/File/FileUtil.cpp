@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
@@ -170,7 +170,7 @@ namespace sw
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 const string  filePath = FileUtil::normalizeSeparators( fileName );
-                const wstring widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
+                const wstring widePath = StringUtil::utf8ToUTF16( filePath.c_str() );
                 // FILE_SHARE_DELETE: 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있게 한다. 없으면 에디터가
                 // 파일을 읽는 순간 겹친 저장이 실패한다(POSIX 의 rename 은 원래 막히지 않는다).
                 HANDLE hFile = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
@@ -636,7 +636,7 @@ namespace sw
 
             // 반환값이 버퍼 크기와 같으면 잘린 것이다(작으면 다 담긴 것이다).
             if ( writtenCount < listPathBuffer.size() )
-                return StringUtil::utf16ToUtf8( listPathBuffer.data() );
+                return StringUtil::utf16ToUTF8( listPathBuffer.data() );
 
             // 윈도우 경로 상한(32767자)을 넘으면 더 키워 봐야 소용없다.
             if ( listPathBuffer.size() >= kMaxWindowsPathSize )
@@ -660,7 +660,7 @@ namespace sw
         const string filePath = normalizeSeparators( fileName );
 #if defined( SW_PLATFORM_WINDOWS )
         // 크기와 시각을 한 번에 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라).
-        const wstring             widePath = StringUtil::utf8ToUtf16( filePath.c_str() );
+        const wstring             widePath = StringUtil::utf8ToUTF16( filePath.c_str() );
         WIN32_FILE_ATTRIBUTE_DATA attribute{};
         if ( GetFileAttributesExW( widePath.c_str(), GetFileExInfoStandard, &attribute ) == FALSE )
             return false;
@@ -775,9 +775,9 @@ namespace sw
         PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
         PlatformFileUtil::emulateReadDelay( outText.size() );
 
-        // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
+        // BOM 판정의 기준은 아래 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
         // 질의 경로가 서로 다른 답을 준다.
-        const string_view withoutBom = skipUtf8Bom( outText );
+        const string_view withoutBom = skipUTF8Bom( outText );
         if ( withoutBom.size() != outText.size() )
             outText.erase( 0, outText.size() - withoutBom.size() );
 
@@ -817,24 +817,24 @@ namespace sw
         return bMoved;
     }
 
-    string_view FileUtil::skipUtf8Bom( string_view text )
+    string_view FileUtil::skipUTF8Bom( string_view text )
     {
-        const bool bHasUtf8Bom = text.size() >= 3 &&
+        const bool bHasUTF8Bom = text.size() >= 3 &&
                                  static_cast<uint8>( text[0] ) == 0xEF &&
                                  static_cast<uint8>( text[1] ) == 0xBB &&
                                  static_cast<uint8>( text[2] ) == 0xBF;
-        if ( bHasUtf8Bom )
+        if ( bHasUTF8Bom )
             return text.substr( 3 );
         return text;
     }
 
-    void FileUtil::skipUtf8Bom( const uint8*& pData, size_t& size )
+    void FileUtil::skipUTF8Bom( const uint8*& pData, size_t& size )
     {
-        const bool bHasUtf8Bom = pData != nullptr && size >= 3 &&
+        const bool bHasUTF8Bom = pData != nullptr && size >= 3 &&
                                  pData[0] == 0xEF &&
                                  pData[1] == 0xBB &&
                                  pData[2] == 0xBF;
-        if ( bHasUtf8Bom )
+        if ( bHasUTF8Bom )
         {
             pData += 3;
             size -= 3;

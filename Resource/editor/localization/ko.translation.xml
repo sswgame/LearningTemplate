@@ -1627,7 +1627,7 @@
 		<entry key="EditorTileMap.ApplySizeTip"
 		       text="맵을 위의 너비와 높이로 바꿉니다. 모든 레이어가 지워집니다."
 		       sourceHash="e745ee6c88546993" />
-		<entry key="EditorTileMap.AtlasIdTip"
+		<entry key="EditorTileMap.AtlasIDTip"
 		       text="칠할 아틀라스 칸 인덱스(0~255)입니다."
 		       sourceHash="20f38f16bde4653e" />
 		<entry key="EditorTileMap.BrushTip"
@@ -1719,7 +1719,7 @@
 		<entry key="EditorTip.CameraFar"
 		       text="카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다."
 		       sourceHash="74bb571efcaa556e" />
-		<entry key="EditorTip.CameraFov"
+		<entry key="EditorTip.CameraFOV"
 		       text="세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다."
 		       sourceHash="12b9a65047c8f0b3" />
 		<entry key="EditorTip.CameraNear"

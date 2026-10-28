@@ -93,9 +93,9 @@ namespace sw
         return url;
     }
 
-    std::optional<JwtVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
+    std::optional<JWTVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
     {
-        JwtUnverified token;
+        JWTUnverified token;
         if ( token.parse( compact ) == false || token.getAlgorithm() != NetSignatureAlgorithm::EcdsaP256Sha256 )
             return std::nullopt;
         const bool   bMarkers = _settings._bRequireAppleMarkers == SW_TRUE;
@@ -106,7 +106,7 @@ namespace sw
         if ( bChainOk == false )
             return std::nullopt;
         // 애플 서명 거래에는 iss · aud · exp 가 없다 — 신뢰는 위에서 확인한 애플 루트 사슬의 리프 키에서 온다.
-        return std::move( token ).verify( *_pSecurity, leafKey, JwtClaimRule::makeSignatureOnly() );
+        return std::move( token ).verify( *_pSecurity, leafKey, JWTClaimRule::makeSignatureOnly() );
     }
 
     string AppleReceiptValidator::makeAuthorization( UnixMilliseconds now )
@@ -132,7 +132,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        token;
         const bool                    bSigned =
-            payload.has_value() && JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
+            payload.has_value() && JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
@@ -209,7 +209,7 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerId, keyId and the signing key", _settings._issuerID.c_str(),
+            SW_LOG_ERROR( "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerID, keyId and the signing key", _settings._issuerID.c_str(),
                           _settings._keyID.c_str() );
         }
         if ( Internal::isTransientStatus( response ) )
@@ -230,7 +230,7 @@ namespace sw
             return;
         }
         const JSONValue                  signedInfo = document.getRoot().get( "signedTransactionInfo" );
-        const std::optional<JwtVerified> verified =
+        const std::optional<JWTVerified> verified =
             signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : std::nullopt;
         if ( verified.has_value() == false )
         {
@@ -238,7 +238,7 @@ namespace sw
             SW_LOG_ERROR( "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
             return;
         }
-        const JwtVerified& token = *verified;
+        const JWTVerified& token = *verified;
         string             transactionID;
         string             bundleID;
         const bool         bIDsOk           = token.findText( "transactionId", transactionID ) && token.findText( "bundleId", bundleID );
@@ -289,7 +289,7 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear();
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token for the notification history - check issuerId, keyId and the signing key" );
+            SW_LOG_ERROR( "Apple rejected the App Store Server API token for the notification history - check issuerID, keyId and the signing key" );
         }
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
@@ -302,7 +302,7 @@ namespace sw
         {
             const JSONValue                  item          = history.at( index );
             const JSONValue                  signedPayload = item.get( "signedPayload" );
-            const std::optional<JwtVerified> notification =
+            const std::optional<JWTVerified> notification =
                 signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
             if ( notification.has_value() == false )
             {
@@ -317,7 +317,7 @@ namespace sw
             const bool bOurRefund = bShapeOk && notificationType == "REFUND" && bundleID == _settings._bundleID;
             if ( bOurRefund == false )
                 continue;
-            const std::optional<JwtVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
+            const std::optional<JWTVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
             string                           transactionID;
             if ( transaction.has_value() == false || transaction->findText( "transactionId", transactionID ) == false )
                 continue;

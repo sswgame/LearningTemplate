@@ -87,7 +87,7 @@ namespace sw
             return 0;
 
         const auto* const pBytes = static_cast<const uint8*>( pData );
-        return HashUtil::appendBytes32( HashUtil::kFnvOffset32, pBytes, dataSize );
+        return HashUtil::appendBytes32( HashUtil::kFNVOffset32, pBytes, dataSize );
     }
 
     bool CompressionStream::verifyHeader( const void* pData, size_t dataSize, CompressionHeader& outHeader )

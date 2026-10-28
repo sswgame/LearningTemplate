@@ -44,7 +44,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( pToggleTooltip );
 
                 EditorViewportToolbar::nextItem( bVertical );
-                ImGui::SetNextItemWidth( comboWidth * EditorThemeUtil::getDpiScale() );
+                ImGui::SetNextItemWidth( comboWidth * EditorThemeUtil::getDPIScale() );
 
                 int32 currentIndex = fallbackIndex;
                 for ( int32 index = 0; index < valueCount; ++index )

@@ -102,7 +102,7 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 /** @brief 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다. 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다. */
 void MaterialInterpolants::storeTangent( VertexContext context )
 {
-    const float4 localTangent = MorphPool::loadTangent( context._instance._meshBatchIndex, context._vertexId, context._input._tangent );
+    const float4 localTangent = MorphPool::loadTangent( context._instance._meshBatchIndex, context._vertexID, context._input._tangent );
     _tangent                  = float4( mul( float4( localTangent.xyz, 0.0f ), context._instance._world ).xyz, localTangent.w );
 }
     #else
@@ -148,16 +148,16 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
-MaterialInterpolants VSMain( VertexInput input, uint vertexId : SV_VertexID )
+MaterialInterpolants VSMain( VertexInput input, uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
     context._input    = input;
-    context._vertexId = vertexId;
+    context._vertexID = vertexID;
     // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
     context._instance = InstanceData::load( input._instanceSlot );
     // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-    context._instance.loadAnimatedVertex( vertexId, input._position, input._normal, context._localPosition, context._localNormal );
+    context._instance.loadAnimatedVertex( vertexID, input._position, input._normal, context._localPosition, context._localNormal );
     // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
     float4 worldPosition   = Transform::computeWorldPosition( context._localPosition, context._instance._world );
     context._worldPosition = worldPosition.xyz;

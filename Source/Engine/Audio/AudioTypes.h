@@ -86,7 +86,7 @@ namespace sw
     {
         inline constexpr utf8 kMaster[]  = "master";
         inline constexpr utf8 kMusic[]   = "music";
-        inline constexpr utf8 kSfx[]     = "sfx";
+        inline constexpr utf8 kSFX[]     = "sfx";
         inline constexpr utf8 kVoice[]   = "voice";
         inline constexpr utf8 kAmbient[] = "ambient";
         inline constexpr utf8 kUI[]      = "ui";

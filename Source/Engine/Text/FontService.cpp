@@ -141,7 +141,7 @@ namespace sw
         if ( catalog.loadFromAsset( assetID ) == false )
             return false;
         if ( gv_fontMsdfGlyphs )
-            catalog._glyphField = GlyphFieldKind::Msdf;
+            catalog._glyphField = GlyphFieldKind::MSDF;
         return initializeFromCatalog( std::move( catalog ) );
     }
 

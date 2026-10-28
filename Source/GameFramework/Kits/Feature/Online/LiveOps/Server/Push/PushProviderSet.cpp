@@ -26,8 +26,8 @@ namespace sw
             static constexpr const utf8* kKindApns = "apns";
 
             /** @brief 종류마다 쓸 수 있는 키입니다 — 다른 종류의 키는 철자 오류와 같이 거절한다. */
-            static constexpr const utf8* kKeysFcm[]  = { "kind", "serviceAccountEnvironment", "tokenUrl", "sendUrl" };
-            static constexpr const utf8* kKeysApns[] = { "kind", "keyEnvironment", "keyId", "teamId", "topic", "sendUrl" };
+            static constexpr const utf8* kKeysFcm[]  = { "kind", "serviceAccountEnvironment", "tokenURL", "sendURL" };
+            static constexpr const utf8* kKeysApns[] = { "kind", "keyEnvironment", "keyId", "teamID", "topic", "sendURL" };
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
@@ -151,11 +151,11 @@ namespace sw
                     return false;
                 }
             }
-            config._sendBaseURL = Internal::readText( entry, "sendUrl" );
+            config._sendBaseURL = Internal::readText( entry, "sendURL" );
             if ( bFcm )
             {
                 config._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
-                config._tokenURL                  = Internal::readText( entry, "tokenUrl" );
+                config._tokenURL                  = Internal::readText( entry, "tokenURL" );
                 if ( config._serviceAccountEnvironment.empty() )
                 {
                     outError = "push provider 'fcm' needs serviceAccountEnvironment";
@@ -165,13 +165,13 @@ namespace sw
             }
             config._keyEnvironment      = Internal::readText( entry, "keyEnvironment" );
             config._keyID               = Internal::readText( entry, "keyId" );
-            config._teamID              = Internal::readText( entry, "teamId" );
+            config._teamID              = Internal::readText( entry, "teamID" );
             config._topic               = Internal::readText( entry, "topic" );
             const bool bKeyMissing      = config._keyEnvironment.empty() || config._keyID.empty();
             const bool bIdentityMissing = config._teamID.empty() || config._topic.empty();
             if ( bKeyMissing || bIdentityMissing )
             {
-                outError = "push provider 'apns' needs keyEnvironment, keyId, teamId and topic";
+                outError = "push provider 'apns' needs keyEnvironment, keyId, teamID and topic";
                 return false;
             }
         }

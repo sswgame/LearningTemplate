@@ -111,7 +111,7 @@ namespace sw
         /** @brief X25519 공유 비밀 32 바이트입니다. 작은 차수 점(공유 비밀이 0)이면 false. */
         [[nodiscard]] virtual bool computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret ) = 0;
         /** @brief HKDF-SHA256(RFC 5869) — 소금 · 정보는 비워도 된다(크기 0). */
-        [[nodiscard]] virtual bool computeHkdfSha256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
+        [[nodiscard]] virtual bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
                                                       uint8* pOut, int32 outSize ) = 0;
         /**
          * @brief 느린 비밀번호 해시 Argon2id(RFC 9106) → @p outSize 바이트입니다.
@@ -127,9 +127,9 @@ namespace sw
         /** @brief 개발용 자체 서명 인증서(EC P-256, SAN = @p commonName · localhost · 127.0.0.1)와 키를 PEM 으로 만듭니다. */
         [[nodiscard]] virtual bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) = 0;
         /** @brief PEM 인증서(첫 장)의 DER SHA-256 을 소문자 16 진 64 자로 줍니다. */
-        [[nodiscard]] virtual bool computeCertificateSha256( const string& certificatePem, string& outHex ) = 0;
+        [[nodiscard]] virtual bool computeCertificateSHA256( const string& certificatePem, string& outHex ) = 0;
         /** @brief SHA-256 다이제스트(32 B)입니다 — PKCE 코드 확인 · 내용 해시. */
-        [[nodiscard]] virtual bool computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) = 0;
+        [[nodiscard]] virtual bool computeSHA256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) = 0;
         /**
          * @brief 서명을 확인합니다(외부 로그인 ID 토큰). 키 구성 요소가 틀렸거나 서명이 맞지 않으면 false 입니다.
          * @details ES256 서명은 JWS 형식(r ‖ s, 64 B)이다. RSA 는 2048 비트 미만 키를 거절한다.

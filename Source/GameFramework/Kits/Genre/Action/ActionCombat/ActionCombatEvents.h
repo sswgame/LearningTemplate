@@ -28,7 +28,7 @@ namespace sw
         GameObjectHandle       _instigator;   ///< 피해를 낸 쪽(쏘거나 휘두른 오브젝트). 모르면 무효 핸들
         GameObjectHandle       _target;       ///< 피해를 받은 유닛
         int32                  _amount;       ///< 들어간 피해. 방어력을 빼고 최소 1을 보장한 값이다. 죽인 피해는 남았던 HP 보다 클 수 있다(넘친 피해)
-        int32                  _remainingHp;  ///< 깎인 뒤 남은 HP
+        int32                  _remainingHP;  ///< 깎인 뒤 남은 HP
         uint8                  _bKilled  : 1; ///< 이 피해로 죽었는지
         [[maybe_unused]] uint8 _reserved : 7;
 
@@ -37,7 +37,7 @@ namespace sw
             : _instigator{}
             , _target{}
             , _amount{ 0 }
-            , _remainingHp{ 0 }
+            , _remainingHP{ 0 }
             , _bKilled{ SW_FALSE }
             , _reserved{ 0 } {}
 

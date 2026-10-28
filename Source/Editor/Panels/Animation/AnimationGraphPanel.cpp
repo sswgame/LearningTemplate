@@ -115,7 +115,7 @@ namespace sw::editor
 
         // 캔버스 오른쪽에 상태 · 전이 편집(언리얼 AnimBP 상태 기계 · 유니티 Animator 의 전이 인스펙터).
         const float32             availWidth = ImGui::GetContentRegionAvail().x;
-        const float32             sideWidth  = MathUtil::min( 300.0f * EditorThemeUtil::getDpiScale(), availWidth * 0.4f );
+        const float32             sideWidth  = MathUtil::min( 300.0f * EditorThemeUtil::getDPIScale(), availWidth * 0.4f );
         editor::EditorSectionDesc canvasDesc{};
         canvasDesc._pID       = "AnimationGraphCanvasRegion";
         canvasDesc._kind      = editor::EditorSectionKind::Child;

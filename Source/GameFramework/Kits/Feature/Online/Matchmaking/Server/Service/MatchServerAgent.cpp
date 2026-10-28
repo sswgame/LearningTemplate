@@ -37,7 +37,7 @@ namespace sw
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )
             {
-                _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs.count() + kExpectTtlMs, static_cast<int32>( team ) };
+                _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs.count() + kExpectTTLMs, static_cast<int32>( team ) };
             }
         }
         _newMatchBuffer.push( std::move( match ) );

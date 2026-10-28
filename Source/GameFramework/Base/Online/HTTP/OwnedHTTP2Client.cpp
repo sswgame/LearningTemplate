@@ -56,7 +56,7 @@ namespace sw
             outError = "https URL '" + string( url ) + "' needs " + string( trustOption ) + " (a CA bundle PEM that verifies the provider)";
             return false;
         }
-        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( trustFile, address._host, outError, HTTP2Client::kAlpnProtocol );
+        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( trustFile, address._host, outError, HTTP2Client::kALPNProtocol );
         if ( context == nullptr )
             return false;
         _client.registerTLSContext( address._host, context.get() );

@@ -62,7 +62,7 @@ namespace sw
 
     uint64 MaterialUtil::hashDefines( const vector<string>& listDefine )
     {
-        uint64 hash = HashUtil::kFnvOffset64;
+        uint64 hash = HashUtil::kFNVOffset64;
         for ( const string& defineStr : listDefine )
         {
             hash = HashUtil::computeStringHash64( defineStr, false, hash );

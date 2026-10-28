@@ -19,7 +19,7 @@
  * 헤더의 SW_LIGHT_GRID_WORD_ENTRY_COUNT 가 담아야 했던 수다.
  *
  * 바인딩 계약(bindingslots.hlsli): 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 뷰 정보, 쓰기 u0 그리드. 상수 버퍼는 없다(뷰마다의 값은 t1 에 있다).
- * C++: bindComputeShaderResource( lights, 0 ) / ( views, 1 ) / bindComputeUav( grid, 0 ) / dispatchCompute( 뷰 수, 1, 1 ) — FrameRendererCompute.cpp dispatchLightGrid.
+ * C++: bindComputeShaderResource( lights, 0 ) / ( views, 1 ) / bindComputeUAV( grid, 0 ) / dispatchCompute( 뷰 수, 1, 1 ) — FrameRendererCompute.cpp dispatchLightGrid.
  */
 
 // 씬 라이트 한 개는 lighting.hlsli 와 같은 LightData(lightdata.hlsli) 다 — 원소 간격이 같아야 번호가 맞는다.
@@ -136,9 +136,9 @@ uint computeClusterIndex( uint3 cell )
 }
 
 SW_NUMTHREADS( SW_LIGHT_GRID_GPU_THREAD_COUNT, 1, 1 )
-void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID )
+void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID )
 {
-    const uint     thread = groupThreadId.x;
+    const uint     thread = groupThreadID.x;
     const GridView view   = loadView( groupId.x );
 
     for ( uint clearCluster = thread; clearCluster < kClusterCount; clearCluster += SW_LIGHT_GRID_GPU_THREAD_COUNT )

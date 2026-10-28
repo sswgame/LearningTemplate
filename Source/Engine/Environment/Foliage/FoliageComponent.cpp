@@ -115,7 +115,7 @@ namespace sw
             static uint64 computeCellHash( const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex )
             {
                 static_assert( sizeof( PlacementInstance ) == sizeof( float32 ) * 9 + sizeof( uint32 ) * 2, "PlacementInstance has padding - hash the fields instead of the bytes" );
-                uint64 hash = HashUtil::kFnvOffset64;
+                uint64 hash = HashUtil::kFNVOffset64;
                 for ( const uint32 instanceIndex : listIndex )
                 {
                     hash = HashUtil::appendBytes64( hash, &listInstance[instanceIndex], sizeof( PlacementInstance ) );

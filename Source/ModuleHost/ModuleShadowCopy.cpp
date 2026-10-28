@@ -8,7 +8,7 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 
-#include "Engine/Module/EngineAbiStamp.h"
+#include "Engine/Module/EngineABIStamp.h"
 
 #include "ModuleHost/ModuleImagePatch.h"
 #include "ModuleHost/ShadowCopyName.h"
@@ -70,7 +70,7 @@ namespace sw
                 inoutImageName._current = generationName;
 
                 vector<string> listImportName;
-                if ( ModuleImagePatch::readImportDllNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
+                if ( ModuleImagePatch::readImportDLLNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
                 {
                     SW_LOG_ERROR( "Module %# is not a PE32+ image this loader can read - refusing its shadow copy", params._moduleName );
                     return false;
@@ -81,11 +81,11 @@ namespace sw
                     const ShadowImageNameState& dependency = *dependencyImage._pImageName;
                     if ( dependency._original.empty() || dependency._current.empty() )
                         continue;
-                    ModuleImagePatch::replaceImportDllName( inoutBytes, dependency._original, dependency._current );
+                    ModuleImagePatch::replaceImportDLLName( inoutBytes, dependency._original, dependency._current );
                 }
 
                 // 의존 목록에 없이 등록된 모듈을 원본 이름으로 부르면 OS 로더가 원본 DLL 을 한 벌 더 올린다(같은 모듈 두 벌 — 정적 상태 · 타입 등록이 갈린다).
-                if ( ModuleImagePatch::readImportDllNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
+                if ( ModuleImagePatch::readImportDLLNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
                     return false;
                 for ( const string& importName : listImportName )
                 {
@@ -151,12 +151,12 @@ namespace sw
         // 지연 import 디렉터리가 있으면 서술자를 읽든 못 읽든 올리지 않는다 — 지연 import 가 없다고 말할 수 없다.
         if ( ModuleImagePatch::hasImportDirectory( bytes, ModuleImagePatch::ImportTable::Delay ) == false )
             return false;
-        vector<string> listDllName;
-        (void)ModuleImagePatch::readImportDllNames( bytes, ModuleImagePatch::ImportTable::Delay, listDllName ); // 로그의 이름만 — 못 읽으면 비어 있다
+        vector<string> listDLLName;
+        (void)ModuleImagePatch::readImportDLLNames( bytes, ModuleImagePatch::ImportTable::Delay, listDLLName ); // 로그의 이름만 — 못 읽으면 비어 있다
         SW_LOG_ERROR( "Module %# (%#) has delay-loaded imports (first: %#, %# DLL(s)) - module images must bind every import when they load, because the "
                       "lld delay-load thunk corrupts the float arguments of the first call. Rebuild it without /DELAYLOAD; refusing to load it",
-                      moduleName, modulePath, listDllName.empty() ? "unreadable import table" : listDllName.front().c_str(),
-                      static_cast<uint32>( listDllName.size() ) );
+                      moduleName, modulePath, listDLLName.empty() ? "unreadable import table" : listDLLName.front().c_str(),
+                      static_cast<uint32>( listDLLName.size() ) );
         SW_ASSERT( false && "A module image with delay-loaded imports must not be loaded" );
         return true;
 #else
@@ -184,14 +184,14 @@ namespace sw
         // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
         // `sw_registerDynamicModule` 이 스탬프를 박는다).
         string     moduleStamp;
-        const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
-        if ( bEngineAbiMismatch )
+        const bool bEngineABIMismatch = ModuleImagePatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp();
+        if ( bEngineABIMismatch )
         {
             // 첫 로드면 지킬 옛 모듈이 없다. 엔진과 모듈 중 한쪽만 다시 빌드된 것이므로 둘을 함께 빌드해야 한다.
             const utf8* pHint = params._bReplacingLoadedImage ? "keeping the old module; restart to pick up the engine change"
                                                               : "rebuild the engine and its modules together";
             SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                          params._moduleName, moduleStamp, engine::getEngineAbiStamp(), pHint );
+                          params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
             return false;
         }
         if ( rejectsDelayImports( params._moduleName, params._originalModulePath, bytes ) )

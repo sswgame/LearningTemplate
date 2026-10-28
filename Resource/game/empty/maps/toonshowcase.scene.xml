@@ -107,6 +107,6 @@
 		<entity id="10"
 		        name="AvatarSampleD"
 		        prefab="game/empty/models/avatarsample_d/avatarsample_d.prefab.xml"
-		        prefabGuid="2ecf2e1e-4fba-4191-8605-631a95dc6f7c" />
+		        prefabGUID="2ecf2e1e-4fba-4191-8605-631a95dc6f7c" />
 	</entities>
 </Scene>

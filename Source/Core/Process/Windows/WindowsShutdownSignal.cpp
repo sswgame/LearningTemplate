@@ -3,7 +3,7 @@
 #include "Core/Process/ShutdownSignal.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
 namespace sw
 {

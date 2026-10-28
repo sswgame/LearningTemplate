@@ -108,7 +108,7 @@ namespace sw
 namespace sw
 {
     /** @brief NPC 하나입니다. 읽을 때 자기 루틴과 아키타입 체인의 루틴을 모아 둡니다. 같은 id 면 자기 것이 덮어씁니다. */
-    struct ScheduleNpcDef
+    struct ScheduleNPCDef
     {
         static constexpr float32 kMinUnitsPerMinute = 0.01f; ///< `speed` 의 하한(0 이면 이동이 끝나지 않는다)
 
@@ -129,7 +129,7 @@ namespace sw
     {
         hashed_string            _id{};
         ScheduleCondition        _condition{};
-        vector<hashed_string>    _listNpc{};       ///< 참가 NPC id
+        vector<hashed_string>    _listNPC{};       ///< 참가 NPC id
         vector<hashed_string>    _listArchetype{}; ///< 참가 아키타입(체인 어디에 있어도 된다). NPC 와 아키타입이 둘 다 비면 모두 참가한다
         vector<ScheduleBlockDef> _listBlock{};
         int32                    _priority{ 100 };
@@ -165,13 +165,13 @@ namespace sw
      *       <Interrupt id="Talk" priority="10" timeout="30"/>
      *       <Appointment id="lunch" place="saloon" start="12:00" end="13:00" wait="30" priority="50" days="Fri"/>
      *       <Archetype id="villager"><Routine id="base"><Block start="0:00" end="7:00" activity="Sleep"/></Routine></Archetype>
-     *       <Npc id="pierre" archetype="villager" home="pierre_home" speed="60" tags="Job.Shopkeeper">
+     *       <NPC id="pierre" archetype="villager" home="pierre_home" speed="60" tags="Job.Shopkeeper">
      *         <Routine id="weekday" priority="0" days="Mon,Tue,Wed,Thu,Fri">
      *           <Block start="9:00" end="17:00" activity="WorkAt" place="store" animation="Sweep"/>
      *           <Block activity="Meet" appointment="lunch"/>
      *         </Routine>
      *         <Routine id="rainy" priority="10" weathers="rain"><Block start="17:00" end="22:00" activity="StayHome"/></Routine>
-     *       </Npc>
+     *       </NPC>
      *       <Event id="egg_festival" priority="100" seasons="Spring" daysOfSeason="13" archetypes="villager">
      *         <Block start="9:00" end="14:00" activity="Attend" place="square"/>
      *       </Event>
@@ -198,19 +198,19 @@ namespace sw
         void                                  setActivityRegistry( const ScheduleActivityRegistry* pRegistry ) { _pActivityRegistry = pRegistry; }
         const ScheduleConditionVocabulary&    getVocabulary() const { return _vocabulary; }
         const SchedulePlaceDef*               findPlace( const hashed_string& id ) const { return _placeCatalog.find( id ); }
-        const ScheduleNpcDef*                 findNpc( const hashed_string& id ) const { return _npcCatalog.find( id ); }
+        const ScheduleNPCDef*                 findNPC( const hashed_string& id ) const { return _npcCatalog.find( id ); }
         const ScheduleArchetypeDef*           findArchetype( const hashed_string& id ) const { return _archetypeCatalog.find( id ); }
         const ScheduleAppointmentDef*         findAppointment( const hashed_string& id ) const { return _appointmentCatalog.find( id ); }
         int32                                 findAppointmentIndex( const hashed_string& id ) const { return _appointmentCatalog.findIndex( id ); }
         const ScheduleInterruptDef*           findInterrupt( const hashed_string& id ) const { return _interruptCatalog.find( id ); }
         const vector<SchedulePlaceDef>&       getPlaces() const { return _placeCatalog.getAll(); }
         const vector<ScheduleSpotDef>&        getSpots() const { return _spotCatalog.getAll(); }
-        const vector<ScheduleNpcDef>&         getNpcs() const { return _npcCatalog.getAll(); }
+        const vector<ScheduleNPCDef>&         getNPCs() const { return _npcCatalog.getAll(); }
         const vector<ScheduleEventDef>&       getEvents() const { return _eventCatalog.getAll(); }
         const vector<ScheduleAppointmentDef>& getAppointments() const { return _appointmentCatalog.getAll(); }
         const vector<ScheduleInterruptDef>&   getInterrupts() const { return _interruptCatalog.getAll(); }
         /** @brief 아키타입 체인(자기부터 부모 쪽으로)에 @p archetypeID 가 있으면 true 입니다. */
-        bool isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeID ) const;
+        bool isNPCOfArchetype( const ScheduleNPCDef& npc, const hashed_string& archetypeID ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "Schedules"; ///< 루트 원소(`XMLCatalog`)
@@ -218,14 +218,14 @@ namespace sw
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 또는 1)를 반환합니다. */
         uint32 loadElement( const XMLNode& node, string_view sourceName );
-        /** @brief 원소 종류별 읽기입니다. 잘못된 원소는 오류를 남기고 더하지 않습니다. `loadNpc` 는 NPC 를 더했으면 true 입니다. */
+        /** @brief 원소 종류별 읽기입니다. 잘못된 원소는 오류를 남기고 더하지 않습니다. `loadNPC` 는 NPC 를 더했으면 true 입니다. */
         void               loadCalendar( const XMLNode& node, string_view sourceName );
         void               loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID );
         void               loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID );
         void               loadInterrupt( const XMLNode& node, string_view sourceName, const utf8* pID );
         void               loadAppointment( const XMLNode& node, string_view sourceName, const utf8* pID );
         void               loadArchetype( const XMLNode& node, string_view sourceName, const utf8* pID );
-        [[nodiscard]] bool loadNpc( const XMLNode& node, string_view sourceName, const utf8* pID );
+        [[nodiscard]] bool loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID );
         void               loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID );
         /** @brief `Routine` 자식을 모두 읽어 쓸 수 있는 것만 더합니다. 그 밖의 자식은 @p ownerKind 로 경고합니다. */
         void readRoutineChildren( const XMLNode& node, string_view sourceName, string_view ownerKind, string_view ownerID, vector<ScheduleRoutineDef>& outListRoutine ) const;
@@ -250,7 +250,7 @@ namespace sw
         GameCatalog<ScheduleInterruptDef>   _interruptCatalog;
         GameCatalog<ScheduleAppointmentDef> _appointmentCatalog;
         GameCatalog<ScheduleArchetypeDef>   _archetypeCatalog;
-        GameCatalog<ScheduleNpcDef>         _npcCatalog;
+        GameCatalog<ScheduleNPCDef>         _npcCatalog;
         GameCatalog<ScheduleEventDef>       _eventCatalog;
         ScheduleConditionVocabulary         _vocabulary;
         const ScheduleActivityRegistry*     _pActivityRegistry;

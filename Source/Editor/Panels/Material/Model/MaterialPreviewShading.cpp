@@ -24,7 +24,7 @@ namespace sw::editor
                 return srgb <= 0.04045f ? srgb / 12.92f : MathUtil::pow( ( srgb + 0.055f ) / 1.055f, 2.4f );
             }
 
-            static float32 toSrgb( float32 linear )
+            static float32 toSRGB( float32 linear )
             {
                 const float32 clamped = MathUtil::clamp( linear, 0.0f, 1.0f );
                 return clamped <= 0.0031308f ? clamped * 12.92f : 1.055f * MathUtil::pow( clamped, 1.0f / 2.4f ) - 0.055f;
@@ -46,7 +46,7 @@ namespace sw::editor
             static const string& readValueText( const MaterialProperty& prop ) { return prop._value.empty() ? prop._defaultValue : prop._value; }
 
             /**
-             * @brief 색 값을 선형 색으로 읽어 @p outColor 에 씁니다. sRGB 로 적힌 값(`bSrgb`)은 풉니다.
+             * @brief 색 값을 선형 색으로 읽어 @p outColor 에 씁니다. sRGB 로 적힌 값(`bSRGB`)은 풉니다.
              * @details 못 읽으면 @p outColor 를 건드리지 않는다 — 그 값의 행은 패널이 원문 칸으로 보여 알린다(`MaterialPanel::drawTypedProperty`).
              */
             static void readColor( const MaterialProperty& prop, float3& outColor )
@@ -54,7 +54,7 @@ namespace sw::editor
                 float32 arrValue[4]{};
                 if ( MaterialPreviewShading::parseColor( readValueText( prop ), arrValue ) == false )
                     return;
-                if ( prop._bSrgb == SW_FALSE )
+                if ( prop._bSRGB == SW_FALSE )
                     outColor = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 else
                     outColor = float3{ toLinear( arrValue[0] ), toLinear( arrValue[1] ), toLinear( arrValue[2] ) };
@@ -78,12 +78,12 @@ namespace sw::editor
     {
         if ( parseFloats( text, outArrValue ) )
             return true;
-        float32 arrRgb[3]{};
-        if ( parseFloats( text, arrRgb ) == false )
+        float32 arrRGB[3]{};
+        if ( parseFloats( text, arrRGB ) == false )
             return false;
-        outArrValue[0] = arrRgb[0];
-        outArrValue[1] = arrRgb[1];
-        outArrValue[2] = arrRgb[2];
+        outArrValue[0] = arrRGB[0];
+        outArrValue[1] = arrRGB[1];
+        outArrValue[2] = arrRGB[2];
         outArrValue[3] = 1.0f; // 알파를 적지 않은 색 — 엔진 묶기(MaterialPacking::writeNumericValue)와 같은 규칙
         return true;
     }
@@ -153,7 +153,7 @@ namespace sw::editor
             const float32 base         = arrChannel[channel];
             const float32 specularTint = 0.04f + ( base - 0.04f ) * inputs._metallic;
             const float32 linear       = base * diffuseWeight * ( MaterialPreviewShadingInternal::kAmbient + diffuse ) + specular * specularTint * 4.0f + arrEmissive[channel];
-            arrChannel[channel]        = MaterialPreviewShadingInternal::toSrgb( linear );
+            arrChannel[channel]        = MaterialPreviewShadingInternal::toSRGB( linear );
         }
         return float3{ arrChannel[0], arrChannel[1], arrChannel[2] };
     }

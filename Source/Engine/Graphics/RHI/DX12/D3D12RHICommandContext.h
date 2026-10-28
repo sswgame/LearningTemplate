@@ -47,7 +47,7 @@ namespace sw
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
         void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override;
-        void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
@@ -69,7 +69,7 @@ namespace sw
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
         void beginEventMarker( const utf8* pName ) override;
-        void writeBreadcrumb( uint32 markerId ) override;
+        void writeBreadcrumb( uint32 markerID ) override;
         void endEventMarker() override;
         void setPipelineState( RHIPipelineStateHandle pso ) override;
         void setComputePipelineState( RHIPipelineStateHandle pso ) override;
@@ -91,13 +91,13 @@ namespace sw
         /**
          * @brief 등록된 bindless 인덱스의 버퍼 GPU 주소입니다. 루트 CBV 에 그대로 바인딩합니다(t 와 u 는 슬롯 테이블이라 이 경로를 쓰지 않습니다).
          * @details 레지스트리는 기록 중 불변이라 락 없이 읽습니다(IRHIDevice::setParallelRecording 참고).
-         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리입니다.
+         * @param bUAV true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리입니다.
          * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋을 더합니다.
          * @return 인덱스가 범위 밖이거나 슬롯이 비어 있으면 0 입니다.
          */
-        D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUav, bool bConstantBuffer ) const;
+        D3D12_GPU_VIRTUAL_ADDRESS resolveBufferAddress( RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer ) const;
         /** @brief 등록된 bindless 인덱스의 오프라인 뷰 핸들입니다(슬롯 테이블 복사 원본). 없으면 ptr 0 입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUav ) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE resolveOfflineView( RHIDescriptorIndex index, bool bUAV ) const;
         /**
          * @brief 바뀐 t/u 슬롯 테이블을 온라인 블록에 확정해 루트 테이블로 바인딩합니다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
          * @param bCompute true 면 컴퓨트 바인드 포인트(t 와 u), false 면 그래픽스(t 만).

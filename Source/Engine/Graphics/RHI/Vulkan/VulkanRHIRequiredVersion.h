@@ -33,7 +33,7 @@ namespace sw
          * @brief Vulkan 1.minor 타깃으로 쿠킹된 SPIR-V 의 버전(SPIR-V 헤더의 `0x00MMmm00`)입니다. 그 Vulkan 버전이 받는 가장 높은 SPIR-V 버전이기도 합니다.
          * @details Vulkan 1.0 → 1.0, 1.1 → 1.3, 1.2 → 1.5, 1.3 → 1.6.
          */
-        static constexpr uint32 computeSpirvVersion( uint32 vulkanMinor )
+        static constexpr uint32 computeSPIRVVersion( uint32 vulkanMinor )
         {
             uint32 spirvMinor{ 6u };
             if ( vulkanMinor == 0u )

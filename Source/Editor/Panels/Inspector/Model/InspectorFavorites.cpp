@@ -134,7 +134,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Inspector favorites could not be read from %#", string( filePath ).c_str() );
             return false;
         }
-        fromText( FileUtil::skipUtf8Bom( text ) );
+        fromText( FileUtil::skipUTF8Bom( text ) );
         return true;
     }
 

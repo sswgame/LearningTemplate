@@ -88,7 +88,7 @@ namespace sw
                 return;
 
             const Stopwatch stopwatch;
-            outListSlot._crc32 = StringUtil::computeCrc32( entry._bytes.data(), entry._bytes.size() );
+            outListSlot._crc32 = StringUtil::computeCRC32( entry._bytes.data(), entry._bytes.size() );
             if ( _pCodec != nullptr && entry._bytes.empty() == false )
             {
                 outListSlot._bCompressed = true;
@@ -433,7 +433,7 @@ namespace sw
         header._compressionType  = static_cast<uint8>( _desc._compression );
         header._encryptionType   = static_cast<uint8>( PackEncryptionType::None );
         header._sectorAlignment  = kPackSectorAlignment;
-        header._flags            = static_cast<uint16>( PackFlag::HasCrc32 ) | static_cast<uint16>( PackFlag::HasStringPool );
+        header._flags            = static_cast<uint16>( PackFlag::HasCRC32 ) | static_cast<uint16>( PackFlag::HasStringPool );
         header._fileCount        = static_cast<uint32>( listDiskEntry.size() );
         header._indexOffset      = indexOffset;
         header._indexSize        = indexSize;

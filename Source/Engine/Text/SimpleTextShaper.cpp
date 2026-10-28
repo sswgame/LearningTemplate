@@ -31,7 +31,7 @@ namespace sw
         while ( offset < run._text.size() )
         {
             const size_t clusterOffset = offset;
-            const uint32 codepoint     = StringUtil::decodeUtf8( run._text, offset );
+            const uint32 codepoint     = StringUtil::decodeUTF8( run._text, offset );
             // 폭 없는 문자(ZWJ, ZWNJ, 방향 제어, 변이 선택자, 결합 분음)는 단순 셰이퍼에서 글리프를 내지 않는다.
             if ( TextItemizer::isZeroWidth( codepoint ) )
                 continue;

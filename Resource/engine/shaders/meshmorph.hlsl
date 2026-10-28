@@ -14,7 +14,7 @@
  * 메시마다, 프레임마다. 게다가 그 호출은 게임 스레드라 OpenGL 에서는 컨텍스트가 없다. 그래서 GPU 다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 레스트 읽기는 t0, 결과 쓰기는 u0.
- * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSrv, 0 ) / bindComputeUav( morphUav, 0 ).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( restSRV, 0 ) / bindComputeUAV( morphUAV, 0 ).
  */
 
 // 결과 배치는 binding.hlsli 의 g_SwMorphVertices 와 같다 — 정점 하나 = SW_MORPH_FLOAT4_PER_VERTEX 개의 float4(bindingslots.hlsli 10 절).
@@ -46,10 +46,10 @@ uint getRestVertexElementCount()
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchThreadId.x );
-    const uint vertexIndex = dispatchThreadId.x;
+    SW_GPU_ASSERT_THREAD( dispatchThreadID.x );
+    const uint vertexIndex = dispatchThreadID.x;
     if ( vertexIndex >= g_MorphVertexCount )
         return;
 

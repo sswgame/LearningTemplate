@@ -113,7 +113,7 @@ namespace sw::editor
         }
 
         // 크기를 먼저 측정한다 — 제목 줄 · 이름 열 · 값 열 · 그래프.
-        const float32                        dpiScale   = EditorThemeUtil::getDpiScale();
+        const float32                        dpiScale   = EditorThemeUtil::getDPIScale();
         const float32                        lineHeight = ImGui::GetTextLineHeight();
         const float32                        padding    = EditorDebugHUDViewInternal::kPadding * dpiScale;
         fixed_string<constant::kMaxBuffer64> viewLine;

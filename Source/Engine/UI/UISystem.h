@@ -253,16 +253,16 @@ namespace sw
         void setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale );
         /** @brief 마지막 그리기 단계가 낸 화면 앵커 표입니다(번호 = `CanvasQuad::_anchor`, 물리 픽셀). `Engine` 가 렌더 패킷 캔버스에 주 출력과 함께 싣습니다. */
         const vector<CanvasAnchor>& getCanvasAnchors() const { return _markers.getCanvasAnchors(); }
-        /** @brief 앵커 @p anchor 의 마커를 GPU 투영으로 올립니다(월드 점 · 보이기 규칙, `UIScreenMarkers::setGpuMarker`). 화면 위치는 렌더러의 컴퓨트가 낸다. */
-        void setGpuScreenMarker( uint32 anchor, const CanvasMarkerRecord& record );
+        /** @brief 앵커 @p anchor 의 마커를 GPU 투영으로 올립니다(월드 점 · 보이기 규칙, `UIScreenMarkers::setGPUMarker`). 화면 위치는 렌더러의 컴퓨트가 낸다. */
+        void setGPUScreenMarker( uint32 anchor, const CanvasMarkerRecord& record );
         /** @brief 앵커 @p anchor 를 GPU 투영에서 뺍니다. */
-        void clearGpuScreenMarker( uint32 anchor );
+        void clearGPUScreenMarker( uint32 anchor );
         /** @brief 켜진 GPU 투영 마커 수입니다(0 이면 렌더 패킷에 마커 입력을 싣지 않는다). */
-        uint32 getGpuMarkerCount() const { return _markers.getGpuMarkerCount(); }
+        uint32 getGPUMarkerCount() const { return _markers.getGPUMarkerCount(); }
         /** @brief 렌더 패킷에 실을 GPU 투영 마커 입력(앵커 번호가 인덱스)과 공용 값입니다. */
-        const vector<CanvasMarkerRecord>& getGpuMarkers() const { return _markers.getGpuMarkers(); }
-        const CanvasMarkerView&           getGpuMarkerView() const { return _markers.getGpuMarkerView(); }
-        const GameObjectManager*          getGpuMarkerManager() const { return _markers.getGpuMarkerManager(); }
+        const vector<CanvasMarkerRecord>& getGPUMarkers() const { return _markers.getGPUMarkers(); }
+        const CanvasMarkerView&           getGPUMarkerView() const { return _markers.getGPUMarkerView(); }
+        const GameObjectManager*          getGPUMarkerManager() const { return _markers.getGPUMarkerManager(); }
         /** @brief 위젯 컴포넌트를 등록합니다. 컴포넌트가 시작할 때 부르며, `update` 가 레이아웃 앞에서 화면 마커 위치를 갱신합니다. */
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );

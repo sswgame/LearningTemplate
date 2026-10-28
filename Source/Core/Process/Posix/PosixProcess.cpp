@@ -6,7 +6,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <csignal>

@@ -8,7 +8,7 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -486,7 +486,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         // VK_NV_device_diagnostic_checkpoints(진단 전용): GPU 브레드크럼 - 패스마다 `vkCmdSetCheckpointNV` 로 id 를 남기고 소실 뒤 큐에서 읽는다(`readLastBreadcrumbs`).
         // 그래픽스 큐 패밀리가 체크포인트를 지원하는 단계(checkpointExecutionStageMask)가 있어야 쓴다. 없으면 켜지 않는다 - 이 능력이 없는 드라이버는 CPU 가 마지막으로 기록한 패스만 보고한다.
-        if ( GpuBreadcrumbs::isEnabled() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
+        if ( GPUBreadcrumbs::isEnabled() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
         {
             uint32 familyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, nullptr );

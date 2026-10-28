@@ -130,7 +130,7 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Command" );
         ImGui::TableSetupColumn( "Category" );
         ImGui::TableSetupColumn( "Shortcut" );
-        ImGui::TableSetupColumn( "##Actions", ImGuiTableColumnFlags_WidthFixed, 160.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::TableSetupColumn( "##Actions", ImGuiTableColumnFlags_WidthFixed, 160.0f * EditorThemeUtil::getDPIScale() );
         ImGui::TableHeadersRow();
         string label;
         for ( const EditorCommandDesc& desc : registry.getCommands() )

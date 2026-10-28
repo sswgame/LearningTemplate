@@ -165,7 +165,7 @@ namespace sw
     uint32 NetHost::computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size )
     {
         // FNV-1a 32비트. 헤더 값(프로토콜 ID)을 먼저 섞으므로, 다른 게임이나 버전의 패킷은 체크섬부터 맞지 않는다.
-        uint32 hash = HashUtil::kFnvOffset32;
+        uint32 hash = HashUtil::kFNVOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
         {
             hash = HashUtil::fnvStep32( hash, ( headerID >> shift ) & 0xFFu );

@@ -192,7 +192,7 @@ namespace sw::editor
         using Internal               = AudioMixerPanelInternal;
         const AudioBusStatus& status = _listBusStatus[busIndex];
         AudioEngine&          engine = audio.getEngine();
-        const float32         dpi    = EditorThemeUtil::getDpiScale();
+        const float32         dpi    = EditorThemeUtil::getDPIScale();
         const string          name   = status._name.c_str();
 
         float32& held        = _listHeldPeak[busIndex];
@@ -282,7 +282,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( busIndex ) );
             drawBusStrip( audio, busIndex );
             ImGui::PopID();
-            ImGui::SameLine( 0.0f, 18.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::SameLine( 0.0f, 18.0f * EditorThemeUtil::getDPIScale() );
         }
         ImGui::EndChild();
     }

@@ -447,11 +447,11 @@ namespace sw
 
     float4x4 float4x4::makePerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
     {
-        const float32 safeFov    = MathUtil::clamp( fov, 0.001f, MathUtil::kPi - 0.001f );
+        const float32 safeFOV    = MathUtil::clamp( fov, 0.001f, MathUtil::kPi - 0.001f );
         const float32 safeAspect = aspectRatio > MathUtil::kEpsilon ? aspectRatio : 1.0f;
         const float32 safeSpan   = MatrixMathInternal::getNonZeroSpan( farPlane - nearPlane );
 
-        const float32 yScale = 1.0f / MathUtil::tan( safeFov * 0.5f );
+        const float32 yScale = 1.0f / MathUtil::tan( safeFOV * 0.5f );
         const float32 xScale = yScale / safeAspect;
         return float4x4{ xScale, 0.f, 0.f, 0.f, 0.f, yScale, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }

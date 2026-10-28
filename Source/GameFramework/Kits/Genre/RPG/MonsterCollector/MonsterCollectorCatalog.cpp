@@ -20,7 +20,7 @@ namespace sw
     {
         struct MonsterCollectorCatalogInternal
         {
-            static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "Hp", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
+            static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "HP", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
 
             /**
              * @brief "39 52 43 60 50 65" 같은 정수 여섯 개(HP 공격 방어 특공 특방 스피드 순)를 읽습니다.
@@ -97,7 +97,7 @@ namespace sw
 
     int32 MonsterNatureDef::computePercent( MonsterStat stat ) const
     {
-        if ( stat == MonsterStat::Hp || _raised == _lowered )
+        if ( stat == MonsterStat::HP || _raised == _lowered )
             return 100;
         if ( stat == _raised )
             return 110;
@@ -315,7 +315,7 @@ namespace sw
             SW_LOG_ERROR( "%#: move '%#' sets status %# but needs statusChance=\"1..100\"", sourceName, def._id.c_str(), getEnumName( def._status ) );
             return false;
         }
-        if ( def._statStages != 0 && def._changedStat == MonsterStat::Hp )
+        if ( def._statStages != 0 && def._changedStat == MonsterStat::HP )
         {
             SW_LOG_ERROR( "%#: move '%#' cannot change HP by stages", sourceName, def._id.c_str() );
             return false;

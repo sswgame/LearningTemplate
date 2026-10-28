@@ -83,7 +83,7 @@ string.Units = Units
 string.EditCondition = EditCondition
 flag.EditConditionHides = EditConditionHides
 # float3/float4 색을 HDR(1 을 넘는 값)로 고친다. 색 선택기이기도 하다
-flag.ColorHdr = ColorHdr
+flag.ColorHDR = ColorHDR
 # 여러 줄 글 칸(string)
 flag.Multiline = Multiline
 # 경로 칸이 받는 파일: "*.png;*.dds". 끌어다 놓은 경로가 맞지 않으면 받지 않는다

@@ -269,7 +269,7 @@ namespace sw::editor
 
     void GimmickGraphPanel::drawCanvasArea( GimmickCircuitComponent& circuit )
     {
-        const float32     sideWidth = GimmickGraphPanelInternal::kSidePanelWidth * EditorThemeUtil::getDpiScale();
+        const float32     sideWidth = GimmickGraphPanelInternal::kSidePanelWidth * EditorThemeUtil::getDPIScale();
         EditorSectionDesc canvasDesc{};
         canvasDesc._pID       = "GimmickCanvasRegion";
         canvasDesc._kind      = EditorSectionKind::Child;

@@ -300,7 +300,7 @@ namespace sw
                 }
                 const string path = runner.resolveOutputPath( *step.findAttribute( "file" ) );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
-                     ImageFileWriter::writePngRgba8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
+                     ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
                     runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": could not write " + path );
                     return true;

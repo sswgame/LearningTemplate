@@ -5,9 +5,9 @@
 #include "Core/Common/Defines.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 #endif
 
 namespace sw

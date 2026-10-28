@@ -83,12 +83,12 @@ namespace sw
          * @brief 그리는 인스턴스의 LOD 단계를 색으로 보인다(언리얼 Visualize LOD Coloration, 유니티 Scene 뷰 LOD 색). 0 초록 · 1 연두 · 2 노랑 · 3 주황 · 4 빨강 · 5 보라 · 6 파랑 · 7 청록이다.
          * @details 컬링이 가시 목록 항목에 쓴 단계 번호(`gpucull.hlsl`)를 정점 단계가 픽셀로 넘긴다(binding.hlsli `SW_LODDEBUG_*`). 머티리얼 셰이더 경로의 메시만 읽고 그 밖의 셰이더는 회색이다.
          */
-        LodLevel,
+        LODLevel,
         /**
          * @brief LOD 크로스페이드의 디더 코드를 색으로 보인다 — 전환 없음은 어두운 회색, 새 단계는 초록 · 직전 단계는 빨강이고 진행이 클수록 밝다(상보 디더라 두 색이 겹치지도 비지도 않으면 맞다).
-         * @details 가시 항목의 위쪽 5비트(`Appearance::computeLodFadeAppearance` 가 읽는 값)를 보인다. 읽는 경로는 `LodLevel` 과 같다.
+         * @details 가시 항목의 위쪽 5비트(`Appearance::computeLODFadeAppearance` 가 읽는 값)를 보인다. 읽는 경로는 `LODLevel` 과 같다.
          */
-        LodFadeCode,
+        LODFadeCode,
         /**
          * @brief 화면 마커(`gv_uiMarkerGpuProjection`)가 GPUScene 인스턴스 칸을 가졌는지를 마커 위젯의 색조로 보인다 — 칸이 있으면 초록, 없으면(월드 점을 게임 스레드가 보낸다) 빨강, 칸이 인스턴스 버퍼 밖이면 자홍이다.
          * @details 장면 지오메트리는 Lit 그대로 그린다(셰이더 define 이 없다). 마커 투영 컴퓨트가 앵커의 네 번째 값에 코드를 쓰고(canvasmarker.hlsl) 캔버스 셰이더가 그 위젯을 칠한다(canvas.hlsl). 주 출력 모드만 본다.
@@ -127,8 +127,8 @@ namespace sw
         {        "Mipmaps",         "SW_VIEWMODE_MIPMAPS=1", false, false,  true, false},
         {"LightComplexity", "SW_VIEWMODE_LIGHTCOMPLEXITY=1", false, false,  true, false},
         {"ShadedWireframe",     "SW_VIEWMODE_WIREOVERLAY=1",  true, false, false,  true},
-        {       "LodLevel",        "SW_VIEWMODE_LODLEVEL=1", false, false,  true, false},
-        {    "LodFadeCode",         "SW_VIEWMODE_LODFADE=1", false, false,  true, false},
+        {       "LODLevel",        "SW_VIEWMODE_LODLEVEL=1", false, false,  true, false},
+        {    "LODFadeCode",         "SW_VIEWMODE_LODFADE=1", false, false,  true, false},
         {    "MarkerSlots",                         nullptr, false, false, false, false},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),

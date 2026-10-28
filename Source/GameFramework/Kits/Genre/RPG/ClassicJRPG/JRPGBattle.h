@@ -135,7 +135,7 @@ namespace sw
             SpellCast,
             Healed,
             Revived,
-            NotEnoughMp,
+            NotEnoughMP,
             NotEnoughInner,
             CannotUse,   ///< 배우지 않은 주문이거나 열리지 않은 초식이다
             CastStarted, ///< `_value` 는 잠금 수

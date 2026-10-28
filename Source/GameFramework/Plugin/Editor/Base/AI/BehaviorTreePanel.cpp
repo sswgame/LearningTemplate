@@ -303,7 +303,7 @@ namespace sw::editor
 
     void BehaviorTreePanel::drawCanvasArea()
     {
-        const float32     sideWidth = BehaviorTreePanelInternal::kSidePanelWidth * EditorThemeUtil::getDpiScale();
+        const float32     sideWidth = BehaviorTreePanelInternal::kSidePanelWidth * EditorThemeUtil::getDPIScale();
         EditorSectionDesc canvasDesc{};
         canvasDesc._pID       = "BehaviorTreeCanvasRegion";
         canvasDesc._kind      = EditorSectionKind::Child;

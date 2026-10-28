@@ -194,7 +194,7 @@ namespace sw
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.
          *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
          */
-        static ShaderCompileResult compileHlsl( const ShaderCompileDesc& desc );
+        static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
 
         /** @brief 셰이더 바이트코드 디스크 캐시를 켜거나 끕니다. */
         static void enableDiskCache( bool bEnable );

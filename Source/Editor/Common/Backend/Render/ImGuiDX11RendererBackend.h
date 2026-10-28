@@ -61,7 +61,7 @@ namespace sw::editor
     private:
 #if defined( SW_PLATFORM_WINDOWS )
         OnceInit<IRHIDevice*>                                    _pRHIDevice;
-        vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrv;
+        vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSRV;
         ImGuiViewportSizeGuard                                   _viewportSizeGuard; ///< DXGI 창 크기 보정 — 초기화 성공 뒤 걸고 종료에서 푼다
 #endif
     };

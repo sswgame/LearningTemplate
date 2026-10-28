@@ -1,6 +1,6 @@
 /**
  * @file RHIStagingRingUtil.h
- * @brief 스테이징 링 할당의 뒷마무리(결과 분류, 못 받은 구간 놓기, 이유 로그)를 DX12 · Vulkan · GL 이 같이 씁니다(docs/plans/RhiAsyncUploads.md 2.2 "스테이징 링").
+ * @brief 스테이징 링 할당의 뒷마무리(결과 분류, 못 받은 구간 놓기, 이유 로그)를 DX12 · Vulkan · GL 이 같이 씁니다(docs/plans/RHIAsyncUploads.md 2.2 "스테이징 링").
  * @details 세 백엔드의 `allocateStagingSpan` 은 장부(`RHIStagingAllocator`)에 구간을 달라고 하고, 차 있으면 끝난 전송을 걷어 한 번 더 부르는 데까지는 자기 몫(걷는 방법이 백엔드마다 다르다)이고,
  *          그 결과를 제출 결과로 옮기고 잡은 구간을 놓고 이유를 남기는 일은 어느 백엔드에서나 같다. 그 뒤쪽을 여기 한 곳에 둬서 로그 문구와 놓는 규칙이 백엔드마다 어긋나지 않게 한다.
  *          단독 구간의 일회성 버퍼를 만드는 일(`vkCreateBuffer`, D3D12 업로드 힙, GL 영속 매핑 PBO)은 백엔드 고유라 여기 없다.

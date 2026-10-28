@@ -152,7 +152,7 @@ namespace sw
 
         /**
          * @brief 백버퍼 컬러 포맷입니다. 네 백엔드의 스왑체인과 파이프라인 RTV 기본값이 같아야 합니다.
-         * @details 파이프라인은 `RHIPipelineStateDesc::_arrRtvFormat` 으로 렌더 패스와 PSO 를 만든다.
+         * @details 파이프라인은 `RHIPipelineStateDesc::_arrRTVFormat` 으로 렌더 패스와 PSO 를 만든다.
          *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 모두 비호환이 된다.
          *          예를 들어 Vulkan 이 `B8G8R8A8_UNORM` 을 고르면 에디터 없이 실행하는 경로가 렌더 패스 비호환으로 깨진다.
          *          백엔드가 이 포맷을 낼 수 없으면 조용히 다른 포맷을 고르지 말고
@@ -644,7 +644,7 @@ namespace sw
         RHIFillMode          _fillMode;                           ///< 채우기 모드
         RHICullMode          _cullMode;                           ///< 컬링 모드
         uint32               _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
-        RHIFormat            _arrRtvFormat[kMaxColorAttachments]; ///< RT별 포맷
+        RHIFormat            _arrRTVFormat[kMaxColorAttachments]; ///< RT별 포맷
         RHIFormat            _depthStencilFormat;
         /**
          * @brief 깊이 바이어스입니다. 깊이 테스트 전에 래스터 깊이에 더합니다(음수면 카메라 쪽, 깊이 비교는 네 백엔드 모두 LessEqual). 둘 다 0 이면 없습니다.
@@ -825,7 +825,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 전송(업로드 · 되읽기)의 제출 결과와 티켓: 완료 대기를 형식으로 강제한다(docs/plans/RhiAsyncUploads.md 2.2)
+    // 전송(업로드 · 되읽기)의 제출 결과와 티켓: 완료 대기를 형식으로 강제한다(docs/plans/RHIAsyncUploads.md 2.2)
     // ------------------------------------------------------------------------------
     /**
      * @enum RHISubmitResult

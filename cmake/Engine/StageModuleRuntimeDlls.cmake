@@ -1,6 +1,6 @@
 # ==============================================================================
-# @file cmake/Engine/StageModuleRuntimeDlls.cmake
-# @brief `cmake -P` 스크립트 — `Bin/Modules` 의 모듈 DLL 이 쓰는 서드파티 DLL 을 `Bin` 에 한 벌 둔다(`sw_stageModuleRuntimeDlls` 가 POST_BUILD 로 부른다)
+# @file cmake/Engine/StageModuleRuntimeDLLs.cmake
+# @brief `cmake -P` 스크립트 — `Bin/Modules` 의 모듈 DLL 이 쓰는 서드파티 DLL 을 `Bin` 에 한 벌 둔다(`sw_stageModuleRuntimeDLLs` 가 POST_BUILD 로 부른다)
 #
 # vcpkg 의 applocal(`z-applocal`)은 의존 DLL 을 대상 바이너리 **옆에** 복사한다. 모듈 옆(`Bin/Modules`)에 두면 실행 파일 옆(`Bin`)과 두 벌이 되고,
 # 의존성 기준선을 올릴 때 두 벌의 버전이 어긋날 수 있다. 그래서 모듈마다 따로 둔 스테이지 폴더에 모듈을 하드 링크로 두고 applocal 을 돌린 뒤,
@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.21)
 
 foreach(swArgument MODULE_FILE STAGE_DIR BIN_DIR VCPKG_EXECUTABLE INSTALLED_BIN_DIR)
 	if(NOT DEFINED ${swArgument} OR "${${swArgument}}" STREQUAL "")
-		message(FATAL_ERROR "[StageModuleRuntimeDlls] ${swArgument} is required")
+		message(FATAL_ERROR "[StageModuleRuntimeDLLs] ${swArgument} is required")
 	endif()
 endforeach()
 
@@ -36,14 +36,14 @@ while(TRUE)
 	if(swResult EQUAL 0 OR swAttempt GREATER_EQUAL 5)
 		break()
 	endif()
-	message(STATUS "[StageModuleRuntimeDlls] z-applocal attempt ${swAttempt} failed for ${swModuleName} (${swResult}), retrying")
+	message(STATUS "[StageModuleRuntimeDLLs] z-applocal attempt ${swAttempt} failed for ${swModuleName} (${swResult}), retrying")
 	execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
 	file(REMOVE_RECURSE "${STAGE_DIR}")
 	file(MAKE_DIRECTORY "${STAGE_DIR}")
 	file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${swModuleName}" COPY_ON_ERROR)
 endwhile()
 if(NOT swResult EQUAL 0)
-	message(FATAL_ERROR "[StageModuleRuntimeDlls] vcpkg z-applocal failed for ${swModuleName} (${swResult}):\n${swOutput}")
+	message(FATAL_ERROR "[StageModuleRuntimeDLLs] vcpkg z-applocal failed for ${swModuleName} (${swResult}):\n${swOutput}")
 endif()
 
 file(GLOB swStagedFiles LIST_DIRECTORIES false "${STAGE_DIR}/*")
@@ -61,7 +61,7 @@ foreach(swPath IN LISTS swStagedFiles)
 			file(SHA256 "${BIN_DIR}/${swFileName}" swBinHash)
 		endif()
 		if(NOT swStagedHash STREQUAL swBinHash)
-			message(FATAL_ERROR "[StageModuleRuntimeDlls] Cannot copy ${swFileName} into ${BIN_DIR} (in use by a running process?): ${swCopyResult}")
+			message(FATAL_ERROR "[StageModuleRuntimeDLLs] Cannot copy ${swFileName} into ${BIN_DIR} (in use by a running process?): ${swCopyResult}")
 		endif()
 	endif()
 endforeach()

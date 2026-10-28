@@ -73,16 +73,16 @@ namespace sw
         _state           = D3D12_RESOURCE_STATE_PRESENT;
     }
 
-    void D3D12RHISwapChain::createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRtvHeap, uint32 rtvDescriptorSize )
+    void D3D12RHISwapChain::createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRTVHeap, uint32 rtvDescriptorSize )
     {
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
-        const bool bCannotCreateBackBuffers = _swapChain == nullptr || pDevice == nullptr || pRtvHeap == nullptr;
+        const bool bCannotCreateBackBuffers = _swapChain == nullptr || pDevice == nullptr || pRTVHeap == nullptr;
         if ( bCannotCreateBackBuffers )
             return;
 
         _listBackBuffer.resize( _bufferCount );
-        _listBackBufferRtv.resize( _bufferCount );
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle( pRtvHeap->GetCPUDescriptorHandleForHeapStart() );
+        _listBackBufferRTV.resize( _bufferCount );
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle( pRTVHeap->GetCPUDescriptorHandleForHeapStart() );
 
         for ( uint32 bufferIndex = 0; bufferIndex < _bufferCount; ++bufferIndex )
         {
@@ -94,7 +94,7 @@ namespace sw
                 return;
             }
             pDevice->CreateRenderTargetView( _listBackBuffer[bufferIndex].Get(), nullptr, rtvHandle );
-            _listBackBufferRtv[bufferIndex] = rtvHandle;
+            _listBackBufferRTV[bufferIndex] = rtvHandle;
             rtvHandle.ptr += rtvDescriptorSize;
         }
     }
@@ -107,7 +107,7 @@ namespace sw
             backBuffer.Reset();
         }
         _listBackBuffer.clear();
-        _listBackBufferRtv.clear();
+        _listBackBufferRTV.clear();
     }
 
     bool D3D12RHISwapChain::resize( uint32 width, uint32 height )
@@ -190,12 +190,12 @@ namespace sw
         return _listBackBuffer[_backBufferIndex].Get();
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHISwapChain::getCurrentRtv() const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHISwapChain::getCurrentRTV() const
     {
         _renderThread.assumeHeldByJoinedTask(); // 병렬 패스 기록 태스크가 부른다(렌더 스레드가 합류를 기다린다 — 인덱스는 기록 밖에서만 바뀐다)
-        if ( _backBufferIndex >= _listBackBufferRtv.size() )
+        if ( _backBufferIndex >= _listBackBufferRTV.size() )
             return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
-        return _listBackBufferRtv[_backBufferIndex];
+        return _listBackBufferRTV[_backBufferIndex];
     }
 } // namespace sw
 #endif

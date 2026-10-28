@@ -185,7 +185,7 @@ namespace sw
         /** @brief 대시 쿨다운 게이지(0~1)를 반환합니다. */
         float32 getDashFill() const;
         /** @brief 보스 룸의 HP 게이지(0~1)입니다. 적 HP 합을 최대 HP 합으로 나눈 값이고, 보스가 하나면 그 보스의 비율입니다. 보스 룸이 아니면 0 입니다. */
-        float32 getBossHpFill() const;
+        float32 getBossHPFill() const;
         /** @brief 살아 있는 적 수를 반환합니다. */
         int32 getAliveEnemyCount() const;
 

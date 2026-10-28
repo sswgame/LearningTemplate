@@ -349,7 +349,7 @@ namespace sw
             part._surfaceIndex = outState._listLayerSurface[part._layerIndex].addSurface( static_cast<uint16>( partIndex ), part._listPosition,
                                                                                           part._pInput->_pGeometry->_listIndex );
         }
-        for ( SurfaceBvh& surface : outState._listLayerSurface )
+        for ( SurfaceBVH& surface : outState._listLayerSurface )
         {
             surface.build();
         }

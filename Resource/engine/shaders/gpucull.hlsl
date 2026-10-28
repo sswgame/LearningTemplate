@@ -10,7 +10,7 @@
  *   2) 그 자리에 자기 인스턴스 번호를 적는다 (`g_VisibleInstanceIDs`).
  * 그래서 간접 인자의 개수와 인스턴스 목록이 **함께** 만들어진다. 정점 셰이더는 입력 어셈블러가 주는 인스턴스 슬롯
  * (`SW_INSTANCESLOT` — 간접 인자의 startInstanceLocation + 서수)으로 `g_SwVisibleInstanceIDs[slot]` 을 읽어 자기 인스턴스를 찾는다
- * (`InstanceData::resolveId`).
+ * (`InstanceData::resolveID`).
  *
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
@@ -55,9 +55,9 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
-    float4   g_LodDepthRow;        // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
-    float4   g_LodView;            // xyz 눈 위치, w 투영 y 배율(AnimationLODUtil::computeProjectionTerms)
-    uint4    g_LodControl;         // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0), y 전환 상태 비우기 1, z 이번 프레임의 전환 진행량(0 ~ 255, 0 이면 전환 없이 바로 바꾸고 상태 버퍼를 읽지 않는다)
+    float4   g_LODDepthRow;        // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
+    float4   g_LODView;            // xyz 눈 위치, w 투영 y 배율(AnimationLODUtil::computeProjectionTerms)
+    uint4    g_LODControl;         // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0), y 전환 상태 비우기 1, z 이번 프레임의 전환 진행량(0 ~ 255, 0 이면 전환 없이 바로 바꾸고 상태 버퍼를 읽지 않는다)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
@@ -65,18 +65,18 @@ SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LodState, 2 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
 
 /// 가림 판정이 읽는 타일의 한 축 상한 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(스레드 하나가 최대 8 x 8 = 64 번 읽는다).
 static const uint kMaxOcclusionTestTiles = 8u;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
 static const float kMinOcclusionClipW = 1.0e-4f;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `AnimationLODUtil::computeScreenSize` 의 `kEpsilon`).
-static const float kMinLodClipW = 1.0e-5f;
+static const float kMinLODClipW = 1.0e-5f;
 /// 더 고운 단계로 돌아갈 때 화면 크기가 임계값보다 이만큼(비율) 커야 한다 — C++ `MeshLODSystem::kRefineHysteresis` 와 같다.
-static const float kLodRefineHysteresis = 0.1f;
-/// 크로스페이드 코드(가시 항목의 위쪽 5비트, instancedata.hlsli) = (직전 단계면 kLodFadeOutgoing) | 진행 L(1 ~ 15).
-static const uint kLodFadeOutgoing = 16u;
+static const float kLODRefineHysteresis = 0.1f;
+/// 크로스페이드 코드(가시 항목의 위쪽 5비트, instancedata.hlsli) = (직전 단계면 kLODFadeOutgoing) | 진행 L(1 ~ 15).
+static const uint kLODFadeOutgoing = 16u;
 
 bool isVisible( float3 center, float radius )
 {
@@ -90,19 +90,19 @@ bool isVisible( float3 center, float radius )
 }
 
 /// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `AnimationLODUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
-float computeLodScreenSize( float3 center, float radius )
+float computeLODScreenSize( float3 center, float radius )
 {
-    const float3 toEye  = center - g_LodView.xyz;
-    const float  clipW  = dot( center, g_LodDepthRow.xyz ) + g_LodDepthRow.w;
-    const bool   bClose = dot( toEye, toEye ) <= radius * radius || clipW <= kMinLodClipW;
-    return bClose ? 1.0f : radius * g_LodView.w / clipW;
+    const float3 toEye  = center - g_LODView.xyz;
+    const float  clipW  = dot( center, g_LODDepthRow.xyz ) + g_LODDepthRow.w;
+    const bool   bClose = dot( toEye, toEye ) <= radius * radius || clipW <= kMinLODClipW;
+    return bClose ? 1.0f : radius * g_LODView.w / clipW;
 }
 
 /**
  * @brief LOD 그룹(머리 배치 @p headBatch)에서 화면 크기에 맞는 단계(0 이 가장 고운 쪽)를 고릅니다. C++ `Mesh::selectLOD` 와 같은 규칙이다 — 화면 크기가 임계값보다 작은 동안
  *        단계를 낮춘다. 단계 k 배치 행(머리 + k)이 이 단계로 넘어가는 임계값을 든다.
  */
-uint selectLodLevel( uint headBatch, uint levelCount, float screenSize )
+uint selectLODLevel( uint headBatch, uint levelCount, float screenSize )
 {
     uint level = 0u;
     for ( uint nextLevel = 1u; nextLevel < levelCount; ++nextLevel )
@@ -201,28 +201,28 @@ void appendVisible( uint batchIndex, uint entry )
 
 /**
  * @brief LOD 그룹 인스턴스의 단계 전환 상태를 한 프레임 진행하고 이번 프레임에 그릴 것을 정합니다.
- * @details 상태(`g_LodState[인스턴스]`)는 뷰마다 하나이고 인스턴스 번호가 안정적인 동안 이어진다(배치를 다시 만들면 C++ 이 `g_LodControl.y` 로 비운다).
+ * @details 상태(`g_LODState[인스턴스]`)는 뷰마다 하나이고 인스턴스 번호가 안정적인 동안 이어진다(배치를 다시 만들면 C++ 이 `g_LODControl.y` 로 비운다).
  *          비트: 0..7 지금 단계, 8..15 직전 단계, 16..23 전환 진행(0..255, 255 = 끝).
  *
  *          전환은 상보 디더 크로스페이드다 — 새 단계는 진행 비율만큼의 픽셀(문턱 <= L / 16), 직전 단계는 나머지 픽셀(문턱 >= L / 16)을 그려 둘이 겹치지도 비지도 않는다
  *          (binding.hlsli `Appearance::clipDither` 가 음수 등장 비율을 상보 패턴으로 읽는다). 진행 도중 단계가 또 바뀌면 지금의 새 단계가 직전 단계가 되어 새로 시작한다.
- *          고운 쪽으로 돌아가는 것은 CPU 선택과 같이 임계값을 `kLodRefineHysteresis` 만큼 넘어야 한다. 등장 디더 중인 인스턴스(`_appearance < 1`)는 같은 디더를 쓰므로 전환을 건너뛰고 바로 바꾼다.
+ *          고운 쪽으로 돌아가는 것은 CPU 선택과 같이 임계값을 `kLODRefineHysteresis` 만큼 넘어야 한다. 등장 디더 중인 인스턴스(`_appearance < 1`)는 같은 디더를 쓰므로 전환을 건너뛰고 바로 바꾼다.
  *
  * @param outLevel      그릴 새(현재) 단계
  * @param outPrevious   직전 단계(전환 중일 때만 쓴다)
  * @param outFadeLevel  0 ~ 16. 16 = 전환 없음(새 단계만, 코드 없음), 0 = 직전 단계만, 1 ~ 15 = 둘 다(새 단계는 L, 직전 단계는 상보)
  */
-void advanceLodFade( uint instanceId, uint headBatch, uint levelCount, float screenSize, float appearance, out uint outLevel, out uint outPrevious, out uint outFadeLevel )
+void advanceLODFade( uint instanceId, uint headBatch, uint levelCount, float screenSize, float appearance, out uint outLevel, out uint outPrevious, out uint outFadeLevel )
 {
-    const bool bStateful = g_LodControl.z != 0u;
-    const uint state     = bStateful ? g_LodState[instanceId] : 0u;
+    const bool bStateful = g_LODControl.z != 0u;
+    const uint state     = bStateful ? g_LODState[instanceId] : 0u;
     uint       current   = state & 0xFFu;
     uint       previous  = ( state >> 8u ) & 0xFFu;
     uint       progress  = ( state >> 16u ) & 0xFFu;
-    uint       target    = selectLodLevel( headBatch, levelCount, screenSize );
-    const bool bReset    = g_LodControl.y != 0u || bStateful == false || current >= levelCount || previous >= levelCount;
+    uint       target    = selectLODLevel( headBatch, levelCount, screenSize );
+    const bool bReset    = g_LODControl.y != 0u || bStateful == false || current >= levelCount || previous >= levelCount;
     if ( bReset == false && target < current )
-        target = min( selectLodLevel( headBatch, levelCount, screenSize / ( 1.0f + kLodRefineHysteresis ) ), current );
+        target = min( selectLODLevel( headBatch, levelCount, screenSize / ( 1.0f + kLODRefineHysteresis ) ), current );
 
     const bool bFadeOn = bStateful && appearance >= 1.0f;
     if ( bReset || bFadeOn == false )
@@ -240,10 +240,10 @@ void advanceLodFade( uint instanceId, uint headBatch, uint levelCount, float scr
     }
     else if ( progress < 255u )
     {
-        progress = min( 255u, progress + g_LodControl.z );
+        progress = min( 255u, progress + g_LODControl.z );
     }
     if ( bStateful )
-        g_LodState[instanceId] = current | ( previous << 8u ) | ( progress << 16u );
+        g_LODState[instanceId] = current | ( previous << 8u ) | ( progress << 16u );
 
     outLevel     = current;
     outPrevious  = previous;
@@ -251,13 +251,13 @@ void advanceLodFade( uint instanceId, uint headBatch, uint levelCount, float scr
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
-void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchThreadId.x );
-    const uint instanceId = dispatchThreadId.x;
+    SW_GPU_ASSERT_THREAD( dispatchThreadID.x );
+    const uint instanceId = dispatchThreadID.x;
     if ( instanceId >= g_InstanceCount )
         return;
-    SW_GPU_ASSERT( instanceId <= kVisibleEntryIdMask, SW_GPU_ASSERT_ID_CULL_INSTANCE_ID, instanceId );
+    SW_GPU_ASSERT( instanceId <= kVisibleEntryIDMask, SW_GPU_ASSERT_ID_CULL_INSTANCE_ID, instanceId );
 
     const InstanceData instance  = g_Instances[instanceId];
     const uint         headBatch = instance._meshBatchIndex;
@@ -284,7 +284,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
         return;
 
     // LOD 그룹이 아니면 머리 배치에 한 번 쓴다.
-    if ( g_LodControl.x == 0u || headInfo._lodLevelCount <= 1u )
+    if ( g_LODControl.x == 0u || headInfo._lodLevelCount <= 1u )
     {
         appendVisible( headBatch, instanceId );
         return;
@@ -295,7 +295,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     uint level     = 0u;
     uint previous  = 0u;
     uint fadeLevel = 16u;
-    advanceLodFade( instanceId, headBatch, headInfo._lodLevelCount, computeLodScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous, fadeLevel );
+    advanceLODFade( instanceId, headBatch, headInfo._lodLevelCount, computeLODScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous, fadeLevel );
     // LOD 단계 번호 — 그룹의 단계 수 안이어야 하고(배치 표의 머리 + 단계 행), 가시 항목의 3 비트 칸 · 크로스페이드 4 비트 칸에 들어가야 한다.
     SW_GPU_ASSERT( level < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_LEVEL, level );
     SW_GPU_ASSERT( previous < headInfo._lodLevelCount, SW_GPU_ASSERT_ID_CULL_LOD_PREVIOUS, previous );
@@ -312,6 +312,6 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     else
     {
         appendVisible( headBatch + level, instanceId | ( level << kVisibleEntryLevelShift ) | ( fadeLevel << kVisibleEntryFadeShift ) );
-        appendVisible( headBatch + previous, instanceId | ( previous << kVisibleEntryLevelShift ) | ( ( kLodFadeOutgoing | fadeLevel ) << kVisibleEntryFadeShift ) );
+        appendVisible( headBatch + previous, instanceId | ( previous << kVisibleEntryLevelShift ) | ( ( kLODFadeOutgoing | fadeLevel ) << kVisibleEntryFadeShift ) );
     }
 }

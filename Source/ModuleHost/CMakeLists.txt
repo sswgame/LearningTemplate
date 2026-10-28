@@ -39,4 +39,4 @@ target_link_libraries(ModuleHost
 		sw_global_options
 )
 target_compile_definitions(ModuleHost PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
-sw_configurePch(ModuleHost "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePCH(ModuleHost "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

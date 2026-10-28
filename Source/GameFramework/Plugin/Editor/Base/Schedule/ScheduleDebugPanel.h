@@ -1,7 +1,7 @@
 /**
  * @file ScheduleDebugPanel.h
- * @brief NPC 하루 일정 디버그 창입니다. 살아 있는 `ScheduleSystem` 의 NPC 를 골라 오늘 타임라인 표와 "지금 왜 이 행동인가"(`explainNpc`) 글을 보입니다.
- * @details 언리얼 Mass/StateTree 디버거 · 유니티 Timeline 디버그 창의 자리다. 일정 시스템을 바꾸지 않는다 — 읽기 질의(`getPlan` · `getNpcView` · `explainNpc` · `dumpTimeline`)만 쓴다.
+ * @brief NPC 하루 일정 디버그 창입니다. 살아 있는 `ScheduleSystem` 의 NPC 를 골라 오늘 타임라인 표와 "지금 왜 이 행동인가"(`explainNPC`) 글을 보입니다.
+ * @details 언리얼 Mass/StateTree 디버거 · 유니티 Timeline 디버그 창의 자리다. 일정 시스템을 바꾸지 않는다 — 읽기 질의(`getPlan` · `getNPCView` · `explainNPC` · `dumpTimeline`)만 쓴다.
  *          시각 슬라이더는 시뮬레이션을 돌리지 않고 오늘 계획에서 그 시각을 덮는 칸을 짚어 보일 뿐이다. 시스템은 매 프레임 `ScheduleSystem::collectLiveSystems` 로 다시 찾는다(포인터를 프레임 너머로 들고 있지 않는다).
  */
 #pragma once
@@ -47,13 +47,13 @@ namespace sw::editor
         const Published& getPublished() const { return _published; }
 
     private:
-        void drawNpcList( const ScheduleSystem& system );
+        void drawNPCList( const ScheduleSystem& system );
         void drawTimeline( const ScheduleSystem& system, int32 npcIndex );
         void drawExplanation( const ScheduleSystem& system, int32 npcIndex );
 
         vector<ScheduleTimelineRow> _listRow;
         string                      _text;
-        hashed_string               _selectedNpc;
+        hashed_string               _selectedNPC;
         int32                       _systemIndex;
         int32                       _previewMinute;
         bool                        _bFollowClock;

@@ -136,9 +136,9 @@ namespace sw::editor
     }
 
     EditorDockLayout::EditorDockLayout()
-        : _imguiIniPath{}
+        : _imguiINIPath{}
         , _panelVisibilityPath{}
-        , _pendingLayoutIni{}
+        , _pendingLayoutINI{}
         , _pendingLayoutVisibility{}
         , _lastDockspaceWidth{ 0.0f }
         , _lastDockspaceHeight{ 0.0f }
@@ -171,8 +171,8 @@ namespace sw::editor
                 visibility._mapOpen[entry._id] = entry._pInstance->isOpen();
         }
         size_t            iniSize  = 0;
-        const utf8* const pIniText = ImGui::SaveIniSettingsToMemory( &iniSize );
-        const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pIniText, iniSize ), visibility );
+        const utf8* const pINIText = ImGui::SaveIniSettingsToMemory( &iniSize );
+        const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pINIText, iniSize ), visibility );
         if ( bSaved )
             SW_LOG_INFO( "Saved layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
         else
@@ -186,7 +186,7 @@ namespace sw::editor
         if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
             return false;
         const string sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
-        if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutIni, _pendingLayoutVisibility ) == false )
+        if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutINI, _pendingLayoutVisibility ) == false )
         {
             SW_LOG_WARNING( "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
             return false;
@@ -212,7 +212,7 @@ namespace sw::editor
                     entry._pInstance->setOpen( bOpen );
             }
         }
-        ImGui::LoadIniSettingsFromMemory( _pendingLayoutIni.c_str(), _pendingLayoutIni.size() );
+        ImGui::LoadIniSettingsFromMemory( _pendingLayoutINI.c_str(), _pendingLayoutINI.size() );
         // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 가지고 있다. 다음 프레임이 그 크기를 기준으로 현재 창에 비율을 맞춘다.
         _lastDockspaceWidth  = 0.0f;
         _lastDockspaceHeight = 0.0f;
@@ -222,16 +222,16 @@ namespace sw::editor
         // 다시 연 패널의 창은 처음 나타나면서 포커스를 받아 그 탭이 앞에 선다. 그대로 두면 씬 뷰 최대화를 풀 때 Prefab Overrides 가 앞에 선다. 기본 배치처럼 Scene 탭을 앞으로 가져온다.
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
-        _pendingLayoutIni.clear();
+        _pendingLayoutINI.clear();
         _pendingLayoutVisibility._mapOpen.clear();
     }
 
     void EditorDockLayout::initializePersistencePaths()
     {
-        _imguiIniPath.clear();
+        _imguiINIPath.clear();
         _panelVisibilityPath.clear();
 
-        const string imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiIniFileName );
+        const string imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiINIFileName );
         const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
@@ -239,12 +239,12 @@ namespace sw::editor
             return;
         }
 
-        _imguiIniPath        = imguiPath;
+        _imguiINIPath        = imguiPath;
         _panelVisibilityPath = windowsPath;
         SW_LOG_TRACE( "Layout persistence dir: %#", FileUtil::getDirectoryPart( imguiPath ).c_str() );
     }
 
-    void EditorDockLayout::applyIniFilename() const
+    void EditorDockLayout::applyINIFilename() const
     {
         ImGuiIO& io = ImGui::GetIO();
 
@@ -253,8 +253,8 @@ namespace sw::editor
         // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
         // 하나만 열 때도 같은 이유로 레이아웃을 비운다. 저장된 도킹으로 복원되면 그 패널이
         // 탭 뒤에 숨어서 결국 보이지 않는다.
-        if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false )
-            io.IniFilename = _imguiIniPath.c_str();
+        if ( _imguiINIPath.empty() == false && isPanelOverrideActive() == false )
+            io.IniFilename = _imguiINIPath.c_str();
         else
             io.IniFilename = nullptr;
     }
@@ -353,11 +353,11 @@ namespace sw::editor
         }
 
         // 도킹 레이아웃도 같다. 스위치가 만든 배치(전부 떠 있는 창, 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
-        const bool bCanSaveImguiLayout = _imguiIniPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr;
+        const bool bCanSaveImguiLayout = _imguiINIPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr;
         if ( bCanSaveImguiLayout )
         {
-            ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
-            SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiIniPath.c_str() );
+            ImGui::SaveIniSettingsToDisk( _imguiINIPath.c_str() );
+            SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiINIPath.c_str() );
         }
     }
 
@@ -376,7 +376,7 @@ namespace sw::editor
 
         if ( _bApplied == SW_FALSE && isOpeningAllPanels() )
         {
-            // 기본 도킹 배치를 적용하지 않는다(위 applyIniFilename 참고). 모두 떠 있는 창으로 둔다.
+            // 기본 도킹 배치를 적용하지 않는다(위 applyINIFilename 참고). 모두 떠 있는 창으로 둔다.
             _bApplied = SW_TRUE;
         }
         else if ( _bApplied == SW_FALSE )

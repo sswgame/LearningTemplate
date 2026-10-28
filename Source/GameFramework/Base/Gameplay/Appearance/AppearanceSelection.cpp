@@ -603,7 +603,7 @@ namespace sw
         writer.writeBits( kVersion, AppearanceSelectionInternal::kVersionBits );
         AppearanceSelectionCodec::writeSelection( writer, selection, database );
         vector<uint8> bytes = writer.releaseBytes();
-        const uint32  crc   = StringUtil::computeCrc32( bytes.data(), bytes.size() );
+        const uint32  crc   = StringUtil::computeCRC32( bytes.data(), bytes.size() );
         for ( uint32 byteIndex = 0; byteIndex < AppearanceSelectionInternal::kChecksumBytes; ++byteIndex )
         {
             bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
@@ -622,12 +622,12 @@ namespace sw
             return false;
         }
         const size_t payloadSize = bytes.size() - Internal::kChecksumBytes;
-        uint32       storedCrc   = 0;
+        uint32       storedCRC   = 0;
         for ( uint32 byteIndex = 0; byteIndex < Internal::kChecksumBytes; ++byteIndex )
         {
-            storedCrc |= static_cast<uint32>( bytes[payloadSize + byteIndex] ) << ( byteIndex * 8 );
+            storedCRC |= static_cast<uint32>( bytes[payloadSize + byteIndex] ) << ( byteIndex * 8 );
         }
-        if ( StringUtil::computeCrc32( bytes.data(), payloadSize ) != storedCrc )
+        if ( StringUtil::computeCRC32( bytes.data(), payloadSize ) != storedCRC )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "checksum mismatch";

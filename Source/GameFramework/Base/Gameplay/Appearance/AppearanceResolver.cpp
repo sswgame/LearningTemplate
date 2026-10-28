@@ -44,7 +44,7 @@ namespace sw
             /** @brief FNV-1a 64 로 값을 누적합니다. 이름은 내용 해시(대소문자 무시)이므로 프로세스나 기계가 달라도 같은 값이 나옵니다. */
             struct HashBuilder
             {
-                uint64 _value{ HashUtil::kFnvOffset64 };
+                uint64 _value{ HashUtil::kFNVOffset64 };
 
                 void addUint64( uint64 value )
                 {

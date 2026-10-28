@@ -5,7 +5,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -365,7 +365,7 @@ namespace sw
             Memory::copy( arrPassName, passName.data(), copyLen );
             arrPassName[copyLen] = '\0';
             // GPU 브레드크럼 - 디바이스 소실 때 마지막으로 닿은 패스 이름을 싣는다(꺼져 있으면 아무것도 하지 않는다).
-            GpuBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
+            GPUBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
             context._pCmd->beginEventMarker( arrPassName );
         }
         context._resourceRegistry.reset();
@@ -382,7 +382,7 @@ namespace sw
                                           : hashed_string{};
 
         // 컬러 타깃은 파이프라인이 선언한 컬러 출력이다(로드 때 해석한 `_listResolvedColorOutput`, 선언 순서). 컬러를 그리는 패스(kDrawsDeclaredColor)는
-        // 로드가 선언을 요구하므로 비어 있지 않다. 이름(SceneColor · GBufferAlbedo · TaaColor 등)으로 짐작하지 않는다 — 다른 이름을 쓰는
+        // 로드가 선언을 요구하므로 비어 있지 않다. 이름(SceneColor · GBufferAlbedo · TAAColor 등)으로 짐작하지 않는다 — 다른 이름을 쓰는
         // 파이프라인에서 없는 첨부(핸들 0 은 백버퍼)를 열었다. 뎁스 로드 연산은 바인딩한 뎁스의 클리어 기록으로 정한다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = passDesc._listResolvedColorOutput;
 
@@ -468,7 +468,7 @@ namespace sw
                 }
                 case RenderPassType::TAA:
                 {
-                    executeTaaPass( input );
+                    executeTAAPass( input );
                     break;
                 }
                 case RenderPassType::Present:
@@ -499,8 +499,8 @@ namespace sw
                 case RenderPassType::MeshMorph:
                 case RenderPassType::MeshSkin:
                 case RenderPassType::LightGrid:
-                case RenderPassType::VfxSimulation:
-                case RenderPassType::VfxMeshInstance:
+                case RenderPassType::VFXSimulation:
+                case RenderPassType::VFXMeshInstance:
                 case RenderPassType::DepthHistory:
                 case RenderPassType::AutoExposure:
                 case RenderPassType::UpscaleEasu:
@@ -723,15 +723,15 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeTaaPass( const PassExecuteInput& input )
+    void FrameRenderer::executeTAAPass( const PassExecuteInput& input )
     {
-        // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTaaHistory).
+        // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTAAHistory).
         FramePassContext&      context   = input._context;
         const AttachmentNames& names     = attachmentNames();
         const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
         const utf8*            pSrcName{ nullptr };
         // 후처리를 끈 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`, kBypassesToSource). 기록하지 않고 히스토리도 건드리지 않는다
-        // — 원본을 TaaColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 `_bTaaHistoryReset` 이 기록을 버린다.
+        // — 원본을 TAAColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 `_bTAAHistoryReset` 이 기록을 버린다.
         if ( activePool().isForwarded( taaTarget.view() ) )
             return;
         registerDeclaredInputs( context, input._passDesc );
@@ -740,17 +740,17 @@ namespace sw
             if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
                 pSrcName = sourceInput._attachment.c_str();
         }
-        // 히스토리 생성과 bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
+        // 히스토리 생성과 bindless 등록은 ensureTAAHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
         const ViewTarget& activeView = *_pActiveView;
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `ViewTarget::_bTaaHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `ViewTarget::_bTAAHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = activeView._bTaaHistoryReset == SW_TRUE && pSrcName != nullptr;
+        const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
         if ( bCut )
             registerPassTexture( context, names._gbufferAlbedo, pSrcName );
         else if ( activeView._taaHistory != 0 )
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
         if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
@@ -759,8 +759,8 @@ namespace sw
         }
 
         const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
-        const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
-        if ( bTaaHistoryWritable )
+        const bool             bTAAHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
+        if ( bTAAHistoryWritable )
             context._pCmd->blitTexture( taaOut, activeView._taaHistory );
     }
 

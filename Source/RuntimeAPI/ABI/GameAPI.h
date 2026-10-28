@@ -58,9 +58,9 @@ extern "C"
     // 2) export — SWGame 이 채우는 진입점
     // ------------------------------------------------------------------------------
     /** @brief 이 모듈이 빌드된 표 버전입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint32 getGameModuleAbiVersion();
+    SW_MODULE_API uint32 getGameModuleABIVersion();
     /** @brief 이 모듈이 빌드된 표 지문입니다. 버전과 함께 대조합니다. */
-    SW_MODULE_API const utf8* getGameModuleAbiStamp();
+    SW_MODULE_API const utf8* getGameModuleABIStamp();
 
     /** @brief SWGame API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI );

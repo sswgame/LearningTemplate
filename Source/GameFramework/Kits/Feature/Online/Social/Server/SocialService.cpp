@@ -23,7 +23,7 @@ namespace sw
         struct SocialServiceInternal
         {
             static constexpr uint8 kFormatVersion     = 1;
-            static constexpr int64 kPresenceTtlMs     = 90000;
+            static constexpr int64 kPresenceTTLMs     = 90000;
             static constexpr int64 kPresenceRefreshMs = 30000;
 
             static const hashed_string& getLinkTable()
@@ -558,7 +558,7 @@ namespace sw
         if ( _dependencies._pRouter == nullptr )
             return true;
         _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
-                                                                   SocialServiceInternal::kPresenceTtlMs ) );
+                                                                   SocialServiceInternal::kPresenceTTLMs ) );
         return true;
     }
 

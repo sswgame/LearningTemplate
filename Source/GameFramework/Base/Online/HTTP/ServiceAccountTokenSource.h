@@ -81,7 +81,7 @@ namespace sw
 
     private:
         static constexpr int64 kRefreshMarginMs = 60000;
-        static constexpr int64 kJwtLifetimeMs   = 3600000; ///< 구글 상한 1시간
+        static constexpr int64 kJWTLifetimeMs   = 3600000; ///< 구글 상한 1시간
 
         ServiceAccountCredentials _credentials;
         string                    _scope;

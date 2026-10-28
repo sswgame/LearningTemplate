@@ -103,7 +103,7 @@ namespace sw
         // 오브젝트 해시를 (이름, 해시) 정수 순으로 접는다 — 실수 비교로 정렬하면 NaN 에서 순서가 깨진다(std::sort 미정의 동작).
         vector<SceneObjectHash> listObject;
         collectObjects( manager, listObject );
-        uint64 hash = HashUtil::kFnvOffset64;
+        uint64 hash = HashUtil::kFNVOffset64;
         for ( const SceneObjectHash& object : listObject )
         {
             hash = HashUtil::appendBytes64( hash, object._name.data(), object._name.size() );

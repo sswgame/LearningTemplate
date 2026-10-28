@@ -19,7 +19,7 @@ namespace sw::editor
          * @brief 에디터가 쓰는 파일 이름입니다. 이름은 코드가 정하고 설정 파일이 바꾸지 않는다. 설정 파일이 자기 위치와
          *        이웃 파일 이름을 정하면 그 설정 파일을 찾는 경로가 순환한다. 임포트 설정 둘만 `Config/Editor`(사람이 쓴다)에 있고, 나머지는 `Saved/Editor`(앱이 쓴다)에 있다.
          */
-        static constexpr const utf8* kImguiIniFileName               = "imgui.ini";
+        static constexpr const utf8* kImguiINIFileName               = "imgui.ini";
         static constexpr const utf8* kPanelVisibilityFileName        = "windows.json";             ///< 패널 가시성(`EditorPanelVisibility`, 리플렉션 JSON)
         static constexpr const utf8* kAnimationGraphCanvasFileName   = "AnimationGraph.json";      ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kDialogueGraphCanvasFileName    = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태

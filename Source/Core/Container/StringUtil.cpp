@@ -35,7 +35,7 @@ namespace sw
             static constexpr uint32 kMaxUnicodeCodepoint = 0x10FFFF;
             static constexpr uint32 kSurrogateBegin      = 0xD800;
             static constexpr uint32 kSurrogateEnd        = 0xDFFF;
-            static constexpr uint32 kUtf16LowBoundary    = 0x10000;
+            static constexpr uint32 kUTF16LowBoundary    = 0x10000;
 
             static SW_INLINE constexpr bool isWhitespace( utf8 c ) noexcept
             {
@@ -47,7 +47,7 @@ namespace sw
                 return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r' || c == L'\f' || c == L'\v';
             }
 
-            struct Utf8LeadInfo
+            struct UTF8LeadInfo
             {
                 size_t _sequenceLength;
                 uint32 _initialBits;
@@ -57,9 +57,9 @@ namespace sw
             /**
              * @brief UTF-8 선행 바이트로 멀티바이트 시퀀스의 길이(1 ~ 4바이트)와 초기 비트를 분류합니다.
              */
-            static constexpr Utf8LeadInfo classifyUtf8LeadByte( const uint8 leadByte ) noexcept
+            static constexpr UTF8LeadInfo classifyUTF8LeadByte( const uint8 leadByte ) noexcept
             {
-                switch ( Utf8Util::getSequenceLength( leadByte ) ) // 길이 규칙은 Utf8Util 하나, 여기는 길이별 초기 비트와 최소 코드 포인트만
+                switch ( UTF8Util::getSequenceLength( leadByte ) ) // 길이 규칙은 UTF8Util 하나, 여기는 길이별 초기 비트와 최소 코드 포인트만
                 {
                     case 1:
                         return { 1, leadByte, 0x0 };
@@ -68,7 +68,7 @@ namespace sw
                     case 3:
                         return { 3, static_cast<uint32>( leadByte & 0x0F ), 0x800 };
                     case 4:
-                        return { 4, static_cast<uint32>( leadByte & 0x07 ), kUtf16LowBoundary };
+                        return { 4, static_cast<uint32>( leadByte & 0x07 ), kUTF16LowBoundary };
                     default:
                         return { 0, 0, 0 };
                 }
@@ -84,7 +84,7 @@ namespace sw
              *   ASCII 가 아닌 바이트를 만났을 때만 2 ~ 4바이트 UTF-8 선행 바이트를 분류하고, 후속 바이트(0x80 ~ 0xBF) · overlong ·
              *   서로게이트(0xD800 ~ 0xDFFF) · 유니코드 최대 범위를 검사합니다.
              */
-            static bool isValidUtf8( const uint8* pData, const size_t length ) noexcept
+            static bool isValidUTF8( const uint8* pData, const size_t length ) noexcept
             {
                 size_t pos{ 0 };
 
@@ -123,8 +123,8 @@ namespace sw
                         continue;
                     }
 
-                    // 2 ~ 4바이트 멀티바이트 시퀀스는 디코더와 같은 한 해석(`decodeUtf8Sequence`)으로 검증한다 - 검증기와 디코더가 다르게 판정하지 않는다.
-                    const DecodedCodepoint decoded = decodeUtf8Sequence( reinterpret_cast<const utf8*>( pData ) + pos, length - pos );
+                    // 2 ~ 4바이트 멀티바이트 시퀀스는 디코더와 같은 한 해석(`decodeUTF8Sequence`)으로 검증한다 - 검증기와 디코더가 다르게 판정하지 않는다.
+                    const DecodedCodepoint decoded = decodeUTF8Sequence( reinterpret_cast<const utf8*>( pData ) + pos, length - pos );
                     if ( decoded._bValid == false )
                         return false;
                     pos += decoded._byteCount;
@@ -149,9 +149,9 @@ namespace sw
              *          (CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리킵니다). 대체 방식은 유니코드 권고(최대
              *          부분 시퀀스마다 U+FFFD 하나)를 따릅니다.
              */
-            static DecodedCodepoint decodeUtf8Sequence( const utf8* pData, const size_t remaining ) noexcept
+            static DecodedCodepoint decodeUTF8Sequence( const utf8* pData, const size_t remaining ) noexcept
             {
-                const Utf8LeadInfo lead = classifyUtf8LeadByte( static_cast<uint8>( pData[0] ) );
+                const UTF8LeadInfo lead = classifyUTF8LeadByte( static_cast<uint8>( pData[0] ) );
                 if ( lead._sequenceLength == 0 )
                     return { kReplacementCodepoint, 1, false };
 
@@ -160,7 +160,7 @@ namespace sw
                 {
                     // 잘렸거나 연속 바이트가 아니면 거기까지를 한 글자로 치고, 그 바이트부터 다시 읽는다(삼키지 않는다).
                     const bool bTruncated = byteIndex >= remaining;
-                    if ( bTruncated || Utf8Util::isContinuation( pData[byteIndex] ) == false )
+                    if ( bTruncated || UTF8Util::isContinuation( pData[byteIndex] ) == false )
                         return { kReplacementCodepoint, byteIndex, false };
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
@@ -179,11 +179,11 @@ namespace sw
             {
                 if constexpr ( sizeof( utf16 ) == 2 )
                 {
-                    if ( codepoint < kUtf16LowBoundary )
+                    if ( codepoint < kUTF16LowBoundary )
                         out.push_back( static_cast<utf16>( codepoint ) );
                     else
                     {
-                        const uint32 value = codepoint - kUtf16LowBoundary;
+                        const uint32 value = codepoint - kUTF16LowBoundary;
                         out.push_back( static_cast<utf16>( 0xD800 + ( value >> 10 ) ) );
                         out.push_back( static_cast<utf16>( 0xDC00 + ( value & 0x3FF ) ) );
                     }
@@ -192,7 +192,7 @@ namespace sw
                     out.push_back( static_cast<utf16>( codepoint ) );
             }
 
-            static void appendUtf8( string& out, const uint32 codepoint )
+            static void appendUTF8( string& out, const uint32 codepoint )
             {
                 if ( codepoint <= 0x7F )
                     out.push_back( static_cast<utf8>( codepoint ) );
@@ -477,7 +477,7 @@ namespace sw
         return ( pStr == nullptr || *pStr == L'\0' );
     }
 
-    wstring StringUtil::utf8ToUtf16( const utf8* pInput )
+    wstring StringUtil::utf8ToUTF16( const utf8* pInput )
     {
         if ( isNullOrEmpty( pInput ) )
             return {};
@@ -499,7 +499,7 @@ namespace sw
                 continue;
             }
 
-            const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( pInput + pos, length - pos );
+            const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUTF8Sequence( pInput + pos, length - pos );
             StringUtilInternal::appendWideChar( result, decoded._codepoint );
             pos += decoded._byteCount;
             if ( decoded._bValid == false )
@@ -507,11 +507,11 @@ namespace sw
         }
 
         if ( bHadInvalidSequence )
-            SW_LOW_LEVEL_WARNING( "utf8ToUtf16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
+            SW_LOW_LEVEL_WARNING( "utf8ToUTF16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
         return result;
     }
 
-    string StringUtil::utf16ToUtf8( const utf16* pInput )
+    string StringUtil::utf16ToUTF8( const utf16* pInput )
     {
         if ( isNullOrEmpty( pInput ) )
             return {};
@@ -541,7 +541,7 @@ namespace sw
                         const uint32 lowSurrogate = pInput[pos + 1];
                         if ( 0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF )
                         {
-                            codepoint = StringUtilInternal::kUtf16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
+                            codepoint = StringUtilInternal::kUTF16LowBoundary + ( ( codepoint - 0xD800 ) << 10 ) + ( lowSurrogate - 0xDC00 );
                             ++pos;
                         }
                         else
@@ -554,11 +554,11 @@ namespace sw
                     codepoint = 0xFFFD;
             }
 
-            StringUtilInternal::appendUtf8( result, codepoint );
+            StringUtilInternal::appendUTF8( result, codepoint );
             ++pos;
         }
 
-        SW_LOW_LEVEL_ASSERT( isValidUtf8( result.c_str() ), "Not a UTF-8 string" );
+        SW_LOW_LEVEL_ASSERT( isValidUTF8( result.c_str() ), "Not a UTF-8 string" );
         return result;
     }
 
@@ -1163,11 +1163,11 @@ namespace sw
         return StringUtilInternal::parseDigitsExact( digits, base, outValue );
     }
 
-    bool StringUtil::isValidUtf8( const utf8* pInput )
+    bool StringUtil::isValidUTF8( const utf8* pInput )
     {
         if ( pInput == nullptr )
             return false;
-        return StringUtilInternal::isValidUtf8( reinterpret_cast<const uint8*>( pInput ), strlen( pInput ) );
+        return StringUtilInternal::isValidUTF8( reinterpret_cast<const uint8*>( pInput ), strlen( pInput ) );
     }
 
     void StringUtil::getLineAndColumn( string_view text, size_t byteOffset, uint32& outLine, uint32& outColumn )
@@ -1183,7 +1183,7 @@ namespace sw
                 ++line;
                 column = 1;
             }
-            else if ( Utf8Util::isContinuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
+            else if ( UTF8Util::isContinuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
             {
                 ++column;
             }
@@ -1192,23 +1192,23 @@ namespace sw
         outColumn = column;
     }
 
-    uint32 StringUtil::decodeUtf8( string_view text, size_t& inoutOffset )
+    uint32 StringUtil::decodeUTF8( string_view text, size_t& inoutOffset )
     {
         if ( inoutOffset >= text.size() )
             return 0;
-        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
+        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUTF8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
         inoutOffset += decoded._byteCount;
         return decoded._codepoint;
     }
 
-    bool StringUtil::tryDecodeUtf8( string_view text, size_t& inoutOffset, uint32& outCodepoint )
+    bool StringUtil::tryDecodeUTF8( string_view text, size_t& inoutOffset, uint32& outCodepoint )
     {
         if ( inoutOffset >= text.size() )
         {
             outCodepoint = StringUtilInternal::kReplacementCodepoint;
             return false;
         }
-        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
+        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUTF8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
         inoutOffset += decoded._byteCount;
         outCodepoint = decoded._codepoint;
         return decoded._bValid;
@@ -1217,7 +1217,7 @@ namespace sw
     bool StringUtil::tryDecodeSingleCodepoint( string_view text, uint32& outCodepoint )
     {
         size_t offset = 0;
-        return tryDecodeUtf8( text, offset, outCodepoint ) && offset == text.size();
+        return tryDecodeUTF8( text, offset, outCodepoint ) && offset == text.size();
     }
 
     void StringUtil::utf8ToUcs2( string_view text, vector<uint16>& outListUnit )
@@ -1228,17 +1228,17 @@ namespace sw
         while ( offset < text.size() )
         {
             uint32     codepoint = 0;
-            const bool bValid    = tryDecodeUtf8( text, offset, codepoint );
+            const bool bValid    = tryDecodeUTF8( text, offset, codepoint );
             outListUnit.push_back( static_cast<uint16>( bValid && codepoint <= kMaxUcs2Codepoint ? codepoint : StringUtilInternal::kReplacementCodepoint ) );
         }
     }
 
-    void StringUtil::appendUtf8( string& inoutText, uint32 codepoint )
+    void StringUtil::appendUTF8( string& inoutText, uint32 codepoint )
     {
-        StringUtilInternal::appendUtf8( inoutText, codepoint );
+        StringUtilInternal::appendUTF8( inoutText, codepoint );
     }
 
-    string StringUtil::escapeInvalidUtf8( string_view text )
+    string StringUtil::escapeInvalidUTF8( string_view text )
     {
         constexpr utf8 kHexDigit[] = "0123456789ABCDEF";
         string         result;
@@ -1246,7 +1246,7 @@ namespace sw
         size_t pos = 0;
         while ( pos < text.size() )
         {
-            const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + pos, text.size() - pos );
+            const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUTF8Sequence( text.data() + pos, text.size() - pos );
             if ( decoded._bValid )
             {
                 result.append( text.data() + pos, decoded._byteCount );

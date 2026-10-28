@@ -491,7 +491,7 @@ namespace sw::editor
 
         // 컴포넌트 목록 끝의 Add Component 다. 유니티 Inspector 맨 아래, 언리얼 Details 의 Add 에 해당하며 Hierarchy 메뉴와 같은 목록이다.
         ImGui::Spacing();
-        const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDpiScale() );
+        const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDPIScale() );
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
         {
@@ -642,7 +642,7 @@ namespace sw::editor
         for ( IInspectorComponent* pInspector : listInspector )
         {
             // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
-            // 영역이 위젯마다 `trackPod` 를 호출하지 않아도 된다.
+            // 영역이 위젯마다 `trackPOD` 를 호출하지 않아도 된다.
             ImGui::BeginGroup();
             pInspector->drawSection( pComp, pRHIDevice );
             ImGui::EndGroup();

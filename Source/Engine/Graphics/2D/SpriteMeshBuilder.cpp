@@ -124,7 +124,7 @@ namespace sw
                     Memory::copy( &arrWord[0], &desc._size, sizeof( float32 ) * 2 );
                     Memory::copy( &arrWord[2], &desc._border, sizeof( float32 ) * 4 );
                     arrWord[6]  = desc._bTiled;
-                    uint64 hash = HashUtil::kFnvOffset64;
+                    uint64 hash = HashUtil::kFNVOffset64;
                     for ( const uint32 word : arrWord )
                     {
                         hash = HashUtil::fnvStep64( hash, word );

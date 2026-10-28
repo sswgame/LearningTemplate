@@ -102,7 +102,7 @@ namespace sw
                 if ( survivor._wiggleProgress >= 1.0f )
                 {
                     pushEvent( AsymmetricHorrorEvent::Kind::WiggledFree, survivorIndex, -1, 0.0f, survivor._position );
-                    dropCarried( true, rules._hook._wiggleStunTime );
+                    dropCarried( true, rules._hook._wiggleSTUNTime );
                 }
                 break;
             }

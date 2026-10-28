@@ -2,7 +2,7 @@
 
 #include "Engine/Input/DevConsoleController.h"
 
-#include "Core/Container/Utf8Util.h"
+#include "Core/Container/UTF8Util.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 
@@ -40,7 +40,7 @@ namespace sw
                 {
                     const uint8 last = static_cast<uint8>( inoutText.back() );
                     inoutText.pop_back();
-                    if ( Utf8Util::isContinuation( last ) == false )
+                    if ( UTF8Util::isContinuation( last ) == false )
                         return;
                 }
             }
@@ -163,13 +163,13 @@ namespace sw
         size_t offset = 0;
         while ( offset < text.size() )
         {
-            const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+            const uint32 codepoint = StringUtil::decodeUTF8( text, offset );
             // Enter, Tab, Backspace 는 액션으로 받는다. 그 키가 함께 내는 제어 문자(\r, \t, DEL)는 글자가 아니다.
             if ( codepoint < 0x20 || codepoint == 0x7F )
                 continue;
             if ( _inputLine.size() >= kMaxInputLength )
                 return;
-            StringUtil::appendUtf8( _inputLine, codepoint );
+            StringUtil::appendUTF8( _inputLine, codepoint );
         }
     }
 

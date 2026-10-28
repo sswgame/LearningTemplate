@@ -34,7 +34,7 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readNpcCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readNPCCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &ScheduleDebugPanel::Published::_npcCount, outValue );
             }
@@ -52,7 +52,7 @@ namespace sw::editor
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         , _listRow{}
         , _text{}
-        , _selectedNpc{}
+        , _selectedNPC{}
         , _systemIndex{ 0 }
         , _previewMinute{ 0 }
         , _bFollowClock{ true }
@@ -67,7 +67,7 @@ namespace sw::editor
         vector<const ScheduleSystem*> listActive;
         for ( const ScheduleSystem* pSystem : listSystem )
         {
-            if ( pSystem != nullptr && pSystem->getNpcCount() > 0 )
+            if ( pSystem != nullptr && pSystem->getNPCCount() > 0 )
                 listActive.push_back( pSystem );
         }
         Published& published = _published;
@@ -87,19 +87,19 @@ namespace sw::editor
                 _systemIndex = 0;
         }
         const ScheduleSystem& system = *listActive[static_cast<size_t>( _systemIndex )];
-        published._npcCount          = static_cast<uint32>( system.getNpcCount() );
+        published._npcCount          = static_cast<uint32>( system.getNPCCount() );
 
-        if ( ImGui::BeginChild( "##ScheduleNpcList", measureExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
-            drawNpcList( system );
+        if ( ImGui::BeginChild( "##ScheduleNPCList", measureExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+            drawNPCList( system );
         ImGui::EndChild();
         ImGui::SameLine();
 
         if ( ImGui::BeginChild( "##ScheduleDetail" ) )
         {
-            const int32 npcIndex = _selectedNpc.empty() ? -1 : system.findNpcIndex( _selectedNpc );
+            const int32 npcIndex = _selectedNPC.empty() ? -1 : system.findNPCIndex( _selectedNPC );
             if ( npcIndex < 0 )
             {
-                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "SelectNpcHint" ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdSchedule", "SelectNPCHint" ) );
             }
             else
             {
@@ -111,17 +111,17 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void ScheduleDebugPanel::drawNpcList( const ScheduleSystem& system )
+    void ScheduleDebugPanel::drawNPCList( const ScheduleSystem& system )
     {
-        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdSchedule", "NpcListTitle" ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdSchedule", "NPCListTitle" ) );
         ImGui::Separator();
-        for ( int32 npcIndex = 0; npcIndex < system.getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < system.getNPCCount(); ++npcIndex )
         {
-            const hashed_string npcID     = system.getNpcID( npcIndex );
-            const bool          bSelected = npcID == _selectedNpc;
+            const hashed_string npcID     = system.getNPCID( npcIndex );
+            const bool          bSelected = npcID == _selectedNPC;
             ImGui::PushID( npcIndex );
             if ( ImGui::Selectable( npcID.c_str(), bSelected ) )
-                _selectedNpc = npcID;
+                _selectedNPC = npcID;
             EditorSelfTestMarks::note( ( string( "schedule.npc." ) + npcID.c_str() ).c_str() ); // 자동화가 NPC 를 고를 자리
             ImGui::PopID();
         }
@@ -183,10 +183,10 @@ namespace sw::editor
 
     void ScheduleDebugPanel::drawExplanation( const ScheduleSystem& system, int32 npcIndex )
     {
-        // explainNpc · dumpTimeline 은 지금 시각 기준이다 — 슬라이더 미리 보기와 상관없이 그대로 보인다.
+        // explainNPC · dumpTimeline 은 지금 시각 기준이다 — 슬라이더 미리 보기와 상관없이 그대로 보인다.
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSchedule", "WhyNow" ), ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            system.explainNpc( npcIndex, _text );
+            system.explainNPC( npcIndex, _text );
             ImGui::TextUnformatted( _text.c_str(), _text.c_str() + _text.size() );
         }
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSchedule", "RawTimeline" ) ) )
@@ -198,8 +198,8 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( ScheduleDebugPanel, ScheduleDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
 
-    SW_AUTOMATION_WATCH( editorScheduleNpcCount, "Editor.ScheduleNpcCount", "NPCs of the schedule system the NPC Schedule window shows",
-                         &ScheduleDebugPanelInternal::readNpcCount );
+    SW_AUTOMATION_WATCH( editorScheduleNPCCount, "Editor.ScheduleNPCCount", "NPCs of the schedule system the NPC Schedule window shows",
+                         &ScheduleDebugPanelInternal::readNPCCount );
     SW_AUTOMATION_WATCH( editorScheduleTimelineRowCount, "Editor.ScheduleTimelineRowCount", "Rows of today's timeline for the NPC picked in the NPC Schedule window",
                          &ScheduleDebugPanelInternal::readTimelineRowCount );
 } // namespace sw::editor

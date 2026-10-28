@@ -21,9 +21,9 @@ namespace sw
     namespace
     {
         // S3TC 는 확장이라 glad 헤더에 없다. 값은 EXT_texture_compression_s3tc 그대로다.
-        constexpr GLenum kGlCompressedRgbaS3tcDxt1 = 0x83F1;
-        constexpr GLenum kGlCompressedRgbaS3tcDxt3 = 0x83F2;
-        constexpr GLenum kGlCompressedRgbaS3tcDxt5 = 0x83F3;
+        constexpr GLenum kGlCompressedRGBAS3tcDxt1 = 0x83F1;
+        constexpr GLenum kGlCompressedRGBAS3tcDxt3 = 0x83F2;
+        constexpr GLenum kGlCompressedRGBAS3tcDxt5 = 0x83F3;
         constexpr GLenum kGlCompressedRgRgtc2      = 0x8DBD;
 
         /**
@@ -40,9 +40,9 @@ namespace sw
         };
 
         constexpr OpenGLFormatRow arrFormatRow[] = {
-            {         RHIFormat::BC1_UNORM,             kGlCompressedRgbaS3tcDxt1,                0,                    0},
-            {         RHIFormat::BC2_UNORM,             kGlCompressedRgbaS3tcDxt3,                0,                    0},
-            {         RHIFormat::BC3_UNORM,             kGlCompressedRgbaS3tcDxt5,                0,                    0},
+            {         RHIFormat::BC1_UNORM,             kGlCompressedRGBAS3tcDxt1,                0,                    0},
+            {         RHIFormat::BC2_UNORM,             kGlCompressedRGBAS3tcDxt3,                0,                    0},
+            {         RHIFormat::BC3_UNORM,             kGlCompressedRGBAS3tcDxt5,                0,                    0},
             {         RHIFormat::BC4_UNORM,               GL_COMPRESSED_RED_RGTC1,                0,                    0},
             {         RHIFormat::BC5_UNORM,                  kGlCompressedRgRgtc2,                0,                    0},
             {         RHIFormat::BC7_UNORM,         GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},

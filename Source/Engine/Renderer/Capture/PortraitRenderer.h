@@ -62,10 +62,10 @@ namespace sw
         void               shutdown();
 
         /**
-         * @brief 프리팹 한 장을 그려 @p outRgbaBytes(행 사이에 빈틈 없는 RGBA8, 위 행부터)에 담습니다. 프리팹을 못 읽거나 그릴 메시가 없으면 false 입니다.
+         * @brief 프리팹 한 장을 그려 @p outRGBABytes(행 사이에 빈틈 없는 RGBA8, 위 행부터)에 담습니다. 프리팹을 못 읽거나 그릴 메시가 없으면 false 입니다.
          * @details 카메라는 대상의 경계 구(메시마다 로컬 경계 상자를 월드로 옮긴 것을 모두 덮는 구)를 시야각에 맞춰 물러납니다. 대상 크기가 달라도 같은 화면 비율입니다.
          */
-        [[nodiscard]] bool renderPrefab( const PortraitRequest& request, vector<uint8>& outRgbaBytes );
+        [[nodiscard]] bool renderPrefab( const PortraitRequest& request, vector<uint8>& outRGBABytes );
 
     private:
         IRHIDevice*               _pDevice;

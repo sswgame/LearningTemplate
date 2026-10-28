@@ -1,8 +1,8 @@
 /**
  * @file SteamPlatformServices.h
- * @brief 스팀 플랫폼 서비스입니다 — 스팀 SDK 호출 묶음(`ISteamApiBridge`)을 받아 `IPlatformServices` 로 보여 줍니다. SDK 자체는 링크하지 않습니다.
- * @details SDK(`steam_api`)를 링크하는 쪽(별도 플러그인)이 `ISteamApiBridge` 를 구현해 넘긴다 — 이 저장소의 빌드는 SDK 없이 선다(라이선스 · 외부 계정이 걸린 일은 그 플러그인의 몫).
- *          다리가 없거나 SDK 초기화(`ISteamApiBridge::initialize`)가 실패하면 서비스를 만들지 않는다(`SteamPlatformServices::create` 가 이유와 함께 nullptr) — 혼자 도는 척하는 대체는 없다.
+ * @brief 스팀 플랫폼 서비스입니다 — 스팀 SDK 호출 묶음(`ISteamAPIBridge`)을 받아 `IPlatformServices` 로 보여 줍니다. SDK 자체는 링크하지 않습니다.
+ * @details SDK(`steam_api`)를 링크하는 쪽(별도 플러그인)이 `ISteamAPIBridge` 를 구현해 넘긴다 — 이 저장소의 빌드는 SDK 없이 선다(라이선스 · 외부 계정이 걸린 일은 그 플러그인의 몫).
+ *          다리가 없거나 SDK 초기화(`ISteamAPIBridge::initialize`)가 실패하면 서비스를 만들지 않는다(`SteamPlatformServices::create` 가 이유와 함께 nullptr) — 혼자 도는 척하는 대체는 없다.
  *          스토어 이름은 `PlatformStoreName::kSteam`("steam") 이고 서버의 스팀 영수증 검증 제공자(`SteamReceiptValidator`)와 같은 글이다. 클라이언트가 스팀 결제(InitTxn · FinalizeTxn)를
  *          마친 주문 번호를 경제 서비스에 영수증으로 보낼 때 `storeName` 에 이 이름을 싣는다.
  */
@@ -18,17 +18,17 @@
 namespace sw
 {
     /**
-     * @class ISteamApiBridge
+     * @class ISteamAPIBridge
      * @brief 스팀 SDK 호출 묶음입니다. SDK 를 링크한 플러그인이 구현합니다(`ISteamUserStats` · `ISteamRemoteStorage` · `ISteamFriends` · `ISteamUser` 에 일대일).
      */
-    class SW_GF_API ISteamApiBridge
+    class SW_GF_API ISteamAPIBridge
     {
     public:
-        ISteamApiBridge()          = default;
-        virtual ~ISteamApiBridge() = default;
+        ISteamAPIBridge()          = default;
+        virtual ~ISteamAPIBridge() = default;
 
-        ISteamApiBridge( const ISteamApiBridge& )            = delete;
-        ISteamApiBridge& operator=( const ISteamApiBridge& ) = delete;
+        ISteamAPIBridge( const ISteamAPIBridge& )            = delete;
+        ISteamAPIBridge& operator=( const ISteamAPIBridge& ) = delete;
 
         /** @brief SDK 를 초기화합니다(`SteamAPI_Init`). 스팀 클라이언트가 없거나 앱 id 가 틀리면 false 이고 이유를 @p outError 에 씁니다. */
         [[nodiscard]] virtual bool initialize( string& outError )                                     = 0;
@@ -53,7 +53,7 @@ namespace sw
          * @brief 다리로 서비스를 만듭니다. @p pBridge 가 비었거나 SDK 초기화가 실패하면 이유를 @p outError 에 쓰고 nullptr 입니다(오류 로그도 남긴다).
          * @details 만든 서비스가 다리를 소유한다 - 소멸하면 SDK 를 내린다(`shutdown`).
          */
-        [[nodiscard]] static unique_ptr<SteamPlatformServices> create( unique_ptr<ISteamApiBridge> pBridge, string& outError );
+        [[nodiscard]] static unique_ptr<SteamPlatformServices> create( unique_ptr<ISteamAPIBridge> pBridge, string& outError );
 
         ~SteamPlatformServices() override;
 
@@ -67,8 +67,8 @@ namespace sw
         void        update() override { _pBridge->runCallbacks(); }
 
     private:
-        explicit SteamPlatformServices( unique_ptr<ISteamApiBridge> pBridge );
+        explicit SteamPlatformServices( unique_ptr<ISteamAPIBridge> pBridge );
 
-        unique_ptr<ISteamApiBridge> _pBridge;
+        unique_ptr<ISteamAPIBridge> _pBridge;
     };
 } // namespace sw

@@ -11,7 +11,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Debug/GpuAssert.h"
+#include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -130,13 +130,13 @@ namespace sw
         if ( quadCount == 0 )
             return;
         // 마커 투영 컴퓨트가 앵커 원소를 쓰려면 이 버퍼에 UAV 가 있어야 한다. 마커가 처음 올라온 프레임에 UAV 없이 만들어진 버퍼는 다시 만들고 내용을 다시 올린다.
-        const bool bNeedsUav = _markerCount > 0;
-        if ( bNeedsUav && _quadBuffer.isValid() && _quadBuffer._uav == kInvalidDescriptorIndex )
+        const bool bNeedsUAV = _markerCount > 0;
+        if ( bNeedsUAV && _quadBuffer.isValid() && _quadBuffer._uav == kInvalidDescriptorIndex )
         {
             _quadBuffer.release( &device );
             _uploadedRevision = 0;
         }
-        const RHIBufferUsage quadUsage = bNeedsUav ? ( RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess ) : RHIBufferUsage::ShaderResource;
+        const RHIBufferUsage quadUsage = bNeedsUAV ? ( RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess ) : RHIBufferUsage::ShaderResource;
         signature                      = signature == 0 ? 1 : signature;
         const bool bSameContent        = bKnown && signature == _uploadedRevision && quadCount == _uploadedQuadCount && _quadBuffer.isValid();
         if ( bSameContent )
@@ -159,7 +159,7 @@ namespace sw
         {
             const uint32 capacity = MathUtil::max( quadCount, static_cast<uint32>( static_cast<float32>( _quadBuffer._capacityElements ) * CanvasRendererInternal::kQuadBufferGrowth ) );
             _quadBuffer.release( &device );
-            if ( _quadBuffer.ensureCapacity( &device, sizeof( CanvasQuad ), capacity, quadUsage, true, bNeedsUav, nullptr ) == false )
+            if ( _quadBuffer.ensureCapacity( &device, sizeof( CanvasQuad ), capacity, quadUsage, true, bNeedsUAV, nullptr ) == false )
             {
                 SW_LOG_ERROR( "Failed to create the canvas quad buffer (%# quads) - the canvas is not drawn", capacity );
                 _uploadedRevision = 0;
@@ -235,8 +235,8 @@ namespace sw
         _bMarkerReadsInstances = bAnyInstanceSlot;
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv,
-                                                 GpuAssertMonitor& inoutAssert, bool bShowInstanceSlots )
+    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV, RHIDescriptorIndex placeholderSRV,
+                                                 GPUAssertMonitor& inoutAssert, bool bShowInstanceSlots )
     {
         if ( _markerCount == 0 )
             return;
@@ -252,7 +252,7 @@ namespace sw
             return;
         }
         // 인스턴스 칸을 읽는 마커가 있으면 GPUScene 인스턴스 버퍼(컬링 · 인스턴스 애니메이션이 이미 끝났다)를 읽는다. 읽을 버퍼가 없으면 칸을 해석할 수 없으므로 멈춘다.
-        if ( _bMarkerReadsInstances && ( instanceBuffer == 0 || instanceSrv == kInvalidDescriptorIndex ) )
+        if ( _bMarkerReadsInstances && ( instanceBuffer == 0 || instanceSRV == kInvalidDescriptorIndex ) )
         {
             SW_LOG_ERROR_ONCE( "GPU-projected markers reference GPUScene instances but the instance buffer is not available - the markers are not placed" );
             return;
@@ -266,8 +266,8 @@ namespace sw
         cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
         if ( _bMarkerReadsInstances )
             cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
-        cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSrv : placeholderSrv, 1 );
-        cmd.bindComputeUav( _quadBuffer._uav, 0 );
+        cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSRV : placeholderSRV, 1 );
+        cmd.bindComputeUAV( _quadBuffer._uav, 0 );
         // 루트 상수 하나(canvasmarker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 0, 1, &debugMode );
@@ -308,7 +308,7 @@ namespace sw
             {
                 RHIDescriptorIndex srv = kInvalidDescriptorIndex;
                 if ( slot < batch._textureCount )
-                    srv = findTextureSrv( batch._arrTexture[slot] );
+                    srv = findTextureSRV( batch._arrTexture[slot] );
                 if ( srv == kInvalidDescriptorIndex )
                 {
                     arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = invalid_index::kUint32;
@@ -673,16 +673,16 @@ namespace sw
         return VectorUtil::findBy<&TargetState::_path>( _listTarget, path );
     }
 
-    RHIDescriptorIndex CanvasRenderer::findTextureSrv( const CanvasTextureRef& texture ) const
+    RHIDescriptorIndex CanvasRenderer::findTextureSRV( const CanvasTextureRef& texture ) const
     {
         if ( texture._texture != nullptr )
-            return texture._texture->isRHIValid() ? texture._texture->getSrv() : kInvalidDescriptorIndex;
+            return texture._texture->isRHIValid() ? texture._texture->getSRV() : kInvalidDescriptorIndex;
         if ( texture._texturePath.empty() == false )
         {
             for ( const PathTexture& pathTexture : _listPathTexture )
             {
                 if ( pathTexture._path == texture._texturePath )
-                    return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRHIValid() ? pathTexture._pTexture->getSrv() : kInvalidDescriptorIndex;
+                    return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRHIValid() ? pathTexture._pTexture->getSRV() : kInvalidDescriptorIndex;
             }
             return kInvalidDescriptorIndex;
         }

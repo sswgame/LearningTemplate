@@ -16,7 +16,7 @@ namespace sw
     {
         struct MonsterBattleInternal
         {
-            static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "Hp", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
+            static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "HP", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
 
             static bool isSpeciesStab( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& moveType )
             {
@@ -362,7 +362,7 @@ namespace sw
         MonsterInstance&           target   = getActiveMutable( kFoeSide );
         const MonsterSpeciesDef*   pSpecies = _pCatalog->findSpecies( target._speciesID );
         const int32                rate     = pSpecies != nullptr ? pSpecies->_catchRate : 1;
-        const MonsterCaptureResult result   = computeCapture( target.getMaxHp(), target._hp, rate, ballMultiplier, target._status, _random );
+        const MonsterCaptureResult result   = computeCapture( target.getMaxHP(), target._hp, rate, ballMultiplier, target._status, _random );
         for ( int32 shake = 1; shake <= result._shakes; ++shake )
         {
             pushEvent( MonsterBattleEvent::Kind::CaptureShake, kFoeSide, shake, target._speciesID );
@@ -531,27 +531,27 @@ namespace sw
                     }
                 }
                 if ( bImmune == false )
-                    applyDamage( side, MathUtil::max( 1, getActive( side ).getMaxHp() / pWeather->_chipDivisor ), MonsterBattleEvent::Kind::WeatherDamage,
+                    applyDamage( side, MathUtil::max( 1, getActive( side ).getMaxHP() / pWeather->_chipDivisor ), MonsterBattleEvent::Kind::WeatherDamage,
                                  _weatherID );
             }
 
             MonsterInstance& monster = getActiveMutable( side );
-            const int32      maxHp   = monster.getMaxHp();
+            const int32      maxHP   = monster.getMaxHP();
             if ( monster.isFainted() == false )
             {
                 if ( monster._status == MonsterStatus::Poison )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHp / 8 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getPoisonName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP / 8 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getPoisonName() );
                 }
                 else if ( monster._status == MonsterStatus::Burn )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHp / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getBurnName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getBurnName() );
                 }
                 else if ( monster._status == MonsterStatus::Toxic )
                 {
                     const int32 counter  = MathUtil::clamp( monster._statusTurns, 1, 15 );
                     monster._statusTurns = counter + 1;
-                    applyDamage( side, MathUtil::max( 1, maxHp * counter / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getToxicName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP * counter / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getToxicName() );
                 }
             }
             if ( getActive( side ).isFainted() )
@@ -584,13 +584,13 @@ namespace sw
         return static_cast<int32>( MathUtil::clamp<int64>( damage, 1, 0x7fffffff ) );
     }
 
-    MonsterCaptureResult MonsterBattle::computeCapture( int32 maxHp, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random )
+    MonsterCaptureResult MonsterBattle::computeCapture( int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random )
     {
         MonsterCaptureResult result;
-        const int64          safeMaxHp = MathUtil::max( 1, maxHp );
-        const int64          safeHp    = MathUtil::clamp<int64>( hp, 1, safeMaxHp );
+        const int64          safeMaxHP = MathUtil::max( 1, maxHP );
+        const int64          safeHP    = MathUtil::clamp<int64>( hp, 1, safeMaxHP );
         float64              catchValue =
-            MathUtil::floor( static_cast<float64>( ( 3 * safeMaxHp - 2 * safeHp ) * MathUtil::clamp( catchRate, 1, 255 ) ) * static_cast<float64>( ballMultiplier ) / static_cast<float64>( 3 * safeMaxHp ) );
+            MathUtil::floor( static_cast<float64>( ( 3 * safeMaxHP - 2 * safeHP ) * MathUtil::clamp( catchRate, 1, 255 ) ) * static_cast<float64>( ballMultiplier ) / static_cast<float64>( 3 * safeMaxHP ) );
         if ( status == MonsterStatus::Sleep || status == MonsterStatus::Freeze )
             catchValue *= 2.0;
         else if ( status != MonsterStatus::None )

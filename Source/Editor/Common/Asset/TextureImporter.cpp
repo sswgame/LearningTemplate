@@ -41,12 +41,12 @@ namespace sw::editor
     {
         /**
          * @brief 규칙의 형식을 DXGI 형식으로 바꿉니다. 규칙은 이미 푼 형식(`TextureImportFormat`)을 들므로 실패가 없다 — 모르는 이름은 설정 로드가 거절했다.
-         * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
+         * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSRGB 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
          *          번호는 이름 표 하나(`TextureImportFormatUtil::getDxgiFormat`)에서 온다 — 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
          */
-        [[nodiscard]] DXGI_FORMAT resolveFormatInternal( TextureImportFormat format, bool bSrgb )
+        [[nodiscard]] DXGI_FORMAT resolveFormatInternal( TextureImportFormat format, bool bSRGB )
         {
-            return static_cast<DXGI_FORMAT>( TextureImportFormatUtil::getDxgiFormat( format, bSrgb ) );
+            return static_cast<DXGI_FORMAT>( TextureImportFormatUtil::getDxgiFormat( format, bSRGB ) );
         }
 
         /**
@@ -176,7 +176,7 @@ namespace sw::editor
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
             // 다른 형식은 옛 머리 그대로 둔다 — 이미 커밋된 DDS 의 바이트가 바뀌지 않게 한다.
             const DirectX::DDS_FLAGS saveFlags = finalImage.GetMetadata().format == DXGI_FORMAT_R8_UNORM ? DirectX::DDS_FLAGS_FORCE_DX10_EXT : DirectX::DDS_FLAGS_NONE;
-            const wstring            wOutPath  = StringUtil::utf8ToUtf16( string( outputPath ).c_str() );
+            const wstring            wOutPath  = StringUtil::utf8ToUTF16( string( outputPath ).c_str() );
             const HRESULT            hrSave    = DirectX::SaveToDDSFile( finalImage.GetImages(), finalImage.GetImageCount(), finalImage.GetMetadata(), saveFlags, wOutPath.c_str() );
             if ( FAILED( hrSave ) )
             {
@@ -254,7 +254,7 @@ namespace sw::editor
          * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
          * @details 규칙의 포맷이 다른 것(8비트)이면 실패로 알린다. 1 을 넘는 값을 자르지 않기 위해서다. 밉은 선형 값 그대로 섞으며 sRGB 가 아니다.
          */
-        [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TaskManager* pTaskManager,
+        [[nodiscard]] bool importHDRTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TaskManager* pTaskManager,
                                                      TextureImportResult* pOutResult )
         {
             const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
@@ -263,7 +263,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
                 return false;
             }
-            const wstring         wSourcePath = StringUtil::utf8ToUtf16( string( sourcePath ).c_str() );
+            const wstring         wSourcePath = StringUtil::utf8ToUTF16( string( sourcePath ).c_str() );
             DirectX::TexMetadata  metadata{};
             DirectX::ScratchImage sourceImage;
             HRESULT               hr = DirectX::LoadFromHDRFile( wSourcePath.c_str(), &metadata, sourceImage );
@@ -277,8 +277,8 @@ namespace sw::editor
             if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, pTaskManager, finalImage ) == false )
                 return false;
             // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
-            constexpr uint32 kHdrSourceChannelCount = 3;
-            return saveImportedDDSInternal( finalImage, kHdrSourceChannelCount, sourcePath, outputPath, pOutResult );
+            constexpr uint32 kHDRSourceChannelCount = 3;
+            return saveImportedDDSInternal( finalImage, kHDRSourceChannelCount, sourcePath, outputPath, pOutResult );
         }
 
         /**
@@ -302,7 +302,7 @@ namespace sw::editor
             // BGRA 와 ARGB 는 같은 것이다. D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B, G, R, A 순서이고 DXGI 는 그것을 `B8G8R8A8`
             // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. RGBA 를 왼쪽으로 한 채널 돌린 GBAR 은 어떻게 읽어도
             // ARGB 가 아니므로 주의한다.
-            static constexpr SwizzleLayout kRgba{
+            static constexpr SwizzleLayout kRGBA{
                 { 0, 1, 2, 3 },
                 SW_FALSE,
                 DXGI_FORMAT_R8G8B8A8_UNORM
@@ -312,7 +312,7 @@ namespace sw::editor
                 SW_FALSE,
                 DXGI_FORMAT_B8G8R8A8_UNORM
             };
-            static constexpr SwizzleLayout kRgb1{
+            static constexpr SwizzleLayout kRGB1{
                 { 0, 1, 2, 3 },
                 SW_TRUE,
                 DXGI_FORMAT_R8G8B8A8_UNORM
@@ -324,9 +324,9 @@ namespace sw::editor
                 case TextureSwizzle::ARGB:
                     return kBgra;
                 case TextureSwizzle::RGB1:
-                    return kRgb1;
+                    return kRGB1;
                 case TextureSwizzle::RGBA:
-                    return kRgba;
+                    return kRGBA;
             }
         }
 
@@ -421,7 +421,7 @@ namespace sw::editor
 
         // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
         if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
-            return importHdrTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
+            return importHDRTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
 
         // 1) ImageUtil 로 소스 이미지를 디코딩한다
         RawImageData rawImage;
@@ -435,7 +435,7 @@ namespace sw::editor
 
         applyChannelManipulations( rawImage, rule, totalPixels );
 
-        const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
+        const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, rule._bSRGB == SW_TRUE );
 
         // 2) DirectXTex 기본 Image 구성
         DirectX::Image baseImage{};
@@ -544,7 +544,7 @@ namespace sw::editor
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
-        const DXGI_FORMAT                      resolvedFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
+        const DXGI_FORMAT                      resolvedFormat = resolveFormatInternal( rule._format, rule._bSRGB == SW_TRUE );
         const SwizzleLayout&                   layout         = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
@@ -552,7 +552,7 @@ namespace sw::editor
                                static_cast<uint32>( resolvedFormat ),
                                static_cast<uint32>( layout._arrSourceChannel[0] ), static_cast<uint32>( layout._arrSourceChannel[1] ),
                                static_cast<uint32>( layout._arrSourceChannel[2] ), static_cast<uint32>( layout._arrSourceChannel[3] ),
-                               static_cast<uint32>( layout._bForceOpaqueAlpha ), static_cast<uint32>( rule._bGenerateMips ), static_cast<uint32>( rule._bSrgb ),
+                               static_cast<uint32>( layout._bForceOpaqueAlpha ), static_cast<uint32>( rule._bGenerateMips ), static_cast<uint32>( rule._bSRGB ),
                                static_cast<uint32>( rule._bInvertGreen ) );
 
         const uint64 contentHash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );

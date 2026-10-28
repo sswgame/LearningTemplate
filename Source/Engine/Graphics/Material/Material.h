@@ -33,7 +33,7 @@ namespace sw
      * @details `NotRequested` → (`requestInitialize`) `Pending` → (렌더 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
      *          패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않습니다.
      */
-    enum class MaterialGpuState : uint8
+    enum class MaterialGPUState : uint8
     {
         NotRequested,
         Pending,
@@ -104,9 +104,9 @@ namespace sw
         /** @brief GPU 자원이 올라가 있으면 true 입니다. 캐시가 따로 세지 않고 이 값을 봅니다. */
         bool isRHIValid() const { return _constantBuffer != 0; }
         /** @brief GPU 준비 상태입니다(어느 스레드에서나 읽습니다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
-        MaterialGpuState getGpuState() const { return static_cast<MaterialGpuState>( _gpuState.load( std::memory_order_acquire ) ); }
+        MaterialGPUState getGPUState() const { return static_cast<MaterialGPUState>( _gpuState.load( std::memory_order_acquire ) ); }
         /** @brief 준비 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
-        void setGpuState( MaterialGpuState state ) { _gpuState.store( static_cast<uint8>( state ), std::memory_order_release ); }
+        void setGPUState( MaterialGPUState state ) { _gpuState.store( static_cast<uint8>( state ), std::memory_order_release ); }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
@@ -206,11 +206,11 @@ namespace sw
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다.
          */
-        const vector<RHIDescriptorIndex>& getMaterialTextureSrvs() const { return _listMaterialTextureSrv; }
+        const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
         /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
         static constexpr uint32 kInvalidTextureSlot = invalid_index::kUint32;
         /**
-         * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSrvs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
+         * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 kInvalidTextureSlot 입니다.
          * @details 인스턴스가 같은 프로퍼티의 텍스처를 덮어쓸 때 같은 슬롯을 쓰려고 묻는다(`MaterialInstance::findTextureSlot`).
          */
@@ -323,7 +323,7 @@ namespace sw
         string                     _assetPath;
         MaterialDesc               _desc;
         MaterialData               _data;
-        atomic<uint8>              _gpuState{ static_cast<uint8>( MaterialGpuState::NotRequested ) }; /**< `MaterialGpuState`. 게임 스레드가 읽고 렌더 스레드가 쓴다. */
+        atomic<uint8>              _gpuState{ static_cast<uint8>( MaterialGPUState::NotRequested ) }; /**< `MaterialGPUState`. 게임 스레드가 읽고 렌더 스레드가 쓴다. */
         RHIBufferHandle            _constantBuffer;
         uint32                     _constantBufferBytes; /**< `_constantBuffer` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(`uploadConstantBytes`). */
         RHIDescriptorIndex         _descriptorIndex;
@@ -337,7 +337,7 @@ namespace sw
         vector<TextureHandle>      _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
         AssetLoadStart             _textureLoadStart;        ///< 텍스처 로드를 어디서 시작하는가(`setTextureLoadStart`). 기본은 그 자리(동기)
         vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
-        vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<RHIDescriptorIndex> _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         RHIBlendMode               _blendMode;
         shared_ptr<AsyncLoadState> _asyncLoadState;

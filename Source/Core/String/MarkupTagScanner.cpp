@@ -8,8 +8,8 @@ namespace sw
     {
         struct MarkupTagScannerInternal
         {
-            static bool isAsciiLetter( utf8 character ) { return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ); }
-            static bool isNameCharacter( utf8 character ) { return isAsciiLetter( character ) || ( '0' <= character && character <= '9' ) || character == '_'; }
+            static bool isASCIILetter( utf8 character ) { return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ); }
+            static bool isNameCharacter( utf8 character ) { return isASCIILetter( character ) || ( '0' <= character && character <= '9' ) || character == '_'; }
 
             /**
              * @brief @p start 의 `[` 가 태그 형태인지 보고, 그렇다면 토큰을 채웁니다(`_offset` · `_text` · 이름 · 값 · 종류).
@@ -22,7 +22,7 @@ namespace sw
                 if ( bClose )
                     ++cursor;
                 const size_t nameStart = cursor;
-                if ( cursor >= markup.size() || isAsciiLetter( markup[cursor] ) == false )
+                if ( cursor >= markup.size() || isASCIILetter( markup[cursor] ) == false )
                     return false;
                 while ( cursor < markup.size() && isNameCharacter( markup[cursor] ) )
                 {

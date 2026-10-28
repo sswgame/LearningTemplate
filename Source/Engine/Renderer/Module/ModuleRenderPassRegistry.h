@@ -26,7 +26,7 @@
 namespace sw
 {
     /** @brief 프록시 하나의 번호입니다. 0 은 등록 실패입니다. */
-    using ModuleSceneProxyId = uint32;
+    using ModuleSceneProxyID = uint32;
     /** @brief 프록시 갱신 함수입니다. 게임 스레드가 값을 캡처해 올리고, 렌더 스레드가 프레임 시작에 프록시에 적용합니다. */
     using ModuleProxyUpdateFn = Delegate<void( IModuleSceneProxy& )>;
 
@@ -70,11 +70,11 @@ namespace sw
         void unregisterExtension( IModuleRenderExtension* pExtension );
 
         /** @brief 프록시를 올리고(소유권을 넘긴다) 번호를 돌려줍니다. nullptr 이면 0 입니다. 렌더 스레드는 다음 프레임부터 봅니다. */
-        [[nodiscard]] ModuleSceneProxyId addProxy( unique_ptr<IModuleSceneProxy> pProxy );
+        [[nodiscard]] ModuleSceneProxyID addProxy( unique_ptr<IModuleSceneProxy> pProxy );
         /** @brief 프록시를 풀고 소멸시킵니다. flush 한 뒤이므로 소멸자는 호출한 모듈 안에서 돕니다. 그 프록시에 대기 중인 갱신도 버립니다. 없는 번호면 아무것도 하지 않습니다. */
-        void removeProxy( ModuleSceneProxyId id );
+        void removeProxy( ModuleSceneProxyID id );
         /** @brief 프록시 갱신을 올립니다. 렌더 스레드가 다음 프레임 시작에 적용합니다. 없는 번호이거나 함수가 비어 있으면 false 입니다. */
-        [[nodiscard]] bool enqueueProxyUpdate( ModuleSceneProxyId id, ModuleProxyUpdateFn update );
+        [[nodiscard]] bool enqueueProxyUpdate( ModuleSceneProxyID id, ModuleProxyUpdateFn update );
 
         // --- 아래는 렌더 스레드가 `RenderScope` 안에서만 부릅니다. ---
 
@@ -90,12 +90,12 @@ namespace sw
     private:
         struct ProxyEntry
         {
-            ModuleSceneProxyId            _id{ 0 };
+            ModuleSceneProxyID            _id{ 0 };
             unique_ptr<IModuleSceneProxy> _pProxy;
         };
         struct PendingUpdate
         {
-            ModuleSceneProxyId  _id{ 0 };
+            ModuleSceneProxyID  _id{ 0 };
             ModuleProxyUpdateFn _update;
         };
 
@@ -104,7 +104,7 @@ namespace sw
         vector<IModuleRenderExtension*> _listExtension    SW_GUARDED_BY( _mutex );
         vector<ProxyEntry> _listProxy                     SW_GUARDED_BY( _mutex );
         vector<PendingUpdate> _listPendingUpdate          SW_GUARDED_BY( _mutex );
-        ModuleSceneProxyId _nextProxyId                   SW_GUARDED_BY( _mutex ) = 1;
+        ModuleSceneProxyID _nextProxyID                   SW_GUARDED_BY( _mutex ) = 1;
         unordered_set<hashed_string> _uniqueFailureLogged SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
@@ -152,6 +152,6 @@ namespace sw
 
     private:
         ModuleRenderPassRegistry& _registry;
-        ModuleSceneProxyId        _id;
+        ModuleSceneProxyID        _id;
     };
 } // namespace sw

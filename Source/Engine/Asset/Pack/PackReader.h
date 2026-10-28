@@ -92,7 +92,7 @@ namespace sw
         PackHeader getHeader() const;
 
         /** @brief DLC 식별자를 반환합니다(0 = 본편, >0 = DLC AppID). */
-        uint32 getDlcAppID() const;
+        uint32 getDLCAppID() const;
 
         /** @brief 팩에 든 파일 총 개수를 반환합니다. */
         uint32 getFileCount() const;
@@ -109,7 +109,7 @@ namespace sw
             uint32              _uncompressedSize{ 0 };
             uint32              _crc32{ 0 };
             PackCompressionType _compression{ PackCompressionType::None };
-            bool                _bVerifyCrc{ false };
+            bool                _bVerifyCRC{ false };
 
             /** @brief 디스크에서 읽을 바이트 수입니다(비압축이면 원본 크기). */
             uint32 getStoredSize() const { return _compression == PackCompressionType::None ? _uncompressedSize : _compressedSize; }

@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -19,7 +19,7 @@ namespace sw
         /**
          * @brief 부르는 쪽이 준 슬롯을 레지스터 번호로 정규화합니다.
          * @details 엔진 바인더는 리플렉션의 `_registerIndex` 를 그대로 넘기는데, Vulkan 리플렉션에서 그 값은 세트 0 의 **binding**
-         *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)입니다. 명시 호출(bindComputeUav( idx, 0 ) 등)은 레지스터를 줍니다.
+         *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)입니다. 명시 호출(bindComputeUAV( idx, 0 ) 등)은 레지스터를 줍니다.
          *          t 범위(16..31) · u 범위(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌립니다.
          */
         uint32 toRegister( uint32 slot, uint32 rangeShift )
@@ -226,7 +226,7 @@ namespace sw
         // 그래픽스 t# → 슬롯 세트의 t 범위. 텍스처 슬롯(엔진 t0..t3 · 머티리얼 t16..t31, 에뮬 전용)은 여기로 오지 않는다.
         // FrameRenderer 가 supportsNativeBindlessSampling() 이면 건너뛴다.
         slot = toRegister( slot, shaderslot::vk::kTShift );
-        if ( slot >= shaderslot::kSrvSlotCount )
+        if ( slot >= shaderslot::kSRVSlotCount )
             return;
         setSlot( false, shaderslot::vk::kTShift + slot, index, false, false );
     }
@@ -593,11 +593,11 @@ namespace sw
         vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
-    void VulkanRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
+    void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessBufferUav)의 것이다.
+        // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것이다.
         slot = toRegister( slot, shaderslot::vk::kUShift );
-        if ( slot >= shaderslot::kComputeUavSlotCount )
+        if ( slot >= shaderslot::kComputeUAVSlotCount )
             return;
         setSlot( true, shaderslot::vk::kUShift + slot, index, true, false );
     }
@@ -605,7 +605,7 @@ namespace sw
     void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         slot = toRegister( slot, shaderslot::vk::kTShift );
-        if ( slot >= shaderslot::kSrvSlotCount )
+        if ( slot >= shaderslot::kSRVSlotCount )
             return;
         setSlot( true, shaderslot::vk::kTShift + slot, index, false, false );
     }
@@ -638,11 +638,11 @@ namespace sw
         _pState->_boundIndexOffset = offset;
     }
 
-    void VulkanRHICommandContext::setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUav, bool bConstantBuffer )
+    void VulkanRHICommandContext::setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUAV, bool bConstantBuffer )
     {
         if ( bindingIndex >= shaderslot::vk::kSlotBindingCount || index == kInvalidDescriptorIndex )
             return;
-        const RHIBufferHandle                      handle  = bUav ? _pDevice->uavSourceBufferAt( index ) : _pDevice->bindlessSourceBufferAt( index );
+        const RHIBufferHandle                      handle  = bUAV ? _pDevice->uavSourceBufferAt( index ) : _pDevice->bindlessSourceBufferAt( index );
         const VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( handle );
         if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
             return;
@@ -1033,16 +1033,16 @@ namespace sw
         }
     }
 
-    void VulkanRHICommandContext::writeBreadcrumb( uint32 markerId )
+    void VulkanRHICommandContext::writeBreadcrumb( uint32 markerID )
     {
 #if !defined( SW_SHIPPING )
         VkCommandBuffer cmd = commandBuffer();
         if ( _pDevice->_bCheckpoints == SW_FALSE || cmd == VK_NULL_HANDLE )
             return;
         // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
-        reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerId ) ) );
+        reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
 #else
-        (void)markerId;
+        (void)markerID;
 #endif
     }
 

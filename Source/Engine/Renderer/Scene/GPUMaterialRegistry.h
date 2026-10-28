@@ -33,7 +33,7 @@ namespace sw
         static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither );
         /**
          * @brief (머티리얼, 인스턴스)의 셰이더 퍼뮤테이션(경로 · define · 해시)을 만듭니다. 머티리얼이 있어야 합니다.
-         * @details 배치의 퍼뮤테이션 표(`shaderPermutationFor`)와 고정한 머티리얼의 PSO 미리 만들기(`FrameRenderer::warmPinnedMaterialPSOs`)가 같은 정의를 쓴다 —
+         * @details 배치의 퍼뮤테이션 표(`shaderPermutationFor`)와 고정한 머티리얼의 PSO 미리 만들기(`FrameRenderer::warmPinnedMaterialPSOS`)가 같은 정의를 쓴다 —
          *          둘이 다르면 미리 만든 PSO 의 키가 실제 배치의 키와 어긋나 다시 만든다.
          */
         static GPUShaderPermutation makeShaderPermutation( const Material& material, const MaterialInstance* pInstance, bool bAppearanceDither );

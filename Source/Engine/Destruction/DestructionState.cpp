@@ -578,7 +578,7 @@ namespace sw
     uint64 DestructionState::computeStateHash() const
     {
         using Internal = DestructionStateInternal;
-        uint64 hash    = HashUtil::kFnvOffset64;
+        uint64 hash    = HashUtil::kFNVOffset64;
         for ( size_t node = 0; node < _listNodeStrain.size(); ++node )
         {
             hash = Internal::mixHash( hash, BitUtil::floatToBits( _listNodeStrain[node] ) );

@@ -334,7 +334,7 @@ namespace sw::editor
         // 렌더러가 그리는 미리보기 씬의 구 — 메인 뷰포트의 선택 오브젝트를 빌리지 않는다.
         syncPreviewSubjectMaterial();
         ImGui::SameLine();
-        const float32 previewSide = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDpiScale();
+        const float32 previewSide = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "material.previewScene" );
 
@@ -390,7 +390,7 @@ namespace sw::editor
         constexpr int32 kSegmentCount = 48;
 
         const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _material->getProperties() );
-        const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDpiScale();
+        const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
         EditorSelfTestMarks::note( "material.preview" );

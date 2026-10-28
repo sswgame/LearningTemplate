@@ -290,9 +290,9 @@ namespace sw
         /** @brief UTF-8 텍스트를 파일 끝에 덧붙입니다(없으면 만듭니다). 쓰기 · 닫기 결과를 확인합니다. 원자적이지 않아(덧붙이다 끊기면 마지막 줄이 잘릴 수 있다) 스풀 · 기록 파일에만 씁니다. */
         [[nodiscard]] static bool appendTextFile( string_view fileName, string_view text );
         /** @brief 문자열이 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 그것을 건너뛴 string_view 를 반환합니다. */
-        static string_view skipUtf8Bom( string_view text );
+        static string_view skipUTF8Bom( string_view text );
         /** @brief 버퍼가 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 포인터와 크기를 3바이트 건너뛰도록 고칩니다. */
-        static void skipUtf8Bom( const uint8*& pData, size_t& size );
+        static void skipUTF8Bom( const uint8*& pData, size_t& size );
 
         /**
          * @brief 네이티브 파일 다이얼로그를 엽니다. **결과 델리게이트는 메인 스레드에서 불립니다.**

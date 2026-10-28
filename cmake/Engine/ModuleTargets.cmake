@@ -7,9 +7,9 @@
 # 런타임은 `ModuleImageUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
 # 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
 # vcpkg 의 applocal 이 `Bin/Modules` 의 모듈 옆에 서드파티 DLL 을 복사하지 않게 하고, 같은 일을 모듈마다 스테이지 폴더에서 해 `Bin` 으로 옮긴다
-# (`StageModuleRuntimeDlls.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
+# (`StageModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
 # 실행 파일 폴더를 본다. vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽으므로 부르는 쪽(`sw_addModuleLibrary`)이 그 순간만 끈다.
-function(sw_stageModuleRuntimeDlls TARGET_NAME)
+function(sw_stageModuleRuntimeDLLs TARGET_NAME)
 	if(NOT WIN32 OR NOT DEFINED Z_VCPKG_EXECUTABLE OR NOT DEFINED VCPKG_INSTALLED_DIR)
 		return()
 	endif()
@@ -20,7 +20,7 @@ function(sw_stageModuleRuntimeDlls TARGET_NAME)
 			"-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin"
 			"-DVCPKG_EXECUTABLE=${Z_VCPKG_EXECUTABLE}"
 			"-DINSTALLED_BIN_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}$<$<CONFIG:Debug>:/debug>/bin"
-			-P "${CMAKE_SOURCE_DIR}/cmake/Engine/StageModuleRuntimeDlls.cmake"
+			-P "${CMAKE_SOURCE_DIR}/cmake/Engine/StageModuleRuntimeDLLs.cmake"
 		VERBATIM
 	)
 endfunction()
@@ -44,7 +44,7 @@ endfunction()
 #
 #   KIND        rhi | kit | game | gameframework | editor | editorextension   동적 모듈 레지스트리 종류(`sw_registerDynamicModule`)
 #   DEV_TYPE    SHARED | MODULE                              개발 빌드의 라이브러리 종류. 배포(SW_SHIPPING_BUILD)는 늘 STATIC 이다
-#   EXPORTS     GF | MODULE | MODULE_SHARED | EDITOR          내보내기 매크로(`sw_configureDllExports`)
+#   EXPORTS     GF | MODULE | MODULE_SHARED | EDITOR          내보내기 매크로(`sw_configureDLLExports`)
 #   LOG_TAG     로그 태그(SW_LOG_TAG)
 #   FOLDER      IDE 폴더
 #   SOURCES     소스
@@ -73,22 +73,22 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set(ARG_MODULE_NAME ${TARGET_NAME})
 	endif()
 	# 게임 팩끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다 — 명령줄 정의가 같아야 하므로 Dev · clang-cl · PCH 켬일 때만(키트의 `sw_kit_pch` 와 같은 장치).
-	set(bShareGamePch OFF)
+	set(bShareGamePCH OFF)
 	if(ARG_KIND STREQUAL "game" AND SW_ENABLE_PCH AND MSVC AND NOT libType STREQUAL "STATIC")
-		set(bShareGamePch ON)
+		set(bShareGamePCH ON)
 	endif()
 
-	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stageModuleRuntimeDlls`).
-	set(bStageRuntimeDlls OFF)
+	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stageModuleRuntimeDLLs`).
+	set(bStageRuntimeDLLs OFF)
 	if(VCPKG_APPLOCAL_DEPS AND NOT libType STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
 		set(VCPKG_APPLOCAL_DEPS OFF)
-		set(bStageRuntimeDlls ON)
+		set(bStageRuntimeDLLs ON)
 	endif()
 	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
 	sw_requireDeterministicMarkForRollback(${TARGET_NAME} ${ARG_SOURCES})
 	sw_keepImportLibraryIfUnchanged(${TARGET_NAME})
-	if(bStageRuntimeDlls)
-		sw_stageModuleRuntimeDlls(${TARGET_NAME})
+	if(bStageRuntimeDLLs)
+		sw_stageModuleRuntimeDLLs(${TARGET_NAME})
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
 	if(NOT ARG_MODULE_NAME STREQUAL TARGET_NAME)
@@ -100,14 +100,14 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 	target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_LINK_PRIVATE} sw_global_options)
 	if(ARG_KIND STREQUAL "kit")
-		# 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`, 함수 끝의 `sw_useSharedPch`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
+		# 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`, 함수 끝의 `sw_useSharedPCH`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
 		# 자동 정의 `<타깃>_EXPORTS` 는 아무도 쓰지 않아 끈다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		if(ARG_DEFINITIONS)
 			target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_DEFINITIONS})
 		endif()
 		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}")
-		set(listPchDefinition "")
+		set(listPCHDefinition "")
 		if(libType STREQUAL "SHARED")
 			# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
 			# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 키트가 include 한 공유 키트 헤더(`SW_KIT_API`)는
@@ -119,25 +119,25 @@ function(sw_addModuleLibrary TARGET_NAME)
 				list(APPEND listTargetDefsOption KIT_EXPORTS)
 			endif()
 			target_compile_definitions(${TARGET_NAME} PUBLIC SW_KIT_IMPORTS)
-			set(listPchDefinition DEFINITIONS SW_KIT_IMPORTS)
+			set(listPCHDefinition DEFINITIONS SW_KIT_IMPORTS)
 		endif()
 		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
-		sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-			LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPchDefinition})
-	elseif(bShareGamePch)
+		sw_addSharedPCHOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
+			LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPCHDefinition})
+	elseif(bShareGamePCH)
 		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		# 키트를 링크하는 게임 모듈은 키트 타깃의 PUBLIC `SW_KIT_IMPORTS` 를 물려받는다. 게임 PCH 와 게임 TU 의 명령줄 정의가 같아야
 		# 하므로 모든 게임이 이 정의를 직접 가지고 PCH 소유자도 같게 가진다(키트가 없는 게임에도 해롭지 않다. 키트 헤더만 읽는다).
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
-		sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
-		sw_addSharedPchOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
+		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+		sw_addSharedPCHOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK Engine RuntimeAPI GameFramework sw_global_options
 			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
-		sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-		sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+		sw_configurePCH(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 	endif()
 
 	if(NOT libType STREQUAL "STATIC")
@@ -166,9 +166,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 
 	if(ARG_KIND STREQUAL "kit")
-		sw_useSharedPch(${TARGET_NAME} sw_kit_pch)   # 소스(리플렉션 산출물 포함)가 다 붙은 뒤
-	elseif(bShareGamePch)
-		sw_useSharedPch(${TARGET_NAME} sw_game_pch)
+		sw_useSharedPCH(${TARGET_NAME} sw_kit_pch)   # 소스(리플렉션 산출물 포함)가 다 붙은 뒤
+	elseif(bShareGamePCH)
+		sw_useSharedPCH(${TARGET_NAME} sw_game_pch)
 	endif()
 endfunction()
 
@@ -216,7 +216,7 @@ function(sw_addModulePart PART_NAME)
 	if(TARGET ${ARG_OWNER}_ReflectionGen)
 		add_dependencies(${PART_NAME} ${ARG_OWNER}_ReflectionGen)
 	endif()
-	sw_configurePch(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configurePCH(${PART_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	get_target_property(bOwnerUnity ${ARG_OWNER} UNITY_BUILD)
 	if(bOwnerUnity)
 		get_target_property(ownerBatch ${ARG_OWNER} UNITY_BUILD_BATCH_SIZE)
@@ -228,9 +228,9 @@ endfunction()
 
 # RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가
 # 백엔드 하나를 Engine 에 넣는다).
-function(sw_addRhiBackendModule BACKEND_NAME)
+function(sw_addRHIBackendModule BACKEND_NAME)
 	set(moduleName ${SW_RHI_BACKEND_${BACKEND_NAME}_MODULE})
-	sw_getRhiBackendSources(${BACKEND_NAME} listDeviceSource)
+	sw_getRHIBackendSources(${BACKEND_NAME} listDeviceSource)
 	sw_skipInactiveModule(${moduleName} swSkip)
 	if(swSkip)
 		# 장치 소스는 모듈 폴더 밖(Graphics/RHI/<폴더>)에 있다 — 그것도 이 구성이 짓지 않는다.

@@ -753,7 +753,7 @@ namespace sw
         }
         lock.unlock();
 
-        // 이전 프레임이 옛 텍스처와 그 bindless 인덱스를 읽고 있을 수 있다. 기다리지 않고 옛 자원을 해제 줄에 넘긴다(RhiAsyncUploads U13 — `waitIdle` 을 지웠다):
+        // 이전 프레임이 옛 텍스처와 그 bindless 인덱스를 읽고 있을 수 있다. 기다리지 않고 옛 자원을 해제 줄에 넘긴다(RHIAsyncUploads U13 — `waitIdle` 을 지웠다):
         // 게임 스레드가 `releaseRetiredTextures` 로 `releaseHandle` 하면 이미 만든 패킷이 끝난 뒤에 핸들 · 인덱스가 돌아가고(스트리밍 교체와 같은 길), 새 텍스처는 새 핸들 · 인덱스를 받는다.
         // 그래서 옛 인덱스를 새 텍스처가 곧바로 물려받아 이전 프레임을 오염시키는 일이 없다. 세대를 올려 빌려 간 머티리얼이 새 인덱스를 다시 받게 한다(아래).
         Texture2DRetiredResource retired{};

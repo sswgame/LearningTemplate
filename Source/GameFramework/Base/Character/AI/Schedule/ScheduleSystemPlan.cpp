@@ -68,9 +68,9 @@ namespace sw
 
 namespace sw
 {
-    void ScheduleSystem::planNpc( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin )
+    void ScheduleSystem::planNPC( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin )
     {
-        NpcRuntime& npc   = _listNpc[static_cast<size_t>( npcIndex )];
+        NPCRuntime& npc   = _listNPC[static_cast<size_t>( npcIndex )];
         npc._origin       = origin;
         npc._originMinute = originMinute;
         npc._planDay      = ScheduleSystemPlanInternal::toDay( originMinute );
@@ -80,13 +80,13 @@ namespace sw
         npc._listSegment = std::move( listSegment );
         npc._routeKey    = 0;
         npc._listRoutePoint.clear();
-        refreshNpc( npcIndex );
+        refreshNPC( npcIndex );
     }
 
-    void ScheduleSystem::replanNpc( int32 npcIndex, int32 minute, bool bKeepOriginIfSame )
+    void ScheduleSystem::replanNPC( int32 npcIndex, int32 minute, bool bKeepOriginIfSame )
     {
         using Internal  = ScheduleSystemPlanInternal;
-        NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+        NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
         if ( bKeepOriginIfSame && npc._planDay == Internal::toDay( minute ) )
         {
             // 같은 출발점으로 다시 세워 지금 칸까지 같으면 그대로 쓴다 — 바뀐 조건이 앞날만 바꾸면 지금 가는 길을 끊지 않는다.
@@ -105,12 +105,12 @@ namespace sw
             {
                 releaseUnused( npc._listSegment, listTrial );
                 npc._listSegment = std::move( listTrial );
-                refreshNpc( npcIndex );
+                refreshNPC( npcIndex );
                 return;
             }
             releaseUnused( listTrial, npc._listSegment );
         }
-        planNpc( npcIndex, minute, computeLogicLocation( npcIndex, minute ) );
+        planNPC( npcIndex, minute, computeLogicLocation( npcIndex, minute ) );
     }
 
     void ScheduleSystem::makePlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment )
@@ -162,8 +162,8 @@ namespace sw
     void ScheduleSystem::collectCandidates( int32 npcIndex, int32 day, vector<BlockCandidate>& outListCandidate ) const
     {
         outListCandidate.clear();
-        const NpcRuntime&     npc    = _listNpc[static_cast<size_t>( npcIndex )];
-        const ScheduleNpcDef& def    = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
+        const NPCRuntime&     npc    = _listNPC[static_cast<size_t>( npcIndex )];
+        const ScheduleNPCDef& def    = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
         const uint32          npcKey = ScheduleHash::computeNameKey( def._id );
         int32                 order  = 0;
 
@@ -220,14 +220,14 @@ namespace sw
         for ( int32 eventIndex = 0; eventIndex < static_cast<int32>( listEvent.size() ); ++eventIndex )
         {
             const ScheduleEventDef& event     = listEvent[static_cast<size_t>( eventIndex )];
-            bool                    bAttendee = event._listNpc.empty() && event._listArchetype.empty();
-            for ( const hashed_string& npcID : event._listNpc )
+            bool                    bAttendee = event._listNPC.empty() && event._listArchetype.empty();
+            for ( const hashed_string& npcID : event._listNPC )
             {
                 bAttendee = bAttendee || npcID == def._id;
             }
             for ( const hashed_string& archetypeID : event._listArchetype )
             {
-                bAttendee = bAttendee || _pCatalog->isNpcOfArchetype( def, archetypeID );
+                bAttendee = bAttendee || _pCatalog->isNPCOfArchetype( def, archetypeID );
             }
             if ( bAttendee == false )
                 continue;
@@ -261,8 +261,8 @@ namespace sw
     void ScheduleSystem::resolveTarget( int32 npcIndex, int32 day, const BlockCandidate* pCandidate, int32 startMinute, int32 endMinute,
                                         vector<ScheduleSegment>& outListSegment )
     {
-        const NpcRuntime&          npc    = _listNpc[static_cast<size_t>( npcIndex )];
-        const ScheduleNpcDef&      def    = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
+        const NPCRuntime&          npc    = _listNPC[static_cast<size_t>( npcIndex )];
+        const ScheduleNPCDef&      def    = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
         const SchedulePlaceDef*    pHome  = _pCatalog->findPlace( def._home );
         const ScheduleLocation     home   = pHome != nullptr ? ScheduleLocation{ pHome->_position, pHome->_area } : ScheduleLocation{};
         const ScheduleBlockDef*    pBlock = pCandidate != nullptr ? pCandidate->_pBlock : nullptr;
@@ -346,8 +346,8 @@ namespace sw
     void ScheduleSystem::planTravel( int32 npcIndex, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& inoutListSegment ) const
     {
         using Internal                   = ScheduleSystemPlanInternal;
-        const NpcRuntime&      npc       = _listNpc[static_cast<size_t>( npcIndex )];
-        const ScheduleNpcDef&  def       = _pCatalog->getNpcs()[static_cast<size_t>( npc._defIndex )];
+        const NPCRuntime&      npc       = _listNPC[static_cast<size_t>( npcIndex )];
+        const ScheduleNPCDef&  def       = _pCatalog->getNPCs()[static_cast<size_t>( npc._defIndex )];
         ScheduleLocation       from      = origin;
         int32                  ready     = originMinuteOfDay; ///< 앞 칸 자리에 닿은 시각 — 그 전에는 나서지 못한다
         const ScheduleSegment* pPrevious = nullptr;
@@ -396,13 +396,13 @@ namespace sw
         _listMetAppointment.clear();
         const int32              dayStart = day * kScheduleMinutesPerDay;
         vector<ScheduleLocation> listLocation;
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
             listLocation.push_back( computeLogicLocation( npcIndex, dayStart ) );
         }
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            planNpc( npcIndex, dayStart, listLocation[static_cast<size_t>( npcIndex )] );
+            planNPC( npcIndex, dayStart, listLocation[static_cast<size_t>( npcIndex )] );
         }
         rebuildAppointmentChecks( day );
     }
@@ -416,7 +416,7 @@ namespace sw
         for ( int32 appointmentIndex = 0; appointmentIndex < static_cast<int32>( listAppointment.size() ); ++appointmentIndex )
         {
             bool bScheduled = false;
-            for ( const NpcRuntime& npc : _listNpc )
+            for ( const NPCRuntime& npc : _listNPC )
             {
                 for ( const ScheduleSegment& segment : npc._listSegment )
                 {
@@ -440,12 +440,12 @@ namespace sw
         const WorldClockSettings&          clock      = _settings._clock;
         ScheduleConditionContext           context;
         context._pFlags       = _pFlags;
-        context._pNpcTags     = &_listNpc[static_cast<size_t>( npcIndex )]._tags;
+        context._pNPCTags     = &_listNPC[static_cast<size_t>( npcIndex )]._tags;
         context._pWorldTags   = _pWorldTags;
         context._weather      = _weather;
         context._day          = day;
         context._dayOfSeason  = day % clock._daysPerSeason + 1;
-        context._affinity     = _listNpc[static_cast<size_t>( npcIndex )]._affinity;
+        context._affinity     = _listNPC[static_cast<size_t>( npcIndex )]._affinity;
         context._pSeasonOrder = &clock._listSeason;
         context._season       = clock._listSeason[static_cast<size_t>( ( day / clock._daysPerSeason ) % static_cast<int32>( clock._listSeason.size() ) )];
         context._chanceKey    = ScheduleHash::mixKey( chanceKey, _settings._seed );

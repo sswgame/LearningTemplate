@@ -51,7 +51,7 @@ namespace sw
                                       OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -79,7 +79,7 @@ namespace sw
                               OpenGLRHIDevice::BindlessTextureRecord{} );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -88,11 +88,11 @@ namespace sw
         GLuint              ssbo = _pDevice->resolveGlBuffer( buffer );
         if ( ssbo == 0 )
             return kInvalidDescriptorIndex;
-        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree,
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree,
                                       OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         if ( texture == 0 )
             return kInvalidDescriptorIndex;
@@ -102,14 +102,14 @@ namespace sw
             return kInvalidDescriptorIndex;
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._texture = texture;
-        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, record );
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree, record );
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
+    void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
     {
         ScopedOpenGLContext contextScope( _pDevice );
         // 이중 해제는 도우미가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
-        releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
+        releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree, index,
                               OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 } // namespace sw

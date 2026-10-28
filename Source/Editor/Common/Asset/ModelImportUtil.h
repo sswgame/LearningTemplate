@@ -96,7 +96,7 @@ namespace sw::editor
             /** @brief 삼각형마다 그 프리미티브의 glTF 메시입니다. VRM 1인칭 가시성(메시마다 정해진다)으로 구간을 나눌 때 씁니다. */
             vector<const cgltf_mesh*> _listTriangleSourceMesh;
             uint32                    _skippedPrimitiveCount{ 0 };
-            string                    _baseColorTextureUri;
+            string                    _baseColorTextureURI;
             /** @brief 머티리얼의 baseColorFactor 를 정점 색에 곱할지 정합니다. VRM 은 머티리얼이 색을 가지고 있으므로 끕니다. 두 번 곱하지 않기 위해서입니다. */
             bool _bBakeMaterialColor{ true };
         };
@@ -381,9 +381,9 @@ namespace sw::editor
         [[nodiscard]] static bool writeMaterialSections( const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
 
         /** @brief 리소스 경로에서 UUID 문자열을 만듭니다. 버전 4와 변형 비트를 맞춘 FNV-1a 두 개로 만들며, 같은 경로는 어디서 임포트해도 같은 GUID 가 나옵니다. */
-        static string makeImportedGuid( string_view assetID );
+        static string makeImportedGUID( string_view assetID );
         /**
-         * @brief 임포터가 만든 산출물(@p assetPath, 디스크 경로)의 `.meta` 를 씁니다 — 경로에서 정해지는 GUID(`makeImportedGuid`), `_bImported`.
+         * @brief 임포터가 만든 산출물(@p assetPath, 디스크 경로)의 `.meta` 를 씁니다 — 경로에서 정해지는 GUID(`makeImportedGUID`), `_bImported`.
          * @details 글로 짓지 않고 `AssetMeta` 로 쓴다(형식은 그 타입 하나가 정한다 — 손으로 지은 키=값 글은 형식이 XML 로 바뀐 뒤 읽히지 않았다).
          *          캐시가 잡을 때 `.meta` 를 지어 붙이면 실행마다 GUID 가 달라 임포트 결과 해시가 어긋나므로 임포터가 미리 쓴다.
          */

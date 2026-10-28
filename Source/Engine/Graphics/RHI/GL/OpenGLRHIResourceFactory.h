@@ -40,11 +40,11 @@ namespace sw
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 프로그램을 링크하고, 실패하면 로그와 함께 지웁니다. 그래픽스와 컴퓨트가 같은 경로를 씁니다. */

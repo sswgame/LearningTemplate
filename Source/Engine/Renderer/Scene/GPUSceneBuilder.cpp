@@ -28,7 +28,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Vfx/VfxComponent.h"
+#include "Engine/VFX/VFXComponent.h"
 
 namespace sw
 {
@@ -80,16 +80,16 @@ namespace sw
             }
 
             /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사합니다(렌더 스레드는 Material* 를 따라갈 수 없습니다). */
-            static void fillMaterialTextureSrvs( GPUMeshBatch& batch, const Material* pMaterial )
+            static void fillMaterialTextureSRVs( GPUMeshBatch& batch, const Material* pMaterial )
             {
                 if ( pMaterial == nullptr )
                     return;
-                const vector<RHIDescriptorIndex>& listSrv = pMaterial->getMaterialTextureSrvs();
-                const uint32                      count   = MathUtil::min( static_cast<uint32>( listSrv.size() ),
+                const vector<RHIDescriptorIndex>& listSRV = pMaterial->getMaterialTextureSRVs();
+                const uint32                      count   = MathUtil::min( static_cast<uint32>( listSRV.size() ),
                                                                            shaderslot::kMaterialTextureCount );
                 for ( uint32 texIndex = 0; texIndex < count; ++texIndex )
                 {
-                    batch._arrMaterialTexSrv[texIndex] = listSrv[texIndex];
+                    batch._arrMaterialTexSRV[texIndex] = listSRV[texIndex];
                 }
             }
 
@@ -305,7 +305,7 @@ namespace sw
             candidate._instance = pMeshComp->getMaterialInstance();
         if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) ) == false )
             return false;
-        applyGPULodGroup( candidate );
+        applyGPULODGroup( candidate );
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
@@ -348,32 +348,32 @@ namespace sw
             candidate._instance = pBatch->getMaterialInstance();
         if ( fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) ) == false )
             return false;
-        applyGPULodGroup( candidate ); // LOD 를 가진 메시의 인스턴스 배치(식생)도 그룹이다 — 항목마다 컬링이 단계를 고른다
+        applyGPULODGroup( candidate ); // LOD 를 가진 메시의 인스턴스 배치(식생)도 그룹이다 — 항목마다 컬링이 단계를 고른다
         return true;
     }
 
-    void GPUSceneBuilder::applyGPULodGroup( DrawCandidate& candidate ) const
+    void GPUSceneBuilder::applyGPULODGroup( DrawCandidate& candidate ) const
     {
         // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 **늘 기록한다**(0 도 값이다).
         candidate._lodContentID = 0;
-        candidate._bLodDither   = SW_FALSE;
+        candidate._bLODDither   = SW_FALSE;
         const Mesh* pMesh       = candidate._mesh.get();
-        if ( _bGPULodActive == SW_FALSE || pMesh == nullptr )
+        if ( _bGPULODActive == SW_FALSE || pMesh == nullptr )
             return;
         // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instancesort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
         // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs` 가 거절한다)이므로 단계가 있는지와 블렌드만 본다. 스킨드 메시는 단계 배치가 자기 모프 풀 구간(`assignMorphBases`)을 가진다.
         const uint32 levelCount     = pMesh->getLODCount();
-        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULodMaxLevels;
+        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULODMaxLevels;
         const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
         if ( bGroupableMesh == false || bOpaque == false )
             return;
         candidate._lodContentID       = pMesh->getContentID();
-        candidate._bLodDither         = _snapshot._lodCrossfadeSeconds > 0.0f ? SW_TRUE : SW_FALSE;
+        candidate._bLODDither         = _snapshot._lodCrossfadeSeconds > 0.0f ? SW_TRUE : SW_FALSE;
         candidate._sectionFirstVertex = 0; // 단계 0 = 메시 전체. 낮은 단계는 컬링이 고른다
         candidate._sectionVertexCount = 0;
     }
 
-    void GPUSceneBuilder::setGPUInstanceLodCrossfadeSeconds( float32 seconds )
+    void GPUSceneBuilder::setGPUInstanceLODCrossfadeSeconds( float32 seconds )
     {
         const float32 value = seconds > 0.0f ? seconds : 0.0f;
         if ( _snapshot._lodCrossfadeSeconds == value )
@@ -382,12 +382,12 @@ namespace sw
         invalidateBuildCache(); // 디더 변형 여부가 퍼뮤테이션 해시(배치 키)를 바꾼다
     }
 
-    void GPUSceneBuilder::setGPUInstanceLodEnabled( bool bEnabled )
+    void GPUSceneBuilder::setGPUInstanceLODEnabled( bool bEnabled )
     {
         const uint8 value = bEnabled ? SW_TRUE : SW_FALSE;
-        if ( _bGPUInstanceLodEnabled == value )
+        if ( _bGPUInstanceLODEnabled == value )
             return;
-        _bGPUInstanceLodEnabled = value;
+        _bGPUInstanceLODEnabled = value;
         invalidateBuildCache(); // 그룹 여부가 배치 키(`_lodContentID`)를 바꾼다
     }
 
@@ -403,7 +403,7 @@ namespace sw
         // GPU 상태가 `Ready` 가 아닌 머티리얼(올리는 중 · 실패)은 그리지 않는다. 렌더 스레드가 상수 버퍼와 bindless 인덱스를 올린 뒤에야 배치가 생긴다
         // (올리는 동안 렌더 스레드가 머티리얼 내용을 쓰므로 상태를 보기 전에는 그 머티리얼의 다른 값을 읽지 않는다). `Failed` 의 오류는 올린 쪽
         // (`MaterialCache::initializePending`)이 한 번 남겼다.
-        if ( pMaterial != nullptr && pMaterial->getGpuState() != MaterialGpuState::Ready )
+        if ( pMaterial != nullptr && pMaterial->getGPUState() != MaterialGPUState::Ready )
         {
             _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
             return false;
@@ -531,11 +531,11 @@ namespace sw
 
         // GPU 인스턴스 LOD 를 쓰는지는 수집 전에 정한다(수집 워커가 읽는다). 고정 단계 · 대기 뷰 · 뷰 없음은 CPU 가 고르므로 그 프레임은 그룹을 만들지 않고,
         // 바뀌면 후보 키(`_lodContentID`)가 바뀌므로 지난 후보를 버려 전체를 다시 모은다(프리미티브는 더럽지 않아 건너뛰기가 막지 못한다).
-        const uint8 gpuLodActive = ( _bGPUInstanceLodEnabled == SW_TRUE && pObjects->getSubsystem<MeshLODSystem>().needsCPUSelection() == false ) ? SW_TRUE : SW_FALSE;
-        if ( gpuLodActive != _bGPULodActive )
+        const uint8 gpuLODActive = ( _bGPUInstanceLODEnabled == SW_TRUE && pObjects->getSubsystem<MeshLODSystem>().needsCPUSelection() == false ) ? SW_TRUE : SW_FALSE;
+        if ( gpuLODActive != _bGPULODActive )
         {
-            _bGPULodActive = gpuLodActive;
-            pObjects->getSubsystem<MeshLODSystem>().setGPUSelectionActive( gpuLodActive == SW_TRUE );
+            _bGPULODActive = gpuLODActive;
+            pObjects->getSubsystem<MeshLODSystem>().setGPUSelectionActive( gpuLODActive == SW_TRUE );
             invalidateBuildCache();
         }
 
@@ -1017,38 +1017,38 @@ namespace sw
     {
         _snapshot.clearParticles();
         vector<GPUParticleBatch>& listBatch = _snapshot._listParticleBatch;
-        for ( const VfxComponent* pVfx : objects.getComponentRegistry().getAll<VfxComponent>() )
+        for ( const VFXComponent* pVFX : objects.getComponentRegistry().getAll<VFXComponent>() )
         {
-            const bool bHidden = pVfx->isPendingDestroy() || pVfx->isActive() == false;
+            const bool bHidden = pVFX->isPendingDestroy() || pVFX->isActive() == false;
             if ( bHidden )
                 continue;
-            const float4x4 world     = pVfx->getWorldMatrix();
+            const float4x4 world     = pVFX->getWorldMatrix();
             const float32  sizeScale = world.getMaximumAxisScale();
-            for ( uint32 emitterIndex = 0; emitterIndex < pVfx->getEmitterCount(); ++emitterIndex )
+            for ( uint32 emitterIndex = 0; emitterIndex < pVFX->getEmitterCount(); ++emitterIndex )
             {
-                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VfxComponent`). 띠는 이웃 둘이 있어야 한 마디다.
+                // 메시 방출기는 메시 인스턴스 배치로 메시 경로를 탄다(`VFXComponent`). 띠는 이웃 둘이 있어야 한 마디다.
                 // GPU 방출기는 입자 수를 GT 가 모른다 — 재생 중이면 싣고, 그릴 입자 수(띠는 마디 수)는 컴퓨트가 간접 인자에 쓴다.
-                const VfxEmitterDef& def     = pVfx->getEmitterDef( emitterIndex );
-                const bool           bRibbon = def._renderMode == VfxRenderMode::Ribbon;
-                const bool           bGPU    = pVfx->getEmitterSimulationTarget( emitterIndex ) == VfxSimulationTarget::GPU;
-                if ( def._renderMode == VfxRenderMode::Mesh )
+                const VFXEmitterDef& def     = pVFX->getEmitterDef( emitterIndex );
+                const bool           bRibbon = def._renderMode == VFXRenderMode::Ribbon;
+                const bool           bGPU    = pVFX->getEmitterSimulationTarget( emitterIndex ) == VFXSimulationTarget::GPU;
+                if ( def._renderMode == VFXRenderMode::Mesh )
                 {
                     // GPU 메시 방출기는 그리기가 아니라 인스턴스 칸 목록을 싣는다 — 컴퓨트가 그 칸에 쓰고 메시 경로가 그린다.
                     if ( bGPU )
-                        appendVfxMeshEmitter( *pVfx, emitterIndex, objects.getPrimitiveRegistry() );
+                        appendVFXMeshEmitter( *pVFX, emitterIndex, objects.getPrimitiveRegistry() );
                     continue;
                 }
                 GPUParticleBatch::Source source{};
                 if ( bGPU )
                 {
-                    const VfxGPUEmitterRequest* pRequest = pVfx->findEmitterGPURequest( emitterIndex );
+                    const VFXGPUEmitterRequest* pRequest = pVFX->findEmitterGPURequest( emitterIndex );
                     if ( pRequest == nullptr )
                         continue;
                     source = *pRequest;
                 }
                 else
                 {
-                    const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVfx->getEmitterParticles( emitterIndex );
+                    const shared_ptr<const vector<GPUParticle>>& pListParticle  = pVFX->getEmitterParticles( emitterIndex );
                     const size_t                                 minParticles   = bRibbon ? 2u : 1u;
                     const bool                                   bNothingToDraw = pListParticle == nullptr || pListParticle->size() < minParticles;
                     if ( bNothingToDraw )
@@ -1061,7 +1061,7 @@ namespace sw
                 batch._world            = world;
                 batch._texturePath      = hashed_string( def._texturePath );
                 batch._sizeScale        = sizeScale;
-                batch._bAdditive        = def._blendMode == VfxBlendMode::Additive ? SW_TRUE : SW_FALSE;
+                batch._bAdditive        = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
             }
         }
         if ( listBatch.empty() )
@@ -1084,9 +1084,9 @@ namespace sw
                                               vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
     }
 
-    void GPUSceneBuilder::appendVfxMeshEmitter( const VfxComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives )
+    void GPUSceneBuilder::appendVFXMeshEmitter( const VFXComponent& vfx, uint32 emitterIndex, const PrimitiveRegistry& primitives )
     {
-        const VfxGPUEmitterRequest* pRequest = vfx.findEmitterGPURequest( emitterIndex );
+        const VFXGPUEmitterRequest* pRequest = vfx.findEmitterGPURequest( emitterIndex );
         const MeshInstanceBatch*    pBatch   = vfx.findEmitterMeshBatch( emitterIndex );
         const bool                  bNoBatch = pRequest == nullptr || pBatch == nullptr || pBatch->isRegistered() == false;
         if ( bNoBatch )
@@ -1107,7 +1107,7 @@ namespace sw
                 ( *pListSlot )[entryIndex] = instanceSlot;
         }
         const float4x4     world   = vfx.getWorldMatrix();
-        GPUVfxMeshEmitter& emitter = _snapshot._listVfxMeshEmitter.emplace_back();
+        GPUVFXMeshEmitter& emitter = _snapshot._listVFXMeshEmitter.emplace_back();
         emitter._request           = *pRequest;
         emitter._pListInstanceSlot = std::move( pListSlot );
         emitter._world             = world;
@@ -1647,7 +1647,7 @@ namespace sw
         else
             batch._materialCb = ( material != nullptr ) ? material->getDescriptorIndex() : kInvalidDescriptorIndex;
         // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
-        GPUSceneBuilderInternal::fillMaterialTextureSrvs( batch, material.get() );
+        GPUSceneBuilderInternal::fillMaterialTextureSRVs( batch, material.get() );
         batch._materialGroup = _materialRegistry.materialGroupFor( material.get(), _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
@@ -1683,25 +1683,25 @@ namespace sw
             work.push_back( gpuInstance );
         }
 
-        // LOD 그룹은 불투명 배치뿐이다(`applyGPULodGroup`). 머리 배치가 단계 수를 들고, 낮은 단계 배치가 바로 뒤에 붙는다.
-        const bool bLodGroup = headCandidate._lodContentID != 0 && blendMode != RHIBlendMode::Transparent;
-        if ( bLodGroup )
+        // LOD 그룹은 불투명 배치뿐이다(`applyGPULODGroup`). 머리 배치가 단계 수를 들고, 낮은 단계 배치가 바로 뒤에 붙는다.
+        const bool bLODGroup = headCandidate._lodContentID != 0 && blendMode != RHIBlendMode::Transparent;
+        if ( bLODGroup )
             batch._lodLevelCount = batch._mesh->getLODCount();
         // 배치 목록은 한 벌이다. 불투명 · 투명은 스냅샷이 내주는 구간 뷰다.
-        if ( bLodGroup )
+        if ( bLODGroup )
         {
             const GPUMeshBatch head = batch;
             _snapshot.appendBatch( std::move( batch ) );
-            emitLodLevelBatches( head );
+            emitLODLevelBatches( head );
             return;
         }
         _snapshot.appendBatch( std::move( batch ) );
     }
 
-    void GPUSceneBuilder::emitLodLevelBatches( const GPUMeshBatch& head )
+    void GPUSceneBuilder::emitLODLevelBatches( const GPUMeshBatch& head )
     {
-        const vector<MeshLOD>& listLod = head._mesh->getLODs();
-        for ( const MeshLOD& lod : listLod )
+        const vector<MeshLOD>& listLOD = head._mesh->getLODs();
+        for ( const MeshLOD& lod : listLOD )
         {
             GPUMeshBatch level        = head;
             level._instanceBase       = static_cast<uint32>( instanceWork().size() ); // 인스턴스는 머리 배치가 가졌다 — 구간은 비고 시작만 이어 간다

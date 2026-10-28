@@ -58,15 +58,15 @@ namespace sw::editor
         // 3) SRV 힙 풀
         // ------------------------------------------------------------------------------
         /** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. 어느 스레드에서나 부를 수 있습니다. */
-        bool allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU );
+        bool allocateSRVDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU );
         /** @brief 할당했던 SRV 디스크립터를 풀에 반환합니다. 곧바로 다시 쓰이므로 GPU 가 그 디스크립터를 다 읽은 뒤에 부릅니다. */
-        void freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu );
+        void freeSRVDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu );
 #endif
 
     private:
 #if defined( SW_PLATFORM_WINDOWS )
         OnceInit<IRHIDevice*>                                  _pRHIDevice;
-        OnceInit<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _d3d12SrvHeap;
+        OnceInit<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _d3d12SRVHeap;
         vector<uint32> _listFreeDescriptor                     SW_GUARDED_BY( _descriptorMutex );
         OnceInit<UINT>                                         _descriptorSize;
         static constexpr uint32                                kMaxDescriptors = 128;

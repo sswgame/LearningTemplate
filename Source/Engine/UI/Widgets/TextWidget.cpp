@@ -26,7 +26,7 @@ namespace sw
                                static_cast<float32>( ( rgba >> 8 ) & 0xFFu ) * kInv255, static_cast<float32>( rgba & 0xFFu ) * kInv255 * alpha };
             }
 
-            /** @brief 리치 텍스트 색이 없음(위젯 색 그대로)을 뜻하는 값입니다(`LaidOutGlyph::_colorRgba`). */
+            /** @brief 리치 텍스트 색이 없음(위젯 색 그대로)을 뜻하는 값입니다(`LaidOutGlyph::_colorRGBA`). */
             static constexpr uint32 kWidgetColor = 0xFFFFFFFFu;
         };
     } // namespace
@@ -53,7 +53,7 @@ namespace sw
         , _layoutFontSize{ 0.0f }
         , _pLayoutStyle{ nullptr }
         , _bLayoutValid{ false }
-        , _bLayoutRtl{ false }
+        , _bLayoutRTL{ false }
         , _bRichParsed{ false }
     {
     }
@@ -239,9 +239,9 @@ namespace sw
         resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
         const TextLayoutStyle  style        = makeLayoutStyle( context._textScale );
         const float32          width        = getGeometry()._size._x;
-        const bool             bRtl         = style._paragraphDirection == TextDirection::RightToLeft;
+        const bool             bRTL         = style._paragraphDirection == TextDirection::RightToLeft;
         const UIComputedStyle* pStyle       = getComputedStyle();
-        const bool             bLayoutStale = _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle;
+        const bool             bLayoutStale = _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRTL != bRTL || _pLayoutStyle != pStyle;
         if ( bLayoutStale )
         {
             // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 텍스트를 물리 픽셀 하나까지 줄인다. 그만큼은 넘쳐도 한 줄로 둔다
@@ -250,7 +250,7 @@ namespace sw
             context._pTextLayout->layout( getPlainText(), style, width + snapSlack, _layoutCache, getSpans() );
             _layoutWidth    = width;
             _layoutFontSize = style._fontSize;
-            _bLayoutRtl     = bRtl;
+            _bLayoutRTL     = bRTL;
             _pLayoutStyle   = pStyle;
             _bLayoutValid   = true;
         }
@@ -264,7 +264,7 @@ namespace sw
         for ( const LaidOutGlyph& glyph : _layoutCache._listGlyph )
         {
             glyphStyle._fontSize    = glyph._fontSize;
-            glyphStyle._color       = glyph._colorRgba == TextWidgetInternal::kWidgetColor ? color : TextWidgetInternal::unpackColor( glyph._colorRgba, color._w );
+            glyphStyle._color       = glyph._colorRGBA == TextWidgetInternal::kWidgetColor ? color : TextWidgetInternal::unpackColor( glyph._colorRGBA, color._w );
             glyphStyle._bFauxBold   = glyph._bFauxBold;
             glyphStyle._bFauxItalic = glyph._bFauxItalic;
             (void)painter.drawGlyph( glyph._origin, glyph._face, glyph._glyphIndex, glyphStyle, *context._pGlyphCache, context._frameIndex );

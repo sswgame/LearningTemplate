@@ -111,31 +111,31 @@ namespace sw
         };
         for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
         {
-            setRootDescriptor( kCbvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
+            setRootDescriptor( kCBVRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
         }
 
         // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
         D3D12_DESCRIPTOR_RANGE srvSlotRange{};
         srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        srvSlotRange.NumDescriptors                                  = shaderslot::kSrvSlotCount;
+        srvSlotRange.NumDescriptors                                  = shaderslot::kSRVSlotCount;
         srvSlotRange.BaseShaderRegister                              = 0;
         srvSlotRange.RegisterSpace                                   = 0;
         srvSlotRange.OffsetInDescriptorsFromTableStart               = 0;
-        arrParam[kSrvTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        arrParam[kSrvTableParam].DescriptorTable.NumDescriptorRanges = 1;
-        arrParam[kSrvTableParam].DescriptorTable.pDescriptorRanges   = &srvSlotRange;
-        arrParam[kSrvTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+        arrParam[kSRVTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kSRVTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kSRVTableParam].DescriptorTable.pDescriptorRanges   = &srvSlotRange;
+        arrParam[kSRVTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
 
         D3D12_DESCRIPTOR_RANGE uavSlotRange{};
         uavSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-        uavSlotRange.NumDescriptors                                  = shaderslot::kComputeUavSlotCount;
+        uavSlotRange.NumDescriptors                                  = shaderslot::kComputeUAVSlotCount;
         uavSlotRange.BaseShaderRegister                              = 0;
         uavSlotRange.RegisterSpace                                   = 0;
         uavSlotRange.OffsetInDescriptorsFromTableStart               = 0;
-        arrParam[kUavTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        arrParam[kUavTableParam].DescriptorTable.NumDescriptorRanges = 1;
-        arrParam[kUavTableParam].DescriptorTable.pDescriptorRanges   = &uavSlotRange;
-        arrParam[kUavTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+        arrParam[kUAVTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kUAVTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kUAVTableParam].DescriptorTable.pDescriptorRanges   = &uavSlotRange;
+        arrParam[kUAVTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
 
         // 텍스처 테이블. 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
         // g_SwBindlessRWTex2D[] (컴퓨트). 인덱스는 등록이 준 힙 슬롯이라 둘 다 offset 0 이다.

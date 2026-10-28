@@ -76,7 +76,7 @@ namespace sw
             {
                 auto& rtBlend                 = psoDesc.BlendState.RenderTarget[rtvIndex];
                 rtBlend.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormat( desc._arrRtvFormat[rtvIndex] );
+                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormat( desc._arrRTVFormat[rtvIndex] );
                 if ( desc._bEnableBlend != 0 )
                 {
                     rtBlend.BlendEnable    = TRUE;

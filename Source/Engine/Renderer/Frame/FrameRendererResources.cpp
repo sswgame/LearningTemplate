@@ -126,7 +126,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
 
         _bPassResourcesReady = SW_TRUE;
-        SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
+        SW_LOG_INFO( "Pass PSOS/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
                      getEnginePSO( RenderPassType::Shadow ), getEnginePSO( RenderPassType::ForwardOpaque ),
                      getEnginePSO( RenderPassType::Transparent ), getEnginePSO( RenderPassType::Lighting ),
                      getEnginePSO( RenderPassType::Bloom ), getEnginePSO( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
@@ -321,8 +321,8 @@ namespace sw
                 RHIPipelineStateHandle existing{ 0 };
                 if ( format == RHIFormat::Unknown || _pPSOCache->findOutputPSO( passType, format, existing ) )
                     continue;
-                const RHIFormat              arrRtvFormat[] = { format };
-                const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRtvFormat );
+                const RHIFormat              arrRTVFormat[] = { format };
+                const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRTVFormat );
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
                 if ( pso == 0 )
                     SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );

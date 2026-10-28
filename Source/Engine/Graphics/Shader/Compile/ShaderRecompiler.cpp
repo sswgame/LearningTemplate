@@ -70,7 +70,7 @@ namespace sw
             // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 요청 그대로(최적화) 컴파일하면 리로드한
             // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 곳에 최적화 코드젠을 덮어쓴다.
             const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
-            const ShaderCompileResult newResult = ShaderCompiler::compileHlsl( liveDesc );
+            const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( liveDesc );
             if ( newResult._bSuccess == false )
             {
                 ++failed;

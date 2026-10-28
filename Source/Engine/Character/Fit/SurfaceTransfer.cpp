@@ -3,7 +3,7 @@
 #include "Engine/Character/Fit/SurfaceTransfer.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/SurfaceBvh.h"
+#include "Engine/Character/Fit/SurfaceBVH.h"
 
 namespace sw
 {
@@ -29,14 +29,14 @@ namespace sw
 
 namespace sw
 {
-    void SurfaceTransferUtil::bindPoints( const AppearanceGeometry& source, const SurfaceBvh& sourceBvh, vector_reference<const float3> listPoint, float32 maxDistance,
+    void SurfaceTransferUtil::bindPoints( const AppearanceGeometry& source, const SurfaceBVH& sourceBVH, vector_reference<const float3> listPoint, float32 maxDistance,
                                           vector<SurfaceBinding>& outListBinding )
     {
         outListBinding.assign( listPoint.size(), SurfaceBinding{} );
         for ( size_t pointIndex = 0; pointIndex < listPoint.size(); ++pointIndex )
         {
             GeometryClosestPoint closest;
-            if ( sourceBvh.findClosestPoint( listPoint[pointIndex], maxDistance, closest ) == false )
+            if ( sourceBVH.findClosestPoint( listPoint[pointIndex], maxDistance, closest ) == false )
                 continue;
             SurfaceBinding& binding = outListBinding[pointIndex];
             binding._triangle       = closest._triangle;

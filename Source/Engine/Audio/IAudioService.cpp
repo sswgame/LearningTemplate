@@ -130,7 +130,7 @@ namespace sw
         // 설정 메뉴가 엔진보다 먼저 볼륨을 넣었을 수 있다. 가지고 있던 값을 다시 적용한다.
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMaster ), _masterVolume );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMusic ), _musicVolume );
-        _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSfx ), _sfxVolume );
+        _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSFX ), _sfxVolume );
         _pEngine->setBusMuted( hashed_string( AudioBusNames::kMaster ), _bMuted );
         for ( const AudioBusVolume& busVolume : _listBusVolume )
         {
@@ -258,7 +258,7 @@ namespace sw
         const AudioChannelLayout layout       = _pEngine->getChannelLayout();
         const uint32             channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
         vector<uint8>            bytes;
-        AudioWavEncoder::encodeFloat32( _listDumpSample.data(), static_cast<uint32>( _listDumpSample.size() / channelCount ), channelCount,
+        AudioWAVEncoder::encodeFloat32( _listDumpSample.data(), static_cast<uint32>( _listDumpSample.size() / channelCount ), channelCount,
                                         AudioChannelLayoutUtil::getChannelMask( layout ), audio::kSampleRate, bytes );
         _listDumpSample.clear();
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
@@ -477,10 +477,10 @@ namespace sw
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMusic ), _musicVolume );
     }
 
-    void IAudioService::setSfxVolume( float32 volume )
+    void IAudioService::setSFXVolume( float32 volume )
     {
         _sfxVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
-        _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSfx ), _sfxVolume );
+        _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSFX ), _sfxVolume );
     }
 
     void IAudioService::setBusVolume( const hashed_string& bus, float32 volume )
@@ -495,9 +495,9 @@ namespace sw
             setMusicVolume( volume );
             return;
         }
-        if ( bus == hashed_string( AudioBusNames::kSfx ) )
+        if ( bus == hashed_string( AudioBusNames::kSFX ) )
         {
-            setSfxVolume( volume );
+            setSFXVolume( volume );
             return;
         }
 
@@ -520,7 +520,7 @@ namespace sw
             return _masterVolume;
         if ( bus == hashed_string( AudioBusNames::kMusic ) )
             return _musicVolume;
-        if ( bus == hashed_string( AudioBusNames::kSfx ) )
+        if ( bus == hashed_string( AudioBusNames::kSFX ) )
             return _sfxVolume;
         for ( const AudioBusVolume& busVolume : _listBusVolume )
         {

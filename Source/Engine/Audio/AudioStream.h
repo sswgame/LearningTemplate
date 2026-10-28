@@ -88,8 +88,8 @@ namespace sw
         enum class Format : uint8
         {
             Vorbis = 0,
-            WavPcm16,
-            WavFloat32
+            WAVPcm16,
+            WAVFloat32
         };
 
         shared_ptr<const vector<uint8>> _pBytes{};

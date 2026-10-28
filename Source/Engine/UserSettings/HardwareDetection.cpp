@@ -2,7 +2,7 @@
 
 #include "Engine/UserSettings/HardwareDetection.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -52,7 +52,7 @@ namespace sw
                 DXGI_ADAPTER_DESC1 desc{};
                 if ( FAILED( adapter->GetDesc1( &desc ) ) )
                     return;
-                result._gpuName = StringUtil::utf16ToUtf8( desc.Description );
+                result._gpuName = StringUtil::utf16ToUTF8( desc.Description );
                 if ( ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 )
                     result._gpuMemoryMb = static_cast<uint32>( desc.DedicatedVideoMemory / constant::kBytesPerMegabyte );
             }

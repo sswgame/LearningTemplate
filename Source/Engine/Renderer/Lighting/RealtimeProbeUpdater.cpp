@@ -110,7 +110,7 @@ namespace sw
         if ( pDevice == nullptr || listRequest.empty() )
             return;
         // 못 켜는 이유는 한 번만 알린다. 실시간 볼륨은 검게 남는다 - 베이크로 대신하지 않는다.
-        const bool bProbeWritable = lightBuffer.getProbeUav() != kInvalidDescriptorIndex;
+        const bool bProbeWritable = lightBuffer.getProbeUAV() != kInvalidDescriptorIndex;
         if ( bPipelineReady == false || bProbeWritable == false )
         {
             if ( _bReportedUnavailable == SW_FALSE )
@@ -193,15 +193,15 @@ namespace sw
         _bActive = SW_TRUE;
     }
 
-    void RealtimeProbeUpdater::dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSrv )
+    void RealtimeProbeUpdater::dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV )
     {
         if ( _bActive == SW_FALSE || pso == 0 )
             return;
         const RHIStructuredBufferSlot* pProbeBuffer = lightBuffer.findProbeBuffer();
-        if ( pProbeBuffer == nullptr || lightBuffer.getProbeUav() == kInvalidDescriptorIndex )
+        if ( pProbeBuffer == nullptr || lightBuffer.getProbeUAV() == kInvalidDescriptorIndex )
             return;
         // t0 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
-        const RHIDescriptorIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSrv;
+        const RHIDescriptorIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
 
         cmd.transitionBuffer( pProbeBuffer->_buffer, RHIBufferState::UnorderedAccess );
         cmd.transitionBuffer( _historyBuffer._buffer, RHIBufferState::UnorderedAccess );
@@ -210,8 +210,8 @@ namespace sw
         cmd.bindComputeShaderResource( lights, 0 );
         cmd.bindComputeShaderResource( _paramBuffer._srv, 1 );
         cmd.bindComputeShaderResource( _voxelBuffer._srv, 2 );
-        cmd.bindComputeUav( _historyBuffer._uav, 0 );
-        cmd.bindComputeUav( lightBuffer.getProbeUav(), 1 );
+        cmd.bindComputeUAV( _historyBuffer._uav, 0 );
+        cmd.bindComputeUAV( lightBuffer.getProbeUAV(), 1 );
         cmd.dispatchCompute( ( _totalProbes + kThreadGroupSize - 1u ) / kThreadGroupSize, 1, 1 );
         // 조명 패스(그래프)가 t13 으로 읽는다. 쓰기가 끝났음을 알린다.
         cmd.transitionBuffer( pProbeBuffer->_buffer, RHIBufferState::ShaderResource );

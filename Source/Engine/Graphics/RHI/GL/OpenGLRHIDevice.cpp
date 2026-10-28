@@ -33,7 +33,7 @@ namespace sw
         , _listRegisteredBindless{}
         , _listBindlessFree{}
         , _listRegisteredUAV{}
-        , _listUavFree{}
+        , _listUAVFree{}
         , _gpuTextures{}
         , _mapCompositeFbo{}
         , _listRegisteredTexture{}

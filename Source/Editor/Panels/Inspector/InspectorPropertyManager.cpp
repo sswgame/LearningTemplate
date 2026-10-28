@@ -105,10 +105,10 @@ namespace sw::editor
                 drawReadOnlyText( prop, buf.c_str() );
             }
             bool isColorRequested( const PropertyInfo& prop ) { return InspectorPropertyLayout::isColorRequested( prop ); }
-            /** @brief 색 편집 플래그입니다. `ColorHdr` 이면 1 을 넘는 값을 받습니다. */
+            /** @brief 색 편집 플래그입니다. `ColorHDR` 이면 1 을 넘는 값을 받습니다. */
             ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
-                return ImGuiColorEditFlags_Float | ( prop._metadata->_bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
+                return ImGuiColorEditFlags_Float | ( prop._metadata->_bColorHDR != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
             /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
@@ -501,7 +501,7 @@ namespace sw::editor
                     *pPtr                = static_cast<T>( InspectorPropertyLayout::clampToAllowedRange( range, stored ) );
                 }
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -534,7 +534,7 @@ namespace sw::editor
                 showTooltipIfHovered( prop );
                 // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
-                    InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                    InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -556,7 +556,7 @@ namespace sw::editor
                 }
                 drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -598,7 +598,7 @@ namespace sw::editor
                 }
 
                 ComponentHandle picked{};
-                // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPod 도 부르지 않는다.
+                // 쓰기는 그리드 한곳(통지 · 되돌리기)이 맡는다. Selectable 은 ImGui 편집 플래그를 세우지 않으므로 trackPOD 도 부르지 않는다.
                 if ( drawPicker( _pLabel, *pManager, *pTargetType, *pValue, _listChoice, picked ) )
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
@@ -779,7 +779,7 @@ namespace sw::editor
                 }
                 showTooltipIfHovered( prop );
                 // 인턴 인덱스 하나이므로 POD 로 되돌린다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -814,7 +814,7 @@ namespace sw::editor
                 else
                     EditorWidgets::drawVec3Control( _pLabel, *pPtr, 0.0f, 100.0f, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -837,7 +837,7 @@ namespace sw::editor
                 }
                 ImGui::DragFloat2( _pLabel, &pPtr->_x, 0.1f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };
@@ -864,7 +864,7 @@ namespace sw::editor
                 else
                     ImGui::DragFloat4( _pLabel, &pPtr->_x, 0.01f );
                 showTooltipIfHovered( prop );
-                InspectorPropertyUndo::trackPod( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
+                InspectorPropertyUndo::trackPOD( MutableValueAddress{ pPtr }, sizeof( *pPtr ), prop );
                 return true;
             }
         };

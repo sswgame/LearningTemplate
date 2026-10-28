@@ -61,7 +61,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	endif()
 
 	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · cursor-shape · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
-	# 패키지: libwayland-dev(wayland-egl 포함) · libegl-dev(GL 컨텍스트 `EglPlatformContext`) · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
+	# 패키지: libwayland-dev(wayland-egl 포함) · libegl-dev(GL 컨텍스트 `EGLPlatformContext`) · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
 	# ------------------------------------------------------------------------------
 	if(SW_ENABLE_WAYLAND)
 		find_package(PkgConfig REQUIRED)
@@ -74,7 +74,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 
 		# 프로토콜 XML 목록(wayland-protocols pkgdatadir 아래 상대 경로). 헤더 이름은 XML 파일 이름에서 정해진다(`<이름>-client-protocol.h`).
 		# fractional-scale · cursor-shape 는 staging 이라 wayland-protocols 1.32 이상이 있어야 한다 — 없으면 아래 검사가 구성을 세운다.
-		set(swWaylandProtocolXmls
+		set(swWaylandProtocolXMLs
 			"stable/xdg-shell/xdg-shell.xml"
 			"staging/fractional-scale/fractional-scale-v1.xml" # 소수 배율(`wp_fractional_scale_v1`)
 			"staging/cursor-shape/cursor-shape-v1.xml" # 커서 모양(`wp_cursor_shape_manager_v1`)
@@ -86,19 +86,19 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 		set(swWaylandGenDir "${CMAKE_BINARY_DIR}/generated/wayland")
 		file(MAKE_DIRECTORY "${swWaylandGenDir}")
 		set(swWaylandGenFiles "")
-		foreach(swProtocolRelXml IN LISTS swWaylandProtocolXmls)
-			set(swProtocolXml "${SW_WAYLAND_PROTOCOLS_DIR}/${swProtocolRelXml}")
-			if(NOT EXISTS "${swProtocolXml}")
-				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${swProtocolXml} (wayland-protocols 1.32 or newer is required)")
+		foreach(swProtocolRelXML IN LISTS swWaylandProtocolXMLs)
+			set(swProtocolXML "${SW_WAYLAND_PROTOCOLS_DIR}/${swProtocolRelXML}")
+			if(NOT EXISTS "${swProtocolXML}")
+				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${swProtocolXML} (wayland-protocols 1.32 or newer is required)")
 			endif()
-			get_filename_component(swProtocolName "${swProtocolXml}" NAME_WE)
+			get_filename_component(swProtocolName "${swProtocolXML}" NAME_WE)
 			set(swProtocolHeader "${swWaylandGenDir}/${swProtocolName}-client-protocol.h")
 			set(swProtocolSource "${swWaylandGenDir}/${swProtocolName}-protocol.c")
 			add_custom_command(
 				OUTPUT "${swProtocolHeader}" "${swProtocolSource}"
-				COMMAND "${SW_WAYLAND_SCANNER}" client-header "${swProtocolXml}" "${swProtocolHeader}"
-				COMMAND "${SW_WAYLAND_SCANNER}" private-code "${swProtocolXml}" "${swProtocolSource}"
-				DEPENDS "${swProtocolXml}"
+				COMMAND "${SW_WAYLAND_SCANNER}" client-header "${swProtocolXML}" "${swProtocolHeader}"
+				COMMAND "${SW_WAYLAND_SCANNER}" private-code "${swProtocolXML}" "${swProtocolSource}"
+				DEPENDS "${swProtocolXML}"
 				COMMENT "wayland-scanner: ${swProtocolName}"
 				VERBATIM
 			)

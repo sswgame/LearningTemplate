@@ -37,8 +37,8 @@ namespace sw
     {
         const utf8*   _pName;         /**< 에디터에 보이는 이름입니다. */
         const utf8*   _pXMLAttribute; /**< `<t>` 의 속성 이름입니다(값이 기본값과 다를 때만 씁니다). nullptr 이면 `<t>` 본문 "1"/"0" 입니다. */
-        uint32        _onColorRgb;    /**< 에디터에서 켜진 셀의 색(0xRRGGBB)입니다. */
-        uint32        _offColorRgb;   /**< 에디터에서 꺼진 셀의 색(0xRRGGBB)입니다. */
+        uint32        _onColorRGB;    /**< 에디터에서 켜진 셀의 색(0xRRGGBB)입니다. */
+        uint32        _offColorRGB;   /**< 에디터에서 꺼진 셀의 색(0xRRGGBB)입니다. */
         TileFlagLayer _layer;         /**< 레이어입니다. 테이블의 순번과 같아야 합니다. */
         uint8         _defaultValue;  /**< 파일에 없을 때와 새 셀의 값(0 또는 1)입니다. */
     };

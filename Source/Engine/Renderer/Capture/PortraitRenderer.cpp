@@ -110,9 +110,9 @@ namespace sw
         _services = SceneEngineServices{};
     }
 
-    bool PortraitRenderer::renderPrefab( const PortraitRequest& request, vector<uint8>& outRgbaBytes )
+    bool PortraitRenderer::renderPrefab( const PortraitRequest& request, vector<uint8>& outRGBABytes )
     {
-        outRgbaBytes.clear();
+        outRGBABytes.clear();
         const bool bCannotRender = _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty();
         if ( bCannotRender )
             return false;
@@ -181,16 +181,16 @@ namespace sw
             return false;
         }
         // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다. 빈틈없이 옮긴다.
-        outRgbaBytes.resize( static_cast<size_t>( layout._width ) * layout._height * 4u );
+        outRGBABytes.resize( static_cast<size_t>( layout._width ) * layout._height * 4u );
         for ( uint32 row = 0; row < layout._height; ++row )
         {
-            Memory::copy( outRgbaBytes.data() + static_cast<size_t>( row ) * layout._width * 4u, captureBytes.data() + static_cast<size_t>( row ) * layout._rowBytes,
+            Memory::copy( outRGBABytes.data() + static_cast<size_t>( row ) * layout._width * 4u, captureBytes.data() + static_cast<size_t>( row ) * layout._rowBytes,
                           static_cast<size_t>( layout._width ) * 4u );
         }
         // 알파는 불투명으로 설정한다. 캡처의 알파는 셰이더마다 달라 썸네일에서 의미가 없다.
-        for ( size_t index = 3; index < outRgbaBytes.size(); index += 4 )
+        for ( size_t index = 3; index < outRGBABytes.size(); index += 4 )
         {
-            outRgbaBytes[index] = 255;
+            outRGBABytes[index] = 255;
         }
         return true;
     }

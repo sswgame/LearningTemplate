@@ -1040,7 +1040,7 @@ namespace sw
     {
         int32 busIndex = bus.empty() ? -1 : _pMixer->findBusIndex( bus );
         if ( busIndex < 0 )
-            busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kSfx ) );
+            busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kSFX ) );
         if ( busIndex < 0 )
             busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kMaster ) );
         return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );

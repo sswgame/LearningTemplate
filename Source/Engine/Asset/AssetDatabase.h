@@ -68,12 +68,12 @@ namespace sw
 
         /**
          * @brief 상대 경로의 GUID 를 찾아 복사합니다(스레드 안전). 경로는 안에서 정규화합니다.
-         * @warning **이 표에서 값을 빌려 나가는 방법은 없습니다. 복사만 있습니다.** `_mapPathToGuid` 는
-         *          **정렬된 벡터**이고 `_mapGuidToPath` 는 **밀집 배열**이라, 잠금을 놓은 뒤에 원소 포인터를
+         * @warning **이 표에서 값을 빌려 나가는 방법은 없습니다. 복사만 있습니다.** `_mapPathToGUID` 는
+         *          **정렬된 벡터**이고 `_mapGUIDToPath` 는 **밀집 배열**이라, 잠금을 놓은 뒤에 원소 포인터를
          *          돌려주면 다른 스레드의 등록 하나가 원소를 통째로 옮깁니다(앞 키 자리에 하나만 끼어들어도
          *          그 뒤가 모두 밀립니다).
          */
-        [[nodiscard]] bool tryGetGuid( string_view relativePath, UUID& outGuid ) const;
+        [[nodiscard]] bool tryGetGUID( string_view relativePath, UUID& outGUID ) const;
 
         /** @brief GUID 의 상대 경로를 찾아 복사합니다(스레드 안전). */
         [[nodiscard]] bool tryGetPath( const UUID& guid, string& outPath ) const;
@@ -132,11 +132,11 @@ namespace sw
         [[nodiscard]] bool writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const;
 
         /** @brief .meta 파일을 읽습니다(`AssetMeta::parseXML`). 없는 것과 깨진 것을 가릅니다 — 깨진 것은 이유를 오류로 남깁니다. */
-        AssetMetaReadResult loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
+        AssetMetaReadResult loadMetaFile( string_view relativePath, UUID& outGUID, bool* pOutImported = nullptr ) const;
 
     private:
         mutable shared_mutex                          _mutex;
-        map<string, UUID, std::less<>> _mapPathToGuid SW_GUARDED_BY( _mutex );
-        unordered_map<UUID, string> _mapGuidToPath    SW_GUARDED_BY( _mutex );
+        map<string, UUID, std::less<>> _mapPathToGUID SW_GUARDED_BY( _mutex );
+        unordered_map<UUID, string> _mapGUIDToPath    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

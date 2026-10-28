@@ -54,7 +54,7 @@ namespace sw
         if ( pDestination == nullptr || capacity == 0 )
             return;
         // UTF-8 글자 중간에서 자르지 않는다 — 이어지는 바이트 위에서는 앞 글자 시작까지 물러난다.
-        const size_t count = StringUtil::floorToUtf8Boundary( text, text.size() < capacity ? text.size() : static_cast<size_t>( capacity - 1 ) );
+        const size_t count = StringUtil::floorToUTF8Boundary( text, text.size() < capacity ? text.size() : static_cast<size_t>( capacity - 1 ) );
         std::memcpy( pDestination, text.data(), count );
         std::memset( pDestination + count, 0, capacity - count );
     }

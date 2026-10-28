@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    bool RenderTargetImageFile::unpackRgba8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRgbaBytes )
+    bool RenderTargetImageFile::unpackRGBA8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRGBABytes )
     {
         const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
         // 단일 채널(깊이 읽기 레이아웃 R32_FLOAT, 마스크 R8)은 회색으로 푼다. 세 채널에 같은 값이다.
@@ -48,8 +48,8 @@ namespace sw
         const bool bGrayByte  = ( format == RHIFormat::R8_UNORM );
         if ( bGrayFloat || bGrayByte )
         {
-            outRgbaBytes.clear();
-            outRgbaBytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+            outRGBABytes.clear();
+            outRGBABytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
             for ( uint32 row = 0; row < layout._height; ++row )
             {
                 const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
@@ -63,10 +63,10 @@ namespace sw
                         Memory::copy( &value, pPixel, sizeof( value ) );
                         gray = static_cast<uint8>( MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f + 0.5f );
                     }
-                    outRgbaBytes.push_back( gray );
-                    outRgbaBytes.push_back( gray );
-                    outRgbaBytes.push_back( gray );
-                    outRgbaBytes.push_back( 255 );
+                    outRGBABytes.push_back( gray );
+                    outRGBABytes.push_back( gray );
+                    outRGBABytes.push_back( gray );
+                    outRGBABytes.push_back( 255 );
                 }
             }
             return true;
@@ -74,8 +74,8 @@ namespace sw
         if ( format == RHIFormat::R16G16_SNORM )
         {
             // G버퍼 법선(옥타헤드럴 좌표) — 방향으로 풀어 `xyz * 0.5 + 0.5` 색으로 낸다(옛 첨부가 담던 값과 같은 모양).
-            outRgbaBytes.clear();
-            outRgbaBytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+            outRGBABytes.clear();
+            outRGBABytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
             for ( uint32 row = 0; row < layout._height; ++row )
             {
                 const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
@@ -84,10 +84,10 @@ namespace sw
                     int16 arrCoordinate[2]{};
                     Memory::copy( arrCoordinate, pRow + static_cast<size_t>( column ) * bytesPerPixel, sizeof( arrCoordinate ) );
                     const float3 direction = OctahedralNormal{ snorm16::fromRaw( arrCoordinate[0] ), snorm16::fromRaw( arrCoordinate[1] ) }.toNormal();
-                    outRgbaBytes.push_back( unorm8::fromFloat( direction._x * 0.5f + 0.5f ).getRaw() );
-                    outRgbaBytes.push_back( unorm8::fromFloat( direction._y * 0.5f + 0.5f ).getRaw() );
-                    outRgbaBytes.push_back( unorm8::fromFloat( direction._z * 0.5f + 0.5f ).getRaw() );
-                    outRgbaBytes.push_back( 255 );
+                    outRGBABytes.push_back( unorm8::fromFloat( direction._x * 0.5f + 0.5f ).getRaw() );
+                    outRGBABytes.push_back( unorm8::fromFloat( direction._y * 0.5f + 0.5f ).getRaw() );
+                    outRGBABytes.push_back( unorm8::fromFloat( direction._z * 0.5f + 0.5f ).getRaw() );
+                    outRGBABytes.push_back( 255 );
                 }
             }
             return true;
@@ -96,8 +96,8 @@ namespace sw
             return false;
         const bool bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );
         const bool bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
-        outRgbaBytes.clear();
-        outRgbaBytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+        outRGBABytes.clear();
+        outRGBABytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
         for ( uint32 row = 0; row < layout._height; ++row )
         {
             const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
@@ -109,16 +109,16 @@ namespace sw
                     const uint16* pHalf = reinterpret_cast<const uint16*>( pPixel );
                     for ( uint32 channel = 0; channel < 3; ++channel )
                     {
-                        outRgbaBytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
+                        outRGBABytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
                     }
                 }
                 else
                 {
-                    outRgbaBytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
-                    outRgbaBytes.push_back( pPixel[1] );
-                    outRgbaBytes.push_back( bBgra ? pPixel[0] : pPixel[2] );
+                    outRGBABytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
+                    outRGBABytes.push_back( pPixel[1] );
+                    outRGBABytes.push_back( bBgra ? pPixel[0] : pPixel[2] );
                 }
-                outRgbaBytes.push_back( 255 );
+                outRGBABytes.push_back( 255 );
             }
         }
         return true;
@@ -127,7 +127,7 @@ namespace sw
     bool RenderTargetImageFile::writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath )
     {
         vector<uint8> rgbaBytes;
-        if ( unpackRgba8( bytes, layout, format, rgbaBytes ) == false )
+        if ( unpackRGBA8( bytes, layout, format, rgbaBytes ) == false )
         {
             SW_LOG_ERROR( "writeImageFile: format %# cannot be written as an image.", static_cast<uint32>( format ) );
             return false;
@@ -135,7 +135,7 @@ namespace sw
 
         bool bWritten = false;
         if ( StringUtil::endsWith( outFilePath, ".png", true ) )
-            bWritten = ImageFileWriter::writePngRgba8( outFilePath, rgbaBytes, layout._width, layout._height );
+            bWritten = ImageFileWriter::writePNGRGBA8( outFilePath, rgbaBytes, layout._width, layout._height );
         else
             bWritten = writePpm( outFilePath, rgbaBytes, layout._width, layout._height );
         if ( bWritten == false )

@@ -8,7 +8,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/Utf8Util.h"
+#include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -648,7 +648,7 @@ namespace sw
             // 잘리는 위치가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다. 바이트 단위로 자르면 버퍼 끝에 걸친
             // 한글 한 글자가 깨진 바이트로 남는다(로그, 경로 표시).
             if ( copyLength < str.length() )
-                copyLength = static_cast<uint32>( Utf8Util::backOffToCharacterStart( str.data(), copyLength ) );
+                copyLength = static_cast<uint32>( UTF8Util::backOffToCharacterStart( str.data(), copyLength ) );
             if ( copyLength > 0 )
                 Memory::copy( pBuffer + pos, str.data(), copyLength );
             return pos + copyLength;
@@ -747,7 +747,7 @@ namespace sw
                 if constexpr ( std::is_same_v<std::decay_t<std::remove_pointer_t<DecayT>>, utf8> ||
                                std::is_same_v<std::decay_t<std::remove_pointer_t<DecayT>>, utf16> )
                 {
-                    const string utf8Str = toUtf8String( value );
+                    const string utf8Str = toUTF8String( value );
                     const uint32 len     = MathUtil::min( static_cast<uint32>( utf8Str.size() ), static_cast<uint32>( kTempBufferSize - 1 ) );
                     Memory::copy( pBuf, utf8Str.data(), len );
                     pBuf[len] = '\0';
@@ -774,7 +774,7 @@ namespace sw
             }
             else
             {
-                const string utf8Str = toUtf8String( value );
+                const string utf8Str = toUTF8String( value );
                 const uint32 len     = MathUtil::min( static_cast<uint32>( utf8Str.size() ), static_cast<uint32>( kTempBufferSize - 1 ) );
                 Memory::copy( pBuf, utf8Str.data(), len );
                 pBuf[len] = '\0';
@@ -784,7 +784,7 @@ namespace sw
 
         /** @brief UTF-8 문자열로 바꿉니다. */
         template <typename StringType>
-        static string toUtf8String( const StringType& str )
+        static string toUTF8String( const StringType& str )
         {
             using T = std::decay_t<StringType>;
             if constexpr ( std::is_pointer_v<T> )
@@ -798,7 +798,7 @@ namespace sw
             else if constexpr ( std::is_constructible_v<std::wstring_view, T> )
             {
                 const wstring wideTemp{ std::wstring_view{ str } };
-                return StringUtil::utf16ToUtf8( wideTemp.c_str() );
+                return StringUtil::utf16ToUTF8( wideTemp.c_str() );
             }
             else
             {

@@ -103,7 +103,7 @@ namespace sw
         {
             if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != L'\0' )
             {
-                const string utf8Line = StringUtil::utf16ToUtf8( pPpArgv[argIndex] );
+                const string utf8Line = StringUtil::utf16ToUTF8( pPpArgv[argIndex] );
                 _listOriginalArgument.push_back( utf8Line );
                 parseArgumentLine( string_view{ utf8Line } );
             }

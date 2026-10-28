@@ -33,8 +33,8 @@ namespace sw
         , _offset{ 0 }
         , _size{ 0 }
         , _textureIndex{ kInvalidDescriptorIndex }
-        , _bHdr{ SW_FALSE }
-        , _bSrgb{ SW_TRUE }
+        , _bHDR{ SW_FALSE }
+        , _bSRGB{ SW_TRUE }
         , _bHidden{ SW_FALSE }
         , _bAdvanced{ SW_FALSE }
         , _reserved{ 0 }
@@ -70,7 +70,7 @@ namespace sw
         , _listTextureLoad{}
         , _textureLoadStart{ AssetLoadStart::OnCallingThread }
         , _listBorrowedTexturePath{}
-        , _listMaterialTextureSrv{}
+        , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
         , _blendMode{ RHIBlendMode::Opaque }
         , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
@@ -102,14 +102,14 @@ namespace sw
         if ( pRHI == nullptr )
             return false;
 
-        // 결과가 정해지기 전에는 그릴 수 없다. 어느 실패 경로로 나가든 마지막 값은 아래 `finishGpuState` 가 정한다.
-        setGpuState( MaterialGpuState::Pending );
-        struct GpuStateFinish
+        // 결과가 정해지기 전에는 그릴 수 없다. 어느 실패 경로로 나가든 마지막 값은 아래 `finishGPUState` 가 정한다.
+        setGPUState( MaterialGPUState::Pending );
+        struct GPUStateFinish
         {
             Material& _material;
             bool      _bSucceeded{ false };
-            ~GpuStateFinish() { _material.setGpuState( _bSucceeded ? MaterialGpuState::Ready : MaterialGpuState::Failed ); }
-        } finishGpuState{ *this };
+            ~GPUStateFinish() { _material.setGPUState( _bSucceeded ? MaterialGPUState::Ready : MaterialGPUState::Failed ); }
+        } finishGPUState{ *this };
 
         _pRHIDevice = pRHI;
         _assetPath  = assetRelativePath;
@@ -138,7 +138,7 @@ namespace sw
         _constantBufferBytes = bufferSize;
 
         pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
-        _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
+        _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSRV( _constantBuffer );
 
         // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
         if ( resolveTextureAssets( pRHI ) == false )
@@ -151,8 +151,8 @@ namespace sw
         loadScope.setBytes( _data._bytes.size() );
         if ( _descriptorIndex != kInvalidDescriptorIndex )
             loadScope.setSucceeded();
-        finishGpuState._bSucceeded = _descriptorIndex != kInvalidDescriptorIndex;
-        return finishGpuState._bSucceeded;
+        finishGPUState._bSucceeded = _descriptorIndex != kInvalidDescriptorIndex;
+        return finishGPUState._bSucceeded;
     }
 
     bool Material::resolveTextureAssets( IRHIDevice* pRHI )
@@ -179,7 +179,7 @@ namespace sw
 #endif
                 continue;
             }
-            const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );
+            const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSRV.size() );
             if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
             {
                 SW_LOG_WARNING( "Material '%#': this backend binds at most %# material textures - '%#' stays white.",
@@ -217,9 +217,9 @@ namespace sw
             _listAcquiredTexturePath.push_back( prop._assetPath );
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
-            _listMaterialTextureSrv.push_back( pTexture->getSrv() );
+            _listMaterialTextureSRV.push_back( pTexture->getSRV() );
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
-            setTextureParameter( pRHI, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
+            setTextureParameter( pRHI, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSRV() : ordinal );
         }
         return true;
     }
@@ -242,7 +242,7 @@ namespace sw
         size_t     ordinal{ 0 };
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            const bool bOrdinalOutOfRange = ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSrv.size();
+            const bool bOrdinalOutOfRange = ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSRV.size();
             if ( bOrdinalOutOfRange )
                 break;
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
@@ -250,10 +250,10 @@ namespace sw
             resolveArrivedTexture( textures, ordinal );
             const string&            boundPath = _listBorrowedTexturePath[ordinal].empty() ? _listAcquiredTexturePath[ordinal] : _listBorrowedTexturePath[ordinal];
             const Texture2D*         pTexture  = textures.find( boundPath );
-            const RHIDescriptorIndex srv       = pTexture != nullptr ? pTexture->getSrv() : kInvalidDescriptorIndex;
-            if ( srv != _listMaterialTextureSrv[ordinal] )
+            const RHIDescriptorIndex srv       = pTexture != nullptr ? pTexture->getSRV() : kInvalidDescriptorIndex;
+            if ( srv != _listMaterialTextureSRV[ordinal] )
             {
-                _listMaterialTextureSrv[ordinal] = srv;
+                _listMaterialTextureSRV[ordinal] = srv;
                 if ( bNativeBindless )
                     setTextureParameter( _pRHIDevice, hashed_string( prop._name.c_str() ), srv );
                 bChanged = true;
@@ -325,7 +325,7 @@ namespace sw
         _listAcquiredTexturePath.clear();
         _listTextureLoad.clear(); // 진짜 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다
         _listBorrowedTexturePath.clear();
-        _listMaterialTextureSrv.clear();
+        _listMaterialTextureSRV.clear();
         _listMaterialTextureName.clear();
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -367,7 +367,7 @@ namespace sw
         _constantBufferBytes = 0;
         _descriptorIndex     = kInvalidDescriptorIndex;
         _pRHIDevice          = nullptr;
-        setGpuState( MaterialGpuState::NotRequested );
+        setGPUState( MaterialGPUState::NotRequested );
     }
 
     void Material::releaseRHI( IRHIDevice* pRHI )
@@ -390,7 +390,7 @@ namespace sw
         _constantBufferBytes = 0;
         _descriptorIndex     = kInvalidDescriptorIndex;
         _pRHIDevice          = nullptr;
-        setGpuState( MaterialGpuState::NotRequested );
+        setGPUState( MaterialGPUState::NotRequested );
     }
 
     void Material::uploadConstantBytes( IRHIDevice* pRHI )
@@ -412,7 +412,7 @@ namespace sw
                 SW_LOG_ERROR( "Material '%#': could not grow the constant buffer to %# bytes", _desc._name.c_str(), byteSize );
                 return;
             }
-            _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
+            _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSRV( _constantBuffer );
         }
         pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), byteSize );
     }
@@ -1014,7 +1014,7 @@ namespace sw
     {
         if ( _bShaderPathHashDirty != SW_FALSE )
         {
-            _cachedShaderPathHash = HashUtil::computeStringHash64( _desc._shaderPath, false, HashUtil::kFnvOffset64 );
+            _cachedShaderPathHash = HashUtil::computeStringHash64( _desc._shaderPath, false, HashUtil::kFNVOffset64 );
             _bShaderPathHashDirty = SW_FALSE;
         }
         return _cachedShaderPathHash;

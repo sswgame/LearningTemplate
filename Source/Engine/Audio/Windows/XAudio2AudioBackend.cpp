@@ -161,7 +161,7 @@ namespace sw
                 IMFAttributes* pStreamAttributes{ nullptr };
                 if ( SUCCEEDED( pByteStream->QueryInterface( IID_PPV_ARGS( &pStreamAttributes ) ) ) && pStreamAttributes != nullptr )
                 {
-                    const wstring originName = StringUtil::utf8ToUtf16( string( path ).c_str() );
+                    const wstring originName = StringUtil::utf8ToUTF16( string( path ).c_str() );
                     pStreamAttributes->SetString( MF_BYTESTREAM_ORIGIN_NAME, originName.c_str() );
                     pStreamAttributes->Release();
                 }

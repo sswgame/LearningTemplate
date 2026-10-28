@@ -64,11 +64,11 @@ namespace sw
          * @brief 글리프를 SDF 로 래스터화합니다.
          * @return 실패(없는 면, 윤곽 없는 비트맵 폰트, SDF 모듈 없음)면 false 를 반환하고 로그를 남깁니다. 공백처럼 윤곽이 빈 글리프는 true 이며 크기가 0 입니다.
          */
-        [[nodiscard]] virtual bool rasterizeSdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) = 0;
+        [[nodiscard]] virtual bool rasterizeSDF( FontFaceID face, uint32 glyphIndex, const SDFRasterParams& params, SDFGlyphBitmap& outBitmap ) = 0;
         /**
-         * @brief 글리프를 MSDF(RGBA8 — RGB 멀티채널, A 일반 SDF)로 래스터화합니다. 크기 · 베어링 · 전진은 `rasterizeSdf` 와 같은 규약이라 같은 아틀라스 자리 계산을 쓴다.
+         * @brief 글리프를 MSDF(RGBA8 — RGB 멀티채널, A 일반 SDF)로 래스터화합니다. 크기 · 베어링 · 전진은 `rasterizeSDF` 와 같은 규약이라 같은 아틀라스 자리 계산을 쓴다.
          * @return 실패(없는 면, 윤곽 없는 비트맵 폰트)면 false 를 반환하고 로그를 남깁니다. 공백처럼 윤곽이 빈 글리프는 true 이며 크기가 0 입니다.
          */
-        [[nodiscard]] virtual bool rasterizeMsdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) = 0;
+        [[nodiscard]] virtual bool rasterizeMSDF( FontFaceID face, uint32 glyphIndex, const SDFRasterParams& params, SDFGlyphBitmap& outBitmap ) = 0;
     };
 } // namespace sw

@@ -401,7 +401,7 @@ namespace sw
         _mipCount      = 1;
         _format        = format;
         _bRenderTarget = SW_TRUE;
-        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSrv() );
+        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSRV() );
         return true;
     }
 
@@ -536,8 +536,8 @@ namespace sw
         if ( pDevice != nullptr )
         {
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
-            if ( getSrv() != kInvalidDescriptorIndex )
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSrv() );
+            if ( getSRV() != kInvalidDescriptorIndex )
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSRV() );
             if ( getHandle() != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
             // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).

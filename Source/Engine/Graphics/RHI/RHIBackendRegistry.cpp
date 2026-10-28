@@ -8,7 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
+#include "Engine/Graphics/RHI/Modules/RHIModuleABI.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
@@ -171,18 +171,18 @@ namespace sw
         if ( pModuleHandle == nullptr )
             return false;
 
-        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiVersion" ) );
-        if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleAbiVersion )
+        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
+        if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleABIVersion )
         {
-            SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleAbiVersion (%#)", modulePath );
+            SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );
             (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
             return false;
         }
 
-        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleAbiStamp" ) );
-        if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleAbiStamp ) == false )
+        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
+        if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleABIStamp ) == false )
         {
-            SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
+            SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );
             (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
             return false;
         }

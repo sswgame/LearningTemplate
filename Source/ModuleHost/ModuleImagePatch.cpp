@@ -350,16 +350,16 @@ namespace sw
         return replacedCount;
     }
 
-    bool ModuleImagePatch::findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp )
+    bool ModuleImagePatch::findEngineABIStamp( const vector<uint8>& bytes, string& outStamp )
     {
         const string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
-        const string_view marker{ kEngineAbiStampMarker };
+        const string_view marker{ kEngineABIStampMarker };
         // 표식 문자열 자체가 다른 자리(예: 이 함수가 든 모듈의 상수)에도 있을 수 있다. 뒤에 16진 40 글자가 온전히 붙은 것을 찾을 때까지 넘긴다.
         for ( size_t markerPos = view.find( marker ); markerPos != string_view::npos; markerPos = view.find( marker, markerPos + 1 ) )
         {
-            if ( view.size() - markerPos < marker.size() + kEngineAbiStampDigits )
+            if ( view.size() - markerPos < marker.size() + kEngineABIStampDigits )
                 return false;
-            const string_view digits = view.substr( markerPos + marker.size(), kEngineAbiStampDigits );
+            const string_view digits = view.substr( markerPos + marker.size(), kEngineABIStampDigits );
             bool              bAllHex{ true };
             for ( const utf8 digit : digits )
             {
@@ -372,7 +372,7 @@ namespace sw
             }
             if ( bAllHex == false )
                 continue;
-            outStamp = string{ view.substr( markerPos, marker.size() + kEngineAbiStampDigits ) };
+            outStamp = string{ view.substr( markerPos, marker.size() + kEngineABIStampDigits ) };
             return true;
         }
         return false;
@@ -381,8 +381,8 @@ namespace sw
     string ModuleImagePatch::makeGenerationName( string_view libraryName, uint32 generation )
     {
         size_t     extensionPos           = libraryName.find( ".so" );
-        const bool bShouldTryDllExtension = extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true );
-        if ( bShouldTryDllExtension )
+        const bool bShouldTryDLLExtension = extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true );
+        if ( bShouldTryDLLExtension )
             extensionPos = libraryName.size() - 4;
         if ( extensionPos == string_view::npos )
             return {};
@@ -403,16 +403,16 @@ namespace sw
         return name;
     }
 
-    bool ModuleImagePatch::readImportDllNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDllName )
+    bool ModuleImagePatch::readImportDLLNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDLLName )
     {
-        outListDllName.clear();
+        outListDLLName.clear();
         ModuleImagePatchInternal::PeView view{};
         vector<uint64>                   listOffset;
         if ( ModuleImagePatchInternal::findPe( bytes, view ) == false || ModuleImagePatchInternal::collectImportNameOffsets( bytes, view, table, listOffset ) == false )
             return false;
         for ( const uint64 offset : listOffset )
         {
-            outListDllName.push_back( string{ ModuleImagePatchInternal::cStringAt( bytes, offset ) } );
+            outListDLLName.push_back( string{ ModuleImagePatchInternal::cStringAt( bytes, offset ) } );
         }
         return true;
     }
@@ -425,7 +425,7 @@ namespace sw
         return ( table == ImportTable::Delay ? view._delayImportRva : view._importRva ) != 0;
     }
 
-    uint32 ModuleImagePatch::replaceImportDllName( vector<uint8>& inoutBytes, string_view from, string_view to )
+    uint32 ModuleImagePatch::replaceImportDLLName( vector<uint8>& inoutBytes, string_view from, string_view to )
     {
         if ( from.empty() || from.size() != to.size() )
             return 0;

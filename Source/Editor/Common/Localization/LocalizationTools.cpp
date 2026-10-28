@@ -51,7 +51,7 @@ namespace sw
                 uint32 count{ 0 };
                 for ( size_t offset = 0; offset < text.size(); )
                 {
-                    (void)StringUtil::decodeUtf8( text, offset );
+                    (void)StringUtil::decodeUTF8( text, offset );
                     ++count;
                 }
                 return count;
@@ -416,7 +416,7 @@ namespace sw
                         string     text;
                         if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
                             continue;
-                        LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), AssetPaths::toAssetID( filePath ) );
+                        LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUTF8Bom( text ), AssetPaths::toAssetID( filePath ) );
                         gatherer.countFile();
                     }
                 }

@@ -93,7 +93,7 @@ namespace sw
         PROPERTY( Min = 0.1 )
         float32 _wiggleTime{ 16.0f }; ///< 들린 채 몸부림으로 빠져나오기까지의 시간
         PROPERTY( Min = 0.0 )
-        float32 _wiggleStunTime{ 3.0f };
+        float32 _wiggleSTUNTime{ 3.0f };
         PROPERTY( Min = 1 )
         int32 _stages{ 3 }; ///< 이 횟수만큼 걸리면 바로 희생된다
     };
@@ -284,7 +284,7 @@ namespace sw
      *        <Window .../><Endgame .../><Killer id="trapper" speedRatio="1.15" .../><Category id="Objectives" cap="8000"/>
      *        <Score action="Repair" category="Objectives" points="1250"/></AsymmetricHorrorRules>` 를 읽습니다.
      * @details 스킬 체크 창은 기반 `TimingJudge` 가 판정한다(이 카탈로그가 가지고 있고, 판은 빌려 쓴다).
-     *          행동 이름은 "Repair", "SkillCheck", "Heal", "Unhook", "Escape", "PalletStun", "Vault", "Hit", "Hook", "Sacrifice", "Kick",
+     *          행동 이름은 "Repair", "SkillCheck", "Heal", "Unhook", "Escape", "PalletSTUN", "Vault", "Hit", "Hook", "Sacrifice", "Kick",
      *          "BreakPallet", "LockerGrab" 이며, 목록에 없는 행동은 점수가 없다.
      */
     class SW_KIT_API AsymmetricHorrorRulesCatalog : public XMLCatalog<AsymmetricHorrorRulesCatalog>

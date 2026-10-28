@@ -92,7 +92,7 @@ namespace sw
         vector<FontFamilyDesc> _listFamily;
         PROPERTY( Tooltip = "Families looked up in the operating system font folders" )
         vector<SystemFontFamilyDesc> _listSystemFamily;
-        PROPERTY( Tooltip = "Distance field the glyph atlas holds: Sdf (single channel, cheap) or Msdf (multi channel RGBA, sharp corners on large text; costs more per new glyph and 4x atlas memory)" )
+        PROPERTY( Tooltip = "Distance field the glyph atlas holds: Sdf (single channel, cheap) or MSDF (multi channel RGBA, sharp corners on large text; costs more per new glyph and 4x atlas memory)" )
         GlyphFieldKind _glyphField{ GlyphFieldKind::Sdf };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */

@@ -10,20 +10,20 @@
 namespace sw::editor
 {
     /**
-     * @class ScopedImGuiOsInputFilter
+     * @class ScopedImGuiOSInputFilter
      * @brief 켜진 채 만들면, 범위 안에서 ImGui 입력 큐에 들어온 사건(마우스 위치 · 단추 · 휠 · 커서 아래 뷰포트 · 키 · 글자 · 포커스)을 범위가 끝날 때 지웁니다.
      * @details 포커스 사건도 지웁니다 — 무인 실행 중 다른 창이 전경을 가져가도 ImGui 가 눌린 키 · 단추를 놓은 것으로 보지 않아야 합니다(`editor.focusloss` 시나리오).
      *          플랫폼 백엔드 호출만 감쌉니다 — 자동화 입력(`EditorSelfTestInput::flushIntoImGui`)은 범위 밖에서 넣습니다.
      *          ImGui 컨텍스트가 없으면 아무것도 하지 않습니다.
      */
-    class ScopedImGuiOsInputFilter
+    class ScopedImGuiOSInputFilter
     {
     public:
-        explicit ScopedImGuiOsInputFilter( bool bActive );
-        ~ScopedImGuiOsInputFilter();
+        explicit ScopedImGuiOSInputFilter( bool bActive );
+        ~ScopedImGuiOSInputFilter();
 
-        ScopedImGuiOsInputFilter( const ScopedImGuiOsInputFilter& )            = delete;
-        ScopedImGuiOsInputFilter& operator=( const ScopedImGuiOsInputFilter& ) = delete;
+        ScopedImGuiOSInputFilter( const ScopedImGuiOSInputFilter& )            = delete;
+        ScopedImGuiOSInputFilter& operator=( const ScopedImGuiOSInputFilter& ) = delete;
 
     private:
         int32 _firstIndex; ///< 범위를 열 때의 큐 길이 — 이 위치부터 지운다. 꺼져 있으면 -1

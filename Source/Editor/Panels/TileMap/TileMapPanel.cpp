@@ -259,7 +259,7 @@ namespace sw::editor
 
         updateCanvasView( canvasMin, bHovered, bActive );
 
-        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDpiScale() * _canvasZoom;
+        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDPIScale() * _canvasZoom;
         const ImVec2  origin( canvasMin.x + _canvasPan._x, canvasMin.y + _canvasPan._y );
         const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
         ImDrawList*   pDl = ImGui::GetWindowDrawList();
@@ -345,7 +345,7 @@ namespace sw::editor
                     case PaintLayer::Flag:
                     {
                         const TileFlagLayerInfo& info = kArrTileFlagLayerInfo[static_cast<size_t>( _flagLayer )];
-                        const uint32             rgb  = _map.getFlagLayer( _flagLayer )[tileIndex] != 0 ? info._onColorRgb : info._offColorRgb;
+                        const uint32             rgb  = _map.getFlagLayer( _flagLayer )[tileIndex] != 0 ? info._onColorRGB : info._offColorRGB;
                         color                         = EditorColorUtil::toImU32( Color::fromArgb( TileMapPanelInternal::kOpaqueAlphaMask | rgb ) );
                         break;
                     }
@@ -711,7 +711,7 @@ namespace sw::editor
             ImGui::InputInt( "Height", &_paintHeight );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PaintHeightTip" ) );
             ImGui::InputInt( "Atlas ID", &_atlasID );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AtlasIdTip" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AtlasIDTip" ) );
             ImGui::ColorEdit3( "Tint", _arrTint );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TintTip" ) );
         }
@@ -863,7 +863,7 @@ namespace sw::editor
         }
         // 브러시마다 아틀라스 이미지의 그 셀을 보인다(유니티 Tile Palette). 이미지를 아직 못 읽었으면 이름만.
         void*         pAtlasTexture = _tileSet.getAtlasPath().empty() ? nullptr : _atlasThumbnail.findTexture( _tileSet.getAtlasPath() );
-        const float32 swatchSide    = 32.0f * EditorThemeUtil::getDpiScale();
+        const float32 swatchSide    = 32.0f * EditorThemeUtil::getDPIScale();
         for ( int32 brushIndex = 0; brushIndex < static_cast<int32>( listBrush.size() ); ++brushIndex )
         {
             const TileBrush& brush = listBrush[static_cast<size_t>( brushIndex )];

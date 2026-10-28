@@ -489,8 +489,8 @@ namespace sw::editor
         }
         // GPU 표에 없는 모디파이어가 있다 - 방금 건 CPU 결과를 정점으로 올린다. 그리는 중인 메시를 고치지 않고 새 메시로 바꿔 끼운다
         // (렌더 스냅샷이 옛 메시를 쥐고 있어 제자리 갱신은 안전하지 않다 - 그래서 비용은 새 메시 만들기 + 탄젠트 + 정점 풀 재업로드다: MeshModifierPreviewCost MM3 결정)
-        SW_PROFILE_SCOPE( "Editor.MeshModifiers.CpuMesh" );
-        SW_PROFILE_COUNT( "Editor.MeshModifiers.CpuMeshVertices", static_cast<uint32>( _previewMesh._listPosition.size() ) );
+        SW_PROFILE_SCOPE( "Editor.MeshModifiers.CPUMesh" );
+        SW_PROFILE_COUNT( "Editor.MeshModifiers.CPUMeshVertices", static_cast<uint32>( _previewMesh._listPosition.size() ) );
         shared_ptr<Mesh> cpuMesh = Mesh::create();
         cpuMesh->setVertices( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ) );
         mountPreviewMesh( *pMeshComp, cpuMesh );

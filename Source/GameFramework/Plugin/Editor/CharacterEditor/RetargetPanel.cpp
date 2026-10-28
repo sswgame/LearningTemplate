@@ -336,7 +336,7 @@ namespace sw::editor
 
     void RetargetPanel::drawSkeletonRows()
     {
-        const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDpiScale();
+        const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDPIScale();
         ImGui::SetNextItemWidth( fieldWidth );
         ImGui::InputTextWithHint( "Source skeleton", "*.skeleton.xml", _sourceSkeleton.data(), _sourceSkeleton.max_size() );
         const bool bSourceDone = ImGui::IsItemDeactivatedAfterEdit();
@@ -385,7 +385,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "target reference" );
         const float2 available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        drawPreviewViewport( float2{ available._x, RetargetPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale() }, false );
+        drawPreviewViewport( float2{ available._x, RetargetPanelInternal::kPreviewHeight * EditorThemeUtil::getDPIScale() }, false );
         EditorSelfTestMarks::note( "retarget.preview" );
         drawSkeletonLines();
     }
@@ -474,7 +474,7 @@ namespace sw::editor
             ChainText&     text  = _listChainText[chainIndex];
             ImGui::PushID( static_cast<int32>( chainIndex ) );
             ImGui::SeparatorText( chain._name.c_str() );
-            const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDpiScale();
+            const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDPIScale();
             ImGui::SetNextItemWidth( fieldWidth );
             ImGui::InputTextWithHint( "Source bones", "root to end: a, b, c", text._source.data(), text._source.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -537,13 +537,13 @@ namespace sw::editor
         uint32                    removeIndex = invalid_index::kUint32;
         bool                      bChanged    = false;
         bool                      bDragged    = false;
-        const float32             fieldWidth  = 220.0f * EditorThemeUtil::getDpiScale();
+        const float32             fieldWidth  = 220.0f * EditorThemeUtil::getDPIScale();
         for ( uint32 poseIndex = 0; poseIndex < static_cast<uint32>( listPose.size() ); ++poseIndex )
         {
             RetargetPoseBone& poseBone = listPose[poseIndex];
             ImGui::PushID( static_cast<int32>( poseIndex ) );
             ImGui::Text( "%s", poseBone._bone.c_str() );
-            ImGui::SameLine( 200.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::SameLine( 200.0f * EditorThemeUtil::getDPIScale() );
             float32 arrDegree[3] = { poseBone._rotationDegrees._x, poseBone._rotationDegrees._y, poseBone._rotationDegrees._z };
             ImGui::SetNextItemWidth( fieldWidth );
             if ( ImGui::DragFloat3( "##Rotation", arrDegree, Internal::kPoseDragSpeed, -Internal::kPoseDegreeLimit, Internal::kPoseDegreeLimit, "%.1f" ) )

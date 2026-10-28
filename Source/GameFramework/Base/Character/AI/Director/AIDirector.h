@@ -36,7 +36,7 @@ namespace sw
     /** @brief 조우 조건을 판정할 때의 세계와 플레이어 상태입니다. 게임이 바뀔 때 `AIDirector::setContext` 로 넘깁니다. */
     struct SW_GF_API AIDirectorContext
     {
-        ScheduleConditionContext _condition{};   ///< 플래그, 플레이어 태그(`_pNpcTags`), 세계 태그, 요일, 계절, 날씨, 하루의 때
+        ScheduleConditionContext _condition{};   ///< 플래그, 플레이어 태그(`_pNPCTags`), 세계 태그, 요일, 계절, 날씨, 하루의 때
         vector<hashed_string>    _listAreaTag{}; ///< 플레이어가 있는 지역의 태그(`areas` 조건)
 
         /** @brief 시계에서 날, 계절의 날, 계절, 하루의 때를 채웁니다. 요일과 날씨는 게임의 달력이 채웁니다. */

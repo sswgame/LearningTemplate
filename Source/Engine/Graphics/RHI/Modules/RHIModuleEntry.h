@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
+#include "Engine/Graphics/RHI/Modules/RHIModuleABI.h"
 
 /**
  * @brief RHI 백엔드 모듈의 C-ABI 진입점 세 개를 구현하고 export 합니다.
@@ -17,16 +17,16 @@
  */
 
 #define SW_IMPLEMENT_RHI_MODULE( DeviceClass )                        \
-    extern "C" SW_MODULE_API uint32      getRHIModuleAbiVersion();    \
-    extern "C" SW_MODULE_API const utf8* getRHIModuleAbiStamp();      \
+    extern "C" SW_MODULE_API uint32      getRHIModuleABIVersion();    \
+    extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp();      \
     extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice();       \
-    extern "C" SW_MODULE_API uint32          getRHIModuleAbiVersion() \
+    extern "C" SW_MODULE_API uint32          getRHIModuleABIVersion() \
     {                                                                 \
-        return sw::kRHIModuleAbiVersion;                              \
+        return sw::kRHIModuleABIVersion;                              \
     }                                                                 \
-    extern "C" SW_MODULE_API const utf8* getRHIModuleAbiStamp()       \
+    extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp()       \
     {                                                                 \
-        return sw::kRHIModuleAbiStamp;                                \
+        return sw::kRHIModuleABIStamp;                                \
     }                                                                 \
     extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice()        \
     {                                                                 \

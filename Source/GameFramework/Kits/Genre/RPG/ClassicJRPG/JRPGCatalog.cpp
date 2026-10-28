@@ -17,7 +17,7 @@ namespace sw
         struct JRPGCatalogInternal
         {
             static constexpr const utf8* kArrStatName[kJRPGStatCount]   = { "hp", "mp", "str", "agi", "vit", "intellect", "luck" };
-            static constexpr const utf8* kArrGrowthName[kJRPGStatCount] = { "growHp", "growMp", "growStr", "growAgi", "growVit", "growIntellect", "growLuck" };
+            static constexpr const utf8* kArrGrowthName[kJRPGStatCount] = { "growHP", "growMP", "growStr", "growAgi", "growVit", "growIntellect", "growLuck" };
 
             /** @brief 능력치 일곱 칸을 이름(@p arrName)으로 읽습니다. 적지 않은 칸은 Def 의 초기값이고, 깨졌거나 0 보다 작으면 오류입니다. */
             [[nodiscard]] static bool readStats( const XMLNode& node, const utf8* const ( &arrName )[kJRPGStatCount], string_view sourceName,
@@ -41,9 +41,9 @@ namespace sw
             }
 
             /** @brief 최대 HP 는 1 이상이어야 합니다(0 이면 처음부터 쓰러진 상태다). */
-            [[nodiscard]] static bool checkMaxHp( const int32 ( &arrStat )[kJRPGStatCount], const XMLNode& node, string_view sourceName )
+            [[nodiscard]] static bool checkMaxHP( const int32 ( &arrStat )[kJRPGStatCount], const XMLNode& node, string_view sourceName )
             {
-                if ( arrStat[static_cast<size_t>( JRPGStat::MaxHp )] >= 1 )
+                if ( arrStat[static_cast<size_t>( JRPGStat::MaxHP )] >= 1 )
                     return true;
                 SW_LOG_ERROR( "%#: <%# id=\"%#\"> needs hp of 1 or more", sourceName, node.getName(), node.getAttributeText( "id" ) );
                 return false;
@@ -142,11 +142,11 @@ namespace sw
         using Internal = JRPGCatalogInternal;
         JRPGClassDef def;
         bool         bValid = GameDataXML::readFields( node, def, sourceName,
-                                                       { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHp", "growMp", "growStr", "growAgi", "growVit",
+                                                       { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "growHP", "growMP", "growStr", "growAgi", "growVit",
                                                          "growIntellect", "growLuck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrBase ) && bValid;
         bValid              = Internal::readStats( node, Internal::kArrGrowthName, sourceName, def._arrGrowth ) && bValid;
-        bValid              = Internal::checkMaxHp( def._arrBase, node, sourceName ) && bValid;
+        bValid              = Internal::checkMaxHP( def._arrBase, node, sourceName ) && bValid;
         for ( XMLNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
         {
             bValid = GameDataXML::readInto( learn, sourceName, def._listLearn ) && bValid;
@@ -191,7 +191,7 @@ namespace sw
         JRPGEnemyDef def;
         bool         bValid = GameDataXML::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
-        bValid              = Internal::checkMaxHp( def._arrStat, node, sourceName ) && bValid;
+        bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
         XMLReadUtil::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
         XMLReadUtil::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
         if ( bValid )

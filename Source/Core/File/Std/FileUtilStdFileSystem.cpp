@@ -90,7 +90,7 @@ namespace sw
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 const string  separated = FileUtil::normalizeSeparators( path );
-                const wstring widePath  = StringUtil::utf8ToUtf16( separated.c_str() );
+                const wstring widePath  = StringUtil::utf8ToUTF16( separated.c_str() );
                 return std::filesystem::path( widePath.c_str() );
 #else
                 // POSIX 의 좁은 문자 경로는 인코딩 변환이 없다. 구분자만 맞춘다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다).
@@ -100,10 +100,10 @@ namespace sw
             }
 
             /** @brief `path` 를 `/` 구분 UTF-8 로 @p outPath 에 담습니다(버퍼를 다시 쓴다). */
-            static void toUtf8( const std::filesystem::path& path, string& outPath )
+            static void toUTF8( const std::filesystem::path& path, string& outPath )
             {
 #if defined( SW_PLATFORM_WINDOWS )
-                outPath = StringUtil::utf16ToUtf8( path.c_str() );
+                outPath = StringUtil::utf16ToUTF8( path.c_str() );
                 StringUtil::replaceChar( outPath, '\\', '/' );
 #else
                 outPath.assign( path.c_str() );
@@ -111,10 +111,10 @@ namespace sw
             }
 
             /** @brief `path` 를 `/` 구분 UTF-8 로 돌려줍니다. */
-            static string toUtf8( const std::filesystem::path& path )
+            static string toUTF8( const std::filesystem::path& path )
             {
                 string result;
-                toUtf8( path, result );
+                toUTF8( path, result );
                 return result;
             }
 
@@ -135,7 +135,7 @@ namespace sw
                 {
                     std::error_code typeError;
                     const bool      bDirectory = iterator->is_directory( typeError );
-                    toUtf8( iterator->path(), entryPath );
+                    toUTF8( iterator->path(), entryPath );
                     const DirectoryEntry entry{ string_view{ entryPath }, typeError ? false : bDirectory };
                     if ( visit( pContext, entry ) == false )
                         return true;
@@ -163,7 +163,7 @@ namespace sw
         const std::filesystem::path relative = std::filesystem::relative( filePath, FileUtilStdInternal::toPath( rootDir ), errorCode );
         if ( errorCode || relative.empty() )
             return false;
-        FileUtilStdInternal::toUtf8( relative, outResult );
+        FileUtilStdInternal::toUTF8( relative, outResult );
         return true;
     }
 
@@ -173,7 +173,7 @@ namespace sw
         const std::filesystem::path absolute = std::filesystem::absolute( FileUtilStdInternal::toPath( path ), errorCode );
         if ( errorCode || absolute.empty() )
             return false;
-        FileUtilStdInternal::toUtf8( absolute, outResult );
+        FileUtilStdInternal::toUTF8( absolute, outResult );
         return true;
     }
 
@@ -183,7 +183,7 @@ namespace sw
         const std::filesystem::path canonical = std::filesystem::canonical( FileUtilStdInternal::toPath( path ), errorCode );
         if ( errorCode || canonical.empty() )
             return false;
-        FileUtilStdInternal::toUtf8( canonical, outResult );
+        FileUtilStdInternal::toUTF8( canonical, outResult );
         return true;
     }
 
@@ -265,7 +265,7 @@ namespace sw
             SW_LOG_WARNING( "Could not read the current directory: %#", FileUtilStdInternal::describe( errorCode ).c_str() );
             return {};
         }
-        return FileUtilStdInternal::toUtf8( current );
+        return FileUtilStdInternal::toUTF8( current );
     }
 
     bool FileUtil::setCurrentPath( string_view path )
@@ -406,7 +406,7 @@ namespace sw
         const std::filesystem::path tempPath = std::filesystem::temp_directory_path( errorCode );
         if ( errorCode )
             return {};
-        return FileUtilStdInternal::toUtf8( tempPath );
+        return FileUtilStdInternal::toUTF8( tempPath );
     }
 
     bool FileUtil::forEachDirectoryEntry( string_view directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )

@@ -46,10 +46,10 @@ namespace sw
         LittleEndianUtil::writeUint64( arrInfo + kLabelSize, clientSalt );
         LittleEndianUtil::writeUint64( arrInfo + kLabelSize + 8, serverSalt );
         LittleEndianUtil::writeUint32( arrInfo + kLabelSize + 16, protocolID );
-        const uint8  arrZeroSalt[NetSecurityConstant::kSha256Size] = {};
+        const uint8  arrZeroSalt[NetSecurityConstant::kSHA256Size] = {};
         const uint8* pSalt                                         = pSessionSecret != nullptr ? pSessionSecret->_arrByte : arrZeroSalt;
         uint8        arrBlock[Internal::kKeyBlockSize];
-        const bool   bDerived = provider.computeHkdfSha256( pSharedSecret, NetSecurityConstant::kX25519KeySize, pSalt, NetSecurityConstant::kSha256Size, arrInfo,
+        const bool   bDerived = provider.computeHkdfSHA256( pSharedSecret, NetSecurityConstant::kX25519KeySize, pSalt, NetSecurityConstant::kSHA256Size, arrInfo,
                                                             static_cast<int32>( sizeof( arrInfo ) ), arrBlock, Internal::kKeyBlockSize );
         if ( bDerived == false )
             return false;
@@ -68,7 +68,7 @@ namespace sw
     bool NetSessionKeyUtil::computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey )
     {
         using Internal = NetSessionKeyUtilInternal;
-        return provider.computeHkdfSha256( secret._arrByte, NetSecurityConstant::kSha256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
+        return provider.computeHkdfSHA256( secret._arrByte, NetSecurityConstant::kSHA256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
                                            static_cast<int32>( sizeof( Internal::kProofLabel ) - 1 ), pOutKey, NetSecurityConstant::kAeadKeySize );
     }
 

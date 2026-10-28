@@ -301,7 +301,7 @@ namespace sw
         }
 
         // DLC 소유권을 확인한다
-        const uint32 dlcAppID = pReader->getDlcAppID();
+        const uint32 dlcAppID = pReader->getDLCAppID();
         if ( dlcAppID > 0 )
         {
             if ( _dlcValidator.isBound() && _dlcValidator( dlcAppID ) == false )
@@ -489,7 +489,7 @@ namespace sw
         return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
-    void PackManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )
+    void PackManager::setDLCEntitlementValidator( DLCEntitlementDelegate validator )
     {
         ScopedLock<mutex> lock{ _vfsMutex };
         _dlcValidator = std::move( validator );

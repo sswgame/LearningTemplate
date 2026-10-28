@@ -33,7 +33,7 @@ namespace sw
     }
 
     CameraComponent::CameraComponent()
-        : _fovY{ kDefaultFovY }
+        : _fovY{ kDefaultFOVY }
         , _nearZ{ kDefaultNearZ }
         , _farZ{ kDefaultFarZ }
         , _orthoHeight{ kDefaultOrthoHeight }
@@ -99,7 +99,7 @@ namespace sw
         pCam->setRole( role );
         pCam->setLocalPosition( position );
         pCam->lookAt( lookTarget );
-        pCam->setFieldOfViewY( kDefaultFovY );
+        pCam->setFieldOfViewY( kDefaultFOVY );
         pCam->setNearPlane( kDefaultNearZ );
         pCam->setFarPlane( kDefaultFarZ );
         return pCam;

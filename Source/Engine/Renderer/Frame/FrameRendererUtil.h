@@ -38,7 +38,7 @@ namespace sw
             static constexpr auto kBloomBright      = "BloomBright";
             static constexpr auto kOutlineColor     = "OutlineColor";
             static constexpr auto kTransparentColor = "TransparentColor";
-            static constexpr auto kTaaColor         = "TaaColor";
+            static constexpr auto kTAAColor         = "TAAColor";
         };
 
         static constexpr uint32 kDefaultTransientSize = 1280;
@@ -148,11 +148,11 @@ namespace sw
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};
             /// @brief 인스턴스 LOD 선택의 화면 크기 식 항입니다(`AnimationLODUtil::computeProjectionTerms`). xyz 클립 w 를 만드는 열, w 가 m44.
-            float32 _arrLodDepthRow[4]{};
+            float32 _arrLODDepthRow[4]{};
             /// @brief xyz 눈 위치(눈이 경계 구 안이면 크기 1), w 투영 y 배율.
-            float32 _arrLodView[4]{};
+            float32 _arrLODView[4]{};
             /// @brief x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0). 나머지는 예약.
-            uint32 _arrLodControl[4]{};
+            uint32 _arrLODControl[4]{};
         };
         /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusiontiles.hlsl 이 루트 상수로 받는다).
         static constexpr uint32 kOcclusionTileSize = 16;
@@ -461,7 +461,7 @@ namespace sw
         hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
         hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
         hashed_string _transparentColor{ FrameRendererUtil::Attachment::kTransparentColor };
-        hashed_string _taaColor{ FrameRendererUtil::Attachment::kTaaColor };
+        hashed_string _taaColor{ FrameRendererUtil::Attachment::kTAAColor };
 
         /// 셰이더가 보는 이름입니다(어태치먼트 이름과 다를 수 있습니다. registerPassTexture 의 canonical 인자).
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 바인딩하고 셰이더가 `g_<Role>Index` 로 읽습니다.
@@ -542,7 +542,7 @@ namespace sw
         hashed_string _flags{ "g_Flags" };
         /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 InstanceData::load 가 범위를 제한합니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };
-        /// @brief 가시 인스턴스 ID 목록의 칸 수(가시 구간의 합)입니다. PassCB g_SwVisibleSlotCount 에 대응하며, 셰이더 InstanceData::resolveId 가 슬롯 범위를 제한합니다.
+        /// @brief 가시 인스턴스 ID 목록의 칸 수(가시 구간의 합)입니다. PassCB g_SwVisibleSlotCount 에 대응하며, 셰이더 InstanceData::resolveID 가 슬롯 범위를 제한합니다.
         hashed_string _swVisibleSlotCount{ "g_SwVisibleSlotCount" };
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수입니다. 셰이더 SW_MATERIAL 이 클램프합니다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };

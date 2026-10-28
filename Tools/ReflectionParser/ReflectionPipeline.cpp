@@ -102,7 +102,7 @@ namespace sw
                             {       prop._bSaveGame,        "SaveGame"},
                             {   prop._bRuntimeState,    "RuntimeState"},
                             {         prop._bInterp,          "Interp"},
-                            {       prop._bColorHdr,        "ColorHdr"},
+                            {       prop._bColorHDR,        "ColorHDR"},
                             {      prop._bMultiline,       "Multiline"},
                         };
                         for ( const auto& [bSet, pFlagName] : arrFlag )
@@ -508,7 +508,7 @@ namespace sw
         if ( FileUtil::exists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
         {
             const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
-            // 대소문자만 바뀐 폴더 이름(`Gui` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
+            // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
             const bool bOtherOwner = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )

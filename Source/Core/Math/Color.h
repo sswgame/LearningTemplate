@@ -1,9 +1,9 @@
 /**
  * @file Color.h
- * @brief RGBA 색 값 타입 `Color` 입니다 — 부동소수점(0~1) 4채널과 8비트 패킹(`toRgba` · `toArgb` · `toAbgr`) · 16진 글자 · sRGB 변환을 한곳에 둡니다.
+ * @brief RGBA 색 값 타입 `Color` 입니다 — 부동소수점(0~1) 4채널과 8비트 패킹(`toRGBA` · `toArgb` · `toAbgr`) · 16진 글자 · sRGB 변환을 한곳에 둡니다.
  * @details 엔진 · 에디터 · UI · 디버그 그리기가 `float4` 필드와 손으로 만든 `uint32` 패킹을 따로 들고 있던 것을 대신합니다.
- *          **저장 값은 입력 그대로입니다**(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSrgb` 로 바꿉니다.
- *          패킹 이름은 **가장 높은 바이트부터** 채널 순서로 읽습니다: `toRgba` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
+ *          **저장 값은 입력 그대로입니다**(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSRGB` 로 바꿉니다.
+ *          패킹 이름은 **가장 높은 바이트부터** 채널 순서로 읽습니다: `toRGBA` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
  *          `toAbgr` 는 리틀엔디안 메모리에서 바이트가 R, G, B, A 순으로 놓이는 값이라 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처 · ImGui `IM_COL32` 와 같습니다.
  */
 #pragma once
@@ -38,7 +38,7 @@ namespace sw
         // 1) 만들기 — 8비트 패킹 · 바이트 · float4 · 16진 글자
         // ------------------------------------------------------------------------------
         /** @brief `0xRRGGBBAA` 에서 만듭니다. */
-        [[nodiscard]] static Color fromRgba( uint32 packed ) noexcept;
+        [[nodiscard]] static Color fromRGBA( uint32 packed ) noexcept;
         /** @brief `0xAARRGGBB` 에서 만듭니다(D3D 의 `D3DCOLOR` · `DXGI_FORMAT_B8G8R8A8_UNORM` 의 정수 값). */
         [[nodiscard]] static Color fromArgb( uint32 packed ) noexcept;
         /** @brief `0xAABBGGRR` 에서 만듭니다(ImGui `IM_COL32` · `DXGI_FORMAT_R8G8B8A8_UNORM` 의 정수 값). */
@@ -60,7 +60,7 @@ namespace sw
         // 2) 내보내기
         // ------------------------------------------------------------------------------
         /** @brief `0xRRGGBBAA` 로 패킹합니다. 채널은 0~1 로 자르고 가장 가까운 바이트로 반올림합니다. */
-        [[nodiscard]] uint32 toRgba() const noexcept;
+        [[nodiscard]] uint32 toRGBA() const noexcept;
         /** @brief `0xAARRGGBB` 로 패킹합니다. */
         [[nodiscard]] uint32 toArgb() const noexcept;
         /** @brief `0xAABBGGRR` 로 패킹합니다(ImGui `IM_COL32` 와 같은 값). */
@@ -91,7 +91,7 @@ namespace sw
         /** @brief 이 색을 sRGB 값으로 보고 선형 값으로 바꿉니다(알파는 그대로). */
         [[nodiscard]] Color toLinear() const noexcept;
         /** @brief 이 색을 선형 값으로 보고 sRGB 값으로 바꿉니다(알파는 그대로). */
-        [[nodiscard]] Color toSrgb() const noexcept;
+        [[nodiscard]] Color toSRGB() const noexcept;
         /** @brief 지각 밝기(Rec.709 가중치, RGB 가 같은 색 공간일 때)입니다. */
         [[nodiscard]] constexpr float32 getLuminance() const noexcept { return _r * 0.2126f + _g * 0.7152f + _b * 0.0722f; }
 

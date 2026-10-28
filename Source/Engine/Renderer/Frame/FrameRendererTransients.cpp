@@ -230,7 +230,7 @@ namespace sw
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
         // 그래서 코드가 이름으로 포맷 · 클리어 색을 짐작해 첨부를 더 만드는 길이 없다(Swapchain 은 첨부가 아니라 백버퍼다).
-        ensureTaaHistory( view );
+        ensureTAAHistory( view );
         ensureDepthHistory( view );
         ensureOcclusionTiles( view );
         ensureAutoExposureHistory( view );
@@ -257,34 +257,34 @@ namespace sw
         historyDesc._bIsUnorderedAccess = SW_TRUE;
         view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
         if ( view._depthHistory != 0 )
-            view._depthHistoryUav = _pDevice->getResourceFactory()->registerBindlessTextureUav( view._depthHistory );
-        if ( view._depthHistoryUav == kInvalidDescriptorIndex )
+            view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
+        if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
             SW_LOG_ERROR( "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
-    void FrameRenderer::ensureTaaHistory( ViewTarget& view )
+    void FrameRenderer::ensureTAAHistory( ViewTarget& view )
     {
         if ( _pDevice == nullptr || view._taaHistory != 0 )
             return;
 
         // 파이프라인에 TAA 패스가 없으면 히스토리도 필요 없다.
-        const RenderGraphPassDesc* pTaaPass = nullptr;
+        const RenderGraphPassDesc* pTAAPass = nullptr;
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             if ( pass._resolvedType == RenderPassType::TAA )
             {
-                pTaaPass = &pass;
+                pTAAPass = &pass;
                 break;
             }
         }
-        if ( pTaaPass == nullptr )
+        if ( pTAAPass == nullptr )
             return;
 
         // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷(선언에서 만든 것)을 그대로 따라간다.
         // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 이름으로 짐작하지 않는다 — 없으면 히스토리를 만들지 않고 알린다.
         const TransientAttachmentPool&      pool = view._transientPool;
         TransientAttachmentPool::Attachment taaTarget{};
-        for ( const hashed_string& output : pTaaPass->_listResolvedOutput )
+        for ( const hashed_string& output : pTAAPass->_listResolvedOutput )
         {
             taaTarget = pool.find( output.view() );
             if ( taaTarget._texture != 0 )
@@ -305,7 +305,7 @@ namespace sw
 
         view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
         if ( view._taaHistory != 0 )
-            view._taaHistorySrv = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
+            view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -333,9 +333,9 @@ namespace sw
             view._occlusionTiles = RHIStructuredBufferSlot{};
             view._transientPool.forget();
             view._taaHistory           = 0;
-            view._taaHistorySrv        = kInvalidDescriptorIndex;
+            view._taaHistorySRV        = kInvalidDescriptorIndex;
             view._depthHistory         = 0;
-            view._depthHistoryUav      = kInvalidDescriptorIndex;
+            view._depthHistoryUAV      = kInvalidDescriptorIndex;
             view._bLastFrameDepthValid = SW_FALSE;
             return;
         }
@@ -343,20 +343,20 @@ namespace sw
         // 가림 타일은 깊이 히스토리 크기를 따른다.
         view._occlusionTiles.release( _pDevice );
         // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
-        if ( view._depthHistoryUav != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessUav( view._depthHistoryUav );
+        if ( view._depthHistoryUAV != kInvalidDescriptorIndex )
+            _pDevice->getResourceFactory()->unregisterBindlessUAV( view._depthHistoryUAV );
         if ( view._depthHistory != 0 )
             _pDevice->getResourceFactory()->destroyTexture( view._depthHistory );
         view._depthHistory         = 0;
-        view._depthHistoryUav      = kInvalidDescriptorIndex;
+        view._depthHistoryUAV      = kInvalidDescriptorIndex;
         view._bLastFrameDepthValid = SW_FALSE;
 
         // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
-        // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.
-        if ( view._taaHistorySrv != kInvalidDescriptorIndex )
+        // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTAAHistory 가 새 크기로 다시 만든다.
+        if ( view._taaHistorySRV != kInvalidDescriptorIndex )
         {
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._taaHistorySrv );
-            view._taaHistorySrv = kInvalidDescriptorIndex;
+            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._taaHistorySRV );
+            view._taaHistorySRV = kInvalidDescriptorIndex;
         }
         if ( view._taaHistory != 0 )
         {
@@ -394,7 +394,7 @@ namespace sw
                 bReleased = pool.releaseIfIdle( _pDevice, name.view(), bUsedThisFrame ) || bReleased;
         };
         // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
-        view._bTaaHistoryWritten = SW_FALSE;
+        view._bTAAHistoryWritten = SW_FALSE;
         auto ensureMade          = [&]( const hashed_string& name )
         {
             if ( pool.contains( name.view() ) )
@@ -415,7 +415,7 @@ namespace sw
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
                 if ( pass._resolvedType == RenderPassType::TAA )
-                    view._bTaaHistoryWritten = SW_TRUE;
+                    view._bTAAHistoryWritten = SW_TRUE;
                 Internal::markReads( listAttachment, pass, true, listNeeded );
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
@@ -450,7 +450,7 @@ namespace sw
                 continue;
             }
             if ( pass._resolvedType == RenderPassType::TAA )
-                view._bTaaHistoryWritten = SW_TRUE;
+                view._bTAAHistoryWritten = SW_TRUE;
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 bForwardSet = pool.stopForward( output._attachment.view() ) || bForwardSet;

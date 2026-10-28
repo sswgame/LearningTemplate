@@ -67,10 +67,10 @@ namespace sw::editor
         /** @brief @p format 의 DXGI 이름(`BC7_UNORM` …)입니다. 로그에 씁니다. */
         [[nodiscard]] static string_view getName( TextureImportFormat format );
         /**
-         * @brief 임포터가 @p format · @p bSrgb 로 써 내는 DDS 의 DXGI 형식 번호입니다. sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 를 보지 않습니다.
+         * @brief 임포터가 @p format · @p bSRGB 로 써 내는 DDS 의 DXGI 형식 번호입니다. sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSRGB 를 보지 않습니다.
          * @details 임포터(`TextureImporter`)는 이 함수로만 DXGI 를 고른다 — 이름 · 번호 · sRGB 짝이 한 표에 있어 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
          */
-        [[nodiscard]] static uint32 getDxgiFormat( TextureImportFormat format, bool bSrgb );
+        [[nodiscard]] static uint32 getDxgiFormat( TextureImportFormat format, bool bSRGB );
         /**
          * @brief 임포터가 써 낼 수 있는 모든 DDS 형식의 DXGI 이름입니다(형식마다 UNORM 과, 있으면 sRGB 짝).
          * @details 에셋 검증 규칙(`Config/Editor/AssetValidationRules.json` 의 `allowed_formats` · `rejected_formats`)이 이 이름을 모두 허용 · 거절 중 하나로 적었는지
@@ -95,7 +95,7 @@ namespace sw::editor
         TextureImportFormat    _format;
         TextureSwizzle         _swizzle;
         uint8                  _bGenerateMips : 1;
-        uint8                  _bSrgb         : 1;
+        uint8                  _bSRGB         : 1;
         uint8                  _bInvertGreen  : 1;
         [[maybe_unused]] uint8 _reserved      : 5;
 
@@ -106,7 +106,7 @@ namespace sw::editor
             , _format{ TextureImportFormat::BC7 }
             , _swizzle{ TextureSwizzle::RGBA }
             , _bGenerateMips{ SW_TRUE }
-            , _bSrgb{ SW_TRUE }
+            , _bSRGB{ SW_TRUE }
             , _bInvertGreen{ SW_FALSE }
             , _reserved{ 0 }
         {

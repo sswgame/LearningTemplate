@@ -37,17 +37,17 @@ struct InstanceData
     float3 getHighlightColor();
     float4 computeUvRect();
     float4 computeTint();
-    void computeVertexAnimationElements( uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha );
-    void loadAnimatedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
+    void computeVertexAnimationElements( uint vertexID, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha );
+    void loadAnimatedVertex( uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
     static float2 unpackUnorm16x2( uint packed );
     static uint resolveEntry( uint instanceSlot );
-    static uint resolveId( uint instanceSlot );
+    static uint resolveID( uint instanceSlot );
     static InstanceData load( uint instanceSlot );
     static float4x4 loadWorld( uint instanceSlot );
 };
 
-/// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다): 아래 24비트 인스턴스 번호, 다음 3비트 LOD 단계(머리 배치에서의 오프셋), 위쪽 5비트 LOD 크로스페이드 코드(binding.hlsli `Appearance::computeLodFadeAppearance`).
-static const uint kVisibleEntryIdMask     = 0x00FFFFFFu;
+/// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다): 아래 24비트 인스턴스 번호, 다음 3비트 LOD 단계(머리 배치에서의 오프셋), 위쪽 5비트 LOD 크로스페이드 코드(binding.hlsli `Appearance::computeLODFadeAppearance`).
+static const uint kVisibleEntryIDMask     = 0x00FFFFFFu;
 static const uint kVisibleEntryLevelShift = 24u;
 static const uint kVisibleEntryLevelMask  = 7u;
 static const uint kVisibleEntryFadeShift  = 27u;

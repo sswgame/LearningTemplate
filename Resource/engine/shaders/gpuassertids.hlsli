@@ -2,7 +2,7 @@
  * gpuassertids.hlsli — 셰이더 assert 계약의 **유일한 정본**(언리얼 ShaderPrint / ShaderDebug 의 조건 번호표와 같은 자리).
  *
  * 이 파일은 순수 전처리기 정의만 담는다(#define 정수 + 주석). 그래서 HLSL 과 C++ 가 **같은 파일을 include** 한다 —
- * C++ 쪽은 Source/Engine/Graphics/Debug/GpuAssert.h 가 이 파일을 include 해 id 별 심각도 · 메시지 표(GpuAssert.cpp)를 만든다.
+ * C++ 쪽은 Source/Engine/Graphics/Debug/GPUAssert.h 가 이 파일을 include 해 id 별 심각도 · 메시지 표(GPUAssert.cpp)를 만든다.
  * 규칙은 bindingslots.hlsli 와 같다: #define 과 주석만, 값은 숫자 리터럴(정수 · `u` 접미)만.
  *
  * 버퍼 배치(uint 원소): [0] 지금까지 적은 기록 수(누적 · 지우지 않는다) · [1..3] 예약 · 이어서 기록 SW_GPU_ASSERT_RING_CAPACITY 칸(한 칸 SW_GPU_ASSERT_RECORD_UINTS 개).
@@ -17,12 +17,12 @@
 #define SW_GPU_ASSERT_RING_CAPACITY 256
 #define SW_GPU_ASSERT_HEADER_UINTS  4
 #define SW_GPU_ASSERT_RECORD_UINTS  4
-#define SW_GPU_ASSERT_BUFFER_UINTS  1028 // 헤더 4 + 256 칸 x 4 — 위 세 값의 식이다(산술식 금지라 값으로 적고 GpuAssert.h 가 static_assert 로 확인한다)
+#define SW_GPU_ASSERT_BUFFER_UINTS  1028 // 헤더 4 + 256 칸 x 4 — 위 세 값의 식이다(산술식 금지라 값으로 적고 GPUAssert.h 가 static_assert 로 확인한다)
 
 // 컴퓨트 쓰기 슬롯 — SW_SLOT_COMPUTE_ASSERT_UAV(bindingslots.hlsli 3 절, u4). 셰이더 소유 쓰기 버퍼 u0..u3 와 겹치지 않으므로 어느 컴퓨트 셰이더(vfxsimulate 포함)든 assert 를 가질 수 있다.
 #include "bindingslots.hlsli"
 
-// 조건 id — 값은 기록 칸에 비트로 싣고, 값의 종류(정수 · 실수)와 심각도 · 메시지는 id 표(GpuAssert.cpp)가 정한다.
+// 조건 id — 값은 기록 칸에 비트로 싣고, 값의 종류(정수 · 실수)와 심각도 · 메시지는 id 표(GPUAssert.cpp)가 정한다.
 // ------------------------------------------------------------------------------
 // gpucull.hlsl — LOD 단계 번호 · 가시 구간 범위
 // ------------------------------------------------------------------------------

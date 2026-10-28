@@ -145,7 +145,7 @@ namespace sw::editor
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##bugit_rows", 3, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::TableSetupColumn( "Folder", ImGuiTableColumnFlags_WidthStretch, 1.0f );
         ImGui::TableSetupColumn( "Note", ImGuiTableColumnFlags_WidthStretch, 2.0f );
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 96.0f * dpiScale );

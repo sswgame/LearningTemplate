@@ -71,10 +71,10 @@ namespace sw
             return 0;
         }
 
-        SW_PROFILE_SCOPE( "GT.GpuUpload.flush" );
+        SW_PROFILE_SCOPE( "GT.GPUUpload.flush" );
 
         const uint32 count = static_cast<uint32>( _listPendingMesh.size() );
-        SW_PROFILE_COUNT( "GT.GpuUpload.meshCount", count );
+        SW_PROFILE_COUNT( "GT.GPUUpload.meshCount", count );
 
         IRHIDevice*                     pDevice   = _pDevice;
         const vector<shared_ptr<Mesh>>& listMesh  = _listPendingMesh;
@@ -89,8 +89,8 @@ namespace sw
         if ( bParallelUploadPossible )
         {
             // 워커가 나눠 만들고 여기서 기다린다. 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다.
-            TaskStageHandle stage  = _pTaskManager->createStage( "GpuUploadMesh" );
-            TaskHandle      handle = _pTaskManager->emplaceParallel( "GpuUploadMesh", count,
+            TaskStageHandle stage  = _pTaskManager->createStage( "GPUUploadMesh" );
+            TaskHandle      handle = _pTaskManager->emplaceParallel( "GPUUploadMesh", count,
                                                                      SW_DELEGATE_LAMBDA( ParallelTaskDelegate, uploadOne ) );
             if ( handle.isValid() )
             {

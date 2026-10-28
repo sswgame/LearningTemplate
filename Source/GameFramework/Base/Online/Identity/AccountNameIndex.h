@@ -6,7 +6,7 @@
  *            왕복이 하나다. 구현은 상태가 없어(연결만 쓴다) 어느 스레드에서 불러도 된다.
  *          - 이름으로 찾을 수 있는 것은 정식 계정(로그인 이름이 곧 고유한 표시 이름)뿐이다. 게스트와 외부 계정의 생성된 이름(`Guest-…`)은 고유하지 않아 색인에 없으므로 계정 id 로 찾는다.
  *          - 접속해 있는 계정은 `IAccountDirectory`(이 프로세스)와 `IAccountPresence`(서버 여럿)가 저장소를 읽지 않고 답한다. 이 인터페이스는 오프라인까지 볼 때 쓴다.
- *          언리얼 `IOnlineUser::QueryUserIdMapping`(표시 이름에서 사용자 id), PlayFab `GetAccountInfo(TitleDisplayName)` 에 해당한다.
+ *          언리얼 `IOnlineUser::QueryUserIDMapping`(표시 이름에서 사용자 id), PlayFab `GetAccountInfo(TitleDisplayName)` 에 해당한다.
  */
 #pragma once
 #include "Core/Common/Types.h"

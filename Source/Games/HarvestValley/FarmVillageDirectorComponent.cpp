@@ -149,7 +149,7 @@ namespace sw
             SW_LOG_WARNING( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
-        if ( _catalog.getNpcs().empty() )
+        if ( _catalog.getNPCs().empty() )
         {
             SW_LOG_WARNING( "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
@@ -163,8 +163,8 @@ namespace sw
         _schedule.setPathing( nullptr, &_finePathing );
         if ( _schedule.initialize( &_catalog, settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) ) == false )
             return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
-        _listPosition.assign( static_cast<size_t>( _schedule.getNpcCount() ), float3{} );
-        _listBodySpeed.assign( static_cast<size_t>( _schedule.getNpcCount() ), 0.0f );
+        _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
+        _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
         if ( _bHasPendingSave )
         {
             // 일정이 서기 전에 읽은 저장(세이브 불러오기)을 지금 건다 — 끼어들기 · 호감도 · 약속 결과가 시계만으로는 나오지 않는다.
@@ -172,12 +172,12 @@ namespace sw
             _pendingSave     = ScheduleSaveState{};
             _bHasPendingSave = false;
         }
-        for ( int32 npcIndex = 0; npcIndex < _schedule.getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
-            _schedule.setNpcLOD( npcIndex, ScheduleLOD::Near );
-            _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNpcView( npcIndex )._location._position;
+            _schedule.setNPCLOD( npcIndex, ScheduleLOD::Near );
+            _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNPCView( npcIndex )._location._position;
         }
-        SW_LOG_INFO( "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNpcCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
+        SW_LOG_INFO( "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
                      clock.getMinute() );
         return true;
     }
@@ -208,7 +208,7 @@ namespace sw
             SW_LOG_ERROR( "[Village] the schedule save state could not be read" );
             return false;
         }
-        if ( _schedule.getNpcCount() > 0 )
+        if ( _schedule.getNPCCount() > 0 )
         {
             _schedule.restoreSaveState( state );
             return true;
@@ -231,10 +231,10 @@ namespace sw
         _schedule.update( clock );
         // 일정의 걸음(게임 분당 거리)을 실제 초당 거리로 — 시계가 빨라지면(빨리 감기) 몸도 그만큼 빨리 걷는다.
         const float32 minutesPerSecond = static_cast<float32>( kScheduleMinutesPerDay ) / MathUtil::max( clock.getSettings()._secondsPerDay, 1.0f ) * clock.getTimeScale();
-        for ( int32 npcIndex = 0; npcIndex < _schedule.getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
-            const ScheduleNpcDef* pDef                      = _catalog.findNpc( _schedule.getNpcID( npcIndex ) );
-            _listPosition[static_cast<size_t>( npcIndex )]  = _schedule.getNpcView( npcIndex )._location._position;
+            const ScheduleNPCDef* pDef                      = _catalog.findNPC( _schedule.getNPCID( npcIndex ) );
+            _listPosition[static_cast<size_t>( npcIndex )]  = _schedule.getNPCView( npcIndex )._location._position;
             _listBodySpeed[static_cast<size_t>( npcIndex )] = pDef != nullptr ? pDef->_unitsPerMinute * minutesPerSecond * _bodyCatchUpScale : 0.0f;
         }
     }
@@ -244,10 +244,10 @@ namespace sw
         if ( bRespawnViews == false )
             return;
         const GameObjectHandle director = getOwner()->getHandle();
-        for ( int32 npcIndex = 0; npcIndex < _schedule.getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
             // 이름은 `Villager.<NPC id>` — 시나리오가 `Object.*` 감시 값의 target 으로 쓴다.
-            const string name      = "Villager." + string( _schedule.getNpcID( npcIndex ).c_str() );
+            const string name      = "Villager." + string( _schedule.getNPCID( npcIndex ).c_str() );
             GameObject*  pVillager = spawnPrefab( manager, _villagerPrefab, name.c_str() );
             if ( pVillager == nullptr )
                 continue;

@@ -58,7 +58,7 @@ namespace sw
             title += " \xE2\x80\x94 "; // " — "
         }
         title += makeSummary( input );
-        return truncateUtf8( title, kMaxTitleBytes );
+        return truncateUTF8( title, kMaxTitleBytes );
     }
 
     string AutomationRunTitleUtil::makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame )
@@ -318,12 +318,12 @@ namespace sw
         pTitleTarget->applyWindowTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
     }
 
-    string AutomationRunTitleUtil::truncateUtf8( string_view text, uint32 maxBytes )
+    string AutomationRunTitleUtil::truncateUTF8( string_view text, uint32 maxBytes )
     {
         constexpr uint32 kEllipsisBytes = 3; // "…" = E2 80 A6
         if ( text.size() <= maxBytes )
             return string{ text };
-        const size_t cut = StringUtil::floorToUtf8Boundary( text, maxBytes > kEllipsisBytes ? maxBytes - kEllipsisBytes : 0 );
+        const size_t cut = StringUtil::floorToUTF8Boundary( text, maxBytes > kEllipsisBytes ? maxBytes - kEllipsisBytes : 0 );
         string       result{ text.substr( 0, cut ) };
         result += "\xE2\x80\xA6";
         return result;

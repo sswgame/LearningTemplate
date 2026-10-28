@@ -530,15 +530,15 @@ namespace sw
             pUnit->_morale = MathUtil::clamp( pUnit->_morale + delta, _settings._moraleMin, _settings._moraleMax );
     }
 
-    void SRPGBattlefield::grantXp( int32 unitIndex, int64 amount )
+    void SRPGBattlefield::grantXP( int32 unitIndex, int64 amount )
     {
         SRPGUnit*  pUnit          = findUnit( unitIndex );
-        const bool bCannotGrantXp = pUnit == nullptr || _pCatalog == nullptr || amount <= 0;
-        if ( bCannotGrantXp )
+        const bool bCannotGrantXP = pUnit == nullptr || _pCatalog == nullptr || amount <= 0;
+        if ( bCannotGrantXP )
             return;
-        if ( pUnit->_pilotLevel.addXp( _pCatalog->getPilotCurve(), amount ) > 0 )
+        if ( pUnit->_pilotLevel.addXP( _pCatalog->getPilotCurve(), amount ) > 0 )
             pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
-        if ( pUnit->_unitLevel.addXp( _pCatalog->getUnitCurve(), amount ) > 0 )
+        if ( pUnit->_unitLevel.addXP( _pCatalog->getUnitCurve(), amount ) > 0 )
             pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_unitLevel.getLevel(), SRPGEvent::Kind::UnitLevelUp, pUnit->_team } );
     }
 

@@ -29,7 +29,7 @@ namespace sw
 {
     /**
      * @enum TextureResidency
-     * @brief DDS 를 GPU 에 업로드할 때 밉 사슬을 어디까지 올리는지입니다(텍스처 밉 스트리밍, 계획 PreloadAndLod P6).
+     * @brief DDS 를 GPU 에 업로드할 때 밉 사슬을 어디까지 올리는지입니다(텍스처 밉 스트리밍, 계획 PreloadAndLOD P6).
      */
     enum class TextureResidency : uint8
     {
@@ -106,7 +106,7 @@ namespace sw
         [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency );
         /**
          * @brief 새 업로드의 1단계입니다 — GPU 텍스처를 만들고 밉 사슬 업로드를 제출합니다. 기다리지 않습니다(`bBlocking` 이 아니면). 디바이스를 쓰는 스레드에서만 부릅니다.
-         * @details 세 단계(워커 읽기 → `beginUploadFromImage` → 이후 프레임의 `finishUpload`)의 가운데다(RhiAsyncUploads U8). 제출한 텍스처는 `finishUpload` 가 `Ready` 를 돌려주기 전에는
+         * @details 세 단계(워커 읽기 → `beginUploadFromImage` → 이후 프레임의 `finishUpload`)의 가운데다(RHIAsyncUploads U8). 제출한 텍스처는 `finishUpload` 가 `Ready` 를 돌려주기 전에는
          *          bindless 에 등록하지 않는다(전송 계약 1 · 8) — 그 사이 `isRHIValid` 는 거짓이다.
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다(블로킹 헬퍼 — 동기 `acquire` 의 `wait()`). 거짓이면 `Busy` 를 그대로 돌려준다.
          */
@@ -121,7 +121,7 @@ namespace sw
         bool hasUploadInFlight() const { return _uploadTicket.isValid(); }
         /**
          * @brief 아래쪽 밉만 있는 텍스처(`StreamingBase`)에 밉 사슬 전부를 새 GPU 텍스처로 올리는 1단계입니다 — 새 텍스처를 만들고 업로드를 제출합니다(렌더 스레드, 기록 전).
-         * @details 첫 업로드와 같은 세 단계다(RhiAsyncUploads U8): 이 함수 → 이후 프레임의 `finishUpgradeResidency`. 그 사이 이 텍스처는 아래쪽 밉 그대로 그려진다. 실패하면 아래쪽 밉 그대로
+         * @details 첫 업로드와 같은 세 단계다(RHIAsyncUploads U8): 이 함수 → 이후 프레임의 `finishUpgradeResidency`. 그 사이 이 텍스처는 아래쪽 밉 그대로 그려진다. 실패하면 아래쪽 밉 그대로
          *          남는다(오류를 남긴다). 이미 올리는 중이거나 올릴 것이 없으면 `Failed` 다(오류 없음).
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다. 거짓이면 `Busy` 를 그대로 돌려줍니다(만든 텍스처는 지웠다).
          */
@@ -179,11 +179,11 @@ namespace sw
          */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
 
-        bool isRHIValid() const { return getHandle() != 0 && getSrv() != kInvalidDescriptorIndex; }
+        bool isRHIValid() const { return getHandle() != 0 && getSRV() != kInvalidDescriptorIndex; }
         /** @brief GPU 텍스처 핸들입니다. 스트리밍이 렌더 스레드에서 바꿔 끼우므로 원자값으로 읽는다(`upgradeResidency`). */
         RHITextureHandle getHandle() const { return _handle.load( std::memory_order_acquire ); }
         /** @brief bindless SRV 번호입니다. 게임 스레드(머티리얼)가 읽는 동안 렌더 스레드가 바꿔 끼울 수 있어 원자값으로 읽는다. */
-        RHIDescriptorIndex getSrv() const { return _srv.load( std::memory_order_acquire ); }
+        RHIDescriptorIndex getSRV() const { return _srv.load( std::memory_order_acquire ); }
         uint32             getWidth() const { return _width; }
         uint32             getHeight() const { return _height; }
         RHIFormat          getFormat() const { return _format; }

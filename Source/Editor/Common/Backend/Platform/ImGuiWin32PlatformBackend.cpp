@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
@@ -44,7 +44,7 @@ namespace sw::editor
             return ImGui_ImplWin32_Init( hWnd );
         }
 
-        float32 getDpiScale() const override
+        float32 getDPIScale() const override
         {
             if ( _hWnd == nullptr )
                 return 1.0f;

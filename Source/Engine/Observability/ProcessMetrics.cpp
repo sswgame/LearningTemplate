@@ -2,7 +2,7 @@
 
 #include "Engine/Observability/ProcessMetrics.h"
 
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 

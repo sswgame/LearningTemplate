@@ -182,7 +182,7 @@ namespace sw
          * @brief 3, 4세대 포획 공식입니다. a = ⌊(3M − 2H) × 포획률 × 볼 / 3M⌋ × 상태(수면과 얼음은 2, 마비, 독, 화상은 1.5),
          *        b = ⌊1048560 / √√⌊16711680 / a⌋⌋ 이고, 0..65535 를 네 번 굴려 모두 b 미만이면 잡힙니다.
          */
-        static MonsterCaptureResult computeCapture( int32 maxHp, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random );
+        static MonsterCaptureResult computeCapture( int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random );
         /** @brief 능력 변화 단계의 배율입니다. +n 은 (2+n)/2, −n 은 2/(2+n) 입니다. */
         static float32 computeStageMultiplier( int32 stage );
         /** @brief 급소 단계의 확률 분모입니다. 단계 0은 24, 1은 8, 2는 2, 3 이상은 1 입니다. */

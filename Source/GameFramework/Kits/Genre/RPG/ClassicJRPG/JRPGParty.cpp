@@ -99,8 +99,8 @@ namespace sw
             learnSpellsAtLevel( memberIndex, *pClass, grownLevel );
         }
         JRPGMember& added = _listMember.back();
-        added._hp         = added.getStat( JRPGStat::MaxHp );
-        added._mp         = added.getStat( JRPGStat::MaxMp );
+        added._hp         = added.getStat( JRPGStat::MaxHP );
+        added._mp         = added.getStat( JRPGStat::MaxMP );
         _eventBuffer.clear(); // 처음 만든 멤버의 성장은 알리지 않는다
         return memberIndex;
     }
@@ -127,9 +127,9 @@ namespace sw
         {
             member._arrStat[index] /= 2;
         }
-        member._arrStat[static_cast<size_t>( JRPGStat::MaxHp )] = MathUtil::max( 1, member.getStat( JRPGStat::MaxHp ) );
-        member._hp                                              = MathUtil::clamp( member._hp, 1, member.getStat( JRPGStat::MaxHp ) );
-        member._mp                                              = MathUtil::clamp( member._mp, 0, member.getStat( JRPGStat::MaxMp ) );
+        member._arrStat[static_cast<size_t>( JRPGStat::MaxHP )] = MathUtil::max( 1, member.getStat( JRPGStat::MaxHP ) );
+        member._hp                                              = MathUtil::clamp( member._hp, 1, member.getStat( JRPGStat::MaxHP ) );
+        member._mp                                              = MathUtil::clamp( member._mp, 0, member.getStat( JRPGStat::MaxMP ) );
         member._level.setLevel( _pCatalog->getCurve(), 1 );
         pushEvent( JRPGPartyEvent::Kind::ClassChanged, memberIndex, 1, classID );
         learnSpellsAtLevel( memberIndex, *pClass, 1 );
@@ -145,7 +145,7 @@ namespace sw
         if ( pClass == nullptr )
             return 0;
         const int32 startLevel = _listMember[static_cast<size_t>( memberIndex )]._level.getLevel();
-        const int32 gained     = _listMember[static_cast<size_t>( memberIndex )]._level.addXp( _pCatalog->getCurve(), amount );
+        const int32 gained     = _listMember[static_cast<size_t>( memberIndex )]._level.addXP( _pCatalog->getCurve(), amount );
         for ( int32 step = 1; step <= gained; ++step )
         {
             growOneLevel( memberIndex, *pClass );
@@ -185,8 +185,8 @@ namespace sw
         {
             if ( member.isAlive() == false )
                 continue;
-            member._hp = member.getStat( JRPGStat::MaxHp );
-            member._mp = member.getStat( JRPGStat::MaxMp );
+            member._hp = member.getStat( JRPGStat::MaxHP );
+            member._mp = member.getStat( JRPGStat::MaxMP );
         }
         pushEvent( JRPGPartyEvent::Kind::Rested, -1, static_cast<int32>( price ) );
         return true;
@@ -202,7 +202,7 @@ namespace sw
         const int64 price = MathUtil::max<int64>( 0, pricePerLevel ) * member._level.getLevel();
         if ( price > 0 && ( _pWallet == nullptr || _pWallet->trySpend( Wallet::getDefaultCurrency(), price ) == false ) )
             return false;
-        member._hp = member.getStat( JRPGStat::MaxHp );
+        member._hp = member.getStat( JRPGStat::MaxHP );
         pushEvent( JRPGPartyEvent::Kind::Revived, memberIndex, static_cast<int32>( price ) );
         return true;
     }
@@ -429,8 +429,8 @@ namespace sw
         // 오른 최대치만큼 지금 HP 와 MP 도 오른다(쓰러진 멤버는 그대로 둔다).
         if ( member.isAlive() )
         {
-            member._hp = MathUtil::min( member.getStat( JRPGStat::MaxHp ), member._hp + classDef._arrGrowth[static_cast<size_t>( JRPGStat::MaxHp )] );
-            member._mp = MathUtil::min( member.getStat( JRPGStat::MaxMp ), member._mp + classDef._arrGrowth[static_cast<size_t>( JRPGStat::MaxMp )] );
+            member._hp = MathUtil::min( member.getStat( JRPGStat::MaxHP ), member._hp + classDef._arrGrowth[static_cast<size_t>( JRPGStat::MaxHP )] );
+            member._mp = MathUtil::min( member.getStat( JRPGStat::MaxMP ), member._mp + classDef._arrGrowth[static_cast<size_t>( JRPGStat::MaxMP )] );
         }
     }
 

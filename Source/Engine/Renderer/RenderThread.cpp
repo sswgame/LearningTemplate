@@ -544,7 +544,7 @@ namespace sw
             ++_budgetFrameCounter;
             if ( bRefreshBudget )
             {
-                SW_PROFILE_SCOPE( "RT.RefreshGpuMemoryBudget" );
+                SW_PROFILE_SCOPE( "RT.RefreshGPUMemoryBudget" );
                 _pDevice->refreshGPUMemoryBudget();
             }
         }

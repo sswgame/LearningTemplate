@@ -35,8 +35,8 @@ namespace sw::editor
             return SubsystemInitResult::Succeeded;
         }
         AccountClientInfo info;
-        info._build    = kGmToolBuild;
-        info._platform = kGmToolPlatform;
+        info._build    = kGMToolBuild;
+        info._platform = kGMToolPlatform;
         // 계정 클라이언트는 연결을 열기 전에 서비스 클라이언트에 등록해야 한다. 등록이 안 되면(영역 겹침) 로그인 없는 반쪽 조립이므로 서지 않는다.
         if ( _login.attach( pSession->getConnection().getServiceClient(), info ) == false )
         {

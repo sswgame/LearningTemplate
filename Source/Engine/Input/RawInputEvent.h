@@ -6,7 +6,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/Utf8Util.h"
+#include "Core/Container/UTF8Util.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
@@ -101,7 +101,7 @@ namespace sw
 
             struct
             {
-                utf8 _arrUtf8[constant::kMaxBuffer32];
+                utf8 _arrUTF8[constant::kMaxBuffer32];
             } _textData;
         } _payload{};
 
@@ -308,11 +308,11 @@ namespace sw
             if ( len < text.size() )
             {
                 // 잘리는 위치가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.
-                len = Utf8Util::backOffToCharacterStart( text.data(), len );
+                len = UTF8Util::backOffToCharacterStart( text.data(), len );
             }
             if ( len > 0 )
-                Memory::copy( outEvent._payload._textData._arrUtf8, text.data(), len );
-            outEvent._payload._textData._arrUtf8[len] = '\0';
+                Memory::copy( outEvent._payload._textData._arrUTF8, text.data(), len );
+            outEvent._payload._textData._arrUTF8[len] = '\0';
         }
     };
 } // namespace sw

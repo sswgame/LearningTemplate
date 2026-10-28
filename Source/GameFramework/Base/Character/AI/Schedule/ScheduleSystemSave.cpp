@@ -83,11 +83,11 @@ namespace sw
         outState._minute  = _minute;
         outState._seed    = _settings._seed;
         outState._weather = _weather;
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            const NpcRuntime&    npc = _listNpc[static_cast<size_t>( npcIndex )];
-            ScheduleNpcSaveState npcState;
-            npcState._id             = getNpcID( npcIndex );
+            const NPCRuntime&    npc = _listNPC[static_cast<size_t>( npcIndex )];
+            ScheduleNPCSaveState npcState;
+            npcState._id             = getNPCID( npcIndex );
             npcState._originArea     = npc._origin._area;
             npcState._originPosition = npc._origin._position;
             npcState._originMinute   = npc._originMinute;
@@ -106,7 +106,7 @@ namespace sw
             {
                 npcState._listTag.push_back( tag.getString() != nullptr ? string( tag.getString() ) : string() );
             }
-            outState._listNpc.push_back( npcState );
+            outState._listNPC.push_back( npcState );
         }
         for ( const int32 appointmentIndex : _listBrokenAppointment )
         {
@@ -121,7 +121,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return;
         _bSuppressEvents = SW_TRUE;
-        for ( NpcRuntime& npc : _listNpc )
+        for ( NPCRuntime& npc : _listNPC )
         {
             releaseUnused( npc._listSegment, vector<ScheduleSegment>{} ); // 예약은 아래에서 저장된 것으로 바꾼다
             npc._listSegment.clear();
@@ -143,13 +143,13 @@ namespace sw
         if ( _pLocator == &_defaultLocator )
             _defaultLocator.restoreState( state._listReservation );
 
-        vector<uint8> listRestored( _listNpc.size(), SW_FALSE );
-        for ( const ScheduleNpcSaveState& npcState : state._listNpc )
+        vector<uint8> listRestored( _listNPC.size(), SW_FALSE );
+        for ( const ScheduleNPCSaveState& npcState : state._listNPC )
         {
-            const int32 npcIndex = findNpcIndex( npcState._id );
+            const int32 npcIndex = findNPCIndex( npcState._id );
             if ( npcIndex < 0 )
                 continue;
-            NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+            NPCRuntime& npc = _listNPC[static_cast<size_t>( npcIndex )];
             npc._affinity   = npcState._affinity;
             npc._tags.clear();
             for ( const string& tagName : npcState._listTag )
@@ -166,13 +166,13 @@ namespace sw
             npc._held                     = ScheduleLocation{ npcState._heldPosition, npcState._heldArea };
             const ScheduleLocation origin = ScheduleLocation{ npcState._originPosition, npcState._originArea };
             const bool             bToday = ScheduleSystemSaveInternal::toDay( npcState._originMinute ) == getDay() && npcState._originMinute <= _minute;
-            planNpc( npcIndex, bToday ? npcState._originMinute : _minute, origin );
+            planNPC( npcIndex, bToday ? npcState._originMinute : _minute, origin );
             listRestored[static_cast<size_t>( npcIndex )] = SW_TRUE;
         }
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
             if ( listRestored[static_cast<size_t>( npcIndex )] == SW_FALSE )
-                planNpc( npcIndex, _minute, _listNpc[static_cast<size_t>( npcIndex )]._origin );
+                planNPC( npcIndex, _minute, _listNPC[static_cast<size_t>( npcIndex )]._origin );
         }
         rebuildAppointmentChecks( getDay() );
         _flagsRevision    = _pFlags != nullptr ? _pFlags->getRevision() : 0;
@@ -184,9 +184,9 @@ namespace sw
     void ScheduleSystem::fillNetSummary( vector<ScheduleNetSummary>& outListSummary ) const
     {
         outListSummary.clear();
-        for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
         {
-            const NpcRuntime&      npc         = _listNpc[static_cast<size_t>( npcIndex )];
+            const NPCRuntime&      npc         = _listNPC[static_cast<size_t>( npcIndex )];
             const float32          minuteOfDay = static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay );
             const int32            active      = ScheduleSystemSaveInternal::findActiveSegment( npc._listSegment, minuteOfDay );
             float32                fraction    = 1.0f;
@@ -196,7 +196,7 @@ namespace sw
             summary._areaHash          = ScheduleHash::computeNameKey( location._area );
             summary._npcIndex          = static_cast<uint16>( npcIndex );
             summary._segmentIndex      = static_cast<int16>( active );
-            summary._phase             = static_cast<uint8>( active >= 0 ? computePhase( npc, active, minuteOfDay, fraction ) : ScheduleNpcPhase::Performing );
+            summary._phase             = static_cast<uint8>( active >= 0 ? computePhase( npc, active, minuteOfDay, fraction ) : ScheduleNPCPhase::Performing );
             summary._interruptionDepth = static_cast<uint8>( MathUtil::min( npc._listInterruption.size(), static_cast<size_t>( 255 ) ) );
             if ( active >= 0 )
                 summary._activityHash = ScheduleHash::computeNameKey( npc._listSegment[static_cast<size_t>( active )]._activity );
@@ -260,8 +260,8 @@ namespace sw
         fillNetSummary( listSummary );
         vector<uint8> bytes;
         encodeNetSummary( _minute, listSummary, bytes );
-        uint64 hash = HashUtil::appendBytes64( HashUtil::kFnvOffset64, bytes.data(), bytes.size() );
-        for ( const NpcRuntime& npc : _listNpc )
+        uint64 hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, bytes.data(), bytes.size() );
+        for ( const NPCRuntime& npc : _listNPC )
         {
             hash = HashUtil::appendValue64( hash, npc._originMinute );
             hash = ScheduleHash::appendPosition( hash, npc._origin._position );

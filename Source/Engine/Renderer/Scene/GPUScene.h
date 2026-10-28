@@ -34,11 +34,11 @@ namespace sw
         RHIStructuredBufferSlot _indirectArgs;
         RHIStructuredBufferSlot _visibleInstances;
         /**
-         * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpucull.hlsl` 의 `g_LodState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
+         * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpucull.hlsl` 의 `g_LODState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
          * @details 뷰마다 하나다 — 뷰마다 보는 거리와 갱신 주기가 달라 전환 진행이 다르다.
          */
         RHIStructuredBufferSlot _lodState;
-        /// @brief `_lodState` 가 맞춰 둔 인스턴스 배치 세대(`GPUSceneSnapshot::_instanceLayoutGeneration`)입니다. 다르면 다음 컬링이 상태를 비운다(`GPUScene::takeLodStateReset`).
+        /// @brief `_lodState` 가 맞춰 둔 인스턴스 배치 세대(`GPUSceneSnapshot::_instanceLayoutGeneration`)입니다. 다르면 다음 컬링이 상태를 비운다(`GPUScene::takeLODStateReset`).
         uint32 _lodStateLayoutGeneration{ 0xFFFFFFFFu };
     };
 } // namespace sw
@@ -155,13 +155,13 @@ namespace sw
         /**
          * @brief 컬링 뷰 @p view 의 LOD 전환 상태를 이번 컬링에서 비워야 하면 true 를 반환하고 비운 것으로 기록합니다(상태 버퍼를 새로 만들었거나 인스턴스 번호 배치가 바뀌었다).
          */
-        bool takeLodStateReset( uint32 cullViewIndex );
+        bool takeLODStateReset( uint32 cullViewIndex );
         /** @brief 컬링 뷰 @p view 에 LOD 전환 상태 버퍼가 있으면 true 입니다(LOD 그룹이 있고 버퍼를 만들었다). */
-        bool hasLodState( uint32 cullViewIndex ) const { return cullViewIndex < _listCullView.size() && _listCullView[cullViewIndex]._lodState._uav != kInvalidDescriptorIndex; }
+        bool hasLODState( uint32 cullViewIndex ) const { return cullViewIndex < _listCullView.size() && _listCullView[cullViewIndex]._lodState._uav != kInvalidDescriptorIndex; }
         /** @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 크로스페이드가 없다(`GPUSceneSnapshot::_lodCrossfadeSeconds`). */
-        float32 getLodCrossfadeSeconds() const { return _snapshot._lodCrossfadeSeconds; }
+        float32 getLODCrossfadeSeconds() const { return _snapshot._lodCrossfadeSeconds; }
         /** @brief 스냅샷에 LOD 그룹이 하나라도 있으면 true 입니다. */
-        bool hasLodGroups() const { return _snapshot.hasLodGroups(); }
+        bool hasLODGroups() const { return _snapshot.hasLODGroups(); }
         /** @brief 가시 목록의 칸 수입니다(`GPUSceneSnapshot::getVisibleSlotCount`). */
         uint32 getVisibleSlotCount() const { return _snapshot.getVisibleSlotCount(); }
         /**
@@ -185,7 +185,7 @@ namespace sw
         /** @brief 방출기마다의 입자 그리기(주 시점에서 먼 것부터)를 반환합니다. */
         const vector<GPUParticleBatch>& getParticleBatches() const { return _snapshot._listParticleBatch; }
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들(인스턴스 칸 목록)을 반환합니다. */
-        const vector<GPUVfxMeshEmitter>& getVfxMeshEmitters() const { return _snapshot._listVfxMeshEmitter; }
+        const vector<GPUVFXMeshEmitter>& getVFXMeshEmitters() const { return _snapshot._listVFXMeshEmitter; }
         /** @brief 주 시점에서 입자 그리기의 순서와 메시 투명 배치 사이의 자리를 반환합니다(`GPUSceneSnapshot::_listParticleSlot`). */
         const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */
@@ -212,13 +212,13 @@ namespace sw
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
-        RHIDescriptorIndex getInstanceSrv() const { return _instances._srv; }
+        RHIDescriptorIndex getInstanceSRV() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
          * @details instanceanimation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
-        RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }
+        RHIDescriptorIndex getInstanceUAV() const { return _instances._uav; }
         /** @brief 뷰 하나의 컬링 산출물(간접 인자와 가시 목록)을 반환합니다. */
         const GPUCullViewResources& getCullView( RenderViewType view ) const { return _listCullView[static_cast<uint32>( view )]; }
         /** @brief 컬링 슬롯 @p cullViewIndex 의 산출물입니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다. */
@@ -230,7 +230,7 @@ namespace sw
          */
         void setCullViewCount( IRHIDevice* pDevice, uint32 count );
         /** @brief 배치 테이블 버퍼의 SRV 를 반환합니다(컬링 컴퓨트 t1, 그래픽스 t9 g_SwBatches). */
-        RHIDescriptorIndex getBatchInfoSrv() const { return _batchInfo._srv; }
+        RHIDescriptorIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
         /** @brief 씬 메시 정점 풀(RT 소유)을 반환합니다. */
@@ -300,7 +300,7 @@ namespace sw
         /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
         void populateIndirectCommands( uint32 argsCount );
         /** @brief 뷰마다 LOD 전환 상태 버퍼를 맞춥니다. LOD 그룹이 없으면 놓습니다(전환 상태는 그룹 인스턴스에만 쓴다). */
-        void ensureLodStateBuffers( IRHIDevice* pDevice, uint32 instanceCount );
+        void ensureLODStateBuffers( IRHIDevice* pDevice, uint32 instanceCount );
         /** @brief 간접 인자의 시작 인스턴스입니다. 컬링이 가시 목록을 만드는 프레임은 가시 구간의 시작, 아니면 인스턴스 구간의 시작입니다. */
         uint32 computeStartInstance( const GPUMeshBatch& batch ) const;
         /** @brief 항등 인스턴스 슬롯 스트림을 가시 칸 수(@p slotCount) 이상으로 확보합니다. */
@@ -331,7 +331,7 @@ namespace sw
          * @brief 뷰별 컬링 산출물입니다. 언리얼의 FInstanceCullingContext 가 뷰마다 있는 것과 같은 구조입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
-         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽는다(binding.hlsli InstanceData::resolveId). 이것이 없으면 컬링이
+         *          `g_SwVisibleInstanceIDs[슬롯]` 을 읽는다(binding.hlsli InstanceData::resolveID). 이것이 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수 없기 때문이다).
          *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
          */

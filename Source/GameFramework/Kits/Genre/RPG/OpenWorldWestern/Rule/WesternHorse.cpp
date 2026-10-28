@@ -33,7 +33,7 @@ namespace sw
         , _healthCore{ kCoreMax }
         , _staminaCore{ kCoreMax }
         , _bond{}
-        , _bondXpCarry{ 0.0f }
+        , _bondXPCarry{ 0.0f }
         , _fear{ 0.0f }
         , _hoursSinceBrush{ 0.0f }
         , _bRidden{ SW_FALSE }
@@ -68,7 +68,7 @@ namespace sw
         _healthCore      = kCoreMax;
         _staminaCore     = kCoreMax;
         _bond            = LevelProgress{};
-        _bondXpCarry     = 0.0f;
+        _bondXPCarry     = 0.0f;
         _fear            = 0.0f;
         _hoursSinceBrush = pCatalog->getBondExperience()._brushCooldownHours;
         _bRidden         = SW_FALSE;
@@ -174,10 +174,10 @@ namespace sw
         if ( _pCatalog == nullptr || amount <= 0.0f )
             return;
         // 기반 레벨 진행은 정수 경험치를 쓴다. 소수(초당 타기)는 1이 될 때까지 따로 보관한다.
-        const float32 total = _bondXpCarry + amount;
+        const float32 total = _bondXPCarry + amount;
         const int64   whole = static_cast<int64>( MathUtil::floor( total ) );
-        _bondXpCarry        = total - static_cast<float32>( whole );
-        if ( whole > 0 && _bond.addXp( _pCatalog->getBondCurve(), whole ) > 0 )
+        _bondXPCarry        = total - static_cast<float32>( whole );
+        if ( whole > 0 && _bond.addXP( _pCatalog->getBondCurve(), whole ) > 0 )
             applyBondLevel( getBondLevel() );
     }
 
@@ -211,7 +211,7 @@ namespace sw
         outArchive << _healthCore;
         outArchive << _staminaCore;
         _bond.writeState( outArchive );
-        outArchive << _bondXpCarry;
+        outArchive << _bondXPCarry;
         outArchive << _fear;
         outArchive << _hoursSinceBrush;
         outArchive << _bRidden;
@@ -245,13 +245,13 @@ namespace sw
         archive >> restored._staminaCore;
         if ( restored._bond.readState( archive ) == false )
             return false;
-        archive >> restored._bondXpCarry;
+        archive >> restored._bondXPCarry;
         archive >> restored._fear;
         archive >> restored._hoursSinceBrush;
         archive >> restored._bRidden;
         archive >> restored._bGalloping;
-        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._bondXpCarry &&
-                            restored._bondXpCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
+        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._bondXPCarry &&
+                            restored._bondXPCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
         if ( bValid == false )
             return false;
         restored._eventBuffer.clear();

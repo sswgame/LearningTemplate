@@ -7,7 +7,7 @@
  */
 #pragma once
 // Windows 의 OS 헤더(`Windows.h` · `DbgHelp.h` …)는 넣지 않는다 — 이 헤더는 PCH 를 거쳐 모든 TU 에 들어가 TU 마다 파싱 비용이 든다.
-// Win32 · POSIX API 를 쓰는 `.cpp` 가 `Core/Common/PlatformOsHeaders.h` 를 직접 include 한다.
+// Win32 · POSIX API 를 쓰는 `.cpp` 가 `Core/Common/PlatformOSHeaders.h` 를 직접 include 한다.
 #include "Core/CoreMinimal.h"
 
 #include "Engine/Common/EngineDefines.h"

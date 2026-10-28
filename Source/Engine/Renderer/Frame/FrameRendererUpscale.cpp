@@ -23,7 +23,7 @@ namespace sw
     SW_LOG_CALLER( "FrameRenderer" );
 
     /**
-     * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
+     * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
      */
     SW_GLOBAL_VARIABLE( float32, gv_upscalerSharpness, 0.2f, "FSR 1 선명화(RCAS) 를 줄이는 단계 — 0 가장 선명, 1 마다 절반 (graphics.upscaler 가 spatial 일 때)" );
 
@@ -52,12 +52,12 @@ namespace sw
 
     void FrameRenderer::releaseUpscaleIntermediate( ViewTarget& view )
     {
-        if ( _pDevice != nullptr && view._upscaleIntermediateSrv != kInvalidDescriptorIndex )
-            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSrv );
+        if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
+            _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
         if ( _pDevice != nullptr && view._upscaleIntermediate != 0 )
             _pDevice->getResourceFactory()->destroyTexture( view._upscaleIntermediate );
         view._upscaleIntermediate    = 0;
-        view._upscaleIntermediateSrv = kInvalidDescriptorIndex;
+        view._upscaleIntermediateSRV = kInvalidDescriptorIndex;
         view._upscaleWidth           = 0;
         view._upscaleHeight          = 0;
         view._bUpscaleThisFrame      = SW_FALSE;
@@ -101,8 +101,8 @@ namespace sw
             IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
             view._upscaleIntermediate     = pFactory->createTexture2D( desc );
             if ( view._upscaleIntermediate != 0 )
-                view._upscaleIntermediateSrv = pFactory->registerBindlessTexture( view._upscaleIntermediate );
-            if ( view._upscaleIntermediateSrv == kInvalidDescriptorIndex )
+                view._upscaleIntermediateSRV = pFactory->registerBindlessTexture( view._upscaleIntermediate );
+            if ( view._upscaleIntermediateSRV == kInvalidDescriptorIndex )
             {
                 SW_LOG_ERROR( "Failed to create the FSR 1 intermediate (%#x%#, RGBA8 RT) - this view is upscaled linearly", viewportWidth, viewportHeight );
                 releaseUpscaleIntermediate( view );
@@ -167,12 +167,12 @@ namespace sw
         cmd.setPipelineState( pso );
         const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererUpscaleInternal::RootConstants constants{};
-        constants._source    = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSrv ) : 0u;
+        constants._source    = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
         constants._viewportX = viewportX;
         constants._viewportY = viewportY;
         constants._sharpness = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
         if ( bNativeBindless == false )
-            cmd.bindShaderResource( view._upscaleIntermediateSrv, shaderslot::kEngineTexture0 );
+            cmd.bindShaderResource( view._upscaleIntermediateSRV, shaderslot::kEngineTexture0 );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         context.resetBindingCache();

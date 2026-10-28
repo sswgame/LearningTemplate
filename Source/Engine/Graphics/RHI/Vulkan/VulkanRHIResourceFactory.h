@@ -31,7 +31,7 @@ namespace sw
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
-        // 전송(RhiAsyncUploads U6): 업로드 · 되읽기 링에 놓고 전송 작업(커맨드 버퍼 + 펜스)으로 내며 기다리지 않는다. 완료는 pollTransfer 가 펜스 줄의 연속 구간 워터마크로 본다.
+        // 전송(RHIAsyncUploads U6): 업로드 · 되읽기 링에 놓고 전송 작업(커맨드 버퍼 + 펜스)으로 내며 기다리지 않는다. 완료는 pollTransfer 가 펜스 줄의 연속 구간 워터마크로 본다.
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
@@ -41,17 +41,17 @@ namespace sw
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
         void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUAV( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처 레코드가 보관한 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture 와 unregisterBindlessTexture 공용). */
         void releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record );
         /** @brief 버퍼 인덱스(SRV/CB 또는 UAV)를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 부르기 전에 원본 테이블은 비워 둡니다. */
-        void deferFreeBufferIndex( RHIDescriptorIndex index, bool bUav );
+        void deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV );
         /** @brief 현재 프레임 슬롯의 스테이징에서 sizeBytes 를 bump 할당합니다(부족하면 키우고 이전 버퍼는 펜스 뒤 해제). */
         bool acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer );
 

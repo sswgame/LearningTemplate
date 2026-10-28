@@ -163,12 +163,12 @@ namespace sw::editor
         }
 
         // 서버의 GM 포트(서버 설정 `_adminServicePort`)에 연결한다. 로그인은 `getConnection().bindLoginHook` 으로 끼운 쪽이 한다.
-        EditorWidgets::drawTextField( "GM port (host:port)", _gmAddressText, 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "GM port (host:port)", _gmAddressText, 200.0f * EditorThemeUtil::getDPIScale() );
         // 계정 이름 · 비밀번호는 로그인을 맡은 쪽(조립)이 처리기를 걸었을 때만 받는다. 없으면 로그인 없이 연결하고 서버가 GM 명령을 거절한다는 것을 알린다.
         const bool bNeedsLogin = session.hasCredentialsHandler();
         if ( bNeedsLogin )
         {
-            EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDpiScale() );
+            EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDPIScale() );
             EditorChrome::setNextItemWidthColumns( 19.0f );
             ImGui::InputText( "GM password", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
         }
@@ -199,7 +199,7 @@ namespace sw::editor
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Account" );
 
-        EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.account" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Lookup" ) );
         if ( ImGui::Button( "Lookup" ) )
@@ -256,11 +256,11 @@ namespace sw::editor
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Grant / Revoke" );
 
-        EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Amount", ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::note( "admin.amount" );
-        EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDPIScale() );
         EditorSelfTestMarks::note( "admin.memo" );
         ImGui::Checkbox( "Refund revoke (may leave a debt)", &_bRefund );
 
@@ -298,7 +298,7 @@ namespace sw::editor
         }
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Seconds", ImGuiDataType_S64, &_sanctionSeconds );
-        EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
         const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
@@ -321,7 +321,7 @@ namespace sw::editor
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Audit log" );
 
-        EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "List audit" ) );
         if ( ImGui::Button( "List audit" ) )
             session.requestAudit( _auditSubjectText );
@@ -410,8 +410,8 @@ namespace sw::editor
         AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Maintenance / Notice" );
 
-        EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDpiScale() );
-        EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDPIScale() );
+        EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Maintenance seconds (0 = until cleared)", ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
@@ -429,7 +429,7 @@ namespace sw::editor
         ImGui::InputInt( "Priority", &_noticePriority );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Notice seconds (0 = until removed)", ImGuiDataType_S64, &_noticeSeconds );
-        EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDPIScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
         ImGui::BeginDisabled( bNoticeReady == false );
         if ( ImGui::Button( "Post notice" ) )
@@ -466,7 +466,7 @@ namespace sw::editor
             session.requestPutLiveEvent( _eventJSONText, _memoText );
         EditorSelfTestMarks::note( "admin.liveevent.put" );
         ImGui::EndDisabled();
-        EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorWidgets::drawTextField( "Event id", _eventIDText, 200.0f * EditorThemeUtil::getDPIScale() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove live event" ) );
         ImGui::BeginDisabled( _memoText.empty() || _eventIDText.empty() );
         if ( ImGui::Button( "Remove live event" ) )

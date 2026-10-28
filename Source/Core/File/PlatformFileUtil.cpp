@@ -10,12 +10,12 @@
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <share.h>
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <fcntl.h>
@@ -120,7 +120,7 @@ namespace sw
             arrWideMode[modeLength] = static_cast<utf16>( static_cast<uint8>( pMode[modeLength] ) );
             ++modeLength;
         }
-        const wstring widePath = StringUtil::utf8ToUtf16( pFilePath );
+        const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
         // 공유를 막지 않는다(`_SH_DENYNO`) — POSIX `fopen` 과 같다. `_wfopen_s` 는 배타적으로 열어, 엔진이 쓰는 동안 그 로그 파일을
         // 다른 프로그램(편집기 · tail · 테스트)이 열지 못한다.
         pFile = _wfsopen( widePath.c_str(), arrWideMode, _SH_DENYNO );
@@ -136,8 +136,8 @@ namespace sw
             return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
-        const wstring wideSource = StringUtil::utf8ToUtf16( pSourcePath );
-        const wstring wideTarget = StringUtil::utf8ToUtf16( pTargetPath );
+        const wstring wideSource = StringUtil::utf8ToUTF16( pSourcePath );
+        const wstring wideTarget = StringUtil::utf8ToUTF16( pTargetPath );
 
         // 1) POSIX 방식 이름 바꾸기(Windows 10 1709+, NTFS). **대상 파일을 누가 열고 있어도** 바꿔 끼운다 — 연 쪽은 옛 파일을 끝까지 읽는다.
         //    `MoveFileExW` 는 대상을 연 핸들이 하나라도 있으면(삭제 공유로 열었어도) 실패해서, 에디터 · 파일 감시가 자주 읽는 파일은 저장이
@@ -196,7 +196,7 @@ namespace sw
         vector<utf16> listWideChar;
         for ( const string& path : listPath )
         {
-            const wstring widePath = StringUtil::utf8ToUtf16( path.c_str() );
+            const wstring widePath = StringUtil::utf8ToUTF16( path.c_str() );
             for ( const utf16 ch : widePath )
             {
                 listWideChar.push_back( ch == L'/' ? L'\\' : ch );
@@ -260,7 +260,7 @@ namespace sw
             return kInvalidNativeFileHandle;
         noteFileOpenedForRead( pFilePath, 0 );
 #if defined( SW_PLATFORM_WINDOWS )
-        const wstring widePath = StringUtil::utf8ToUtf16( pFilePath );
+        const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
         const HANDLE  hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
                                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr );
         if ( hFile == INVALID_HANDLE_VALUE )

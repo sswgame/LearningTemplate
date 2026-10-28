@@ -167,9 +167,9 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderLightGrid; ///< 라이트 그리드 생산(컴퓨트) — 클러스터드 라이팅의 빛 목록
         PROPERTY( Required )
-        DataPath _shaderVfxSimulation; ///< GPU 방출기의 입자 시뮬레이션(컴퓨트)
+        DataPath _shaderVFXSimulation; ///< GPU 방출기의 입자 시뮬레이션(컴퓨트)
         PROPERTY( Required )
-        DataPath _shaderVfxMeshInstance; ///< GPU 메시 입자의 인스턴스 쓰기(컴퓨트)
+        DataPath _shaderVFXMeshInstance; ///< GPU 메시 입자의 인스턴스 쓰기(컴퓨트)
         PROPERTY( Required )
         DataPath _shaderDepthHistory; ///< 뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다
         PROPERTY( Required )
@@ -181,9 +181,9 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderFullscreenTriangle; ///< 전체 화면 삼각형 정점 셰이더
         PROPERTY( Required )
-        DataPath _shaderSsao; ///< SSAO
+        DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
-        DataPath _shaderTaa; ///< TAA
+        DataPath _shaderTAA; ///< TAA
         PROPERTY( Required )
         DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다
         PROPERTY( Required )
@@ -215,7 +215,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSprite2DLit; ///< 빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다
         PROPERTY( Required )
-        DataPath _shaderParticle; ///< 파티클 빌보드(Vfx) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다
+        DataPath _shaderParticle; ///< 파티클 빌보드(VFX) — 방출기 하나 = 그리기 하나, 입자 하나 = 인스턴스 하나. 투명 패스 PSO 를 물려받는다
 
         // RHI · 렌더 테스트의 프로브 셰이더 — 런타임은 쓰지 않지만 Shipping 테스트가 쿠킹된 바이너리를 읽으므로 쿠킹 목록에 든다.
         PROPERTY( Required )

@@ -72,18 +72,18 @@ namespace sw
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
     {
-        if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
+        if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSRV() == kInvalidDescriptorIndex )
             return;
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
         context._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
-                                                  _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
+                                                  _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV() );
         context._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
 
         // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
-        if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
+        if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSRV() != kInvalidDescriptorIndex )
         {
-            context._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSrv() );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSRV() );
             context._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
         }
 
@@ -130,7 +130,7 @@ namespace sw
         // 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 빛이 있는 프레임에만 역할 텍스처로 건다(셰이더는 g_Light2DCookieAtlasIndex 로 걸렸는지 본다).
         const Texture2D* pCookieAtlas = _cookieAtlas.hasCookies() ? _cookieAtlas.findAtlas() : nullptr;
         if ( pCookieAtlas != nullptr )
-            context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSrv() );
+            context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSRV() );
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling=None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
@@ -155,7 +155,7 @@ namespace sw
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t5).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
-        if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
+        if ( batch._materialBuffer == 0 || batch._materialSRV == kInvalidDescriptorIndex )
         {
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
             // 폴백은 **이 PSO 셰이더의 레이아웃**(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
@@ -175,18 +175,18 @@ namespace sw
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
             {
                 // 여기서 조용히 나가면 t5 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
-                // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
+                // 막는 것은 ensureMaterialPSOS 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
                 SW_LOG_ERROR( "No material fallback buffer for stride %# - this draw goes out with g_SwMaterials empty.",
                               pSlot->_elementStride );
             }
             return;
         }
-        context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSrv );
+        context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSRV );
         context._drawMaterialCount = batch._materialCount;
     }
 
     void FrameRenderer::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                     const RHIDescriptorIndex* pMaterialTexSrv )
+                                     const RHIDescriptorIndex* pMaterialTexSRV )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -228,7 +228,7 @@ namespace sw
         const BindlessIndexCheckSite* pIndexCheck = nullptr;
 #endif
         ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, engineCb, materialCb,
-                                             _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate, pIndexCheck );
+                                             _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bUpToDate, pIndexCheck );
 
         context._lastBindPSO           = pso;
         context._lastCbBuffer          = engineCb._buffer;
@@ -348,7 +348,7 @@ namespace sw
         commitBindlessTextureBindings( context );
 
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
-                                _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
+                                _gpuScene.getInstanceSRV() != kInvalidDescriptorIndex;
         if ( bInstanced )
             registerInstanceBuffer( context );
 
@@ -444,7 +444,7 @@ namespace sw
 
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
-        // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
+        // 캐시는 ensureMaterialPSOS 가 기록 전에 채운다. 여기서는 조회만 한다.
         RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
         const RHIPipelineStateHandle     batchPSO = psoForBatch( pso, head, drawMode, &psoState );
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
@@ -462,7 +462,7 @@ namespace sw
 
         // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
         registerMaterialBuffer( context, head, batchPSO );
-        bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSrv );
+        bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSRV );
         context._pCmd->drawIndirect( argsBuffer, argIndex * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
         return true;
     }
@@ -529,7 +529,7 @@ namespace sw
             desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
             desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
             desc._numRenderTargets              = 1;
-            desc._arrRtvFormat[0]               = pAtlas->getFormat();
+            desc._arrRTVFormat[0]               = pAtlas->getFormat();
             desc._depthStencilFormat            = RHIFormat::Unknown;
             desc._bEnableDepthTest              = 0;
             desc._bEnableDepthWrite             = 0;
@@ -582,7 +582,7 @@ namespace sw
             viewport._height = static_cast<float32>( cellSize );
             _pCmd->setViewport( viewport );
             context._resourceRegistry.reset();
-            context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pTexture->getHandle(), draw._pTexture->getSrv() );
+            context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pTexture->getHandle(), draw._pTexture->getSRV() );
             if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 쿠키 칸은 그리지 않는다
                 continue;
             drawFullscreen( context, pso );

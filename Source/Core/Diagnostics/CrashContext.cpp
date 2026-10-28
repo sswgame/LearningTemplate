@@ -3,7 +3,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 
 #include "Core/Common/HexDigitUtil.h"
-#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -162,7 +162,7 @@ namespace sw
             if ( bNothingToWrite )
                 return;
 #if defined( SW_PLATFORM_WINDOWS )
-            // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다(StringUtil::utf8ToUtf16 은 할당한다).
+            // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다(StringUtil::utf8ToUTF16 은 할당한다).
             utf16 arrWidePath[constant::kMaxBuffer1024]{};
             if ( MultiByteToWideChar( CP_UTF8, 0, pPath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
                 return;

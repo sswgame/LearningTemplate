@@ -38,7 +38,7 @@ target_link_libraries(App
 		sw_global_options
 )
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
-sw_configurePch(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePCH(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 sw_splitShippingDebugInfo(App)
 
 

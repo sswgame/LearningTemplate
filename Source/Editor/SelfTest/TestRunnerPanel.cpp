@@ -135,7 +135,7 @@ namespace sw::editor
     void TestRunnerPanel::drawSelfTestTab()
     {
         using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
         ImGui::InputTextWithHint( "##SelfTestFilter", "Filter tests...", _arrFilter, sizeof( _arrFilter ) );
         EditorSelfTestMarks::note( "testRunner.filter" );
         const string_view filter( _arrFilter );
@@ -314,7 +314,7 @@ namespace sw::editor
 
     void TestRunnerPanel::drawExecutableCombo( const string& binDirectory, bool bBusy, bool bExecutableChosen )
     {
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
         const utf8* pPreview = bExecutableChosen ? _listTestExecutablePath[_selectedExecutableIndex].c_str() : "Choose a test executable";
         if ( ImGui::BeginCombo( "##TestExecutable", pPreview ) == false )
             return;

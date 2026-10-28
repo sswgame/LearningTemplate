@@ -110,7 +110,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        secret;
         const bool                    bSigned =
-            payload.has_value() && JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
+            payload.has_value() && JWTUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );
@@ -281,7 +281,7 @@ namespace sw
         if ( bInvalidGrant )
             return; // 이미 무효인 토큰이다 — 더 철회할 것이 없다
         if ( response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest )
-            SW_LOG_ERROR( "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
+            SW_LOG_ERROR( "Login provider '%#' rejected the revocation (status %#) - check teamID, signingKeyID and the signing key", _settings._name.c_str(), response._statusCode );
         done._bUnavailable = SW_TRUE;
     }
 

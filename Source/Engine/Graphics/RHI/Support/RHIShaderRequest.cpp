@@ -67,7 +67,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() )
             return engine::getSubsystem<ShaderCache>().getOrCompile( desc );
-        return ShaderCompiler::compileHlsl( desc );
+        return ShaderCompiler::compileHLSL( desc );
     }
 
     bool RHIShaderRequest::compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel )

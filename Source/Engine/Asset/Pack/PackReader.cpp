@@ -293,7 +293,7 @@ namespace sw
         outPlan._uncompressedSize  = entry._uncompressedSize;
         outPlan._crc32             = entry._crc32;
         outPlan._compression       = static_cast<PackCompressionType>( _header._compressionType );
-        outPlan._bVerifyCrc        = ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0;
+        outPlan._bVerifyCRC        = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
         outFile                    = _file;
         return true;
     }
@@ -318,13 +318,13 @@ namespace sw
 
         // 2. CRC32 로 무결성을 검증한다. 플래그가 있으면 **늘** 대조한다. 쿠킹하는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0).
         //    저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
-        if ( plan._bVerifyCrc )
+        if ( plan._bVerifyCRC )
         {
-            const uint32 computedCrc = StringUtil::computeCrc32( outBytes.data(), outBytes.size() );
-            if ( computedCrc != plan._crc32 )
+            const uint32 computedCRC = StringUtil::computeCRC32( outBytes.data(), outBytes.size() );
+            if ( computedCRC != plan._crc32 )
             {
                 SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,
-                              Fmt( computedCrc, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                              Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
@@ -364,7 +364,7 @@ namespace sw
         if ( readFile( relativePath, bytes ) == false )
             return false;
 
-        const string_view text = FileUtil::skipUtf8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
+        const string_view text = FileUtil::skipUTF8Bom( string_view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() } );
         outText.assign( text.data(), text.size() );
         return true;
     }
@@ -397,7 +397,7 @@ namespace sw
         return _header;
     }
 
-    uint32 PackReader::getDlcAppID() const
+    uint32 PackReader::getDLCAppID() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         return _header._dlcAppID;

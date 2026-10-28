@@ -75,7 +75,7 @@ namespace sw
             _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
         }
         {
-            // 등록(registerBindlessBufferSrv · registerBindlessBufferUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
+            // 등록(registerBindlessBufferSRV · registerBindlessBufferUAV)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
         }
@@ -579,7 +579,7 @@ namespace sw
         D3D12RHIDevice::OffscreenTargetView view{};
         if ( _pDevice->findOffscreenTargetView( texture, 0, view ) )
         {
-            if ( view._bHasDsv != SW_FALSE )
+            if ( view._bHasDSV != SW_FALSE )
                 return RHIFormat::D24_UNORM_S8_UINT;
             return fromDxgiFormat( view._format );
         }
@@ -920,8 +920,8 @@ namespace sw
         record._height     = desc._height;
         record._arraySize  = desc._arraySize;
         record._dimension  = desc._dimension;
-        record._bHasRtv    = SW_FALSE;
-        record._bHasDsv    = SW_FALSE;
+        record._bHasRTV    = SW_FALSE;
+        record._bHasDSV    = SW_FALSE;
         record._reserved   = 0;
         const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
 
@@ -935,25 +935,25 @@ namespace sw
         for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
             uint32 rtvSlot{ 0 };
-            if ( _pDevice->_listFreeOffscreenRtvIndex.empty() == false )
+            if ( _pDevice->_listFreeOffscreenRTVIndex.empty() == false )
             {
-                rtvSlot = _pDevice->_listFreeOffscreenRtvIndex.back();
-                _pDevice->_listFreeOffscreenRtvIndex.pop_back();
+                rtvSlot = _pDevice->_listFreeOffscreenRTVIndex.back();
+                _pDevice->_listFreeOffscreenRTVIndex.pop_back();
             }
-            else if ( _pDevice->_nextOffscreenRtvIndex < D3D12RHIDevice::kMaxOffscreenRtvs )
-                rtvSlot = _pDevice->_nextOffscreenRtvIndex++;
+            else if ( _pDevice->_nextOffscreenRTVIndex < D3D12RHIDevice::kMaxOffscreenRTVs )
+                rtvSlot = _pDevice->_nextOffscreenRTVIndex++;
             else
             {
                 // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
                 // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
-                rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
+                rtvSlot = D3D12RHIDevice::kMaxOffscreenRTVs;
                 SW_LOG_ERROR( "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
-                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRtvs ) );
+                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRTVs ) );
             }
-            if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRtvs )
+            if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRTVs )
                 break;
             const uint32                  rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
-            D3D12_CPU_DESCRIPTOR_HANDLE   rtvHandle = _pDevice->getOffscreenRtvHandle( rtvIndex );
+            D3D12_CPU_DESCRIPTOR_HANDLE   rtvHandle = _pDevice->getOffscreenRTVHandle( rtvIndex );
             D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
             rtvDesc.Format = colorFmt;
             if ( bSliced )
@@ -975,31 +975,31 @@ namespace sw
             {
                 record._rtvIndex  = rtvIndex;
                 record._rtvHandle = rtvHandle;
-                record._bHasRtv   = SW_TRUE;
+                record._bHasRTV   = SW_TRUE;
             }
             else
-                record._listExtraRtvIndex.push_back( rtvIndex );
+                record._listExtraRTVIndex.push_back( rtvIndex );
         }
 
         for ( uint32 slice = 0; pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
             uint32 dsvSlot{ 0 };
-            if ( _pDevice->_listFreeOffscreenDsvIndex.empty() == false )
+            if ( _pDevice->_listFreeOffscreenDSVIndex.empty() == false )
             {
-                dsvSlot = _pDevice->_listFreeOffscreenDsvIndex.back();
-                _pDevice->_listFreeOffscreenDsvIndex.pop_back();
+                dsvSlot = _pDevice->_listFreeOffscreenDSVIndex.back();
+                _pDevice->_listFreeOffscreenDSVIndex.pop_back();
             }
-            else if ( _pDevice->_nextOffscreenDsvIndex < D3D12RHIDevice::kMaxOffscreenDsvs )
-                dsvSlot = _pDevice->_nextOffscreenDsvIndex++;
+            else if ( _pDevice->_nextOffscreenDSVIndex < D3D12RHIDevice::kMaxOffscreenDSVs )
+                dsvSlot = _pDevice->_nextOffscreenDSVIndex++;
             else
             {
-                dsvSlot = D3D12RHIDevice::kMaxOffscreenDsvs;
+                dsvSlot = D3D12RHIDevice::kMaxOffscreenDSVs;
                 SW_LOG_ERROR( "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
-                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDsvs ) );
+                              static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDSVs ) );
             }
-            if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDsvs )
+            if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDSVs )
                 break;
-            const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = _pDevice->getOffscreenDsvHandle( dsvSlot );
+            const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = _pDevice->getOffscreenDSVHandle( dsvSlot );
             D3D12_DEPTH_STENCIL_VIEW_DESC     dsvDesc{};
             dsvDesc.Format = dsvFmt;
             dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
@@ -1020,10 +1020,10 @@ namespace sw
             {
                 record._dsvIndex  = dsvSlot;
                 record._dsvHandle = dsvHandle;
-                record._bHasDsv   = SW_TRUE;
+                record._bHasDSV   = SW_TRUE;
             }
             else
-                record._listExtraDsvIndex.push_back( dsvSlot );
+                record._listExtraDSVIndex.push_back( dsvSlot );
         }
 
         _pDevice->_mapOffscreenTexture[handle] = record;
@@ -1041,18 +1041,18 @@ namespace sw
             auto it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it != _pDevice->_mapOffscreenTexture.end() )
             {
-                const uint32 offscreenRtvBase = _pDevice->_swapChain.getBufferCount();
-                if ( it->second._bHasRtv != SW_FALSE && it->second._rtvIndex >= offscreenRtvBase )
-                    _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
-                if ( it->second._bHasDsv != SW_FALSE )
-                    _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
-                for ( const uint32 rtvIndex : it->second._listExtraRtvIndex )
+                const uint32 offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
+                if ( it->second._bHasRTV != SW_FALSE && it->second._rtvIndex >= offscreenRTVBase )
+                    _pDevice->_listFreeOffscreenRTVIndex.push_back( it->second._rtvIndex - offscreenRTVBase );
+                if ( it->second._bHasDSV != SW_FALSE )
+                    _pDevice->_listFreeOffscreenDSVIndex.push_back( it->second._dsvIndex );
+                for ( const uint32 rtvIndex : it->second._listExtraRTVIndex )
                 {
-                    _pDevice->_listFreeOffscreenRtvIndex.push_back( rtvIndex - offscreenRtvBase );
+                    _pDevice->_listFreeOffscreenRTVIndex.push_back( rtvIndex - offscreenRTVBase );
                 }
-                for ( const uint32 dsvIndex : it->second._listExtraDsvIndex )
+                for ( const uint32 dsvIndex : it->second._listExtraDSVIndex )
                 {
-                    _pDevice->_listFreeOffscreenDsvIndex.push_back( dsvIndex );
+                    _pDevice->_listFreeOffscreenDSVIndex.push_back( dsvIndex );
                 }
                 _pDevice->_mapOffscreenTexture.erase( it );
             }

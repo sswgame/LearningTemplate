@@ -62,9 +62,9 @@ namespace sw::editor
          * @details 테마는 96 DPI 기준의 절대 크기를 기록하므로 배율은 테마를 적용할 때마다 곱한다. 글자는 `style.FontScaleDpi` 로 키운다.
          *          ImGui 1.92 의 동적 폰트이므로 흐려지지 않는다. 모니터를 옮길 때의 글자는 `io.ConfigDpiScaleFonts` 가 따라간다.
          */
-        static void setDpiScale( float32 dpiScale );
+        static void setDPIScale( float32 dpiScale );
         /** @brief 현재 DPI 배율을 반환합니다. 96 DPI 가 1 입니다. */
-        static float32 getDpiScale();
+        static float32 getDPIScale();
 
         /** @brief 토큰 벌(`Resource/editor/theme/<이름>.tokens.json`, 대소문자 무시)을 적용합니다. 덮어쓴 강조색 · 둥글기는 버립니다. 없는 이름이면 false 입니다. */
         [[nodiscard]] static bool applyThemeByName( string_view name );

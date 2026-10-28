@@ -219,7 +219,7 @@ namespace sw
                 if ( pGo == nullptr )
                 {
                     SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
-                                    entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
+                                    entity._prefabGUID.empty() ? "none" : entity._prefabGUID.c_str() );
                     if ( bStreamingCell == false )
                         inoutListUnresolved.push_back( entity );
                 }
@@ -334,7 +334,7 @@ namespace sw
                 {
                     const UUID guid = pAssetManager->getAssetDatabase().ensureMeta( outNode._prefab );
                     if ( guid.isNull() == false )
-                        outNode._prefabGuid = guid.toString();
+                        outNode._prefabGUID = guid.toString();
                 }
                 const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
                 // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.

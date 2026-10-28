@@ -59,7 +59,7 @@ sw_readModuleEnumNames(SW_MODULE_TARGETS ModuleTarget)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)
-	sw_requireJsonValue(swName "${MANIFEST_PATH}" _name)
+	sw_requireJSONValue(swName "${MANIFEST_PATH}" _name)
 
 	if(swName STREQUAL "")
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _name is empty")
@@ -71,24 +71,24 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: the file must be named '${swName}.module.json'")
 	endif()
 
-	sw_requireJsonValue(swKeyCount "${MANIFEST_PATH}" LENGTH)
+	sw_requireJSONValue(swKeyCount "${MANIFEST_PATH}" LENGTH)
 	math(EXPR swLastKey "${swKeyCount} - 1")
 
 	foreach(swKeyIndex RANGE ${swLastKey})
-		sw_requireJsonValue(swKey "${MANIFEST_PATH}" MEMBER ${swKeyIndex})
+		sw_requireJSONValue(swKey "${MANIFEST_PATH}" MEMBER ${swKeyIndex})
 
 		if(NOT swKey IN_LIST SW_MODULE_MANIFEST_KEYS)
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown key '${swKey}'")
 		endif()
 	endforeach()
 
-	sw_requireJsonValue(swVersion "${MANIFEST_PATH}" _version)
+	sw_requireJSONValue(swVersion "${MANIFEST_PATH}" _version)
 
 	if(NOT swVersion MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _version must be 'major.minor.patch'")
 	endif()
 
-	sw_requireJsonValue(swKind "${MANIFEST_PATH}" _kind)
+	sw_requireJSONValue(swKind "${MANIFEST_PATH}" _kind)
 
 	if(NOT swKind IN_LIST SW_MODULE_KINDS)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown _kind '${swKind}' (one of ${SW_MODULE_KINDS})")
@@ -96,7 +96,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 
 	foreach(swListKey _listPlatform _listConfiguration _listTarget)
 		set(swValues "")
-		sw_requireJsonValue(swCount "${MANIFEST_PATH}" LENGTH ${swListKey})
+		sw_requireJSONValue(swCount "${MANIFEST_PATH}" LENGTH ${swListKey})
 
 		if(swCount EQUAL 0)
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: ${swListKey} must be a non-empty array")
@@ -105,7 +105,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			sw_requireJsonValue(swValue "${MANIFEST_PATH}" ${swListKey} ${swIndex})
+			sw_requireJSONValue(swValue "${MANIFEST_PATH}" ${swListKey} ${swIndex})
 			list(APPEND swValues ${swValue})
 		endforeach()
 
@@ -132,7 +132,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 
 	# 선택 키 셋(`_bEnabledByDefault` · `_listDependency` · `_minVersion`)은 매니페스트 형식의 기본값이다 — 설정 파일에는 기본값과 다른 값만 적는다.
 	# 같은 기본값을 런타임 `ModuleCatalog::parseManifest` 가 들고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 두 해석을 견준다.
-	sw_readOptionalJsonValue(swEnabled "${MANIFEST_PATH}" _bEnabledByDefault)
+	sw_readOptionalJSONValue(swEnabled "${MANIFEST_PATH}" _bEnabledByDefault)
 
 	if(NOT DEFINED swEnabled)
 		set(swEnabled ON)
@@ -140,14 +140,14 @@ function(sw_readModuleManifest MANIFEST_PATH)
 
 	set(swDependencyNames "")
 	set(swDependencyMinVersions "")
-	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
 
 	if(DEFINED swCount AND swCount GREATER 0)
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			sw_requireJsonValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
-			sw_readOptionalJsonValue(swMinVersion "${MANIFEST_PATH}" _listDependency ${swIndex} _minVersion)
+			sw_requireJSONValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
+			sw_readOptionalJSONValue(swMinVersion "${MANIFEST_PATH}" _listDependency ${swIndex} _minVersion)
 
 			if(NOT DEFINED swMinVersion)
 				set(swMinVersion "0.0.0")
@@ -171,7 +171,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 
 	set(swOverrideNames "")
 	set(swOverrideValues "")
-	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listModuleOverride)
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listModuleOverride)
 
 	if(DEFINED swCount)
 		if(NOT swKind STREQUAL "Game")
@@ -182,8 +182,8 @@ function(sw_readModuleManifest MANIFEST_PATH)
 			math(EXPR swLast "${swCount} - 1")
 
 			foreach(swIndex RANGE ${swLast})
-				sw_requireJsonValue(swOverrideName "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _name)
-				sw_requireJsonValue(swOverrideValue "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _bEnabled)
+				sw_requireJSONValue(swOverrideName "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _name)
+				sw_requireJSONValue(swOverrideValue "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _bEnabled)
 				list(APPEND swOverrideNames ${swOverrideName})
 				list(APPEND swOverrideValues ${swOverrideValue})
 			endforeach()
@@ -254,20 +254,20 @@ endfunction()
 # 함께 짓는 게임 팩(활성 게임이 아닌 것)의 매니페스트에서 의존 이름만 읽어 `SW_GAME_PACK_<게임>_DEPENDENCIES` 에 둔다.
 # 모듈 표(`SW_MODULE_NAMES`)에는 넣지 않는다 — 게임 모듈 이름은 모두 SWGame 이고, 이 빌드의 켜기/끄기 표는 활성 게임의 것이다.
 function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
-	sw_requireJsonValue(swKind "${MANIFEST_PATH}" _kind)
+	sw_requireJSONValue(swKind "${MANIFEST_PATH}" _kind)
 
 	if(NOT swKind STREQUAL "Game")
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: a game pack manifest must have _kind Game")
 	endif()
 
 	set(swDependencyNames "")
-	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
 
 	if(DEFINED swCount AND swCount GREATER 0)
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			sw_requireJsonValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
+			sw_requireJSONValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
 			list(APPEND swDependencyNames ${swDependency})
 		endforeach()
 	endif()
@@ -463,7 +463,7 @@ function(sw_resolveModuleManifests)
 			endif()
 		endforeach()
 
-		# 옛 매니페스트는 **복사 전에** 지운다. Windows 에서 대소문자만 바뀐 이름(`GF_ClassicJrpg` → `GF_ClassicJRPG`)은 같은 파일이라
+		# 옛 매니페스트는 **복사 전에** 지운다. Windows 에서 대소문자만 바뀐 이름(`GF_ClassicJRPG` → `GF_ClassicJRPG`)은 같은 파일이라
 		# 복사가 옛 철자 파일 이름을 그대로 두고, 복사 뒤에 글자 그대로 비교해 지우면 방금 복사한 매니페스트를 지운다.
 		file(GLOB swExistingList "${swCatalogDirectory}/*.module.json")
 		foreach(swExisting IN LISTS swExistingList)

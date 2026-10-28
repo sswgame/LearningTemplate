@@ -103,7 +103,7 @@ namespace sw
         }
         outImage._width  = width;
         outImage._height = height;
-        outImage._listRgb.assign( pData + cursor, pData + cursor + pixelBytes );
+        outImage._listRGB.assign( pData + cursor, pData + cursor + pixelBytes );
         return true;
     }
 
@@ -188,7 +188,7 @@ namespace sw
             for ( uint32 x = x0; x < x1; ++x )
             {
                 const size_t offset = ( static_cast<size_t>( y ) * image._width + x ) * 3u;
-                const uint8* pPixel = image._listRgb.data() + offset;
+                const uint8* pPixel = image._listRGB.data() + offset;
                 switch ( kind )
                 {
                     case AutomationImageMetricKind::MeanLuma:
@@ -208,7 +208,7 @@ namespace sw
                     }
                     case AutomationImageMetricKind::DifferentFrom:
                     {
-                        const uint8* pOther = pReference->_listRgb.data() + offset;
+                        const uint8* pOther = pReference->_listRGB.data() + offset;
                         for ( uint32 channel = 0; channel < 3; ++channel )
                         {
                             sum += MathUtil::abs( static_cast<float64>( pPixel[channel] ) - static_cast<float64>( pOther[channel] ) ) / ( 255.0 * 3.0 );
@@ -217,7 +217,7 @@ namespace sw
                     }
                     case AutomationImageMetricKind::DifferingFraction:
                     {
-                        const uint8* pOther   = pReference->_listRgb.data() + offset;
+                        const uint8* pOther   = pReference->_listRGB.data() + offset;
                         uint32       distance = 0;
                         for ( uint32 channel = 0; channel < 3; ++channel )
                         {

@@ -15,7 +15,7 @@ SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 �
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3. 파이프라인 패스의 `_minPostQuality` 보다 낮으면 그 패스를 건너뛴다(SSAO · 블룸, `FrameRenderer::executePass`).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_motionBlur );           ///< 모션 블러. 3D 파이프라인(디퍼드 · 포워드 넷)의 MotionBlur 패스가 읽는다(끄면 원본을 넘긴다).
 // 아래 층이 읽는 설정 변수는 읽는 쪽에 있다(그 층은 이 헤더를 include 하지 못한다): 시야 거리 `gv_viewDistanceScale`(CameraComponent.cpp),
-// 텍스처 품질 `gv_textureMipDrop`(Texture2D.cpp), 이펙트 품질 `gv_effectsSpawnScale`(VfxComponent.cpp). 단계마다의 값은 스키마 선택지의 `targetValue` 다.
+// 텍스처 품질 `gv_textureMipDrop`(Texture2D.cpp), 이펙트 품질 `gv_effectsSpawnScale`(VFXComponent.cpp). 단계마다의 값은 스키마 선택지의 `targetValue` 다.
 
 // 게임플레이와 카메라
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView ); ///< 1 인칭과 3 인칭 카메라 시야각(도)입니다. 카메라가 읽습니다.

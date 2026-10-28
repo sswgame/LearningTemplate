@@ -72,7 +72,7 @@ namespace sw
         , _listScenePreviewBuilder{}
         , _listPreviewLODView{}
         , _bMergeBatchesAcrossMaterials{ false }
-        , _bGPUInstanceLodCapable{ false }
+        , _bGPUInstanceLODCapable{ false }
         , _bMissingCameraReported{ false }
     {
     }
@@ -93,7 +93,7 @@ namespace sw
         // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
         _bMergeBatchesAcrossMaterials = device.supportsNativeBindlessSampling();
         // GPU 인스턴스 LOD 는 컬링 컴퓨트가 단계를 고르므로 GPU 컬링 능력이 있는 백엔드만이다(DX11 은 CPU 단계 선택이 남는다).
-        _bGPUInstanceLodCapable = device.getCapabilities()._bGPUCulling != SW_FALSE;
+        _bGPUInstanceLODCapable = device.getCapabilities()._bGPUCulling != SW_FALSE;
         _gpuSceneBuilder->setMergeBatchesAcrossMaterials( _bMergeBatchesAcrossMaterials );
         for ( ScenePreviewBuilder& preview : _listScenePreviewBuilder )
         {
@@ -290,8 +290,8 @@ namespace sw
 
     void RenderPacketBuilder::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene )
     {
-        _gpuSceneBuilder->setGPUInstanceLodEnabled( _bGPUInstanceLodCapable && gv_gpuInstanceLod );
-        _gpuSceneBuilder->setGPUInstanceLodCrossfadeSeconds( gv_lodCrossfadeSeconds );
+        _gpuSceneBuilder->setGPUInstanceLODEnabled( _bGPUInstanceLODCapable && gv_gpuInstanceLod );
+        _gpuSceneBuilder->setGPUInstanceLODCrossfadeSeconds( gv_lodCrossfadeSeconds );
         _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
@@ -409,7 +409,7 @@ namespace sw
         if ( packet._canvas._listMarker.empty() || pUISystem == nullptr || pActiveScene == nullptr || _gpuSceneBuilder == nullptr )
             return;
         // 기록이 다른 관리자(미리보기 씬)의 것이면 프리미티브 번호가 이 스냅샷의 것이 아니다 — 월드 점을 쓴다.
-        if ( pUISystem->getGpuMarkerManager() != pActiveScene->getObjectManager() )
+        if ( pUISystem->getGPUMarkerManager() != pActiveScene->getObjectManager() )
             return;
         for ( CanvasMarkerRecord& record : packet._canvas._listMarker )
         {
@@ -430,10 +430,10 @@ namespace sw
             packet._canvas._listAnchor      = pUISystem->getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
             packet._canvas._contentRevision = pUISystem->getCanvasRevision();
             // GPU 가 투영하는 마커 — 월드 점만 싣고 화면 좌표는 렌더러의 컴퓨트(`CanvasRenderer::recordMarkerProjection`)가 앵커 원소에 쓴다. 켜진 마커가 없으면 싣지 않는다.
-            if ( pUISystem->getGpuMarkerCount() > 0 )
+            if ( pUISystem->getGPUMarkerCount() > 0 )
             {
-                packet._canvas._listMarker = pUISystem->getGpuMarkers();
-                packet._canvas._markerView = pUISystem->getGpuMarkerView();
+                packet._canvas._listMarker = pUISystem->getGPUMarkers();
+                packet._canvas._markerView = pUISystem->getGPUMarkerView();
             }
         }
         if ( bUIReady )

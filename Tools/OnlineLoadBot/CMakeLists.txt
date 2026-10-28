@@ -36,14 +36,14 @@ target_link_libraries(OnlineLoadBotCore
 	PRIVATE
 		sw_global_options
 )
-sw_configurePch(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePCH(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBotCore PROPERTIES FOLDER "Tools")
 
 add_executable(OnlineLoadBot Main.cpp)
 # ModuleHost: 호스트 범위의 모듈 이미지 창구(`ModuleImageHostSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
 target_link_libraries(OnlineLoadBot PRIVATE OnlineLoadBotCore ModuleHost sw_global_options)
 target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"")
-sw_configurePch(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configurePCH(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBot PROPERTIES FOLDER "Tools")
 
 # Dev(Windows): 키트 DLL 은 `Bin/Modules` 에 있어 OS 로더가 시작 때 찾지 못한다 — `ToolBin` 에 내고 키트 DLL 을 옆에 복사한다.

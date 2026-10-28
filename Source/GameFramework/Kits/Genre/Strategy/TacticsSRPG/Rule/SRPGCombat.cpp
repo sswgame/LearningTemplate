@@ -58,7 +58,7 @@ namespace sw
                 if ( settings._bSupportDefense == SW_FALSE || pDefender == nullptr )
                     return -1;
                 int32 bestIndex = -1;
-                int32 bestHp    = 0;
+                int32 bestHP    = 0;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
                     const SRPGUnit& ally       = field.getUnits()[static_cast<size_t>( index )];
@@ -70,10 +70,10 @@ namespace sw
                                                                                  100 - settings._supportDefenseReduction );
                     if ( preview._critDamage >= ally._hp )
                         continue; // 대신 맞다가 쓰러질 수 있으면 나서지 않는다
-                    if ( bestIndex < 0 || ally._hp > bestHp )
+                    if ( bestIndex < 0 || ally._hp > bestHP )
                     {
                         bestIndex = index;
-                        bestHp    = ally._hp;
+                        bestHP    = ally._hp;
                     }
                 }
                 return bestIndex;
@@ -119,7 +119,7 @@ namespace sw
                 }
             }
 
-            static int64 computeXp( int32 base, int32 levelStep, int32 attackerLevel, int32 defenderLevel )
+            static int64 computeXP( int32 base, int32 levelStep, int32 attackerLevel, int32 defenderLevel )
             {
                 return MathUtil::max<int64>( 1, static_cast<int64>( base ) + static_cast<int64>( defenderLevel - attackerLevel ) * levelStep );
             }
@@ -148,10 +148,10 @@ namespace sw
                     field.pushEvent( SRPGEvent{ preview._attacker, preview._defender, result._damage, SRPGEvent::Kind::Hit, pAttacker->_team } );
                     field.addMorale( preview._attacker, settings._moraleOnHit + ( bDestroyed ? settings._moraleOnKill : 0 ) );
                     field.addMorale( preview._defender, settings._moraleOnDamaged );
-                    int64 xp = computeXp( settings._xpHit, settings._xpLevelStep, attackerLevel, defenderLevel );
+                    int64 xp = computeXP( settings._xpHit, settings._xpLevelStep, attackerLevel, defenderLevel );
                     if ( bDestroyed )
-                        xp += computeXp( settings._xpKill, settings._xpLevelStep, attackerLevel, defenderLevel );
-                    field.grantXp( preview._attacker, xp );
+                        xp += computeXP( settings._xpKill, settings._xpLevelStep, attackerLevel, defenderLevel );
+                    field.grantXP( preview._attacker, xp );
                 }
                 else
                 {

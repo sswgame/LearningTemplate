@@ -8,7 +8,7 @@
  *            여러 스레드가 동시에 `send` 를 부르면 잠금 하나로 한 번에 하나씩 보냅니다.
  *          - 방법은 GET 과 POST 만 받습니다(`HTTPClient` 가 아는 방법). 다른 방법은 보내지 않고 `_status` 0 과 까닭으로 돌려줍니다.
  *          - 시한은 요청마다 `HTTPClientRequest::_timeoutMs` 기본값이며, 넘으면 `HTTPClient` 가 전송 실패로 끝냅니다.
- *          언리얼의 `FHttpModule` 위에 막는 호출을 감싸는 것과 같은 구조입니다.
+ *          언리얼의 `FHTTPModule` 위에 막는 호출을 감싸는 것과 같은 구조입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

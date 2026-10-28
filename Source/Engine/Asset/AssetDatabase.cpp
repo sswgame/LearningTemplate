@@ -94,8 +94,8 @@ namespace sw
         BLOCK( "Check Existing Meta" )
         {
             ScopedSharedLock<shared_mutex> lock{ _mutex };
-            const auto                     it = _mapPathToGuid.find( path );
-            if ( it != _mapPathToGuid.end() )
+            const auto                     it = _mapPathToGUID.find( path );
+            if ( it != _mapPathToGUID.end() )
             {
                 result = it->second;
                 return result;
@@ -137,8 +137,8 @@ namespace sw
         BLOCK( "Register Meta" )
         {
             UniqueLock<shared_mutex> lock{ _mutex };
-            _mapPathToGuid[path]   = result;
-            _mapGuidToPath[result] = path;
+            _mapPathToGUID[path]   = result;
+            _mapGUIDToPath[result] = path;
         }
 
         return result;
@@ -151,8 +151,8 @@ namespace sw
             return;
 
         UniqueLock<shared_mutex> lock{ _mutex };
-        _mapPathToGuid[path] = guid;
-        _mapGuidToPath[guid] = path;
+        _mapPathToGUID[path] = guid;
+        _mapGUIDToPath[guid] = path;
     }
 
     bool AssetDatabase::registerExisting( string_view relativePath )
@@ -166,12 +166,12 @@ namespace sw
             return false;
 
         UniqueLock<shared_mutex> lock{ _mutex };
-        _mapPathToGuid[path] = guid;
-        _mapGuidToPath[guid] = path;
+        _mapPathToGUID[path] = guid;
+        _mapGUIDToPath[guid] = path;
         return true;
     }
 
-    bool AssetDatabase::tryGetGuid( string_view relativePath, UUID& outGuid ) const
+    bool AssetDatabase::tryGetGUID( string_view relativePath, UUID& outGUID ) const
     {
         // **넣을 때 정규화했으면 찾을 때도 정규화해야 한다.** `ensureMeta` · `registerMapping` ·
         // `registerExisting` 은 모두 `normalizePath` 를 거친 키를 넣는다(소문자 · `/` 구분자). 받은 문자열을 그대로 찾으면
@@ -179,18 +179,18 @@ namespace sw
         const string path = FileUtil::normalizePath( relativePath );
 
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        const auto                     it = _mapPathToGuid.find( path );
-        if ( it == _mapPathToGuid.end() )
+        const auto                     it = _mapPathToGUID.find( path );
+        if ( it == _mapPathToGUID.end() )
             return false;
-        outGuid = it->second;
+        outGUID = it->second;
         return true;
     }
 
     bool AssetDatabase::tryGetPath( const UUID& guid, string& outPath ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        const auto                     it = _mapGuidToPath.find( guid );
-        if ( it == _mapGuidToPath.end() )
+        const auto                     it = _mapGUIDToPath.find( guid );
+        if ( it == _mapGUIDToPath.end() )
             return false;
         outPath = it->second;
         return true;
@@ -199,7 +199,7 @@ namespace sw
     size_t AssetDatabase::getAssetCount() const
     {
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        return _mapPathToGuid.size();
+        return _mapPathToGUID.size();
     }
 
     uint32 AssetDatabase::refreshFolder( string_view absoluteFolder, bool bCreateMissing )
@@ -305,8 +305,8 @@ namespace sw
             UUID       guid{};
             string     metaText;
             const bool bMetaRead       = AssetIO::readTextFile( metaAbs, metaText ) && meta.parseXML( metaText, metaAbs.c_str() );
-            const bool bUnreadableGuid = bMetaRead == false || UUID::tryParse( meta._guid.c_str(), guid ) == false || guid.isNull();
-            if ( bUnreadableGuid )
+            const bool bUnreadableGUID = bMetaRead == false || UUID::tryParse( meta._guid.c_str(), guid ) == false || guid.isNull();
+            if ( bUnreadableGUID )
             {
                 SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
                 ++outFailedCount;
@@ -410,8 +410,8 @@ namespace sw
     void AssetDatabase::clear()
     {
         UniqueLock<shared_mutex> lock{ _mutex };
-        _mapPathToGuid.clear();
-        _mapGuidToPath.clear();
+        _mapPathToGUID.clear();
+        _mapGUIDToPath.clear();
     }
 
     bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
@@ -431,7 +431,7 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absMeta ) && FileUtil::writeTextFile( absMeta, meta.toXML() );
     }
 
-    AssetMetaReadResult AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
+    AssetMetaReadResult AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGUID, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
         if ( AssetIO::hasResource( AssetID{ metaRel } ) == false )
@@ -442,8 +442,8 @@ namespace sw
         if ( AssetIO::readTextAsset( AssetID{ metaRel }, metaText ) == false || meta.parseXML( metaText, metaRel.c_str() ) == false )
             return AssetMetaReadResult::Invalid;
 
-        const bool bInvalidGuid = UUID::tryParse( meta._guid.c_str(), outGuid ) == false || outGuid.isNull();
-        if ( bInvalidGuid )
+        const bool bInvalidGUID = UUID::tryParse( meta._guid.c_str(), outGUID ) == false || outGUID.isNull();
+        if ( bInvalidGUID )
         {
             SW_LOG_ERROR( "'%#' has an unreadable guid '%#'", metaRel, meta._guid );
             return AssetMetaReadResult::Invalid;

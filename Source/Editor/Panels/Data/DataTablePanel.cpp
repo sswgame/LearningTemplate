@@ -265,7 +265,7 @@ namespace sw::editor
         uint32                 length = 0;
         for ( size_t offset = 0; offset < text.size(); )
         {
-            (void)StringUtil::decodeUtf8( text, offset );
+            (void)StringUtil::decodeUTF8( text, offset );
             ++length;
         }
         const bool bTooLong = record._maxLength != 0 && length > record._maxLength;
@@ -361,7 +361,7 @@ namespace sw::editor
             {
                 ImGui::TableSetupColumn( culture.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
             }
-            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableHeadersRow();
 
             int32 deleteIndex = -1;
@@ -498,7 +498,7 @@ namespace sw::editor
                     Memory::copy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
 
                 constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
-                if ( ImGui::InputTextMultiline( "##rawXmlEdit", arrEditBuffer.data(), arrEditBuffer.size(), ImGui::GetContentRegionAvail(), editFlags ) )
+                if ( ImGui::InputTextMultiline( "##rawXMLEdit", arrEditBuffer.data(), arrEditBuffer.size(), ImGui::GetContentRegionAvail(), editFlags ) )
                 {
                     _selectedGameDataRawText = arrEditBuffer.data();
                     _gameDataDocument.replaceText( _selectedGameDataRawText, false );

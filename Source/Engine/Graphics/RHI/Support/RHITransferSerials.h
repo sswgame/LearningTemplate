@@ -1,6 +1,6 @@
 /**
  * @file RHITransferSerials.h
- * @brief 전송 티켓의 시리얼 발급, 완료 워터마크, 티켓 판정, 읽기 결과 보관을 네 백엔드가 같이 씁니다(docs/plans/RhiAsyncUploads.md 2.2).
+ * @brief 전송 티켓의 시리얼 발급, 완료 워터마크, 티켓 판정, 읽기 결과 보관을 네 백엔드가 같이 씁니다(docs/plans/RHIAsyncUploads.md 2.2).
  * @details 백엔드마다 다른 것은 "GPU 가 끝냈는지 어떻게 아는가"(DX11 이벤트 쿼리, GL 펜스, DX12 프레임 펜스, Vulkan 전송 작업 펜스)뿐이고, 시리얼을 매기는 규칙과
  *          `Complete` 의 뜻(연속으로 끝난 시리얼의 끝 이하)은 여기 한 곳이 정한다. 그래서 백엔드가 서로 다른 완료 의미를 갖는 일이 생기지 않는다.
  */

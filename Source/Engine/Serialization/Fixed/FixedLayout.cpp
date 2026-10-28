@@ -359,7 +359,7 @@ namespace sw
 
     uint64 FixedLayout::computeSchemaHash( const uint32 version, const string_view canonical, const std::initializer_list<uint64> listNestedHash )
     {
-        uint64 hash = HashUtil::kFnvOffset64;
+        uint64 hash = HashUtil::kFNVOffset64;
         hash        = FixedLayoutInternal::appendHashInteger( hash, version );
         hash        = HashUtil::appendBytes64( hash, canonical.data(), canonical.size() );
         for ( const uint64 nestedHash : listNestedHash )

@@ -254,7 +254,7 @@ namespace sw::editor
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##mapcheck_rows", 5, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 24.0f * dpiScale );
         ImGui::TableSetupColumn( "Object", ImGuiTableColumnFlags_WidthStretch, 1.0f );
         ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthStretch, 1.0f );

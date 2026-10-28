@@ -28,7 +28,7 @@ namespace sw
 {
     SW_LOG_CALLER( "WidgetComponent" );
 
-    /// true 면 화면 마커의 월드 → 화면 투영을 렌더러의 컴퓨트(`canvasmarker.hlsl`)가 합니다(`WidgetComponent::isGpuProjected` 조건을 만족하는 마커만).
+    /// true 면 화면 마커의 월드 → 화면 투영을 렌더러의 컴퓨트(`canvasmarker.hlsl`)가 합니다(`WidgetComponent::isGPUProjected` 조건을 만족하는 마커만).
     /// 켜려면 엔진 셰이더를 쿠킹해야 하고 컴퓨트 능력이 있는 백엔드여야 한다(없으면 렌더러가 오류를 남기고 마커를 그리지 않는다 — CPU 투영으로 대신하지 않는다).
     SW_GLOBAL_VARIABLE( bool, gv_uiMarkerGpuProjection, false, "화면 마커(이름표 · HP 바)의 화면 투영을 GPU 컴퓨트로 한다 — 마커 2,000 개 이상에서 GT.UI.Markers 를 줄인다(컴퓨트 백엔드 + 쿠킹된 canvasmarker 셰이더 필요)" );
 } // namespace sw
@@ -86,7 +86,7 @@ namespace sw
         , _gpuAnchor{ 0 }
         , _bHidden{ SW_FALSE }
         , _gpuState{ 0 }
-        , _bGpuSlotDirty{ SW_TRUE }
+        , _bGPUSlotDirty{ SW_TRUE }
         , _documentPath{}
         , _space{ WidgetSpace::Screen }
         , _drawSize{}
@@ -149,7 +149,7 @@ namespace sw
         _pUISystem     = nullptr;
         _markerWidget  = kInvalidWidgetID;
         _gpuState      = 0; // 앵커 표는 UI 시스템과 함께 사라졌다
-        _bGpuSlotDirty = SW_TRUE;
+        _bGPUSlotDirty = SW_TRUE;
     }
 
     void WidgetComponent::setContent( unique_ptr<Widget> content )
@@ -186,7 +186,7 @@ namespace sw
             return;
         if ( _space == WidgetSpace::World )
         {
-            // World: 자기 트리(화면 스택 밖이라 포커스와 포인터가 없으며, 입력은 후보 절 UiInputRemaining 에 있다)에 배치하고 렌더 텍스처로 칠한다.
+            // World: 자기 트리(화면 스택 밖이라 포커스와 포인터가 없으며, 입력은 후보 절 UIInputRemaining 에 있다)에 배치하고 렌더 텍스처로 칠한다.
             if ( _worldTree == nullptr )
                 _worldTree = make_unique<WidgetTree>();
             _worldTree->setRoot( std::move( _pendingContent ) );
@@ -204,11 +204,11 @@ namespace sw
         _worldTree.reset();
         if ( _markerWidget == kInvalidWidgetID )
             return;
-        releaseGpuMarker(); // 앵커를 돌려주기 전에 GPU 기록을 내린다
+        releaseGPUMarker(); // 앵커를 돌려주기 전에 GPU 기록을 내린다
         if ( _pUISystem != nullptr )
             _pUISystem->removeScreenMarker( _markerWidget );
         _markerWidget  = kInvalidWidgetID;
-        _bGpuSlotDirty = SW_TRUE;
+        _bGPUSlotDirty = SW_TRUE;
     }
 
     bool WidgetComponent::needsMarkerPlacement() const
@@ -216,29 +216,29 @@ namespace sw
         return false;
     }
 
-    bool WidgetComponent::isGpuProjected() const
+    bool WidgetComponent::isGPUProjected() const
     {
         const bool bFixedSize = _drawSize._x > 0.0f && _drawSize._y > 0.0f; // 원하는 크기로 피벗을 맞추는 마커는 CPU 가 크기를 읽어야 한다
         return gv_uiMarkerGpuProjection && _space == WidgetSpace::Screen && bFixedSize && _bOccludedByPhysics == false && needsMarkerPlacement() == false;
     }
 
-    void WidgetComponent::releaseGpuMarker()
+    void WidgetComponent::releaseGPUMarker()
     {
         if ( _gpuState == 0 )
             return;
         if ( _pUISystem != nullptr )
-            _pUISystem->clearGpuScreenMarker( _gpuAnchor );
+            _pUISystem->clearGPUScreenMarker( _gpuAnchor );
         _gpuState = 0;
     }
 
-    void WidgetComponent::updateGpuMarker( const SceneComponent* pScene, bool bMarkerHidden )
+    void WidgetComponent::updateGPUMarker( const SceneComponent* pScene, bool bMarkerHidden )
     {
         UISystem* const pUI = _pUISystem;
         if ( pUI == nullptr )
             return;
         // 위젯은 상태가 바뀔 때만 만진다(접힘 ↔ 보임, 슬롯 변경). 매 프레임 하는 일은 월드 점을 기록에 적는 것뿐이다.
         const uint8 wantedState = bMarkerHidden ? 1 : 2;
-        if ( _gpuState != wantedState || ( wantedState == 2 && _bGpuSlotDirty == SW_TRUE ) )
+        if ( _gpuState != wantedState || ( wantedState == 2 && _bGPUSlotDirty == SW_TRUE ) )
         {
             Widget* pMarker = pUI->findScreenMarker( _markerWidget );
             if ( pMarker == nullptr )
@@ -247,7 +247,7 @@ namespace sw
             if ( wantedState == 1 )
             {
                 pMarker->setVisibility( WidgetVisibility::Collapsed );
-                pUI->clearGpuScreenMarker( _gpuAnchor );
+                pUI->clearGPUScreenMarker( _gpuAnchor );
             }
             else
             {
@@ -273,7 +273,7 @@ namespace sw
         const MeshComponent* pMesh        = pOwnerObject != nullptr ? pOwnerObject->getComponent<MeshComponent>() : nullptr;
         if ( pMesh != nullptr && static_cast<const SceneComponent*>( pMesh ) == pScene )
             record._primitiveIndex = pMesh->getPrimitiveIndex();
-        pUI->setGpuScreenMarker( _gpuAnchor, record );
+        pUI->setGPUScreenMarker( _gpuAnchor, record );
     }
 
     WidgetMarkerPlacement WidgetComponent::computeMarkerPlacement( const float4x4& viewProjection, const float3& cameraPosition, const float3& worldPosition,
@@ -330,7 +330,7 @@ namespace sw
         return placement;
     }
 
-    void WidgetComponent::makeGpuMarkerView( const WidgetMarkerView& view, const float2& viewportSize, CanvasMarkerView& outView )
+    void WidgetComponent::makeGPUMarkerView( const WidgetMarkerView& view, const float2& viewportSize, CanvasMarkerView& outView )
     {
         using Internal            = WidgetComponentInternal;
         outView                   = CanvasMarkerView{};
@@ -365,19 +365,19 @@ namespace sw
         const bool            bMarkerHidden = pScene == nullptr || inoutView._pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE || shouldShowMarker() == false;
         // GPU 투영 — 프레임의 공용 카메라는 첫 GPU 마커의 관리자 것이다(패킷의 값이 하나). 다른 관리자의 마커는 CPU 투영으로 남는다.
         const bool bCameraReady = inoutView._pCamera != nullptr;
-        if ( bCameraReady && inoutView._pGpuManager == nullptr && isGpuProjected() )
+        if ( bCameraReady && inoutView._pGPUManager == nullptr && isGPUProjected() )
         {
-            inoutView._pGpuManager       = pManager;
+            inoutView._pGPUManager       = pManager;
             inoutView._gpuViewProjection = inoutView._viewProjection;
             inoutView._gpuCameraPosition = inoutView._cameraPosition;
         }
-        const bool bGpu = isGpuProjected() && ( bCameraReady == false || inoutView._pGpuManager == pManager );
-        if ( bGpu )
+        const bool bGPU = isGPUProjected() && ( bCameraReady == false || inoutView._pGPUManager == pManager );
+        if ( bGPU )
         {
-            updateGpuMarker( pScene, bMarkerHidden );
+            updateGPUMarker( pScene, bMarkerHidden );
             return;
         }
-        releaseGpuMarker(); // GPU 에서 CPU 투영으로 돌아왔다(설정을 껐거나 다른 관리자 · 기능이 붙었다)
+        releaseGPUMarker(); // GPU 에서 CPU 투영으로 돌아왔다(설정을 껐거나 다른 관리자 · 기능이 붙었다)
         if ( bMarkerHidden )
         {
             WidgetMarkerPlacement hidden{};
@@ -419,7 +419,7 @@ namespace sw
 
     void WidgetComponent::applyMarkerSlot( Widget& marker )
     {
-        _bGpuSlotDirty = SW_FALSE;
+        _bGPUSlotDirty = SW_FALSE;
         // 고정 크기면 그 크기를 쓴다(레이아웃 경계). 아니면 지난 원하는 크기로 피벗을 맞춘다 — 슬롯은 크기가 바뀔 때만 바뀐다.
         const bool       bFixed = _drawSize._x > 0.0f && _drawSize._y > 0.0f;
         const float2     size   = bFixed ? _drawSize : marker.getDesiredSize();

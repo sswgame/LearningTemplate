@@ -93,8 +93,8 @@ namespace sw
         , _listRegisteredTexture{}
         , _listTextureFree{}
         , _listRegisteredUAV{}
-        , _listUavSourceBuffer{}
-        , _listUavFree{}
+        , _listUAVSourceBuffer{}
+        , _listUAVFree{}
         , _pipelineStates{}
         , _renderPassLedger{}
         , _arrStaticSampler{}
@@ -222,7 +222,7 @@ namespace sw
         return pRecord != nullptr ? pRecord->_buffer.Get() : nullptr;
     }
 
-    ID3D11ShaderResourceView* D3D11RHIDevice::resolveBufferSrv( RHIBufferHandle handle ) const
+    ID3D11ShaderResourceView* D3D11RHIDevice::resolveBufferSRV( RHIBufferHandle handle ) const
     {
         const BufferRecord* pRecord = _gpuBuffers.get( handle );
         return pRecord != nullptr ? pRecord->_srv.Get() : nullptr;
@@ -250,7 +250,7 @@ namespace sw
         return _listRegisteredTexture[index];
     }
 
-    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUavAt( RHIDescriptorIndex index ) const
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> D3D11RHIDevice::bindlessUAVAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredUAV.size() )
@@ -261,9 +261,9 @@ namespace sw
     RHIBufferHandle D3D11RHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        if ( index >= _listUavSourceBuffer.size() )
+        if ( index >= _listUAVSourceBuffer.size() )
             return RHIBufferHandle{ 0 };
-        return _listUavSourceBuffer[index];
+        return _listUAVSourceBuffer[index];
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv )
@@ -280,7 +280,7 @@ namespace sw
         return handle;
     }
 
-    RHIBufferHandle D3D11RHIDevice::storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
+    RHIBufferHandle D3D11RHIDevice::storeBufferWithSRV( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
     {
         // 뷰를 만들지 못한 버퍼는 등록하지 않는다 — 뷰 없이 등록하면 셰이더가 그 버퍼를 조용히 0 으로 읽는다.
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;

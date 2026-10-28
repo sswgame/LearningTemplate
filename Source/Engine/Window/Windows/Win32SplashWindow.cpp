@@ -118,7 +118,7 @@ namespace sw
         const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
         const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
 
-        const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUtf16( pTitle );
+        const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUTF16( pTitle );
 
         HWND hWnd = CreateWindowExW(
             WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
@@ -244,7 +244,7 @@ namespace sw
         HGDIOBJ hPrevFont = SelectObject( hDC, _hStatusFont );
         SetTextColor( hDC, RGB( 190, 215, 245 ) );
 
-        const wstring wsStatus = StringUtil::utf8ToUtf16( getStatus().c_str() );
+        const wstring wsStatus = StringUtil::utf8ToUTF16( getStatus().c_str() );
         RECT          rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
         DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
 

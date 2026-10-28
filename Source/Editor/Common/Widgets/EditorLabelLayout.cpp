@@ -48,7 +48,7 @@ namespace sw::editor
             while ( fitEnd < remaining.size() )
             {
                 size_t next = fitEnd;
-                (void)StringUtil::decodeUtf8( remaining, next );
+                (void)StringUtil::decodeUTF8( remaining, next );
                 const bool bOverflows = pfnMeasure( remaining.substr( 0, next ), pUserData ) > width;
                 if ( fitEnd != 0 && bOverflows )
                     break;

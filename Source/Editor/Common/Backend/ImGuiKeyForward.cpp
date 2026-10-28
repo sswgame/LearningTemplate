@@ -184,7 +184,7 @@ namespace sw::editor
         for ( int32 index = 0; index < io.InputQueueCharacters.Size; ++index )
         {
             string character;
-            StringUtil::appendUtf8( character, static_cast<uint32>( io.InputQueueCharacters[index] ) );
+            StringUtil::appendUTF8( character, static_cast<uint32>( io.InputQueueCharacters[index] ) );
             outListEvent.push_back( RawInputEvent::makeTextInput( character ) );
         }
     }

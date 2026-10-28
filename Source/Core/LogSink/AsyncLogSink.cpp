@@ -626,12 +626,12 @@ namespace sw
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
         //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
-        string      fallbackUtf8;
+        string      fallbackUTF8;
         const utf8* pFormattedBuffer = formattedBuffer.c_str();
-        if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
+        if ( StringUtil::isValidUTF8( pFormattedBuffer ) == false )
         {
-            fallbackUtf8     = StringUtil::escapeInvalidUtf8( string_view{ pFormattedBuffer } );
-            pFormattedBuffer = fallbackUtf8.c_str();
+            fallbackUTF8     = StringUtil::escapeInvalidUTF8( string_view{ pFormattedBuffer } );
+            pFormattedBuffer = fallbackUTF8.c_str();
         }
 
         // 4단계: 리스너에게 락 밖에서 알린다. 리스너가 없으면 락도 잡지 않는다.
@@ -663,9 +663,9 @@ namespace sw
             // 메시지만 UTF-8 이 아닐 수 있다(태그 · 호출자 · 파일은 소스의 글자 상수). 잘못된 바이트는 줄 전체와 같은 방식으로 바꾼다.
             string      escapedMessage;
             string_view message{ pEffectiveMsg };
-            if ( StringUtil::isValidUtf8( pEffectiveMsg ) == false )
+            if ( StringUtil::isValidUTF8( pEffectiveMsg ) == false )
             {
-                escapedMessage = StringUtil::escapeInvalidUtf8( message );
+                escapedMessage = StringUtil::escapeInvalidUTF8( message );
                 message        = escapedMessage;
             }
             JSONLogFields fields;

@@ -1,6 +1,6 @@
 <Scene formatVersion="2" name="VfxGPULights256">
 	<!-- 슬롯 스윕(VfxGPULightSlotSweep)의 측정 씬 — vfxgpulights 와 같은 무대이고 효과만 파티클 라이트 슬롯 256 짜리(engine/vfx/gpusparklights256, GPU 구간 상한)다. 시나리오는 없다(측정 전용).
-	     perf-compare --cases vfxGpuLights256 이 RT.Vfx.Simulate 를 슬롯 32(vfxgpulights)와 견주게 한다. -->
+	     perf-compare --cases vfxGpuLights256 이 RT.VFX.Simulate 를 슬롯 32(vfxgpulights)와 견주게 한다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -58,7 +58,7 @@
 		<entity id="4" name="Effect">
 			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
 				<_listComponent>
-					<VfxComponent _localPosition="0,0.5,2"
+					<VFXComponent _localPosition="0,0.5,2"
 					              _localRotation="0,0,0"
 					              _localScale="1,1,1"
 					              _attachOwner="None"

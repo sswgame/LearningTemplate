@@ -77,7 +77,7 @@ namespace sw
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /**
          * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
-         * @details 업로드는 세 단계다(RhiAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`
+         * @details 업로드는 세 단계다(RHIAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`
          *          (`pollTransfer` 가 `Complete` 면 bindless 등록과 공개). 같은 호출이 이미 제출한 로드의 끝남 확인을 먼저 하고, @p maxCount 는 **새로 제출하는 수**에 적용한다
          *          (확인은 값싸다). `Busy` 면 그 프레임의 나머지 제출을 미루고 다음 프레임에 다시 낸다. 블로킹이 아닌 길이라 `wait()` 한 쪽이 있으면 그쪽이 먼저 끝낸다.
          *          한 프레임에 @p maxCount 개까지만 제출한다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
@@ -88,14 +88,14 @@ namespace sw
         static constexpr uint32 kMaxUploadsPerFrame = 8;
         /**
          * @brief 아래쪽 밉만 올린 텍스처(비동기 로드, `TextureResidency::StreamingBase`)의 위쪽 밉을 업로드합니다(렌더 스레드, 기록 전, `completePendingLoads` 뒤). 바꿔 끼운 수를 반환합니다.
-         * @details 텍스처 밉 스트리밍(계획 PreloadAndLod P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
+         * @details 텍스처 밉 스트리밍(계획 PreloadAndLOD P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
          *          새 GPU 텍스처 · SRV 로 바꿔 끼우고 리로드 세대를 올려 머티리얼이 새 번호를 받게 한다. 옛 자원은 게임 스레드가 해제한다(`releaseRetiredTextures`).
          *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
          */
         uint32 updateStreaming( IRHIDevice* pDevice, uint32 maxCount );
         /**
          * @brief 이번 프레임 화면에서 텍스처 @p relativePath 가 차지하는 크기를 알립니다(게임 스레드). 값은 가장 큰 뷰의 화면 크기(화면 높이에 대한 비율)이고 클수록 위쪽 밉을 먼저 올린다.
-         * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLod P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.
+         * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLOD P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.
          *          `updateStreaming` 이 위쪽 밉을 기다리는 줄을 이 값의 내림차순(알리지 않은 것은 0, 같으면 먼저 읽힌 순)으로 정렬해 쓰고 알림을 비운다 — 한 프레임 안의 값이다.
          */
         void noteScreenSize( string_view relativePath, float32 screenSize );

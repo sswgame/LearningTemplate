@@ -92,8 +92,8 @@ namespace sw
         const PkceLoginProviderConfig* pSettings = findSettings( provider );
         const bool                     bSecrets  = pSettings != nullptr && makeRandomText( Internal::kVerifierBytes, pending._codeVerifier ) &&
                               makeRandomText( Internal::kStateBytes, pending._state ) && makeRandomText( Internal::kStateBytes, pending._nonce );
-        uint8      arrChallenge[NetSecurityConstant::kSha256Size];
-        const bool bChallenge = bSecrets && _pProvider->computeSha256( reinterpret_cast<const uint8*>( pending._codeVerifier.data() ),
+        uint8      arrChallenge[NetSecurityConstant::kSHA256Size];
+        const bool bChallenge = bSecrets && _pProvider->computeSHA256( reinterpret_cast<const uint8*>( pending._codeVerifier.data() ),
                                                                        static_cast<int32>( pending._codeVerifier.size() ), arrChallenge );
         if ( bChallenge == false )
         {
@@ -103,7 +103,7 @@ namespace sw
         vector<HTTPHeader> listQuery;
         listQuery.push_back( HTTPHeader{ "response_type", "code" } );
         listQuery.push_back( HTTPHeader{ "client_id", pSettings->_clientID } );
-        listQuery.push_back( HTTPHeader{ "redirect_uri", makeRedirectUri() } );
+        listQuery.push_back( HTTPHeader{ "redirect_uri", makeRedirectURI() } );
         listQuery.push_back( HTTPHeader{ "scope", pSettings->_scope } );
         listQuery.push_back( HTTPHeader{ "state", pending._state } );
         listQuery.push_back( HTTPHeader{ "nonce", pending._nonce } );
@@ -223,7 +223,7 @@ namespace sw
         vector<HTTPHeader> listForm;
         listForm.push_back( HTTPHeader{ "grant_type", "authorization_code" } );
         listForm.push_back( HTTPHeader{ "code", pCode->_value } );
-        listForm.push_back( HTTPHeader{ "redirect_uri", makeRedirectUri() } );
+        listForm.push_back( HTTPHeader{ "redirect_uri", makeRedirectURI() } );
         listForm.push_back( HTTPHeader{ "client_id", pSettings->_clientID } );
         listForm.push_back( HTTPHeader{ "code_verifier", pFound->_codeVerifier } );
         HTTPClientRequest tokenRequest;
@@ -263,7 +263,7 @@ namespace sw
             SW_LOG_WARNING( "external sign-in with '%#' did not finish: %#", pending._provider.c_str(), result._failureText.c_str() );
     }
 
-    string LoopbackPkceLoginClient::makeRedirectUri() const
+    string LoopbackPkceLoginClient::makeRedirectURI() const
     {
         return "http://127.0.0.1:" + to_string( static_cast<int32>( _redirectServer.getListenPort() ) ) + LoopbackPkceLoginClientInternal::kCallbackPath;
     }

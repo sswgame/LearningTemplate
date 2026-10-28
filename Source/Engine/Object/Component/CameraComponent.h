@@ -105,7 +105,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr float32 kDefaultFovY        = 0.70f;
+        static constexpr float32 kDefaultFOVY        = 0.70f;
         static constexpr float32 kDefaultNearZ       = 0.1f;
         static constexpr float32 kDefaultFarZ        = 100.0f;
         static constexpr float32 kDefaultOrthoHeight = 10.0f;
@@ -116,7 +116,7 @@ namespace sw
         /**
          * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트와 컴포넌트를 만듭니다) 역할, 위치, 시선, 기본 렌즈를 맞춥니다.
          * @details 엔진의 기본 게임 카메라(`Scene::pickActiveGameCamera`)와 도구의 뷰포트 카메라가 함께 쓴다(기본 렌즈 값
-         *          `kDefaultFovY`, `kDefaultNearZ`, `kDefaultFarZ` 를 리터럴로 다시 적지 않게 하려는 것이다).
+         *          `kDefaultFOVY`, `kDefaultNearZ`, `kDefaultFarZ` 를 리터럴로 다시 적지 않게 하려는 것이다).
          * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연된다) nullptr 입니다.
          */
         static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
