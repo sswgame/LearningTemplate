@@ -208,6 +208,17 @@ namespace sw
         }
     }
 
+    bool MMOReplicator::initializeWithStreaming( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldStreamingSubsystem& streaming, const IInterestPolicy* pPolicy )
+    {
+        return initialize( pHost, settings, streaming.getGrid(), pPolicy );
+    }
+
+    void MMOReplicator::updateAndFeedStreaming( float32 deltaTime, WorldStreamingSubsystem& streaming )
+    {
+        update( deltaTime );
+        feedStreamingSources( streaming );
+    }
+
     void MMOReplicator::feedStreamingSources( WorldStreamingSubsystem& streaming )
     {
         collectObserverPositions( _listScratchSource );

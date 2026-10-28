@@ -165,6 +165,11 @@ namespace sw
          *          스트리밍하는 씬은 `WorldStreamingSubsystem::getGrid()` 를, 스트리밍하지 않는 게임은 자기 데이터의 `WorldCellGridDef` 로 만든 격자를 넘긴다.
          */
         [[nodiscard]] bool initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldCellGrid& cellGrid, const IInterestPolicy* pPolicy = nullptr );
+        /**
+         * @brief 스트리밍하는 씬의 격자(`WorldStreamingSubsystem::getGrid`)로 시작합니다. `initialize` 와 같고 격자를 고르는 자리를 없앤 입구입니다.
+         * @details 서버 게임이 스트리밍 서브시스템과 다른 격자를 넘겨 관심 영역과 올라온 셀이 어긋나는 일을 막는다(복제기의 칸은 스트리밍 격자의 칸이어야 한다).
+         */
+        [[nodiscard]] bool initializeWithStreaming( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldStreamingSubsystem& streaming, const IInterestPolicy* pPolicy = nullptr );
         /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
@@ -190,6 +195,11 @@ namespace sw
          * @details 관찰자가 없으면 빈 목록을 넣는다 — 아무 셀도 원하지 않는다(카메라 원점으로 돌아가지 않는다).
          */
         void feedStreamingSources( WorldStreamingSubsystem& streaming );
+        /**
+         * @brief `update` 다음에 `feedStreamingSources` 를 부릅니다. 서버 게임의 틱이 부르는 입구입니다.
+         * @details 원점을 넣는 것이 이번 틱의 관찰자 위치(`update` 가 반영한 뒤)여야 하므로 두 호출의 순서를 한 호출로 묶는다.
+         */
+        void updateAndFeedStreaming( float32 deltaTime, WorldStreamingSubsystem& streaming );
 
         /** @brief 그 관찰자에게 지금 보이는 엔티티 수를 반환합니다. */
         int32  getVisibleCount( int32 connectionID ) const;
