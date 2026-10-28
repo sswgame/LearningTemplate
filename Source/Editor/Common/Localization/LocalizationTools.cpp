@@ -729,7 +729,12 @@ namespace sw
         string             text;
         string             error;
         PortableObjectFile file;
-        if ( FileUtil::readTextFile( poPath, text ) == false || file.parse( text, &error ) == false )
+        if ( FileUtil::readTextFile( poPath, text ) == false )
+        {
+            SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
+            return false;
+        }
+        if ( file.parse( text, &error ) == false )
         {
             SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: %#", poPath, error.c_str() );
             return false;
@@ -836,9 +841,15 @@ namespace sw
             // PO 헤더의 프로젝트 이름으로 기본 대상 중에서 고른다.
             string             text;
             PortableObjectFile file;
-            if ( FileUtil::readTextFile( poPath, text ) == false || file.parse( text ) == false )
+            string             parseError;
+            if ( FileUtil::readTextFile( poPath, text ) == false )
             {
-                SW_LOG_ERROR( "[ImportPo] '%#' cannot be read", poPath );
+                SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: the file could not be opened", poPath );
+                return false;
+            }
+            if ( file.parse( text, &parseError ) == false )
+            {
+                SW_LOG_ERROR( "[ImportPo] '%#' cannot be read: %#", poPath, parseError.c_str() );
                 return false;
             }
             vector<string> listProjectPath;

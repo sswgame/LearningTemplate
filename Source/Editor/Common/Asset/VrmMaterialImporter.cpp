@@ -658,13 +658,19 @@ namespace sw::editor
             return false;
 
         // 키가 없으면 `ToonMaterialDesc` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
-        auto readFactor = [&]( string_view key, float4& inoutColor ) -> bool
-        { return mtoon.has( key ) == false || Internal::readColor( mtoon.get( key ), inoutColor ); };
+        string_view invalidFactor;
+        auto        readFactor = [&]( string_view key, float4& inoutColor ) -> bool
+        {
+            const bool bRead = mtoon.has( key ) == false || Internal::readColor( mtoon.get( key ), inoutColor );
+            if ( bRead == false && invalidFactor.empty() )
+                invalidFactor = key;
+            return bRead;
+        };
         const bool bInvalidColorFactor = readFactor( "shadeColorFactor", outDesc._shadeColor ) == false || readFactor( "matcapFactor", outDesc._matcapColor ) == false ||
                                          readFactor( "parametricRimColorFactor", outDesc._rimColor ) == false || readFactor( "outlineColorFactor", outDesc._outlineColor ) == false;
         if ( bInvalidColorFactor )
         {
-            outError = context + ": a color factor is not three or four numbers";
+            outError = context + ": " + string( invalidFactor ) + " is not three or four numbers";
             return false;
         }
         // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
