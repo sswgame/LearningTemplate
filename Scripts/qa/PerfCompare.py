@@ -21,13 +21,16 @@ import argparse
 import platform
 import statistics
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.AppRun import addAppRunArguments, kBackendSwitch, kBenchRowRe, parseProfileTable, runApp  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, kBenchRowRe, loadGameTable, parseProfileTable, runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -183,7 +186,8 @@ def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> 
 def runSideInternal(case: PerfCase, executable: Path, listArgument: list[str], sample: CaseSample, timeoutSeconds: float) -> None:
     # TestBin 의 테스트 실행 파일은 Engine.dll 이 있는 형제 Bin 에서 돌린다(없으면 DLL 을 못 찾아 시작하자마자 죽는다).
     workingFolder = executable.resolve().parent.parent / "Bin" if executable.resolve().parent.name == "TestBin" else None
-    result = runApp(executable, listArgument, cwd=workingFolder, timeoutSeconds=timeoutSeconds)
+    isolation = SettingsIsolation.NOT_APPLICABLE if case.kind == "test" else SettingsIsolation.PRESET_FILE   # 테스트 실행 파일은 그리지 않는 마이크로 벤치다
+    result = runApp(executable, listArgument, settings=isolation, cwd=workingFolder, timeoutSeconds=timeoutSeconds)
     if result.bBackendUnusable:
         sample.listFailure.append("backend unusable on this machine")
         return
@@ -212,16 +216,20 @@ def measureCaseInternal(case: PerfCase, args: argparse.Namespace) -> tuple[CaseS
             return f"{executable} 이 없다"
     sampleBefore = CaseSample()
     sampleAfter = CaseSample()
-    for runIndex in range(max(1, args.runs)):
-        # 판마다 순서를 바꿔 기계 상태의 흐름이 한쪽에만 실리지 않게 한다.
-        listOrder = [(executableBefore, case.listBefore, sampleBefore), (executableAfter, case.listAfter, sampleAfter)]
-        if case.mode == "single":
-            listOrder = listOrder[1:]
-        elif runIndex % 2 == 1:
-            listOrder.reverse()
-        for executable, listExtra, sample in listOrder:
-            runSideInternal(case, executable, [*listBase, *listExtra], sample, args.timeout)
-        print(f"[PerfCompare] {case.name} run {runIndex + 1}/{args.runs}", flush=True)
+    # App 케이스는 그리므로 품질 프리셋을 표가 정한 이름의 설정 파일로 써 준다(전 · 후가 같은 프리셋이어야 비교가 된다). 테스트 실행 파일은 그리지 않는다.
+    with tempfile.TemporaryDirectory(prefix="sw_perfcompare_") as tempDir:
+        if case.kind != "test":
+            listBase = [*listBase, *writePresetSettingsFile(getProjectRoot(), readTableQuality(loadGameTable(getProjectRoot())), Path(tempDir) / "usersettings.json")]
+        for runIndex in range(max(1, args.runs)):
+            # 판마다 순서를 바꿔 기계 상태의 흐름이 한쪽에만 실리지 않게 한다.
+            listOrder = [(executableBefore, case.listBefore, sampleBefore), (executableAfter, case.listAfter, sampleAfter)]
+            if case.mode == "single":
+                listOrder = listOrder[1:]
+            elif runIndex % 2 == 1:
+                listOrder.reverse()
+            for executable, listExtra, sample in listOrder:
+                runSideInternal(case, executable, [*listBase, *listExtra], sample, args.timeout)
+            print(f"[PerfCompare] {case.name} run {runIndex + 1}/{args.runs}", flush=True)
     return sampleBefore, sampleAfter
 
 
@@ -251,6 +259,7 @@ def main(listArgument: list[str] | None = None) -> int:
             print(f"{case.name:16} {case.kind:4} {case.mode:6} {case.note}")
         return ExitCode.Passed
 
+    print(f"[PerfCompare] quality {readTableQuality(loadGameTable(getProjectRoot()))} (App 케이스의 품질 프리셋)", flush=True)
     listSelected = [case for case in kListCase if args.cases is None or case.name in args.cases]
     listRow: list[tuple[str, str, str, str, str]] = []
     listSkipped: list[str] = []

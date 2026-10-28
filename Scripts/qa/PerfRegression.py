@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.QualityPreset import describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
+from common.QualityPreset import SettingsIsolation, describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
@@ -49,7 +49,7 @@ def measureInternal(appPath: Path, listArgument: list[str], runCount: int) -> tu
     mapSample: dict[str, dict[str, list[float]]] = {}
     listFailure: list[str] = []
     for runIndex in range(runCount):
-        result = runApp(appPath, listArgument, timeoutSeconds=600.0)
+        result = runApp(appPath, listArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=600.0)
         if result.bBackendUnusable:
             listFailure.append("backend unusable on this machine")
             break
@@ -99,7 +99,7 @@ def captureTraceInternal(appPath: Path, listAppArgument: list[str], gameName: st
     tracePath = Path(appPath).resolve().parent / "Saved" / "Traces" / f"perf_{gameName}_{backend}.trace.json"
     tracePath.parent.mkdir(parents=True, exist_ok=True)
     tracePath.unlink(missing_ok=True)
-    result = runApp(appPath, [*listAppArgument, f"-gv_profileTracePath={tracePath.as_posix()}"], timeoutSeconds=600.0)
+    result = runApp(appPath, [*listAppArgument, f"-gv_profileTracePath={tracePath.as_posix()}"], settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=600.0)
     if not result.bClean or not tracePath.is_file():
         print(f"[Perf] trace run did not leave {tracePath} ({(result.listErrorLine or [f'exit {result.exitCode}'])[0]})", flush=True)
         return None

@@ -37,6 +37,7 @@ from common.BuildTree import BuildTree, kMapConfigPreset, readConfigPresets  # n
 from common.CookContract import CookContractSpec  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation  # noqa: E402
 from common.ScenarioArguments import kVocabulary  # noqa: E402
 from common.ScenarioFile import (ScenarioDeclaration, ScenarioFileError, findResourceRoot, findScenarioCandidates,  # noqa: E402
                                  readScenarioDeclaration)
@@ -289,7 +290,8 @@ def judgeRun(plan: RunPlan, backend: Backend, listArgument: list[str], mapCode: 
             result.meaning = f"GPU {'독점' if bExclusive else '공유'} 칸을 잡지 못함(종료 코드 {lockCode}) — 돌지 않았다"
             return result
         clearOutputFolder(plan)   # 잠금을 잡은 뒤에 비운다 — 같은 시나리오를 도는 다른 판의 산출물을 지우지 않게
-        run = runApp(plan.appPath, listArgument, cwd=plan.binDir, timeoutSeconds=float(plan.timeoutSeconds))
+        # 인자에 `-unattended` · `-scenario=` 가 있어 엔진이 사양으로 프리셋을 고르지 않는다(a0521e79a). 이 PC 의 사용자 폴더 설정 파일은 읽으므로 품질에 기대는 시나리오는 <Launch> 로 못 박는다.
+        run = runApp(plan.appPath, listArgument, settings=SettingsIsolation.UNATTENDED_ONLY, cwd=plan.binDir, timeoutSeconds=float(plan.timeoutSeconds))
     result.seconds = run.seconds
     result.exitCode = run.exitCode
     if not run.bLaunched:

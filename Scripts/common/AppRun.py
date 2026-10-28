@@ -28,6 +28,7 @@ from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
 from .Paths import getProjectRoot
 from .ProcessLimits import ProcessLimits
+from .QualityPreset import SettingsIsolation, checkSettingsIsolation
 from .Timeline import appendAppEndLine, appendAppStartLine, summarizeAppArguments
 
 #: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
@@ -223,15 +224,17 @@ def sampleLinuxInternal(pid: int, elapsed: float) -> ResourceSample | None:
 # ------------------------------------------------------------------------------
 # 한 판 돌리기
 # ------------------------------------------------------------------------------
-def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, timeoutSeconds: float = 300.0,
+def runApp(appPath: Path, listArgument: list[str], *, settings: SettingsIsolation, cwd: Path | None = None, timeoutSeconds: float = 300.0,
            sampleIntervalSeconds: float = 0.0, echo: bool = False, limits: ProcessLimits | None = None,
            environment: dict[str, str] | None = None) -> AppRunResult:
     """
     App 을 띄워 끝날 때까지 기다립니다. 출력은 별도 스레드가 계속 읽는다(파이프가 차서 App 이 멈추지 않게).
     `sampleIntervalSeconds` 가 0 보다 크면 그 간격으로 자원을 측정한다. 시간을 넘기면 죽이고 `bTimedOut` 이다.
     작업 폴더는 기본으로 App 이 있는 `Bin` 이다(App 은 거기서 위로 `Resource/` 를 찾는다).
+    `settings` 는 필수다 — 사용자 설정(그 PC 의 파일 · 사양으로 고른 프리셋)에서 어떻게 떨어졌는지 밝히고(`SettingsIsolation`), 인자와 맞지 않으면 띄우기 전에 ValueError 다.
     `limits` 는 CPU 코어 · 메모리 제한(`ProcessLimits`, 부하 검증의 하드웨어 프로필), `environment` 는 더할 환경 변수다.
     """
+    checkSettingsIsolation(settings, listArgument)
     result = AppRunResult()
     workingDirectory = Path(cwd) if cwd is not None else Path(appPath).resolve().parent
     startSeconds = time.monotonic()

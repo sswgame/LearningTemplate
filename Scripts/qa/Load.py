@@ -47,7 +47,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.AppRun import (kBackendSwitch, kStartupRe, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall,  # noqa: E402
                            runApp, splitRunSeconds)
 from common.ProcessLimits import ProcessLimits  # noqa: E402
-from common.QualityPreset import describeQualityMismatch, writePresetSettingsFile  # noqa: E402
+from common.QualityPreset import SettingsIsolation, describeQualityMismatch, writePresetSettingsFile  # noqa: E402
 from common.ScenarioFile import readLoadSpec  # noqa: E402
 
 kLoadFolder = "Test/Load"
@@ -287,7 +287,7 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
         profile = HardwareProfile(profile.name, {**profile.data, "quality": qualityOverride})
     with tempfile.TemporaryDirectory(prefix="sw_load_") as temporaryFolder:
         # 사용자 폴더를 건드리지 않는 임시 설정 파일. 품질이 정해진 프로필은 파일에 적어 기동 적용(다시 시작이 필요한 텍스처 품질 포함)으로 넣고,
-        # `auto` 는 파일을 두지 않아 엔진이 흉내 낸 사양으로 고른다(첫 실행 자동 선택).
+        # `auto` 는 파일을 두지 않는다 — 부하 실행은 `-scenario` 라 엔진이 사양으로 프리셋을 고르지 않고(a0521e79a) 스키마 기본값(high)으로 돈다.
         settingsPath = Path(temporaryFolder) / "usersettings.json"
         quality = qualityOverride or profile.data["quality"]
         if quality and quality != "auto":
@@ -295,8 +295,9 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
         listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath) + list(listExtraArgument or [])
         measurement.command = [str(appPath), *listArgument]
         timeoutSeconds = declaration.durationSeconds * 2.0 + 240.0
-        result = runApp(appPath, listArgument, timeoutSeconds=timeoutSeconds, sampleIntervalSeconds=max(1.0, declaration.durationSeconds / 60.0),
-                        limits=profile.makeLimits())
+        isolation = SettingsIsolation.PRESET_FILE if settingsPath.is_file() else SettingsIsolation.ISOLATED_AUTOMATED   # 둘 다 -gv_userSettingsFile 를 건넨다
+        result = runApp(appPath, listArgument, settings=isolation, timeoutSeconds=timeoutSeconds,
+                        sampleIntervalSeconds=max(1.0, declaration.durationSeconds / 60.0), limits=profile.makeLimits())
     if result.bBackendUnusable:
         measurement.skipReason = f"{backend} is not usable on this machine"
         return measurement
@@ -330,7 +331,8 @@ def runLoadBotDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
         if declaration.clientCount > 0:
             listArgument.append(f"--bots={declaration.clientCount}")
         measurement.command = [str(botPath), *listArgument]
-        result = runApp(botPath, listArgument, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 3.0 + 120.0,
+        # OnlineLoadBot 은 그리지 않는 도구라 사용자 설정(UserSettingsManager)을 거치지 않는다.
+        result = runApp(botPath, listArgument, settings=SettingsIsolation.NOT_APPLICABLE, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 3.0 + 120.0,
                         sampleIntervalSeconds=1.0, limits=profile.makeLimits())
         # 봇이 보고서를 남기지 못한 것은 이 판의 실패다(아래에서 기록) — 필수 표용 readJsonInternal 은 없는 파일에서 멈춰 결과 JSON 이 통째로 사라진다.
         report = json.loads(reportPath.read_text(encoding="utf-8")) if reportPath.is_file() else None
@@ -365,8 +367,9 @@ def runClusterDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
                    "SW_LOAD_DURATION_SECONDS": str(declaration.durationSeconds), "SW_LOAD_NETWORK": declaration.network or profile.data["network"] or "off"}
     listArgument = [f"--test_filter={declaration.testFilter}", "--load_suites=only", "--host_suites=all"]
     measurement.command = [f"{key}={value}" for key, value in environment.items()] + [str(testPath), *listArgument]
-    result = runApp(testPath, listArgument, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 20.0 + 300.0, sampleIntervalSeconds=1.0,
-                    limits=profile.makeLimits(), environment=environment)
+    # 루프백 클러스터를 도는 테스트 실행 파일이라 그리지 않는다.
+    result = runApp(testPath, listArgument, settings=SettingsIsolation.NOT_APPLICABLE, cwd=tree.binDir,
+                    timeoutSeconds=declaration.durationSeconds * 20.0 + 300.0, sampleIntervalSeconds=1.0, limits=profile.makeLimits(), environment=environment)
     measurement.listLine = result.listLine
     for line in result.listLine:
         if (match := _kLoadMetricRe.search(line)) is not None:

@@ -25,7 +25,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec  # noqa: E402
-from common.AppRun import kBackendSwitch, runApp  # noqa: E402
+from common.AppRun import kBackendSwitch, loadGameTable, runApp  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AutomationTimeLimits import kProcessKillSeconds  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
@@ -71,6 +73,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     listBackend = [(backend.name, kBackendSwitch[backend.commandLineName]) for backend in CookContractSpec.load().listBackend
                    if backend.commandLineName in args.backends]
 
+    # 품질 프리셋은 표가 정한 이름을 설정 파일로 써 준다 — 없으면 이 PC 의 사용자 폴더 파일 · 사양으로 고른 프리셋이 그림(해상도 배율 · 시야)을 정한다.
+    quality = readTableQuality(loadGameTable(getProjectRoot()))
+    listQualityArgument = writePresetSettingsFile(getProjectRoot(), quality, outDir / "smoke_usersettings.json")
+
     bFailed = False
     listResult = []
     for kind, listExtra, frames in (("opaque", ["-gv_benchTransparent=0"], 30), ("transparent", ["-gv_benchTransparent=25"], 30)):
@@ -78,9 +84,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             ppmPath = outDir / f"{kind}_{name}.ppm"
             logPath = outDir / f"{kind}_{name}.log"
             ppmPath.unlink(missing_ok=True)
-            listArgument = [switch, *listExtra, f"-gv_benchMeshes={args.meshes}", f"-gv_profileFrames={frames}", f"-gv_screenshot={ppmPath}"]
+            listArgument = [switch, *listExtra, f"-gv_benchMeshes={args.meshes}", f"-gv_profileFrames={frames}", f"-gv_screenshot={ppmPath}",
+                            *listQualityArgument]
             # runApp 이 시각표(timeline.log)에 pid · 인자를 남긴다 — 본 화면을 실행과 맞추려면 App 을 띄우는 길이 하나여야 한다.
-            result = runApp(appPath, listArgument, cwd=binDir, timeoutSeconds=kProcessKillSeconds)
+            result = runApp(appPath, listArgument, settings=SettingsIsolation.PRESET_FILE, cwd=binDir, timeoutSeconds=kProcessKillSeconds)
             logPath.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
             stats = readPpmStatsInternal(ppmPath) if ppmPath.is_file() else None
             bOk = result.bLaunched and not result.bTimedOut and result.exitCode == 0 and stats is not None and stats[1] > 0
@@ -92,7 +99,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         mean = f"{stats[0]}" if stats else "no ppm"
         nonBackgroundCount = stats[1] if stats else "-"
         print("%-7s %-10s %5d %7d %-20s %s" % (kind, name, returnCode, errorCount, mean, nonBackgroundCount))
-    print(f"PPM/log: {outDir}")
+    print(f"PPM/log: {outDir} (quality {quality})")
     return ExitCode.Violation if bFailed else ExitCode.Passed
 
 

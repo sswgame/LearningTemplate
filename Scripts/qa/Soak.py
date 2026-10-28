@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -27,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AppRun import (addAppRunArguments, kBackendSwitch, kStartupRe, computeSlopePerMinute, loadGameTable, parseProfileTable,  # noqa: E402
                            parseProfileWall, runApp, splitRunSeconds)
 
@@ -53,8 +55,13 @@ def main(listArgument: list[str] | None = None) -> int:
         return ExitCode.Violation
     seconds = max(10, int(args.minutes * 60))
     listAppArgument = [f"-game={gameName}", *table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]
-    print(f"[Soak] {gameName} on {args.backend} for {seconds} s: App {' '.join(listAppArgument)}", flush=True)
-    result = runApp(args.app, listAppArgument, timeoutSeconds=seconds + 180.0, sampleIntervalSeconds=args.sample_seconds)
+    quality = readTableQuality(table)
+    print(f"[Soak] {gameName} on {args.backend} (quality {quality}) for {seconds} s: App {' '.join(listAppArgument)}", flush=True)
+    # 품질 프리셋은 표가 정한 이름을 설정 파일로 써 준다 — 없으면 이 PC 의 사용자 폴더 파일 · 사양으로 고른 프리셋이 프레임 시간을 정한다.
+    with tempfile.TemporaryDirectory(prefix="sw_soak_") as tempDir:
+        listRunArgument = [*listAppArgument, *writePresetSettingsFile(repositoryRoot, quality, Path(tempDir) / "usersettings.json")]
+        result = runApp(args.app, listRunArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=seconds + 180.0,
+                        sampleIntervalSeconds=args.sample_seconds)
 
     listFailure: list[str] = []
     if result.bBackendUnusable:
@@ -103,7 +110,7 @@ def main(listArgument: list[str] | None = None) -> int:
 
     if args.out is not None:
         report = {
-            "game": gameName, "backend": args.backend, "seconds": seconds, "exit_code": result.exitCode,
+            "game": gameName, "backend": args.backend, "quality": quality, "seconds": seconds, "exit_code": result.exitCode,
             "run_seconds": result.seconds, "startup_seconds": startupSeconds, "measure_seconds": measureSeconds,
             "private_mb_per_minute": privateSlope, "working_set_mb_per_minute": workingSetSlope,
             "handles_per_minute": handleSlope, "gui_objects_per_minute": guiSlope,

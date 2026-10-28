@@ -23,7 +23,9 @@ from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.AppRun import AppRunResult, runApp  # noqa: E402
+from common.AppRun import AppRunResult, loadGameTable, runApp  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.DestructionHashLog import compareHashLogs, parseHashLog  # noqa: E402
@@ -69,14 +71,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     outDir.mkdir(parents=True, exist_ok=True)
 
     serverArguments = [f"-gv_firstScene={args.scene}", f"-gv_netListenPort={args.port}", f"-gv_serverExitAfterTicks={args.ticks}"]
-    clientArguments = [f"-gv_firstScene={args.scene}", f"-gv_netConnectAddress=127.0.0.1:{args.port}", f"-gv_profileFrames={args.frames}"]
+    # 클라이언트는 그리는 App 이라 품질 프리셋(이펙트 스폰 배율 등)이 이 PC 의 설정 · 사양에 달리지 않게 설정 파일로 못 박는다. 서버는 그리지 않고 사용자 설정을 읽지 않는다.
+    clientArguments = [f"-gv_firstScene={args.scene}", f"-gv_netConnectAddress=127.0.0.1:{args.port}", f"-gv_profileFrames={args.frames}",
+                       *writePresetSettingsFile(getProjectRoot(), readTableQuality(loadGameTable(getProjectRoot())), outDir / "client_usersettings.json")]
 
     # 서버는 따로 스레드에서 돌리고(끝날 때까지 출력을 읽는다) 잠깐 뒤 클라이언트를 붙인다.
     mapResult: dict[str, AppRunResult] = {}
-    serverThread = threading.Thread(target=lambda: mapResult.__setitem__("server", runApp(serverPath, serverArguments, timeoutSeconds=args.timeout)))
+    serverThread = threading.Thread(target=lambda: mapResult.__setitem__("server", runApp(serverPath, serverArguments, settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=args.timeout)))
     serverThread.start()
     threading.Event().wait(kServerHeadStartSeconds)
-    mapResult["client"] = runApp(appPath, clientArguments, timeoutSeconds=args.timeout)
+    mapResult["client"] = runApp(appPath, clientArguments, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=args.timeout)
     serverThread.join()
 
     serverResult, clientResult = mapResult["server"], mapResult["client"]

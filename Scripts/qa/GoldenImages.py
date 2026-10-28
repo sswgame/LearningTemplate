@@ -35,7 +35,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.QualityPreset import describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
+from common.QualityPreset import SettingsIsolation, describeQualityMismatch, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
@@ -54,7 +54,7 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     listArgument = [f"-W={table['capture_width']}", f"-H={table['capture_height']}", *game["arguments"], *listQualityArgument,
                     f"-gv_screenshotSettledFrames={settledFrames}", "-gv_screenshotQuit=1", f"-gv_screenshot={screenshotPath}",
                     kBackendSwitch[backend], *game["extra_arguments"]]
-    result = runApp(appPath, listArgument, timeoutSeconds=300.0)
+    result = runApp(appPath, listArgument, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=300.0)
     if result.bBackendUnusable:
         return "skip", "backend unusable on this machine", result.seconds
     listIgnored = result.findIgnoredGlobals(listArgument)
