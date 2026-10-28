@@ -1,32 +1,24 @@
 > 질문: 로그 · 시간 · 난수 · 파일 같은 흔한 일에 Core · Engine 의 무엇을 쓰고, 무엇을 직접 부르지 않는가?
 > 독자: C++ 코드에서 흔한 일을 처음 구현하려는 사람과 에이전트.
-> 결론: 새로 짜기 전에 아래 표의 "Use" 를 찾아 쓴다. "Do not use" 를 쓴 곳은 표의 게이트(`CheckFacilityBypass`)가 잡는다(옮긴 이력은 결정 기록 5-3). 없는 기능은 직접 짜지 말고 Core · Engine 에 하나 더한다.
+> 결론: 새로 짜기 전에 아래 표의 "Use" 를 찾아 쓴다. "Do not use" 를 쓴 곳은 표의 게이트(`CheckFacilityBypass`)가 잡는다. 없는 기능은 직접 짜지 말고 Core · Engine 에 하나 더한다.
 
 ## Existing facilities
 
-Read this before writing a helper for a common job. Every row was checked against the header it names. If the
-job is not here, search the header tree first (`graphify query "<job>"`), then add the facility to Core or Engine
-once instead of writing a local copy.
-
-**Blocking order.** Make the direct API unreachable by type first: keep the direct header out of the layer
-(`CheckCoreLayers` tiers, `CheckThirdPartyIsolation`), expose only the wrapper, or give a wrapper so convenient
-that nobody needs the direct call (`DataPath` cannot be built from a literal). A lint rule is the last resort and
-only covers a gap that types cannot close; each rule states that gap in one line (for example the `whyNotType`
-field in `Scripts/lint/gate/CheckFacilityBypass.py`). A rule without such a reason is not added.
+Read this before writing a helper for a common job. If the job is not here, search the header tree first, then add the
+facility to Core or Engine once instead of writing a local copy. The direct API is made unreachable by type where possible
+(`CheckCoreLayers`, `CheckThirdPartyIsolation`, `DataPath` has no literal constructor); a lint rule covers only the gap a type cannot close.
 
 | Need | Use (header · API) | Do not use | Basis |
 | --- | --- | --- | --- |
 | Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR` · `SW_LOG_WARNING` · `SW_LOG_INFO` · `SW_LOG_TRACE` (`_ID` variants); once per scope: `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` | `CheckFacilityBypass` stdout |
 | Report below the Log tier or before the logger starts | `Core/Common/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (falls back to stderr until the logger registers a reporter) | `fprintf( stderr, … )` | `CheckFacilityBypass` stdout; `CheckCoreLayers` rule 4 bans `SW_LOG_*` there |
 | Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` | `CheckFacilityBypass` stdout |
-| Diagnostic line in a test body | `Test/TestFramework/TestReport.h` `test::printTestNote` (flushed at once) | `printf` · `fprintf( stdout, … )` | `CheckFacilityBypass` stdout |
-| Assert | `Core/Common/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` | 0 uses today, no gate |
+| Assert | `Core/Common/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` | review |
 | Current time, elapsed time, wait deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::steady_clock` · `high_resolution_clock` · `system_clock` | `CheckClockReads` |
 | UTC time, local calendar | `Core/Time/WallClock.h` (services take `nowMs` as a parameter) | `system_clock` · `localtime` · `gmtime` | `CheckClockReads` |
 | Frame delta | `Core/Time/GameTimer.h` · `Core/Time/FixedTimestep.h` | own delta bookkeeping | review |
 | Random value (engine) | `Core/Math/MathUtil.h` `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `srand` · `std::mt19937` · `std::random_device` | `CheckFacilityBypass` random |
 | Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Common/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Base/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) | `CheckFacilityBypass` random |
-| OS entropy (UUID, nonce, salt) | `SecureRandom::fill` · `nextUint64` in Core/Math (being added on the `wt/corebase` branch) | `std::random_device` per call site | `CheckFacilityBypass` random baseline |
 | Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them | review |
 | Data-defined resource path | `Engine/Serialization/Base/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers | the type: no literal constructor |
 | Resolve a resource id | `Engine/Resource/ResourcePaths.h`; read: `Engine/Resource/ResourceIO.h` `readTextResource` · `readBinaryResource` · `collectResources` | disk paths in runtime game code | `CheckRuntimeResourceDiskAccess` |
@@ -42,15 +34,14 @@ field in `Scripts/lint/gate/CheckFacilityBypass.py`). A rule without such a reas
 | Split text into a list | `Core/Container/StringUtil.h` `split( text, separators, StringSplitOptions{ _bTrim, _bDropEmpty } )`; one token at a time without allocation: `forEachToken`; lines: `forEachLine` | `find` · `substr` loops, a local `splitList` / `splitTokens` | review |
 | Trim, compare, case | `Core/Container/StringUtil.h` `trim` · `startsWith` · `endsWith` · `toLower` · `matchesWildcard` | hand loops over `char` | review |
 | UTF-8 and UTF-16 | `Core/Container/StringUtil.h` `utf8ToUtf16` · `utf16ToUtf8` · `isValidUtf8`; `Core/Container/Utf8Util.h` | `MultiByteToWideChar` at call sites | `CheckWin32WideCalls` covers the `A` calls |
-| Format text, hex | `Core/Container/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/String/Base64Util.h` | `snprintf` chains, own hex tables | review (`HexUtil` · `HexDigitUtil`) |
-| Format text | `Core/Container/formatString.h` `formatstring`; build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/String/Base64Util.h` | `snprintf` chains | review |
+| Format text, hex, colors, Base64 | `Core/Container/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/String/Base64Util.h` | `snprintf` chains, own hex tables | review (`HexUtil` · `HexDigitUtil`) |
 | Bytes or fixed-width integers as hex | `Core/String/HexUtil.h` `encodeBytes` · `appendBytes` · `appendUint64` · `decodeBytes` (`HexCase`) | a `"0123456789abcdef"` table and nibble shifts | review |
 | Hash, interned name | `Core/Common/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/String/hashed_string.h` | literal FNV or golden-ratio constants | `CheckWellKnownConstants` |
 | Read hand-written data XML attributes | `Engine/Serialization/XML/XMLReadUtil.h` `loadRootOrWarn` · `findRequiredID` · `readRequiredName` · `parseNameList` · `parseFloat3` · `readOptionalNumber` · `readOptionalFlag` · `forEachNamedNumber`; attribute present: `XMLNode::hasAttribute`; curves: `GameDataXML::readFloatCurve`; reflection Def rows: `GameDataXML::readFields` · `readInto` | per-kit copies of the same readers, aliases that forward to them | review |
 | Serialize an object | `Engine/Serialization/Format/XMLSerializer.h` · `JSONSerializer.h` · `BinarySerializer.h` through reflection; raw binary: `Engine/Serialization/Format/Archive.h` | `pugixml` or JSON library calls outside Serialization | `CheckThirdPartyIsolation` |
-| Callback, multicast event | `Core/Delegate/Delegate.h` `Delegate` · `MulticastDelegate` · `SW_DECLARE_DELEGATE` · `SW_DECLARE_MULTI_CAST_DELEGATE` | `std::function` | 0 uses today, no gate |
+| Callback, multicast event | `Core/Delegate/Delegate.h` `Delegate` · `MulticastDelegate` · `SW_DECLARE_DELEGATE` · `SW_DECLARE_MULTI_CAST_DELEGATE` | `std::function` | review |
 | Publish and subscribe by channel | `Core/Event/EventDispatcher.h` `subscribe` · `publish` · `push` | a hand-rolled listener list | review |
-| Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; result: `Core/Task/TaskFuture.h` | `std::async` · a thread per job | `CheckStdThread`; `std::async` 0 uses |
+| Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; result: `Core/Task/TaskFuture.h` | `std::async` · a thread per job | `CheckStdThread` |
 | A dedicated thread | `Core/Concurrency/thread.h` `sw::thread`; locks: `Core/Concurrency/mutex.h` | `std::thread` | `CheckStdThread` |
 | Load an asset | `Engine/Resource/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `ResourceIO` | `FileUtil` reads of `Resource/` in game code | `CheckRuntimeResourceDiskAccess` |
 | Engine or game setting | `Engine/Config/ConfigManager.h` `getConfig<T>` (keyed by type) | config lookup by a name string | review |
@@ -66,12 +57,5 @@ field in `Scripts/lint/gate/CheckFacilityBypass.py`). A rule without such a reas
 | Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()` | `CheckServiceAccess` |
 | Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Common/Defines.h` `constant::` | retyped literals | `CheckWellKnownConstants` |
 
-`review` means no gate: the direct form is either already absent, or cannot be told apart from legitimate code by
-its shape. Keep the row anyway so the replacement is found before a second copy is written.
-
-### Adding a row
-
-1. Name the header and the API you checked, not a folder.
-2. If a gate covers the direct form, name the gate. If you add a rule, add it to an existing gate's table
-   (`CheckFacilityBypass` for direct C runtime or standard calls) with its `whyNotType` line, and count existing
-   uses as a baseline instead of fixing them in the same change.
+`review` means no gate: the direct form is either already absent or cannot be told apart from legitimate code by its shape.
+A new row names the header and the API; a new rule goes into the table of `CheckFacilityBypass` with its `whyNotType` line.

@@ -2,6 +2,8 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 표
 
+2026-10-28: 기능별 테스트 · 시나리오(`Test/` · `Resource/**/automation/`)를 새 프레임워크를 만들려고 전부 지웠다. 이 문서의 테스트 · 시나리오 · `ctest` · `AppTestUtil` 언급은 옛 구조를 가리키며, 새 틀이 정해지면 다시 쓴다.
+
 `Engine/Automation` 은 시나리오 형식 · 등록 · 타임라인 · 입력 재생 같은 일반 기능과 테스트 판정 · 로그 게이트 · 보고 같은 테스트 전용 기능을 한 폴더에 가지고 있다. 2026-10-23 사용자와 정한 결론은 **형식 경계를 먼저 고치고 폴더를 둘로 나눈다**이다.
 
 ## 1. 결론 (2026-10-23)
@@ -33,8 +35,8 @@
 | 단계 | 내용 | 검증 | 상태 |
 |---|---|---|---|
 | ① 탐침 | 탐침 레지스트리를 티어 10 으로 내리고 Terrain · Character · Scene 탐침을 기능 폴더로(기능이 자기 탐침을 등록) | 층 게이트 4종, 시나리오 네 백엔드 회귀(작업자가 안 돌림 — 정의 위치만 옮겨 동작은 같다) | 완료 — 2026-10-27 GameFramework 허브(`GameplayAutomationSteps.cpp`)의 탐침 16개도 영역 폴더로 옮겼다(`SessionStateProbes`(퀘스트 포함) · `ScheduleProbes` · `AIControllerProbes` · `PawnProbes` · `VehicleProbes`). 허브에는 단계 셋(`AdvanceGameTime` · `Mount` · `Dismount`)만 남음. 같은 날 에디터 허브 `EditorScenarioSteps.cpp` 의 탐침 91개도 패널 · 기능 폴더의 `*Probes.cpp` 로 옮겼다(허브에는 단계 일곱만, 허브의 패널 헤더 include 40여 개가 사라짐). 시나리오용 전역 변수 `gv_editorProbe*` 는 `SelfTest/EditorProbeSupport.h` 에 선언한다. `AutomationRunner.cpp` 의 탐침 12개도 뺐다: `Object.*` 는 `Scene/ObjectProbes.cpp`, `Assets.Pending` 은 `AutomationCaptureProbes.cpp`, `Input.*` 와 `Profiler.TraceRecording` 은 입력(T10) · 프로파일링(T4)이 레지스트리(T10)를 못 봐서 가장 가까운 층인 `AutomationInputProbes.cpp` · `AutomationProfilerProbes.cpp` 에 둔다. 이 뒤로 탐침을 모아 쥔 허브 파일은 없다(`NetSimAutomation.cpp` · `RHIBackendSwitcherAutomation.cpp` 는 자기 기능의 탐침) |
-| ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스(`AutomationStepContext`)를 받게 한다 | 등록자가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현, 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
-| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드, 컴파일 확인 전) — 2026-10-28 폴더 이동 · 실행기 번역 단위 분할(6절). `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`로 결과 형식과 종료 코드를 갈랐고 테스트 전용 선언을 `AutomationTestOptions`(`getTestOptions()`)로 모았다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
+| ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스(`AutomationStepContext`)를 받게 한다 | 등록자가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현, 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: |
+| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드, 컴파일 확인 전) — 2026-10-28 폴더 이동 · 실행기 번역 단위 분할(6절). `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`로 결과 형식과 종료 코드를 갈랐고 테스트 전용 선언을 `AutomationTestOptions`(`getTestOptions()`)로 모았다. 확인 대기: |
 | ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 자동화를 Shipping 에서도 쓰는 방침과 부딪히고 GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
 
 ## 6. 남은 것과 위험
@@ -82,7 +84,7 @@
 
 ### 통합이 돌릴 확인
 
-- 행 감시 교착 시나리오: 매니페스트 id `app-hang-watch`(`AppHangWatchTest`, Debug). 지면 보고의 reason 을 먼저 본다 — 기동이 `wallTimeoutSeconds`(3 초)를 넘겼으면 `hang.scenario.xml` 의 시한을 올린다.
-- 시나리오 단계별 시간: 매니페스트 id `scenario-timeline-measure`(`scenario-waits --measured-dir`, `app-scenarios-release` 뒤).
-- 어림값 문턱 승격 제안: 매니페스트 id `scenario-thresholds-promote`(보고만, 승격은 표를 보고 사람이 따로 돌린다). `{bin}/Saved/Automation` 보고는 시나리오 줄기 + 백엔드 이름으로 덮어쓰이므로 `ExpectImage` 가 든 줄기가 유일한 것들(어림값 13 개 시나리오)만 쓴다.
+- 행 감시 교착 시나리오:(`AppHangWatchTest`, Debug). 지면 보고의 reason 을 먼저 본다 — 기동이 `wallTimeoutSeconds`(3 초)를 넘겼으면 `hang.scenario.xml` 의 시한을 올린다.
+- 시나리오 단계별 시간:(`scenario-waits --measured-dir`, `app-scenarios-release` 뒤).
+- 어림값 문턱 승격 제안:. `{bin}/Saved/Automation` 보고는 시나리오 줄기 + 백엔드 이름으로 덮어쓰이므로 `ExpectImage` 가 든 줄기가 유일한 것들(어림값 13 개 시나리오)만 쓴다.
 - 처음 도는 시나리오 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)은 통합 S 의 `app-scenarios-release` 통과(1300 s, 시나리오 Warning/Error 0)로 덮여 항목(`scenarios-new-q2`)을 지웠다.

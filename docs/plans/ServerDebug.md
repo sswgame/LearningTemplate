@@ -2,6 +2,8 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-3 · 진행: 9/15
 
+2026-10-28: 기능별 테스트 · 시나리오(`Test/` · `Resource/**/automation/`)를 새 프레임워크를 만들려고 전부 지웠다. 이 문서의 테스트 · 시나리오 · `ctest` · `AppTestUtil` 언급은 옛 구조를 가리키며, 새 틀이 정해지면 다시 쓴다.
+
 S1 ~ S4 · S6 · S7 의 바닥은 들어갔고 남은 것은 각 단위 절에 있습니다.
 
 ## 왜 필요한가
@@ -34,8 +36,8 @@ S1 ~ S4 · S6 · S7 의 바닥은 들어갔고 남은 것은 각 단위 절에 �
 Profiler 탭과 `net.stats` 질의, 종류별 셈(`NetMessageKindTallyTable`, 줄의 `kinds=` · `sentKinds=`), 트레이스의 메시지 흐름(`NetFlowLog`, 모든 채널, 같은 id 가 합친 트레이스에서 화살표로 이어짐)은 들어갔습니다. 선 형식에 칸을 더하지 않고 양쪽이 같은 번호를 따로 계산하는 것이 설계 결정입니다. 링은 Core 층 규칙(네트워크는 진단을 include 하지 못한다) 때문에 Network 층에 있습니다.
 오브젝트별 복제 빈도: 키트가 `GameNetSession::setReplicaStats( 이름, 갱신 수, 바이트 )` 로 누적 셈을 올리면 `net.stats` 의 `replicas=` 로 실리고(이름 `[a-z0-9_.-]`, 32 개까지), Profiler 탭이 초당 표로 보인다(`EditorNetProfilerUtil::computeReplicaRates`). 한 줄에는 바이트가 큰 8 개만 싣되 앞 4 칸은 지난 보고 뒤 늘어난 바이트 순, 나머지는 누적 순으로 채운다(오래 큰 이름이 새로 활발해진 이름을 가리지 않게).
 
-- 눈으로 보는 확인: 두 프로세스 합친 트레이스의 화살표(`netplay.scenario.xml` + `-gv_traceSaveOnExit`). 확인 대기: 매니페스트 id `net-stats-replicas-tests` · `profiler-replica-rate-tests` · `game-net-session-replica-stats-tests`.
-- 한 줄 답의 상한은 Core 의 `DebugReplyLine::kMaxBytes`(3500) 하나다(`Core/Network/DebugReplyLine.h`, 2026-10-26 `wt/linecap` · `wt/netstats`, 빌드 전). 줄일 수 있는 꼬리가 있는 줄(`net.stats`)은 `DebugReplyLine::makeCapped`(`NetStatsReport::makeLine` 이 유일한 길 — 넘으면 뒤의 항목을 빼고 ` truncated=<원래 길이>` 를 붙이고 읽는 쪽이 `_truncatedLineBytes` 로 되읽음), 길이가 정해진 줄(`net.emulation stats`)은 `makeFixed` 가 만들고, 줄일 수 없는 줄(`state.objectline` · `state.hashline`)은 `fits` 로 재서 넘으면 오류로 멈춘다(S7). Sync 탭 질의(이력 · 오브젝트 해시)는 시간 상한(`EditorSyncPreferences._clientReplyTimeoutSeconds`, 기본 10 초)을 넘으면 대기를 끝내고 오류 글을 보인다. 확인 대기: 매니페스트 id `net-stats-replicas-tests`(새 테스트 `DebugReplyLineTest.*` · `OverlongLineIsCappedAndMarkedTruncated`).
+- 눈으로 보는 확인: 두 프로세스 합친 트레이스의 화살표(`netplay.scenario.xml` + `-gv_traceSaveOnExit`). 확인 대기:.
+- 한 줄 답의 상한은 Core 의 `DebugReplyLine::kMaxBytes`(3500) 하나다(`Core/Network/DebugReplyLine.h`, 2026-10-26 `wt/linecap` · `wt/netstats`, 빌드 전). 줄일 수 있는 꼬리가 있는 줄(`net.stats`)은 `DebugReplyLine::makeCapped`(`NetStatsReport::makeLine` 이 유일한 길 — 넘으면 뒤의 항목을 빼고 ` truncated=<원래 길이>` 를 붙이고 읽는 쪽이 `_truncatedLineBytes` 로 되읽음), 길이가 정해진 줄(`net.emulation stats`)은 `makeFixed` 가 만들고, 줄일 수 없는 줄(`state.objectline` · `state.hashline`)은 `fits` 로 재서 넘으면 오류로 멈춘다(S7). Sync 탭 질의(이력 · 오브젝트 해시)는 시간 상한(`EditorSyncPreferences._clientReplyTimeoutSeconds`, 기본 10 초)을 넘으면 대기를 끝내고 오류 글을 보인다. .
 - 키트별 복제 통계(들어감, 빌드 전): 파괴 복제(`DestructionNetSessionComponent`, 이름 `destruction` — 사건 · 자세 · 멈춤 · 스냅숏 · 해시 메시지 수와 보낸 바이트)와 페어드 애니메이션(`PairedAnimationNetSessionComponent`, 이름 `paired_animation` — 바이트는 세지 않아 0)이 틱마다 `setReplicaStats` 로 자기 합을 올린다. 클라이언트는 보낸 양이 없어 서버 쪽 값이 주로 오른다. `ReplicationServer` 와 MMO 복제는 키트에 셈 구조가 없어 올리지 않았다(셈을 먼저 만들어야 한다).
 - 탭이 보이지 않을 때도 기록하기(들어감, 빌드 전): `IMultiplayerTab::updateWhileHidden` 을 창이 열려 있고 그 탭이 고른 탭이 아닐 때 부르고, Profiler 탭의 "Record while hidden" 체크(기본 꺼짐 — 자식 로그에 2 Hz 줄이 쌓인다)가 켜져 있으면 `net.stats` 를 묻는다. 창을 닫으면 기록하지 않는다. 번역 키 `EditorMultiplayer.ProfilerRecordHidden` 은 `editor.strings.xml` 에만 더했다(번역 파일의 sourceHash 는 글 수집 도구가 채운다 — 다음 수집에서 `ko` 를 채운다).
 - 부하 봇을 붙인 시나리오는 만들지 않았다: 봇(`Tools/OnlineLoadBot`)은 온라인 서버(TCP)를 치는데 Profiler 는 게임 세션(UDP)의 `net.stats` 를 보므로 봇을 붙여도 숫자가 오르지 않는다고 판단했다(코드로 확인한 것은 봇의 인자 `--server=` · `--local-server` 뿐이다). 숫자가 오르는 확인은 `net.traffic` 이 하는 `netprofiler.scenario.xml` 이 맡는다. 봇이 "online kit 'matchmaking' could not initialize" 로 서던 것은 봇 `Main.cpp` 가 `ServerApp` 처럼 호스트 범위 + `Engine`(DedicatedServer)을 세워 고쳤다(`wt/loadbot`, 빌드 전). 빌드 뒤의 확인은 `Scripts/qa/Load.py` 의 loadbot 구동기(`--local-server`)가 한다.
@@ -54,7 +56,7 @@ Profiler 탭과 `net.stats` 질의, 종류별 셈(`NetMessageKindTallyTable`, �
 클라이언트 쪽 기록: 전용 서버가 틱마다 `GameNetSession::sendServerTick` 으로 틱 번호를 보내고, 클라이언트가 씬 프레임 뒤 `recordActiveScene` 한다. 클라이언트 칸은 자식 표준 입력에 `state.hashline` 을 묻고 로그의 한 줄(`kReportLinePrefix`)을 거둔다.
 어긋난 오브젝트 짚기: 이력에 오브젝트별 해시를 쌓지 않고(틱 × 오브젝트라 크다) 어긋난 틱 근처에서 두 프로세스의 현재 값을 견준다. `state.objects`(서버, 여러 줄)와 `state.objectline`(클라이언트용 한 줄)이 `tick <n>` 머리를 달고, `compareObjects` 가 틱이 없거나 다르면 거절한다(해시 이력과 오브젝트 답이 다른 시각이라는 어긋남을 형식으로 막는다). Sync 탭의 "Which objects differ" 단추와 `netplay.sync objects server|client` · `netsyncobjects.scenario.xml` 이 있다.
 한 줄 답의 상한: POSIX 파이프 읽기의 줄 버퍼(`fgets` 4096)가 가장 작아 `kMaxReportLineBytes`(3500)를 쓰기 · 읽기가 같이 본다(넘으면 오류 id `State.ReportLineTooLong`로 멈추고 읽는 쪽도 거절). 이력은 90 샘플까지, 오브젝트가 많아 `state.objectline` 이 넘으면 클라이언트 칸은 쓸 수 없다.
-확인 대기: 매니페스트 id `state-object-hash-tests` · `sync-tab-object-diff-tests`. Sync 탭 시나리오(`netsyncobjects`)는 통합 S 의 `app-scenarios-release` 통과로 덮여 항목을 지웠다.
+Sync 탭 시나리오(`netsyncobjects`)는 통합 S 의 `app-scenarios-release` 통과로 덮여 항목을 지웠다.
 
 - 키트별 해시(들어감, 빌드 전): 이력에 이름 붙은 줄을 더한다 — 키트가 `IStateHashProvider` 를 구현해 `StateHashHistory::registerChannel( 이름, &제공자 )` 로 등록하면(구독이 풀려도 이력은 남고 같은 이름으로 이어 쓴다, 8 줄까지) 이력이 틱을 남길 때(`recordActiveScene` → `recordChannels`) 같은 호스트 틱에 제공자를 부른다. 제공자가 틱 번호를 바꿀 수 있다. `destruction` 줄은 `DestructionNetSession`(파괴 구조 해시를 번호 순으로 접음, 컴포넌트가 이력이 켜져 있으면 등록)이, `rollback` 줄은 `RollbackSession`(확정 프레임 시작 전 상태 바이트의 해시, 틱 = 프레임 번호 — 게임이 등록하며 쓰는 게임은 아직 없다)이 낸다. `state.hashes <from> <count> [줄]` · `state.hashline <count> [줄]` · `state.hashnames` 가 읽고, Sync 탭의 줄 이름 칸과 `netplay.sync channel <이름>` 이 읽을 줄을 고른다(서버 · 클라이언트 칸이 같은 이름을 쓰고 비교 규칙은 그대로다). 오브젝트별 짚기(`state.objects`)는 씬 줄만이다. 새 테스트 `StateHashReportLineTest.KitChannelsRecordPerHostTickAndKeepHistoryAfterTheSubscriptionEnds` · `NetLockstepTest.RollbackPredictsRewindsAndConvergesOnBothSides` 의 롤백 줄 확인이 덮는다(아직 돌리지 않았다).
 - 탭은 클라이언트 질의가 오류 응답을 받으면 답을 기다린 채 남는다(시간 초과 없음). 창의 단추를 실제로 누르는 입력(EditorClick)은 Multiplayer 창을 여는 시나리오가 없어 개발 명령으로 갈음했다.

@@ -19,18 +19,17 @@
 - Module/file names use `PascalCase.py`.
 - JSON keys of Python-owned contracts (`Config/Engine/CookContract.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
-Shape. `CheckPythonConventions.py` checks every tracked `.py` (rule names `docstring` · `future` · `annotation` · `typing` · `encoding` · `osPath` · `exit` · `mainGuard` · `exitCode` · `argparse`;
-exemption keys `<rule>:<path>` in `Scripts/lint/rules/CheckPythonConventions.toml`): a module docstring and `from __future__ import annotations`; every function annotated (`__init__` → `-> None`);
-`X | None` and built-in generics, never `typing.Optional` / `List` / `Dict`; text I/O names `encoding="utf-8"`; `pathlib.Path` (`os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`);
-`sys.exit(…)` never `raise SystemExit(…)`, with the `__main__` guard the single line `sys.exit(main())` (tests: `unittest.main()`); under `Scripts/`, `main( argv )` returns `ExitCode` values (`CheckScriptEntryPoints.py`);
-`argparse.ArgumentParser` gets a `description=`. Examples are in `docs/04_CodingGuidelines.md` 8. The code must run on Python 3.10 (`kMinimumPythonVersion` in `Scripts/common/Constants.py`; `CheckPythonMinimumVersion.py`).
+Shape (`CheckPythonConventions.py`, examples in `docs/04_CodingGuidelines.md` 8): a module docstring and `from __future__ import annotations`;
+every function annotated (`__init__` → `-> None`); `X | None` and built-in generics, never `typing.Optional` / `List` / `Dict`; text I/O names
+`encoding="utf-8"`; `pathlib.Path` (`os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`);
+`sys.exit(…)` never `raise SystemExit(…)`, with the `__main__` guard the single line `sys.exit(main())` (tests: `unittest.main()`); under `Scripts/`,
+`main( argv )` returns `ExitCode` values; `argparse.ArgumentParser` gets a `description=`. The code must run on Python 3.10 (`CheckPythonMinimumVersion.py`).
 
 - Not checked by a gate: console output is plain `print`; catch the exceptions you expect, and `except Exception` only at a boundary that must keep going and reports what it swallowed (a setup step, a session hook).
 
 ### HLSL
 
-Shaders follow the C++ rules wherever HLSL can express them. `CheckShaderConventions.py` enforces this
-section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
+Shaders follow the C++ rules wherever HLSL can express them. `CheckShaderConventions.py` enforces this section.
 
 - **Functions** are `camelCase`. A function in a shared header (`.hlsli`) belongs to a struct — FXC (DX11) has
   no namespaces, so a struct stands in for one, and there is no `sw` prefix anywhere. A function whose first
@@ -49,8 +48,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty
   definition), so the calling body reads the same in every permutation (`surface.applyAlphaCutoff()`,
   `context.storeSurface( surface )` in `materialshadermain.hlsli`).
-  The gate flags a `#if` inside a function body unless its condition names a backend macro (`backend_macro` in
-  `Scripts/lint/rules/CheckShaderConventions.toml`); a `#if` directly inside a struct body is a declaration, not a body branch.
+  `CheckShaderConventions` flags a `#if` inside a function body unless its condition names a backend macro.
 - **Types** are `PascalCase` with no `_t` suffix and no `Sw` prefix (`InstanceData`, `PixelContext`, `PSInput`).
   A struct that mirrors a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
 - **Struct fields** are `_camelCase`, as in a C++ plain-data struct (`PSInput::_position`, `context._worldPosition`).
@@ -75,16 +73,15 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   the macros in `bindingslots.hlsli` and shader file names (a named entry with its reason in the gate, `kStringBoundName`).
 - **Formatting**: `clang-format` formats shaders as it does C++ (`FormatModified.py` fixes them). A compute entry point takes
   `SW_NUMTHREADS( x, y, z )` (`common.hlsli`), not `[numthreads(…)]`.
-- **Renaming a string-bound name changes C++ in the same commit** (`ShaderBindingValidator::validate` skips an unknown reflected name;
-  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` catches a name C++ binds that is missing from the cooked reflection).
+- **Renaming a string-bound name changes C++ in the same commit** (`ShaderBindingValidator::validate` skips an unknown reflected name, so a name C++ binds that is missing from the cooked reflection goes unnoticed).
 
 ### Resource Assets
 
-- All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). Enforced automatically by `CheckResourceCasing.py` and Git pre-commit hooks.
+- All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). (`CheckResourceCasing.py`).
 - The runtime reads textures only as DDS. A runtime texture folder (`textures/`) holds `.dds` and data (`.sprite.xml`,
   `.meta`) only; source images (PNG, JPG, TGA, ...) live under `textures_raw/` at the same relative path and are imported
   with `App --import-textures` (the editor imports on hot reload too). Commit the DDS together with `textures_raw/import.stamp`;
-  `TextureImportStampTest` (and `App --check-textures`) fails when a source, its import rule or its DDS drifts. Delete a
+  `App --check-textures` fails when a source, its import rule or its DDS drifts. Delete a
   source nothing references instead of moving it. Enforced by `CheckTextureFolders.py`.
 - Models follow the same rule: glTF sources (`.glb`, `.gltf`) live under `models_raw/` and `App --import-models` writes
   `models/<name>.mesh` plus `models_raw/import.stamp` (`App --check-models` compares). Commit the `.mesh` with the stamp.

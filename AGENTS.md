@@ -42,8 +42,7 @@ project conventions unless the user explicitly requests otherwise.
 py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/setup/SetupVcpkg.py --install
 cmake --preset Ninja-Debug
-cmake --build --preset Ninja-Debug                        # App, Server, modules
-cmake --build --preset Ninja-Debug --target all AllTests  # + tests
+cmake --build --preset Ninja-Debug  # App, Server, modules
 ```
 
 - Build outputs are in `build/Ninja-Debug/Bin`.
@@ -51,13 +50,12 @@ cmake --build --preset Ninja-Debug --target all AllTests  # + tests
 
 ## Writing — docs, comments, commit messages
 
-- Docs, comments and commit messages follow `docs/10_WritingDocs.md`: sentence rules (§4) and the term table (§5 —
-  established loanwords and English terms, no coined native words). Log and assert strings stay English.
+- Docs, comments and commit messages use
+  established loanwords and English terms, no coined native words. Log and assert strings stay English.
 
 ## Rule files — read only the ones your task needs
 
-The rules are split by topic under `docs/agents/`. Do not read all of them: open the file that matches the work, and
-name that file in any instruction you hand to another agent. Korean examples for these rules are in
+The rules are split by topic under `docs/agents/`. Do not read all of them: open the file that matches the work. Korean examples for these rules are in
 [docs/04_CodingGuidelines.md](docs/04_CodingGuidelines.md); the rule files win when the two disagree.
 
 | File | What it holds | Read it when |
@@ -67,9 +65,7 @@ name that file in any instruction you hand to another agent. Korean examples for
 | [docs/agents/Includes.md](docs/agents/Includes.md) | `C++ structure and includes` | you add a file, a header or an include |
 | [docs/agents/Constants.md](docs/agents/Constants.md) | `Constants — where a constant lives` | you add or move a constant or a tuning value |
 | [docs/agents/Helpers.md](docs/agents/Helpers.md) | `Helpers: Util vs Internal`, one anonymous namespace per file | you add a helper function or a TU-private type |
-| [docs/agents/CppStyle.md](docs/agents/CppStyle.md) | `C++ style` | you write C++ bodies: branches, loops, types, thread use |
-| [docs/agents/EditingTraps.md](docs/agents/EditingTraps.md) | `Editing traps` | you edit files with a script (heredoc ban, line endings) |
+| [docs/agents/CppStyle.md](docs/agents/CppStyle.md) | `C++ style`, `Parallel-safe code` | you write C++ bodies: branches, loops, types, thread use, code that runs in parallel |
 | [docs/agents/ExistingFacilities.md](docs/agents/ExistingFacilities.md) | `Existing facilities`: what Core and Engine already provide (log, time, random, files, parsing, tasks …) and the direct calls not to use | you are about to write a helper for a common job, or call a C runtime or `std` facility directly |
-| [docs/agents/Parallel.md](docs/agents/Parallel.md) | `Parallel-friendly rules`: tests, lint gates, importers, workers, lazy init | you write a test, a gate, an importer, a job or a lazy initializer |
 
 `Project architecture`, `Build workflow` and `Writing` stay in this file.
