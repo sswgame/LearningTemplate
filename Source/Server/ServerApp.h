@@ -128,6 +128,13 @@ namespace sw
         /** @brief 디버그 채널을 열고 상태 해시 이력을 켭니다(실행 인자가 없으면 아무 일도 하지 않습니다). 열려고 했는데 못 열면 false 입니다(기동 실패). */
         [[nodiscard]] bool startDebugTools();
 #endif
+        /**
+         * @brief 관리 채널(서버 운영 O4)을 열고 점검 모드 · 상태 · 정상 종료를 허용 목록으로 연결합니다. 모든 구성(Shipping 포함)이다.
+         * @details 설정 `_adminChannelPort` 가 0 이면 아무 일도 하지 않습니다(기본 꺼짐). 켰는데 토큰 환경 변수가 없거나 비면, 포트가 틀리면 false 입니다(기동 실패 - 토큰 없는 채널로 뜨지 않는다).
+         */
+        [[nodiscard]] bool startAdminChannel();
+        /** @brief 관리 채널의 한 줄을 실행합니다(허용 목록: `help` · `status` · `maintenance on|off|state` · `shutdown`). 게임 스레드에서 불립니다. */
+        [[nodiscard]] bool executeAdminCommand( string_view line, string& outReply );
 
     private:
         /**
@@ -149,6 +156,8 @@ namespace sw
         unique_ptr<IStreamTransport> _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
         unique_ptr<DebugChannel>     _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널(`gv_debugChannelPort` 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
 #endif
+        unique_ptr<IStreamTransport>      _adminTransport; ///< 관리 채널의 스트림 전송(채널을 종료한 뒤 지운다)
+        unique_ptr<DebugChannel>          _adminChannel;   ///< 관리 채널(`_adminChannelPort` 가 0 이 아닐 때만, 루프백 · 환경 변수 토큰 - 서버 운영 O4)
         ModuleCatalog                     _moduleCatalog;
         ModuleResolution                  _moduleResolution;
         StandardInputCommands             _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
@@ -191,6 +200,7 @@ namespace sw
         uint8                  _bPaused                : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
         [[maybe_unused]] uint8 _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
         uint8                  _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
-        [[maybe_unused]] uint8 _reserved               : 4;
+        uint8                  _bMaintenance           : 1; ///< 점검 모드 - `/readyz` 가 503 이라 부하 분산기가 새 접속을 보내지 않는다(종료 드레인과 달리 서버는 계속 돈다)
+        [[maybe_unused]] uint8 _reserved               : 3;
     };
 } // namespace sw

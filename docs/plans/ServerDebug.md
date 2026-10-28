@@ -19,7 +19,7 @@
 | O1 | 사고 기록 — 프레임 이력 링 버퍼 · 느린 틱 덤프 | 코드 끝, 빌드 전. 크래시 폴더 묶기 · 서버용 동의 남음 |
 | O2 | 서버 로그 JSON lines | 끝(빌드 전) |
 | O3 | 종료 · 드레인 | 코드 끝, 빌드 전. 키트 종료 API 남음 |
-| O4 | 관리 채널(재시작 없는 설정 · 제재 · 점검) | 남음(S3 디버그 채널의 Shipping 판 · 인증을 먼저 정한 뒤) |
+| O4 | 관리 채널(재시작 없는 설정 · 제재 · 점검) | 채널 · 인증 끝(점검 · 상태 · 종료 명령, 빌드 확인), 제재 · 설정 명령 남음 |
 | O5 | 부하 기준선 | 코드 끝, 빌드 전. 봇 1000 · 5000 측정 남음 |
 | O6 | 배포(컨테이너 · 쿠버네티스 예시) | 일부(Agones · 빌드 판 협상 · 이중 키 기간 남음) |
 | O7 | 운영에서 개발로 — 운영 서버의 의도 기록(`.swintent`)을 Sync 탭에서 재생 | 코드 끝, 빌드 전(S7 되감기와 같은 길) |
@@ -81,7 +81,7 @@
 | O1 사고 기록 | `ServerFrameHistory`(최근 N 틱의 틱 시간 · 접속 수 · 밀린 틱 링 버퍼, `_frameHistoryTicks`)와 느린 틱 덤프(`_slowTickDumpMs` → `Saved/ServerReports/frames_…_slow_tick.txt`, 메시지 종류별 누적 셈 포함, 10 초 간격 제한). 크래시 보고에 `ServerTick` 문맥(마지막 틱 시간 · 접속 수)을 초마다 갱신해 붙인다 | 크래시 폴더 묶기(스택 · 마지막 로그 · 틱 이력을 같은 폴더에)와 서버용 보내기 동의 — 서버용 보고 경로가 먼저 필요. 죽어 가는 프로세스에서 파일을 쓰지 않으려고 이력의 크래시 시점 덤프는 문맥 한 줄로 갈음했다 |
 | O2 로그 | `JSONLinesLogOutput`(`_bJSONLogs`). 칸: `time` · `ts` · `level` · `tag` · `caller` · `tick` · `trace` · `acct` · `id` · `msg` · `file` · `line`. 켜면 콘솔 장치는 꺼진다 | 감사 줄이 요청 문맥 안에서 쓰이는지 확인(추적 id 는 `trace` 칸으로 이미 실림). OpenTelemetry 내보내기 |
 | O3 종료 · 드레인 | 종료 신호 → 즉시 `/readyz` 503 → 서비스 연결이 0 이 되거나 `_drainWaitSeconds` 까지 틱을 돌린 뒤 정상 종료. 콘솔 · Ctrl+C · 테스트 틱 상한은 기다리지 않는다 | 게임 UDP 접속은 연결 수에 안 든다. 진행 중인 매치 · 거래의 끝을 키트에 묻는 길과 끊김 사유를 클라이언트에 알리는 일은 키트의 종료 API 가 먼저다 |
-| O4 관리 채널 | 하지 않음 | 재시작 없이 설정 바꾸기 · 접속자 목록 · 내보내기 · 제재 · 점검 모드 · 공지. S3 의 디버그 채널과 같은 채널 · 토큰 · 루프백 규칙을 쓴다(중복을 만들지 않는다). 그 채널의 Shipping 판 · 인증을 먼저 정한 뒤 |
+| O4 관리 채널 | **채널 · 인증(빌드 확인).** `DebugChannel` 의 Dev 전용 가드를 걷어 Dev 디버그 채널과 Shipping 관리 채널이 같은 코드(전송 · 줄마다 토큰 · 루프백)를 쓴다. 관리 채널은 설정 `_adminChannelPort`(기본 0 = 꺼짐, Shipping 도 같다)로 켜고, 토큰은 `_adminChannelTokenEnvironment` 가 가리키는 환경 변수(기본 `SW_ADMIN_CHANNEL_TOKEN`)에서만 읽는다 — 켰는데 토큰이 없거나 비면 서버가 기동하지 못한다. 상용 서버(언리얼 `Rcon` · 유니티 Multiplay 관리 API)처럼 비밀은 파일에 두지 않고, 개발 명령 전체가 아니라 `ServerApp` 의 허용 목록만 받는다: `help` · `status` · `maintenance on\|off\|state`(`/readyz` 503 — 종료 드레인 중에는 못 바꿈) · `shutdown`(SIGTERM 과 같은 드레인 뒤 종료) | 재시작 없이 설정 바꾸기 · 접속자 목록 · 내보내기 · 제재 · 공지 명령은 키트가 서버 서비스 쪽에 명령을 올리는 길(허용 목록에 키트 명령을 끼우는 확장 칸)이 필요하다. 지금 GM 도구(`_adminServicePort` · Admin 키트)가 제재 · 공지를 맡는다. 관리 채널의 자동 시나리오(토큰 없이 기동 실패 · 틀린 토큰 거절 · `maintenance` 로 `/readyz` 전환)도 남음 |
 | O5 부하 기준선 | 틱 사용률 지표 `server_tick_utilization_ratio`(`_tickLoadWarnPercent` 를 넘으면 1 분에 한 번 경고), 대시보드 예시 `deploy/dashboards/server-overview.json` | Release 서버 한 대에 봇 1000 · 5000 으로 수용 연결 수 · 틱 p99 · 메시지 p99 를 재서 기준선을 남긴다 |
 | O6 배포 | `deploy/docker/Dockerfile`, `deploy/kubernetes/server.yaml`(`/readyz` · `/healthz`, 종료 유예, 비밀은 `secretKeyRef`), `deploy/README.md`(종료 · 드레인, 비밀 교체 절차) | Agones 연결(클라우드 계정 · SDK 필요), 빌드 판 협상(프로토콜 판이 다르면 "업데이트 필요"), 서명 키 이중 키 기간 |
 | O7 운영에서 개발로 | Sync 탭의 Replay server 줄(S7 되감기)이 운영 서버가 기록한 `.swintent` 를 멈춘 서버에서 재생한다(빌드 전) | 운영 서버가 의도를 기록해 파일로 내는 길(`intent.record` · `intent.save` 를 관리 채널로 부르기)은 O4 가 선 뒤 |

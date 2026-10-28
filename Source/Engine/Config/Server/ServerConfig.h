@@ -116,6 +116,17 @@ namespace sw
         /** @brief 운영 엔드포인트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). */
         PROPERTY()
         string _opsListenAddress{ "127.0.0.1" };
+        /**
+         * @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료를 재시작 없이 부르는 텍스트 TCP 채널) 포트입니다. 0 이면 끔(기본 — Shipping 도 같다).
+         * @details 켜려면 `_adminChannelTokenEnvironment` 의 환경 변수에 비밀 토큰이 있어야 한다 — 없거나 비면 서버가 기동하지 못한다(토큰 없는 관리 채널로 뜨지 않는다).
+         *          루프백에만 묶고(쿠버네티스 `port-forward` · 사이드카 · SSH 터널로 닿는다), 요청 줄마다 토큰을 요구하며 틀리면 끊는다. Dev 의 디버그 채널과 같은 채널 코드(`DebugChannel`)이지만
+         *          개발 명령 전체가 아니라 허용 목록(`help`)만 받는다. 언리얼 `Rcon` · 유니티 Multiplay 관리 API 처럼 비밀은 파일이 아니라 환경에서만 읽는다.
+         */
+        PROPERTY( Min = 0, Max = 65535 )
+        int32 _adminChannelPort{ 0 };
+        /** @brief 관리 채널 토큰을 담은 환경 변수 이름입니다(토큰 자체는 설정 파일에 쓰지 않는다). */
+        PROPERTY()
+        string _adminChannelTokenEnvironment{ "SW_ADMIN_CHANNEL_TOKEN" };
         /** @brief 서버 틱 수(초당)입니다. 한 틱이 게임 고정 스텝 하나입니다. */
         PROPERTY( Min = 1, Max = 240 )
         int32 _tickRateHz{ 30 };

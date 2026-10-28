@@ -2,14 +2,12 @@
 
 #include "Engine/Observability/DebugChannel.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Core/Common/SecureUtil.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/Time/MonotonicClock.h"
 
-    #include "Core/Common/SecureUtil.h"
-    #include "Core/Container/StringUtil.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Time/MonotonicClock.h"
-
-    #include <charconv>
+#include <charconv>
 
 namespace sw
 {
@@ -347,5 +345,3 @@ namespace sw
         _bClosed = SW_TRUE;
     }
 } // namespace sw
-
-#endif

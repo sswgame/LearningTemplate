@@ -1,7 +1,7 @@
 /**
  * @file DebugChannel.h
- * @brief 디버그 채널 — 실행 중인 서버(또는 클라이언트)에 붙어 개발 명령을 원격으로 부르는 읽기 중심의 TCP 채널입니다(서버 디버깅 S3). **Shipping 에는 없습니다.**
- * @details 개발 빌드 전용 · 루프백에만 묶음 · 토큰 필수 · 임의 프로퍼티 쓰기는 열지 않고 개발 명령으로만 게임이 정한 경로를 거칩니다.
+ * @brief 디버그 채널 — 실행 중인 서버(또는 클라이언트)에 붙어 개발 명령을 원격으로 부르는 읽기 중심의 TCP 채널입니다(서버 디버깅 S3). Dev 의 디버그 채널(개발 명령 전부)과 Shipping 의 관리 채널(`ServerApp` 이 허용 목록 명령만 연결, 서버 운영 O4)이 이 클래스를 같이 씁니다 — 전송 · 토큰 · 루프백 규칙을 한 곳에 둡니다.
+ * @details 루프백에만 묶음 · 토큰 필수 · 임의 프로퍼티 쓰기는 열지 않고 개발 명령으로만 게임이 정한 경로를 거칩니다.
  *          **프로토콜** 요청은 한 줄 `<토큰> <개발 명령 한 줄>\n`, 응답은 `OK <바이트 수>\n<본문>` 또는 `ERR <바이트 수>\n<본문>` 입니다.
  *          토큰이 틀리면 `ERR` 하나를 돌려주고 연결을 닫습니다(그 연결의 줄은 실행하지 않는다). 한 연결로 요청을 여러 번 보낼 수 있습니다.
  *          **스레드** I/O 스레드는 줄을 큐에 쌓기만 하고, `pump()` 가 게임 스레드에서 명령을 실행해 답합니다 — 씬을 읽는 명령이 게임 스레드에서 돌아야 하고,
@@ -13,17 +13,13 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/OnceInit.h"
-#include "Core/Console/DevCommandsEnabled.h"
-
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Concurrency/mutex.h"
-    #include "Core/Container/string.h"
-    #include "Core/Container/vector.h"
-    #include "Core/Delegate/Delegate.h"
-    #include "Core/Memory/Memory.h"
-    #include "Core/Network/NetTypes.h"
-    #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 
 namespace sw
 {
@@ -130,5 +126,3 @@ namespace sw
         [[maybe_unused]] uint8       _reserved : 6;
     };
 } // namespace sw
-
-#endif
