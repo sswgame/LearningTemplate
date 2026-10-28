@@ -331,7 +331,7 @@ namespace sw
         {
             const AudioGraph::Node&        node                               = listNode[binding._nodeIndex];
             const AudioGraphParameterInfo& info                               = AudioGraphRegistry::getNodeType( node._type )._pParameter[binding._parameterIndex];
-            const float32                  value                              = AudioCurvePoint::evaluate( binding._listPoint, _listParameterValue[binding._inputIndex], info._defaultValue );
+            const float32                  value                              = AudioCurvePoint::evaluate( binding._listPoint, _listParameterValue[binding._inputIndex] ).value_or( info._defaultValue );
             getBlockParameters( binding._nodeIndex )[binding._parameterIndex] = MathUtil::clamp( value, info._minValue, info._maxValue );
         }
     }

@@ -36,10 +36,10 @@ namespace sw
                 return pValue != nullptr ? float3{ pValue->_vector._x, pValue->_vector._y, pValue->_vector._z } : float3{};
             }
 
-            static float32 readNumber( const GimmickCircuit& circuit, int32 node, const utf8* pName, float32 fallback )
+            [[nodiscard]] static std::optional<float32> readNumber( const GimmickCircuit& circuit, int32 node, const utf8* pName )
             {
                 const GimmickParamValue* pValue = circuit.findParam( node, hashed_string( pName ) );
-                return pValue != nullptr ? pValue->_vector._x : fallback;
+                return pValue != nullptr ? std::optional<float32>{ pValue->_vector._x } : std::nullopt; // 없을 때의 값은 호출부가 정한다
             }
 
             static const string* readText( const GimmickCircuit& circuit, int32 node, const utf8* pName )
@@ -62,7 +62,7 @@ namespace sw
                     return;
                 const SplineSample sample = pSpline->getWorldPath().sampleAtDistance( distance );
                 pScene->setWorldPosition( sample._position );
-                if ( readNumber( circuit, node, "faceForward", 0.0f ) != 0.0f )
+                if ( readNumber( circuit, node, "faceForward" ).value_or( 0.0f ) != 0.0f )
                     pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
             }
 
@@ -72,7 +72,7 @@ namespace sw
                 const GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();
                 if ( pSensor == nullptr || circuit.getOutput( node, hashed_string( "OnDamageTick" ) ) == false )
                     return;
-                const float32 damage = readNumber( circuit, node, "damage", 0.0f );
+                const float32 damage = readNumber( circuit, node, "damage" ).value_or( 0.0f );
                 for ( const GameObjectHandle& handle : pSensor->getOccupants() )
                 {
                     GameObject* pVictim = manager.resolveGameObject( handle );
@@ -87,7 +87,7 @@ namespace sw
                 LightComponent* pLight = target.getComponent<LightComponent>();
                 if ( pLight == nullptr )
                     return;
-                const float32 intensity = circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * readNumber( circuit, node, "intensity", 1.0f ) : 0.0f;
+                const float32 intensity = circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * readNumber( circuit, node, "intensity" ).value_or( 1.0f ) : 0.0f;
                 if ( pLight->getIntensity() == intensity )
                     return;
                 const TComponentHandle<LightComponent> light{ pLight };
@@ -385,7 +385,7 @@ namespace sw
         const bool            bNoTagFilter = index >= _listNodeTag.size() || _listNodeTag[index].getTagCount() == 0 || pScene == nullptr;
         if ( bNoTagFilter )
             return GimmickCircuitComponentInternal::kFarDistance;
-        const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar", 0.0f ) != 0.0f;
+        const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar" ).value_or( 0.0f ) != 0.0f;
         const float3 origin   = pScene->getWorldPosition();
         float32      nearest  = GimmickCircuitComponentInternal::kFarDistance;
         const uint64 targetID = target.getObjectID();
@@ -412,7 +412,7 @@ namespace sw
         const float4x4 world     = pScene->getWorldMatrix();
         const float3   origin    = pScene->getWorldPosition();
         const float3   direction = float3::transformVector( GimmickCircuitComponentInternal::readVector( _circuit, node, "direction" ), world ).normalize();
-        const float32  range     = GimmickCircuitComponentInternal::readNumber( _circuit, node, "range", 10.0f );
+        const float32  range     = GimmickCircuitComponentInternal::readNumber( _circuit, node, "range" ).value_or( 10.0f );
         WorldRayHit    hit;
         return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
     }

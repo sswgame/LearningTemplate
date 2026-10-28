@@ -182,7 +182,7 @@ namespace sw
         const AudioMusicLayerDesc& layer    = _music._pDesc->_listSegment[static_cast<size_t>( segmentIndex )]._listLayer[static_cast<size_t>( layerIndex )];
         float32                    volumeDb = layer._volumeDb;
         if ( layer._parameter.empty() == false )
-            volumeDb += AudioCurvePoint::evaluate( layer._listPoint, getParameterValue( layer._parameter ), 0.0f );
+            volumeDb += AudioCurvePoint::evaluate( layer._listPoint, getParameterValue( layer._parameter ) ).value_or( 0.0f );
         return AudioMath::dbToLinear( volumeDb );
     }
 

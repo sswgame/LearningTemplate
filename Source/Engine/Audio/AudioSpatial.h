@@ -68,8 +68,8 @@ namespace sw
         PROPERTY( Tooltip = "Output (dB, semitones, Hz ... depending on the curve)" )
         float32 _y{ 0.0f };
 
-        /** @brief 점들(입력 오름차순) 사이를 직선 보간합니다. 끝 밖은 끝 값, 점이 없으면 @p fallback 입니다. */
-        static float32 evaluate( const vector<AudioCurvePoint>& listPoint, float32 x, float32 fallback );
+        /** @brief 점들(입력 오름차순) 사이를 직선 보간합니다. 끝 밖은 끝 값이고, 점이 없으면 값이 없습니다(없을 때의 값은 호출부가 정합니다). */
+        [[nodiscard]] static std::optional<float32> evaluate( const vector<AudioCurvePoint>& listPoint, float32 x );
     };
 } // namespace sw
 

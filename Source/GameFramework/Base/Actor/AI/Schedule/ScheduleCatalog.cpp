@@ -67,17 +67,18 @@ namespace sw
                                                              bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
-            static int32 readClock( const XMLNode& node, const utf8* pName, int32 fallback, string_view sourceName, string_view ownerName, bool& inoutbValid )
+            /** @brief 시각 속성을 분으로 읽는다. 속성이 없거나 깨졌으면(깨진 경우 @p inoutbValid 를 내린다) 값이 없다. 없을 때의 값은 호출부가 정한다. */
+            [[nodiscard]] static std::optional<int32> readClock( const XMLNode& node, const utf8* pName, string_view sourceName, string_view ownerName, bool& inoutbValid )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( pText == nullptr )
-                    return fallback;
+                    return std::nullopt;
                 int32 minutes = 0;
                 if ( ScheduleCatalog::parseClockMinutes( pText, minutes ) )
                     return minutes;
                 SW_LOG_WARNING_ID( "Schedule.TimeInvalid", "%#: '%#' has an invalid %# time '%#' (expected H:MM in 0:00..24:00)", sourceName, ownerName, pName, pText );
                 inoutbValid = false;
-                return fallback;
+                return std::nullopt;
             }
 
             static void parseTagList( string_view text, vector<TagID>& outListTag )
@@ -293,8 +294,8 @@ namespace sw
         appointment._id          = hashed_string( pID );
         appointment._place       = hashed_string( node.getAttributeText( "place" ) );
         bool bValid              = true;
-        appointment._startMinute = Internal::readClock( node, "start", -1, sourceName, pID, bValid );
-        appointment._endMinute   = Internal::readClock( node, "end", -1, sourceName, pID, bValid );
+        appointment._startMinute = Internal::readClock( node, "start", sourceName, pID, bValid ).value_or( -1 );
+        appointment._endMinute   = Internal::readClock( node, "end", sourceName, pID, bValid ).value_or( -1 );
         bValid                   = XMLReadUtil::readOptionalNumber( node, "wait", sourceName, 0, MathUtil::kMaxInt32, appointment._waitMinutes ) && bValid;
         bValid                   = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, appointment._priority ) && bValid;
         bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
@@ -518,8 +519,8 @@ namespace sw
                 break;
             }
         }
-        outBlock._startMinute = Internal::readClock( node, "start", -1, sourceName, ownerName, bValid );
-        outBlock._endMinute   = Internal::readClock( node, "end", -1, sourceName, ownerName, bValid );
+        outBlock._startMinute = Internal::readClock( node, "start", sourceName, ownerName, bValid ).value_or( -1 );
+        outBlock._endMinute   = Internal::readClock( node, "end", sourceName, ownerName, bValid ).value_or( -1 );
         // `overnight="true"` 인 칸은 끝이 시작보다 이른 것이 정상이다(22:00–6:00, 자정을 넘는다). 끝이 0:00 이면 24:00 으로 읽는다.
         // 표시가 없는 칸의 start ≥ end 는 실수라서 아래에서 경고하고 뺀다.
         const bool bWrapsMidnight = bValid && bOvernight && outBlock._startMinute > 0 && outBlock._endMinute >= 0 &&

@@ -1132,7 +1132,7 @@ namespace sw
             {
                 for ( const AudioParameterMapping& mapping : pEvent->_listParameterMap )
                 {
-                    const float32 output = AudioCurvePoint::evaluate( mapping._listPoint, findParameterValue( slot._emitterID, mapping._parameter ), 0.0f );
+                    const float32 output = AudioCurvePoint::evaluate( mapping._listPoint, findParameterValue( slot._emitterID, mapping._parameter ) ).value_or( 0.0f );
                     switch ( mapping._target )
                     {
                         case AudioParameterTarget::Volume:

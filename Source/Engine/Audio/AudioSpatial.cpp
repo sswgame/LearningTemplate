@@ -6,10 +6,10 @@
 
 namespace sw
 {
-    float32 AudioCurvePoint::evaluate( const vector<AudioCurvePoint>& listPoint, float32 x, float32 fallback )
+    std::optional<float32> AudioCurvePoint::evaluate( const vector<AudioCurvePoint>& listPoint, float32 x )
     {
         if ( listPoint.empty() )
-            return fallback;
+            return std::nullopt;
         if ( x <= listPoint.front()._x )
             return listPoint.front()._y;
         if ( x >= listPoint.back()._x )
@@ -54,7 +54,7 @@ namespace sw
             }
             case AudioAttenuationCurve::Custom:
             {
-                return AudioMath::dbToLinear( AudioCurvePoint::evaluate( _listCustomPoint, distance, 0.0f ) );
+                return AudioMath::dbToLinear( AudioCurvePoint::evaluate( _listCustomPoint, distance ).value_or( 0.0f ) );
             }
         }
         return 1.0f;
@@ -62,7 +62,7 @@ namespace sw
 
     float32 AudioAttenuationDesc::computeLowPassHz( float32 distance ) const
     {
-        return AudioCurvePoint::evaluate( _listLowPassPoint, distance, audio::kFilterOpenHz );
+        return AudioCurvePoint::evaluate( _listLowPassPoint, distance ).value_or( audio::kFilterOpenHz );
     }
 
     float32 AudioSpatializer::computeDistance( const AudioListenerState& listener, const float3& emitterPosition )
