@@ -59,10 +59,11 @@ namespace sw
 
             ~ToolHostScope()
             {
-                // `Engine::shutdown` 은 일부만 서도 된다. 엔진 범위가 사라진 뒤에 호스트 범위를 내린다.
+                // `Engine::shutdown` 은 일부만 서도 된다. 엔진 범위가 사라진 뒤 부트스트랩(종료 누수 보고)보다 먼저 호스트 범위를 내린다.
                 if ( _bEngineStarted == SW_TRUE )
-                    _engine.shutdown();
-                _host.destroyAll();
+                    _engine.shutdown( _host );
+                else
+                    _host.destroyAll();
             }
 
             ToolHostScope( const ToolHostScope& )            = delete;
