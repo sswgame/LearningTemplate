@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/NetSimulation/EditorNetSimSession.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 

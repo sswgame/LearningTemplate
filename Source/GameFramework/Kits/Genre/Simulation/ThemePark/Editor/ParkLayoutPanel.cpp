@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPanel.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -13,7 +13,7 @@
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPreview.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
 #include <imgui.h>
 

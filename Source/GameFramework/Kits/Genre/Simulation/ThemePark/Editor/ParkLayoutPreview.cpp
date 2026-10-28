@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPreview.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"

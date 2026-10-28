@@ -9,8 +9,8 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
-#include "GameFramework/Plugin/Editor/NetSimulation/EditorNetSimSession.h"
 
 #include <imgui.h>
 

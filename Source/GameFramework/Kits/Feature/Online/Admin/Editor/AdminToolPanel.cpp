@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolPanel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
@@ -18,7 +18,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolSession.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
 
 #include <imgui.h>
 

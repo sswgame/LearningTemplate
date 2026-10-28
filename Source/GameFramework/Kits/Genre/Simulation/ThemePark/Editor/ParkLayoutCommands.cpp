@@ -9,7 +9,7 @@
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPanel.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.h"
 
 namespace sw::editor
 {

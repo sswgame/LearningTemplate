@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminCommandProvider.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminCommandProvider.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"

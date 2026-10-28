@@ -9,8 +9,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolPanel.h"
-#include "GameFramework/Plugin/Editor/Admin/AdminToolSession.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

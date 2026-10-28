@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleGame.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
-#include "GameFramework/Plugin/Editor/NetSimulation/Sample/NetSimSampleGame.h"
 
 namespace sw::editor
 {

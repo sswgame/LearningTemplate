@@ -271,8 +271,15 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		UNITY_BATCH ${SW_UNITY_BATCH_KIT}
 		REFLECTION_EXCLUDE "/Editor/"
 	)
+	# 키트의 에디터 확장(언리얼 플러그인의 <X>Editor 모듈)은 키트 폴더의 Editor/ 다. 런타임 · 서버로 나뉜 키트는 `Runtime/` 이 이 함수를 부르고
+	# 확장은 그 옆(`<기능>/Editor/`)에 있다.
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
 		add_subdirectory(Editor)
+	else()
+		get_filename_component(kitFolderName "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+		if(kitFolderName STREQUAL "Runtime" AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../Editor/CMakeLists.txt")
+			add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../Editor" "${CMAKE_CURRENT_BINARY_DIR}/Editor")
+		endif()
 	endif()
 endfunction()
 

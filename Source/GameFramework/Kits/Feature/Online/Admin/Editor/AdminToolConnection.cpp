@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolConnection.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolConnection.h"
 
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"

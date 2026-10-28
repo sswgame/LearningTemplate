@@ -14,8 +14,8 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminCommandProvider.h"
-#include "GameFramework/Plugin/Editor/Admin/AdminToolConnection.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminCommandProvider.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolConnection.h"
 
 namespace sw::editor
 {

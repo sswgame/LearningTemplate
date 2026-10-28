@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPreview.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
 namespace sw::editor
 {

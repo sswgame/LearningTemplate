@@ -9,7 +9,7 @@
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolPanel.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.h"
 
 namespace sw::editor
 {

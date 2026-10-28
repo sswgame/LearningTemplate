@@ -5,7 +5,7 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "GameFramework/Plugin/Editor/Admin/AdminToolSession.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
 
 namespace sw::editor
 {

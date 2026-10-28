@@ -9,8 +9,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPanel.h"
-#include "GameFramework/Plugin/Editor/ThemePark/ParkLayoutPreview.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
