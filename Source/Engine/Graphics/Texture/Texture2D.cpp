@@ -146,8 +146,16 @@ namespace sw
 
     bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
     {
-        if ( pDevice == nullptr || relativePath.empty() )
+        // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadBlock`).
+        if ( beginUploadFromImage( pDevice, relativePath, image, residency, true ) != Texture2DUploadStep::Submitted )
             return false;
+        return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;
+    }
+
+    Texture2DUploadStep Texture2D::beginUploadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency, bool bBlocking )
+    {
+        if ( pDevice == nullptr || relativePath.empty() )
+            return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
             releaseRHI( pDevice );
 
@@ -159,17 +167,20 @@ namespace sw
         const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
         const Texture2DMipDrop residentDrop =
             residency == TextureResidency::StreamingBase ? computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( fileMipCount ) ) : qualityDrop;
-        RHITextureDesc     desc{};
-        RHITextureHandle   handle = 0;
-        RHIDescriptorIndex srv    = kInvalidDescriptorIndex;
-        if ( createTextureWithMips( *pDevice, relativePath, image, format, residentDrop, desc, handle, srv ) == false )
-            return false;
+        // 텍스처를 만들고 업로드를 제출한다 — 끝남 확인과 bindless 등록은 `finishUpload` 의 몫이다(전송 계약 1 · 8).
+        RHITextureDesc            desc{};
+        RHITextureHandle          handle = 0;
+        RHITransferTicket         ticket{};
+        const Texture2DUploadStep step = createAndSubmitMips( *pDevice, relativePath, image, format, residentDrop, bBlocking, desc, handle, ticket );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step;
 
-        // `_pDevice` 는 **성공한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
-        // 표시가 남는다. `isRHIValid` 는 핸들을 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
-        // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
+        // `_pDevice` 는 **제출한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
+        // 표시가 남는다. `isRHIValid` 는 핸들과 SRV 를 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
+        // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다. SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
         _handle.store( handle, std::memory_order_release );
-        _srv.store( srv, std::memory_order_release );
+        _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        _uploadTicket     = ticket;
         _pDevice          = pDevice;
         _path             = string{ relativePath };
         _width            = desc._width;
@@ -177,43 +188,156 @@ namespace sw
         _mipCount         = desc._mipLevels;
         _streamedMipCount = residentDrop._mipCount - qualityDrop._mipCount;
         _format           = format;
+        return Texture2DUploadStep::Submitted;
+    }
+
+    Texture2DUploadStep Texture2D::submitCreatedTexture( IRHIResourceFactory& factory, RHITextureHandle handle, const RHITextureUploadDesc& upload, bool bBlocking, string_view label,
+                                                         RHITransferTicket& outTicket )
+    {
+        RHITransferSubmit submit{};
+        if ( bBlocking )
+        {
+            const bool bSettled = RHITransferUtil::submitWhileBusy( [&]()
+            { return factory.submitTextureUpload( handle, upload ); }, submit );
+            if ( bSettled == false )
+            {
+                factory.destroyTexture( handle );
+                return Texture2DUploadStep::Failed;
+            }
+        }
+        else
+        {
+            submit = factory.submitTextureUpload( handle, upload );
+        }
+        if ( submit._result == RHISubmitResult::Busy )
+        {
+            // 다음 프레임에 텍스처부터 다시 만든다 — 만든 것을 쥔 채 기다리면 `Busy` 인 동안 GPU 메모리만 잡는다.
+            factory.destroyTexture( handle );
+            return Texture2DUploadStep::Busy;
+        }
+        if ( submit.isAccepted() == false )
+        {
+            SW_LOG_ERROR( "Texture2D: submitTextureUpload was rejected for '%#'", label );
+            factory.destroyTexture( handle );
+            return Texture2DUploadStep::Failed;
+        }
+        outTicket = submit._ticket;
+        return Texture2DUploadStep::Submitted;
+    }
+
+    Texture2DUploadStatus Texture2D::finishUpload( IRHIDevice* pDevice, bool bBlocking )
+    {
+        const bool bNothingInFlight = pDevice == nullptr || _pDevice != pDevice || _uploadTicket.isValid() == false || getHandle() == 0;
+        if ( bNothingInFlight )
+        {
+            // 장치 교체가 `forgetRHI` · `releaseRHI` 로 지웠거나 다른 디바이스의 텍스처다 — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다.
+            SW_LOG_ERROR( "Texture2D: '%#' has no upload in flight on this device", _path.c_str() );
+            _uploadTicket               = RHITransferTicket{};
+            const bool bOwnsLiveTexture = pDevice != nullptr && _pDevice == pDevice && getHandle() != 0;
+            if ( bOwnsLiveTexture )
+                releaseRHI( pDevice );
+            return Texture2DUploadStatus::Failed;
+        }
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        RHITransferStatus    status    = RHITransferStatus::Pending;
+        if ( bBlocking )
+            status = RHITransferUtil::waitForTransfer( *pResource, _uploadTicket ) ? RHITransferStatus::Complete : RHITransferStatus::Failed;
+        else
+            status = pResource->pollTransfer( _uploadTicket );
+        if ( status == RHITransferStatus::Pending )
+            return Texture2DUploadStatus::Pending;
+        if ( status == RHITransferStatus::Failed )
+        {
+            SW_LOG_ERROR( "Texture2D: the upload of '%#' did not complete", _path.c_str() );
+            releaseRHI( pDevice );
+            return Texture2DUploadStatus::Failed;
+        }
+        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( getHandle() );
+        if ( srv == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            releaseRHI( pDevice );
+            return Texture2DUploadStatus::Failed;
+        }
+        _srv.store( srv, std::memory_order_release );
+        _uploadTicket = RHITransferTicket{};
         SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
                      static_cast<uint32>( _format ), srv );
-        return true;
+        return Texture2DUploadStatus::Ready;
     }
 
-    bool Texture2D::upgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, Texture2DRetiredResource& outRetired )
+    Texture2DUploadStep Texture2D::beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
-        const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid();
+        const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid() && _upgrade._ticket.isValid() == false;
         if ( bUpgradable == false )
-            return false;
+            return Texture2DUploadStep::Failed;
         const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
         SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
-        const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
-        const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
-        RHITextureDesc         desc{};
-        RHITextureHandle       handle = 0;
-        RHIDescriptorIndex     srv    = kInvalidDescriptorIndex;
-        if ( createTextureWithMips( *pDevice, _path, image, format, qualityDrop, desc, handle, srv ) == false )
-            return false;
-        outRetired._handle = _handle.exchange( handle, std::memory_order_acq_rel );
-        outRetired._srv    = _srv.exchange( srv, std::memory_order_acq_rel );
-        _width             = desc._width;
-        _height            = desc._height;
-        _mipCount          = desc._mipLevels;
-        _streamedMipCount  = 0;
-        return true;
+        const uint32              fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
+        const Texture2DMipDrop    qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        PendingUpgrade            upgrade{};
+        RHITextureDesc            desc{};
+        const Texture2DUploadStep step = createAndSubmitMips( *pDevice, _path, image, format, qualityDrop, bBlocking, desc, upgrade._handle, upgrade._ticket );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step;
+        upgrade._width    = desc._width;
+        upgrade._height   = desc._height;
+        upgrade._mipCount = desc._mipLevels;
+        _upgrade          = upgrade;
+        return Texture2DUploadStep::Submitted;
     }
 
-    bool Texture2D::createTextureWithMips( IRHIDevice& device, string_view relativePath, const DDSImageData& image, RHIFormat format, const Texture2DMipDrop& drop,
-                                           RHITextureDesc& outDesc, RHITextureHandle& outHandle, RHIDescriptorIndex& outSrv )
+    Texture2DUploadStatus Texture2D::finishUpgradeResidency( IRHIDevice* pDevice, bool bBlocking, Texture2DRetiredResource& outRetired )
+    {
+        const bool bNothingInFlight = pDevice == nullptr || _pDevice != pDevice || _upgrade._ticket.isValid() == false;
+        if ( bNothingInFlight )
+        {
+            // 장치 교체가 지웠다(`releaseRHI` · `forgetRHI`) — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다. 새 텍스처는 그 디바이스와 함께 갔거나 해제 큐가 지웠다.
+            _upgrade = PendingUpgrade{};
+            return Texture2DUploadStatus::Failed;
+        }
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        RHITransferStatus    status    = RHITransferStatus::Pending;
+        if ( bBlocking )
+            status = RHITransferUtil::waitForTransfer( *pResource, _upgrade._ticket ) ? RHITransferStatus::Complete : RHITransferStatus::Failed;
+        else
+            status = pResource->pollTransfer( _upgrade._ticket );
+        if ( status == RHITransferStatus::Pending )
+            return Texture2DUploadStatus::Pending;
+        const PendingUpgrade upgrade = _upgrade;
+        _upgrade                     = PendingUpgrade{};
+        if ( status == RHITransferStatus::Failed )
+        {
+            // 아래쪽 밉 그대로 남는다. 새 텍스처는 쓰지 않으므로 지운다(전송 중 파괴는 백엔드가 미룬다 — 계약 6).
+            SW_LOG_ERROR( "Texture2D: the top-mip upload of '%#' did not complete", _path.c_str() );
+            pResource->destroyTexture( upgrade._handle );
+            return Texture2DUploadStatus::Failed;
+        }
+        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( upgrade._handle );
+        if ( srv == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            pResource->destroyTexture( upgrade._handle );
+            return Texture2DUploadStatus::Failed;
+        }
+        outRetired._handle = _handle.exchange( upgrade._handle, std::memory_order_acq_rel );
+        outRetired._srv    = _srv.exchange( srv, std::memory_order_acq_rel );
+        _width             = upgrade._width;
+        _height            = upgrade._height;
+        _mipCount          = upgrade._mipCount;
+        _streamedMipCount  = 0;
+        return Texture2DUploadStatus::Ready;
+    }
+
+    Texture2DUploadStep Texture2D::createAndSubmitMips( IRHIDevice& device, string_view relativePath, const DDSImageData& image, RHIFormat format, const Texture2DMipDrop& drop,
+                                                        bool bBlocking, RHITextureDesc& outDesc, RHITextureHandle& outHandle, RHITransferTicket& outTicket )
     {
         const uint32 fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         if ( drop._skippedBytes >= image._bytes.size() )
         {
             SW_LOG_ERROR( "Texture2D: '%#' payload (%# bytes) is shorter than its mip chain (%# mips)", relativePath, image._bytes.size(), fileMipCount );
-            return false;
+            return Texture2DUploadStep::Failed;
         }
         outDesc                        = RHITextureDesc{};
         outDesc._width                 = image._width >> drop._mipCount;
@@ -226,32 +350,18 @@ namespace sw
         if ( outHandle == 0 )
         {
             SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
-            return false;
+            return Texture2DUploadStep::Failed;
         }
 
         // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치다. submitTextureUpload 의 규약과 같다.
-        // 동기 변형이다: 업로드가 끝난 뒤에야 bindless 에 등록한다(전송 계약). 비동기로 바꾸는 일은 RhiAsyncUploads U8 이다.
         RHITextureUploadDesc upload{};
-        upload._pData     = image.getPixels() + drop._skippedBytes;
-        upload._sizeBytes = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
-        upload._mipLevels = outDesc._mipLevels;
-        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, outHandle, upload ) == false )
-        {
-            SW_LOG_ERROR( "Texture2D: uploadTexture2DAndWait failed for '%#'", relativePath );
-            pResource->destroyTexture( outHandle );
-            outHandle = 0;
-            return false;
-        }
-
-        outSrv = pResource->registerBindlessTexture( outHandle );
-        if ( outSrv == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath );
-            pResource->destroyTexture( outHandle );
-            outHandle = 0;
-            return false;
-        }
-        return true;
+        upload._pData                  = image.getPixels() + drop._skippedBytes;
+        upload._sizeBytes              = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
+        upload._mipLevels              = outDesc._mipLevels;
+        const Texture2DUploadStep step = submitCreatedTexture( *pResource, outHandle, upload, bBlocking, relativePath, outTicket );
+        if ( step != Texture2DUploadStep::Submitted )
+            outHandle = 0; // `submitCreatedTexture` 가 지웠다
+        return step;
     }
 
     bool Texture2D::createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format )
@@ -326,42 +436,44 @@ namespace sw
     {
         if ( isRHIValid() )
             return true;
-        if ( pDevice == nullptr || hasCPUBytes() == false )
+        // 블로킹 헬퍼: 제출 → 대기 → 끝내기(`loadFromImage` 와 같다).
+        if ( beginUploadFromCPUBytes( pDevice, true ) != Texture2DUploadStep::Submitted )
             return false;
+        return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;
+    }
+
+    Texture2DUploadStep Texture2D::beginUploadFromCPUBytes( IRHIDevice* pDevice, bool bBlocking )
+    {
+        if ( pDevice == nullptr || hasCPUBytes() == false )
+            return Texture2DUploadStep::Failed;
+        if ( getHandle() != 0 )
+            releaseRHI( pDevice );
         RHITextureDesc desc{};
-        desc._width                    = _width;
-        desc._height                   = _height;
-        desc._mipLevels                = 1;
-        desc._format                   = _format;
-        desc._bIsShaderResource        = SW_TRUE;
-        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
-        _handle                        = pResource->createTexture2D( desc );
-        if ( getHandle() == 0 )
+        desc._width                      = _width;
+        desc._height                     = _height;
+        desc._mipLevels                  = 1;
+        desc._format                     = _format;
+        desc._bIsShaderResource          = SW_TRUE;
+        IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
+        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        if ( handle == 0 )
         {
             SW_LOG_ERROR( "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
-            return false;
+            return Texture2DUploadStep::Failed;
         }
         RHITextureUploadDesc upload{};
         upload._pData     = _cpuBytes.data();
         upload._sizeBytes = static_cast<uint32>( _cpuBytes.size() );
         upload._mipLevels = 1;
-        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _handle, upload ) == false )
-        {
-            SW_LOG_ERROR( "Texture2D: uploadTexture2DAndWait failed for CPU texture '%#'", _path.c_str() );
-            pResource->destroyTexture( _handle );
-            _handle = 0;
-            return false;
-        }
-        _srv = pResource->registerBindlessTexture( _handle );
-        if ( _srv == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for CPU texture '%#'", _path.c_str() );
-            pResource->destroyTexture( _handle );
-            _handle = 0;
-            return false;
-        }
-        _pDevice = pDevice;
-        return true;
+        RHITransferTicket         ticket{};
+        const Texture2DUploadStep step = submitCreatedTexture( *pResource, handle, upload, bBlocking, _path, ticket );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step;
+        _handle.store( handle, std::memory_order_release );
+        _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        _uploadTicket = ticket;
+        _pDevice      = pDevice;
+        return Texture2DUploadStep::Submitted;
     }
 
     RHISubmitResult Texture2D::writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc )
@@ -380,7 +492,8 @@ namespace sw
             Memory::copy( _cpuBytes.data() + target, pSource + row * rowBytes, rowBytes );
         }
         // GPU 에 없으면 원본만 고친다 — 다음에 올릴 때(`loadFromCPUBytes`) 이 내용이 올라간다.
-        const bool bResidentOnDevice = pDevice != nullptr && isRHIValid() && _pDevice == pDevice;
+        // 올리는 중(제출했고 아직 등록 전)인 텍스처도 구간을 낸다 — 같은 텍스처의 전송은 낸 순서대로 실행되므로(계약 3c) 처음 업로드 뒤에 이 구간이 덮인다.
+        const bool bResidentOnDevice = pDevice != nullptr && ( isRHIValid() || hasUploadInFlight() ) && _pDevice == pDevice;
         if ( bResidentOnDevice == false )
             return RHISubmitResult::Accepted;
         // 등록된 텍스처의 구간 갱신이라 완료를 기다리지 않는다 — 같은 텍스처의 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
@@ -396,6 +509,8 @@ namespace sw
         // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
         _handle           = 0;
         _srv              = kInvalidDescriptorIndex;
+        _uploadTicket     = RHITransferTicket{};
+        _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
         _streamedMipCount = 0;
     }
@@ -414,9 +529,14 @@ namespace sw
                 pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSrv() );
             if ( getHandle() != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
+            // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).
+            if ( _upgrade._handle != 0 )
+                pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
         }
         _handle           = 0;
         _srv              = kInvalidDescriptorIndex;
+        _uploadTicket     = RHITransferTicket{};
+        _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
         _streamedMipCount = 0;
         // 렌더 타깃 · CPU 텍스처는 크기 · 포맷이 곧 정의다 — 다시 만들 때 쓴다.

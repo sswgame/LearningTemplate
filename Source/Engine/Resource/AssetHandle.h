@@ -31,6 +31,18 @@ namespace sw
     };
 
     /**
+     * @brief 완료 단계 한 걸음의 결과입니다(`AssetLoadBlock::beginCompletion` · `pollCompletion`).
+     * @details GPU 업로드처럼 제출과 끝남 확인이 갈리는 종류만 `Submitted` · `Busy` 를 쓴다. 한 번에 끝나는 종류는 `Done` · `Failed` 만 돌려준다.
+     */
+    enum class AssetCompletionStep : uint8
+    {
+        Done = 0,  ///< 끝났다. 블록이 `Ready` 가 된다
+        Failed,    ///< 실패했다. 이유를 @p outError 에 적었다
+        Submitted, ///< 일을 냈고 끝났는지는 `pollCompletion` 이 본다(업로드 중 단계 — 블록은 `Loading` 으로 남는다)
+        Busy,      ///< 지금은 낼 수 없다. 완료를 다시 기다리는 단계로 돌아가 다음 펌프에서 다시 낸다
+    };
+
+    /**
      * @brief 새 로드의 로드 단계를 어디서 시작하는가입니다(`AssetLoadBlock::startLoad`).
      * @details 동기 API(`acquire` · `loadPrefab`)는 `OnCallingThread` 로 블록을 만들어 그 자리에서 읽는다 — 워커에 맡겼다가 곧바로 기다리면 태스크가 하나
      *          헛돌고, 읽기의 로그(오류)가 호출한 스레드가 아니라 워커에서 나와 테스트의 방어 범위(`SW_TEST_DEFENSIVE_SCOPE`) 밖으로 샌다.
@@ -81,6 +93,11 @@ namespace sw
         void runLoadIfUnclaimed();
         /** @brief 로드가 끝나 완료를 기다리면 이 스레드가 완료 단계를 실행합니다(정해진 스레드의 펌프). 실행했으면 true 입니다. */
         bool runCompletionIfPending();
+        /**
+         * @brief 완료 단계를 내 둔(업로드 중) 로드의 끝남 확인을 아무도 집지 않았으면 이 스레드가 한 걸음 실행합니다(펌프, 막지 않는다). 실행했으면 true 입니다.
+         * @details 끝나지 않았으면 단계는 업로드 중으로 남고 `onUploadSubmitted` 가 다시 불립니다. 다른 스레드의 `wait()` 가 같은 블록의 완료를 집지 않도록 **집은 스레드 하나만** 실행합니다.
+         */
+        bool runUploadPollIfPending();
 
         /**
          * @brief 로드 단계를 시작합니다. `Async` 는 엔진 태스크가 있으면 낮은 우선순위 워커 태스크로, 없으면(테스트 · 도구) 이 자리에서 실행합니다.
@@ -106,6 +123,17 @@ namespace sw
         /** @brief 완료 단계 본문입니다(정해진 스레드). 완료가 있는 종류만 덮어씁니다. */
         [[nodiscard]] virtual bool runCompletion( string& outError );
         /**
+         * @brief 완료 단계의 첫 걸음입니다. 기본은 `runCompletion` 을 한 번에 실행해 `Done` · `Failed` 로 끝냅니다. 제출과 확인이 갈리는 종류가 덮어씁니다.
+         * @param bBlocking `wait()` 가 부른 경우 true 입니다 — 끝날 때까지 기다리고 `Done` · `Failed` 만 돌려줍니다(`Submitted` · `Busy` 를 돌려주지 않는다). 펌프는 false 입니다.
+         */
+        [[nodiscard]] virtual AssetCompletionStep beginCompletion( bool bBlocking, string& outError );
+        /** @brief `Submitted` 뒤의 끝남 확인입니다(업로드 중 단계에서 집은 스레드가 부른다). `bBlocking` 이면 끝날 때까지 기다립니다. 기본은 늘 `Done` 입니다. */
+        [[nodiscard]] virtual AssetCompletionStep pollCompletion( bool bBlocking, string& outError );
+        /** @brief 완료 단계가 `Submitted` 로 끝나 업로드 중이 된 순간 불립니다(펌프 목록에 넣을 때). 잠금 안에서 `isUploading()` 을 확인하고 넣습니다. */
+        virtual void onUploadSubmitted() {}
+        /** @brief 업로드 중(완료를 냈고 끝남 확인을 아무도 집지 않은) 단계면 true 입니다. */
+        bool isUploading() const { return _phase.load( std::memory_order_acquire ) == kPhaseUploading; }
+        /**
          * @brief 로드 단계가 성공해 완료를 기다리게 된 순간 불립니다(로드한 스레드). 완료 단계를 펌프에 맡기는 종류가 덮어씁니다.
          * @warning 단계를 `AwaitingCompletion` 으로 알린 **뒤에** 불리므로, 기다리던 다른 스레드가 이미 완료를 집었을 수 있습니다. 펌프 목록에 넣는 쪽은
          *          완료 본문이 목록에서 빼는 잠금 안에서 `isAwaitingCompletion()` 을 보고 넣어야 합니다 — 아니면 끝난 블록이 목록에 남아 참조를 쥡니다.
@@ -128,12 +156,17 @@ namespace sw
             kPhaseAwaitingCompletion, ///< 로드는 끝났고 완료를 아무도 집지 않았다
             kPhaseCompleting,         ///< 한 스레드가 완료 중이다
             kPhaseDone,               ///< `_state` 가 `Ready` 나 `Failed` 다
+            kPhaseUploading,          ///< 완료 단계가 일을 냈고(`Submitted`) 끝남 확인을 아무도 집지 않았다 — `wait()` 와 펌프가 집어 확인한다(집은 쪽은 `kPhaseCompleting`)
         };
 
         /** @brief 집은 로드 단계를 실행하고 다음 단계로 넘깁니다. */
         void executeLoad();
-        /** @brief 집은 완료 단계를 실행하고 끝냅니다. */
-        void executeCompletion();
+        /** @brief 집은 완료 단계를 실행하고 결과에 따라 끝내거나 업로드 중 · 완료 대기 단계로 넘깁니다. */
+        void executeCompletion( bool bBlocking );
+        /** @brief 집은 업로드 중 단계의 끝남 확인을 한 걸음 실행하고 결과를 반영합니다. */
+        void executeUploadPoll( bool bBlocking );
+        /** @brief 완료 단계 한 걸음의 결과를 단계 워드에 반영합니다. */
+        void settleCompletionStep( AssetCompletionStep step, string error );
         /** @brief 결과를 적고 `Done` 으로 넘긴 뒤 기다리는 쪽을 깨웁니다. */
         void finish( bool bSucceeded, string error );
 

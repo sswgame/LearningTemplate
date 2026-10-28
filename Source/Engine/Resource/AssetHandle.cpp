@@ -49,7 +49,13 @@ namespace sw
             }
             if ( phase == kPhaseAwaitingCompletion && _phase.compare_exchange_strong( phase, kPhaseCompleting, std::memory_order_acq_rel ) )
             {
-                executeCompletion();
+                executeCompletion( true );
+                continue;
+            }
+            // 펌프가 일을 내 둔 로드다 — 기다리는 쪽이 끝남 확인을 집어 끝날 때까지 기다린다(블로킹 헬퍼: 제출 → 대기 → 끝내기).
+            if ( phase == kPhaseUploading && _phase.compare_exchange_strong( phase, kPhaseCompleting, std::memory_order_acq_rel ) )
+            {
+                executeUploadPoll( true );
                 continue;
             }
             // 다른 스레드가 이 단계를 실행 중이다 — 그 스레드는 일하는 중이므로 끝나면 단계 워드를 바꾸고 깨운다.
@@ -71,7 +77,16 @@ namespace sw
         uint32 expected = kPhaseAwaitingCompletion;
         if ( _phase.compare_exchange_strong( expected, kPhaseCompleting, std::memory_order_acq_rel ) == false )
             return false;
-        executeCompletion();
+        executeCompletion( false );
+        return true;
+    }
+
+    bool AssetLoadBlock::runUploadPollIfPending()
+    {
+        uint32 expected = kPhaseUploading;
+        if ( _phase.compare_exchange_strong( expected, kPhaseCompleting, std::memory_order_acq_rel ) == false )
+            return false;
+        executeUploadPoll( false );
         return true;
     }
 
@@ -115,6 +130,16 @@ namespace sw
         return false;
     }
 
+    AssetCompletionStep AssetLoadBlock::beginCompletion( bool /*bBlocking*/, string& outError )
+    {
+        return runCompletion( outError ) ? AssetCompletionStep::Done : AssetCompletionStep::Failed;
+    }
+
+    AssetCompletionStep AssetLoadBlock::pollCompletion( bool /*bBlocking*/, string& /*outError*/ )
+    {
+        return AssetCompletionStep::Done;
+    }
+
     void AssetLoadBlock::markReadyWithoutLoad()
     {
         SW_ASSERT( _phase.load( std::memory_order_acquire ) == kPhaseQueued );
@@ -146,11 +171,51 @@ namespace sw
         onAwaitingCompletion();
     }
 
-    void AssetLoadBlock::executeCompletion()
+    void AssetLoadBlock::executeCompletion( bool bBlocking )
     {
-        string     error;
-        const bool bCompleted = runCompletion( error );
-        finish( bCompleted, std::move( error ) );
+        string                    error;
+        const AssetCompletionStep step = beginCompletion( bBlocking, error );
+        settleCompletionStep( step, std::move( error ) );
+    }
+
+    void AssetLoadBlock::executeUploadPoll( bool bBlocking )
+    {
+        string                    error;
+        const AssetCompletionStep step = pollCompletion( bBlocking, error );
+        settleCompletionStep( step, std::move( error ) );
+    }
+
+    void AssetLoadBlock::settleCompletionStep( AssetCompletionStep step, string error )
+    {
+        switch ( step )
+        {
+            case AssetCompletionStep::Done:
+            {
+                finish( true, string{} );
+                return;
+            }
+            case AssetCompletionStep::Failed:
+            {
+                finish( false, std::move( error ) );
+                return;
+            }
+            case AssetCompletionStep::Submitted:
+            {
+                // 일은 나갔다. 끝남 확인은 펌프(`runUploadPollIfPending`)나 `wait()` 가 집는다.
+                _phase.store( kPhaseUploading, std::memory_order_release );
+                Futex::wakeAll( _phase );
+                onUploadSubmitted();
+                return;
+            }
+            case AssetCompletionStep::Busy:
+            {
+                // 지금은 낼 수 없다 — 아무도 집지 않은 완료 대기로 돌아가 다음 펌프가 다시 낸다.
+                _phase.store( kPhaseAwaitingCompletion, std::memory_order_release );
+                Futex::wakeAll( _phase );
+                onAwaitingCompletion();
+                return;
+            }
+        }
     }
 
     void AssetLoadBlock::finish( bool bSucceeded, string error )

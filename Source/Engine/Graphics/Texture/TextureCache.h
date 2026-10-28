@@ -76,8 +76,11 @@ namespace sw
          */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /**
-         * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 올린 수를 반환합니다.
-         * @details 한 프레임에 @p maxCount 개까지만 올린다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
+         * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 끝낸(bindless 에 등록해 공개한) 수를 반환합니다.
+         * @details 업로드는 세 단계다(RhiAsyncUploads U8) — 워커 읽기 → 이 함수가 `beginUpload`(텍스처 생성 · 제출, 기다리지 않는다) → 이후 프레임의 이 함수가 `finishUpload`
+         *          (`pollTransfer` 가 `Complete` 면 bindless 등록과 공개). 같은 호출이 이미 제출한 로드의 끝남 확인을 먼저 하고, @p maxCount 는 **새로 제출하는 수**에 적용한다
+         *          (확인은 값싸다). `Busy` 면 그 프레임의 나머지 제출을 미루고 다음 프레임에 다시 낸다. 블로킹이 아닌 길이라 `wait()` 한 쪽이 있으면 그쪽이 먼저 끝낸다.
+         *          한 프레임에 @p maxCount 개까지만 제출한다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
          *          요청한 디바이스가 아니라 지금 올리는 디바이스로 올린다 — 요청 뒤 디바이스가 내려가고(백엔드 교체 · 테스트의 디바이스 차례) 새로 섰으면 옛 주소는 죽었다.
          */
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
@@ -220,8 +223,16 @@ namespace sw
     private:
         [[nodiscard]] bool runLoad( string& outError ) override;
         bool               hasCompletion() const override { return true; }
-        [[nodiscard]] bool runCompletion( string& outError ) override;
-        void               onAwaitingCompletion() override;
+        /** @brief 완료 1단계 — 텍스처를 만들고 업로드를 제출합니다(`Texture2D::beginUploadFromImage`). 블로킹이면 이어서 끝까지 기다립니다. */
+        [[nodiscard]] AssetCompletionStep beginCompletion( bool bBlocking, string& outError ) override;
+        /** @brief 완료 2단계 — 업로드가 끝났는지 보고 bindless 에 등록해 항목을 공개합니다(`Texture2D::finishUpload`). */
+        [[nodiscard]] AssetCompletionStep pollCompletion( bool bBlocking, string& outError ) override;
+        void                              onAwaitingCompletion() override;
+        void                              onUploadSubmitted() override;
+        /** @brief 두 대기 목록에서 이 블록을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
+        void removeFromPumpLists( TextureCache::Impl& cache );
+        /** @brief 업로드가 끝난(또는 실패한) 뒤의 마무리입니다 — 항목을 공개하고 결과를 단계 결과로 바꿉니다. */
+        [[nodiscard]] AssetCompletionStep concludeCompletion( TextureCache::Impl& cache, bool bReady, string& outError );
 
     private:
         friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다

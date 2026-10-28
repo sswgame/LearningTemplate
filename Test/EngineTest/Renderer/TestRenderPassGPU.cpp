@@ -4901,6 +4901,50 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAs
     constexpr const utf8* kFirstLoaded  = "engine/textures/particles/kenney_particle/trace_07.dds";
     constexpr const utf8* kSecondLoaded = "engine/textures/particles/kenney_particle/trace_01.dds";
 
+/**
+ * @brief [RenderPassGPUTest] 펌프(`completePendingLoads`)만으로 비동기 텍스처가 제출 → 폴링 → 공개의 세 단계를 거쳐 `Ready` 가 된다 — 4 백엔드
+ * @details RhiAsyncUploads U8. `wait()` 를 부르지 않는다 — 제출한 프레임에는 `Ready` 가 아닐 수 있고(DX12 · Vulkan 은 한 프레임 이상), 이후 펌프가 `pollTransfer` 로 `Complete` 를
+ *          보고 bindless 에 등록한다. `Ready` 가 되기 전에는 `get()` 이 비어 있고 `Ready` 가 된 뒤에는 SRV 가 유효하다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AsyncTextureBecomesReadyThroughThePumpWithoutWait, test::listRHIBackendParameter, 0.4 )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kPumpedTexture = "engine/textures/particles/kenney_particle/magic_03.dds";
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label    = sw::string( device->getBackendName() ) + ": ";
+        sw::TextureCache& textures = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
+        if ( textures.find( kPumpedTexture ) != nullptr )
+            continue; // 다른 쪽이 이미 올려 두었다 — 세 단계를 볼 수 없다
+        {
+            const sw::TextureHandle handle = textures.request( kPumpedTexture, device.get(), sw::AssetLoadStart::Async );
+            SW_ASSERT_TRUE( handle.isValid() );
+            const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
+            while ( handle.isLoading() && deadline.isExpired() == false )
+            {
+                (void)textures.completePendingLoads( device.get(), sw::TextureCache::kMaxUploadsPerFrame );
+                if ( handle.isLoading() )
+                    std::this_thread::yield();
+            }
+            SW_ASSERT_TRUE_MSG( handle.isReady(), ( label + "the texture did not become ready through the pump alone" ).c_str() );
+            const sw::shared_ptr<sw::Texture2D> pTexture = handle.get();
+            SW_ASSERT_NOT_NULL( pTexture.get() );
+            SW_EXPECT_TRUE_MSG( pTexture->isRHIValid(), ( label + "the ready texture has no valid SRV" ).c_str() );
+            SW_EXPECT_FALSE_MSG( pTexture->hasUploadInFlight(), ( label + "the ready texture still has an unfinished upload" ).c_str() );
+            textures.releaseRetiredTextures( device.get() );
+        }
+        for ( uint32 frame = 0; frame < 64 && textures.hasPendingStreamingUpgrades(); ++frame )
+        {
+            (void)textures.updateStreaming( device.get(), sw::TextureCache::kMaxStreamingUpgradesPerFrame ); // 이 텍스처가 남긴 위쪽 밉 줄을 비운다
+        }
+        textures.releaseRetiredTextures( device.get() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the texture pump test" );
+}
+
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
@@ -4927,7 +4971,12 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAs
 
         textures.noteScreenSize( kSecondLoaded, 0.6f );
         textures.noteScreenSize( kFirstLoaded, 0.05f );
-        SW_EXPECT_EQUAL( 1u, textures.updateStreaming( device.get(), 1 ) );
+        // 한 호출은 한 장을 제출한다(RhiAsyncUploads U8 — 끝남은 이후 호출의 폴링이 본다). 상한 0 은 새로 제출하지 않고 끝남만 확인한다.
+        (void)textures.updateStreaming( device.get(), 1 );
+        for ( uint32 frame = 0; frame < 64 && pSecond->isFullyResident() == false; ++frame )
+        {
+            (void)textures.updateStreaming( device.get(), 0 );
+        }
         SW_EXPECT_TRUE_MSG( pSecond->isFullyResident(), ( label + "화면에서 큰 텍스처의 위쪽 밉이 먼저 올라오지 않았습니다" ).c_str() );
         SW_EXPECT_FALSE_MSG( pFirst->isFullyResident(), ( label + "화면에서 작은 텍스처가 큰 것보다 먼저 올라왔습니다" ).c_str() );
         for ( uint32 frame = 0; frame < 16 && pFirst->isFullyResident() == false; ++frame )
