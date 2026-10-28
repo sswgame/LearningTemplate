@@ -13,8 +13,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
-#include "Engine/Object/SceneAnimation/AnimationLOD.h"
 
 namespace sw
 {

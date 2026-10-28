@@ -16,8 +16,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"

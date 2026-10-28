@@ -6,14 +6,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
-#include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 
 namespace sw
 {

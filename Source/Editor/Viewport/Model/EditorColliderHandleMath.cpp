@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Physics/Component/PhysicsComponent.h"
 
 namespace sw::editor
 {

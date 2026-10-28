@@ -2,7 +2,7 @@
 
 #include "Games/PixelTown/TownWalkerViewComponent.h"
 
-#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
+#include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

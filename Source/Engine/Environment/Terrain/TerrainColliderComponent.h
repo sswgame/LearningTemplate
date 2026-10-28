@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

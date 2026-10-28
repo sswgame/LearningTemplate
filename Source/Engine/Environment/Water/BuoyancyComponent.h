@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

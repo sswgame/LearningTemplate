@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
@@ -20,7 +21,6 @@
 #include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"

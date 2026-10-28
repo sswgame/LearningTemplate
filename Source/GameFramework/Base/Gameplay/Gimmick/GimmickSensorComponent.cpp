@@ -2,10 +2,10 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
 
-#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
 

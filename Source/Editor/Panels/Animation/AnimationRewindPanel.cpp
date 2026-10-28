@@ -16,13 +16,13 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationRewind.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/SceneAnimation/AnimationRewind.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>

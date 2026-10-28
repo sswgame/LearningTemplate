@@ -4,14 +4,14 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Object/SceneAnimation/AnimationLOD.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 

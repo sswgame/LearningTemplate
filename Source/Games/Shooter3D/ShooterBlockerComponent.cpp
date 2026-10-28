@@ -4,9 +4,9 @@
 
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 namespace sw
 {

@@ -7,9 +7,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
+#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/NavMeshAsset.h"
-#include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"

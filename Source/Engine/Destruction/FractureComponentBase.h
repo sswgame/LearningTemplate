@@ -38,7 +38,7 @@
 #include "Engine/Destruction/DestructionState.h"
 #include "Engine/Destruction/FractureNetworkSync.h"
 #include "Engine/Destruction/FractureRenderUnits.h"
-#include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

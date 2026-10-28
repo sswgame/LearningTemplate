@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
@@ -11,11 +13,9 @@
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/Scene.h"
 
 #include "Games/Empty/BenchSceneSettings.h"

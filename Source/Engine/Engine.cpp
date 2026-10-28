@@ -23,6 +23,8 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Animation/Scene/AnimationCrowd.h"
+#include "Engine/Animation/Scene/VertexAnimationCooker.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
@@ -65,8 +67,6 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
-#include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/FrameStall.h"
 #include "Engine/Profiling/ProfilerBackend.h"

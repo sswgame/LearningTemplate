@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
@@ -23,7 +24,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Resource/AssetManager.h"

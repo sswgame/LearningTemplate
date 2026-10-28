@@ -1,0 +1,297 @@
+#include "pch.h"
+
+#include "Engine/Audio/Component/SceneAudio.h"
+
+#include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/Component/AudioEmitterComponent.h"
+#include "Engine/Audio/Component/AudioListenerComponent.h"
+#include "Engine/Audio/Component/AudioReverbZoneComponent.h"
+#include "Engine/Audio/Component/Physics2DAudioOcclusionQuery.h"
+#include "Engine/Audio/Component/PhysicsAudioOcclusionQuery.h"
+#include "Engine/Audio/IAudioService.h"
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct SceneAudioInternal
+        {
+            /** @brief 직교 카메라의 화면 가로세로비 가정입니다(창 크기를 모르는 자리 — 정확한 반폭은 리스너 컴포넌트로). */
+            static constexpr float32 kAssumedAspect = 16.0f / 9.0f;
+            /** @brief 속도의 한계(m/s)입니다 — 순간이동한 프레임이 도플러를 튀게 하지 않게. */
+            static constexpr float32 kMaxSpeed = 100.0f;
+
+            /** @brief 켜져 있고 삭제 대기가 아닌 컴포넌트인지입니다. */
+            static bool isUsable( const Component* pComponent )
+            {
+                // 소유 오브젝트의 삭제 대기는 다시 보지 않는다. 그 오브젝트의 컴포넌트는 항상 삭제 대기다(`GameObject::isPendingDestroy`).
+                const bool bUnusableComponent = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false;
+                return bUnusableComponent == false && pComponent->getOwner() != nullptr;
+            }
+
+            /** @brief 지난 자리와 지금 자리로 속도를 측정합니다(한계로 묶음). 첫 프레임은 0 입니다. */
+            static float3 computeVelocity( const float3& position, const float3& lastPosition, bool bHasLast, float32 deltaSeconds )
+            {
+                if ( bHasLast == false || deltaSeconds <= 1e-5f )
+                    return float3{};
+                float3        velocity = ( position - lastPosition ) / deltaSeconds;
+                const float32 speed    = velocity.getLength();
+                if ( speed > kMaxSpeed )
+                    velocity *= kMaxSpeed / speed;
+                return velocity;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    // 진행은 `Scene::update` 이 카메라와 함께 부른다 — 단계는 자리만 정하고 `update( deltaTime )` 은 빈 함수다.
+    SW_SCENE_SERVICE( SceneAudio, FlushEnd )
+
+    SceneAudio::SceneAudio( GameObjectManager& manager )
+        : _listener{ "SceneAudio.Listener" }
+        , _emitter{}
+        , _zone{ "SceneAudio.ReverbZone" }
+        , _listEmitterSnapshot{}
+        , _listZoneValue{}
+        , _listZoneCurrent{}
+        , _pAudioService{ manager.getSceneEngineServices()._pAudioService }
+        , _pEngineOverride{ nullptr }
+        , _pOcclusionOverride{ nullptr }
+        , _primaryListenerPosition{}
+        , _lastCameraPosition{}
+        , _mutex{}
+        , _occlusionCursor{ 0 }
+        , _activeListenerMask{ 0 }
+        , _bHasLastCameraPosition{ false }
+    {
+    }
+
+    SceneAudio::~SceneAudio() = default;
+
+    AudioEngine* SceneAudio::findAudioEngine() const
+    {
+        if ( _pEngineOverride != nullptr )
+            return _pEngineOverride;
+        // 포인터는 생성할 때 받은 것이고, 오디오가 올라와 있는지는 부를 때마다 본다.
+        if ( _pAudioService == nullptr || _pAudioService->isInitialized() == false )
+            return nullptr;
+        return &_pAudioService->getEngine();
+    }
+
+    Subscription SceneAudio::addListener( AudioListenerComponent* pListener )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _listener.addLogged( pListener, "Audio listener" ) != RegistrationResult::Added )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pListener ) );
+    }
+
+    Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( pEmitter == nullptr )
+        {
+            reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
+            return {};
+        }
+        if ( _emitter.add( pEmitter ) == false )
+            return {}; // 이미 올라 있다 — 먼저 받은 구독이 쥔다
+        return issueSubscription( reinterpret_cast<uint64>( pEmitter ) );
+    }
+
+    Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _zone.addLogged( pZone, "Audio reverb zone" ) != RegistrationResult::Added )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pZone ) );
+    }
+
+    void SceneAudio::releaseSubscription( uint64 id )
+    {
+        void* const                  pItem    = reinterpret_cast<void*>( id ); // 주소로만 찾는다 — 든 목록을 찾기 전에는 역참조하지 않는다
+        AudioEmitterComponent* const pEmitter = static_cast<AudioEmitterComponent*>( pItem );
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _listener.remove( static_cast<AudioListenerComponent*>( pItem ) ) || _zone.remove( static_cast<AudioReverbZoneComponent*>( pItem ) ) )
+                return;
+            if ( _emitter.remove( pEmitter ) == false )
+                return;
+        }
+        AudioEngine* pEngine = findAudioEngine();
+        if ( pEngine != nullptr )
+            pEngine->removeEmitter( pEmitter->getEmitterID() );
+    }
+
+    void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )
+    {
+        AudioEngine* pEngine = findAudioEngine();
+        if ( pEngine == nullptr )
+            return;
+        ScopedLock<mutex> lock{ _mutex };
+        const float3      previousListenerPosition = _primaryListenerPosition;
+        updateListeners( *pEngine, deltaSeconds, pCamera );
+        updateEmitters( *pEngine, deltaSeconds, previousListenerPosition != _primaryListenerPosition );
+        updateOcclusion( *pEngine, pScene3D, pScene2D );
+        updateReverbZones( *pEngine );
+    }
+
+    void SceneAudio::updateListeners( AudioEngine& audioEngine, float32 deltaSeconds, const CameraComponent* pCamera )
+    {
+        // 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬).
+        uint32 listenerMask = 0;
+        bool   bHavePrimary = false;
+        for ( AudioListenerComponent* pListener : _listener.getItems() )
+        {
+            if ( SceneAudioInternal::isUsable( pListener ) == false )
+                continue;
+            const uint32 listenerIndex = MathUtil::min( pListener->getListenerIndex(), AudioEngine::kMaxListenerCount - 1 );
+            // 트랜스폼이 그대로면(월드 변경 번호) 자리 · 앞 · 위를 지난 상태에서 잇는다 — 자리가 같으니 속도는 0 이다. 모드 · 반폭은 세터가 바꾸므로 늘 넣는다.
+            const uint32       version        = pListener->getWorldTransformVersion();
+            const bool         bPoseUnchanged = pListener->_bHasLastState && version == pListener->_seenTransformVersion;
+            AudioListenerState state          = pListener->makeListenerState( bPoseUnchanged );
+            if ( bPoseUnchanged == false )
+                state._velocity = SceneAudioInternal::computeVelocity( state._position, pListener->_lastState._position, pListener->_bHasLastState, deltaSeconds );
+            pListener->_lastState            = state;
+            pListener->_seenTransformVersion = version;
+            pListener->_bHasLastState        = true;
+            audioEngine.setListener( listenerIndex, state );
+            listenerMask |= 1u << listenerIndex;
+            if ( listenerIndex == 0 || bHavePrimary == false )
+                _primaryListenerPosition = state._position;
+            bHavePrimary = true;
+        }
+        if ( listenerMask == 0 && pCamera != nullptr )
+        {
+            const float4x4     world = pCamera->getWorldMatrix();
+            AudioListenerState state;
+            state._position = world.getTranslation();
+            state._forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), world ).normalize();
+            state._up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), world ).normalize();
+            state._velocity = SceneAudioInternal::computeVelocity( state._position, _lastCameraPosition, _bHasLastCameraPosition, deltaSeconds );
+            if ( pCamera->isOrthographic() )
+            {
+                state._mode            = AudioSpatialMode::Screen2D;
+                state._screenHalfWidth = pCamera->getOrthoHeight() * SceneAudioInternal::kAssumedAspect * 0.5f;
+            }
+            state._bActive           = true;
+            _lastCameraPosition      = state._position;
+            _bHasLastCameraPosition  = true;
+            _primaryListenerPosition = state._position;
+            audioEngine.setListener( 0, state );
+            listenerMask = 1u;
+        }
+        // 지난 프레임에 켰는데 이번에 없는 칸은 끈다.
+        for ( uint32 listenerIndex = 0; listenerIndex < AudioEngine::kMaxListenerCount; ++listenerIndex )
+        {
+            const uint32 bit = 1u << listenerIndex;
+            if ( ( _activeListenerMask & bit ) != 0 && ( listenerMask & bit ) == 0 )
+                audioEngine.setListener( listenerIndex, AudioListenerState{} );
+        }
+        _activeListenerMask = listenerMask;
+    }
+
+    void SceneAudio::updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved )
+    {
+        // 에미터 자리 · 속도. 자리는 에미터의 트랜스폼과(넓은 소리는) 리스너 자리를 따르므로, 둘 다 그대로면(월드 변경 번호 · 리스너 자리) 지난 자리를
+        // 그대로 쓰고 속도는 0 이다. 엔진에는 그래도 넣는다 — 엔진이 지난 값을 들고 있는지에 기대지 않는다.
+        _listEmitterSnapshot.clear();
+        for ( AudioEmitterComponent* pEmitter : _emitter.items() )
+        {
+            if ( SceneAudioInternal::isUsable( pEmitter ) == false )
+                continue;
+            const uint32 version             = pEmitter->getWorldTransformVersion();
+            const bool   bUnmoved            = pEmitter->_bHasLastAudioPosition && bListenerMoved == false && version == pEmitter->_seenTransformVersion;
+            const float3 position            = bUnmoved ? pEmitter->_lastAudioPosition : pEmitter->computeAudioPosition( _primaryListenerPosition );
+            const float3 velocity            = bUnmoved ? float3{}
+                                                        : SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
+            pEmitter->_lastAudioPosition     = position;
+            pEmitter->_seenTransformVersion  = version;
+            pEmitter->_bHasLastAudioPosition = true;
+            audioEngine.setEmitter( pEmitter->getEmitterID(), position, velocity );
+            _listEmitterSnapshot.push_back( pEmitter );
+        }
+    }
+
+    void SceneAudio::updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )
+    {
+        // 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다).
+        PhysicsAudioOcclusionQuery   physicsQuery;
+        Physics2DAudioOcclusionQuery physics2DQuery;
+        const IAudioOcclusionQuery*  pQuery = _pOcclusionOverride;
+        if ( pQuery == nullptr && pScene3D != nullptr )
+        {
+            physicsQuery.setScene( pScene3D, MathUtil::kMaxUInt32 );
+            pQuery = &physicsQuery;
+        }
+        else if ( pQuery == nullptr && pScene2D != nullptr )
+        {
+            physics2DQuery.setScene( pScene2D, MathUtil::kMaxUInt32 );
+            pQuery = &physics2DQuery;
+        }
+        const uint32 emitterCount = static_cast<uint32>( _listEmitterSnapshot.size() );
+        if ( pQuery != nullptr && emitterCount > 0 )
+        {
+            const uint32 checkCount = MathUtil::min( emitterCount, kOcclusionChecksPerFrame );
+            for ( uint32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
+            {
+                AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + checkIndex ) % emitterCount];
+                if ( pEmitter->usesOcclusion() == false )
+                    continue;
+                audioEngine.setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
+            }
+            _occlusionCursor = ( _occlusionCursor + checkCount ) % emitterCount;
+        }
+    }
+
+    void SceneAudio::updateReverbZones( AudioEngine& audioEngine )
+    {
+        // 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다.
+        _listZoneCurrent.clear();
+        for ( AudioReverbZoneComponent* pZone : _zone.getItems() )
+        {
+            if ( SceneAudioInternal::isUsable( pZone ) == false || pZone->getSnapshot().empty() )
+                continue;
+            const float32 intensity = pZone->computeIntensity( _primaryListenerPosition );
+            bool          bFound    = false;
+            for ( ZoneValue& value : _listZoneCurrent )
+            {
+                if ( value._snapshot == pZone->getSnapshot() )
+                {
+                    value._intensity = MathUtil::max( value._intensity, intensity );
+                    bFound           = true;
+                }
+            }
+            if ( bFound == false )
+                _listZoneCurrent.push_back( ZoneValue{ pZone->getSnapshot(), intensity } );
+        }
+        for ( const ZoneValue& current : _listZoneCurrent )
+        {
+            const ZoneValue* pPrevious = nullptr;
+            for ( const ZoneValue& previous : _listZoneValue )
+            {
+                if ( previous._snapshot == current._snapshot )
+                    pPrevious = &previous;
+            }
+            if ( pPrevious == nullptr || MathUtil::abs( pPrevious->_intensity - current._intensity ) > 1e-4f )
+                audioEngine.setSnapshotIntensity( current._snapshot, current._intensity );
+        }
+        for ( const ZoneValue& previous : _listZoneValue )
+        {
+            bool bStillZoned = false;
+            for ( const ZoneValue& current : _listZoneCurrent )
+            {
+                bStillZoned = bStillZoned || current._snapshot == previous._snapshot;
+            }
+            if ( bStillZoned == false )
+                audioEngine.setSnapshotIntensity( previous._snapshot, 0.0f );
+        }
+        _listZoneValue.swap( _listZoneCurrent );
+    }
+} // namespace sw

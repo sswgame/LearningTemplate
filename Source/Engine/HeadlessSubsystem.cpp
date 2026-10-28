@@ -10,6 +10,8 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Animation/Scene/AnimationCrowd.h"
+#include "Engine/Animation/Scene/VertexAnimationCooker.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -25,8 +27,6 @@
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
-#include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"

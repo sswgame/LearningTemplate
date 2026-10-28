@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/BoxCollider2DComponent.h"
 
 #include "GameFramework/Base/Foundation/Utility/Time/LifeSpanUtil.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import time
 from pathlib import Path
 
 from common.ExitCode import ExitCode
@@ -128,7 +129,11 @@ def mainMove(argv: list[str]) -> int:
 
     for old, new in mapFile.items():
         (source / new).parent.mkdir(parents=True, exist_ok=True)
-        result = runGit(["mv", f"Source/{old}", f"Source/{new}"], cwd=root)
+        for _ in range(20):  # IDE 의 git 이 잠깐 잡는 index.lock 은 기다리면 풀린다 — 반쯤 옮긴 채 멈추지 않게
+            result = runGit(["mv", f"Source/{old}", f"Source/{new}"], cwd=root)
+            if result.bSucceeded or "index.lock" not in result.stderr:
+                break
+            time.sleep(0.5)
         if not result.bSucceeded:
             raise RuntimeError(f"git mv {old} 실패: {result.stderr.strip()}")
     for new, text in mapMovedText.items():

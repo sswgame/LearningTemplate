@@ -5,10 +5,10 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/WorldCellGrid.h"

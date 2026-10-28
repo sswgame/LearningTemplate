@@ -11,7 +11,7 @@
 #include "Core/Delegate/Subscription.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
+#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

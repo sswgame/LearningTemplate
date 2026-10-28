@@ -25,7 +25,7 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-    #include "Engine/Object/Component/Physics/ScenePhysics.h"
+    #include "Engine/Physics/Component/ScenePhysics.h"
     #include "Engine/Physics/IPhysicsScene.h"
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Scene/Scene.h"

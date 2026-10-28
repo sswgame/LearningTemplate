@@ -11,8 +11,8 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Physics/Component/BoxCollider2DComponent.h"
 
 #include <imgui.h>
 

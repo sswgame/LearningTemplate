@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSkeletalAnimator.h"
 
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

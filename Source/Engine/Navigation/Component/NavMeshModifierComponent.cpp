@@ -1,0 +1,36 @@
+#include "pch.h"
+
+#include "Engine/Navigation/Component/NavMeshModifierComponent.h"
+
+#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionValidation.h"
+
+namespace sw
+{
+    NavMeshModifierComponent::NavMeshModifierComponent()
+        : _areaName{}
+        , _bIgnoreFromBuild{ false }
+    {
+    }
+
+    void NavMeshModifierComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        GameObject* pOwner = getOwner();
+        AABB        box{};
+        const bool  bHasWorldBox = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box );
+        if ( bHasWorldBox )
+            pOwner->getManager()->getSubsystem<SceneNavigation>().invalidateArea( box, true );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void NavMeshModifierComponent::validateAreaName( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validateNavArea( context, "_areaName", _areaName );
+    }
+} // namespace sw

@@ -7,16 +7,16 @@
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationPlayer.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/LocomotionWarpingComponent.h"
+#include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/SceneAnimation/LocomotionWarpingComponent.h"
-#include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
 namespace sw
 {

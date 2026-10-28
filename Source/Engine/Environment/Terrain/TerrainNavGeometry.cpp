@@ -4,8 +4,8 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Navigation/Component/NavGeometryContributor.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
-#include "Engine/Object/Component/Navigation/NavGeometryContributor.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

@@ -4,11 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"

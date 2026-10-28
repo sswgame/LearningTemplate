@@ -6,12 +6,12 @@
 
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
 namespace sw

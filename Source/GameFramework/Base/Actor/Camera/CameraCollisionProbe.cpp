@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
-#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 namespace sw

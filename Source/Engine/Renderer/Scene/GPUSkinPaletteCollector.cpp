@@ -4,11 +4,11 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationCrowd.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
-#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 

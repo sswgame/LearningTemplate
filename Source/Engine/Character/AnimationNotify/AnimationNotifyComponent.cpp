@@ -2,12 +2,12 @@
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
-#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

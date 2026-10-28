@@ -2,8 +2,8 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -8,7 +8,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
+#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor

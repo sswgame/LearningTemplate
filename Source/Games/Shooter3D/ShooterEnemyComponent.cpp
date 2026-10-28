@@ -4,14 +4,14 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
-#include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"

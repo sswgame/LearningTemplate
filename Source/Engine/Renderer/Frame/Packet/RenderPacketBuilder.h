@@ -12,7 +12,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/SceneAnimation/AnimationLOD.h"
+#include "Engine/Animation/Scene/AnimationLOD.h"
 
 namespace sw
 {

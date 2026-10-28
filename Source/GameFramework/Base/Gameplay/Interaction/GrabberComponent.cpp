@@ -2,11 +2,11 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/GrabberComponent.h"
 
-#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
-#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/World/Environment/GravityComponent.h"

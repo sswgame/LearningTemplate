@@ -7,6 +7,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/unordered_set.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
@@ -21,7 +22,6 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/MeshSectionComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

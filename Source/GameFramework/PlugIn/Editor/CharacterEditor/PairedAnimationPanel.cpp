@@ -13,8 +13,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

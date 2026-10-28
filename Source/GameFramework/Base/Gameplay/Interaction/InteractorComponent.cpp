@@ -2,15 +2,15 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
-#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"

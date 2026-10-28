@@ -5,9 +5,9 @@
  */
 #include "pch.h"
 
+#include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
 {
