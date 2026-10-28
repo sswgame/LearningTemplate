@@ -69,12 +69,10 @@ namespace sw::editor
             /** @brief 그리기 확장 등록 항목이 프로퍼티 매니저에 등록되고 내장 위젯은 그대로 남습니다. */
             static EditorSelfTestStep runPropertyDrawerRegistered( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                pContext->getSubsystem<InspectorPropertyManager>().syncWithRegistry();
-                context.expect( pContext->getSubsystem<InspectorPropertyManager>().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
-                context.expect( pContext->getSubsystem<InspectorPropertyManager>().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<InspectorPropertyManager>().syncWithRegistry();
+                context.expect( editorContext.getSubsystem<InspectorPropertyManager>().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
+                context.expect( editorContext.getSubsystem<InspectorPropertyManager>().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -92,11 +90,9 @@ namespace sw::editor
              */
             static IEditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelID )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return nullptr;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
-                IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( pPanelID );
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
+                IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( pPanelID );
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
@@ -122,9 +118,7 @@ namespace sw::editor
                 const SceneViewPanel* pPanel = openSceneView( context );
                 if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
-                DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
-                if ( context.expect( pQueue != nullptr, "no DebugDrawQueue service" ) == false )
-                    return EditorSelfTestStep::Done;
+                DebugDrawQueue& queue = editor::getSubsystem<DebugDrawQueue>();
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -137,9 +131,9 @@ namespace sw::editor
                     const float3   forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world ).normalize();
                     const float3   center  = pCamera->getWorldPosition() + forward * 5.0f;
                     const float4   color{ 1.0f, 0.3f, 0.1f, 1.0f };
-                    pQueue->drawBox( center, float3{ 0.5f, 0.5f, 0.5f }, color, 2.0f, "SelfTest" );
-                    pQueue->drawArrow( center, center + float3{ 1.0f, 0.0f, 0.0f }, color, 2.0f, "SelfTest" );
-                    pQueue->drawText( center, "self test", color, 2.0f, "SelfTest" );
+                    queue.drawBox( center, float3{ 0.5f, 0.5f, 0.5f }, color, 2.0f, "SelfTest" );
+                    queue.drawArrow( center, center + float3{ 1.0f, 0.0f, 0.0f }, color, 2.0f, "SelfTest" );
+                    queue.drawText( center, "self test", color, 2.0f, "SelfTest" );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -157,11 +151,9 @@ namespace sw::editor
             static EditorSelfTestStep runConsoleTagFilter( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kProbeMessage = "console tag filter probe";
-                EditorContext*        pContext      = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
-                ConsolePanel* pConsole = pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
+                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
+                ConsolePanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -221,12 +213,10 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kEcho    = "> timescale 0.75 : time scale = 0.75";
-                EditorContext*        pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
-                ConsolePanel* pConsole = pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
+                constexpr const utf8* kEcho         = "> timescale 0.75 : time scale = 0.75";
+                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
+                ConsolePanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -251,9 +241,9 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSelectAllWithTag( EditorSelfTestContext& context )
             {
-                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                GameObjectManager* pManager      = editor::getActiveObjectManager();
+                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
                 const TagID tag    = TagID::request( "SwSelfTest.SelectAll" );
                 GameObject* pFirst = pManager->createGameObject( hashed_string( "SelfTestSelectA" ) );
@@ -269,7 +259,7 @@ namespace sw::editor
                 (void)context.expect( EditorSceneCommands::selectObjects( listMatch ) == 2, "selectObjects did not take both tagged objects" );
                 (void)context.expect( editor::getMainSceneSelection().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
 
-                pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 pManager->destroyObject( pFirst );
                 pManager->destroyObject( pOther );
                 return EditorSelfTestStep::Done;
@@ -280,10 +270,10 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runNamedLayoutRoundTrip( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelID    = HistoryPanel::kPanelID;
-                constexpr const utf8* kLayoutName = "selftest";
-                EditorContext*        pContext    = editor::findSubsystem<EditorContext>();
-                EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                constexpr const utf8* kPanelID      = HistoryPanel::kPanelID;
+                constexpr const utf8* kLayoutName   = "selftest";
+                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                EditorDockLayout*     pDock         = editorContext.findSubsystem<EditorDockLayout>();
                 if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
                     return EditorSelfTestStep::Done;
                 const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_selftest_layouts" );
@@ -291,7 +281,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex == 1 )
@@ -302,18 +292,18 @@ namespace sw::editor
                     (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiIniPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < 4 )
                     return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 만들어진다
 
-                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
+                const IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( HierarchyPanel::kPanelTitle );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
                 return EditorSelfTestStep::Done;
             }
@@ -573,10 +563,9 @@ namespace sw::editor
                 constexpr uint32     kSettleFrameCount = 3; // 탭이 앞으로 오고 이미지 자리가 엔진 프레임에 한 번 닿는 데 걸리는 프레임 수
                 const GameViewPanel* pPanel            = openGameView( context );
                 EditorContext&       editorContext     = editor::getSubsystem<EditorContext>();
-                const UISystem*      pUI               = findSubsystem<UISystem>();
-                const InputManager*  pInput            = findSubsystem<InputManager>();
-                const bool           bMissingContext   = pPanel == nullptr || context.expect( pUI != nullptr && pInput != nullptr, "no UI system or input manager" ) == false;
-                if ( bMissingContext )
+                const UISystem&      uiSystem          = editor::getSubsystem<UISystem>();
+                const InputManager&  input             = editor::getSubsystem<InputManager>();
+                if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
                 const bool   bDrawn    = editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
@@ -596,9 +585,9 @@ namespace sw::editor
                                            static_cast<float32>( view._windowY ) >= top - 1.0f && static_cast<float32>( view._windowY ) <= top + pWindow->Size.y;
                 (void)context.expect( bInsideWindow, "the game view image position is outside the Game window" );
                 // 같은 값이 런타임 UI 와 입력에 닿는다(`Engine::update`).
-                const UIViewport& uiViewport = pUI->getViewport();
+                const UIViewport& uiViewport = uiSystem.getViewport();
                 (void)context.expect( uiViewport._pointerOrigin == int2{ view._windowX, view._windowY }, "the UI pointer origin differs from the game view image position" );
-                (void)context.expect( pInput->getGameViewRect()._origin == int2{ view._windowX, view._windowY }, "the input game view origin differs from the game view image position" );
+                (void)context.expect( input.getGameViewRect()._origin == int2{ view._windowX, view._windowY }, "the input game view origin differs from the game view image position" );
                 ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
                 return EditorSelfTestStep::Done;
             }

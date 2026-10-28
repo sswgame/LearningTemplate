@@ -184,10 +184,7 @@ namespace sw::editor
                 listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
             } );
             std::sort( listEntry.begin(), listEntry.end() );
-            GlobalVariableManager* pVariables = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
-            if ( pVariables == nullptr )
-                SW_LOG_ERROR( "[Scenario] GlobalVariableManager is missing - the scene hash dump flag is not read" );
-            const GlobalVariableInfo* pDump = pVariables != nullptr ? pVariables->findVariable( "gv_automationHashDump" ) : nullptr;
+            const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
             const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
             uint64                    hash  = HashUtil::kFnvOffset64;
             for ( const std::pair<string, uint64>& entry : listEntry )
@@ -302,13 +299,7 @@ namespace sw::editor
 
         [[nodiscard]] bool readLoadingScreenShown( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const UISystem* pUI = editor::findSubsystem<UISystem>();
-            if ( pUI == nullptr ) // 필수 서비스: 없으면 버그
-            {
-                SW_LOG_ERROR( "[Scenario] probe LoadingScreen.Shown: UISystem is missing" );
-                return false;
-            }
-            outValue = pUI->isLoadingScreenShown() ? 1.0 : 0.0;
+            outValue = editor::getSubsystem<UISystem>().isLoadingScreenShown() ? 1.0 : 0.0;
             return true;
         }
 
@@ -344,13 +335,7 @@ namespace sw::editor
         /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`) 상태입니다. 화면이 열렸는지(엔진 프로브 `DebugHUD.Shown`)와 달리 정지 상태에서도 켜짐 여부를 반환합니다. 조종자가 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readDebugHUDEnabled( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const UISystem* pUI = editor::findSubsystem<UISystem>();
-            if ( pUI == nullptr ) // 필수 서비스: 없으면 버그
-            {
-                SW_LOG_ERROR( "[Scenario] probe DebugHUD.Enabled: UISystem is missing" );
-                return false;
-            }
-            const DebugHUD* pHUD = pUI->getDebugHUD();
+            const DebugHUD* pHUD = editor::getSubsystem<UISystem>().getDebugHUD();
             if ( pHUD == nullptr )
                 return false; // HUD 를 아직 만들지 않았다
             outValue = pHUD->isShown() ? 1.0 : 0.0;

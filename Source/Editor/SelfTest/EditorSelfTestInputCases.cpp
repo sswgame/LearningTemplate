@@ -99,11 +99,9 @@ namespace sw::editor
 
             static EditorSelfTestStep runHierarchySearchTyping( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel*    pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -361,12 +359,12 @@ namespace sw::editor
 
             static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
             {
-                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                GameObjectManager* pManager      = editor::getActiveObjectManager();
+                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 uint64&         objectID   = context.getTestState<ToggleProbe>()._objectID;
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -421,12 +419,12 @@ namespace sw::editor
             {
                 constexpr const utf8* kProbeName       = "EditorSelfTestRowProbe";
                 constexpr uint32      kMaxMarkWaitStep = 10;
-                EditorContext*        pContext         = editor::findSubsystem<EditorContext>();
+                EditorContext&        editorContext    = editor::getSubsystem<EditorContext>();
                 GameObjectManager*    pManager         = editor::getActiveObjectManager();
-                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 uint64&         objectID   = context.getTestState<RowProbe>()._objectID;
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -437,7 +435,7 @@ namespace sw::editor
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
                     objectID = pObj->getObjectID();
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
+                    editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -453,7 +451,7 @@ namespace sw::editor
                     what += to_string( row._min._x ) + ", over the toggle that ends at x " + to_string( toggle._max._x );
                     (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
                 }
-                pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
