@@ -250,6 +250,14 @@ namespace sw
                         info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
+                    case RenderPassType::SceneDepthCopy:
+                    {
+                        // 장면 깊이를 선언한 R32 실수 출력으로 옮기는 일반 풀스크린 패스다(scenedepthcopy.hlsl). 꺼지는 조건이 없다 — 반투명이 읽는 입력이라 늘 돈다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderSceneDepthCopy;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
+                        break;
+                    }
                     case RenderPassType::MotionBlur:
                     {
                         // 원본 색과 장면 깊이를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 카메라가 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).

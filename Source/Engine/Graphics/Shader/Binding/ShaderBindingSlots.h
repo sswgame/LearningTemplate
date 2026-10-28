@@ -409,6 +409,7 @@ namespace sw
                 {     "GBufferAlbedo",             SW_SLOT_ENGINE_TEX1},
                 {  "AmbientOcclusion",             SW_SLOT_ENGINE_TEX1},
                 {    "SceneColorCopy",             SW_SLOT_ENGINE_TEX1},
+                {    "SceneDepthCopy",             SW_SLOT_ENGINE_TEX2},
                 {"Light2DCookieAtlas",             SW_SLOT_ENGINE_TEX1},
                 {     "GBufferNormal",             SW_SLOT_ENGINE_TEX2},
                 {       "BloomBright",             SW_SLOT_ENGINE_TEX2},

@@ -185,6 +185,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderTaa; ///< TAA
         PROPERTY( Required )
+        DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다
+        PROPERTY( Required )
         DataPath _shaderMotionBlur; ///< 카메라 모션 블러(지난 프레임 뷰-투영으로 구한 화면 속도)
         PROPERTY( Required )
         DataPath _shaderTonemap; ///< 톤 매핑

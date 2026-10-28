@@ -253,6 +253,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_BloomBrightIndex;        // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
     uint   g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
     uint   g_AutoExposureIndex;       // 자동 노출의 이번 EV(1x1 R32, autoexposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(postgrade.hlsli)
+    uint   g_SceneColorCopyIndex;     // 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 굴절)
+    uint   g_SceneDepthCopyIndex;     // 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스 출력, R32 실수)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 화면 공간 두께)
     uint   g_Flags;
     uint   g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint   g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
@@ -969,12 +971,12 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
-    // FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright/autoExposure, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
+    // FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie/sceneColorCopy, normal/bloomBright/autoExposure/sceneDepthCopy, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
     if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
         return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex || index == g_SceneColorCopyIndex )
         return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex || index == g_SceneDepthCopyIndex )
         return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
     if ( index == g_SceneDepthIndex )
         return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
@@ -1001,9 +1003,9 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
         return float4( 0, 0, 0, 1 );
     if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
         return Bindless::sampleSlotWith( g_SwSlot0, samplerId, uv );
-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex || index == g_SceneColorCopyIndex )
         return Bindless::sampleSlotWith( g_SwSlot1, samplerId, uv );
-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex || index == g_SceneDepthCopyIndex )
         return Bindless::sampleSlotWith( g_SwSlot2, samplerId, uv );
     if ( index == g_SceneDepthIndex )
         return Bindless::sampleSlotWith( g_SwSlot3, samplerId, uv );
@@ -1033,9 +1035,9 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
         return float4( 0, 0, 0, 1 );
     if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
         return Bindless::sampleSlotPoint( g_SwSlot0, uv );
-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex || index == g_SceneColorCopyIndex )
         return Bindless::sampleSlotPoint( g_SwSlot1, uv );
-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex || index == g_SceneDepthCopyIndex )
         return Bindless::sampleSlotPoint( g_SwSlot2, uv );
     if ( index == g_SceneDepthIndex )
         return Bindless::sampleSlotPoint( g_SwSlot3, uv );

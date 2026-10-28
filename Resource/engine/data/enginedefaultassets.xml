@@ -73,6 +73,7 @@
                      _shaderFullscreenTriangle="engine/shaders/fullscreentriangle.hlsl"
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"
+                     _shaderSceneDepthCopy="engine/shaders/scenedepthcopy.hlsl"
                      _shaderMotionBlur="engine/shaders/motionblur.hlsl"
                      _shaderTonemap="engine/shaders/tonemap.hlsl"
                      _shaderDepthOfField="engine/shaders/depthoffield.hlsl"

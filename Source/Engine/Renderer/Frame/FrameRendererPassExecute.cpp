@@ -219,6 +219,8 @@ namespace sw
                 return names._gbufferMaterial;
             case RenderPassInputRole::SceneColorCopy:
                 return names._sceneColorCopy;
+            case RenderPassInputRole::SceneDepthCopy:
+                return names._sceneDepthCopy;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -421,6 +423,7 @@ namespace sw
                 case RenderPassType::Module:
                 case RenderPassType::DepthOfField:
                 case RenderPassType::MotionBlur:
+                case RenderPassType::SceneDepthCopy:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnimation:
@@ -565,6 +568,10 @@ namespace sw
         const auto* pSceneColorCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneColorCopy );
         if ( pSceneColorCopyInput != nullptr )
             registerPassTexture( context, attachmentNames()._sceneColorCopy, pSceneColorCopyInput->_attachment.view() );
+        // 장면 깊이 사본(SceneDepthCopy 패스 출력)도 같다 — 물의 화면 공간 두께가 읽는다. 반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 그 깊이를 샘플할 수 없다.
+        const auto* pSceneDepthCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneDepthCopy );
+        if ( pSceneDepthCopyInput != nullptr )
+            registerPassTexture( context, attachmentNames()._sceneDepthCopy, pSceneDepthCopyInput->_attachment.view() );
 
         if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
@@ -1036,17 +1043,18 @@ namespace sw
             return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
         };
 
-        const AttachmentNames&   names  = attachmentNames();
-        const RHIDescriptorIndex shadow = srvOf( names._shadowMap );
-        const RHIDescriptorIndex albedo = srvOf( names._gbufferAlbedo );
-        const RHIDescriptorIndex normal = srvOf( names._gbufferNormal );
-        const RHIDescriptorIndex depth  = srvOf( names._sceneDepth );
-        const RHIDescriptorIndex source = srvOf( names._sourceColor );
-        const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
-        const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
-        const RHIDescriptorIndex cookie = srvOf( names._light2DCookieAtlas );
-        const RHIDescriptorIndex expo   = srvOf( names._autoExposure );
-        const RHIDescriptorIndex copy   = srvOf( names._sceneColorCopy );
+        const AttachmentNames&   names     = attachmentNames();
+        const RHIDescriptorIndex shadow    = srvOf( names._shadowMap );
+        const RHIDescriptorIndex albedo    = srvOf( names._gbufferAlbedo );
+        const RHIDescriptorIndex normal    = srvOf( names._gbufferNormal );
+        const RHIDescriptorIndex depth     = srvOf( names._sceneDepth );
+        const RHIDescriptorIndex source    = srvOf( names._sourceColor );
+        const RHIDescriptorIndex ao        = srvOf( names._ambientOcclusion );
+        const RHIDescriptorIndex bloom     = srvOf( names._bloomBright );
+        const RHIDescriptorIndex cookie    = srvOf( names._light2DCookieAtlas );
+        const RHIDescriptorIndex expo      = srvOf( names._autoExposure );
+        const RHIDescriptorIndex copy      = srvOf( names._sceneColorCopy );
+        const RHIDescriptorIndex depthCopy = srvOf( names._sceneDepthCopy );
         // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
         const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
         if ( material != kInvalidDescriptorIndex )
@@ -1068,7 +1076,8 @@ namespace sw
         const RHIDescriptorIndex slot0 = pickOne( source, shadow, kInvalidDescriptorIndex );
         // 슬롯 1 은 역할이 넷이다(SceneColorCopy 는 반투명 패스가 읽는다). 앞 셋을 먼저 고르고 그 결과와 사본 중 하나만 있어야 한다.
         const RHIDescriptorIndex slot1 = pickOne( pickOne( albedo, ao, cookie ), copy, kInvalidDescriptorIndex );
-        const RHIDescriptorIndex slot2 = pickOne( normal, bloom, expo );
+        // 슬롯 2 도 넷이다(SceneDepthCopy 는 반투명 패스가 읽는다 — 그 패스는 G버퍼 노멀 · 블룸을 읽지 않는다).
+        const RHIDescriptorIndex slot2 = pickOne( pickOne( normal, bloom, expo ), depthCopy, kInvalidDescriptorIndex );
 
         if ( slot0 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );

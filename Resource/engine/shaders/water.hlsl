@@ -5,8 +5,9 @@
  * 정의한다. 위치는 뼈대가 만든다 — 파도는 오프셋으로만 준다(물은 MATERIAL_VERTEX_DEFORM 을 가진다).
  *
  * 머티리얼은 **정점 셰이더만** 읽는다 — GL(ARB_gl_spirv)은 구조버퍼를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다. 픽셀이 필요한 값은
- * 사용자 보간 칸으로 넘긴다. 반투명 패스에는 장면 깊이 · 색 입력이 없어 굴절 · 화면 공간 두께는 없다: 깊이는 컴포넌트가 지형에서 재어 정점 색 알파에
- * 구워 둔다(m). 정점 색 rg 는 강의 흐름 방향이다(호수는 0).
+ * 사용자 보간 칸으로 넘긴다. 굴절은 반투명 앞에 떠 둔 장면 색 사본(`g_SceneColorCopyIndex` — 파이프라인의 SceneColorCopy 패스)을 파도 노멀로 비껴 읽고,
+ * 화면 공간 두께는 장면 깊이 사본(`g_SceneDepthCopyIndex` — SceneDepthCopy 패스)에서 구한다. 사본이 걸리지 않은 파이프라인(2D 등)은 굴절 없이 알파 블렌드이고,
+ * 깊이 사본만 없으면 두께는 컴포넌트가 지형에서 재어 정점 색 알파에 구워 둔 깊이(m)를 쓴다. 정점 색 rg 는 강의 흐름 방향이다(호수는 0).
  */
 #include "lighting.hlsli"
 
@@ -15,6 +16,13 @@ static const float kSurfaceRoughness = 0.0f;
 static const float kSurfaceMetallic  = 0.0f;
 // 물 몸통(Lighting::shadeLights)의 거칠기 — 몸통은 확산만 받고 반사는 프레넬 · 주광 반사가 따로 한다(같은 빛이 두 번 반짝이지 않게 가장 거친 값).
 static const float kBodyRoughness = 1.0f;
+// 굴절 — 파도 노멀의 xz 를 화면 uv 오프셋으로 쓰는 세기(uv 단위)와, 그 오프셋이 다 차는 물 두께(m). 얕은 물가는 오프셋이 0 에 가까워 가장자리가 튀지 않는다.
+static const float kRefractionStrength  = 0.05f;
+static const float kRefractionFullDepth = 1.5f;
+// 물이 장면을 가리는 정도 = 1 - exp(-두께 × 이 값). 깊이 사본이 걸려 장면까지의 실제 두께를 알 때만 쓴다(1/m).
+static const float kAbsorptionPerMeter = 0.8f;
+// 깊이 비교의 여유(장치 깊이) — 물 표면과 같은 깊이의 장면(물가에 닿은 바닥)을 물 앞으로 오판하지 않는다.
+static const float kDepthCompareBias = 1e-5f;
 #include "gerstner.hlsli"
 
 // water.material 의 프로퍼티와 같은 이름 · 타입이다.
@@ -158,6 +166,36 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     const float foam        = context._user._shading.x * ( 0.55f + 0.45f * foamPattern );
     color                   = lerp( color, float3( 0.92f, 0.95f, 0.97f ), foam );
     alpha                   = max( alpha, foam );
+
+    // 굴절 · 화면 공간 두께 — 장면 색 사본이 걸린 파이프라인은 물 뒤의 장면을 파도 노멀로 비껴 읽어 물 색과 섞고, 그 픽셀을 불투명하게 덮는다(장면 색은 이미 이 섞기의 한 항이다).
+    // 사본은 반투명 전체 앞에 떠 둔 것이라 물보다 먼저 그려진 다른 반투명은 이 픽셀에서 지워진다. 인덱스는 패스 상수라 분기가 고르다.
+    SW_BRANCH if ( g_SceneColorCopyIndex != kInvalidIndex )
+    {
+        const float2 screenUv  = context._position.xy * g_SourceTexel.xy;
+        float        thickness = context._user._shading.w; // 정점에 구운 깊이(m) — 깊이 사본이 없을 때의 두께
+        float2       refractUv = screenUv;
+        SW_BRANCH if ( g_SceneDepthCopyIndex != kInvalidIndex )
+        {
+            // 장면까지의 실제 두께: 이 픽셀의 장면 깊이로 월드 위치를 복원해 물 표면과의 거리를 잰다. 물보다 앞에 있는 물체(장면 깊이가 더 작다)는 두께 0 이다.
+            const float  sceneDepth    = Bindless::sampleIndexWith( g_SceneDepthCopyIndex, SW_SAMPLER_POINT_CLAMP, screenUv ).r;
+            const float3 scenePosition = Transform::computeWorldPositionFromDepth( screenUv, sceneDepth );
+            const bool   bSceneBehind  = sceneDepth + kDepthCompareBias >= context._position.z;
+            thickness                  = bSceneBehind ? length( scenePosition - context._worldPosition ) : 0.0f;
+            // 비껴 읽은 자리가 물 앞의 물체면 그 물체의 색을 끌어오지 않는다(굴절을 버리고 제자리를 읽는다).
+            const float2 offsetUv       = normal.xz * kRefractionStrength * saturate( thickness / kRefractionFullDepth );
+            const float2 candidateUv    = saturate( screenUv + offsetUv );
+            const float  candidateDepth = Bindless::sampleIndexWith( g_SceneDepthCopyIndex, SW_SAMPLER_POINT_CLAMP, candidateUv ).r;
+            refractUv                   = ( candidateDepth + kDepthCompareBias >= context._position.z ) ? candidateUv : screenUv;
+            alpha                       = max( alpha, 1.0f - exp( -thickness * kAbsorptionPerMeter ) );
+        }
+        else
+        {
+            refractUv = saturate( screenUv + normal.xz * kRefractionStrength * saturate( thickness / kRefractionFullDepth ) );
+        }
+        const float3 refracted = Bindless::sampleIndex( g_SceneColorCopyIndex, refractUv ).rgb;
+        color                  = lerp( refracted, color, alpha );
+        alpha                  = 1.0f;
+    }
     return float4( color, alpha );
 }
 

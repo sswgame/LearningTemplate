@@ -9,6 +9,8 @@
 		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 		<!-- 반투명 앞의 장면 색 사본 — 반투명(물의 굴절)이 읽는다. SceneColor 와 같은 형식 · 크기(복사). 복사 패스가 쓰므로 지우지 않는다. -->
 		<RenderPassAttachment _name="SceneColorCopy" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" />
+		<!-- 반투명 앞의 장면 깊이 사본(R32 실수) — 물의 화면 공간 두께가 읽는다. 반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 직접 읽을 수 없다. 복사 패스가 쓰므로 지우지 않는다. -->
+		<RenderPassAttachment _name="SceneDepthCopy" _format="R32_FLOAT" _clearColor="1,0,0,0" _bClear="false" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="MotionBlurColor"
@@ -132,6 +134,23 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 장면 깊이 사본 — 장면 깊이를 R32 실수로 옮긴다(scenedepthcopy.hlsl). 반투명이 읽는다. -->
+		<RenderGraphPassDesc _name="SceneDepthCopy"
+		                     _type="SceneDepthCopy"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneDepthCopy</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
@@ -145,6 +164,7 @@
 			<_listInput>
 				<item>SceneColor</item>
 				<item>SceneColorCopy</item>
+				<item>SceneDepthCopy</item>
 				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>
