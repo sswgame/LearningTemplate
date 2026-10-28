@@ -22,7 +22,9 @@
 
 #include "GameFramework/Base/Actor/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
+#include "GameFramework/Base/Actor/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 
 #include <imgui.h>
 
@@ -309,6 +311,11 @@ namespace sw::editor
         canvasDesc._flags     = EditorSectionFlags::NoScrollbar | EditorSectionFlags::NoScrollWithMouse;
         EditorChrome::beginSection( canvasDesc );
 
+        string                    liveRunnerName;
+        const BehaviorTreeRunner* pRunner = findLiveRunner( liveRunnerName );
+        if ( liveRunnerName.empty() == false )
+            ImGui::TextDisabled( "Live: %s", liveRunnerName.c_str() );
+
         // 확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하므로, 캔버스를 연 뒤 이 사본에도 지금 편집기를 건다(`EditorGraphDocumentPanel::beginGraphCanvas` 와 같다).
         if ( _nodeGraph.beginCanvas( BehaviorTreePanelInternal::kCanvasID, BehaviorTreePanelInternal::kCanvasSettingsFile ) == false )
         {
@@ -319,7 +326,6 @@ namespace sw::editor
         }
         ed::SetCurrentEditor( _nodeGraph.getContext() );
 
-        const BehaviorTreeRunner* pRunner = findLiveRunner();
         for ( size_t index = 0; index < _listPreorder.size(); ++index )
         {
             const BehaviorTreeEditNode* pNode = _model.find( _listPreorder[index] );
@@ -576,19 +582,41 @@ namespace sw::editor
         (void)layoutNode( _model.getRootID(), 0, nextRow ); // 반환은 부모 줄 계산용이라 루트에서는 쓸 곳이 없다
     }
 
-    const BehaviorTreeRunner* BehaviorTreePanel::findLiveRunner() const
+    const BehaviorTreeRunner* BehaviorTreePanel::findLiveRunner( string& outName ) const
     {
+        outName.clear();
         const EditorSelection* pSelection = editor::getFocusedSelection();
         if ( pSelection == nullptr )
             return nullptr;
         vector<GameObject*> listSelected;
         pSelection->getSelectedObjects( listSelected );
+        vector<BehaviorTreeDebugRunner> listDebugRunner;
         for ( GameObject* pObject : listSelected )
         {
-            AIControllerComponent*    pController = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
+            if ( pObject == nullptr )
+                continue;
+            AIControllerComponent*    pController = pObject->getComponent<AIControllerComponent>();
             const BehaviorTreeRunner* pRunner     = pController != nullptr ? pController->getBehaviorTreeRunner() : nullptr;
             if ( pRunner != nullptr )
                 return pRunner;
+
+            // 컴포넌트에 안 붙은 실행기(지휘관 AI 등) — 노드 번호는 깊이 우선 번호라 창에 연 파일과 같은 트리 파일을 쥔 실행기만 맞다.
+            listDebugRunner.clear();
+            pObject->forEachComponentOfType<GameDirectorComponent>(
+                [&listDebugRunner]( GameDirectorComponent* pDirector )
+            {
+                const IBehaviorTreeDebugSource* pSource = pDirector->findBehaviorTreeDebugSource();
+                if ( pSource != nullptr )
+                    pSource->collectBehaviorTreeRunners( listDebugRunner );
+            } );
+            for ( const BehaviorTreeDebugRunner& entry : listDebugRunner )
+            {
+                if ( entry._pRunner != nullptr && entry._treePath == getLoadedAssetPath() )
+                {
+                    outName = entry._name;
+                    return entry._pRunner;
+                }
+            }
         }
         return nullptr;
     }

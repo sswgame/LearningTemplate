@@ -28,6 +28,7 @@ namespace sw
         : _manager{ manager }
         , _listView{}
         , _pendingView{}
+        , _forcedLOD{ -1 }
         , _bViewsSet{ SW_FALSE }
         , _bHasPendingView{ SW_FALSE }
     {
@@ -80,7 +81,7 @@ namespace sw
         (void)deltaTime;
         SW_PROFILE_SCOPE( "GT.MeshLOD.select" );
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
-        const int32                    forcedLOD     = gv_meshLodForce;
+        const int32                    forcedLOD     = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
         for ( ScenePrimitive* pPrimitive : listPrimitive )
         {
             // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).

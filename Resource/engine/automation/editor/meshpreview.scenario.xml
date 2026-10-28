@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 메시 미리보기 창: 창을 열고 Quick Open 으로 Empty 게임의 표본 메시(crate_medium.mesh)를 고르면 창이 그 메시를 문서로 받아
+  미리보기 씬의 MeshComponent 로 그리고, 렌더러가 그 씬을 창의 렌더 타깃에 그린다.
+  탐침: Editor.MeshPreviewVertexCount(메시를 읽었다) → Editor.MeshPreviewSceneFrames(그렸다) → Editor.MeshPreviewDrawnLOD(단계 하나짜리 메시는 LOD 0).
+  LOD 가 여럿인 메시로 단계를 고르는 길(MeshLODSystem::setForcedLOD)은 이 시나리오가 확인하지 않는다 - 표본 메시가 단계 하나뿐이다.
+  실행: py -3 -m Scripts scenario meshpreview (백엔드 vk · dx11 · opengl 도 같다)
+-->
+<Scenario name="editor.meshpreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="40"><DevCommand line="panel.focus mesh_preview"/></At>
+	<At frame="60"><EditorKey key="Ctrl+P"/></At>
+	<At frame="75"><EditorText value="crate_medium.mesh"/></At>
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="95"><WaitUntil probe="Editor.MeshPreviewVertexCount" atLeast="3" timeoutFrames="600"/></At>
+	<At frame="110"><WaitUntil probe="Editor.MeshPreviewSceneFrames" atLeast="60" timeoutFrames="600"/></At>
+	<At frame="120"><Expect probe="Editor.MeshPreviewDrawnLOD" equals="0"/></At>
+	<At frame="125"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

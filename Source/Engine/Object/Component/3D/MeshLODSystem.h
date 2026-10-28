@@ -58,6 +58,12 @@ namespace sw
         bool areViewsSet() const { return _bViewsSet == SW_TRUE; }
         /** @brief 컴포넌트의 경계 구를 모든 뷰(대기 뷰 포함)에서 본 가장 큰 화면 크기입니다. 어느 뷰에도 없으면 0 입니다(텍스처 밉 요청 우선순위도 이것을 쓴다). */
         float32 computeScreenSize( const MeshComponent& component ) const;
+        /**
+         * @brief 이 씬의 모든 메시를 화면 크기와 상관없이 단계 @p lodIndex 로 그립니다(-1 이면 화면 크기로 고른다). 메시 미리보기 창이 단계를 고정해 비교한다.
+         * @details 전역 변수 `gv_meshLodForce` 가 켜져 있으면 그 값이 먼저다. 메시의 단계 수를 넘는 값은 가장 낮은 단계로 그려진다(`MeshComponent::setLODIndex`).
+         */
+        void  setForcedLOD( int32 lodIndex ) { _forcedLOD = lodIndex; }
+        int32 getForcedLOD() const { return _forcedLOD; }
 
         /**
          * @brief 화면 크기 @p screenSize 에서 지금 단계 @p currentLOD 다음에 그릴 단계입니다. 거친 쪽은 바로, 고운 쪽은 `kRefineHysteresis` 만큼 여유를 두고 바꾼다.
@@ -69,6 +75,7 @@ namespace sw
         GameObjectManager&       _manager;
         vector<AnimationLODView> _listView;
         AnimationLODView         _pendingView;
+        int32                    _forcedLOD;       ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
         uint8                    _bViewsSet;       ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
         uint8                    _bHasPendingView; ///< 대기 뷰가 있다
     };
