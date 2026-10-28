@@ -254,10 +254,10 @@ namespace sw
         return value;
     }
 
-    int32 GameFlags::getFlag( const hashed_string& name, int32 fallback ) const
+    int32 GameFlags::getFlag( const hashed_string& name ) const
     {
         const auto mapIter = _mapFlag.find( name );
-        return mapIter != _mapFlag.end() ? mapIter->second : fallback;
+        return mapIter != _mapFlag.end() ? mapIter->second : 0;
     }
 
     bool GameFlags::hasFlag( const hashed_string& name ) const

@@ -367,71 +367,75 @@ namespace sw
         return *this;
     }
 
-    // 아래 읽기 연산자들은 `readBytes` 의 결과를 버린다 — 실패는 끈적한 오류 상태(`isError`)에 남고, 부른 쪽이 읽기를 마친 뒤 그것을 본다
-    // (iostream 과 같은 관용). 연산자마다 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
+    void Archive::readLatched( void* pOutBuffer, uint64 byteSize )
+    {
+        (void)readBytes( pOutBuffer, byteSize ); // 실패는 _bError 에 남는다 — 이 함수가 결과를 버리는 유일한 자리다(선언 설명)
+    }
+
+    // 아래 읽기 연산자들은 `readLatched` 로 읽는다 — 실패는 끈적한 오류 상태(`isError`)에 남는다.
     Archive& Archive::operator>>( bool& outData )
     {
-        (void)readBytes( &outData, sizeof( bool ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( bool ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint8& outData )
     {
-        (void)readBytes( &outData, sizeof( uint8 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( uint8 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint16& outData )
     {
-        (void)readBytes( &outData, sizeof( uint16 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( uint16 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint32& outData )
     {
-        (void)readBytes( &outData, sizeof( uint32 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( uint32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint64& outData )
     {
-        (void)readBytes( &outData, sizeof( uint64 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( uint64 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int8& outData )
     {
-        (void)readBytes( &outData, sizeof( int8 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( int8 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int16& outData )
     {
-        (void)readBytes( &outData, sizeof( int16 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( int16 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int32& outData )
     {
-        (void)readBytes( &outData, sizeof( int32 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( int32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int64& outData )
     {
-        (void)readBytes( &outData, sizeof( int64 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( int64 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float32& outData )
     {
-        (void)readBytes( &outData, sizeof( float32 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float64& outData )
     {
-        (void)readBytes( &outData, sizeof( float64 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float64 ) );
         return *this;
     }
 
@@ -454,7 +458,7 @@ namespace sw
                 return *this;
             }
             outData.resize( len );
-            (void)readBytes( outData.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
+            readLatched( outData.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
         }
         else
         {
@@ -482,7 +486,7 @@ namespace sw
                 return *this;
             }
             outBytes.resize( len );
-            (void)readBytes( outBytes.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
+            readLatched( outBytes.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
         }
         else
         {
@@ -493,25 +497,25 @@ namespace sw
 
     Archive& Archive::operator>>( float2& outData )
     {
-        (void)readBytes( &outData, sizeof( float2 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float2 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float3& outData )
     {
-        (void)readBytes( &outData, sizeof( float3 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float3 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float4& outData )
     {
-        (void)readBytes( &outData, sizeof( float4 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float4 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float4x4& outData )
     {
-        (void)readBytes( &outData, sizeof( float4x4 ) ); // 실패는 _bError 에 남는다(위 설명)
+        readLatched( &outData, sizeof( float4x4 ) );
         return *this;
     }
 

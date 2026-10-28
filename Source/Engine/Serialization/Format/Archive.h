@@ -357,6 +357,13 @@ namespace sw
         [[nodiscard]] bool loadStringPool();
 
     private:
+        /**
+         * @brief `operator>>` 가 쓰는 읽기입니다 — 실패는 끈적한 오류 상태(`isError`)에 남고 값은 건드리지 않는다.
+         * @details 부른 쪽이 읽기를 마친 뒤 `isError` 를 본다(iostream 과 같은 관용). 연산자마다 결과를 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
+         *          버리는 자리가 이 함수 하나라 연산자들에 `(void)` 가 흩어지지 않는다.
+         */
+        void readLatched( void* pOutBuffer, uint64 byteSize );
+
         StringPool             _stringPool;
         vector<uint8>          _bytes;
         const uint8*           _pData;

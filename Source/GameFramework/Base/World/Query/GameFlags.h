@@ -60,7 +60,8 @@ namespace sw
         void setFlag( const hashed_string& name, int32 value = 1 );
         /** @brief 값을 더하고 새 값을 반환합니다. */
         int32 addFlag( const hashed_string& name, int32 delta );
-        int32 getFlag( const hashed_string& name, int32 fallback = 0 ) const;
+        /** @brief 값입니다. 0 은 "지움" 과 같은 뜻이라 없는 플래그는 0 입니다(값 0 을 따로 저장하지 않는다). */
+        int32 getFlag( const hashed_string& name ) const;
         /** @brief 0 이 아닌 값이 있으면 true 입니다. */
         bool hasFlag( const hashed_string& name ) const;
         /** @brief 지웁니다. 있었으면 true 입니다. */

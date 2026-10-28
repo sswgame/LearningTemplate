@@ -54,35 +54,35 @@ namespace sw
                 size_t       _offset;
                 bool         _bFailed;
 
-                [[nodiscard]] bool readRaw( void* pOut, size_t size )
+                /** @brief 읽습니다. 실패는 `_bFailed` 에 남고 값은 0 입니다 — 호출자가 읽기를 마친 뒤 `_bFailed` 를 확인한다(결과를 돌려주는 길이 없다). */
+                void readRaw( void* pOut, size_t size )
                 {
                     if ( _bFailed || _offset + size > _size )
                     {
                         _bFailed = true;
                         Memory::set( pOut, 0, size );
-                        return false;
+                        return;
                     }
                     Memory::copy( pOut, _pData + _offset, size );
                     _offset += size;
-                    return true;
                 }
                 uint32 readUint()
                 {
                     uint32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
+                    readRaw( &value, sizeof( value ) );
                     return value;
                 }
                 int32 readInt()
                 {
                     int32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
+                    readRaw( &value, sizeof( value ) );
                     return value;
                 }
                 /** @brief 유한한 실수만 받습니다. NaN · 무한대는 깨진 파일로 보고 실패 상태가 되며 0 입니다(NaN 은 시각 비교를 모두 빠져나간다). */
                 float32 readFiniteFloat()
                 {
                     float32 value = 0.0f;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
+                    readRaw( &value, sizeof( value ) );
                     if ( MathUtil::isFinite( value ) )
                         return value;
                     _bFailed = true;
