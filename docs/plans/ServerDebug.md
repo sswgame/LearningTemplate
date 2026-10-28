@@ -55,7 +55,7 @@ Profiler 탭과 `net.stats` 질의, 종류별 셈(`NetMessageKindTallyTable`, �
 클라이언트 쪽 기록: 전용 서버가 틱마다 `GameNetSession::sendServerTick` 으로 틱 번호를 보내고, 클라이언트가 씬 프레임 뒤 `recordActiveScene` 한다. 클라이언트 칸은 자식 표준 입력에 `state.hashline` 을 묻고 로그의 한 줄(`kReportLinePrefix`)을 거둔다.
 어긋난 오브젝트 짚기: 이력에 오브젝트별 해시를 쌓지 않고(틱 × 오브젝트라 크다) 어긋난 틱 근처에서 두 프로세스의 현재 값을 견준다. `state.objects`(서버, 여러 줄)와 `state.objectline`(클라이언트용 한 줄)이 `tick <n>` 머리를 달고, `compareObjects` 가 틱이 없거나 다르면 거절한다(해시 이력과 오브젝트 답이 다른 시각이라는 어긋남을 형식으로 막는다). Sync 탭의 "Which objects differ" 단추와 `netplay.sync objects server|client` · `netsyncobjects.scenario.xml` 이 있다.
 한 줄 답의 상한: POSIX 파이프 읽기의 줄 버퍼(`fgets` 4096)가 가장 작아 `kMaxReportLineBytes`(3500)를 쓰기 · 읽기가 같이 본다(넘으면 오류 id `State.ReportLineTooLong`로 멈추고 읽는 쪽도 거절). 이력은 90 샘플까지, 오브젝트가 많아 `state.objectline` 이 넘으면 클라이언트 칸은 쓸 수 없다.
-확인 대기: 매니페스트 id `state-object-hash-tests` · `sync-tab-object-diff-tests` · `sync-tab-object-diff-scenario`.
+확인 대기: 매니페스트 id `state-object-hash-tests` · `sync-tab-object-diff-tests`. Sync 탭 시나리오(`netsyncobjects`)는 통합 S 의 `app-scenarios-release` 통과로 덮여 항목을 지웠다.
 
 - 키트별 해시: 파괴 해시 비교 · 롤백 세션 상태 바이트를 같은 이력에 다른 이름으로 더한다(지금은 씬 트랜스폼뿐).
 - 탭은 클라이언트 질의가 오류 응답을 받으면 답을 기다린 채 남는다(시간 초과 없음). 창의 단추를 실제로 누르는 입력(EditorClick)은 Multiplayer 창을 여는 시나리오가 없어 개발 명령으로 갈음했다.

@@ -130,28 +130,6 @@
       "source": "docs/plans/Candidates-engine.md ClothSkinnedCapeScreen", "result_doc": "docs/plans/Candidates-engine.md ClothSkinnedCapeScreen"
     },
     {
-      "id": "ability-arena-ai-control-scenarios", "title": "AbilityArena ai · control 시나리오가 내비메시 이동으로도 통과", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["game/abilityarena/automation/ai.scenario.xml", "game/abilityarena/automation/control.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/decisions/5-6_ObjectsInput.md 3D 내비메시 확장의 실행 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다"
-    },
-    {
-      "id": "game-pack-scenarios", "title": "게임 팩 시나리오를 네 백엔드로(AppScenarioTest.<게임>.<시나리오>.<백엔드>)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["AppScenarioTest.<게임>.*"], "covered_by": "app-scenarios-release",
-      "source": "docs/decisions/5-2_Build.md 게임 여럿 빌드 · 선택 실행의 네 백엔드 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
-      "note": "게임 팩은 Bin/Games 에 있어야 한다(Release -DSW_GAMES=ALL). 팩이 없으면 케이스가 건너뛰므로 로그의 건너뜀 줄을 본다."
-    },
-    {
-      "id": "assertdialog-scenario", "title": "assertdialog 시나리오(단언 대화상자)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/assertdialog.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/decisions/5-2_Build.md 구조 리팩토링 이동의 남은 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다"
-    },
-    {
-      "id": "standard-input-commands", "title": "-gv_standardInputCommands(netplay 가 띄운 클라이언트의 표준 입력 명령)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/netconditions.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/decisions/5-2_Build.md 구조 리팩토링 이동의 남은 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
-      "note": "netconditions 가 netplay.command 로 클라이언트(-gv_standardInputCommands=1) 표준 입력에 명령을 보낸다 — 그 시나리오가 통과하면 이 길도 돈다."
-    },
-    {
       "id": "foliage-navmesh-tests", "title": "막는 식생 · 장애물 캐시 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "FoliageTest.BlockingLayerAddsNavObstaclePerInstance,NavMeshTileCacheTest.*",
       "source": "docs/decisions/5-6_ObjectsInput.md 3D 내비메시 확장의 실행 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
@@ -328,11 +306,6 @@
       "source": "docs/plans/Candidates-engine.md VectorAliasLoopsBench", "result_doc": "docs/plans/Candidates-engine.md VectorAliasLoopsBench"
     },
     {
-      "id": "scene-reference-scenario", "title": "editor/scenereference 시나리오(씬 오브젝트 참조 선택기)와 EditorTest 빌드", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/scenereference.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/CrossFileObjectReference.md C2", "result_doc": "docs/plans/CrossFileObjectReference.md C2"
-    },
-    {
       "id": "module-pass-scenario", "title": "game/empty/modulepass 시나리오(모듈 패스가 붉은 틴트를 낸다, 네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["game/empty/automation/modulepass.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/ModuleRenderPass.md M2", "result_doc": "docs/plans/ModuleRenderPass.md M2",
@@ -412,11 +385,6 @@
     {
       "id": "sync-tab-object-diff-tests", "title": "Sync 탭의 다른 오브젝트 찾기(EditorStateHashCompare 오브젝트 답 견주기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "EditorStateHashCompareTest.*",
-      "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
-    },
-    {
-      "id": "sync-tab-object-diff-scenario", "title": "editor/netsyncobjects 시나리오(Sync 탭 Which objects differ — 서버 칸 · 클라이언트 칸 목록이 뜸)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/netsyncobjects.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
     },
     {
@@ -709,12 +677,6 @@
       "id": "scenario-thresholds-promote", "title": "어림값 문턱 38 개를 잰 값으로 승격하는 제안 표(네 백엔드 보고)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "tool": "scripts", "args": ["scenario-thresholds", "--reports", "build/{preset}/AppRuns"], "requires": ["app-scenarios-release"], "limit": "보고만 — 승격 가능 · 결함 의심 · 사람이 정함을 나눠 보인다(--apply 는 표를 보고 사람이 따로 돌린다)", "judge": "exit",
       "source": "docs/plans/GpuVerification.md 3절", "result_doc": "docs/plans/GpuVerification.md 3절"
-    },
-    {
-      "id": "scenarios-new-q2", "title": "시나리오 없던 기능 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["engine/automation/editor/audiographpanel.scenario.xml", "engine/automation/editor/behaviortreepanel.scenario.xml", "engine/automation/editor/worldcellspanel.scenario.xml", "engine/automation/editor/reflectionprobebake.scenario.xml", "game/wildwest/automation/autoplaymount.scenario.xml", "game/frontiertown/automation/autoplayclock.scenario.xml", "game/meadowvillage/automation/autoplayclock.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/AutomationSplit.md 8절", "result_doc": "docs/plans/AutomationSplit.md 8절",
-      "note": "처음 도는 시나리오들이다. 지면 보고의 failures · unhandledLogs 를 본다 — 패널은 Editor.PanelOpen 이 안 서면 panel.focus 철자부터, 자동 플레이는 시한(30 · 40 초)이 8 배속 가정과 맞는지부터."
     },
     {
       "id": "normal-maps-reimport", "title": "노멀 맵 열 장을 초록이 위인 그대로 다시 굽기(Base_NormalMap 의 invert_green 을 껐다)", "kind": "cook", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,

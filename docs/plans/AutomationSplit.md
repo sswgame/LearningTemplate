@@ -80,4 +80,4 @@
 - 행 감시 교착 시나리오: 매니페스트 id `app-hang-watch`(`AppHangWatchTest`, Debug). 지면 보고의 reason 을 먼저 본다 — 기동이 `wallTimeoutSeconds`(3 초)를 넘겼으면 `hang.scenario.xml` 의 시한을 올린다.
 - 시나리오 단계별 시간: 매니페스트 id `scenario-timeline-measure`(`scenario-waits --measured-dir`, `app-scenarios-release` 뒤).
 - 어림값 문턱 승격 제안: 매니페스트 id `scenario-thresholds-promote`(보고만, 승격은 표를 보고 사람이 따로 돌린다). `{bin}/Saved/Automation` 보고는 시나리오 줄기 + 백엔드 이름으로 덮어쓰이므로 `ExpectImage` 가 든 줄기가 유일한 것들(어림값 13 개 시나리오)만 쓴다.
-- 처음 도는 시나리오 일곱: 매니페스트 id `scenarios-new-q2`. 지면 보고의 failures · unhandledLogs 를 본다 — 패널은 `panel.focus` 철자, 자동 플레이는 시한(30 · 40 초)이 8 배속 가정과 맞는지부터.
+- 처음 도는 시나리오 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)은 통합 S 의 `app-scenarios-release` 통과(1300 s, 시나리오 Warning/Error 0)로 덮여 항목(`scenarios-new-q2`)을 지웠다.

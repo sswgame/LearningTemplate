@@ -584,6 +584,29 @@ class RequiresTest(unittest.TestCase):
             self.assertEqual([], findManifestProblems(root, parseManifest(makeData(producer, {**reader, "requires": ["producer"]}))))
 
 
+class DocReferenceTest(unittest.TestCase):
+    def testResultDocMustPointAtARealSectionOfARealDocument(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "docs" / "plans").mkdir(parents=True)
+            (root / "docs" / "plans" / "A.md").write_text("# 계획\n\n## 3. 측정\n\n### 3-1. 세부\n", encoding="utf-8")
+            (root / "docs" / "plans" / "NEXT.md").write_text("# 인계\n\n## 1. 마지막\n", encoding="utf-8")
+            (root / "Test" / "QA").mkdir(parents=True)
+            (root / "Test" / "TestT.cpp").write_text("SW_TEST_CASE( T, X )\n", encoding="utf-8")
+
+            def problemsOf(resultDoc: str) -> list[str]:
+                item = {**makeItem("t", "test", "Release", "none", filter="T.*"), "result_doc": resultDoc}
+                return findManifestProblems(root, parseManifest(makeData(item)))
+
+            self.assertEqual([], problemsOf("docs/plans/A.md 3절 측정"))
+            self.assertEqual([], problemsOf("docs/plans/A.md 3-1절"))
+            self.assertEqual([], problemsOf("docs/plans/A.md 상태를 끝으로"))   # 번호 없는 절 이름은 사람이 읽는다
+            self.assertIn("로 시작하는 절이 없습니다", problemsOf("docs/plans/A.md 9절")[0])
+            self.assertIn("로 시작하는 절이 없습니다", problemsOf("docs/plans/A.md 0000절")[0])
+            self.assertIn("인계 · 규칙 문서", problemsOf("docs/plans/NEXT.md 1절")[0])
+            self.assertIn("저장소 파일이 아닙니다", problemsOf("docs/plans/Missing.md 3절")[0])
+
+
 class ShardTest(unittest.TestCase):
     """`shards` — 항목 읽기 규칙, 정책에서 읽는 계획, 조각 단위의 겹침, 조각 결과를 하나로 합치기."""
 
