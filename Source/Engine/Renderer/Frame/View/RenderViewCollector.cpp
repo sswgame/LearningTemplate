@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -35,6 +36,14 @@ namespace sw
     {
         struct RenderViewCollectorInternal
         {
+            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(탐침 `RenderView.HiddenCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
+            inline static atomic<uint32> _s_hiddenViewCount{ 0 };
+            [[nodiscard]] static bool    readHiddenViewCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                outValue = static_cast<float64>( _s_hiddenViewCount.load( std::memory_order_relaxed ) );
+                return true;
+            }
             /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
             static constexpr uint32 kMaxUpscaleZoom = 16;
             /// 배율이 1 인지 보는 허용 오차입니다(부동소수 저장 오차만 받는다).
@@ -148,6 +157,9 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
+    SW_AUTOMATION_PROBE( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
+                         &RenderViewCollectorInternal::readHiddenViewCount );
+
     RenderViewBudget RenderViewCollector::getDefaultBudget()
     {
         RenderViewBudget budget;
@@ -229,6 +241,7 @@ namespace sw
             if ( request._outputKind == RenderViewOutputKind::ScreenRect )
                 arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( request._viewProj, request._position );
         }
+        uint32 hiddenViewCount = 0;
         for ( uint32 index = 0; index < candidateCount; ++index )
         {
             const CameraRenderOutput& output = *arrCameraOutput[index];
@@ -237,7 +250,9 @@ namespace sw
             const float32 screenSize      = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount, pMainOcclusion );
             const bool    bVisible        = screenSize > 0.0f && screenSize >= output._minScreenSize;
             arrCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
+            hiddenViewCount += bVisible ? 0u : 1u;
         }
+        RenderViewCollectorInternal::_s_hiddenViewCount.store( hiddenViewCount, std::memory_order_relaxed );
 
         uint8 arrRender[kMaxExtraRenderView]{};
         (void)scheduler.schedule( now, arrCandidate, candidateCount, budget, arrRender );
