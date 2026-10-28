@@ -22,30 +22,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "bash",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "bash",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
     "StopFailure": [
       {
         "hooks": [
@@ -54,30 +30,6 @@
             "shell": "bash",
             "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
             "timeout": 15
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash|PowerShell",
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "bash",
-            "command": "if command -v py >/dev/null 2>&1; then py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/GuardCommands.py\"; else python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/GuardCommands.py\"; fi",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "shell": "bash",
-            "command": "if command -v py >/dev/null 2>&1; then py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ReadGuard.py\"; else python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ReadGuard.py\"; fi",
-            "timeout": 10
           }
         ]
       }

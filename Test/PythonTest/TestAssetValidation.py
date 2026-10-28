@@ -20,7 +20,10 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from common.AssetValidation import (RuleConfigError, ValidationContext, isShaderWordUsedInternal, loadRules,  # noqa: E402
                                     parseRules, readDdsInfo, readMeshInfo, validate)
-from common.AssetValidation import _kMeshVersion, _kMeshVertexSize, _kReferenceTokenRe  # noqa: E402
+from common.AssetValidation import _kMeshHeaderSize, _kMeshVersion, _kMeshVertexSize, _kReferenceTokenRe  # noqa: E402
+
+# 머리의 고정 필드(24 바이트) 뒤 UV 경계 자리 — 값은 읽지 않는다.
+_kMeshHeaderPad = bytes(_kMeshHeaderSize - 24)
 
 
 def makeDdsInternal(width: int, height: int, mipCount: int, dxgiFormat: int) -> bytes:
@@ -37,7 +40,7 @@ def makeDdsInternal(width: int, height: int, mipCount: int, dxgiFormat: int) -> 
 
 def makeMeshInternal(triangleCount: int, radius: float = 1.0) -> bytes:
     vertexCount = triangleCount * 3
-    return b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, vertexCount, _kMeshVertexSize, radius, 0) + bytes(vertexCount * _kMeshVertexSize)
+    return b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, vertexCount, _kMeshVertexSize, radius, 0) + _kMeshHeaderPad + bytes(vertexCount * _kMeshVertexSize)
 
 
 class AssetValidationFixture(unittest.TestCase):
@@ -115,14 +118,14 @@ class HeaderReaderTest(unittest.TestCase):
 
     def testSkinnedMeshCountsItsSkinStream(self) -> None:
         # 스킨 메시는 정점마다 스킨 칸(24 바이트)이 뒤에 붙는다 — 크기 검사가 그것을 센다.
-        skinned = b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, 6, _kMeshVertexSize, 1.0, 4) + bytes(6 * _kMeshVertexSize) + bytes(6 * 24)
+        skinned = b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, 6, _kMeshVertexSize, 1.0, 4) + _kMeshHeaderPad + bytes(6 * _kMeshVertexSize) + bytes(6 * 24)
         self.assertEqual(2, readMeshInfo(skinned).triangleCount)
         with self.assertRaises(ValueError):
             readMeshInfo(skinned[:-24])
 
     def testMeshMorphChunkIsCounted(self) -> None:
         # 정점 뒤 선택 덩어리(MRPH)는 태그 · 길이로 건너뛴다 — 길이가 파일을 넘거나 모르는 태그면 오류.
-        base = b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, 3, _kMeshVertexSize, 1.0, 0) + bytes(3 * _kMeshVertexSize)
+        base = b"SWMS" + struct.pack("<IIIfI", _kMeshVersion, 3, _kMeshVertexSize, 1.0, 0) + _kMeshHeaderPad + bytes(3 * _kMeshVertexSize)
         self.assertEqual(1, readMeshInfo(base + b"MRPH" + struct.pack("<I", 4) + bytes(4)).triangleCount)
         with self.assertRaises(ValueError):
             readMeshInfo(base + b"MRPH" + struct.pack("<I", 8) + bytes(4))
@@ -131,7 +134,7 @@ class HeaderReaderTest(unittest.TestCase):
 
     def testOldMeshVersionIsRejected(self) -> None:
         with self.assertRaises(ValueError):
-            readMeshInfo(b"SWMS" + struct.pack("<IIIfI", 1, 3, _kMeshVertexSize, 1.0, 0) + bytes(3 * _kMeshVertexSize))
+            readMeshInfo(b"SWMS" + struct.pack("<IIIfI", 1, 3, _kMeshVertexSize, 1.0, 0) + _kMeshHeaderPad + bytes(3 * _kMeshVertexSize))
 
     def testMeshWithWrongSizeIsRejected(self) -> None:
         with self.assertRaises(ValueError):

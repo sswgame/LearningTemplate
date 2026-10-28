@@ -9,7 +9,7 @@
 ## 시작 전에 읽는 것
 
 - 남은 일: [NEXT](docs/plans/NEXT.md)(지금 상태) → [Roadmap](docs/plans/Roadmap.md)(순서) → 계획 문서. `py -3 -m Scripts plans` 가 목록, `--file <이름>` 이 한 문서, `--find <옛번호>` 가 옛 번호를 푼다.
-- 큰 문서: `py -3 -m Scripts doc <파일>`(목차) → `--section <제목 일부>`. 훅이 30KB 넘는 `.md` 의 통째 읽기를 거절한다.
+- 큰 문서: `py -3 -m Scripts doc <파일>`(목차) → `--section <제목 일부>`. 30KB 넘는 `.md` 는 통째로 읽지 않는다.
 - 워크트리 · 빌드 · 검증 · push · 커밋 형식 · 일을 끝낼 때 고칠 문서: [11 작업 방식](docs/11_Workflow.md). 워크트리는 `py -3 -m Scripts worktree-make <이름> --base main` 으로만 만든다.
 - 코딩 규칙: [AGENTS.md](AGENTS.md) 목차에서 일에 맞는 `docs/agents/` 파일만 읽는다. 스크립트로 파일을 고칠 때 heredoc 은 금지다([EditingTraps](docs/agents/EditingTraps.md)).
 
@@ -32,4 +32,3 @@
 
 - graphify: 코드 질문은 저장소 루트에서 `graphify query "<질문>"` · `path "<A>" "<B>"` · `explain "<개념>"` 으로 범위를 먼저 좁히고(작업자 워크트리는 MCP `query_graph`), 코드를 고친 뒤 `graphify update Source` 를 돌린다. 설치는 [13 보조 도구 설치](docs/13_LocalTools.md).
 - ponytail: `.claude/skills/ponytail/SKILL.md` 가 있으면 모든 작업에서 `Skill` 로 부른다. 구조 개편을 시킬 때는 "구조는 장기 이득이면 과감히 바꾼다"는 뜻을 요청에 적는다(스킬의 "기존 구조 유지" 지침과 부딪힌다).
-- 가드 훅이 `git commit --no-verify`, 링크가 든 폴더의 재귀 삭제, 너무 긴 세션, 큰 파일의 통째 읽기를 막는다. 거절된 명령은 우회하지 않는다.

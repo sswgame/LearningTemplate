@@ -35,9 +35,9 @@
 
 - 지시문에 읽을 문서와 절을 이름으로 적고, 찾기만 하는 일은 `scout` 로 보내 결과를 열 줄 안쪽으로 받습니다.
 - 코드를 찾는 지시문에는 `graphify query "<질문>"` 을 먼저 쓰라고 적고(작업자 워크트리에서는 MCP `query_graph`), 행 번호는 실제 파일에서 다시 확인하게 합니다. 사용법은 [CLAUDE.md](../CLAUDE.md) 가 원본입니다.
-- **큰 문서는 `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 절만 읽습니다.** 훅(`.claude/hooks/ReadGuard.py`)이 30KB 를 넘는 `.md` 와 48KB 를 넘는 코드의 `limit` · `offset` 없는 통째 읽기를 거절합니다(셸 `cat` · 넓은 `sed -n` 은 `GuardCommands.py`). 계획 문서는 `py -3 -m Scripts plans --file <이름> --section <절 제목 일부>` 로 읽습니다.
+- **큰 문서는 `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 절만 읽습니다.** 큰 `.md` 의 통째 읽기를 막던 훅은 지웠으니(2026-10-28, 사용자 지시) 스스로 지킵니다. 계획 문서는 `py -3 -m Scripts plans --file <이름> --section <절 제목 일부>` 로 읽습니다.
 - `SendMessage` 로 이어 시키는 것은 같은 파일을 계속 만질 때만 합니다. 이어 시킬 때마다 지난 대화가 다시 입력으로 들어가므로 무관한 일은 새로 띄우는 쪽이 쌉니다.
-- **긴 대기는 `run_in_background` 로 하고 `sleep` 으로 기다리지 않습니다.** `SendMessage` 는 받는 에이전트의 **다음 도구 호출에야** 닿으므로, `verify-batch` 를 전경에서 돌리거나 `sleep` 폴링 루프(전경 명령은 최대 590초)로 기다리는 동안은 사용자 · 메인의 지시가 큐에 쌓여 방향을 바꿀 수 없습니다. 수 분 넘는 검증 · 빌드는 `run_in_background: true` 로 띄워 끝 알림만 기다리고, 상태가 궁금하면 로그 끝을 한 번 읽습니다. `GuardCommands` 훅이 전경 `verify-batch` · `full-build` · `soak` · `load` · `perf-compare` 와 20초 이상 `sleep` 을 막으므로(`run_in_background` 호출은 통과) 문서에만 기대지 않습니다. 이미 전경으로 도는 중이면 상위 프로세스를 종료해(`taskkill /PID <py.exe> /T /F`) 메시지가 닿게 한 뒤 다시 띄우게 합니다.
+- **긴 대기는 `run_in_background` 로 하고 `sleep` 으로 기다리지 않습니다.** `SendMessage` 는 받는 에이전트의 **다음 도구 호출에야** 닿으므로, `verify-batch` 를 전경에서 돌리거나 `sleep` 폴링 루프(전경 명령은 최대 590초)로 기다리는 동안은 사용자 · 메인의 지시가 큐에 쌓여 방향을 바꿀 수 없습니다. 수 분 넘는 검증 · 빌드는 `run_in_background: true` 로 띄워 끝 알림만 기다리고, 상태가 궁금하면 로그 끝을 한 번 읽습니다. 전경 장기 실행을 막던 훅은 지웠으니(2026-10-28, 사용자 지시) 스스로 지킵니다. 이미 전경으로 도는 중이면 상위 프로세스를 종료해(`taskkill /PID <py.exe> /T /F`) 메시지가 닿게 한 뒤 다시 띄우게 합니다.
 - 조각이 끝날 때마다 토큰 수와 도구 호출 수를 6절 표에 한 줄 적습니다.
 
 ## 3. 세션 자체의 토큰
@@ -68,8 +68,6 @@
 
 ## 5. 훅
 
-- 명령 가드 `.claude/hooks/GuardCommands.py` 는 Bash · PowerShell 호출 직전에 `git commit --no-verify` 와 링크(정션)가 든 폴더의 재귀 삭제(`Tools/LLVM` 같은 공유 도구가 함께 지워지는 것)를 막습니다. 훅이 거절한 명령은 우회하지 않습니다.
-- 세션 가드 `.claude/hooks/SessionGuard.py` 는 알릴 것이 있을 때만 출력하고, 기록이 4MB · 8MB · 16MB 에 닿을 때마다(또는 압축 2회 이상) 단계마다 한 번 프롬프트를 막습니다. 무엇을 알리는지는 훅 파일이 원본입니다.
 - `.claude` 에서는 에이전트 정의 · 훅 · 공유 설정 · 스킬 넷(`integrate` · `ci-triage` · `worker-brief` · `doc-slim`)만 추적합니다. 개인 권한 목록은 `.claude/settings.local.json` 입니다.
 
 ## 6. 토큰 측정값
