@@ -7,7 +7,7 @@ configure 가 파이썬 생성기 넷을 **한 프로세스**로 부른다 — �
 3 할 가까이가 파이썬이었다(Ninja-Debug 실측: 생성기 일곱 1007 ms / configure 3486 ms). 각 생성기는 그대로 단독 실행도 된다 — 이 파일은 그
 `generate*()` 함수를 차례로 부를 뿐이다(규칙 · 출력은 각 생성기 한 자리).
 
-  - ConfigVars.cmake       (GenerateCMakeConstants)      — Constants.py → CMake set()
+  - ConfigVars.cmake       (GenerateCMakeConstants)      — ProjectConstants.py → CMake set()
   - CookContract.gen.h · CookContract.cmake (GenerateCookContract) — CookContract.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (GenerateShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
   - EditorLayers.cmake     (GenerateEditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
@@ -26,8 +26,8 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common · generate
 
-from common.Constants import kDirRuntimeGamePreset  # noqa: E402
-from generate.GeneratedFile import runGenerator  # noqa: E402
+from common.ProjectConstants import kDirRuntimeGamePreset  # noqa: E402
+from generate.GeneratorOutput import runGenerator  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.GenerateCMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.GenerateCookContract import generateCookContract  # noqa: E402

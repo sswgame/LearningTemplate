@@ -1,5 +1,5 @@
 """
-Scripts/common/Config.py
+Scripts/common/ToolchainConfig.py
 
 JSON 설정 파일 읽기/쓰기, 툴체인 및 검색 경로 설정 관리.
 """
@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .Constants import (
+from .ProjectConstants import (
     kDirConfigEnv,
     kFileSearchPaths,
     kFileSearchPathsDefaults,

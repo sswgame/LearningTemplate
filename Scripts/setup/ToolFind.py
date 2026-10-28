@@ -1,5 +1,5 @@
 """
-Scripts/setup/ToolLocator.py
+Scripts/setup/ToolFind.py
 
 도구(Ninja, LLVM, vcpkg 등) 탐색 및 설정을 위한 선언적 프레임워크:
   1. OS 환경 변수 검사
@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from common.Archive import resolveToolsSubdir
-from common.Config import loadSearchPaths
+from common.ToolDownload import resolveToolsSubdir
+from common.ToolchainConfig import loadSearchPaths
 from common.Paths import normalizePath
-from common.Search import findFirstValidRoot, platformSearchRoots
+from common.FileCollect import findFirstValidRoot, platformSearchRoots
 
 
 @dataclass(frozen=True)

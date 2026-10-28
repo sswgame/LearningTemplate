@@ -19,7 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
-from generate.GeneratedFile import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
+from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 kTag = "GenerateCookContract"

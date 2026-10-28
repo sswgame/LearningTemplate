@@ -1,7 +1,7 @@
 """
 Scripts/common — 공용 라이브러리 층(층 0). 위 층(lint · 명령)을 import 하지 않는다.
 
-패키지는 아무 이름도 다시 내보내지 않는다. 쓰는 쪽은 모듈을 이름으로 부른다(`from common.Process import runProcess`) — 어느 모듈에 기대는지가
+패키지는 아무 이름도 다시 내보내지 않는다. 쓰는 쪽은 모듈을 이름으로 부른다(`from common.RunProcess import runProcess`) — 어느 모듈에 기대는지가
 import 줄에 보이고, 프로세스마다 쓰지 않는 모듈까지 읽지 않는다. 모듈 목록과 한 줄 설명은 `py -3 -m Scripts --list common` 이다.
 
 이 파일이 하는 일은 둘이다: 콘솔 인코딩을 UTF-8 로 맞추고, 파이썬 최소 버전을 확인한다. 진입점은 모듈 수준에서 `common` 을 import 해
@@ -39,7 +39,7 @@ for _stream in (_sys.stdout, _sys.stderr):
 # 낮은 인터프리터에서는 스크립트가 엉뚱한 자리(없는 API 의 AttributeError, 구문 오류)에서 죽어 원인이 가려진다.
 # 진입점이 모두 common 을 import 하므로 여기서 한 번 검사하고 멈춘다.
 # ------------------------------------------------------------------------------
-from .Constants import kMinimumPythonVersion as _kMinimumPythonVersion
+from .ProjectConstants import kMinimumPythonVersion as _kMinimumPythonVersion
 
 if _sys.version_info[:2] < _kMinimumPythonVersion:
     _sys.exit(

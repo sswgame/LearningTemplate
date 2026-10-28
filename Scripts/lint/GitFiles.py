@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from common.Constants import kCppAllExtensions
+from common.ProjectConstants import kCppAllExtensions
 from common.Git import kStagedFileArgument, listGitFiles
 from common.Paths import getProjectRoot
 

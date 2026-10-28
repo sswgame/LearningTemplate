@@ -38,7 +38,7 @@ set(swMsvcTools "")
 
 foreach(candidateRoot IN ITEMS "${swRepoRoot}" "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 	get_filename_component(absRoot "${candidateRoot}" ABSOLUTE)
-	# 파일 이름과 키는 Constants.py 의 상수다(FindLlvmBin 이 LoadConfigConstants 로 읽어 두었다). 예전에는 여기 글자 그대로 적혀 있었다 —
+	# 파일 이름과 키는 ProjectConstants.py 의 상수다(FindLlvmBin 이 LoadConfigConstants 로 읽어 두었다). 예전에는 여기 글자 그대로 적혀 있었다 —
 	# 본 프로젝트 쪽(FindWindowsTools)이 같은 이유로 철자가 갈라진 적이 있다.
 	set(cfgCandidate "${absRoot}/${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG}")
 

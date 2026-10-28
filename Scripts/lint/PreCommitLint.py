@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.Constants import kShaderSourceExtensions  # noqa: E402
+from common.ProjectConstants import kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402

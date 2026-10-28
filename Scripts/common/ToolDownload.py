@@ -1,5 +1,5 @@
 """
-Scripts/common/Archive.py
+Scripts/common/ToolDownload.py
 
 네트워크 다운로드, SHA-256 해시 검증, Zip/Tar 안전 압축 해제(Zip Slip 방지) 및 캐시 유틸리티.
 """
@@ -10,8 +10,8 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from .Config import loadSearchPaths
-from .Constants import kDirToolsCache
+from .ToolchainConfig import loadSearchPaths
+from .ProjectConstants import kDirToolsCache
 from .Paths import getProjectRoot
 
 #: 해시를 계산할 때 한 번에 읽는 크기입니다. 수백 MB 압축 파일도 메모리에 통째로 올리지 않습니다.

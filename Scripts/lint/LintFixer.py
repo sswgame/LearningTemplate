@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from common.ProjectConstants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
 from lint.GitFiles import getModifiedCppFiles  # noqa: E402
-from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
+from common.FileCollect import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
@@ -54,7 +54,7 @@ class FixerFileKind:
 
 def selectFixerTargetFiles(args: argparse.Namespace, repositoryRoot: Path, tag: str, fileKind: FixerFileKind | None = None) -> list[Path]:
     """
-    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — `common.Search.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
+    무엇을 고칠지 고릅니다: 지정한 파일(`--files` — `common.FileCollect.resolveFileArguments`) > `--all` > Git 변경 파일 > 전체.
     `fileKind` 가 없으면 C++ 소스, 있으면 그 종류(셰이더).
 
     마지막 폴백("변경된 파일이 없으면 전체")이 이 규칙의 핵심이다. 깨끗한 트리에서 돌려도

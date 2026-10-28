@@ -9,9 +9,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from common.Constants import kCppSourceExtensions, kLintTargetBaseDirNames
+from common.ProjectConstants import kCppSourceExtensions, kLintTargetBaseDirNames
 from common.Paths import getProjectRoot
-from common.Search import collectRepositoryFiles
+from common.FileCollect import collectRepositoryFiles
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 

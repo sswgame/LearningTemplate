@@ -1,5 +1,5 @@
 """
-Scripts/setup/HostTools.py
+Scripts/setup/ToolchainDetect.py
 
 호스트 SDK/컴파일러 경로 탐색 (MSVC, Windows SDK, DXC, system includes).
 """
@@ -13,13 +13,13 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-from common.Archive import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
-from common.Config import loadSearchPaths, recordEnginePath
-from common.Constants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
+from common.ToolDownload import ensureCachedDownload, extractZipSafe, resolveToolsSubdir, toolsCacheDir
+from common.ToolchainConfig import loadSearchPaths, recordEnginePath
+from common.ProjectConstants import kKeyNinjaDownloadUrls, kKeyNinjaSearchRoots, kKeyNinjaToolsSubdir, kKeyVcpkgInstalledRel
 from common.Paths import normalizePath, platformKey, sharedLibraryNames
-from common.Process import runProcess
-from common.Search import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, selectLatestVersion
-from setup.ToolLocator import ToolSpec, findToolRoot
+from common.RunProcess import runProcess
+from common.FileCollect import findFirstExistingFileInBinDirs, findFirstExistingFileRecursive, selectLatestVersion
+from setup.ToolFind import ToolSpec, findToolRoot
 
 
 def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:
@@ -36,7 +36,7 @@ def findVcpkgInstalledDirsInternal(projectRoot: Path) -> list[Path]:
     search = loadSearchPaths()
     relativeInstalledPath = search.get(kKeyVcpkgInstalledRel)
     if not relativeInstalledPath:
-        raise KeyError(f"[HostTools] Missing required key '{kKeyVcpkgInstalledRel}' in search_paths config")
+        raise KeyError(f"[ToolchainDetect] Missing required key '{kKeyVcpkgInstalledRel}' in search_paths config")
     if (preferred := projectRoot / relativeInstalledPath).is_dir():
         result.append(preferred)
     if (buildDir := projectRoot / "build").is_dir():
@@ -122,7 +122,7 @@ def findMsvcPath() -> str:
     result = runProcess(command)
     if not result.bSucceeded:
         # "설치 안 됨" 과 "찾다가 실패" 를 가른다 — 돌려주는 값은 둘 다 빈 문자열이지만 configure 로그에 이유가 남는다.
-        print(f"[HostTools] MSVC 위치를 vswhere 로 찾지 못했습니다(종료 코드 {result.returnCode}): {result.stderr.strip()}", file=sys.stderr)
+        print(f"[ToolchainDetect] MSVC 위치를 vswhere 로 찾지 못했습니다(종료 코드 {result.returnCode}): {result.stderr.strip()}", file=sys.stderr)
         return ""
     vsPath = result.stdout.strip()
     if not vsPath:
@@ -131,7 +131,7 @@ def findMsvcPath() -> str:
     try:
         latestVersion = selectLatestVersion([entry.name for entry in msvcBase.iterdir() if entry.is_dir()]) if msvcBase.is_dir() else ""
     except OSError as error:
-        print(f"[HostTools] MSVC 버전 폴더를 읽지 못했습니다: {msvcBase}: {error}", file=sys.stderr)
+        print(f"[ToolchainDetect] MSVC 버전 폴더를 읽지 못했습니다: {msvcBase}: {error}", file=sys.stderr)
         return ""
     return normalizePath(msvcBase / latestVersion) if latestVersion else ""
 
@@ -159,7 +159,7 @@ def findWindowsSdkPath() -> tuple[str, str]:
         latestVersion = selectLatestVersion([entry.name for entry in includeDir.iterdir() if entry.name.startswith("10.")]) if kitsRoot and includeDir.is_dir() else ""
     except OSError as error:
         # 레지스트리 키가 없거나 폴더를 못 읽음 — "설치 안 됨" 과 구별되도록 이유를 남긴다.
-        print(f"[HostTools] Windows SDK 위치를 레지스트리에서 찾지 못했습니다: {error}", file=sys.stderr)
+        print(f"[ToolchainDetect] Windows SDK 위치를 레지스트리에서 찾지 못했습니다: {error}", file=sys.stderr)
         return "", ""
     return (normalizePath(kitsRoot), latestVersion) if latestVersion else ("", "")
 

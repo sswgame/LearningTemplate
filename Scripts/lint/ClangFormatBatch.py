@@ -13,7 +13,7 @@ from typing import Sequence
 from common.ClangFormat import resolveClangFormat
 from common.ExitCode import ExitCode
 from common.Paths import getProjectRoot
-from common.Process import runProcess
+from common.RunProcess import runProcess
 from lint.Parallel import runUntilNonZero
 
 

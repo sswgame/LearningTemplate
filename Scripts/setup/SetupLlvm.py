@@ -23,10 +23,10 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.Archive import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
+from common.ToolDownload import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
 from common.ClangFormat import ensureClangFormat
-from common.Config import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
-from common.Constants import (
+from common.ToolchainConfig import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
+from common.ProjectConstants import (
     kEnvSwLlvmAutoBootstrap,
     kKeyLibclangDllPath,
     kKeyLlvmAutoBootstrap,
@@ -36,8 +36,8 @@ from common.Constants import (
     kKeyLlvmToolsSubdir,
 )
 from common.Paths import getProjectRoot, normalizePath, platformKey, sharedLibraryNames
-from common.Search import findFirstExistingFile, findFirstExistingFileRecursive
-from setup.ToolLocator import ToolSpec, findToolRoot
+from common.FileCollect import findFirstExistingFile, findFirstExistingFileRecursive
+from setup.ToolFind import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라

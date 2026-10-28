@@ -18,9 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.Archive import resolveToolsSubdir
-from common.Config import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
-from common.Constants import (
+from common.ToolDownload import resolveToolsSubdir
+from common.ToolchainConfig import autoBootstrapEnabled, loadSearchPaths, recordEnginePath
+from common.ProjectConstants import (
     kEnvSwVcpkgAutoBootstrap,
     kKeyVcpkgAutoBootstrap,
     kKeyVcpkgGitCommit,
@@ -31,9 +31,9 @@ from common.Constants import (
 )
 from common.Git import ensureGitOnPath, runGit
 from common.Paths import platformKey, platformScriptCommand
-from common.Process import runProcess
-from common.Search import isVcpkgRoot
-from setup.ToolLocator import ToolSpec, findToolRoot
+from common.RunProcess import runProcess
+from common.FileCollect import isVcpkgRoot
+from setup.ToolFind import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 kVcpkgToolSpec = ToolSpec(

@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Config/LoadConfigConstants.cmake
-# @brief Scripts/common/Constants.py 의 상수를 CMake 변수(SW_DIR_* · SW_FILE_* · SW_KEY_* · SW_SCRIPT_*)로 읽어 들입니다.
+# @brief Scripts/common/ProjectConstants.py 의 상수를 CMake 변수(SW_DIR_* · SW_FILE_* · SW_KEY_* · SW_SCRIPT_*)로 읽어 들입니다.
 # ==============================================================================
 # 상수만 필요한 곳(툴체인 탐색 `sw_findLlvmBin` · vcpkg 연동 · vcpkg 포트 툴체인)은 이것을 include 한다. C++ 헤더까지 만드는
 # `GenerateConfigConstants.cmake` 를 include 하면 헤더 생성기가 따라 돈다 — 상수만 필요한 곳이 그것을 include 하면 configure 한 번에
@@ -12,7 +12,7 @@ include_guard(GLOBAL)
 
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
-# Constants.py 가 원본이다. 파이썬이 `set(SW_...)` 목록을 찍고 CMake 는 그것을 읽는다.
+# ProjectConstants.py 가 원본이다. 파이썬이 `set(SW_...)` 목록을 찍고 CMake 는 그것을 읽는다.
 # 최상위 configure 는 GenerateConfigConstants.cmake 가 생성기 다섯을 한 프로세스로 먼저 돌려 두었다(SW_CONFIGURE_FILES_GENERATED) —
 # 여기서는 상수만 필요한 곳(vcpkg 포트 툴체인처럼 따로 도는 CMake)일 때만 이 생성기를 혼자 부른다.
 set(SW_GENERATED_CMAKE_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ConfigVars.cmake")

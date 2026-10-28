@@ -20,7 +20,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from lint.LintFixer import FixerFileKind, addFileArguments, selectFixerTargetFiles
-from common.Constants import kShaderSourceExtensions
+from common.ProjectConstants import kShaderSourceExtensions
 from common.ExitCode import ExitCode
 from lint.ClangFormatBatch import runClangFormatBatch
 from common.Paths import getProjectRoot

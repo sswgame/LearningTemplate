@@ -22,7 +22,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from generate.GeneratedFile import writeGeneratedFile  # noqa: E402
+from generate.GeneratorOutput import writeGeneratedFile  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
 #: 포트를 짓는 데만 쓰는 vcpkg 도우미 포트의 이름 접두입니다 — 산출물에 들어가지 않는다.

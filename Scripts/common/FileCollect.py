@@ -1,5 +1,5 @@
 """
-Scripts/common/Search.py
+Scripts/common/FileCollect.py
 
 파일 및 디렉터리 탐색, 검색 루트 템플릿 확장, vcpkg 루트 검증 유틸리티.
 """
@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
-from .Constants import kCppAllExtensions, kGeneratedRelDirs, kLintTargetRelDirs, kNotOurDirNames
+from .ProjectConstants import kCppAllExtensions, kGeneratedRelDirs, kLintTargetRelDirs, kNotOurDirNames
 from .Paths import expandPathTemplate, platformKey
 
 _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}

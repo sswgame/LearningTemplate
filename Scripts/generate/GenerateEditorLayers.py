@@ -8,7 +8,7 @@ Scripts/generate/GenerateEditorLayers.py
 **왜 린트가 아니라 빌드인가.** `Source/Editor` 의 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 이 규칙은 예전에 린트 게이트가
 `#include` 글자를 읽어 막았다. 지금은 `Source/Editor/CMakeLists.txt` 가 티어마다 OBJECT 라이브러리(부분)로 짓고, 부분마다 자기 티어보다 위 층의
 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다 — 위 층 헤더를 include 하면 컴파일이 멈춘다(전이 include 도 같다). 표는 여기서 한 번만 읽고
-CMake 는 결과를 읽는다(`Constants.py` → `ConfigVars.cmake` 와 같은 방식).
+CMake 는 결과를 읽는다(`ProjectConstants.py` → `ConfigVars.cmake` 와 같은 방식).
 
 표가 폴더와 어긋나도 멈춘다(configure 가 서지 않는다) — 표에 없는 폴더는 티어를 정하고 넣고, 폴더가 사라진 줄은 지운다.
 
@@ -25,10 +25,10 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common.Constants import kDirSourceEditor  # noqa: E402
-from generate.GeneratedFile import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
+from common.ProjectConstants import kDirSourceEditor  # noqa: E402
+from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from generate.RuleData import RuleDataError, kKindInteger, kKindReason, readRuleFile  # noqa: E402
+from generate.TomlRules import RuleDataError, kKindInteger, kKindReason, readRuleFile  # noqa: E402
 
 kTag = "GenerateEditorLayers"
 kRuleName = "GenerateEditorLayers"

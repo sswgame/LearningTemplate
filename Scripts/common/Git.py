@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .Paths import getProjectRoot
-from .Process import ProcessResult, runProcess
+from .RunProcess import ProcessResult, runProcess
 
 
 def resolveGitExecutable() -> str | None:

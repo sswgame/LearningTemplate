@@ -21,11 +21,11 @@ import shutil
 import sys
 from pathlib import Path
 
-from .Archive import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
-from .Config import loadSearchPaths, loadToolchainConfig
-from .Constants import kKeyClangFormatVersion, kKeyLlvmPath, kKeyLlvmToolsSubdir
+from .ToolDownload import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
+from .ToolchainConfig import loadSearchPaths, loadToolchainConfig
+from .ProjectConstants import kKeyClangFormatVersion, kKeyLlvmPath, kKeyLlvmToolsSubdir
 from .Paths import normalizePath
-from .Process import runProcess
+from .RunProcess import runProcess
 
 _kClangFormatWin = "clang-format.exe"
 _kClangFormatPosix = "clang-format"
@@ -85,7 +85,7 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
 
     URL 에 해시가 들어 있어 손으로 적어 둘 수 없으므로 버전만 고정하고 URL 은 여기서 받아 온다.
     """
-    import urllib.request  # PyPI 를 물을 때만(Archive.downloadUrl 과 같은 이유)
+    import urllib.request  # PyPI 를 물을 때만(ToolDownload.downloadUrl 과 같은 이유)
     if not version:
         return ""
 

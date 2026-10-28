@@ -35,11 +35,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from dev.BuildTree import BuildTree, kMapConfigPreset, kMapServerPreset  # noqa: E402
-from common.Config import ConfigError, requireConfig  # noqa: E402
+from dev.BuildPreset import BuildTree, kMapConfigPreset, kMapServerPreset  # noqa: E402
+from common.ToolchainConfig import ConfigError, requireConfig  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.Constants import kDirRuntimeGamePreset  # noqa: E402
-from common.Process import runProcess  # noqa: E402
+from common.ProjectConstants import kDirRuntimeGamePreset  # noqa: E402
+from common.RunProcess import runProcess  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.

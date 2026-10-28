@@ -22,7 +22,7 @@ sw_executePythonScript("Scripts/generate/GenerateConfigureFiles.py"
 set(SW_CONFIGURE_FILES_GENERATED ON)
 
 # ------------------------------------------------------------------------------
-# 2) Constants.py 의 상수를 CMake 변수로(SW_DIR_* · SW_FILE_* …) · 쿠킹 표의 CMake 쪽
+# 2) ProjectConstants.py 의 상수를 CMake 변수로(SW_DIR_* · SW_FILE_* …) · 쿠킹 표의 CMake 쪽
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 include("${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.cmake")

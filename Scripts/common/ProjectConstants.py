@@ -1,5 +1,5 @@
 """
-Scripts/common/Constants.py
+Scripts/common/ProjectConstants.py
 
 프로젝트 전체에서 공유하는 고정 경로, 파일명, JSON 스키마 키 및 스크립트 진입점 상수 (SSOT).
 """

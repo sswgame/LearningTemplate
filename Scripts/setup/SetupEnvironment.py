@@ -23,8 +23,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.ClangFormat import ensureClangFormat
-from common.Config import autoBootstrapEnabled, loadSearchPaths, loadToolchainConfig, readOptionalConfig, requireConfig
-from common.Constants import (
+from common.ToolchainConfig import autoBootstrapEnabled, loadSearchPaths, loadToolchainConfig, readOptionalConfig, requireConfig
+from common.ProjectConstants import (
     kDirConfigEnv,
     kEnvSwVcpkgAutoBootstrap,
     kFileParserConfig,
@@ -49,9 +49,9 @@ from common.Constants import (
     kKeyWindowsSdkVersion,
 )
 from common.Paths import getProjectRoot, normalizePath
-from common.Search import getOrFindCached, isVcpkgRoot
+from common.FileCollect import getOrFindCached, isVcpkgRoot
 from common.ExitCode import ExitCode  # noqa: E402
-from setup.HostTools import (
+from setup.ToolchainDetect import (
     findDxcDlls,
     findMsvcPath,
     findWindowsSdkPath,
