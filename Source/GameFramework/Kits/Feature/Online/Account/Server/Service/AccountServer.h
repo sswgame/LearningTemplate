@@ -12,10 +12,10 @@
  *            다른 서버에 접속한 세션을 끊으면 버스 `account.revoke` 로 알리고, 받은 서버가 그 연결을 닫는다. 버스를 놓쳐도 세션 다시 읽기가 찾아낸다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/TimePoint.h"

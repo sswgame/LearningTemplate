@@ -15,10 +15,10 @@
  *     배포본에는 에디터가 없으므로 감시 스레드도 없습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"

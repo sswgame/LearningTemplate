@@ -4,8 +4,8 @@
  * @details 변수는 시나리오가 `<Variable>` 로 정하는 감시 값 대상(오브젝트 이름 · 패널 id …)입니다. 정의는 `EditorWatchSupport.cpp` 에 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 namespace sw

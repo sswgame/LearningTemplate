@@ -2,10 +2,10 @@
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

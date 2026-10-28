@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 

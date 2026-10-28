@@ -10,9 +10,9 @@
  *          읽기는 `scene.poses` 명령의 글(`<이름> x y z [rot …] [box …]`)이라 파서와 비교(`parsePoses` · `writePoses` · `computeDeltas`)는 서버 없이 테스트합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

@@ -4,9 +4,9 @@
  * @details ImGui 를 모르므로 EngineTest 가 직접 컴파일해 테스트합니다(`TestScheduleTimelineRows.cpp`). 시각은 그날의 분입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

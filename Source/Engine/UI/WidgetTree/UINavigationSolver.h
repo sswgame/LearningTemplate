@@ -3,8 +3,8 @@
  * @brief 포커스 탐색의 순수 계산입니다. 받을 수 있는지, 공간 점수, 방향과 탭 순서로 다음 위젯을 고르는 규칙을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/WidgetTree/WidgetNavigation.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

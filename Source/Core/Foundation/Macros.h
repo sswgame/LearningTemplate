@@ -3,8 +3,8 @@
  * @brief Core 공통 매크로(어서션, 디버그 브레이크, SW_API, 인라인 힌트 등)를 정의합니다. 타깃 매크로 검사는 TargetMacroCheck.h 에 있습니다.
  */
 #pragma once
-#include "Core/Common/TargetMacroCheck.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/TargetMacroCheck.h"
+#include "Core/Foundation/Types.h"
 
 #include <cstdio>      // SW_ASSERT 가 멈추기 전에 남기는 한 줄(Debug)
 #include <type_traits> // SW_REQUIRES 와 arrayCountHelper 의 std::enable_if_t
@@ -158,7 +158,7 @@ namespace sw::internal
 // ------------------------------------------------------------------------------
 // 8) 단언 가로채기. 테스트가 단언 경로를 지나가게 할 때만 쓴다.
 //    Debug 의 단언은 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 가로채기를 건 동안은 멈추지 않고
-//    개수만 센다. 유니티의 `LogAssert.Expect`, 언리얼 자동화의 기대 오류와 같은 역할이다. 정의는 `Core/Common/Macros.cpp` 에 있다.
+//    개수만 센다. 유니티의 `LogAssert.Expect`, 언리얼 자동화의 기대 오류와 같은 역할이다. 정의는 `Core/Foundation/Macros.cpp` 에 있다.
 // ------------------------------------------------------------------------------
 #if defined( SW_DEBUG )
 // 멈추는 단언(`SW_ASSERT`, 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다. 배포본에는 테스트가 단언을 끄는 함수가 없다.
@@ -175,7 +175,7 @@ namespace sw::internal
 } // namespace sw::internal
 
 // ------------------------------------------------------------------------------
-// 9) 단언 대화상자. 대화형 에디터 실행에서만 App 이 설치한다(언리얼의 ensure 대화상자). 정의는 `Core/Common/Macros.cpp` 에 있다.
+// 9) 단언 대화상자. 대화형 에디터 실행에서만 App 이 설치한다(언리얼의 ensure 대화상자). 정의는 `Core/Foundation/Macros.cpp` 에 있다.
 //    설치되지 않았으면(자동 실행, 테스트, 에디터 없는 실행) 단언은 기존처럼 멈춘다.
 // ------------------------------------------------------------------------------
 namespace sw::internal
@@ -210,7 +210,7 @@ namespace sw::internal
 //     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 등록하는 보고자(`setLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
 //     **Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤** 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
 //     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 싱크 없음) stderr 에 남는다.
-//     stderr 로 가는 경로는 `Core/Common/Macros.cpp` 한 곳이다.
+//     stderr 로 가는 경로는 `Core/Foundation/Macros.cpp` 한 곳이다.
 //
 //     **서식은 `printf` 문법이다(`snprintf`). 엔진 `formatstring` 의 `%#` 가 아니다.** 어긋남은 `SW_PRINTF_FORMAT` 이 컴파일러(`-Wformat`)에게 맡긴다.
 // ------------------------------------------------------------------------------

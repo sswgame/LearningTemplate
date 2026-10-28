@@ -5,9 +5,9 @@
  *          걸린 이펙트(이름 · 남은 시간 · 스택), 소유 태그와 개수, 부여된 어빌리티와 쿨다운. 컴포넌트의 공개 질의만 읽고 아무것도 바꾸지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

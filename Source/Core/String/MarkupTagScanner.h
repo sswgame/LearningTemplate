@@ -6,10 +6,10 @@
  *          태그 형태: `[` + (`/`) + 이름(ASCII 글자로 시작, 글자 · 숫자 · `_`) + (여는 태그만 `=값`, 값에는 `[` `]` 없음) + `]`. 형태가 아닌 `[` 는 글자입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

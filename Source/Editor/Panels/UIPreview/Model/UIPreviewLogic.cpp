@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"

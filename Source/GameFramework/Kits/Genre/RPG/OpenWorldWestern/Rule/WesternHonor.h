@@ -3,9 +3,9 @@
  * @brief 명예를 다룹니다. 빌려 온 기반 `ReputationState` 의 세력 하나("western.honor")로 값과 단계를 관리하고, 행동과 범죄마다 값을 올리거나 내리며, 단계에 따라 상점 할인과 대사 플래그를 줍니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"

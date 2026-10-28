@@ -9,12 +9,12 @@
  *          언리얼의 PSO 비동기 컴파일 스레드와 같은 모양입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

@@ -9,12 +9,12 @@
  *          한 파일은 정확히 한 종류에만 맞아야 한다(`AssetDataKindRegistry::collectMatches` 가 둘 이상이면 테스트가 진다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 

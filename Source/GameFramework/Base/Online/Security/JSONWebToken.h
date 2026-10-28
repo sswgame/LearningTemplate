@@ -6,10 +6,10 @@
  *          `verify` 가 서명과 시각 · 발급자 · 대상 클레임(`JWTClaimRule`)을 한 번에 확인한 뒤에야 본문을 넘긴다. 호출부마다 exp · iss · aud 검사를 빠뜨릴 틈을 없앤다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 

@@ -3,9 +3,9 @@
  * @brief 이미지 단언(`<ExpectImage>`) 문턱의 근거를 정의합니다. 문턱이 잰 값인지 아직 재지 않은 어림값인지 속성 형식으로 갈립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

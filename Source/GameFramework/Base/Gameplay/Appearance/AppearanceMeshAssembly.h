@@ -6,11 +6,11 @@
  *          피팅 델타와 체형 모프를 레스트에 베이크한다). 부품은 메시 객체를 따로 둔다 — 한 메시로 병합(`MeshMerger`, 그리기 줄이기)은 이 결과 위의 다음 단계다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

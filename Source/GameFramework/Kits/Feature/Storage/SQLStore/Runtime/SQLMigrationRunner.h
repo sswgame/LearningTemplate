@@ -13,9 +13,9 @@
  *          체크섬은 줄 끝을 LF 로 맞춘 원문으로 계산한다. 그래서 Windows 와 리눅스 체크아웃이 같은 DB 를 쓸 수 있다. Flyway 와 Rails 마이그레이션과 같은 방식이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

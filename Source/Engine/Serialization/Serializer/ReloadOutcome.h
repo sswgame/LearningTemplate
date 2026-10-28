@@ -4,7 +4,7 @@
  * @details 있을 수도 없을 수도 있는 파일을 처음 읽는 결과는 `ConfigReadResult`(Loaded · Missing · Invalid)다(docs/plans/DataDriven.md 7.3).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

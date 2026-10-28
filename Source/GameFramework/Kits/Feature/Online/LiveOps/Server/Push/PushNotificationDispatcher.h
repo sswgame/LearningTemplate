@@ -10,11 +10,11 @@
  *          PlayFab Push 의 등록과 FCM 관례(무효 토큰이면 등록을 지운다)와 같다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"

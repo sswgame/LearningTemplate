@@ -6,8 +6,8 @@
  *          서버 디버깅의 다음 단위(`docs/plans/ServerDebug.md` 의 S3 · S5 · S7)와 확장 모듈도 같은 줄을 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

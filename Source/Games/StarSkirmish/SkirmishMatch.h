@@ -7,9 +7,9 @@
  *          가운데서 서로 지우기만 하고 끝나지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

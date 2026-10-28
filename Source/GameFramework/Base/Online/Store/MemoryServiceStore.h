@@ -6,11 +6,11 @@
  *          - "서버 재시작" 테스트는 데이터를 남기고 프런트와 서비스를 새로 만든다. "서버 둘" 테스트는 프런트 둘이 데이터 하나를 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/map.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"

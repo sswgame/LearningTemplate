@@ -3,10 +3,10 @@
  * @brief Config/Editor/editortooldefaults.json 에서 읽는 에디터 도구 시드입니다(배포용 Resource 데이터가 아닙니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

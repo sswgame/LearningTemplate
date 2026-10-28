@@ -2,8 +2,8 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/NativeWindowEvent.h"

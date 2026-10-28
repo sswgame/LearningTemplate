@@ -4,7 +4,7 @@
  * @details 색인 1 부터 61 까지이며 배열 위치는 색인 - 1 이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

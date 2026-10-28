@@ -3,8 +3,8 @@
  * @brief 줄이 차면 다음 줄로 넘기는 흐름 패널입니다(유니티의 flex-wrap: wrap, Godot 의 FlowContainer, WPF 의 WrapPanel 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

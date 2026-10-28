@@ -7,9 +7,9 @@
  *       `ABI/` 쪽의 함수 포인터 테이블뿐입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

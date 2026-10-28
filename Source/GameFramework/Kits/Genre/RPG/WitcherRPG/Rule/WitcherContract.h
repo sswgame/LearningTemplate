@@ -3,12 +3,12 @@
  * @brief 계약을 다룹니다. 위쳐 감각으로 단서를 찾는 조사(조사 지점, 발견 순서, 단계의 단서를 모두 찾으면 다음 단계로 넘어가며 기반 `QuestLog` 에 진행을 알림)와 보상 흥정(분노 게이지가 있고 너무 올리면 결렬됨)을 관리합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

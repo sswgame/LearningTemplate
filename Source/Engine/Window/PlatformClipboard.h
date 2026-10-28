@@ -3,9 +3,9 @@
  * @brief 운영체제 글 클립보드를 읽고 씁니다(창 계층). 런타임 UI 의 클립보드 창구(`UIClipboardAPI`)에 호스트가 끼웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

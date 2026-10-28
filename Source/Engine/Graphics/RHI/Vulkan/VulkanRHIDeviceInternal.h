@@ -7,9 +7,9 @@
  * @note 백엔드 내부 전용입니다. RHI 경계 밖으로 나가면 안 됩니다.
  */
 #pragma once
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"

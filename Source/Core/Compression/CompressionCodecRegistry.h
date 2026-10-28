@@ -3,12 +3,12 @@
  * @brief 압축 코덱 레지스트리입니다. 등록 · 조회 · 기본 코덱을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

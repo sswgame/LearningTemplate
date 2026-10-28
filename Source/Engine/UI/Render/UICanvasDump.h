@@ -3,8 +3,8 @@
  * @brief 캔버스 그리기 목록을 텍스트로 씁니다. 결정성 골든(`UIDeterminismTest`)이 비교하는 형식입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

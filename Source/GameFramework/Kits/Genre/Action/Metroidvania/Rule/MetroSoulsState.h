@@ -6,12 +6,12 @@
  *          전리품은 기반 `LootCatalog` 를 시드가 있는 `GameRandom` 으로 굴린다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

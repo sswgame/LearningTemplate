@@ -3,10 +3,10 @@
  * @brief 씬을 비동기로 바꾸는 동안 맨 위 층(`Loading`)에 로딩 화면을 띄우고, 화면 페이드(`ScreenFade`)의 알파를 전체 화면 검은 패널로 그립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 

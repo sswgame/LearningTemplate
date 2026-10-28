@@ -4,8 +4,8 @@
  * @details 게임은 뷰모델 세터만 부르면 된다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

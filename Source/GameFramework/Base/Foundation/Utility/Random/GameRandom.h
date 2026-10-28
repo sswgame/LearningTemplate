@@ -4,8 +4,8 @@
  * @details 테스트, 리플레이, 절차 생성이 같은 결과를 되풀이하게 한다. 수열 · 씨앗 규칙(0 거절)은 `DeterministicRandom32` 하나다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 
 namespace sw

@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Texture/TextureCache.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
@@ -10,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

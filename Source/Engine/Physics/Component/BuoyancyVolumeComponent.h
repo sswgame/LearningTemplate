@@ -3,9 +3,9 @@
  * @brief 물 부피 — 오브젝트 자리의 상자 안에 든 움직이는 바디를 고정 스텝마다 띄우고 끌림 · 흐름을 겁니다(3D, `IPhysicsBuoyancyScene`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

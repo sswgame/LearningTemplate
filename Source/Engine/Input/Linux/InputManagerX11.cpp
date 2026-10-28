@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
     #include "Core/Concurrency/atomic.h"
     #include "Core/String/fixed_string.h"
 
@@ -25,7 +25,7 @@
     #include <X11/XKBlib.h>
     #include <linux/input-event-codes.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 
 namespace sw
 {

@@ -3,9 +3,6 @@
  * @brief 다국어(로컬라이제이션) 관리자를 정의합니다. 싱글톤이 아니라 엔진 서비스 `engine::getSubsystem<LocalizationManager>()` 로 얻습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
@@ -16,6 +13,9 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 

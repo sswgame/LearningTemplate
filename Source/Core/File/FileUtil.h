@@ -3,13 +3,13 @@
  * @brief 경로 · 파일 I/O · 다이얼로그 · 동적 라이브러리 유틸리티입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

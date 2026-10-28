@@ -9,10 +9,10 @@
  *          스폰은 틱 안에서 할 수 없으므로 보이기 시작한 유닛과 사라진 유닛의 슬롯을 쌓아 두었다가 `executeOrDeferPostTick` 한 번으로 틱이 끝난 뒤에 스폰하고 지운다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

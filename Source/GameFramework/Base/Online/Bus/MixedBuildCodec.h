@@ -9,8 +9,8 @@
  *          영속 레코드는 이 코덱을 쓰지 않습니다. 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지기 때문입니다(`ServiceRecordUtil::readDurable`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/hashed_string.h"
 

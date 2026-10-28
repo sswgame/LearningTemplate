@@ -9,9 +9,9 @@
  *          코드(드로우 시점의 레지스트리 조회 등)는 손댈 필요가 없습니다. 잠금은 없습니다 — 스레드 안전은 부르는 쪽 책임입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

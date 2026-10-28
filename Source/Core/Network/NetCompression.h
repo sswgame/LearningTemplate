@@ -6,10 +6,10 @@
  *          순서는 압축 → 암호화(암호문은 줄지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

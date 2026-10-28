@@ -7,12 +7,12 @@
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 
-    #include "Core/Common/PlatformOSHeaders.h"
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #include <X11/extensions/XTest.h>
 
-    #include "Core/Common/X11MacroUndef.h" // XTest 헤더 뒤에 X11 매크로를 다시 지운다
+    #include "Core/Foundation/X11MacroUndef.h" // XTest 헤더 뒤에 X11 매크로를 다시 지운다
 
 namespace sw
 {

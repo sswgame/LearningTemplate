@@ -7,9 +7,6 @@
  *          요청 ID는 클라이언트마다 1부터 증가한다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
@@ -18,6 +15,9 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"

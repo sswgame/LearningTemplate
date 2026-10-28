@@ -7,9 +7,9 @@
  *          PlayFab 의 타이틀 데이터와 Unity Remote Config 클라이언트처럼 "알림을 받으면 다시 받는" 방식이다. 사람마다 대상이 다르므로 알림에는 내용을 싣지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"

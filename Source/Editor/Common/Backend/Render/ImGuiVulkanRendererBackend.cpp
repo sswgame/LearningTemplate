@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
@@ -17,7 +17,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #include "Engine/Window/IWindow.h"
 
@@ -26,7 +26,7 @@
     #include <vulkan/vulkan_xlib.h>
     #include <xcb/xcb.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 #endif
 
 namespace sw::editor

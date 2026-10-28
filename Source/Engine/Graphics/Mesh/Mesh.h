@@ -3,11 +3,11 @@
  * @brief CPU 메시 데이터와 GPU 정점 버퍼 업로드를 정의합니다. 씬 지오메트리용이며 RHI 데모용이 아닙니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

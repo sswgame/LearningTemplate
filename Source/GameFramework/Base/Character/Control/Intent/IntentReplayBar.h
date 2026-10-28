@@ -7,10 +7,10 @@
  *          막대 문서의 이름(`Scrub` · `TimeText` · `PlayPauseLabel`)과 명령(`Replay.StepBack` · `Replay.TogglePause` · `Replay.Close`)이 계약이다 — 없으면 열기가 오류로 멈춘다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Screen/UIScreen.h"

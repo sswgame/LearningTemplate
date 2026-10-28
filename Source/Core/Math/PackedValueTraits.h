@@ -13,8 +13,8 @@
  *          - 압축 타입이 아닌 `T` 의 `PackedValueTraits<T>` 는 비어 있어 `kIsPackedValue<T>` 가 false 입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Half.h"
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"

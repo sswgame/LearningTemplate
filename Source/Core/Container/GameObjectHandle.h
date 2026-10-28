@@ -5,8 +5,8 @@
  * @note `ComponentHandle` 과 같은 곳(`Core/Container`)에 둡니다. objectID 정수 하나뿐인 값 타입이라 Core 밖을 모릅니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

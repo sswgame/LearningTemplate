@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"

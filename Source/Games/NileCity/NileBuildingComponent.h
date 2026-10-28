@@ -3,10 +3,10 @@
  * @brief 건물 하나의 모습 — 디렉터 도시의 같은 번호 건물을 따라 모델(집은 단계마다 다른 집) · 높이 · 자리를 맞춥니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

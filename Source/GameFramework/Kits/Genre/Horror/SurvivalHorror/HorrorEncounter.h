@@ -6,10 +6,10 @@
  *          주사위는 시드 난수라서 같은 시드이면 같은 싸움이 된다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/Base/Character/Combat/TurnOrder.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"

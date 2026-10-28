@@ -8,7 +8,7 @@
  *          `EngineServices.h` 는 엔진 · 앱 · 테스트 전용이라 여기서는 전방 선언만 씁니다 — 게임 모듈도 이 헤더를 지나 `GameObjectManager.h` 를 읽습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

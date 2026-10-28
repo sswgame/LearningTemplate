@@ -3,8 +3,8 @@
  * @brief Sederberg-Parry 자유 형태 변형(FFD) 모디파이어입니다. 패널 · 시각화가 제어점을 다루려고 헤더를 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

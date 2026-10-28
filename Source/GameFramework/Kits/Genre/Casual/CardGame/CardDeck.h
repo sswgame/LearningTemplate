@@ -6,9 +6,9 @@
  *          화투는 종류와 월, 우노는 색과 값이다. 띠 색이나 고도리 같은 속성은 게임이 `_id` 로 별도 테이블에서 찾는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"

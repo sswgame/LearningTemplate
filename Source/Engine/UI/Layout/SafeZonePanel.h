@@ -3,7 +3,7 @@
  * @brief 화면의 안전 영역 밖을 피해 자식을 놓는 패널입니다(UMG 의 SafeZone, 유니티의 Screen.safeArea 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

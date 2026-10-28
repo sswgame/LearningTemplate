@@ -3,10 +3,10 @@
  * @brief 에디터 인스턴스를 다시 만들 때(백엔드 교체 · 에디터 모듈 리로드) 새 인스턴스에 넘겨 줄 편집 세션 상태입니다 — 선택 · 미저장 표시.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

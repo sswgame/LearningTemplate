@@ -2,11 +2,11 @@
 
 #include "Engine/Asset/Pack/PackPatch.h"
 
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/SecureUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Hash/SecureUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

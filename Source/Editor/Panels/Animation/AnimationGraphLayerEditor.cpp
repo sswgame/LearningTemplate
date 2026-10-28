@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Animation/AnimationGraphLayerEditor.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"

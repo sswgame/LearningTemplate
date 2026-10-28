@@ -6,7 +6,7 @@
  *          한 게임이 키트 둘을 같이 써도 첫 바이트로 구분된다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw

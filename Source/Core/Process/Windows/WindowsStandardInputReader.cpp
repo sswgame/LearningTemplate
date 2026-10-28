@@ -3,7 +3,7 @@
 #include "Core/Process/StandardInputReader.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Container/StringUtil.h"
 
 namespace sw

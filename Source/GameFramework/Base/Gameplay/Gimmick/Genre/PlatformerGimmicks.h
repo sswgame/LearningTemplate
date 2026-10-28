@@ -4,8 +4,8 @@
  * @details 모두 같은 오브젝트의 `GimmickSensorComponent`(겹친 것)나 겹침 훅을 읽으므로 2D 와 3D 에서 모두 동작한다. 시간은 60 Hz 스텝 수로 세며 결정적이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
 

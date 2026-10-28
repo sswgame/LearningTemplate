@@ -3,8 +3,8 @@
  * @brief ContainerKind / FunctionNetRole 과 식별자 문자열 사이의 변환입니다(원본은 Predefined*.xxx).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"

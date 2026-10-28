@@ -15,12 +15,12 @@
  *          Nakama 의 메모리 매처, OpenMatch 의 디렉터와 할당기, PlayFab 의 Matchmaking 에서 Multiplayer Servers 로 이어지는 흐름에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

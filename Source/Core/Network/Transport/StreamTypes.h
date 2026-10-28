@@ -3,9 +3,9 @@
  * @brief 스트림(TCP) 전송의 공통 타입 — 연결 핸들 · 닫힘 까닭 · 보내기 결과 · 설정 · 통계입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw

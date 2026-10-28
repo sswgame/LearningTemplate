@@ -4,7 +4,7 @@
  * @details 두 카메라는 위치 · 회전 표현이 달라도(도 · 라디안, 위치 · 궤도 중심) 휠과 가운데 단추의 느낌은 같아야 하므로 숫자는 여기 한 곳에서만 정한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw::editor

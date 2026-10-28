@@ -3,9 +3,9 @@
  * @brief 모듈 켜고 끄기의 ImGui 없는 반쪽입니다 — 프로젝트 매니페스트의 `_listModuleOverride` 고쳐 쓰기와 바꿨을 때의 미리보기.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

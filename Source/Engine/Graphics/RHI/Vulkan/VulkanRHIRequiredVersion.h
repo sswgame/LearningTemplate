@@ -5,7 +5,7 @@
  *          (디바이스 선택과 테스트가 이 헤더를 씁니다). 셰이더 컴파일러는 버전 값만 읽으므로 RHITypes.h 만 봅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

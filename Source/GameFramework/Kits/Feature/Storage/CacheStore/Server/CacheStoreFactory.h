@@ -8,8 +8,8 @@
  *          - 그 밖의 이름이나 잘못된 엔드포인트는 분명한 오류를 남기고 기동을 멈춘다. 다른 드라이버로 대신하지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 

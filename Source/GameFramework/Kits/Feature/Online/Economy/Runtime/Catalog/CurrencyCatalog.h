@@ -8,10 +8,10 @@
  *          `ILedgerPolicy` 로 계정 상한을 답한다(`cap`, 0이면 원장 상한만 적용한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

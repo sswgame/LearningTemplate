@@ -3,12 +3,12 @@
  * @brief 도시 한 판을 진행합니다. 땅, 도로, 건물 배치, 노동 배분, 순회 일꾼(서비스, 상인, 수레, 세리), 집 진화, 이민, 달마다 소비와 세금과 임금, 해마다 범람을 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 

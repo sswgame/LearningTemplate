@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"

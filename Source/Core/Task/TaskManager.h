@@ -4,15 +4,15 @@
  * @details 방향성 비순환 그래프(DAG) 형태의 의존성을 가진 작업 실행을 지원합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskTypes.h"
 

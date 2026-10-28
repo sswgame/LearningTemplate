@@ -3,8 +3,8 @@
  * @brief 서비스 저장소의 키와 레코드 바이트 도우미입니다. 고정 16자 16 진수(키 순서가 수 순서와 같다)와 레코드 문자열 쓰기, 읽기를 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

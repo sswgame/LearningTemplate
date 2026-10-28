@@ -10,11 +10,11 @@
  *          언리얼 `IOnlinePresence::QueryPresence`(사용자 id 에서 상태, 완료 델리게이트)와 Nakama status registry 에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"

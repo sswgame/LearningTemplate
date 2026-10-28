@@ -3,9 +3,9 @@
  * @brief 출력 로그 행의 소스 위치 찾기, IDE 로 열기, 태그(카테고리) 필터링을 담당합니다. ImGui 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor

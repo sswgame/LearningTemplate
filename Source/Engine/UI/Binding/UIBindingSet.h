@@ -3,11 +3,11 @@
  * @brief 화면 하나의 바인딩 집합입니다. 문서의 바인딩 식을 해석해 위젯 필드와 소스(뷰모델 필드)를 연결하고, 바뀐 것만 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"

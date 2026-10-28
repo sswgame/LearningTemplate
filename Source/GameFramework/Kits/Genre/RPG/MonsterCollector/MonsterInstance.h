@@ -4,11 +4,11 @@
  *        진화(레벨, 아이템, 친밀도), 파티 6마리와 박스 보관을 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

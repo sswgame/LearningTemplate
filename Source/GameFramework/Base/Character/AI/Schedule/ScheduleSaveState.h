@@ -5,10 +5,10 @@
  *          같은 계획이 나옵니다. 그래서 저장 파일이 작고, 데이터를 고친 뒤 불러와도 새 일정으로 이어집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

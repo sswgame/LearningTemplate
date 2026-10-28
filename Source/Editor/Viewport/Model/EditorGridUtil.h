@@ -5,7 +5,7 @@
  *          카메라 위치를 판정에 넣으면 카메라가 움직일 때 굵은 선이 다른 월드 선으로 미끄러진다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw::editor

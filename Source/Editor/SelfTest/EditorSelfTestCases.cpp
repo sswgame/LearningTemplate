@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"

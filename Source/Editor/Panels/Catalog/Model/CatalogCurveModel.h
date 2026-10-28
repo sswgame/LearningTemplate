@@ -6,9 +6,9 @@
  *          곡선인지는 **이름이 아니라 모양**으로 판정한다(`_listKey` 자식이 있는 원소) - VFX 의 `_sizeOverLife` 도, 앞으로 곡선을 쓰는 다른 데이터 종류도 같은 길을 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 

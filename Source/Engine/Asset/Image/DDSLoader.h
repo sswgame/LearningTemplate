@@ -1,8 +1,8 @@
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

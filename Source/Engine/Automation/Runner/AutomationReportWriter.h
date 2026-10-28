@@ -3,10 +3,10 @@
  * @brief 자동화 시나리오의 JSON 보고 경로 · 지표 줄을 가지고, 끝날 때 보고 파일을 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Scenario/AutomationTimeline.h"
 

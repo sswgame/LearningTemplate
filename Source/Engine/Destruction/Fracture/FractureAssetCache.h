@@ -6,7 +6,7 @@
  *          쓰는 쪽은 `getReloadCount` 가 바뀌면 다시 받아 다시 만든다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 

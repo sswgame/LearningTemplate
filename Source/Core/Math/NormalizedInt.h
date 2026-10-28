@@ -15,8 +15,8 @@
  *            `SNorm16` 정점 속성 형식.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/PackedTypesFwd.h"
 #include "Core/Math/VectorMath.h"
 

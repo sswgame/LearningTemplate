@@ -5,9 +5,9 @@
  *          역변환은 1/N 로 나눠 forward → inverse 가 원래 값으로 돌아온다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

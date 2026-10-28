@@ -11,9 +11,9 @@
  *          가중치 바이트는 그대로 옮기고 정규화하지 않는다. 지형이 읽을 때 합으로 나눈다(`TerrainHeightfield::computeLayerWeightsAtUv`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,8 +3,8 @@
  * @brief 에디터의 Look & Feel 테마 설정과 실시간 스타일 적용을 담당하는 유틸리티입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorColor.h"

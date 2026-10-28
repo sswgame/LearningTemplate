@@ -6,9 +6,9 @@
  *          제공자는 `Provider/Fake/`(테스트와 개발)와 `Provider/Fcm/` 이다. 자격(서비스 계정 키)은 운영 비밀(환경 변수)에서만 읽는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"

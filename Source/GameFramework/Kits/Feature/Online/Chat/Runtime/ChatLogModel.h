@@ -8,10 +8,10 @@
  *          이 객체는 클라이언트와 함께(또는 먼저 요청이 끝난 뒤) 소멸해야 한다. 기록이나 결과가 바뀔 때마다 `getRevision` 이 올라가 화면이 다시 그릴지 판단한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatClient.h"

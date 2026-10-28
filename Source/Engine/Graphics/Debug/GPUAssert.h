@@ -13,9 +13,9 @@
  * @note 네 백엔드 모두 컴퓨트 UAV 구조 버퍼 슬롯 u4 로 바인딩된다(DX11 포함 — 컴퓨트 UAV 는 DX11 에서도 된다). 컴퓨트 능력(`RHICapabilities::_bCompute`)이 없는 백엔드는 이 기능을 쓰지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"

@@ -4,11 +4,11 @@
  * @details 둘 다 비가상이고 할당을 늘리지 않습니다. 오디오 상태를 바꾸는 순서는 `AudioEngine` 이 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

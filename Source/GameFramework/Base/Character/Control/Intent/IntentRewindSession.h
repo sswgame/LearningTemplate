@@ -12,9 +12,9 @@
  *            멈춘 그림을 둔다. 돌고 있는 동안(`isSeeking`) 호스트는 자기 틱을 돌리지 않는다 — 세계를 이 세션이 돌리기 때문이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/Control/Intent/IntentRewindBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"

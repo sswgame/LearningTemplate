@@ -3,10 +3,10 @@
  * @brief GPU 방출기의 입자 시뮬레이션(렌더 스레드, vfxsimulate.hlsl · vfxmeshinstance.hlsl)입니다. `VFXParticleRenderer` 가 소유합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 

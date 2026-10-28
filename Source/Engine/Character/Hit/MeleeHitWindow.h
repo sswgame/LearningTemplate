@@ -9,11 +9,11 @@
  *          역할에서 읽는 것은 `getProcessAuthority` 한 곳이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"

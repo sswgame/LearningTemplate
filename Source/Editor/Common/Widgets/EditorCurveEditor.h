@@ -3,8 +3,8 @@
  * @brief `FloatCurve` 의 작은 미리보기와 편집기를 그립니다. 편집기는 격자, 키 드래그, 접선 핸들, 메뉴, 화면 맞추기를 지원합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

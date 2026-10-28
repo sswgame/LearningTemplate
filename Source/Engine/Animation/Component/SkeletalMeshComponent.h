@@ -3,11 +3,11 @@
  * @brief 애니메이션 유닛입니다. 스켈레톤, 포즈 버퍼, 스킨 팔레트, 스킨드 메시를 가지며, 평가는 자기 onTick 이 아니라 `AnimationSystem` 이 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 

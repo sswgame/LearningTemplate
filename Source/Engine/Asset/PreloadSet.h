@@ -3,10 +3,10 @@
  * @brief 미리 올릴 에셋 세트입니다 — 컷 · 레벨 전환 앞에 파일을 백그라운드로 읽어 두고(스트리밍 큐), 고정을 켰으면 읽은 에셋을 캐시에 붙들어 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetPinSet.h"

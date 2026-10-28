@@ -3,9 +3,9 @@
  * @brief 청크로 나눈 유한한 복셀 월드입니다. 블록을 읽고 쓰며, 다시 메싱할 청크를 표시합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"

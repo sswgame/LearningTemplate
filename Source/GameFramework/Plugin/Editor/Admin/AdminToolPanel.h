@@ -4,8 +4,8 @@
  * @details 명령은 `AdminToolSession` 이 제공자로 보냅니다. 서버가 없으면 메모리 제공자가 같은 모양의 응답을 돌려주므로 창이 비지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

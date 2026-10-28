@@ -2,9 +2,9 @@
 
 #include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"

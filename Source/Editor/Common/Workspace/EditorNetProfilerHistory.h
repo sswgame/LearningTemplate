@@ -7,8 +7,8 @@
  *          `netplay.profile` 동안만 한다. 언리얼의 Network Insights, 유니티의 Netcode Runtime Stats Monitor 에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

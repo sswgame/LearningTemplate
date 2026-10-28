@@ -3,8 +3,8 @@
  * @brief 롤러코스터 열차 물리(중력, 구름 저항, 공기 저항, 체인, 부스터, 브레이크)와 승차 평가(흥분, 강도, 멀미)를 구현합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
 

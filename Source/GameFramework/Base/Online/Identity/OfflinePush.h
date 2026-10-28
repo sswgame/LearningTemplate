@@ -7,8 +7,8 @@
  *          - 서비스 스레드 하나에서만 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"

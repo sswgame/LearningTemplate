@@ -37,7 +37,7 @@
 
 1. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위) · `Editor/Common/GUI`(32) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `GameFramework/Base/Gameplay/Appearance`(21).
 2. **남은 모호한 폴더**: `Core/Common`(include 2,291 곳 — 가장 낮은 층이라 내용별로 나눌지 정한다) · `Editor/Common` · `GameFramework/Base`(키트 C 단계와 함께) · `GameFramework/Plugin/Editor/Base` · `Engine/Graphics/RHI/Support`(스테이징 · 전송 · 진단 묶음으로 나눌 후보).
-3. **모호한 파일 이름**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `GameInstanceBase` · `ReflectionCore`. `FractureComponentBase` 는 추상 기반이라 둔다.
+3. **모호한 파일 이름**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `GameInstance` · `ReflectionCore`. `FractureComponentBase` 는 추상 기반이라 둔다.
 4. **둔 것**: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일 — 언리얼도 접두어를 둔다), App 폴더(9 단위, 실행 파일 호스트 부품만 — 언리얼 Launch), `Resources/App.rc`(Windows 리소스 — 바깥 API 용어).
 
 ## 4. 처리 규칙 (3 절에 적용)

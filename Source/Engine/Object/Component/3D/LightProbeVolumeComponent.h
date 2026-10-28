@@ -3,9 +3,9 @@
  * @brief 라이트 프로브 볼륨 하나입니다. 축 정렬 상자 안에 균일 격자로 프로브를 두고, 베이크 결과(`.probes`)를 읽어 간접 조명으로 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

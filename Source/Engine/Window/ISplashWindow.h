@@ -3,9 +3,9 @@
  * @brief 플랫폼 독립적인 스플래시 화면 인터페이스입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"

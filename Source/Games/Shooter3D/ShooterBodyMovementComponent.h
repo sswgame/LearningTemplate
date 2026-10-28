@@ -3,9 +3,9 @@
  * @brief 슈터 아레나의 몸 이동 — 폰의 의도를 읽어 걷기 · 달리기 · 점프 · 중력으로 움직이고 막는 상자에 미끄러집니다. 플레이어와 스켈레톤이 같이 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

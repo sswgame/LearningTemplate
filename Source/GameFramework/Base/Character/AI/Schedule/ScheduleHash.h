@@ -6,8 +6,8 @@
  *          바이트를 섞는 규칙과 상수는 `HashUtil` 에 있습니다. 저장과 네트워크로 나가는 값이라 섞는 순서를 바꾸지 않습니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/BugIt/BugItPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"

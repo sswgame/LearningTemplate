@@ -3,9 +3,9 @@
  * @brief 화면 마커(월드를 따라가는 HUD 위젯)의 화면 핸들과 그리기 앵커 표입니다(`UISystem` 의 값 멤버).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"

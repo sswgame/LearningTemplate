@@ -4,10 +4,10 @@
  * @details 언리얼의 `AGameModeBase` 와 `AGameStateBase` 에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

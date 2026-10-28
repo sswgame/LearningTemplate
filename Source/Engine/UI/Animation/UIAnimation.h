@@ -3,10 +3,10 @@
  * @brief UI 애니메이션 에셋입니다. 트랙(위젯 이름, 프로퍼티 경로, 키)과 이벤트(시각, 명령)로 이루어지며 UI 문서의 `<_listAnimation>` 에 적습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"

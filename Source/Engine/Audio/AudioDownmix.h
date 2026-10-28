@@ -8,8 +8,8 @@
  *          Vorbis 는 명세(Vorbis I 4.3.9)가 채널 수마다 정한 순서를 쓴다(`getVorbisSpeakers`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

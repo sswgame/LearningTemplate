@@ -3,9 +3,9 @@
  * @brief 파일 · 네트워크 바이트를 리틀 엔디언 정수로 읽고 쓰는 도우미입니다 — 호스트 바이트 순서와 무관합니다.
  */
 #pragma once
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 
 namespace sw
 {

@@ -3,8 +3,8 @@
  * @brief 32 레이어 충돌 필터 행렬입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 
 namespace sw

@@ -3,10 +3,10 @@
  * @brief 타일맵(`TileMapXMLData` 의 타일 레이어 + `.tileset.xml`)을 그리고 충돌 · 그림자 외곽선 · 이동 비용을 만드는 컴포넌트입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

@@ -7,8 +7,8 @@
  *          화면은 요청을 직접 보내지 않고 모델로 보낸다(틱마다 `ChatLogModel::update` 로 받은 메시지를 반영한다). 모델이 화면보다 오래 살아야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Screen/UIScreen.h"

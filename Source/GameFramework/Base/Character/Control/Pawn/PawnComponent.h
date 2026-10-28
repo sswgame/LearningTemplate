@@ -4,12 +4,12 @@
  * @details 조종자가 채운 이번 틱의 의도를 보관하고, 버튼과 아날로그의 이름(스키마), 플레이어가 빙의했을 때의 입력 레이어를 정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -2,12 +2,12 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"

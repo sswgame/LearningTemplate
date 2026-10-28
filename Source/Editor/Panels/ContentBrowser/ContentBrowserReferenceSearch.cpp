@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Task/TaskManager.h"
 

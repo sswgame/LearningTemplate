@@ -16,11 +16,11 @@
  * 읽기 → 저장 · Undo 를 한 번 지날 때마다 조용히 사라집니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"

@@ -9,9 +9,9 @@
  *          건너는 동안 바깥이 알린 위치(`syncAgentPosition`)는 무시한다 — 링크 위 위치는 군중이 정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/INavMesh.h"

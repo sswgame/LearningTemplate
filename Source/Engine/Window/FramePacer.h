@@ -9,8 +9,8 @@
  *          에디터의 입력 때만 다시 그리기)와 같은 방향이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

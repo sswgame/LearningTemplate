@@ -3,7 +3,7 @@
  * @brief 시나리오 결과(`AutomationOutcome`)를 App 프로세스 종료 코드로 번역합니다. 종료 코드 표의 유일한 정의 자리입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/EngineFrameObserver.h"

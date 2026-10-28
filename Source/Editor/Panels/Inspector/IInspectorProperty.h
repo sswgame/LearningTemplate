@@ -3,7 +3,7 @@
  * @brief 리플렉션 프로퍼티 타입별 인스펙터 편집 UI
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"

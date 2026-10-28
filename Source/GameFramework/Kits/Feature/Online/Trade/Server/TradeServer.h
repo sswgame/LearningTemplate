@@ -7,10 +7,10 @@
  *          - 원격 설정 `feature.trade_enabled`(기본값은 켬)가 꺼져 있으면 모든 요청이 `kFeatureDisabled` 로 끝난다. 계정이 떠나면 그 계정의 열린 거래를 닫는다(PartyLeft).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 

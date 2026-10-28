@@ -2,8 +2,8 @@
 
 #include "Engine/Destruction/Fracture/MeshFracture.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

@@ -3,11 +3,11 @@
  * @brief 삼각형 표면 여럿을 한 BVH(`BVHTree3D`)에 담아, 광선과 가장 가까운 점을 질의하는 구조입니다. 피팅이 겹마다 한 번 만들고 연산들이 나눠 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Spatial/BVHTree3D.h"
 

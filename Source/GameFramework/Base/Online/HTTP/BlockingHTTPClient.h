@@ -11,9 +11,9 @@
  *          언리얼의 `FHTTPModule` 위에 막는 호출을 감싸는 것과 같은 구조입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 

@@ -3,10 +3,10 @@
  * @brief 반사 프로브의 GPU 베이크입니다. 프로브 위치에서 씬을 면 여섯으로 그려(HDR) 접고 거칠기 단계마다 거른 `.reflprobe` 데이터를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"

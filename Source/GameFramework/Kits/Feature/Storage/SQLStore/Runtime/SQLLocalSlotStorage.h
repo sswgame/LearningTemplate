@@ -5,8 +5,8 @@
  *          기반 계층의 `LocalStoreFactory` 에 "sqlite" 이름으로 등록한다. 등록은 모듈 수명을 따른다(`.cpp` 의 정적 `LocalStoreBackendRegistration`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/Base/Online/Local/LocalSlotStorage.h"

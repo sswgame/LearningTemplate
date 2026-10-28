@@ -3,7 +3,7 @@
  * @brief 마우스 드래그나 터치 스크린 기반 가상 조이스틱의 2D 축 계산 유틸리티입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 

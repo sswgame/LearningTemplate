@@ -12,9 +12,9 @@
  *          겹치면 안 된다. 교체는 씬 틱 밖(컴포넌트 틱이 끝난 뒤)에서만 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"

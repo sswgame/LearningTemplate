@@ -9,9 +9,9 @@
  *          클러스터 안의 라이트 순서는 GPU 생산자에서 원자 연산이 정하므로 다를 수 있습니다(집합은 같습니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

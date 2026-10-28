@@ -5,9 +5,9 @@
  *          상자를 먹은 차의 순위로 테이블을 골라 한 번 굴린다. 난수는 호출하는 쪽의 `GameRandom` 이므로 시드가 같으면 같은 아이템이 나온다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

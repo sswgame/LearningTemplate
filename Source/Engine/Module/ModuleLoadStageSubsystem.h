@@ -5,7 +5,7 @@
  *          (`TypeRegistry::markAllModuleTypesRegistered`), 그때부터 씬을 읽을 수 있다 — 헤드리스 쿠킹이 이것에 의존한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 

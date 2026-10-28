@@ -3,8 +3,8 @@
  * @brief 콘텐츠 브라우저의 파일 작업입니다. 새로 만들기, 복제, 이름 바꾸기, 옮기기, 삭제와 그 사이에 기다리는 상태를 가집니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

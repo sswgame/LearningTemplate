@@ -29,11 +29,11 @@
  *          싣지 못하고 줄에서 나이 상한을 넘기면 Lost 다. 잃은 것으로 본 뒤 늦게 온 확인은 판정을 바꾸지 않는다(받는 쪽은 틱 번호로 늦은 메시지를 스스로 거른다).
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/SequenceBuffer.h"
 #include "Core/Network/NetTypes.h"
 

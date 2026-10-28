@@ -9,9 +9,9 @@
  *          정렬 목표는 `PairedAnimationDef::computeAlignTarget`(세션과 같은 식)이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

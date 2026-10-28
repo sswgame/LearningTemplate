@@ -5,10 +5,10 @@
  *          조건은 절(clause)마다 따로 판정해 어느 절이 막았는지 남깁니다. "왜 여기 있나" 추적이 그것을 보여 줍니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"

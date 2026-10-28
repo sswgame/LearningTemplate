@@ -5,9 +5,9 @@
  *          보정 조각 작성은 이 창의 범위 밖이다(설계 문서 "결정과 위험").
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

@@ -8,8 +8,8 @@
  *          - 티켓이 맞으면 받아들이기 정책(`IConnectAdmission`)에 묻는다. 매칭으로 배정되는 서버는 배정받은 사람만 받는다(`MatchServerAgent`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"

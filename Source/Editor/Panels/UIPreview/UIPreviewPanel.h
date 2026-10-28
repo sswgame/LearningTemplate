@@ -4,9 +4,9 @@
  *        고른 위젯의 프로퍼티 편집과 저장 · 입력 흉내(마우스, 탐색 방향) · 애니메이션 미리 보기.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

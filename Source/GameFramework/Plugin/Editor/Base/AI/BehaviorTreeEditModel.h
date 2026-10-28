@@ -7,9 +7,9 @@
  *          깊이 우선(앞 자식부터) 순서가 런타임 `BehaviorTree` 의 노드 번호와 같다(`collectPreorder`) - 플레이 중 활성 노드 표시가 이 대응을 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/AI/BehaviorTree.h"
 

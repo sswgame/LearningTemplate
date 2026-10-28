@@ -3,9 +3,9 @@
  * @brief 배치 결과를 사각형 목록 텍스트로 씁니다. 레이아웃 테스트와 결정성 골든이 비교하는 형식입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

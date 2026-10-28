@@ -4,9 +4,9 @@
  * @details 슬레이 더 스파이어 같은 지도이다. 노드 종류는 데이터(이름, 가중치, 나올 수 있는 층, 연속 금지 여부)이므로 장르마다 바꿀 수 있다. 메탈슬러그 택틱스의 작전 지도도 같은 구조이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

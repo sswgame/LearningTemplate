@@ -2,12 +2,12 @@
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 

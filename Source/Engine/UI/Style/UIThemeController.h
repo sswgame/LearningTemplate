@@ -3,8 +3,8 @@
  * @brief 테마 목록, 지금 테마, 사용자 설정(gv_uiTheme) 추적을 맡고 화면의 스타일 세트를 테마 시트, 문서 시트 순서로 다시 짓습니다(`UISystem` 의 값 멤버).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Style/UITheme.h"

@@ -3,9 +3,9 @@
  * @brief 이름마다 수치를 두는 집합입니다. 장비 능력치, 스킬 보너스, 보상, 비용처럼 "종류를 코드가 정하지 않는" 숫자 목록에 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

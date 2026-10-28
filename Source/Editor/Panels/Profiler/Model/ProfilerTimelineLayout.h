@@ -3,10 +3,10 @@
  * @brief 프로파일러 패널 Timeline 탭의 배치 계산입니다 — 사건을 화면 x 범위 · 스레드 줄 · 겹으로 바꿉니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

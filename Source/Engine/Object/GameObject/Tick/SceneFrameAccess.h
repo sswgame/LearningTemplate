@@ -6,8 +6,8 @@
  *          "서로 겹치는 접근이 없는 것끼리만 같이 돈다" 의 입력입니다(`FrameSystemLanePlan` 이 파도로 묶고 `runFrameStepFrameSystems` 가 `_bLaneSafe` 인 것을 워커로 보낸다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include <initializer_list>
 

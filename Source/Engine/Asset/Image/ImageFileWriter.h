@@ -3,9 +3,9 @@
  * @brief RGBA8 그림을 파일로 씁니다 — DDS(엔진이 텍스처로 다시 읽는다)와 PNG(사람이 본다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 

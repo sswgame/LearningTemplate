@@ -1,10 +1,10 @@
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

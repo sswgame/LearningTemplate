@@ -12,9 +12,9 @@
  *          - 붙고 떼기: 하는 쪽의 `onBeginPlay` · `onEndPlay` 가 공간별 사용자 수를 센다. 마지막 사용자가 떠나면 매니저에서 뗀다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"

@@ -3,8 +3,8 @@
  * @brief 서부극 말을 탈것 이동에 연결합니다. 질주는 스태미나(`WesternHorse::gallop`)가 버틸 때만 하고, 유대 능력이 없으면 질주할 수 없으며, 타는 동안 유대가 쌓이고, 겁이 나서 탄 사람을 떨어뜨리면 강제로 하차합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

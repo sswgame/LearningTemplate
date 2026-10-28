@@ -3,9 +3,9 @@
  * @brief 맵 검사 패널의 줄을 고르고 세는 판단입니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
 

@@ -5,9 +5,9 @@
  *          받은 입력은 틱 순서로 꺼내 주고, "빈틈없이 받은 다음 틱" 을 스냅샷에 실어 돌려준다. 클라이언트는 그 틱부터 입력을 다시 보낸다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"

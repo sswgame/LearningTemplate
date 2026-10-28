@@ -3,8 +3,8 @@
  * @brief 틱 번호의 함수로 움직이는 바닥(엘리베이터 · 왕복 발판)입니다. 서버와 클라이언트가 같은 틱에 같은 자리를 냅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -3,9 +3,9 @@
  * @brief 런타임 UI 의 노드 하나를 정의합니다. 이름, 보임, 사용 여부, 불투명도, 렌더 변환, 무효화, 이벤트 가상 함수를 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

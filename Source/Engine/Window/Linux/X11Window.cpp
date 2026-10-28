@@ -2,20 +2,20 @@
 
 #include "Engine/Window/Linux/X11Window.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #include <X11/XKBlib.h>
     #include <X11/cursorfont.h>
     #include <poll.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 #endif
 
 #include <cstring>

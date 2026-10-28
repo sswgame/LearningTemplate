@@ -5,10 +5,10 @@
  *          아래 층(`Base/SerializerUtil`)이 위 층 직렬화기를 부르지 않게 하려고 옮겼습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 

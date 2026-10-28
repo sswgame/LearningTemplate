@@ -9,7 +9,7 @@
  *          한다). 아무도 쓰지 않으면 false 이고 다음 `acquire` 가 새 내용을 읽는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 

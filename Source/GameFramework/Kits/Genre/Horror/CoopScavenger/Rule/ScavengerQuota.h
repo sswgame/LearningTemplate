@@ -3,9 +3,9 @@
  * @brief 할당량 주기를 구현합니다. 마감까지 남은 날, 이번 할당량, 채운 양을 관리하고 마감을 판정합니다(채우면 다음 할당량과 보너스, 못 채우면 게임 오버).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"

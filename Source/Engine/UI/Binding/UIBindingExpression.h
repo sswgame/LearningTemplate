@@ -3,9 +3,9 @@
  * @brief 문서 속성 값의 바인딩 식(`{bind:_health, mode=TwoWay}`)을 해석한 결과입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

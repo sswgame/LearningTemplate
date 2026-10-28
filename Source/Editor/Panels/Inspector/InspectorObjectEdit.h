@@ -3,9 +3,9 @@
  * @brief 오브젝트 하나를 바꾸는 인스펙터 편집의 공용 진입점입니다. 인스펙터 패널과 프로퍼티 그리드가 같은 규칙을 쓰도록 한 곳에 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"

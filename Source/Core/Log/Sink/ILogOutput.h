@@ -9,9 +9,9 @@
  * 장치마다 자기 락을 가집니다 — 뮤텍스 **하나**가 콘솔과 파일 쓰기를 함께 잠그면 파일 I/O 가 느릴 때 콘솔까지 멈춥니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,9 +3,9 @@
  * @brief 인스펙터가 리플렉션 프로퍼티를 무엇을 어떤 순서로 그릴지 정합니다. ImGui 에 의존하지 않으므로 테스트를 붙일 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/TextAddress.h"

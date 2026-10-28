@@ -3,10 +3,10 @@
  * @brief std::basic_string 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

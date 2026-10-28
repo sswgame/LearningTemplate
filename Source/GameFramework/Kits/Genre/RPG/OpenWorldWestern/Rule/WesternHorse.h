@@ -3,11 +3,11 @@
  * @brief 말 한 마리를 다룹니다. 유대 단계(타기, 손질, 먹이, 달래기 경험치), 단계별 능력 해금, 체력, 스태미나 게이지(기반 `ResourceGauge`)와 코어, 질주, 겁먹음을 관리합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"

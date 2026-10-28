@@ -2,7 +2,7 @@
 
 #include "Programs/ReflectionParser/ParserContext.h"
 
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 
 #include "Programs/ReflectionParser/ParserConfig.h"

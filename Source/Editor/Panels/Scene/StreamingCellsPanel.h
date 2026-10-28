@@ -8,7 +8,7 @@
  *          격자 선은 `gv_worldCellDebugDraw` 가 씬 뷰에 그린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

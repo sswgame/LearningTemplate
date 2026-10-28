@@ -6,13 +6,13 @@
  *          다시 여는 동안의 작업은 닫힌 연결로 실행되어 `ConnectionLost` 를 받으며, 멈춰서 기다리지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"

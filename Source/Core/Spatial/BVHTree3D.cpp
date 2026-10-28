@@ -2,8 +2,8 @@
 
 #include "Core/Spatial/BVHTree3D.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/Math.h"
 

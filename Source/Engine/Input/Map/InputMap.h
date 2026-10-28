@@ -7,13 +7,13 @@
  *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, XML 직렬화를 제공한다. 선입력 버퍼링과 격투 커맨드 판정은 `InputActionBuffer`(`getActionBuffer`)가 맡는다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

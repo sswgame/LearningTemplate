@@ -7,9 +7,9 @@
  *          이것을 상속하는 쪽(`GameRandom` · `DestructionRandom`)에 둡니다. 비밀 · 겹치면 안 되는 값은 `SecureRandom` 입니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/XorShift32.h"
 
 namespace sw

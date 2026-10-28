@@ -3,9 +3,9 @@
  * @brief 장비 슬롯입니다. 슬롯 이름과 받는 종류(반지 슬롯 두 개가 같은 "Ring" 을 받음), 장착 조건, 끼기와 벗기, 인벤토리와 주고받기, 능력치 합을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -7,9 +7,9 @@
  *          그래서 계획을 다시 세워도 슬롯이 바뀌지 않고, 저장에서 복원한 예약을 그대로 다시 고릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/AI/Schedule/SchedulePathing.h"

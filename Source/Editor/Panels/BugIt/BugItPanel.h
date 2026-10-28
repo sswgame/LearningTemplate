@@ -4,9 +4,9 @@
  * @details 모으기는 커맨드 `help.reportBug` 와 같은 `BugItReport::makeInputs` → `BugItReport::capture` 이고, 이 창은 메모 칸과 지난 폴더 목록만 더합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

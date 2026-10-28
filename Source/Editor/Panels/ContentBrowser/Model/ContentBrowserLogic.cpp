@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw::editor
 {

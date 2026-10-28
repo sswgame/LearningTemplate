@@ -19,11 +19,11 @@
  * (`ProfilerBackend` — Tracy 타임라인)에 함께 기록합니다. 외부 출력은 Shipping 에서 컴파일되지 않습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"

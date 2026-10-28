@@ -3,7 +3,7 @@
  * @brief App 이 맡는 헤드리스 작업 표입니다. 엔진의 `Headless` 단계가 하지 못하는 일(에디터 모듈 작업, 크래시 보고)만 여기에 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

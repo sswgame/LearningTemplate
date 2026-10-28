@@ -3,9 +3,9 @@
  * @brief 가상 입력 원천의 계약입니다. 프레임 번호마다 장치 이벤트(`RawInputEvent`)를 내며, 시나리오, 입력 리플레이, 테스트가 구현합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/RawInputEvent.h"
 

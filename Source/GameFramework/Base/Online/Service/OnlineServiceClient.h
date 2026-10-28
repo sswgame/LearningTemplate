@@ -18,12 +18,12 @@
  *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame`, `handleClosed`)을 부른 스레드에서 불린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"

@@ -5,11 +5,11 @@
  *          같은 속성 보너스(포켓몬 STAB: 기술 속성이 쓰는 쪽의 타입과 같으면 1.5 배)는 쓰는 쪽의 속성이 필요하므로 테이블이 아니라 키트가 곱합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"

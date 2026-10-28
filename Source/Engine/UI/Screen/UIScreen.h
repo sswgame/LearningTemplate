@@ -3,14 +3,14 @@
  * @brief 화면 하나를 정의합니다. 위젯 트리 하나와 그 성질(레이어, 모달, 포커스, 커서, 게임 정지)을 가지며, `UISystem` 이 레이어마다 스택으로 쌓습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

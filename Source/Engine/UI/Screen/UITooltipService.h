@@ -3,8 +3,8 @@
  * @brief 런타임 UI 의 툴팁과 커서 모양입니다. 호버 경로에서 가장 가까운 위젯의 설명 글(`Widget::getTooltip`)을 머문 뒤 띄우고, 커서 모양(`Widget::getCursorShape`)을 OS 커서로 냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

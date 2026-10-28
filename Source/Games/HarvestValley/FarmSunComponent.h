@@ -3,8 +3,8 @@
  * @brief 농장의 해 — 디렉터 달력의 시각과 비로 같은 오브젝트의 방향광 높이 · 방향 · 세기를 맞춥니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

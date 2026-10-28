@@ -4,10 +4,10 @@
  * @details 할로우 나이트의 부적, 블라스퍼머스의 묵주 구슬, 더 라스트 페이스의 문양이 같은 규칙이다. 능력치는 기반 `StatBlock` 이라 이름은 게임이 정한다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

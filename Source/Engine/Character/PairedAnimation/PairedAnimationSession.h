@@ -12,10 +12,10 @@
  *          - **복제**: 상태는 `captureSnapshot` 으로 복사하고 `restore` 로 이어 받는다(늦게 들어온 클라이언트, 롤백).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

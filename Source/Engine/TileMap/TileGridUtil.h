@@ -3,9 +3,9 @@
  * @brief 타일 격자에서 충돌 사각형(병합), 외곽선(그림자, 다각형 충돌), 이동 비용 격자를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

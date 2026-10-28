@@ -5,8 +5,8 @@
  *          (폴더가 첨부하기 쉽고 의존이 늘지 않습니다). 게임 창(`~` 콘솔)과 에디터(Output Log 입력 줄, Report Bug 커맨드)가 같은 명령을 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"

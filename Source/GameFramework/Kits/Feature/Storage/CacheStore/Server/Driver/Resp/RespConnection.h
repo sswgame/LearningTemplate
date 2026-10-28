@@ -7,9 +7,9 @@
  *          - 연결이 열리기 전에 보낸 명령은 모아 두었다가 열리면 AUTH 다음에 보낸다. 연결이 닫히면 기다리던 태그마다 정확히 한 번 실패 답을 낸다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/StreamTypes.h"

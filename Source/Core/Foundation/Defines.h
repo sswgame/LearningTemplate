@@ -4,7 +4,7 @@
  * @note 렌더 · 리소스 폴더 상수는 Engine/Foundation/EngineDefines.h 에 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -5,9 +5,9 @@
  *          영역 번호는 설정 테이블(`NavMeshSettings::_listArea`)의 순서다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

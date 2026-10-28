@@ -8,9 +8,9 @@
  *          `RHITransferStatus` 와도 섞이지 않는다). 기다리는 동안은 몇 번 `yield` 한 뒤 짧게 잔다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"

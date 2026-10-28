@@ -4,10 +4,10 @@
  * @details 누르고 있기는 기반인 `InteractionProgress`(끊기면 처음부터)를 그대로 쓴다. 시간은 `update` 로만 흐르며 결정적이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"

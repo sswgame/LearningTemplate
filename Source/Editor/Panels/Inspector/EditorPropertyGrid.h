@@ -3,12 +3,12 @@
  * @brief 리플렉션 객체의 프로퍼티, 메서드, 이벤트를 그리고 편집하는 그리드입니다. 인스펙터, 환경설정, 다중 선택이 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 

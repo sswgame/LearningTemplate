@@ -3,10 +3,10 @@
  * @brief 타일맵 XML 문서 스키마 (Engine 소유, Editor/GameFramework 공용)
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

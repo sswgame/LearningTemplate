@@ -5,10 +5,10 @@
  *          원장은 자산의 뜻을 모른다. 자산 id 는 `[0-9a-z_.-]` 48 자 이하이고, 관례로 화폐는 `cur.<이름>`, 아이템은 `item.<이름>` 이다. 뜻은 카탈로그가 준다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

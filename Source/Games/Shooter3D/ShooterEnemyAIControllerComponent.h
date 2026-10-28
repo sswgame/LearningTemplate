@@ -3,8 +3,8 @@
  * @brief 스켈레톤 적의 판단 — 플레이어를 쫓고(내비메시 경로 · 군중 회피), 닿으면 휘두르기 버튼을 누릅니다. 몸(폰)은 플레이어와 같은 몸 이동으로 걷는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

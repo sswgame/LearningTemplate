@@ -3,9 +3,9 @@
  * @brief 주인을 따라오는 말 AI입니다. 탄 사람이 없을 때 말을 조종하고, 주인이 멀어지면 다가오며, 휘파람(`whistle`)을 불면 어디서든 옵니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

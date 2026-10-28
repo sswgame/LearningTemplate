@@ -12,9 +12,9 @@
  *          언리얼 Online Subsystem 의 플랫폼별 `IOnlineIdentity` 구현과 EOS Connect 의 외부 계정 연결에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

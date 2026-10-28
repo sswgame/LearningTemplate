@@ -3,10 +3,10 @@
  * @brief 외형 해석입니다. 프리셋, 장비 상태, 보이는 장비 덮어쓰기, 꾸미기 값, 태그를 입력으로 받아 실제로 그릴 외형(부품, 숨김 영역, 모프, 머티리얼 값, 소켓)과 그 설명을 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

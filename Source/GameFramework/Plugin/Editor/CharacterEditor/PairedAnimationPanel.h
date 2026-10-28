@@ -11,11 +11,11 @@
  *          - 역할 프리팹 경로는 이 창의 미리보기 설정이라 에셋에 저장하지 않는다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 

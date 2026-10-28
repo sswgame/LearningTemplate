@@ -8,8 +8,8 @@
  *          `g_FogInscatter`(rgb 방향광 산란 색 × 세기, w 지수) · `g_FogVolumeParams`(x 볼륨 안개를 켠 1 · 끈 0, y 볼륨 거리, z 산란 배율, w 이방성)로 싣는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

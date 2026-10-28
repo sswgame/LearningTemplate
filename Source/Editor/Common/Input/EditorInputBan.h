@@ -16,7 +16,7 @@
 // imgui.h 끝에서만 뜻이 있다(선언을 다시 하므로). 그 밖에서 읽히면(헤더 단독 검사) · 어댑터 파일이면 아무것도 하지 않는다.
 #if defined( IMGUI_VERSION ) && !defined( SW_EDITOR_INPUT_ADAPTER )
 
-    #include "Core/Common/Types.h"
+    #include "Core/Foundation/Types.h"
 
     #define SW_EDITOR_INPUT_BAN_MESSAGE "editor code does not read ImGui input directly - use the editor input map (EditorInputActions) or EditorInputGUI (Common/Input)"
 

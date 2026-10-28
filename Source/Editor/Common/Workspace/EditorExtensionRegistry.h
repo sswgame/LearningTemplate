@@ -3,9 +3,9 @@
  * @brief 에디터 확장(패널, 팝업, 인스펙터, 뷰포트 시각화)을 각자의 파일에서 등록하는 공통 정적 레지스트리입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Editor/Common/EditorExports.h"

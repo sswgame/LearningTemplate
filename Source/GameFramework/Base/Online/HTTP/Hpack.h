@@ -8,10 +8,10 @@
  *          부호기는 허프만을 쓰지 않는다. 이 파일은 바이트만 다루고 네트워크를 모른다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

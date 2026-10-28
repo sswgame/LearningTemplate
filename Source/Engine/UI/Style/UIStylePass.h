@@ -3,8 +3,8 @@
  * @brief 스타일 순회를 정의합니다. 스타일이 더티한 위젯만 계산된 스타일을 다시 정하고, 바뀐 필드 종류에 따라 레이아웃이나 그리기 더티로 표시합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

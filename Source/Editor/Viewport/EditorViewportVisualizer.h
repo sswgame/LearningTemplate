@@ -3,8 +3,8 @@
  * @brief 컴포넌트 종류별 뷰포트 디버그 시각화를 등록합니다. 콜라이더 와이어프레임과 카메라 프러스텀이 예입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"

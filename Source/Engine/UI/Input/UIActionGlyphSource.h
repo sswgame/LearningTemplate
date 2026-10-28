@@ -3,9 +3,9 @@
  * @brief 액션 이름에서 지금 입력 장치의 글리프 텍스트(`[ E ]`, 패드 버튼)를 구합니다. 리치 텍스트 `[action=이름]`(튜토리얼 힌트, 입력 힌트)이 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

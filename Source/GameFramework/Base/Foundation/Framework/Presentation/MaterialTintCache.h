@@ -3,8 +3,8 @@
  * @brief 색 하나마다 머티리얼 인스턴스 하나를 만들어 나눠 쓰는 캐시입니다. 디렉터가 씬이 늘 보관하는 머티리얼에서 색만 바꾼 외형을 만듭니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

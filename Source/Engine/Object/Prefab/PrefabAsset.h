@@ -3,14 +3,14 @@
  * @brief 프리팹 에셋의 로드, 저장, 스폰입니다(GameObject 템플릿: XML, JSON, PFB2 바이너리).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"

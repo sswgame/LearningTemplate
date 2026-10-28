@@ -7,11 +7,11 @@
  *          픽셀은 XRGB8888(`WaylandShmBuffer`)이고 행이 빈틈없이 붙어 있다(한 행 = @c width 픽셀).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Text/TextTypes.h"

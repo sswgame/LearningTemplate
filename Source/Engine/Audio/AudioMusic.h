@@ -7,10 +7,10 @@
  *          바꾸고, 그 위치에서 스팅어를 낸다. 클립은 구간 길이(마디 × 박자 × 박 길이)에 맞춰 만든다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -7,9 +7,9 @@
  *          - 개발 도구용 설정이다: 한 주소에서 오는 봇 수천을 받도록 주소마다 요청 · 로그인 시도 제한을 크게 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"

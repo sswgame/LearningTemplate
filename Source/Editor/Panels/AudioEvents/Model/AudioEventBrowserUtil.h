@@ -3,9 +3,9 @@
  * @brief 오디오 이벤트 창이 그리는 테이블 행을 엔진 상태에서 만드는 순수 로직입니다. ImGui 를 쓰지 않아 단위 테스트가 바로 부릅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioEngineState.h"

@@ -4,10 +4,10 @@
  * @details GPU 를 부르지 않는 순수 변환이라 테스트가 GPU 없이 부를 수 있습니다. 읽어 오는 쪽은 `FrameCapture` 입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

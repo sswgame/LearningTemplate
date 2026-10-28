@@ -3,7 +3,7 @@
  * @brief 씬 뷰 카메라의 상태(위치 · 회전 · 궤도 · 직교)와 그 입력(비행 · 궤도 · 북마크 · 초점)입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

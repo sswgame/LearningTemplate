@@ -4,8 +4,8 @@
  * @details 내구도와 부서짐 처리 자체는 기반 `Inventory::wearSlot` 이 한다(0이 되면 슬롯이 빈다). 내구도가 없는 아이템(`_maxDurability` 가 0)은 닳지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -3,10 +3,10 @@
  * @brief AnnotationMeta.txt 를 읽어 REFLECT/ENUM/PROPERTY/FUNCTION 토큰을 필드 바인딩으로 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

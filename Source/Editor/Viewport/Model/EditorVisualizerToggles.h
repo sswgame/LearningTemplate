@@ -3,9 +3,9 @@
  * @brief 뷰포트 시각화의 켬/끔을 id 로 보관합니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

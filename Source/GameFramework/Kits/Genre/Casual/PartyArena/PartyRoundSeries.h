@@ -6,10 +6,10 @@
  *          그 총점도 같으면 아무도 우승하지 않고 다음 라운드로 간다(서든 데스). 점수표는 기반 `RoundSeries` 가 가지고 있고, 이 클래스는 라운드 목록, XML, 이벤트를 가진다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

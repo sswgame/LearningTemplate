@@ -3,9 +3,9 @@
  * @brief 위젯 겉모습 필드(배경, 모서리, 테두리, 그림자, 여백, 글꼴, 글자 색, 외곽선, 포커스 테두리, 불투명도, 전환)와 계산된 스타일을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

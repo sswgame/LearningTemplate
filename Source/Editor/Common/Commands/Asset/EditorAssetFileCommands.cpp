@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 

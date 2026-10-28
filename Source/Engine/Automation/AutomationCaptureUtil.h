@@ -5,8 +5,8 @@
  *          언리얼 자동화 스크린샷이 레벨 로드 · 스트리밍 · 셰이더 컴파일이 끝나기를 기다린 뒤 찍는 것과 같은 자리입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,10 +3,10 @@
  * @brief 외형 데이터 폴더(`<게임>/data/appearance/`)를 감시해, 파일을 고치면 실행 중인 `AppearanceDatabase` 를 다시 읽습니다(핫 리로드).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"

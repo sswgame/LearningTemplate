@@ -6,13 +6,13 @@
 
 #include "Engine/Profiling/ProfilerBackend.h"
 
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"

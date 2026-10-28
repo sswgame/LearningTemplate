@@ -7,8 +7,8 @@
  *          백엔드 고유의 것(입력 레이아웃, 상태 객체, API 호출)은 그대로 백엔드에 남습니다. 정책은 Engine, 메커니즘은 디바이스입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 

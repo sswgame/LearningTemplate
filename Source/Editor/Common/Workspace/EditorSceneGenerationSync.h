@@ -3,7 +3,7 @@
  * @brief 씬이 바뀌었을 때(새 세대) 에디터가 옛 씬을 가리키던 상태를 버립니다 — 선택 · dirty · Undo 스택.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

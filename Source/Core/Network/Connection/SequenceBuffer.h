@@ -6,10 +6,10 @@
  *          슬롯 위치(시퀀스 % 크기)가 이어지지 않아 감김 직전과 직후의 시퀀스가 같은 슬롯을 덮습니다. 실행 중 크기(0 이면 1 로 바꾸던 폴백 포함)는 받지 않습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw

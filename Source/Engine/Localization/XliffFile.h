@@ -17,10 +17,10 @@
  *          본문 속 인라인 태그(`<g>`, `<x/>`)는 지원하지 않는다 — ICU 자리표시자(`{name}`)가 글 그대로 들어가므로 필요 없다. 글의 앞뒤 공백은 읽을 때 다듬어진다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/PortableObjectFile.h"
 

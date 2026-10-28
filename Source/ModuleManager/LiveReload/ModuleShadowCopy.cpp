@@ -2,9 +2,9 @@
 
 #include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/Process.h"
 

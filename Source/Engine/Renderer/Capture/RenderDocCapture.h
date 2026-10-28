@@ -3,7 +3,7 @@
  * @brief RenderDoc in-app API 로 프레임 캡처를 코드에서 시작합니다(네 백엔드 모두). Dev 에서만 동작하고 Shipping 은 빈 함수입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 

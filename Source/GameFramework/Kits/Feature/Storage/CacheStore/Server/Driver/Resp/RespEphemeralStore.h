@@ -11,13 +11,13 @@
  *          - 전송의 `_ioThreadCount` 가 0이면(루프백 테스트) `pollReplies`, `pollMessages`, 구독 대기가 전송을 직접 돌린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"

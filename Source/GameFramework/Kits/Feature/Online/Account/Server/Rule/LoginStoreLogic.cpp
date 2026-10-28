@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 
-#include "Core/Common/SecureUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/SecureUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/HexUtil.h"
 

@@ -3,8 +3,8 @@
  * @brief 에디터 창들이 함께 쓰는 ImGui 위젯입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorColor.h"

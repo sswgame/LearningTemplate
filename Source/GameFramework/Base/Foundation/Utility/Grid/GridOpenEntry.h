@@ -3,7 +3,7 @@
  * @brief 격자 탐색(A* · 다익스트라)이 쓰는 열린 목록 항목과 최소 힙 비교자를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

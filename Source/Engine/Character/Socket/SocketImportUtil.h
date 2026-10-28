@@ -5,10 +5,10 @@
  *          소켓을 임포트 산출물과 따로 두는 이유가 그것이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 

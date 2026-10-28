@@ -3,10 +3,10 @@
  * @brief 서부 평원 승마 디렉터 — 서부극 데이터(`WesternCatalog`)를 열고, 카메라가 기수를 따라가게 하고, 휘파람으로 말을 부르고, HUD 한 줄(탑승 상태 · 걸음새 · 속도 · 스태미나)을 씁니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

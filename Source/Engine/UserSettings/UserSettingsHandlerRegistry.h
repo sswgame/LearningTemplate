@@ -5,13 +5,13 @@
  *          스키마(데이터)는 `target="handler:<name>"` 과 `optionsFrom="<name>"` 으로 여기의 이름을 고른다. 코드는 이름과 동작만 가진다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

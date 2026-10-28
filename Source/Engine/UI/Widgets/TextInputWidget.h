@@ -3,10 +3,10 @@
  * @brief 한 줄 텍스트 입력 필드입니다(UMG 의 EditableTextBox, 유니티의 TextField, Godot 의 LineEdit 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -4,7 +4,7 @@
  * @details 씬 서비스 계약 옆에 둔다 — 기능 폴더(Physics · Audio)가 씬 매니저 헤더를 include 하지 않고 정책을 읽게.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

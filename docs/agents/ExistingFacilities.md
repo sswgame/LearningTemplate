@@ -9,14 +9,14 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Need | Use (header · API) | Do not use |
 | --- | --- | --- |
 | Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR` · `SW_LOG_WARNING` · `SW_LOG_INFO` · `SW_LOG_TRACE` (`_ID` variants); once per scope: `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` |
-| Report below the Log tier or before the logger starts | `Core/Common/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (stderr until the logger registers) | `fprintf( stderr, … )` |
+| Report below the Log tier or before the logger starts | `Core/Foundation/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (stderr until the logger registers) | `fprintf( stderr, … )` |
 | Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
-| Assert | `Core/Common/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
+| Assert | `Core/Foundation/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
 | Current time, elapsed time, wait deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::steady_clock` · `high_resolution_clock` · `system_clock` |
 | UTC time, local calendar | `Core/Time/WallClock.h` (services take `nowMs` as a parameter) | `system_clock` · `localtime` · `gmtime` |
 | Frame delta | `Core/Time/GameTimer.h` · `Core/Time/FixedTimestep.h` | own delta bookkeeping |
 | Random value (engine) | `Core/Math/MathUtil.h` `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `srand` · `std::mt19937` · `std::random_device` |
-| Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Common/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Base/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
+| Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Hash/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Base/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
 | Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them |
 | Data-defined resource path | `Engine/Serialization/Serializer/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers |
 | Resolve a resource id | `Engine/Asset/AssetPaths.h`; read: `Engine/Asset/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectResources` | disk paths in runtime game code |
@@ -34,7 +34,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | UTF-8 and UTF-16 | `Core/Container/StringUtil.h` `utf8ToUtf16` · `utf16ToUtf8` · `isValidUtf8` | `MultiByteToWideChar` at call sites |
 | Format text, hex, colors, Base64 | `Core/Container/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/String/Base64Util.h` | `snprintf` chains, own hex tables |
 | Bytes or fixed-width integers as hex | `Core/String/HexUtil.h` `encodeBytes` · `appendBytes` · `appendUint64` · `decodeBytes` (`HexCase`) | a `"0123456789abcdef"` table and nibble shifts |
-| Hash, interned name | `Core/Common/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/String/hashed_string.h` | literal FNV or golden-ratio constants |
+| Hash, interned name | `Core/Hash/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/String/hashed_string.h` | literal FNV or golden-ratio constants |
 | Read hand-written data XML attributes | `Engine/Serialization/XML/XMLReadUtil.h` `loadRootOrWarn` · `findRequiredID` · `readRequiredName` · `parseNameList` · `parseFloat3` · `readOptionalNumber` · `readOptionalFlag` · `forEachNamedNumber`; attribute present: `XMLNode::hasAttribute`; curves: `GameDataXML::readFloatCurve`; reflection Def rows: `GameDataXML::readFields` · `readInto` | per-kit copies of the same readers, aliases that forward to them |
 | Serialize an object | `Engine/Serialization/Format/XMLSerializer.h` · `JSONSerializer.h` · `BinarySerializer.h` through reflection; raw binary: `Engine/Serialization/Format/Archive.h` | `pugixml` or JSON library calls outside Serialization |
 | Callback, multicast event | `Core/Delegate/Delegate.h` `Delegate` · `MulticastDelegate` · `SW_DECLARE_DELEGATE` · `SW_DECLARE_MULTI_CAST_DELEGATE` | `std::function` |
@@ -53,6 +53,6 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Own a byte block or object | `Core/Memory/MemoryBlock.h` `MemoryBlock`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
 | Many short-lived allocations | `Core/Memory/LinearAllocator.h` · `PoolAllocator.h`; per frame: `Core/Container/FrameArenaAllocator.h`; small inline: `InlineAllocator.h` | a private free list |
 | Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()` |
-| Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Common/Defines.h` `constant::` | retyped literals |
+| Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Foundation/Defines.h` `constant::` | retyped literals |
 
 A new row names the header and the API.

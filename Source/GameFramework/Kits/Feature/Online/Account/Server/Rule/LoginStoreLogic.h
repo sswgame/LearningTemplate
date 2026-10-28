@@ -18,8 +18,8 @@
  *          연동은 이름과 외부 주체 레코드를 "없어야 함" 조건으로 넣는다. 이미 다른 계정의 것이면 `AlreadyLinked` 이며, 계정을 자동으로 합치지 않는 것은 사용자가 정한 정책이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"

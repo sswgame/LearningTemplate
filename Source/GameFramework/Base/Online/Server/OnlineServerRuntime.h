@@ -12,9 +12,9 @@
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Time/TimePoint.h"

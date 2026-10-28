@@ -5,7 +5,7 @@
  *          `editor::findSubsystem<T>()`)를 쓴다. 그 창구가 호스트 범위를 받지 못한 실행(쿠커 · 테스트 하네스)에서 엔진 범위로 내려갈 때 이 함수만 본다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

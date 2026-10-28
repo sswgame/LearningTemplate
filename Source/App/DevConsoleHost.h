@@ -3,8 +3,8 @@
  * @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널의 App 쪽 — 만들기, 시작 명령 실행, 프레임 갱신, 종료입니다. **Shipping 에는 콘솔이 없습니다.**
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Console/StandardInputCommands.h"

@@ -3,7 +3,7 @@
  * @brief 컨테이너 경합 검출기(`RaceDetectContext`)가 찾은 경합을 로그와 호출 스택으로 남기는 보고기입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

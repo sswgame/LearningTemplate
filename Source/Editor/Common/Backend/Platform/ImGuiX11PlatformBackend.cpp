@@ -3,7 +3,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/Time/GameTimer.h"
 

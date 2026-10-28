@@ -3,10 +3,10 @@
  * @brief 도시 건설의 데이터를 담습니다. 물자, 건물(크기, 비용, 일꾼, 서비스, 생산, 저장, 시장, 매력도), 집 단계(수용 인구, 필요한 서비스, 필요한 물자, 매력도)를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

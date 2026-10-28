@@ -3,10 +3,10 @@
  * @brief 엔진의 TileMapXMLData 를 편집하는 에디터 측 TileMap XML 페인터입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 

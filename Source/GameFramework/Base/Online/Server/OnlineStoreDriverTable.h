@@ -11,9 +11,9 @@
  *            옛 묶음의 소멸자가 칸을 무조건 비우면 새 이미지의 함수가 사라집니다. 테이블은 모듈 언로드 리스너라 내려가는 이미지의 함수도 지웁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

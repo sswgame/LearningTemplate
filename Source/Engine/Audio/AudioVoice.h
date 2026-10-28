@@ -6,8 +6,8 @@
  *          **가상(virtual)** 보이스는 섞지 않고 재생 위치만 진행한다. 다시 들리게 되면 그 시각의 위치에서 이어서 재생한다(Wwise 의 "virtual voice").
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioBinaural.h"

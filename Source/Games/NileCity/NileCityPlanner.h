@@ -6,10 +6,10 @@
  *          순서표는 도로 고리 → 우물 → 범람원 농장 → 곡물 창고 → 바자 → 집 → 순회 서비스 → 다음 구역 순서이고, 단계마다 돈 · 인구 임계값이 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

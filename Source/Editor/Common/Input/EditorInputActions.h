@@ -6,11 +6,11 @@
  *          유니티 단축키 관리자의 컨텍스트, 언리얼 위젯별 `FUICommandList` 와 같은 선이다(기억).
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"

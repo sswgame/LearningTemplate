@@ -3,8 +3,8 @@
  * @brief 게임의 자동 플레이(입력 없이 AI 가 조종 — 확인 · 녹화 · 벤치) 계약입니다. 게임이 한 줄로 등록하고, 에디터 툴바 · 콘솔 · 명령줄이 같은 스위치를 켭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

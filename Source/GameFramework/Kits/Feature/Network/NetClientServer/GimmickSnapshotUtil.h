@@ -10,8 +10,8 @@
  *          회로가 늘거나 줄면 번호가 밀려 뒤쪽 엔티티가 모두 바뀐다 — 회로 집합은 씬을 만들 때 정해지고 플레이 중에는 거의 변하지 않는다고 가정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickStateBundle.h"
 #include "GameFramework/GameFrameworkExports.h"

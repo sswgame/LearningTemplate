@@ -3,8 +3,8 @@
  * @brief 슈터 HUD 문서가 보이는 값(체력 · 탄약 · 무기 이름 · 든 아이템 이름 · 조준선 · 맞음 표시)입니다 — 게임은 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Binding/UIViewModel.h"

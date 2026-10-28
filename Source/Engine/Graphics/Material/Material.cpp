@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/Material/Material.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"

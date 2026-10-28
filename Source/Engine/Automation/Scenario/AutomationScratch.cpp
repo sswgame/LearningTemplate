@@ -2,11 +2,11 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
 #include "Core/UUID/UUID.h"
 

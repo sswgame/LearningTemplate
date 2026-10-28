@@ -3,7 +3,7 @@
  * @brief 직렬화가 무엇을 위해 쓰고 읽는지(저작 · 스냅샷 · 세이브)를 나타내는 열거형입니다. 직렬화 문맥(`SerializeContext`)과 오브젝트 상태 옵션의 필수 값입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

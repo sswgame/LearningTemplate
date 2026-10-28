@@ -3,8 +3,8 @@
  * @brief 씬 문서의 열기 · 새로 만들기 · 저장 · 종료 흐름입니다. 저장하지 않은 변경 확인을 거칩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 

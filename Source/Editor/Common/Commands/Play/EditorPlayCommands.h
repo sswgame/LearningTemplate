@@ -3,8 +3,8 @@
  * @brief 플레이 옵션입니다 — 플레이 때 게임 뷰 최대화, 플레이 중 씬 뷰로 빠져나오기(Eject), 플레이 중 바꾼 값 남기기, 새 창(별도 프로세스)에서 플레이.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor

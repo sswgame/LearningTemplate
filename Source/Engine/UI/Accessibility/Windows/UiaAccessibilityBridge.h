@@ -6,8 +6,8 @@
  *          UIA 가 메인 스레드로 옮겨 부르도록(`ProviderOptions_UseComThreading`) 해 두어 UI 상태를 읽고 쓰는 호출은 모두 메인(게임) 스레드에서 일어난다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"

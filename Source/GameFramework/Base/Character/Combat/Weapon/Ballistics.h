@@ -3,8 +3,8 @@
  * @brief 탄도 계산입니다. 중력과 공기 저항을 받는 투사체의 한 스텝, 맞히기 위한 발사 각(포물선 각), 움직이는 목표의 앞을 겨누는 계산을 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

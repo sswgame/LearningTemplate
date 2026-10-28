@@ -3,8 +3,8 @@
  * @brief "Add Component" 목록(검색 필드 + 그룹별 항목)입니다. Hierarchy 의 오른쪽 클릭 메뉴와 인스펙터의 Add Component 단추가 같이 씁니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"

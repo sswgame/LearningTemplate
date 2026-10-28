@@ -7,10 +7,10 @@
  *          `Core/String/TagID.h` 로 내렸습니다(이유는 그 파일의 @note 참고).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

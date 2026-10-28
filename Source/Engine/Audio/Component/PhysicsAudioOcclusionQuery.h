@@ -5,8 +5,8 @@
  *          캐릭터 캡슐)과 에미터 0.5 m 안(소리 내는 물체 자신의 콜라이더)의 닿음은 세지 않습니다. 트리거는 보지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"

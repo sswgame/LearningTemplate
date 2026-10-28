@@ -6,8 +6,8 @@
  *          여섯 칸은 모두 필수다 — 하나라도 빠지면 읽기가 실패한다. 레퍼런스 포즈는 적지 않고 스켈레톤 경로에서 만든다(창이 저장하는 짝 파일이라 아직 없을 수 있다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

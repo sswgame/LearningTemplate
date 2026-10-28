@@ -3,8 +3,8 @@
  * @brief 바인딩 변환기(`{bind:필드, converter=Percent}`)의 이름 → 함수 레지스트리입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 

@@ -4,11 +4,11 @@
  * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따르며 팩 에셋 인스턴스와 분리합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/AssetHandle.h"

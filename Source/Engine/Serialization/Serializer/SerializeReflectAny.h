@@ -10,7 +10,7 @@
  *       순환이 됩니다. 핸들러는 "둘 다 아는 쪽" 이 갖습니다. 그쪽이 Serialization 입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

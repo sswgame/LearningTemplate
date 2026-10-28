@@ -3,8 +3,8 @@
  * @brief 게임 시간 배율(슬로 모션 · 빨리 감기)입니다. 호스트의 프레임 시간이 이 값을 곱해 게임 업데이트 · 씬 틱 · 고정 스텝으로 흐릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

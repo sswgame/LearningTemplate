@@ -3,12 +3,12 @@
  * @brief 고정 용량 문자열(basic_fixed_string)입니다. 힙을 쓰지 않습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"

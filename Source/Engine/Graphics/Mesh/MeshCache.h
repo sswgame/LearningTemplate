@@ -3,9 +3,9 @@
  * @brief 메시 에셋(`.mesh`)을 경로로 공유하는 캐시와, 그 캐시를 에셋 캐시 레지스트리에 노출하는 함수입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"

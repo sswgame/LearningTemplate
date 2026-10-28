@@ -1,6 +1,6 @@
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"

@@ -8,9 +8,9 @@
  *          층은 압축하지 않고 그대로 싣는다(저장 압축기) — 층 하나는 타일 크기² 바이트 셋이라 작고, 압축 코덱을 하나 더 들이지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Navigation/INavMesh.h"

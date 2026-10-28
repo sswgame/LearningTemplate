@@ -5,9 +5,9 @@
  *          이 모음은 문제마다 id(`"영역.사건"` 글자 상수)를 같이 받는다. `CharacterDataReader::addIssues` 가 id 를 그대로 로그에 단다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

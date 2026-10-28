@@ -3,10 +3,10 @@
  * @brief 플레이어가 저장한 외형 프리셋입니다. 이름 붙은 슬롯, 즐겨찾기, 썸네일 경로, 부분 프리셋을 세이브에 싣습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

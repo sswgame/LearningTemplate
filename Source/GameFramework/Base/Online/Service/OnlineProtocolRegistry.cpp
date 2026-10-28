@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 

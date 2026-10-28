@@ -8,10 +8,10 @@
  *          `EditorKey` 의 키 이름이 ImGui 가 아는 이름인지는 ImGui 의 이름표가 있어야 알 수 있어, 이 파일은 낱말 모양만 보고 이름은 단계의 준비 함수가 본다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

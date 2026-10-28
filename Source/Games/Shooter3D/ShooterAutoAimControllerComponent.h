@@ -3,8 +3,8 @@
  * @brief Shooter3D 의 자동 플레이 — 플레이어 폰에 빙의하는 AI 조종자입니다(가까운 적을 겨눠 쏘고, 아레나 가운데를 돌며, 거리로 무기를 고른다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

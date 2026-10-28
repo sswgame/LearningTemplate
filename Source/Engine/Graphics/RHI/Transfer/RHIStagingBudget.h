@@ -7,9 +7,9 @@
  *          시계는 호출자가 넘긴다 — 시간 규칙을 GPU 없이 결정적으로 시험하려는 것이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,10 +3,10 @@
  * @brief UI 문서(`*.ui.xml`)를 읽고, 읽은 문서에서 위젯 트리를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Document/UIBindingDesc.h"

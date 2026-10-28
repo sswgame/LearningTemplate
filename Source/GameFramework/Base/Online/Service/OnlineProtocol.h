@@ -7,7 +7,7 @@
  *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerServerService` 가 거절한다(조립 실수를 기동에서 잡는다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

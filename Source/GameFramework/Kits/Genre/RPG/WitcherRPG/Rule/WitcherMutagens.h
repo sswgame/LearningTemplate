@@ -3,10 +3,10 @@
  * @brief 강화와 변이 슬롯을 다룹니다. 스킬 슬롯 그룹(레벨로 열림)마다 변이원 슬롯이 하나 있고, 같은 그룹에 색이 맞는 스킬이 있을 때마다 변이원 보너스가 오릅니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

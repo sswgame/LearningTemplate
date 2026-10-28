@@ -6,11 +6,11 @@
  *          언리얼의 Live Link Face 소스(Live Link 플러그인)에 해당한다. 실제 장치로는 확인하지 않았다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Facial/LiveLinkFace.h"

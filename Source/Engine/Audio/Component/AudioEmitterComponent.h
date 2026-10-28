@@ -5,9 +5,9 @@
  *          이 컴포넌트는 틱하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioTypes.h"

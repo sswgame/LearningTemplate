@@ -13,9 +13,9 @@
  *          PlayFab Matchmaking 의 규칙 세 가지(실력 확장, 지역 완화, 팀 균형)를 데이터 구조체 하나(`MatchModeDefinition`)로 표현한 것이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"

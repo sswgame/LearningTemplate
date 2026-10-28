@@ -8,10 +8,10 @@
  *          - 라우터의 `pump` 가 메시지를 버스 큐에 넣고, `pollMessages` 가 큐를 비웁니다. 호스트 `tick` 이 이 순서로 부릅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/GameFrameworkExports.h"

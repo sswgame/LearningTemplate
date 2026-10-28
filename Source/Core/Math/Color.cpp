@@ -2,9 +2,9 @@
 
 #include "Core/Math/Color.h"
 
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/HexDigitUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/HexDigitUtil.h"
 
 namespace sw
 {

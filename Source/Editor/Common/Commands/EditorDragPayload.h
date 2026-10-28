@@ -6,8 +6,8 @@
  *          언리얼의 타입 있는 `FDragDropOperation` 과 같은 선이다(기억).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

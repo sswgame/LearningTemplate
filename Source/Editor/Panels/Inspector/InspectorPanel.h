@@ -3,12 +3,12 @@
  * @brief 선택한 GameObject / Component 의 프로퍼티를 편집하는 인스펙터입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 

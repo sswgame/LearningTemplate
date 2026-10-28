@@ -3,8 +3,8 @@
  * @brief 개발용 UI 테스트 화면입니다(`-gv_uiDemo=1`). 텍스트, 버튼 다섯 개, 슬라이더, 체크, 진행 막대, 콤보, 입력 필드를 한 패널에 띄웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 

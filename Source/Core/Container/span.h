@@ -16,7 +16,7 @@
  * @note C++ 최소 표준이 17 이라 `std::span` 을 쓸 수 없어 직접 둡니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이며, 여기 없는 기능(정적 길이 · `as_bytes`)을 더할 때는 `std::span` 과 같은 이름 · 의미로 더합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include <cstddef>
 #include <iterator>

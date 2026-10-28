@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/CameraComponent.h"

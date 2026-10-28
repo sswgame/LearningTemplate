@@ -13,10 +13,10 @@
  *       소멸자 합류도 같은 `join` 을 지난다. 스레드를 가진 객체는 수명이 명시적인 소유자(`initialize` · `shutdown`)에 둔다. 리눅스(`dlclose` 안의 소멸자)는 검사하지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 #include <functional>
 #include <thread>

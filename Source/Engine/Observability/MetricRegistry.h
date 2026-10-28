@@ -8,12 +8,12 @@
  *          - `FrameProfiler`(개발 중 프레임 구간, 기본 꺼짐) · `TelemetryService`(동의 받은 클라이언트 사건)와 다른 자리 — 늘 켜진 서버 누계다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

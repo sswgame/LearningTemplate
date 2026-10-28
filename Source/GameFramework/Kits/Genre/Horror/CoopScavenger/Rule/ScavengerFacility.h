@@ -3,10 +3,10 @@
  * @brief 시설을 구현합니다. 시드로 방 그래프(정문, 방, 문, 잠긴 문, 고리 통로, 화재 출구)를 만들어 기반 `AreaGraph` 에 담고, 고철(가치, 무게, 양손)을 방마다 놓습니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/World/Land/AreaGraph.h"

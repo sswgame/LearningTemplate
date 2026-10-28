@@ -6,8 +6,8 @@
  *          언리얼은 `UScriptStruct::InitializeStruct` · `DestroyStruct` 짝을 `FStructOnScope` 가 쥐는 것과 같은 자리다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryBlock.h"
 
 #include "Engine/EngineMinimal.h"

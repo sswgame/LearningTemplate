@@ -3,10 +3,10 @@
  * @brief 경로를 키로 Texture2D 소유권을 관리합니다(MaterialCache 와 같은 구조).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"

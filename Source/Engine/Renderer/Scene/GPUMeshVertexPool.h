@@ -25,12 +25,12 @@
  *   (`repack`). 새 버퍼는 아무 프레임도 읽지 않으므로 대기 중인 반납도 버립니다. 용량은 1.5 배씩 늘어 드물게만 일어납니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

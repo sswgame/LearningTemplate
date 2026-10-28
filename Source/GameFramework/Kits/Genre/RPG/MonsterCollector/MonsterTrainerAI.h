@@ -3,8 +3,8 @@
  * @brief 트레이너 AI입니다. 가장 큰 기대 피해를 주는 기술을 고르고, 상성이 불리하면 유리한 개체로 교체합니다. 쓰러진 자리는 가장 센 개체로 채웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"

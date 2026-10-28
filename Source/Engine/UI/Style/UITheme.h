@@ -3,9 +3,9 @@
  * @brief UI 테마를 정의합니다. 이름 하나에 스타일 시트 목록이 붙으며(`engine/ui/uithemes.xml`), 팩 설정 `PackEngineSettings::_uiThemes` 가 덮어씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

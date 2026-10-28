@@ -11,13 +11,13 @@
  *          EOS Lobbies, PlayFab Lobby(서비스 쪽 공유 상태와 소유자 넘김), Nakama Parties(파티장과 초대)와 같은 규칙이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

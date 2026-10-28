@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 

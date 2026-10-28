@@ -3,10 +3,10 @@
  * @brief 항목이 아주 많은 세로 목록입니다. 보이는 줄만 위젯을 만들어 다시 씁니다(UMG 의 ListView, 유니티의 ListView, Godot 의 ItemList 가상화에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

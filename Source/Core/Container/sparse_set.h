@@ -5,11 +5,11 @@
  *          그래서 같은 셋에서 삽입 · 삭제가 일어나면 T 의 주소가 바뀝니다. 오래 들고 있을 때는 키나 핸들만 저장하십시오.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

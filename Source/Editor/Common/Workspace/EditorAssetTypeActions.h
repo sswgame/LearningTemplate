@@ -3,8 +3,8 @@
  * @brief 애셋 종류별 에디터 동작(썸네일, 열기, 뷰포트 드롭)의 인터페이스와 레지스트리를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 struct ImDrawList;
 

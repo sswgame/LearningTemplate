@@ -10,10 +10,10 @@
  *          - 200 이고 결과 글이 성공 값이면 성공, 200 인데 결과가 다르거나 주체가 없으면 거절, 401 · 403 은 거절, 그 밖(연결 실패 · 시한 · 5xx)은 쓸 수 없음이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"

@@ -3,9 +3,9 @@
  * @brief 유령 사냥(루이지 맨션 장르)의 데이터를 담습니다. 손전등과 청소기 수치, 유령 종류, 저택의 방(유령, 열쇠 보상, 불 플래그), 열쇠 문, 가구, 부(Boo)를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

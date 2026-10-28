@@ -6,11 +6,11 @@
  *          - 정산 잔액(`TradeBalance`)은 게임이 지갑과 인벤토리 미러에 넣는다. 키트끼리는 서로 모르며 원장이 소유의 원본이다. 사용자가 정한 정책이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/String/hashed_string.h"
 

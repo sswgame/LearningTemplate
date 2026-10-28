@@ -2,8 +2,8 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"

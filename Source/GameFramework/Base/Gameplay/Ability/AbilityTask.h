@@ -3,9 +3,9 @@
  * @brief 어빌리티가 실행되는 동안 기다리는 작업입니다. 지연과 이벤트 대기가 있습니다(언리얼의 `UAbilityTask` 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 #include "Core/Time/Countdown.h"
 

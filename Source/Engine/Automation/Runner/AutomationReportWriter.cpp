@@ -2,8 +2,8 @@
 
 #include "Engine/Automation/Runner/AutomationReportWriter.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 

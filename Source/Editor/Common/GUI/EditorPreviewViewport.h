@@ -6,8 +6,8 @@
  *          언리얼의 `FPreviewScene` 과 `SEditorViewport`, 유니티의 `PreviewRenderUtility` 에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

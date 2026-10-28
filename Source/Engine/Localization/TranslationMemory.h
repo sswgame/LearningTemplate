@@ -7,10 +7,10 @@
  *          유사도는 정규화한 글자열의 편집 거리(레벤슈타인, UTF-8 글자 단위)로 측정한다. 상용 CAT 도구(memoQ, Trados)의 퍼지 일치와 같은 생각이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
 

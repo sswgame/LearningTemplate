@@ -4,8 +4,8 @@
  * @details 순서는 `isAcceptable`(복호 전에 싸게 거른다) → 복호 · 검증 → `markReceived`. 검증 전에 표시하면 위조 패킷이 진짜 번호를 미리 태워 진짜를 거절하게 만든다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

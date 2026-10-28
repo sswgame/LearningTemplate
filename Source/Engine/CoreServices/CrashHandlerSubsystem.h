@@ -7,7 +7,7 @@
  *          리소스 루트 · 게임 선택은 엔진을 세우는 호스트의 일이라 `ContentRootSubsystem` 이 따로 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

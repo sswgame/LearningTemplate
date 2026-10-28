@@ -5,13 +5,13 @@
  *          디코드 결과는 float 로 바꿔 캐시에 넣는다. 믹서 스레드는 캐시에서 **찾기만** 하고(`findClip`) 디코드를 기다리지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskHandleTracker.h"

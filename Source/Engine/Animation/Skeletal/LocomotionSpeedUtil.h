@@ -3,8 +3,8 @@
  * @brief 이동 클립의 발 속도를 측정하고, 실제 이동 속도에 맞는 재생 속도를 구합니다(발 미끄러짐 줄이기).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

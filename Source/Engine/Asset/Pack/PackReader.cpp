@@ -2,14 +2,14 @@
 
 #include "Engine/Asset/Pack/PackReader.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 

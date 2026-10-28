@@ -4,10 +4,10 @@
  *        살인마(속도 비율, 공격 쿨다운, 위협 반경, 능력), 블러드포인트 범주와 행동 점수를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

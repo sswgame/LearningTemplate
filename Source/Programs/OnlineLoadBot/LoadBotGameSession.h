@@ -6,8 +6,8 @@
  *          (연결 유지 패킷과 RTT 가 서버 쪽 연결 통계를 채운다 — 서버의 연결 수 · 틱 · 드레인을 재는 것이 목적이다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"

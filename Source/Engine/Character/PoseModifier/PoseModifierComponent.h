@@ -6,13 +6,13 @@
  *          언리얼의 Control Rig(후처리 노드)와 IK Rig, 유니티의 Animation Rigging(Rig Builder, 제약 컴포넌트)에 해당한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

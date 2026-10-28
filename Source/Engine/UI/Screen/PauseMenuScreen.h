@@ -3,7 +3,7 @@
  * @brief 일시정지 메뉴입니다. 엔진 기본 문서 `engine/ui/pause.ui.xml`(계속, 옵션)을 쓰며, 화면이 없을 때 `UI.Pause`(Esc, 패드 Start)가 엽니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Screen/UIScreen.h"

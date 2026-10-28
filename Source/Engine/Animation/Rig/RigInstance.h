@@ -5,10 +5,10 @@
  *          바깥 대상(다른 유닛이나 오브젝트)의 값을 프레임마다 넣는다. 그래서 오브젝트 없이 테스트할 수 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

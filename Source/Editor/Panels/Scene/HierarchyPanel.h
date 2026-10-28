@@ -3,8 +3,8 @@
  * @brief 씬 GameObject / Component 계층 창입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

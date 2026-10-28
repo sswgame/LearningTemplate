@@ -2,10 +2,10 @@
 
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/GameConfig.h"

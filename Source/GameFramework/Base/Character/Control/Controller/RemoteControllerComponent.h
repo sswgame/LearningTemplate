@@ -3,8 +3,8 @@
  * @brief 원격 조종자입니다. 네트워크로 받은 의도를 냅니다. 의도는 네트워크 키트가 틱마다 넣어 주는 값(`receiveIntent`)이고 조종자가 사본을 소유합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

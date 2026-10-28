@@ -3,7 +3,7 @@
  * @brief 런타임 디버그 HUD(`DebugHUD`)를 에디터에서 고치는 위젯입니다 — 게임 뷰 · 씬 뷰 툴바의 섹션 팝업과 환경설정의 Debug HUD 쪽이 같이 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

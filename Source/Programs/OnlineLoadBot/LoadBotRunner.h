@@ -8,9 +8,9 @@
  *          - 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationSeconds` 가 지나면 `tick` 이 false 다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"

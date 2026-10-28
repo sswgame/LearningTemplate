@@ -2,17 +2,17 @@
 
 #include "Core/File/Linux/LinuxFileDialog.h"
 
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
 namespace sw
 {

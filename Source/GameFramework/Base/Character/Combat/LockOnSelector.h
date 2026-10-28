@@ -5,9 +5,9 @@
  * @details 젤다의 주목(Z 주목), 소울라이크 · 위쳐의 대상 고정, 기체 대전의 록온, 카트 유도 아이템의 목표 고르기가 같은 계산입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

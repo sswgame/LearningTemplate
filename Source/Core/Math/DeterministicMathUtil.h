@@ -6,8 +6,8 @@
  *          범위는 같은 플랫폼 안의 구성 간 결정성이다 — 플랫폼 간 비트 결정성은 보장하지 않는다(결정 D7-8). 정확도는 float32 결과 기준 libm 과 1 ulp 안이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

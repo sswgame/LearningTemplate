@@ -3,9 +3,9 @@
  * @brief 게임패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다(언리얼 CommonUI 의 아날로그 커서, Steam Input 의 마우스 에뮬레이션).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"

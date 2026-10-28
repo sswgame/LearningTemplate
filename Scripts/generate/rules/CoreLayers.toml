@@ -33,5 +33,5 @@ Diagnostics = 10    # 호출 스택 · 크래시 보고 · 메모리 프로파�
 Event = 10
 
 # Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 지금은 없다 — 아래 티어는 `SW_LOW_LEVEL_REPORT` · `SW_LOW_LEVEL_ASSERT`
-# (`Core/Common/Macros.h`, 로그가 기동 때 보고자를 건다)로 보고한다. 새로 늘리지 않는다.
+# (`Core/Foundation/Macros.h`, 로그가 기동 때 보고자를 건다)로 보고한다. 새로 늘리지 않는다.
 [exemption]

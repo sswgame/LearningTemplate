@@ -5,10 +5,10 @@
  *          `invalidateArea` 만 아무 스레드에서 부르고(스핀 잠금), 나머지는 게임 스레드에서 부릅니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Memory/Memory.h"
 

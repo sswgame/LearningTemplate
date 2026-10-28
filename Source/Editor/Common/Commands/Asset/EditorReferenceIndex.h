@@ -3,9 +3,9 @@
  * @brief 리소스 트리의 텍스트 에셋에 적힌 리소스 id 를 모아 "누가 이것을 쓰나" 와 "이것이 무엇을 쓰나" 에 답합니다. ImGui 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

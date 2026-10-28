@@ -5,7 +5,7 @@
  *          (또는 깨움 상한 100 ms)까지 멈추므로, 시간으로 움직이는 것은 모두 여기 든다 — 시나리오 `editor.idle` 이 깨어나는 길을 본다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

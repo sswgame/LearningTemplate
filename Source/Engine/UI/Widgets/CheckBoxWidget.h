@@ -3,9 +3,9 @@
  * @brief 체크 상자입니다(UMG 의 CheckBox, 유니티의 Toggle, Godot 의 CheckBox 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

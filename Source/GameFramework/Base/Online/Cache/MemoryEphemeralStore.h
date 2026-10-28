@@ -7,7 +7,6 @@
  *          - 발행은 그 채널을 구독한 앞마다 받은편지함에 넣고, 앞의 `pollMessages` 가 꺼낸다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
@@ -16,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"

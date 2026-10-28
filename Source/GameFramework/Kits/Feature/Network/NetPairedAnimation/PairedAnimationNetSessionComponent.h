@@ -11,8 +11,8 @@
  *          클라이언트의 게임플레이(상호작용)가 세션을 따로 시작하지 않게 하는 일은 게임이 권한으로 막는다(서버가 시작을 결정한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

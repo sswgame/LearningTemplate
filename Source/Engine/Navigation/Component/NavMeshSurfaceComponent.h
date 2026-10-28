@@ -9,10 +9,10 @@
  *          캐릭터 컨트롤러 · Static 이 아닌 강체 · 스킨드 메시가 든 오브젝트의 계층). 파괴 오브젝트는 자기 기하를 따로 낸다(`INavGeometrySource`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"

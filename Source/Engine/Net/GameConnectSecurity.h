@@ -10,9 +10,9 @@
  *          (푼 뒤에는 옛 인증기를 부르지 않으므로, 푼 쪽이 바로 인증기를 내려도 된다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 
 namespace sw

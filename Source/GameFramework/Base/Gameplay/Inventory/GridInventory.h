@@ -4,10 +4,10 @@
  * @details 아이템의 크기와 겹침 수는 델리게이트(`ShapeDelegate`)로 물어본다. 그래서 특정 카탈로그 종류에 의존하지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"

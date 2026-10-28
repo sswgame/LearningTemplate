@@ -3,9 +3,9 @@
  * @brief LEB128 가변 길이 정수 인코딩과 ZigZag(부호 있는 정수를 작은 부호 없는 정수로 바꾸기) 도우미입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

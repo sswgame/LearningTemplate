@@ -4,8 +4,8 @@
 
 #if SW_NET_FLOW_LOG_ENABLED
 
-    #include "Core/Common/HashUtil.h"
-    #include "Core/Common/StdHeaders.h"
+    #include "Core/Hash/HashUtil.h"
+    #include "Core/Foundation/StdHeaders.h"
     #include "Core/Concurrency/atomic.h"
     #include "Core/Container/CompareUtil.h"
     #include "Core/Time/MonotonicClock.h"

@@ -6,11 +6,11 @@
  *          `-gv_screenshotQuit` 의 장부(요청한 종류 · 끝낸 종류 · 쓰지 못한 종류)도 여기 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

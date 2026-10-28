@@ -3,10 +3,10 @@
  * @brief 출하함을 구현합니다. 넣은 것은 하루가 끝날 때 팔립니다(하베스트 문의 출하 상자). 가방과 지갑은 빌려 씁니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"

@@ -7,7 +7,7 @@
  *          함께 보고하고, 본문이 끝나면 `SERVICE_STOPPED`.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

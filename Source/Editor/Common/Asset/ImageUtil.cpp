@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Asset/ImageUtil.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

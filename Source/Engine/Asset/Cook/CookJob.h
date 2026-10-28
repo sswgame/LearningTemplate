@@ -12,11 +12,11 @@
  *          - 리소스 id 는 `AssetPaths::toAssetID` 로 맞춘다(리소스 루트 밖의 파일은 받은 경로 그대로). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -6,9 +6,9 @@
  *          둘이 같은 키를 동시에 지으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받습니다. 사라진 칸은 새 칸을 넣을 때 걷습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

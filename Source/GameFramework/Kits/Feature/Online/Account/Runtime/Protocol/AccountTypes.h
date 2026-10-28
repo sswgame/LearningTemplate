@@ -5,10 +5,10 @@
  *          서버 전용 타입(설정, 저장, 암호)은 `GF_Server_Account` 의 `LoginTypes.h` 에 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

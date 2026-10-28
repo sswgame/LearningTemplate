@@ -3,11 +3,11 @@
  * @brief id 로 찾는 이펙트, 어빌리티, 어빌리티 세트의 정의와 이름으로 클래스를 만드는 레지스트리입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

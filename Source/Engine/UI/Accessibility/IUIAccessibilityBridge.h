@@ -6,9 +6,9 @@
  *          모든 호출은 메인(게임) 스레드이며, 플랫폼이 다른 스레드에서 묻는 것은 브리지가 메인 스레드로 옮겨 처리한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

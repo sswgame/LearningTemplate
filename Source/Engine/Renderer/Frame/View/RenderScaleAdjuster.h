@@ -3,9 +3,9 @@
  * @brief 프레임 시간이 예산을 깨면 3D 렌더 배율을 한 단계씩 내리고, 여유가 오래 이어지면 한 단계씩 올리는 자동 품질 조정기입니다(게임 스레드).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 

@@ -7,7 +7,7 @@
  *          배포본에는 할당 헤더가 없어 셀 것이 없으므로 진단 구성(테스트 하네스)에서만 세운다. 교착 감지기와 플랫폼 누수 검사는 진단 구성만.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

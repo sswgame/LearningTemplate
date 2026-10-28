@@ -7,9 +7,9 @@
  *          형식은 빌드마다 하나뿐이고, 새 가변 전역은 만들지 않는다. 몸통이 없으면 링크가 실패하므로 빠뜨릴 수 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

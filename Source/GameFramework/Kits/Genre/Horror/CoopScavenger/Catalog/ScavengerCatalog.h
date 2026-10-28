@@ -3,10 +3,10 @@
  * @brief 협동 수집 공포(리썰 컴퍼니 장르)의 데이터를 담습니다. 할당량 주기, 매입률, 하루 시각, 운반, 벌금, 시설 생성, 고철, 위성(달)을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

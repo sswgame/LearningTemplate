@@ -3,9 +3,9 @@
  * @brief AI 의 메모장입니다. 이름으로 값(실수, 정수, 참거짓, 위치, 오브젝트 id)을 저장하고, 행동 트리의 조건과 작업이 읽고 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

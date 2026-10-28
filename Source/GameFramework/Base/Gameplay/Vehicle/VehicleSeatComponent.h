@@ -3,10 +3,10 @@
  * @brief 탈것의 좌석 하나입니다. 소켓, 하차 위치, 탑승 중 자세를 가집니다. 운전석이면 앉은 쪽의 조종자가 탈것 폰을 쥡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

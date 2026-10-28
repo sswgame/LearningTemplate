@@ -16,10 +16,10 @@
  *          씬과 프리팹에서는 `GimmickCircuitComponent` 의 PROPERTY(노드와 배선 목록)가 같은 정의를 담는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

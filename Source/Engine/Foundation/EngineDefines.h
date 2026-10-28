@@ -3,7 +3,7 @@
  * @brief 엔진 기본 상수(뷰포트 크기 · 기본 언어)와 팩 · 폴더 이름입니다. 에셋 경로는 EngineDefaultAssets(enginedefaultassets.xml)가 정합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 
 namespace sw
 {

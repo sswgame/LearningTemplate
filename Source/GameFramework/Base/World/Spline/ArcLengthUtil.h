@@ -5,8 +5,8 @@
  *          닫힌 곡선은 거리를 한 바퀴로 감고(음수도), 열린 곡선은 양 끝에서 자릅니다. 마지막 점 뒤의 구간은 닫힌 곡선에서만 첫 점으로 이어집니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Layout/UILayoutDump.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"

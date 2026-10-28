@@ -2,9 +2,9 @@
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"

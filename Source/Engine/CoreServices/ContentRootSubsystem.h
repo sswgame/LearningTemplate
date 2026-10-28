@@ -6,7 +6,7 @@
  *          쓰지 않으므로 아무것도 하지 않는다(못 찾아도 서야 한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

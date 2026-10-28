@@ -4,9 +4,9 @@
  * @details 씬에 이것이 없으면 게임 카메라가 리스너입니다(`SceneAudio`). 칸 번호(`_listenerIndex`, 0..3)가 같은 것이 여럿이면 나중 것이 이깁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Object/Component/SceneComponent.h"

@@ -3,7 +3,7 @@
  * @brief 무기 피해를 계산합니다. 거리 감쇠, 머리 배율, 방어(고정, 비율, 최소)를 적용합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

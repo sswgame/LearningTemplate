@@ -5,7 +5,7 @@
  *          의존하는 쪽이 자기 의존 칸(`getSubsystemDependencies`)에 이름을 적는 방향만 쓰고, 구현한 쪽은 누가 자기 뒤에 서는지 모릅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

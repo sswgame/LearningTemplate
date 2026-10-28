@@ -3,8 +3,8 @@
  * @brief 소리 그래프 창입니다(Window > Audio Graph). `*.audiograph.xml` 하나를 읽어 캔버스(노드 · 연결)와 속성 그리드로 고치고, 검사를 통과하면 저장하며, 미리 들어 봅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 

@@ -7,7 +7,7 @@
  *          회수는 음수가 되지 않게 막는다. 다만 환불 회수(`_bRefund`)는 빚을 허용한다. 사용자가 정한 정책이며 빚이 있는 동안은 그 재화를 쓸 수 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

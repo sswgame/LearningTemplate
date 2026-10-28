@@ -3,9 +3,9 @@
  * @brief 디바이스가 보관하는 "살아 있는 커맨드 리스트" 목록을 종료 때 한 번에 분리하는 도우미입니다(DX11, DX12, Vulkan 이 같이 씁니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

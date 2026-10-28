@@ -3,7 +3,7 @@
  * @brief 엔진 코드가 쓰는 포크-조인 병렬 도우미입니다. 서비스가 연결돼 있으면 잡으로, 아니면 현재 스레드에서 돌립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineServices.h"

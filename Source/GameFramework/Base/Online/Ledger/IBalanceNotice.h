@@ -8,8 +8,8 @@
  *          - 서비스 스레드 하나에서만 씁니다. 경제 키트가 시작하기 전이나 종료한 뒤의 호출은 무시됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"

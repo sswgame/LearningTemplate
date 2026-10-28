@@ -8,7 +8,7 @@
  *          레이아웃의 기준은 장치 협상과 사용자 설정(`audio.speakerMode` → `AudioSpeakerMode`)이다. 믹서 그래프 데이터는 채널 중립이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

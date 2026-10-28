@@ -3,9 +3,9 @@
  * @brief 패키징 창입니다. 타깃 · 게임 · 백엔드 · 산출 폴더를 고르고 `Scripts/package/Pack.py` 를 새 프로세스로 띄웁니다(언리얼 Package Project).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 

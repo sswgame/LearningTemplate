@@ -3,8 +3,8 @@
  * @brief 사용자 파일(`Saved/Editor/` 의 환경설정 · 단축키)을 읽은 결과와, 깨진 파일을 치우는 복구 경로 하나입니다. ImGui 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

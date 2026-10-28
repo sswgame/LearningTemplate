@@ -3,8 +3,8 @@
  * @brief 컴포넌트 없이 스프라이트 N 장을 그리는 렌더 프리미티브입니다 — 월드 공간 UI(HP 바 · 데미지 숫자)가 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

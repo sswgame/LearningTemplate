@@ -3,10 +3,10 @@
  * @brief 높이장 지형입니다. 청크 LOD 메시, 스플랫 레이어 머티리얼, 구멍, CPU 높이와 노멀 질의를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

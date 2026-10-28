@@ -3,11 +3,11 @@
  * @brief 캐릭터 외형 데이터가 함께 쓰는 작은 타입입니다. 소켓 배치, 소켓 덮어쓰기, 슬롯 요청(해석기 입력), 로드 오류 모음이 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

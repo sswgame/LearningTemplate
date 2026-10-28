@@ -9,10 +9,10 @@
  *          머티리얼이 선언하지 않은 이름은 인스턴스 덮어쓰기로만 남고 그려지는 데는 영향이 없다(염색 파라미터와 같다). 파라미터를 읽어 그리는 머티리얼 셰이더는 따로 둔다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

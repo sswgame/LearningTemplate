@@ -3,7 +3,7 @@
  * @brief 두 디렉터가 같은 판을 여는 공유 상태 설정과 게임이 쓰는 이름입니다 — 어느 디렉터가 먼저 열어도 같은 값.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 

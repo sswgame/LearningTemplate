@@ -3,10 +3,10 @@
  * @brief 퀘스트 정의입니다. 선행 퀘스트와 레벨, 단계(목표, 다음 단계, 선택지 분기, 완료, 실패), 보상을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

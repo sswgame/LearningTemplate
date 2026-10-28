@@ -7,7 +7,7 @@
  *          그 줄을 기대 목록과 대조합니다. 줄 모양은 `EditorExtensionRegistry|<종류>|<id>|...` 로 고정입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

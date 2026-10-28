@@ -6,8 +6,8 @@
  *          다르지 않다. 추적 id 는 W3C `traceparent` 의 trace-id 와 같은 크기다. 지표 라벨에는 추적 id · 계정 id 를 넣지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

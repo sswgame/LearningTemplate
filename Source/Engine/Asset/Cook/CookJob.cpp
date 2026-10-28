@@ -2,10 +2,10 @@
 
 #include "Engine/Asset/Cook/CookJob.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetPaths.h"

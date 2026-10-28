@@ -3,9 +3,9 @@
  * @brief 글 입력 위젯의 복사 · 잘라내기 · 붙여넣기가 쓰는 글 클립보드 창구입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

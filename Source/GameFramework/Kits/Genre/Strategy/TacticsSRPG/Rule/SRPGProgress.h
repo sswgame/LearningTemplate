@@ -3,11 +3,11 @@
  * @brief 택틱스 SRPG 의 진행을 담당합니다. 작전의 승패 조건(적 전멸, 지휘관 격파, 지점 도달, 턴 버티기, 턴 제한, 아군 지휘관), 로그라이트 작전 지도(기반 `RunMap`), 명단(레벨과 개발이 이어진다)을 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"

@@ -2,8 +2,8 @@
 
 #include "Engine/Asset/Cook/CookStore.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"

@@ -3,8 +3,8 @@
  * @brief 플랫폼 메시지 페이로드입니다(Win32, X11 등이 같은 필드를 채웁니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Window/IRenderSurface.h"
 

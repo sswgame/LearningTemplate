@@ -8,7 +8,7 @@
  *          래그돌, 페어드 애니메이션)이 자기가 만든 것을 다시 만든다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 

@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"

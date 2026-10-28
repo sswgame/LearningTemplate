@@ -9,12 +9,12 @@
  *          혼자 평가합니다. LOD 가 아주 멀다고 판단한 유닛은 정점 애니메이션(VAT) 메시로 넘어가 CPU 포즈도 GPU 스키닝도 없습니다(`findVertexAnimationMesh`).
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 

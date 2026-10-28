@@ -6,11 +6,11 @@
  *          소유 규칙(shared_ptr 로 소유권을 함께 싣는다)은 `GPUSceneSnapshot` 주석을 참고한다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"

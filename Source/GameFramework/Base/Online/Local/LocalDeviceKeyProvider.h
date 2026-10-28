@@ -6,9 +6,9 @@
  *          계정 단위 키(서버가 준 것)를 쓰려면 다른 `ILocalStoreKeyProvider` 를 준다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Local/LocalStore.h"
 #include "GameFramework/GameFrameworkExports.h"

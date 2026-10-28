@@ -5,9 +5,9 @@
  *          글 칸의 `{bot}` 은 봇 번호, `{seq}` 는 그 봇이 이 동작을 낸 순번(0 부터)으로 바뀐다 — 같은 글을 되풀이하면 도배 막이에 걸린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

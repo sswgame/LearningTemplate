@@ -10,9 +10,9 @@
  *          - 요청은 처음 것만 남습니다. 메인 루프는 `getRequestedCause` 로 묻고, 정리를 끝내면 `notifyShutdownComplete` 를 부릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

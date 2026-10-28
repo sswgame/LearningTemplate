@@ -4,10 +4,10 @@
  *        기체(HP, EN, 이동력, 이동 타입, 지형 적성, 크기, 무기, 개발 트리), 파일럿(능력치, 성장, 경험치 곡선)을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

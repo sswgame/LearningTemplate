@@ -1,7 +1,7 @@
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"

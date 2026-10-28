@@ -5,7 +5,7 @@
  *          같은 범위에서 이것에 기대는 것 · 위 범위의 것이 먼저 소멸한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

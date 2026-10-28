@@ -3,8 +3,8 @@
  * @brief 쿼터니언(quaternion)과 4x4 행렬(float4x4), 그리고 둘로 하는 변환 연산입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

@@ -5,9 +5,9 @@
  *          해시만 갈리는 일을 막는다. 접는 함수는 형식마다 하나라 호출하는 쪽이 비트 변환을 직접 쓰지 않는다(FNV-1a 64).
  */
 #pragma once
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include <cmath>

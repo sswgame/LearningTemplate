@@ -3,8 +3,8 @@
  * @brief 지형, 식생, 물 컴포넌트가 함께 쓰는 도구입니다. 보는 카메라 위치, 캐시에서 잡은 머티리얼과 컴포넌트별 인스턴스를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

@@ -4,8 +4,8 @@
  * @details ImGui 를 쓰지 않으므로 EditorTest 가 테스트한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

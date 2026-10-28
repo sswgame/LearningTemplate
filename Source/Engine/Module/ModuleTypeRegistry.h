@@ -3,8 +3,8 @@
  * @brief 동적으로 로드한 모듈의 리플렉션 타입(컴포넌트 생성 함수 포함)과 전역 변수를 등록 · 정리합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -4,7 +4,7 @@
  * @details 메인 창(`IWindow::createPlatformWindow`)과 스플래시 창(`ISplashWindow`)이 같은 계층을 골라야 하므로 읽는 코드를 한 곳에 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

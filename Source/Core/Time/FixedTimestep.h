@@ -9,8 +9,8 @@
  *          기본값은 Core 가 정하지 않습니다. 값을 가진 쪽(엔진의 `EngineConfig`)이 만들 때 넘기고, `configure` 의 0 이하 값은 그 기본값으로 돌아갑니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/FixedStepTimer.h"
 #include "Core/Time/GameTimer.h"
 

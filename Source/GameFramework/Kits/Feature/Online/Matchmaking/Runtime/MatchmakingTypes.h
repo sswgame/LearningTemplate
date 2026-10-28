@@ -3,9 +3,9 @@
  * @brief 매칭 키트의 타입입니다. 결과, 모드 정의, 대기열 티켓, 만들어진 경기, 파티, 로비, 배정 결과를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -6,8 +6,8 @@
  *          카메라 컷을 `CinematicCameraComponent` 가 받는 것과 같은 나눔이다. 언리얼 Sequencer 의 Event 트랙이 블루프린트로 장비를 바꾸는 일을 데이터 항목으로 만든 셈이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

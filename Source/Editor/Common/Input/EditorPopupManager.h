@@ -3,9 +3,9 @@
  * @brief 에디터 팝업 · 모달 대화 상자를 등록하고 관리합니다(EditorContext 소유).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"

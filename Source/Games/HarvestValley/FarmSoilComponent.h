@@ -3,8 +3,8 @@
  * @brief 밭 칸 하나의 흙 모습 — 디렉터 밭의 같은 칸을 따라 풀 · 갈았음 · 물 줌 색을 입힙니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -3,9 +3,9 @@
  * @brief O(1) 고정 크기 블록 할당자입니다(스레드 안전 여부를 고를 수 있습니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

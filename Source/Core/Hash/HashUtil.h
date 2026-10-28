@@ -7,9 +7,9 @@
  *          의 기본 해시(`DefaultHash`)가 그것을 부르고, 여러 칸을 섞는 본문은 `HashUtil::makeHash( _a, _b )` 한 줄이다.
  */
 #pragma once
-#include "Core/Common/ASCIIUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/ASCIIUtil.h"
 
 namespace sw
 {

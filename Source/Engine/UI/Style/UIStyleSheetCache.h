@@ -3,9 +3,9 @@
  * @brief 읽어 둔 스타일 시트를 경로별로 나눠 주는 캐시입니다(에셋 종류 `UIStyleSheet`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Document/UITextAssetCache.h"

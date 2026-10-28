@@ -3,10 +3,10 @@
  * @brief 시나리오 스크린샷(PPM)의 영역 지표를 정의합니다. `<ExpectImage>` 가 단언하는 값이며, 배경과 톤맵이 바뀌어도 버티는 상대 지표입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

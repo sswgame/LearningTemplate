@@ -6,10 +6,10 @@
  *          클릭 · 끌기 · 더블클릭의 문턱은 입력 맵의 값 하나다 — `EditorInputActions::processFrame` 이 ImGui 에 같은 값을 넣는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"

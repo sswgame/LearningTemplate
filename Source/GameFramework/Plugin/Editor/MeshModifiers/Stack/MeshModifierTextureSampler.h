@@ -8,8 +8,8 @@
  *          (지금 적용이 번갈아 쓰는 이미지는 남긴다 — 정점마다 다시 디코드하지 않게). 8 비트 원본을 8 비트로 보관하면 4 배 줄지만 아직 하지 않았습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

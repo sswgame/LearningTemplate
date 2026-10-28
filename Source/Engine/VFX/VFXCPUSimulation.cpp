@@ -2,7 +2,7 @@
 
 #include "Engine/VFX/VFXCPUSimulation.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 

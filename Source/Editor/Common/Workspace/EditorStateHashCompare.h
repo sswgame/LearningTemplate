@@ -7,10 +7,10 @@
  *          클라이언트(App)는 서버 틱 번호를 모르므로 아직 원천이 아니다 — 같은 입력의 두 서버, 또는 서버와 저장한 이력을 비교한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 #include "Editor/Common/EditorExports.h"

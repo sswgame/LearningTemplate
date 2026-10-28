@@ -2,9 +2,9 @@
 
 #include "Engine/Profiling/DebugOverlayState.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw

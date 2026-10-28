@@ -3,9 +3,9 @@
  * @brief InputMap XML 을 시각적으로 편집하는 ImGui 패널입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableAssetPath.h"

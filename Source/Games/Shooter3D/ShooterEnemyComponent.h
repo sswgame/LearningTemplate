@@ -3,9 +3,9 @@
  * @brief 스켈레톤 적 하나(폰) — 땅에서 일어나 AI 조종자의 의도대로 걸어오고, 휘두르기 버튼이 눌리면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"

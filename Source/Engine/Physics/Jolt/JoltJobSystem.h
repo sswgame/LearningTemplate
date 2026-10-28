@@ -14,11 +14,11 @@
  *          그 실행이 끝나기를 기다린다(슬롯별 들어감 · 나옴 수, 나옴은 release).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/FixedSizeFreeList.h>

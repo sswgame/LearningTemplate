@@ -3,9 +3,9 @@
  * @brief clang 컨테이너 표기 → ContainerKind + wrapper stem (ReflectBuiltins에서 채움).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionContainers.h"
 

@@ -5,9 +5,9 @@
  *          사라질 때(1 → 0)만 보냅니다. 같은 태그를 주는 이펙트가 하나 더 적용돼도 "생겼다" 고 알리지 않습니다(언리얼의 NewOrRemoved).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Object/Component/TagSystem.h"

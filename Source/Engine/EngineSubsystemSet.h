@@ -9,8 +9,8 @@
  *          범위의 부모(`setParentScope`)와 초기화는 호출한 쪽이 한다. 이 함수들은 만들어 넣고 범위에 거는 일까지만 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/IAudioService.h"

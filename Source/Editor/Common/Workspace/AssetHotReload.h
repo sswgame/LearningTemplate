@@ -3,10 +3,10 @@
  * @brief 실행 중 `Content/` 변경을 감지해 엔진 캐시가 다시 읽게 합니다. 에디터 전용 개발 기능이며 배포본에는 감시가 없습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"

@@ -5,7 +5,7 @@
  *          프레임 경로 폴더(`Renderer/Frame/`, `Graphics/Material/`, `Graphics/Texture/` 의 핫 리로드가 아닌 함수)에서 `Tool` 이 아닌 이유의 호출을 찾아내기 쉽다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

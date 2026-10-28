@@ -8,9 +8,9 @@
  *          방 · 포털 그래프는 소리가 문을 돌아 오는 길(겉보기 위치, 회절)도 낸다(`AudioPropagation`). 엔진은 겉보기 위치로 방향 · 거리를, 회절로 볼륨 · 컷오프를 더 정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

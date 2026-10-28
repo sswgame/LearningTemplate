@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Graph/BlendSpace.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

@@ -3,10 +3,10 @@
  * @brief RTS 의 데이터를 담습니다. 유닛, 건물, 자원마다 체력, 방어, 속도, 시야, 비용, 보급, 생산 시간, 공격, 일꾼 여부, 본진 여부, 생산처, 선행 건물을 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

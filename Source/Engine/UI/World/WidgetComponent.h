@@ -3,10 +3,10 @@
  * @brief 오브젝트에 붙는 UI 입니다. 화면 마커(Screen)와 월드 사각형(World) 두 가지가 있으며, 언리얼의 UWidgetComponent, 유니티의 World Space Canvas, Godot 의 SubViewport 를 3D 에 붙이는 방식에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

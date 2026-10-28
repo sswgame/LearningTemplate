@@ -8,8 +8,8 @@
  *          1인칭(`FirstPersonCameraComponent`), 디렉터(`CameraDirectorComponent`)가 같은 계산을 부른다. 직교 시점도 디렉터의 모드(`OrthoTopDown`)다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Character/Camera/CameraPose.h"

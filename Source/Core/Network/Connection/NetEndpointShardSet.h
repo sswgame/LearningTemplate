@@ -11,9 +11,9 @@
  *          언리얼 `UNetDriver` 가 연결 목록 하나를 키트(리플리케이션 그래프)에 주는 자리와 같다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 
 namespace sw

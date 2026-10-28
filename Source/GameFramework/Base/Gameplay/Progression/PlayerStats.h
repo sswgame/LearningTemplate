@@ -3,11 +3,11 @@
  * @brief 로컬 통계입니다. 통계 정의는 데이터(카운터, 최대, 최소, 시간)로 두고, 값은 프로필마다 저장하며, 바뀌면 알립니다. 업적의 바탕이 되며 Steam Stats 에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

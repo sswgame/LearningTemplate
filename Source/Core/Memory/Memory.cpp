@@ -2,8 +2,8 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include <cstdio>

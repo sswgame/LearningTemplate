@@ -3,10 +3,10 @@
  * @brief 화면 하나의 애니메이션 재생기입니다. 이름 붙은 애니메이션(문서)과 코드 트윈을 프레임마다 진행해 위젯 프로퍼티에 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"

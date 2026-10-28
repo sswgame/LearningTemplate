@@ -3,10 +3,10 @@
  * @brief 키트 디렉터 여럿이 함께 쓰는 판 상태를 보관하는 컴포넌트입니다. 지갑, 플래그, 시계, 퀘스트 일지, 평판, 가방, 날씨, 땅이 들어 있습니다. 세이브 슬롯 하나(한 세션)의 상태이며, 월드 단위 복제 상태인 언리얼 GameState 와는 다릅니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

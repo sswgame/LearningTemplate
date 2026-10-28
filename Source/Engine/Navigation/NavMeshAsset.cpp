@@ -2,12 +2,12 @@
 
 #include "Engine/Navigation/NavMeshAsset.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetIO.h"

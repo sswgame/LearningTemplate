@@ -6,10 +6,10 @@
  *          저장소에는 CC0 라틴 폰트만 둔다. 한글, CJK, 아랍 문자는 시스템 패밀리가 맡는다(런타임 UI 결정 R1).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"

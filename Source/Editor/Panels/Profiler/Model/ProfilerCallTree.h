@@ -3,11 +3,11 @@
  * @brief 프로파일러 패널 Call Tree 탭의 집계입니다 — 타임라인 녹화의 사건을 호출 경로(스레드 → 바깥 구간 → 안 구간)로 접습니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

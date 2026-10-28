@@ -12,11 +12,11 @@
  *          쓰는 곳: 물리 메시 셰이프(`PhysicsMeshShapeCache::makeShapeData`), 메시 파괴(`MeshFracture`), 캐릭터 기하 자르기(`GeometryCutUtil`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

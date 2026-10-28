@@ -12,8 +12,8 @@
  *          정렬 비교자는 `CompareUtil.h`(`Ascending<&T::_member>`)에 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {

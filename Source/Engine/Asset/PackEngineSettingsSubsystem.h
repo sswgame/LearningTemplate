@@ -4,7 +4,7 @@
  * @details 팩 마운트(`AssetManager`, Resource 단계)에 기대므로 Resource 폴더에 있다(값의 형식 `PackEngineSettings` 는 Config). 테스트 하네스도 같은 단계를 세운다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

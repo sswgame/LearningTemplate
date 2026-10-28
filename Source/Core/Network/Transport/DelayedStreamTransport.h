@@ -8,13 +8,13 @@
  *          그래서 처리량이 아니라 지연(왕복 시간) 측정에만 쓴다. 한 연결의 순서는 지켜진다(지연이 고정이고 보낸 순서대로 안쪽에 넘긴다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 

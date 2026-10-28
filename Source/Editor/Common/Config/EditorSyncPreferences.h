@@ -3,7 +3,7 @@
  * @brief 멀티플레이 창 Sync 탭의 환경설정 섹션(Editor/Multiplayer Sync)입니다. 등록은 `MultiplayerSyncTab.cpp` 가 `SW_EDITOR_SETTINGS` 로 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

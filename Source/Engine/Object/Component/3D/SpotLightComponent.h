@@ -3,8 +3,8 @@
  * @brief 스포트라이트 하나입니다. 위치 · 방향 · 원뿔각 · 반경을 선언으로 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"

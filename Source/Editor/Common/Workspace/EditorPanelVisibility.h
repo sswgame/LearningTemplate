@@ -6,9 +6,9 @@
  *          적지 않은 패널은 지금 상태 그대로 둔다(새로 생긴 패널은 등록한 기본 가시성).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"

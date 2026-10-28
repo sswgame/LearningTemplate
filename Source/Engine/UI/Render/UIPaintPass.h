@@ -3,9 +3,9 @@
  * @brief 그리기 순회를 정의합니다. 그리기 더티인 위젯만 자기 그리기 캐시를 다시 칠하고, 프레임 목록은 그리기 순서로 캐시를 이어 붙입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"

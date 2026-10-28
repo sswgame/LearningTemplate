@@ -4,9 +4,9 @@
  * @details JSON 호스트 설정은 저장하면 실행 중인 호스트가 다시 읽습니다. 팩의 `<Engine>` 요소(`PackEngineSettings`)는 다음 기동부터 반영됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

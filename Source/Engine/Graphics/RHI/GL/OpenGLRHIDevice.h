@@ -4,12 +4,12 @@
  * @note glad(GL 심볼)는 이 헤더가 아니라 GL 의 .cpp 들이 직접, 또는 OpenGLRHIDeviceInternal.h 를 거쳐 include 합니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"

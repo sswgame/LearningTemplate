@@ -5,7 +5,7 @@
  *          필요한 자리는 여기 매크로로 바꿉니다. 모르는 낱말(오타)은 정의되지 않은 매크로 이름이 되어 컴파일 오류입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 // requirement 칸: `Required` 면 areEngineServicesBound() 검사에 든다.
 

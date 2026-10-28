@@ -6,10 +6,10 @@
  *          엔진의 기본 그래프는 `engine/audio/default.audiomixer.xml` 이다. 사용자 설정의 버스 볼륨(`audio.busVolume`)은 그 이름으로 버스를 찾는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -6,12 +6,12 @@
  *          분할 월드) 다른 씬의 카메라까지 흔들리고, 등록 목록을 지키는 것이 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include <thread>

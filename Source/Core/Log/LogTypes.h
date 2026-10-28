@@ -6,10 +6,10 @@
  * 파사드를 include 하게 되어 의존 방향이 뒤집힙니다. `Logger.h` 가 이 헤더를 include 합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 
 namespace sw

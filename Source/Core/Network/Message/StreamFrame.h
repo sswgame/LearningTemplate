@@ -4,10 +4,10 @@
  * @details 길이 필드의 상한 검사는 **몸을 받기 전에** 한다 — 4 바이트만 와도 4 GB 를 잡지 않는다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

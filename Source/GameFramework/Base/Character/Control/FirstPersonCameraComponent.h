@@ -4,8 +4,8 @@
  * @details 시점(폰의 조종 회전, 피치 한계), 눈 위치, 손에 든 모델(뷰 모델)을 붙이는 위치를 다룬다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

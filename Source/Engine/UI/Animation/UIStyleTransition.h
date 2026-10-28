@@ -3,10 +3,10 @@
  * @brief 스타일 전환(transition)을 정의합니다. 계산된 스타일이 바뀔 때 `_transition` 에 적힌 필드만 지금 값에서 새 값으로 보간합니다(유니티 USS, CSS 의 `transition` 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/UI/Style/WidgetStyle.h"

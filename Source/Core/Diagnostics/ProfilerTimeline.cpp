@@ -2,11 +2,11 @@
 
 #include "Core/Diagnostics/ProfilerTimeline.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetFlowLog.h"

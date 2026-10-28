@@ -5,9 +5,9 @@
  *          트리를 고쳐 가며 만들 때는 `JSONDocument`, 크기가 큰 출력(트레이스)이나 할당이 없어야 하는 출력(행 감시 보고)은 이것을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include <optional>
 

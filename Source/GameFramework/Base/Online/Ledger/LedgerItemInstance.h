@@ -9,8 +9,8 @@
  *          PlayFab Economy v2 의 stack id 와 인스턴스 속성, 국내 MMO 의 아이템 고유 번호와 같은 구조입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

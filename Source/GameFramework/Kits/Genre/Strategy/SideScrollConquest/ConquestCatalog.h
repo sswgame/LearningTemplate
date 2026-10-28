@@ -5,9 +5,9 @@
  * @details 자원 이름(나무, 철, 금 등)은 코드가 정하지 않는다. 비용과 수입은 `StatBlock`(`<Cost wood="20" gold="5"/>`)으로 읽는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -3,9 +3,9 @@
  * @brief 이미지(또는 단색 상자) 하나를 그리는 위젯입니다(UMG 의 Image, 유니티의 Image, Godot 의 TextureRect 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

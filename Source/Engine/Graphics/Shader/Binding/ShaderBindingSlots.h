@@ -11,7 +11,7 @@
  *          DX11 과 GL 은 슬롯이다. 텍스처만 DX12 와 Vulkan 이 무제한 배열(`bindless::`)이고 DX11 과 GL 은 고정 슬롯이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "bindingslots.hlsli"
 

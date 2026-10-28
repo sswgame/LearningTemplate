@@ -51,11 +51,11 @@
  *          Shipping 은 이 비트를 보내지도 믿지도 않는다. 비트를 켠 클라이언트가 슬롯을 계속 붙잡는 일을 막기 위해서다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetChallenge.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/Connection/NetPacketSealer.h"

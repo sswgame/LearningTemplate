@@ -2,9 +2,9 @@
 
 #include "Games/PixelTown/TownDirectorComponent.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"

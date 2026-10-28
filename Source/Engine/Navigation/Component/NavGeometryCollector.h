@@ -5,9 +5,9 @@
  *          어떤 오브젝트를 넣고 뺄지(수정자 · 제외 태그 · 움직이는 계층)와 메시 · 강체를 읽는 법이 바뀔 때만 이 파일이 바뀝니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 
 namespace sw

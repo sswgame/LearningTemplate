@@ -9,10 +9,10 @@
  *          **EditorModule 안의 코드만 쓴다.** 확장 모듈(플러그인) 코드는 모듈이 언로드될 때 vtable 이 사라지므로 `SW_EDITOR_SUBSYSTEM` 서브시스템을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 

@@ -6,9 +6,9 @@
  *          기한이 같은 시각을 봅니다. 로거를 include 하지 않는 가벼운 헤더라 동시성 · 컨테이너 헤더에서도 씁니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

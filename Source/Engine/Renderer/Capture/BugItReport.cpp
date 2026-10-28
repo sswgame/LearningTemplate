@@ -3,11 +3,11 @@
 #include "Engine/Renderer/Capture/BugItReport.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/BuildInfo.h"
-#include "Core/Common/Defines.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"

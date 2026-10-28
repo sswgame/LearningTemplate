@@ -3,7 +3,7 @@
  * @brief 창 · 패널 · 팝업의 크기를 글자 칸 수와 줄 수로 적는 형식입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

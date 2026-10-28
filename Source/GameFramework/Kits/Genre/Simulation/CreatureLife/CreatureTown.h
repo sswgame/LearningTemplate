@@ -3,12 +3,12 @@
  * @brief 생물과 함께 만드는 마을을 구현합니다. 셀 격자의 오브젝트, 서식지 맞추기(회전 허용), 시간대와 날씨에 따른 방문(결정적), 호감도와 부탁, 능력으로 세계 편집, 집 배정, 매력도를 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

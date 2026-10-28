@@ -2,11 +2,11 @@
 
 #include "GameFramework/Base/Foundation/Framework/Save/Autosave.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"

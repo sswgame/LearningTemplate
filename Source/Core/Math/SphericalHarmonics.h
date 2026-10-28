@@ -9,7 +9,7 @@
  *          (유니티 ShadeSH9 의 SHAr..SHC 배치와 같다 — 마지막 원소의 w 는 0).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/VectorMath.h"
 

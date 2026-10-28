@@ -4,12 +4,12 @@
  *        팀 전원 기절 시 전멸 처리, 자기장 피해, 보급 상자, 남은 인원과 킬 피드 알림을 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/Time/FixedStepTimer.h"
 
 #include "GameFramework/Base/Character/Combat/Health/Vitality.h"

@@ -9,9 +9,9 @@
  *          바이트 머리에 스키마 해시가 있으므로 배치가 다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

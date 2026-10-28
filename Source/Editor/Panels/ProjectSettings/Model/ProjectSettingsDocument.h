@@ -3,8 +3,8 @@
  * @brief 프로젝트 설정 파일 하나(또는 XML 파일 안의 설정 요소 하나)의 편집 상태입니다. 리플렉션 인스턴스를 들고, 기본값과 다른 키만 씁니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectedInstance.h"

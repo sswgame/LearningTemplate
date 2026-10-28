@@ -5,10 +5,10 @@
  *          델타, 병합된 형상)를 다시 GPU 쪽에 싣는다. 그래서 이 폴더의 계산은 GPU 나 씬 없이 테스트할 수 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"

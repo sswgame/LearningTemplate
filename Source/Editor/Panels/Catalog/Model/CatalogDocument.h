@@ -6,9 +6,9 @@
  *          언리얼 `UDataTable` 편집기가 행을 테이블로 고치고 CSV · JSON 으로 가져오고 내보내는 것에 해당하지만, 이 엔진의 카탈로그는 손으로 읽는 XML 이라 행은 리플렉션 구조체가 아니라 XML 원소입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 

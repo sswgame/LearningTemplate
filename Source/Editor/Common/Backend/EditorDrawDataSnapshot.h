@@ -3,7 +3,7 @@
  * @brief ImGui 메인 뷰포트 DrawData를 클론해 렌더 스레드가 안전하게 그리게 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 struct ImDrawData;

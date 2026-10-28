@@ -2,9 +2,9 @@
 
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"

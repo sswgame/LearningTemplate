@@ -10,9 +10,9 @@
  *          - `load( path, outAsset )` : `[[nodiscard]] static bool` — 읽지 못하면 오류를 남기고 false
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 

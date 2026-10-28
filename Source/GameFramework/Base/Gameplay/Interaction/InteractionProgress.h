@@ -5,10 +5,10 @@
  *          붙어 있는 동안 가끔 스킬 체크가 뜬다. 판정은 `TimingJudge` 를 참조해서 하고, 간격과 대상은 `GameRandom` 시드로 정하므로 같은 시드에서 같은 결과가 반복된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 

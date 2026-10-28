@@ -3,10 +3,10 @@
  * @brief 사용자 파일(`usersettings.json`)의 형식입니다. JSON 글과 키 · 값 목록을 오가고, 이전 버전 파일을 스키마의 `<Upgrade>` 단계로 올립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

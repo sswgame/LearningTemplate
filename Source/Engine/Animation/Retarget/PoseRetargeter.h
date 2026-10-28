@@ -3,10 +3,10 @@
  * @brief 비율이 다른 두 스켈레톤 사이에서 포즈를 옮기는 리타기터(런타임)와, 클립 하나를 대상 스켈레톤 클립으로 베이크하는 오프라인 경로입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"

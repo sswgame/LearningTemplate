@@ -3,9 +3,9 @@
  * @brief 화면 레이어(`UILayer`)와 레이어 집합(`UILayerMask`)입니다. 화면을 정의하는 `UIScreen.h` 없이 레이어만 쓰는 쪽(카메라 디렉터의 포토 모드 데이터)이 가볍게 가져다 씁니다.
  */
 #pragma once
-#include "Core/Common/EnumUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/EnumUtil.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -3,10 +3,10 @@
  * @brief 스켈레톤 에셋(`.skeleton.xml`)입니다. 본 이름, 부모, 레퍼런스 포즈, 역 바인드와, 임포트가 본에 붙어 있던 메시를 기록한 읽기 전용 테이블을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,10 +3,10 @@
  * @brief 콘텐츠 브라우저의 임포트 대기열입니다. 파일 대화상자가 고른 경로를 백그라운드 스레드에서 받아 두었다가 메인 스레드에 넘깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

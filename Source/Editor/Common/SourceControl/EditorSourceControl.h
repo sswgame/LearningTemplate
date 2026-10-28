@@ -3,9 +3,9 @@
  * @brief 에디터의 체크아웃(잠금)을 담당합니다. 공급자를 고르고, 잠금 목록을 보관하며, 사용자가 선택한 파일만 잠그거나 풉니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"

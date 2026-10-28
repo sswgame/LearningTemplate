@@ -9,9 +9,9 @@
  *          `translation` · `rotation`(부모 본 · 소켓 공간)을 같은 되쓰기로 저장한다(파일 글 전후가 되돌리기 하나). 바깥 대상(다른 유닛 · 오브젝트)은 옮기지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

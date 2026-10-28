@@ -3,8 +3,8 @@
  * @brief 프리팹을 자기 미리보기 씬에서 편집하는 창입니다 — 메인 씬을 더럽히지 않고, 창마다 Undo 스택 · 선택을 가집니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/GUI/EditorPreviewPanel.h"

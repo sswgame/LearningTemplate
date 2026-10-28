@@ -10,10 +10,10 @@
  *       구독 해제가 겹치는 것은 계약 밖이다(출처가 사라지는 중이면 어느 잠금도 그 메모리를 지키지 못한다).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

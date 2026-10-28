@@ -5,9 +5,9 @@
  *          계정의 음수 잔액은 환불 회수의 빚이라 위반이 아니다(따로 센다). 맡김의 음수는 위반이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"

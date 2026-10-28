@@ -2,8 +2,8 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 

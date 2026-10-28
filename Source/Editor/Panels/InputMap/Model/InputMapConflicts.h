@@ -3,8 +3,8 @@
  * @brief Input Map Editor 의 바인딩 충돌 찾기입니다 — 같은 레이어에서 두 액션이 같은 키(슬롯)를 쓰는 곳(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Input/IInputDevice.h"

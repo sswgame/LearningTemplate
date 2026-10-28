@@ -3,9 +3,9 @@
  * @brief 파라미터 하나나 둘로 여러 클립의 포즈를 섞는 포즈 블렌드 스페이스입니다(언리얼 Blend Space, 유니티 Blend Tree 에 해당합니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

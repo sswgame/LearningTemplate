@@ -3,8 +3,8 @@
  * @brief AI 조종자입니다. 판단(`think`)으로 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

@@ -5,7 +5,7 @@
 #include "Core/Process/Process.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <shellapi.h>
     #include <shlobj.h>

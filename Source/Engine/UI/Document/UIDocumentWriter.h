@@ -3,9 +3,9 @@
  * @brief 위젯 트리를 UI 문서(`*.ui.xml`) 텍스트로 씁니다. 에디터 미리보기가 고친 화면을 저장할 때 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/UI/Document/UIBindingDesc.h"
 

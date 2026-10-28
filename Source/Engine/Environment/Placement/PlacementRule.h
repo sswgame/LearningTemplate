@@ -8,8 +8,8 @@
  *          밀지 않는다(필터 하나를 바꿔도 남는 위치는 그대로다). 언리얼 PCG 와 Horizon 의 배치 규칙에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 

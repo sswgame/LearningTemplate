@@ -3,8 +3,8 @@
  * @brief 아홉 슬롯 핫바입니다. 부순 블록을 모으고, 고른 슬롯의 블록을 놓습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"

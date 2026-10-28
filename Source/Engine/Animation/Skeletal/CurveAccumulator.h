@@ -3,9 +3,9 @@
  * @brief 한 프레임의 커브 값을 이름별로 모읍니다(같은 이름은 더합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

@@ -3,8 +3,8 @@
  * @brief 아래 층(커맨드 · 작업 공간 · 뷰포트)이 패널과 도킹을 부르는 진입점입니다. 구현은 GUI 층(`EditorPanelService`)에 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"

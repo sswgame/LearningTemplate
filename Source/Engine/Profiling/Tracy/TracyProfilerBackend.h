@@ -3,9 +3,9 @@
  * @brief Tracy 출력(`IProfilerBackend`)입니다. Tracy 헤더는 짝 .cpp 하나만 include 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Profiling/IProfilerBackend.h"
 

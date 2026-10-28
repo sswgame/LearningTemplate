@@ -3,8 +3,8 @@
  * @brief 레이싱 기믹입니다. 부스트 패드와 아이템 상자(시드를 고정한 가중치 뽑기, 다시 나타남)를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 

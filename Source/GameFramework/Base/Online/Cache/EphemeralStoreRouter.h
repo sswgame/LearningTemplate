@@ -13,7 +13,6 @@
  *          gRPC 와 Nakama 런타임처럼 런타임이 나눠 주는 구조다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -21,6 +20,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"

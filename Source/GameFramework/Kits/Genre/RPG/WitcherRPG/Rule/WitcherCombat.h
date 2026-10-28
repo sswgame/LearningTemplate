@@ -4,9 +4,9 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 줄어듦)를 관리합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

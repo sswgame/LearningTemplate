@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Backend/DrawSnapshotHandoff.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw::editor
 {

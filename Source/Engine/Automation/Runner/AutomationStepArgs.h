@@ -5,8 +5,8 @@
  *          검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앱니다. 기본값은 구조체의 초기값 하나입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationThresholdBasis.h"

@@ -3,9 +3,9 @@
  * @brief 자동화 감시 값을 정의합니다. 시나리오의 `<Expect watch="…">` 가 읽는 이름 붙은 값이며, 게임과 키트가 .cpp 에 `SW_AUTOMATION_WATCH` 한 줄로 등록합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

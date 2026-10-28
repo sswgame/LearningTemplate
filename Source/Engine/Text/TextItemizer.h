@@ -3,10 +3,10 @@
  * @brief 런 나누기(itemization)를 정의합니다. 텍스트를 (면, 방향)이 같은 런으로 끊고, 셰이퍼는 런 하나씩 셰이핑합니다(HarfBuzz 도 같습니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Text/ITextShaper.h"
 

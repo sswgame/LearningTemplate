@@ -5,9 +5,9 @@
  *          핸들 · 스레드 · 단위 규칙은 `IPhysicsScene.h` 머리말과 같다. 정점은 씬 스텝이 함께 푼다(따로 부를 것이 없다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/PhysicsTypes.h"

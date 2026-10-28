@@ -3,7 +3,7 @@
  * @brief 온라인 서비스 여러 곳이 함께 지키는 상한입니다. 저장소, 캐시, 프로토콜이 따로 적으면 한쪽만 바뀌므로 여기 하나만 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

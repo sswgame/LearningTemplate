@@ -6,8 +6,8 @@
  *          이벤트는 루프(`_bLoop`)로 만들고 `ambient` 버스로 보냅니다. 레이캐스트 가림은 기본으로 끕니다(영역 소리는 벽을 넘어 번진다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/Component/AudioEmitterComponent.h"

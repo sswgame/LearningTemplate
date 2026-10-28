@@ -7,8 +7,8 @@
  *          역방향 의존으로 적는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

@@ -3,9 +3,9 @@
  * @brief 패키징 진입점(`Scripts/package/Pack.py`)의 출력 줄을 읽어 진행과 결과로 바꿉니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

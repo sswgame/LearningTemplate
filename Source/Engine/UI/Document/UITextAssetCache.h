@@ -3,13 +3,13 @@
  * @brief 텍스트로 읽어 파싱하는 UI 에셋(문서, 스타일 시트)을 경로별로 보관하는 캐시의 공통 구현입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -3,9 +3,9 @@
  * @brief 화면 페이드 인/아웃과 씬 전환 시퀀스(FadeOut → OnExecute → FadeIn) FSM 관리자입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/GameFrameworkExports.h"

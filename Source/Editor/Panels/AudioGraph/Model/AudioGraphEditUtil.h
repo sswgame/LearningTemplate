@@ -6,7 +6,7 @@
  *          들어오는 핀은 링크를 여럿 받는다(입력의 합).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Audio/Graph/AudioGraphDef.h"

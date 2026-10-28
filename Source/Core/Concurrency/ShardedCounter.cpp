@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/ShardedCounter.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 
 namespace sw
 {

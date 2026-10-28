@@ -3,9 +3,9 @@
  * @brief 날아가는 투사체 하나 — 자기 오브젝트를 옮기고, 디렉터의 유닛 모습에서 처음 닿은 적대 유닛에 이펙트를 겁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

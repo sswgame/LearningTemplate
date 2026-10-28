@@ -7,7 +7,7 @@
  *          고정점 반복으로 찾은 뒤의 높이다(`computeSurfaceHeight`).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

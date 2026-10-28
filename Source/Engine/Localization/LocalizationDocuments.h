@@ -6,11 +6,11 @@
  *          낡은 번역 대신 다음 문화권으로 넘어간다). 모르는 속성 · 자식은 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작다. 형식은 XML 이다(키는 `<entry key="…">` 의 속성 — 키가 값마다 다른 맵이라 칸 이름으로 쓸 수 없다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
 

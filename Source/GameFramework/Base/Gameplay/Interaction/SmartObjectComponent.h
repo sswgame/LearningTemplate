@@ -5,11 +5,11 @@
  *          차지한 쪽은 오브젝트 핸들로 센다. 슬롯을 고르는 AI 는 태그(`Activity.Sit`)로 빈 슬롯을 찾고, 플레이어는 상호작용으로 같은 슬롯을 차지한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

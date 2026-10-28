@@ -2,10 +2,10 @@
 
 #include "Engine/Localization/StringTable.h"
 
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/MemoryBlock.h"
 

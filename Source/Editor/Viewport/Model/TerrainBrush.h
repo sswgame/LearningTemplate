@@ -6,8 +6,8 @@
  *          적용 결과는 `TerrainComponent::writeHeights` · `writeLayerWeights` 로 지형에 넣는다(틱 밖, 프레임에 한 번). 뷰포트 드래그 · 되돌리기 · 저장은 `TerrainBrushTool` 이 잇는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"

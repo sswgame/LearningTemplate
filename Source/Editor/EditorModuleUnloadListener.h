@@ -3,7 +3,7 @@
  * @brief 확장 모듈 라이브러리가 언로드되기 전에 그 이미지의 등록 줄로 만든 에디터 인스턴스를 지웁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/EditorSubsystem.h"

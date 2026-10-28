@@ -2,8 +2,8 @@
 
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/String/HexUtil.h"
 
 namespace sw

@@ -6,11 +6,11 @@
  *          고정 틱(권장 1/60)으로 호출하면 결정적이다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/Time/Countdown.h"
 
 #include "GameFramework/Base/Character/Movement/PlatformerMotor2D.h"

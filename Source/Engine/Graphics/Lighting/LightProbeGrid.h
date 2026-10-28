@@ -9,13 +9,13 @@
  *          볼륨의 격자(위치 · 크기 · 간격)와 파일의 격자가 다르면 그 파일은 다른 볼륨의 베이크다 — 읽는 쪽이 오류로 멈추고 쓰지 않는다(다시 베이크한다).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

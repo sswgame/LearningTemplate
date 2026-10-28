@@ -3,10 +3,10 @@
  * @brief 프로젝트의 2D 렌더 설정(`render2d.xml`)입니다. 정렬 레이어 목록과 투명 정렬 축을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

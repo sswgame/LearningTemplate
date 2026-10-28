@@ -3,9 +3,9 @@
  * @brief 인스펙터 즐겨찾기 프로퍼티의 키 집합과 저장 파일 읽기 · 쓰기입니다. ImGui 에 의존하지 않으므로 테스트를 붙일 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

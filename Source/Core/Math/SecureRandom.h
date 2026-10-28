@@ -7,8 +7,8 @@
  * @note Math 티어라 `span` 을 받지 못해(Container 가 위 티어) 포인터와 바이트 수를 받습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

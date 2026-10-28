@@ -3,8 +3,8 @@
  * @brief 인스펙터 프로퍼티 Undo / 프리팹 적용·복원 커맨드
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

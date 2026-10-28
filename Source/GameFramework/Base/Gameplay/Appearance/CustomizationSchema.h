@@ -3,10 +3,10 @@
  * @brief 꾸미기 스키마입니다. 캐릭터와 아이템이 함께 쓰는 매개변수 정의(슬라이더, 색, 고르기, 부착)를 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

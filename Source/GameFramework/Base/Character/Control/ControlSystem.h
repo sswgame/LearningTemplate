@@ -4,10 +4,10 @@
  * @details 씬 프레임 단계 `FrameSystems` 에서 돈다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 

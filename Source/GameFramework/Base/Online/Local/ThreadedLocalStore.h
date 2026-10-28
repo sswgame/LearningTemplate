@@ -5,10 +5,10 @@
  *          (로그, 파일 감시, SQL 풀과 같은 규칙). `shutdown` 은 남은 쓰기와 지우기를 끝까지 마치고 합류한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/DedicatedWorker.h"
 

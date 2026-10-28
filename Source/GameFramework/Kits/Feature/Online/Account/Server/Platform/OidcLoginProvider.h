@@ -6,10 +6,10 @@
  *          - 티켓 문자열은 ID 토큰이거나 `ID 토큰|nonce` 이다. nonce 는 클라이언트가 인증 요청에 실은 값 그대로이며 토큰의 `nonce` 와 같아야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"

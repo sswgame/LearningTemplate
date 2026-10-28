@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Debug/GPUAssert.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"

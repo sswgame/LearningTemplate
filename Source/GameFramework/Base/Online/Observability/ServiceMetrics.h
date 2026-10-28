@@ -5,10 +5,10 @@
  *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정하므로 서비스는 받은 시각을 작업 객체에 보관하고 `complete` 에서 `observe` 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/EnumName.h"
 

@@ -14,10 +14,10 @@
  *          0.x 의 끝 본(자식 없음)은 VRM 이 가상 꼬리(7 cm)로 돌리지만 리그 사슬은 끝 본을 돌리지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

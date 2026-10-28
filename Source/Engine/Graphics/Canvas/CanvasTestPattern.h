@@ -3,8 +3,8 @@
  * @brief 캔버스 개발 테스트 이미지입니다. 위젯(UI 단계)이 생기기 전에 Canvas 패스, 셰이더, 아틀라스를 네 백엔드에서 눈으로 확인하는 경로입니다(`-gv_canvasTestPattern=1`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

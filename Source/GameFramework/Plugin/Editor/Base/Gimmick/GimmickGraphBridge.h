@@ -5,7 +5,7 @@
  *          편집기 전용 getter 를 더하지 않는다. 쓴 뒤에는 컴포넌트의 `onPropertyChanged` 를 불러 회로를 다시 짓는다(인스펙터가 속성을 고친 것과 같은 알림).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Plugin/Editor/Base/Gimmick/GimmickGraphModel.h"
 

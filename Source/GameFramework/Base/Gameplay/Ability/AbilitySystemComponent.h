@@ -3,12 +3,12 @@
  * @brief 어트리뷰트, 이펙트, 어빌리티, 태그를 한 오브젝트에서 함께 돌리는 컴포넌트입니다(언리얼의 `UAbilitySystemComponent` 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/TagID.h"

@@ -3,8 +3,8 @@
 #include "Engine/HeadlessSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/string_splitter.h"
 

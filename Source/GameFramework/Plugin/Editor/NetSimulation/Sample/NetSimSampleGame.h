@@ -13,8 +13,8 @@
  *          - 오브젝트 이름은 `Avatar<엔티티 id>` 이다. 색은 `MeshComponent::setHighlight` 외곽선으로 구분한다(머티리얼 에셋을 가리키지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

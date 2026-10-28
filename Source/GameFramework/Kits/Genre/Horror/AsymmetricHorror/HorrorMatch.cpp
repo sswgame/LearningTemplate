@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 

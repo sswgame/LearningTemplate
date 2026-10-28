@@ -6,9 +6,9 @@
  *          정적 기하가 아니므로 쿠킹본에는 들지 않습니다 — 쿠킹본을 읽은 뒤 장애물 자리의 타일을 다시 베이크합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/NavMeshGeometry.h"

@@ -11,8 +11,8 @@
  *          표 바로 위의 `@brief` 문서 주석이 그 절의 설명입니다. 리플렉션 구조체로 읽는 설정은 이것을 쓰지 않습니다(칸 표가 PROPERTY 에서 나온다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

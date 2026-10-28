@@ -5,8 +5,8 @@
  *          여기는 비교 규칙, 정렬 전략(삽입 정렬 → std::sort), 추가 뷰의 순번 테이블을 맡습니다. GPU 도 씬도 모릅니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/EngineMinimal.h"

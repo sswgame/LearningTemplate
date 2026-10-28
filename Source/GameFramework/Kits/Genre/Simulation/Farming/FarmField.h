@@ -3,10 +3,10 @@
  * @brief 밭을 구현합니다. 타일마다 갈기, 물, 작물, 자람을 가지고, 하루가 넘어갈 때 자람, 시듦, 비를 처리합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

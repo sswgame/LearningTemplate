@@ -3,8 +3,8 @@
  * @brief 카메라 하나의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 카메라 컴포넌트가 갖고, 렌더 뷰가 렌더러로 나릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

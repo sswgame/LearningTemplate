@@ -6,8 +6,8 @@
  *          레이 방향은 정규화돼 있다고 가정한다. 모든 좌표는 같은 공간(보통 월드)이어야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

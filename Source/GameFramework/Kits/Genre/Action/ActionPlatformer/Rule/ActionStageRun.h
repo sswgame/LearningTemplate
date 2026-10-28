@@ -4,10 +4,10 @@
  * @details 시간은 `update` 로만 흐른다(고정 걸음이면 결정적이다). 목숨이 0이 되면 게임 오버이고, `restartStage` 로 스테이지를 처음부터 다시 시작한다(시간, 수집, 피격도 처음부터 다시 센다).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

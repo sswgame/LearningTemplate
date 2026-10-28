@@ -6,8 +6,8 @@
  *          크기를 받으므로 담기지 않으면 거절해야 합니다. 그 검사를 백엔드마다 복사하지 않고 여기 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

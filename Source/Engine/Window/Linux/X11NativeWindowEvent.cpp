@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
 
 namespace sw
 {

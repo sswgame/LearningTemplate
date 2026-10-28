@@ -5,8 +5,8 @@
  *          (모두 LE) — 같은 공유 비밀이라도 다른 연결 · 다른 판에서는 다른 키다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
 namespace sw

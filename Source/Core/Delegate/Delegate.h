@@ -3,13 +3,13 @@
  * @brief 타입 안전 델리게이트 · 멀티캐스트 델리게이트 · 핸들입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

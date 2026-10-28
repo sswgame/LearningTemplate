@@ -3,7 +3,7 @@
  * @brief 키트 클라이언트가 받은 응답(`OnlineResponse`)을 키트 응답 구조체로 읽는 공통 처리를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"

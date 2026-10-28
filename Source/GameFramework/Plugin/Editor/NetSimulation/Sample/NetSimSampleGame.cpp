@@ -2,9 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/NetSimulation/Sample/NetSimSampleGame.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Serialization/BitStream.h"

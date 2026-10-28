@@ -3,10 +3,10 @@
  * @brief 아이템 정의입니다. 분류, 겹침 수, 무게, 값, 희귀도, 장비 슬롯, 내구도, 태그, 능력치, 사용 효과를 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameCatalog.h"

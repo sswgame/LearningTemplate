@@ -9,8 +9,8 @@
  *          고도는 아직 쓰지 않는다. 높이 채널이 없는 레이아웃만 다루기 때문이며, HRTF 패너가 같은 입력에 고도를 더해 같은 자리에 올라온다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 

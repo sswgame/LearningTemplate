@@ -5,7 +5,7 @@
  *          다른 기계에서 옮겨 온 슬롯은 장치 키가 달라 풀리지 않는다. 이 경우 새로 만들지 않고 실패로 둔다. 새로 만들면 그 게스트 계정을 영영 잃으므로 사용자에게 연동을 권한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"

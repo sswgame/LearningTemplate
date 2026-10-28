@@ -5,7 +5,7 @@
  *          그래서 값은 뷰포트가 들고 시각화는 그리기 인자(`EditorViewportVisualizerArgs::_pStats`)로 받아 적는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

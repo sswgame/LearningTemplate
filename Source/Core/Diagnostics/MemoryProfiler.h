@@ -3,8 +3,6 @@
  * @brief 할당 추적 · 콜 스택 프로파일, CRT/LSan 누수 검사, (선택) 전역 new 훅입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/ShardedCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -13,6 +11,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 

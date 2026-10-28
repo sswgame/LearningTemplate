@@ -11,10 +11,10 @@
  *          - 요청한 작업의 `complete` 가 이 객체를 부르므로, 저장소의 완료를 모두 회수하거나 저장소를 먼저 종료한 뒤에 이 객체를 지운다. 서비스 스레드 하나가 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

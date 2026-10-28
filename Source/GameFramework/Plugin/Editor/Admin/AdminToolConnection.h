@@ -8,10 +8,10 @@
  *          한 계정은 연결 하나에만 붙으므로 플레이어 포트와 GM 포트에 같은 계정으로 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"

@@ -27,9 +27,9 @@
  *       기다리다 시간을 넘깁니다(`acquireGraphicsContextBlocking timed out`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

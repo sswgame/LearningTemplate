@@ -2,10 +2,10 @@
 
 #include "Core/UUID/UUID.h"
 
-#include "Core/Common/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/HexDigitUtil.h"
 
 namespace sw
 {

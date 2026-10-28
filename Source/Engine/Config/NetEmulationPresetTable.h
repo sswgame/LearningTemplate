@@ -5,9 +5,9 @@
  *          표는 이름 · 표시 이름 · 여섯 값만 듭니다. 흉내 자체(`NetEmulationConditions`)는 Core 가 하고 이 표는 그 조건을 만듭니다(Core 는 리플렉션 아래 티어라 표를 읽지 못합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"

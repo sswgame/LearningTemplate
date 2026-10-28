@@ -12,9 +12,9 @@
  *          지금 이 번들을 부르는 게임 코드는 없고 테스트뿐이다. 롤백이나 스냅샷을 싣는 게임이 생기면 그 워크로드로 크기와 시간을 다시 측정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

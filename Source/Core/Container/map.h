@@ -4,10 +4,10 @@
  * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 `stable_unordered_map`).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {

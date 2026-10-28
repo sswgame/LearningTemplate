@@ -6,7 +6,7 @@
  *          실행 중에 켜는 개발 명령은 `ProfilerBackend::startTracy` 를 직접 부른다(그때는 서비스 표가 묶여 있다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

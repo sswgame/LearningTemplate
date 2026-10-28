@@ -3,10 +3,10 @@
  * @brief 머티리얼 패널의 구 미리보기 셰이딩입니다 — 머티리얼 값(기본색 · 거칠기 · 금속성 · 방출)으로 구의 한 점 색을 CPU 에서 셈합니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

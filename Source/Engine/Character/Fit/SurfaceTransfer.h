@@ -6,10 +6,10 @@
  *          참고: 언리얼 Mutable Skin Weights 전이, Character Creator 스마트 핏, Daz 오토핏.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

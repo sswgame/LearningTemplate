@@ -2,8 +2,8 @@
 
 #include "Core/Network/Transport/DelayedStreamTransport.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <chrono>

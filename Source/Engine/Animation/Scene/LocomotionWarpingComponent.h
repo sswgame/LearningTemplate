@@ -9,10 +9,10 @@
  *            돌립니다(골반 +1, 가슴 -0.5 처럼 — 다리는 이동 방향을, 상체는 몸 방향을 본다). 후처리 단계(PostProcess)에서 돕니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

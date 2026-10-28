@@ -3,10 +3,10 @@
  * @brief 시나리오 한 판의 벽시계가 어디에 쓰였는지 프레임 종류별로 모읍니다 — 고정 프레임 대기가 실제로 얼마나 드는지 보고(`timeline`)로 남깁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

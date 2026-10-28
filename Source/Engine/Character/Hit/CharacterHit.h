@@ -6,9 +6,9 @@
  *          오브젝트가 되고, 히트 존은 그 오브젝트의 래그돌(물리 에셋 바디의 `_hitZone`)에서 먼저, 없으면 강체 컴포넌트의 히트 존 속성에서 찾는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

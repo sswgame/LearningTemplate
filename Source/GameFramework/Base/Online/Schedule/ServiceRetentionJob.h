@@ -8,8 +8,8 @@
  *          종료하는 쪽(`shutdown`)은 맡긴 일이 끝날 때까지 저장소 완료를 회수한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Store/ServiceRetention.h"

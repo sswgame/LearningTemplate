@@ -6,10 +6,10 @@
  *          단추처럼 안의 글이 이름이 되는 위젯은 잎이다(`describeAccessible` 이 `_bLeaf` 를 켠다) — 안의 글을 노드로 또 내지 않는다. 읽는 순서는 트리 순서(자식 순서)다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"

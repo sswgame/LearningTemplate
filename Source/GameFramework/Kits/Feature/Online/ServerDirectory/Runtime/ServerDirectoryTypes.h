@@ -6,11 +6,11 @@
  *          점검 창의 허용 목록은 클라이언트에 보내지 않으므로, 와이어에는 허용 목록이 없는 타입(`MaintenanceView`)만 싣는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

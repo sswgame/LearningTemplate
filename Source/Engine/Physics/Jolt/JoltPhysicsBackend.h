@@ -4,8 +4,8 @@
  * @details 이 헤더는 Jolt 헤더를 include 하지 않는다. `PhysicsSystem` 만 이것을 보고, 나머지 엔진은 `IPhysicsScene3D` 만 본다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/IPhysicsScene.h"

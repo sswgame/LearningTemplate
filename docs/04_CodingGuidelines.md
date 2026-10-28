@@ -60,10 +60,10 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 #include "Core/Concurrency/ThreadName.h"            // 짝 헤더
 
-#include "Core/Common/Defines.h"                    // 그다음 범위별 그룹(빈 줄로 나눈다)
+#include "Core/Foundation/Defines.h"                    // 그다음 범위별 그룹(빈 줄로 나눈다)
 
 #if defined( SW_PLATFORM_WINDOWS )                  // 플랫폼 include 는 맨 뒤 분기 하나. 분기 안은 프로젝트 헤더, 빈 줄, 시스템 헤더
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #endif
 ```
 

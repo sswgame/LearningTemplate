@@ -5,8 +5,8 @@
  *          `atspi-constants.h` 의 `AtspiRole` · `AtspiStateType` 이다 — 값을 바꾸지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 

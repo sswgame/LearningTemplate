@@ -7,9 +7,9 @@
  *          파일을 쓰면 핫 리로드가 같은 파일을 다시 읽는다 — 편집 중 다시 읽기와 겨루지 않게 하는 것(저장 직후 감시 무시 한 번)은 패널 쪽 일이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

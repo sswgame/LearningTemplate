@@ -3,8 +3,8 @@
  * @brief 타기와 내리기입니다. 탑승은 조종자가 빙의를 탈것으로 옮기는 일입니다. 탑승자 폰은 좌석 소켓에 붙고 이동이 멈춥니다. 플레이어와 NPC 가 같은 함수로 탑니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

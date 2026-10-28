@@ -3,8 +3,8 @@
  * @brief 설정 확인 카운트다운 창입니다. 화면 방식이나 해상도처럼 `confirmSeconds` 가 있는 설정을 적용한 뒤 "유지할까요? 0:15" 를 보여 줍니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

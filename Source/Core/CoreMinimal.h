@@ -3,11 +3,6 @@
  * @brief Core 를 쓰는 TU 가 먼저 포함하는 묶음입니다 — 기본 타입 · 컨테이너 · 문자열 · 로그 · 메모리 · 수학 · 파일.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/EnumUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
@@ -23,6 +18,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/EnumUtil.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"

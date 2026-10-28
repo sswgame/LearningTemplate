@@ -5,8 +5,8 @@
  *          `EditorAssetFileCommands`, 폴더 목록은 `EditorFolderListing` 이 맡습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

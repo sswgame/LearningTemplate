@@ -7,10 +7,10 @@
  *          - 실행기 스레드 하나에서 돈다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/DrainGate.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/TimePoint.h"

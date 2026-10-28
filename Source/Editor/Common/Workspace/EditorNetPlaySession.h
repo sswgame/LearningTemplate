@@ -26,9 +26,9 @@
  *          - 오브젝트별 해시 한 줄(`state.objectline` 의 답, `SceneStateHash::kObjectReportLinePrefix`)도 같다 — `state.objects` 는 여러 줄이라 표준 입력 답으로는 거둘 수 없어 한 줄 판을 따로 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/NetEmulation.h"

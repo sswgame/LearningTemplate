@@ -6,9 +6,9 @@
  *          모듈을 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — 셰이더 리로드 단축키는 `ShaderRecompiler` 를 소유한 `Engine` 가 읽습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

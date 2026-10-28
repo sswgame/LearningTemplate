@@ -3,9 +3,9 @@
  * @brief 마을 사람 한 명의 모습 — 마을 디렉터가 적은 일정상 위치를 `NavAgent` 로 쫓아 자기 메시를 옮깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

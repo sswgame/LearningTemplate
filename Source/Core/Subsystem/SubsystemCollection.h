@@ -9,11 +9,11 @@
  *          부른 쪽이 표준 오류로 내야 한다 — 그 오류는 개발 때 `EngineInitSequenceTest` 가 실제 목록으로 잡는 프로그래머 오류라 이것으로 좁힐 뿐 없애지는 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

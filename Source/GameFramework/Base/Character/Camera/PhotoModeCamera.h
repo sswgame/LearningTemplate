@@ -5,7 +5,7 @@
  *          컴포넌트, 입력 맵, 시간 배율을 모른다. `CameraDirectorComponent` 가 입력을 모아 넣고 결과 포즈를 카메라에 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Character/Camera/CameraPose.h"

@@ -5,10 +5,10 @@
  *          변환 도구로 다시 씁니다(`Scripts/dev/MoveSceneFormat.py`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

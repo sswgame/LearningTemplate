@@ -7,7 +7,7 @@
  *          (예산 검사도 프레임 끝에서만 돌므로 기동 끝에 읽던 것과 같다). 언리얼도 LLM 추적은 기동 초에 켜고 예산은 설정이 선 뒤에 읽는 것으로 알고 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Profiling/MemoryBudgetMonitor.h"

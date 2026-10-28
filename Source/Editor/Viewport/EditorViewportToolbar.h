@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 

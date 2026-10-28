@@ -2,8 +2,8 @@
 
 #include "Engine/Character/Fit/GeometryCut.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Spatial/PositionWelder.h"
 

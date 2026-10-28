@@ -4,9 +4,9 @@
  * @details 기억은 마지막으로 감지한 위치와 그 뒤로 지난 시간을 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

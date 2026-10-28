@@ -10,7 +10,7 @@
  *          열거자 값이 `0..N-1` 로 빈틈없으면 이름도 목록 인덱스로 찾습니다(`EnumInfo::_listDenseName`).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/TypeRegistry.h"

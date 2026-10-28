@@ -4,7 +4,7 @@
  * @note `string` 을 돌려주는 편의 함수는 `StringUtil`(티어 3)에 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

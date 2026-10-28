@@ -12,9 +12,6 @@
  *          잠금 순서: `_mutex` → `_beginPlayMutex`(선언의 `SW_ACQUIRED_AFTER`) → `TickRegistry` 의 잠금(가장 안쪽).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
@@ -22,6 +19,9 @@
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"

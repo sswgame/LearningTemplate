@@ -3,9 +3,9 @@
  * @brief 캐릭터 하나의 외형 상태입니다. 펼친 프리셋과 형상 변경, 외형 상태를 보관하고, 장비와 데이터와 입력의 버전이 바뀔 때만 다시 해석합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"

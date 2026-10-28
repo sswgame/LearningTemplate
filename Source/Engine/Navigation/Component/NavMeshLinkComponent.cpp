@@ -2,7 +2,7 @@
 
 #include "Engine/Navigation/Component/NavMeshLinkComponent.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Navigation/Component/SceneNavigation.h"

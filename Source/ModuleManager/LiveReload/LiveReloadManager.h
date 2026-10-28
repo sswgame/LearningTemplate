@@ -13,7 +13,6 @@
  *       처음 호출하는 지점을 보호하는 `ModuleCallGuard`, 복사본 파일 이름을 만들고 남은 것을 정리하는 `ShadowCopyName` 입니다. 모두 Shipping 에서 함께 빠집니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/stable_unordered_map.h"
@@ -22,6 +21,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Foundation/Foundation.h"

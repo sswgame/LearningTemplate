@@ -6,10 +6,10 @@
  *          커맨드 표기 · 자세 목록 · 프레임 데이터처럼 칸 하나로 담지 않는 값은 손으로 읽는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -3,9 +3,9 @@
  * @brief 크로스 플랫폼 콜 스택 캡처와 심볼 변환 유틸리티입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

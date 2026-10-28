@@ -3,10 +3,10 @@
  * @brief 상호작용하는 쪽(플레이어, AI)입니다. 대상 고르기(거리, 시야각, 시야), UI 안내 데이터, 입력 방식에 따른 진행, 강조 요청, 권한 훅을 처리합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

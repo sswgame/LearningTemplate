@@ -3,7 +3,7 @@
  * @brief OS 마우스 커서의 모양입니다(`InputManager::setCursorShape`). 런타임 UI 가 호버한 위젯에 따라 고른다(`UICursorShape` → 이것).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

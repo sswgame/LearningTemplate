@@ -3,11 +3,11 @@
  * @brief 링 상수 버퍼의 최신 값을 CPU 에 보관하고, 옛 값이 남은 프레임 슬롯을 그 슬롯의 차례에 채웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

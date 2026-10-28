@@ -5,7 +5,6 @@
  *          만 합니다. 그래서 백엔드를 하나 더 붙여도 정책은 그대로입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -13,6 +12,7 @@
 #include "Core/Container/deque.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/MemoryTag.h"
 
 #include <condition_variable>

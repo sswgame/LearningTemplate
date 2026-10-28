@@ -11,8 +11,8 @@
  *          시한이 지난 거래와 닫혔는데 남은 활성 링크는 다음 신청이 정리한다(지연 만료). 서비스 틱도 아는 거래의 시한을 확인한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"

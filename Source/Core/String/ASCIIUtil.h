@@ -3,7 +3,7 @@
  * @brief 문자 하나의 ASCII 대소문자 변환입니다 — `HashUtil` 의 문자열 해시와 `StringUtil::toLowerChar` 가 같은 정의를 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

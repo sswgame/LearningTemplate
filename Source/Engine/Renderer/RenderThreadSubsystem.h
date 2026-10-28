@@ -5,7 +5,7 @@
  *          (GameModuleManager)가 그대로 남습니다. 전용 서버는 이 서브시스템을 돌리지 않으므로 객체도 만들지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

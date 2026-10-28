@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"

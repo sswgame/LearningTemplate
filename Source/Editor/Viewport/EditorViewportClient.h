@@ -1,6 +1,6 @@
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/EditorDebugHUDView.h"

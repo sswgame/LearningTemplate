@@ -2,8 +2,8 @@
 
 #include "Editor/Viewport/EditorViewportCanvasOverlay.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/Color.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"

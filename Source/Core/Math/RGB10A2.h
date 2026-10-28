@@ -10,8 +10,8 @@
  *          - 크기 · 정렬은 `static_assert` 가 못 박습니다(패딩 없음). 상용 엔진의 대응: 언리얼 `FPackedRGB10A2N`(DXGI `R10G10B10A2` · Vulkan `A2B10G10R10` 형식).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/VectorMath.h"
 

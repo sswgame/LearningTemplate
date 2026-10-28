@@ -3,10 +3,10 @@
  * @brief OS 창 스레드와 백그라운드 입력 폴러에서 생기는 정밀 원시 입력 이벤트 패킷입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/UTF8Util.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"

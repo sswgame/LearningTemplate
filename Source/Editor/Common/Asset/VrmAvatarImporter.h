@@ -8,10 +8,10 @@
  *          이 파일에만 있다(1인칭 메시 숨김은 엔진 메시에 머티리얼 구간이 생겨야 한다 — 본 메시는 구간을 합친 것이다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

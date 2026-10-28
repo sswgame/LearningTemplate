@@ -3,8 +3,8 @@
  * @brief 씬 한 프레임의 단계 열거입니다. 값은 표(`SceneFrameStepList.xxx`)의 줄 순서입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

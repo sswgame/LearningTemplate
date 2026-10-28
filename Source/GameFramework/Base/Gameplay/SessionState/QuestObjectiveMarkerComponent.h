@@ -3,7 +3,7 @@
  * @brief 퀘스트 목표의 월드 오브젝트입니다. 어느 퀘스트의 어느 목표(종류와 대상)가 이 오브젝트인지 데이터로 적고, 그 목표가 열린 동안만 목표 마커를 보입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

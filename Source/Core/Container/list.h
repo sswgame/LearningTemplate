@@ -3,8 +3,8 @@
  * @brief std::list 래퍼입니다. 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

@@ -3,8 +3,8 @@
  * @brief 스폰된 투사체(화살 · 탄피 · 던진 물건)를 같은 오브젝트의 동적 강체로 날려 보냅니다. 운동 모델은 물리다 — 처음 속도만 주고, 중력 · 충돌 · 연속 충돌은 강체가 맡습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

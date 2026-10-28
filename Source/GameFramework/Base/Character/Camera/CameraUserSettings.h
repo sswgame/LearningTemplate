@@ -10,8 +10,8 @@
  *          좁게 저작한 시야각도 같은 비율로 따라간다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/Camera/CameraPose.h"
 #include "GameFramework/Base/Character/Camera/CameraPreset.h"

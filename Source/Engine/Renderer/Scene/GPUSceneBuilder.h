@@ -7,10 +7,10 @@
  *          투명 정렬 규칙(`GPUTransparentSorter`), 머티리얼 레지스트리, 스킨 팔레트 옮기기(`GPUSkinPaletteCollector`)는 값 멤버 클래스로 두고 직접 부른다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"

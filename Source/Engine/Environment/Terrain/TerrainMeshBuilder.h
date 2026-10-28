@@ -8,8 +8,8 @@
  *          정확히 나타나면(예: 1 m 와 0.5 m 셀, 정수 원점) 이웃 청크의 같은 정점이 비트까지 같다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

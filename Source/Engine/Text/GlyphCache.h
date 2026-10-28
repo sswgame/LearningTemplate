@@ -5,9 +5,9 @@
  *          그 페이지에 있던 글리프를 테이블에서 지운다. 다음 조회가 다시 래스터화한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Text/GlyphAtlas.h"

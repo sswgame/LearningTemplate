@@ -4,7 +4,7 @@
  * @details 끝나면 알리는 남은 시간(`Countdown`)과, 초당 비율을 정수 발생으로 바꾸는 누적기(`RateAccumulator`)가 있다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

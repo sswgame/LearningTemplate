@@ -4,7 +4,7 @@
  * @details 백엔드 교체 뒤 다시 시작하며 새 디바이스를 연결합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

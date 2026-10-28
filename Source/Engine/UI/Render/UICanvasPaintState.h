@@ -3,9 +3,9 @@
  * @brief 화면 UI 그리기 목록과 그 재사용 판정 상태, 레이어 숨김 요청 수입니다(`UISystem` 의 값 멤버).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"

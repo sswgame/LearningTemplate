@@ -3,8 +3,8 @@
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/BuildInfo.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Module/ModuleBuildID.h"
 
 #include "Engine/CoreServices/CommandLineSubsystem.h"

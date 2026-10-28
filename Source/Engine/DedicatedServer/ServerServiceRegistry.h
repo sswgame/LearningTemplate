@@ -8,10 +8,10 @@
  *            인스턴스의 수명은 `ServerServiceManager` 가 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Time/TimePoint.h"

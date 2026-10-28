@@ -9,10 +9,10 @@
  *          원문 테이블에서 사라진 키의 번역은 번역 테이블에서 빼고, 메모리에는 남긴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/TextGatherer.h"
 

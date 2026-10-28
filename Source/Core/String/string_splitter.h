@@ -3,9 +3,9 @@
  * @brief 구분자 기반의 빠른 문자열 분할기와 순방향 반복자입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -6,8 +6,8 @@
  *          - 막으면 두 줄(친구와 신청)을 지운다. 상대가 나를 이미 막았으면 그 줄은 둔다. 서로 막은 상태가 된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"

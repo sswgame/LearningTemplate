@@ -5,7 +5,7 @@
  *          엔진 프레임 루프의 시간 정책(가변 델타 상한 · 시간 배율)은 `FixedTimestep` 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

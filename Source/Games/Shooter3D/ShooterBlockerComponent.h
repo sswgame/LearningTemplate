@@ -3,7 +3,7 @@
  * @brief 아레나의 막는 상자 하나 — 벽 · 엄폐물. 오브젝트 자리를 가운데로 한 축 상자(반 크기)이고, 몸 · 적 · 탄 · 래그돌이 이것에 막힙니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

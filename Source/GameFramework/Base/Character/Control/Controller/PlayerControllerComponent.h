@@ -4,10 +4,10 @@
  * @details 입력을 매핑(InputMap)으로 의도로 바꾼다. 매핑 층을 읽는 **유일한** 조종자이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"

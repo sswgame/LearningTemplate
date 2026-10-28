@@ -3,7 +3,7 @@
  * @brief 물리 · 내비메시의 디버그 선(`IPhysicsDebugRenderer`)을 뷰포트 캔버스에 바로 그리는 출구입니다. 엔진은 그리는 쪽을 모르므로 에디터가 선을 받아 투영합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

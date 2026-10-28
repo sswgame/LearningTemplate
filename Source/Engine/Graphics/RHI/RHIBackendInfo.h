@@ -6,8 +6,8 @@
  *          장치 모듈(`RHI_*`)도 이 헤더를 읽으므로 테이블은 `inline constexpr` 다(엔진 DLL 함수를 부르지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"

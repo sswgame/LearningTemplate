@@ -10,12 +10,12 @@
  *          (`SocketAnchor::Surface`)은 `applyShapedGeometry` 가 계산한 체형 보정을 더합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 

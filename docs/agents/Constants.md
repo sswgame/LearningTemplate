@@ -10,7 +10,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 | --- | --- |
 | One `.cpp` | That file's `XxxInternal` struct as `static constexpr` (or inside the function). Do not hoist it "in case" |
 | One module | The owning type (`MeshAssetFormat::kExtension`) or the module namespace in its types header (`audio::kSampleRate` in `AudioTypes.h`). No per-folder `*Constants.h` |
-| A contract between modules or backends | The contract header: `RHITypes.h` `constant` block (backend ↔ backend), `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read as `shaderslot::k*`), `Core/Common/Defines.h` · `Engine/Foundation/EngineDefines.h` `constant` (engine-wide). A per-side copy with a "must equal X" comment is the bug |
+| A contract between modules or backends | The contract header: `RHITypes.h` `constant` block (backend ↔ backend), `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read as `shaderslot::k*`), `Core/Foundation/Defines.h` · `Engine/Foundation/EngineDefines.h` `constant` (engine-wide). A per-side copy with a "must equal X" comment is the bug |
 
 ### Values with one home
 
@@ -20,7 +20,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 | Gravity | `PhysicsSystem::getConfiguredGravity(Magnitude)` |
 | Golden ratio, splitmix64, FNV-1a | `HashUtil` |
 | Four-character tags | `FourCcUtil::make( "SWHF" )` |
-| Time and byte units | `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond`, `kBytesPerMegabyte` ...); never `1e9`, `1024 * 1024`, a local `kKilobyte` |
+| Time and byte units | `constant::` in `Core/Foundation/Defines.h` (`kNanosecondsPerSecond`, `kBytesPerMegabyte` ...); never `1e9`, `1024 * 1024`, a local `kKilobyte` |
 | Limits several online modules share | `OnlineLimit.h` |
 | Buffer and path sizes | `constant::kMaxBuffer16` .. `kMaxBuffer8192`, `kMaxPathSize`; never `char buf[64]` |
 

@@ -3,9 +3,9 @@
  * @brief 컴포넌트에 안 붙은 행동 트리 실행기(예: RTS 지휘관 AI)를 행동 트리 창에 보이는 작은 인터페이스입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

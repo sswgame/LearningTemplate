@@ -6,7 +6,7 @@
  *          Animation(티어 2)이 아니라 Resource(티어 4)에 있는 것은 `IAssetCache` 를 구현하기 때문이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 

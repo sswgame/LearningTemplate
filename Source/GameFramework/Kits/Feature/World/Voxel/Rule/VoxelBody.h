@@ -3,8 +3,8 @@
  * @brief 블록 월드를 걷는 몸입니다. 축 정렬 상자(AABB) 충돌, 중력, 점프, 물속 헤엄을 처리합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/GameFrameworkExports.h"

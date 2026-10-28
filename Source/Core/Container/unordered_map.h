@@ -11,7 +11,7 @@
  * 4. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
  *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>`(`Core/Container/string.h` 의 특수화)에
  *    `string_view` 오버로드가 있어서 같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
- * 5. 기본 해시: `DefaultHash<Key>`(`Core/Common/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
+ * 5. 기본 해시: `DefaultHash<Key>`(`Core/Hash/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
  *    따로 두지 않습니다.
  *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
@@ -21,13 +21,13 @@
  *          순회 순서(넣은 순서, `erase` 는 마지막 원소를 빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

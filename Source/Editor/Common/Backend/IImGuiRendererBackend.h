@@ -3,9 +3,9 @@
  * @brief ImGui GPU 렌더러 백엔드의 추상 인터페이스입니다. RHI 마다 구현합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"

@@ -3,8 +3,8 @@
  * @brief 개발 스위치(전역 변수)를 따라 화면을 열고 닫는 등록입니다. 화면 .cpp 가 `SW_UI_SCREEN_SWITCH` 한 줄로 스스로 등록하고, `UISystem::update` 는 등록을 순서대로 돌기만 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/Screen/UIScreen.h"
 

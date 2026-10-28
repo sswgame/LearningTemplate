@@ -2,10 +2,10 @@
 
 #include "Engine/Asset/Cook/CookRecord.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetPaths.h"

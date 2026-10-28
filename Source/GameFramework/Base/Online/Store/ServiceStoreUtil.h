@@ -3,8 +3,8 @@
  * @brief 서비스 저장소를 쓰는 쪽의 공통 도우미입니다. 종료할 때 요청한 저장 작업을 시간 제한 안에서 회수하는 대기를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

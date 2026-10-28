@@ -6,7 +6,7 @@
  *          키는 xkbcommon 의 keysym 이다 — X11 KeySym 과 같은 번호라 키 표(`InputKeyTable::mapX11KeySym`)를 함께 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

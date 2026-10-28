@@ -5,9 +5,9 @@
  *          마지막으로 고른 프리셋이 남는다. 깨진 파일은 환경설정 · 단축키와 같은 한 경로(`EditorUserFile::quarantineCorruptFile`)로 치운다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"

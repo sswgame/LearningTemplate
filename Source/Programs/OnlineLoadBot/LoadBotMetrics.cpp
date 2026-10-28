@@ -2,8 +2,8 @@
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

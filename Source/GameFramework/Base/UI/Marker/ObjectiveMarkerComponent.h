@@ -3,8 +3,8 @@
  * @brief 목표 마커입니다. 화면 마커(WidgetComponent Screen)에 이름과 거리(m)를 띄우고, 화면 밖이면 가장자리에 붙여 목표 쪽을 가리키는 막대를 돌립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/World/WidgetComponent.h"

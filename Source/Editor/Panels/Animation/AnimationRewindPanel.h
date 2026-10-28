@@ -5,8 +5,8 @@
  *          "Resume" 이 되감기를 풀고 플레이를 잇습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

@@ -3,7 +3,7 @@
  * @brief 선택한 강체의 콜라이더 크기 손잡이를 씬 뷰에 그리고 끌어 고칩니다(유니티 Box Collider 편집 · 언리얼 브러시 핸들). 물리 셰이프 시각화(Phys)가 켜져 있을 때 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

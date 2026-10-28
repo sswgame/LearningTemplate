@@ -4,8 +4,8 @@
  * @details `send` 는 여러 스레드에서 동시에 불러도 된다(운영체제가 데이터그램 단위로 지킨다). `close` 는 기다리는 스레드를 멈춘 뒤에.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 

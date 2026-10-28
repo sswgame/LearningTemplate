@@ -3,10 +3,10 @@
  * @brief 3D 강체 하나 — 바디 종류 · 셰이프(여럿이면 컴파운드) · 레이어 · 재질 · 질량을 데이터로 들고, 바디를 이 컴포넌트의 월드 자세와 맞춥니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

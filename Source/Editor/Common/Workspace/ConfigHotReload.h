@@ -3,8 +3,8 @@
  * @brief 실행 중 `Config/` 의 설정 JSON(EngineConfig · GameConfig · editortooldefaults …)이 바뀌면 다시 읽습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"

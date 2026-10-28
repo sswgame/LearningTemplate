@@ -7,8 +7,8 @@
  *       공통 디코더가 다루지 않는 형식(MP3, ADPCM WAV)은 Media Foundation 대체 디코더로 디코드합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/IAudioService.h"

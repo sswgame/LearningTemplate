@@ -2,9 +2,9 @@
 
 #include "Core/File/Windows/WindowsFileWatcher.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

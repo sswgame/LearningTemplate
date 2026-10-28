@@ -3,10 +3,10 @@
  * @brief 프리팹 인스턴스가 프리팹과 다른 점(덮어쓴 값 · 지운 컴포넌트 · 더한 컴포넌트)을 뽑고, 프리팹 위에 다시 얹습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

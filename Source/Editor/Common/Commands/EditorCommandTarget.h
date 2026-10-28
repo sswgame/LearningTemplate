@@ -5,8 +5,8 @@
  *          대상 명령을 패널이 키를 직접 읽어 처리했다(EditorUX 10-2). ImGui 를 쓰지 않는다(EditorTest 가 테스트한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw::editor

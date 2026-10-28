@@ -9,11 +9,11 @@
  *          측정 창 전체(`-gv_profileTracePath`), 느린 틱(`-gv_traceSlowTickMs`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 
 #if SW_PROFILER_TRACE_ENABLED

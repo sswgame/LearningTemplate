@@ -3,7 +3,7 @@
  * @brief 수명이 다하면 오브젝트를 지우는 컴포넌트(이펙트 페이드, 데미지 숫자, 투사체)가 함께 쓰는 수명 계산입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

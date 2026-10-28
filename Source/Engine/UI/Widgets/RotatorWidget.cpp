@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Widgets/RotatorWidget.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"

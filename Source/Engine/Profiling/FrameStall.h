@@ -7,9 +7,9 @@
  *          개발 명령이 없는 구성(Shipping)에는 형식째 없습니다 — 걸 방법이 없는 지연을 매 프레임 확인하지 않고, 출시 빌드에 프레임을 붙잡는 길을 남기지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 namespace sw

@@ -2,7 +2,7 @@
 
 #include "Core/Diagnostics/CallStackCapture.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringBuilder.h"
 
 namespace sw

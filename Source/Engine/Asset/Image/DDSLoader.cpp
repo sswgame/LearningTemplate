@@ -2,11 +2,11 @@
 
 #include "Engine/Asset/Image/DDSLoader.h"
 
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetPaths.h"

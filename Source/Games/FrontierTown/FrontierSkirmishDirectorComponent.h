@@ -3,11 +3,11 @@
  * @brief 개척 마을의 RTS 디렉터 — 공유 지갑을 플레이어 0 에 빌려 주고, 공유 땅 위에서 일꾼이 병영을 짓고 해병이 도시 건물을 돌아 순찰합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

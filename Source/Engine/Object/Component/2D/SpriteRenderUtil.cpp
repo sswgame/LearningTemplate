@@ -2,7 +2,7 @@
 
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"

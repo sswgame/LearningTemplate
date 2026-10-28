@@ -3,11 +3,11 @@
  * @brief PredefinedNameType 의 사전 정의 표준 타입 이름을 기본으로 싣는 양방향 문자열 intern 풀입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

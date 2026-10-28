@@ -8,8 +8,8 @@
  *          온라인 게임은 지갑을 로컬에서 바꾸지 않으며 `add` 와 `trySpend` 는 이 클래스만 부른다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"

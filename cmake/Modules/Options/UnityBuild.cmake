@@ -65,7 +65,7 @@ function(sw_skipUnityForX11Sources TARGET_NAME)
 		endif()
 
 		file(STRINGS "${srcPath}" listX11Include LIMIT_COUNT 1
-			REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"](X11/|GL/glx|vulkan/vulkan_xlib|Core/Common/X11Headers\\.h)")
+			REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"](X11/|GL/glx|vulkan/vulkan_xlib|Core/Foundation/X11Headers\\.h)")
 
 		if(listX11Include)
 			set_source_files_properties("${srcPath}" TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

@@ -5,9 +5,9 @@
  *          표를 읽지 못하면 오류이고 목록이 빕니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"

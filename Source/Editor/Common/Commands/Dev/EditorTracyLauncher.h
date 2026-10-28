@@ -6,8 +6,8 @@
  *          ImGui 두 벌을 만들거나 에디터의 ImGui 버전을 묶습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor

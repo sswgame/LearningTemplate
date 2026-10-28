@@ -3,10 +3,10 @@
  * @brief 식당 정의를 담습니다. 메뉴(기반 `RecipeDef` 를 가리키는 요리, 분류, 기본 가격, 숙련도별 품질), 재료 유통 기한, 손님 성향, 시간대별 도착, 날씨 배율, 영업 시간을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

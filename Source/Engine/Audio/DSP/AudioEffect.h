@@ -5,9 +5,9 @@
  *          고른다. 모르는 종류나 모르는 파라미터는 읽기 오류다. 파라미터는 스냅샷이 이름으로 바꾼다(`AudioSnapshotDesc`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

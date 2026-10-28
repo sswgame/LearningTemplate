@@ -3,8 +3,8 @@
  * @brief 씬에 놓는 스플라인입니다. 조절점(소유 오브젝트 로컬)을 저장하고 `SplinePath` 를 제공합니다. 무버, 카메라 레일, 길이 같은 곡선을 읽습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

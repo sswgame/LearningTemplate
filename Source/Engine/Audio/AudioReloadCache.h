@@ -4,7 +4,7 @@
  *        에디터 핫 리로드가 다른 에셋과 같은 경로로 다시 읽게 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/Cache/IAssetCache.h"

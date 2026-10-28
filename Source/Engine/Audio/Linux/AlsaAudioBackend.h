@@ -8,8 +8,8 @@
  *       채널 순서는 ALSA 순서(FL FR RL RR FC LFE SL SR)로 바꿔 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/IAudioService.h"

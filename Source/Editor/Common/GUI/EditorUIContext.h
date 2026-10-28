@@ -3,7 +3,7 @@
  * @brief 에디터 ImGui · ImPlot 컨텍스트를 확장 DLL 의 ImGui 사본에 거는 결속기입니다(ImGui 헤더를 include 하지 않습니다 — 컨텍스트는 `void*`).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"

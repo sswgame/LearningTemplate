@@ -3,9 +3,9 @@
  * @brief 씬 뷰 위에 떠 있는 오버레이 바들입니다(유니티 씬 뷰 Overlays) — 끌어 옮기고, 가장자리에 붙이고, 접고, 숨깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

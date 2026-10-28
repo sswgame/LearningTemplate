@@ -3,10 +3,10 @@
  * @brief 밭 칸 하나의 작물 모습 — 디렉터 밭의 같은 칸을 따라 단계 모델 · 크기 · 색 · 보임을 맞춥니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

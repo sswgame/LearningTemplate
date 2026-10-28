@@ -2,10 +2,10 @@
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"

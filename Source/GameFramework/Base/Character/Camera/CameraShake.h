@@ -7,9 +7,9 @@
  *          `applyCameraShake` 가 마지막에 더한다. 같은 시드와 같은 시간이면 같은 값이 나온다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Character/Camera/CameraPose.h"

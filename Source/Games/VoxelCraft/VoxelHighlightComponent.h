@@ -3,9 +3,9 @@
  * @brief 플레이어가 바라보는 블록을 표시합니다. 반투명 큐브가 겨눈 블록에 겹쳐 보이고, 블록을 부수는 동안 네 단계로 진해집니다. 에디터 게임 뷰에서는 테두리도 그립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

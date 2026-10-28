@@ -2,9 +2,9 @@
 
 #include "Programs/OnlineLoadBot/LoadBot.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"

@@ -9,10 +9,10 @@
  *          - @p pPolicy 는 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약 ILedgerPolicy 라서 키트끼리 몰라도 된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"

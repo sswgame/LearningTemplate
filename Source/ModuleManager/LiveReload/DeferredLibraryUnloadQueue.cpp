@@ -2,7 +2,7 @@
 
 #include "ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "ModuleManager/LiveReload/ModuleShadowCopy.h"

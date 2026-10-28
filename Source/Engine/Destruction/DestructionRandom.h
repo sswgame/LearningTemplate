@@ -5,7 +5,7 @@
  *          파괴를 네트워크로 맞출 때 시드와 피해 사건만 보내므로, 같은 시드가 모든 기계에서 같은 조각과 같은 흩기를 내야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/VectorMath.h"
 

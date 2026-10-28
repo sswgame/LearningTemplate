@@ -6,11 +6,11 @@
  *          `IHTTPClient` 를 구현해 끼웁니다. 테스트는 요청을 받아 적기만 하는 가짜를 끼웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

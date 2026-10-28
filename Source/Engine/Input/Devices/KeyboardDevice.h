@@ -3,8 +3,8 @@
  * @brief 표준 키보드 입력 장치입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"

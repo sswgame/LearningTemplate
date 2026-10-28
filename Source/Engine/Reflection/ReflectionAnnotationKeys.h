@@ -6,7 +6,7 @@
  *          편집기에서만 include 됩니다(`ReflectionIntellisense.h`). 빌드와 ReflectionParser 는 이 파일을 읽지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::reflect::attr
 {

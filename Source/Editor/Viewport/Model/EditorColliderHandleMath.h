@@ -3,8 +3,8 @@
  * @brief 콜라이더 크기 손잡이의 계산입니다 — 셰이프의 손잡이 위치와, 손잡이를 끈 위치에서 새 크기를 구하는 일(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"

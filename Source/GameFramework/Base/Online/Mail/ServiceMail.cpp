@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"

@@ -3,7 +3,7 @@
  * @brief 커브 편집기의 화면 ↔ 커브 좌표 계산입니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

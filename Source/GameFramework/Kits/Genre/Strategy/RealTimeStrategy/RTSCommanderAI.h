@@ -3,8 +3,8 @@
  * @brief 컴퓨터 상대를 구현합니다. 행동 트리로 일꾼, 보급, 생산 건물, 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 

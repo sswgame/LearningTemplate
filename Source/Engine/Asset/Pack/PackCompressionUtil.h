@@ -6,9 +6,9 @@
  * 잇습니다 — 어느 쪽 번호도 바뀌지 않습니다. 코덱 구현은 레지스트리가 들고 있으므로, 팩 리더와 팩을 쓰는 쪽은 코덱 클래스를 직접 만들지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Pack/PackTypes.h"
 

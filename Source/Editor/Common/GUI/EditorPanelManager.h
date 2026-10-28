@@ -3,9 +3,9 @@
  * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다. `EditorContext` 가 소유합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"

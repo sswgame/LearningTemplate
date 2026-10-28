@@ -6,10 +6,10 @@
  *          바뀌므로 세대가 키에 꼭 든다(언리얼 Details 의 `FPropertyNode` 트리가 객체 · 클래스가 바뀔 때만 다시 지어지는 것과 같다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

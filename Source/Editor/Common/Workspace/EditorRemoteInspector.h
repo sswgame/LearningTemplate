@@ -9,9 +9,9 @@
  *          언리얼 PIE 의 서버 월드 아웃라이너 · 유니티 Multiplayer Play Mode 의 가상 플레이어 인스펙터에 해당한다. 에디터가 띄운 세션이 아니어도 주소 · 포트 · 토큰으로 붙는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 

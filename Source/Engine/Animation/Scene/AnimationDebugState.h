@@ -3,8 +3,8 @@
  * @brief 애니메이션 진단 상태 — 그래프 상태 · 상태 시각 · 이번 프레임 알림 · 커브 · 루트 모션 · 스프라이트 프레임입니다(되감기 기록 · 패널이 읽는다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"

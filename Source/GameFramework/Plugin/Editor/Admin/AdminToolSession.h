@@ -5,11 +5,11 @@
  *          기본 제공자는 서버 없이 도는 메모리 제공자(`FakeAdminProvider`)이고, `useLiveClient` 로 실제 `AdminClient` 를 건다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"

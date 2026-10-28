@@ -9,9 +9,9 @@
  *          입력 행 배치(`probeupdate.hlsl` 의 kRow*)는 `makeParamRows` 가 한 곳에서 짠다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

@@ -17,11 +17,11 @@
  *            (지금, 목표] 안의 이벤트(날 시작, 끼어들기 만료, 약속 판정, 상태 바뀜)는 시각 순으로, 같은 시각이면 NPC 순으로 처리한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"

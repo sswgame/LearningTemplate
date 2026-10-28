@@ -8,7 +8,7 @@
  *          이 컴포넌트가 그 경로를 실행합니다. 새 게임을 시작할 때는 `BenchScene.*` 와 함께 지우는 파일입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -3,8 +3,8 @@
  * @brief 게임 입력 맵을 읽되, 런타임 UI 가 먹은 입력과 게임 입력을 막는 화면(모달 · 로딩)을 걸러서 돌려주는 읽기 전용 창구입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

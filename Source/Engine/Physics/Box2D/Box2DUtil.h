@@ -3,8 +3,8 @@
  * @brief 엔진 수학 타입 ↔ Box2D 타입 변환과 id 묶기 도우미입니다(`Physics/Box2D` 안에서만).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/PhysicsTypes.h"

@@ -6,9 +6,9 @@
  *          실행기(`AutomationRunner`)가 구현하고, 테스트는 가짜 문맥으로 단계 함수를 실행기 없이 부를 수 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

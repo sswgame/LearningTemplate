@@ -3,7 +3,7 @@
  * @brief 시나리오 실행의 벽시계 시한들과 그 대소 관계입니다 — 서로 겹치지 않게 한 곳에서 못 박습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

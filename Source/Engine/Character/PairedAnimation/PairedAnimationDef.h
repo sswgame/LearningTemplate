@@ -17,10 +17,10 @@
  *          `<Select>`(없거나 하나)는 세트 고르기 조건이다 — 그 역할이 앵커 앞에서 본 방위각(도) 구간과 수평 거리 안에 있어야 이 세트를 고른다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

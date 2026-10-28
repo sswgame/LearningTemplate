@@ -3,10 +3,10 @@
  * @brief 이 실행에서 컴파일된 셰이더를 요청이 있을 때 다시 컴파일합니다(수동 리로드).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

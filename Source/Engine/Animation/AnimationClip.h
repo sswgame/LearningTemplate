@@ -3,10 +3,10 @@
  * @brief 스켈레탈 애니메이션 클립 에셋(`.animclip`)입니다. 본 트랙(코덱 블롭), 실수 커브, 알림, 루트 모션 트랙을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"

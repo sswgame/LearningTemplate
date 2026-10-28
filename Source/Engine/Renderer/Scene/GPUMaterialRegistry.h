@@ -6,9 +6,9 @@
  *          스냅샷은 빌더가 가지고 매 프레임 복사해 내보내므로 함수마다 인자로 받습니다(포인터로 붙들면 빌더를 옮길 때 끊어집니다).
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"

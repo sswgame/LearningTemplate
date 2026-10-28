@@ -8,7 +8,7 @@
  *          아직 살아 있다는 뜻이고, 별도의 유효성 표식(세대 번호)이 필요 없습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

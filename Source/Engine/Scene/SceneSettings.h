@@ -11,9 +11,9 @@
  * 격자 · 내리는 여유 반경 · 프레임당 올리는 셀 수는 모두 이 데이터에서 온다. 코드에는 기본값이 없다 — 맞지 않으면 `validate` 가 오류로 멈춘다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/StreamingCellGrid.h"

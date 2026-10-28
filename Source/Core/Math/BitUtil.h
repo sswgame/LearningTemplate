@@ -3,7 +3,7 @@
  * @brief 바이트를 합치고 꺼내는 비트 도우미입니다 — 시프트와 마스크를 손으로 적지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

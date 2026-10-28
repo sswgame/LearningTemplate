@@ -3,7 +3,7 @@
  * @brief 디바이스의 선택 능력인 GPU 타임스탬프 계측입니다. 이 능력을 가진 디바이스만 구현하고, 쓰는 쪽은 `IRHIDevice::findTimestampProvider` 로 묻습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

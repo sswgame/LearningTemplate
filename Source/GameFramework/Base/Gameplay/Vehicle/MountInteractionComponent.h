@@ -3,8 +3,8 @@
  * @brief 탑승자 쪽 타기 버튼입니다. 폰의 의도 버튼(`Interact`)이 발동하면 가까운 빈 좌석에 탑니다. 승객석에 앉아 있으면 같은 버튼으로 내립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -3,8 +3,8 @@
  * @brief 카메라를 따라 늦게(또는 빠르게) 움직이고 되풀이 길이로 감기는 2D 시차 레이어입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -3,10 +3,10 @@
  * @brief 애니메이션 데이터(스켈레톤, 클립 옆 데이터, 임포트 규칙)가 함께 쓰는 JSON 읽기와 쓰기 도우미입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

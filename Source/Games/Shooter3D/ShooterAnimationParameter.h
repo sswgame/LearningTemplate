@@ -3,7 +3,7 @@
  * @brief Shooter3D 애니 그래프(knight · skeleton animgraph)의 매개변수 이름과 이동 코드입니다. 플레이어 몸과 적이 같은 그래프 계약을 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

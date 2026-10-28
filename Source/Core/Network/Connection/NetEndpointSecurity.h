@@ -6,8 +6,8 @@
  *          협상하지 않는다(`NetProtocolFeature` — 한쪽만이면 SecurityMismatch).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
 namespace sw

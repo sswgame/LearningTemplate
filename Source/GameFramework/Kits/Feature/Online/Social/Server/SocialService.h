@@ -14,13 +14,13 @@
  *          Nakama Friends(친구, 보낸 신청, 받은 신청, 막음 상태와 방향 있는 행 둘)와 같은 구조이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"

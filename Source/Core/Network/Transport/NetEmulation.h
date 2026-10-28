@@ -4,11 +4,11 @@
  * @details 나쁜 회선을 흉내 내는 곳은 이 파일 하나다. 루프백 네트워크는 배달만 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetTransport.h"

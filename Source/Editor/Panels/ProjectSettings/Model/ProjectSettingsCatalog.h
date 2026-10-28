@@ -3,9 +3,9 @@
  * @brief 프로젝트 설정 창이 고칠 수 있는 설정 파일의 목록입니다. 생성 메타데이터 `docs/Config/ConfigReference.json` 에서 읽습니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

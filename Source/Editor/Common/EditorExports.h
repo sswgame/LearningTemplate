@@ -3,7 +3,7 @@
  * @brief EditorModule SHARED DLL 의 SW_EDITOR_API 입니다(Dev 전용 — 확장 모듈 `GF_EditorPlugin_*` · `SWGameEditor` 가 링크합니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 // ------------------------------------------------------------------------------
 // 1) SW_EDITOR_API — EditorModule 내보내기

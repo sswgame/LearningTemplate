@@ -7,8 +7,8 @@
  *          스케일을 따로 보간한 뒤 다시 곱해야 합니다. `BlendSpace` 가 그렇게 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

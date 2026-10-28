@@ -3,8 +3,8 @@
  * @brief 커맨드 레지스트리를 ImGui 메뉴에 연결합니다(기본 커맨드 테이블 · 메뉴 항목). 단축키는 에디터 입력 맵(`EditorInputActions`)이 판정합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

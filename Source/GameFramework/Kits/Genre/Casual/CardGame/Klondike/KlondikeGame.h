@@ -3,10 +3,10 @@
  * @brief 솔리테어(클론다이크)를 구현합니다. 7열, 파운데이션 4개, 스톡, 웨이스트를 두고 옮기기 규칙 검사, 1장 또는 3장 뽑기, 자동 완료, 되돌리기를 지원합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -5,8 +5,8 @@
  *          쓰는 쪽과 읽는 쪽이 다른 키트라 기반에 둔다. 넥슨과 엔씨 GM 툴의 "계정 제재(종류, 기간, 사유)" 항목과 같다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

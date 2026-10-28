@@ -3,10 +3,10 @@
  * @brief 네트워크 공통 타입(주소, 패킷 크기 한도, 채널 종류, 연결 상태, 시퀀스 비교)을 정의합니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 #include <initializer_list>
 

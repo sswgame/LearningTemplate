@@ -5,9 +5,9 @@
  *          파라미터(방 크기 · 프리딜레이)와 센드 레벨을 정하므로, 존은 "어떤 스냅샷을 얼마나" 만 말합니다. 같은 스냅샷을 거는 존이 여럿 겹치면 가장 큰 세기입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"

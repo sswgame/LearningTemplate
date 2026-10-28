@@ -15,9 +15,9 @@
  *          쉬기와 되감기는 무엇을 언제 시뮬레이션할지만 바꾼다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/TickRingBuffer.h"

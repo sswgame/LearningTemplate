@@ -3,8 +3,8 @@
  * @brief 에디터 셸의 틀(크롬)입니다. Panel, Section, Toolbar, FloatingBar, Overlay, SearchOverlay 를 제공하며 ImGui 헤더를 포함하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorColor.h"

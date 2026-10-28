@@ -3,7 +3,7 @@
  * @brief 네이티브 `ID3D11DeviceContext`(Deferred Context)를 소유하는 IRHICommandList 구현체입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"

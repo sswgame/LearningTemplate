@@ -5,10 +5,10 @@
  *          점수는 서버 게임 로직이 낸다. 클라이언트 제출은 보드마다 `_bClientSubmit` 을 켠 보드만 받으며, 위조를 감수하는 캐주얼과 싱글 기록용이라는 것이 사용자가 정한 방침이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

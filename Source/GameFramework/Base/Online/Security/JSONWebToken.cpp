@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 

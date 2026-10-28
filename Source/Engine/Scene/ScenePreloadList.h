@@ -11,10 +11,10 @@
  *          쿠킹은 씬 하나마다 작업 둘을 돈다(`SceneCooker::cookAllScenes`) — 쿠킹 기록은 작업 하나에 출력 하나라, 씬 쿠킹본(SCN1)에 목록을 싣는 대신 옆 파일을 따로 굽는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

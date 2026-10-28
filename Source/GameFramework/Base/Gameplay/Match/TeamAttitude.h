@@ -6,7 +6,7 @@
  *          키트가 역할 이름으로 쓰는 팀 enum(`SRPGTeam`, `ConquestTeam`)은 각자의 `isHostile` 을 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

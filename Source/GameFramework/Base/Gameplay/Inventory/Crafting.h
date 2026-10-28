@@ -3,12 +3,12 @@
  * @brief 제작 시스템입니다. 레시피 카탈로그(재료, 결과, 도구, 작업대, 레벨, 시간), 배운 레시피, 즉시 제작, 시간이 걸리는 제작 대기열을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

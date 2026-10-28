@@ -3,10 +3,10 @@
  * @brief 포인터를 중복 없이 모으는 목록입니다. 넣기 · 빼기 · 포함 검사가 모두 O(1) 이고, 순회는 연속 배열을 그대로 돕니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

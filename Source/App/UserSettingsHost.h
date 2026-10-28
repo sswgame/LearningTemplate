@@ -3,8 +3,8 @@
  * @brief 사용자 설정의 호스트 쪽 — 확인 카운트다운 진행, 화면 요청(창 방식 · 해상도 · VSync)을 렌더 스레드와 안전하게 적용, 명령줄 디버그 적용입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

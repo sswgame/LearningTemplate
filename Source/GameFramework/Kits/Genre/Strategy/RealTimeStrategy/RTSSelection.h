@@ -3,9 +3,9 @@
  * @brief 유닛 선택을 담당합니다. 끌어서 선택(내 유닛 우선), 클릭, 같은 종류 선택, 부대 지정(0..9)을 지원합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

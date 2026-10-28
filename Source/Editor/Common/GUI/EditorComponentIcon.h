@@ -3,8 +3,8 @@
  * @brief 컴포넌트 타입 → 아이콘 글리프 · 색 · 빌보드 여부를 리플렉션 메타에서 읽습니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"

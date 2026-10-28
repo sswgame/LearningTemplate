@@ -6,7 +6,7 @@
  *          초기화는 호스트의 `Editor` 메모리 범위를 벗어나 서브시스템의 태그 아래에서 돌므로 태그를 여기서 `Editor` 로 고정합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Subsystem/ISubsystem.h"
 

@@ -3,10 +3,10 @@
  * @brief 자동화 시나리오의 판정을 소유합니다 — 감시 값 비교 · 방문 이력 · 기억 값 · 로그 · 이미지 지표와 실패 · 미확정 · 처리하지 않은 로그 목록.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"

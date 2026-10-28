@@ -10,10 +10,10 @@
  *          게임 스레드에서만 부릅니다(`SceneAudio::setOcclusionQuery` 로 물립니다). 길 찾기는 작은 그래프를 O(방²) 로 훑고, 작업 버퍼는 멤버를 재사용해 할당하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Audio/AudioSpatial.h"

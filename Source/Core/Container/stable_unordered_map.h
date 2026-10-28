@@ -14,12 +14,12 @@
  * - 키는 복사할 수 있어야 합니다(찾는 표와 원소가 각각 키 한 벌을 듭니다). 값은 이동 · 복사할 필요가 없습니다 — 한 번 만든 자리에서 옮겨지지 않기 때문입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 namespace sw
 {

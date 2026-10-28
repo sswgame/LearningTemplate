@@ -10,7 +10,7 @@
 #include <cstdio>
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <DbgHelp.h>
     #include <ProcessSnapshot.h>

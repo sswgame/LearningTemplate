@@ -5,9 +5,9 @@
  *          그래서 저장소마다 슬롯 규칙, 상한, 봉투가 달라지지 않는다. 백엔드는 한 스레드에서만 불린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Local/LocalSlotEnvelope.h"
 #include "GameFramework/Base/Online/Local/LocalStore.h"

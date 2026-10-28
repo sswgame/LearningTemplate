@@ -2,10 +2,10 @@
 
 #include "ModuleManager/LiveReload/LiveReloadManager.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/IFileWatcher.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"

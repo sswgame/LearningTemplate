@@ -5,10 +5,10 @@
  *          규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고, 영역 아래 지형(`TerrainComponent`)을 표면으로 읽는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"

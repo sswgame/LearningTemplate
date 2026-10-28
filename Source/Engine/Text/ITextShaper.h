@@ -6,10 +6,10 @@
  *          HarfBuzz 는 같은 계약으로 끼운다(런 하나이며, 같은 폰트 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

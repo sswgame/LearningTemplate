@@ -6,10 +6,10 @@
  *          `createRenderPass` 를 불러도 재할당이 다른 호출과 겹칠 수 있다. 기록을 읽어야 하는 일이 생기면 포인터를 내주지 말고 복사본을 돌려주는 읽기를 여기에 더한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

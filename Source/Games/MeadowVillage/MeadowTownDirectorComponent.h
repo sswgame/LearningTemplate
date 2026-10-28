@@ -3,11 +3,11 @@
  * @brief 마을 디렉터 — 밭 디렉터 뒤에서 생물 마을 키트를 공유 상태 위에 돌립니다. 생물이 찾아와 부탁을 하고, 공유 지갑으로 과수원을 심어 부탁을 끝냅니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

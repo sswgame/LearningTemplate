@@ -3,9 +3,9 @@
  * @brief 청크 하나를 화면에 그리는 컴포넌트입니다. 디렉터가 요청하면 월드에서 이 청크를 메싱해, 자기 오브젝트의 불투명 메시와 물 메시를 다시 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

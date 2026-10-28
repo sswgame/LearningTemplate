@@ -16,5 +16,5 @@
     #include <X11/Xutil.h>
     #include <X11/keysym.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 #endif

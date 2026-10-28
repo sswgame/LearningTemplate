@@ -11,8 +11,8 @@
  * `SW_PROFILER_BACKEND_COMPILED` 가 0 이라 계측 매크로가 지점을 등록하지도, 출력에 묻지도 않습니다. Tracy 는 링크조차 하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Profiling/IProfilerBackend.h"

@@ -7,8 +7,8 @@
  *          구성: `SW_ENABLE_ATSPI` (libdbus-1 필요, cmake/Modules/Platform/Linux.cmake). 꺼져 있으면 이 브리지는 지어지지 않고 팩토리가 nullptr 을 준다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"

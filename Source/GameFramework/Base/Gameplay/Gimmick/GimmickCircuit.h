@@ -6,10 +6,10 @@
  *          바이트로 바꾸는 일은 이 클래스가 하지 않는다(`GimmickCircuitState.h`). 실행 중에는 슬롯을 회로 전체의 평평한 목록에 두고, 저장할 때만 노드별로 나눈다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 

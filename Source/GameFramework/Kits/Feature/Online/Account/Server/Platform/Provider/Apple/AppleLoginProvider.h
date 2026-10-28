@@ -12,11 +12,11 @@
  *          HTTP 클라이언트가 둘이다(ID 토큰의 JWKS 용과 이 제공자의 교환 · 철회 용) — 클라이언트의 응답은 소유한 쪽이 모두 회수하기 때문이다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

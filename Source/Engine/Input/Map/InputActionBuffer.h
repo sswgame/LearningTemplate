@@ -9,10 +9,10 @@
  *          틱 단위로 결정적인 격투 커맨드(롤백 넷코드, 바라보는 쪽 뒤집기)는 GameFramework 의 `InputCommandBuffer` 가 맡습니다. 이 버퍼는 실시간 액션 이력입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/RingBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

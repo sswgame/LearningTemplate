@@ -8,8 +8,8 @@
  *          모릅니다. 그 반복을 여기로 모아 Export 매크로의 한 항목이 한 줄이 되게 합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,9 +3,9 @@
  * @brief 런타임 UI 성능 벤치 화면입니다(`-gv_benchUiWidgets=N -gv_benchUiChurn=M`). 위젯 N 개짜리 격자를 만들고 프레임마다 M 개의 텍스트를 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 

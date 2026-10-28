@@ -5,11 +5,11 @@
  *       반환합니다**(그 처리는 호출하는 쪽의 책임입니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 // `drain( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 넣지 않는다.
 // 주의: 토큰만 세고 include 를 지우면 이 헤더가 혼자서는 컴파일되지 않을 수 있다(단독 컴파일로 확인할 것).

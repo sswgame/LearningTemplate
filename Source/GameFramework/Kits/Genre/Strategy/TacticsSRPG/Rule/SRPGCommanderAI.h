@@ -3,8 +3,8 @@
  * @brief 택틱스 SRPG 의 적 AI 를 구현합니다. 갈 수 있는 셀, 무기, 표적의 조합마다 "기대 피해 - 반격 위험" 점수를 매겨 가장 좋은 것을 고릅니다(결정적).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

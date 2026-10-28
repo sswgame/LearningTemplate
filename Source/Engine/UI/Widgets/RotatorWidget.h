@@ -3,11 +3,11 @@
  * @brief 좌우로 하나씩 넘겨 고르는 선택 상자입니다(언리얼 CommonUI 의 `UCommonRotator`, 유니티의 `Slider` 로 만든 단계 선택, Godot 의 좌우 화살표 `OptionButton` 대용에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

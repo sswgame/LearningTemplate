@@ -3,8 +3,8 @@
  * @brief 메시가 없는 컴포넌트(빛 · 카메라 · 오디오 …)를 뷰포트에 아이콘 배지로 보이고, 눌러 고르게 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

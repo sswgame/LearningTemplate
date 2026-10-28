@@ -6,10 +6,10 @@
  *          작업 본문만 가진다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"

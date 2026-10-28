@@ -4,10 +4,10 @@
  * @details 핫 리로드(`AssetHotReload`, Workspace 층)가 쓰므로 같은 층에 둔다. 공통 규약(락, 세대, 완료 플래그)은 `EditorBackgroundTask` 에 있다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 

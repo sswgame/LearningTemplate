@@ -5,10 +5,10 @@
  *          언리얼의 `UAnimBoneCompressionCodec`, Godot 의 PhysicsServer 처럼 구현을 교체할 수 있게 하는 경계다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"

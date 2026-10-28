@@ -3,9 +3,9 @@
  * @brief 노드 그래프 프레임워크의 판단 로직입니다. 노드 검색, 핀 연결 규칙, 도달하지 못하는 노드를 다룹니다. ImGui 에 의존하지 않으므로 EditorTest 가 테스트합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

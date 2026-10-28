@@ -3,9 +3,9 @@
  * @brief 에디터의 버전 관리 잠금(체크아웃) 추상 — 공급자는 **명령을 만들고 출력을 읽기만** 합니다. 띄우는 것은 `EditorSourceControl` 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor

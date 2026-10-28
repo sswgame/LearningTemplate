@@ -6,9 +6,9 @@
  *          행 만들기는 `AbilityDebugModel` 이 맡는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

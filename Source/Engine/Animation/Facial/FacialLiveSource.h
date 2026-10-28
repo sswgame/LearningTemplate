@@ -5,7 +5,7 @@
  *          장치 쪽(네트워크 수신 · 채널 이름 바꾸기)은 이 인터페이스를 구현하는 쪽의 몫이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

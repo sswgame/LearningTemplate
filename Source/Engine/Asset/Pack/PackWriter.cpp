@@ -2,12 +2,12 @@
 
 #include "Engine/Asset/Pack/PackWriter.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

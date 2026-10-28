@@ -7,9 +7,9 @@
  *          - 시즌 결과는 항목 하나(점수와 순위)와 기간 id(시즌 id)로 싣는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

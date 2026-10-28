@@ -3,7 +3,7 @@
  * @brief ImGui 플랫폼(창 · 입력) 백엔드의 추상 인터페이스입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 struct ImGuiViewport;

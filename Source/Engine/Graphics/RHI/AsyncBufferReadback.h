@@ -9,9 +9,9 @@
  * @note 이 타입은 RHI ABI 가 아니라 그 위의 편의 계층입니다. 백엔드 모듈이 아니라 엔진이 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

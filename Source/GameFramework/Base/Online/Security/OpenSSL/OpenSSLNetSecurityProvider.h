@@ -4,7 +4,7 @@
  * @details 다른 코드는 이 헤더가 아니라 `NetSecurity::getProvider()` 로 받는다. 모든 함수는 스레드 안전하다(컨텍스트를 호출마다 만들거나, 세션과 AEAD 는 한 스레드가 전담한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 namespace sw

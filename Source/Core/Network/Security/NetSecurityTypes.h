@@ -4,10 +4,10 @@
  * @details 구현(OpenSSL)을 모르는 Core 타입만 둔다. 비밀 키와 세션 키는 다 쓰면 `wipe` 로 지운다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

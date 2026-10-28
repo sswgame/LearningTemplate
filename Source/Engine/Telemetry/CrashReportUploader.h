@@ -4,10 +4,10 @@
  * @details 업로더는 동의를 모릅니다 — 동의(`telemetry.crashReports`)는 `CrashReportService` 가 지키고, 업로더는 보내기로 정해진(Queued) 묶음에만 불립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

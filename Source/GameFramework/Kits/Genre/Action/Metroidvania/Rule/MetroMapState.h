@@ -6,10 +6,10 @@
  *          아이템 표시는 "지도에 그려진 방", "아직 방문하지 않은 방", "아직 줍지 않은 것"을 모두 만족할 때만 나온다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

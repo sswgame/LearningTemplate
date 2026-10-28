@@ -5,10 +5,10 @@
  *          이 컴포넌트가 들어서 디렉터를 움직인다. 언리얼 Sequencer 의 Camera Cut 트랙이 PlayerCameraManager 에 뷰 타깃을 넣는 것에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Object/Component/Component.h"

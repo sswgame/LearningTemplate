@@ -5,10 +5,10 @@
  *          200 이면 경로의 값(문자열이나 숫자)이 주체이고, 401 과 403 은 거절이며, 그 밖(연결 실패, 시한, 5xx)은 제공자를 쓸 수 없는 것으로 본다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

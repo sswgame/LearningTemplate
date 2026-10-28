@@ -3,10 +3,10 @@
  * @brief OS 시스템 폰트 폴더와 그 안의 폰트 파일을 찾습니다(런타임 텍스트와 에디터 ImGui 가 함께 씁니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

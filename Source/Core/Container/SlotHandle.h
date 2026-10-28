@@ -5,8 +5,8 @@
  *       게임 오브젝트와는 관계가 없습니다(게임 오브젝트 참조는 `GameObjectHandle`).
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

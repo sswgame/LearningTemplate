@@ -5,10 +5,10 @@
  *          그래서 엔진이나 물리 씬 없이 쿠킹한 `FractureAsset` 하나로 테스트할 수 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

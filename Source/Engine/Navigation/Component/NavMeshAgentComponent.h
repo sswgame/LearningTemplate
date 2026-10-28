@@ -3,9 +3,9 @@
  * @brief 내비메시 위를 걷는 에이전트 — 목적지 → 경로 → 군중 조향(이웃 회피)으로 오브젝트를 옮기거나, 같은 오브젝트의 캐릭터 컨트롤러에 원하는 속도를 넘깁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

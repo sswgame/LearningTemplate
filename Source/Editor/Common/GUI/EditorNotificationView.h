@@ -3,7 +3,7 @@
  * @brief 토스트 알림 큐(`EditorNotificationManager`)를 화면 오른쪽 아래에 그립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

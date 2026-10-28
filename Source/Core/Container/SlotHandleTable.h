@@ -3,13 +3,13 @@
  * @brief SlotHandle 로 T 슬롯을 보관하는 테이블입니다. 핸들의 기본값은 무효입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

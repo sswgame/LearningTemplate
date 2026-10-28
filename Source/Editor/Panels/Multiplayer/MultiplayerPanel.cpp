@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Multiplayer/MultiplayerPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"

@@ -3,8 +3,8 @@
  * @brief 격자 행위자(`NavAgent`, `NavGrid`, `GridPathfinder`)를 공통 이동 인터페이스(`INavMover`)로 감쌉니다. 내비메시 에이전트와 같은 곳에 연결됩니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/INavMover.h"

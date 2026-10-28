@@ -4,11 +4,11 @@
  * @details 종료 낱말을 아는 곳은 여기 하나입니다. 나머지 줄을 무엇으로 처리할지(개발 콘솔, 서버 루프 명령)는 호스트가 델리게이트로 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

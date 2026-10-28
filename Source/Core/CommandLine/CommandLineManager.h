@@ -3,11 +3,11 @@
  * @brief 실행할 때 받은 커맨드라인 인자를 파싱하고 보관하는 매니저입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 
 #include <variant>

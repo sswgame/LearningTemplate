@@ -10,9 +10,9 @@
  *          이 서브시스템은 Admin 확장의 `AdminToolSession` 을 인라인 멤버로만 부른다(확장 DLL 끼리는 링크하지 않는다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 

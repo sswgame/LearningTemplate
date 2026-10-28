@@ -6,8 +6,8 @@
  *       결과를 두 번 만들게 하고, 두 번째가 더 크면 버퍼가 모자라 실패하므로 표에 두지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "ModuleAPI/ABI/ModuleHandles.h"
 

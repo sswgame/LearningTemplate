@@ -5,8 +5,8 @@
  *          Core 만 include 하므로 어느 Engine 티어에서 구현해도 됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

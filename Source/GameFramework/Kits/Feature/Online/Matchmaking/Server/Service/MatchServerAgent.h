@@ -7,12 +7,12 @@
  *          버스 구독은 서버 조립 단계(또는 `MatchmakingServer`)가 `getAssignTopic` 으로 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"

@@ -6,10 +6,10 @@
  *          - OIDC 제공자의 티켓은 `ID 토큰|nonce` 형식이다. 서버의 `OidcLoginProvider` 가 nonce 를 확인해 티켓의 재사용을 막는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

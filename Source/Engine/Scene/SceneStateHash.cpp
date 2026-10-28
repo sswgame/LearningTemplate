@@ -2,9 +2,9 @@
 
 #include "Engine/Scene/SceneStateHash.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/HexUtil.h"

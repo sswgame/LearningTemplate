@@ -3,10 +3,10 @@
  * @brief 슬롯 인벤토리입니다. 겹치기, 무게 한도, 슬롯 옮기기, 나누기, 정렬, 내구도를 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/CustomizationValueSet.h"

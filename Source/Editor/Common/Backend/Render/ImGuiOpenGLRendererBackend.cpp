@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
@@ -25,7 +25,7 @@ static HGLRC s_MainWindowRC{ nullptr };
     // vcpkg 의 Khronos glxext.h 가 X11 Status 를 참조해, include 순서에 따라 깨진다.
     #define GLX_GLXEXT_LEGACY
     #include <GL/glx.h>
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 
     #include "Engine/Window/IWindow.h"
 

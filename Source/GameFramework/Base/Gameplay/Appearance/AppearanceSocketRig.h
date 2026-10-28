@@ -6,13 +6,13 @@
  *          새 무기의 총구를 가리킨다. 씬과 컴포넌트를 모르는 값 타입이라 테스트에서 그대로 실행할 수 있다. 외형 컴포넌트가 이 타입을 보관하고 오브젝트에 붙인다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

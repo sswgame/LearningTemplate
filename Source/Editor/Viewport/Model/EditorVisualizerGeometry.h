@@ -3,8 +3,8 @@
  * @brief 뷰포트 시각화가 그릴 월드 도형을 만듭니다. ImGui 에 의존하지 않으며, 투영과 그리기는 시각화 파일이 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

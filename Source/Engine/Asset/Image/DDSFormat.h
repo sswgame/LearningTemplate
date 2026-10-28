@@ -3,8 +3,8 @@
  * @brief DDS 파일 머리의 고정 값입니다. 읽는 쪽(`DDSLoader`)과 쓰는 쪽(`ImageFileWriter`)이 같은 값을 봅니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {

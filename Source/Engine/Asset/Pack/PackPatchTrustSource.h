@@ -10,8 +10,8 @@
  *          - 개인 키는 이 설정에 없다 — 서명하는 쪽만 `-patch-sign-key <PEM 경로>` 로 저장소 밖 파일에서 읽는다(`PackPatchBuilder`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Pack/PackPatch.h"
 

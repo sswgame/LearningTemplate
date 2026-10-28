@@ -2,7 +2,7 @@
 
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Navigation/Recast/RecastNavMesh.h"

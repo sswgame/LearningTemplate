@@ -6,8 +6,8 @@
  *          것이 없습니다(`isCached` 는 false, `reload` 는 할 일이 없다) — 값이 기대는 파일(텍스처 · 머티리얼)은 그 파일의 캐시가 제자리로 다시 읽습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetID.h"

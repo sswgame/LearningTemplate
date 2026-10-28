@@ -16,10 +16,10 @@
  *          칸이 생겨, 게임 모듈이 인스턴스화한 세터가 엔진이 채운 칸을 보지 못합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Tick/DeferredDelegateQueue.h"
 

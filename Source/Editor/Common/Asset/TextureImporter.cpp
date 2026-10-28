@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Asset/TextureImporter.h"
 
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"

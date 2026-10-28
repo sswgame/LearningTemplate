@@ -3,9 +3,9 @@
  * @brief 프레임 번호에 묶은 이벤트 목록을 가진 가상 입력 원천입니다. "60 프레임에 E 누름, 61 에 뗌" 같은 입력을 적어 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Input/IInputDevice.h"

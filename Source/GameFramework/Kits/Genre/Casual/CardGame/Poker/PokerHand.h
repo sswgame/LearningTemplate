@@ -3,8 +3,8 @@
  * @brief 포커 족보를 판정합니다. 5장의 족보와 키커를 계산하고, 7장(홀 카드 2장 + 보드 5장) 중 가장 센 5장을 고릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"

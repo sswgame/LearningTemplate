@@ -12,8 +12,8 @@
  * 예외). 언리얼 `FJSONObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/Reflection.h"

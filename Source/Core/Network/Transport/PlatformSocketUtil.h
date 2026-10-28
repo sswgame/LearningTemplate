@@ -4,8 +4,8 @@
  * @details Core README 의 규칙("함수 이름만 다르면 *Util 한 곳")을 따릅니다. 소켓 핸들은 `uint64` 로 들고 다닙니다(Windows SOCKET 은 포인터 크기).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 namespace sw

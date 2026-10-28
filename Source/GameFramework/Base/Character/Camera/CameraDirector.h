@@ -4,9 +4,9 @@
  * @details 활성 프리셋, 모드 상태, 블렌드 스택, 감쇠, 흔들림을 시간으로 굴린다. 컴포넌트와 씬은 모른다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/Camera/CameraBlend.h"

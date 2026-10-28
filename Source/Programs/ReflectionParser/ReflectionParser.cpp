@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Common/Types.h"
 #include "Core/Diagnostics/DataRaceReporter.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Time/GameTimer.h"

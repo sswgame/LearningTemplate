@@ -6,7 +6,7 @@
  *          오케스트레이터(Agones, 쿠버네티스) 없이 두 플랫폼에서 도는 "서버가 스스로 보내는 하트비트" 구조다. 오케스트레이터를 연결하면 등록만 그쪽 상태로 바꾼다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"

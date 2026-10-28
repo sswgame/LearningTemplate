@@ -3,9 +3,9 @@
  * @brief 같은 오브젝트의 강체(`RigidBodyComponent`)를 물(`WaterBodyComponent`) 위에 띄웁니다. 언리얼 Water 플러그인의 BuoyancyComponent(폰툰)에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

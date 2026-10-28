@@ -6,8 +6,8 @@
  *       전혀 모릅니다. 그래서 직렬화기가 Object 를 include 하지 않고 이 핸들의 텍스트 핸들러를 등록합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

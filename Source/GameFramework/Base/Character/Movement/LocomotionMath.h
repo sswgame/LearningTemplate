@@ -4,8 +4,8 @@
  * @details 3인칭 슈터처럼 몸이 시점을 따라 돌고 다리는 이동 방향을 따르는 캐릭터(옆걸음 · 뒷걸음)가 씁니다. 좌표는 엔진과 같습니다(+Y 위, +Z 앞, 요는 +Z 에서 +X 쪽).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

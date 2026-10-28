@@ -7,7 +7,7 @@
  *          Engine 의 전역 변수를 읽지 못한다. 수준은 `-gv_validateBindlessIndex` 로 정한다. 0 은 끔, 1 은 죽은 번호(Debug 기본), 2 는 "없음" 번호가 셰이더로 가는 위치까지 남긴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

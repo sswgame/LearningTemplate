@@ -2,10 +2,10 @@
 
 #include "Engine/Localization/LocalizationDocuments.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

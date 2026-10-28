@@ -11,7 +11,7 @@
 #endif
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/BuildInfo.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Log/Logger.h"

@@ -3,7 +3,7 @@
  * @brief Detour 질의 객체로 점을 내비메시에 붙이는 규칙입니다. `RecastNavMesh` 의 질의와 `DetourNavCrowd` 의 목적지 · 위치 붙이기가 같은 규칙을 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 #include <recastnavigation/DetourNavMeshQuery.h>

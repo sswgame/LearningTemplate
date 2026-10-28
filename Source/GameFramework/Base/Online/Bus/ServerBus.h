@@ -10,9 +10,9 @@
  *          구현은 `EphemeralServerBus`(캐시 발행/구독 위, 서버 여럿)와 `LocalServerBus`(프로세스 안, 서버 한 대와 테스트)다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

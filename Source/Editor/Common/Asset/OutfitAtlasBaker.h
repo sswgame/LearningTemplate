@@ -18,10 +18,10 @@
  *          0..1 밖 UV(타일링)를 가진 부품은 아틀라스에 앉힐 수 없어 굽기를 거절한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/EditorExports.h"

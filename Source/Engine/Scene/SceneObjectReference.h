@@ -10,9 +10,9 @@
  *          씬은 있는데 파일 id 가 없는 것(지운 오브젝트)은 데이터 결함이다 — 부르는 쪽이 둘을 다르게 다룬다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -6,8 +6,8 @@
  *          동안 `AnimationSystem` 은 평가를 멈추고 기록된 포즈를 유닛에 겁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 /** @brief 되감기 기록기가 컴파일되는 구성이면 1 입니다. Shipping 은 0 이고 기록기 · 명령 · 패널이 모두 빠집니다. */
 #if defined( SW_SHIPPING )

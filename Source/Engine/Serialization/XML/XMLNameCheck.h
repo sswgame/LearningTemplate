@@ -6,9 +6,9 @@
  *          로그를 같은 말로 거를 수 있습니다 — `<원소> has unknown attribute '이름'` · `<원소> has unknown element <이름>`.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
 
 namespace sw

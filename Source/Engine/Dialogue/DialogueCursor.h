@@ -3,8 +3,8 @@
  * @brief 대화 그래프에서 다음 노드를 정하는 규칙입니다. 런타임 러너와 에디터 미리보기가 같은 함수를 부릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 

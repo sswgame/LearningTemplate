@@ -3,9 +3,9 @@
  * @brief 2D 그림자 가림막 — 상자 모양 또는 같은 오브젝트의 타일맵 외곽선이 2D 빛을 가립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -7,9 +7,9 @@
  *          `toAbgr` 는 리틀엔디안 메모리에서 바이트가 R, G, B, A 순으로 놓이는 값이라 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처 · ImGui `IM_COL32` 와 같습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

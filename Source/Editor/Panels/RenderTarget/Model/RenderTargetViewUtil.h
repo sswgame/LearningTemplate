@@ -3,8 +3,8 @@
  * @brief 렌더 타깃 창의 보기 계산을 담당합니다. CPU 로 읽은 픽셀을 값으로 풀고, 채널 선택과 깊이 선형화를 거쳐 미리보기 RGBA8 을 만듭니다. ImGui 에 의존하지 않으며 EditorTest 가 테스트합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

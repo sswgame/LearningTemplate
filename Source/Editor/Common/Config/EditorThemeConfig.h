@@ -4,9 +4,9 @@
  * @details 색 · 크기의 기본값을 여기 두지 않는다. 원본은 토큰 파일 하나다(두 곳에 두면 한쪽만 고쳐진다). 테마를 읽기 전의 값은 의미가 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/EditorColor.h"

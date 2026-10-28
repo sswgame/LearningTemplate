@@ -4,8 +4,8 @@
  * @details 좌표는 UI 단위(UI 배율을 곱하기 전, 1080p 기준 픽셀과 같은 크기)이고 원점은 화면 왼쪽 위이며 y 는 아래가 + 이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

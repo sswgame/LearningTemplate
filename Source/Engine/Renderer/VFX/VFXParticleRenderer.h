@@ -11,10 +11,10 @@
  *          지금은 색 커브(더하기 방출기는 1 보다 큰 HDR 색)로 맞췄다. 텍스처 임포트에 "알파만 마스크" 규칙이 필요해지면 후보로 따로 적는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"

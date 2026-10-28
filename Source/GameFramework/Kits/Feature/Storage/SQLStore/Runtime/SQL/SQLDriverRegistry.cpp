@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 
-#include "Core/Common/BuildInfo.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"

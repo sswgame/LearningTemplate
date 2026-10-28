@@ -4,8 +4,8 @@
  * @details 체력 읽기(지금, 최대, 쓰러짐)와 받는 쪽에 알리기를 한곳에 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

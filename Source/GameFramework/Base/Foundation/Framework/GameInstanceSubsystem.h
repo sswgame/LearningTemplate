@@ -7,7 +7,7 @@
  *          프레임마다 도는 핫 데이터나 게임플레이 객체(컴포넌트, 카탈로그 값)는 서브시스템이 아닙니다. 카탈로그는 `bindScopedService` 로 빌려 등록합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Subsystem/ISubsystem.h"
 

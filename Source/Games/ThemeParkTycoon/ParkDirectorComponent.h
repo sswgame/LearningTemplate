@@ -9,10 +9,10 @@
  *          뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

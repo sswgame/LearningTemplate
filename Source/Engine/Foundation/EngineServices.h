@@ -16,8 +16,8 @@
  *          칸은 아무것도 소유하지 않습니다. 테스트는 `test::ScopedEngineServiceOverride` 로 범위에 목을 넣어 다시 묶는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/EngineScope.h"

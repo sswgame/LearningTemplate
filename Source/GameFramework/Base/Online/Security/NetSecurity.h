@@ -7,8 +7,8 @@
  *          `devserver.key.pem`(없으면 만든다)을 쓰고, Shipping 은 오류다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"

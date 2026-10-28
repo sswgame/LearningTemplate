@@ -3,13 +3,13 @@
  * @brief RenderPipeline XML 을 로드해 RenderGraph 를 만들고, Shadow, Forward, Deferred, Post 패스를 실행합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"

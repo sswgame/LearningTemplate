@@ -8,8 +8,8 @@
  * @note 리눅스 클라이언트 전용입니다. 주입기는 자기 X 연결을 따로 연다(창과 무관). 개발 명령은 `input.xtest`.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

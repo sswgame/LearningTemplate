@@ -15,10 +15,10 @@
  *            게임 스레드와 네트워크 스레드는 DB 를 기다리지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

@@ -3,12 +3,12 @@
  * @brief 법 집행을 다룹니다. 범죄 목격(시야 콜백), 신고까지의 시간, 목격자 처치와 위협, 지역별 현상금과 수배 단계, 시간과 변장에 따른 감쇠, 현상금 지불, 보안관 추적 단계를 관리합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 

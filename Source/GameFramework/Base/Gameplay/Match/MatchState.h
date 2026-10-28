@@ -4,10 +4,10 @@
  * @details 장르 공통이다. 팀 데스매치(점수), 기체 대전(코스트 게이지), 배틀로얄(부활 없음, 순위), 비대칭 대전(역할이 다른 두 팀)이 설정만 바꿔서 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 

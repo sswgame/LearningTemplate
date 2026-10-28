@@ -7,8 +7,8 @@
  *          플랫폼 백엔드는 프레임마다 실제 커서를 다시 넣을 수 있으므로, 누르기, 떼기, 호버는 그 단계마다 레이블 위로 다시 옮긴 뒤 넣는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

@@ -3,9 +3,9 @@
  * @brief 2D 빛 — 점 · 스폿(`PointLight2DComponent`), 자유 모양(`FreeformLight2DComponent`), 전역(`GlobalLight2DComponent`)입니다. 빛 받는 스프라이트(`sprite2dlit.material`)만 비춥니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/3D/LightComponent.h"

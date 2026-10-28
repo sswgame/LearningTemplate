@@ -9,8 +9,8 @@
  *          적중 · 실패는 창 시작(워밍업 뒤, `CacheStats::markWindowStart`)부터의 값입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,8 +3,8 @@
  * @brief 입력 슬롯(`InputSlot`)과 사람이 읽는 문자열(`Key.Space`, `Mouse.Left`, `Gamepad.A`) 사이의 변환을 제공합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Input/IInputDevice.h"
 

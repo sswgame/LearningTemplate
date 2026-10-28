@@ -5,10 +5,10 @@
  *          하나 늘어나면 `InspectorWidgetFor` 특수화가 없는 한 컴파일되지 않는다. 그리는 쪽은 `InspectorPropertyManager.cpp` 이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/PackedTypesFwd.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskTypes.h"

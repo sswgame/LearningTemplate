@@ -7,7 +7,7 @@
  * **함께** 올립니다(둘이 어긋나면 컴파일되지 않습니다). Engine 과 함께 모든 RHI_* 모듈을 다시 빌드하십시오.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

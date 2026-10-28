@@ -3,8 +3,8 @@
  * @brief 비행기 경로와 낙하를 다룹니다. 경로는 맵을 가로지르는 시드 기반 무작위 직선이며 뛰어내릴 수 있는 구간이 있고, 낙하는 자유 낙하에서 낙하산으로 이어지며 수평 이동과 착지 지점 예측을 지원합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

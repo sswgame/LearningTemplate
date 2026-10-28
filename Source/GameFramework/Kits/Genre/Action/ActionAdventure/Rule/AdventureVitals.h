@@ -5,9 +5,9 @@
  * @details 하트는 기반 `Vitality`(체력 = 하트 × 4)가, 마법과 스태미나는 기반 `ResourceGauge` 가 맡는다. 스태미나를 0까지 쓰면 탈진 상태가 되어 `_staminaRecoverLevel` 까지 다시 찰 때까지 어떤 행동도 스태미나를 쓰지 못한다(야생의 숨결의 붉은 바퀴).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

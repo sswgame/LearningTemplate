@@ -5,7 +5,7 @@
  *          없으면 백버퍼(게임 창 전체)다. 창 크기(`IWindow`)를 게임 화면 크기로 읽지 않는다 — 에디터 게임 뷰는 창의 일부다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

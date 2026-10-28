@@ -3,9 +3,9 @@
  * @brief 방출기 하나의 CPU 입자 시뮬레이션(`VFXCPUSimulation`)입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/VFX/VFXEffectDef.h"

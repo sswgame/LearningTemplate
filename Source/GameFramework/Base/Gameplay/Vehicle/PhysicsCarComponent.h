@@ -3,8 +3,8 @@
  * @brief 물리 차 폰의 이동입니다. 의도를 같은 오브젝트의 `WheeledVehicleComponent` 운전 입력(페달, 조향, 브레이크, 핸드브레이크)으로 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

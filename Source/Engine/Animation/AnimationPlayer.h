@@ -3,9 +3,9 @@
  * @brief 재생할 것(`IAnimationPlayable`) 두 슬롯을 크로스페이드하는 플레이어, 동기 그룹, 상태 기계 파라미터입니다. 2D 와 3D 가 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"

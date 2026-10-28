@@ -3,7 +3,7 @@
  * @brief 벤치 카메라 맞춤의 보기 모드와 입력 값입니다. 장면에 묶이지 않은 순수 구조라 단위 테스트가 직접 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include <cstring>
 #include <type_traits>

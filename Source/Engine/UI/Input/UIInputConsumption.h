@@ -3,9 +3,9 @@
  * @brief UI 가 소비한 물리 입력(키, 버튼, 마우스 버튼, 스틱)을 보관합니다. 뗄 때까지 게임 쪽 액션이 그 입력으로 발화하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Input/IInputDevice.h"

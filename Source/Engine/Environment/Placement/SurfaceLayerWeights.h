@@ -5,8 +5,8 @@
  *          레이어 수의 정본은 `kLayerCount` 입니다 - 파일 형식 · 브러시 · 배치 필터 · 머티리얼이 이 값을 따릅니다. 기본값은 레이어 0 이 가득입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

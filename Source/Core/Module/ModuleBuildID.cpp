@@ -2,11 +2,11 @@
 
 #include "Core/Module/ModuleBuildID.h"
 
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/HexDigitUtil.h"
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/String/FourCcUtil.h"
+#include "Core/String/HexDigitUtil.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 

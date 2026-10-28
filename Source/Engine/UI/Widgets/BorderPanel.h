@@ -3,8 +3,8 @@
  * @brief 자식 하나를 배경, 테두리, 그림자, 안쪽 여백으로 감싸는 패널입니다(UMG 의 Border, Godot 의 PanelContainer 와 StyleBox 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

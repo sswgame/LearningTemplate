@@ -4,10 +4,10 @@
  * @details 계절마다 가중치로 다음 날씨를 고르고, 정한 시간 동안 이어지다가 부드럽게 넘어간다. 젖음, 바람, 안개 같은 값을 섞어 준다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameCatalog.h"

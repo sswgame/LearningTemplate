@@ -4,9 +4,9 @@
  * @details 언리얼 `FSlateRHIRenderer` 에 해당합니다(게임 스레드가 만든 그리기 목록만 읽습니다). `FrameRenderer` 가 소유합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

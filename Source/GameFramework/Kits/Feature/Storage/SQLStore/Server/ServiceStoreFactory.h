@@ -6,8 +6,8 @@
  *          이 빌드 타깃에 없는 드라이버이면 분명한 오류를 남기고 기동을 멈추며, 다른 드라이버로 대신하지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

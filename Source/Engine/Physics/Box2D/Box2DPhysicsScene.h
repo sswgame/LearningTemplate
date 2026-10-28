@@ -13,14 +13,14 @@
  *  - **스레드.** `PhysicsSettings::_workerCount2D` 가 2 이상이면 씬마다 전용 워커(`Box2DWorkerPool`)를 붙인다. 소유 규칙 · 잠금 순서 · 결정성은 그 헤더에 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/map.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Collision/PhysicsContact.h"

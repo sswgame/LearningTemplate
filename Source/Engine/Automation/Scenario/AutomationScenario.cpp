@@ -2,9 +2,9 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Engine/Asset/AssetIO.h"

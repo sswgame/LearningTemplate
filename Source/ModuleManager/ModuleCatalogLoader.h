@@ -3,7 +3,7 @@
  * @brief 실행 파일 옆 `Modules/` 의 매니페스트를 읽어 호스트 대상(App = 빌드 마스크, Server = Server)으로 해석합니다. App · Server 가 같이 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 

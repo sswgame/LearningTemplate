@@ -8,10 +8,10 @@
  *          - 폴더에 패치 목록이 있으면 기본 팩의 폴더가 아니다 — 거절한다(이미 패치된 폴더에서 다음 빌드를 만들지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Pack/PackPatch.h"
 #include "Engine/Asset/Pack/PackWriter.h"

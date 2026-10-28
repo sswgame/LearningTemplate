@@ -5,10 +5,10 @@
  *          붙인 컴포넌트는 핸들로 들고 쓸 때마다 오브젝트의 매니저로 찾는다. 사라졌으면 그 슬롯을 건너뛴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

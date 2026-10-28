@@ -5,7 +5,7 @@
  *          (`GPULightBuffer`). 컴포넌트 층이 렌더러를 include 할 수 없어 이 구조체만 렌더러 아래의 계약 폴더에 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 

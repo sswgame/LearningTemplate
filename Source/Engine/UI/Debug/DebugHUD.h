@@ -7,8 +7,8 @@
 
 #if SW_DEV_COMMANDS_ENABLED
 
-    #include "Core/Common/Macros.h"
-    #include "Core/Common/Types.h"
+    #include "Core/Foundation/Macros.h"
+    #include "Core/Foundation/Types.h"
     #include "Core/Container/string.h"
     #include "Core/String/hashed_string.h"
 

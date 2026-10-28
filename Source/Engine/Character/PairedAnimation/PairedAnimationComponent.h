@@ -7,10 +7,10 @@
  *          `startSession` · `abortSession` 은 게임 스레드, 틱 밖에서 부른다(세션이 다른 오브젝트의 애니메이터를 바꾼다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

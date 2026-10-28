@@ -3,9 +3,9 @@
  * @brief 청크 하나를 삼각형 목록으로 만듭니다. 드러난 면만 만들고, 면마다 아틀라스 UV, 면 밝기, 꼭짓점 그늘(AO)을 넣습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/GameFrameworkExports.h"

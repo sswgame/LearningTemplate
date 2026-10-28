@@ -3,8 +3,8 @@
  * @brief 씬의 주광(directional key light)입니다. 방향 · 색 · 그림자 볼륨을 선언으로 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/LightComponent.h"

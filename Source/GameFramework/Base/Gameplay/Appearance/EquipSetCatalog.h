@@ -4,9 +4,9 @@
  * @details 세트 효과 같은 수치는 게임플레이(어빌리티 시스템)가 맡으므로 여기에 두지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"

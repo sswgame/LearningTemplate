@@ -3,10 +3,10 @@
  * @brief 압축 바이너리 컨테이너입니다. 헤더 · 체크섬 · 코덱 선택을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {

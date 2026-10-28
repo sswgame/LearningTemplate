@@ -7,9 +7,9 @@
  *          감사 기록)만 흉내 낸다. 서버 쪽 규칙의 기준은 `AdminStoreLogic` 이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminClient.h"
 

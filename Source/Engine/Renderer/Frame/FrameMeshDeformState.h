@@ -4,10 +4,10 @@
  * @details 데이터만 담는 비가상 부품입니다. 디스패치 순서(컬링보다 앞)와 기록은 `FrameRenderer` 가 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"

@@ -26,10 +26,10 @@
  *          파편의 물리 자세는 기계마다 다르다. 장식이므로 롤백(상태 저장과 되돌리기)은 하지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Message/NetMessage.h"

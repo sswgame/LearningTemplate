@@ -4,7 +4,7 @@
  * @details `Engine::update` 이 씬 틱 뒤에 부른다. 상태가 없어 정적 함수 하나입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

@@ -14,10 +14,10 @@
  *          덮어쓴 포즈는 새 레퍼런스 포즈이므로, 스키닝 쪽은 덮어쓴 모델 변환으로 레퍼런스 역행렬을 다시 만듭니다(통합 쪽 일).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"

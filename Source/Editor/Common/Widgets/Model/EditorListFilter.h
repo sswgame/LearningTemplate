@@ -3,8 +3,8 @@
  * @brief 목록형 패널의 검색 필터 판정입니다(ImGui 에 의존하지 않아 테스트를 붙일 수 있습니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

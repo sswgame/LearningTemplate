@@ -8,9 +8,9 @@
  *          - 진행은 고정 스텝이다. 프레임 시간을 모아 스텝 간격마다 `step` 하고, 한 프레임에 `kMaxStepsPerFrame` 을 넘기지 않는다(중단점 뒤 몰아 돌지 않게).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"

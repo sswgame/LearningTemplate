@@ -12,10 +12,10 @@
  *            언리얼 Online Services 의 인터페이스 조립, Nakama 런타임의 `InitModule` 등록에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"

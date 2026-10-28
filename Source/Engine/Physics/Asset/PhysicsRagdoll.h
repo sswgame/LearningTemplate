@@ -11,10 +11,10 @@
  *          행렬은 엔진 관례(행 벡터, `로컬 × 부모`)를 따릅니다. 뼈 배열은 부모가 자식보다 앞이어야 합니다(부모 번호 < 자기 번호, 루트는 -1).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

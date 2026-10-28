@@ -5,13 +5,13 @@
  *          모든 컨테이너 형식은 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

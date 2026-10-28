@@ -6,7 +6,7 @@
  *          형식으로 못 막는 남은 틈(결과를 아예 받지 않은 호출)은 `[[nodiscard]]` 밖이라 호출하는 쪽이 지킵니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"

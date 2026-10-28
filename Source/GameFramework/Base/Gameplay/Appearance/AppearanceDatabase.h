@@ -3,11 +3,11 @@
  * @brief 외형 데이터 한 벌입니다. 슬롯 테이블, 장비 세트, 아이템 외형, 꾸미기 스키마, 외형 규칙, 캐릭터 프리셋을 읽고 서로의 이름을 대조합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -19,7 +19,7 @@
  *       그러면 옛 DLL 은 로드 시점에 이유가 적힌 에러와 함께 거부됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

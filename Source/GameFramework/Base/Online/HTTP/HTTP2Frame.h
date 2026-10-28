@@ -6,9 +6,9 @@
  *          HTTP/2 의 TLS 협상(ALPN `h2`)은 TLS 계층(`TLSContextConfig::_alpnProtocol`)이 하고, 연결 · 스트림 상태는 `HTTP2Connection` 이 얹는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

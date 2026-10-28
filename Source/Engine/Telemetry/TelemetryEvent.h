@@ -3,10 +3,10 @@
  * @brief 텔레메트리 사건 하나 — 사건 id 와 타입이 붙은 필드 값입니다. 스키마 대조는 `TelemetryService::record` 가 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Telemetry/TelemetrySchema.h"

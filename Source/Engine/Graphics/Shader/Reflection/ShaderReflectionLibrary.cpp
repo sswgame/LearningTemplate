@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
@@ -10,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetPaths.h"

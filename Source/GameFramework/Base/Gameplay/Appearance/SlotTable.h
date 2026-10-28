@@ -3,10 +3,10 @@
  * @brief 슬롯 테이블입니다. 장비 슬롯의 이름과 받는 종류, 아이템이 차지하는 슬롯 그룹(로브는 상의와 하의, 양손 무기는 두 손)을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

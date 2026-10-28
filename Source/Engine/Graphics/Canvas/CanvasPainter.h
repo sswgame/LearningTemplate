@@ -6,9 +6,9 @@
  *          둥근 자르기만 셰이더의 부호 거리로 처리한다. 같은 텍스처(최대 4개)와 같은 가위가 이어지면 한 일괄이 된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

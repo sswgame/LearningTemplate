@@ -3,10 +3,10 @@
  * @brief 타일셋(`.tileset.xml`)입니다. 아틀라스 셀, 애니메이션 타일, 규칙 타일(이웃 규칙 자동 타일링), 충돌, 이동 비용을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

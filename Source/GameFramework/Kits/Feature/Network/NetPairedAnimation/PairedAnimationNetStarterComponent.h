@@ -9,8 +9,8 @@
  *          그 밖의 실패는 데이터 결함이라 오류로 남기고 멈춘다(다른 값으로 대신 시도하지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

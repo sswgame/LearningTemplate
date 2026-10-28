@@ -3,8 +3,8 @@
  * @brief 입력 장치의 다형 추상 인터페이스와 범용 InputSlot 스키마입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/KeyCodeUtil.h"

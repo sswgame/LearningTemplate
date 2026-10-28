@@ -5,7 +5,7 @@
  *          묻습니다(Win32 `ImGui_ImplWin32_NewFrame` 의 `GetCursorPos` · 커서 아래 뷰포트, X11 `XQueryPointer`). 그 호출을 이 범위로 감쌉니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

@@ -6,10 +6,10 @@
  *          - 상한은 벌크 1 MiB, 줄 64 KiB, 배열 원소 2^20, 중첩 8이다. 넘으면 `Error` 를 반환하고 연결을 닫는다. 계약의 값 상한 64 KiB 보다 충분히 크다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

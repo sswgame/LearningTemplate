@@ -6,10 +6,10 @@
  *          실수와 정수 슬롯뿐이므로, 회로 전체 상태를 바이트로 저장하고 해시하고 되감을 수 있다(`GimmickCircuit`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"

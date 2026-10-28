@@ -3,10 +3,10 @@
  * @brief 알림과 토스트입니다. "저장했습니다", "다시 시작하면 적용됩니다", 퀘스트 갱신, 튜토리얼 힌트를 오버레이 레이어에 최대 셋까지 쌓아 보여 줍니다(들어올 때와 나갈 때 페이드).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

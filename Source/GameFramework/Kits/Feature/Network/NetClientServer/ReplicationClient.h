@@ -4,9 +4,9 @@
  * @details 보간 지연만큼 과거를 그리도록 렌더 시각을 맞추고, 입력은 서버가 확인한 다음 틱부터 보낸다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetClock.h"
 #include "Core/Network/Replication/NetInputWindow.h"

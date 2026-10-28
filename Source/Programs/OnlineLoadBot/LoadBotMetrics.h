@@ -5,10 +5,10 @@
  *          오류 종류는 글 키다: 전송 · 공통 오류는 `code<OnlineError 번호>`, 업무 결과가 Ok 가 아니면 `<동작>.result<결과 번호>`.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
 

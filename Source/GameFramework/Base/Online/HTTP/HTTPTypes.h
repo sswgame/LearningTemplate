@@ -12,11 +12,11 @@
  *          - 호스트는 IPv4 글자나 `localhost` 만 쓸 수 있다. Core 주소에 이름 해석이 없기 때문이며, 실제 제공자 호스트 이름은 후보 절(`Candidates-network.md`)에 있다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

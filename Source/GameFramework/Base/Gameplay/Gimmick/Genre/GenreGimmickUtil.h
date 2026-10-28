@@ -3,9 +3,9 @@
  * @brief 장르 기믹 컴포넌트가 함께 쓰는 도구입니다. "game" 채널 이벤트, 오브젝트의 몸(콜라이더와 그래픽)을 켜고 끄는 함수, 고정 스텝 수를 세는 함수가 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Event/EventType.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"

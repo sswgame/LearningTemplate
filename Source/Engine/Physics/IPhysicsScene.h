@@ -29,10 +29,10 @@
  *          **단위.** 미터, 킬로그램, 초, 라디안을 쓴다. 3D 는 +Y 가 위이고, 2D 는 XY 평면에서 각이 Z 축 둘레(반시계가 +)다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"

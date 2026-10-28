@@ -3,10 +3,10 @@
  * @brief 레이캐스트, 셰이프 캐스트, 겹침 질의의 필터 조건과 결과입니다. 2D 와 3D 가 같은 템플릿을 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 

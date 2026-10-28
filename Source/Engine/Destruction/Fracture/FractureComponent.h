@@ -5,10 +5,10 @@
  *          파쇄 경로를 비우면 오브젝트 메시의 `_meshID`(`a/b.mesh`)에서 `a/b.fracture` 를 찾는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"

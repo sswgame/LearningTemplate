@@ -8,10 +8,10 @@
  *          화면은 시뮬레이션을 그리기만 한다. 손님의 위치(`ParkGuest::_position`)도 시뮬레이션이 정한다. 난수는 시드가 같으면 같은 결과가 나온다(테스트용).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"

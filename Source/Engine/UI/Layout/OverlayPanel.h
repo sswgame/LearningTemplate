@@ -3,7 +3,7 @@
  * @brief 자식을 겹쳐 놓는 패널입니다(UMG 의 Overlay, Godot 의 기본 Container 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

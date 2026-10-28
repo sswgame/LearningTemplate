@@ -7,9 +7,9 @@
  *          격자(Lattice) 모디파이어만 제어점 목록 입력칸을 더 그린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"

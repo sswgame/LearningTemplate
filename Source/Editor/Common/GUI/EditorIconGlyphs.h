@@ -6,7 +6,7 @@
  *          바이트를 직접 쓰지 않습니다. 목록 순서가 코드포인트이기 때문입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor::editoricon
 {

@@ -3,9 +3,9 @@
  * @brief 로컬라이제이션 프로젝트(원문 테이블과 문화권별 번역 테이블)와 게임 데이터 XML 파일을 읽고 쓰는 커맨드입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/LocalizationDocuments.h"
 

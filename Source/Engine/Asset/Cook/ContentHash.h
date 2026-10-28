@@ -6,10 +6,10 @@
  *          셰이더 스탬프를 쓰는 쪽과 판정하는 쪽(`ShaderCookStamp.cpp`)이 같은 함수를 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -6,8 +6,8 @@
  *          `ScenePhysics`)은 그보다 먼저 사라진다(Scene 단계가 Physics 에 의존한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

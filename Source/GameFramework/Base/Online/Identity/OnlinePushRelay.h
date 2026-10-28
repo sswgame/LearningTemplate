@@ -8,9 +8,9 @@
  *          - 열거자 이름을 바꾸면 섞인 동안 옛 빌드가 보낸 중계를 찾지 못합니다(위험 10).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/hashed_string.h"
 

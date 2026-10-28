@@ -3,9 +3,9 @@
  * @brief 장착 조건입니다. 아이템을 끼려면 무엇이 있어야 하는지(세트 완성, 세트 n 조각, 다른 장비의 태그, 캐릭터 태그, 체형)와 조건이 깨질 때의 처리를 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 

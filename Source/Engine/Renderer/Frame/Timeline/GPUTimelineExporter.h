@@ -12,9 +12,9 @@
  * 이 기록 시각이 아니라 읽은 시각이라는 것 하나입니다(GPU 타임라인의 위치와 길이는 정확합니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Profiling/IProfilerBackend.h"
 

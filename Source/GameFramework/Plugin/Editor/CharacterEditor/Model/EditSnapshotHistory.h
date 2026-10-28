@@ -5,9 +5,9 @@
  *          스냅샷은 값 타입이어야 하며 복사 비용이 작아야 한다(소켓 표, 외형 선택).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

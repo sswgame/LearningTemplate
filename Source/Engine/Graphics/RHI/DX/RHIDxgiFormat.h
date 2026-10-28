@@ -3,7 +3,7 @@
  * @brief RHIFormat 에서 DXGI_FORMAT 으로의 변환입니다(DX11, DX12 공유).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/RHITypes.h"

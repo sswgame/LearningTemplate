@@ -3,10 +3,10 @@
  * @brief 들고 다니는 슬롯을 구현합니다. 슬롯 수(기본 4), 양손 아이템(드는 동안 다른 것을 줍지 못한다), 무게에 따른 이동 속도 감소를 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"

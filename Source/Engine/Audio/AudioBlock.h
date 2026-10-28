@@ -6,8 +6,8 @@
  *          `channelIndex * audio::kBlockFrameCount` 이므로 블록 길이(`_frameCount`)가 짧아도 채널 간격은 변하지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"

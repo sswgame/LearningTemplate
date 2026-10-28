@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Dialogue/DialogueGraphPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"

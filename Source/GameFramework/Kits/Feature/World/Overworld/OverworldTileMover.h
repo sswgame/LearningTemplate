@@ -3,11 +3,11 @@
  * @brief 타일을 한 칸씩 걷는 폰 이동과 locomotion FSM 입니다. 입력이 아니라 조종자가 낸 의도(`ControlIntent`)를 받습니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/Base/World/Encounter/StepEncounter.h"
 #include "GameFramework/GameFrameworkExports.h"

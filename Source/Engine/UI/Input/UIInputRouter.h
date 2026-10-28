@@ -3,11 +3,11 @@
  * @brief 입력을 UI 이벤트로 보내는 쪽입니다. 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식을 가집니다(`UISystem` 의 값 멤버).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

@@ -3,12 +3,12 @@
  * @brief GPU 지연 해제 큐입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/KeyedPendingList.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"

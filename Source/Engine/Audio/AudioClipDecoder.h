@@ -4,10 +4,10 @@
  * @details 바이트에서 바로 디코드하므로 팩 안의 파일도 읽을 수 있다. 재생 백엔드(XAudio2 등)는 결과의 형식 필드를 자기 형식 구조체로 옮기기만 하면 된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

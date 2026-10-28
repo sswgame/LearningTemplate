@@ -12,10 +12,10 @@
  *            빌드 타깃)은 작업 키의 설정 해시다. 무변경 재쿠킹은 팩을 다시 쓰지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

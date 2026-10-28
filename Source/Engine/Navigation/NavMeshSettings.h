@@ -6,10 +6,10 @@
  *          에이전트 종류마다 내비메시가 하나씩 따로 베이크된다(언리얼의 `SupportedAgents`, 유니티의 Agent Type 에 해당한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 

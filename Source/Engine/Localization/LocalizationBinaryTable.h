@@ -13,12 +13,12 @@
  *          읽기는 길이 · 범위 · 검사합을 모두 확인하고, 하나라도 틀리면 거절한다(깨진 파일이 일부만 적용되지 않는다).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
 

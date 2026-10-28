@@ -2,9 +2,9 @@
 
 #include "Core/File/Windows/WindowsFileDialog.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

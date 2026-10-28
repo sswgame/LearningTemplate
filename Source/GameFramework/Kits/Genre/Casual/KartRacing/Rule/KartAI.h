@@ -4,8 +4,8 @@
  * @details 러버밴딩(1등과의 거리에 따른 최고 속도 배율)은 순위를 아는 `KartRace` 가 건다. 운전은 속도 상한을 모른다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"

@@ -3,7 +3,7 @@
  * @brief 씬 뷰(에디터 카메라)를 다른 코드(확장 모듈의 패널 · 커맨드)가 움직이는 진입점입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

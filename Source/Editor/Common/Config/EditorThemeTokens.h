@@ -11,9 +11,9 @@
  *          주의: `_typography._iconScale` 은 글꼴 아틀라스를 만들 때만 읽는다(아이콘 글꼴을 본문 글꼴에 합칠 때의 크기 비율). 바꾸면 에디터를 다시 띄워야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

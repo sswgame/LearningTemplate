@@ -2,9 +2,9 @@
 
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"

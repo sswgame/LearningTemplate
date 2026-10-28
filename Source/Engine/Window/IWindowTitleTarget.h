@@ -5,8 +5,8 @@
  *          그래서 창 제목을 거는 길은 하나다. 테스트는 가짜 구현을 넣어 "언제 몇 번 걸었는지" 를 본다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

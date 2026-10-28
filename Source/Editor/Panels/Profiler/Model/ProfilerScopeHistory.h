@@ -6,9 +6,9 @@
  *          이 클래스는 엔진 테이블만 읽으므로 Tracy 가 꺼진 빌드에서도 같게 동작한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

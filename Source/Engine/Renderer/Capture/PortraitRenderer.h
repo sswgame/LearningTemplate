@@ -3,10 +3,10 @@
  * @brief 프리팹 하나를 **따로 떨어진 스튜디오**(자기 씬, 카메라, 조명, 렌더러)에서 그려 초상화(썸네일) 이미지를 얻습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

@@ -9,8 +9,8 @@
  *            기록이 밀려나 예측이 영영 맞춰지지 않아도 부르는 쪽이 알 수 없었다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 namespace sw

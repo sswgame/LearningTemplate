@@ -5,11 +5,11 @@
  *          유니티 Profiler 의 Timeline 보기가 에디터 안에 있는 것에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 /**
  * @brief 트레이스 내보내기(긴 캡처 · Chrome Trace Event 저장)가 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 긴 캡처 기록 경로 · 변환기 · 개발 명령이 모두 빠집니다.

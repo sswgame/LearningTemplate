@@ -6,9 +6,9 @@
  *          스켈레톤과 대조한다(모르는 본은 오류). 조회 도우미(`SocketLookupUtil`)는 테이블에 없는 이름을 유닛의 본 이름으로도 받는다(`foot.l`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

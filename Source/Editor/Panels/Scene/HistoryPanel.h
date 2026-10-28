@@ -3,7 +3,7 @@
  * @brief 실행 취소 · 다시 실행 내역을 보여 주고 원하는 시점으로 되돌리는 히스토리 창입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

@@ -2,7 +2,7 @@
 # @file cmake/Modules/Architecture/DetectArchitecture.cmake
 # @brief 컴파일러가 겨냥하는 아키텍처를 sw_target_architecture 에 정한다 (x64 · arm64)
 # @note X64.cmake · ARM64.cmake 가 이 값으로 SW_X64 / SW_ARM64 를 고른다.
-#       코드 쪽 검사는 Source/Core/Common/TargetMacroCheck.h — 여기 판정이 실제 컴파일러와 어긋나면 빌드가 선다.
+#       코드 쪽 검사는 Source/Core/Foundation/TargetMacroCheck.h — 여기 판정이 실제 컴파일러와 어긋나면 빌드가 선다.
 # ==============================================================================
 
 # CMAKE_SYSTEM_PROCESSOR 는 툴체인 파일이 정하지 않으면 **빌드하는 기계**의 CPU 다. Windows 에서 MSVC arm64 교차 도구나

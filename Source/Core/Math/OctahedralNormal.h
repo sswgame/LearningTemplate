@@ -14,7 +14,7 @@
  *          상용 엔진의 대응: 언리얼의 옥타헤드럴 법선(Nanite · G버퍼), 유니티 SRP `PackNormalOctQuadEncode`.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/VectorMath.h"

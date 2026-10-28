@@ -5,11 +5,11 @@
  *          한 줄 서식 안의 정수 하나는 `formatstring` 의 `%x` · `%016llx` 로도 됩니다. 이것은 바이트 열과 고정 폭 정수용입니다.
  */
 #pragma once
-#include "Core/Common/HexDigitUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/HexDigitUtil.h"
 
 namespace sw
 {

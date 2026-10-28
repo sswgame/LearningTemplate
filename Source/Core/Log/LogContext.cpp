@@ -2,8 +2,8 @@
 
 #include "Core/Log/LogContext.h"
 
-#include "Core/Common/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/HexDigitUtil.h"
 
 namespace sw
 {

@@ -6,9 +6,9 @@
  *          광선이 옮겨 가면 Leave · Enter 가 맞게 간다. 위젯 안의 위젯이 포인터를 잡았으면(슬라이더 끌기) 광선이 사각형 밖으로 벗어나도 그 위젯이 평면 위의 점을 받는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/WidgetTree/UIEvents.h"

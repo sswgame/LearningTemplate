@@ -3,8 +3,8 @@
  * @brief 시드 고정 2D 값 노이즈입니다. 지형 높이, 바이옴, 구름, 바람처럼 부드럽게 변하는 절차 값을 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

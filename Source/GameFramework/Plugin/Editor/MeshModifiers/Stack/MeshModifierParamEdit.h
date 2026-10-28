@@ -6,10 +6,10 @@
  *          곡선 매개변수는 엔진 공용 곡선 편집기와 같은 `FloatCurve` 를 그대로 든다(보간 · 접선 포함) - 어댑터가 따로 없다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

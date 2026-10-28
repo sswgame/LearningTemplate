@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"

@@ -4,9 +4,9 @@
  * @details 소리를 디코드하는 일(디코더)이 Audio 에 있으므로 이 기능도 여기에 있다. 분석기와 트랙 형식은 Animation(하위 티어)의 `Animation/Facial/LipSync` 에 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

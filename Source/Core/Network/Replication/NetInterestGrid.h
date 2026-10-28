@@ -8,11 +8,11 @@
  *          언리얼 Replication Graph 의 공간 노드(`UReplicationGraphNode_GridSpatialization2D`)와 같은 자리다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
 

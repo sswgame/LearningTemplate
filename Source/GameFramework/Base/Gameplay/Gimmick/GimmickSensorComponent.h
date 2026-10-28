@@ -6,10 +6,10 @@
  *          모두 그대로 동작한다. 이 컴포넌트는 차원을 구분하지 않는다. 같은 오브젝트에 트리거 콜라이더를 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"

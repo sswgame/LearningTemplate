@@ -3,8 +3,8 @@
  * @brief 지형의 CPU 질의입니다. 월드 높이, 노멀, 구멍, 레이어 가중치를 제공하며, 렌더 메시, 배치, 물리 충돌 메시(`TerrainCollisionUtil`)가 같은 값을 읽습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"

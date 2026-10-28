@@ -4,9 +4,9 @@
  * @details 쿼터니언은 두 쪽 모두 (x, y, z, w) 해밀턴 곱이라 성분을 그대로 옮긴다. 행렬은 넘기지 않는다(엔진은 행 벡터, Jolt 는 열 벡터를 쓴다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 

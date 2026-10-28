@@ -9,9 +9,9 @@
  * @note Shipping 에서는 빠집니다(`SW_NET_FLOW_LOG_ENABLED` 0 — 트레이스 내보내기가 없다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
 
 /** @brief 메시지 흐름 링이 컴파일되는 구성이면 1 입니다(트레이스 내보내기 `SW_PROFILER_TRACE_ENABLED` 와 같은 조건). */

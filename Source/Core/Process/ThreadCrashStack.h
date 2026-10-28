@@ -3,7 +3,7 @@
  * @brief 스레드마다 크래시 보고가 쓸 스택 영역을 준비합니다(스택 오버플로 대비).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

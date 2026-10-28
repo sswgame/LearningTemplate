@@ -2,8 +2,8 @@
 
 #include "Engine/Input/Map/InputMap.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/IInputDevice.h"

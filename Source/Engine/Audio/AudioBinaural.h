@@ -9,8 +9,8 @@
  *          오디오 스레드의 보이스 하나가 하나씩 가지며 할당하지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioPanner.h"
 

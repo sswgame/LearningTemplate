@@ -3,7 +3,7 @@
  * @brief 적 유닛의 AI 조종자 — 근접(Grunt)은 다가와 때리고, 원거리(Caster)는 거리를 지키며 쏩니다. 폰(`ArenaUnitComponent`)과 따로 살고 의도만 냅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

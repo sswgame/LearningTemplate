@@ -3,9 +3,9 @@
  * @brief 프로퍼티 타입명 → IInspectorProperty (EditorContext 소유)
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 

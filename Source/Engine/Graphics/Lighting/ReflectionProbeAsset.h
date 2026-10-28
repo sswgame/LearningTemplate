@@ -11,13 +11,13 @@
  *          (식을 고치면 두 곳을 함께 고친다. ReflectionProbeAssetTest 가 C++ 쪽 왕복을 본다).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetID.h"
 

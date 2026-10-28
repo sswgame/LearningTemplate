@@ -3,9 +3,9 @@
  * @brief 열과 행 트랙으로 자식을 격자 칸에 놓는 패널입니다(UMG 의 GridPanel, Godot 의 GridContainer, CSS Grid 의 단순화한 버전).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

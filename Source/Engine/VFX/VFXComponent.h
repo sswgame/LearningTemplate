@@ -3,9 +3,9 @@
  * @brief 파티클 효과(`*.vfx.xml`) 하나를 씬에서 재생하는 컴포넌트입니다(유니티 ParticleSystem, 언리얼 UNiagaraComponent 자리).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/SceneComponent.h"

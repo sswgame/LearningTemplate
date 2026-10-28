@@ -3,8 +3,8 @@
  * @brief 장비를 다룹니다. 헬멧과 조끼 등급(피해 감소율, 내구도), 가방 등급(인벤토리 무게 한도)을 관리하고, 탄약 아이템을 무기 재장전에 연결합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

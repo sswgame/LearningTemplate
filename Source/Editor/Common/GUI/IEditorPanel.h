@@ -3,7 +3,7 @@
  * @brief 도킹할 수 있는 에디터 패널의 인터페이스입니다. 셸 크롬은 draw() 가, 내용은 drawContent() 가 그립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

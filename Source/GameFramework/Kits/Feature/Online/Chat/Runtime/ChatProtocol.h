@@ -10,9 +10,9 @@
  *            버스의 의미 버전은 `ChatMessage::kBusVersion`, 기록 레코드의 버전은 `kChatRecordVersion` 으로 따로다(버스는 이관을 보지 않는다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

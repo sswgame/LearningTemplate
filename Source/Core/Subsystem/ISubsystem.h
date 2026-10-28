@@ -7,8 +7,8 @@
  *          어떤 서브시스템이 있고 호스트 비트가 무엇을 뜻하는지(클라이언트 · 전용 서버)는 쓰는 쪽(엔진)이 정한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 
 namespace sw

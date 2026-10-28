@@ -4,8 +4,8 @@
  * @details 언리얼 Chaos 의 구속(`FConstraintInstance`), 유니티의 `Joint` 에 해당한다. 핸들 · 스레드 · 단위 규칙은 `IPhysicsScene.h` 머리말과 같다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"

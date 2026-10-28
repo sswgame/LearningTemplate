@@ -3,11 +3,11 @@
  * @brief 괴물 도감입니다. 읽기, 처치, 조사로 지식 단계가 오르고, 해금된 약점만 보여 주며, 기반 `ElementChart` 로 오일, 폭탄, 표식의 속성 배율을 계산합니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -11,7 +11,7 @@
  *          주의: 한 번 읽은 파일 표는 프로세스가 끝날 때까지 그대로다 — 설정 파일을 고친 뒤의 검증은 엔진을 다시 띄워야 새 표를 본다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

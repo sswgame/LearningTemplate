@@ -12,9 +12,9 @@
  * @note 표는 Engine 이미지 안에서만 채웁니다(핫 리로드 모듈이 등록하면 언로드 뒤 죽은 함수를 가리킨다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

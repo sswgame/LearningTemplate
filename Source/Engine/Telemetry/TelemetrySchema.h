@@ -5,11 +5,11 @@
  *          기록되지 않습니다(언리얼 Analytics 의 자유 형식 속성과 달리, 받는 쪽 테이블과 맞는 사건만 나간다 — Unity Analytics 의 사건 스키마와 같은 쪽).
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

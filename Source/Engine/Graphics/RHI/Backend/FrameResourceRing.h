@@ -3,9 +3,9 @@
  * @brief N-버퍼 프레임 슬롯과 슬롯별 펜스 값입니다(DX12 가 프레임 리소스 고르기에 씁니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

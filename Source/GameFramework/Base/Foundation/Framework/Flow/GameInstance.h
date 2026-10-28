@@ -3,11 +3,11 @@
  * @brief IGame 의 공통 수명주기와 GamePackConfig 배선, 인스턴스 상태 스냅샷 직렬화를 담당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"

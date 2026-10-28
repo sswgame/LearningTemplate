@@ -3,8 +3,8 @@
  * @brief 진행 기믹입니다. 능력 문(메트로배니아에서 능력 태그를 가진 것이 가까이 오면 열림)과 채집 지점(RPG에서 쓰면 아이템을 주고, 다 쓰면 다시 자람)을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 

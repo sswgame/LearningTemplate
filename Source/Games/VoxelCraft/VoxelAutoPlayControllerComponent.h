@@ -3,8 +3,8 @@
  * @brief VoxelCraft 의 자동 플레이를 맡는 AI 조종자입니다. 플레이어 폰에 빙의해 걷다가 막히면 점프하고, 앞 블록을 부수고 놓습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

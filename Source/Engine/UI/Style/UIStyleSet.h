@@ -3,10 +3,10 @@
  * @brief 화면 하나에 적용된 스타일 시트 목록(테마, 문서 순서)과 계산된 스타일 캐시를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Style/WidgetStyle.h"

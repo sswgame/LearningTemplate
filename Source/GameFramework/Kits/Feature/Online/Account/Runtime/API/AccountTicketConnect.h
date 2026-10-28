@@ -7,8 +7,8 @@
  *          막는 호출이라 게임 루프가 아닌 자리(개발 명령 · 도구 · 시나리오 구동기)에서 쓴다. 비밀번호는 요청 구조체에만 있고 로그인을 보낸 뒤 지운다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 

@@ -9,7 +9,7 @@
  *       변환만 이 헤더로 분리해 두었습니다. 캔버스를 직접 그리는 쪽만 포함합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include <imgui-node-editor/imgui_node_editor.h>
 

@@ -3,9 +3,9 @@
  * @brief 전역 변수 프리셋 파일 IO 커맨드
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

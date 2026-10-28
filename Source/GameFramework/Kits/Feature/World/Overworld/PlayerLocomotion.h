@@ -3,7 +3,7 @@
  * @brief 타일 스텝 이동 FSM(Idle / Walk / Interact)입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"

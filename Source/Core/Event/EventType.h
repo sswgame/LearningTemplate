@@ -3,10 +3,10 @@
  * @brief 엔진 이벤트 타입 ID 입니다(게임플레이 이벤트는 GameFramework 의 해시 ID 를 씁니다).
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 namespace sw
 {

@@ -8,8 +8,8 @@
  * - sw::make_pair: 인자 타입을 decay 해서 알맞은 sw::pair 를 만드는 팩토리 함수입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 #include <tuple>
 #include <type_traits>

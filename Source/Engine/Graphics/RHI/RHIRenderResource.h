@@ -17,8 +17,8 @@
  *       다시 만드는 쪽은 `initRHI( pDevice )` 이고, 새 디바이스가 만들어진 직후 `initAllFor` 가 같은 목록에 통보를 보냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

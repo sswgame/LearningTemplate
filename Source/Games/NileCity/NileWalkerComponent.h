@@ -3,8 +3,8 @@
  * @brief 일꾼 하나의 모습 — 디렉터 도시의 같은 자리 일꾼을 따라 자리 · 보임 · 종류 색을 맞춥니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

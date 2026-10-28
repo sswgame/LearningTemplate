@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Binding/UIBindingValue.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"

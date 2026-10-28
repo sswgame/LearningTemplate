@@ -12,10 +12,10 @@
  *          주의: OpenGL 은 FBO 의 0 행이 아래쪽이라 읽은 뒤 뒤집는다(엔진 텍스처와 달리 ImGui GL 렌더러는 클립 원점을 보고 위아래를 바꿔 그린다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 

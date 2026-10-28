@@ -3,8 +3,8 @@
  * @brief 오디오 이벤트 창입니다(Window > Audio Events). 로드된 라이브러리의 이벤트 목록과 속성, 재생 중 인스턴스, 보이스 가상화 프로파일러를 보입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 

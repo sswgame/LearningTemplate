@@ -6,10 +6,10 @@
  *          (작업 폴더 Bin) 돌립니다. 출력 읽기는 ImGui 없는 `EditorTestOutputParser` 입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

@@ -10,10 +10,10 @@
  *          자체 MMO 서버가 거래 확정을 DB 트랜잭션 하나(두 인벤토리와 거래 기록)로 처리하는 것과 같은 구조이다. 언리얼에는 거래 시스템이 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"

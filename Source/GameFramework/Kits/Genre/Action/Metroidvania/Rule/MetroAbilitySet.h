@@ -5,10 +5,10 @@
  *          같은 능력 집합이면 항상 같은 설정이 나온다(결정적). 세이브는 `GameFlags` 하나로 충분하며, `restoreFromFlags` 가 플래그에서 능력을 복원한다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/Movement/PlatformerMotor2D.h"

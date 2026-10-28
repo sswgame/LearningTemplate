@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 

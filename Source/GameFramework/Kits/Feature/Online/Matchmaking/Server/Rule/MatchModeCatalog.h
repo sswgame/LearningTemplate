@@ -11,9 +11,9 @@
  *          도구와 테스트처럼 데이터 파일이 없는 조립은 `parseCompactMode`(`<id>:<팀 수>x<팀 인원>`)로 같은 정의를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"

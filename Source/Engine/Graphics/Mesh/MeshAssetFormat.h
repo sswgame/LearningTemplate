@@ -3,10 +3,10 @@
  * @brief 메시 에셋 파일(`.mesh`)의 바이너리 형식입니다. 런타임(`MeshCache`)이 읽고, 에디터의 모델 임포터가 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

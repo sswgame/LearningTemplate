@@ -7,10 +7,10 @@
  *          기록 첫 바이트는 형식 버전(2 — 게임 포트 수가 생겼다)이고, 다른 버전은 읽지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

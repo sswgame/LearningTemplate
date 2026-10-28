@@ -6,9 +6,9 @@
  *          일은 백엔드와 무관하므로 여기 한 곳에 둔다. 두 백엔드는 바디 자세만 넘긴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"

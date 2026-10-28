@@ -7,8 +7,8 @@
  *          이동 속도만큼 뒤로 미끄러지므로 수평 속도는 닿음을 가리지 못한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

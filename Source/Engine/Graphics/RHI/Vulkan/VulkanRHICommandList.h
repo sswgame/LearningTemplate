@@ -3,7 +3,7 @@
  * @brief CPU 기록 벡터 없이 VulkanRHICommandContext 를 곧바로 부르는 IRHICommandList 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICommandListForwarder.h"

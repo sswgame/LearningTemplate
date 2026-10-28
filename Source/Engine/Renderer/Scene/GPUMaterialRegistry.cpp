@@ -2,8 +2,8 @@
 
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"

@@ -7,10 +7,10 @@
  *          쿠킹의 것이 섞여 실린다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 

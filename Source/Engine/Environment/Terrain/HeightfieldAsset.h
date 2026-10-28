@@ -14,10 +14,10 @@
  *          높이의 월드 값(최저와 최고)과 넓이는 에셋이 아니라 `TerrainComponent` 가 정한다(언리얼 랜드스케이프의 Z 스케일에 해당한다).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

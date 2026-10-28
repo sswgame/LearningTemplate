@@ -3,8 +3,8 @@
  * @brief GPU 로 시뮬레이션하는 방출기 하나의 게임 스레드 쪽(`VFXGPUEmitter`)입니다. 시간과 생성 일정만 들고 입자는 렌더 스레드의 컴퓨트가 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/VFX/VFXEffectDef.h"

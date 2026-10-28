@@ -3,8 +3,8 @@
  * @brief 서버 비밀(DB 비밀번호 · 캐시 AUTH · 키 암호)을 환경 변수에서 읽습니다. 설정 파일에는 변수 이름만 둡니다(`ServerConfig`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

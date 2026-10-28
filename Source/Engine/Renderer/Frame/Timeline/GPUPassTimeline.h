@@ -6,10 +6,10 @@
  *          프로파일러는 렌더러 초기화 때 주입받으므로 테스트가 자기 `FrameProfiler` 로 보고 결과를 확인할 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"

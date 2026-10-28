@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"

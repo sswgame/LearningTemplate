@@ -4,9 +4,9 @@
  * @details 리듬 게임의 Cool/Good/Bad/Miss, 턴제의 타이밍 공격(씨 오브 스타즈 · 마리오 RPG), 비대칭 공포의 스킬 체크, 격투의 저스트 프레임이 같은 계산입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

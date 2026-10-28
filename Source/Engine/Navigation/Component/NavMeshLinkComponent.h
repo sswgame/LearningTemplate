@@ -11,9 +11,9 @@
  *          링크 번호(`computeLinkID`)는 두 끝의 월드 위치와 종류 이름에서 나오므로 쿠킹본과 런타임 베이크가 같은 번호를 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"

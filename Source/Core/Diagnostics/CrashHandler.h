@@ -3,9 +3,9 @@
  * @brief 처리되지 않은 예외와 치명적인 시그널을 잡아 심볼 변환한 콜 스택 · 미니덤프 · 컨텍스트를 남깁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,9 +3,9 @@
  * @brief 씬 뷰의 트랜스폼 기즈모(ImGuizmo)입니다. 단일 · 다중 선택 조작과 드래그 하나를 되돌리기 하나로 기록하는 일을 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

@@ -6,7 +6,7 @@
  *          계약이 없으면 XML 이 선언한 입력을 아무도 바인딩하지 않아도 오류 없이 지나가고, 그 입력을 만드는 패스(SSAO 등)만 헛돕니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"

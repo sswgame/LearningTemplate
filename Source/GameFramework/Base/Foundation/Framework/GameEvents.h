@@ -12,10 +12,10 @@
  *          `SceneManager` 를 직접 불러 한 씬 로드는 레벨 이벤트를 내지 않는다. 엔진은 GameFramework 를 모르기 때문이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Event/EventType.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -4,8 +4,8 @@
  * @details 계정 키트, 서비스 프레임워크, 채팅이 같은 코드를 각자 쓰지 않게 여기 둔다. 상한에서 지울 것이 없으면(모두 쓰는 중) 그대로 더한다. 상한은 청소 시점일 뿐이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucket.h"
 

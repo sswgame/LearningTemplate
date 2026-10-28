@@ -5,7 +5,7 @@
  *          씨앗 0 은 고정점(0 만 계속 나온다)이라 부르는 쪽이 0 이 아닌 씨앗을 줍니다. 64 비트 수열은 `HashUtil::splitMix64Next` 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -5,12 +5,12 @@
  *          그래서 문 하나의 정의가 두 곳에 나뉘어 있다. 그래프는 "어디로 이어지는가"를 적고, 이 카탈로그는 "무엇으로 여는가"를 적는다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 

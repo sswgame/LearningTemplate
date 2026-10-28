@@ -2,9 +2,9 @@
 
 #include "Engine/Localization/LocalizationBinaryTable.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

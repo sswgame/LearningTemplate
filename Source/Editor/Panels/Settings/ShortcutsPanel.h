@@ -3,8 +3,8 @@
  * @brief 단축키 편집기(Keyboard Shortcuts)입니다. 에디터 입력 맵(`EditorInputActions`)의 액션마다 조합을 받아 바꾸고, 기본과 다른 것만 `Saved/Editor/editorbindings.xml` 에 저장합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

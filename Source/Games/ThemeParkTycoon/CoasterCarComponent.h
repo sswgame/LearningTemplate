@@ -3,8 +3,8 @@
  * @brief 코스터 차량 한 칸의 모습 — 디렉터가 돌리는 열차에서 자기 칸의 자리 · 기울기를 읽어 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

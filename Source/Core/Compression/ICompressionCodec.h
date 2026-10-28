@@ -3,8 +3,8 @@
  * @brief 압축 코덱 인터페이스와 코덱 식별자입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

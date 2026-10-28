@@ -3,10 +3,10 @@
  * @brief 애니메이션과 트윈이 움직이는 위젯 프로퍼티 하나입니다. 경로를 한 번 해석하고, 값을 읽고 보간하고 리플렉션으로 써서 필드에 맞는 무효화를 겁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/UI/Binding/UIBindingValue.h"

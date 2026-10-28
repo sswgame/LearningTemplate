@@ -4,9 +4,9 @@
  * @details 슬롯, 무게, 꾸미기, 소유권을 가진 가방은 `Inventory` 이다. 이 클래스는 "아이템 몇 개" 라는 값일 뿐이어서 슬롯이 없다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -9,9 +9,9 @@
  *          Nakama 의 신고 기능은 없고, PlayFab 의 `ReportPlayer` 와 국내 게임사 GM 툴의 신고 큐에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

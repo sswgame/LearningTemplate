@@ -3,9 +3,9 @@
  * @brief TypeRegistry 와 정적 Type/Enum 등록기 연결입니다.
  */
 #pragma once
-#include "Core/Common/EnumUtil.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/EnumUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -419,7 +419,7 @@ namespace sw
          * @brief 템플릿 비트플래그 enum 에 대해 포함 여부를 검사합니다.
          * @details ENUM(Flags) 로 등록된 타입인지 런타임에 검증한다. 타입을 컴파일 타임에 알고
          *          있고 레지스트리 검증이 필요 없는 핫패스라면, 조회 없이 바로 계산하는
-         *          sw::EnumUtil::hasFlag(Core/Common/EnumUtil.h)를 대신 쓴다.
+         *          sw::EnumUtil::hasFlag(Core/Foundation/EnumUtil.h)를 대신 쓴다.
          *          실제 비트 연산 로직은 EnumUtil 에만 있고, 여기서는 넘기기만 한다.
          */
         template <typename E>

@@ -3,8 +3,8 @@
  * @brief 레이아웃의 두 순회를 정의합니다. measure(아래에서 위로, 가용 크기를 받음)와 arrange(위에서 아래로, 슬롯을 적용)입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"

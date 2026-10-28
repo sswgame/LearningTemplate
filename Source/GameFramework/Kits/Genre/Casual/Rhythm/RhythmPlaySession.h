@@ -3,11 +3,11 @@
  * @brief 건반 리듬 한 판을 진행합니다. 레인 대기열, 누르기와 떼기 판정(`TimingJudge`), 롱노트, 놓침, 콤보, 점수, 라이프, 정확도, 등급, 오토플레이, 입력 기록을 다룹니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

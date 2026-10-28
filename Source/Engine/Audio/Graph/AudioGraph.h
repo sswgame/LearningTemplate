@@ -10,10 +10,10 @@
  *          - 게임 파라미터 값은 블록마다 엔진이 넣는다(`setParameterValue`). 묶인 노드 값은 그 블록 처음에 곡선으로 바뀌고, 게인은 블록 안에서 램프한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

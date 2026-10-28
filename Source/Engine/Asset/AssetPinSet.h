@@ -3,10 +3,10 @@
  * @brief 미리 읽은 에셋을 붙드는 고정 세트입니다. 메모리 예산을 넘으면 오래 안 쓴 것부터 놓습니다(LRU).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

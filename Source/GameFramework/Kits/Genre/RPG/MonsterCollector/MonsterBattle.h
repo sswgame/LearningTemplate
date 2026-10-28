@@ -5,11 +5,11 @@
  * @details 모든 난수는 시드 하나로 만든 `GameRandom` 에서 나온다. 시드와 명령이 같으면 같은 전투가 된다(리플레이, 테스트, 넷 턴 릴레이).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/Combat/TurnOrder.h"

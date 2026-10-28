@@ -5,7 +5,7 @@
  *          검증 함수가 없는 타입은 건너뜁니다(`ReflectionValidation::hasValidator` — 등록 때 한 번 구해 둔 답).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"

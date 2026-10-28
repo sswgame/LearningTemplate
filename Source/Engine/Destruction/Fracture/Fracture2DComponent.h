@@ -7,9 +7,9 @@
  *          같은 시드와 형태면 모든 기계에서 같은 조각이 나오므로 시드와 사건만 보낸다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"

@@ -3,10 +3,10 @@
  * @brief `-scenario=a,b,c` 한 번의 실행을 소유합니다. 시나리오 순서(`AutomationScenarioChain`)와 지금 단계의 실행기(`AutomationRunner`)를 들고, 단계가 끝나면 다음 단계를 시작하고, 끝나면 종료 코드를 냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

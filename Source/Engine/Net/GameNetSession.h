@@ -42,8 +42,8 @@
  * @warning 리로드로 다시 선 키트는 이미 붙은 연결의 `Connected` 사건을 받지 못한다 — 처리기를 단 뒤 `getPeers().collectConnected` 로 받는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Connection/NetEndpointShardSet.h"

@@ -5,7 +5,7 @@
  *          처음에는 가득 차 있다. 그래서 처음 몇 번은 몰아 쓸 수 있고(버스트) 그 뒤로는 간격마다 하나다. Envoy 와 nginx `limit_req` 와 같은 구조다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

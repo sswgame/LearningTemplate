@@ -7,7 +7,7 @@
  *          `HeadlessSubsystem` 이 역방향으로 적습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

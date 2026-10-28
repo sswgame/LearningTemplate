@@ -14,11 +14,11 @@
  *          국내 MMO 우편함과 같은 모양이다. 보낸 순간 보낸 쪽에서 빠지고(맡김), 운영 우편은 재원 없는 발행이라 수령 때 움직인다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

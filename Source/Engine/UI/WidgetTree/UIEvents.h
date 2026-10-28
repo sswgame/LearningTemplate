@@ -4,9 +4,9 @@
  * @details 이벤트는 위젯 경로(루트에서 잎)를 따라 터널링(미리보기) 다음 버블링으로 간다. 처리(`UIReply::makeHandled`)하면 거기서 멈춘다(언리얼의 FReply).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

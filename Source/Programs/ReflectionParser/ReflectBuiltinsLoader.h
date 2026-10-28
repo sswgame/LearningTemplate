@@ -3,7 +3,7 @@
  * @brief ReflectBuiltins.xxx 스캔 → TypeNameMap/ContainerTypeMap + TypeRegistrar .gen.cpp emit.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Programs/ReflectionParser/ParserSession.h"
 

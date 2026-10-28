@@ -8,11 +8,11 @@
  *          기준선 창(`captureMemoryLeakBaseline`)이 열려 있으면 닫고 시작하며, 끝나면 `TagTotals` 창을 다시 열어 종료 보고가 비지 않게 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw

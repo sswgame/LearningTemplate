@@ -3,9 +3,9 @@
  * @brief 게임플레이 씬 흐름, 다국어, 입력, 세이브 팩 설정과 커스텀 게임 데이터를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Config/PackEngineSettings.h"

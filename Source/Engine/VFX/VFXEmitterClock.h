@@ -3,9 +3,9 @@
  * @brief 방출기 하나의 시간과 생성 일정(`VFXEmitterClock`)입니다. CPU 시뮬레이션과 GPU 시뮬레이션이 같은 일정으로 입자를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/VFX/VFXEffectDef.h"

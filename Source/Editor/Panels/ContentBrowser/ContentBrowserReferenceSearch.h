@@ -3,9 +3,9 @@
  * @brief 콘텐츠 브라우저의 참조 찾기입니다. 참조 역색인을 워커에서 최신으로 유지하고 Find References 와 Show Dependencies 의 결과를 가집니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"

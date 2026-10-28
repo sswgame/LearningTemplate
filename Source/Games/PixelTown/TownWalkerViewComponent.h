@@ -3,9 +3,9 @@
  * @brief 주인공의 모습 — 디렉터의 주인공 자리를 따라 자기 오브젝트를 옮기고, 바라보는 방향과 걸음에 맞는 스프라이트 애니메이션을 고릅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

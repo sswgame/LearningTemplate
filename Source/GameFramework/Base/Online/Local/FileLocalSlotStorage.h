@@ -6,8 +6,8 @@
  *          남은 반쪽 파일은 봉투 체크섬이 Corrupt 로 잡는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Local/LocalSlotStorage.h"
 #include "GameFramework/GameFrameworkExports.h"

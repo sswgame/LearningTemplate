@@ -9,9 +9,9 @@
  *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/SecureUtil.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/SecureUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 
 namespace sw

@@ -8,8 +8,8 @@
  *          `findSubsystem` 은 nullptr 이고, 읽는 쪽은 "창 없음" 으로 다룬다(지금까지 `getActiveWindow()` 가 nullptr 이던 때와 같다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

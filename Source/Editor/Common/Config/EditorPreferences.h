@@ -3,8 +3,8 @@
  * @brief 에디터 환경설정의 기본 섹션입니다(General, Viewport, Play, Content Browser). 테마(Appearance)는 `EditorConfig` 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

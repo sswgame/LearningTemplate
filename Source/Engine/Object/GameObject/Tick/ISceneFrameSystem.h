@@ -3,8 +3,8 @@
  * @brief 씬 한 프레임의 정해진 자리(`FrameSystems` 단계)에서 게임 스레드로 한 번 도는 시스템의 계약입니다. 매니저가 소유합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 

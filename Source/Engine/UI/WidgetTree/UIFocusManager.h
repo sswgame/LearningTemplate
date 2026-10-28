@@ -3,8 +3,8 @@
  * @brief 사용자(로컬 플레이어) 하나의 포커스를 관리합니다. 어느 트리의 어느 위젯이 포커스를 가졌는지, 옮기기, 방향 탐색을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/WidgetTree/WidgetNavigation.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

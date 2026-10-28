@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 
 #if !defined( SW_SHIPPING )
-    #include "Core/Common/HashUtil.h"
+    #include "Core/Hash/HashUtil.h"
     #include "Core/Concurrency/mutex.h"
     #include "Core/Container/unordered_set.h"
     #include "Core/GlobalVariable/GlobalVariableManager.h"

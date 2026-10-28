@@ -3,11 +3,11 @@
  * @brief 화면이 보여 주는 데이터(뷰모델)입니다. 게임 코드가 값을 넣고 바뀐 필드를 알립니다(UE5 MVVM 의 ViewModel 과 FieldNotify 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

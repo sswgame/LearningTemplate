@@ -3,9 +3,9 @@
  * @brief 9-슬라이스(Sliced)와 타일(Tiled) 스프라이트 메시를 만들고 공유합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

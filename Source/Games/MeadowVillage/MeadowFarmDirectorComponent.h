@@ -3,11 +3,11 @@
  * @brief 마을 밭 디렉터 — 공유 상태(`SessionStateComponent`)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 공유 지갑에 팔고 다시 심습니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

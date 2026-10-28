@@ -7,9 +7,9 @@
  *          더티 구간 · 투명 정렬 모두 그대로). 항목 수는 만들 때 정해집니다(언리얼 ISM 도 추가 · 제거가 재구성입니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 

@@ -15,8 +15,8 @@
 #include "App/RHIBackendSwitcher.h"
 #include "App/UserSettingsHost.h"
 
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/FixedTimestep.h"
 

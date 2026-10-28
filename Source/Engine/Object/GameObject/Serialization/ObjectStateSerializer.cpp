@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"

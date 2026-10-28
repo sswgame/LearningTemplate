@@ -23,11 +23,11 @@
  * 그 비용을 프레임당 셀 수로 나눈다. 셀마다 따로 읽어야 할 만큼 월드가 커지면 쿠킹본에 셀 위치 표를 두고 구간 읽기로 바꾼다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"

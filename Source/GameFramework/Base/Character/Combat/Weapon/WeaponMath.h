@@ -4,8 +4,8 @@
  *        `Input/FirstPersonLook.h`, `Utility/GameRandom.h`)에 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"

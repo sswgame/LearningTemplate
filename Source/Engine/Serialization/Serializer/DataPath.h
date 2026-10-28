@@ -14,9 +14,9 @@
  *            createPipelineState( assets._shaderToon.get() );       // 읽는 쪽
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

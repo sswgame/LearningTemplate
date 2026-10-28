@@ -3,8 +3,8 @@
  * @brief 폰 이동입니다. 의도를 같은 오브젝트의 캐릭터 컨트롤러(걷기, 달리기, 점프, 가감속, 몸 방향)로 옮깁니다. 플레이어, NPC, 자동 플레이, 재생이 모두 이것으로 걷습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

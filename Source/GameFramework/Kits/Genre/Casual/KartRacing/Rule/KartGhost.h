@@ -8,9 +8,9 @@
  *          같은 프레임 형식(`writeFrame`, `readFrame`)은 락스텝 넷 게임이 입력을 실어 보낼 때도 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"

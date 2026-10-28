@@ -8,10 +8,10 @@
  *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트, 경제와 서버 디렉터리 클라이언트와 같은 구조이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/DrainGate.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"

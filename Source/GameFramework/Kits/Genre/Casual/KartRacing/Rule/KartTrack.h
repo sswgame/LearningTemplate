@@ -6,10 +6,10 @@
  *          결승선은 거리 0 이고 체크포인트는 그 사이의 거리이다. 문은 중심선에 직각인 선분이므로, 안쪽 풀밭을 가로지르는 지름길은 문을 지나지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

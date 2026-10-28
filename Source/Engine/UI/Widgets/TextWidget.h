@@ -3,10 +3,10 @@
  * @brief 텍스트 한 줄이나 한 문단을 그리는 위젯입니다(UMG 의 TextBlock, 유니티의 Label, Godot 의 Label 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

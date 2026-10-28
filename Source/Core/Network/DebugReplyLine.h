@@ -6,9 +6,9 @@
  *          길이가 열린 줄은 `makeCapped` 로, 길이가 정해진 줄은 `makeFixed` 로 만든다 — 개별 보고가 상한을 따로 지키지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include <limits>
 #include <utility>

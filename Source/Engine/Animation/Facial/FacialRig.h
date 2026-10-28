@@ -5,10 +5,10 @@
  *          Live Link Face 의 커브 컨트롤 매핑에 해당한다). 모르는 키는 오류이고, 메시에 없는 타깃이나 스켈레톤에 없는 본은 바인딩할 때 오류다(`validate`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

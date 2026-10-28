@@ -5,7 +5,7 @@
  *          옮기므로 텍스트 · 바이너리 핸들러와 PROPERTY() 를 쓸 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include <atomic>
 

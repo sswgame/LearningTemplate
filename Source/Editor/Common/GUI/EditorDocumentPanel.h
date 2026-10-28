@@ -3,9 +3,9 @@
  * @brief 포커스한 애셋 경로와 연동되어 필요할 때 여는 도구 패널의 기반 클래스입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"

@@ -2,8 +2,8 @@
 
 #include "ModuleManager/LiveReload/ModuleCallGuard.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include <csetjmp>

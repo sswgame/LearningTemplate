@@ -6,7 +6,7 @@
  *          카메라가 물속이면(`WaterBodyComponent::findUnderwaterFog`) 물의 안개 값이 이 컴포넌트의 값을 덮는다 — 균일한 안개이고 안개 컴포넌트가 없는 씬도 물속은 안개가 낀다(`findFog`).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Environment/Fog/FogSettings.h"

@@ -8,8 +8,8 @@
  *          하나뿐인 정적 버퍼에 써서 여러 스레드가 부르면 데이터 레이스다 — 호출하는 쪽마다 플랫폼 분기를 적으면 한쪽이 그것을 고른다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 namespace sw

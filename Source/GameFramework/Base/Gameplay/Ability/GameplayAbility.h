@@ -3,11 +3,11 @@
  * @brief 게임플레이 어빌리티입니다. 태그, 비용, 쿨다운 같은 발동 조건을 통과하면 실행되는 행동입니다(언리얼의 `UGameplayAbility` 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

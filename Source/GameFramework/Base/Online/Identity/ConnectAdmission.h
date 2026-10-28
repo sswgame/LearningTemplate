@@ -6,7 +6,7 @@
  *          - 네트워크 스레드에서 `NetEndpoint` 락을 잡은 채 불리므로 구현은 스레드 안전하고 빨라야 하며 `NetEndpoint` 를 부르지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 

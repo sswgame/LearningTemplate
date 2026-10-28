@@ -2,10 +2,10 @@
 
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"

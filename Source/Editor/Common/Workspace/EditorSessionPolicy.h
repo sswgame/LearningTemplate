@@ -3,7 +3,7 @@
  * @brief 미저장 확인과 플레이 중 편집 허용 여부를 판단합니다. UI 없이 테스트할 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw::editor

@@ -3,7 +3,7 @@
  * @brief 계정끼리의 차단 목록을 묻는 인터페이스입니다. 친구 키트(GF_Server_Social)가 구현하고, 채팅처럼 차단을 지켜야 하는 키트가 서버 조립에서 받습니다(키트끼리는 include 하지 못한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"

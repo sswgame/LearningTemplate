@@ -8,9 +8,9 @@
  *          - 비밀(티켓 키, DB 비밀번호)은 이 파일에 쓰지 않습니다. 옵션에는 환경 변수 이름만 둡니다(`ServerSecret::read`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"

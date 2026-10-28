@@ -6,10 +6,10 @@
  *          낱말도 같은 정규화를 거쳐 넣는다. 만든 뒤에는 읽기만 하므로 여러 스레드가 `apply` 를 함께 불러도 된다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

@@ -4,12 +4,12 @@
  * @details 채널별로 이벤트를 브로드캐스트할 수 있고, 즉시 발행(publish)과 큐에 넣었다가 나중에 발행하는 방식(push)을 모두 지원합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Event/EventType.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"

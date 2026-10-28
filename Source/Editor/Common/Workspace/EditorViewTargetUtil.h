@@ -4,7 +4,7 @@
  * @details ImGui 없이 계산만 하므로 `Test/EditorTest` 가 테스트한다. 패널은 그린 크기를 이 판정에 넘기고, 셸(`ImGuiEditor`)은 보이는 뷰만 호스트에 알린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw::editor

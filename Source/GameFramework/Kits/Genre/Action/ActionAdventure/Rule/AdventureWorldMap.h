@@ -5,9 +5,9 @@
  * @details 지도는 기반 `AreaGraph` 의 지역 공개(`discoverRegion`)로 드러낸다. 그릇 교환 결과는 `AdventureVitals` 에 준다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

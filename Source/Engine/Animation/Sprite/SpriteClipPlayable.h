@@ -3,8 +3,8 @@
  * @brief 스프라이트 클립의 이름 붙은 프레임 구간 하나를 재생할 것(`IAnimationPlayable`)으로 노출합니다. 2D 와 3D 가 같은 재생기와 상태 기계를 쓰게 하는 다리입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 

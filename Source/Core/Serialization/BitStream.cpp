@@ -2,7 +2,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "Core/Common/BitUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 

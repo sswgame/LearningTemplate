@@ -3,7 +3,6 @@
 #include "Engine/Engine.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Console/DevCommandsEnabled.h"
@@ -12,6 +11,7 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"

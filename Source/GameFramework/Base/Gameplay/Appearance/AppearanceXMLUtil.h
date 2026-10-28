@@ -3,9 +3,9 @@
  * @brief 외형 데이터 XML 의 공통 읽기 함수입니다. 알 수 없는 속성과 원소는 오류로 처리하고, 이름 목록, 소켓 배치, 태그를 읽습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,10 +3,10 @@
  * @brief 시나리오를 한 프로세스에서 차례로 돌리는 순서입니다(`-scenario=a.scenario.xml,b.scenario.xml`). 어느 단계를 돌릴지, 언제 멈출지, 단계 보고 경로를 정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 

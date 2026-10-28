@@ -7,10 +7,10 @@
  *          최근 칸들을 그 파일 끝에 싣는다(`writeCrashTail` — `setCrashExtraTextWriter` 에 건다). 틱마다 문맥 값을 갱신하는 비용도 없고 마지막 틱까지 남는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

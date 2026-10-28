@@ -5,9 +5,9 @@
  *          그리는 도중 문서의 원소 인덱스가 바뀌면 그리던 테이블이 깨지기 때문입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"

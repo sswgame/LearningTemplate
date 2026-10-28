@@ -4,8 +4,8 @@
  * @details 버스 이펙트(LowPass, HighPass, BandPass, Peaking, 셸빙)와 보이스의 가림, 거리 로우패스가 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioBlock.h"
 

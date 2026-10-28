@@ -7,9 +7,9 @@
  *          지원하는 문법은 카탈로그가 쓰는 것뿐입니다: 원소, 속성(작은 · 큰따옴표), 주석, CDATA, 처리 명령, `<!DOCTYPE>`. 이름공간은 이름 문자열 그대로 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

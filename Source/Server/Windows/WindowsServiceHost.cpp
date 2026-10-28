@@ -3,7 +3,7 @@
 #include "Server/Windows/WindowsServiceHost.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Process/ShutdownSignal.h"
 
     #include "Server/ServerApp.h"

@@ -7,8 +7,8 @@
  *          2D 콜라이더(`BoxCollider2DComponent`)도 2D 씬의 바디라 같은 광선이 맞히며, 2D 씬은 XY 평면이라 광선의 Z 와 상관없이 맞힌다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

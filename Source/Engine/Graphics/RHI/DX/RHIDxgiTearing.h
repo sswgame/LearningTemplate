@@ -14,7 +14,7 @@
  * 둘 중 하나만 있으면 DXGI 가 `DXGI_ERROR_INVALID_CALL` 을 반환합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 

@@ -6,7 +6,7 @@
  *          배치 키가 아니라 인스턴스 내용이라, 강조를 켜고 꺼도 배치를 다시 나누지 않고 그 인스턴스만 다시 올라갑니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 

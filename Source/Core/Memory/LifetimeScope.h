@@ -12,11 +12,11 @@
  *          모듈마다의 범위는 두지 않는다 — 모듈 DLL 의 `ScopeOwned` 는 DLL 언로드 때 스스로 소멸해 같은 효과다(범위에서 빠지고 값을 소멸시킨다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

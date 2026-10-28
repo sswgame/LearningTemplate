@@ -4,11 +4,11 @@
  * @details **공개 API 가 아닙니다.** `Core/Task` 안의 구현 파일만 include 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskNode.h"

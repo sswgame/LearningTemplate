@@ -17,13 +17,13 @@
  * 가리키지 않습니다. 들어오는 타입이 메시 계열뿐이라는 불변식은 기반의 private 생성자가 지킵니다(`ScenePrimitive.h`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexedPtrList.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

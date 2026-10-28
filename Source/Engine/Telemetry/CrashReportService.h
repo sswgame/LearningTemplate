@@ -7,11 +7,11 @@
  *          **기본은 기계 안에만**(`telemetry.crashReports` = `local`) — 묶음은 만들지만 보내지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

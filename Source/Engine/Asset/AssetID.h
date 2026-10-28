@@ -9,9 +9,9 @@
  *          상용 엔진: 언리얼 `FSoftObjectPath`(문자열에서 명시적으로 만든다), 유니티는 GUID, Godot 은 `res://` 접두가 붙은 문자열이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

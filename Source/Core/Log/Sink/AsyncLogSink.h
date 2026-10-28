@@ -3,10 +3,6 @@
  * @brief 기본 로그 싱크입니다. 포맷 · 타임스탬프 · 리스너 · 비동기 큐를 맡고, 한 줄은 출력 장치(`ILogOutput`)에 넘깁니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -16,6 +12,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"

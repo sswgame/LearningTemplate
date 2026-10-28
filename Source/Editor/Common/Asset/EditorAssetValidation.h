@@ -3,9 +3,9 @@
  * @brief 저장 · 임포트 직후 그 에셋에 검증 규칙(`Config/Editor/AssetValidationRules.json`)을 돌려 결과를 로그로 남깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 

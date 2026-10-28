@@ -3,8 +3,8 @@
  * @brief 잠깐 보이는 탄착 · 터짐 구 하나 — 디렉터의 풀에 숨어 있다가 꺼내지고, 수명이 다하면 스스로 숨습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

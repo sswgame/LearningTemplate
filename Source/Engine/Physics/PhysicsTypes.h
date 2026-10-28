@@ -5,7 +5,7 @@
  *          그 위의 서술자와 결과 타입은 차원 트레이트를 받는 템플릿 하나씩이다(`PhysicsDesc.h`, `PhysicsQuery.h`, `PhysicsContact.h`).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"

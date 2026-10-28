@@ -4,9 +4,9 @@
  *        켜고 끄거나 기본값으로 되돌리면 함께 바뀌는 모듈을 미리 보인 뒤 프로젝트 매니페스트를 고쳐 씁니다. 설치 · 제거(파일 복사 · 삭제)는 하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

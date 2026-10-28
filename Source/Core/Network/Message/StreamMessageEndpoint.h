@@ -3,12 +3,12 @@
  * @brief 스트림 전송 위에서 프레임을 주고받는 엔드포인트를 정의합니다. I/O 스레드에서 프레임을 잘라 연결별 수신 큐에 쌓고, 게임(서비스) 스레드의 `pump` 가 한 번의 잠금으로 꺼내 줍니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/NetCompression.h"

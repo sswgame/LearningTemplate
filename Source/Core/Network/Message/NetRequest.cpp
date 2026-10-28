@@ -2,7 +2,7 @@
 
 #include "Core/Network/Message/NetRequest.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Time/MonotonicClock.h"

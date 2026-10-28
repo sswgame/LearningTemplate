@@ -3,9 +3,9 @@
  * @brief 바퀴 넷 차 — 같은 오브젝트의 동적 강체(차체)에 바퀴 · 서스펜션 · 엔진 · 변속을 붙입니다(Jolt `VehicleConstraint`). 운전 입력은 틱 어디서든 넣습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

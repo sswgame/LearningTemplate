@@ -6,8 +6,8 @@
  *          아직 읽는 중이면 그 컴포넌트는 건너뛴다. 면의 반사율은 메시가 아니라 볼륨 한 값이다(`LightProbeVolumeComponent::getBounceAlbedo` — 베이커와 같은 규칙).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 
 #include "Engine/Graphics/Lighting/SceneVoxelGrid.h"

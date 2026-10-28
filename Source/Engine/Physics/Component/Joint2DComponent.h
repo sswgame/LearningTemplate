@@ -3,8 +3,8 @@
  * @brief 2D 관절 — 이 오브젝트의 2D 강체를 부모 쪽 2D 강체(또는 월드)에 잇습니다. 3D 판(`JointComponent`)과 규칙이 같습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

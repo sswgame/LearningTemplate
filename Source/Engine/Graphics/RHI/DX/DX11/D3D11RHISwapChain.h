@@ -3,7 +3,7 @@
  * @brief 창 하나에 붙는 D3D11 백버퍼입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/RHITypes.h"

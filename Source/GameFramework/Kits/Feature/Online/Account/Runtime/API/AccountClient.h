@@ -9,11 +9,11 @@
  *          - 모든 호출과 꺼내기는 `OnlineServiceClient::update` 을 부르는 스레드에서 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 

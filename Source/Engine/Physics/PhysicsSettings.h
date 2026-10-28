@@ -5,10 +5,10 @@
  *          레이어 테이블은 2D 와 3D 가 함께 쓰고(`makeCollisionLayers`), 2D 콜라이더(`BoxCollider2DComponent`)도 2D 씬의 바디라 같은 행렬을 받는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

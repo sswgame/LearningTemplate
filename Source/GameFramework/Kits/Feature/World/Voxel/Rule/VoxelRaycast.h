@@ -3,8 +3,8 @@
  * @brief 블록 격자를 따라 걷는 광선(Amanatides–Woo DDA)입니다. 바라보는 블록, 맞은 면, 블록을 놓을 위치를 구합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/GameFrameworkExports.h"

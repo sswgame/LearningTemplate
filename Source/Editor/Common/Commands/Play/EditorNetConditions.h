@@ -5,8 +5,8 @@
  *          조건 자체(프리셋 값, 덮어쓰기 글의 키)는 Core `NetEmulationConditions` 가 원본이고, 여기는 패널 단위(ms · % · KB/s)로 옮기는 일만 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

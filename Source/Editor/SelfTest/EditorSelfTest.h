@@ -14,10 +14,10 @@
  *          함수 포인터라 상태를 받지 못하는 콜백(ImGui 플랫폼 콜백 등)은 `EditorSelfTestRunner::findRunningContext()->findTestState<T>()` 로 프로브를 찾고, 콜백을 건 프로브의 소멸자가 되돌린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 

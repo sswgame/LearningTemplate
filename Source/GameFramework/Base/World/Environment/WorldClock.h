@@ -4,11 +4,11 @@
  * @details 하루 길이, 시간 배율, 멈춤, 시와 분과 날과 계절과 해, 새벽과 낮과 해질녘과 밤, 햇빛 세기, 잠자기(그 시각까지 건너뛰기)를 다룬다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

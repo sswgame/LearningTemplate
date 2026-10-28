@@ -3,8 +3,8 @@
  * @brief 코드 이름(`_maxSpeed` · `bIsVisible` · `m_speed` · `max_speed`)을 에디터에 보일 이름("Max Speed")으로 다듬습니다(ImGui 에 의존하지 않습니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

@@ -2,7 +2,7 @@
 
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/Layout/UILayoutPass.h"

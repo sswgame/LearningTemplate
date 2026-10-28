@@ -4,8 +4,8 @@
  * @details 충돌 레이어를 고려한 겹침 질의(`queryOverlaps`)는 물리 쪽 `CollisionLayers.h` 에 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

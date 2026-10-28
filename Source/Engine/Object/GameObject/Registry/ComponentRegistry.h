@@ -22,11 +22,11 @@
  *       목록이 바뀌는 등록 · 해제는 틱 밖(구조 변경은 틱 뒤로 미뤄진다)에서만 일어나므로 병렬 틱 중의 조회와 겹치지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

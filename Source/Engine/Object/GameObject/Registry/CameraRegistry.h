@@ -9,13 +9,13 @@
  * 더 높은 우선순위의 카메라나 꺼진 카메라를 따라가지 못합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Object/GameObject/Registry/CameraShakeChannel.h"

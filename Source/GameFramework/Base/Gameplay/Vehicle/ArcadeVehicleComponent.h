@@ -3,9 +3,9 @@
  * @brief 아케이드 차 폰의 이동입니다. 의도를 `ArcadeVehicleMotor`(가속, 조향, 드리프트, 부스트, 점프)에 전달합니다. 물리 엔진 없이 루트를 옮기고, 땅은 물리 광선으로 측정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

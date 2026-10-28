@@ -6,9 +6,9 @@
  *          그래서 단위 포즈가 곧 쪼개기 전 모습이다. 런타임은 본 로컬 = (이동, 회전, 축소 배율)을 쓴다(`makeBoneTransform`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

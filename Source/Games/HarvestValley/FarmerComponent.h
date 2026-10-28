@@ -3,8 +3,8 @@
  * @brief 농부와 바라보는 칸 표시의 모습 — 디렉터의 농부 자리를 따라 자기 메시를 옮깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

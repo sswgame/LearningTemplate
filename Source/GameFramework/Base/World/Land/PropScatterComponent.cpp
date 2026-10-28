@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/World/Land/PropScatterComponent.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
 

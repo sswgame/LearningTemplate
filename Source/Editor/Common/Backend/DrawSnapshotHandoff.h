@@ -3,9 +3,9 @@
  * @brief UI 스레드가 만든 draw 스냅샷 슬롯을 렌더 스레드에 넘기는 약속을 한 곳에 둔 상태 기계입니다. 약속은 게시, 렌더 시작, 렌더 끝, 포기입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

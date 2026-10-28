@@ -2,13 +2,13 @@
 
 #include "Engine/Telemetry/TelemetryService.h"
 
-#include "Core/Common/BuildInfo.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/String/StringBuilder.h"

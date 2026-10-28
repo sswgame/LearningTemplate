@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Widgets/ComboBoxWidget.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionCast.h"

@@ -5,10 +5,10 @@
  *          연동 비밀 철회를 흉내 내려면 `enableRevocation` 을 켠다 — 확인이 성공할 때마다 `setLinkSecret` 의 글을 연동 비밀로 주고, 철회는 다음 `tick` 에 끝나며 철회한 비밀을 기록한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

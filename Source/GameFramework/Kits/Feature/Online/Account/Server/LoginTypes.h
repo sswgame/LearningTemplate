@@ -3,10 +3,10 @@
  * @brief 계정 키트(서버)의 공통 타입입니다. 설정, 자격, 발급 결과, 이벤트와 암호 인터페이스(`ILoginCrypto`)를 정의합니다. 와이어 타입(결과, 토큰, 티켓)은 공유 모듈 `GF_Account` 의 `AccountTypes.h` 에 있습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

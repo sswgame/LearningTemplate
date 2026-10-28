@@ -6,7 +6,7 @@
  *          녹이지 않고 바로 0 이다(순간 이동 · 부활처럼 부드럽게 보일 까닭이 없는 큰 보정). 언리얼 `UCharacterMovementComponent` 의 네트워크 스무딩(지수 모드)과 같은 자리다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 

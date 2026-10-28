@@ -3,8 +3,8 @@
  * @brief 게임 로직 모듈의 런타임 추상 인터페이스입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

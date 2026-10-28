@@ -10,10 +10,10 @@
  *          PlayFab LiveOps(타이틀 데이터와 예약)와 Unity Remote Config(조건, 출시 비율, 일정)에 해당한다. 일정은 영속 테이블과 버스로, 값은 원격 설정으로 관리해서 두 원본을 섞지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

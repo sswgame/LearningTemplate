@@ -3,11 +3,11 @@
  * @brief 오버월드 타일맵입니다. Engine 의 타일맵 스키마(`TileMapXMLData`) 위에서 걷기, 조우, 통과, 워프 타일을 조회합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/TileMap/TileMapXML.h"
 

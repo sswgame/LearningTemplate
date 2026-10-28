@@ -12,9 +12,9 @@
  *       이 표의 항목은 내리지 않으므로, 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Cache/IAssetCache.h"

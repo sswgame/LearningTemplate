@@ -3,8 +3,8 @@
  * @brief 시퀀서 타임라인의 클립 배치(시작 · 끝 · 종류 · 개수)를 떠 두고 바뀌었는지 봅니다. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 

@@ -4,7 +4,6 @@
  * @details 허브는 버스마다 받은편지함과 구독 주제를 갖고 잠금 하나로 직렬화한다(버스들이 다른 스레드여도 된다). 허브는 버스보다 오래 산다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
@@ -12,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/GameFrameworkExports.h"

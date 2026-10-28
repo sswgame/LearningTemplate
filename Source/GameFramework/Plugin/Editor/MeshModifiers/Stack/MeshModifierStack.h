@@ -5,9 +5,9 @@
  *          읽을 때는 id 로 레지스트리에서 만들고 아는 이름의 값만 채운다 — 모르는 id 는 경고하고 건너뛰고, 모르는 매개변수 이름은 버린다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

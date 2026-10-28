@@ -3,10 +3,10 @@
  * @brief 에디터와 런타임이 함께 쓰는 스프라이트 클립(`.sprite.xml`) 에셋입니다. 아틀라스, 프레임(UV 사각형과 시간), 이름 붙은 애니메이션을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

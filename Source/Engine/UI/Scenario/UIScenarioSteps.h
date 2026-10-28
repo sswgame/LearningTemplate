@@ -5,8 +5,8 @@
  *          그래서 테스트의 탐색 스크립트와 실기동 시나리오가 같은 형식과 같은 판정을 쓴다(언리얼 Automation Driver 가 위젯을 찾아 단언하는 것에 해당한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

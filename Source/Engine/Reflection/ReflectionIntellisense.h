@@ -16,7 +16,7 @@
  *          빌드에는 영향이 없습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionAnnotationKeys.h"
 

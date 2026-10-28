@@ -5,10 +5,10 @@
  *          연결 통계(`NetConnectionStats`: 패킷 수 · 최근 1 초 대역폭 · RTT · 손실 · 재전송)와 라우터의 종류별 셈(`NetMessageKindTally`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

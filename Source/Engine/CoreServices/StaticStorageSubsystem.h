@@ -6,7 +6,7 @@
  *          그 컴포넌트가 내려간 메모리를 든다). 이름 풀 · 로거보다 먼저 내려가도록 그 뒤에 선다(리소스 루트 단계가 연 경로 캐시를 비운다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw

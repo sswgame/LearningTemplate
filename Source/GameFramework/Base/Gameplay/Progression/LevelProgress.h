@@ -3,9 +3,9 @@
  * @brief 경험치 곡선(공식 또는 테이블)과 레벨 진행입니다. 경험치를 더하면 몇 레벨이 올랐는지 계산하고, 최고 레벨에서 멈춥니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

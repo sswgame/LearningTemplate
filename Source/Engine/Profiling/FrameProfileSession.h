@@ -3,8 +3,8 @@
  * @brief `-gv_profileFrames=N` 계측 한 회분입니다(워밍업 버리기 → N 프레임 측정 → 보고 → 종료 요청).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

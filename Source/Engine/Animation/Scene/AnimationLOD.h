@@ -5,10 +5,10 @@
  *          넣습니다(`AnimationSystem::setLODViews`). 표(단계 · 예산)는 데이터(`engine/animation/animationlod.xml`)입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"

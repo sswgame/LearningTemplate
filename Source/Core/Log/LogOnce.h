@@ -6,9 +6,9 @@
  *          케이스마다 `beginScope` 를 불러 범위를 케이스로 맞춥니다. 게임 · 에디터 · 서버는 범위를 열지 않으므로 프로세스가 하나의 범위입니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 
 namespace sw

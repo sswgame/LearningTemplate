@@ -3,7 +3,7 @@
  * @brief 월드 좌표를 뷰포트 화면 좌표로 투영하고, 마우스 아래 레이와 ImGuizmo 행렬 배열을 만듭니다(뷰포트 조각들이 함께 씁니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

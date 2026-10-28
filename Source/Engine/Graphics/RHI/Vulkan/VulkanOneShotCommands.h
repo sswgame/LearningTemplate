@@ -3,9 +3,9 @@
  * @brief 프레임 밖 일회성 커맨드 버퍼(할당, 기록, 제출, 대기, 해제)입니다. Vulkan 백엔드 내부 전용입니다.
  */
 #pragma once
-#include "Core/Common/PlatformOSHeaders.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 #include "Engine/Profiling/FrameProfiler.h"

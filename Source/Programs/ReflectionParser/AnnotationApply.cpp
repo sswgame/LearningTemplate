@@ -2,8 +2,8 @@
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
 
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/string_splitter.h"
 
 #include "Programs/ReflectionParser/AnnotationFields.h"

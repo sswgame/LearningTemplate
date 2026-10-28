@@ -5,9 +5,9 @@
  * @details 스레드 안전하지 않다. 주인(`HTTPClient`, `HTTPServer`)이 잠금을 잡고 부른다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/StreamTypes.h"
 

@@ -10,13 +10,13 @@
  *          **모듈 구간 안(확장 · 프록시 · 실행 콜백)에서 이 레지스트리의 등록 해제 함수를 부르면 교착합니다.**
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"

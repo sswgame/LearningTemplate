@@ -5,8 +5,8 @@
  *          보통 땅으로 베이크합니다. 바꾸면(속성 · 켜기 · 끄기) 그 오브젝트 자리의 타일을 다시 베이크합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

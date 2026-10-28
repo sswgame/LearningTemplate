@@ -10,10 +10,10 @@
  *          한 스레드가 쓴다(`HTTP2Client` 가 잠금 안에서 부른다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTP2Frame.h"
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"

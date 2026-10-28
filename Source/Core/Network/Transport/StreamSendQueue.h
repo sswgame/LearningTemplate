@@ -4,10 +4,10 @@
  * @details 높은 물금 · 낮은 물금 · 상한을 한 곳에서 판정한다 — 세 전송(IOCP · epoll · 루프백)이 같은 배압 규칙을 쓴다. 잠금은 소유자(연결)가 잡는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
 namespace sw

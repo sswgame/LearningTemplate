@@ -3,10 +3,10 @@
  * @brief 건반 리듬 게임의 채보를 담습니다. 노트(레인, 박, 롱노트 끝 박), BPM 변화, 정지, 변박, 박과 초의 변환, 화면 스크롤 위치를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"

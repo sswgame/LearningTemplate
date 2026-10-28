@@ -6,9 +6,9 @@
  *          렌더 스레드는 씬을 못 보므로 여기서 만든 값(`FrameShadowData`, `ViewShadowData`)만 패킷으로 넘어갑니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

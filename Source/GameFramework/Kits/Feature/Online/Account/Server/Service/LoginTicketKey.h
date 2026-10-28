@@ -4,8 +4,8 @@
  * @details 변수 이름이 비면 Dev 만 개발용 키(경고)이고 Shipping 은 실패다. 값은 16 진수 64 자다. 읽은 비밀 글은 바로 지운다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 

@@ -7,9 +7,9 @@
  *          그래프에 없는 상태는 재생하지 않고 횟수만 센다(`getFailedPlayCount`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleSystem.h"

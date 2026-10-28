@@ -3,11 +3,11 @@
  * @brief imgui-node-editor 컨텍스트의 수명 주기와 캔버스의 Begin/End 를 관리합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 

@@ -3,7 +3,7 @@
  * @brief RHI 초기화 결과와, "이 기계에서 그 백엔드를 못 돌린다"를 프로세스 밖(테스트, 스크립트)으로 알리는 종료 코드입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

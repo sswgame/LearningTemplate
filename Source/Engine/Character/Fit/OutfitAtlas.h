@@ -6,11 +6,11 @@
  *          이 파일은 디스크도 GPU 도 모른다 — 읽기 · 쓰기와 명령은 에디터의 `OutfitAtlasBaker` 가 한다. 언리얼 Mutable 의 텍스처 합성(Compose)과 같은 자리다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

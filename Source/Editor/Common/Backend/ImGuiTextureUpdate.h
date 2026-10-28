@@ -3,7 +3,7 @@
  * @brief ImGui 텍스처(글꼴 아틀라스 등) 갱신을 백엔드에 넘길지 정하는 판정입니다(네 렌더러 백엔드 공통).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

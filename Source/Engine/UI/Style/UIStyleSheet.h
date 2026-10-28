@@ -3,10 +3,10 @@
  * @brief 스타일 시트(`*.uistyle.xml`)를 정의합니다. 선택자, 특정도, 규칙, 변수로 이루어지며 유니티 USS 에 해당하고 형식은 엔진 XML 입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"

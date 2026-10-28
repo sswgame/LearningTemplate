@@ -3,14 +3,14 @@
  * @brief 씬 컴포넌트 트랜스폼 계층입니다. 더티 루트 목록, 더티 세대, 틱 중 쓰기(대기 슬롯과 쓰기 큐)와 그 적용, 배치 쓰기, 월드 캐시 플러시를 맡습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/SceneTransformStorage.h"

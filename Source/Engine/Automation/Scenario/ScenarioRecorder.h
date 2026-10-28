@@ -3,10 +3,10 @@
  * @brief 실행 중 입력을 녹화해 자동화 시나리오(`.scenario.xml`)의 시간 순 입력 단계로 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/Virtual/InputReplay.h"
 

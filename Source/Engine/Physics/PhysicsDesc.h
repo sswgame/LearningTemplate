@@ -6,9 +6,9 @@
  *          재질은 이름으로 씬의 재질 테이블에서 찾고(`PhysicsSettings`, 없으면 오류를 남기고 기본 재질을 쓴다), 레이어는 번호다(`PhysicsSettings::findLayerIndex`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"

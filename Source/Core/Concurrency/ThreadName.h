@@ -3,8 +3,8 @@
  * @brief 지금 스레드에 OS 이름을 붙입니다(디버거 · 프로파일러가 읽는 이름).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

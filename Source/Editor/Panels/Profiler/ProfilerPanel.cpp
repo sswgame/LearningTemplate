@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

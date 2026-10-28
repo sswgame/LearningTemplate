@@ -5,7 +5,7 @@
  *          원격 설정 플래그와 같은 해시를 쓰므로 같은 계정은 항상 같은 쪽에 속한다. 해시 이름이 이벤트 id 이므로 이벤트마다 다른 계정 집합이 선택된다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"

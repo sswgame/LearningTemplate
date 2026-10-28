@@ -6,8 +6,8 @@
  *          헤더를 통째로 포함하게 됩니다(FrameRenderer.h 가 이 타입 하나 때문에 ShaderParameterBinder.h 를 끌어옵니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

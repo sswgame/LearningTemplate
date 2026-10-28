@@ -5,9 +5,9 @@
  *          토큰은 이름의 앞이나 뒤에 붙었거나, 양쪽이 구분자(`_` `.` `-` 공백)나 이름 끝일 때만 짝으로 본다 — `Shoulder_Pad` 의 `r_` 을 우측 표시로 읽지 않기 위해서다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

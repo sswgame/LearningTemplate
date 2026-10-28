@@ -7,11 +7,11 @@
  *          이름은 `<영역>.<작업>` 소문자로 쓴다(`rts.defend`). 대소문자는 가리지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 
 #include "GameFramework/Base/Character/AI/BehaviorTree.h"

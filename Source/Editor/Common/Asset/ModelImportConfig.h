@@ -3,10 +3,10 @@
  * @brief 모델 임포트 규칙(`Config/Editor/ModelImportConfig.json`)을 읽고 원본 경로에 맞는 규칙을 고릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 

@@ -3,9 +3,9 @@
  * @brief 꾸미기 값 집합입니다. 매개변수 이름마다 값(슬라이더, 색, 고른 항목)을 둡니다. 캐릭터 프리셋과 아이템 인스턴스가 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

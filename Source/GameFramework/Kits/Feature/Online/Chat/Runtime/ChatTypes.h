@@ -7,8 +7,8 @@
  *          귓속말은 채널이 아니라 (보낸 사람, 받는 사람) 쌍이다. 기록 키는 `whisper.<작은 계정 16진>.<큰 계정 16진>` 이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

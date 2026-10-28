@@ -5,12 +5,12 @@
  * @details 프런트를 없애고 새 프런트를 같은 데이터에 붙이면 "다시 켠 게임" 이다. 꺼짐 주입은 다음 쓰기를 적지 않고 IOError 로 끝낸다. 다시 켜면 옛 내용이다(원자 쓰기의 계약).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Local/LocalSlotStorage.h"
 #include "GameFramework/GameFrameworkExports.h"

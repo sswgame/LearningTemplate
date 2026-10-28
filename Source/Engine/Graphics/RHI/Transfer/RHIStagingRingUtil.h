@@ -6,8 +6,8 @@
  *          단독 구간의 일회성 버퍼를 만드는 일(`vkCreateBuffer`, D3D12 업로드 힙, GL 영속 매핑 PBO)은 백엔드 고유라 여기 없다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"

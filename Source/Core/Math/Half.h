@@ -13,9 +13,9 @@
  *            `R16G16B16A16_FLOAT` 정점 · 텍스처 형식이 하드웨어로 풉니다. 상용 엔진의 대응: 언리얼 `FFloat16` · `FVector2DHalf`, 유니티 `half`.
  */
 #pragma once
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

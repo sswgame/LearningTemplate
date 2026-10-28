@@ -3,10 +3,10 @@
  * @brief 바인딩이 소스와 위젯 사이에 나르는 값과, 리플렉션 프로퍼티 경로를 읽고 쓰는 도우미입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

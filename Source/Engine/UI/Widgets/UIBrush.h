@@ -3,8 +3,8 @@
  * @brief 위젯 필드에 적는 겉모습 하나입니다(리플렉션을 쓰므로 문서와 인스펙터가 씁니다). 칠할 때 캔버스 브러시로 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

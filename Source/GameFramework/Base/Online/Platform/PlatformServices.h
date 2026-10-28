@@ -9,9 +9,9 @@
  *          - 동기 호출 모양이다(결과는 이번 프레임에 돌아오고 스토어에 쓰는 것은 SDK 가 비동기로 한다). `update` 를 프레임마다 부른다(SDK 콜백 펌프).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

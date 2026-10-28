@@ -5,10 +5,10 @@
  *          그래서 GPU 없이 단위 테스트로 장부의 규칙(가득 참, 구간마다의 회수, 빈 자리 재사용)을 확인할 수 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/SpanAllocator.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

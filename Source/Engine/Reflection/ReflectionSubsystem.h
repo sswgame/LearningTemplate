@@ -6,7 +6,7 @@
  *          테스트 하네스는 이것을 상속해 GameFramework · 테스트 타입까지 모은다(`TestReflectionSubsystem`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

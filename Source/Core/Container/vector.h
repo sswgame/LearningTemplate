@@ -4,9 +4,9 @@
  * @details 디버그 빌드에서는 RaceDetectContext 로 동시 접근을 잡아내고, InlineAllocator 와 함께 쓰면 SBO 를 지원합니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
 #include "Core/Container/InlineAllocator.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 

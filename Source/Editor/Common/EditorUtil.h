@@ -3,9 +3,9 @@
  * @brief EditorModule 유틸리티입니다(파이썬 스크립트 명령, 계층 뱃지). 경로는 EditorPaths. UI 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor

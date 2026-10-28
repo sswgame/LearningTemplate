@@ -5,8 +5,8 @@
  *          껍질 규칙입니다 — 리스너 0.3 m 안(서 있는 캐릭터)과 에미터 0.5 m 안(소리 내는 물체 자신)의 닿음은 세지 않습니다. 트리거는 보지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"

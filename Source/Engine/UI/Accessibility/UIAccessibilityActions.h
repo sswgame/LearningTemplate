@@ -5,8 +5,8 @@
  *          바인딩 되쓰기 · 명령 · 소리가 사람이 누른 것과 같다. 위젯은 (화면 핸들, 위젯 번호)로 가리킨다 — 스크린 리더가 쥐고 있는 사이 지워질 수 있어 포인터를 쥐지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 

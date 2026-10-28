@@ -6,10 +6,10 @@
  *          그래서 확장 모듈이 없는 런타임(게임 · Shipping)에서도 씬과 에셋이 그대로 읽힌다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

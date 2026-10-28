@@ -6,7 +6,7 @@
  *          단계(헤드리스 쿠킹 · 렌더러)는 이 서브시스템에 의존으로 매인다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

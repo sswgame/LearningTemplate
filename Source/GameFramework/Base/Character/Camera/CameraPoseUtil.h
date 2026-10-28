@@ -3,8 +3,8 @@
  * @brief 카메라 포즈(`CameraPose`)와 `CameraComponent` 사이를 오갑니다. 포즈를 카메라에 쓰고, 카메라를 포즈로 읽습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/Camera/CameraPose.h"
 #include "GameFramework/GameFrameworkExports.h"

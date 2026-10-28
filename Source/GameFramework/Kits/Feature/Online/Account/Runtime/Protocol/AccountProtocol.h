@@ -8,9 +8,9 @@
  *          - 비밀번호, 장치 비밀, 세션 비밀은 TLS 안에서 보내므로 그대로 싣는다. 서버 로그에는 본문을 찍지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

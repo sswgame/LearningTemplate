@@ -3,8 +3,8 @@
  * @brief 에디터의 도크스페이스, 기본 레이아웃, imgui.ini 와 패널 가시성(windows.json)의 저장과 복원을 담당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
 

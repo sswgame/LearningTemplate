@@ -3,10 +3,10 @@
  * @brief 스켈레톤 하나의 본 LOD 테이블(`<이름>.bonelod.xml`)입니다. 화면에서 작아진 캐릭터는 끝 본을 계산하지 않습니다(언리얼 스켈레탈 메시 LOD 의 본 줄이기에 해당합니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

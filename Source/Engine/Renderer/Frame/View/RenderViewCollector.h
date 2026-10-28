@@ -3,9 +3,9 @@
  * @brief 씬의 카메라에서 이번 프레임의 뷰 요청을 만드는 게임 스레드 쪽 함수 모음입니다. 주 시점의 출력 설정과 추가 뷰(캡처, 화면 사각형) 목록을 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/EngineMinimal.h"

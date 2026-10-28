@@ -3,8 +3,8 @@
  * @brief 위젯 하나의 포커스 탐색 규칙입니다. 방향마다 규칙과 명시 이웃을 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

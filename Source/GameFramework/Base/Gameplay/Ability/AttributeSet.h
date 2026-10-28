@@ -3,10 +3,10 @@
  * @brief 어트리뷰트(숫자 상태) 세트와 그 변경 훅입니다(언리얼의 `UAttributeSet` 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemTypes.h"

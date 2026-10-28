@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"

@@ -3,9 +3,9 @@
  * @brief 옵션 메뉴를 정의합니다. 사용자 설정 스키마(카테고리, 설정 정의)에서 탭과 행을 런타임에 만들고, 적용, 되돌리기, 기본값, 확인 카운트다운, 키 바인딩 창을 연결합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

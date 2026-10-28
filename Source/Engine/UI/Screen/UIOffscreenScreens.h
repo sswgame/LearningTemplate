@@ -3,9 +3,9 @@
  * @brief 화면 스택 밖에서 렌더 텍스처에 그리는 화면들(에디터 UI 미리보기)입니다(`UISystem` 의 값 멤버).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

@@ -6,9 +6,9 @@
  *          이 값을 적습니다. 매 빌드 다른 값이라 "같은 빌드에서 난 크래시인가" 의 답이기도 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

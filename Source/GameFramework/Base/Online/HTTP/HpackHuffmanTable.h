@@ -4,7 +4,7 @@
  * @details 기호 0 ~ 255 는 바이트, 256 은 EOS 다. 부호는 오른쪽 맞춤이고 비트 수가 길이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,8 +3,8 @@
  * @brief 풀을 눕히는 구입니다. 캐릭터나 탈것에 붙이면 지나가는 위치의 풀이 바깥으로 휩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/SceneComponent.h"

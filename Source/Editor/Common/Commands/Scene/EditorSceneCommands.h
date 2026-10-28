@@ -3,9 +3,9 @@
  * @brief 하이어라키와 뷰포트가 함께 쓰는 씬 오브젝트 변경 커맨드를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"

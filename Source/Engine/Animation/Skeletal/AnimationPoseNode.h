@@ -8,9 +8,9 @@
  *          노드는 애니메이터 인스턴스마다 만든다(평가 중 쓰는 임시 포즈를 노드가 가진다 — 한 인스턴스는 한 스레드에서 평가된다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

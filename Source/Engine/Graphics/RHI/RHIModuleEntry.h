@@ -3,7 +3,7 @@
  * @brief RHI 백엔드 MODULE 의 C-ABI 진입점을 한 줄로 구현하는 매크로입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIModuleABI.h"

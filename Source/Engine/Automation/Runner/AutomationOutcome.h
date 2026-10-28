@@ -3,7 +3,7 @@
  * @brief 시나리오 한 편이 끝난 까닭(`AutomationOutcome`)을 정의합니다. 숫자 값은 없습니다 — 프로세스 종료 코드로의 번역은 `AutomationExitCode.h` 가 맡습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

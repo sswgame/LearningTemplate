@@ -3,10 +3,10 @@
  * @brief ReflectionParser용 clang 표기 → canonical 맵 (ReflectBuiltins에서 채움).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

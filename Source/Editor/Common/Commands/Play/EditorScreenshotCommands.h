@@ -4,7 +4,7 @@
  * @details ImGui 없이 렌더 스레드 요청 진입점(`RenderThread::requestScreenshot`)만 부릅니다. 끝나면 셸이 프레임마다 부르는 `update` 가 토스트를 띄웁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 

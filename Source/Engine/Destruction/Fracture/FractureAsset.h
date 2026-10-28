@@ -8,11 +8,11 @@
  *          삼각형마다 슬롯 번호가 있다. 0 은 원래 겉면이고, 1 은 자른 안쪽 면이다(머티리얼이 따로 있다). 껍질 점은 조각 무게 중심 기준이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetID.h"

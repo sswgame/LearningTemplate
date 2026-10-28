@@ -3,12 +3,12 @@
  * @brief 실행 취소와 다시 실행 명령 스택입니다(에디터와 툴 공용).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Subsystem/ISubsystem.h"

@@ -5,8 +5,8 @@
  *          `SceneNavigation::update` 가 에이전트마다 게임 스레드에서 직접 부릅니다(가상 호출 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

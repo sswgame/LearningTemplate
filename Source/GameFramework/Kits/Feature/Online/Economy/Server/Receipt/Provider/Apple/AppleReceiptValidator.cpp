@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"

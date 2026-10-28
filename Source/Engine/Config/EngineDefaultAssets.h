@@ -3,9 +3,9 @@
  * @brief enginedefaultassets.xml 에서 읽는 엔진 셸 경로입니다(Scene / App / FrameRenderer / RHI).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetID.h"

@@ -2,9 +2,9 @@
 
 #include "Programs/ReflectionParser/ParserConfig.h"
 
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
@@ -458,7 +458,7 @@ namespace sw
 
         BLOCK( "Target Macros" )
         {
-            // 헤더는 CMake 가 정의하는 타깃 매크로만 읽고 `Core/Common/TargetMacroCheck.h` 가 그것을 실제 컴파일러와 대조한다.
+            // 헤더는 CMake 가 정의하는 타깃 매크로만 읽고 `Core/Foundation/TargetMacroCheck.h` 가 그것을 실제 컴파일러와 대조한다.
             // libclang 은 CMake 를 거치지 않으므로 같은 매크로를 여기서 넘긴다. libclang 은 기본 타깃(이 파서를 지은 기계)으로 읽고,
             // 언제나 clang 이다.
 #if defined( SW_PLATFORM_WINDOWS )

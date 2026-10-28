@@ -3,8 +3,8 @@
  * @brief 승마 HUD 문서가 보이는 값(탑승 상태 글 · 말 스태미나)입니다 — 디렉터 컴포넌트는 세터만 부르고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Binding/UIViewModel.h"

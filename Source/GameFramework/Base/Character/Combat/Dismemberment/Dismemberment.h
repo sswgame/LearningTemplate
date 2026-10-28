@@ -6,10 +6,10 @@
  *          쪼갠 파괴 가능 메시도 같은 도우미를 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 

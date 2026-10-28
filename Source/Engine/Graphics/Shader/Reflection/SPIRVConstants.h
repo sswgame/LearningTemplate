@@ -4,7 +4,7 @@
  * @details 값은 Khronos SPIR-V 명세(spirv.core.grammar.json)의 것이므로 바꾸지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::spirv
 {

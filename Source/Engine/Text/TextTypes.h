@@ -5,8 +5,8 @@
  *          화면 크기는 em 비율 × 폰트 크기(UI 단위)로 구하며, 래스터 크기와 화면 크기를 섞지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

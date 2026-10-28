@@ -5,8 +5,8 @@
  *          모르는 이름은 읽을 때 오류입니다. 게임은 종류를 더 등록할 수 있습니다. 예를 들어 낚시는 스마트 오브젝트 `FishingSpot` 을 쓰는 활동입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 

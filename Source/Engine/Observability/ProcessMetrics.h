@@ -6,8 +6,8 @@
  *          - 운영체제에 묻는 비용이 있으므로 서버는 초에 한 번쯤 `update` 를 부릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

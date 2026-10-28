@@ -3,7 +3,7 @@
  * @brief 뷰포트 클릭 피킹을 담당합니다. 레이와 처음 만나는 오브젝트와 컴포넌트를 찾으며, ImGui 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

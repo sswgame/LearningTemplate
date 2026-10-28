@@ -3,8 +3,8 @@
  * @brief 부모 패널이 위젯을 배치하는 규칙(슬롯)과 레이아웃 열거형을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

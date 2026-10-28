@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Character/Camera/CameraDirector.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

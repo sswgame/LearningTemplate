@@ -12,8 +12,8 @@
  *          메모리 구현과 같은 계약 테스트(`ServiceStoreContract.h`)를 같은 결과로 통과한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

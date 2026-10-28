@@ -6,8 +6,8 @@
  *          (구글 영수증 제공자가 단조 시각을 JWT `iat` 로 보내던 결함이 이 모양이다.)
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

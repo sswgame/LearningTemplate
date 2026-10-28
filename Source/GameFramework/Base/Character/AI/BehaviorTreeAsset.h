@@ -3,9 +3,9 @@
  * @brief 행동 트리 데이터 파일(`*.bt.xml`, 데이터 종류 `behaviortree`)을 읽어 `BehaviorTree` 를 짓습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/AI/BehaviorTree.h"
 #include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"

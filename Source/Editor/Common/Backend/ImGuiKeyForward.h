@@ -5,9 +5,9 @@
  *          그 키를 ImGui 가 이번 프레임에 알게 된 변화에서 읽어 게임 입력에 넣을 사건으로 만듭니다. 키 ↔ ImGui 키 짝은 여기 한 곳에 둡니다(입력 맵 패널의 키 바인딩 잡기도 이것을 씁니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"

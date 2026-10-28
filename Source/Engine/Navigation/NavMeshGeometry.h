@@ -6,9 +6,9 @@
  *          타일 하나에 닿는 삼각형은 XZ 셀 색인(`rebuildSpatialIndex`)으로 찾는다. 타일마다 전체를 훑지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 

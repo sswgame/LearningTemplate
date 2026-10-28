@@ -3,9 +3,9 @@
  * @brief 값을 끌어 고르는 슬라이더와 진행 막대를 정의합니다(UMG 의 Slider 와 ProgressBar, 유니티의 Slider 와 ProgressBar, Godot 의 HSlider 와 ProgressBar 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -3,9 +3,9 @@
  * @brief 루팅을 다룹니다. 건물과 지점 종류마다의 전리품 테이블(기반 `LootCatalog`)로 맵 전체의 아이템 배치를 시드로 만들고, 보급 상자의 내용물을 굴립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

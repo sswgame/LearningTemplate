@@ -3,10 +3,10 @@
  * @brief 상호작용할 수 있는 오브젝트입니다. 상호작용 종류(데이터), 맞춤 지점, 쿨다운, 강조 요청 플래그를 담습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

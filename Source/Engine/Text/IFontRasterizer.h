@@ -5,10 +5,10 @@
  *          객체는 스레드 안전하지 않다). 셰이핑은 이 계약이 아니라 `ITextShaper` 가 한다(HarfBuzz 를 그 자리에 끼운다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Text/TextTypes.h"

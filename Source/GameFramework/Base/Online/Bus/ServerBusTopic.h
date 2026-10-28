@@ -7,9 +7,9 @@
  *          - 읽기 실패는 (타입, 결과, 받은 버전)마다 한 번 오류 로그를 남기고 `ServerBusReadLog::getRejectedCount` 를 올립니다. 부르는 쪽은 결과만 보고 버립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Base/Online/Bus/ServerBus.h"

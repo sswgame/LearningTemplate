@@ -5,9 +5,9 @@
  *          `TelemetryService` 가 지키고, 업로더는 동의가 켜져 있을 때만 불립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

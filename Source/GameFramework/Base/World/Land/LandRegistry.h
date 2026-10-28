@@ -4,11 +4,11 @@
  * @details 셀마다 그 셀을 쓰는 키트(주인)와 지나갈 수 있는지를 보관한다. 땅에 무언가 놓는 키트는 놓기 전에 차지하고(`claimRect`), 치우면 반납한다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"

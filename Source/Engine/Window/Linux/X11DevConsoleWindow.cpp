@@ -18,13 +18,13 @@
     #include "Engine/Window/Linux/Wayland/WaylandDevConsoleWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
-    #include "Core/Common/PlatformOSHeaders.h"
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #include <X11/Xft/Xft.h>
     #include <fontconfig/fontconfig.h>
 
-    #include "Core/Common/X11MacroUndef.h" // Xft 헤더 뒤에 X11 매크로를 다시 지운다
+    #include "Core/Foundation/X11MacroUndef.h" // Xft 헤더 뒤에 X11 매크로를 다시 지운다
 
 namespace sw
 {

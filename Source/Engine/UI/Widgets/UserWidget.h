@@ -3,8 +3,8 @@
  * @brief 다른 UI 문서를 조각으로 끼우는 위젯입니다(UMG 위젯 블루프린트 안의 위젯, 유니티 UXML 의 Template 인스턴스에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Layout/OverlayPanel.h"

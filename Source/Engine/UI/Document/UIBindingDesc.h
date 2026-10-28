@@ -3,8 +3,8 @@
  * @brief UI 문서의 바인딩 식 하나를 정의합니다. 문서 속성 값이 `{` 로 시작하면 위젯 필드에 넣지 않고 이 구조체로 분리합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 

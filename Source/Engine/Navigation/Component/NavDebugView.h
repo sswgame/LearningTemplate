@@ -5,9 +5,9 @@
  *          게임 스레드, 씬 틱 밖에서 부릅니다(`Engine`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

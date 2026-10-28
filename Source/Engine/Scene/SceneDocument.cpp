@@ -2,9 +2,9 @@
 
 #include "Engine/Scene/SceneDocument.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetDatabase.h"

@@ -6,9 +6,9 @@
  *          어떤 오브젝트가 어느 NPC 인지는 기본으로 **오브젝트 이름 = NPC id** 이고, 다르게 이어야 하면 `setNPCResolver` 로 바꾼다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

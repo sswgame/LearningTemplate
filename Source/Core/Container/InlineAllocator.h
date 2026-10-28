@@ -3,8 +3,8 @@
  * @brief SBO(Small Buffer Optimization)용 인라인 버퍼 할당자입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

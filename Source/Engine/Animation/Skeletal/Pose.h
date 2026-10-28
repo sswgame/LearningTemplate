@@ -3,9 +3,9 @@
  * @brief 본 로컬 변환(이동, 회전, 스케일)을 SoA 로 보관하는 포즈와, 포즈 섞기, 가산, 마스크, 모델 공간, 스킨 팔레트 계산입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

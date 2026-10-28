@@ -6,8 +6,8 @@
  *          - 연결이 닫혀도 지우지 않는다. 완료가 오면 꺼내 답하고, 닫힌 연결의 답은 호스트가 버린다(`respond*` 가 false).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/GameFrameworkExports.h"

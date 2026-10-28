@@ -3,8 +3,8 @@
  * @brief 같은 오브젝트의 주 메시 컴포넌트가 그리는 **메시 객체의 한 구간**을 자기 머티리얼로 그립니다(언리얼 Skeletal Mesh 의 Section 머티리얼, 유니티 SubMesh 의 자리).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"

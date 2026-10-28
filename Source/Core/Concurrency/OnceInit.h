@@ -7,8 +7,8 @@
  *          `->` 는 값이면 그 값의 주소, 맨 포인터 · `unique_ptr` · `shared_ptr` 이면 가리키는 객체를 준다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
 
 #include <memory>
 #include <type_traits>

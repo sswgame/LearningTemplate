@@ -5,9 +5,9 @@
  *          로더(타입 공급자 라이브러리 로드)는 만들 때 받고, 씬 뒤 훅(모듈 DLL 내리기)은 모듈 매니저가 선 뒤에 걸 수 있다(Dev 전용이라 Shipping 은 걸지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Foundation/HostSubsystemNames.h"

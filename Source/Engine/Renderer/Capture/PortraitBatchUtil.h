@@ -3,8 +3,8 @@
  * @brief 프리팹 목록마다 초상화를 그려 `<이름>.portrait.dds` 와 `.png` 로 씁니다(`--render-portraits`, `Engine::renderPortraits`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

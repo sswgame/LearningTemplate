@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Observability/MetricRegistry.h"

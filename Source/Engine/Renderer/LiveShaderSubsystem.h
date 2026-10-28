@@ -7,9 +7,9 @@
  *          멈춘 뒤에 반영합니다. 재컴파일은 개발 중 가끔이라 이때의 스톨은 문제가 되지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

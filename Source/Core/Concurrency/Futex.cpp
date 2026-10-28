@@ -2,10 +2,10 @@
 
 #include "Core/Concurrency/Futex.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include <linux/futex.h>
     #include <sys/syscall.h>

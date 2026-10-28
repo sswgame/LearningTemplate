@@ -6,8 +6,8 @@
  *          속도는 대상의 `GravityComponent` 수직 속도로만 준다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

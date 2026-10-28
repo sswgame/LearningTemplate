@@ -3,10 +3,10 @@
  * @brief glTF 2.0 모델 원본(`models_raw/` 의 `.glb`, `.gltf`, `.vrm`)을 엔진 에셋으로 임포트합니다. 결과는 `models/` 의 `.mesh`, 스켈레톤, 부착 메시, 애니메이션 클립입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Asset/VrmAvatarImporter.h"

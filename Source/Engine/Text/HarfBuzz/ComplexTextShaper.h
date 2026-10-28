@@ -6,7 +6,7 @@
  *          라이브러리 헤더 · 타입은 이 폴더 밖으로 나가지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Text/ITextShaper.h"

@@ -6,9 +6,9 @@
  *          베이크하므로 두 길의 타일 바이트가 같습니다. 배포본은 그것을 팩에서 읽고, Dev 는 쿠킹 폴더를 마운트하지 않아 처음 쓸 때 베이크합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

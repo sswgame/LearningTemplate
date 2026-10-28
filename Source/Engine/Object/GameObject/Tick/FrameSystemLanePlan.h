@@ -6,10 +6,10 @@
  *          언리얼 Task Graph 의 선행(prerequisite)이 있는 태스크 묶음, 유니티 Job System 의 `JobHandle` 의존과 같은 자리이고, 엔진 밖(데이터 접근 선언)을 모르는 순수 함수라 단위로 시험한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 

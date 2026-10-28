@@ -2,9 +2,9 @@
 
 #include "Engine/Navigation/NavMeshGeometry.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"

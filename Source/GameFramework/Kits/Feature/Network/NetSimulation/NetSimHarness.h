@@ -25,9 +25,9 @@
  *          조건이 깨끗하면 틱 N 끝에 보낸 메시지를 틱 N + 1 이 받는다. 지연이 L 이면 보낸 시각 + L 이 지난 첫 틱에 받는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"

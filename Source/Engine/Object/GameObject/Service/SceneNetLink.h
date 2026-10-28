@@ -8,8 +8,8 @@
  *          가리키는 창구 · 라우터는 소유하지 않는다 — 올린 쪽이 월드보다 오래 살거나 월드를 비우기 전에 `unbind` 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 

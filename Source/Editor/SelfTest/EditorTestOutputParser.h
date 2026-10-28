@@ -4,9 +4,9 @@
  *        `[  SKIPPED ]`)을 케이스 결과로 바꿉니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

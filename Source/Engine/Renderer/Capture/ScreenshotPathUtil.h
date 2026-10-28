@@ -3,8 +3,8 @@
  * @brief 실행 중 스크린샷(`RenderThread::requestScreenshot`)의 기본 파일 경로와 개발 명령 `screenshot` 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 

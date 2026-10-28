@@ -16,7 +16,7 @@
  *       넘칠 때 조용히 작은 버퍼가 됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include <d3d12.h>
 

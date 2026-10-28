@@ -2,14 +2,14 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
-#include "Core/Common/BitUtil.h"
-#include "Core/Common/Defines.h"
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/UnionFindUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Foundation/EngineDefines.h"

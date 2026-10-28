@@ -56,14 +56,14 @@ if(sw_flag_libraries)
 	target_link_libraries(sw_global_options INTERFACE ${sw_flag_libraries})
 endif()
 
-# 빌드 구성 이름(sw::build::kConfigName, Core/Common/BuildInfo.h) — Shipping 이면 "Shipping", 아니면 실제 구성 이름.
+# 빌드 구성 이름(sw::build::kConfigName, Core/Foundation/BuildInfo.h) — Shipping 이면 "Shipping", 아니면 실제 구성 이름.
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
 
 # 자동화 런타임 유무(`SW_ENABLE_AUTOMATION`) — App 이 `#if SW_AUTOMATION_ENABLED` 로 세션을 들거나 뺀다.
 target_compile_definitions(sw_global_options INTERFACE "SW_AUTOMATION_ENABLED=$<BOOL:${SW_ENABLE_AUTOMATION}>")
 
-# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Common/BuildInfo.h` · `TargetMacroCheck.h`).
+# 빌드 타깃 종류(SW_TARGET_TYPE) — 코드는 이 둘과 `sw::build::kTargetName` 만 읽는다(`Core/Foundation/BuildInfo.h` · `TargetMacroCheck.h`).
 #   SW_WITH_CLIENT_CODE : Game · Client — 창 · 렌더 · 입력 장치 · 오디오 장치 코드
 #   SW_WITH_SERVER_CODE : Game · Server — 서버 코드
 # `#if defined( SW_WITH_*_CODE )` 는 .cpp 본문에서만 쓴다. 리플렉션 선언 · 헤더의 클래스 모양을 가르지 않는다 — 나뉘는 코드는 모듈(`_listTarget`)로 나눈다.

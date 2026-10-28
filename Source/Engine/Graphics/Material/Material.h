@@ -6,9 +6,9 @@
  *  - MaterialInstance 는 사용처마다 파라미터, 키워드, multi_compile 을 덮어쓰고 자기 CB 를 가진다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 

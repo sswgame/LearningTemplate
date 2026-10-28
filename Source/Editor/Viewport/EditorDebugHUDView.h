@@ -3,8 +3,8 @@
  * @brief 씬 뷰 오른쪽 위에 디버그 HUD 섹션을 그립니다 — 게임 HUD 와 같은 섹션 레지스트리 · 같은 섹션 켜짐을 쓰고, 그리기만 ImGui 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

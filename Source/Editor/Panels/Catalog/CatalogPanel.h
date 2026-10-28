@@ -6,9 +6,9 @@
  *          검증이 실패해도 파일은 쓴 대로 남고 "이전 파일로 되돌리기" 가 저장 직전 글을 되쓴다(저장이 실행 중 게임의 핫 리로드를 부르기 때문에 틀린 파일을 오래 두지 않게 한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"

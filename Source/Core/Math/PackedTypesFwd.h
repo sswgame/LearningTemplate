@@ -7,7 +7,7 @@
  *          (`sw::unorm8x4`)과 정의가 어긋나지 않게 합니다. 완전한 타입이 필요하면 `Core/Math/PackedTypes.h` 를 include 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

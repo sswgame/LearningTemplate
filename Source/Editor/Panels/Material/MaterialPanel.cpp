@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Material/MaterialPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"

@@ -3,10 +3,10 @@
  * @brief 시나리오 한 판이 시간 축 어디까지 왔는지(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열)를 쥡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

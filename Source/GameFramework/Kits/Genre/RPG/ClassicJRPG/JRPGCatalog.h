@@ -4,10 +4,10 @@
  *        합동기(참여 멤버, 콤보 포인트), 무공 비급(숙련 단계별 초식), 적(능력치, 약점, 시전, 잠금), 인카운터 지역(걸음당 확률, 유예 걸음, 무리 가중치)을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

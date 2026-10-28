@@ -2,8 +2,8 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

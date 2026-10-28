@@ -6,7 +6,7 @@
  *          그 경우는 놓치는 쪽(경고 안 함)으로 기운다. 시간은 호출하는 쪽이 정한다(창의 단조 시계) — 이 클래스는 시계를 모른다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

@@ -3,8 +3,8 @@
  * @brief 여러 오브젝트를 한 번에 고치는 판단입니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

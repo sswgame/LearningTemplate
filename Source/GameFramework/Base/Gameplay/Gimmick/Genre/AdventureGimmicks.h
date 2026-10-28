@@ -3,8 +3,8 @@
  * @brief 어드벤처 기믹입니다. 미는 블록(격자 한 셀 단위)과 오브젝트의 원소 상태(횃불 퍼즐, 타는 상자)를 다룹니다. 스위치와 열쇠 문은 상호작용과 회로 프리팹으로 만듭니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"

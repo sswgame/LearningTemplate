@@ -8,9 +8,9 @@
  *          `startMs` 와 `endMs` 는 판매 기간이며 유닉스 밀리초이다. 0이면 열려 있고 끝은 열린 구간이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

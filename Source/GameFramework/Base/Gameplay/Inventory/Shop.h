@@ -6,12 +6,12 @@
  *          이 파일은 오프라인과 로컬 상점을 위한 것이다. 온라인(서버 권위) 게임의 상점은 원장 위에 만든 GF_Economy 이고, 이때 지갑은 원장의 읽기 전용 사본(`EconomyMirror`)이다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

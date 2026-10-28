@@ -3,9 +3,9 @@
  * @brief 상호작용 대상 고르기입니다. 거리, 시야각, 시야(가림)를 만족하는 후보 중 우선도가 가장 높고 가장 가까운 것을 고릅니다. 2D(XY 평면)와 3D 가 같은 계산을 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

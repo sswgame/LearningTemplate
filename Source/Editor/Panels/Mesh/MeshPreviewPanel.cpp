@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Mesh/MeshPreviewPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"

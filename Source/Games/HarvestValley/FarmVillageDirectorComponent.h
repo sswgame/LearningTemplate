@@ -12,9 +12,9 @@
  *          자동화는 `Schedule.*` 감시 값(NPC id)과 `Object.*` 감시 값(`Villager.<id>`)으로 본다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

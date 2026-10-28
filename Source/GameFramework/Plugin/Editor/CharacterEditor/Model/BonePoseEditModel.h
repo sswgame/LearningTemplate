@@ -5,9 +5,9 @@
  *          본의 "지금 값"(`getEffectiveTransform`)은 스켈레톤의 레퍼런스 포즈 위에 덮어쓰기를 얹은 결과이다. 좌우 짝은 이름 규칙(`MirrorNameRules`)으로 찾아 쌍으로 등록한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

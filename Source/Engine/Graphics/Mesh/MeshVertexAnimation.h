@@ -6,10 +6,10 @@
  *          그래서 테이블을 모프 결과 버퍼의 맨 앞 구간에 담습니다. 텍스처 바인딩이 새로 필요하지 않고 네 백엔드가 같은 경로를 탑니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

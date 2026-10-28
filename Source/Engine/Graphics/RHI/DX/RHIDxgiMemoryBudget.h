@@ -5,7 +5,7 @@
  *          비로컬은 GPU 가 보는 시스템 메모리(업로드 힙)입니다. 사용량은 둘의 합이고 예산은 로컬 예산입니다. 엔진 장부가 업로드 힙 버퍼도 세기 때문입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"

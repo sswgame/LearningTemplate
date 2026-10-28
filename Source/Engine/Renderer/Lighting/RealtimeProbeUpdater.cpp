@@ -2,8 +2,8 @@
 
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"

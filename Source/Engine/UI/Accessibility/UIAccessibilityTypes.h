@@ -5,9 +5,9 @@
  *          역할 · 상태는 UI 자동화(Windows UI Automation, Linux AT-SPI)가 공통으로 가진 것만 둔다 — 플랫폼 번호로의 바꿈은 각 플랫폼 브리지가 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

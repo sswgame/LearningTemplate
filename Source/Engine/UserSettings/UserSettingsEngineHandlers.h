@@ -3,10 +3,10 @@
  * @brief 엔진이 등록하는 사용자 설정 핸들러(오디오 버스, 입력, 언어, 화면)와 화면 요청(`DisplaySettingsRequest`)을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

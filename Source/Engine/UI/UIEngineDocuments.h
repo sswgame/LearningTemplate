@@ -3,8 +3,8 @@
  * @brief 엔진 UI 가 여는 문서(옵션 메뉴 · 행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)의 경로 묶음입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

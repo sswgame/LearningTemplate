@@ -3,8 +3,8 @@
  * @brief D3D11 즉시 컨텍스트를 런타임 임계 구역과 함께 소유하고, 잠근 가드로만 꺼내 줍니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 

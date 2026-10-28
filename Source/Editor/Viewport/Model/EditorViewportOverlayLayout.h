@@ -4,9 +4,9 @@
  * @details 저장은 사용자 상태라 리플렉션 JSON(`EditorViewportOverlayFile`)이다. 옛 파일을 읽는 길은 두지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"

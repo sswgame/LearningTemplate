@@ -5,8 +5,8 @@
  *          오디오 끔(오디오 엔진이 하나라 월드끼리 덮어쓴다) · 플레이 없음(하니스가 `beginPlay` 를 부른다)이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"

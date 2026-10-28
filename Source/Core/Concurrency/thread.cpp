@@ -5,7 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include <sched.h>
 #endif

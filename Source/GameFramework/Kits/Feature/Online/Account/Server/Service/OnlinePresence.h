@@ -13,12 +13,12 @@
  *          계정 키트의 `AccountServer` 가 소유하며 호스트 틱 스레드에서 쓴다. Nakama 의 status registry 와 PlayFab 의 presence 에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"

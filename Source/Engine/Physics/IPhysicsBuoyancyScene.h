@@ -6,8 +6,8 @@
  *          핸들 · 스레드 · 단위 규칙은 `IPhysicsScene.h` 머리말과 같다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/PhysicsTypes.h"

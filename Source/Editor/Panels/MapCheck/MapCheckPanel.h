@@ -3,8 +3,8 @@
  * @brief 맵 검사 창입니다. `ValidationIssueLog` 의 결과를 테이블로 보이고, 줄을 누르면 그 오브젝트를 고릅니다(언리얼 Map Check).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

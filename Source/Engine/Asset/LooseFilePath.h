@@ -3,8 +3,8 @@
  * @brief 리소스 id 를 디스크의 낱개 파일로 푼 결과입니다. 팩을 보지 않는 경로라는 것을 형식이 말합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

@@ -18,11 +18,11 @@
  *          - 트랜스폼은 서버 권위다. 복원은 정렬(`snap` · `warp`)을 하지 않고 트랜스폼 복제가 맞춘다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 

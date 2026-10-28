@@ -4,8 +4,8 @@
  * @details Direct3D 12 HLSL 의 구조체 메모리 배치와 맞도록 정렬을 유지합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

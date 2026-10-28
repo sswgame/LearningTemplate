@@ -3,8 +3,8 @@
  * @brief Windows XInput 게임패드 구현입니다(GamepadDevice 상속).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 

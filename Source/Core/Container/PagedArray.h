@@ -3,10 +3,10 @@
  * @brief 원소 주소가 옮겨지지 않는 청크(페이지) 배열입니다. 쓰기는 한 번에 한 스레드, 읽기는 락 없이 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

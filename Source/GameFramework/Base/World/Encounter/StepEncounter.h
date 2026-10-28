@@ -8,8 +8,8 @@
  *          - 두 방식 모두 rate 0 이하는 끄는 값, 1 이상은 매 걸음이다. 조우 뒤 `_graceSteps` 걸음 동안은 굴리지 않는다(난수도 쓰지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

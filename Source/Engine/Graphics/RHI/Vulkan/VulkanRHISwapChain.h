@@ -3,8 +3,8 @@
  * @brief 창 하나에 붙는 Vulkan 서피스 + 스왑체인입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"

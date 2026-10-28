@@ -11,7 +11,7 @@
  *          - 명시 태그: 스코프 밖에서 용도가 정해진 버퍼는 `Memory::allocate( size, tag )` 로 그 자리에서 태그를 줍니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

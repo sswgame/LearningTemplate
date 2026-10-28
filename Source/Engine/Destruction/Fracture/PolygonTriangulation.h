@@ -5,10 +5,10 @@
  *          그래서 입력 고리를 메시 앞면 규약대로 감아 넘기면 결과도 그 규약을 따른다(오목하거나 구멍 난 단면에서 중심 부채꼴이 틀리는 문제를 해결한다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

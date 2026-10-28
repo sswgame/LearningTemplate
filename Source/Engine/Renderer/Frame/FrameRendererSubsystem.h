@@ -5,7 +5,7 @@
  *          보관하고 있어 렌더러와 같은 시점에, 디바이스가 살아 있을 때(종료) 해제한다. 소멸은 패킷 빌더(해제 `destroy` 뒤) → 렌더러 순이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

@@ -6,9 +6,9 @@
  *          메트로배니아, 액션 플랫포머, 2D 소울라이크가 같은 몸을 씁니다. 셀레스테와 할로우 나이트의 조작감을 내는 규칙들입니다. 좌표는 +X 오른쪽, +Y 위, 단위는 타일이 아니라 월드 단위입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 

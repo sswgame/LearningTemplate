@@ -3,11 +3,11 @@
  * @brief 펼쳐서 하나를 고르는 목록 상자입니다(UMG 의 ComboBox, 유니티의 DropdownField, Godot 의 OptionButton 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

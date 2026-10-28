@@ -3,11 +3,11 @@
  * @brief 2D 박스 콜라이더 컴포넌트입니다 — 씬의 2D 물리(Box2D) 안의 센서 바디 하나로 겹침을 냅니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

@@ -3,9 +3,9 @@
  * @brief 택틱스 SRPG 의 전투 계산을 담당합니다. 명중률, 피해, 크리티컬 예측(`computeForecast`), 반격, 지원 공격, 지원 방어, 동기 공격, 결정적 난수를 쓰는 실제 전투, MAP 병기를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -3,7 +3,7 @@
  * @brief 뷰-투영 행렬에서 뽑은 절두체의 여섯 평면과 겹침 판정입니다. GPU 컬링 입력(`RenderView`)과 CPU 공간 질의(`BVHTree3D`)가 같은 식을 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"

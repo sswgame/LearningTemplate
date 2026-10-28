@@ -4,8 +4,8 @@
  * @details 점 종류(`float3` · `float2`)와 안쪽 판정만 다르고 나머지는 같다 — 이미 놓인 점과 겹치면 버리고, 안이 아니면 버리고, 아니면 더한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -14,7 +14,7 @@
  *       흔듭니다. 보는 것은 "0 이 아닌가" 와 "창 목록이 그대로인가" 입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

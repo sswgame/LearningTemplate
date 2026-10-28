@@ -3,7 +3,7 @@
  * @brief 확장 도구(모디파이어 기즈모 등)가 씬 뷰의 마우스를 가져가는 진입점입니다. 가져간 동안 클릭 선택과 변환 기즈모가 물러납니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

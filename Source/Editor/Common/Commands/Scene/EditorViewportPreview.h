@@ -3,7 +3,7 @@
  * @brief 도구 패널 미리보기를 선택 오브젝트·씬에 적용합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

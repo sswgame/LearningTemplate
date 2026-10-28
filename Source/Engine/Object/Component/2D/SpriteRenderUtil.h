@@ -3,8 +3,8 @@
  * @brief 스프라이트를 그리는 두 길(`SpriteComponent` · `SpriteInstanceBatch`)이 함께 쓰는 머티리얼 · 텍스처 인스턴스 규칙입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

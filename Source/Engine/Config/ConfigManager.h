@@ -7,13 +7,13 @@
  *       이름의 해시를 키로 쓰면 이름이 달라도 해시가 같을 때 같은 항목을 가리킵니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

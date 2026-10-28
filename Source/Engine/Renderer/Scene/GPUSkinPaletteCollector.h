@@ -5,7 +5,7 @@
  *          `SkeletalMeshComponent`)은 이 파일에만 있습니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 
 #include "Engine/EngineMinimal.h"
 

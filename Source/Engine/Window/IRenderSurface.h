@@ -9,8 +9,8 @@
  *          네이티브 표면 재생성을 요구할 때(OpenGL ↔ DXGI 는 픽셀 포맷이 창에 붙습니다) 부를 훅입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -11,9 +11,9 @@
  *          점프 버튼은 그 프레임에 틱이 없으면 놓친다(눌림 판정은 프레임마다다) — 고정 틱 입력 모으기는 남은 일이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/PredictionSmoother.h"
 
 #include "Engine/Object/Component/Component.h"

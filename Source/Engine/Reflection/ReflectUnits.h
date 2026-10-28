@@ -5,9 +5,9 @@
  *          적힌 글(`"150 cm"`)을 받으면 이 표로 저장 단위로 바꿉니다. 같은 차원끼리만 바뀝니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

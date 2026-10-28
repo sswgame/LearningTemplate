@@ -3,12 +3,12 @@
  * @brief 얼굴 애니메이션 — 표정 커브 · 립싱크 · 눈 깜빡임 · 시선(사카드)을 같은 오브젝트 유닛(`SkeletalMeshComponent`)의 모프 가중치 · 눈 본에 겁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

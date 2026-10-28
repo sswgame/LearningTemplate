@@ -10,7 +10,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #endif
 
 namespace sw

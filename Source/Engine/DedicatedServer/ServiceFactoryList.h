@@ -8,10 +8,10 @@
  *          - 모으기는 순서 값, 같으면 이름 순입니다. 시작은 그 순서, 멈춤은 반대 순서로 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

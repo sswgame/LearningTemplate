@@ -3,8 +3,8 @@
  * @brief 2D 도구(`TileMapPanel` · `SpriteClipPanel`)의 셀 판단입니다 — 획 선분, 사각형, 채우기, 화면 ↔ 셀, 아틀라스 셀. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw::editor

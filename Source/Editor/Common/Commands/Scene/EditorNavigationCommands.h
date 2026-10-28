@@ -3,7 +3,7 @@
  * @brief 활성 씬의 내비메시를 지금 베이크하는 동작입니다(`navigation.bake`, ImGui 없음 — EditorTest 가 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

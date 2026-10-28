@@ -3,10 +3,10 @@
  * @brief 전리품 테이블입니다. 가중치 뽑기, 횟수 범위, "아무것도 없음" 가중치, 항상 주는 항목(확률), 테이블 안의 테이블, 행운 배율을 지원합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

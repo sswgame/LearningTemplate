@@ -8,12 +8,12 @@
  *          그 밖(파일 · NUL)은 끝까지 읽고 스레드를 끝냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 
 #include <thread>
 

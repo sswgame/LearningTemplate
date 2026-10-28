@@ -6,10 +6,10 @@
  *          유니티는 에디터 프로세스의 내부 붙여 넣기 버퍼에 둔다. 여기는 후자다 — 바이너리 상태라 OS 클립보드에 올리지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw

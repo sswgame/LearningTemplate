@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include <array>
 #include <atomic>

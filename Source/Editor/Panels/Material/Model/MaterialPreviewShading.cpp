@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 
-#include "Core/Common/Macros.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"

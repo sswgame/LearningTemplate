@@ -9,13 +9,13 @@
  *    충격량은 접촉이 생길 때 `EstimateCollisionResponse` 로 어림하고, 접촉이 유지되는 동안에는 그 스텝의 어림값을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Collision/PhysicsContact.h"

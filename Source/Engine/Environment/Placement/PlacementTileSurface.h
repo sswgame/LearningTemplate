@@ -3,8 +3,8 @@
  * @brief 2D 타일 맵을 배치 표면으로 쓰는 어댑터입니다. 타일 종류가 곧 레이어입니다(풀 타일에만 꽃, 모래 타일에만 조개).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"

@@ -7,11 +7,11 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"

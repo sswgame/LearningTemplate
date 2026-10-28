@@ -3,10 +3,10 @@
  * @brief 시뮬레이션이 한 걸음 동안 쌓고 게임이 프레임마다 가져가는 알림 버퍼입니다(`drainEvents` 의 몸통).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/DrainGate.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

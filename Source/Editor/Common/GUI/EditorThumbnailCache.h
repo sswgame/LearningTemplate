@@ -3,11 +3,11 @@
  * @brief 콘텐츠 브라우저 썸네일로 쓸 텍스처를 ImGui 텍스처 id 로 보관하고 있는 작은 LRU 캐시입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

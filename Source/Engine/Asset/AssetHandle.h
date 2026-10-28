@@ -13,11 +13,11 @@
  *          상태로 흉내 낸 것이라 `Missing` 과 `Failed` 를 한데 묶어 처리하는 호출처를 낳기 때문입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

@@ -2,8 +2,8 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"

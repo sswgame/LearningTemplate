@@ -4,8 +4,8 @@
  * @details 부착은 캐릭터 층(티어 7), 강체는 오브젝트 층(티어 6)이라 창구를 아래층에 둡니다 — 부착 쪽은 이 인터페이스만 압니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

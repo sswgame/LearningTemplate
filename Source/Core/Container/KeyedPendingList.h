@@ -3,10 +3,10 @@
  * @brief 항목을 단조 증가하는 키(프레임 번호 · 펜스 값 · 스냅샷 번호)와 함께 들고 있다가, 기준값이 그 키에 닿으면 넣은 순서대로 꺼내 주는 목록입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

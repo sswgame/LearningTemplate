@@ -5,10 +5,10 @@
  *          그대로 쓴다. 정점 속성(법선, UV, 스킨, 정점 그룹, 모프)은 따라간다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 

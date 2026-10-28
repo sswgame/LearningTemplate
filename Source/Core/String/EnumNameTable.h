@@ -8,8 +8,8 @@
  *          리플렉션 `ENUM()` 으로 옮기지 않는 까닭: 데이터 파일이 `impulse` · `phaseEnter` 처럼 소문자로 적고 있어, 철자가 열거자 이름과 다르다. 옮기면 데이터를 다시 써야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

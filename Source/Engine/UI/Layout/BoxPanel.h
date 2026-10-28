@@ -3,8 +3,8 @@
  * @brief 가로와 세로 상자 패널입니다(UMG 의 HorizontalBox 와 VerticalBox, Godot 의 HBox 와 VBox, 유니티의 flex-direction 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

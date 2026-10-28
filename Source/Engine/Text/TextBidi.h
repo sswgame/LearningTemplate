@@ -8,9 +8,9 @@
  *          (W2 ~ W6. 아랍 숫자와 유럽 숫자를 가르지 않는다), 아랍어 연결형(셰이퍼의 일)이다. 복합 문자 빌드(`SW_ENABLE_COMPLEX_TEXT`)는 수준만 SheenBidi(`Text/SheenBidi/`)가 정하고 나머지는 이 파일 그대로다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Text/ITextShaper.h"
 

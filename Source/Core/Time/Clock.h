@@ -7,9 +7,9 @@
  *          언리얼 `FApp::GetCurrentTime` + 자동화 테스트의 고정 시각, 유니티 `Time` + 테스트 프레임워크의 시간 고정과 같은 갈래다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/TimePoint.h"
 

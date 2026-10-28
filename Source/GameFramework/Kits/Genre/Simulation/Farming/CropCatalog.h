@@ -3,12 +3,12 @@
  * @brief 작물 정의를 담습니다. 씨앗, 수확물, 자라는 날 수, 다시 자람, 계절, 가격을 가지며 `crops.xml` 에서 읽습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

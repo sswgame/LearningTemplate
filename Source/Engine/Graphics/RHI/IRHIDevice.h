@@ -3,10 +3,10 @@
  * @brief RHI 디바이스 추상화입니다. 프레임 수명주기, 커맨드 리스트, 능력 조회, 네이티브 핸들을 담당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"

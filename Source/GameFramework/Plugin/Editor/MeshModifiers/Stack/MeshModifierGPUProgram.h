@@ -15,9 +15,9 @@
  *          새 점 단위 모디파이어를 GPU 로 옮기려면 셰이더의 `SW_MODIFIER_*` 번호와 함수, 이 파일의 표 한 줄을 함께 더한다(`MeshModifierGPUProgramTest` 가 둘이 맞는지 본다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

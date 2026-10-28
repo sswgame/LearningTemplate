@@ -13,10 +13,10 @@
  *          주장의 전송 형식(`write` · `read`)만 정하고, 어디에 실을지는 게임이 정한다(입력 바이트 안에 싣는다 — 키트의 와이어 형식은 바꾸지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Character/Hit/MeleeHitWindow.h"

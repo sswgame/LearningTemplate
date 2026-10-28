@@ -12,7 +12,7 @@
  *          그 밖의 플랫폼: default visibility.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #if defined( SW_GF_EXPORTS )

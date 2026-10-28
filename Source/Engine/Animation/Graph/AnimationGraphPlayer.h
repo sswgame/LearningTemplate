@@ -3,9 +3,9 @@
  * @brief 애니메이션 그래프 에셋(`AnimationGraphAsset`)을 상태 기계로 실행합니다. 노드는 상태이고 링크는 전이(조건 또는 "끝나면 다음")입니다. 2D 와 3D 가 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayer.h"

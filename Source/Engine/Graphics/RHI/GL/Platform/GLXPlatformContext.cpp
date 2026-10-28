@@ -8,12 +8,12 @@
     #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
     #include "Engine/Graphics/RHI/RHITypes.h"
 
-    #include "Core/Common/X11Headers.h"
+    #include "Core/Foundation/X11Headers.h"
 
     #define GLX_GLXEXT_LEGACY
     #include <GL/glx.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 
     #define GLX_CONTEXT_MAJOR_VERSION_ARB    0x2091
     #define GLX_CONTEXT_MINOR_VERSION_ARB    0x2092

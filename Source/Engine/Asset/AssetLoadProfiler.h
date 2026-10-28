@@ -3,11 +3,11 @@
  * @brief 에셋 로딩 프로파일러 — 에셋 하나를 읽을 때 IO · 해석 · GPU 올리기 시간, 바이트, 동기 · 비동기를 모아 종류별 표와 가장 느린 로드를 냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 

@@ -5,8 +5,8 @@
  *          실패 알림은 이것이 아니라 로그이고, 로거가 서기 전이면 `SW_LOW_LEVEL_ERROR` 입니다. 표준 출력을 직접 부르는 자리는 이 파일의 구현 하나입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

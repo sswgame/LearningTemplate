@@ -10,10 +10,10 @@
  *       집합과 질의는 `Engine` 쪽 `Object/Component/TagSystem.h` 에 있습니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 namespace sw
 {

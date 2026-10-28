@@ -17,12 +17,12 @@
  * 방식입니다. 싱글턴으로 두면 수명이 아무에게도 속하지 않아 종료 순서를 정할 수 없습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

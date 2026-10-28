@@ -2,9 +2,9 @@
 
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Fit/BodyShape.h"

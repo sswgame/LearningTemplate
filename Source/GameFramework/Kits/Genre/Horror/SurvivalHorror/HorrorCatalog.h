@@ -4,10 +4,10 @@
  * @details 조합은 기반 `RecipeCatalog` 의 레시피(작업대 `Combine`, 재료 둘에서 결과 하나)로 담아 둔다. 약초 섞기도 제작과 같은 정의이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

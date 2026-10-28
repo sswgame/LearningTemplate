@@ -2,9 +2,9 @@
 
 #include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {

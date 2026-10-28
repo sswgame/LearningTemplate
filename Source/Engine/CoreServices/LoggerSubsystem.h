@@ -6,7 +6,7 @@
  *          종료에서 로거 **스레드**를 세우고(그 스레드도 메모리를 풀며 메모리 프로파일러를 부른다), 객체는 소멸자에서 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

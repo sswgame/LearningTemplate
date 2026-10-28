@@ -8,10 +8,10 @@
  *          폴리곤 참조는 32 비트(Detour 기본)이고 엔진 쪽 64 비트에 담는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshSettings.h"

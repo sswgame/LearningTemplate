@@ -3,10 +3,10 @@
  * @brief 후처리 리그의 노드 기반입니다. 대상(본, 소켓, 오브젝트) 서술, 노드가 받는 컨텍스트(준비, 평가, 바인딩), 엄격한 XML 읽기, 노드 기반 클래스를 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

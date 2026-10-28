@@ -3,9 +3,9 @@
  * @brief 카메라 프리셋 파일(`*.cameras.xml`)의 프리셋을 미리보기 씬에서 보는 창입니다(Cinemachine 의 프리셋 미리보기, 언리얼 카메라 리그 미리보기에 해당).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
 

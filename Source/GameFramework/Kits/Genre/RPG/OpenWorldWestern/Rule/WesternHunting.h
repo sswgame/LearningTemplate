@@ -3,8 +3,8 @@
  * @brief 사냥을 다룹니다. 가죽 등급(1~3성은 원래 품질, 사용 무기, 명중 부위, 더 쏜 발 수로 정함), 가죽 손상, 사체 부패, 손질 전리품, 상인 매입 값을 계산합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

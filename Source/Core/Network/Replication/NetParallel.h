@@ -7,9 +7,9 @@
  *          게임은 `setTaskManager( &engine::getSubsystem<TaskManager>() )` 를 넘깁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 

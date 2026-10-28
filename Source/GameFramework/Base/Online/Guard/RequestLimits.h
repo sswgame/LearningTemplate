@@ -3,7 +3,7 @@
  * @brief 요청 크기와 문자열 상한입니다. 서비스 프레임워크가 본문을 읽기 전에, 키트가 필드를 읽을 때 같은 값을 봅니다. 조용히 자르지 않고 거절합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

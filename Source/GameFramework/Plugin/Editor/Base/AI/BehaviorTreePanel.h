@@ -8,9 +8,9 @@
  *          이 종류는 데이터 종류 레지스트리(`SW_RESOURCE_DATA_KIND`)에 올리지 않아 카탈로그 편집기(표)의 파일 목록에 없다 - 같은 파일을 두 편집기가 쥐지 않게 한다(`BehaviorTreeAsset::kDataKind`).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"

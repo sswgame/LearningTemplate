@@ -3,9 +3,9 @@
  * @brief 앵커와 오프셋으로 자식을 놓는 패널입니다(UMG 의 Canvas Panel, Godot 의 앵커/오프셋, 유니티의 position: absolute 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -3,10 +3,10 @@
  * @brief Base64(RFC 4648) 쓰기 · 읽기 — 표준(`+/`, 채움 `=`)과 URL 안전(`-_`, 채움 없음 — JWT · PKCE · 공유 코드)입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

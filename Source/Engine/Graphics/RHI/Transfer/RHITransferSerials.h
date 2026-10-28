@@ -5,12 +5,12 @@
  *          `Complete` 의 뜻(연속으로 끝난 시리얼의 끝 이하)은 여기 한 곳이 정한다. 그래서 백엔드가 서로 다른 완료 의미를 갖는 일이 생기지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

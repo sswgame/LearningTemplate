@@ -10,10 +10,10 @@
  *          어느 쪽에도 닿지 않는 본은 0 이다. 가중치는 0 이상 1 이하이고 필수다. 스켈레톤에 없는 본 이름은 오류다(조용히 건너뛰지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

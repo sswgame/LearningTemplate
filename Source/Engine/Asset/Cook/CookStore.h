@@ -11,10 +11,10 @@
  *          - 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다. 출력 형식이나 출력을 바꾸는 코드(기본값, 알고리즘)를 바꾸면 올린다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cook/CookJob.h"
 #include "Engine/Asset/Cook/CookRecord.h"

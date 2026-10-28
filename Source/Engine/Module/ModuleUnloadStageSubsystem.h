@@ -6,7 +6,7 @@
  *          모듈 코드를 드는 낮은 층(비동기 IO 의 완료 콜백 · 오디오 · 입력 · 씬)은 이 이름을 모르므로, 이것이 그들을 역방향 의존으로 적어 그들이 먼저 내려가게 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 

@@ -2,11 +2,11 @@
 
 #include "Core/Log/Sink/FileLogOutput.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw

@@ -3,9 +3,9 @@
  * @brief 격자 내비게이션 맵입니다. 셀마다 지나는 값(1..254, 255 는 막힘)을 두고, 월드와 셀 변환, 시선(LOS), 가장 가까운 걸을 수 있는 셀 찾기를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"

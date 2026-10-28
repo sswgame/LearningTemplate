@@ -3,8 +3,8 @@
  * @brief 이 플랫폼의 접근성 브리지를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"

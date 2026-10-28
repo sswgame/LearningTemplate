@@ -3,12 +3,12 @@
  * @brief 외부 프로세스를 만들고, 출력을 스트리밍하고, 제어 · 종료하는 크로스 플랫폼 유틸리티입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

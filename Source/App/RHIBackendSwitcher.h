@@ -3,8 +3,8 @@
  * @brief gv_rhiBackend 변경을 받아 프레임 경계에서 그래픽 API 를 교체합니다(전역 변수 훅부터 모듈 재생성까지).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,9 +3,9 @@
  * @brief 천 — 사각 격자 소프트 바디(Jolt `SoftBody`)를 오브젝트 자리에 걸고, 고정한 가장자리가 오브젝트를 따라 움직입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

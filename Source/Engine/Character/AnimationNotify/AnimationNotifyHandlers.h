@@ -13,7 +13,7 @@
  *          | `MotionWarp` | 구간 알림이다. `MotionWarpingComponent` 에 워프 창을 열어, 구간 끝에 이름 붙은 목표에 닿게 루트 모션을 휜다 | target(필수), translation, rotation, vertical |
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

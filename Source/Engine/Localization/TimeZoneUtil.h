@@ -5,9 +5,9 @@
  *          표에 없는 이름은 `findZone` 이 nullptr 이다 — 호출자가 UTC 로 쓸지 오류로 볼지 정한다. 과거 규칙 변경(2007 년 이전 미국 등)은 반영하지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/CultureInfo.h"
 

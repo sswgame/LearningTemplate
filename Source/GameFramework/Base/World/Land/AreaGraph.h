@@ -6,10 +6,10 @@
  *          잠금 조건은 `GameFlags` 조건식이라서 열쇠, 능력, 퀘스트 진행을 같은 방식으로 적는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameCatalog.h"

@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Core/Common/EnumUtil.h"
+#include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 

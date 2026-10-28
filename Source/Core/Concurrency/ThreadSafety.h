@@ -8,8 +8,8 @@
  *          언리얼은 같은 매크로를 두지 않고 주석으로 적으며, 크로미움 · LLVM · Abseil 이 같은 clang 속성을 매크로로 감싼다(`GUARDED_BY` · `EXCLUSIVE_LOCKS_REQUIRED`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
 
 #include <thread>
 

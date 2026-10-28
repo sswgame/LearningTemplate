@@ -3,7 +3,7 @@
  * @brief 씬의 바람입니다. 방향, 세기, 돌풍을 담습니다. 식생(`FoliageComponent`)이 틱마다 읽어 머티리얼에 싣고, 나중에 천, 파티클, 소리가 같은 값을 읽습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

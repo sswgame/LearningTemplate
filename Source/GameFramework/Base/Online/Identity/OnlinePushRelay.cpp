@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 
 namespace sw

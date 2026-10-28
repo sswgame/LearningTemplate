@@ -3,9 +3,9 @@
  * @brief 캐릭터 컨트롤러(2D) — 선 캡슐 하나를 Box2D 무버(`b2World_CastMover` · `b2SolvePlanes`)로 움직입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

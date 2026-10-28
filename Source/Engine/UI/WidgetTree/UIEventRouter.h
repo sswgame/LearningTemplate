@@ -3,9 +3,9 @@
  * @brief 히트 테스트와 이벤트 경로를 정의합니다. 화면 점 아래의 위젯 경로를 찾고, 경로를 따라 터널링 다음 버블링으로 이벤트를 보냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/WidgetTree/UIEvents.h"

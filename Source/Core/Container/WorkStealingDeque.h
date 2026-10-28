@@ -3,10 +3,10 @@
  * @brief Chase-Lev 방식의 lock-free 작업 훔치기(work-stealing) 데크입니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

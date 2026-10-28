@@ -4,9 +4,9 @@
  * @details 경로점 따라가기, 흐름장 따라가기, 도착 감속, 이웃과 떨어지기(분리), 막힌 셀을 따라 미끄러지기, 끼임 감지를 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

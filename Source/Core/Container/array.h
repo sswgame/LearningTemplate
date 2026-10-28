@@ -17,8 +17,8 @@
  *       보고되지 않습니다. 여기서 말하는 것은 정말로 여러 스레드가 동시에 들어오는 경우입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/DataRaceDetector.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {

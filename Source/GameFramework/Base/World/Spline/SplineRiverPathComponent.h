@@ -8,8 +8,8 @@
  *          물이나 스플라인이 없으면 오류를 한 번 남기고 아무것도 하지 않는다 — 다른 경로로 대신하지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"

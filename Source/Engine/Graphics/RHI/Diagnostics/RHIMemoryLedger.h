@@ -6,11 +6,11 @@
  *          백엔드는 크기와 키만 낸다. 백엔드는 별도 모듈이라 Engine 전역을 볼 수 없어 장부는 디바이스(`IRHIDevice`)가 소유한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/array.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

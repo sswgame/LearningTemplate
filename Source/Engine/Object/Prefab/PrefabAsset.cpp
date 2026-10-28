@@ -2,13 +2,13 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetDatabase.h"

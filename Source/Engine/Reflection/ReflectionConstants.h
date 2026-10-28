@@ -3,7 +3,7 @@
  * @brief Reflection 서브시스템이 쓰는 상수 · 데이터 테이블입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::constant::reflection
 {

@@ -6,11 +6,11 @@
  *          **모르는 태그, 짝이 맞지 않는 태그, 읽을 수 없는 값은 글자 그대로 남기고 경고한다.** 번역 실수가 화면에서 보이게 하기 위해서다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

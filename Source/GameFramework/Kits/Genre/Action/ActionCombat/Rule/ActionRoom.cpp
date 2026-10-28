@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"

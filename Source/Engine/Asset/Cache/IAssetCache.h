@@ -16,9 +16,9 @@
  *       등록한 캐시는 매니저보다 오래 살아야 합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetID.h"

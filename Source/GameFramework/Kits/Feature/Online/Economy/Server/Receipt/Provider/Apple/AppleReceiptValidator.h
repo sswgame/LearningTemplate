@@ -15,11 +15,11 @@
  *          시계를 읽지 않는다 — HTTP 시한 · JWT · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"

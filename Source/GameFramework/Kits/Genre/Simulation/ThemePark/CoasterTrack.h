@@ -7,11 +7,11 @@
  *          에르미트 곡선을 이어 회로를 닫는다. 롤러코스터 타이쿤처럼 "조각을 이어 붙이는" 방식으로 만든다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"

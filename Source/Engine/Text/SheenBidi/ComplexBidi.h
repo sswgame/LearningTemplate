@@ -5,9 +5,9 @@
  *          줄 안 재배열(L2) · 거울 문자(L4)는 `TextBidi` 가 그대로 합니다 — 수준만 바뀌면 같은 계산이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Text/ITextShaper.h"
 

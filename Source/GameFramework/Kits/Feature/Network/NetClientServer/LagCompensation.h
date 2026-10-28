@@ -5,9 +5,9 @@
  *          되감기 한도는 기억하는 틱 수이다. 너무 늦은 사격은 현재 위치로 판정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 

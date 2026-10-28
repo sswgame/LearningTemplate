@@ -4,9 +4,9 @@
  * @details 부모 프리셋을 지정하고 다른 값만 적는다. 종족 기본, 직업 복장, 개별 NPC 순으로 상속한다. 값 대신 범위나 후보 목록을 적으면 시드로 뽑는다. 무작위 NPC에 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,8 +3,8 @@
  * @brief 닿으면 튜토리얼 힌트("[action=Interact] 로 문 열기")를 알림으로 띄우는 볼륨입니다. 글의 행동 태그는 지금 장치의 버튼 글리프가 됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Object/Component/Component.h"

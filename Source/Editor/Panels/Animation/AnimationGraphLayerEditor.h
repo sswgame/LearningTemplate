@@ -7,9 +7,9 @@
  *          (애니메이터가 스켈레톤에 맞출 때 오류로 알린다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

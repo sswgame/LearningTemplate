@@ -4,11 +4,11 @@
  * @details 레지스트리 번호는 코어 기반 `ScenePrimitive` 가 가집니다. 레지스트리는 그 기반만 알고, 빌더가 이 타입으로 `static_cast` 합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/MeshCache.h"

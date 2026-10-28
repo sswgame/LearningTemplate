@@ -5,7 +5,7 @@
  *          HarfBuzz 가 필요한 경계다. 결합 분음과 폭 없는 제어 문자는 글리프를 내지 않고 버린다(Engine/Text/README.md).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Text/ITextShaper.h"
 

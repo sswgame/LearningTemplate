@@ -5,9 +5,9 @@
  *          취소와 거절은 언제든 Cancelled 로 이어진다. 닫힌 거래나 허용되지 않는 상태에서의 명령은 `WrongState` 이다. 같은 확정을 두 번 하면 Ok 이며 멱등이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"

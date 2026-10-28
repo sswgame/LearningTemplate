@@ -15,7 +15,7 @@
  * @endcode
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetConnection.h"
 
 namespace sw

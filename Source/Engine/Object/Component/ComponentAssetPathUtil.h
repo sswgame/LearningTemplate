@@ -4,9 +4,9 @@
  * @details 에디터 핫 리로드(바뀐 파일을 쓰는 컴포넌트 찾기)와 씬 프리로드 목록 수집(`ScenePreloadList`)이 같은 읽기를 쓴다 — 경로 프로퍼티의 판정(문자열 · 해시 문자열)이 두 곳에서 갈라지지 않게 한 곳에 둔다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

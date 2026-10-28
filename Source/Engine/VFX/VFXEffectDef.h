@@ -9,9 +9,9 @@
  *          좌표는 방출기 로컬이고, 커브의 시간은 입자 수명의 비율(0..1)이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetID.h"

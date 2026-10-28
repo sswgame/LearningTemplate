@@ -3,10 +3,10 @@
  * @brief 빙의 이벤트입니다. 플레이어 조종자가 다른 폰에 빙의하면 "game" 채널(`GameEventUtil::send`)에 냅니다. HUD 와 화면 전환이 받습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Event/EventType.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

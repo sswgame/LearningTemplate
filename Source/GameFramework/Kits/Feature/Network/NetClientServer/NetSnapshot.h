@@ -4,9 +4,9 @@
  * @details 서버와 클라이언트가 같은 코드로 쓰고 읽는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 
 #include "GameFramework/GameFrameworkExports.h"

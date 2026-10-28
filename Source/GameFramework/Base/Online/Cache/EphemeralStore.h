@@ -15,9 +15,9 @@
  *          - 답은 한 앞 안에서 맡긴 순서대로 온다. 한 앞은 서비스 스레드 하나가 맡기고 회수한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/GameFrameworkExports.h"

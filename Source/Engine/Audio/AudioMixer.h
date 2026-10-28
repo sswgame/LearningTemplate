@@ -8,9 +8,9 @@
  *          버스마다 채널 구성이 있다(`AudioBusDesc::_channels`): 출력 레이아웃이거나 두 채널이다. 이펙트는 버스의 레이아웃으로 만들고, 채널 수가 다른 버스로 갈 때만 `accumulateBus` 가 바꾼다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioBlock.h"

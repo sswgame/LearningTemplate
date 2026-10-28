@@ -3,9 +3,9 @@
  * @brief 외형 규칙 테이블입니다. 조건(입힌 장비나 캐릭터의 태그 질의, 슬롯 점유, 체형, 몸 종류)을 만족하면 동작(숨기기, 변형 고르기, 메시나 머티리얼 바꾸기, 모프, 소켓 덮어쓰기)을 적용합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 

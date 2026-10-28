@@ -4,9 +4,9 @@
  * @details 평면(2D) 풀이는 같은 함수에 `RigSolveSpace::_bPlanar` 를 켜서 쓴다. 위치를 평면에 투영하고, 회전은 평면 법선(기본 Z) 둘레로만 생긴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"

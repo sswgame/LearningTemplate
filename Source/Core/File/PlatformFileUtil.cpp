@@ -2,20 +2,20 @@
 
 #include "Core/File/PlatformFileUtil.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <share.h>
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <fcntl.h>

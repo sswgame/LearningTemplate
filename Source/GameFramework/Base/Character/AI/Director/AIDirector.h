@@ -8,12 +8,12 @@
  *          스폰 자체는 `SpawnDirector` 가 하고 단계가 예산 배율과 태그를 바꾼다. 조건은 일정의 `ScheduleCondition` 을, 난수는 `GameRandom` 을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/RingBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

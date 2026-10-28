@@ -3,9 +3,9 @@
  * @brief 반사 프로브 하나입니다. 이 위치에서 찍어 거른 둘레의 빛(`.reflprobe`)을 축 정렬 상자 안의 표면 반사로 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"

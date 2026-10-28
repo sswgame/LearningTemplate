@@ -14,10 +14,10 @@
  *          - 오류는 조용히 넘기지 않는다. 없는 의존, 꺼진 의존, 낮은 버전, 순환, 모르는 이름, 모르는 키는 해석을 멈추고 무엇이 왜 문제인지 알려 준다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

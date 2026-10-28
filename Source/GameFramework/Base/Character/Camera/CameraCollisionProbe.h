@@ -6,9 +6,9 @@
  *          구현은 상자 목록(테스트와 게임이 아는 막는 상자)과 씬의 물리(3D Jolt · 2D Box2D, 2D 콜라이더 포함), 두 가지이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 

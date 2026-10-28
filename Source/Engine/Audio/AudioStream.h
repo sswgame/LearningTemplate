@@ -11,10 +11,10 @@
  *          - 3 채널 이상은 프레임을 읽을 때 명시 다운믹스(`AudioDownmix`)로 스테레오로 줄인다. 행렬은 소스를 만들 때 한 번 정한다(WAV 는 채널 마스크, Vorbis 는 명세의 순서).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioDownmix.h"

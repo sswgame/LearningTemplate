@@ -7,10 +7,10 @@
  *          `assign` 은 한 스레드에서(적용 시작에), 질의는 여러 스레드에서 부른다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"

@@ -3,7 +3,7 @@
  * @brief 플레이어 옵션(사용자 설정)을 메뉴 UI 없이 바꿔 보는 개발용 창입니다. 게임 메뉴가 쓸 바인딩 API(`UserSettingsManager`)만 씁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 

@@ -4,9 +4,9 @@
  *        오른손 소켓의 칼이 물리로 떨어지는 장면을 시간표대로 돌립니다(게임플레이 · 애니메이션 · 물리 이음의 눈 검증).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Packaging/Model/PackagingProgressParser.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw::editor
 {

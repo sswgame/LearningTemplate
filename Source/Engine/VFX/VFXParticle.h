@@ -4,7 +4,7 @@
  * @details float4 셋(48 바이트)이라 구조 버퍼의 한 원소가 됩니다. 좌표는 방출기 로컬입니다(월드 변환은 그리는 쪽이 방출기 행렬로 합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 

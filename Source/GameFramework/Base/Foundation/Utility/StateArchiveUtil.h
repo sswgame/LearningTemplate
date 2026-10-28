@@ -3,8 +3,8 @@
  * @brief 키트 시뮬레이션의 `writeState` 와 `readState`(바이너리 `Archive`)가 함께 쓰는 머리, 이름, 개수 읽기 도우미를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

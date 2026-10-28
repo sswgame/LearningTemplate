@@ -3,9 +3,9 @@
  * @brief 머티리얼 패킹, XML, define 을 함께 다루는 도우미입니다(Engine TU 전용).
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

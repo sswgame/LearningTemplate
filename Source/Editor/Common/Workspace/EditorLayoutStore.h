@@ -3,9 +3,9 @@
  * @brief 이름 붙인 에디터 레이아웃(도킹 배치 + 패널 가시성)을 파일로 두는 곳입니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
 

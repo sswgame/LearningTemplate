@@ -3,8 +3,8 @@
  * @brief 픽셀 아트용 카메라 — 정수 배율 · 직교 높이 · 화면 픽셀 격자 스냅 · 레터박스입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/2D/SpriteInstanceBatch.h"

@@ -2,8 +2,8 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
 
 SW_LOG_CALLER( "CommandLineManager" );
 

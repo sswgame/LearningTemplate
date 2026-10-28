@@ -8,14 +8,14 @@
  *          언리얼 `FRunnable` + `TQueue` 의 전용 스레드, 유니티 `Thread` + `BlockingCollection` 에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Process/ThreadCrashStack.h"
 
 #include <condition_variable>

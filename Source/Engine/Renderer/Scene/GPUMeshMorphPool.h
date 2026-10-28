@@ -43,12 +43,12 @@
  * 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓰며 `_refCount` 로 센다. 언리얼 GPU Skin Cache 가 스켈레탈 메시마다 버퍼 구간을 나누고, 유니티 GPU skinning 이 메시 단위 버퍼 구간을 두는 것과 같은 선이다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"

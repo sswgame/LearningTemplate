@@ -3,7 +3,7 @@
  * @brief 씬 뷰 이미지 위에 ImGui 로 그리는 보조 그림입니다. 적응형 격자, 자(M 키), 방향 큐브가 있습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Viewport/Model/EditorGridUtil.h"

@@ -2,7 +2,7 @@
 
 #include "Engine/Net/NetMessageChannel.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include <algorithm>
 

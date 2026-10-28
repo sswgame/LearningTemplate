@@ -8,8 +8,8 @@
  *          언리얼 `DrawDebugLine` 이 게임 뷰포트에 그려지는 자리와 같다(그쪽은 배치 선 렌더러로 깊이를 쓴다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

@@ -3,8 +3,8 @@
  * @brief 메시 에셋(`*.mesh`)을 미리보기 씬에서 돌려 보고 LOD 단계를 골라 견주는 창입니다(유니티 모델 임포터 미리보기의 LOD 보기, 언리얼 Static Mesh 에디터의 LOD 선택에 해당합니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
 

@@ -5,8 +5,8 @@
  *          패널 클래스의 `kPanelID` 도 여기 상수에서 온다(`SceneViewPanel::kPanelID = editorpanel::kSceneView.c_str()`) — 등록 · 조회 · 창구가 한 상수를 본다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

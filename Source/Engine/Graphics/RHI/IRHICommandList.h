@@ -5,8 +5,8 @@
  *          `IRHICommandContext` 가 이 인터페이스를 상속해 "기록 범위가 없는" 형태로 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

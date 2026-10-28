@@ -8,9 +8,9 @@
  *          알려진 한계: 겹치는 윤곽(가변 폰트의 글리프)은 겹침을 합치지 않아 겹친 자리에 거짓 선이 생길 수 있다 — 바깥 윤곽끼리 겹치지 않는 폰트에서 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

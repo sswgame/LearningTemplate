@@ -14,11 +14,11 @@
  *          핸들은 런타임 값이라 저장하지 않습니다 — 핫 리로드 · 되돌리기로 다시 만든 컴포넌트는 새 바디를 만듭니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/SceneComponent.h"

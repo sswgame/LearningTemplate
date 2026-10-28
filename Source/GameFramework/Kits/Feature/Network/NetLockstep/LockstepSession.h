@@ -15,10 +15,10 @@
  *          - **체크섬 창**: 지금보다 `kChecksumWindow` 틱을 넘게 지난 체크섬은 다 모이지 않았어도 지운다. 이탈한 플레이어는 그 틱부터 기다리지 않는다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 

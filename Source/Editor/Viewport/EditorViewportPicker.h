@@ -3,7 +3,7 @@
  * @brief 씬 뷰의 클릭 선택과 호버 강조입니다. 마우스 아래 오브젝트를 찾는 일은 둘이 같은 함수로 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

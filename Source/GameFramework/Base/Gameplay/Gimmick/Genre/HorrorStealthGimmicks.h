@@ -3,8 +3,8 @@
  * @brief 공포와 잠입 기믹입니다. 놀래기 트리거, 깜빡이는 라이트(퀘이크 라이트 스타일 문자열), 숨는 곳(스마트 오브젝트 슬롯과 숨음 태그), 소리 내는 것, 빛 노출 질의를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"

@@ -15,9 +15,9 @@
  *          법선은 변형 함수의 야코비안(법선에 수직인 접선 두 개를 조금 밀어 본 차분)으로 옮긴다. 스택이 법선 재계산을 고르면 끝에 면 법선으로 다시 만든다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"

@@ -7,9 +7,9 @@
  *          점검 창과 공지의 저장소 레코드는 다른 빌드가 읽으므로 자기 기술형(A)이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

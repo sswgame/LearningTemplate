@@ -3,8 +3,8 @@
  * @brief Engine 이 외부 라이브러리로 구현한 압축 코덱들의 **등록 목록**을 한곳에 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

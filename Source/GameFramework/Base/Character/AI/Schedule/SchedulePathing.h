@@ -8,9 +8,9 @@
  *          화면 안 NPC 의 걷는 위치는 같은 출발 시각과 도착 시각 사이를 경로 위에서 비율로 나눈다. 그래서 화면 밖 NPC 와 같은 시각에 도착한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,11 +3,11 @@
  * @brief 자막 서비스입니다. 화자, 텍스트, 표시 시간을 받아 화면 아래 가운데에 최대 둘까지 띄우며, 사용자 설정(끔/켬, 크기, 배경 불투명도)을 따릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Widgets/UIBrush.h"

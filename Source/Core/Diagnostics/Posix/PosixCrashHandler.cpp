@@ -11,7 +11,7 @@
 #include <ctime>
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <pthread.h>
     #include <unistd.h>

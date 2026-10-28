@@ -3,9 +3,9 @@
  * @brief 창 하나에 붙는 D3D12 백버퍼 모음입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

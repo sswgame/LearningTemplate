@@ -3,8 +3,8 @@
  * @brief 디지털 게임패드 버튼 열거형과 이름 변환입니다(플랫폼 래퍼와 분리).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

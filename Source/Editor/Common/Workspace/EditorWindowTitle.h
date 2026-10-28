@@ -4,8 +4,8 @@
  * @details ImGui 없이 글자만 만들어 `Test/EditorTest` 가 테스트합니다. 셸(`ImGuiEditor::updateUI`)이 프레임마다 `MainWindowSubsystem::setBaseTitle` 에 겁니다(창에 거는 일은 엔진 추적기가 실행 정보를 붙여 한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

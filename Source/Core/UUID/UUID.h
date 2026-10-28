@@ -3,9 +3,9 @@
  * @brief 128비트 UUID v4 생성과 문자열 변환입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include <functional>
 

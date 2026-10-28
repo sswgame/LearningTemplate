@@ -6,10 +6,10 @@
  *          DDC 는 키의 내용 주소 폴더(`<루트>/<키 앞 두 글자>/<키>`)다. 로컬 루트는 `<프로젝트>/Saved/DDC` 이고, 공유 층은 아직 없다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cook/CookJob.h"
 

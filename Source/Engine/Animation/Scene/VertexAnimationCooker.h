@@ -5,10 +5,10 @@
  *          (`MeshVertexAnimationBaker`)로 베이크합니다 — 두 길의 결과가 바이트까지 같습니다. 쿠킹은 `App --cook-scenes` 단계가 부릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

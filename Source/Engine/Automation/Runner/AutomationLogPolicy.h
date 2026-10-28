@@ -11,10 +11,10 @@
  *          `AutomationRunner`(프로세스 안, 시나리오 구간), `AppScenarioTest`(프로세스 출력 전체, 기동 · 종료 포함), 테스트 케이스의 `CaseLogJudge` 가 같은 목록을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
 
 namespace sw

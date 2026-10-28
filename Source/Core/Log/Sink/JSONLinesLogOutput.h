@@ -3,10 +3,10 @@
  * @brief JSON lines 로그 장치입니다. 한 줄에 JSON 객체 하나를 표준 출력에 씁니다(컨테이너 · 로그 수집기가 그대로 먹는 모양).
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Sink/ILogOutput.h"

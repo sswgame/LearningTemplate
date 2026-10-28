@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"

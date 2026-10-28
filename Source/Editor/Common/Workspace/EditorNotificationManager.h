@@ -3,9 +3,9 @@
  * @brief 에디터 토스트 알림 큐입니다(EditorContext 소유, ImGui 없음). 그리기는 `EditorNotificationView` 가 합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"

@@ -6,11 +6,11 @@
  *          배포본에는 프로파일러가 없어 아무 일도 하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

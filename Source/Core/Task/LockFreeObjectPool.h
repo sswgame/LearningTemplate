@@ -13,11 +13,11 @@
  *     * 포인터를 참조로 받아 반납 직후 비우므로, 해제한 객체를 다시 쓰는 실수를 막습니다
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/array.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"

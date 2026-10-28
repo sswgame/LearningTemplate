@@ -3,10 +3,10 @@
  * @brief 에디터의 애셋 종류, 패널 제목, 접미사를 한곳에서 정의합니다(SSOT).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorColor.h"
 

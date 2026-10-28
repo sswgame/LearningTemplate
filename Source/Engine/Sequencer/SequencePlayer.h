@@ -3,9 +3,9 @@
  * @brief SequenceAsset 타임라인을 프레임 단위로 재생합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 

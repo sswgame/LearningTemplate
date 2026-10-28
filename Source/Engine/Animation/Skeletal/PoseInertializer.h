@@ -10,9 +10,9 @@
  *          스켈레탈 애니메이터의 그래프 전이(`AnimationBlendMode::Inertialization`)가 쓰고, 레이어 경로도 같은 객체 하나를 레이어마다 두면 된다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

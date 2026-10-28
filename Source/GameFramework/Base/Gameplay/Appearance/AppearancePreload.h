@@ -3,10 +3,10 @@
  * @brief 외형 프리셋이 읽는 에셋 경로를 모읍니다 — 전환 앞에 미리 올릴 묶음(`PreloadSet`)에 넘긴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

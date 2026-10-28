@@ -3,7 +3,7 @@
  * @brief 애플리케이션 · 에디터 초기화 중에 띄우는 가벼운 네이티브 스플래시 화면의 RAII 래퍼입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

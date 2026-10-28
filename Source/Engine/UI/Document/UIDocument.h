@@ -3,9 +3,9 @@
  * @brief 읽어 둔 UI 문서(`*.ui.xml`)입니다. 화면 서술, 스타일 시트 목록, 위젯 노드 트리를 가지며, 화면은 이 문서로 만듭니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"

@@ -6,7 +6,7 @@
  *          종료는 전역 변수를 기본값으로 되돌린다(값 변경 콜백을 건 쪽 — App 의 백엔드 교체 — 은 그 전에 뗐다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

@@ -11,7 +11,7 @@
 - In `.cpp`: `"pch.h"` first, a blank line, then the matching header. Then project headers grouped by relative source scope, separated by blank lines. System, OS-specific, project-global and ThirdParty headers use angle brackets, each in its own group.
 - **Every project include is a full path from a root**: `Source/` (`Engine/Scene/SceneManager.h`), `Content/`, the generated folder, or `Tools/` for that tree; or a bare name in the same folder (`Foo.h`). No folder under `Source/` is on an include path, so `Scene/SceneManager.h` does not compile.
 - Sort includes within a group where that does not break a required order.
-- Prefer `Core/Common/StdHeaders.h` and `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes. Heavy standard headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<csignal>`, `<queue>`, `<stack>`, `<bitset>`) are included directly by the file that uses them (declare stream operators with `<iosfwd>`).
+- Prefer `Core/Foundation/StdHeaders.h` and `Core/Foundation/PlatformOSHeaders.h` over scattered system/OS includes. Heavy standard headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<csignal>`, `<queue>`, `<stack>`, `<bitset>`) are included directly by the file that uses them (declare stream operators with `<iosfwd>`).
 - Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the unconditional includes; inside a branch, project headers, a blank line, then system headers.
 - Use the type aliases from `Types.h`. Prefer Core and Engine facilities over STL or direct system calls ([ExistingFacilities](ExistingFacilities.md)).
 

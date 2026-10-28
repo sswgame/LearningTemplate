@@ -9,9 +9,9 @@
  *          PreloadAndLOD P9 의 남은 일이다(셰이더).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"

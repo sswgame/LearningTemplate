@@ -6,7 +6,7 @@
  *          Engine/Foundation 에 둡니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

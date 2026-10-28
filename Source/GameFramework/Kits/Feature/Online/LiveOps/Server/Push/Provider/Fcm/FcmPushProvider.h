@@ -11,10 +11,10 @@
  *          APNs 는 HTTP/2 가 필수라 이 제공자가 아니라 `Provider/Apns/` 의 제공자가 HTTP/2 클라이언트(`HTTP2Client`)로 보낸다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"

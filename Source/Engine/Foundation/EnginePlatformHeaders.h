@@ -5,7 +5,7 @@
  *       Windows 에서 DXC 를 쓸 수 있는지만 `SW_HAS_DXC_API` 로 표시합니다.
  */
 #pragma once
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <d3d11.h>

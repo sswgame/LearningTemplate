@@ -5,9 +5,9 @@
  *          모든 칸이 `Required` 다 — 사용자 프리셋 파일에 칸이 빠졌으면 그 파일은 깨진 것으로 보고(`EditorUserFile`) 조용히 코드 기본값을 넣지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

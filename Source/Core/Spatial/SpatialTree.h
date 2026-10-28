@@ -3,9 +3,9 @@
  * @brief 2D/3D 공통 공간 분할 트리 템플릿입니다(QuadTree · Octree 의 공통 기반).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 

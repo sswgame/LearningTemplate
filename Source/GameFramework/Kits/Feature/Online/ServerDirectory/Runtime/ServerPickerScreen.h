@@ -7,9 +7,9 @@
  *          화면은 요청을 보내지 않고 모델을 읽는다. 모델이 화면보다 오래 살아야 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Screen/UIScreen.h"

@@ -3,12 +3,12 @@
  * @brief 런타임 UI 의 엔진 서비스입니다. 화면 스택, 입력에서 UI 이벤트로의 변환, 갱신 순서를 담당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleLibraryUtil.h"

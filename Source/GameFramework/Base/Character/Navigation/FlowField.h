@@ -3,9 +3,9 @@
  * @brief 흐름장입니다. 목적지에서 거꾸로 퍼진 거리장과, 셀마다 "어느 쪽으로 가면 가까워지는가" 를 담습니다. 한 번 구하면 몇 마리가 써도 같은 값입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridOpenEntry.h"

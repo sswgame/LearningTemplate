@@ -3,10 +3,10 @@
  * @brief 블록 종류를 정의합니다(blocks.xml). 면마다 아틀라스 타일, 색, 단단함, 통과 여부를 가집니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,7 +3,7 @@
  * @brief 키보드와 마우스 바인드 ID 를 정의합니다. ENUM() 이 KeyCodeUtil.gen.cpp 에 등록합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

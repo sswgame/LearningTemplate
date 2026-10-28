@@ -7,8 +7,8 @@
  *          9 국진(열끗(쌍피로 쓸 수 있음), 청단, 피, 피), 10 단풍(열끗, 청단, 피, 피), 11 오동(광, 쌍피, 피, 피), 12 비(비광, 열끗, 띠, 쌍피).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"

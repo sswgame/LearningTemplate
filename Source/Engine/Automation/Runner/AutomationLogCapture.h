@@ -3,13 +3,13 @@
  * @brief 자동화 시나리오 동안 남은 로그 줄을 모읍니다. `<ExpectLog>` 가 이것으로 줄을 셉니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
 
 namespace sw

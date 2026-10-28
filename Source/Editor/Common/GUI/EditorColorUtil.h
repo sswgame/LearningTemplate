@@ -4,7 +4,7 @@
  * @details 에디터 코드는 색을 `Color` 로 보관하고, ImGui 에 넘기는 지점에서만 여기를 거칩니다. `toImU32` 는 `IM_COL32` 와 같은 값(`Color::toAbgr`)입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Color.h"
 
 #include "Editor/Common/EditorExports.h"

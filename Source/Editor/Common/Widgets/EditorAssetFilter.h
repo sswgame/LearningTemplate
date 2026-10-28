@@ -3,8 +3,8 @@
  * @brief 에셋 슬롯의 확장자 필터 문자열(`".png,.jpg .tga"`)을 나누고 경로가 맞는지 봅니다. ImGui 가 없어 단위 테스트가 직접 컴파일합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

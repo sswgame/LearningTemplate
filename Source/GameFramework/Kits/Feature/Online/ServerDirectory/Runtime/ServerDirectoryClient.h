@@ -7,8 +7,8 @@
  *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트에 해당한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"

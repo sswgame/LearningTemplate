@@ -3,8 +3,8 @@
  * @brief 계정의 접속 세션을 끊는 인터페이스입니다. 계정 키트(GF_Server_Account)가 구현하고, 게임(서버 조립)이 GM 키트와 제재를 적용하는 쪽에 넘깁니다(키트끼리는 include 하지 못한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

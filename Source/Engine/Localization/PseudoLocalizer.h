@@ -6,9 +6,9 @@
  *          화면에 괄호 없이 보이는 텍스트는 테이블을 거치지 않은 하드코딩 텍스트이고, `]` 가 잘려 보이면 UI 가 번역의 길이를 수용하지 못하는 것이다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/CultureInfo.h"
 

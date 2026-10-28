@@ -4,8 +4,8 @@
  * @details 만드는 곳은 `StreamTransportFactory` 다. OS 타입은 .cpp 의 `State` 에만 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 

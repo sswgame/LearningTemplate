@@ -3,9 +3,9 @@
  * @brief 재료 재고의 신선도를 관리합니다. 기반 `Inventory` 의 개수 위에 들어온 배치(남은 날과 단가)를 얹어, 오래된 것부터 쓰고 기한이 지나면 버립니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

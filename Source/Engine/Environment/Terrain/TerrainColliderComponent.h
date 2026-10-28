@@ -3,9 +3,9 @@
  * @brief 같은 오브젝트의 지형(`TerrainComponent`)을 정적 물리 바디로 만듭니다. 유니티의 TerrainCollider, 언리얼 랜드스케이프의 충돌 컴포넌트에 해당합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"

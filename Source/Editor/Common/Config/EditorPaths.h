@@ -3,8 +3,8 @@
  * @brief 에디터의 프로젝트 루트, 상태 폴더(Saved/Editor), 상태 파일 이름을 정의합니다. UI 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

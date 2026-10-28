@@ -11,8 +11,8 @@
  *          장치 키는 그 PC 에 있으므로 치트는 막지 못한다. 실수와 가벼운 변조를 막는 용도다(경쟁 데이터의 원본은 서버).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Local/LocalStore.h"
 #include "GameFramework/GameFrameworkExports.h"

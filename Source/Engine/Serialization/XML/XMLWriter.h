@@ -5,9 +5,9 @@
  *          읽은 문서를 고쳐 다시 쓸 때는 `XMLDocument`, 사람이 읽는 줄 배치를 지켜야 하는 출력(녹화한 시나리오 · 만든 프리팹)은 이것을 쓴다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

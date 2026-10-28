@@ -5,8 +5,8 @@
  *          위젯 좌표는 그 사각형에 붙인 렌더 텍스처의 픽셀(= UI 단위)이다. 앞면은 u 가 +X 로, 뒷면은 −X 로 늘고 v 는 위가 0 이다(메시의 UV 와 같은 규약).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

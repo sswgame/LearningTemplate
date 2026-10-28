@@ -3,9 +3,9 @@
  * @brief Resource 트리를 애셋 종류 테이블로 분류합니다 — 퀵 런처 항목과 리소스 카탈로그 개수(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

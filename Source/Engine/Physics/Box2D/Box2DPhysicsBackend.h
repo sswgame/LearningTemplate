@@ -6,8 +6,8 @@
  *          넘기면 교착할 수 있다. 바디가 수천이면 설정(`PhysicsSettings::_workerCount2D`)으로 씬마다 전용 워커를 붙인다(`Box2DWorkerPool`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/IPhysicsScene.h"

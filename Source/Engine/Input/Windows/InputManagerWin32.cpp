@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -8,7 +8,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/Defines.h"
+    #include "Core/Foundation/Defines.h"
     #include "Core/Concurrency/atomic.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/String/fixed_string.h"

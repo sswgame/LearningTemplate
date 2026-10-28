@@ -3,9 +3,9 @@
  * @brief 후처리 리그의 작업 포즈입니다. 로컬 변환(원본)과, 지연 갱신되는 모델 공간 변환(이동, 회전, 스케일)을 함께 보관합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

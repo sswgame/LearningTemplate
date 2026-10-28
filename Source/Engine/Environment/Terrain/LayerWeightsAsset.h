@@ -15,10 +15,10 @@
  *          클라이언트의 GPU 텍스처는 지형이 읽은 뒤 이 바이트로 만든다(`TerrainComponent`, `TextureCache::createCPUTexture`).
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"

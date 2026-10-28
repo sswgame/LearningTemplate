@@ -7,7 +7,7 @@
  *          이름을 코드에서 `#if` 사슬로 다시 만들지 말 것 — 원본은 CMake 한 곳입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #if !defined( SW_BUILD_CONFIG_NAME ) || !defined( SW_PLATFORM_NAME ) || !defined( SW_TARGET_NAME )
     #error "SW_BUILD_CONFIG_NAME / SW_PLATFORM_NAME / SW_TARGET_NAME are defined by CMake (sw_global_options / sw_platform_*) - link the target to sw_global_options"

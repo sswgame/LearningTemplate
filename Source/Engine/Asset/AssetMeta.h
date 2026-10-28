@@ -7,9 +7,9 @@
  *          임포터(`ModelImportMaterial`)와 `AssetDatabase` 가 같은 `toXML` 로 쓰므로 형식이 둘로 갈라지지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

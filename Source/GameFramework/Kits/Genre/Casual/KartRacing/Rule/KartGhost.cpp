@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 

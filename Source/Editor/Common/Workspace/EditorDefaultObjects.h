@@ -3,8 +3,8 @@
  * @brief 컴포넌트 타입마다 기본값 인스턴스 하나를 만들어 둡니다(언리얼 CDO — Class Default Object). 인스펙터가 "기본값과 다름" 을 판정합니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"

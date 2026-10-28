@@ -3,9 +3,9 @@
  * @brief 에디터 환경설정 섹션 등록(`SW_EDITOR_SETTINGS`)과 저장 파일 `Saved/Editor/EditorPreferences.json` 의 읽기와 쓰기를 담당합니다. ImGui 에 의존하지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"

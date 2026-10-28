@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"

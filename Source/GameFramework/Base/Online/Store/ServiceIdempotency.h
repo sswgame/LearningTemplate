@@ -9,9 +9,9 @@
  *          Stripe 의 Idempotency-Key · AWS 의 ClientToken 과 같은 모양이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

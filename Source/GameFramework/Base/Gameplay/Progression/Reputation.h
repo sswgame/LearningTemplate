@@ -3,12 +3,12 @@
  * @brief 평판과 호감도입니다. 세력(또는 NPC)마다 값, 범위, 단계를 가지며, 연결된 세력(돕는 쪽의 적은 미워함)이 있고, 하루마다 기준값으로 돌아갑니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameCatalog.h"

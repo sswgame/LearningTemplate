@@ -23,10 +23,10 @@
  *          알 수 없는 속성, 원소, 열거자 이름은 경고를 남기고 읽기에 실패한다(`ResourceDataSchemaTest`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

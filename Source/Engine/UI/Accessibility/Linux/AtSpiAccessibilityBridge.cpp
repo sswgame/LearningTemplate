@@ -18,7 +18,7 @@
     #include <dbus/dbus.h>
     #include <X11/Xlib.h>
 
-    #include "Core/Common/X11MacroUndef.h"
+    #include "Core/Foundation/X11MacroUndef.h"
 
 namespace sw
 {

@@ -2,9 +2,9 @@
 
 #include "Core/Subsystem/SubsystemCollection.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Defines.h"
 
 namespace sw
 {

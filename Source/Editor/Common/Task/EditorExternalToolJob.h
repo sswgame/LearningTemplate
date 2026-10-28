@@ -3,11 +3,11 @@
  * @brief 에디터가 외부 도구(파이썬 검증 스크립트 · git LFS)를 띄우고 출력 줄을 모으는 잡입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
 

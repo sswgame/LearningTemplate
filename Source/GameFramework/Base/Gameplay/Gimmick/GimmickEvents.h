@@ -3,9 +3,9 @@
  * @brief 기믹이 "game" 채널(`GameEventUtil::send`)에 내는 이벤트입니다. 피해는 게임의 피해 규칙(어빌리티, 체력)이 받아서 적용합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Event/EventType.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"

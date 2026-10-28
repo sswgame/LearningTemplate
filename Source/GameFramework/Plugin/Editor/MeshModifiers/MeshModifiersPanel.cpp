@@ -6,8 +6,8 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.h"
 
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"

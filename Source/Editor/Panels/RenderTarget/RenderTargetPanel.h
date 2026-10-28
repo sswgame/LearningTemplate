@@ -3,9 +3,9 @@
  * @brief 프레임 렌더 타깃(G버퍼, 그림자 맵, 포스트 단계)을 찾아보고 화면으로 확인하는 에디터 창입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"

@@ -5,10 +5,10 @@
  *          - 서비스 코드는 그것을 올린 모듈(DLL)에 있습니다. 그 모듈을 언로드하기 **전에** `stopAll` 을 불러야 합니다. 서버는 모듈 리로드 직전과 종료 때 부릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

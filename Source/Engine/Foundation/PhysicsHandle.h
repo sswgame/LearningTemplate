@@ -5,9 +5,9 @@
  *          핸들만 Engine/Foundation 에 두고, 나머지 물리 기본 타입은 `Engine/Physics/PhysicsTypes.h` 에 있다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

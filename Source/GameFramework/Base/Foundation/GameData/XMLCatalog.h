@@ -3,8 +3,8 @@
  * @brief XML 데이터 표(카탈로그)의 공개 로드 함수 두 개(`loadFromAsset`, `loadFromXMLText`)를 한 번만 적는 CRTP 베이스를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 

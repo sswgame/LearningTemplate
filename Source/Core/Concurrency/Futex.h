@@ -10,9 +10,9 @@
  *          그러니 호출하는 쪽은 조건을 다시 확인하는 루프 안에서 써야 합니다. 깨우는 쪽은 워드를 **먼저 바꾼 뒤** 깨웁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

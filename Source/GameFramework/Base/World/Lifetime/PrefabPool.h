@@ -3,10 +3,10 @@
  * @brief 프리팹 하나의 인스턴스 풀입니다 — 돌려받은 인스턴스를 꺼 두었다가 다시 켜서 내줍니다(탄 · 손님 · 유닛처럼 자주 생기고 사라지는 것).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

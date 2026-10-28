@@ -13,10 +13,10 @@
  *          - 스레드 안전하지 않다(쓰는 쪽 하나). 읽기만 하는 `find` 와 `get*` 는 쓰기와 겹치지 않으면 여러 스레드가 함께 불러도 된다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

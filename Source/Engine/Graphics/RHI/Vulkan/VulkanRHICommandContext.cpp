@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"

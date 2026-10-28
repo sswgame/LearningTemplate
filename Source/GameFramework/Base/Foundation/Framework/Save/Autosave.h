@@ -4,10 +4,10 @@
  * @details 언제(간격, 지역 이동, 체크포인트, 보스 앞, 종료) 어느 슬롯(순환 슬롯)에 저장하는지와 체크포인트로 되돌리는 방법을 정한다. UI 는 없다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetID.h"

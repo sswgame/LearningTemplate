@@ -10,10 +10,10 @@
  *          두 경로의 타일 바이트는 같다. 읽은 쪽은 입력 해시와 베이크 값 해시가 현재 씬과 테이블에 같을 때만 쓰고, 다르면 경고를 남기고 베이크한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/String/hashed_string.h"
 

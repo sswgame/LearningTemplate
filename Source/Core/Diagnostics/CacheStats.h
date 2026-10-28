@@ -16,11 +16,11 @@
  *          두면 엔진을 다시 세울 때 그 핸들이 죽은 칸을 가리키고, 종료 누수 보고에도 오릅니다. 칸 수는 `kMaxCacheCount` 로 막고 넘치면 오류로 멈춘다(조용히 안 센다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

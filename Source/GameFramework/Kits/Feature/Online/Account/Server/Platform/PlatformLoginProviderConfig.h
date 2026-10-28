@@ -8,9 +8,9 @@
  *          실제 제공자 등록(앱 등록, client id)은 쓰는 게임이 생기면 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"

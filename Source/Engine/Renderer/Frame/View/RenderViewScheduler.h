@@ -3,9 +3,9 @@
  * @brief 추가 뷰(CCTV, 백미러, PiP) 중 이번 프레임에 그릴 것을 고릅니다. 갱신 주기, 보이는지 여부, 프레임 예산을 따집니다(게임 스레드).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/EngineMinimal.h"
 

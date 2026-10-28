@@ -4,7 +4,7 @@
  *        설정 창의 해상도 줄(`terrain.resize`)은 지형을 다시 표본화하고 전후 전체를 되돌리기 하나(`Resize Terrain`)로 남깁니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/Model/TerrainBrush.h"

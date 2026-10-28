@@ -9,9 +9,9 @@
  *          언리얼 `FPlatformProcess::UserSettingsDir` · 유니티 `Application.persistentDataPath` 에 해당한다. 모바일 샌드박스는 지원 플랫폼이 되면 분기 하나로 추가한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

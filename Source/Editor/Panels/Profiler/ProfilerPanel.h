@@ -6,9 +6,9 @@
  *          긴 시간축 분석(GPU 큐, 락, 컨텍스트 전환)은 외부 Tracy 뷰어가 맡는다(`EditorTracyLauncher`).
  */
 #pragma once
-#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"

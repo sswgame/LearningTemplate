@@ -12,10 +12,10 @@
  *          PlayFab Title News(공지)와 타이틀 점검, 국내 MMO 의 "서버 선택과 점검 화이트리스트" 와 같은 구조이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 

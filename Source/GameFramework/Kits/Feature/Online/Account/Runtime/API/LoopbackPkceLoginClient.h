@@ -7,10 +7,10 @@
  *          - client secret 은 쓰지 않는다. 배포된 클라이언트는 비밀을 지킬 수 없으므로 공개 클라이언트와 PKCE 를 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"

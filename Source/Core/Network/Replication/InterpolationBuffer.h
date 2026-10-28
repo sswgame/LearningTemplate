@@ -10,9 +10,9 @@
  *          유니티 Netcode for GameObjects 의 `BufferedLinearInterpolator<T>` 에 해당한다. 스레드 안전하지 않다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"

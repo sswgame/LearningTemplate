@@ -4,9 +4,9 @@
  * @details 지형 비용과 막힘을 보고, 아군 셀은 지나가되 서지는 못합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridOpenEntry.h"

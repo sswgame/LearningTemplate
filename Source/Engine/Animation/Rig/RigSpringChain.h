@@ -3,10 +3,10 @@
  * @brief 스프링 본(꼬리, 머리 가닥, 망토 끝 같은 2 차 움직임)입니다. 베를레 입자 체인, 고정 스텝, 구와 캡슐 충돌체를 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

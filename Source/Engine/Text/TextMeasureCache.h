@@ -22,11 +22,11 @@
  *          스레드: 게임 스레드에서만 씁니다(`TextLayoutEngine` 이 게임 스레드 전용).
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

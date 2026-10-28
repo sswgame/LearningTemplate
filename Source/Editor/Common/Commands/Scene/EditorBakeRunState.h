@@ -3,7 +3,7 @@
  * @brief 에디터 프레임에 나눠 도는 베이크 세션(라이트 프로브 · 반사 프로브)이 함께 쓰는 실행 상태입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

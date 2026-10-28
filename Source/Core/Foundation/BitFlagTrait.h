@@ -4,7 +4,7 @@
  * @details ReflectionParser 가 만드는 `*.gen.h` 는 이 파일만 include 하고 열거형마다 특수화 한 줄을 둡니다. 그 `*.gen.h` 를 모은
  *          `FlagOps.gen.h` 는 타깃의 모든 TU 에 강제 include(`/FI`) 되므로, 여기에 무엇을 include 하든 그 이름은 모든 TU 에
  *          "이미 있는" 이름이 되어 다른 헤더의 include 누락을 가립니다. 그래서 `<type_traits>` 밖에는 아무것도 include 하지 않습니다.
- *          비트 연산자는 `Core/Common/EnumUtil.h` 에 있습니다.
+ *          비트 연산자는 `Core/Foundation/EnumUtil.h` 에 있습니다.
  */
 #pragma once
 #include <type_traits>

@@ -3,9 +3,9 @@
  * @brief 아이템 외형입니다. 게임플레이 정의(`ItemDef`)와 따로 둔 부품 목록, 상태별 소켓 배치, 피해 단계를 담습니다. `ItemDef` 는 이 외형의 id 만 가리킵니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

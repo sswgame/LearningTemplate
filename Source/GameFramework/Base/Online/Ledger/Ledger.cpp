@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerItemInstance.h"

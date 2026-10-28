@@ -10,10 +10,10 @@
  *          헤더만으로 선다(엔진 테스트 · 서버 부팅 테스트가 같은 표로 순서를 단언한다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 

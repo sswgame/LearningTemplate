@@ -11,11 +11,11 @@
  */
 #include "pch.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 

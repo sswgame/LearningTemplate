@@ -3,9 +3,9 @@
  * @brief CDO(클래스 기본 객체)와 비교한 객체 델타(diff) 직렬화 · 역직렬화입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -3,10 +3,10 @@
  * @brief VRM 의 MToon 머티리얼(0.x 는 `extensions.VRM.materialProperties`, 1.0 은 `VRMC_materials_mtoon`)을 엔진 툰 머티리얼(`engine/materials/toon.material`)로 변환합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Serialization/Serializer/DataPath.h"

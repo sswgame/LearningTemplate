@@ -6,8 +6,8 @@
  *       `StdHeaders.h` 를 include 하지 말 것 — 비트플래그 연산자를 쓰려는 쪽이 `<regex>` 같은 무거운 헤더까지 끌어옵니다.
  */
 #pragma once
-#include "Core/Common/BitFlagTrait.h"
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/BitFlagTrait.h"
+#include "Core/Foundation/Macros.h"
 
 #include <type_traits>
 

@@ -10,8 +10,8 @@
  */
 #include "pch.h"
 
-#include "Core/Common/EnumUtil.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"

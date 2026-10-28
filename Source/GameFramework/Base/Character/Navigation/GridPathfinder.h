@@ -4,9 +4,9 @@
  * @details 닿지 못하면 가장 가까운 곳까지 가는 경로를 내고, 줄 당기기(string pulling)로 경로를 다듬습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

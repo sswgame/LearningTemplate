@@ -6,8 +6,8 @@
  *          프레임마다 부르는 경로가 아니다 — 카메라 등록과 출력 변경 때만 부른다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

@@ -4,9 +4,9 @@
  * @details 계정은 서버 하나에만 접속하므로 이 서버의 메모리로 충분하다. 캐시 왕복이 없다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/RingBuffer.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

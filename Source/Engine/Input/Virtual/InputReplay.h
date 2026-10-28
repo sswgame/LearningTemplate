@@ -3,10 +3,10 @@
  * @brief 입력 계층 녹화입니다. 프레임마다 장치에 적용된 원시 이벤트를 .swreplay 로 기록하고, 가상 입력 원천으로 프레임 번호 그대로 재생합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"

@@ -3,9 +3,9 @@
  * @brief ThemePark 배치 파일을 읽어 에디터가 겹쳐 그릴 도형을 만듭니다(ImGui 에 의존하지 않습니다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorSubsystem.h"

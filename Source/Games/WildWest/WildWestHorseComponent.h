@@ -3,11 +3,11 @@
  * @brief 말 한 마리의 상태(`WesternHorse` — 스태미나 · 유대 · 겁)를 가지고 같은 오브젝트의 `WesternHorseMountComponent` 에 빌려 주며, 시간을 흘립니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"

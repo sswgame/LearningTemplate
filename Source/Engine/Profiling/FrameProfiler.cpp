@@ -2,9 +2,9 @@
 
 #include "Engine/Profiling/FrameProfiler.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"

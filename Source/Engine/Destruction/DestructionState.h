@@ -15,10 +15,10 @@
  *          네트워크는 변환이 아니라 시드와 사건을 보낸다. 그룹 번호는 1 부터 시작해 늘기만 한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Destruction/DestructionProfile.h"

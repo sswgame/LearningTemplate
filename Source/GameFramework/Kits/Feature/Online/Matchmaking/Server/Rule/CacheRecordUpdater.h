@@ -8,11 +8,11 @@
  *          EOS 와 PlayFab 로비가 서비스 쪽 공유 상태를 버전(etag) 조건으로 바꾸는 것과 같은 구조이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"

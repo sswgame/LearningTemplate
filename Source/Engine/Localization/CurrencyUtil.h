@@ -5,9 +5,9 @@
  *          기호는 문화권마다 달리 쓰이지만(미국 밖의 `US$`) 이 표는 한 가지 철자만 가집니다 — 문화권별 기호가 필요해지면 문화권 데이터로 덮는 칸을 더합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

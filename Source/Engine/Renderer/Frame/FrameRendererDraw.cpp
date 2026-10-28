@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/HashUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"

@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/AudioMixer/AudioMixerPanel.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"

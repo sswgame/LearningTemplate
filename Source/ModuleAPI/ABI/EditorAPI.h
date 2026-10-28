@@ -3,8 +3,8 @@
  * @brief App ↔ EditorModule 통신용 함수 테이블입니다(IEditor 구현 세부 사항을 숨깁니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "ModuleAPI/ABI/ModuleHandles.h"
 

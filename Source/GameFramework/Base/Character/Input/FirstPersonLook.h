@@ -3,8 +3,8 @@
  * @brief 마우스로 요와 피치를 돌리는 1인칭 시점입니다. 슈터, 복셀 샌드박스, 걷는 시뮬레이터가 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"

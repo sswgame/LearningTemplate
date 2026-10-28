@@ -3,9 +3,9 @@
  * @brief 위쳐 RPG 의 데이터입니다. 괴물(도감 지식과 약점), 연금술 물건(물약, 변이 혼합물, 오일, 폭탄), 표식, 전투 수치, 스킬 색, 변이원, 슬롯 그룹, 계약(단서와 보상)을 담습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

@@ -3,11 +3,11 @@
  * @brief 중첩 프리팹으로 스폰한 오브젝트가 어느 프리팹 인스턴스의 부품인지 기록하는 씬 서비스입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 

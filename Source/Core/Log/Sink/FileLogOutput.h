@@ -3,10 +3,10 @@
  * @brief 파일 로그 장치입니다. `Saved/Logs` 폴더에 쓰고, 시간과 세션마다 파일을 바꿉니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Sink/ILogOutput.h"
 
 namespace sw

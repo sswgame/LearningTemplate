@@ -5,7 +5,7 @@
  *          SipHash 는 64 비트 출력의 키 있는 PRF 다(Aumasson · Bernstein 2012). 짧은 입력의 위조 방지(챌린지 값)에 쓰고, 긴 메시지 인증은 보안 제공자의 HMAC 을 쓴다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include <string_view>
 

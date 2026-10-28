@@ -3,7 +3,7 @@
  * @brief 같은 오브젝트의 체력 변화를 받는 컴포넌트(HP 바, 체력 연출)의 베이스와 그 이벤트입니다. 체력 시스템은 뷰를 모르고 이것으로 알립니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

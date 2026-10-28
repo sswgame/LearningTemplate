@@ -3,7 +3,7 @@
  * @brief 네이티브 ID3D12GraphicsCommandList 를 소유하는 IRHICommandList 구현체입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"

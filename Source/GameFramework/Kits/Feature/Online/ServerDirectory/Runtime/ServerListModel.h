@@ -6,9 +6,9 @@
  *          목록을 받지 못하면(`Failed`) 이전 목록을 남기지 않고 비운다 — 낡은 목록을 새것처럼 보이지 않게 한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"

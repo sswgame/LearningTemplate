@@ -11,13 +11,13 @@
  *          프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexedPtrList.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"

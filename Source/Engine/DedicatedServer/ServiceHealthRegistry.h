@@ -7,11 +7,11 @@
  *          - 쓰기(서버 · 서비스 스레드)와 읽기(운영 HTTP 의 I/O 스레드)가 잠금 하나를 나눈다 — 초당 몇 번이라 경합이 없다. 시각은 단조 밀리초를 넘겨받는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

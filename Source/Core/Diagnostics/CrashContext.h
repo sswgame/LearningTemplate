@@ -3,11 +3,11 @@
  * @brief 크래시 시점에 **할당 없이** 읽을 수 있도록 미리 채워 두는 키-값 저장소입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw

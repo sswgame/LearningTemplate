@@ -5,10 +5,10 @@
  *          같은 지역 후보가 있으면 그중에서, 없고 `_bAllowOtherRegion` 이면 전체에서. 찬 비율(부하 × 1024 / 정원)이 낮은 것, 같으면 서버 id 가 작은 것(결정적).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/GameFrameworkExports.h"

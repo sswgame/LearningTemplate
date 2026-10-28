@@ -9,8 +9,8 @@
  *          UV 밀도(텍셀 대 화면 픽셀)는 모르므로 화면 크기만 쓴다 — 같은 머티리얼의 텍스처는 같은 우선도를 받는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 

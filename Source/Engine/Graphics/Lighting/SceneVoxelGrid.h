@@ -8,9 +8,9 @@
  *          메시 컴포넌트를 모으는 일은 렌더러의 `SceneVoxelizer` 가 하고, 이 형식은 컴포넌트를 모른다(그래서 컴포넌트가 이 형식을 값으로 들 수 있다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 

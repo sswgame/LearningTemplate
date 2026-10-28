@@ -12,11 +12,11 @@
  *          변위는 스키닝 앞의 생성 보정 델타(모프 풀)로 싣고, 잘린 삼각형은 병합(`MeshMerger`)이 인덱스에서 뺀다. 그래서 오버드로와 Z 파이팅이 없다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

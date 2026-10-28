@@ -6,10 +6,10 @@
  *          컴포넌트가 바깥에서 바뀌면(되돌리기, 인스펙터) 저장 목록의 서명이 달라지는 것으로 알아보고 모델을 다시 읽는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

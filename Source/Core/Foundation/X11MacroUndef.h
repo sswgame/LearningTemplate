@@ -6,7 +6,7 @@
  */
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/Types.h"
+    #include "Core/Foundation/Types.h"
     #if defined( None )
         #undef None
     #endif

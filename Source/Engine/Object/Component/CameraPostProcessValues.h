@@ -3,8 +3,8 @@
  * @brief 카메라 하나가 화면 후처리에 적용하는 값입니다. 카메라 컴포넌트가 갖고, 렌더 뷰가 렌더러로 나릅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

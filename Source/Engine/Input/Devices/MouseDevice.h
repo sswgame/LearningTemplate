@@ -3,8 +3,8 @@
  * @brief 표준 마우스 입력 장치입니다(버튼, 좌표, 1:1 원시 델타, 휠, 커서 모드).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"

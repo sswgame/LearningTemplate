@@ -7,9 +7,9 @@
  *          비밀번호는 이 객체의 메모리에만 있고 로그인 응답을 받으면(성공이든 실패든) 지운다. 계정이 서버에 없으면 가입하지 않는다(GM 계정은 운영이 만든다).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"

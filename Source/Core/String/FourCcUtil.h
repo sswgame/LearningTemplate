@@ -3,7 +3,7 @@
  * @brief 네 글자 표식(FourCC)을 만드는 도우미입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

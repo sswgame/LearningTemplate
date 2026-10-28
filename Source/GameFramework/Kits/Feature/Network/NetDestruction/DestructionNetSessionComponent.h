@@ -10,8 +10,8 @@
  *          서버 고정 틱과 같아야 한다. 서버는 첫 틱의 델타가 다르면 오류를 남기고 복제를 멈춘다(다른 값으로 대신 돌지 않는다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

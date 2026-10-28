@@ -3,8 +3,8 @@
  * @brief 포인터 하나의 UI 상태입니다. 호버 경로와 포인터를 잡은 위젯을 가지며, 포인터 이벤트를 트리로 보내고 그 결과를 적용합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"

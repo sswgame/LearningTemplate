@@ -5,9 +5,9 @@
  *          끝을 알고, 지나간 알림을 고르는 일은 둘이 같으므로 여기에 한 벌만 둔다(`AnimationPlayer` 와 `AnimationGraphPlayer` 도 이것만 본다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/AnimationNotifyPhase.h"

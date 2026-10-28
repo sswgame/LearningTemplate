@@ -3,9 +3,9 @@
  * @brief UI 배율 규칙(해상도에서 배율을 구하는 UMG DPI 곡선에 해당)과 뷰포트 계산을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/VectorMath.h"
 

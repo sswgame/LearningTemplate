@@ -13,7 +13,7 @@
  *       디바이스 헤더로 새지 않습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Window/IRenderSurface.h"

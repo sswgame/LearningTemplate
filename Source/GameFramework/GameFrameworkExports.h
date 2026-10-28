@@ -3,7 +3,7 @@
  * @brief GameFramework SHARED DLL 용 SW_GF_API 입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 #include "ModuleAPI/Export/GameFrameworkAPI.h"
 

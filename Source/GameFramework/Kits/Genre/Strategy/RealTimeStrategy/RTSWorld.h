@@ -3,12 +3,12 @@
  * @brief RTS 한 판의 규칙을 담습니다. 플레이어, 유닛, 명령 대기열, 채취, 건설, 생산, 테크, 전투, 전장의 안개, 승패를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"

@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Scene/HistoryPanel.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 

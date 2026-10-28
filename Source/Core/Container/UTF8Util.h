@@ -5,7 +5,7 @@
  *          `StringUtil` 은 이 함수를 `string_view` 로 감싼 `floorToUTF8Boundary` 를 가진다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

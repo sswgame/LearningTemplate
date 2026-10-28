@@ -3,7 +3,7 @@
  * @brief 자동 전투 — 플레이어 유닛에 빙의하는 AI 조종자입니다. 자동 플레이 스위치(`-gv_arenaAutoPlay`)를 켜면 디렉터가 이것을 플레이어 폰에 빙의시키고, 끄면 플레이어 조종자가 되찾습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

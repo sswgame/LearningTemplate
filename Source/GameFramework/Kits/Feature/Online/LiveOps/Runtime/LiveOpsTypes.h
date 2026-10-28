@@ -3,9 +3,9 @@
  * @brief 라이브 운영 키트의 타입입니다. 결과, 반복, 이벤트 정의, 클라이언트가 받는 열린 이벤트를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

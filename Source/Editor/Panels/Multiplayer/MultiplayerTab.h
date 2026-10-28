@@ -5,7 +5,7 @@
  *          서버 디버깅의 다음 단위(Inspector · Sync)와 확장 모듈(게임별 상태 보기)도 자기 .cpp 에 같은 한 줄을 둔다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"

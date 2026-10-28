@@ -15,7 +15,7 @@
  * @endcode
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {

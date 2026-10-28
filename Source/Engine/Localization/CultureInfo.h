@@ -5,11 +5,11 @@
  *          ICU 와 CLDR 를 들이지 않고 그 형식의 부분 집합을 따른다(패턴 기호는 y, M, d, H, h, m, s, a).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"

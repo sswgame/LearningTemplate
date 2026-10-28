@@ -6,10 +6,10 @@
  *          창이 하는 일은 바디 표 + 뷰포트 겹침 선(스켈레톤 · 바디 셰이프 · 관절)과 시뮬레이션 시험(쓰러뜨리기 · 충격 · 부분 · 리셋)이다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
 

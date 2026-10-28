@@ -7,11 +7,11 @@
  *          - 라우터보다 먼저 종료할 수 있다. `shutdown` 이 기다리던 캐시 요청을 취소한다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerSelection.h"

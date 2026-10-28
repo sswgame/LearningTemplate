@@ -6,9 +6,9 @@
  *          `AppearanceSelectionUtil::previewSelection` 이 하며 이 모델 밖이다. ImGui 와 씬을 모릅니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 

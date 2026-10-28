@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Asset/ModelImportConfig.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Config/EditorPaths.h"

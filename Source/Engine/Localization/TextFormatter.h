@@ -12,10 +12,10 @@
  *          `spellout` 은 없다. plural · selectordinal · select 에는 `other` 가 반드시 있어야 한다(ICU 와 같다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Localization/CultureInfo.h"
 

@@ -5,8 +5,8 @@
  *          `makeBindBones` 로 한 번 만들고, 본이 움직인 프레임마다 `copyUnitPose` 로 유닛의 모델 공간 행렬을 옮겨 소켓 변환을 구한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

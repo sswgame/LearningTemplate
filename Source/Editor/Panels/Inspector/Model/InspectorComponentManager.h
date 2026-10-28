@@ -3,10 +3,10 @@
  * @brief 컴포넌트 타입 이름에서 IInspectorComponent 로의 대응을 관리합니다. `EditorContext` 가 소유합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 

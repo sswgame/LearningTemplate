@@ -6,10 +6,10 @@
  *          충돌 사건은 물리가 만들므로 기계마다 다를 수 있다. 그래서 권한을 가진 쪽(서버)이 만든 사건만 기록에 실어 보낸다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw

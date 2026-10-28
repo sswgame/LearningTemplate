@@ -3,8 +3,8 @@
  * @brief 2D 셀 격자의 모양(셀 번호, 경계, 이웃 순서)과, 너비 우선 탐색과 표시에 쓰는 재사용 스크래치를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 namespace sw

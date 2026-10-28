@@ -3,8 +3,8 @@
  * @brief 플랫폼 VK/KeySym 을 Key 로 변환하고, Win32 폴링 테이블을 제공합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Input/KeyCodeUtil.h"
 

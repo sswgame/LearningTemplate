@@ -3,7 +3,7 @@
  * @brief sw 할당자로 잡은 바이트 블록 하나를 소유하는 형식입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 

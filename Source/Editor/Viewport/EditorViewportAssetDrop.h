@@ -3,7 +3,7 @@
  * @brief 콘텐츠 브라우저에서 씬 뷰로 끌어 놓은 애셋을 마우스 아래 바닥에 놓습니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

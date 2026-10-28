@@ -3,8 +3,6 @@
  * @brief inotify 와 eventfd 워커로 디렉터리 변경을 모읍니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -12,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/IFileWatcher.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
 
 #if defined( SW_PLATFORM_LINUX )
 

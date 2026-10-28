@@ -6,10 +6,10 @@
  *          부르는 순서(패킷 열기 → 관찰자 → 씬과 뷰 → 캔버스 → 제출)는 `Engine::update` 의 호출 코드에서 볼 수 있습니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"

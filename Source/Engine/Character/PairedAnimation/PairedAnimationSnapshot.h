@@ -7,10 +7,10 @@
  *          "마지막 갱신 때의 상태"입니다. 앵커 시각은 그 갱신이 읽은 값(그 프레임 평가 전)이고, 알림 커서는 그 갱신이 낸 알림까지 셉니다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {

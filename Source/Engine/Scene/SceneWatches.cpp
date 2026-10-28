@@ -4,8 +4,8 @@
  */
 #include "pch.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 

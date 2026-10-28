@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.h"
 
-#include "Core/Common/StdHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Object/Component/SceneComponent.h"

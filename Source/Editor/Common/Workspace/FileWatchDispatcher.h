@@ -3,9 +3,6 @@
  * @brief 실행 중 애셋 파일(텍스처, 셰이더 등)의 변경을 감지해, 등록된 구독자에게만 전달합니다.
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -13,6 +10,9 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/File/IFileWatcher.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

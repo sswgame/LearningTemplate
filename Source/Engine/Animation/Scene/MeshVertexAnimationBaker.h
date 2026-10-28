@@ -5,9 +5,9 @@
  *          언리얼 AnimToTexture 가 애니메이션과 렌더 모듈을 함께 드는 플러그인인 것과 같은 자리입니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 

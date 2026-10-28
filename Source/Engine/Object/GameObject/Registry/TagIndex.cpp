@@ -6,8 +6,8 @@
 
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Object/Component/TagComponent.h"
 

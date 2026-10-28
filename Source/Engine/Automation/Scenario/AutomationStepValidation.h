@@ -8,9 +8,9 @@
  *              부르기 전에 `findUnresolvedDependency` 로 먼저 가른다. 모르는 단계는 통과로 세지 않고 "못 본 단계" 로 따로 센다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 

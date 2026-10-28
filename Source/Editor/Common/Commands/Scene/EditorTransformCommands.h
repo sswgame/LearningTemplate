@@ -3,9 +3,9 @@
  * @brief 컴포넌트 붙여 넣기와 프리셋, 다중 선택의 정렬과 스냅 커맨드를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

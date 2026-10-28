@@ -3,10 +3,10 @@
  * @brief UI 스레드가 해제한 GPU 리소스(ImGui 텍스처, 게임 뷰 렌더 타깃)를, 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 실제로 해제합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/KeyedPendingList.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

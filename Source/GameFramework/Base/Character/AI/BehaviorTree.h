@@ -6,10 +6,10 @@
  *          데코레이터는 반전, 성공 강제, 반복, 쿨다운, 시간 제한, 블랙보드 조건(관찰 중단 포함)을 지원한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

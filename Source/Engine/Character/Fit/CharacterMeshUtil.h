@@ -6,11 +6,11 @@
  *          베이크한 모프 타깃은 사본에서 빠진다 — 커브 · 얼굴이 같은 이름에 가중치를 내도 두 번 걸리지 않는다. 베이크하지 않은 타깃(얼굴)은 그대로 남아 GPU 모프 풀이 건다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

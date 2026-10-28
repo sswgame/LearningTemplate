@@ -3,9 +3,9 @@
  * @brief 키 바인딩 창입니다. "누를 키를 누르세요" 를 보여 주고 다음 원시 입력을 받아 키 바인딩 설정의 보류 값으로 넣습니다(겹치면 바꾸기를 묻습니다).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 

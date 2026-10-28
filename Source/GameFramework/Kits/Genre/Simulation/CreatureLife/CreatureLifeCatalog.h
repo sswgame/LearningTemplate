@@ -3,10 +3,10 @@
  * @brief 생물 생활 정의를 담습니다. 서식지 레시피(셀 패턴), 생물 종(좋아하는 서식지, 음식, 선물, 시간대, 날씨, 능력, 부탁), 능력(셀 변환 규칙), 마을 매력도 단계를 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

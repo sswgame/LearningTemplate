@@ -7,8 +7,8 @@
  *          XML 에서 키를 빠뜨리면 그 필드는 0 이나 빈 문자열이 됩니다. 결정적 스크린샷이 이 값에 묶여 있으므로, 값을 바꾸면 기준 이미지도 바뀝니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -4,10 +4,10 @@
  * @details 속성 하나하나의 손 읽기(이름 · 이름 목록 · 실수 묶음 · 범위 숫자 · 불리언 · 커브 · id)는 엔진의 `XMLReadUtil` 이 정본이다 — 여기에 별칭을 두지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"

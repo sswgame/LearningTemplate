@@ -4,9 +4,9 @@
  * @details 하위 폴더를 읽은 횟수(`getChildFolderScanCount`)는 에디터 범위의 상태 저장소(`EditorStateStore`)가 센다 — 에디터 범위(또는 테스트가 건 저장소)가 있어야 `collectChildFolders` 를 부를 수 있다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw::editor
 {

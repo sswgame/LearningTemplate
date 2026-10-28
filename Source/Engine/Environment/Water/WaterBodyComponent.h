@@ -3,10 +3,10 @@
  * @brief 물입니다. 호수(사각 수면)와 강(경로를 따르는 띠)에 거스트너 파도, 깊이 색, 프레넬, 물가 거품을 입히고, 수면 높이, 노멀, 물속 질의를 제공합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"

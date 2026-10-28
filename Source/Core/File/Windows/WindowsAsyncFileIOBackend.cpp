@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Core/Common/Defines.h"
-#include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Concurrency/ThreadName.h"

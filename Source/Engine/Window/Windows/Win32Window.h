@@ -3,7 +3,7 @@
  * @brief Windows 전용(Win32 API 기반) IWindow 구현입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Window/IWindow.h"
 

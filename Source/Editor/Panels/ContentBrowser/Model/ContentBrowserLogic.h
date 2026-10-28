@@ -3,10 +3,10 @@
  * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단 로직입니다. 브레드크럼 조각, 폴더 트리 캐시, 탐색 이력을 담당하며, ImGui 에 의존하지 않으므로 EditorTest 가 테스트합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw::editor

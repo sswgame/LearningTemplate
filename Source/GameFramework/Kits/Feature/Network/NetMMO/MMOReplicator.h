@@ -22,13 +22,13 @@
  *          엔티티 상태의 크기는 `NetMMOMessage::kMaxStateBytes` 까지 허용한다. 서버와 클라이언트가 같은 상한을 쓰며, 이를 넘는 `setEntity` 는 받지 않는다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"

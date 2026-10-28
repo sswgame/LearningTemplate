@@ -16,11 +16,11 @@
  *          시드와 난수는 `DestructionRandom` 이 만들므로, 같은 메시와 설정과 시드를 주면 어느 기계에서도 같은 조각이 나온다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

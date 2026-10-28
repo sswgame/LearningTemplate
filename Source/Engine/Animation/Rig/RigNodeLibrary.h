@@ -3,7 +3,7 @@
  * @brief 엔진이 기본으로 등록하는 리그 노드 종류들입니다. 종류마다 .cpp 하나가 자기 노드를 등록합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {

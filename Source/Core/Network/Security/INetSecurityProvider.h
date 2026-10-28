@@ -5,10 +5,10 @@
  * @details 암호를 직접 짜지 않는다. TLS 세션은 소켓을 모른다 — 엔드포인트가 받은 암호문을 넣고 평문을 꺼낸다(OpenSSL 메모리 BIO · SChannel 버퍼와 같은 모양).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 

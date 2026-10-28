@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
-#include "Core/Common/BitUtil.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"

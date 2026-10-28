@@ -5,7 +5,7 @@
  *          플레이어 게임은 이 키트에 의존하지 않는다. 운영 도구와 에디터만 쓴다. 요청 · 응답 규칙은 `OnlineKitClient` 에 있다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"

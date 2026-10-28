@@ -6,14 +6,14 @@
  *          구조 상태(`DestructionState`)와 사건 기록은 건드리지 않는다. 결정성은 사건 순서가 정하고, 이 클래스는 그 순서를 바꾸지 않는다.
  */
 #pragma once
-#include "Core/Common/FourCcUtil.h"
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
+#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {

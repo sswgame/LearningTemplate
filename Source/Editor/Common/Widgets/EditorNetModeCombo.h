@@ -3,7 +3,7 @@
  * @brief 툴바와 Multiplayer 창이 같이 그리는 Net Mode 고르기(Standalone · 전용 서버 · 리슨 호스트 + 플레이어 수)입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
 

@@ -3,8 +3,8 @@
  * @brief 행동 레이어입니다. 조종 대상(폰)이 받는, 장치와 무관한 한 틱의 명령입니다. 플레이어, AI, 네트워크, 기록이 모두 이것을 냅니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"

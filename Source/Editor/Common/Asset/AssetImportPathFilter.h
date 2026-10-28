@@ -3,11 +3,11 @@
  * @brief 임포트 규칙이 어떤 원본에 적용되는지 고르는 경로 조건(포함 · 제외 패턴과 경로)과, 한 원본에 규칙이 하나만 맞게 하는 선택기입니다. 텍스처와 모델 임포트 설정이 함께 씁니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

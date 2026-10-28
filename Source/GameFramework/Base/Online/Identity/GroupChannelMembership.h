@@ -7,7 +7,7 @@
  *          - 서비스 스레드 하나에서만 씁니다. 채팅 키트가 시작하기 전이나 내린 뒤의 호출은 무시됩니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

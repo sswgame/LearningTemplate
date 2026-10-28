@@ -21,13 +21,13 @@
  * - intern 생성 · 조회에는 32개로 나눈 샤드 뮤텍스를 써서 여러 스레드가 동시에 만들 수 있습니다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
-#include "Core/Common/StdHeaders.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"

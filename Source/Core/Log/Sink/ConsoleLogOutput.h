@@ -3,9 +3,9 @@
  * @brief 표준 출력 로그 장치입니다(Windows 콘솔 색상 / POSIX ANSI 이스케이프).
  */
 #pragma once
-#include "Core/Common/Defines.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Defines.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Sink/ILogOutput.h"
 
 namespace sw

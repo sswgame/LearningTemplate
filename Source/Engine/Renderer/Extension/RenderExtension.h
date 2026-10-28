@@ -18,12 +18,12 @@
  *          모듈 코드는 **렌더 스레드(병렬 기록 워커)에서 돈다.** `ExtensionPassContext` 는 커맨드 리스트 · 풀 · 상태를 내주지 않고 검사한 연산(풀스크린 · 요소 그리기)만 연다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"

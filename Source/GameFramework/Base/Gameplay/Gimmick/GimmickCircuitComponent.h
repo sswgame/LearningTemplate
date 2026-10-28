@@ -20,10 +20,10 @@
  *          씬 · 프리팹 저작 저장에도 이 런타임 상태가 들어갈 수 있다(지금 저장 문맥이 레벨 세이브와 같다). 저작 저장에서 빼는 표시는 옛 `C-53` 다(GimmickCircuitState).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

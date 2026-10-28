@@ -12,7 +12,7 @@
  *       기본값으로 떨어집니다. Shipping 빌드에서도 마찬가지입니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

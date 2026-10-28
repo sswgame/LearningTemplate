@@ -5,9 +5,9 @@
  *          (가장 이른 시각이지 번호가 낮은 슬롯이 아닙니다) 기록되지 않은 슬롯을 음수로 표시하는 규칙은 네 백엔드가 같으므로 여기 한 벌만 둡니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

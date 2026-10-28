@@ -6,10 +6,10 @@
  *          권한 등급은 넷이며 `Viewer` < `Support` < `Operator` < `Super` 순서이다. 국내 게임사 GM 툴의 권한 그룹과 Nakama 콘솔의 역할에 해당한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -10,11 +10,11 @@
  *          4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 테이블)의 그 영역에서 `_bloodChannel` 을 1 로 설정한다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

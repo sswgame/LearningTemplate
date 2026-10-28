@@ -3,9 +3,9 @@
  * @brief 자식을 소유하고 배치하는 위젯입니다(언리얼 SPanel, UMG UPanelWidget, Godot Container 에 해당).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

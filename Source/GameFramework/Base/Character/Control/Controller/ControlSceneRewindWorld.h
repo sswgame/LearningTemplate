@@ -9,8 +9,8 @@
  *          리플레이 씬(플레이 씬을 건드리지 않고 스냅샷으로 띄운 별도 장면)은 그 장면의 관리자와 게임 인스턴스를 넘기면 같은 길로 돈다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/Base/Character/Control/Intent/IntentRewindSession.h"
 #include "GameFramework/GameFrameworkExports.h"

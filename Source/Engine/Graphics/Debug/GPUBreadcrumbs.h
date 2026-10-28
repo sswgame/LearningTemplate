@@ -12,9 +12,9 @@
  *          켜는 스위치는 `-gv_gpuBreadcrumbs`(개발 빌드 기본 켬 — 표지 한 번이 패스당 GPU 쓰기 하나뿐이라 값싸다)이고 Shipping 은 등록되지 않아 늘 꺼진다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 namespace sw
 {

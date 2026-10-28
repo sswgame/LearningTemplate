@@ -3,10 +3,10 @@
  * @brief 스킬 트리입니다. 스킬(최대 랭크, 비용, 필요 레벨, 선행 스킬 랭크, 트리에 쓴 점수, 배타 그룹, 랭크당 능력치, 주는 어빌리티)과 캐릭터마다의 랭크를 다룹니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

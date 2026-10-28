@@ -3,9 +3,9 @@
  * @brief 애니메이션 그래프, 대화 그래프, 타일맵, 스프라이트 클립, 프리팹 오버라이드의 파일 입출력을 담당합니다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorAssetType.h"

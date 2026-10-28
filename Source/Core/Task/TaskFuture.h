@@ -3,9 +3,9 @@
  * @brief C++17 에서 쓰는 체이닝 가능한 비동기 TaskFuture<T> · TaskPromise<T> 입니다.
  */
 #pragma once
-#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 

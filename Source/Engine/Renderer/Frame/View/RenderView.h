@@ -3,7 +3,7 @@
  * @brief "어느 눈으로 보는가" 를 한 곳에 모은 타입을 정의합니다.
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"

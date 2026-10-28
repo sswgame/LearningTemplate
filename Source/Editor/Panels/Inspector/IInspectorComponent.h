@@ -3,8 +3,8 @@
  * @brief 컴포넌트 타입별 인스펙터 UI 확장
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/EditorExports.h"

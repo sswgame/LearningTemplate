@@ -5,7 +5,7 @@
  *          테스트 하네스는 데이터를 읽지 않고 소유만 한다(`TestEngineDefaultAssetsSubsystem`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 

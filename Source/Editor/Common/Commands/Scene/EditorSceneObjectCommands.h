@@ -5,8 +5,8 @@
  *          대상(`EditorCommandTarget`)에 선택 스냅숏이 있으면 그것, 없으면(메뉴바 · 단축키) 메인 씬의 지금 선택이 대상이다. ImGui 를 쓰지 않는다.
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/EditorExports.h"

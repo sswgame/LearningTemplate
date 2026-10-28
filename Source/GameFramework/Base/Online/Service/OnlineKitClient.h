@@ -13,9 +13,9 @@
  *          언리얼 Online Services 의 인터페이스마다 `TOnlineAsyncOpHandle<T>` 를 돌려주는 공통 비동기 연산 구조에 해당한다(기억에 의존).
  */
 #pragma once
-#include "Core/Common/Types.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 

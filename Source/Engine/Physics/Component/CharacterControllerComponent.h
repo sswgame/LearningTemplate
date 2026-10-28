@@ -3,9 +3,9 @@
  * @brief 캐릭터 컨트롤러(3D) — 캡슐 하나를 질의로 움직여 벽에 미끄러지고 · 턱을 오르고 · 가파른 비탈에 막힙니다(Jolt `CharacterVirtual`).
  */
 #pragma once
-#include "Core/Common/Macros.h"
-#include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 

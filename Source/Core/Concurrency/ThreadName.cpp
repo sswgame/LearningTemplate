@@ -2,12 +2,12 @@
 
 #include "Core/Concurrency/ThreadName.h"
 
-#include "Core/Common/Defines.h"
+#include "Core/Foundation/Defines.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOSHeaders.h"
+    #include "Core/Foundation/PlatformOSHeaders.h"
 #endif
 
 namespace sw
