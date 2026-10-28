@@ -8,8 +8,16 @@
 out/
 generated/
 *.pack
-!Content/**/shaders/bin/
-!Content/**/shaders/bin/**
+
+# 임포트 · 쿠킹 산출물 — 원본(`*_raw/` · 셰이더 소스)에서 App 이 만든다(`--import-textures` · `--import-models` · `--import-heightfields` ·
+# `--cook-shaders`). 65225afc1 이 저장소에서 걷었다. 엔진 기본 텍스처 둘은 원본이 없어 손으로 둔 콘텐츠다(기동이 요구한다).
+Content/**/textures/**
+!Content/engine/textures/missing.dds
+!Content/engine/textures/loading.dds
+Content/**/models/**
+Content/**/heightfields/**
+Content/**/*_raw/import.stamp
+Content/**/shaders/bin/
 
 # ==============================================================================
 # IDE & Tooling
