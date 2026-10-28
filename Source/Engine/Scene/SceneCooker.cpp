@@ -610,7 +610,7 @@ namespace sw
     bool SceneCooker::previewStreamingCells( const Scene& scene, StreamingCellPreview& outPreview )
     {
         outPreview = StreamingCellPreview{};
-        if ( scene.getWorldSettings()._bStreaming == false )
+        if ( scene.getSceneSettings()._bStreaming == false )
         {
             SW_LOG_ERROR( "Streaming cell preview: '%#' does not stream", scene.getName().c_str() );
             return false;

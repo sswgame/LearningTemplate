@@ -125,7 +125,7 @@ namespace sw
              * @brief 월드 설정은 판 2부터 필수다 — 없으면 스트리밍 여부를 지어내지 않고 읽지 않는다. 읽고 검증해 @p outSettings 에 담는다.
              * @return 요소가 없거나 읽지 못하거나 쓸 수 없으면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool readWorldSettings( const XMLNode& root, string_view sceneName, string_view absPath, SceneSettings& outSettings )
+            [[nodiscard]] static bool readSceneSettings( const XMLNode& root, string_view sceneName, string_view absPath, SceneSettings& outSettings )
             {
                 const XMLNode sceneSettingsNode = root.findChild( SceneSettings::kElementName );
                 if ( sceneSettingsNode.isValid() == false )
@@ -133,8 +133,8 @@ namespace sw
                     SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
                 }
-                const bool bWorldSettingsRead = XMLSerializer::deserialize( &outSettings, *SceneSettings::StaticType(), sceneSettingsNode.toString() );
-                if ( bWorldSettingsRead == false || outSettings.validate( sceneName ) == false )
+                const bool bSceneSettingsRead = XMLSerializer::deserialize( &outSettings, *SceneSettings::StaticType(), sceneSettingsNode.toString() );
+                if ( bSceneSettingsRead == false || outSettings.validate( sceneName ) == false )
                 {
                     SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
@@ -251,7 +251,7 @@ namespace sw
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        if ( SceneDocumentInternal::readWorldSettings( root, _name, absPath, _sceneSettings ) == false )
+        if ( SceneDocumentInternal::readSceneSettings( root, _name, absPath, _sceneSettings ) == false )
         {
             *this = {};
             return false;

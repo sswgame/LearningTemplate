@@ -1,6 +1,6 @@
 /**
  * @file SceneSettings.h
- * @brief 씬 하나의 월드 설정입니다(언리얼 `AWorldSettings` · World Partition 의 런타임 격자 설정 자리). 지금은 월드 스트리밍 여부와 그 격자 · 예산을 담습니다.
+ * @brief 씬 하나의 월드 설정입니다(언리얼 `ASceneSettings` · World Partition 의 런타임 격자 설정 자리). 지금은 월드 스트리밍 여부와 그 격자 · 예산을 담습니다.
  *
  * [씬 파일]
  * 씬 루트의 `<SceneSettings>` 자식으로 리플렉션이 적고 읽습니다(`SceneDocument`). 씬 형식 판 2부터 **필수**입니다 — 없는 씬 파일은 읽지 않습니다.

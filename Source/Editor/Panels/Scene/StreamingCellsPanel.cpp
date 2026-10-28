@@ -137,7 +137,7 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "NoActiveScene" ) );
             return;
         }
-        const SceneSettings& settings = pScene->getWorldSettings();
+        const SceneSettings& settings = pScene->getSceneSettings();
         if ( settings._bStreaming == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorStreamingCells", "NotStreaming" ) );
@@ -209,7 +209,7 @@ namespace sw::editor
 
     void StreamingCellsPanel::drawCells( Scene& scene )
     {
-        const SceneSettings& settings = scene.getWorldSettings();
+        const SceneSettings& settings = scene.getSceneSettings();
         StreamingCellGrid    grid;
         if ( StreamingCellGrid::tryCreate( settings._cellGrid, grid ) == false )
             return; // 미리보기가 섰다면 격자는 쓸 수 있다 — 그 사이 설정을 고쳤다(오류는 로그에)

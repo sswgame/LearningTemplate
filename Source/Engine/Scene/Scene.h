@@ -115,9 +115,9 @@ namespace sw
         bool isAudioUpdateEnabled() const { return _bAudioUpdateEnabled; }
 
         /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
-        void setWorldSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
+        void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
         /** @brief 씬 파일에서 읽은 월드 설정입니다. */
-        const SceneSettings& getWorldSettings() const { return _sceneSettings; }
+        const SceneSettings& getSceneSettings() const { return _sceneSettings; }
 
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }

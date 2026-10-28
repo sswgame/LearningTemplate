@@ -54,9 +54,9 @@ namespace sw
              * @brief 씬의 격자(`SceneSettings::_cellGrid`)를 카메라 둘레에 그립니다. 격자가 없는 씬(셀 크기 0)이면 그리지 않습니다.
              * @details 에디터에서 연 씬(XML)은 셀을 나누지 않았으므로 노랑 · 회색만 나온다 — 쿠킹이 나눌 자리의 미리보기다.
              */
-            static void drawWorldCells( Scene& scene, DebugDrawQueue& queue )
+            static void drawStreamingCells( Scene& scene, DebugDrawQueue& queue )
             {
-                const SceneSettings& settings = scene.getWorldSettings();
+                const SceneSettings& settings = scene.getSceneSettings();
                 StreamingCellGrid    grid;
                 if ( settings._cellGrid._cellSize <= 0.0f || StreamingCellGrid::tryCreate( settings._cellGrid, grid ) == false )
                     return;
@@ -119,6 +119,6 @@ namespace sw
         }
 
         if ( gv_worldCellDebugDraw )
-            SceneDebugDrawInternal::drawWorldCells( *pScene, queue );
+            SceneDebugDrawInternal::drawStreamingCells( *pScene, queue );
     }
 } // namespace sw
