@@ -8,6 +8,11 @@
  *          두께는 화면 높이 비율이고 파이프라인 XML 의 패스 퍼뮤테이션 `SW_HIGHLIGHT_WIDTH=<값>` 이 정한다(데이터가 정본 — 없으면 컴파일 오류).
  *          정점은 모프 · 스키닝 결과를 읽으므로(MorphPool::loadVertex) 움직이는 캐릭터에서도 껍질이 따라간다.
  */
+// 이 패스는 배치의 퍼뮤테이션 변형을 받지 않는 엔진 PSO 라 등장 디더(binding.hlsli 8-1)를 늘 켠다 — LOD 크로스페이드 중인 인스턴스(두 단계가 상보 디더로 겹친다)의 외곽선도 같은 픽셀만 그려야
+// 두 단계 껍질이 겹쳐 두꺼워지지 않는다. 등장 비율 1 인 인스턴스는 픽셀을 버리지 않는다.
+#if !defined( SW_APPEARANCE_DITHER )
+    #define SW_APPEARANCE_DITHER 1
+#endif
 #include "binding.hlsli"
 
 #if !defined( SW_HIGHLIGHT_WIDTH )
@@ -24,6 +29,7 @@ struct PSInput
 {
     float4                 _position : SV_POSITION;
     nointerpolation float3 _color : COLOR;
+    SW_APPEARANCE_VARYING
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
@@ -31,6 +37,7 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
     PSInput      output;
     InstanceData instance = InstanceData::load( input._instanceSlot );
     output._color         = instance.getHighlightColor();
+    SW_APPEARANCE_WRITE( output, instance )
     // 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.
     if ( instance.getHighlightStyle() != kHighlightPassStyle )
     {
@@ -56,5 +63,6 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
+    SW_APPEARANCE_CLIP( input )
     return float4( input._color, 1.0f );
 }
