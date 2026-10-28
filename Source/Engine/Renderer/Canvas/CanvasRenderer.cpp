@@ -385,74 +385,92 @@ namespace sw
     {
         if ( page._bytes.empty() || page._bFailed == SW_TRUE )
             return;
-        constexpr uint32     kPageSize = GlyphAtlas::kPageSize;
-        IRHIResourceFactory& factory   = *device.getResourceFactory();
-        if ( page._texture == 0 )
-        {
-            RHITextureDesc desc{};
-            desc._width              = kPageSize;
-            desc._height             = kPageSize;
-            desc._mipLevels          = 1;
-            desc._format             = page._bytesPerTexel == 4 ? RHIFormat::R8G8B8A8_UNORM : RHIFormat::R8_UNORM;
-            desc._bIsShaderResource  = SW_TRUE;
-            desc._bIsRenderTarget    = SW_FALSE;
-            desc._bIsDepthStencil    = SW_FALSE;
-            desc._bIsUnorderedAccess = SW_FALSE;
-            page._texture            = factory.createTexture2D( desc );
-            if ( page._texture == 0 )
-            {
-                failAtlasPage( page, "could not be created" );
-                return;
-            }
-            // 등록은 첫 전체 업로드가 끝난 뒤다(전송 계약 10) — 끝나지 않은 전송이 있는 텍스처의 등록은 백엔드가 거절한다.
-            page._bWholePageDirty = SW_TRUE;
-        }
-
-        // 새 페이지는 첫 전체 업로드의 티켓이 `Complete` 가 된 프레임에 등록한다. 그 전에는 이 페이지의 글리프를 그리지 않고(SRV 가 없다), 그동안 쌓인 구간은
-        // 등록한 프레임에 이어서 올린다(등록 전에 구간을 내면 마지막 전송이 늘 새것이라 등록이 계속 밀린다).
-        if ( page._srv == kInvalidDescriptorIndex && page._registerTicket.isValid() )
-        {
-            const RHITransferStatus status = factory.pollTransfer( page._registerTicket );
-            if ( status == RHITransferStatus::Pending )
-                return;
-            if ( status == RHITransferStatus::Failed )
-            {
-                failAtlasPage( page, "first upload failed on the GPU" );
-                return;
-            }
-            page._registerTicket = RHITransferTicket{};
-            page._srv            = factory.registerBindlessTexture( page._texture );
-            if ( page._srv == kInvalidDescriptorIndex )
-            {
-                failAtlasPage( page, "could not be registered for bindless sampling" );
-                return;
-            }
-        }
+        IRHIResourceFactory& factory = *device.getResourceFactory();
+        if ( ensureAtlasPageTexture( factory, page ) == false )
+            return;
+        if ( registerAtlasPage( factory, page ) == false )
+            return;
 
         // 실패 규칙: `Busy` 는 더티 상태를 그대로 두고 다음 프레임에 다시 낸다(미러가 최신 내용을 들고 있다). `Rejected` 는 다시 내도 안 되는 요청이라
         // 오류를 남기고 이 페이지를 멈춘다(`failAtlasPage`). 어느 쪽도 더티 상태를 버리고 지나가지 않는다.
         if ( page._bWholePageDirty == SW_TRUE )
+            uploadWholeAtlasPage( factory, page );
+        else
+            uploadAtlasRegions( factory, page );
+    }
+
+    bool CanvasRenderer::ensureAtlasPageTexture( IRHIResourceFactory& factory, AtlasPage& page )
+    {
+        if ( page._texture != 0 )
+            return true;
+        RHITextureDesc desc{};
+        desc._width              = GlyphAtlas::kPageSize;
+        desc._height             = GlyphAtlas::kPageSize;
+        desc._mipLevels          = 1;
+        desc._format             = page._bytesPerTexel == 4 ? RHIFormat::R8G8B8A8_UNORM : RHIFormat::R8_UNORM;
+        desc._bIsShaderResource  = SW_TRUE;
+        desc._bIsRenderTarget    = SW_FALSE;
+        desc._bIsDepthStencil    = SW_FALSE;
+        desc._bIsUnorderedAccess = SW_FALSE;
+        page._texture            = factory.createTexture2D( desc );
+        if ( page._texture == 0 )
         {
-            RHITextureUploadDesc upload{};
-            upload._pData                  = page._bytes.data();
-            upload._sizeBytes              = static_cast<uint32>( page._bytes.size() );
-            upload._mipLevels              = 1;
-            const RHITransferSubmit submit = factory.submitTextureUpload( page._texture, upload );
-            if ( submit._result == RHISubmitResult::Busy )
-                return;
-            if ( submit.isAccepted() == false )
-            {
-                failAtlasPage( page, "upload was rejected" );
-                return;
-            }
-            ++_lastUploadCallCount;
-            page._bWholePageDirty = SW_FALSE;
-            page._listDirty.clear();
-            if ( page._srv == kInvalidDescriptorIndex )
-                page._registerTicket = submit._ticket;
+            failAtlasPage( page, "could not be created" );
+            return false;
+        }
+        // 등록은 첫 전체 업로드가 끝난 뒤다(전송 계약 10) — 끝나지 않은 전송이 있는 텍스처의 등록은 백엔드가 거절한다.
+        page._bWholePageDirty = SW_TRUE;
+        return true;
+    }
+
+    bool CanvasRenderer::registerAtlasPage( IRHIResourceFactory& factory, AtlasPage& page )
+    {
+        // 새 페이지는 첫 전체 업로드의 티켓이 `Complete` 가 된 프레임에 등록한다. 그 전에는 이 페이지의 글리프를 그리지 않고(SRV 가 없다), 그동안 쌓인 구간은
+        // 등록한 프레임에 이어서 올린다(등록 전에 구간을 내면 마지막 전송이 늘 새것이라 등록이 계속 밀린다).
+        if ( page._srv != kInvalidDescriptorIndex || page._registerTicket.isValid() == false )
+            return true;
+        const RHITransferStatus status = factory.pollTransfer( page._registerTicket );
+        if ( status == RHITransferStatus::Pending )
+            return false;
+        if ( status == RHITransferStatus::Failed )
+        {
+            failAtlasPage( page, "first upload failed on the GPU" );
+            return false;
+        }
+        page._registerTicket = RHITransferTicket{};
+        page._srv            = factory.registerBindlessTexture( page._texture );
+        if ( page._srv == kInvalidDescriptorIndex )
+        {
+            failAtlasPage( page, "could not be registered for bindless sampling" );
+            return false;
+        }
+        return true;
+    }
+
+    void CanvasRenderer::uploadWholeAtlasPage( IRHIResourceFactory& factory, AtlasPage& page )
+    {
+        RHITextureUploadDesc upload{};
+        upload._pData                  = page._bytes.data();
+        upload._sizeBytes              = static_cast<uint32>( page._bytes.size() );
+        upload._mipLevels              = 1;
+        const RHITransferSubmit submit = factory.submitTextureUpload( page._texture, upload );
+        if ( submit._result == RHISubmitResult::Busy )
+            return;
+        if ( submit.isAccepted() == false )
+        {
+            failAtlasPage( page, "upload was rejected" );
             return;
         }
+        ++_lastUploadCallCount;
+        page._bWholePageDirty = SW_FALSE;
+        page._listDirty.clear();
+        if ( page._srv == kInvalidDescriptorIndex )
+            page._registerTicket = submit._ticket;
+    }
 
+    void CanvasRenderer::uploadAtlasRegions( IRHIResourceFactory& factory, AtlasPage& page )
+    {
+        constexpr uint32 kPageSize = GlyphAtlas::kPageSize;
         // 구간은 기다리지 않고 잇달아 낸다. 같은 텍스처에 낸 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
         mergeUploadRegions( page._listDirty, kMaxRegionUploadPerPage );
         size_t submittedCount = 0;

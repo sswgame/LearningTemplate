@@ -163,6 +163,18 @@ namespace sw
             uint32              _groupCount{ 0 };
         };
 
+        /** @brief GPU 로 돌릴 방출기가 있는데 시뮬레이션 컴퓨트 PSO 가 없으면 한 번만 오류를 남깁니다(`prepareFrame` 의 한 단계). */
+        void reportMissingSimulationPipeline( bool bAnyGPUBatch );
+        /** @brief 파티클 라이트 범위를 렌더러가 구간 크기를 정할 때와 같은 함수로 구해 `_listLightRange` 에 담습니다(어긋나면 비웁니다). */
+        void assignParticleLights( const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter );
+        /** @brief 파티클 배치마다 방출기 상태를 갖추고 시뮬레이션을 더합니다. */
+        void prepareParticleEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
+        /** @brief 메시 방출기마다 방출기 상태를 갖추고 시뮬레이션과 메시 인스턴스 쓰기를 더합니다. */
+        void prepareMeshEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter );
+        /** @brief 이번 프레임에 없는 재생(멈춤 · 다시 재생 · 컴포넌트 제거)의 GPU 버퍼를 놓습니다. */
+        void releaseStaleEmitters( IRHIDevice& device );
+        /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
+        void uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
         /** @brief 요청의 상태를 찾거나 만들고 버퍼를 갖춥니다. 버퍼를 만들지 못했으면 오류를 남기고 nullptr 입니다. */
         EmitterState* prepareEmitterState( IRHIDevice& device, const VfxGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */

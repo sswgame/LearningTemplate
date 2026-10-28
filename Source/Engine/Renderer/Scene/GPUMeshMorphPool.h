@@ -213,6 +213,10 @@ namespace sw
         static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
         /** @brief 스킨 원본 집합을 맞춥니다. 바뀌었으면 레스트와 가중치를 다시 올립니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
+        /** @brief 스킨 원본을 맞추고 스킨 메시마다 인스턴스 행(결과 구간 · 원본 구간 · 팔레트 시작)과 `_mapSkinBase` 를 다시 만듭니다. `_vertexCount` 를 정합니다. */
+        void buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
+        /** @brief 결과 버퍼 · 스킨 인스턴스 표 · 팔레트 버퍼의 용량을 맞추고 못 만든 것을 오류로 남깁니다. */
+        void ensureDeformBuffers( IRHIDevice* pDevice );
         /** @brief 모프 메시 집합을 맞춥니다. 들어온 메시의 레스트만 올립니다. @return 어느 모프 메시의 구간이라도 바뀌었으면 true 입니다. */
         bool updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh );
         /** @brief 목록의 메시를 이번 갱신 번호로 표시하고, 처음 보거나 내용이 바뀐 메시를 `_listScratchAdded` 에 모읍니다. @return 무엇이든 바뀌었으면 true 입니다. */

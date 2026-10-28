@@ -168,6 +168,75 @@ namespace sw
         vector<string> _listUpgrading                  SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
         unordered_map<string, float32>                 _mapScreenSize;                   ///< 이번 프레임에 알린 화면 크기(`noteScreenSize`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
+        /** @brief `submitRegionUpdate` 의 결과: 올림 · 다음 프레임에 다시(`Busy` 이면 이번 차례의 나머지도 미룬다) · 버림. */
+        enum class RegionFlushResult : uint8
+        {
+            Uploaded,
+            Retry,
+            RetryBusy,
+            Dropped
+        };
+
+        /** @brief 구간 갱신 하나를 CPU 원본 또는 GPU 텍스처에 냅니다(`flushRegionUpdates` 의 요청 하나 내기). `Busy` · `Rejected` 규칙은 그 함수 머리 주석에 있다. */
+        RegionFlushResult submitRegionUpdate( RegionUpdate& update, IRHIDevice* pDevice )
+        {
+            // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            const auto                     it     = _mapEntry.find( update._key );
+            Texture2D*                     pFound = it != _mapEntry.end() ? it->second._texture.get() : nullptr;
+            RHITextureRegionUploadDesc     desc{};
+            desc._pData     = update._rgbaBytes.data();
+            desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
+            desc._x         = update._x;
+            desc._y         = update._y;
+            desc._width     = update._width;
+            desc._height    = update._height;
+            // CPU 텍스처는 GPU 에 없어도 원본을 고친다. 올리는 중이면 다음 프레임으로 미룬다(그 스레드가 원본을 읽고 있다).
+            if ( pFound != nullptr && pFound->hasCPUBytes() )
+            {
+                if ( it->second._bLoading )
+                    return RegionFlushResult::Retry;
+                const RHISubmitResult written = pFound->writeCPUBytes( pDevice, desc );
+                if ( written == RHISubmitResult::Accepted )
+                    return RegionFlushResult::Uploaded;
+                // 원본은 이미 고쳤다 — 다음 프레임에 같은 구간을 다시 쓰고 낸다(같은 바이트라 원본은 그대로다).
+                if ( written == RHISubmitResult::Busy )
+                    return RegionFlushResult::RetryBusy;
+                SW_LOG_ERROR( "Region update for CPU texture %# rejected (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
+                return RegionFlushResult::Dropped;
+            }
+            const bool bResident = pFound != nullptr && it->second._bPublished && it->second._bLoading == false && pFound->isRHIValid();
+            if ( bResident == false || pDevice == nullptr )
+            {
+                SW_LOG_WARNING( "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
+                return RegionFlushResult::Dropped;
+            }
+            const Texture2D& texture = *pFound;
+            if ( texture.getFormat() == RHIFormat::B8G8R8A8_UNORM )
+            {
+                if ( update._bSwappedToBgra == false )
+                {
+                    for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
+                    {
+                        std::swap( update._rgbaBytes[offset], update._rgbaBytes[offset + 2] );
+                    }
+                    update._bSwappedToBgra = true;
+                }
+            }
+            else if ( texture.getFormat() != RHIFormat::R8G8B8A8_UNORM )
+            {
+                SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
+                return RegionFlushResult::Dropped;
+            }
+            const RHITransferSubmit submit = pDevice->getResourceFactory()->submitTextureRegionUpload( texture.getHandle(), desc );
+            if ( submit._result == RHISubmitResult::Busy )
+                return RegionFlushResult::RetryBusy;
+            if ( submit.isAccepted() )
+                return RegionFlushResult::Uploaded;
+            SW_LOG_ERROR( "Region update for texture %# rejected by the RHI (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width, update._height );
+            return RegionFlushResult::Dropped;
+        }
+
         /** @brief 위쪽 밉을 기다리는 줄에 넣습니다(로드 블록의 완료 단계). */
         void queueStreamingUpgrade( const string& key, unique_ptr<DDSImageData> pImage )
         {
@@ -834,80 +903,20 @@ namespace sw
                 listRetry.push_back( std::move( update ) );
                 continue;
             }
-            // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
-            ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
-            const auto                     it     = _impl->_mapEntry.find( update._key );
-            Texture2D*                     pFound = it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
-            RHITextureRegionUploadDesc     desc{};
-            desc._pData     = update._rgbaBytes.data();
-            desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
-            desc._x         = update._x;
-            desc._y         = update._y;
-            desc._width     = update._width;
-            desc._height    = update._height;
-            // CPU 텍스처는 GPU 에 없어도 원본을 고친다. 올리는 중이면 다음 프레임으로 미룬다(그 스레드가 원본을 읽고 있다).
-            if ( pFound != nullptr && pFound->hasCPUBytes() )
+            switch ( _impl->submitRegionUpdate( update, pDevice ) )
             {
-                if ( it->second._bLoading )
-                {
-                    listRetry.push_back( std::move( update ) );
-                    continue;
-                }
-                const RHISubmitResult written = pFound->writeCPUBytes( pDevice, desc );
-                if ( written == RHISubmitResult::Accepted )
-                {
+                case Impl::RegionFlushResult::Uploaded:
                     ++uploadedCount;
-                }
-                else if ( written == RHISubmitResult::Busy )
-                {
-                    // 원본은 이미 고쳤다 — 다음 프레임에 같은 구간을 다시 쓰고 낸다(같은 바이트라 원본은 그대로다).
+                    break;
+                case Impl::RegionFlushResult::RetryBusy:
                     bBusy = true;
                     listRetry.push_back( std::move( update ) );
-                }
-                else
-                {
-                    SW_LOG_ERROR( "Region update for CPU texture %# rejected (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width,
-                                  update._height );
-                }
-                continue;
-            }
-            const bool bResident = pFound != nullptr && it->second._bPublished && it->second._bLoading == false && pFound->isRHIValid();
-            if ( bResident == false || pDevice == nullptr )
-            {
-                SW_LOG_WARNING( "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
-                continue;
-            }
-            const Texture2D& texture = *pFound;
-            if ( texture.getFormat() == RHIFormat::B8G8R8A8_UNORM )
-            {
-                if ( update._bSwappedToBgra == false )
-                {
-                    for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
-                    {
-                        std::swap( update._rgbaBytes[offset], update._rgbaBytes[offset + 2] );
-                    }
-                    update._bSwappedToBgra = true;
-                }
-            }
-            else if ( texture.getFormat() != RHIFormat::R8G8B8A8_UNORM )
-            {
-                SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
-                continue;
-            }
-            const RHITransferSubmit submit = pDevice->getResourceFactory()->submitTextureRegionUpload( texture.getHandle(), desc );
-            if ( submit._result == RHISubmitResult::Busy )
-            {
-                bBusy = true;
-                listRetry.push_back( std::move( update ) );
-            }
-            else if ( submit.isAccepted() )
-            {
-                ++uploadedCount;
-            }
-            else
-            {
-                SW_LOG_ERROR( "Region update for texture %# rejected by the RHI (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width,
-                              update._height );
+                    break;
+                case Impl::RegionFlushResult::Retry:
+                    listRetry.push_back( std::move( update ) );
+                    break;
+                case Impl::RegionFlushResult::Dropped:
+                    break;
             }
         }
         _impl->_listFlushingRegion.clear();

@@ -34,6 +34,9 @@ namespace sw
 
     namespace
     {
+        constexpr RHIBufferUsage kLightBufferUsage        = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        constexpr RHIBufferUsage kLightBufferUsageWithUav = kLightBufferUsage | RHIBufferUsage::UnorderedAccess;
+
         struct GPULightBufferInternal
         {
             /** @brief 그림자를 켠 점광과 스폿이면 true 입니다(방향광은 씬이 하나 고릅니다). */
@@ -261,19 +264,9 @@ namespace sw
         _gpuLightCount = selectGPULightSlotCount( producer, requestedGPULightSlotCount );
         if ( requestedGPULightSlotCount > 0 && _gpuLightCount == 0 )
             reportGPULightRefused( requestedGPULightSlotCount );
-        const uint32 cpuLimit = shaderslot::kMaxFrameLight - _gpuLightCount;
-        uint32       cpuCount = static_cast<uint32>( _listLightScratch.size() );
-        if ( cpuCount > cpuLimit )
-        {
-            if ( _bWarnedOverflow == SW_FALSE )
-            {
-                _bWarnedOverflow = SW_TRUE;
-                SW_LOG_WARNING( "The light count exceeds the limit (%#, excluding %# GPU slots) - truncating from the front.", shaderslot::kMaxFrameLight, _gpuLightCount );
-            }
-            cpuCount = cpuLimit;
-        }
-        _cpuCount = cpuCount;
-        _count    = cpuCount + _gpuLightCount;
+        const uint32 cpuCount = limitCPULightCount();
+        _cpuCount             = cpuCount;
+        _count                = cpuCount + _gpuLightCount;
         if ( pDevice == nullptr || _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
@@ -281,68 +274,10 @@ namespace sw
             return;
         }
 
-        // 업로드 목록: [CPU 라이트][GPU 구간 — 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다 — 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
-        // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(lightgrid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
-        _listUploadScratch.assign( _listLightScratch.begin(), _listLightScratch.begin() + cpuCount );
-        GPULight deadLight{};
-        deadLight._directionType = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( shaderslot::kLightTypePoint ) };
-        for ( uint32 gpuSlot = 0; gpuSlot < _gpuLightCount; ++gpuSlot )
-        {
-            _listUploadScratch.push_back( deadLight );
-        }
-        _listUploadScratch.insert( _listUploadScratch.end(), _listTileScratch.begin(), _listTileScratch.end() );
-
-        const GPULight*          pUpload     = _listUploadScratch.data();
-        const uint32             totalCount  = static_cast<uint32>( _listUploadScratch.size() );
-        const bool               bNeedsUav   = _gpuLightCount > 0;
-        constexpr RHIBufferUsage kUsage      = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        constexpr RHIBufferUsage kLightUsage = kUsage | RHIBufferUsage::UnorderedAccess;
-        const uint32             stride      = static_cast<uint32>( sizeof( GPULight ) );
-        // UAV 없이 잡혀 있던 버퍼는 용량이 충분해도 다시 잡는다(ensureCapacity 는 용량만 본다). 백엔드가 UAV 를 거절한 버퍼는 다시 잡아도 같으니 한 번만 해 본다.
-        const bool bLacksUav = bNeedsUav && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
-        if ( bLacksUav && _bUavDenied == SW_FALSE )
-            _buffer.release( pDevice );
-        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUav ? kLightUsage : kUsage, true, bNeedsUav, pUpload ) == false )
-        {
-            _count         = 0;
-            _cpuCount      = 0;
-            _gpuLightCount = 0;
+        if ( uploadLightList( pDevice, cpuCount ) == false )
             return;
-        }
-        const bool bUavDeniedNow = bNeedsUav && _buffer._uav == kInvalidDescriptorIndex;
-        if ( bUavDeniedNow && _bUavDenied == SW_FALSE )
-        {
-            _bUavDenied = SW_TRUE;
-            SW_LOG_ERROR( "Light buffer has no UAV - GPU particle lights stay dead" );
-        }
-        _buffer.upload( pDevice, pUpload, totalCount * stride );
 
-        // 라이트 프로브 SH9(t13). 볼륨 원소가 라이트 목록에 있으면 그 프로브들이 여기 있다 — 못 올리면 볼륨 원소가 빈 버퍼를 가리키므로 오류로 남긴다.
-        if ( _listProbeScratch.empty() == false )
-        {
-            const uint32 probeElementCount = static_cast<uint32>( _listProbeScratch.size() );
-            const uint32 probeStride       = static_cast<uint32>( sizeof( float4 ) );
-            // 실시간 볼륨이 있으면 프로브 갱신 컴퓨트가 이 버퍼를 쓴다 — UAV 가 있는 버퍼로 잡는다(UAV 없이 잡혀 있던 버퍼는 다시 잡는다. 백엔드가 거절한 버퍼는 한 번만 다시 해 본다).
-            const bool bWritable      = _bProbeWritable == SW_TRUE;
-            const bool bLacksProbeUav = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
-            if ( bLacksProbeUav && _bProbeUavDenied == SW_FALSE )
-                _probeBuffer.release( pDevice );
-            if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightUsage : kUsage, true, bWritable, _listProbeScratch.data() ) )
-            {
-                _probeBuffer.upload( pDevice, _listProbeScratch.data(), probeElementCount * probeStride );
-                _probeElementCount      = probeElementCount;
-                const bool bNewlyDenied = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
-                if ( bNewlyDenied && _bProbeUavDenied == SW_FALSE )
-                {
-                    _bProbeUavDenied = SW_TRUE;
-                    SW_LOG_ERROR( "Light probe buffer has no UAV - realtime probe volumes stay black" );
-                }
-            }
-            else
-            {
-                SW_LOG_ERROR( "Light probe buffer (%# elements) could not be allocated - probe volumes give no indirect light this frame", probeElementCount );
-            }
-        }
+        uploadProbeElements( pDevice );
 
         if ( listGridViewProj.empty() )
             return;
@@ -362,6 +297,90 @@ namespace sw
                 updateGPUGrid( pDevice, listGridViewProj );
                 break;
             }
+        }
+    }
+
+    uint32 GPULightBuffer::limitCPULightCount()
+    {
+        const uint32 cpuLimit = shaderslot::kMaxFrameLight - _gpuLightCount;
+        uint32       cpuCount = static_cast<uint32>( _listLightScratch.size() );
+        if ( cpuCount > cpuLimit )
+        {
+            if ( _bWarnedOverflow == SW_FALSE )
+            {
+                _bWarnedOverflow = SW_TRUE;
+                SW_LOG_WARNING( "The light count exceeds the limit (%#, excluding %# GPU slots) - truncating from the front.", shaderslot::kMaxFrameLight, _gpuLightCount );
+            }
+            cpuCount = cpuLimit;
+        }
+        return cpuCount;
+    }
+
+    bool GPULightBuffer::uploadLightList( IRHIDevice* pDevice, uint32 cpuCount )
+    {
+        // 업로드 목록: [CPU 라이트][GPU 구간 — 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다 — 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
+        // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(lightgrid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
+        _listUploadScratch.assign( _listLightScratch.begin(), _listLightScratch.begin() + cpuCount );
+        GPULight deadLight{};
+        deadLight._directionType = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( shaderslot::kLightTypePoint ) };
+        for ( uint32 gpuSlot = 0; gpuSlot < _gpuLightCount; ++gpuSlot )
+        {
+            _listUploadScratch.push_back( deadLight );
+        }
+        _listUploadScratch.insert( _listUploadScratch.end(), _listTileScratch.begin(), _listTileScratch.end() );
+
+        const GPULight* pUpload    = _listUploadScratch.data();
+        const uint32    totalCount = static_cast<uint32>( _listUploadScratch.size() );
+        const bool      bNeedsUav  = _gpuLightCount > 0;
+        const uint32    stride     = static_cast<uint32>( sizeof( GPULight ) );
+        // UAV 없이 잡혀 있던 버퍼는 용량이 충분해도 다시 잡는다(ensureCapacity 는 용량만 본다). 백엔드가 UAV 를 거절한 버퍼는 다시 잡아도 같으니 한 번만 해 본다.
+        const bool bLacksUav = bNeedsUav && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bLacksUav && _bUavDenied == SW_FALSE )
+            _buffer.release( pDevice );
+        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUav ? kLightBufferUsageWithUav : kLightBufferUsage, true, bNeedsUav, pUpload ) == false )
+        {
+            _count         = 0;
+            _cpuCount      = 0;
+            _gpuLightCount = 0;
+            return false;
+        }
+        const bool bUavDeniedNow = bNeedsUav && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bUavDeniedNow && _bUavDenied == SW_FALSE )
+        {
+            _bUavDenied = SW_TRUE;
+            SW_LOG_ERROR( "Light buffer has no UAV - GPU particle lights stay dead" );
+        }
+        _buffer.upload( pDevice, pUpload, totalCount * stride );
+        return true;
+    }
+
+    void GPULightBuffer::uploadProbeElements( IRHIDevice* pDevice )
+    {
+        // 라이트 프로브 SH9(t13). 볼륨 원소가 라이트 목록에 있으면 그 프로브들이 여기 있다 — 못 올리면 볼륨 원소가 빈 버퍼를 가리키므로 오류로 남긴다.
+        if ( _listProbeScratch.empty() )
+            return;
+
+        const uint32 probeElementCount = static_cast<uint32>( _listProbeScratch.size() );
+        const uint32 probeStride       = static_cast<uint32>( sizeof( float4 ) );
+        // 실시간 볼륨이 있으면 프로브 갱신 컴퓨트가 이 버퍼를 쓴다 — UAV 가 있는 버퍼로 잡는다(UAV 없이 잡혀 있던 버퍼는 다시 잡는다. 백엔드가 거절한 버퍼는 한 번만 다시 해 본다).
+        const bool bWritable      = _bProbeWritable == SW_TRUE;
+        const bool bLacksProbeUav = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
+        if ( bLacksProbeUav && _bProbeUavDenied == SW_FALSE )
+            _probeBuffer.release( pDevice );
+        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUav : kLightBufferUsage, true, bWritable, _listProbeScratch.data() ) )
+        {
+            _probeBuffer.upload( pDevice, _listProbeScratch.data(), probeElementCount * probeStride );
+            _probeElementCount      = probeElementCount;
+            const bool bNewlyDenied = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
+            if ( bNewlyDenied && _bProbeUavDenied == SW_FALSE )
+            {
+                _bProbeUavDenied = SW_TRUE;
+                SW_LOG_ERROR( "Light probe buffer has no UAV - realtime probe volumes stay black" );
+            }
+        }
+        else
+        {
+            SW_LOG_ERROR( "Light probe buffer (%# elements) could not be allocated - probe volumes give no indirect light this frame", probeElementCount );
         }
     }
 

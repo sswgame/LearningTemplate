@@ -182,6 +182,12 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
     private:
+        /** @brief CPU 라이트 수를 프레임 상한(GPU 구간을 뺀 몫)에 맞춰 돌려줍니다. 넘치면 한 번 경고합니다. */
+        uint32 limitCPULightCount();
+        /** @brief 업로드 목록([CPU 라이트][GPU 구간][그림자 타일])을 만들고 라이트 버퍼를 갖춰 올립니다. 버퍼를 잡지 못하면 개수를 0 으로 돌리고 false 입니다. */
+        bool uploadLightList( IRHIDevice* pDevice, uint32 cpuCount );
+        /** @brief 라이트 프로브 SH9 원소를 올립니다(없으면 아무것도 하지 않습니다). */
+        void uploadProbeElements( IRHIDevice* pDevice );
         /** @brief CPU 생산자 — 뷰마다 `LightGrid` 를 채워 단어를 이어 붙여 올립니다. */
         void updateCPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj );
         /** @brief GPU 생산자 — 뷰마다 뷰 정보를 올리고 그리드 버퍼를 잡습니다. */

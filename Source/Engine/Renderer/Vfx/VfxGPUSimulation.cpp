@@ -174,8 +174,7 @@ namespace sw
     void VfxGPUSimulation::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
                                          const VfxSimulationFrameInput& input )
     {
-        using Internal = VfxGPUSimulationInternal;
-        _frameInput    = input;
+        _frameInput = input;
         _listDispatch.clear();
         _listMeshDispatch.clear();
         _listParamWord.clear();
@@ -191,24 +190,45 @@ namespace sw
         {
             bAnyGPUBatch = bAnyGPUBatch || batch.findGPURequest() != nullptr;
         }
-        const bool bReportMissingPipeline = bAnyGPUBatch && input._bSimulationPipelineReady == false && _bPipelineMissingLogged == false;
+        reportMissingSimulationPipeline( bAnyGPUBatch );
+
+        assignParticleLights( listBatch, listMeshEmitter );
+
+        if ( input._bSimulationPipelineReady )
+        {
+            SW_PROFILE_SCOPE( "RT.Vfx.SimulationPrepare" );
+            prepareParticleEmitters( device, listBatch );
+            prepareMeshEmitters( device, listBatch, listMeshEmitter );
+        }
+
+        releaseStaleEmitters( device );
+
+        uploadParamBuffer( device, listBatch );
+    }
+
+    void VfxGPUSimulation::reportMissingSimulationPipeline( bool bAnyGPUBatch )
+    {
+        const bool bReportMissingPipeline = bAnyGPUBatch && _frameInput._bSimulationPipelineReady == false && _bPipelineMissingLogged == false;
         if ( bReportMissingPipeline )
         {
             // 대신 CPU 로 그리지 않는다 — 시뮬레이션 대상은 데이터와 빌드가 정했고, 바꿔 그리면 CPU 와 GPU 를 비교하는 화면이 거짓이 된다.
             SW_LOG_ERROR( "The VFX simulation compute PSO is missing - GPU-simulated emitters are not drawn" );
             _bPipelineMissingLogged = true;
         }
+    }
 
+    void VfxGPUSimulation::assignParticleLights( const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter )
+    {
         // 파티클 라이트 — 라이트 버퍼가 GPU 구간을 받은 프레임에만 쓴다. 범위는 렌더러가 구간 크기를 정할 때와 같은 함수로 얻는다(어긋나면 쓰지 않는다).
         _listLightRange.clear();
-        const bool bLightsReady = input._lightSlotCount > 0 && input._lightUav != kInvalidDescriptorIndex && input._lightBuffer != 0;
+        const bool bLightsReady = _frameInput._lightSlotCount > 0 && _frameInput._lightUav != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
         if ( bLightsReady )
         {
             const VfxGPULightAssignment assignment = assignLightRanges( listBatch, listMeshEmitter, _listLightRange );
-            if ( assignment._slotCount != input._lightSlotCount )
+            if ( assignment._slotCount != _frameInput._lightSlotCount )
             {
                 SW_LOG_ERROR( "VFX particle light slots (%#) differ from the light buffer's GPU section (%#) - particle lights are not drawn", assignment._slotCount,
-                              input._lightSlotCount );
+                              _frameInput._lightSlotCount );
                 _listLightRange.clear();
             }
             else if ( assignment._overflowEmitterCount > 0 && _bLightOverflowLogged == false )
@@ -218,48 +238,53 @@ namespace sw
                               GPULightBuffer::kMaxGPULight );
             }
         }
+    }
 
-        if ( input._bSimulationPipelineReady )
+    void VfxGPUSimulation::prepareParticleEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch )
+    {
+        for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
-            SW_PROFILE_SCOPE( "RT.Vfx.SimulationPrepare" );
-            for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
-            {
-                const GPUParticleBatch&     batch    = listBatch[batchIndex];
-                const VfxGPUEmitterRequest* pRequest = batch.findGPURequest();
-                if ( pRequest == nullptr || pRequest->_pDef == nullptr )
-                    continue;
-                EmitterState* pState = prepareEmitterState( device, *pRequest );
-                if ( pState == nullptr )
-                    continue;
-                const VfxGPULightRange lightRange = batchIndex < _listLightRange.size() ? _listLightRange[batchIndex] : VfxGPULightRange{};
-                appendSimulation( *pState, *pRequest, batch._world, batch._bRibbon == SW_TRUE, lightRange );
-                _listBatchDrawSource[batchIndex] = &pState->_drawSource;
-            }
-
-            // 메시 방출기 — 인스턴스 버퍼 UAV 와 쓰기 PSO 가 있어야 그린다(없으면 한 번 알리고 그리지 않는다).
-            const bool bMeshReady         = input._bMeshPipelineReady && input._instanceUav != kInvalidDescriptorIndex && input._instanceBuffer != 0;
-            const bool bReportMissingMesh = listMeshEmitter.empty() == false && bMeshReady == false && _bMeshPipelineMissingLogged == false;
-            if ( bReportMissingMesh )
-            {
-                SW_LOG_ERROR( "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
-                _bMeshPipelineMissingLogged = true;
-            }
-            for ( size_t meshIndex = 0; meshIndex < listMeshEmitter.size(); ++meshIndex )
-            {
-                const GPUVfxMeshEmitter& emitter       = listMeshEmitter[meshIndex];
-                const bool               bEmitterReady = emitter._request._pDef != nullptr && emitter._pListInstanceSlot != nullptr;
-                if ( bMeshReady == false || bEmitterReady == false )
-                    continue;
-                EmitterState* pState = prepareEmitterState( device, emitter._request );
-                if ( pState == nullptr )
-                    continue;
-                const size_t           rangeIndex = listBatch.size() + meshIndex;
-                const VfxGPULightRange lightRange = rangeIndex < _listLightRange.size() ? _listLightRange[rangeIndex] : VfxGPULightRange{};
-                appendSimulation( *pState, emitter._request, emitter._world, false, lightRange );
-                appendMeshInstance( *pState, emitter );
-            }
+            const GPUParticleBatch&     batch    = listBatch[batchIndex];
+            const VfxGPUEmitterRequest* pRequest = batch.findGPURequest();
+            if ( pRequest == nullptr || pRequest->_pDef == nullptr )
+                continue;
+            EmitterState* pState = prepareEmitterState( device, *pRequest );
+            if ( pState == nullptr )
+                continue;
+            const VfxGPULightRange lightRange = batchIndex < _listLightRange.size() ? _listLightRange[batchIndex] : VfxGPULightRange{};
+            appendSimulation( *pState, *pRequest, batch._world, batch._bRibbon == SW_TRUE, lightRange );
+            _listBatchDrawSource[batchIndex] = &pState->_drawSource;
         }
+    }
 
+    void VfxGPUSimulation::prepareMeshEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter )
+    {
+        // 메시 방출기 — 인스턴스 버퍼 UAV 와 쓰기 PSO 가 있어야 그린다(없으면 한 번 알리고 그리지 않는다).
+        const bool bMeshReady         = _frameInput._bMeshPipelineReady && _frameInput._instanceUav != kInvalidDescriptorIndex && _frameInput._instanceBuffer != 0;
+        const bool bReportMissingMesh = listMeshEmitter.empty() == false && bMeshReady == false && _bMeshPipelineMissingLogged == false;
+        if ( bReportMissingMesh )
+        {
+            SW_LOG_ERROR( "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
+            _bMeshPipelineMissingLogged = true;
+        }
+        for ( size_t meshIndex = 0; meshIndex < listMeshEmitter.size(); ++meshIndex )
+        {
+            const GPUVfxMeshEmitter& emitter       = listMeshEmitter[meshIndex];
+            const bool               bEmitterReady = emitter._request._pDef != nullptr && emitter._pListInstanceSlot != nullptr;
+            if ( bMeshReady == false || bEmitterReady == false )
+                continue;
+            EmitterState* pState = prepareEmitterState( device, emitter._request );
+            if ( pState == nullptr )
+                continue;
+            const size_t           rangeIndex = listBatch.size() + meshIndex;
+            const VfxGPULightRange lightRange = rangeIndex < _listLightRange.size() ? _listLightRange[rangeIndex] : VfxGPULightRange{};
+            appendSimulation( *pState, emitter._request, emitter._world, false, lightRange );
+            appendMeshInstance( *pState, emitter );
+        }
+    }
+
+    void VfxGPUSimulation::releaseStaleEmitters( IRHIDevice& device )
+    {
         // 이번 프레임에 없는 재생은 놓는다(멈춤 · 다시 재생 · 컴포넌트 제거).
         _listScratchStaleRunID.clear();
         for ( auto& [runID, pState] : _mapState )
@@ -275,7 +300,11 @@ namespace sw
             state._argsBuffer.release( &device );
             _mapState.erase( runID );
         }
+    }
 
+    void VfxGPUSimulation::uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch )
+    {
+        using Internal              = VfxGPUSimulationInternal;
         const bool bNothingToUpload = _listDispatch.empty() && _listMeshDispatch.empty();
         if ( bNothingToUpload )
             return;

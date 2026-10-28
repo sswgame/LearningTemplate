@@ -23,6 +23,7 @@ namespace sw
 
     class IRHICommandList;
     class IRHIDevice;
+    class IRHIResourceFactory;
     class RenderPSOCache;
     class Texture2D;
 
@@ -122,6 +123,14 @@ namespace sw
          * @details 새 페이지의 SRV 는 첫 업로드 티켓이 `Complete` 가 된 이후 프레임에 등록합니다. `Busy` 는 다음 프레임에 다시 내고, `Rejected` · `Failed` 는 페이지를 멈춥니다.
          */
         void uploadAtlasPage( IRHIDevice& device, AtlasPage& page );
+        /** @brief 페이지 텍스처가 없으면 만들고 첫 전체 업로드를 표시합니다. 만들지 못해 페이지를 멈췄으면 false 입니다. */
+        bool ensureAtlasPageTexture( IRHIResourceFactory& factory, AtlasPage& page );
+        /** @brief 새 페이지의 첫 업로드가 끝났으면 bindless 로 등록합니다. 아직 끝나지 않았거나 페이지를 멈췄으면 false 이며 이번 프레임은 더 올리지 않습니다. */
+        bool registerAtlasPage( IRHIResourceFactory& factory, AtlasPage& page );
+        /** @brief 페이지 전체를 올립니다(`Busy` 는 더티 상태를 두고 다음 프레임). */
+        void uploadWholeAtlasPage( IRHIResourceFactory& factory, AtlasPage& page );
+        /** @brief 더티 구간을 합쳐 잇달아 냅니다(`Busy` 에서 멈추고 나머지는 다음 프레임). */
+        void uploadAtlasRegions( IRHIResourceFactory& factory, AtlasPage& page );
         /** @brief 페이지를 멈춥니다: 오류를 남기고, `release` 전까지 그리지도 올리지도 않습니다(폴백 없이 실패를 드러냅니다). */
         void failAtlasPage( AtlasPage& page, string_view reason );
         /** @brief 경로로 빌린 이미지 하나입니다(텍스처는 `TextureCache` 가 소유하며 `release` 가 돌려줍니다). */

@@ -496,6 +496,86 @@ namespace sw
                 return StringUtil::endsWith( path, ".dxil", true ) || StringUtil::endsWith( path, ".dxbc", true ) || StringUtil::endsWith( path, ".spv", true );
             }
 
+            /** @brief 스탬프에 적힌 소스 해시 · 헤더 해시를 현재 소스와 견주어 낡음 · 누락 · 삭제를 문제로 적습니다(`verifyDomain` 의 한 단계). */
+            static void verifySourceHashes( string_view resourceRoot, const vector<string>& listIncludeRoot, const string& shadersDir, const string& label, string_view shaderFolder,
+                                            const vector<StampedSource>& listSource, const StampInfo& stamped, vector<string>& outListProblem )
+            {
+                unordered_set<string> uniqueCurrentKey;
+                for ( const StampedSource& source : listSource )
+                {
+                    uniqueCurrentKey.insert( source._key );
+                    const uint64 hash        = ContentHash::computeFile( source._absPath );
+                    const auto   stampedIter = stamped._mapSourceHash.find( source._key );
+                    if ( stampedIter == stamped._mapSourceHash.end() )
+                    {
+                        appendProblem( outListProblem, "%#/%#: never cooked for '%#'", label, source._key, shaderFolder );
+                        continue;
+                    }
+                    if ( stampedIter->second != hash )
+                    {
+                        appendProblem( outListProblem, "%#/%#: source changed but '%#' was not cooked again", label, source._key, shaderFolder );
+                        continue;
+                    }
+                    // 소스가 열었던 헤더만 본다. 이 소스와 상관없는 헤더가 바뀐 것은 문제가 아니다.
+                    const auto dependencyIter = stamped._mapDependency.find( source._key );
+                    if ( dependencyIter == stamped._mapDependency.end() )
+                        continue;
+                    for ( const StampDependency& dependency : dependencyIter->second )
+                    {
+                        const string headerPath = resolveHeaderKey( resourceRoot, listIncludeRoot, shadersDir, dependency._headerKey );
+                        if ( headerPath.empty() || ContentHash::computeFile( headerPath ) != dependency._hash )
+                            appendProblem( outListProblem, "%#/%#: header '%#' changed or is gone but '%#' was not cooked again", label, source._key, dependency._headerKey, shaderFolder );
+                    }
+                }
+                for ( const auto& [key, hash] : stamped._mapSourceHash )
+                {
+                    if ( uniqueCurrentKey.find( key ) == uniqueCurrentKey.end() )
+                        appendProblem( outListProblem, "%#/%#: removed shader is still in the '%#' stamp", label, key, shaderFolder );
+                }
+            }
+
+            /** @brief `bin/<폴더>` 의 바이너리가 있는지, 반사 매니페스트가 모든 바이너리 키를 덮는지 판정합니다(`verifyDomain` 의 한 단계). */
+            static void verifyBinaries( const string& binDir, const string& label, string_view shaderFolder, vector<string>& outListProblem )
+            {
+                vector<string> listBinary;
+                vector<string> listFile;
+                if ( FileUtil::collectFiles( binDir, "", listFile, false ) == false ) // 방금 본 폴더다 — 실패는 도중에 멈춘 목록뿐이다
+                {
+                    appendProblem( outListProblem, "%#: '%#' binaries could not all be listed", label, shaderFolder );
+                    return;
+                }
+                for ( const string& filePath : listFile )
+                {
+                    if ( isShaderBinaryFile( filePath ) )
+                        listBinary.push_back( FileUtil::getFileNamePart( filePath ) );
+                }
+                if ( listBinary.empty() )
+                    appendProblem( outListProblem, "%#: '%#' has no shader binaries", label, shaderFolder );
+
+                // 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 소스가 바뀌었는지만 보므로 쿠커의 레시피가 늘어난 경우(새 퍼뮤테이션 축)는
+                // 여기가 아니면 못 잡는다 — 리플렉션 없이 바인딩한 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로다.
+                vector<uint8> manifestBytes;
+                const string  manifestPath = FileUtil::joinPath( binDir, "reflection.manifest" );
+                if ( FileUtil::isRegularFile( manifestPath ) == false || FileUtil::readFile( manifestPath, manifestBytes ) == false )
+                {
+                    appendProblem( outListProblem, "%#: '%#' has no reflection manifest", label, shaderFolder );
+                    return;
+                }
+                const string_view manifest{ reinterpret_cast<const utf8*>( manifestBytes.data() ), manifestBytes.size() };
+                vector<string>    listUncovered;
+                for ( const string& binaryName : listBinary )
+                {
+                    if ( manifest.find( binaryName ) == string_view::npos )
+                        listUncovered.push_back( binaryName );
+                }
+                if ( listUncovered.empty() == false )
+                {
+                    std::sort( listUncovered.begin(), listUncovered.end() );
+                    appendProblem( outListProblem, "%#: '%#' manifest misses %# binaries (first: %#) - cook again or delete the stale files", label, shaderFolder,
+                                   listUncovered.size(), listUncovered.front() );
+                }
+            }
+
             /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCooker::verifyCookedShaders` 의 본체). */
             static void verifyDomain( string_view resourceRoot, const vector<string>& listPriority, const string& domain, string_view shaderFolder, vector<string>& outListProblem )
             {
@@ -540,76 +620,9 @@ namespace sw
                 if ( stamped._bHasToolchain == false || stamped._toolchain != computeToolchainFingerprint() )
                     appendProblem( outListProblem, "%#: '%#' was cooked with another toolchain (compiler or options changed)", label, shaderFolder );
 
-                unordered_set<string> uniqueCurrentKey;
-                for ( const StampedSource& source : listSource )
-                {
-                    uniqueCurrentKey.insert( source._key );
-                    const uint64 hash        = ContentHash::computeFile( source._absPath );
-                    const auto   stampedIter = stamped._mapSourceHash.find( source._key );
-                    if ( stampedIter == stamped._mapSourceHash.end() )
-                    {
-                        appendProblem( outListProblem, "%#/%#: never cooked for '%#'", label, source._key, shaderFolder );
-                        continue;
-                    }
-                    if ( stampedIter->second != hash )
-                    {
-                        appendProblem( outListProblem, "%#/%#: source changed but '%#' was not cooked again", label, source._key, shaderFolder );
-                        continue;
-                    }
-                    // 소스가 열었던 헤더만 본다. 이 소스와 상관없는 헤더가 바뀐 것은 문제가 아니다.
-                    const auto dependencyIter = stamped._mapDependency.find( source._key );
-                    if ( dependencyIter == stamped._mapDependency.end() )
-                        continue;
-                    for ( const StampDependency& dependency : dependencyIter->second )
-                    {
-                        const string headerPath = resolveHeaderKey( resourceRoot, listIncludeRoot, shadersDir, dependency._headerKey );
-                        if ( headerPath.empty() || ContentHash::computeFile( headerPath ) != dependency._hash )
-                            appendProblem( outListProblem, "%#/%#: header '%#' changed or is gone but '%#' was not cooked again", label, source._key, dependency._headerKey, shaderFolder );
-                    }
-                }
-                for ( const auto& [key, hash] : stamped._mapSourceHash )
-                {
-                    if ( uniqueCurrentKey.find( key ) == uniqueCurrentKey.end() )
-                        appendProblem( outListProblem, "%#/%#: removed shader is still in the '%#' stamp", label, key, shaderFolder );
-                }
+                verifySourceHashes( resourceRoot, listIncludeRoot, shadersDir, label, shaderFolder, listSource, stamped, outListProblem );
 
-                vector<string> listBinary;
-                vector<string> listFile;
-                if ( FileUtil::collectFiles( binDir, "", listFile, false ) == false ) // 방금 본 폴더다 — 실패는 도중에 멈춘 목록뿐이다
-                {
-                    appendProblem( outListProblem, "%#: '%#' binaries could not all be listed", label, shaderFolder );
-                    return;
-                }
-                for ( const string& filePath : listFile )
-                {
-                    if ( isShaderBinaryFile( filePath ) )
-                        listBinary.push_back( FileUtil::getFileNamePart( filePath ) );
-                }
-                if ( listBinary.empty() )
-                    appendProblem( outListProblem, "%#: '%#' has no shader binaries", label, shaderFolder );
-
-                // 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 소스가 바뀌었는지만 보므로 쿠커의 레시피가 늘어난 경우(새 퍼뮤테이션 축)는
-                // 여기가 아니면 못 잡는다 — 리플렉션 없이 바인딩한 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로다.
-                vector<uint8> manifestBytes;
-                const string  manifestPath = FileUtil::joinPath( binDir, "reflection.manifest" );
-                if ( FileUtil::isRegularFile( manifestPath ) == false || FileUtil::readFile( manifestPath, manifestBytes ) == false )
-                {
-                    appendProblem( outListProblem, "%#: '%#' has no reflection manifest", label, shaderFolder );
-                    return;
-                }
-                const string_view manifest{ reinterpret_cast<const utf8*>( manifestBytes.data() ), manifestBytes.size() };
-                vector<string>    listUncovered;
-                for ( const string& binaryName : listBinary )
-                {
-                    if ( manifest.find( binaryName ) == string_view::npos )
-                        listUncovered.push_back( binaryName );
-                }
-                if ( listUncovered.empty() == false )
-                {
-                    std::sort( listUncovered.begin(), listUncovered.end() );
-                    appendProblem( outListProblem, "%#: '%#' manifest misses %# binaries (first: %#) - cook again or delete the stale files", label, shaderFolder,
-                                   listUncovered.size(), listUncovered.front() );
-                }
+                verifyBinaries( binDir, label, shaderFolder, outListProblem );
             }
         };
     } // namespace

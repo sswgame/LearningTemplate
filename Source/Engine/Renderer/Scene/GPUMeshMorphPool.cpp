@@ -229,6 +229,21 @@ namespace sw
         // 스킨 구간은 모프 **용량** 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
         _skinVertexBase = _morphAllocator.getCapacity();
 
+        buildSkinInstanceRows( pDevice, listSkinMesh );
+
+        if ( _vertexCount == 0 )
+        {
+            _morph.release( pDevice );
+            _skinInstance.release( pDevice );
+            _skinPalette.release( pDevice );
+            return;
+        }
+
+        ensureDeformBuffers( pDevice );
+    }
+
+    void GPUMeshMorphPool::buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
+    {
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
         _mapSkinBase.clear();
@@ -275,15 +290,10 @@ namespace sw
             row._morphWeightBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
         }
         _vertexCount = _skinVertexBase + resultOffset;
+    }
 
-        if ( _vertexCount == 0 )
-        {
-            _morph.release( pDevice );
-            _skinInstance.release( pDevice );
-            _skinPalette.release( pDevice );
-            return;
-        }
-
+    void GPUMeshMorphPool::ensureDeformBuffers( IRHIDevice* pDevice )
+    {
         // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
         const bool bMorphBuffer = _morph.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex,
                                                          GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
