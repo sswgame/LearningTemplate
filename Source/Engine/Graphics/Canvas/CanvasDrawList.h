@@ -11,6 +11,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -156,6 +157,43 @@ namespace sw
         float32 _unused{ 0.0f }; ///< 셰이더 float4 의 w(쓰지 않는다)
     };
 } // namespace sw
+namespace sw
+{
+    /** @brief 마커 기록의 `_flags` 비트입니다. 숫자는 `canvasmarker.hlsl` 의 `kMarkerFlag*` 와 같아야 합니다. */
+    enum class CanvasMarkerFlag : uint32
+    {
+        None  = 0,
+        Clamp = SW_BIT( 0 ), ///< 화면 밖이면 가장자리에 붙인다(끄면 숨긴다)
+    };
+
+    /**
+     * @brief 컴퓨트가 투영하는 화면 마커 하나의 입력입니다(앵커 번호가 인덱스). 월드 점과 보이기 규칙만 싣는다 — 화면 좌표 · 가시 판정은 `canvasmarker.hlsl` 이 계산한다.
+     * @details 기록 하나가 렌더러 쪽 마커 인스턴스 하나다: 마커 ↔ GPU 인스턴스 대응은 앵커 번호(= 구조 버퍼의 앞 원소 번호)이므로 따로 표를 두지 않는다.
+     *          `_bActive` 가 0 이면 컴퓨트는 그 앵커를 건드리지 않는다(CPU 가 투영하는 마커이거나 숨긴 마커). 배치는 float4 둘이다(`CanvasMarkerView` 앞 머리 행 뒤에 이어 올린다).
+     */
+    struct CanvasMarkerRecord
+    {
+        float3  _worldPosition{};           ///< 마커의 월드 기준점입니다(주 씬 컴포넌트 위치 + 월드 오프셋).
+        float32 _maxDistance{ 0.0f };       ///< 이보다 멀면 숨깁니다(0 이면 제한 없음).
+        float2  _screenOffset{};            ///< 투영한 점에 더하는 UI 단위 오프셋입니다.
+        float32 _referenceDistance{ 0.0f }; ///< 0 보다 크면 거리 배율(`_referenceDistance / 거리`, 뷰의 최소 · 최대로 자른다)을 씁니다.
+        uint32  _flags{ 0 };                ///< `CanvasMarkerFlag` 비트입니다.
+        uint32  _bActive{ 0 };              ///< 1 이면 컴퓨트가 이 앵커를 씁니다.
+    };
+
+    /** @brief 마커 투영이 한 프레임에 쓰는 공용 값입니다(게임 카메라의 뷰 · 투영과 UI 뷰포트). */
+    struct CanvasMarkerView
+    {
+        float4x4 _viewProjection{};   ///< 행 벡터 규약(`float4::transform`)의 게임 카메라 뷰 · 투영 행렬입니다.
+        float3   _cameraPosition{};   ///< 거리 계산용 카메라 월드 위치입니다.
+        float2   _viewportSize{};     ///< UI 뷰포트 크기(UI 단위)입니다.
+        float32  _uiScale{ 1.0f };    ///< UI 단위 → 물리 픽셀 배율입니다(앵커를 이 배율로 곱해 정수로 맞춘다 — `UIScreenMarkers::publishCanvasAnchors` 와 같은 규칙).
+        float32  _edgeMargin{ 0.0f }; ///< 가장자리에 붙일 때 남기는 안쪽 여백(UI 단위)입니다.
+        float32  _minClipW{ 0.0f };   ///< 클립 w 가 이보다 작으면 카메라 뒤입니다.
+        float32  _minDistanceScale{ 1.0f };
+        float32  _maxDistanceScale{ 1.0f };
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -167,6 +205,12 @@ namespace sw
         vector<GlyphAtlasUpload>     _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
         /** @brief 주 출력 사각형의 `_anchor` 가 가리키는 앵커입니다. 프레임마다 바뀌어도 `_contentRevision` 을 증가시키지 않습니다. 렌더러가 앵커 구간만 업로드합니다. */
         vector<CanvasAnchor> _listAnchor{};
+        /**
+         * @brief 컴퓨트가 투영할 화면 마커 입력입니다(앵커 번호가 인덱스, 비어 있으면 컴퓨트를 돌리지 않는다). 렌더러가 업로드한 뒤 `canvasmarker.hlsl` 이 활성 기록의 앵커 원소를 덮어쓴다.
+         * @details 게임 스레드가 월드 점만 싣고(`_listAnchor` 의 CPU 투영을 하지 않는다) 화면 좌표 · 가시 판정은 GPU 가 낸다. 사각형 버퍼는 그대로라 `_contentRevision` 도 올리지 않는다.
+         */
+        vector<CanvasMarkerRecord> _listMarker{};
+        CanvasMarkerView           _markerView{}; ///< `_listMarker` 가 쓰는 공용 값입니다.
         /**
          * @brief 사각형이나 일괄 내용이 바뀔 때만 증가하는 번호입니다. 렌더러는 지난 프레임과 같으면 사각형 버퍼를 다시 업로드하지 않습니다.
          * @details 0은 "모른다" 는 뜻이라 항상 업로드합니다(테스트와 개발 테스트 이미지).

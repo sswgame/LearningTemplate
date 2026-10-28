@@ -53,6 +53,11 @@ namespace sw
         WidgetComponent::onBeginPlay();
     }
 
+    bool ObjectiveMarkerComponent::needsMarkerPlacement() const
+    {
+        return true;
+    }
+
     void ObjectiveMarkerComponent::onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement )
     {
         using Internal      = ObjectiveMarkerComponentInternal;

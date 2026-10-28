@@ -322,6 +322,13 @@ namespace sw
             {
                 pComponent->updateScreenMarker( _viewport, view );
             }
+            // GPU 투영 마커의 공용 카메라 — 켜진 마커가 있을 때만 패킷에 실린다(`getGpuMarkerCount`).
+            if ( view._pGpuManager != nullptr )
+            {
+                CanvasMarkerView gpuView{};
+                WidgetComponent::makeGpuMarkerView( view, _viewport._size, gpuView );
+                _markers.setGpuMarkerView( gpuView );
+            }
         }
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
@@ -1002,6 +1009,16 @@ namespace sw
     void UISystem::setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale )
     {
         _markers.setAnchor( anchor, position, scale );
+    }
+
+    void UISystem::setGpuScreenMarker( uint32 anchor, const CanvasMarkerRecord& record )
+    {
+        _markers.setGpuMarker( anchor, record );
+    }
+
+    void UISystem::clearGpuScreenMarker( uint32 anchor )
+    {
+        _markers.clearGpuMarker( anchor );
     }
 
     Widget* UISystem::findScreenMarker( WidgetID widget ) const

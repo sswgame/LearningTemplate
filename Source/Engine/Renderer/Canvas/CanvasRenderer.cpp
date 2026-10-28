@@ -5,6 +5,7 @@
 #include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -43,6 +44,16 @@ namespace sw
 
             /** @brief 사각형 버퍼가 모자라면 이 배율로 키운다(프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kQuadBufferGrowth = 1.5f;
+
+            /** @brief 마커 투영 컴퓨트의 입력 행 배치입니다 — canvasmarker.hlsl 의 kRow* · kMarkerFlagActive · numthreads 와 같아야 합니다. */
+            static constexpr uint32 kRowViewProjection     = 0;
+            static constexpr uint32 kRowCamera             = 4;
+            static constexpr uint32 kRowViewport           = 5;
+            static constexpr uint32 kRowLimits             = 6;
+            static constexpr uint32 kRowFirstMarker        = 8;
+            static constexpr uint32 kMarkerRowCount        = 2;
+            static constexpr uint32 kMarkerFlagActive      = 0x80000000u;
+            static constexpr uint32 kMarkerThreadGroupSize = 64;
         };
     } // namespace
 } // namespace sw
@@ -54,11 +65,14 @@ namespace sw
         , _listPathTexture{}
         , _regionScratchBytes{}
         , _listAnchorScratch{}
+        , _listMarkerRowScratch{}
         , _listUploadedAnchor{}
         , _quadBuffer{}
+        , _markerRowBuffer{}
         , _uploadedRevision{ 0 }
         , _uploadedQuadCount{ 0 }
         , _mainQuadBase{ 0 }
+        , _markerCount{ 0 }
         , _lastUploadCallCount{ 0 }
         , _lastDrawnTargetCount{ 0 }
     {
@@ -69,6 +83,7 @@ namespace sw
     void CanvasRenderer::prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache )
     {
         prepareTargets( device, inoutFrame, psoCache );
+        prepareMarkers( device, inoutFrame );
         SW_PROFILE_SCOPE( "RT.Canvas.Upload" );
         _lastUploadCallCount = 0;
 
@@ -112,8 +127,16 @@ namespace sw
         }
         if ( quadCount == 0 )
             return;
-        signature               = signature == 0 ? 1 : signature;
-        const bool bSameContent = bKnown && signature == _uploadedRevision && quadCount == _uploadedQuadCount && _quadBuffer.isValid();
+        // 마커 투영 컴퓨트가 앵커 원소를 쓰려면 이 버퍼에 UAV 가 있어야 한다. 마커가 처음 올라온 프레임에 UAV 없이 만들어진 버퍼는 다시 만들고 내용을 다시 올린다.
+        const bool bNeedsUav = _markerCount > 0;
+        if ( bNeedsUav && _quadBuffer.isValid() && _quadBuffer._uav == kInvalidDescriptorIndex )
+        {
+            _quadBuffer.release( &device );
+            _uploadedRevision = 0;
+        }
+        const RHIBufferUsage quadUsage = bNeedsUav ? ( RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess ) : RHIBufferUsage::ShaderResource;
+        signature                      = signature == 0 ? 1 : signature;
+        const bool bSameContent        = bKnown && signature == _uploadedRevision && quadCount == _uploadedQuadCount && _quadBuffer.isValid();
         if ( bSameContent )
         {
             uploadAnchors( device, inoutFrame._listAnchor, false );
@@ -134,7 +157,7 @@ namespace sw
         {
             const uint32 capacity = MathUtil::max( quadCount, static_cast<uint32>( static_cast<float32>( _quadBuffer._capacityElements ) * CanvasRendererInternal::kQuadBufferGrowth ) );
             _quadBuffer.release( &device );
-            if ( _quadBuffer.ensureCapacity( &device, sizeof( CanvasQuad ), capacity, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
+            if ( _quadBuffer.ensureCapacity( &device, sizeof( CanvasQuad ), capacity, quadUsage, true, bNeedsUav, nullptr ) == false )
             {
                 SW_LOG_ERROR( "Failed to create the canvas quad buffer (%# quads) - the canvas is not drawn", capacity );
                 _uploadedRevision = 0;
@@ -166,6 +189,70 @@ namespace sw
         }
         _quadBuffer.upload( &device, _listAnchorScratch.data(), static_cast<uint32>( listAnchor.size() * sizeof( CanvasQuad ) ) );
         _listUploadedAnchor = listAnchor;
+    }
+
+    void CanvasRenderer::prepareMarkers( IRHIDevice& device, const CanvasFrameData& frame )
+    {
+        using Internal = CanvasRendererInternal;
+        _markerCount   = 0;
+        if ( frame._listMarker.empty() )
+            return;
+        // 입력 행 배치는 canvasmarker.hlsl 의 kRow* 와 1:1 이다(뷰 · 투영 4행 · 카메라 · 뷰포트 · 한계 · 여백 1행 뒤에 마커마다 두 행).
+        const CanvasMarkerView& view        = frame._markerView;
+        const uint32            markerCount = static_cast<uint32>( frame._listMarker.size() );
+        const uint32            rowCount    = Internal::kRowFirstMarker + markerCount * Internal::kMarkerRowCount;
+        _listMarkerRowScratch.assign( rowCount, float4{} );
+        const float32* pMatrix = view._viewProjection.data(); // 행 우선 16 개 — 행 벡터 규약 그대로 올린다(셰이더가 행 곱으로 푼다)
+        for ( uint32 row = 0; row < 4; ++row )
+        {
+            _listMarkerRowScratch[Internal::kRowViewProjection + row] = float4{ pMatrix[row * 4], pMatrix[row * 4 + 1], pMatrix[row * 4 + 2], pMatrix[row * 4 + 3] };
+        }
+        _listMarkerRowScratch[Internal::kRowCamera]   = float4{ view._cameraPosition._x, view._cameraPosition._y, view._cameraPosition._z, BitUtil::bitsToFloat( markerCount ) };
+        _listMarkerRowScratch[Internal::kRowViewport] = float4{ view._viewportSize._x, view._viewportSize._y, view._uiScale, view._edgeMargin };
+        _listMarkerRowScratch[Internal::kRowLimits]   = float4{ view._minClipW, view._minDistanceScale, view._maxDistanceScale, 0.0f };
+        for ( uint32 index = 0; index < markerCount; ++index )
+        {
+            const CanvasMarkerRecord& record = frame._listMarker[index];
+            const uint32              rowAt  = Internal::kRowFirstMarker + index * Internal::kMarkerRowCount;
+            const uint32              bits   = record._flags | ( record._bActive != 0 ? Internal::kMarkerFlagActive : 0u );
+            _listMarkerRowScratch[rowAt]     = float4{ record._worldPosition._x, record._worldPosition._y, record._worldPosition._z, record._maxDistance };
+            _listMarkerRowScratch[rowAt + 1] = float4{ record._screenOffset._x, record._screenOffset._y, record._referenceDistance, BitUtil::bitsToFloat( bits ) };
+        }
+        constexpr RHIBufferUsage kRowUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        if ( _markerRowBuffer.ensureCapacity( &device, sizeof( float4 ), rowCount, kRowUsage, true, false, nullptr ) == false )
+        {
+            SW_LOG_ERROR( "Failed to create the canvas marker input buffer (%# rows) - GPU-projected markers are not placed", rowCount );
+            return;
+        }
+        _markerRowBuffer.upload( &device, _listMarkerRowScratch.data(), rowCount * static_cast<uint32>( sizeof( float4 ) ) );
+        _markerCount = markerCount;
+    }
+
+    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso )
+    {
+        if ( _markerCount == 0 )
+            return;
+        if ( pso == 0 )
+        {
+            // 셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드다. CPU 투영으로 대신하지 않는다 — 켜진 마커의 앵커 배율은 CPU 가 0 으로 올렸으므로 그려지지 않는다.
+            SW_LOG_ERROR_ONCE( "The canvas marker projection compute PSO is missing (shader not cooked or no compute support) - GPU-projected markers are not drawn" );
+            return;
+        }
+        if ( _quadBuffer.isValid() == false || _quadBuffer._uav == kInvalidDescriptorIndex || _markerRowBuffer.isValid() == false )
+        {
+            SW_LOG_ERROR_ONCE( "The canvas quad buffer has no UAV for the marker projection - GPU-projected markers are not drawn" );
+            return;
+        }
+        using Internal = CanvasRendererInternal;
+        SW_PROFILE_SCOPE( "RT.Canvas.MarkerProject" );
+        // 앵커 원소는 이 버퍼의 맨 앞이다. 컴퓨트가 쓰고 나면 캔버스 그리기가 읽기로 본다(프로브 갱신과 같은 상태 전환).
+        cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::UnorderedAccess );
+        cmd.setComputePipelineState( pso );
+        // g_MarkerRows(t0) / g_MarkerQuadsRW(u0). canvasmarker.hlsl 레지스터와 1:1 이다.
+        cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
+        cmd.bindComputeUav( _quadBuffer._uav, 0 );
+        cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
+        cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
     uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
@@ -267,6 +354,8 @@ namespace sw
         }
         _listTarget.clear();
         _quadBuffer.release( pDevice );
+        _markerRowBuffer.release( pDevice );
+        _markerCount       = 0;
         _uploadedRevision  = 0;
         _uploadedQuadCount = 0;
         _listUploadedAnchor.clear();

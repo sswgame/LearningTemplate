@@ -7,6 +7,7 @@
 // 이 셰이더는 루트 상수 블록을 직접 선언한다(binding.hlsli 의 그래픽스 블록 g_SwMaterialCount 대신).
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
+#include "canvasquad.hlsli"
 #include "colorvision.hlsli"
 
 static const uint kCanvasQuadRect              = 0u;
@@ -15,22 +16,6 @@ static const uint kCanvasQuadGlyph             = 2u;
 static const uint kCanvasQuadShadow            = 3u;
 static const uint kCanvasFlagRoundedClip       = 1u;
 static const uint kCanvasFlagMultiChannelGlyph = 2u; // 글리프 아틀라스 페이지가 MSDF(RGBA) — RGB 의 중앙값이 거리값(C++ CanvasQuadFlag::kMultiChannelGlyph)
-
-struct CanvasQuad
-{
-    float4 _rect;         // x, y(변환 전 왼쪽 위의 화면 위치) · 너비, 높이(픽셀)
-    float4 _uvRect;       // u0, v0, u1, v1
-    float4 _color;        // 곧은 RGBA
-    float4 _borderColor;  // Rect: 테두리 색 · Glyph: 외곽선 색
-    float4 _cornerRadius; // 왼위 · 오위 · 오아 · 왼아(픽셀)
-    float4 _clipRect;     // 둥근 자르기 x0, y0, x1, y1(픽셀)
-    float4 _axis;         // 2×2 변환 — 축 X = xy · 축 Y = zw
-    float4 _params;       // Rect: x 테두리 · Glyph: x 거리 배율 · y 외곽선 · z 굵게 · Shadow: y 흐림 · w 둥근 자르기 반지름
-    uint   _kind;
-    uint   _textureSlot; // 일괄 텍스처 번호(0..3), 없음 = kInvalidIndex
-    uint   _flags;
-    uint   _anchor; // 화면 앵커 번호, 없음 = kInvalidIndex — 앵커는 버퍼 맨 앞 원소들이고 rect 가 (x, y, 배율, -) 다(C++ CanvasAnchor)
-};
 
 SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_PASS_SRV );
 

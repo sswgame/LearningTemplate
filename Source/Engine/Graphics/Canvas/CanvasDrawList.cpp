@@ -147,6 +147,8 @@ namespace sw
         _listTarget.clear();
         _listAtlasUpload.clear();
         _listAnchor.clear();
+        _listMarker.clear();
+        _markerView      = CanvasMarkerView{};
         _contentRevision = 0;
         _colorVisionMode = 0;
     }

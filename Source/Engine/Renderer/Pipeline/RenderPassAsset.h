@@ -147,6 +147,11 @@ namespace sw
          *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
          */
         ProbeUpdate,
+        /**
+         * @brief 화면 마커 투영 컴퓨트(canvasmarker.hlsl)입니다. 마커마다 월드 점을 게임 카메라로 투영해 가시 판정과 함께 캔버스 사각형 버퍼의 앵커 원소(x, y, 배율)에 씁니다(`CanvasRenderer::recordMarkerProjection`).
+         *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
+         */
+        CanvasMarker,
     };
 
     /**

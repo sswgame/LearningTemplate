@@ -37,6 +37,8 @@ namespace sw
 
     protected:
         void onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement ) override;
+        /** @brief 거리 글과 방향 막대를 놓인 자리로 쓰므로 투영은 CPU 가 한다(`WidgetComponent::needsMarkerPlacement`). */
+        bool needsMarkerPlacement() const override;
 
     private:
         /** @brief 막대, 이름, 거리 글을 세로로 쌓은 내용입니다. */

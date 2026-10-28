@@ -504,6 +504,7 @@ namespace sw
                 case RenderPassType::UpscaleRcas:
                 case RenderPassType::OcclusionTiles:
                 case RenderPassType::VolumetricFog:
+                case RenderPassType::CanvasMarker:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );

@@ -201,6 +201,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderProbeUpdate; ///< 실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다
         PROPERTY( Required )
+        DataPath _shaderCanvasMarker; ///< 화면 마커 투영(컴퓨트) — 마커마다 월드 점을 화면 앵커로 투영해 캔버스 사각형 버퍼의 앵커 원소에 쓴다
+        PROPERTY( Required )
         DataPath _shaderToon; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
         PROPERTY( Required )
         DataPath _shaderHighlightOutline; ///< 인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더
