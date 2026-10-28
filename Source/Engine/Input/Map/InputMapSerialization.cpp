@@ -952,6 +952,22 @@ namespace sw
                     }
                 }
             }
+
+            /** @brief 더하는 파일이 맵 전체 값을 정했으면 오류를 남기고 true 입니다. 두 파일이 각자 정하면 어느 값이 이기는지가 읽는 순서에 달리기 때문이다. */
+            [[nodiscard]] static bool hasMapWideAttribute( const XMLNode& root, string_view absPath )
+            {
+                static constexpr const utf8* kArrMapWideAttr[] = { InputMapXML::kAttrDefaultLayer, InputMapXML::kAttrDoubleClick, InputMapXML::kAttrDoubleClickDist,
+                                                                   InputMapXML::kAttrHoldThreshold, InputMapXML::kAttrDragThreshold, InputMapXML::kAttrVirtualCursor };
+                bool                         bMapWide          = false;
+                for ( const utf8* pAttr : kArrMapWideAttr )
+                {
+                    if ( root.findAttribute( pAttr ) == nullptr )
+                        continue;
+                    SW_LOG_ERROR( "InputMap %# is appended to another map but sets the map-wide attribute '%#' - only the base map sets it", absPath, pAttr );
+                    bMapWide = true;
+                }
+                return bMapWide;
+            }
         };
     } // namespace
 } // namespace sw
@@ -1266,23 +1282,36 @@ namespace sw
             return false;
         }
 
-        // 더하는 파일은 맵 전체 값을 정하지 않는다 — 두 파일이 각자 정하면 어느 값이 이기는지가 읽는 순서에 달린다.
-        if ( bAppend )
-        {
-            static constexpr const utf8* kArrMapWideAttr[] = { InputMapXML::kAttrDefaultLayer, InputMapXML::kAttrDoubleClick, InputMapXML::kAttrDoubleClickDist,
-                                                               InputMapXML::kAttrHoldThreshold, InputMapXML::kAttrDragThreshold, InputMapXML::kAttrVirtualCursor };
-            bool                         bMapWide          = false;
-            for ( const utf8* pAttr : kArrMapWideAttr )
-            {
-                if ( root.findAttribute( pAttr ) == nullptr )
-                    continue;
-                SW_LOG_ERROR( "InputMap %# is appended to another map but sets the map-wide attribute '%#' - only the base map sets it", absPath, pAttr );
-                bMapWide = true;
-            }
-            if ( bMapWide )
-                return false;
-        }
+        // 읽기 단계: 맵 전체 값 → 레이어 → 액션 → 충돌 검사. 단계가 실패하면 거기서 끝낸다.
+        if ( bAppend && InputMapSerializationInternal::hasMapWideAttribute( root, absPath ) )
+            return false;
+        if ( readMapSettings( root, absPath, bAppend ) == false )
+            return false;
 
+        bool bValid = true;
+        readLayerDefinitions( root, absPath, bAppend, bValid );
+        vector<hashed_string> listLoadedAction;
+        readActionDefinitions( root, absPath, bAppend, listLoadedAction, bValid );
+
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap %# has invalid attribute values (listed above)", absPath );
+            return false;
+        }
+        // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
+        if ( countVirtualCursorConflicts( absPath ) > 0 )
+            return false;
+        uint32 sameLayerConflictCount = 0;
+        for ( const hashed_string& actionName : listLoadedAction )
+        {
+            sameLayerConflictCount += countSameLayerInputConflicts( absPath, actionName );
+        }
+        return sameLayerConflictCount == 0;
+    }
+
+    bool InputMap::readMapSettings( const XMLNode& root, string_view absPath, bool bAppend )
+    {
+        using InputMapXML = InputMapSerializationInternal::InputMapXML;
         // 적지 않은 값은 `InputMapDefaults` 의 기본값이다. 깨진 값은 읽기 실패다.
         bool    bValid        = true;
         float32 dblClick      = InputMapDefaults::kDoubleClickTime;
@@ -1318,7 +1347,12 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
                 _defaultLayerName = hashed_string( pDefaultLayer );
         }
+        return true;
+    }
 
+    void InputMap::readLayerDefinitions( const XMLNode& root, string_view absPath, bool bAppend, bool& inoutbValid )
+    {
+        using InputMapXML  = InputMapSerializationInternal::InputMapXML;
         XMLNode layersNode = root.findChild( InputMapXML::kLayers );
         if ( layersNode.isValid() )
         {
@@ -1330,20 +1364,23 @@ namespace sw
                 if ( bAppend && hasLayer( hashed_string( pLayerName ) ) )
                 {
                     SW_LOG_ERROR( "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, pLayerName );
-                    bValid = false;
+                    inoutbValid = false;
                     continue;
                 }
                 InputMapSerializationInternal::LayerSettings settings;
-                InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
+                InputMapSerializationInternal::readLayerSettings( layerNode, settings, inoutbValid );
                 registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
             }
         }
 
         ensureLayer( _defaultLayerName, 0, true, false );
+    }
 
+    void InputMap::readActionDefinitions( const XMLNode& root, string_view absPath, bool bAppend, vector<hashed_string>& outListLoadedAction, bool& inoutbValid )
+    {
+        using InputMapXML = InputMapSerializationInternal::InputMapXML;
         // 더할 때는 이미 있는 액션을 다시 정의하지 못한다(두 파일이 같은 이름을 쓰면 바인딩이 섞인다). 더한 액션은 끝에서 같은 레이어 충돌을 본다.
-        vector<hashed_string> listLoadedAction;
-        const auto            loadAction = [&]( XMLNode actionNode, string_view inheritedLayer )
+        const auto loadAction = [&]( XMLNode actionNode, string_view inheritedLayer )
         {
             const utf8* pActionName = actionNode.findAttribute( InputMapXML::kAttrName );
             if ( bAppend && StringUtil::isNullOrEmpty( pActionName ) == false )
@@ -1352,12 +1389,12 @@ namespace sw
                 if ( hasAction( actionName ) )
                 {
                     SW_LOG_ERROR( "InputMap %# defines action '%#' that the map already has", absPath, pActionName );
-                    bValid = false;
+                    inoutbValid = false;
                     return;
                 }
-                listLoadedAction.push_back( actionName );
+                outListLoadedAction.push_back( actionName );
             }
-            InputMapActionLoader::load( *this, actionNode, inheritedLayer, bValid );
+            InputMapActionLoader::load( *this, actionNode, inheritedLayer, inoutbValid );
         };
 
         for ( XMLNode layerNode = root.findChild( InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapXML::kLayer ) )
@@ -1368,7 +1405,7 @@ namespace sw
             if ( hasLayer( hashed_string( pLayerName ) ) == false )
             {
                 InputMapSerializationInternal::LayerSettings settings;
-                InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
+                InputMapSerializationInternal::readLayerSettings( layerNode, settings, inoutbValid );
                 registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
             }
             for ( XMLNode actionNode = layerNode.findChild( InputMapXML::kAction ); actionNode.isValid(); actionNode = actionNode.findNextSibling( InputMapXML::kAction ) )
@@ -1381,21 +1418,6 @@ namespace sw
         {
             loadAction( actionNode, _defaultLayerName.view() );
         }
-
-        if ( bValid == false )
-        {
-            SW_LOG_ERROR( "InputMap %# has invalid attribute values (listed above)", absPath );
-            return false;
-        }
-        // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
-        if ( countVirtualCursorConflicts( absPath ) > 0 )
-            return false;
-        uint32 sameLayerConflictCount = 0;
-        for ( const hashed_string& actionName : listLoadedAction )
-        {
-            sameLayerConflictCount += countSameLayerInputConflicts( absPath, actionName );
-        }
-        return sameLayerConflictCount == 0;
     }
 
     uint32 InputMap::countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const

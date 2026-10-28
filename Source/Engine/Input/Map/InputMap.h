@@ -779,6 +779,12 @@ namespace sw
          * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
          */
         [[nodiscard]] bool loadDefinition( const ResourceID& resourceID, bool bAppend );
+        /** @brief `loadDefinition` 의 맵 전체 값 단계입니다. 시간 문턱 · 가상 커서 · 기본 레이어를 읽고, 더하지 않을 때만 맵을 비우고 적용합니다. 깨졌거나 거절되면 false 입니다. */
+        [[nodiscard]] bool readMapSettings( const XMLNode& root, string_view absPath, bool bAppend );
+        /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */
+        void readLayerDefinitions( const XMLNode& root, string_view absPath, bool bAppend, bool& inoutbValid );
+        /** @brief `loadDefinition` 의 액션 단계입니다. 최상위 `<layer>` 와 `<action>` 을 읽고 더한 액션 이름을 @p outListLoadedAction 에 모읍니다. */
+        void readActionDefinitions( const XMLNode& root, string_view absPath, bool bAppend, vector<hashed_string>& outListLoadedAction, bool& inoutbValid );
         /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromResource`). */
         [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
 
