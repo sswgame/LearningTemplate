@@ -33,7 +33,7 @@ namespace sw::editor
 
     /**
      * @struct PlaySessionData
-     * @brief 플레이 세션의 모든 상태를 담습니다. 소유자는 에디터 서브시스템 `EditorPlaySessionState` 입니다.
+     * @brief 플레이 세션의 모든 상태를 담습니다. 소유자는 에디터 서브시스템 `EditorPlaySession` 입니다.
      * @details 에디터 범위가 보관하므로 컨텍스트와 함께 생기고 사라진다. 파일 정적 변수로 두면 수명을 소유한 객체가 없어,
      *          컨텍스트를 다시 만들어도 이전 세션의 스냅샷과 재생 상태가 그대로 남는다.
      */
@@ -130,33 +130,17 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorPlaySessionState
-     * @brief 플레이 세션 상태(`PlaySessionData`)를 가진 에디터 서브시스템입니다. 조작은 정적 파사드 `EditorPlaySession` 이 합니다.
-     */
-    class EditorPlaySessionState final : public EditorSubsystem
-    {
-    public:
-        static constexpr const utf8* kSubsystemName = "EditorPlaySessionState";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-
-        PlaySessionData& getData() { return _data; }
-
-    private:
-        PlaySessionData _data{};
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
      * @class EditorPlaySession
      * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.
-     * @details 상태는 에디터 서브시스템 `EditorPlaySessionState` 가 보관하고(`PlaySessionData`), 이 클래스는 그 상태를 조작하는 정적 파사드이다.
-     *          컨텍스트가 없으면 "정지" 로 응답한다.
+     * @details 에디터 서브시스템으로 상태(`PlaySessionData`)를 들고, 정적 함수가 에디터 범위에서 이 서브시스템을 찾아 조작한다(언리얼 `FSlateApplication::Get` 처럼
+     *          하나뿐인 인스턴스에 정적으로 닿는다). 에디터 범위가 없으면 "정지" 로 응답한다. `PlaySessionData&` 를 받는 본체는 컨텍스트 없이 테스트한다.
      */
-    class EditorPlaySession
+    class EditorPlaySession final : public EditorSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "EditorPlaySession";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief "카메라 위치에서 시작" 이 먼저 찾는 태그입니다. 이 태그를 가진 오브젝트가 없으면 게임 카메라를 가진 오브젝트를 옮깁니다. */
         static constexpr const utf8* kPlayerStartTag = "Player";
         /** @brief 한 번에 진행할 수 있는 Step 프레임 수의 상한입니다. */
@@ -274,5 +258,8 @@ namespace sw::editor
          *          플레이 중에 생긴 오브젝트는 되돌리기가 지우므로 남지 않는다.
          */
         static bool keepObjectState( PlaySessionData& data, const GameObject* pObject );
+
+    private:
+        PlaySessionData _data{};
     };
 } // namespace sw::editor

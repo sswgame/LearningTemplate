@@ -90,7 +90,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorDefaultObjects>() );
         _scope.addSubsystem( make_unique<EditorNetPlaySession>() );
         _scope.addSubsystem( make_unique<EditorRenderViews>() );
-        _scope.addSubsystem( make_unique<EditorPlaySessionState>() );
+        _scope.addSubsystem( make_unique<EditorPlaySession>() );
         _scope.addSubsystem( make_unique<EditorTheme>() );
         _scope.addSubsystem( make_unique<EditorUICapture>() );
         _scope.addSubsystem( make_unique<EditorExtensionSubsystems>( _scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
