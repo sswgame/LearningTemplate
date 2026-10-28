@@ -1,16 +1,16 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationStepValidation.h"
+#include "Engine/Scenario/AutomationStepValidation.h"
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Automation/AutomationEnvironmentSteps.h"
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Scenario/AutomationEnvironmentSteps.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 
 namespace sw
 {

@@ -3,12 +3,12 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/ScenarioRecorder.h"
 
 #include "TestFramework/TestFramework.h"
 

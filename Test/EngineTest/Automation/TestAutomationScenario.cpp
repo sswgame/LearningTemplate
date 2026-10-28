@@ -10,15 +10,15 @@
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationRunner.h"
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Automation/AutomationStepValidation.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
+#include "Engine/Scenario/AutomationStepValidation.h"
 
 #include "TestFramework/TestFramework.h"
 

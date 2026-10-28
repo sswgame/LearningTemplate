@@ -5,7 +5,7 @@
 
 - 엔진이 읽는 인자의 철자(`-unattended` · `-scenario` · `-scenario-report` · `-EnableEditor` · `-game`) — `Source/Core/Predefined/ArgumentList.xxx` 의 줄
   (`ConfigReference.collectArguments` 가 읽는다. C++ 은 `getCommandLineArgumentSpelling` 으로 같은 표를 쓴다).
-- 자동화 산출물 폴더 · 에디터 상태 폴더 이름 · 에디터 상태 폴더와 사용자 설정 파일을 주는 전역 변수 이름 —`Source/Engine/Automation/AutomationScenario.h` 의
+- 자동화 산출물 폴더 · 에디터 상태 폴더 이름 · 에디터 상태 폴더와 사용자 설정 파일을 주는 전역 변수 이름 —`Source/Engine/Scenario/AutomationScenario.h` 의
   `inline constexpr const utf8* kAutomationXxx = "…";` 줄(실행기 · 녹화기 · AppTest 가 쓴다).
 
 철자나 상수 줄이 없거나 모양이 바뀌었으면 오류로 멈춘다(폴백 없음). 인자를 만드는 순서와 `<Launch>` 값은 시나리오 파일에서 오므로 여기 없다 — 인자 순서는 App 에게 의미가 없다.
@@ -22,7 +22,7 @@ from .ConfigReference import collectArguments
 from .Paths import getProjectRoot
 
 #: 자동화 글 상수의 정본(C++ 엔진 헤더).
-kAutomationHeaderRelPath = "Source/Engine/Automation/AutomationScenario.h"
+kAutomationHeaderRelPath = "Source/Engine/Scenario/AutomationScenario.h"
 #: 엔진 인자 표(철자의 정본).
 kArgumentListRelPath = "Source/Core/Predefined/ArgumentList.xxx"
 _kConstantRe = re.compile(r'inline\s+constexpr\s+const\s+utf8\*\s+(k\w+)\s*=\s*"([^"]*)"\s*;')

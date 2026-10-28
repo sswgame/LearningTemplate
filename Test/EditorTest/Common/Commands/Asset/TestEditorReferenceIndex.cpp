@@ -5,7 +5,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 
-#include "Engine/Automation/AutomationScratch.h"
+#include "Engine/Scenario/AutomationScratch.h"
 
 #include "TestFramework/TestFramework.h"
 

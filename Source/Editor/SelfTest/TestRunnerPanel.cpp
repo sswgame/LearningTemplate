@@ -16,12 +16,12 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationScratch.h"
 
 #include <imgui.h>
 

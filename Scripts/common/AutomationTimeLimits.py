@@ -13,7 +13,7 @@ from pathlib import Path
 from .Paths import getProjectRoot
 
 #: 시한 상수의 정본(C++ 엔진 헤더).
-kTimeLimitsHeaderRelPath = "Source/Engine/Automation/AutomationTimeLimits.h"
+kTimeLimitsHeaderRelPath = "Source/Engine/Scenario/AutomationTimeLimits.h"
 _kIntegerConstantRe = re.compile(r"static\s+constexpr\s+uint32\s+(k\w+)\s*=\s*(\d+)\s*;")
 
 

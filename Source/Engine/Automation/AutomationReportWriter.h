@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Automation/AutomationTimeline.h"
+#include "Engine/Scenario/AutomationTimeline.h"
 
 namespace sw
 {

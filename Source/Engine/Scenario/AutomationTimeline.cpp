@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationTimeline.h"
+#include "Engine/Scenario/AutomationTimeline.h"
 
 namespace sw
 {

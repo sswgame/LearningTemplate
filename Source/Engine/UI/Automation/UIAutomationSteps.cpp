@@ -5,10 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepContext.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepContext.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"

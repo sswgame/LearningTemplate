@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationScratch.h"
+#include "Engine/Scenario/AutomationScratch.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"

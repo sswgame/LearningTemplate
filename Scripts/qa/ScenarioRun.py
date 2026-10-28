@@ -10,7 +10,7 @@
     py -3 -m Scripts scenario previewsky --app-arg=-gv_deferred=1       # 선언에 없는 변형 인자를 맨 뒤에 더한다(조립이 소유한 인자와 겹치면 오류)
 
 시나리오 파일의 `<Launch>`(게임 팩의 게임 이름 · `-gv_firstScene` 같은 기동 변수)와 루트 선언(에디터 · 전경 창)에서 인자를 만들고, 거기에 `-unattended`
-`-scenario=` `-scenario-report=` 백엔드 스위치를 붙인다. 인자의 글은 엔진이 정본이다 — 철자는 `Source/Core/Predefined/ArgumentList.xxx`, 산출물 · 에디터 상태 폴더 이름은 `Source/Engine/Automation/AutomationScenario.h` 의 상수이고 `common/ScenarioArguments.py` 가 그것을 읽어 온다(C++ 테스트도 같은 곳을 쓴다. 두 벌을 갖지 않는다). 백엔드마다 GPU 칸을 잡고(공유 · 전경 창이 필요한 시나리오는 독점 — 작업 방식 2 절) 한 번씩 돌려
+`-scenario=` `-scenario-report=` 백엔드 스위치를 붙인다. 인자의 글은 엔진이 정본이다 — 철자는 `Source/Core/Predefined/ArgumentList.xxx`, 산출물 · 에디터 상태 폴더 이름은 `Source/Engine/Scenario/AutomationScenario.h` 의 상수이고 `common/ScenarioArguments.py` 가 그것을 읽어 온다(C++ 테스트도 같은 곳을 쓴다. 두 벌을 갖지 않는다). 백엔드마다 GPU 칸을 잡고(공유 · 전경 창이 필요한 시나리오는 독점 — 작업 방식 2 절) 한 번씩 돌려
 종료 코드를 뜻으로 풀고, 보고 JSON 의 `failures[]` · `unconfirmed[]` · `unhandledLogs[]` 를 표로 보인다(처리하지 않은 로그는 줄 그대로).
 종료 코드: 0 모든 백엔드 통과, 1 하나라도 통과가 아님, 2 돌릴 수 없다(이름이 없거나 모호함 · 선언을 인자로 풀 수 없음 · 빌드 없음 …).
 

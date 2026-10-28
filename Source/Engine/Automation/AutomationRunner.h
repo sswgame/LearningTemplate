@@ -14,12 +14,12 @@
 #include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepContext.h"
-#include "Engine/Automation/AutomationTimeline.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceID.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepContext.h"
+#include "Engine/Scenario/AutomationTimeline.h"
 
 namespace sw
 {

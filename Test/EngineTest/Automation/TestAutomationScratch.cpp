@@ -3,10 +3,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationScratch.h"
 
 #include "TestFramework/TestFramework.h"
 

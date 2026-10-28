@@ -21,10 +21,10 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Popups/QuickLauncherLayout.h"
 
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 
 #include <imgui.h>
 

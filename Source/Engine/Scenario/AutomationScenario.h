@@ -9,10 +9,10 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScratch.h"
-#include "Engine/Automation/AutomationTimeLimits.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 #include "Engine/Resource/ResourceID.h"
+#include "Engine/Scenario/AutomationScratch.h"
+#include "Engine/Scenario/AutomationTimeLimits.h"
 
 namespace sw
 {

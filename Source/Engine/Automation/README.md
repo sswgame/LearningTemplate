@@ -8,6 +8,8 @@
 종료 코드가 결과입니다: 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 14 미확정(단언은 맞았지만 어림값 문턱이 있다), 15 처리하지 않은 로그(단언은 맞았지만 처리하지 않은 `[Warning]` · `[Error]` 가 남았다. 15 는 14 보다 앞선다).
 0 은 로그까지 깨끗하다는 뜻입니다("로그 게이트"). `AppScenarioTest` 가 시나리오 파일을 찾아 백엔드마다 돌립니다.
 
+폴더는 둘입니다. 시나리오 형식 · 단계 등록표 · 타임라인 · 입력 단계 · 녹화는 `Engine/Scenario`([README](../Scenario/README.md))이고, 이 폴더는 실행기 · 판정 단계 · 로그 게이트 · 보고 · 이미지 지표 · 종료 코드 · Session · Chain 입니다. 아래 파일 이름 가운데 `AutomationScenario` · `AutomationStepRegistry` · `AutomationStepContext` · `AutomationActionSteps` · `AutomationTimeline` · `AutomationScratch` · `ScenarioRecorder` 는 `Engine/Scenario` 에 있습니다.
+
 ## 머릿속 그림
 
 ```
@@ -128,7 +130,7 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 탐침 레지스트리(`Engine/Probe/AutomationProbe.h`)는 티어가 컴포넌트 모델(Object) 바로 위라 그 위의 Engine 기능(Scene · Character · Environment · Vfx …)도 자기 폴더의 .cpp 에 탐침을 둡니다(`Scene/SceneProbes.cpp`, `Environment/Terrain/TerrainProbes.cpp`). 실행기에 남은 탐침은 실행기 자신의 상태, 오브젝트 질의(`Object.*`), Probe 와 티어가 같거나 낮은 것(`Input.*` · `Profiler.TraceRecording`)입니다.
 
 새 단계는 `SW_AUTOMATION_STEP( id, "이름", 실행, 검사, 입력 전 여부 )` 로 등록합니다. 입력으로 옮겨지는 단계는 `SW_AUTOMATION_STEP_WITH_HOOKS` 의 준비 함수에서 `runner.getInputScript()` 에 이벤트를 넣고, 속성은 검사 함수에서 모두 확인합니다(모르는 속성은 읽기 오류). 검사 함수는 순수 함수라 실행기 없이 부를 수 있고 `AutomationScenarioDataTest`(nogpu)가 모든 시나리오 파일의 단계를 이 함수로 훑습니다. 등록표에 이름을 묻는 검사(탐침 · 전역 변수 · 개발 명령)는 `AutomationStepValidation::findUnresolvedDependency` 로 "틀렸다" 와 "이 프로세스가 모른다" 를 가리고,
-단계를 등록하는 모듈(에디터 · App)이 안 올라온 프로세스도 검사하게 하려면 검사 함수를 ImGui · 렌더를 모르는 파일에 두고 `SW_AUTOMATION_STEP_VALIDATOR( id, 이름, 검사 )` 로 따로 올립니다(`Editor/SelfTest/EditorScenarioStepValidation.cpp`, `Engine/Automation/AutomationBackendSteps.cpp`). 입력 맵 · 창 · ImGui 가 있어야 답이 나오는 검사는 준비 함수(`_pPrepare`)에 둡니다.
+단계를 등록하는 모듈(에디터 · App)이 안 올라온 프로세스도 검사하게 하려면 검사 함수를 ImGui · 렌더를 모르는 파일에 두고 `SW_AUTOMATION_STEP_VALIDATOR( id, 이름, 검사 )` 로 따로 올립니다(`Editor/SelfTest/EditorScenarioStepValidation.cpp`, `Engine/Scenario/AutomationBackendSteps.cpp`). 입력 맵 · 창 · ImGui 가 있어야 답이 나오는 검사는 준비 함수(`_pPrepare`)에 둡니다.
 AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상태가 바뀔 때 `setStateName( "Chase" )` 를 부르고 판단 값은 `getBlackboard()` 에 둡니다(탐침 `AI.State` · `AI.Blackboard`). 영역을 넘는 게임 로직 단계(시간 감기, 탑승)는 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에, 탐침(시계, 판 상태, 퀘스트, 일정, AI, 폰, 좌석)은 각 영역 폴더의 `*Probes.cpp` 에 있습니다.
 등록자는 단계 · 탐침을 정의한 .cpp 의 정적 객체입니다. Shipping 은 통째 링크(`sw_linkWholeArchive`)하므로 그 .cpp 를 붙드는 빈 함수를 두지 않습니다.
 

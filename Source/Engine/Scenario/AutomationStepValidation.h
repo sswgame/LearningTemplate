@@ -12,7 +12,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 
 namespace sw
 {

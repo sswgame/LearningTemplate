@@ -5,8 +5,8 @@
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationSession.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
 #include "TestFramework/TestFramework.h"

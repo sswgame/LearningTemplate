@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationBackendSteps.h"
+#include "Engine/Scenario/AutomationBackendSteps.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 
-    #include "Engine/Automation/AutomationScenario.h"
-    #include "Engine/Automation/AutomationStepValidation.h"
+    #include "Engine/Scenario/AutomationScenario.h"
+    #include "Engine/Scenario/AutomationStepValidation.h"
 
     #include "sw/config/CookContract.gen.h"
 

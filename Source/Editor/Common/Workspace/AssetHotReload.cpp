@@ -16,8 +16,6 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/AutomationScratch.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -28,6 +26,8 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScratch.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor

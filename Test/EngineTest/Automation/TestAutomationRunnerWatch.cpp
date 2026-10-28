@@ -8,11 +8,11 @@
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationRunner.h"
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 

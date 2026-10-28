@@ -1,12 +1,12 @@
 #include "pch.h"
 
 #include "Engine/Automation/AutomationRunner.h"
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/ScenarioRecorder.h"
 
 #include "TestFramework/TestFramework.h"
 

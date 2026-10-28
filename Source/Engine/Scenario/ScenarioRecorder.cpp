@@ -1,12 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Automation/ScenarioRecorder.h"
+#include "Engine/Scenario/ScenarioRecorder.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -14,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
 #include "Engine/Serialization/XML/XMLWriter.h"
 
 namespace sw

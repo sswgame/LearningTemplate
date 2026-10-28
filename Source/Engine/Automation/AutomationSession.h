@@ -12,7 +12,7 @@
 
 #include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/ScenarioRecorder.h"
+#include "Engine/Scenario/ScenarioRecorder.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw

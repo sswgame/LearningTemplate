@@ -6,16 +6,16 @@
  */
 #include "pch.h"
 
-#include "Engine/Automation/AutomationEnvironmentSteps.h"
+#include "Engine/Scenario/AutomationEnvironmentSteps.h"
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepContext.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevConsole.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepContext.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 

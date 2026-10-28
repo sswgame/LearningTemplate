@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 #include "Engine/UI/Base/WidgetTree.h"

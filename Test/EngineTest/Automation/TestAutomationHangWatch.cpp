@@ -6,7 +6,7 @@
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationHangWatch.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/AutomationTimeLimits.h"
+#include "Engine/Scenario/AutomationTimeLimits.h"
 
 #include "TestFramework/TestFramework.h"
 

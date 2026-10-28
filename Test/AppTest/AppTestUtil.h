@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Process/Process.h"
 
-#include "Engine/Automation/AutomationTimeLimits.h"
+#include "Engine/Scenario/AutomationTimeLimits.h"
 
 #include "TestFramework/Harness/TestProcessRun.h"
 

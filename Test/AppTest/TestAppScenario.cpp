@@ -7,10 +7,10 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/ScenarioRecorder.h"
 
 #include "TestFramework/TestFramework.h"
 

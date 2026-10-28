@@ -5,7 +5,6 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -14,6 +13,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
 #include "Engine/UI/Automation/UIAutomationSteps.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/UINavigationSolver.h"

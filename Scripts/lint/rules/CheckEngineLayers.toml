@@ -108,21 +108,24 @@ Sequencer = 12
 Destruction = 12
 # 핫 리로드 — 씬과 컴포넌트를 읽는다.
 Module = 12
-# 자동화 시나리오(실행기 · 단계 등록표). 입력 · 씬 · 창을 내려다보고, 프레임 관찰자(`Engine/Utility/EngineFrameObserver.h`)로 루프에 붙어 스크린샷 · 종료를 넘긴다.
-# UI 는 이 위다 — UI 단계(`ExpectUI`)와 로딩 화면 시작 차단 조건을 UI 가 이 등록표에 올린다(실행기는 UI 를 include 하지 않는다).
+# 시나리오 형식 · 단계 등록표 · 타임라인 · 입력 단계 · 녹화(일반 기능). 입력 · 탐침 · 창을 내려다보고 테스트 판정은 모른다 — 기능(UI · GameFramework · Editor · App)이
+# 이 등록표에 단계를 올리므로 `Automation` 의 로그 게이트 · 보고 · 종료 코드 헤더를 끌어오지 않는다(`docs/plans/AutomationSplit.md`).
+Scenario = 11
+# 자동화 테스트(실행기 · 판정 단계 · 로그 게이트 · 보고 · Session). 시나리오 · 씬 · 창을 내려다보고, 프레임 관찰자(`Engine/Utility/EngineFrameObserver.h`)로 루프에 붙어 스크린샷 · 종료를 넘긴다.
+# UI 는 `Scenario` 만 보고 이 폴더를 include 하지 않는다 — UI 단계(`ExpectUI`)와 로딩 화면 시작 차단 조건을 UI 가 Scenario 의 등록표에 올린다.
 Automation = 12
 # 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(Engine 가 프레임 시간을 넘긴다).
 Telemetry = 12
 # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력 · 글자 · 캔버스 그리기 목록(Graphics) · 사용자 설정을 쓴다.
 # 렌더러와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
-UI = 13
+UI = 12
 # 부트스트랩 범위의 서브시스템(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소). 정적 저장소 정리가 씬 컴포넌트 · RHI 자원 ·
 # 자동화 등록표를 내려다본다. 엔진 루프(루트)와 테스트 하네스가 세운다.
 Bootstrap = 13
 # 그리는 쪽 — 씬과 컴포넌트를 읽는다.
-Renderer = 14
+Renderer = 13
 # 전부를 엮는 자리.
-"<root>" = 15
+"<root>" = 14
 
 # ------------------------------------------------------------------------------
 # 표가 include 그래프 계산값보다 **일부러 높은** 폴더 → 이유. 게이트(`CheckEngineLayers`)가 그래프에서 티어를 직접 계산해 [tier] 와 맞춰 보고,

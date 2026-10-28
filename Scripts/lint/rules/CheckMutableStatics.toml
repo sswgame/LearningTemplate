@@ -100,8 +100,8 @@
 "Source/Engine/Animation/Rig/RigAsset.cpp" = 2
 "Source/Engine/Animation/Skeletal/SkeletonBoneLOD.cpp" = 1
 # Source/Engine/Automation — 이전 대기
-"Source/Engine/Automation/AutomationScratch.cpp" = 1
-"Source/Engine/Automation/AutomationStepRegistry.cpp" = 1
+"Source/Engine/Scenario/AutomationScratch.cpp" = 1
+"Source/Engine/Scenario/AutomationStepRegistry.cpp" = 1
 # Source/Engine/Character — 이전 대기
 "Source/Engine/Character/AnimationNotify/AnimationNotifyTable.cpp" = 1
 "Source/Engine/Character/CharacterDataCache.cpp" = 1

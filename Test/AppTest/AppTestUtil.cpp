@@ -11,9 +11,9 @@
 
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
-#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
 
 #include "TestFramework/TestFramework.h"
 

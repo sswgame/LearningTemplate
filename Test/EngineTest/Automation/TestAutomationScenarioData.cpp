@@ -7,12 +7,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Automation/AutomationStepValidation.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scenario/AutomationScenario.h"
+#include "Engine/Scenario/AutomationStepRegistry.h"
+#include "Engine/Scenario/AutomationStepValidation.h"
 
 #include "TestFramework/TestFramework.h"
 

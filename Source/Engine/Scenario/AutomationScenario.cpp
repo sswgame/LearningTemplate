@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Scenario/AutomationScenario.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
