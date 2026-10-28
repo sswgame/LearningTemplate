@@ -789,6 +789,34 @@ namespace sw
         return FileUtilInternal::writeAtomically( fileName, text.data(), text.size() );
     }
 
+    bool FileUtil::appendTextFile( string_view fileName, string_view text )
+    {
+        const string filePath = normalizeSeparators( fileName );
+        if ( isWriteAllowed( filePath ) == false )
+            return false;
+        FILE* pFile = PlatformFileUtil::openFile( filePath.c_str(), "ab" );
+        if ( pFile == nullptr )
+            return false;
+        const size_t written = text.empty() ? 0 : std::fwrite( text.data(), 1, text.size(), pFile );
+        const bool   bClosed = std::fclose( pFile ) == 0;
+        if ( written != text.size() || bClosed == false )
+            return false;
+        noteFileCreated();
+        return true;
+    }
+
+    bool FileUtil::moveToRecycleBin( const vector<string>& listPath )
+    {
+        for ( const string& path : listPath )
+        {
+            if ( exists( path ) && isWriteAllowed( path ) == false )
+                return false;
+        }
+        const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
+        noteFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
+        return bMoved;
+    }
+
     string_view FileUtil::skipUtf8Bom( string_view text )
     {
         const bool bHasUtf8Bom = text.size() >= 3 &&

@@ -8,7 +8,6 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/PlatformFileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleBuildID.h"
@@ -67,16 +66,6 @@ namespace sw
                     return lhs < rhs;
                 }
             };
-
-            static bool appendText( const string& path, string_view text )
-            {
-                FILE* pFile = PlatformFileUtil::openFile( path.c_str(), "ab" );
-                if ( pFile == nullptr )
-                    return false;
-                const size_t written = std::fwrite( text.data(), 1, text.size(), pFile );
-                std::fclose( pFile );
-                return written == text.size();
-            }
 
             static uint32 countLines( string_view text )
             {
@@ -688,7 +677,7 @@ namespace sw
             if ( bFull )
             {
                 // 이 줄을 넣으면 상한을 넘는다 — 모은 것을 쓰고 파일을 닫은 뒤 새 파일로.
-                if ( chunk.empty() == false && Internal::appendText( _currentFile, chunk ) )
+                if ( chunk.empty() == false && FileUtil::appendTextFile( _currentFile, chunk ) )
                     _currentFileBytes += chunk.size();
                 chunk.clear();
                 closeCurrentFileLocked();
@@ -709,7 +698,7 @@ namespace sw
         }
         if ( chunk.empty() == false )
         {
-            if ( Internal::appendText( _currentFile, chunk ) )
+            if ( FileUtil::appendTextFile( _currentFile, chunk ) )
                 _currentFileBytes += chunk.size();
             else
                 SW_LOG_WARNING( "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
