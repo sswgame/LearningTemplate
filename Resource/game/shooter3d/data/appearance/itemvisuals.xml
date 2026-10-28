@@ -39,7 +39,8 @@
     <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/rogue_cape.prefab.xml" socket="Back"/>
   </ItemVisual>
   <ItemVisual id="cape_knight" tags="Cape.Heraldic">
-    <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/knight_cape.prefab.xml" socket="Back"/>
+    <Part name="Cape" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_cape_chain.mesh" skeleton="game/shooter3d/rigs/knight_cape.skeleton.xml"
+          rig="game/shooter3d/rigs/knight_cape.rig.xml" material="game/shooter3d/materials/kaykit_knight.material" socket="Back"/>
   </ItemVisual>
   <ItemVisual id="cape_skeleton" tags="Cape">
     <Part name="Cape" kind="SocketPrefab" prefab="game/shooter3d/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" socket="Back"/>
