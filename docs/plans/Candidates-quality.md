@@ -47,6 +47,15 @@
 - 로그 게이트 · 판정기는 모든 스위트로 넓혔다(`HostLogJudge` → `CaseLogJudge`, 스위트 종류로 가르지 않음). 이제 CPU 테스트의 표식 없는 Warning · Error 도 그 케이스를 진다 — 확인은 상시 항목 `ctest-nogpu` 전체이고, 지는 케이스가 나오면 원인을 고치거나 그 호출에 범위를 씌운다(판정기를 좁히지 않는다). 돌려 보기 전이라 로그에 안 나온 구성(Release · Shipping, 시간에 기대는 배경 스레드 줄)에서 남은 줄이 있을 수 있다.
 - 에디터 켠 짧은 실행(`-gv_profileFrames=90`)을 다른 GPU 작업과 겹쳐 돌리면 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 가 났다(36 회 중 3 회, 단독 재실행 0 회). 종료 경로의 문구는 고쳤고(`ModuleHost::drainRenderWorkers` 가 종료 앞이면 "at shutdown" 문구에 남은 태스크 수와 첫 미완료 태스크 이름을 찍는다). 5 초 넘게 도는 에디터 배경 작업이 무엇인지는 모른다 — 다시 보이면 로그의 첫 미완료 태스크 이름과 `py -3 -m Scripts stacks <pid>` 의 워커 스택으로 가린다.
 
+### WriteGateRemainders
+제목: 쓰기 게이트의 남은 것
+옛번호: 없음
+왜 필요한가: 자동화 실행 중 `Resource/` 의 `scratch/` 밖 쓰기는 `FileUtil::isWriteAllowed` 가 거절한다(결정 기록 5-11). 게이트는 `FileUtil` 의 입구만 지키므로, 입구 밖에서 파일을 바꾸는 직접 호출은 `CheckFacilityBypass` 의 `fileMutate` · `libraryWrite` 규칙이 센다(기준선 0, 예외는 `Scripts/lint/rules/CheckFacilityBypass.toml` 에 이유와 함께).
+남은 것:
+- 2026-10-28 조사(Source · Tools · Test): 입구 밖에서 파일을 바꾸던 곳 중 에셋 휴지통(`EditorAssetFileCommands::moveToTrash`)은 `FileUtil::moveToRecycleBin`, 텔레메트리 스풀 덧붙이기는 `FileUtil::appendTextFile` 로 옮겼고, DirectXTex 의 DDS 저장(`TextureImporter`)과 SQLite 열기(`SQLiteDriver`)는 쓰기 전에 `isWriteAllowed` 를 직접 묻는다. 옮기지 않은 것은 예외 표에 이유가 있다 — 로그 파일(FileUtil 이 SW_LOG 로 알려 로거로 되돌아 들어간다), 크래시 기록(처리기 안이라 할당 없이 써야 한다), 자식 프로세스 파이프 · `/dev/null` · `/dev/input`, 키 파일 `chmod`, `imgui.ini`(`Saved/Editor`). `setWritable` · `setFileWriteTime` · `ensureDirectoryExists` 는 내용을 바꾸지 않아 막지 않는다. 새 테스트 `FileTest.AppendTextFileAddsToTheEnd` · `WriteGateRefusesEveryMutatingEntry` 는 상시 항목 `ctest-nogpu` 에 든다.
+- 같은 결함의 남은 후보: 게이트는 `Resource/` 루트 아래만 지킨다 — 루트를 거치지 않는 추적 파일(`docs/` · `Config/` 등)에 자동화가 쓰는 길은 막지 않는다. `scene-load-bench` 는 별도 프로세스(`--cook-scenes`)로 `Resource/` 에 장면 · 쿠킹 산출물을 만들고 끝에 지운 뒤 `git status` 로 확인하므로(`--keep` 이면 남는다) 게이트 밖이다. `Load.py` · `PerfRegression.py` · `GoldenImages.py` · `ScenarioThresholds.py` · `RunScenarioLogs.py` 는 명시 옵션(`--record` · `--apply` · 초안 쓰기)일 때만 추적 파일을 쓰고 시나리오 실행 중에는 쓰지 않는다.
+- `Source/Core` · `Source/Games` 의 저장 입구가 빈 결과를 파일에 쓰는 모양은 찾지 못했다(`FileUtil` 을 부르는 곳은 `ShooterDirectorComponent` 의 동작 기록이 빈 글이면 쓰지 않고, 그림자 사본은 모듈 바이트를 복사한다).
+
 ## 관찰
 
 ### ShardExitCodeAfterPass
