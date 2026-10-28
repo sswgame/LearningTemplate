@@ -86,9 +86,9 @@ set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 
 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 
-# 끄면 활성 게임(과 그 밖의 켜진 비키트 모듈)이 의존으로 닿지 않는 키트를 짓지 않는다. 게임별 · Shipping 프리셋이 끈다(언리얼 패키징이 프로젝트가 켠 플러그인만 담는 것과 같다).
-# 켜 두는 Ninja-Debug · CI 프리셋이 모든 키트와 키트 테스트를 짓는다.
-option(SW_BUILD_UNUSED_KITS "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)" ON)
+# 끄면 활성 게임(과 그 밖의 켜진 비키트 모듈)이 의존으로 닿지 않는 키트를 짓지 않는다. 기본은 끈다 — 언리얼이 프로젝트가 켠 플러그인만 짓는 것과 같다(일상 빌드 시간).
+# 모든 키트가 컴파일되는지는 켜 두는 Ninja-Release 프리셋이 본다.
+option(SW_BUILD_UNUSED_KITS "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)" OFF)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
 
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
