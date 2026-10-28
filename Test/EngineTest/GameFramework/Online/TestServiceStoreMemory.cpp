@@ -133,7 +133,7 @@ SW_TEST_CASE( ServiceStoreMemoryTest, OnlyWorkRefusedByShutdownIsCancelledNotWor
     int32                 completed  = 0;
     ServiceStoreResult    result     = ServiceStoreResult::Ok;
     bool                  bCancelled = true;
-    database.armFault( ServiceStoreFault::RejectRead, 1 );
+    database.armFault( ServiceStoreFault::RejectRead );
     store.submit( make_unique<MemoryStoreCountingWork>( &completed, &result, &bCancelled ) );
     SW_EXPECT_EQUAL( 1, store.pollCompletions() );
     SW_EXPECT_TRUE( result == ServiceStoreResult::Unavailable );

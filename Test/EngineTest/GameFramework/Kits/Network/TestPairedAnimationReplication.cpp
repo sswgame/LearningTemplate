@@ -362,22 +362,16 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateBeforeParticipantsAreReadyIsK
     SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
     SW_EXPECT_EQUAL( 1u, client.getPendingCount() );
 
-    // 2) 준비되면 보관한 상태로 복원한다.
-    SW_ASSERT_TRUE( ::test::finishAssetArrivals( clientManager ) );
-    client.retryPending();
-    SW_EXPECT_EQUAL( 0u, client.getPendingCount() );
-    SW_EXPECT_EQUAL( 1u, client.getStats()._appliedCount );
-    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount );
-    PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( clientManager );
-    const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
-    SW_ASSERT_NOT_NULL( pSession );
-    SW_EXPECT_TRUE( pSession->isPlaying() );
+    // 2) 준비되면 보관한 상태로 복원한다 — 맨 끝에서 한다. 클립이 도착하면 공유 캐시에 남아, 그 뒤에 만든 참가자는 처음부터 준비된 상태가 되어 3) · 4) 를 볼 수 없다.
 
     // 3) 끝 메시지는 보관한 상태를 버린다 — 끝난 세션을 뒤늦게 복원하지 않는다.
+    // 클립은 도착하면 폴더 이름으로 공유 캐시에 남으므로 이 구간만의 폴더를 쓴다(앞 구간의 클립이 도착해도 여기 참가자는 아직 읽는 중이어야 한다).
+    string endFolder;
+    SW_ASSERT_FALSE( TestPairedAnimationReplicationInternal::writeAssets( "pairedreplicationpendingend", endFolder ).empty() );
     GameObjectManager endManager;
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Leader", folder, false ) );
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Follower", folder, false ) );
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Prop", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Leader", endFolder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Follower", endFolder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Prop", endFolder, false ) );
     PairedAnimationReplicationClient endClient;
     endClient.initialize( &endManager );
     SW_EXPECT_TRUE( endClient.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
@@ -387,10 +381,12 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateBeforeParticipantsAreReadyIsK
     SW_EXPECT_EQUAL( 0u, endClient.getPendingCount() );
 
     // 4) 끝내 준비되지 않으면 상한까지는 보관하고, 상한을 넘는 프레임에 오류로 버린다.
+    string stuckFolder;
+    SW_ASSERT_FALSE( TestPairedAnimationReplicationInternal::writeAssets( "pairedreplicationpendingstuck", stuckFolder ).empty() );
     GameObjectManager stuckManager;
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Leader", folder, false ) );
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Follower", folder, false ) );
-    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Prop", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Leader", stuckFolder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Follower", stuckFolder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Prop", stuckFolder, false ) );
     PairedAnimationReplicationClient stuckClient;
     stuckClient.initialize( &stuckManager );
     SW_EXPECT_TRUE( stuckClient.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
@@ -407,4 +403,15 @@ SW_TEST_CASE( PairedAnimationReplicationTest, StateBeforeParticipantsAreReadyIsK
     SW_EXPECT_EQUAL( 0u, stuckClient.getPendingCount() );
     SW_EXPECT_EQUAL( 1u, stuckClient.getStats()._rejectedCount );
     SW_EXPECT_EQUAL( 0u, stuckClient.getStats()._appliedCount );
+
+    // 2) 의 본문: 준비되면 보관한 상태로 복원한다.
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( clientManager ) );
+    client.retryPending();
+    SW_EXPECT_EQUAL( 0u, client.getPendingCount() );
+    SW_EXPECT_EQUAL( 1u, client.getStats()._appliedCount );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount );
+    PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( clientManager );
+    const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( pSession->isPlaying() );
 }
