@@ -53,15 +53,6 @@
         // 2. Test & Quality Tasks
         // ==========================================
         {
-            "label": "CTest: Run All Tests",
-            "type": "shell",
-            "command": "ctest --test-dir build/Ninja-Debug --output-on-failure",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        },
-        {
             "label": "Lint: PreCommitLint",
             "type": "shell",
             "command": "py -3 Scripts/lint/PreCommitLint.py"

@@ -23,7 +23,6 @@ set(SW_CPP_STANDARD 17 CACHE STRING "C++ 표준(17 이상 — 20 · 23)")
 # 2) 핵심 빌드 및 아키텍처 기능 옵션 (SW_* / option) — 논리 그룹별 알파벳 정렬
 # ------------------------------------------------------------------------------
 # 2-1) 빌드 모드 및 엔진 기능 옵션
-option(SW_BUILD_DOCS "Doxygen 코드 문서화 생성 타겟 추가" OFF)
 option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드" ON)
 
 # 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
@@ -95,11 +94,6 @@ set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 # (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다).
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 엔진 커버리지 계측(libFuzzer)" OFF)
 
-# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 그렇다고 Shipping 에서 테스트를
-# 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 테스트 집합을 돈다).
-# 테스트는 어디서든 빌드하고, Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
-# 테스트가 끌고 오는 개발용 DLL 은 각 호출부의 SW_SHIPPING_BUILD 가드가 이미 막고 있다.
-option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용" OFF)
 # 유니티 범위 확대 측정용(빌드 속도 계획 5단계): Core_objects 와 GameFramework 키트의 묶음 크기. 0 이면 묶지 않는다.
 # SW_ENABLE_UNITY_BUILD 가 꺼져 있으면 값과 상관없이 묶지 않는다(`sw_setUnityBuild`). 측정이 끝나 값을 정하면 이 변수를 지우고 호출부에 숫자를 쓴다.

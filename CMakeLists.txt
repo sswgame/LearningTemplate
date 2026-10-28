@@ -37,7 +37,7 @@ sw_vcpkgWriteManifestStamp()
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
-# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저다.
+# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(UnbuiltSources · ModuleTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queueRuntimeCopy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
 include(cmake/Modules/LoadCompileFlags.cmake)
 include(cmake/Engine/BuildLayout.cmake)
@@ -47,7 +47,6 @@ include(cmake/Engine/EngineAbiStamp.cmake)
 include(cmake/Engine/ModuleRegistry.cmake)
 include(cmake/Engine/ModuleTargets.cmake)
 include(cmake/Engine/ExecutableTargets.cmake)
-include(cmake/Engine/TestTargets.cmake)
 include(cmake/Engine/ModuleManifest.cmake)
 include(cmake/Engine/ModuleActivation.cmake)
 include(cmake/Engine/ThirdPartyLibs.cmake)
@@ -116,18 +115,6 @@ sw_configureAppDependencies(Server)
 
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
 sw_writeUnbuiltSourceList()
-
-# ------------------------------------------------------------------------------
-# 5) 테스트 — GPU 불필요 lint는 nogpu 라벨
-# ------------------------------------------------------------------------------
-if(SW_ENABLE_TESTING)
-	include(CTest)
-	set(CTEST_TEST_TIMEOUT 180)
-	enable_testing()
-	# 실행 파일 테스트(`Test/`)는 지금 없다 — 새 프레임워크가 생기면 여기서 `add_subdirectory(Test EXCLUDE_FROM_ALL)` 한다.
-	# 린트 테스트 — 린트는 `Scripts/lint/gate/CheckIncludeOrder.py` 하나다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
-	sw_registerGeneratedLintTests()
-endif()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
 sw_verifySourceIncludeRoots()

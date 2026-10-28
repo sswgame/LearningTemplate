@@ -10,7 +10,6 @@ configure 가 파이썬 생성기 넷을 **한 프로세스**로 부른다 — �
   - ConfigVars.cmake       (GenerateCMakeConstants)      — Constants.py → CMake set()
   - CookContract.gen.h · CookContract.cmake (GenerateCookContract) — CookContract.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (GenerateShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
-  - LintTargets.cmake      (GenerateLintTargets)         — lint/gate 폴더 → CMake 린트 타깃
   - EditorLayers.cmake     (GenerateEditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
 
 ToolchainVars.cmake(GenerateToolchainCMake)는 여기 없다 — SetupEnvironment 가 toolchain_config.json 을 쓴 **뒤**에 돌아야 한다.
@@ -33,20 +32,18 @@ from common.Paths import getProjectRoot  # noqa: E402
 from generate.GenerateCMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.GenerateCookContract import generateCookContract  # noqa: E402
 from generate.GenerateEditorLayers import generateEditorLayers  # noqa: E402
-from generate.GenerateLintTargets import generateLintTargets  # noqa: E402
 from generate.GenerateShippingHostDefaults import generateShippingHostDefaults  # noqa: E402
 
 kTag = "GenerateConfigureFiles"
 
 
 def generateConfigureFiles(outputDir: Path, gameName: str) -> None:
-    """configure 산출물 여섯을 `outputDir` 에 — 각 생성기를 단독으로 돌린 것과 같은 바이트."""
+    """configure 산출물 넷을 `outputDir` 에 — 각 생성기를 단독으로 돌린 것과 같은 바이트."""
     generateCMakeConstants(outputDir / "ConfigVars.cmake")
     generateCookContract(outputDir / "CookContract.gen.h", outputDir / "CookContract.cmake")
     gamePreset = f"{kDirRuntimeGamePreset}/{gameName}.json"
     if (getProjectRoot() / gamePreset).is_file():
         generateShippingHostDefaults(outputDir / "ShippingHostDefaults.h", outputDir / "ShippingGameDefaults.h", gamePreset)
-    generateLintTargets(outputDir / "LintTargets.cmake")
     generateEditorLayers(outputDir / "EditorLayers.cmake")
 
 
@@ -56,7 +53,7 @@ def addArgumentsInternal(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    return runGenerator(argv, tag=kTag, description="configure 생성기 다섯을 한 프로세스로",
+    return runGenerator(argv, tag=kTag, description="configure 생성기 넷을 한 프로세스로",
                         addArguments=addArgumentsInternal,
                         generate=lambda args: generateConfigureFiles(args.outputDir, args.game))
 

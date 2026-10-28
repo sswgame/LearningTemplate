@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Config/GenerateConfigConstants.cmake
-# @brief configure 생성 파일 — 생성기 넷을 한 프로세스로 돌리고(ConfigVars · CookContract · ShippingHostDefaults · LintTargets),
+# @brief configure 생성 파일 — 생성기 넷을 한 프로세스로 돌리고(ConfigVars · CookContract · ShippingHostDefaults),
 #        상수를 CMake 변수로 읽고, 게임 프리셋 경로를 정하고, ConfigConstants.h 를 만든다. 최상위 CMakeLists 가 project() 전에 한 번 include 한다.
 # ==============================================================================
 # 상수만 필요하면 이 파일이 아니라 `LoadConfigConstants.cmake` 를 include 한다(그 파일 머리말 참고).

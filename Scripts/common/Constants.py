@@ -77,7 +77,6 @@ kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 
 kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
 kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
-kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -

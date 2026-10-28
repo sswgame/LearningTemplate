@@ -7,7 +7,7 @@ Scripts/generate/GenerateToolchainCMake.py
 
 **왜 CMake 가 JSON 을 직접 파싱하지 않나.** 이 JSON 은 `SetupEnvironment.py` 가 **쓰는** 파일이다. CMake 여러 곳이
 각자 파싱하면 같은 키를 상수와 리터럴 두 가지로 적게 되고, 한쪽만 바뀌는 날이 온다. 쓰는 쪽이 파이썬이니 **읽는 모양도
-파이썬이 준다** — 이 저장소가 `Constants.py` → `ConfigVars.cmake` · 린트 목록 → `LintTargets.cmake`
+파이썬이 준다** — 이 저장소가 `Constants.py` → `ConfigVars.cmake` → `ConfigVars.cmake`
 로 하고 있는 것과 같다.
 
 **키 목록을 여기서도 들지 않는다** — JSON 에 있는 키를 그대로 `SW_TOOLCHAIN_<KEY 대문자>` 로 찍는다.

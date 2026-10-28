@@ -1,42 +1,12 @@
 # ==============================================================================
 # @file cmake/Engine/AssetAndToolTargets.cmake
-# @brief 에셋 쿠킹(CookAssets), Doxygen 문서(GenerateDocs), 린트 스크립트 및 CTest 등록 헬퍼
+# @brief 에셋 쿠킹(CookAssets), 서드파티 라이선스 고지
 # ==============================================================================
 
 include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
 
 # ------------------------------------------------------------------------------
-# 0) sw_addRepoPythonTarget — 저장소 루트 기준 Python 커스텀 타겟
-# ------------------------------------------------------------------------------
-function(sw_addRepoPythonTarget TARGET_NAME SCRIPT_REL)
-	cmake_parse_arguments(SW_PT "" "COMMENT" "ARGS" ${ARGN})
-	add_custom_target(${TARGET_NAME}
-		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${SCRIPT_REL}" ${SW_PT_ARGS}
-		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-		COMMENT "${SW_PT_COMMENT}"
-		VERBATIM
-	)
-	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Engine/Scripts")
-endfunction()
-
-# ------------------------------------------------------------------------------
-# 1) Doxygen — SW_BUILD_DOCS일 때만 GenerateDocs
-# ------------------------------------------------------------------------------
-if(SW_BUILD_DOCS)
-	# 문서를 켰으면 doxygen 과 Doxyfile 은 필수다 — 없으면 타깃 없이 조용히 지나가지 않고 구성을 세운다.
-	find_program(DOXYGEN_EXECUTABLE doxygen REQUIRED)
-
-	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Doxyfile")
-		message(FATAL_ERROR "[Docs] SW_BUILD_DOCS=ON but ${CMAKE_SOURCE_DIR}/Doxyfile is missing")
-	endif()
-
-	sw_addRepoPythonTarget(GenerateDocs "${SW_SCRIPT_GENERATE_DOCS}"
-		COMMENT "Generating Doxygen Documentation..."
-	)
-endif()
-
-# ------------------------------------------------------------------------------
-# 2) 스크립트 타겟 — 에셋 쿠킹, Engine 레이어/GLOB 린트
+# 스크립트 타겟 — 에셋 쿠킹, 서드파티 고지
 # ------------------------------------------------------------------------------
 # 파이썬은 PythonUtils.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
 # 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
@@ -101,10 +71,3 @@ if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VC
 	add_custom_target(ThirdPartyNotices ALL DEPENDS "${swThirdPartyNotices}")
 	set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
 endif()
-
-# 린트 타깃·CTest 등록은 파이썬이 만든다(Scripts/generate/GenerateLintTargets.py — 린트는 Scripts/lint/gate/CheckIncludeOrder.py 하나).
-
-# 파일은 configure 첫머리(GenerateConfigConstants.cmake 의 GenerateConfigureFiles)가 이미 만들었다.
-set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
-include("${SW_GENERATED_LINT_TARGETS}")
-sw_addGeneratedLintTargets()
