@@ -4,13 +4,15 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 V(작업자 브랜치 14 개)를 `wt/integ-v`(`D:/w/integ-v`)에 모두 병합했으나 병합 뒤 빌드 · 검증은 아직이다. 첫 일은 그 워크트리에서 빌드하고 검증해 main 에 넣고 push 하는 것이다(아래 1절). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
+> 결론: 통합 V(작업자 브랜치 14 개)가 main 에 들어가 push 됐다(adaeb8de8). 병합된 상태에서 세 구성의 빌드와 일부 검증만 돌렸으므로 첫 일은 CI 의 Linux 잡을 보고 못 돌린 검증을 마치는 것이다(아래 1절). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
 
 이 문서는 지금 상태 한 장만 둔다. 순서는 [Roadmap](Roadmap.md), 설계는 계획 문서(`py -3 -m Scripts plans`), 결정은 [결정 기록](../09_Decisions.md), 작업 방식은 [11 작업 방식](../11_Workflow.md)이다.
 
-## 1. 지금 상태 — 통합 V (2026-10-28, 진행 중)
+## 1. 지금 상태 — 통합 V (2026-10-28, main 에 push 완료)
 
-`wt/integ-v` 에 1 차(net-load · gfx-baseline · cand-sweep · old-defects · scratch-gate · vtools · keep-assets)와 2 차(wpath · svc-cancel · parse-core · ui-wrap · py-compat · rhi-leftovers · pair-scene)를 병합했다. main 에는 아직 없고 push 도 안 했다. main 에는 CI 수정 커밋 01e3e4e06(Vulkan 확장 개수 · Python 3.12 `read_text` · 없는 sysfs 카드 조사)이 push 전으로 있다.
+1 차(net-load · gfx-baseline · cand-sweep · old-defects · scratch-gate · vtools · keep-assets)와 2 차(wpath · svc-cancel · parse-core · ui-wrap · py-compat · rhi-leftovers · pair-scene)를 병합해 main 에 fast-forward 로 push 했다. CI 수정 커밋 01e3e4e06(Vulkan 확장 개수 · Python 3.12 `read_text` · 없는 sysfs 카드 조사)과 사용자가 지운 `prof.out` 도 들어갔다. push 직전 증거는 세 구성의 빌드 통과와 `full-build` 뿐이고 아래 "못 돌린 검증"은 안 했다.
+
+워크트리는 병합된 21 개를 지웠다. 남은 `errh` · `gfxc` · `netsec` · `integ-v`(`D:/w`)는 지워도 잃는 것이 없다(셰이더 6 개 편집은 main 의 같은 파일과 같고 `netsec` 의 `.cpp.t` 는 임시 파일) — `worktree-remove --force` 가 권한 분류기에 막혀 사용자가 직접 지운다. 병합 안 된 `wt/integ-merge` 의 커밋 12 개는 태그 `archive/integ-merge-20261028` 로 보존했다(`ConfigManager` 모듈 설정 언로드 · `ResourceID` 호출처 수정 5 패치가 main 에 같은 모양으로 있는지는 확인 안 했다).
 
 | 단계 | 결과 |
 |---|---|
@@ -19,7 +21,7 @@
 | `shooter3d-keyrebind-restart`(Release) | 병합된 상태에서 직접 돌리면 통과(두 시나리오 2.4 s · 1.7 s). 검증 도구 안에서 20 분 시간 초과였던 원인은 재현 못 했다(원인 불명 — 다시 나오면 앱 로그부터) |
 | 2 차 병합 뒤(Debug · Release) | 두 구성 빌드 통과. Debug 린트 35/35(`StatusBoard` 재생성) · 파이썬 71/71(`pairedanimnet.scene.xml` 을 엔진 서식으로) 통과. Release 공식 샤드 1 통과(236 s), 샤드 0 · 1 · 5 는 비용표 없이 직접 돌려 통과(57 · 56 · 61 개). **Shipping 빌드, Debug nogpu · race · hostgpu 재실행, Release 샤드 2 · 3 · 5(공식 분배)와 `AppTest_Desktop` 은 아직 안 했다**. 컴파일 확인이 못 본 것: `PosixProcess.cpp`(Linux 전용) |
 
-**첫 일(순서)**: ① 푸시했다면 `ci-jobs --summary` 로 Linux 잡(특히 `PosixProcess.cpp` · 쓰기 게이트 · `NetHost` 경고)을 본다 ② 안 했다면 `D:/w/integ-v` 에서 Shipping 빌드 → Debug `nogpu` · `race` · `hostgpu` → Release 공식 샤드 2 · 3 · 5 와 `AppTest_Desktop` ③ 아래 확인 목록 ④ 통과하면 main 에 fast-forward 하고 force 없이 push.
+**첫 일(순서)**: ① `py -3 -m Scripts ci-jobs --summary` 로 Linux 잡(특히 `PosixProcess.cpp` · 쓰기 게이트 · `NetHost` 경고 · 야간 Load)을 보고 원인별로 묶는다(`ci-triage` 스킬) ② main 기준으로 새 워크트리를 만들어(`worktree-make <이름> --base main`) **못 돌린 검증**을 `run_in_background` 로 돌린다 — Shipping 테스트, Debug `nogpu` · `race` · `hostgpu`, Release 공식 샤드 2 · 3 · 5 와 `AppTest_Desktop` ③ 아래 확인 목록 ④ 고칠 것이 나오면 작업자 브랜치로 나눈다(남은 일 표와 3절이 병렬로 나눌 묶음).
 
 **돌릴 때 알아 둘 것(이번 세션에서 시간을 크게 썼다)**
 - `verify-batch` 는 `--owner <이름>` 이 필수이고 전경에서는 훅이 막는다. `--failed-from` 은 폴더가 아니라 요약 파일을 받는다. 호출 하나는 10 분이 한도라 긴 검증은 `run_in_background`.
