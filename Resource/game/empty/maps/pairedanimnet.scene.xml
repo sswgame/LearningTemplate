@@ -154,8 +154,7 @@
 		<entity id="6" name="PairedAnimationNetSession">
 			<GameObject _schemaVersion="0" _name="PairedAnimationNetSession" _bActive="true">
 				<_listComponent>
-					<PairedAnimationNetSessionComponent _componentName="PairedAnimationNetSessionComponent"
-					                                    _bActive="true" />
+					<PairedAnimationNetSessionComponent _componentName="PairedAnimationNetSessionComponent" _bActive="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>
