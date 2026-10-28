@@ -82,16 +82,16 @@
 |---|---|
 | `AttributeFallback` | 없음(886): 폴백 읽기를 지워 형식으로 막혔고 종류를 게이트에서 뺐다 |
 | `TuningConstexpr` | 45(48) |
-| `AssetPathLiteral` | 12(40) |
+| `AssetPathLiteral` | 8 안팎(40): 네 설정 표의 `kResourcePath` 를 `EngineDefaultAssets` 표로 옮겼다(게이트 값은 다음 `--print-baseline` 에서 다시 적는다) |
 | `SilentFallback` | 15(122) |
 | `DiscardedLoadResult` | 64(164) |
 | `MagicNameLiteral`(보고만) | 72(75) |
 | `LiteralGetDefault`(보고만) | 27: 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로 |
 
 남은 것의 성격:
-- `AssetPathLiteral`: 설정 표의 `kResourcePath` 가 정적 `SW_RESOURCE_DATA_KIND` 등록(`LipSync` · `AnimationCrowd` · `AnimationLOD`)에 들어가 있다. 등록이 서브시스템보다 먼저라 표로 못 옮기니 등록 형식(경로를 늦게 푸는 길)을 바꿔야 한다. 나머지는 부트 순서가 얽힌 설정, 에디터 팩 자기 경로, 데모 · 벤치.
-- `SilentFallback`: 렌더러 · RHI 로그(렌더러 소관)와, 없을 때의 항등을 인자로 받는 모양(`AudioCurvePoint::evaluate` · `GimmickCircuit::readNumber` · `ScheduleCatalog::readClock`). 뒤 셋은 `std::optional` 반환으로 바꿔 호출부가 없음을 정하게 한다.
-- `DiscardedLoadResult`: 끈적한 오류 상태로 결과를 쌓는 읽기, 건너뛰기 · 채움 읽기, 편집기 패널의 "깨진 글도 연다" 호출. `loadFromAttributes` 는 읽은 개수를 돌려주는 함수라 이름만 로드 결과로 잡힌다.
+- `AssetPathLiteral`: 설정 표 경로(`LipSync` · `AnimationCrowd` · `AnimationLOD` · `NavMeshSettings`)는 `EngineDefaultAssets` 의 칸이 됐고, 정적 `SW_RESOURCE_DATA_KIND` 등록은 경로 전체가 아니라 접미 규칙(`/animation/lipsync.xml` 처럼)만 가진다 — 등록은 서브시스템보다 먼저라 표를 읽을 수 없으니 경로를 가리키지 않고 "이런 모양의 파일" 로만 적는다. 남은 것은 부트 순서가 얽힌 설정, 에디터 팩 자기 경로, 데모 · 벤치.
+- `SilentFallback`: 렌더러 · RHI 로그(렌더러 소관). 없을 때의 항등을 인자로 받던 `AudioCurvePoint::evaluate` · `GimmickCircuit::readNumber` · `ScheduleCatalog::readClock` 은 `std::optional` 반환으로 바꿨다(호출부가 `value_or` 로 없음을 정한다).
+- `DiscardedLoadResult`: 끈적한 오류 상태로 결과를 쌓는 읽기, 건너뛰기 · 채움 읽기, 편집기 패널의 "깨진 글도 연다" 호출. `StatBlock::loadFromAttributes` 는 읽은 개수를 돌려주는 함수라 이름만 로드 결과로 잡혔으므로 `addAttributes` 로 바꾸고 `(void)` 를 지웠다. 남은 `(void)` 는 대기 · 해제 · 호출자가 이유를 적어 둔 것이다.
 
 ### 7.5 단위
 
