@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
 #include "Engine/Destruction/FractureGraph.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // DestructionStateTest — 묶음이 갈라져도 연결이 그대로면 한 덩어리, 앵커와 끊긴 덩어리는 떨어지고, 붙은 덩어리는 무게로 무너진다(레드 팩션 지지).
@@ -246,6 +248,6 @@ SW_TEST_CASE( DestructionStateTest, ProfileRejectsUnknownNamesAndReadsTheDefault
         SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Strain thresholds="10 -3"/></DestructionProfile>)", "negative" ) );
         SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Links strength="1"/><Links strength="2"/></DestructionProfile>)", "twice" ) );
     }
-    SW_EXPECT_TRUE( profile.loadFromResource( sw::ResourceID{ sw::DestructionProfile::kDefaultPath } ) );
+    SW_EXPECT_TRUE( profile.loadFromResource( sw::ResourceID{ ::test::getEngineDefaultAssets()._defaultDestructionProfile.get() } ) );
     SW_EXPECT_TRUE( profile._listStrainThreshold.size() >= 2 );
 }

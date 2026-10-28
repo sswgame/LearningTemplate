@@ -42,13 +42,15 @@ namespace sw
     class SW_API SocketKindTable
     {
     public:
-        /** @brief 엔진 기본 종류 테이블의 리소스 경로입니다. */
-        static constexpr string_view kDefaultPath = "engine/character/default.socketkinds.xml";
-
         /** @brief XML 텍스트에서 읽어 현재 테이블에 추가합니다. 모르는 속성이나 원소, 겹친 이름은 오류이며 false 를 반환합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( const ResourceID& resourceID );
+        /**
+         * @brief 엔진 기본 종류 테이블을 읽습니다. 경로의 원본은 엔진 기본 에셋 표(`EngineDefaultAssets::_defaultSocketKinds`)입니다.
+         * @details 표가 없으면 대신 쓸 경로가 없어 서브시스템 조회가 멈춘다. 읽지 못했으면 false 이고 오류는 로그에 남는다.
+         */
+        [[nodiscard]] bool loadDefault();
         /** @brief 종류 하나를 더합니다(이미 있으면 그대로). */
         void addKind( const hashed_string& name );
         /** @brief 그 종류가 테이블에 있으면 true 를 반환합니다. */

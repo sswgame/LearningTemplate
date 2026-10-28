@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAnchor.h"
 #include "Engine/Destruction/FractureAsset.h"
@@ -879,7 +880,7 @@ namespace sw
         _bFractureMissing = _asset == nullptr ? SW_TRUE : SW_FALSE;
         if ( _asset == nullptr )
             return false;
-        const string profilePath = _profilePath.empty() ? string{ DestructionProfile::kDefaultPath } : _profilePath;
+        const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath;
         if ( _profile.loadFromResource( ResourceID{ profilePath } ) == false )
             SW_LOG_ERROR( "'%#': destruction profile '%#' could not be read - using built-in values", getOwner() != nullptr ? getOwner()->getName().c_str() : "?",
                           profilePath.c_str() );

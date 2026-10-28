@@ -29,9 +29,6 @@ namespace sw
     /** @brief 파괴 재질 테이블 하나입니다. 파일 머리말을 참고하세요. 단위는 변형(피해와 같은 단위), 미터, 킬로그램, 초, 뉴턴입니다. */
     struct SW_API DestructionProfile
     {
-        /** @brief 엔진 기본 테이블 경로입니다. 컴포넌트가 테이블을 지정하지 않으면 이 경로를 씁니다. */
-        static constexpr string_view kDefaultPath = "engine/destruction/default.destruction.xml";
-
         vector<float32> _listStrainThreshold; ///< 깊이별 변형 임계값이다. 이만큼 쌓이면 묶음은 자식으로 갈라지고 잎은 떨어져 나간다. 더 깊으면 마지막 값을 쓴다.
         hashed_string   _physicsMaterial;     ///< 조각 바디의 물리 재질 이름이다.
         float32         _density;             ///< 킬로그램/세제곱미터다(2D 는 /제곱미터). 지지 하중과 바디 질량에 쓴다.

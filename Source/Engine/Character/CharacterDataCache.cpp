@@ -22,13 +22,11 @@ namespace sw
     {
         struct CharacterDataCacheInternal
         {
-            static constexpr const utf8* kDefaultSocketKindPath = "engine/character/default.socketkinds.xml";
-
             [[nodiscard]] static bool loadDefaultKinds( SocketKindTable& outKinds )
             {
-                if ( outKinds.loadFromResource( ResourceID{ kDefaultSocketKindPath } ) )
+                if ( outKinds.loadDefault() )
                     return true;
-                SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - no socket asset is handed out", kDefaultSocketKindPath );
+                SW_LOG_ERROR( "Default socket kinds could not be loaded - no socket asset is handed out" );
                 return false;
             }
 

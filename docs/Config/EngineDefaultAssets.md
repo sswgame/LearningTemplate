@@ -57,11 +57,16 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_debugHUDSettingsSchema` | `DataPath` | — |  |  | 디버그 HUD 설정 스키마(`DebugHUD`, 개발 빌드) |
 | `_uiResolutionPresets` | `DataPath` | — |  |  | UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`) |
 | `_netEmulationPresets` | `DataPath` | — |  |  | 네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`) |
+| `_defaultSocketKinds` | `DataPath` | — |  |  | 소켓 종류 표(`SocketKindTable`) — 소켓 세트가 종류 이름을 검사한다 |
+| `_defaultSurfaceChannels` | `DataPath` | — |  |  | 절단면 채널 표(`DismembermentComponent`) |
+| `_defaultDestructionProfile` | `DataPath` | — |  |  | 파괴 프로필(`FractureComponentBase` — 프로필 칸이 비면 쓴다) |
 | `_tileMapMaterial` | `DataPath` | — |  |  | 타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼 |
 | `_foliageMaterial` | `DataPath` | — |  |  | 풀 · 나무 층(`FoliageComponent`) |
 | `_terrainMaterial` | `DataPath` | — |  |  | 지형(`TerrainComponent`) |
 | `_terrainGeomorphMaterial` | `DataPath` | — |  |  | 지오모프를 켠 지형 - terrain.hlsl 에 정점 변형(MATERIAL_VERTEX_DEFORM)을 켠 같은 머티리얼 |
 | `_waterMaterial` | `DataPath` | — |  |  | 물(`WaterBodyComponent`) |
+| `_spriteMaterial` | `DataPath` | — |  |  | 스프라이트(2D) — 머티리얼 칸이 비면 쓰는 기본 머티리얼(`SpriteRenderUtil`) |
+| `_toonMaterialTemplate` | `DataPath` | — |  |  | VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`VrmMaterialImporter`) |
 | `_defaultForwardPipeline` | `DataPath` | — |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `DataPath` | — |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `DataPath` | — |  |  | 기본 렌더 패스 바인드 틀 |

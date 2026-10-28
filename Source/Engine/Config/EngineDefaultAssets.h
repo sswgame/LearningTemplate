@@ -102,6 +102,12 @@ namespace sw
         DataPath _uiResolutionPresets; ///< UI 미리보기 해상도 프리셋 표(`UIResolutionPresetTable`)
         PROPERTY( Required )
         DataPath _netEmulationPresets; ///< 네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`)
+        PROPERTY( Required )
+        DataPath _defaultSocketKinds; ///< 소켓 종류 표(`SocketKindTable`) — 소켓 세트가 종류 이름을 검사한다
+        PROPERTY( Required )
+        DataPath _defaultSurfaceChannels; ///< 절단면 채널 표(`DismembermentComponent`)
+        PROPERTY( Required )
+        DataPath _defaultDestructionProfile; ///< 파괴 프로필(`FractureComponentBase` — 프로필 칸이 비면 쓴다)
 
         // 컴포넌트 기본 머티리얼 — 컴포넌트의 머티리얼 칸이 비면 이것을 쓴다(칸에 적으면 그것)
         PROPERTY( Required )
@@ -114,6 +120,10 @@ namespace sw
         DataPath _terrainGeomorphMaterial; ///< 지오모프를 켠 지형 - terrain.hlsl 에 정점 변형(MATERIAL_VERTEX_DEFORM)을 켠 같은 머티리얼
         PROPERTY( Required )
         DataPath _waterMaterial; ///< 물(`WaterBodyComponent`)
+        PROPERTY( Required )
+        DataPath _spriteMaterial; ///< 스프라이트(2D) — 머티리얼 칸이 비면 쓰는 기본 머티리얼(`SpriteRenderUtil`)
+        PROPERTY( Required )
+        DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`VrmMaterialImporter`)
 
         PROPERTY( Required )
         DataPath _defaultForwardPipeline; ///< 포워드 렌더 파이프라인(프레임 그래프)

@@ -11,6 +11,7 @@
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -22,6 +23,7 @@
 #include "Engine/Reflection/ReflectionValidation.h"
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -31,8 +33,7 @@ namespace sw
     {
         struct DismembermentComponentInternal
         {
-            static constexpr const utf8* kDefaultSurfaceChannels = "engine/character/default.surfacechannels.xml";
-            static constexpr uint32      kMaxHullPoint           = 256; ///< 볼록 껍질 점 상한(넘으면 고르게 솎는다)
+            static constexpr uint32 kMaxHullPoint = 256; ///< 볼록 껍질 점 상한(넘으면 고르게 솎는다)
 
             static MeshSkinVertex toMeshSkin( const SkinInfluence& influence )
             {
@@ -230,11 +231,18 @@ namespace sw
                 SW_LOG_ERROR( "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
                               _regionTablePath.c_str() );
         }
+        const EngineDefaultAssets* pDefaultAssets = game::findSubsystem<EngineDefaultAssets>();
+        if ( pDefaultAssets == nullptr )
+        {
+            SW_LOG_ERROR( "Dismemberment needs the engine default assets for its surface channels - dismemberment stays off" );
+            return;
+        }
+        const string&       channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
         SurfaceChannelTable channels;
-        if ( channels.loadFromResource( ResourceID{ DismembermentComponentInternal::kDefaultSurfaceChannels } ) == false )
+        if ( channels.loadFromResource( ResourceID{ channelsPath } ) == false )
         {
             // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
-            SW_LOG_ERROR( "Default surface channels '%#' could not be loaded - dismemberment stays off", DismembermentComponentInternal::kDefaultSurfaceChannels );
+            SW_LOG_ERROR( "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );
             return;
         }
         _surfaceState.initialize( channels, static_cast<uint32>( _regionTable.getRegions().size() ), 0 );

@@ -6,6 +6,7 @@
 #include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -75,7 +76,7 @@ namespace sw
 
     hashed_string SpriteRenderUtil::getSpriteMaterialPath()
     {
-        static const hashed_string s_spriteMaterial( "engine/materials/sprite2d.material" );
+        static const hashed_string s_spriteMaterial( engine::getSubsystem<EngineDefaultAssets>()._spriteMaterial.c_str() ); // 경로의 원본은 enginedefaultassets.xml
         return s_spriteMaterial;
     }
 

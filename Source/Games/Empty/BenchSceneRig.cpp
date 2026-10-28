@@ -278,8 +278,8 @@ namespace sw
 
         SocketKindTable       kinds;
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
-        if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) == false )
-            SW_LOG_ERROR( "[Bench] Failed to read the socket kind table '%#' the crossbow sockets need.", SocketKindTable::kDefaultPath );
+        if ( kinds.loadDefault() == false )
+            SW_LOG_ERROR( "[Bench] Failed to read the default socket kind table the crossbow sockets need." );
         else if ( weaponSockets->loadFromResource( ResourceID{ _settings._rigWeaponSockets.c_str() }, kinds ) == false )
             SW_LOG_ERROR( "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
 

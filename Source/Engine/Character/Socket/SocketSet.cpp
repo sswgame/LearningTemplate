@@ -4,10 +4,12 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -50,6 +52,8 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "SocketKindTable" );
+
     bool SocketKindTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         CharacterDataReader reader( sourceName );
@@ -69,6 +73,15 @@ namespace sw
         if ( reader.loadRoot( document, resourceID, "SocketKinds", root ) )
             readRoot( root, reader );
         return reader.finish();
+    }
+
+    bool SocketKindTable::loadDefault()
+    {
+        const string& path = engine::getSubsystem<EngineDefaultAssets>()._defaultSocketKinds.get();
+        if ( loadFromResource( ResourceID{ path } ) )
+            return true;
+        SW_LOG_ERROR( "Default socket kinds '%#' could not be loaded", path.c_str() );
+        return false;
     }
 
     void SocketKindTable::readRoot( const XMLNode& root, CharacterDataReader& reader )

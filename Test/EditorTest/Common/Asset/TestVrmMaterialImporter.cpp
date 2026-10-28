@@ -232,7 +232,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
     const sw::vector<sw::string> listTexturePath = { "", "game/test/textures/hair.dds" };
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( material->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath, ::test::getEngineDefaultAssets()._toonMaterialTemplate ) ) );
     SW_EXPECT_STREQ( test::getEngineDefaultAssets()._shaderToon.c_str(), material->getShaderPath().c_str() );
     float32 toony{ 0.0f };
     SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "_shadingToony" ), toony ) );
@@ -258,7 +258,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
     // 반투명은 블렌드 모드 + MATERIAL_BLEND_TRANSLUCENT 이고 외곽선 패스에는 들어가지 않는다(불투명 목록만 그린다).
     desc._alphaMode                    = sw::editor::ToonAlphaMode::Transparent;
     sw::shared_ptr<sw::Material> glass = sw::Material::create();
-    SW_ASSERT_TRUE( glass->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( glass->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath, ::test::getEngineDefaultAssets()._toonMaterialTemplate ) ) );
     const sw::vector<sw::string>& listGlassDefine = glass->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_BLEND_TRANSLUCENT" ) ) != listGlassDefine.end() );
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_OUTLINE" ) ) == listGlassDefine.end() );

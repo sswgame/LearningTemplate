@@ -486,6 +486,33 @@
        "description": "네트워크 에뮬레이션 프리셋 표(`NetEmulationPresetTable`)"
       },
       {
+       "name": "_defaultSocketKinds",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "소켓 종류 표(`SocketKindTable`) — 소켓 세트가 종류 이름을 검사한다"
+      },
+      {
+       "name": "_defaultSurfaceChannels",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "절단면 채널 표(`DismembermentComponent`)"
+      },
+      {
+       "name": "_defaultDestructionProfile",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "파괴 프로필(`FractureComponentBase` — 프로필 칸이 비면 쓴다)"
+      },
+      {
        "name": "_tileMapMaterial",
        "type": "DataPath",
        "default": "",
@@ -529,6 +556,24 @@
        "max": "",
        "units": "",
        "description": "물(`WaterBodyComponent`)"
+      },
+      {
+       "name": "_spriteMaterial",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "스프라이트(2D) — 머티리얼 칸이 비면 쓰는 기본 머티리얼(`SpriteRenderUtil`)"
+      },
+      {
+       "name": "_toonMaterialTemplate",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`VrmMaterialImporter`)"
       },
       {
        "name": "_defaultForwardPipeline",
@@ -2804,6 +2849,51 @@
        "description": "종료 요청 뒤 연결 정리 · 저장에 주는 시간(초)입니다(키트가 읽는다)."
       },
       {
+       "name": "_drainWaitSeconds",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "3600",
+       "units": "",
+       "description": "종료 신호(SIGTERM 등)를 받은 뒤 접속자가 모두 나가기를 기다리는 시간(초)입니다(서버 운영 O3 — 드레인). 신호가 오면 먼저 `/readyz` 가 503 이 되고(새 접속을 부하 분산기가 끊는다), 서버는 접속(서비스 연결 수)이 0 이 되거나 이 시간이 지날 때까지 틱을 돌린 뒤 서비스를 멈춘다. 0 이면 기다리지 않고 바로 내린다. 콘솔 `quit` · 틱 상한 종료는 기다리지 않는다(사람이 내린 것이다 — 테스트가 느려지지 않게). 쿠버네티스는 `terminationGracePeriodSeconds` 를 이 값 + `_shutdownGraceSeconds` 보다 크게 잡는다(`deploy/kubernetes/`)."
+      },
+      {
+       "name": "_bJsonLogs",
+       "type": "bool",
+       "default": "false",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "서버 로그를 줄마다 JSON 한 줄(JSON lines)로 표준 출력에 씁니다(서버 운영 O2 — 컨테이너 로그 수집기용). 켜면 콘솔 장치는 꺼지고 파일 로그는 그대로입니다."
+      },
+      {
+       "name": "_slowTickDumpMs",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "60000",
+       "units": "",
+       "description": "틱 본문이 이 시간(밀리초)을 넘으면 프레임 이력(`ServerFrameHistory`)을 `Saved/ServerReports/` 에 덤프합니다(서버 운영 O1). 0 이면 끔. 덤프는 틱 사이에 최소 10 초 간격을 두며 최근 `_frameHistoryTicks` 틱의 시간 · 접속 수 · 메시지 바이트가 든다. Dev 의 `-gv_traceSlowTickMs`(프로파일러 캡처)와는 따로다."
+      },
+      {
+       "name": "_frameHistoryTicks",
+       "type": "int32",
+       "default": "600",
+       "min": "0",
+       "max": "36000",
+       "units": "",
+       "description": "프레임 이력 링 버퍼가 기억하는 최근 틱 수입니다(서버 운영 O1). 0 이면 이력을 남기지 않습니다."
+      },
+      {
+       "name": "_tickLoadWarnPercent",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "100",
+       "units": "",
+       "description": "틱 사용률(틱 본문 시간 ÷ 틱 주기)이 이 값(퍼센트)을 넘으면 경고합니다(서버 운영 O5). 0 이면 끔. 초마다 구간 평균 사용률을 지표 `server_tick_utilization_ratio` 에 적고, 넘으면 로그 경고를 남긴다(경고는 1 분에 한 번). 예 70."
+      },
+      {
        "name": "_tlsCertificateFile",
        "type": "string",
        "default": "",
@@ -4230,6 +4320,22 @@
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
   {
+   "name": "gv_realtimeProbeRayCount",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트",
+   "description": "실시간 프로브 볼륨의 프로브당 광선 수 덮어쓰기(0 이면 볼륨의 값 — 스윕용)",
+   "source": "Source/Engine/Renderer/Light/GPULightBuffer.cpp"
+  },
+  {
+   "name": "gv_realtimeProbeUpdatePeriod",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트",
+   "description": "실시간 프로브 볼륨의 갱신 주기(프레임) 덮어쓰기(0 이면 볼륨의 값 — 스윕용)",
+   "source": "Source/Engine/Renderer/Light/GPULightBuffer.cpp"
+  },
+  {
    "name": "gv_renderPipeline",
    "type": "string",
    "default": "",
@@ -4444,6 +4550,14 @@
    "kind": "테스트 · 배포본에도",
    "description": "이 틱 수를 돈 뒤 정상 종료 (0=끄기)",
    "source": "Source/Server/ServerApp.cpp"
+  },
+  {
+   "name": "gv_shadowCascadeCulling",
+   "type": "bool",
+   "default": "false",
+   "kind": "테스트",
+   "description": "방향광 그림자를 캐스케이드마다 따로 컬링한다(0 이면 모든 타일을 덮는 상자 하나 — 전/후 비교용)",
+   "source": "Source/Engine/Renderer/Frame/FrameRendererViews.cpp"
   },
   {
    "name": "gv_shadowMapResolution",

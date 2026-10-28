@@ -15,6 +15,7 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Resource/AssetMeta.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -289,6 +290,14 @@ namespace sw::editor
             listTexturePath[textureIndex] = ResourcePaths::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
         }
 
+        // 툰 머티리얼 견본의 경로는 엔진 기본 에셋 표에 있다. 이 함수는 워커에서도 도므로 서비스를 찾지 않고 데이터에서 표를 읽는다.
+        const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
+        if ( pDefaultAssets == nullptr )
+        {
+            SW_LOG_ERROR( "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
+            return false;
+        }
+
         vector<string> listWrittenStem;
         for ( const ModelImportSection& section : result._listSection )
         {
@@ -296,7 +305,7 @@ namespace sw::editor
             if ( std::find( listWrittenStem.begin(), listWrittenStem.end(), section._fileStem ) != listWrittenStem.end() )
                 continue;
             listWrittenStem.push_back( section._fileStem );
-            const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath );
+            const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
             const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
             if ( bWritten == false )

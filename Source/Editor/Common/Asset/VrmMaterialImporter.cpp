@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceIO.h"
@@ -20,9 +21,6 @@ namespace sw::editor
          */
         struct VrmMaterialImporterInternal
         {
-            /** @brief 엔진 툰 머티리얼 템플릿 경로입니다. 프로퍼티 목록과 퍼뮤테이션의 원본은 이 파일 하나입니다. */
-            static constexpr string_view kToonMaterialTemplate = "engine/materials/toon.material";
-
             /** @brief 0.x 원소의 최상위 키입니다. */
             static constexpr string_view kArrVrm0RootKey[] = { "name", "shader", "renderQueue", "floatProperties", "vectorProperties", "textureProperties", "keywordMap", "tagMap" };
             /** @brief 0.x 에서 옮기는 실수 키 하나와, 키가 없을 때의 값(UniVRM 0.x MToon 셰이더의 기본값)입니다. */
@@ -583,6 +581,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "VrmMaterialImporter" );
+
     float32 VrmMaterialImporter::convertGammaToLinear( float32 value )
     {
         // sRGB 전달 함수(IEC 61966-2-1)의 역함수다. 유니티가 감마 색을 선형으로 바꾸는 식과 같다.
@@ -715,12 +715,15 @@ namespace sw::editor
         return true;
     }
 
-    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath )
+    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath, const DataPath& toonTemplate )
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
-        if ( ResourceIO::readTextResource( ResourceID{ Internal::kToonMaterialTemplate }, templateText ) == false )
+        if ( ResourceIO::readTextResource( ResourceID{ toonTemplate.get() }, templateText ) == false )
+        {
+            SW_LOG_ERROR( "Toon material template '%#' could not be read", toonTemplate.c_str() );
             return {};
+        }
         XMLDocument document;
         if ( document.parse( templateText ) == false )
             return {};

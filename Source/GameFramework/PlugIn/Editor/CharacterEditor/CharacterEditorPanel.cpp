@@ -1712,7 +1712,7 @@ namespace sw::editor
         _bKindTableReady = true;
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
-        if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) == false )
+        if ( kinds.loadDefault() == false )
             SW_LOG_WARNING( "Default socket kind table could not be loaded - kinds are not validated" );
         else
             _sockets.setKindTable( kinds );
