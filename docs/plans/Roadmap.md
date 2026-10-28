@@ -20,7 +20,7 @@
 | 8 | [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) | Wayland 창 계층, 서버 타깃에서 렌더러 빼기 | 병렬 | 없음 |
 | 9 | [LongFunctions](LongFunctions.md) | 긴 함수 정리 | 단독: 헤더 · include 변경 재빌드 | 1 ~ 2 |
 | 10 | [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md) | 결정 측정 열, 이월 확인, 조용한 폴백 감사(정리 → 기능 순) | 병렬 | 없음 |
-| 11 | [ModuleRenderPass](ModuleRenderPass.md) · [ThirdPartyGaps](ThirdPartyGaps.md) | 렌더 패스 등록 창구, 서드파티 빈자리 | 병렬 | 없음 |
+| 11 | [ModuleRenderPass](ModuleRenderPass.md) · [ThirdPartyGaps](ThirdPartyGaps.md) | 모듈 렌더 확장(훅 · 패스 빌더 · 프록시), 서드파티 빈자리 | 병렬 | 없음 |
 | 12 | [AutomationSplit](AutomationSplit.md) | Automation 분리 | 병렬: 셰이더 · 층 게이트와 파일이 다르다 | 없음 |
 | 13 | [RhiAsyncUploads](RhiAsyncUploads.md) | RHI 비동기 업로드(U5 GPU 확인은 통합, U7 · U8 · U9 · U11 남은 몫, 이어 U10 · U12 ~ U14) | 병렬: 단위마다 소유 폴더가 다르다(계획 문서 표) | 없음 |
 | 14 | [PackedTypes](PackedTypes.md) | 저장 전용 압축 타입 P4(G 버퍼 법선, GPU 확인 · 재쿠킹은 통합) → P5 → P6 | 단독: P4 는 셰이더 재베이크 | 없음 |
