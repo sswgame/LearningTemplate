@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+@file NetPairRun.py
+@brief 같은 기계에서 전용 서버(`Server`)와 클라이언트(`App`)를 띄워 두 출력을 모으는 공용 코드입니다.
+
+`Scripts/dev/RunDestructionNetPair.py`(파괴 복제 해시 로그)와 `Scripts/dev/RunPairedAnimationNetPair.py`(페어드 애니메이션 세션 로그)가 같이 쓴다. 순서는 같다:
+서버를 `-gv_netListenPort` 로 띄우고(`-gv_serverExitAfterTicks` 로 스스로 끝난다) 잠깐 뒤 클라이언트를 `-gv_netConnectAddress` 로 붙인다. 서버를 먼저 띄워 두므로
+클라이언트가 붙기 전의 사건은 서버가 늦은 참가 스냅숏으로 넘긴다. 로그를 어떻게 맞댈지는 부르는 쪽이 정한다.
+"""
+
+from __future__ import annotations
+
+import threading
+from pathlib import Path
+
+from .AppRun import AppRunResult, loadGameTable, runApp
+from .BuildTree import BuildTree
+from .Paths import getProjectRoot
+from .QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile
+
+#: 서버 기동을 기다리는 시간(초). 클라이언트는 연결 재시도가 있어 길게 잡지 않는다.
+kServerHeadStartSeconds = 3.0
+kDefaultPort = 7777
+
+
+def findServerExecutable(tree: BuildTree) -> Path | None:
+    """빌드 폴더의 `Server` 실행 파일. 없으면 None."""
+    for name in ("Server.exe", "Server"):
+        candidate = tree.binDir / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def writeLog(path: Path, result: AppRunResult) -> None:
+    path.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
+
+
+def makeServerArguments(scene: str, port: int, ticks: int) -> list[str]:
+    return [f"-gv_firstScene={scene}", f"-gv_netListenPort={port}", f"-gv_serverExitAfterTicks={ticks}"]
+
+
+def makeClientArguments(scene: str, port: int, frames: int, outDir: Path) -> list[str]:
+    """클라이언트는 그리는 App 이라 품질 프리셋(이펙트 스폰 배율 등)이 이 PC 의 설정 · 사양에 달리지 않게 설정 파일(@p outDir 아래)로 못 박는다. 서버는 그리지 않고 사용자 설정을 읽지 않는다."""
+    return [f"-gv_firstScene={scene}", f"-gv_netConnectAddress=127.0.0.1:{port}", f"-gv_profileFrames={frames}",
+            *writePresetSettingsFile(getProjectRoot(), readTableQuality(loadGameTable(getProjectRoot())), outDir / "client_usersettings.json")]
+
+
+def runServerClientPair(serverPath: Path, appPath: Path, serverArguments: list[str], clientArguments: list[str], timeoutSeconds: float) -> tuple[AppRunResult, AppRunResult]:
+    """서버를 따로 스레드에서 돌리고(끝날 때까지 출력을 읽는다) 잠깐 뒤 클라이언트를 붙인다. 둘이 모두 끝난 뒤 (서버, 클라이언트) 결과를 돌려준다."""
+    mapResult: dict[str, AppRunResult] = {}
+    serverThread = threading.Thread(target=lambda: mapResult.__setitem__("server", runApp(serverPath, serverArguments, settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=timeoutSeconds)))
+    serverThread.start()
+    threading.Event().wait(kServerHeadStartSeconds)
+    mapResult["client"] = runApp(appPath, clientArguments, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=timeoutSeconds)
+    serverThread.join()
+    return mapResult["server"], mapResult["client"]
+
+
+def findLogProblems(text: str, label: str, warningMarker: str) -> list[str]:
+    """프로세스 출력의 판정 줄 — 모든 `[Error]` 줄과, @p warningMarker(그 기능의 로그 호출자 이름)가 든 `[Warning]` 줄. 다른 곳의 경고는 이 확인의 판정이 아니다.
+
+    두 러너(파괴 · 페어드 애니메이션)가 같이 쓴다. 두 확인의 씬에서 기능이 남기는 `[Error]` 는 모두 결함이다 — 허용 목록(시나리오 로그의 `allowedlogs.json`)에
+    이 기능들의 항목이 없고 이 확인에도 허용하는 Error 가 없다. 허용해야 할 Error 가 생기면 여기에 목록을 더한다(조용히 거르지 않는다).
+    """
+    return [f"{label}: {line.strip()}" for line in text.splitlines() if "[Error]" in line or ("[Warning]" in line and warningMarker in line)]
+
+
+def hasBadExit(result: AppRunResult) -> bool:
+    """프로세스가 뜨지 못했거나 시간 안에 못 끝났거나 종료 코드가 0 이 아니다."""
+    return result.bLaunched is False or result.bTimedOut or result.exitCode != 0

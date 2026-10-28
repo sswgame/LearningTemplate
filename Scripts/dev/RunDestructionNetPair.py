@@ -11,43 +11,26 @@
 둘의 출력 줄에서 `[DestructionHash]` 줄을 `CompareDestructionHashLogs` 와 같은 규칙으로 맞댄다. 서버를 먼저 띄워 두므로 클라이언트가 붙기 전의 사건은
 스냅숏으로 건너뛴다(겹치는 열쇠만 본다). 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫(결정 기록 5-12)이라 이 도구는 한 기계의 두 프로세스만 다룬다.
 
-종료 코드: 0 = 같다, 1 = 해시가 다르거나 비교할 것이 없다, 2 = 실행 파일이 없거나 프로세스가 비정상으로 끝났다.
+해시가 같아도 두 프로세스의 출력에 `[Error]` 줄(또는 `Destruction…` 호출자의 `[Warning]` 줄)이 있으면 실패다(`common/NetPairRun.findLogProblems`, 페어드 애니메이션 러너와 같다).
+
+종료 코드: 0 = 같다, 1 = 해시가 다르거나 비교할 것이 없거나 오류 로그가 있다, 2 = 실행 파일이 없거나 프로세스가 비정상으로 끝났다.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-import threading
 from collections.abc import Sequence
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.AppRun import AppRunResult, loadGameTable, runApp  # noqa: E402
-from common.Paths import getProjectRoot  # noqa: E402
-from common.QualityPreset import SettingsIsolation, readTableQuality, writePresetSettingsFile  # noqa: E402
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.DestructionHashLog import compareHashLogs, parseHashLog  # noqa: E402
+from common.NetPairRun import findLogProblems, hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
 
 #: 파괴 복제 컴포넌트를 둔 씬(`DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase` 가 컴포넌트를 지킨다).
 kDefaultScene = "game/empty/maps/destructionnet.scene.xml"
-kDefaultPort = 7777
-#: 서버 기동을 기다리는 시간(초). 클라이언트는 연결 재시도가 있어 길게 잡지 않는다.
-kServerHeadStartSeconds = 3.0
-
-
-def findServerExecutable(tree: BuildTree) -> Path | None:
-    """빌드 폴더의 `Server` 실행 파일. 없으면 None."""
-    for name in ("Server.exe", "Server"):
-        candidate = tree.binDir / name
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def writeLog(path: Path, result: AppRunResult) -> None:
-    path.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -70,24 +53,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     outDir = args.out or tree.path / "destructionpair"
     outDir.mkdir(parents=True, exist_ok=True)
 
-    serverArguments = [f"-gv_firstScene={args.scene}", f"-gv_netListenPort={args.port}", f"-gv_serverExitAfterTicks={args.ticks}"]
-    # 클라이언트는 그리는 App 이라 품질 프리셋(이펙트 스폰 배율 등)이 이 PC 의 설정 · 사양에 달리지 않게 설정 파일로 못 박는다. 서버는 그리지 않고 사용자 설정을 읽지 않는다.
-    clientArguments = [f"-gv_firstScene={args.scene}", f"-gv_netConnectAddress=127.0.0.1:{args.port}", f"-gv_profileFrames={args.frames}",
-                       *writePresetSettingsFile(getProjectRoot(), readTableQuality(loadGameTable(getProjectRoot())), outDir / "client_usersettings.json")]
-
-    # 서버는 따로 스레드에서 돌리고(끝날 때까지 출력을 읽는다) 잠깐 뒤 클라이언트를 붙인다.
-    mapResult: dict[str, AppRunResult] = {}
-    serverThread = threading.Thread(target=lambda: mapResult.__setitem__("server", runApp(serverPath, serverArguments, settings=SettingsIsolation.NOT_APPLICABLE, timeoutSeconds=args.timeout)))
-    serverThread.start()
-    threading.Event().wait(kServerHeadStartSeconds)
-    mapResult["client"] = runApp(appPath, clientArguments, settings=SettingsIsolation.PRESET_FILE, timeoutSeconds=args.timeout)
-    serverThread.join()
-
-    serverResult, clientResult = mapResult["server"], mapResult["client"]
+    serverArguments = makeServerArguments(args.scene, args.port, args.ticks)
+    clientArguments = makeClientArguments(args.scene, args.port, args.frames, outDir)
+    serverResult, clientResult = runServerClientPair(serverPath, appPath, serverArguments, clientArguments, args.timeout)
     writeLog(outDir / "server.log", serverResult)
     writeLog(outDir / "client.log", clientResult)
     for name, result in (("server", serverResult), ("client", clientResult)):
-        if result.bLaunched is False or result.bTimedOut or result.exitCode != 0:
+        if hasBadExit(result):
             print(f"[RunDestructionNetPair] {name} 가 비정상으로 끝났습니다(종료 코드 {result.exitCode}, 시간 초과 {result.bTimedOut}). 로그: {outDir / (name + '.log')}")
             return ExitCode.CheckInvalid
 
@@ -101,6 +73,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"[RunDestructionNetPair] 해시 줄이 없습니다(서버 쪽 '{server.side}', 클라이언트 쪽 '{client.side}'). 로그: {outDir}")
         return ExitCode.Violation
     sharedCount, listProblem = compareHashLogs(server, client)
+    listProblem = findLogProblems("\n".join(serverResult.listLine), "server", "Destruction") + findLogProblems("\n".join(clientResult.listLine), "client", "Destruction") + listProblem
     print(f"[RunDestructionNetPair] 겹친 열쇠 {sharedCount}, 문제 {len(listProblem)}")
     for problem in listProblem:
         print(f"  {problem}")

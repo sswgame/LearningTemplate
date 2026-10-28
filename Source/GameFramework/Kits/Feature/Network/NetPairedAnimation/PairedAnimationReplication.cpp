@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
@@ -36,6 +37,18 @@ namespace sw
             GameObject*                      pObject   = manager.getSubsystem<NetObjectTable>().findObject( netID );
             const SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
             return pAnimator != nullptr ? TComponentHandle<SkeletalAnimatorComponent>( pAnimator ) : TComponentHandle<SkeletalAnimatorComponent>{};
+        }
+
+        /**
+         * @brief 두 프로세스 확인이 로그를 맞대는 사건 줄입니다: `[PairedAnimationNet] side=<server|client> event=<start|join|end|restore> session=<번호> anchor=<앵커 시각 초>`.
+         * @details 줄 형식의 정본은 이 함수이고 `Scripts/common/PairedAnimationNetLog.py` 가 읽는다. `start` 는 서버가 새 세션을 모두에게 보냈고, `join` 은 늦게 붙은 연결에 재생 중인 세션을
+         *          보냈고, `end` 는 끝 메시지(서버가 보냈다 · 클라이언트가 받았다), `restore` 는 클라이언트가 상태를 이어 받았다. 끝 줄의 앵커 시각은 뜻이 없어 0 이다.
+         */
+        string formatEventLine( const utf8* pSide, const utf8* pEvent, uint32 sessionID, float32 anchorTime )
+        {
+            StringBuilder<constant::kMaxBuffer256> text;
+            text.appendFormat( "[PairedAnimationNet] side=%# event=%# session=%# anchor=%#", pSide, pEvent, sessionID, anchorTime );
+            return string( text.c_str(), text.size() );
         }
     } // namespace
 } // namespace sw
@@ -205,6 +218,7 @@ namespace sw
             writer.writeVarUint( sessionID );
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
+            SW_LOG_INFO( "%#", formatEventLine( "server", "end", sessionID, 0.0f ).c_str() );
             _listAnnouncedID.erase( _listAnnouncedID.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
         // 복제하지 못한 세션은 끝나면 잊는다.
@@ -235,6 +249,7 @@ namespace sw
             }
             (void)_writer.broadcast( *_pHost, NetChannelType::ReliableOrdered ); // 연결이 없어도 기록한다 — 나중에 들어온 쪽은 늦은 참가로 받는다
             ++_stats._stateSentCount;
+            SW_LOG_INFO( "%#", formatEventLine( "server", "start", session.getID(), state._snapshot._anchorTime ).c_str() );
             _listAnnouncedID.push_back( session.getID() );
         }
     }
@@ -254,7 +269,10 @@ namespace sw
             for ( const int32 connectionID : _listJoiningConnection )
             {
                 if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
+                {
                     ++_stats._stateSentCount;
+                    SW_LOG_INFO( "%#", formatEventLine( "server", "join", sessionID, state._snapshot._anchorTime ).c_str() );
+                }
                 else
                     ++_stats._sendRejectedCount;
             }
@@ -276,6 +294,7 @@ namespace sw
 {
     PairedAnimationReplicationClient::PairedAnimationReplicationClient()
         : _stats{}
+        , _listPending{}
         , _pManager{ nullptr }
     {
     }
@@ -284,11 +303,52 @@ namespace sw
     {
         _pManager = pManager;
         _stats    = PairedAnimationReplicationStats{};
+        _listPending.clear();
         if ( pManager != nullptr )
             pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
     }
 
+    void PairedAnimationReplicationClient::dropPending( uint32 sessionID )
+    {
+        VectorUtil::removeIf( _listPending, [sessionID]( const PendingState& pending )
+        { return pending._state._snapshot._sessionID == sessionID; } );
+    }
+
     PairedAnimationStartResult PairedAnimationReplicationClient::applyState( const PairedAnimationNetState& state )
+    {
+        dropPending( state._snapshot._sessionID ); // 같은 세션의 새 상태가 서버의 기준이다
+        const PairedAnimationStartResult result = applyStateNow( state );
+        if ( result == PairedAnimationStartResult::ParticipantNotReady )
+        {
+            _listPending.push_back( PendingState{ state, 0 } );
+            ++_stats._deferredCount;
+        }
+        return result;
+    }
+
+    void PairedAnimationReplicationClient::retryPending()
+    {
+        // 적용하는 동안 목록이 바뀌지 않게 복사해 돌린다(복원은 이 목록을 건드리지 않는다).
+        vector<PendingState> listWaiting;
+        listWaiting.swap( _listPending );
+        for ( PendingState& pending : listWaiting )
+        {
+            ++pending._waitedFrames;
+            const PairedAnimationStartResult result = applyStateNow( pending._state );
+            if ( result != PairedAnimationStartResult::ParticipantNotReady )
+                continue; // 복원했거나 오류로 거절했다(applyStateNow 가 남겼다)
+            if ( pending._waitedFrames > kMaxPendingFrames )
+            {
+                SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored: participants were still loading animation clips after %# frames (limit %#)", pending._state._snapshot._sessionID,
+                              pending._state._assetPath.c_str(), pending._waitedFrames, kMaxPendingFrames );
+                ++_stats._rejectedCount;
+                continue;
+            }
+            _listPending.push_back( std::move( pending ) );
+        }
+    }
+
+    PairedAnimationStartResult PairedAnimationReplicationClient::applyStateNow( const PairedAnimationNetState& state )
     {
         if ( _pManager == nullptr )
         {
@@ -335,8 +395,9 @@ namespace sw
         if ( result == PairedAnimationStartResult::Started )
         {
             ++_stats._appliedCount;
+            SW_LOG_INFO( "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
         }
-        else
+        else if ( result != PairedAnimationStartResult::ParticipantNotReady ) // 클립을 읽는 중이면 정상 거절 — 보관하고 다시 한다
         {
             SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored (result %#)", state._snapshot._sessionID, state._assetPath.c_str(), static_cast<uint32>( result ) );
             ++_stats._rejectedCount;
@@ -353,6 +414,7 @@ namespace sw
             const uint32 sessionID = body.readVarUint32();
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
+            dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
             PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
             const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
             if ( pSession != nullptr && pSession->isPlaying() )
@@ -360,6 +422,8 @@ namespace sw
                 pSystem->abortSession( *_pManager, sessionID );
                 ++_stats._endAppliedCount;
             }
+            // 클라이언트 쪽 세션이 먼저 끝났어도(같은 시계로 따라 돈다) 끝 메시지를 받은 것은 남긴다.
+            SW_LOG_INFO( "%#", formatEventLine( "client", "end", sessionID, 0.0f ).c_str() );
             return NetHandleResult::Handled;
         }
         PairedAnimationNetState state{};

@@ -70,6 +70,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("asset-merge", "asset.AssetMerge", "XML 에셋 의미 비교 · 3-way 병합 (git 드라이버로도 쓴다)"),
     Subcommand("golden", "qa.GoldenImages", "테스트 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),
     Subcommand("soak", "qa.Soak", "자동 플레이 장시간 실행 — 메모리 · 핸들 증가와 프레임 p99"),
+    Subcommand("paired-net-pair", "dev.RunPairedAnimationNetPair", "같은 기계에서 Server + App 을 띄워 페어드 애니메이션 세션 시작 · 늦은 참가 · 끝 복제 로그를 맞댄다(매니페스트 paired-animation-two-process)"),
     Subcommand("perf", "qa.PerfRegression", "Release 프레임 p50 · p99 를 이 기계의 기준과 견준다"),
     Subcommand("load", "qa.Load", "부하 검증 — 부하 시나리오 × 하드웨어 프로필을 Release 로 재고 예산(p50 · p99 · max) · 기준선과 견주며 병목을 적는다"),
     Subcommand("perf-compare", "qa.PerfCompare", "성능 변경의 전 · 후(스위치 · 바이너리 A/B)를 번갈아 여러 번 재고 중앙값 표를 낸다"),
