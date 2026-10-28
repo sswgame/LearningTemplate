@@ -92,14 +92,14 @@ namespace sw::editor
                 return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
-            /** @brief 탐침 `Editor.NetPlayProfilerSamples` — Profiler 시계열에 쌓인 표본 수(모든 프로세스의 합)입니다. */
+            /** @brief 감시 값 `Editor.NetPlayProfilerSamples` — Profiler 시계열에 쌓인 표본 수(모든 프로세스의 합)입니다. */
             [[nodiscard]] static bool readSampleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getHistory().computeSampleCount() );
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayProfilerPeakSentBytesPerSecond` — 시계열에서 한 프로세스가 보인 가장 큰 초당 보낸 바이트입니다. */
+            /** @brief 감시 값 `Editor.NetPlayProfilerPeakSentBytesPerSecond` — 시계열에서 한 프로세스가 보인 가장 큰 초당 보낸 바이트입니다. */
             [[nodiscard]] static bool readPeakSentBytes( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getHistory().computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) );
@@ -108,7 +108,7 @@ namespace sw::editor
 
             /**
              * @brief `netplay.profile [<초>]` — 그 시간 동안 Profiler 탭처럼 모든 프로세스에 `net.stats` 를 묻고 답을 시계열에 쌓으며 이 프레임을 붙잡습니다.
-             * @details 탭은 보일 때만 묻는다. 시나리오는 탭을 띄우지 않으므로 이 명령으로 같은 일을 한다(`netplay.stats` 와 같은 모양). 탐침 `Editor.NetPlayProfiler*` 가 결과를 읽는다.
+             * @details 탭은 보일 때만 묻는다. 시나리오는 탭을 띄우지 않으므로 이 명령으로 같은 일을 한다(`netplay.stats` 와 같은 모양). 감시 값 `Editor.NetPlayProfiler*` 가 결과를 읽는다.
              */
             static bool runProfile( const vector<string>& listArgument, string& outReply )
             {

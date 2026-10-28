@@ -30,7 +30,7 @@
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.AudioMixerBusVolume` 이 볼 버스 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchBus, "master", "탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchBus, "master", "감시 값 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)" );
 
     namespace
     {
@@ -53,7 +53,7 @@ namespace sw::editor
                 float32 _probedBusVolume{ -1.0f };
             };
 
-            /** @brief 탐침이 읽는 지난 프레임의 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            /** @brief 감시 값이 읽는 지난 프레임의 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
             static ProbeState& getProbeState() { return getEditorState<ProbeState>(); }
 
             /** @brief 선형 피크를 dB 로 바꿉니다. 0 이면 바닥 값입니다. */

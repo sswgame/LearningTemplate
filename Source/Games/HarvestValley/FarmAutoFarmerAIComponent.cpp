@@ -53,7 +53,7 @@ namespace sw
             }
 
             /**
-             * @brief 할 일의 상태 이름입니다(탐침 `AI.State` 가 읽는다). 타일 일은 도구로 가른다 — `Till` · `Water` · `Sow` · `Harvest`.
+             * @brief 할 일의 상태 이름입니다(감시 값 `AI.State` 가 읽는다). 타일 일은 도구로 가른다 — `Till` · `Water` · `Sow` · `Harvest`.
              * @details 이름은 시나리오의 데이터다(`<ExpectVisited probe="AI.State" sequence="Till,Sow,Water"/>`). 바꾸면 시나리오도 함께 고친다.
              */
             static const utf8* getStateName( const Task& task )

@@ -4070,59 +4070,59 @@
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.AlwaysLoadedTip"
+		<entry key="EditorStreamingCells.AlwaysLoadedTip"
 		       source="Select the entities the cook keeps in the base list (always loaded, or without a position).">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.CookedScene"
+		<entry key="EditorStreamingCells.CookedScene"
 		       source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.NoActiveScene" source="No active scene.">
+		<entry key="EditorStreamingCells.NoActiveScene" source="No active scene.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.NoGameCamera" source="No game camera - the load and unload column needs one.">
+		<entry key="EditorStreamingCells.NoGameCamera" source="No game camera - the load and unload column needs one.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.NoPreview" source="Press Preview Split to split the scene into cells as the cook would.">
+		<entry key="EditorStreamingCells.NoPreview" source="Press Preview Split to split the scene into cells as the cook would.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.NotStreaming"
+		<entry key="EditorStreamingCells.NotStreaming"
 		       source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.PreviewTip"
+		<entry key="EditorStreamingCells.PreviewTip"
 		       source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.SplitFailed" source="The scene could not be split - see the log.">
+		<entry key="EditorStreamingCells.SplitFailed" source="The scene could not be split - see the log.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.ViolationHeader" source="Cross-cell references that fail the cook:">
+		<entry key="EditorStreamingCells.ViolationHeader" source="Cross-cell references that fail the cook:">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorWorldCells.ViolationTip"
+		<entry key="EditorStreamingCells.ViolationTip"
 		       source="Selects both objects. Mark the target always loaded or move it into the same cell.">
 			<origins>
-				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
 	</entries>

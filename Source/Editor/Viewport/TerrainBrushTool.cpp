@@ -106,7 +106,7 @@ namespace sw::editor
                 bool                       _bStroking{ false };
                 bool                       _bUnsaved{ false };
                 bool                       _bHit{ false };
-                int32                      _activeFrame{ -1 }; ///< 도구가 마지막으로 돈 ImGui 프레임(탐침 `Editor.TerrainBrushToolActive`)
+                int32                      _activeFrame{ -1 }; ///< 도구가 마지막으로 돈 ImGui 프레임(감시 값 `Editor.TerrainBrushToolActive`)
                 uint32                     _strokeCount{ 0 };
             };
 

@@ -71,7 +71,7 @@ namespace sw
     {
         const string&                      watchName     = *step.findAttribute( "watch" );
         const AutomationWatchRegistration* pRegistration = AutomationWatchs::find( watchName );
-        // 모듈을 언로드했다 로드하면 탐침이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
+        // 모듈을 언로드했다 로드하면 감시 값이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr )
         {
             outMessage = watchName + " is no longer registered";

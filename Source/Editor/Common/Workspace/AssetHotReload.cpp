@@ -52,14 +52,14 @@ namespace sw::editor
             /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
             static constexpr int64 kFenceImportTimeoutMilliseconds = 120000;
 
-            /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(탐침은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
+            /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(감시 값은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 return pContext != nullptr ? &pContext->getSubsystem<AssetHotReload>() : nullptr;
             }
 
-            /** @brief 탐침 `Editor.AssetImportBusy` — 원본 임포트가 돌거나 기다리면 1 입니다. 시나리오가 임포트가 끝나기를 기다린다. */
+            /** @brief 감시 값 `Editor.AssetImportBusy` — 원본 임포트가 돌거나 기다리면 1 입니다. 시나리오가 임포트가 끝나기를 기다린다. */
             [[nodiscard]] static bool readImportBusy( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const AssetHotReload* pHotReload = findHotReload();
@@ -67,7 +67,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.AssetImportFinishedCount` — 끝난 원본 임포트의 누적 수입니다(`WaitUntil` 이 임포트가 시작돼 끝난 것을 알아본다). */
+            /** @brief 감시 값 `Editor.AssetImportFinishedCount` — 끝난 원본 임포트의 누적 수입니다(`WaitUntil` 이 임포트가 시작돼 끝난 것을 알아본다). */
             [[nodiscard]] static bool readImportFinishedCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const AssetHotReload* pHotReload = findHotReload();

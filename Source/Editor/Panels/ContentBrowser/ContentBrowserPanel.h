@@ -77,13 +77,13 @@ namespace sw::editor
         bool hasRoot( string_view displayName ) const;
         /**
          * @brief 참조 역색인이 에디터가 본 마지막 `Resource/` 변경까지 반영했으면 true 입니다(`ContentBrowserReferenceSearch::isCurrent`).
-         * @details 자동화 탐침(`Editor.ReferenceIndexReady` · `Editor.ReferenceCount`)과 이름 바꾸기 · 옮기기가 본다. 한 번 만든 색인이 있어도 스캔이 돌면 false 다.
+         * @details 자동화 감시 값(`Editor.ReferenceIndexReady` · `Editor.ReferenceCount`)과 이름 바꾸기 · 옮기기가 본다. 한 번 만든 색인이 있어도 스캔이 돌면 false 다.
          */
         bool isReferenceIndexCurrent() const;
         /**
          * @brief 내용이 화면에 보이는데 참조 역색인이 아직 마지막 변경을 반영하지 않았으면 true 입니다. 자동화 시계 잡기 조건(`ContentBrowserReferenceIndex`)입니다.
          * @details 색인은 내용을 그리는 프레임에만 따라온다(`syncReferenceIndex`). 가려진 탭 · 접힌 창 · 닫힌 패널은 색인을 갱신하지 않으므로 기다리지 않는다 —
-         *          그때 탐침은 값을 내지 않고, 시나리오는 패널을 앞에 두고(`panel.focus content_browser`) 기다린다.
+         *          그때 감시 값은 값을 내지 않고, 시나리오는 패널을 앞에 두고(`panel.focus content_browser`) 기다린다.
          */
         bool isWaitingForReferenceIndex() const;
         /** @brief 참조 역색인을 반환합니다. */

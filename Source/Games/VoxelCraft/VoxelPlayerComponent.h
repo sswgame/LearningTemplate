@@ -66,7 +66,7 @@ namespace sw
         float32 getBreakProgress() const { return _breakProgress; }
         uint32  getBrokenCount() const { return _brokenCount; }
         uint32  getPlacedCount() const { return _placedCount; }
-        /** @brief 몸을 처음 놓은 위치입니다. 테스트와 탐침이 걸은 거리를 측정할 때 기준으로 씁니다. */
+        /** @brief 몸을 처음 놓은 위치입니다. 테스트와 감시 값이 걸은 거리를 측정할 때 기준으로 씁니다. */
         const float3&           getStartPosition() const { return _startPosition; }
         const GameObjectHandle& getDirector() const { return _director; }
 

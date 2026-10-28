@@ -21,7 +21,7 @@ namespace sw
      *          한 주기(기본 12초) 동안 앞으로 걸으면서 천천히 돕니다. 주기의 앞 절반은 오른쪽으로, 뒤 절반은 왼쪽으로 돕니다.
      *          아래를 조금 보며, 주기 안의 정해진 구간에 블록을 부수고 한 번 놓습니다. 구간의 시각은 PROPERTY 로 정합니다.
      *          앞이 막혔거나 물 속이면 점프 버튼을 누릅니다. 월드는 이 판단을 위해서만 읽습니다.
-     *          판단 상태(`setStateName`, 탐침 `AI.State`)는 `Walk`, `Break`, `Place` 중 하나입니다.
+     *          판단 상태(`setStateName`, 감시 값 `AI.State`)는 `Walk`, `Break`, `Place` 중 하나입니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Auto Play Controller", Tooltip = "AI controller that walks, breaks and places blocks with the player pawn when auto play is on" )
     class VoxelAutoPlayControllerComponent : public AIControllerComponent

@@ -35,9 +35,9 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override { return false; }
         bool               canSaveDocument() const override { return false; }
 
-        /** @brief 미리보기 메시의 LOD 0 정점 수입니다. 아직 읽는 중이거나 읽지 못했거나 씬이 없으면 false 입니다(탐침 `Editor.MeshPreviewVertexCount`). */
+        /** @brief 미리보기 메시의 LOD 0 정점 수입니다. 아직 읽는 중이거나 읽지 못했거나 씬이 없으면 false 입니다(감시 값 `Editor.MeshPreviewVertexCount`). */
         [[nodiscard]] bool findPreviewVertexCount( uint32& outCount ) const;
-        /** @brief 미리보기 메시가 지금 그리는 LOD 단계입니다. 없으면 false 입니다(탐침 `Editor.MeshPreviewDrawnLOD`). */
+        /** @brief 미리보기 메시가 지금 그리는 LOD 단계입니다. 없으면 false 입니다(감시 값 `Editor.MeshPreviewDrawnLOD`). */
         [[nodiscard]] bool findPreviewDrawnLOD( uint32& outLOD ) const;
 
     private:

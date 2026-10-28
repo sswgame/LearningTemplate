@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kAttack = "Attack";
 
-            /** @brief 몸의 단계를 판단 상태 이름으로 바꿉니다(탐침 `AI.State`). */
+            /** @brief 몸의 단계를 판단 상태 이름으로 바꿉니다(감시 값 `AI.State`). */
             static const utf8* getStateName( ShooterEnemyPhase phase )
             {
                 switch ( phase )

@@ -61,7 +61,7 @@ namespace sw
         /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
-        // ---- 자동화 탐침이 읽는 것(게임 스레드, 틱 뒤) ----
+        // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
         int32 getPopulation() const;
         int64 getMoney() const;
         int32 getMonthCount() const { return _monthCount; }

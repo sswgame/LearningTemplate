@@ -35,7 +35,7 @@ namespace sw::editor
         void        drawContent() override;
         void        shutdown( IRHIDevice* pRHIDevice ) override;
 
-        /** @brief 지난 프레임 목록에 보인 섹션 수입니다(탐침 `Editor.PreferencesVisibleSections`). */
+        /** @brief 지난 프레임 목록에 보인 섹션 수입니다(감시 값 `Editor.PreferencesVisibleSections`). */
         static uint32 getVisibleSectionCount();
 
     private:

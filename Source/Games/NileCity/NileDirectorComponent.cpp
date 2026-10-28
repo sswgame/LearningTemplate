@@ -63,7 +63,7 @@ namespace sw
                 return pMesh;
             }
 
-            /** @brief 활성 씬의 첫 나일 디렉터입니다(탐침). */
+            /** @brief 활성 씬의 첫 나일 디렉터입니다(감시 값). */
             static const NileDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
             {
                 const NileDirectorComponent* pFound = nullptr;

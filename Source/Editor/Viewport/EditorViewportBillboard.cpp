@@ -91,7 +91,7 @@ namespace sw::editor
                     } );
             }
 
-            /** @brief 지난 그리기에서 오브젝트마다 넘긴 글리프입니다(탐침이 그린 값을 본다 — 수집 결과가 아니라). */
+            /** @brief 지난 그리기에서 오브젝트마다 넘긴 글리프입니다(감시 값이 그린 값을 본다 — 수집 결과가 아니라). */
             struct DrawnGlyph
             {
                 const GameObject* _pObject{ nullptr };

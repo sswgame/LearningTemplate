@@ -89,7 +89,7 @@ namespace sw::editor
             }
 
             /** @brief 새 씬의 글입니다. */
-            static constexpr const utf8* kSceneText = "<Scene formatVersion=\"2\" name=\"NewScene\">\n\t<WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n\t</entities>\n</Scene>\n";
+            static constexpr const utf8* kSceneText = "<Scene formatVersion=\"2\" name=\"NewScene\">\n\t<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></SceneSettings><entities>\n\t</entities>\n</Scene>\n";
             /** @brief 새 프리팹의 글입니다. */
             static constexpr const utf8* kPrefabText = "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
                                                        "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";

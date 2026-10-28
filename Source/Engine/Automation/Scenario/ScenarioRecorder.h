@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @struct ScenarioRecordCheckpoint
-     * @brief 녹화를 멈출 때 읽은 탐침 값 하나입니다. 시나리오 끝에 `<Expect>` 로 실려 녹화가 스스로를 검증합니다(같은 입력이면 같은 값 — 결정적 재생).
+     * @brief 녹화를 멈출 때 읽은 감시 값 값 하나입니다. 시나리오 끝에 `<Expect>` 로 실려 녹화가 스스로를 검증합니다(같은 입력이면 같은 값 — 결정적 재생).
      */
     struct ScenarioRecordCheckpoint
     {
@@ -102,7 +102,7 @@ namespace sw
         /** @brief 녹화 경로(`isAllowedOutputPath`)를 다시 돌릴 때의 리소스 id 로 바꿉니다. 허락되지 않은 경로면 빈 문자열입니다. */
         static string makeReplayID( string_view outputPath );
         /**
-         * @brief 검사점 하나(`탐침`, `탐침@대상`, `탐침@대상@키`)를 지금 값으로 읽습니다. 모르는 탐침이거나 값이 없으면 false 와 이유입니다.
+         * @brief 검사점 하나(`감시 값`, `감시 값@대상`, `감시 값@대상@키`)를 지금 값으로 읽습니다. 모르는 감시 값이거나 값이 없으면 false 와 이유입니다.
          * @details 녹화를 멈출 때 부른다. 그 프레임의 씬 틱 뒤 값이라 재생에서도 같은 프레임 끝에 같은 값이 나와야 한다.
          */
         [[nodiscard]] static bool readCheckpoint( string_view spec, const GameObjectManager* pManager, ScenarioRecordCheckpoint& outCheckpoint, string& outError );

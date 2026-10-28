@@ -43,7 +43,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 Editor.NotificationCount — 지금 떠 있는 알림 수입니다. */
+            /** @brief 감시 값 Editor.NotificationCount — 지금 떠 있는 알림 수입니다. */
             [[nodiscard]] static bool readNotificationCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorContext* pContext = editor::findSubsystem<EditorContext>();

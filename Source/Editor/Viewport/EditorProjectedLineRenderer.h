@@ -21,7 +21,7 @@ namespace sw::editor
 {
     /**
      * @class EditorProjectedLineRenderer
-     * @brief 월드 선분을 근평면에서 잘라 캔버스 좌표로 옮겨 `ImDrawList` 에 긋습니다. 그린 선분 수를 셉니다(시각화 통계 · 시나리오 탐침).
+     * @brief 월드 선분을 근평면에서 잘라 캔버스 좌표로 옮겨 `ImDrawList` 에 긋습니다. 그린 선분 수를 셉니다(시각화 통계 · 시나리오 감시 값).
      * @details 선택 외곽선 · 디버그 드로우 시각화와 같은 투영(`EditorViewportProjectionUtil::projectSegment`)을 씁니다. 프레임마다 스택에 만들어 쓰는 값이라 할당이 없습니다.
      */
     class SW_EDITOR_API EditorProjectedLineRenderer final : public IPhysicsDebugRenderer

@@ -1,6 +1,6 @@
 /**
  * @file EditorSelfTestWatchs.cpp
- * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 탐침 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수.
+ * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 감시 값 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수.
  * @details 값을 고르는 쪽(인스펙터 콤보, Hierarchy 끌어 놓기, 문서 패널 저장)이 바뀐 결과가 화면이 아니라 데이터에서 읽히게 한다. 대상은 `gv_editorWatchProperty` · `gv_editorWatchObject`
  *          (`EditorWatchSupport.h` 가 선언하는 시나리오용 전역 변수)가 정한다.
  */
@@ -75,7 +75,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `gv_editorWatchPanel` 패널의 내용 영역 폭이 숫자 "0" 몇 칸인지입니다(`IEditorPanel::getContentColumnCount`). 값을 내지 않는 조건은 줄 수 탐침과 같습니다. */
+            /** @brief `gv_editorWatchPanel` 패널의 내용 영역 폭이 숫자 "0" 몇 칸인지입니다(`IEditorPanel::getContentColumnCount`). 값을 내지 않는 조건은 줄 수 감시 값과 같습니다. */
             [[nodiscard]] static bool readPanelContentColumns( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();

@@ -38,7 +38,7 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 120.0f, 33.0f ); }
         void             drawContent() override;
 
-        /** @brief 자동화 탐침이 읽는 값입니다. 창이 그릴 때마다 게시합니다(게임 스레드). 창이 닫히면 마지막 값이 남습니다. 값은 이 패널 인스턴스의 것이라 에디터마다 따로입니다. */
+        /** @brief 자동화 감시 값이 읽는 값입니다. 창이 그릴 때마다 게시합니다(게임 스레드). 창이 닫히면 마지막 값이 남습니다. 값은 이 패널 인스턴스의 것이라 에디터마다 따로입니다. */
         struct Published
         {
             uint32 _npcCount{ 0 };         ///< 고른 일정 시스템의 NPC 수
@@ -57,6 +57,6 @@ namespace sw::editor
         int32                       _systemIndex;
         int32                       _previewMinute;
         bool                        _bFollowClock;
-        Published                   _published; ///< 탐침이 읽는 게시 값
+        Published                   _published; ///< 감시 값이 읽는 게시 값
     };
 } // namespace sw::editor

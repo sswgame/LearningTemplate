@@ -24,7 +24,7 @@ namespace sw::editor
         static void process( const EditorViewportVisualizerArgs& args );
         /** @brief 마우스가 손잡이 위에 있거나 손잡이를 끄는 중이면 true 입니다(지난 `process` 기준). 선택 클릭과 기즈모가 보고 물러납니다. */
         static bool isCapturingMouse();
-        /** @brief 끌기를 마치고 되돌리기를 남긴 횟수입니다(탐침 `Editor.ColliderHandleCommitCount`). */
+        /** @brief 끌기를 마치고 되돌리기를 남긴 횟수입니다(감시 값 `Editor.ColliderHandleCommitCount`). */
         static uint32 getCommitCount();
     };
 } // namespace sw::editor

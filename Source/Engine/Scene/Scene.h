@@ -51,7 +51,7 @@ namespace sw
          */
         [[nodiscard]] bool instantiate( const SceneDocument& doc, const atomic<bool>* pStop = nullptr );
         /**
-         * @brief 스트리밍 셀 하나의 엔티티를 이 씬에 더해 짓습니다(`WorldStreamingSubsystem` 이 부릅니다). 지은 오브젝트 id 를 @p outListObjectID 에 더합니다.
+         * @brief 스트리밍 셀 하나의 엔티티를 이 씬에 더해 짓습니다(`SceneStreamingSubsystem` 이 부릅니다). 지은 오브젝트 id 를 @p outListObjectID 에 더합니다.
          * @details 셀의 엔티티는 같은 셀이나 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 지금 씬에 있는 파일 id 의 오브젝트를 같은 배치에 기록해
          *          그 참조를 잇는다. 실패해도 그때까지 지은 오브젝트 id 는 @p outListObjectID 에 남는다(부르는 쪽이 `unloadCell` 로 내린다).
          */
@@ -115,9 +115,9 @@ namespace sw
         bool isAudioUpdateEnabled() const { return _bAudioUpdateEnabled; }
 
         /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
-        void setWorldSettings( const WorldSettings& settings ) { _worldSettings = settings; }
+        void setWorldSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
         /** @brief 씬 파일에서 읽은 월드 설정입니다. */
-        const WorldSettings& getWorldSettings() const { return _worldSettings; }
+        const SceneSettings& getWorldSettings() const { return _sceneSettings; }
 
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
@@ -178,7 +178,7 @@ namespace sw
         string                        _name;
         string                        _sourcePath;
         string                        _defaultMaterialPath;
-        WorldSettings                 _worldSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
+        SceneSettings                 _sceneSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
         SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;

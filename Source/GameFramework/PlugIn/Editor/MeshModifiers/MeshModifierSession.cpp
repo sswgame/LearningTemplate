@@ -106,7 +106,7 @@ namespace sw::editor
             return listVertex;
         }
 
-        /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 탐침입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
+        /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 감시 값입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
         struct MeshModifierSessionProbes
         {
             static editor::MeshModifierSession* findSession()

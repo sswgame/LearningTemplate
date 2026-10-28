@@ -3848,52 +3848,52 @@ msgctxt "EditorUIPreview.WaitingForTexture"
 msgid "Waiting for the render thread to create the preview texture..."
 msgstr "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.AlwaysLoadedTip"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.AlwaysLoadedTip"
 msgid "Select the entities the cook keeps in the base list (always loaded, or without a position)."
 msgstr "쿠킹이 기본 목록에 두는 엔티티(늘 올라 있거나 자리가 없는 것)를 고릅니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.CookedScene"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.CookedScene"
 msgid "This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split."
 msgstr "이 씬은 쿠킹본에서 지어져 이미 셀로 나뉘어 있습니다. 나눔을 미리 보려면 씬 파일을 엽니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.NoActiveScene"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.NoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.NoGameCamera"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.NoGameCamera"
 msgid "No game camera - the load and unload column needs one."
 msgstr "게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.NoPreview"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.NoPreview"
 msgid "Press Preview Split to split the scene into cells as the cook would."
 msgstr "Preview Split 을 눌러 쿠킹처럼 씬을 셀로 나눠 봅니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.NotStreaming"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.NotStreaming"
 msgid "The active scene does not stream. Turn on streaming in its World Settings to split it into cells."
 msgstr "활성 씬은 스트리밍하지 않습니다. 셀로 나누려면 월드 설정에서 스트리밍을 켭니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.PreviewTip"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.PreviewTip"
 msgid "Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'."
 msgstr "씬 쿠킹과 똑같이 씬을 셀로 나눠 셀 목록이나 쿠킹을 실패시킬 참조를 보입니다. 'world.cells' 와 같습니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.SplitFailed"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.SplitFailed"
 msgid "The scene could not be split - see the log."
 msgstr "씬을 나누지 못했습니다 - 로그를 봅니다."
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.ViolationHeader"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.ViolationHeader"
 msgid "Cross-cell references that fail the cook:"
 msgstr "쿠킹을 실패시키는 셀을 넘는 참조:"
 
-#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
-msgctxt "EditorWorldCells.ViolationTip"
+#: Source/Editor/Panels/Scene/StreamingCellsPanel.cpp
+msgctxt "EditorStreamingCells.ViolationTip"
 msgid "Selects both objects. Mark the target always loaded or move it into the same cell."
 msgstr "두 오브젝트를 고릅니다. 대상을 늘 올라 있게 표시하거나 같은 셀로 옮깁니다."

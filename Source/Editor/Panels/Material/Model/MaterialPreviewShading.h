@@ -60,7 +60,7 @@ namespace sw::editor
          * @param ny 세로 위치(아래가 +)
          */
         static float3 shadePoint( const MaterialPreviewInputs& inputs, float32 nx, float32 ny );
-        /** @brief 원 안을 고르게 짚은 점들의 평균 (R - B) 입니다(0..255 — 탐침이 머티리얼 색을 따르는지 본다). */
+        /** @brief 원 안을 고르게 짚은 점들의 평균 (R - B) 입니다(0..255 — 감시 값이 머티리얼 색을 따르는지 본다). */
         static float32 computeMeanRedMinusBlue( const MaterialPreviewInputs& inputs );
     };
 } // namespace sw::editor

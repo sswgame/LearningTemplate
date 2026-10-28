@@ -66,7 +66,7 @@ namespace sw
         /**
          * @brief 플레이를 시나리오로 녹화합니다(`-scenario-record=<Saved/Automation/...scenario.xml>`). 활성 씬이 플레이를 시작한 첫 프레임부터 입력을 적고,
          *        시나리오가 끝나거나 창이 닫힐 때 파일을 씁니다.
-         * @param watchList `-scenario-record-watchs=` 값 — 쉼표로 가른 검사점(`탐침`, `탐침@대상`, `탐침@대상@키`). 끝 프레임의 값이 `<Expect>` 로 실려 녹화가 스스로를 검증한다.
+         * @param watchList `-scenario-record-watchs=` 값 — 쉼표로 가른 검사점(`감시 값`, `감시 값@대상`, `감시 값@대상@키`). 끝 프레임의 값이 `<Expect>` 로 실려 녹화가 스스로를 검증한다.
          * @details 시나리오와 함께 돌리면(`-scenario`) 시나리오가 낸 가상 입력도 적는다 — 시나리오 → 녹화 → 재생의 왕복으로 결정적 재생을 확인한다. 시작 조건은 시나리오의 `ScenePlaying` 과 같은 프레임이다.
          * @return 경로가 `Saved/Automation/` 아래의 `.scenario.xml` 이 아니면 false 입니다.
          */

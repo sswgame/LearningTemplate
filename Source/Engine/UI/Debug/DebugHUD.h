@@ -53,7 +53,7 @@ namespace sw
         // (`EngineDefaultAssets::_debugHUDSettingsSchema` · `_uiDebugHUD`, 창은 `UISystem::getEngineDocuments()._debugHUD`).
         /** @brief 셸 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
         static constexpr const utf8* kToggleActionName = "DebugHUDToggle";
-        /** @brief HUD 패널 위젯 이름입니다(레이아웃 덤프와 탐침이 찾습니다). */
+        /** @brief HUD 패널 위젯 이름입니다(레이아웃 덤프와 감시 값이 찾습니다). */
         static constexpr const utf8* kPanelName = "DebugHUDPanel";
         /** @brief 불투명도 범위입니다(설정 정의와 같으며, 0 이면 HUD 를 켜도 보이지 않습니다). */
         static constexpr float32 kMinOpacity = 0.2f;
@@ -65,7 +65,7 @@ namespace sw
         DebugHUD& operator=( const DebugHUD& ) = delete;
 
         /**
-         * @brief UI 시스템과 설정 출처를 연결하고, 명령과 탐침이 찾는 컨트롤러로 등록합니다.
+         * @brief UI 시스템과 설정 출처를 연결하고, 명령과 감시 값이 찾는 컨트롤러로 등록합니다.
          * @param pSettings 설정 매니저입니다(nullptr 이거나 HUD 스키마를 읽지 않았으면 전역 변수에 바로 씁니다. 테스트용).
          */
         void initialize( UISystem& ui, UserSettingsManager* pSettings );
@@ -100,9 +100,9 @@ namespace sw
         bool               isWindowOpen() const;
         /** @brief HUD 화면이 열려 있으면 true 입니다(켜짐과 다음 `update` 사이에는 다를 수 있습니다). */
         bool isScreenOpen() const;
-        /** @brief HUD 화면이 지금 그리는 섹션 수입니다(화면이 없으면 0. 탐침 `DebugHUD.SectionCount`). */
+        /** @brief HUD 화면이 지금 그리는 섹션 수입니다(화면이 없으면 0. 감시 값 `DebugHUD.SectionCount`). */
         uint32 getDrawnSectionCount() const;
-        /** @brief HUD 화면이 섹션 @p name 을 그리고 있으면 true 입니다(탐침 `DebugHUD.SectionShown`). */
+        /** @brief HUD 화면이 섹션 @p name 을 그리고 있으면 true 입니다(감시 값 `DebugHUD.SectionShown`). */
         bool isSectionDrawn( string_view name ) const;
         /**
          * @brief HUD 패널이 실제로 놓인 모서리를 구합니다(지난 레이아웃 결과이며, 패널 가운데가 뷰포트의 어느 4 분면에 있는지로 판정).

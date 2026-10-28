@@ -166,7 +166,7 @@ namespace sw::editor
 
         int32                         getTrackCount() const { return static_cast<int32>( _listTrack.size() ); }
         const EditorNetProfilerTrack* findTrack( int32 processIndex ) const;
-        /** @brief 모든 프로세스의 표본 수 합입니다(탐침 `Editor.NetPlayProfilerSamples`). */
+        /** @brief 모든 프로세스의 표본 수 합입니다(감시 값 `Editor.NetPlayProfilerSamples`). */
         int32 computeSampleCount() const;
         /** @brief 모든 프로세스 가운데 한 필드의 가장 큰 값입니다. */
         float32 computePeak( EditorNetProfilerChannel channel ) const;

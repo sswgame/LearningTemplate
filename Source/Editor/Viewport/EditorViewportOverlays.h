@@ -56,7 +56,7 @@ namespace sw::editor
          *        씬 뷰 HUD 상자 · 방향 큐브가 바 아래에 놓이게 한다.
          */
         float2 computeTopRightInset() const;
-        /** @brief 바의 이번 실행 상태입니다(탐침). 없으면 nullptr 입니다. */
+        /** @brief 바의 이번 실행 상태입니다(감시 값). 없으면 nullptr 입니다. */
         const EditorOverlayBarRuntime* findRuntime( string_view barID ) const;
 
     private:

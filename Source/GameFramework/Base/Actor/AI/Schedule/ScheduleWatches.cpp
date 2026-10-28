@@ -1,6 +1,6 @@
 /**
  * @file ScheduleWatchs.cpp
- * @brief NPC 일정의 자동화 탐침입니다. `Schedule.Activity` · `Schedule.Phase` · `Schedule.DistanceToPlace` · `Schedule.DistanceToTarget` · `Schedule.MinuteOfDay` — 살아 있는 일정 시스템에서 NPC id 로 찾습니다.
+ * @brief NPC 일정의 자동화 감시 값입니다. `Schedule.Activity` · `Schedule.Phase` · `Schedule.DistanceToPlace` · `Schedule.DistanceToTarget` · `Schedule.MinuteOfDay` — 살아 있는 일정 시스템에서 NPC id 로 찾습니다.
  */
 #include "pch.h"
 
@@ -37,7 +37,7 @@ namespace sw
             return false;
         }
 
-        /** @brief 탐침 `Schedule.Activity` 입니다. NPC 가 지금(가는 중이면 가서 할) 블록의 활동 이름이고, 없으면 `none` 입니다. */
+        /** @brief 감시 값 `Schedule.Activity` 입니다. NPC 가 지금(가는 중이면 가서 할) 블록의 활동 이름이고, 없으면 `none` 입니다. */
         [[nodiscard]] bool readScheduleActivity( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const ScheduleSystem* pSystem  = nullptr;
@@ -49,7 +49,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Schedule.Phase` 입니다. `Traveling` · `Performing` · `Interrupted` 입니다. */
+        /** @brief 감시 값 `Schedule.Phase` 입니다. `Traveling` · `Performing` · `Interrupted` 입니다. */
         [[nodiscard]] bool readSchedulePhase( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const ScheduleSystem* pSystem  = nullptr;
@@ -77,7 +77,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Schedule.DistanceToPlace` 입니다. NPC 의 일정상 위치에서 카탈로그 장소 `key` 까지의 지면 거리(m)입니다. */
+        /** @brief 감시 값 `Schedule.DistanceToPlace` 입니다. NPC 의 일정상 위치에서 카탈로그 장소 `key` 까지의 지면 거리(m)입니다. */
         [[nodiscard]] bool readScheduleDistanceToPlace( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const ScheduleSystem* pSystem  = nullptr;
@@ -94,7 +94,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Schedule.DistanceToTarget` 입니다. NPC 의 일정상 위치에서 지금 블록의 목표 위치까지 지면 거리(m)이며, 닿았으면 0 입니다. */
+        /** @brief 감시 값 `Schedule.DistanceToTarget` 입니다. NPC 의 일정상 위치에서 지금 블록의 목표 위치까지 지면 거리(m)이며, 닿았으면 0 입니다. */
         [[nodiscard]] bool readScheduleDistanceToTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const ScheduleSystem* pSystem  = nullptr;
@@ -106,7 +106,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Schedule.MinuteOfDay` 입니다. 첫 일정 시스템의 그날 분(0..1439)입니다. */
+        /** @brief 감시 값 `Schedule.MinuteOfDay` 입니다. 첫 일정 시스템의 그날 분(0..1439)입니다. */
         [[nodiscard]] bool readScheduleMinuteOfDay( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             vector<const ScheduleSystem*> listSystem;

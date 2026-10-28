@@ -35,7 +35,7 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override { return false; }
         bool               canSaveDocument() const override { return false; }
 
-        /** @brief 지금 고른 프리셋 번호입니다(탐침 `Editor.CameraPresetSelected`). 없으면 -1 입니다. */
+        /** @brief 지금 고른 프리셋 번호입니다(감시 값 `Editor.CameraPresetSelected`). 없으면 -1 입니다. */
         int32 getSelectedIndex() const { return _selectedIndex; }
         /** @brief 문서의 프리셋 수입니다. */
         uint32 getPresetCount() const { return static_cast<uint32>( _catalog.getCount() ); }

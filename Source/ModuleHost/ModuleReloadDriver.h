@@ -1,6 +1,6 @@
 /**
  * @file ModuleHost/ModuleReloadDriver.h
- * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `LiveReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 탐침 `Module.*`)입니다.
+ * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `LiveReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 감시 값 `Module.*`)입니다.
  * @details App 과 Server 가 같은 모양으로 씁니다. 리로드를 거는 입력(단축키)은 그 입력을 아는 호스트가 정하고 여기에는 `requestReload` 로 넘깁니다.
  */
 #pragma once
@@ -17,10 +17,10 @@ namespace sw
     /**
      * @class ModuleReloadDriver
      * @brief 호스트가 값 멤버로 들고 직접 부릅니다. **Shipping 에는 리로드할 모듈이 없어** 매니저가 없고 모든 함수가 아무것도 하지 않습니다.
-     * @details `initialize` 가 자신을 호스트 범위에 겁니다(`SubsystemScope::bind`). 개발 명령 `module.reload` 와 탐침 `Module.*` 는 `engine::findSubsystem<ModuleReloadDriver>()`
+     * @details `initialize` 가 자신을 호스트 범위에 겁니다(`SubsystemScope::bind`). 개발 명령 `module.reload` 와 감시 값 `Module.*` 는 `engine::findSubsystem<ModuleReloadDriver>()`
      *          로 엔진 범위에서 호스트 범위까지 올라가 찾습니다 — 정적 포인터 창구를 두지 않습니다. 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이라
      *          매니저 종료와 범위에서 풀기는 호스트 범위의 모듈 이미지 창구(`ModuleImageHostSubsystem`)의 씬 뒤 훅에 겁니다.
-     *          등록 매크로(개발 명령 · 탐침)는 이 클래스의 `.cpp` 에 있습니다. 호스트가 이 클래스를 부르므로 정적 라이브러리에서도 그 오브젝트가 링크에서 빠지지 않습니다.
+     *          등록 매크로(개발 명령 · 감시 값)는 이 클래스의 `.cpp` 에 있습니다. 호스트가 이 클래스를 부르므로 정적 라이브러리에서도 그 오브젝트가 링크에서 빠지지 않습니다.
      */
     class ModuleReloadDriver
     {
@@ -45,7 +45,7 @@ namespace sw
         /** @brief 핫 리로드 매니저입니다. Shipping 에서는 항상 nullptr 이고, 받는 쪽이 그 경우를 처리합니다. */
         LiveReloadManager* getLiveReloadManager() const;
 
-        // --- 자동화 창구(개발 명령 `module.reload` · 탐침 `Module.*`) ---------------------------------------------------------------------------------
+        // --- 자동화 창구(개발 명령 `module.reload` · 감시 값 `Module.*`) ---------------------------------------------------------------------------------
         /**
          * @brief `module.reload` — 실린 모듈이면 리로드를 예약하고 끝을 볼 완료 수를 적습니다(`isReloadPending`).
          * @return 그 이름의 모듈이 실려 있지 않으면 false 입니다.

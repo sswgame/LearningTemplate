@@ -11,7 +11,7 @@
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/PlugIn/Editor/NetSimulation/EditorNetSimSession.h"
 
-// 한 프로세스 재생의 자동화 탐침(`Editor.NetSim*`) — 에디터 시나리오(`engine/automation/editor/netsim.scenario.xml`)가 탭이 가진 세션을 읽는다.
+// 한 프로세스 재생의 자동화 감시 값(`Editor.NetSim*`) — 에디터 시나리오(`engine/automation/editor/netsim.scenario.xml`)가 탭이 가진 세션을 읽는다.
 // 세션이 돌지 않으면 값을 내지 않는다(0 으로 지어내지 않는다) — 단, 돌고 있는지 묻는 `Editor.NetSimRunning` 은 0 · 1 이다.
 
 namespace sw::editor

@@ -105,7 +105,7 @@ namespace sw
                 bVisible     = bChestVisible;
             }
         }
-        // 상태(탐침 `AI.State`): 적이 없으면 Patrol, 겨누는 중이면 Aim, 이번 틱에 쏘면 Fire.
+        // 상태(감시 값 `AI.State`): 적이 없으면 Patrol, 겨누는 중이면 Aim, 이번 틱에 쏘면 Fire.
         if ( listView.empty() )
         {
             setStateName( "Patrol" );

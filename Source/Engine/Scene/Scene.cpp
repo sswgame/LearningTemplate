@@ -24,7 +24,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Scene/WorldStreamingSubsystem.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
 {
@@ -371,7 +371,7 @@ namespace sw
         : _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
-        , _worldSettings{}
+        , _sceneSettings{}
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
@@ -418,9 +418,9 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return false;
-        if ( doc._worldSettings.validate( _name ) == false )
+        if ( doc._sceneSettings.validate( _name ) == false )
             return false;
-        _worldSettings = doc._worldSettings;
+        _sceneSettings = doc._sceneSettings;
         // 내비게이션이 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름이다.
         _objectManager->getSubsystem<SceneNavigation>().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
@@ -429,7 +429,7 @@ namespace sw
         // 셀로 나눈 쿠킹본이면 셀은 지금 짓지 않는다 — 스트리밍 원점이 다가올 때 서비스가 짓는다(`instantiateCell`).
         if ( doc._listStreamingCell.empty() )
             return true;
-        return _objectManager->getSubsystem<WorldStreamingSubsystem>().beginWorld( *this, _worldSettings, doc._listStreamingCell );
+        return _objectManager->getSubsystem<SceneStreamingSubsystem>().beginWorld( *this, _sceneSettings, doc._listStreamingCell );
     }
 
     bool Scene::instantiateCell( const vector<SceneDocument::SceneObjectNode>& listNode, vector<uint64>& outListObjectID )
@@ -517,7 +517,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
         // 셀을 스트리밍하는 씬(쿠킹본)은 내려가 있는 셀의 엔티티를 들고 있지 않다 — 쓰면 그 엔티티가 파일에서 사라진다.
-        if ( _objectManager->getSubsystem<WorldStreamingSubsystem>().isStreaming() )
+        if ( _objectManager->getSubsystem<SceneStreamingSubsystem>().isStreaming() )
         {
             SW_LOG_ERROR( "Scene '%#' streams cells from a cooked scene - it cannot be written as a document", _name.c_str() );
             return false;
@@ -525,7 +525,7 @@ namespace sw
 
         outDoc._name          = _name;
         outDoc._sourcePath    = _sourcePath;
-        outDoc._worldSettings = _worldSettings;
+        outDoc._sceneSettings = _sceneSettings;
         outDoc._listStreamingCell.clear();
         outDoc._listSceneObjectNode.clear();
         outDoc._bValid = true;
@@ -647,7 +647,7 @@ namespace sw
         releaseDefaultMaterial();
         // 셀을 버린다 — 내린 씬에 다음 갱신이 셀을 다시 짓지 않게.
         if ( _objectManager != nullptr )
-            _objectManager->getSubsystem<WorldStreamingSubsystem>().endWorld();
+            _objectManager->getSubsystem<SceneStreamingSubsystem>().endWorld();
         _mapPrefabSource.clear();
         _mapObjectIDToFileID.clear();
         _listUnresolvedEntity.clear();
@@ -669,7 +669,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return;
         // 스트리밍 원점은 지난 프레임 끝의 카메라 자리다 — 셀은 프레임 끝(`DestroyPost`)에 오르내린다. 바깥 원점(서버의 접속자)을 쓰면 넣지 않는다.
-        WorldStreamingSubsystem& streaming = _objectManager->getSubsystem<WorldStreamingSubsystem>();
+        SceneStreamingSubsystem& streaming = _objectManager->getSubsystem<SceneStreamingSubsystem>();
         if ( streaming.isStreaming() && streaming.usesExternalSources() == false )
         {
             const CameraComponent* pCamera = getActiveGameCamera();

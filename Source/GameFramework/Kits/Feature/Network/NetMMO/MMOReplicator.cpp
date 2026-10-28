@@ -9,7 +9,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Scene/WorldStreamingSubsystem.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
@@ -76,7 +76,7 @@ namespace sw
     {
     }
 
-    bool MMOReplicator::initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldCellGrid& cellGrid, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initialize( INetPeers* pHost, const MMOReplicatorConfig& settings, const StreamingCellGrid& cellGrid, const IInterestPolicy* pPolicy )
     {
         // 실패하면 호스트 없는 복제기로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -86,7 +86,7 @@ namespace sw
             SW_LOG_ERROR( "MMOReplicator: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        // 기본값 격자(셀 크기 0)는 `WorldCellGrid::tryCreate` 를 지나지 않은 것이다 — 칸 크기를 대신 정하지 않는다.
+        // 기본값 격자(셀 크기 0)는 `StreamingCellGrid::tryCreate` 를 지나지 않은 것이다 — 칸 크기를 대신 정하지 않는다.
         if ( ( cellGrid.getCellSize() > 0.0f ) == false )
         {
             SW_LOG_ERROR( "MMOReplicator: refused to start - world cell grid was not created (cell size %#)", cellGrid.getCellSize() );
@@ -208,18 +208,18 @@ namespace sw
         }
     }
 
-    bool MMOReplicator::initializeWithStreaming( INetPeers* pHost, const MMOReplicatorConfig& settings, const WorldStreamingSubsystem& streaming, const IInterestPolicy* pPolicy )
+    bool MMOReplicator::initializeWithStreaming( INetPeers* pHost, const MMOReplicatorConfig& settings, const SceneStreamingSubsystem& streaming, const IInterestPolicy* pPolicy )
     {
         return initialize( pHost, settings, streaming.getGrid(), pPolicy );
     }
 
-    void MMOReplicator::updateAndFeedStreaming( float32 deltaTime, WorldStreamingSubsystem& streaming )
+    void MMOReplicator::updateAndFeedStreaming( float32 deltaTime, SceneStreamingSubsystem& streaming )
     {
         update( deltaTime );
         feedStreamingSources( streaming );
     }
 
-    void MMOReplicator::feedStreamingSources( WorldStreamingSubsystem& streaming )
+    void MMOReplicator::feedStreamingSources( SceneStreamingSubsystem& streaming )
     {
         collectObserverPositions( _listScratchSource );
         streaming.setExternalSources( span<const float3>( _listScratchSource.data(), _listScratchSource.size() ) );

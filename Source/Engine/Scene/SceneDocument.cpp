@@ -125,18 +125,18 @@ namespace sw
              * @brief 월드 설정은 판 2부터 필수다 — 없으면 스트리밍 여부를 지어내지 않고 읽지 않는다. 읽고 검증해 @p outSettings 에 담는다.
              * @return 요소가 없거나 읽지 못하거나 쓸 수 없으면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool readWorldSettings( const XMLNode& root, string_view sceneName, string_view absPath, WorldSettings& outSettings )
+            [[nodiscard]] static bool readWorldSettings( const XMLNode& root, string_view sceneName, string_view absPath, SceneSettings& outSettings )
             {
-                const XMLNode worldSettingsNode = root.findChild( WorldSettings::kElementName );
-                if ( worldSettingsNode.isValid() == false )
+                const XMLNode sceneSettingsNode = root.findChild( SceneSettings::kElementName );
+                if ( sceneSettingsNode.isValid() == false )
                 {
-                    SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+                    SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
                 }
-                const bool bWorldSettingsRead = XMLSerializer::deserialize( &outSettings, *WorldSettings::StaticType(), worldSettingsNode.toString() );
+                const bool bWorldSettingsRead = XMLSerializer::deserialize( &outSettings, *SceneSettings::StaticType(), sceneSettingsNode.toString() );
                 if ( bWorldSettingsRead == false || outSettings.validate( sceneName ) == false )
                 {
-                    SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+                    SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", SceneSettings::kElementName, absPath );
                     return false;
                 }
                 return true;
@@ -251,7 +251,7 @@ namespace sw
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        if ( SceneDocumentInternal::readWorldSettings( root, _name, absPath, _worldSettings ) == false )
+        if ( SceneDocumentInternal::readWorldSettings( root, _name, absPath, _sceneSettings ) == false )
         {
             *this = {};
             return false;
@@ -290,7 +290,7 @@ namespace sw
             return false;
         }
         // 읽는 쪽이 받지 않는 월드 설정은 쓰지 않는다.
-        if ( _worldSettings.validate( _name ) == false )
+        if ( _sceneSettings.validate( _name ) == false )
             return false;
 
         XMLDocument xmlDoc;
@@ -298,14 +298,14 @@ namespace sw
         root.appendAttribute( "formatVersion", static_cast<uint32>( kAssetType._formatVersion ) );
         root.appendAttribute( "name", _name );
         {
-            XMLDocument worldSettingsDoc;
-            if ( worldSettingsDoc.parse( XMLSerializer::serialize( &_worldSettings, *WorldSettings::StaticType() ) ) == false ||
-                 worldSettingsDoc.getRoot().isValid() == false )
+            XMLDocument sceneSettingsDoc;
+            if ( sceneSettingsDoc.parse( XMLSerializer::serialize( &_sceneSettings, *SceneSettings::StaticType() ) ) == false ||
+                 sceneSettingsDoc.getRoot().isValid() == false )
             {
                 SW_LOG_ERROR( "Scene '%#' world settings could not be written - the scene is not saved", _name );
                 return false;
             }
-            root.appendClone( worldSettingsDoc.getRoot() );
+            root.appendClone( sceneSettingsDoc.getRoot() );
         }
         XMLNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
@@ -406,7 +406,7 @@ namespace sw
         }
 
         arch >> _name;
-        if ( BinarySerializer::deserialize( &_worldSettings, *WorldSettings::StaticType(), arch ) == false || _worldSettings.validate( _name ) == false )
+        if ( BinarySerializer::deserialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false || _sceneSettings.validate( _name ) == false )
         {
             SW_LOG_ERROR( "Binary scene world settings could not be read or are not usable: %#", absPath );
             *this = {};
@@ -429,7 +429,7 @@ namespace sw
             return false;
         }
         // 셀은 스트리밍하는 씬에만 있다 — 스트리밍하지 않는 씬에 셀이 있으면 그 엔티티는 아무도 올리지 않는다.
-        if ( cellCount > 0 && _worldSettings._bStreaming == false )
+        if ( cellCount > 0 && _sceneSettings._bStreaming == false )
         {
             SW_LOG_ERROR( "Binary scene has %# streaming cells but does not stream: %#", cellCount, absPath );
             *this = {};
@@ -464,9 +464,9 @@ namespace sw
     bool SceneDocument::saveBinary( string_view path ) const
     {
         // 읽는 쪽이 받지 않는 월드 설정 · 셀은 쓰지 않는다.
-        if ( _worldSettings.validate( _name ) == false )
+        if ( _sceneSettings.validate( _name ) == false )
             return false;
-        if ( _listStreamingCell.empty() == false && _worldSettings._bStreaming == false )
+        if ( _listStreamingCell.empty() == false && _sceneSettings._bStreaming == false )
         {
             SW_LOG_ERROR( "Scene '%#' has streaming cells but does not stream - not saved", _name );
             return false;
@@ -476,7 +476,7 @@ namespace sw
         arch << SceneDocumentInternal::kBinMagic;
         arch << SceneDocumentInternal::kBinVersion;
         arch << _name;
-        if ( BinarySerializer::serialize( &_worldSettings, *WorldSettings::StaticType(), arch ) == false )
+        if ( BinarySerializer::serialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false )
         {
             SW_LOG_ERROR( "Scene '%#' world settings could not be written - not saved", _name );
             return false;

@@ -23,7 +23,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 개발 명령 `module.reload` 와 탐침 `Module.*` 의 처리 함수입니다. 리로드 구동기는 호스트 범위에 걸려 있어 엔진 범위에서 올라가 찾습니다. */
+        /** @brief 개발 명령 `module.reload` 와 감시 값 `Module.*` 의 처리 함수입니다. 리로드 구동기는 호스트 범위에 걸려 있어 엔진 범위에서 올라가 찾습니다. */
         struct ModuleReloadDriverInternal
         {
             /** @brief 매니저가 살아 있는 구동기입니다. 범위에 없거나(엔진 밖) 씬 뒤 훅이 매니저를 내렸으면 nullptr 입니다. */
@@ -55,7 +55,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `Module.ReloadPending` — `module.reload` 로 예약한 리로드가 아직 끝나지 않았으면 1 입니다(`WaitUntil … equals="0"` 으로 기다린다). */
+            /** @brief 감시 값 `Module.ReloadPending` — `module.reload` 로 예약한 리로드가 아직 끝나지 않았으면 1 입니다(`WaitUntil … equals="0"` 으로 기다린다). */
             [[nodiscard]] static bool readReloadPending( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ModuleReloadDriver* pDriver = engine::findSubsystem<ModuleReloadDriver>();
@@ -117,7 +117,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         _liveReloadManager = make_unique<LiveReloadManager>();
         _pHostScope        = &hostScope;
-        const bool bBound  = hostScope.bind( this ); // 개발 명령 `module.reload` · 탐침 `Module.*` 가 엔진 범위에서 올라가 찾는다
+        const bool bBound  = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );
         (void)bBound;
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 이미지 창구가 엔진 종료 안에서 그 자리를 부른다.

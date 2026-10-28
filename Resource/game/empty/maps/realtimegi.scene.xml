@@ -2,9 +2,9 @@
 	<!-- 실시간 프로브 갱신 시나리오(automation/realtimegi)의 무대 — 방향광 아래 밝은 바닥과 큐브 하나, 큐브를 덮는 실시간 라이트 프로브 볼륨.
 	     햇빛은 거의 수직으로 내리꽂혀 카메라를 향한 큐브 옆면에는 직접광이 거의 없고(앰비언트 0), 그 면은 바닥에서 한 번 튕긴 빛(프로브의 간접광)만 받는다.
 	     프로브 갱신이 돌면 옆면이 밝아지고, 안 돌면 거의 검다. 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다. -->
-	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
-	</WorldSettings>
+	</SceneSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">

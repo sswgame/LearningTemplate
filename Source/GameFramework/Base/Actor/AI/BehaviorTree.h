@@ -174,7 +174,7 @@ namespace sw
      * @class BehaviorTreeRunner
      * @brief 행위자 하나의 트리 실행 상태입니다. 매 틱 루트부터 내려가되, 도는 중인(Running) 가지는 멈춘 곳에서 이어갑니다.
      * @details 루트가 끝나면(성공이든 실패든) 다음 틱에 처음부터 다시 돈다.
-     *          `getActiveLeafName` 은 디버그 표시와 자동화 탐침에 쓴다. 언리얼 BT 디버거에서 깜빡이는 노드와 같다.
+     *          `getActiveLeafName` 은 디버그 표시와 자동화 감시 값에 쓴다. 언리얼 BT 디버거에서 깜빡이는 노드와 같다.
      */
     class SW_GF_API BehaviorTreeRunner
     {

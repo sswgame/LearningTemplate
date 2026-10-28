@@ -115,7 +115,7 @@ namespace sw::editor
         void resetAllShortcuts();
         /** @brief 액션의 첫 바인딩이 기본과 다르면 true 입니다. */
         bool isShortcutModified( string_view action ) const;
-        /** @brief 기본과 다른 액션 수입니다(탐침 `Editor.ShortcutOverrideCount`). */
+        /** @brief 기본과 다른 액션 수입니다(감시 값 `Editor.ShortcutOverrideCount`). */
         uint32 countModifiedShortcuts() const;
         /** @brief 사용자 재배치 파일 경로입니다(`Saved/Editor/editorbindings.xml`). */
         static string getUserBindingsPath();

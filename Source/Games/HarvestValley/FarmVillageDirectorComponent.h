@@ -9,7 +9,7 @@
  *          일정의 화면 안 경로(고운 경로)를 그 격자의 A* 로 한다(`NavGridSchedulePathing`). 계획 경로는 곧은 선이라 도착 시각은 격자와 무관하다.
  *          몸은 `FarmVillagerComponent` 가 `NavAgent` 로 이 디렉터가 적은 일정상 위치를 쫓는다 — 언리얼의 "움직이는 목표로 이동" 과 같다. 시계를 감아
  *          일정상 위치가 몸에서 `_bodySnapDistance` 넘게 떨어지면 몸을 그 자리에 놓는다(잠 · 빨리 감기 · 자동화 `AdvanceGameTime`).
- *          자동화는 `Schedule.*` 탐침(NPC id)과 `Object.*` 탐침(`Villager.<id>`)으로 본다.
+ *          자동화는 `Schedule.*` 감시 값(NPC id)과 `Object.*` 감시 값(`Villager.<id>`)으로 본다.
  */
 #pragma once
 #include "Core/Common/Types.h"

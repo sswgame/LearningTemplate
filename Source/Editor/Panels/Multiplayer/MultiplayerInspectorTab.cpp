@@ -66,7 +66,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayInspectorObjects` — 검사기가 마지막으로 읽은 하이어라키의 오브젝트 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlayInspectorObjects` — 검사기가 마지막으로 읽은 하이어라키의 오브젝트 수입니다. */
             [[nodiscard]] static bool readObjectCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getInspector().getObjectRows().size() );
@@ -75,7 +75,7 @@ namespace sw::editor
 
             /**
              * @brief `netplay.inspect [<명령 줄>]` — 세션의 전용 서버 디버그 채널에 붙어, 인자가 없으면 하이어라키를 새로 읽고 있으면 그 줄을 채널로 보냅니다.
-             * @details 탭이 하는 일과 같은 길이다. 시나리오는 탭을 띄우지 않으므로 이 명령과 탐침 `Editor.NetPlayInspectorObjects` 로 확인한다.
+             * @details 탭이 하는 일과 같은 길이다. 시나리오는 탭을 띄우지 않으므로 이 명령과 감시 값 `Editor.NetPlayInspectorObjects` 로 확인한다.
              */
             static bool runInspect( const vector<string>& listArgument, string& outReply )
             {

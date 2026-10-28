@@ -4,7 +4,7 @@
  * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`SessionStateComponent`) 시계를 감는다.
  *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`MountUtil`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
  *          - 오브젝트 대상(`rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
- *          탐침은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
+ *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
  *          `AI.*`(`AIControllerProbes.cpp`), `Pawn.Controller`(`PawnProbes.cpp`), `Pawn.Seat`(`VehicleProbes.cpp`). 이 파일에는 영역을 넘는 단계만 둔다.
  */
 #include "pch.h"
@@ -66,7 +66,7 @@ namespace sw
 
             /**
              * @brief 활성 씬의 판 상태마다 시계를 감는다. 지나간 시 · 날 경계는 알림으로 남아 다음 틱의 디렉터 · 일정이 받는다(잠 · 빨리 감기와 같은 길).
-             * @details 씬 틱 뒤에 돌므로 같은 프레임의 틱은 감기 전 시각을 봤다. 탐침은 감은 시각을 바로 보지만 몸(일정을 따르는 오브젝트)은 다음 틱에 옮겨진다.
+             * @details 씬 틱 뒤에 돌므로 같은 프레임의 틱은 감기 전 시각을 봤다. 감시 값은 감은 시각을 바로 보지만 몸(일정을 따르는 오브젝트)은 다음 틱에 옮겨진다.
              */
             static bool runAdvanceGameTime( AutomationStepContext& runner, const AutomationStep& step )
             {

@@ -48,7 +48,7 @@ namespace sw
         /** @brief `writeState` 의 바이트를 받아 둡니다. 말을 연 뒤에 적용하며, 읽지 못하면 알리고 새 말로 갑니다. */
         void restoreState( vector<uint8>&& bytes );
 
-        /** @brief 말을 열었으면 그 상태이고, 아니면 nullptr 입니다(HUD · 탐침이 읽는다). */
+        /** @brief 말을 열었으면 그 상태이고, 아니면 nullptr 입니다(HUD · 감시 값이 읽는다). */
         const WesternHorse* findHorse() const { return _bOpened == SW_TRUE ? &_horse : nullptr; }
 
     private:

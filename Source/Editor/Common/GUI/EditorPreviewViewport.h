@@ -89,7 +89,7 @@ namespace sw::editor
         uint32 getTargetID() const { return _targetID; }
         /** @brief 지금 렌더 타깃 핸들입니다. 스크린샷과 테스트에 씁니다. 없으면 0 입니다. */
         uint64 getRenderTarget() const;
-        /** @brief 지금까지 `draw` 가 호스트에 뷰를 알린 프레임 수입니다. 탐침과 테스트에 씁니다. */
+        /** @brief 지금까지 `draw` 가 호스트에 뷰를 알린 프레임 수입니다. 감시 값과 테스트에 씁니다. */
         uint32 getSubmittedFrameCount() const { return _submittedFrameCount; }
         /**
          * @brief 이 뷰포트의 렌더 타깃을 @p path(디스크 경로)에 이미지로 씁니다 — 확장자가 `.png` 면 PNG, 아니면 PPM 입니다(`RenderThread::requestScreenshot`). 파일은 몇 프레임 뒤에 생깁니다.

@@ -76,7 +76,7 @@ namespace sw::editor
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
         bool          isDocumentLoaded() const;
         bool          isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
-        /** @brief 다른 문서로 바꾸려는데 미저장 편집이 있어 "그래도 바꿀까요?" 확인을 기다리는 중이면 true 입니다. 이 동안 새 문서는 열리지 않습니다(자동화 탐침이 읽는다). */
+        /** @brief 다른 문서로 바꾸려는데 미저장 편집이 있어 "그래도 바꿀까요?" 확인을 기다리는 중이면 true 입니다. 이 동안 새 문서는 열리지 않습니다(자동화 감시 값이 읽는다). */
         bool isSwitchConfirmPending() const { return _bConfirmSwitch == SW_TRUE; }
         bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
 

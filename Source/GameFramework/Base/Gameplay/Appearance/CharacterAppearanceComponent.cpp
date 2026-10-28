@@ -78,7 +78,7 @@ namespace sw
                 { func( *pMesh ); } );
             }
 
-            /** @brief 탐침 대상 오브젝트의 외형 컴포넌트입니다. 없으면 @p outValue 에 까닭을 적고 nullptr 입니다. */
+            /** @brief 감시 값 대상 오브젝트의 외형 컴포넌트입니다. 없으면 @p outValue 에 까닭을 적고 nullptr 입니다. */
             static const CharacterAppearanceComponent* findProbeTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const GameObject* pObject = query.findTargetObject();

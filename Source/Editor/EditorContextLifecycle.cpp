@@ -70,7 +70,7 @@ namespace sw::editor
         (void)bToolDefaultsBound;
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
-        _scope.addSubsystem( make_unique<EditorStateStore>() ); // 한 파일 안의 상태(탐침이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
+        _scope.addSubsystem( make_unique<EditorStateStore>() ); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
         EditorSelection&    selection    = _scope.addSubsystem( make_unique<EditorSelection>() );
         EditorPanelManager& panelManager = _scope.addSubsystem( make_unique<EditorPanelManager>() );
         EditorPanelHost&    panelHost    = _scope.addSubsystem( make_unique<EditorPanelHost>( *this, panelManager ) );

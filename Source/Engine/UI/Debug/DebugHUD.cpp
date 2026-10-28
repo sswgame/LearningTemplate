@@ -29,7 +29,7 @@
     #include "Engine/UserSettings/UserSettingsManager.h"
     #include "Engine/UserSettings/UserSettingsVariables.h"
 
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDProbeSection, "", "자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
+SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDProbeSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
 
 namespace sw
 {
@@ -39,7 +39,7 @@ namespace sw
     {
         struct DebugHUDInternal
         {
-            /** @brief 엔진 UI 서비스가 든 HUD 입니다(`UISystem::getDebugHUD`). 개발 명령 `hud` 와 탐침이 찾는다. 엔진 밖이거나 HUD 가 없으면 nullptr 입니다. */
+            /** @brief 엔진 UI 서비스가 든 HUD 입니다(`UISystem::getDebugHUD`). 개발 명령 `hud` 와 감시 값이 찾는다. 엔진 밖이거나 HUD 가 없으면 nullptr 입니다. */
             static DebugHUD* findEngineHUD()
             {
                 UISystem* pUI = engine::findSubsystem<UISystem>();
@@ -378,9 +378,9 @@ namespace sw
                 refreshSections();
             }
 
-            /** @brief 지금 그린 섹션 수입니다(탐침). */
+            /** @brief 지금 그린 섹션 수입니다(감시 값). */
             uint32 getSectionViewCount() const { return static_cast<uint32>( _listView.size() ); }
-            /** @brief 섹션 @p name 의 상자를 그리고 있으면 true 입니다(탐침). */
+            /** @brief 섹션 @p name 의 상자를 그리고 있으면 true 입니다(감시 값). */
             bool hasSectionView( string_view name ) const
             {
                 return VectorUtil::containsIf( _listView, [&]( const SectionView& view )

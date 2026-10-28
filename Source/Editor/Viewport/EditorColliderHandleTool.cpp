@@ -108,7 +108,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.ColliderHalfExtentX` 가 읽는 값 — 단일 선택 강체의 첫 셰이프 반 크기 X 입니다. 없으면 0 입니다. */
+            /** @brief 감시 값 `Editor.ColliderHalfExtentX` 가 읽는 값 — 단일 선택 강체의 첫 셰이프 반 크기 X 입니다. 없으면 0 입니다. */
             [[nodiscard]] static bool readHalfExtentX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue                           = 0.0;

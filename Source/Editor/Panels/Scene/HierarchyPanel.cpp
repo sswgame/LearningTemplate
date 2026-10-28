@@ -50,7 +50,7 @@
 namespace sw::editor
 {
     /** @brief 프로브 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchHierarchyObject, "", "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchHierarchyObject, "", "감시 값 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
 
     namespace
     {
@@ -123,7 +123,7 @@ namespace sw::editor
                 const GameObjectManager*              _pManager{ nullptr };   ///< 지을 때의 매니저
                 uint64                                _structureGeneration{ 0 };
                 uint64                                _tagGeneration{ 0 };
-                uint32                                _rebuildCount{ 0 }; ///< 다시 지은 횟수(탐침 `Editor.HierarchyRowRebuildCount`)
+                uint32                                _rebuildCount{ 0 }; ///< 다시 지은 횟수(감시 값 `Editor.HierarchyRowRebuildCount`)
                 bool                                  _bFilterActive{ false };
             };
 
@@ -286,7 +286,7 @@ namespace sw::editor
                 return model._bFilterActive == false || model._uniqueFilterMatchID.contains( pObj->getObjectID() );
             }
 
-            /** @brief 행 모델을 다시 지은 횟수입니다(탐침 `Editor.HierarchyRowRebuildCount`). 구조가 그대로인 프레임에는 오르지 않아야 한다. */
+            /** @brief 행 모델을 다시 지은 횟수입니다(감시 값 `Editor.HierarchyRowRebuildCount`). 구조가 그대로인 프레임에는 오르지 않아야 한다. */
             [[nodiscard]] static bool readRowRebuildCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getRowState()._rowModel._rebuildCount );

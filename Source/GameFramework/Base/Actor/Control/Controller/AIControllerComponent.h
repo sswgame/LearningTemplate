@@ -64,14 +64,14 @@ namespace sw
 
         /**
          * @brief 판단의 지금 상태 이름입니다(상태 머신의 상태 · 고른 할 일). 파생이 `think` 에서 상태가 바뀔 때 부릅니다.
-         * @details 디버그 표시와 자동화 탐침 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT 줄과 상태 줄에 해당한다.
+         * @details 디버그 표시와 자동화 감시 값 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT 줄과 상태 줄에 해당한다.
          */
         void                 setStateName( const hashed_string& stateName ) { _stateName = stateName; }
         const hashed_string& getStateName() const { return _stateName; }
-        /** @brief 이 조종자의 블랙보드입니다(언리얼 `AAIController` 의 Blackboard 컴포넌트). 행동 트리 · 판단이 쓰고 탐침 `AI.Blackboard` 가 읽습니다. */
+        /** @brief 이 조종자의 블랙보드입니다(언리얼 `AAIController` 의 Blackboard 컴포넌트). 행동 트리 · 판단이 쓰고 감시 값 `AI.Blackboard` 가 읽습니다. */
         Blackboard&       getBlackboard() { return _blackboard; }
         const Blackboard& getBlackboard() const { return _blackboard; }
-        /** @brief 판단이 행동 트리로 돌면 그 실행기를 정합니다. 탐침 `AI.BehaviorTask` 가 도는 잎 이름을 읽습니다. 실행기는 파생이 소유하고, 종료하기 전에 nullptr 로 돌립니다. */
+        /** @brief 판단이 행동 트리로 돌면 그 실행기를 정합니다. 감시 값 `AI.BehaviorTask` 가 도는 잎 이름을 읽습니다. 실행기는 파생이 소유하고, 종료하기 전에 nullptr 로 돌립니다. */
         void                      setBehaviorTreeRunner( const BehaviorTreeRunner* pRunner ) { _pBehaviorTreeRunner = pRunner; }
         const BehaviorTreeRunner* getBehaviorTreeRunner() const { return _pBehaviorTreeRunner; }
 

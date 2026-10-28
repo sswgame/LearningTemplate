@@ -12,7 +12,7 @@
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Scene/WorldSettings.h"
+#include "Engine/Scene/SceneSettings.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
         };
         /**
          * @brief 씬 에셋 종류입니다(등록은 `SceneDocument.cpp` 의 `SW_ASSET_TYPE`).
-         * @details 판 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판 2: 씬 루트에 월드 설정(`<WorldSettings>`, 스트리밍 여부 · 격자)이
+         * @details 판 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판 2: 씬 루트에 월드 설정(`<SceneSettings>`, 스트리밍 여부 · 격자)이
          *          반드시 있다. 판이 2 가 아닌 씬 파일은 읽지 않는다 — 이관기를 두지 않고 저장소의 씬을 `Scripts/dev/MoveSceneFormat.py` 로 다시 썼다.
          */
         static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".scene.bin", 2, {} };
@@ -68,17 +68,17 @@ namespace sw
         /**
          * @brief 스트리밍하는 씬의 셀 하나와 그 셀에 놓인 엔티티입니다. **쿠킹본에만 있습니다**(`SceneCooker` 가 나눈다).
          * @details 셀의 엔티티는 같은 셀의 엔티티나 기본 목록(`_listSceneObjectNode`, 늘 올라 있다)의 엔티티만 파일 id 로 가리킨다 — 쿠커가 그 밖의 참조를
-         *          쿠킹 오류로 멈춘다(`WorldCellGrid::findCrossCellReferences`).
+         *          쿠킹 오류로 멈춘다(`StreamingCellGrid::findCrossCellReferences`).
          */
         struct StreamingCell
         {
-            WorldCellCoord          _cell{};
+            StreamingCellCoord      _cell{};
             vector<SceneObjectNode> _listSceneObjectNode;
         };
 
         string                  _name;
         string                  _sourcePath;
-        WorldSettings           _worldSettings{};     ///< 씬 파일의 `<WorldSettings>`(형식 판 2부터 필수)
+        SceneSettings           _sceneSettings{};     ///< 씬 파일의 `<SceneSettings>`(형식 판 2부터 필수)
         vector<SceneObjectNode> _listSceneObjectNode; ///< 늘 올라 있는 엔티티. 스트리밍하지 않는 씬은 모든 엔티티다
         vector<StreamingCell>   _listStreamingCell;   ///< 셀로 나눈 엔티티(쿠킹본에만, z · x 오름차순). XML 로는 쓰지 않는다
         bool                    _bValid{ false };

@@ -59,7 +59,7 @@ namespace sw::editor
                 return total;
             }
 
-            /** @brief 탐침 `Editor.NetPlayResentMessages` — 프로세스들이 마지막으로 알린 재전송 신뢰 메시지의 합입니다(`netplay.stats` 가 새로 묻는다). */
+            /** @brief 감시 값 `Editor.NetPlayResentMessages` — 프로세스들이 마지막으로 알린 재전송 신뢰 메시지의 합입니다(`netplay.stats` 가 새로 묻는다). */
             [[nodiscard]] static bool readResentMessages( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();
@@ -67,7 +67,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayEmulationDroppedPackets` — 회선 흉내가 버린 패킷의 합입니다. */
+            /** @brief 감시 값 `Editor.NetPlayEmulationDroppedPackets` — 회선 흉내가 버린 패킷의 합입니다. */
             [[nodiscard]] static bool readDroppedPackets( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();
@@ -75,7 +75,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayMeasuredLossPercent` — 연결이 측정한 손실(%) 가운데 가장 큰 값입니다(연결 쪽 추정이 흉내를 따라가는지 본다). */
+            /** @brief 감시 값 `Editor.NetPlayMeasuredLossPercent` — 연결이 측정한 손실(%) 가운데 가장 큰 값입니다(연결 쪽 추정이 흉내를 따라가는지 본다). */
             [[nodiscard]] static bool readMeasuredLoss( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();
@@ -154,7 +154,7 @@ namespace sw::editor
 
             /**
              * @brief `netplay.stats [<초>]` — 돌고 있는 프로세스마다 `net.emulation stats` 를 묻고 모두 답할 때까지 이 프레임을 붙잡습니다.
-             * @details 시나리오는 프레임 단위라 답이 언제 오는지 모른다(`netplay.wait` 와 같은 이유). 답은 탐침 `Editor.NetPlay*` 가 읽는다.
+             * @details 시나리오는 프레임 단위라 답이 언제 오는지 모른다(`netplay.wait` 와 같은 이유). 답은 감시 값 `Editor.NetPlay*` 가 읽는다.
              */
             static bool runStats( const vector<string>& listArgument, string& outReply )
             {

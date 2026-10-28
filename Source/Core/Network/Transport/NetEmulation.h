@@ -69,7 +69,7 @@ namespace sw
     /**
      * @struct NetEmulationReport
      * @brief 프로세스 하나의 회선 흉내 · 연결 수치를 한 줄로 주고받는 형식입니다(개발 명령 `net.emulation stats` 의 답).
-     * @details 쓰는 쪽(게임 세션)과 읽는 쪽(에디터 Multiplayer 창 · 탐침)이 이 정의 하나를 씁니다. 줄은 `kLinePrefix` 뒤에 `key=value` 를 빈칸으로 잇습니다.
+     * @details 쓰는 쪽(게임 세션)과 읽는 쪽(에디터 Multiplayer 창 · 감시 값)이 이 정의 하나를 씁니다. 줄은 `kLinePrefix` 뒤에 `key=value` 를 빈칸으로 잇습니다.
      */
     struct SW_API NetEmulationReport
     {

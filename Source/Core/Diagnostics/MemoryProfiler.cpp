@@ -219,7 +219,7 @@ namespace sw
         _CrtMemCheckpoint( &state );
         outTotalBytes = static_cast<uint64>( state.lTotalCount );
 
-        // 요청 번호는 할당마다 하나씩 오른다. 새 블록의 번호가 곧 지금까지의 할당 수다(이 탐침 하나가 더해진다).
+        // 요청 번호는 할당마다 하나씩 오른다. 새 블록의 번호가 곧 지금까지의 할당 수다(이 감시 값 하나가 더해진다).
         void* pProbe = _malloc_dbg( 1, _NORMAL_BLOCK, __FILE__, __LINE__ );
         if ( pProbe == nullptr )
             return false;

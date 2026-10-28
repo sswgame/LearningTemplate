@@ -36,7 +36,7 @@ namespace sw
     {
         struct RenderViewCollectorInternal
         {
-            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(탐침 `RenderView.HiddenCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
+            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(감시 값 `RenderView.HiddenCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
             inline static atomic<uint32> _s_hiddenViewCount{ 0 };
             [[nodiscard]] static bool    readHiddenViewCount( const GameObjectManager* pManager, float64& outValue )
             {

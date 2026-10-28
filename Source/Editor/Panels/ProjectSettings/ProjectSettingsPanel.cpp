@@ -41,7 +41,7 @@ namespace sw::editor
             /** @brief 설정 색인의 위치입니다(`GenerateConfigReference.py` 가 만든다). */
             static constexpr const utf8* kReferencePath = "docs/Config/ConfigReference.json";
 
-            /** @brief 탐침이 읽는 지난 프레임의 값입니다. 패널 인스턴스는 탐침에서 보이지 않으므로 에디터 범위의 상태 저장소가 소유한다. */
+            /** @brief 감시 값이 읽는 지난 프레임의 값입니다. 패널 인스턴스는 감시 값에서 보이지 않으므로 에디터 범위의 상태 저장소가 소유한다. */
             struct ProbeState
             {
                 uint32 _pageCount{ 0 };

@@ -16,7 +16,7 @@ namespace sw
         Running,
         Passed,
         Failed,
-        LoadError, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
+        LoadError, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 감시 값이 있습니다. 조용히 버리지 않습니다.
         TimedOut,
         Skipped,      ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
         Unconfirmed,  ///< 단언은 모두 맞았지만 아직 재지 않은 어림값 문턱(`provisional`)이 들어 있습니다. 통과로 세지 않고 잰 값을 `measured` 로 옮길 때까지 미확정으로 보고합니다.

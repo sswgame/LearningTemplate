@@ -115,7 +115,7 @@ namespace sw::editor
                 return other._symmetry == param._symmetry && other._kind == param._kind;
             }
 
-            /** @brief 탐침이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
+            /** @brief 감시 값이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
             [[nodiscard]] static bool readPublished( uint32 CharacterEditorPanel::Published::* pField, float64& outValue )
             {
                 const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();

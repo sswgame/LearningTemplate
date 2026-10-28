@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    /** @brief 패키징 한 번의 상태입니다. 탐침 `Editor.PackagingState` 의 값이기도 하다. */
+    /** @brief 패키징 한 번의 상태입니다. 감시 값 `Editor.PackagingState` 의 값이기도 하다. */
     enum class PackagingState : uint8
     {
         Idle = 0,

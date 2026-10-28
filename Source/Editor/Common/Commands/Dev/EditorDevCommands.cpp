@@ -2,7 +2,7 @@
  * @file EditorDevCommands.cpp
  * @brief 에디터가 제공하는 개발 명령입니다. 에디터 커맨드 실행, 플레이 세션, 씬 열기와 저장, 임시 에셋 열기, 선택, 디버그 그리기 데모가 있습니다.
  *        에디터 모듈과 함께 로드되고 언로드됩니다.
- * @details 임시 에셋 명령(`asset.open`, `asset.removeTemp`, 탐침 `Editor.TempAssetExists`)은 시나리오가 저장소 리소스를 바꾸지 않고
+ * @details 임시 에셋 명령(`asset.open`, `asset.removeTemp`, 감시 값 `Editor.TempAssetExists`)은 시나리오가 저장소 리소스를 바꾸지 않고
  *          문서 패널의 저장을 테스트하는 경로다. 경로는 작업 폴더의 `Saved/Automation/` 아래만 받고, 리소스 트리는 거절한다.
  */
 #include "pch.h"
@@ -180,7 +180,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 탐침 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
+            /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 감시 값 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
             struct TempAssetState
             {
                 string _lastPath{}; ///< 마지막으로 연 임시 에셋의 절대 경로. 연 적이 없으면 비어 있다

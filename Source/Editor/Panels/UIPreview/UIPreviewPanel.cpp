@@ -138,7 +138,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( mark.c_str() );
             }
 
-            /** @brief 열린 패널의 탐침 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
+            /** @brief 열린 패널의 감시 값 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
             [[nodiscard]] static const UIPreviewProbe* findProbe()
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();

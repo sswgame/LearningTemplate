@@ -46,7 +46,7 @@
 
 namespace sw::editor
 {
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchAsset, "", "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchAsset, "", "감시 값 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
 
     namespace
     {

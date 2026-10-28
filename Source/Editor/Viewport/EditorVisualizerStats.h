@@ -23,7 +23,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 물리 셰이프 · 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 시나리오 탐침(`Editor.PhysicsShapeSegments` · `Editor.NavMeshSegments`)이 읽습니다. */
+    /** @brief 물리 셰이프 · 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 시나리오 감시 값(`Editor.PhysicsShapeSegments` · `Editor.NavMeshSegments`)이 읽습니다. */
     struct EditorShapeVisualizerStats
     {
         uint32 _physicsSegmentCount{ 0 };

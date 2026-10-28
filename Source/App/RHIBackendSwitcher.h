@@ -22,7 +22,7 @@ namespace sw
      *          그 순서를 아는 곳을 하나로 둡니다. 상용 엔진이 디바이스 상실 · 어댑터 변경 · 전체 화면 전환을 모두 같은 재생성
      *          경로로 모으는 것과 같은 이유입니다. 사유는 늘어도 순서를 아는 코드는 하나여야 합니다. 쓰는 곳은 App 뿐입니다.
      *          요청은 메뉴 · 콘솔(`gv_rhiBackend`)과 시나리오 단계 `SwapBackend` 가 같은 길로 합니다. App 이 이 객체를 호스트 범위에 걸어 두고(`SubsystemScope::bind`)
-     *          단계와 탐침은 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾습니다 — 정적 포인터 창구를 두지 않습니다.
+     *          단계와 감시 값은 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾습니다 — 정적 포인터 창구를 두지 않습니다.
      */
     class RHIBackendSwitcher
     {
@@ -50,7 +50,7 @@ namespace sw
         /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
         void applyIfPending();
 
-        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
+        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
         [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
         /**

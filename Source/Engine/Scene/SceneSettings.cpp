@@ -1,21 +1,21 @@
 #include "pch.h"
 
-#include "Engine/Scene/WorldSettings.h"
+#include "Engine/Scene/SceneSettings.h"
 
 #include "Core/Log/Logger.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "WorldSettings" );
+    SW_LOG_CALLER( "SceneSettings" );
 
-    bool WorldSettings::validate( string_view sceneName ) const
+    bool SceneSettings::validate( string_view sceneName ) const
     {
         if ( _bStreaming == false )
             return true;
 
-        bool          bValid = true;
-        WorldCellGrid grid;
-        if ( WorldCellGrid::tryCreate( _cellGrid, grid ) == false )
+        bool              bValid = true;
+        StreamingCellGrid grid;
+        if ( StreamingCellGrid::tryCreate( _cellGrid, grid ) == false )
         {
             SW_LOG_ERROR( "Scene '%#' streams but its cell grid is not usable (cell size %#, loading radius %#)", sceneName, _cellGrid._cellSize,
                           _cellGrid._loadingRadius );

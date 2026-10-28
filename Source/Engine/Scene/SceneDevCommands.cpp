@@ -21,7 +21,7 @@
     #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneCooker.h"
     #include "Engine/Scene/SceneManager.h"
-    #include "Engine/Scene/WorldStreamingSubsystem.h"
+    #include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
 {
@@ -78,7 +78,7 @@ namespace sw
                     outReply = "no active scene";
                     return false;
                 }
-                const WorldStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<WorldStreamingSubsystem>();
+                const SceneStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
                 if ( streaming.isStreaming() )
                 {
                     outReply = "streaming: " + to_string( streaming.getLoadedCellCount() ) + " of " + to_string( streaming.getCellCount() ) + " cells loaded";
@@ -98,7 +98,7 @@ namespace sw
                 if ( preview._listViolation.empty() == false )
                 {
                     outReply = "the cook would fail - " + to_string( static_cast<uint32>( preview._listViolation.size() ) ) +
-                               " cross-cell references (see the log or the World Cells window)";
+                               " cross-cell references (see the log or the Streaming Cells window)";
                     return false;
                 }
                 outReply = to_string( static_cast<uint32>( preview._listCell.size() ) ) + " cells, " +
@@ -205,7 +205,7 @@ namespace sw
                     "Load a scene again and again (1 warmup + N measured, default 8) and judge whether leftover memory grows (leak detection L3)",
                     &SceneDevCommandsInternal::runSceneLeakCurve );
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene", &SceneDevCommandsInternal::runTeleport );
-    SW_DEV_COMMAND( WorldCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
+    SW_DEV_COMMAND( StreamingCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
                     &SceneDevCommandsInternal::runWorldCells );
     SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
     SW_DEV_COMMAND( AnimationRewind, "anim.rewind", "anim.rewind [on|off]", "Show or switch animation rewind recording (gv_animationRewind)",

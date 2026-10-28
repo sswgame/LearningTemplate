@@ -1,6 +1,6 @@
 /**
  * @file SceneLoadLeakProbe.h
- * @brief 진짜 씬 로드를 되풀이해 누수 곡선(`MemoryProfiler::judgeLeakCurve`)을 재는 탐침입니다(누수 탐지 L3).
+ * @brief 진짜 씬 로드를 되풀이해 누수 곡선(`MemoryProfiler::judgeLeakCurve`)을 재는 감시 값입니다(누수 탐지 L3).
  * @details 언리얼의 `memreport` 를 로드 전후로 되풀이해 보는 일, 유니티 메모리 프로파일러의 스냅샷 비교에 해당하는 일을 한 명령으로 묶는다.
  *          한 회차는 "창 열기 → 씬 로드 → 빈 씬으로 교체(로드한 씬 언로드) → 몇 프레임 기다림 → 창 닫기" 이고, 창이 닫힐 때 아직 살아 있는 블록이 그 회차의 남은 양이다.
  *          빈 씬 자체도 창 안에서 태어나므로 로드 없이 빈 씬만 만든 **대조 회차**를 먼저 재어 그 양을 뺀다. 점은 대조를 뺀 남은 양의 누적 합이라 회차마다 같은 양이 새면
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class SceneLoadLeakProbe
-     * @brief 씬 로드 곡선 탐침입니다. `SceneManager` 가 하나 들고 프레임마다 `update` 를 부릅니다(메인 스레드).
+     * @brief 씬 로드 곡선 감시 값입니다. `SceneManager` 가 하나 들고 프레임마다 `update` 를 부릅니다(메인 스레드).
      */
     class SW_API SceneLoadLeakProbe
     {

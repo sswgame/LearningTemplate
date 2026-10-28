@@ -30,7 +30,7 @@ namespace sw
     /**
      * @class AutomationRunner
      * @brief 시나리오 한 편을 프레임마다 진행합니다. `Engine` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
-     * @details 프레임 0 은 시작 조건이 처음 참인 프레임이다. 그때 단계를 검사하고(레지스트리와 탐침은 모듈이 로드된 뒤라 그때 채워져 있다) 입력 단계를
+     * @details 프레임 0 은 시작 조건이 처음 참인 프레임이다. 그때 단계를 검사하고(레지스트리와 감시 값은 모듈이 로드된 뒤라 그때 채워져 있다) 입력 단계를
      *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
      *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
      *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
@@ -141,7 +141,7 @@ namespace sw
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
-        /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
+        /** @brief 감시 값 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
         void                  addRecordLine( string line ) { _judge.addRecordLine( std::move( line ) ); }
         const vector<string>& getRecordLines() const { return _judge.getRecordLines(); }
 
@@ -203,7 +203,7 @@ namespace sw
 
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
-        AutomationJudge          _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 탐침 이력). 시간 · 입력은 모른다
+        AutomationJudge          _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
         AutomationStepTimeline   _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
         AutomationReportWriter   _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
         AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)

@@ -20,7 +20,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 탐침 `Editor.PreviewTickCount` — 씬 매니저가 미리보기 씬들을 틱한 횟수의 합입니다. 숨은 창이면 늘지 않아야 한다. */
+        /** @brief 감시 값 `Editor.PreviewTickCount` — 씬 매니저가 미리보기 씬들을 틱한 횟수의 합입니다. 숨은 창이면 늘지 않아야 한다. */
         [[nodiscard]] bool readPreviewTickCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             const SceneManager* pSceneManager = findSubsystem<SceneManager>();

@@ -1,7 +1,7 @@
 <Scene formatVersion="2" name="PixelTown">
-	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
-	</WorldSettings>
+	</SceneSettings>
 	<entities>
 		<entity id="1" name="Camera2D">
 			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">

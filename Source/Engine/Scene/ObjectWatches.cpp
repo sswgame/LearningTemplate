@@ -1,6 +1,6 @@
 /**
  * @file ObjectWatchs.cpp
- * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 탐침입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo`.
+ * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 감시 값입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo`.
  * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Automation/Watch/AutomationWatch.h`)이 정한다.
  */
 #include "pch.h"
@@ -18,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 질의 탐침의 대상 오브젝트 월드 위치입니다. 대상이 없으면 이유를 적고 false 입니다. */
+        /** @brief 질의 감시 값의 대상 오브젝트 월드 위치입니다. 대상이 없으면 이유를 적고 false 입니다. */
         [[nodiscard]] bool readTargetPosition( const AutomationWatchQuery& query, float3& outPosition, AutomationWatchValue& outValue )
         {
             const GameObject*     pTarget = query.findTargetObject();
@@ -32,7 +32,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Object.X` · `Object.Y` · `Object.Z` 의 몸통입니다. */
+        /** @brief 감시 값 `Object.X` · `Object.Y` · `Object.Z` 의 몸통입니다. */
         [[nodiscard]] bool readObjectAxis( const AutomationWatchQuery& query, uint32 axis, AutomationWatchValue& outValue )
         {
             float3 position{};
@@ -57,7 +57,7 @@ namespace sw
             return readObjectAxis( query, 2, outValue );
         }
 
-        /** @brief 탐침 `Object.Exists` 입니다. 활성 씬에 그 오브젝트가 있으면 1, 없으면 0 입니다. 고를 수 없는 대상(같은 이름 여럿, 틀린 번호 글)은 값이 없습니다. */
+        /** @brief 감시 값 `Object.Exists` 입니다. 활성 씬에 그 오브젝트가 있으면 1, 없으면 0 입니다. 고를 수 없는 대상(같은 이름 여럿, 틀린 번호 글)은 값이 없습니다. */
         [[nodiscard]] bool readObjectExists( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             if ( query._pManager == nullptr )
@@ -72,7 +72,7 @@ namespace sw
         }
 
         /**
-         * @brief 탐침 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
+         * @brief 감시 값 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
          * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 비교할 수 있다
          *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
          */
@@ -125,7 +125,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Object.DistanceTo` 입니다. 대상과 `key` 이름의 오브젝트 사이 월드 거리(m)입니다. */
+        /** @brief 감시 값 `Object.DistanceTo` 입니다. 대상과 `key` 이름의 오브젝트 사이 월드 거리(m)입니다. */
         [[nodiscard]] bool readObjectDistanceTo( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             float3 position{};

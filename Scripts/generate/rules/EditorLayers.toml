@@ -48,5 +48,5 @@ SelfTest = 7
 "Editor/Common/GUI/EditorIconGlyphs.h" = "아이콘 글리프 코드포인트 상수만 — 커맨드 등록 줄이 아이콘을 적는다"
 "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h" = "프로퍼티 표시 이름 규칙(makeDisplayName · chooseLabel) — Core 만 include 하는 잎 헤더라 프리팹 오버라이드 목록(커맨드 층)도 쓴다"
 "Editor/Viewport/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
-"Editor/SelfTest/EditorWatchSupport.h" = "탐침 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
+"Editor/SelfTest/EditorWatchSupport.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
 "Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"

@@ -202,7 +202,7 @@ namespace sw
         bool hasSurfaceState() const { return _surface.getChannels().empty() == false; }
         /** @brief 조립한 횟수입니다. 진단과 테스트에 씁니다. */
         uint32 getAssembleCount() const { return _assembleCount; }
-        /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품 하나씩). 합치지 않았으면 0 입니다. 진단과 탐침에 씁니다. */
+        /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품 하나씩). 합치지 않았으면 0 입니다. 진단과 감시 값에 씁니다. */
         uint32 getMergedSectionCount() const;
         /**
          * @brief 지난 조립이 푼 피팅 결과입니다(캐릭터 편집 창의 피팅 확인 표시). 미리보기 입히기(`previewSelection`)만 남깁니다 — 게임의 조립은 같은 차림이 구운 메시를 나누므로

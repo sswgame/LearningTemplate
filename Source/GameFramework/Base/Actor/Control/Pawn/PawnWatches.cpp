@@ -1,6 +1,6 @@
 /**
  * @file PawnWatchs.cpp
- * @brief 폰의 자동화 탐침 `Pawn.Controller` 입니다. 좌석 쪽 `Pawn.Seat` 는 탈것 층(`Gameplay/Vehicle/VehicleWatchs.cpp`)에 있다 — 조종 층이 탈것 층을 보지 않는다.
+ * @brief 폰의 자동화 감시 값 `Pawn.Controller` 입니다. 좌석 쪽 `Pawn.Seat` 는 탈것 층(`Gameplay/Vehicle/VehicleWatchs.cpp`)에 있다 — 조종 층이 탈것 층을 보지 않는다.
  */
 #include "pch.h"
 
@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 탐침 `Pawn.Controller` 입니다. 폰을 쥔 조종자 오브젝트의 이름이고, 아무도 쥐지 않았으면 `none` 입니다. */
+        /** @brief 감시 값 `Pawn.Controller` 입니다. 폰을 쥔 조종자 오브젝트의 이름이고, 아무도 쥐지 않았으면 `none` 입니다. */
         [[nodiscard]] bool readPawnController( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const GameObject*    pTarget = query.findTargetObject();

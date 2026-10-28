@@ -36,7 +36,7 @@ namespace sw::editor
                 return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
-            /** @brief 탐침 `Editor.NetPlayProcessCount` — 돌고 있는 멀티 프로세스 재생의 프로세스 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlayProcessCount` — 돌고 있는 멀티 프로세스 재생의 프로세스 수입니다. */
             [[nodiscard]] static bool readProcessCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();
@@ -44,7 +44,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayConnectedClients` — 서버에 붙었다고 알린 클라이언트 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlayConnectedClients` — 서버에 붙었다고 알린 클라이언트 수입니다. */
             [[nodiscard]] static bool readConnectedClients( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();

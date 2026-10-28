@@ -75,7 +75,7 @@ namespace sw::editor
      * @details 지금 에디터 범위와 그 상위 범위에서 먼저 찾고, 없으면 호스트 서비스 범위를 본다. 게임 쪽 `game::findSubsystem<T>()` 와 계약이 같다.
      *          한쪽만 실패 위치에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. 그래서 두 함수 모두 받는 쪽이 널을 검사해야 한다.
      *          에디터 컨텍스트도 이 창구로 찾는다(컨텍스트가 자기 범위에 자신을 등록한다): 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 명령)은
-     *          `getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트가 부르는 함수 · 탐침)는 `findSubsystem<EditorContext>()` 다.
+     *          `getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트가 부르는 함수 · 감시 값)는 `findSubsystem<EditorContext>()` 다.
      */
     template <typename T>
     [[nodiscard]] T* findSubsystem()
@@ -176,7 +176,7 @@ namespace sw::editor
 
     // ------------------------------------------------------------------------------
     // 선택을 얻는 경로. `EditorSelection` 은 타입으로 찾지 못한다(`kIsAccessorOnlySubsystem`). 호출부마다 어느 선택인지 이름으로 적는다.
-    //   getMainSceneSelection : 메인 씬(활성 씬)의 선택. 메인 월드를 보여 주는 창(씬 뷰, 계층, 맵 검사)과 셀프테스트 탐침이 쓴다.
+    //   getMainSceneSelection : 메인 씬(활성 씬)의 선택. 메인 월드를 보여 주는 창(씬 뷰, 계층, 맵 검사)과 셀프테스트 감시 값이 쓴다.
     //   getFocusedSelection   : 지금 대상인 창의 선택. 인스펙터와 전역 명령(삭제, 복제, 정렬, 붙여넣기)이 쓴다.
     //   findSelectionOf       : 오브젝트가 있는 씬의 선택. 오브젝트를 받아 고치는 명령(지운 것을 선택에서 빼기, 복제본 고르기)이 쓴다.
     // ------------------------------------------------------------------------------

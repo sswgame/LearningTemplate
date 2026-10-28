@@ -23,7 +23,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). 에디터 범위의 상태 저장소가 소유한다. */
+        /** @brief 가장 최근에 그린 그래프의 노드 수 — 감시 값이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). 에디터 범위의 상태 저장소가 소유한다. */
         struct EditorNodeGraphDrawnState
         {
             uint32 _nodeCount{ 0 };

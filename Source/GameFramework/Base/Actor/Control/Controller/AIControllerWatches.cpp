@@ -1,6 +1,6 @@
 /**
  * @file AIControllerWatchs.cpp
- * @brief AI 조종자의 자동화 탐침입니다. `AI.State`(`AIControllerComponent::setStateName`) · `AI.BehaviorTask` · `AI.MoveStatus` · `AI.DistanceToDestination` · `AI.Blackboard`(key).
+ * @brief AI 조종자의 자동화 감시 값입니다. `AI.State`(`AIControllerComponent::setStateName`) · `AI.BehaviorTask` · `AI.MoveStatus` · `AI.DistanceToDestination` · `AI.Blackboard`(key).
  */
 #include "pch.h"
 
@@ -32,7 +32,7 @@ namespace sw
             return pAI;
         }
 
-        /** @brief 탐침 `AI.State` 입니다. AI 조종자의 판단 상태 이름(`setStateName`)이고, 없으면 `none` 입니다. */
+        /** @brief 감시 값 `AI.State` 입니다. AI 조종자의 판단 상태 이름(`setStateName`)이고, 없으면 `none` 입니다. */
         [[nodiscard]] bool readAIState( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const AIControllerComponent* pAI = findTargetAI( query, outValue );
@@ -42,7 +42,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `AI.BehaviorTask` 입니다. 행동 트리 실행기가 도는 잎 노드 이름입니다(실행기가 없으면 값이 없다). */
+        /** @brief 감시 값 `AI.BehaviorTask` 입니다. 행동 트리 실행기가 도는 잎 노드 이름입니다(실행기가 없으면 값이 없다). */
         [[nodiscard]] bool readAIBehaviorTask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const AIControllerComponent* pAI = findTargetAI( query, outValue );
@@ -58,7 +58,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `AI.MoveStatus` 입니다. `Idle` · `Moving` · `Arrived` · `Failed` 입니다. */
+        /** @brief 감시 값 `AI.MoveStatus` 입니다. `Idle` · `Moving` · `Arrived` · `Failed` 입니다. */
         [[nodiscard]] bool readAIMoveStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const AIControllerComponent* pAI = findTargetAI( query, outValue );
@@ -90,7 +90,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `AI.DistanceToDestination` 입니다. 조종하는 폰에서 목적지까지 거리(m)이고, 목적지가 없으면 0 입니다. */
+        /** @brief 감시 값 `AI.DistanceToDestination` 입니다. 조종하는 폰에서 목적지까지 거리(m)이고, 목적지가 없으면 0 입니다. */
         [[nodiscard]] bool readAIDistanceToDestination( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const AIControllerComponent* pAI = findTargetAI( query, outValue );
@@ -107,7 +107,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `AI.Blackboard` 입니다. 키 `key` 의 수치(실수 · 정수 · 참거짓은 0/1 · 오브젝트는 0/1)이고, 벡터는 길이입니다. 없는 키는 값이 없습니다. */
+        /** @brief 감시 값 `AI.Blackboard` 입니다. 키 `key` 의 수치(실수 · 정수 · 참거짓은 0/1 · 오브젝트는 0/1)이고, 벡터는 길이입니다. 없는 키는 값이 없습니다. */
         [[nodiscard]] bool readAIBlackboard( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const AIControllerComponent* pAI = findTargetAI( query, outValue );

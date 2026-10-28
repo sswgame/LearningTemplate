@@ -116,7 +116,7 @@ namespace sw
         bool                  hasHumanPlayer() const { return _bHumanPlayer != SW_FALSE; }
         bool                  isOver() const { return _world.getWinningTeam() >= 0; }
         SkirmishPlayerSummary makeSummary( int32 player ) const;
-        /** @brief 플레이어 @p player 를 맡은 컴퓨터 상대입니다. 사람이 맡았거나 범위 밖이면 nullptr 입니다(자동화 탐침 `Skirmish.AITask`). */
+        /** @brief 플레이어 @p player 를 맡은 컴퓨터 상대입니다. 사람이 맡았거나 범위 밖이면 nullptr 입니다(자동화 감시 값 `Skirmish.AITask`). */
         const RTSCommanderAI* findAI( int32 player ) const
         {
             const bool bAIPlayer = 0 <= player && player < kPlayerCount && _arrAIActive[player] != SW_FALSE;

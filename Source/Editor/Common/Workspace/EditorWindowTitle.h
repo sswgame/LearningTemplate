@@ -28,7 +28,7 @@ namespace sw::editor
          * @param pPlayState Play · Simulate 중이면 "Playing" · "Simulating" 같은 글을 끝에 괄호로 붙인다. 편집 중이면 nullptr
          */
         static string makeTitle( string_view gameName, string_view scenePath, bool bDirty, const utf8* pPlayState );
-        /** @brief 제목이 미저장 표시(`*`)를 달고 있으면 true 입니다(탐침 `Editor.WindowTitleDirty`). */
+        /** @brief 제목이 미저장 표시(`*`)를 달고 있으면 true 입니다(감시 값 `Editor.WindowTitleDirty`). */
         static bool isDirtyTitle( string_view title );
     };
 } // namespace sw::editor

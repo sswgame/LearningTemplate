@@ -7,7 +7,7 @@
  *          [내리기의 GPU 안전] 창이 닫혀 메인 패킷에서 그 씬의 뷰 요청이 사라지면 `retireScenePreviews` 가 그 렌더러를 바로 `shutdown` 한다.
  *          이미 낸 프레임이 그 렌더러의 자원(버퍼 · 텍스처 · 커맨드 리스트)을 읽고 있을 수 있지만, 그 해제는 모두 디바이스의 해제 큐가 GPU 완료 뒤로
  *          미룬다(`IRHIDevice::enqueueGPURelease`, DX12 · Vulkan 은 펜스, DX11 · GL 은 프레임 지연 — 커맨드 리스트의 할당자도 같은 큐로 돌아간다).
- *          PSO 는 주 렌더러의 캐시에 남으므로 내리기가 PSO 를 건드리지 않는다. 확인은 에디터 시나리오 `editor/previewreopen`(탐침 `Editor.ScenePreviewRenderers`)이다.
+ *          PSO 는 주 렌더러의 캐시에 남으므로 내리기가 PSO 를 건드리지 않는다. 확인은 에디터 시나리오 `editor/previewreopen`(감시 값 `Editor.ScenePreviewRenderers`)이다.
  */
 #include "pch.h"
 

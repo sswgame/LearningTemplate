@@ -386,7 +386,7 @@ namespace sw
         uint64 getCanvasRevision() const { return _paintState.getCanvasRevision(); }
         /**
          * @brief 지난 그리기가 글리프 래스터화 예산(`gv_uiGlyphRasterBudgetMicros`) 때문에 못 그리고 다음 프레임으로 미룬 글리프 수입니다. 0 이면 화면의 글자가 다 그려졌다.
-         * @details 지난 그리기를 그대로 재사용한 프레임은 0 이다(미룬 위젯은 다시 무효화되므로 재사용할 수 없다). 자동화 탐침 `UI.DeferredGlyphs` 가 읽는다.
+         * @details 지난 그리기를 그대로 재사용한 프레임은 0 이다(미룬 위젯은 다시 무효화되므로 재사용할 수 없다). 자동화 감시 값 `UI.DeferredGlyphs` 가 읽는다.
          */
         uint32 getDeferredGlyphCount() const { return _paintState.getDeferredGlyphCount(); }
         /**

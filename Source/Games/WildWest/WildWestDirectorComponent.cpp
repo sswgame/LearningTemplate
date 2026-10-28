@@ -60,7 +60,7 @@ namespace sw
                 return pMovement;
             }
 
-            /** @brief 탐침 `WildWest.Gait` 입니다. 대상 말의 걸음새 번호(0 서기 .. 4 질주)입니다. */
+            /** @brief 감시 값 `WildWest.Gait` 입니다. 대상 말의 걸음새 번호(0 서기 .. 4 질주)입니다. */
             [[nodiscard]] static bool readGait( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
@@ -70,7 +70,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `WildWest.Speed` 입니다. 대상 말이 몸 방향으로 가는 속도(m/s)입니다. */
+            /** @brief 감시 값 `WildWest.Speed` 입니다. 대상 말이 몸 방향으로 가는 속도(m/s)입니다. */
             [[nodiscard]] static bool readSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const MountMovementComponent* pMovement = findTargetMovement( query, outValue );
@@ -80,7 +80,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `WildWest.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
+            /** @brief 감시 값 `WildWest.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
             [[nodiscard]] static bool readStamina( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const WildWestHorseComponent* pHorseComponent = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<WildWestHorseComponent>() : nullptr;

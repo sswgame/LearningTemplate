@@ -1,6 +1,6 @@
 /**
  * @file AutomationCaptureWatchs.cpp
- * @brief 캡처 대기 판정(`AutomationCaptureUtil`)의 자동화 탐침 `Assets.Pending` 입니다.
+ * @brief 캡처 대기 판정(`AutomationCaptureUtil`)의 자동화 감시 값 `Assets.Pending` 입니다.
  */
 #include "pch.h"
 
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 탐침 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
+        /** @brief 감시 값 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
         [[nodiscard]] bool readAssetsPending( const GameObjectManager* pManager, float64& outValue )
         {
             outValue = static_cast<float64>( AutomationCaptureUtil::countPendingAssetWork( pManager ) );

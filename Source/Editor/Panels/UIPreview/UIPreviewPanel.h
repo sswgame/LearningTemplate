@@ -36,7 +36,7 @@ namespace sw::editor
 {
     /**
      * @struct UIPreviewProbe
-     * @brief 패널이 마지막으로 그린 프레임에서 본 값입니다(자동화 탐침 `Editor.UIPreview*` 가 읽는다). 창이 닫혔거나 문서가 없으면 `_bValid` 가 false 입니다.
+     * @brief 패널이 마지막으로 그린 프레임에서 본 값입니다(자동화 감시 값 `Editor.UIPreview*` 가 읽는다). 창이 닫혔거나 문서가 없으면 `_bValid` 가 false 입니다.
      */
     struct UIPreviewProbe
     {
@@ -101,7 +101,7 @@ namespace sw::editor
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
         void shutdown( IRHIDevice* pRHIDevice ) override;
 
-        /** @brief 마지막으로 그린 프레임의 값입니다(자동화 탐침). */
+        /** @brief 마지막으로 그린 프레임의 값입니다(자동화 감시 값). */
         const UIPreviewProbe& getProbe() const { return _probe; }
 
     protected:
@@ -240,7 +240,7 @@ namespace sw::editor
         uint32                          _languageIndex;
         uint32                          _slotDragOrdinal; ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
         uint32                          _paletteFrame;    ///< 팔레트를 마지막으로 모은 ImGui 프레임
-        uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(탐침)
+        uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(감시 값)
         UIResolutionPresetTable         _resolutionTable; ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
         uint32                          _resolutionIndex;
         bool                            _bResolutionTableAttempted; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
@@ -259,7 +259,7 @@ namespace sw::editor
         bool                            _bPointerPressed;    ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
         bool                            _bApplyLocalization; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
         bool                            _bAwaitReload;       ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
-        bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(탐침)
+        bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(감시 값)
         bool                            _bSlotDragging;      ///< 슬롯 손잡이를 끄는 중인지
         bool                            _bLayoutDragging;    ///< 상자 · 격자 옮기기 손잡이를 끄는 중인지
     };

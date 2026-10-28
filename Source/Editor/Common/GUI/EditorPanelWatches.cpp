@@ -1,7 +1,7 @@
 /**
  * @file EditorPanelWatchs.cpp
- * @brief 패널 매니저(`EditorPanelManager`)의 자동화 탐침입니다 — `Editor.PanelOpen` · `Editor.PanelDirty` · `Editor.HasPanel`.
- * @details 탐침 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다. 패널 id 를 정하는 전역 변수 `gv_editorWatchPanel` 은 `EditorWatchSupport.h` 에 있습니다.
+ * @brief 패널 매니저(`EditorPanelManager`)의 자동화 감시 값입니다 — `Editor.PanelOpen` · `Editor.PanelDirty` · `Editor.HasPanel`.
+ * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 패널 id 를 정하는 전역 변수 `gv_editorWatchPanel` 은 `EditorWatchSupport.h` 에 있습니다.
  */
 #include "pch.h"
 

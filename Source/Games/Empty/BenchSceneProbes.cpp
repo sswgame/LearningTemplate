@@ -1,6 +1,6 @@
 /**
  * @file BenchSceneProbes.cpp
- * @brief 벤치 탐침입니다. 측정 구간 안의 정해진 프레임에 한 번 일어나는 일(새 한글 글리프 수백 개, 비동기 씬 로드)과
+ * @brief 벤치 감시 값입니다. 측정 구간 안의 정해진 프레임에 한 번 일어나는 일(새 한글 글리프 수백 개, 비동기 씬 로드)과
  *        월드 공간 UI 대량(RTS 이름과 HP 막대)을 켜고, 그 비용을 프로파일 목록(`GT.Frame` 의 max와 p99, `GT.UI.*`, `RT.Canvas.*`)에서 읽을 수 있게 합니다.
  */
 #include "pch.h"
@@ -41,20 +41,20 @@ namespace sw
      *          히치가 4ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 결정합니다.
      *          `-lang=ko` 로 실행해야 합니다. 영어 문화권의 대체 글꼴 체인에는 한글 글꼴이 없어서 글자가 두부(□)로만 그려지고, 그러면 측정이 되지 않습니다. 시스템에도 한글 글꼴이 있어야 합니다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiHangulGlyphs, 0, "감시 값 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchSceneLoadPath=<리소스 경로>`: `gv_benchProbeFrame` 프레임에 이 씬을 비동기로 엽니다.
      * @details 워커가 파싱하고 오브젝트를 생성하는 동안과, 활성 씬을 바꾸는 프레임의 최악 시간을 측정합니다(`GT.Frame` 의 p99와 max). 로드 자체에 걸린 시간은
      *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다(`Scripts/qa/SceneLoadBench.py`).
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_benchSceneLoadPath, "", "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_benchSceneLoadPath, "", "감시 값 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
 
     /**
-     * @brief `-gv_benchProbeFrame=F`: 한 번 일어나는 탐침(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
+     * @brief `-gv_benchProbeFrame=F`: 한 번 일어나는 감시 값(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
      * @details 프로파일 측정 창은 워밍업(60 프레임) 뒤에 시작하므로 그보다 뒤여야 표에 잡힌다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchProbeFrame, 180, "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchProbeFrame, 180, "한 번 일어나는 벤치 감시 값(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
 } // namespace sw
 
 namespace sw

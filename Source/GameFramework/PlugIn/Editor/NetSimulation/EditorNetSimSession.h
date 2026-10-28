@@ -70,7 +70,7 @@ namespace sw::editor
         int32 getViewportCount() const { return static_cast<int32>( _listView.size() ); }
 
         /**
-         * @brief 지금 돌고 있는 세션입니다. 없으면 nullptr 입니다. 자동화 탐침(`Editor.NetSim*`)이 탭이 든 세션을 읽는 창구입니다.
+         * @brief 지금 돌고 있는 세션입니다. 없으면 nullptr 입니다. 자동화 감시 값(`Editor.NetSim*`)이 탭이 든 세션을 읽는 창구입니다.
          * @details 세션은 하나만 돈다는 전제다 — 두 번째 세션이 시작하면 그것이 이 값이 되고, 멈추면 앞의 것으로 돌아가지 않고 비운다.
          */
         static EditorNetSimSession* findRunning();

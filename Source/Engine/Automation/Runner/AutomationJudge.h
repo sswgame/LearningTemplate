@@ -1,6 +1,6 @@
 /**
  * @file AutomationJudge.h
- * @brief 자동화 시나리오의 판정을 소유합니다 — 탐침 비교 · 방문 이력 · 기억 값 · 로그 · 이미지 지표와 실패 · 미확정 · 처리하지 않은 로그 목록.
+ * @brief 자동화 시나리오의 판정을 소유합니다 — 감시 값 비교 · 방문 이력 · 기억 값 · 로그 · 이미지 지표와 실패 · 미확정 · 처리하지 않은 로그 목록.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -44,13 +44,13 @@ namespace sw
 
         /** @brief 실패 한 줄을 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void addFailure( const AutomationStep& step, string_view message );
-        /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). */
+        /** @brief 감시 값 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). */
         void addRecordLine( string line );
 
-        /** @brief `<ExpectVisited>` 가 보는 탐침마다 이번 프레임 값을 읽어 바뀌었으면 적습니다(씬 틱 뒤, 단계 전). */
+        /** @brief `<ExpectVisited>` 가 보는 감시 값마다 이번 프레임 값을 읽어 바뀌었으면 적습니다(씬 틱 뒤, 단계 전). */
         void sampleWatches( AutomationStepContext& context );
 
-        /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다(값이 있으면 `<탐침> <규칙>, got <값>`). */
+        /** @brief 감시 값 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 감시 값에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다(값이 있으면 `<감시 값> <규칙>, got <값>`). */
         [[nodiscard]] bool compareWatch( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const;
 
         void runExpect( AutomationStepContext& context, const AutomationStep& step );
@@ -84,7 +84,7 @@ namespace sw
     private:
         /**
          * @struct WatchWatch
-         * @brief `<ExpectVisited>` 가 보는 탐침 하나(탐침 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
+         * @brief `<ExpectVisited>` 가 보는 감시 값 하나(감시 값 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
          */
         struct WatchWatch
         {
@@ -97,7 +97,7 @@ namespace sw
 
         /**
          * @struct RememberedValue
-         * @brief `<Remember as="이름">` 이 남긴 탐침 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
+         * @brief `<Remember as="이름">` 이 남긴 감시 값 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
          * @details 판정은 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
          */
         struct RememberedValue
@@ -106,9 +106,9 @@ namespace sw
             string _text{};
         };
 
-        /** @brief 단계의 탐침 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
+        /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
         [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
-        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 탐침마다 이력을 만듭니다. */
+        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
 
         AutomationLogCapture    _logCapture;       ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
@@ -119,7 +119,7 @@ namespace sw
         vector<string>          _listAllowedLogID; ///< 이 실행에서 허용 항목이 맞은 로그 id
         vector<string>          _listMetricLine;   ///< 보고에 적는 지표 값
         vector<string>          _listRecordLine;   ///< 보고에 적는 기록 값(결정성 대조)
-        vector<WatchWatch>      _listWatch;        ///< `<ExpectVisited>` 가 보는 탐침 이력
+        vector<WatchWatch>      _listWatch;        ///< `<ExpectVisited>` 가 보는 감시 값 이력
         vector<RememberedValue> _listRemembered;   ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

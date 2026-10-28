@@ -147,7 +147,7 @@ SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
 SW_REGISTER_ARGUMENT( SCENARIO_KEEP_GOING, false, false, "scenario-keep-going" )
 // 플레이를 시나리오로 녹화한다 — 값은 `Saved/Automation/` 아래의 `.scenario.xml`. 씬 플레이 첫 프레임부터 입력을 적고 끝날 때 쓴다(`-scenario` 와 함께면 그 가상 입력도 적는다).
 SW_REGISTER_ARGUMENT( SCENARIO_RECORD, "", false, "scenario-record" )
-// 녹화 끝 프레임의 검사점 — 쉼표로 가른 `탐침`, `탐침@대상`, `탐침@대상@키`. 값이 녹화 끝에 `<Expect>` 로 실린다.
+// 녹화 끝 프레임의 검사점 — 쉼표로 가른 `감시 값`, `감시 값@대상`, `감시 값@대상@키`. 값이 녹화 끝에 `<Expect>` 로 실린다.
 SW_REGISTER_ARGUMENT( SCENARIO_RECORD_PROBES, "", false, "scenario-record-probes" )
 
 // RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.

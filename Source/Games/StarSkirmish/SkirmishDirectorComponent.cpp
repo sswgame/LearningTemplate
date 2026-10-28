@@ -113,7 +113,7 @@ namespace sw
             return countSelected( pManager, true, outValue );
         }
 
-        /** @brief 탐침 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
+        /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const SkirmishDirectorComponent* pDirector = findProbeDirector( query._pManager );

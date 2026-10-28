@@ -31,7 +31,7 @@ namespace sw::editor
     {
         struct EditorWidgetsInternal
         {
-            /** @brief 0 건 안내를 그린 기록입니다. 탐침이 읽는다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
+            /** @brief 0 건 안내를 그린 기록입니다. 감시 값이 읽는다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
             struct HintState
             {
                 uint32 _noSearchResultHintCount{ 0 }; ///< 0 건 안내를 그린 횟수(`getNoSearchResultHintCount`)

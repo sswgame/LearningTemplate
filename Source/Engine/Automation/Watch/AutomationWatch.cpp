@@ -85,7 +85,7 @@ namespace sw
                 return text;
             }
 
-            /** @brief 등록된 탐침(등록 순서 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`). */
+            /** @brief 등록된 감시 값(등록 순서 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`). */
             static RegistrationList<const AutomationWatchRegistration>& getRegistrations()
             {
                 static RegistrationList<const AutomationWatchRegistration> s_registration{ "AutomationWatchRegistry", RegistrationOrder::Insertion, true };
@@ -108,7 +108,7 @@ namespace sw
 
     void AutomationWatchs::unregisterWatch( const AutomationWatchRegistration* pRegistration )
     {
-        (void)AutomationWatchInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 탐침을 빼는 것은 할 일이 없다
+        (void)AutomationWatchInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 감시 값을 빼는 것은 할 일이 없다
     }
 
     const AutomationWatchRegistration* AutomationWatchs::find( string_view name )

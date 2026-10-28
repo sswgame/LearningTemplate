@@ -1,6 +1,6 @@
 /**
  * @file SceneWatchs.cpp
- * @brief 씬의 자동화 탐침입니다(`Scene.*`). 탐침 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 탐침을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 감시 값입니다(`Scene.*`). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  */
 #include "pch.h"
 
@@ -28,7 +28,7 @@ namespace sw
         /** @brief `Scene.TransformHash` 가 위치를 자르는 단위(1 mm)입니다. */
         constexpr float32 kHashUnitsPerMeter = 1000.0f;
 
-        /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
+        /** @brief 감시 값 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
         [[nodiscard]] bool readSceneObjectCount( const GameObjectManager* pManager, float64& outValue )
         {
             if ( pManager == nullptr )
@@ -41,8 +41,8 @@ namespace sw
         }
 
         /**
-         * @brief 탐침 `Scene.Transitioning` 입니다. 비동기 씬 로드나 전환이 진행 중이면 1 입니다.
-         * @details 씬 열기(`scene.open`)는 요청만 하고 돌아온다. 이미 같은 상태의 씬이 열려 있으면 다른 탐침에 차이가 나타나지 않으므로, 열기가 끝났는지는 이 탐침이 0 인 것으로 본다.
+         * @brief 감시 값 `Scene.Transitioning` 입니다. 비동기 씬 로드나 전환이 진행 중이면 1 입니다.
+         * @details 씬 열기(`scene.open`)는 요청만 하고 돌아온다. 이미 같은 상태의 씬이 열려 있으면 다른 감시 값에 차이가 나타나지 않으므로, 열기가 끝났는지는 이 감시 값이 0 인 것으로 본다.
          */
         [[nodiscard]] bool readSceneTransitioning( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -53,7 +53,7 @@ namespace sw
         }
 
         /**
-         * @brief 탐침 `Scene.TransformHash` 입니다. 활성 씬 오브젝트마다 (이름, 1 mm 로 자른 월드 위치)를 해시해 더한 32 비트 값입니다.
+         * @brief 감시 값 `Scene.TransformHash` 입니다. 활성 씬 오브젝트마다 (이름, 1 mm 로 자른 월드 위치)를 해시해 더한 32 비트 값입니다.
          * @details 오브젝트 순서 · id 와 무관하다(합). 같은 시나리오를 같은 고정 틱으로 돌리면 백엔드와 상관없이 같아야 한다 — 게임 상태는 CPU 에서만 정해진다.
          *          32 비트라 `float64` 에 정확히 담기고 `equals` · `<Record>` 로 비교할 수 있다.
          */

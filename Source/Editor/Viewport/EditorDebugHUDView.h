@@ -34,7 +34,7 @@ namespace sw::editor
 
         /** @brief 캔버스 오른쪽 위(@p topRightInset 만큼 안 — 붙은 오버레이 바 아래)에 상자를 그립니다. 상자 아래 끝(캔버스 위 기준 픽셀)을 돌려줍니다. */
         float32 draw( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float2& topRightInset, float32 deltaSeconds );
-        /** @brief 지난 그리기에 담은 섹션 수입니다(탐침 `Editor.SceneViewHUDSections`). */
+        /** @brief 지난 그리기에 담은 섹션 수입니다(감시 값 `Editor.SceneViewHUDSections`). */
         uint32 getDrawnSectionCount() const { return _drawnSectionCount; }
 
     private:

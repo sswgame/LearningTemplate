@@ -144,7 +144,7 @@ namespace sw
 
         /** @brief @p component 와 같은 오브젝트에 있는 판 상태입니다. 없으면 nullptr 입니다. */
         static SessionStateComponent* findOnOwner( const Component& component );
-        /** @brief 씬 @p pManager 에서 열린 판 상태를 오브젝트 순서로 @p outListState 에 모읍니다(판 상태는 컴포넌트 레지스트리에 없다). 자동화 단계 · 탐침이 읽는다. */
+        /** @brief 씬 @p pManager 에서 열린 판 상태를 오브젝트 순서로 @p outListState 에 모읍니다(판 상태는 컴포넌트 레지스트리에 없다). 자동화 단계 · 감시 값이 읽는다. */
         static void collectOpen( const GameObjectManager* pManager, vector<SessionStateComponent*>& outListState );
         /** @brief 씬 @p pManager 의 첫 열린 판 상태입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] static const SessionStateComponent* findFirstOpen( const GameObjectManager* pManager );

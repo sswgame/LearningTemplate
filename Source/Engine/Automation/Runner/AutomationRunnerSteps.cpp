@@ -214,7 +214,7 @@ namespace sw
                 return pInfo != nullptr && evaluateExpectVariable( step, *pInfo, bMatched, outError );
             }
 
-            /** @brief 탐침 이름과 그 탐침이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
+            /** @brief 감시 값 이름과 그 감시 값이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
             static bool validateWatchReference( const AutomationStep& step, string& outError )
             {
                 const string* pWatch = step.requireAttribute( "watch", outError );
@@ -237,7 +237,7 @@ namespace sw
                 return pRegistration->_bNeedsKey == false || step.requireAttribute( "key", outError ) != nullptr;
             }
 
-            /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 탐침이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
+            /** @brief 감시 값 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 감시 값이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
             static bool validateWatchComparison( const AutomationStep& step, string& outError )
             {
                 if ( validateWatchReference( step, outError ) == false )
@@ -290,13 +290,13 @@ namespace sw
                 return AutomationStepArgsUtil::readUint( step, "since", since, outError );
             }
 
-            /** @brief `Record` 입니다. 탐침 값을 보고의 `records` 에 남깁니다. */
+            /** @brief `Record` 입니다. 감시 값 값을 보고의 `records` 에 남깁니다. */
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
                 return step.hasOnlyAttributes( { "watch", "target", "key" }, outError ) && validateWatchReference( step, outError );
             }
 
-            /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
+            /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
             static bool validateRemember( const AutomationStep& step, string& outError )
             {
                 return step.hasOnlyAttributes( { "watch", "target", "key", "as" }, outError ) && step.requireAttribute( "as", outError ) != nullptr &&

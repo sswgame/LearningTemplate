@@ -2,9 +2,9 @@
 	<!-- 대기 산란 하늘 + 구름 시나리오(automation/sky)의 무대 — 하늘만 보는 카메라. 해(방향광)가 머리 위에서 비스듬히 비춘다.
 	     해 높이는 수평선 위 약 46°다(방향광 기본 방향 (-0.35,-0.85,-0.25)를 피치 0.4 · 요 0.5 로 돌린 값. 피치 1.2 는 해를 수평선 위 4.5° 노을로 눕혀 하늘이 어둡고 갈색이 되었다).
 	     구름은 바람으로 흐르지만(머티리얼 시계) 시나리오는 고정 프레임 시간이라 같은 프레임이 같은 무늬다. -->
-	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
-	</WorldSettings>
+	</SceneSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">

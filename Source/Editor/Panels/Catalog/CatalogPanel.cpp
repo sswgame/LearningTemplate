@@ -60,7 +60,7 @@ namespace sw::editor
             Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저
         };
 
-        // 시나리오 탐침이 읽는 값입니다. 패널이 그릴 때 갱신하고 탐침은 게임 스레드에서 읽습니다.
+        // 시나리오 감시 값이 읽는 값입니다. 패널이 그릴 때 갱신하고 감시 값은 게임 스레드에서 읽습니다.
         std::atomic<int32> s_catalogFileCount{ 0 };
         std::atomic<int32> s_catalogRowCount{ 0 };
         std::atomic<int32> s_catalogValidation{ 0 }; ///< 0 아직, 1 통과, 2 실패
@@ -208,7 +208,7 @@ namespace sw::editor
         if ( ImGui::Button( "Validate" ) )
         {
             validateCurrentFile();
-            syncDirty(); // 검증 결과 탐침(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
+            syncDirty(); // 검증 결과 감시 값(`Editor.CatalogValidation`)도 여기서 갱신된다 — 저장 · 복원 길과 같다
         }
         EditorSelfTestMarks::note( "catalog.validate" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw text" ) );

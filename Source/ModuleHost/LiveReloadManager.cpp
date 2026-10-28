@@ -703,7 +703,7 @@ namespace sw
             // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
             outShadow._previousHeads = engine::peekGlobalRegistrarHeads();
 
-            // 교체 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 탐침 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
+            // 교체 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
             if ( context._pLibraryModule != nullptr )
             {

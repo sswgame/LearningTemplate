@@ -48,7 +48,7 @@ namespace sw::editor
         static const utf8* findGlyph( string_view iconName );
         /** @brief 색 이름(`Light`)이 아는 이름인지 봅니다. */
         static bool isKnownColorName( string_view colorName );
-        /** @brief 글리프(UTF-8 한 글자)의 코드 포인트입니다. 잘못된 글이면 0 입니다(탐침이 숫자로 비교한다). */
+        /** @brief 글리프(UTF-8 한 글자)의 코드 포인트입니다. 잘못된 글이면 0 입니다(감시 값이 숫자로 비교한다). */
         static uint32 decodeGlyph( const utf8* pGlyph );
     };
 } // namespace sw::editor

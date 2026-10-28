@@ -514,7 +514,7 @@ namespace sw
         const AnimationCrowd& getCrowd() const { return _crowd; }
         /** @brief 군중 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 쓸 때 `EngineDefaultAssets::_animationCrowdSettings` 를 읽습니다. */
         void setCrowdSettings( const AnimationCrowdSettings& settings );
-        /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 유닛 수입니다(프로파일 카운터 `GT.Animation.crowd*Units` 와 같은 값, 자동화 탐침 `Animation.Crowd*Units`). */
+        /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 유닛 수입니다(프로파일 카운터 `GT.Animation.crowd*Units` 와 같은 값, 자동화 감시 값 `Animation.Crowd*Units`). */
         uint32 getCrowdModeCount( AnimationCrowdMode mode ) const { return _arrCrowdModeCount[static_cast<uint32>( mode )]; }
 
         /** @brief 등록된 유닛 수입니다. */

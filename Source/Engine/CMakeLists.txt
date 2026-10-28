@@ -42,7 +42,7 @@ if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 endif()
 
-# 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 탐침(Probe/ · *Probes) · 단계 등록(Scenario/)은
+# 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은
 # 엔진 프레임이 읽거나 기능이 등록하는 것이라 남는다.
 if(NOT SW_ENABLE_AUTOMATION)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES

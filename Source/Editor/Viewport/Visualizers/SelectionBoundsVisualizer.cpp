@@ -33,7 +33,7 @@ namespace sw::editor
             /** @brief 선택 상자의 그리기 기록입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct DrawState
             {
-                uint32 _drawnBoxCount{ 0 };   ///< 지난 프레임에 그린 선택 상자 수(탐침 `Editor.SelectionOutlineBoxes`)
+                uint32 _drawnBoxCount{ 0 };   ///< 지난 프레임에 그린 선택 상자 수(감시 값 `Editor.SelectionOutlineBoxes`)
                 uint64 _hoveredObjectID{ 0 }; ///< 호버 중인 오브젝트(0 이면 없음)
             };
 

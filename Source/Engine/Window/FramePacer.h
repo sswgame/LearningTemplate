@@ -2,7 +2,7 @@
  * @file FramePacer.h
  * @brief 앱 루프의 프레임 페이싱 상태(`FramePacingState`)와 그 상태대로 프레임 끝에서 기다리는 `FramePacer` 입니다.
  * @details 상태는 프레임마다 입력(실행 인자 · 넷 역할 · 창 이벤트가 적은 최소화 · 포커스 · 에디터의 다시 그릴 까닭)으로 다시 정한다. 어느 상태인지가 값으로 드러나야
- *          "배경인데 왜 전속인가" 를 탐침(`Engine.FramePacingState`)으로 바로 본다 — 조건문 속 숨은 분기로 두지 않는다.
+ *          "배경인데 왜 전속인가" 를 감시 값(`Engine.FramePacingState`)으로 바로 본다 — 조건문 속 숨은 분기로 두지 않는다.
  *          전속 상태(Automation · Server · FullSpeed)는 모두 **실행 인자가 고른 명시 상태**다: `-scenario` · `-gv_profileFrames` · `-gv_netListenPort` ·
  *          `-gv_framePacing=FullSpeed`. 창 상태를 모를 때 전속으로 떨어지는 숨은 폴백은 없다 — 인자가 없으면 창 상태대로다.
  *          언리얼(`t.IdleWhenNotForeground` · 최소화 때 렌더 생략 · 에디터 비실시간 뷰포트)과 유니티(`Application.runInBackground` · 배경 `targetFrameRate` ·
@@ -18,7 +18,7 @@ namespace sw
 {
     class IWindow;
 
-    /** @brief 이번 프레임을 어떤 빠르기로 도는지입니다. 탐침 `Engine.FramePacingState` 가 이 번호를 그대로 낸다(번호를 바꾸면 시나리오도 고친다). */
+    /** @brief 이번 프레임을 어떤 빠르기로 도는지입니다. 감시 값 `Engine.FramePacingState` 가 이 번호를 그대로 낸다(번호를 바꾸면 시나리오도 고친다). */
     enum class FramePacingState : uint8
     {
         Foreground = 0, ///< 포커스를 가진 창 — 따로 묶지 않는다(VSync 설정만).

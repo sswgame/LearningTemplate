@@ -36,7 +36,7 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override { return false; }
         bool               canSaveDocument() const override { return false; }
 
-        /** @brief 몸이 지금 재생하는 클립의 길이(초)입니다. 몸이 없거나 클립을 읽지 못했으면 false 입니다(탐침 `Editor.ClipPreviewDuration`). */
+        /** @brief 몸이 지금 재생하는 클립의 길이(초)입니다. 몸이 없거나 클립을 읽지 못했으면 false 입니다(감시 값 `Editor.ClipPreviewDuration`). */
         [[nodiscard]] bool findPreviewClipDuration( float32& outSeconds ) const;
 
     private:

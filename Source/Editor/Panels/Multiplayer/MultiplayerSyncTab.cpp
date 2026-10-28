@@ -55,7 +55,7 @@ namespace sw::editor
                 return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
-            /** @brief 그리기 · 폴링 경로의 세션입니다. 탭은 에디터 안에서만 그려지므로 에디터 문맥이 없으면 버그다(탐침 · 개발 명령은 `findSession`). */
+            /** @brief 그리기 · 폴링 경로의 세션입니다. 탭은 에디터 안에서만 그려지므로 에디터 문맥이 없으면 버그다(감시 값 · 개발 명령은 `findSession`). */
             static EditorNetPlaySession& getSession() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>(); }
 
             /** @brief 세션이 띄운 전용 서버의 이력을 칸에 담습니다. 채널이 없으면 false 이고 이유는 `getLastError` 가 아니라 @p outReason 에 씁니다. */
@@ -95,28 +95,28 @@ namespace sw::editor
                 return "no divergence over " + to_string( comparison._commonTickCount ) + " common tick(s)";
             }
 
-            /** @brief 탐침 `Editor.NetPlaySyncCommonTicks` — 마지막 비교에서 두 이력에 모두 있던 틱 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlaySyncCommonTicks` — 마지막 비교에서 두 이력에 모두 있던 틱 수입니다. */
             [[nodiscard]] static bool readCommonTicks( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getCompare().getComparison()._commonTickCount );
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlaySyncDiverged` — 마지막 비교에서 어긋난 틱을 찾았으면 1 입니다. */
+            /** @brief 감시 값 `Editor.NetPlaySyncDiverged` — 마지막 비교에서 어긋난 틱을 찾았으면 1 입니다. */
             [[nodiscard]] static bool readDiverged( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = getCompare().getComparison()._bDiverged ? 1.0 : 0.0;
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlaySyncObjectsCompared` — 마지막 "Which objects differ" 가 끝까지 갔으면 1 입니다(목록이 비어도 비교는 한 것). */
+            /** @brief 감시 값 `Editor.NetPlaySyncObjectsCompared` — 마지막 "Which objects differ" 가 끝까지 갔으면 1 입니다(목록이 비어도 비교는 한 것). */
             [[nodiscard]] static bool readObjectsCompared( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = getCompare().hasObjectComparison() ? 1.0 : 0.0;
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlaySyncDifferingObjects` — 마지막 "Which objects differ" 가 짚은 다른 오브젝트 수입니다. */
+            /** @brief 감시 값 `Editor.NetPlaySyncDifferingObjects` — 마지막 "Which objects differ" 가 짚은 다른 오브젝트 수입니다. */
             [[nodiscard]] static bool readDifferingObjects( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getCompare().getDifferingObjects().size() );
@@ -164,7 +164,7 @@ namespace sw::editor
 
             /**
              * @brief `netplay.sync save <경로>` — 세션 전용 서버의 이력을 A 에 담아 파일로 씁니다. `netplay.sync compare <경로>` — 세션 서버를 A, 파일을 B 로 담아 비교합니다.
-             * @details 탭의 "Session server" · "Load file" · "Save" · "Compare" 와 같은 길이다. 시나리오는 이 명령과 탐침 `Editor.NetPlaySync*` 로 확인한다.
+             * @details 탭의 "Session server" · "Load file" · "Save" · "Compare" 와 같은 길이다. 시나리오는 이 명령과 감시 값 `Editor.NetPlaySync*` 로 확인한다.
              */
             static bool runSync( const vector<string>& listArgument, string& outReply )
             {

@@ -41,13 +41,13 @@ namespace sw::editor
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 22.0f ); }
 
-        /** @brief 지난 프레임에 게시된 버스 수입니다(탐침 `Editor.AudioMixerBusCount`). */
+        /** @brief 지난 프레임에 게시된 버스 수입니다(감시 값 `Editor.AudioMixerBusCount`). */
         static uint32 getBusCount();
-        /** @brief 음소거인 버스 수입니다(탐침 `Editor.AudioMixerMutedCount`). */
+        /** @brief 음소거인 버스 수입니다(감시 값 `Editor.AudioMixerMutedCount`). */
         static uint32 getMutedCount();
-        /** @brief 솔로인 버스 수입니다(탐침 `Editor.AudioMixerSoloCount`). */
+        /** @brief 솔로인 버스 수입니다(감시 값 `Editor.AudioMixerSoloCount`). */
         static uint32 getSoloCount();
-        /** @brief 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨입니다. 없으면 -1 입니다(탐침 `Editor.AudioMixerBusVolume`). */
+        /** @brief 이름이 `gv_editorWatchBus` 인 버스의 사용자 볼륨입니다. 없으면 -1 입니다(감시 값 `Editor.AudioMixerBusVolume`). */
         static float32 getProbedBusVolume();
 
     private:

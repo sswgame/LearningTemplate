@@ -178,7 +178,7 @@ namespace sw
          */
         [[nodiscard]] bool attachNameplate( GameObject& object, uint32 index ) const;
         /**
-         * @brief 벤치 프레임을 세고, `-gv_benchProbeFrame` 프레임에 한 번 일어나는 탐침을 시작합니다. 탐침은 `-gv_benchUiHangulGlyphs` 의 새 한글 글리프와 `-gv_benchSceneLoadPath` 의 비동기 씬 로드입니다.
+         * @brief 벤치 프레임을 세고, `-gv_benchProbeFrame` 프레임에 한 번 일어나는 감시 값을 시작합니다. 감시 값은 `-gv_benchUiHangulGlyphs` 의 새 한글 글리프와 `-gv_benchSceneLoadPath` 의 비동기 씬 로드입니다.
          */
         void updateProbes( GameObjectManager* pObjects );
         /**
@@ -256,7 +256,7 @@ namespace sw
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
         uint32 _benchGridSide;
-        /** @brief `updateProbes` 가 센 벤치 프레임 수입니다(탐침을 거는 프레임을 고릅니다). */
+        /** @brief `updateProbes` 가 센 벤치 프레임 수입니다(감시 값을 거는 프레임을 고릅니다). */
         uint32 _probeFrame;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
         uint8 _bRefreshedCameras : 1;

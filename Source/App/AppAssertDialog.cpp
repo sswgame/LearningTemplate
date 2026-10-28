@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 이 TU 의 대화상자 구현과 탐침입니다. */
+        /** @brief 이 TU 의 대화상자 구현과 감시 값입니다. */
         struct AppAssertDialogInternal
         {
 #if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
@@ -63,7 +63,7 @@ namespace sw
             }
 #endif
 
-            /** @brief 탐침 `App.AssertDialogInstalled` 입니다. 대화상자가 설치돼 있으면 1 입니다. */
+            /** @brief 감시 값 `App.AssertDialogInstalled` 입니다. 대화상자가 설치돼 있으면 1 입니다. */
             [[nodiscard]] static bool readAssertDialogInstalled( const GameObjectManager* /*pManager*/, float64& outValue )
             {
 #if defined( SW_DEBUG )

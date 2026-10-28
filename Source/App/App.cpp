@@ -79,7 +79,7 @@ namespace sw
                 return params;
             }
 
-            /** @brief 탐침 `Engine.FramePacingState` — 앱 루프가 이번 프레임에 고른 페이싱 상태 번호입니다. 주 창 서비스가 없으면(헤드리스) 값이 없습니다. */
+            /** @brief 감시 값 `Engine.FramePacingState` — 앱 루프가 이번 프레임에 고른 페이싱 상태 번호입니다. 주 창 서비스가 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readFramePacingState( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
@@ -322,7 +322,7 @@ namespace sw
             return false;
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 탐침 `Module.*` 가 찾는다).
+        // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 감시 값 `Module.*` 가 찾는다).
         _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif
 
@@ -348,7 +348,7 @@ namespace sw
             case HostPartID::BackendSwitcher:
             {
                 _backendSwap.initialize( &_engine, _moduleHost.get(), bEnableEditor );
-                // 시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
+                // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
                 return _host.bind( &_backendSwap );
             }
             case HostPartID::UserSettings:

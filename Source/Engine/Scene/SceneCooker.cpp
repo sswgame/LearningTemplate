@@ -21,7 +21,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
-#include "Engine/Scene/WorldCellGrid.h"
+#include "Engine/Scene/StreamingCellGrid.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -184,8 +184,8 @@ namespace sw
              * @brief 지어 둔 오브젝트마다 셀 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
              * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool collectCellRecords( const SceneDocument& doc, const WorldCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
-                                                          string_view scenePath, vector<WorldCellObjectRecord>& outListRecord, vector<WorldCellReference>& outListReference )
+            [[nodiscard]] static bool collectCellRecords( const SceneDocument& doc, const StreamingCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
+                                                          string_view scenePath, vector<StreamingCellObjectRecord>& outListRecord, vector<StreamingCellReference>& outListReference )
             {
                 outListRecord.reserve( doc._listSceneObjectNode.size() );
                 vector<uint64> listReferencedID;
@@ -197,13 +197,13 @@ namespace sw
                         SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
                         return false;
                     }
-                    const GameObject*     pObject    = objectIt->second;
-                    const GameObject*     pRoot      = findPlacementRoot( pObject );
-                    const SceneComponent* pRootScene = pRoot->getPrimarySceneComponent();
-                    WorldCellObjectRecord record{};
+                    const GameObject*         pObject    = objectIt->second;
+                    const GameObject*         pRoot      = findPlacementRoot( pObject );
+                    const SceneComponent*     pRootScene = pRoot->getPrimarySceneComponent();
+                    StreamingCellObjectRecord record{};
                     record._objectID      = entity._fileID;
                     record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
-                    record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : WorldCellCoord{};
+                    record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : StreamingCellCoord{};
                     outListRecord.push_back( record );
 
                     listReferencedID.clear();
@@ -218,16 +218,16 @@ namespace sw
                         // 파일에 없는 대상(중첩 프리팹 부품)은 그 주인 엔티티와 함께 지어진다 — 엔티티 사이의 참조만 본다. 자기 자신도 뺀다.
                         if ( targetIt == mapSavedID.end() || targetIt->second == entity._fileID )
                             continue;
-                        outListReference.push_back( WorldCellReference{ entity._fileID, targetIt->second } );
+                        outListReference.push_back( StreamingCellReference{ entity._fileID, targetIt->second } );
                     }
                 }
                 return true;
             }
 
             /** @brief 셀을 넘는 참조마다 오류를 남깁니다. */
-            static void reportCrossCellViolations( const vector<WorldCellReference>& listViolation, const unordered_map<uint64, GameObject*>& mapObjectByFileID, string_view scenePath )
+            static void reportCrossCellViolations( const vector<StreamingCellReference>& listViolation, const unordered_map<uint64, GameObject*>& mapObjectByFileID, string_view scenePath )
             {
-                for ( const WorldCellReference& violation : listViolation )
+                for ( const StreamingCellReference& violation : listViolation )
                 {
                     const auto fromIt = mapObjectByFileID.find( violation._fromObjectID );
                     const auto toIt   = mapObjectByFileID.find( violation._toObjectID );
@@ -238,15 +238,15 @@ namespace sw
             }
 
             /** @brief 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮깁니다. 셀은 z, x 오름차순, 셀 안의 엔티티는 문서 순서다(결정적). */
-            static void splitIntoCells( SceneDocument& inoutDoc, const vector<WorldCellObjectRecord>& listRecord )
+            static void splitIntoCells( SceneDocument& inoutDoc, const vector<StreamingCellObjectRecord>& listRecord )
             {
                 vector<SceneDocument::SceneObjectNode> listBase;
                 vector<SceneDocument::StreamingCell>   listCell;
                 unordered_map<int64, size_t>           mapCellIndex;
                 for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
                 {
-                    SceneDocument::SceneObjectNode& entity = inoutDoc._listSceneObjectNode[entityIndex];
-                    const WorldCellObjectRecord&    record = listRecord[entityIndex];
+                    SceneDocument::SceneObjectNode&  entity = inoutDoc._listSceneObjectNode[entityIndex];
+                    const StreamingCellObjectRecord& record = listRecord[entityIndex];
                     if ( record._bAlwaysLoaded )
                     {
                         listBase.push_back( std::move( entity ) );
@@ -276,14 +276,14 @@ namespace sw
 
             /**
              * @brief 스트리밍하는 씬의 엔티티를 셀로 나눕니다. 늘 올라 있는 엔티티는 `_listSceneObjectNode` 에 남고 나머지는 `_listStreamingCell` 로 갑니다.
-             * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`WorldCellGrid::findCrossCellReferences`)나
+             * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`StreamingCellGrid::findCrossCellReferences`)나
              *          프리팹을 찾지 못한 엔티티가 있으면 오류를 남기고 false 다 — 런타임에 조용히 끊기는 참조 · 빠지는 엔티티를 쿠킹본에 싣지 않는다.
              */
             static bool partitionStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath,
-                                                 vector<WorldCellReference>* pOutListViolation )
+                                                 vector<StreamingCellReference>* pOutListViolation )
             {
-                WorldCellGrid grid;
-                if ( WorldCellGrid::tryCreate( inoutDoc._worldSettings._cellGrid, grid ) == false )
+                StreamingCellGrid grid;
+                if ( StreamingCellGrid::tryCreate( inoutDoc._sceneSettings._cellGrid, grid ) == false )
                 {
                     SW_LOG_ERROR( "Scene cook: '%#' streams but its cell grid is not usable", scenePath );
                     return false;
@@ -302,13 +302,13 @@ namespace sw
                 ObjectSavedIDMap mapSavedID;
                 placement.collectSavedIDMap( mapSavedID );
 
-                vector<WorldCellObjectRecord> listRecord;
-                vector<WorldCellReference>    listReference;
+                vector<StreamingCellObjectRecord> listRecord;
+                vector<StreamingCellReference>    listReference;
                 if ( collectCellRecords( inoutDoc, grid, mapObjectByFileID, mapSavedID, scenePath, listRecord, listReference ) == false )
                     return false;
 
-                vector<WorldCellReference> listViolation;
-                WorldCellGrid::findCrossCellReferences( listRecord, listReference, listViolation );
+                vector<StreamingCellReference> listViolation;
+                StreamingCellGrid::findCrossCellReferences( listRecord, listReference, listViolation );
                 if ( listViolation.empty() == false )
                 {
                     reportCrossCellViolations( listViolation, mapObjectByFileID, scenePath );
@@ -593,11 +593,11 @@ namespace sw
     }
 
     bool SceneCooker::splitStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,
-                                           vector<WorldCellReference>* pOutListViolation )
+                                           vector<StreamingCellReference>* pOutListViolation )
     {
         if ( pOutListViolation != nullptr )
             pOutListViolation->clear();
-        if ( inoutDoc._worldSettings._bStreaming == false )
+        if ( inoutDoc._sceneSettings._bStreaming == false )
             return true;
         if ( inoutDoc._listStreamingCell.empty() == false )
         {
@@ -636,14 +636,14 @@ namespace sw
             return objectIt != mapObjectIDByFileID.end() ? objectIt->second : uint64{ 0 };
         };
 
-        vector<WorldCellReference> listViolation;
+        vector<StreamingCellReference> listViolation;
         if ( splitStreamingCells( scene.getEngineServices(), doc, scene.getName(), &listViolation ) == false )
         {
             if ( listViolation.empty() )
                 return false; // 나누지 못한 이유는 쿠커가 로그에 남겼다
-            for ( const WorldCellReference& violation : listViolation )
+            for ( const StreamingCellReference& violation : listViolation )
             {
-                outPreview._listViolation.push_back( WorldCellReference{ toObjectID( violation._fromObjectID ), toObjectID( violation._toObjectID ) } );
+                outPreview._listViolation.push_back( StreamingCellReference{ toObjectID( violation._fromObjectID ), toObjectID( violation._toObjectID ) } );
             }
             return true;
         }

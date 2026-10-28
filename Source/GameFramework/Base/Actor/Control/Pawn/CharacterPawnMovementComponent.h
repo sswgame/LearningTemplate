@@ -50,7 +50,7 @@ namespace sw
         /** @brief 멈춰 둡니다(탑승 · 연출). 멈추는 순간 수평 속도를 0 으로 둡니다. */
         void setSuspended( bool bSuspended );
         bool isSuspended() const { return _bSuspended == SW_TRUE; }
-        /** @brief 지금 수평 속도입니다(애니메이션 · 탐침이 읽는다). */
+        /** @brief 지금 수평 속도입니다(애니메이션 · 감시 값이 읽는다). */
         const float3& getHorizontalVelocity() const { return _velocity; }
         /** @brief 몸의 요입니다(라디안). */
         float32 getFacingYaw() const { return _facingYaw; }

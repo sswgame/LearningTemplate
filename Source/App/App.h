@@ -152,7 +152,7 @@ namespace sw
         IWindow* _pWindow;
 
         FixedTimestep _fixedTimestep;
-        /** @brief 백엔드 교체기입니다. 부품 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 탐침 `RHI.*` 가 찾는다). */
+        /** @brief 백엔드 교체기입니다. 부품 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
 

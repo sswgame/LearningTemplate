@@ -31,7 +31,7 @@ namespace sw
         BuoyancyVolumeComponent();
         ~BuoyancyVolumeComponent() override = default;
 
-        /** @brief 지난 고정 스텝에 수면 아래로 잠긴 바디 수입니다(진단 · 테스트 · 탐침). */
+        /** @brief 지난 고정 스텝에 수면 아래로 잠긴 바디 수입니다(진단 · 테스트 · 감시 값). */
         uint32 getSubmergedBodyCount() const { return _submergedBodyCount; }
         /** @brief 지금 자세의 수면(점 · 위쪽 법선, 월드)과 상자 중심 · 회전입니다. 오브젝트가 없으면 false 입니다. */
         [[nodiscard]] bool computeSurface( float3& outSurfacePoint, float3& outSurfaceNormal, float3& outCenter, quaternion& outRotation ) const;

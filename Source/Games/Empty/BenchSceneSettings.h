@@ -236,7 +236,7 @@ namespace sw
         PROPERTY( Category = "Rig", Tooltip = "Point the single-knight camera looks at", Units = m )
         float3 _rigViewFocus{};
 
-        // ---- UI 탐침 ----
+        // ---- UI 감시 값 ----
         PROPERTY( Category = "UI", Tooltip = "Nameplate width", Min = 0.0 )
         float32 _nameplateWidth{};
         PROPERTY( Category = "UI", Min = 0.0 )

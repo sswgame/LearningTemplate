@@ -39,7 +39,7 @@ namespace sw::editor
         /** @brief 도는 패키징을 끝냅니다(모듈이 언로드되기 전). */
         void shutdown( IRHIDevice* pDevice ) override;
 
-        /** @brief 지금 패키징 상태입니다(탐침 `Editor.PackagingState`). */
+        /** @brief 지금 패키징 상태입니다(감시 값 `Editor.PackagingState`). */
         PackagingState getState() const { return _progress._state; }
         /** @brief 지금 설정으로 진입점 명령을 만듭니다(작업 폴더는 저장소 루트). */
         ProcessCommand makeCommand() const;

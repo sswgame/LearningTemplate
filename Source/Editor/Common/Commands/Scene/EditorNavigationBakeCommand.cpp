@@ -22,7 +22,7 @@ namespace sw::editor
     {
         struct EditorNavigationBakeCommandInternal
         {
-            /** @brief 이 에디터 세션에서 `navigation.bake` 가 끝난 횟수(탐침 `Editor.NavigationBakeCount`)의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            /** @brief 이 에디터 세션에서 `navigation.bake` 가 끝난 횟수(감시 값 `Editor.NavigationBakeCount`)의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct BakeRunState
             {
                 uint32 _count{ 0 };

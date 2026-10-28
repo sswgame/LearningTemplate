@@ -37,7 +37,7 @@ namespace sw::editor
         void        drawContent() override;
         void        shutdown( IRHIDevice* pRHIDevice ) override;
 
-        /** @brief 지금 묻고 있는 충돌 수입니다(받은 조합과 겹친 액션 — 탐침 `Editor.ShortcutConflictCount`). */
+        /** @brief 지금 묻고 있는 충돌 수입니다(받은 조합과 겹친 액션 — 감시 값 `Editor.ShortcutConflictCount`). */
         static uint32 getPendingConflictCount();
 
     private:

@@ -42,11 +42,11 @@ namespace sw::editor
         void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
 
-        /** @brief 지난 프레임 목록에 오른 설정 파일 수입니다(탐침 `Editor.ProjectSettingsPageCount`). */
+        /** @brief 지난 프레임 목록에 오른 설정 파일 수입니다(감시 값 `Editor.ProjectSettingsPageCount`). */
         static uint32 getPageCount();
-        /** @brief 고른 파일의 현재 값에서 기본값과 다른 키 수입니다(탐침 `Editor.ProjectSettingsKeyCount`). 고른 파일이 없으면 0 입니다. */
+        /** @brief 고른 파일의 현재 값에서 기본값과 다른 키 수입니다(감시 값 `Editor.ProjectSettingsKeyCount`). 고른 파일이 없으면 0 입니다. */
         static uint32 getSelectedKeyCount();
-        /** @brief 저장하지 않은 편집이 있는 파일 수입니다(탐침 `Editor.ProjectSettingsDirtyPageCount`). */
+        /** @brief 저장하지 않은 편집이 있는 파일 수입니다(감시 값 `Editor.ProjectSettingsDirtyPageCount`). */
         static uint32 getDirtyPageCount();
 
     protected:

@@ -1,7 +1,7 @@
 /**
  * @file EditorWorkspaceWatchs.cpp
- * @brief 편집 작업 공간 전체(플레이 상태 · 선택 · 되돌리기 · 씬 변경)를 읽는 에디터 탐침(`Editor.*`)입니다. 한 패널의 것이 아니라 패널을 넘는 값이라 자체 테스트 폴더에 둡니다(작업 공간 폴더는 ImGui 를 모르는 코어라 EditorTest 도 받는데, 이 탐침들은 EditorModule 에서만 읽는다).
- * @details 탐침 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
+ * @brief 편집 작업 공간 전체(플레이 상태 · 선택 · 되돌리기 · 씬 변경)를 읽는 에디터 감시 값(`Editor.*`)입니다. 한 패널의 것이 아니라 패널을 넘는 값이라 자체 테스트 폴더에 둡니다(작업 공간 폴더는 ImGui 를 모르는 코어라 EditorTest 도 받는데, 이 감시 값들은 EditorModule 에서만 읽는다).
+ * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorWatchSupport.h` 에 있습니다.
  */
 #include "pch.h"
@@ -146,7 +146,7 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 64 비트 값을 16 자리 16 진 글로 씁니다(수 탐침의 float 비교에서 뭉개지지 않게 글로 낸다). */
+        /** @brief 64 비트 값을 16 자리 16 진 글로 씁니다(수 감시 값의 float 비교에서 뭉개지지 않게 글로 낸다). */
         string formatHash( uint64 hash )
         {
             constexpr const utf8* kHexDigit = "0123456789abcdef";

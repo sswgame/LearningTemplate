@@ -1,7 +1,7 @@
 /**
  * @file AutomationInputWatchs.cpp
- * @brief 입력 관리자의 자동화 탐침입니다 — `Input.OsDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY`.
- * @details 입력 층(티어 10)은 탐침 레지스트리(티어 10)를 볼 수 없어 레지스트리를 볼 수 있는 가장 가까운 층인 Automation 이 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
+ * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OsDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY`.
+ * @details 입력 층(티어 10)은 감시 값 레지스트리(티어 10)를 볼 수 없어 레지스트리를 볼 수 있는 가장 가까운 층인 Automation 이 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
  */
 #include "pch.h"
 
@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 탐침 `Input.OsDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
+        /** @brief 감시 값 `Input.OsDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
         [[nodiscard]] bool readOsDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
@@ -24,7 +24,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Input.VirtualCursorEnabled` 입니다. 패드 가상 커서가 켜져 있으면 1 입니다(명령형 디렉터가 플레이 동안 켠다). */
+        /** @brief 감시 값 `Input.VirtualCursorEnabled` 입니다. 패드 가상 커서가 켜져 있으면 1 입니다(명령형 디렉터가 플레이 동안 켠다). */
         [[nodiscard]] bool readVirtualCursorEnabled( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
@@ -34,7 +34,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 탐침 `Input.MouseX` · `Input.MouseY` 입니다. 마우스(가상 커서가 옮긴 것 포함)의 창 클라이언트 픽셀 위치입니다. */
+        /** @brief 감시 값 `Input.MouseX` · `Input.MouseY` 입니다. 마우스(가상 커서가 옮긴 것 포함)의 창 클라이언트 픽셀 위치입니다. */
         [[nodiscard]] bool readMousePosition( bool bX, float64& outValue )
         {
             if ( engine::areEngineServicesBound() == false )

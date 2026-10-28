@@ -42,11 +42,11 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override { return false; }
         bool               canSaveDocument() const override { return false; }
 
-        /** @brief 문서에서 읽은 물리 에셋의 바디 수입니다. 문서를 읽지 못했으면 false 입니다(탐침 `Editor.RagdollPreviewDocumentBodies`). */
+        /** @brief 문서에서 읽은 물리 에셋의 바디 수입니다. 문서를 읽지 못했으면 false 입니다(감시 값 `Editor.RagdollPreviewDocumentBodies`). */
         [[nodiscard]] bool findDocumentBodyCount( uint32& outCount ) const;
-        /** @brief 미리보기 몸의 래그돌이 만든 바디 수입니다. 몸이 없거나 래그돌이 아직 서지 않았으면 false 입니다(탐침 `Editor.RagdollPreviewBuiltBodies`). */
+        /** @brief 미리보기 몸의 래그돌이 만든 바디 수입니다. 몸이 없거나 래그돌이 아직 서지 않았으면 false 입니다(감시 값 `Editor.RagdollPreviewBuiltBodies`). */
         [[nodiscard]] bool findBuiltBodyCount( uint32& outCount ) const;
-        /** @brief 미리보기 몸의 래그돌 상태(`RagdollState` 의 번호)입니다. 몸이 없으면 false 입니다(탐침 `Editor.RagdollPreviewState`). */
+        /** @brief 미리보기 몸의 래그돌 상태(`RagdollState` 의 번호)입니다. 몸이 없으면 false 입니다(감시 값 `Editor.RagdollPreviewState`). */
         [[nodiscard]] bool findRagdollState( uint32& outState ) const;
 
     protected:

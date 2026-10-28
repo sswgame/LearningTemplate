@@ -113,7 +113,7 @@ namespace sw::editor
 
         /**
          * @brief 임포트 잡이 도는 중이거나 기다리는 원본이 있으면 true 입니다. 이 동안 임포트 결과를 읽는 쪽(캐시 리로드 · 검증)은 미뤄진다.
-         * @details 자동화 시나리오가 "임포트 끝" 을 알 수 있도록 탐침 `Editor.AssetImportBusy` 로도 나간다. 감시 울타리(`pollContentWatchFence`)도 이 값이 거짓이 될 때까지 기다린다.
+         * @details 자동화 시나리오가 "임포트 끝" 을 알 수 있도록 감시 값 `Editor.AssetImportBusy` 로도 나간다. 감시 울타리(`pollContentWatchFence`)도 이 값이 거짓이 될 때까지 기다린다.
          */
         [[nodiscard]] bool isImportBusy() const { return _bImportInFlight || _listQueuedImport.empty() == false; }
         /** @brief 지금 도는 임포트 잡의 원본 수입니다(없으면 0). 상태줄이 보인다. */

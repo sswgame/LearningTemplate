@@ -61,9 +61,9 @@ namespace sw
         int32 getHeroTileY() const { return _mover.getTileY(); }
         /** @brief 대화가 열려 있으면 true 입니다(줄을 보이는 중이거나 선택을 기다리는 중). */
         bool isTalking() const { return _talkTarget.isValid(); }
-        /** @brief 이번 판에 보인 대화 줄 수입니다(시나리오 탐침). */
+        /** @brief 이번 판에 보인 대화 줄 수입니다(시나리오 감시 값). */
         int32 getShownLineCount() const { return _shownLineCount; }
-        /** @brief 이번 판에 끝까지 마친 대화 수입니다(시나리오 탐침). */
+        /** @brief 이번 판에 끝까지 마친 대화 수입니다(시나리오 감시 값). */
         int32 getFinishedTalkCount() const { return _finishedTalkCount; }
 
     protected:

@@ -1,7 +1,7 @@
 <Scene formatVersion="2" name="WildWest">
-	<WorldSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2">
+	<SceneSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2">
 		<_cellGrid _cellSize="16" _loadingRadius="32" />
-	</WorldSettings>
+	</SceneSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true" _bAlwaysLoaded="true">

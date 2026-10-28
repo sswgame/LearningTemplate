@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Scene/WorldStreamingSubsystem.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
@@ -11,12 +11,12 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "WorldStreaming" );
+    SW_LOG_CALLER( "SceneStreaming" );
 
     // 셀을 짓는 일은 파괴를 처리한 뒤(`DestroyPost`)다 — 이번 프레임에 내린 셀의 오브젝트와 겹치지 않고, 만든 오브젝트는 다음 프레임 병합에서 틱에 든다.
-    SW_SCENE_SERVICE( WorldStreamingSubsystem, DestroyPost )
+    SW_SCENE_SERVICE( SceneStreamingSubsystem, DestroyPost )
 
-    WorldStreamingSubsystem::WorldStreamingSubsystem( GameObjectManager& /*manager*/ )
+    SceneStreamingSubsystem::SceneStreamingSubsystem( GameObjectManager& /*manager*/ )
         : _pScene{ nullptr }
         , _settings{}
         , _grid{}
@@ -31,7 +31,7 @@ namespace sw
     {
     }
 
-    bool WorldStreamingSubsystem::beginWorld( Scene& scene, const WorldSettings& settings, const vector<SceneDocument::StreamingCell>& listCell )
+    bool SceneStreamingSubsystem::beginWorld( Scene& scene, const SceneSettings& settings, const vector<SceneDocument::StreamingCell>& listCell )
     {
         endWorld();
         if ( settings._bStreaming == false || settings.validate( scene.getName() ) == false )
@@ -39,7 +39,7 @@ namespace sw
             SW_LOG_ERROR( "Scene '%#' has streaming cells but no usable streaming settings - its cells are not loaded", scene.getName() );
             return false;
         }
-        if ( WorldCellGrid::tryCreate( settings._cellGrid, _grid ) == false )
+        if ( StreamingCellGrid::tryCreate( settings._cellGrid, _grid ) == false )
             return false;
 
         _listCell.reserve( listCell.size() );
@@ -66,7 +66,7 @@ namespace sw
         return true;
     }
 
-    void WorldStreamingSubsystem::endWorld()
+    void SceneStreamingSubsystem::endWorld()
     {
         if ( _pScene != nullptr )
         {
@@ -80,7 +80,7 @@ namespace sw
         _pScene = nullptr;
     }
 
-    void WorldStreamingSubsystem::onSceneCleared()
+    void SceneStreamingSubsystem::onSceneCleared()
     {
         // 매니저가 오브젝트를 이미 비웠다 — 내릴 것 없이 셀만 버린다.
         _listCell.clear();
@@ -89,25 +89,25 @@ namespace sw
         _bCameraSourceSet = false;
     }
 
-    void WorldStreamingSubsystem::setCameraSource( const float3& position )
+    void SceneStreamingSubsystem::setCameraSource( const float3& position )
     {
         _cameraSource     = position;
         _bCameraSourceSet = true;
     }
 
-    void WorldStreamingSubsystem::setExternalSources( span<const float3> listSource )
+    void SceneStreamingSubsystem::setExternalSources( span<const float3> listSource )
     {
         _listExternalSource.assign( listSource.begin(), listSource.end() );
         _bExternalSources = true;
     }
 
-    void WorldStreamingSubsystem::clearExternalSources()
+    void SceneStreamingSubsystem::clearExternalSources()
     {
         _listExternalSource.clear();
         _bExternalSources = false;
     }
 
-    uint32 WorldStreamingSubsystem::getLoadedCellCount() const
+    uint32 SceneStreamingSubsystem::getLoadedCellCount() const
     {
         uint32 count = 0;
         for ( const CellSlot& slot : _listCell )
@@ -117,13 +117,13 @@ namespace sw
         return count;
     }
 
-    bool WorldStreamingSubsystem::isCellLoaded( const WorldCellCoord& cell ) const
+    bool SceneStreamingSubsystem::isCellLoaded( const StreamingCellCoord& cell ) const
     {
         const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
         return indexIt != _mapCellIndex.end() && _listCell[indexIt->second]._bLoaded;
     }
 
-    void WorldStreamingSubsystem::update( float32 deltaTime )
+    void SceneStreamingSubsystem::update( float32 deltaTime )
     {
         (void)deltaTime;
         if ( _pScene == nullptr )
@@ -143,7 +143,7 @@ namespace sw
         for ( const float3& source : getActiveSources() )
         {
             _grid.computeCellsInRange( source, _listScratchCell );
-            for ( const WorldCellCoord& cell : _listScratchCell )
+            for ( const StreamingCellCoord& cell : _listScratchCell )
             {
                 const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
                 if ( indexIt == _mapCellIndex.end() )
@@ -173,12 +173,12 @@ namespace sw
         }
     }
 
-    uint64 WorldStreamingSubsystem::makeCellKey( const WorldCellCoord& cell )
+    uint64 SceneStreamingSubsystem::makeCellKey( const StreamingCellCoord& cell )
     {
         return ( static_cast<uint64>( static_cast<uint32>( cell._x ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cell._z ) );
     }
 
-    span<const float3> WorldStreamingSubsystem::getActiveSources() const
+    span<const float3> SceneStreamingSubsystem::getActiveSources() const
     {
         if ( _bExternalSources )
             return span<const float3>( _listExternalSource.data(), _listExternalSource.size() );
@@ -187,7 +187,7 @@ namespace sw
         return {};
     }
 
-    float32 WorldStreamingSubsystem::computeNearestSourceDistanceSquared( const WorldCellCoord& cell ) const
+    float32 SceneStreamingSubsystem::computeNearestSourceDistanceSquared( const StreamingCellCoord& cell ) const
     {
         float32 nearest = MathUtil::kMaxFloat;
         for ( const float3& source : getActiveSources() )
@@ -197,7 +197,7 @@ namespace sw
         return nearest;
     }
 
-    void WorldStreamingSubsystem::loadCell( CellSlot& slot )
+    void SceneStreamingSubsystem::loadCell( CellSlot& slot )
     {
         slot._listObjectID.clear();
         if ( _pScene->instantiateCell( slot._listNode, slot._listObjectID ) == false )
@@ -212,7 +212,7 @@ namespace sw
         slot._bLoaded = true;
     }
 
-    void WorldStreamingSubsystem::unloadCell( CellSlot& slot )
+    void SceneStreamingSubsystem::unloadCell( CellSlot& slot )
     {
         if ( slot._bLoaded == false )
             return;

@@ -21,7 +21,7 @@ namespace sw::editor
      *          질의와 결과는 UI 스레드에서만 다룬다(`EditorReferenceIndex` 의 규칙).
      *          "색인이 있다"(`EditorReferenceIndex::isReady`)와 "색인이 지금 디스크와 맞다"(`isCurrent`)는 다르다. 스캔은 시작한 순간의 트리를 읽으므로,
      *          스캔 도중에 바뀐 파일(시나리오의 `<Scratch>` 복사, 다른 저장)은 그 결과에 없을 수 있다. 결과를 넣은 뒤에도 변경 번호가 앞서 있으면 다시 스캔하고,
-     *          그 사이에는 `isCurrent` 가 false 다. 답이 맞아야 하는 쪽(옮기기 · 이름 바꾸기, 자동화 탐침, 시계 잡기 조건)은 `isCurrent` 를 본다.
+     *          그 사이에는 `isCurrent` 가 false 다. 답이 맞아야 하는 쪽(옮기기 · 이름 바꾸기, 자동화 감시 값, 시계 잡기 조건)은 `isCurrent` 를 본다.
      *          남는 틈: 에디터 밖의 쓰기(`<Scratch>` 복사 · 탐색기)는 OS 파일 감시가 알려야 변경 번호가 오른다. 그 알림이 오기 전에는 `isCurrent` 가 낡은 색인을 맞다고 본다
      *          (보통 몇 ms — 스캔 하나(Release 수 초, Debug 수십 초)보다 짧다). 에디터 자신의 이동은 `EditorAssetFileCommands::moveAsset` 이 색인을 그 자리에서 고친다.
      *          시나리오의 사본 쓰기는 시작 차단 조건(`AssetHotReload::pollContentWatchFence`)이 감시 사건을 기다려 막는다.

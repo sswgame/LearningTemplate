@@ -57,7 +57,7 @@ namespace sw::editor
         /** @brief 지금 베이크하는 볼륨의 진행(0 ~ 1)입니다. */
         float32 getVolumeProgress() const;
         /**
-         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(탐침 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`).
+         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`).
          */
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 

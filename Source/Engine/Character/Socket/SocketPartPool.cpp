@@ -20,7 +20,7 @@ namespace sw
     {
         struct SocketPartPoolInternal
         {
-            /** @brief 첫 씬이 아니라 지금 활성 씬의 풀을 읽는다 — 시나리오 탐침이 부릅니다. */
+            /** @brief 첫 씬이 아니라 지금 활성 씬의 풀을 읽는다 — 시나리오 감시 값이 부릅니다. */
             [[nodiscard]] static bool readTakeHitCount( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )

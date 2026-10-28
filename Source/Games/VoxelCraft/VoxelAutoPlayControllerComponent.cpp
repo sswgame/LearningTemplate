@@ -67,7 +67,7 @@ namespace sw
         holdButton( pPlayer->getBreakButton(), bBreaking );
         if ( bPlacing )
             pressButton( pPlayer->getPlaceButton() );
-        // 놓기는 한 틱 동안만 일어나서, 상태도 그 틱에만 `Place` 입니다. 탐침 이력은 값이 바뀔 때 기록하므로 한 틱짜리 상태도 남습니다.
+        // 놓기는 한 틱 동안만 일어나서, 상태도 그 틱에만 `Place` 입니다. 감시 값 이력은 값이 바뀔 때 기록하므로 한 틱짜리 상태도 남습니다.
         setStateName( hashed_string( bPlacing ? "Place" : ( bBreaking ? "Break" : "Walk" ) ) );
     }
 } // namespace sw

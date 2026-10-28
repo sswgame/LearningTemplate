@@ -54,7 +54,7 @@ namespace sw::editor
         /** @brief 배지 지름(픽셀 — 26 × DPI 배율)입니다. */
         static float32 getDiameter();
         /**
-         * @brief 지난 그리기에서 @p object 의 배지에 실제로 넘긴 글리프의 코드 포인트입니다(탐침 `Editor.BillboardIcon`).
+         * @brief 지난 그리기에서 @p object 의 배지에 실제로 넘긴 글리프의 코드 포인트입니다(감시 값 `Editor.BillboardIcon`).
          *        그리지 않았거나 글이 한 글자가 아니면(무효 메모리를 읽은 쓰레기 문자열) 0 입니다.
          */
         static uint32 findDrawnGlyph( const GameObject& object );

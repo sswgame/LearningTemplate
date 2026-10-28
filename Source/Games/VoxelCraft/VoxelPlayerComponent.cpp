@@ -71,7 +71,7 @@ namespace sw
                 return pBlock->_dropID.empty() ? block : catalog.findBlockIndex( pBlock->_dropID );
             }
 
-            /** @brief 씬의 첫 복셀 플레이어입니다. 탐침에서만 쓰고, 프레임 경로에서는 쓰지 않습니다. */
+            /** @brief 씬의 첫 복셀 플레이어입니다. 감시 값에서만 쓰고, 프레임 경로에서는 쓰지 않습니다. */
             static const VoxelPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
             {
                 const VoxelPlayerComponent* pFound = nullptr;

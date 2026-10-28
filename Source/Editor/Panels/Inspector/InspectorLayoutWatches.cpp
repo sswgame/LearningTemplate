@@ -1,6 +1,6 @@
 /**
  * @file InspectorLayoutWatchs.cpp
- * @brief 인스펙터 그리드가 배치 묶음을 새로 지은 횟수를 시나리오가 읽는 탐침입니다(`Editor.InspectorLayoutRebuildCount`).
+ * @brief 인스펙터 그리드가 배치 묶음을 새로 지은 횟수를 시나리오가 읽는 감시 값입니다(`Editor.InspectorLayoutRebuildCount`).
  * @details 묶음은 (타입, 확장이 그린 이름, 검색 글, 타입 레지스트리 세대)가 바뀔 때만 짓는다. 같은 선택을 몇 프레임 그려도 이 수가 늘지 않으면 매 프레임 재구성이 없다.
  */
 #include "pch.h"

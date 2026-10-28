@@ -23,7 +23,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 탐침 `Skirmish.ViewLagMax` 입니다. 모든 유닛 뷰 가운데 메시가 디렉터의 유닛 자리에서 가장 멀리 벗어난 거리입니다.
+         * @brief 감시 값 `Skirmish.ViewLagMax` 입니다. 모든 유닛 뷰 가운데 메시가 디렉터의 유닛 자리에서 가장 멀리 벗어난 거리입니다.
          *        측정한 뷰가 하나도 없으면(뷰가 없거나 모두 비교 불가) false 를 돌려 시나리오가 빈 측정으로 통과하지 못하게 합니다.
          */
         [[nodiscard]] bool readViewLagMax( const GameObjectManager* pManager, float64& outValue )

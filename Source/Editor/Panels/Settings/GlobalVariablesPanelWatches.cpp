@@ -1,6 +1,6 @@
 /**
  * @file GlobalVariablesPanelWatchs.cpp
- * @brief 전역 변수 창이 보일 목록을 다시 지은 횟수를 시나리오가 읽는 탐침입니다(`Editor.GlobalVariablesRebuildCount`).
+ * @brief 전역 변수 창이 보일 목록을 다시 지은 횟수를 시나리오가 읽는 감시 값입니다(`Editor.GlobalVariablesRebuildCount`).
  * @details 창은 등록 세대 · 검색 글이 바뀐 프레임에만 목록을 짓는다. 창을 연 채 몇 프레임 지나도 이 수가 늘지 않으면 매 프레임 재구성이 없다.
  */
 #include "pch.h"

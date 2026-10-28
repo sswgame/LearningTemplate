@@ -1,9 +1,9 @@
 <Scene formatVersion="2" name="FogShowcase">
 	<!-- 안개 시나리오(automation/fog)의 무대 — 넓은 바닥 위로 멀어지는 큐브 둘. 바닥은 어둡고 안개는 밝아서, 먼 바닥이 안개색으로 올라가는지 가까운 바닥은 그대로인지 밝기로 본다.
 	     애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다. -->
-	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
-	</WorldSettings>
+	</SceneSettings>
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">

@@ -51,7 +51,7 @@ namespace sw::editor
         uint32 getProbeCount() const { return static_cast<uint32>( _listObjectID.size() ); }
         /** @brief 지금까지 처리한(구웠거나 실패한) 프로브 수입니다. */
         uint32 getDoneProbeCount() const { return _nextProbeIndex; }
-        /** @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(탐침 `Editor.ReflectionProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`). */
+        /** @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.ReflectionProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`). */
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 
     private:

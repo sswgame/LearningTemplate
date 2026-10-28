@@ -88,7 +88,7 @@ namespace sw
                                                 uint64& outEndNanos ) const;
         /** @brief [@p beginNanos, @p endNanos] 안의 프레임 시작 시각을 오름차순으로 담습니다(타임라인의 프레임 경계선). */
         void collectFrameBegins( uint64 beginNanos, uint64 endNanos, vector<uint64>& outListFrameBegin ) const;
-        /** @brief 최근 @p frameCount 프레임 구간에 사건을 남긴 스레드 수입니다(탐침 · 테스트용). */
+        /** @brief 최근 @p frameCount 프레임 구간에 사건을 남긴 스레드 수입니다(감시 값 · 테스트용). */
         uint32 countActiveThreads( uint32 frameCount ) const;
 #if SW_PROFILER_TRACE_ENABLED
         /**

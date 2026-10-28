@@ -24,7 +24,7 @@ namespace sw::editor
          * @return 내비메시가 선 에이전트 종류 수입니다. 기하가 없는 종류는 세지 않으며 씬에 기하가 없으면 0 입니다.
          */
         static uint32 bakeAll( GameObjectManager& manager );
-        /** @brief 지금 베이크해 둔 에이전트 종류 수입니다(탐침 `Editor.NavMeshCount`). */
+        /** @brief 지금 베이크해 둔 에이전트 종류 수입니다(감시 값 `Editor.NavMeshCount`). */
         static uint32 countBakedMeshes( GameObjectManager& manager );
     };
 } // namespace sw::editor

@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Scene/WorldCellGrid.h"
+#include "Engine/Scene/StreamingCellGrid.h"
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "WorldCellGrid" );
+    SW_LOG_CALLER( "StreamingCellGrid" );
 
-    bool WorldCellGrid::tryCreate( const WorldCellGridDef& def, WorldCellGrid& outGrid )
+    bool StreamingCellGrid::tryCreate( const StreamingCellGridDef& def, StreamingCellGrid& outGrid )
     {
         // 기본값으로 메우지 않는다 — 셀 크기가 없는 월드는 데이터가 빠진 것이다.
         if ( ( def._cellSize > 0.0f ) == false )
@@ -26,15 +26,15 @@ namespace sw
         return true;
     }
 
-    WorldCellCoord WorldCellGrid::computeCell( const float3& position ) const
+    StreamingCellCoord StreamingCellGrid::computeCell( const float3& position ) const
     {
-        WorldCellCoord cell{};
+        StreamingCellCoord cell{};
         cell._x = static_cast<int32>( std::floor( position._x / _def._cellSize ) );
         cell._z = static_cast<int32>( std::floor( position._z / _def._cellSize ) );
         return cell;
     }
 
-    float32 WorldCellGrid::computeCellDistanceSquared( const WorldCellCoord& cell, const float3& position ) const
+    float32 StreamingCellGrid::computeCellDistanceSquared( const StreamingCellCoord& cell, const float3& position ) const
     {
         const float32 minX = static_cast<float32>( cell._x ) * _def._cellSize;
         const float32 minZ = static_cast<float32>( cell._z ) * _def._cellSize;
@@ -45,27 +45,27 @@ namespace sw
         return dx * dx + dz * dz;
     }
 
-    void WorldCellGrid::computeCellsInRange( const float3& origin, vector<WorldCellCoord>& outListCell ) const
+    void StreamingCellGrid::computeCellsInRange( const float3& origin, vector<StreamingCellCoord>& outListCell ) const
     {
         outListCell.clear();
-        const float3         minCorner{ origin._x - _def._loadingRadius, origin._y, origin._z - _def._loadingRadius };
-        const float3         maxCorner{ origin._x + _def._loadingRadius, origin._y, origin._z + _def._loadingRadius };
-        const WorldCellCoord minCell       = computeCell( minCorner );
-        const WorldCellCoord maxCell       = computeCell( maxCorner );
-        const float32        radiusSquared = _def._loadingRadius * _def._loadingRadius;
+        const float3             minCorner{ origin._x - _def._loadingRadius, origin._y, origin._z - _def._loadingRadius };
+        const float3             maxCorner{ origin._x + _def._loadingRadius, origin._y, origin._z + _def._loadingRadius };
+        const StreamingCellCoord minCell       = computeCell( minCorner );
+        const StreamingCellCoord maxCell       = computeCell( maxCorner );
+        const float32            radiusSquared = _def._loadingRadius * _def._loadingRadius;
         for ( int32 z = minCell._z; z <= maxCell._z; ++z )
         {
             for ( int32 x = minCell._x; x <= maxCell._x; ++x )
             {
-                const WorldCellCoord cell{ x, z };
+                const StreamingCellCoord cell{ x, z };
                 if ( computeCellDistanceSquared( cell, origin ) <= radiusSquared )
                     outListCell.push_back( cell );
             }
         }
     }
 
-    void WorldCellGrid::findCrossCellReferences( const vector<WorldCellObjectRecord>& listObject, const vector<WorldCellReference>& listReference,
-                                                 vector<WorldCellReference>& outListViolation )
+    void StreamingCellGrid::findCrossCellReferences( const vector<StreamingCellObjectRecord>& listObject, const vector<StreamingCellReference>& listReference,
+                                                     vector<StreamingCellReference>& outListViolation )
     {
         outListViolation.clear();
         unordered_map<uint64, size_t> mapObjectIndex;
@@ -74,7 +74,7 @@ namespace sw
         {
             mapObjectIndex.emplace( listObject[index]._objectID, index );
         }
-        for ( const WorldCellReference& reference : listReference )
+        for ( const StreamingCellReference& reference : listReference )
         {
             const auto fromIt = mapObjectIndex.find( reference._fromObjectID );
             const auto toIt   = mapObjectIndex.find( reference._toObjectID );
@@ -83,8 +83,8 @@ namespace sw
                 outListViolation.push_back( reference );
                 continue;
             }
-            const WorldCellObjectRecord& from = listObject[fromIt->second];
-            const WorldCellObjectRecord& to   = listObject[toIt->second];
+            const StreamingCellObjectRecord& from = listObject[fromIt->second];
+            const StreamingCellObjectRecord& to   = listObject[toIt->second];
             // 늘 올라 있는 쪽은 셀이 아니라 기본 묶음에 실린다 — 같은 셀 자리여도 셀의 오브젝트를 가리키면 그 셀이 내려갈 때 끊긴다.
             const bool bSameCell = from._bAlwaysLoaded == false && from._cell == to._cell;
             const bool bAllowed  = to._bAlwaysLoaded || bSameCell;
