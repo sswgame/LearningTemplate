@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  부하 시나리오(서버) — 친구 접속 상태 팬아웃: 온라인 부하 봇 1000 이 친구 요청을 200 번씩 맺은 뒤 접속 상태를 바꿔 팬아웃 지연을 잰다(OnlineKits M1).
-  봇 시나리오(Tools/OnlineLoadBot/Scenarios/friend_presence_fanout.json)의 숫자와 같다. 예산(Budgets.json)은 두지 않는다 — 잰 뒤에 정하므로 지금은 보고만 한다.
--->
-<LoadScenario name="load.friendpresence" driver="loadbot" botScenario="Tools/OnlineLoadBot/Scenarios/friend_presence_fanout.json">
-	<Load clients="1000" rampUpSeconds="20" durationSeconds="300"/>
-</LoadScenario>

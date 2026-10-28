@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  부하 시나리오(서버) — 루프백 클러스터: 서버 하나와 클라이언트 8 이 lte 회선에서 파괴 쇼케이스를 12 초 돌린다. 틱 시간 분포와 끝의 상태 해시 일치(서버-클라이언트 어긋남 없음)를 본다.
-  EngineTest 의 부하 스위트 NetSimLoadTest 를 돌리고 <Load> 를 환경 변수(SW_LOAD_*)로 넘긴다.
--->
-<LoadScenario name="load.replication" driver="cluster" test="NetSimLoadTest.*">
-	<Load clients="8" rampUpSeconds="2" durationSeconds="12" network="lte"/>
-</LoadScenario>

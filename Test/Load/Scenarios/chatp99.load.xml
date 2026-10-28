@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  부하 시나리오(서버) — 채팅 보내기 p99: 온라인 부하 봇 2000 이 한 채널(world.p99)에 한 글씩 보내 `chat_send` 의 p99 를 잰다. 채팅 채널 샤딩(OnlineKits B2)을 정할 근거다.
-  봇 시나리오(Tools/OnlineLoadBot/Scenarios/chat_send_p99.json)의 숫자와 같다. 예산(Budgets.json)은 두지 않는다 — 잰 뒤에 정하므로 지금은 보고만 한다.
--->
-<LoadScenario name="load.chatp99" driver="loadbot" botScenario="Tools/OnlineLoadBot/Scenarios/chat_send_p99.json">
-	<Load clients="2000" rampUpSeconds="30" durationSeconds="240"/>
-</LoadScenario>
