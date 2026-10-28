@@ -9,7 +9,8 @@
     "arguments": [
       "-gv_benchMeshes=8",
       "-gv_benchAnimate=0"
-    ]
+    ],
+    "quality": "high"
   },
   "metrics": {
     "background": [
