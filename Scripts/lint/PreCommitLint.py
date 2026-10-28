@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommitLint.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`gate/CheckIncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
@@ -22,9 +22,8 @@ from common.ProjectConstants import kShaderSourceExtensions  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from lint.ClangFormatBatch import runClangFormatBatch  # noqa: E402
-from lint.GitFiles import getStagedCppFiles  # noqa: E402
-from lint.gate.CheckIncludeOrder import checkIncludeOrder  # noqa: E402
+from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
+from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

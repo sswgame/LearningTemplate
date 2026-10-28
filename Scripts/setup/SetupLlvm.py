@@ -37,7 +37,7 @@ from common.ProjectConstants import (
 )
 from common.Paths import getProjectRoot, normalizePath, platformKey, sharedLibraryNames
 from common.FileCollect import findFirstExistingFile, findFirstExistingFileRecursive
-from setup.ToolFind import ToolSpec, findToolRoot
+from setup.ToolchainDetect import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라

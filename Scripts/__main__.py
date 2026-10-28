@@ -31,10 +31,10 @@ class Subcommand:
     하위 명령 하나.
 
     - `name`        : `py -3 -m Scripts <name>`
-    - `modulePath`  : `Scripts` 기준 모듈 경로. 그 모듈의 `main` 을 부른다.
+    - `modulePath`  : `Scripts` 기준 모듈 경로. 그 모듈의 `main` 을 부른다(`모듈:함수` 로 다른 진입 함수를 고른다).
     - `description` : `--help` 에 찍히는 한 줄.
 
-    모든 진입점은 `main(argv)` 를 받는다 — 남은 인자를 그대로 넘긴다.
+    모든 진입점은 `(argv)` 를 받는다 — 남은 인자를 그대로 넘긴다.
     """
 
     name: str
@@ -42,7 +42,8 @@ class Subcommand:
     description: str
 
     def run(self, listArgument: list[str]) -> int:
-        return importlib.import_module(self.modulePath).main(listArgument)
+        moduleName, _, entryName = self.modulePath.partition(":")
+        return getattr(importlib.import_module(moduleName), entryName or "main")(listArgument)
 
 
 _kSubcommand: tuple[Subcommand, ...] = (
@@ -50,9 +51,9 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("vcpkg", "setup.SetupVcpkg", "vcpkg 탐색 및 부트스트랩"),
     Subcommand("llvm", "setup.SetupLlvm", "LLVM/Clang 탐색 및 설정"),
     Subcommand("lint", "lint.PreCommitLint", "Staged 파일 대상 사전 커밋 린트 검사"),
-    Subcommand("include-order", "lint.gate.CheckIncludeOrder", "include 순서 검사(--files 로 좁힌다)"),
-    Subcommand("format-includes", "lint.fixer.FormatIncludeOrder", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
-    Subcommand("format", "lint.fixer.FormatClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
+    Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
+    Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
+    Subcommand("format", "lint.Format:mainFormatClang", "C++ 코드 clang-format 자동 포맷팅"),
 )
 
 _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command in _kSubcommand}

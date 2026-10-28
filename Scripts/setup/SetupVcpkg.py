@@ -33,7 +33,7 @@ from common.Git import ensureGitOnPath, runGit
 from common.Paths import platformKey, platformScriptCommand
 from common.RunProcess import runProcess
 from common.FileCollect import isVcpkgRoot
-from setup.ToolFind import ToolSpec, findToolRoot
+from setup.ToolchainDetect import ToolSpec, findToolRoot
 from common.ExitCode import ExitCode  # noqa: E402
 
 kVcpkgToolSpec = ToolSpec(
