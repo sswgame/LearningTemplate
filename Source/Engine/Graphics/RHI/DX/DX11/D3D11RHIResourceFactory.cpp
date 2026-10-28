@@ -7,10 +7,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-#include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

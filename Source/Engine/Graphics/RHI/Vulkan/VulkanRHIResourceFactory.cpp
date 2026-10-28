@@ -8,9 +8,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"

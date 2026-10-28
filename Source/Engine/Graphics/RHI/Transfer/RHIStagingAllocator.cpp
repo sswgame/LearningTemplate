@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"

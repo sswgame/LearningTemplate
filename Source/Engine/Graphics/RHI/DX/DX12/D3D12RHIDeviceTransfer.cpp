@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
-#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"

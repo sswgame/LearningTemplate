@@ -8,7 +8,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

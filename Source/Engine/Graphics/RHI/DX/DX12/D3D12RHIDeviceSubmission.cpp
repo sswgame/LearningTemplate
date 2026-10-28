@@ -7,7 +7,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"

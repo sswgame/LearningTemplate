@@ -9,8 +9,8 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -22,7 +22,7 @@
     #include <vulkan/vulkan_win32.h>
 #endif
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 
 namespace sw
 {

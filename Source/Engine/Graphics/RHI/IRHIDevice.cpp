@@ -12,9 +12,9 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Window/IRenderSurface.h"
 
 namespace sw

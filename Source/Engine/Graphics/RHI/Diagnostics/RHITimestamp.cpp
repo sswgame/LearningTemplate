@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

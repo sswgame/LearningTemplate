@@ -10,8 +10,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"

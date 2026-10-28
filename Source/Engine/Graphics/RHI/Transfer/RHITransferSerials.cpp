@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 
 namespace sw
 {

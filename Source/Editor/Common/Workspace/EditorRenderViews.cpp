@@ -10,7 +10,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw::editor

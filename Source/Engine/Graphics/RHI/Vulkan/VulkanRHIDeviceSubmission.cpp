@@ -3,7 +3,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"

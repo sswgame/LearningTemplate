@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 
 namespace sw
 {

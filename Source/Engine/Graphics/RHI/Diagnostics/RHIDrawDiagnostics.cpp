@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"

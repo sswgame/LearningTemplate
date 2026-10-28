@@ -5,8 +5,8 @@
 #include "Core/Common/PlatformOSHeaders.h"
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 

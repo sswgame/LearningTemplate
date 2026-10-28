@@ -5,10 +5,10 @@
 #include "Core/Container/span.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"

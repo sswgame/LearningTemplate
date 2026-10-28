@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
-#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 

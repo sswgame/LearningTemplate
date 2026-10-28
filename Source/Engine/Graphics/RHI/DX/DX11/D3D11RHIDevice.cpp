@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

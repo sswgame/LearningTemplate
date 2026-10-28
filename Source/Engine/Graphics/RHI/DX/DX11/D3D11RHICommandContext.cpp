@@ -7,7 +7,7 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

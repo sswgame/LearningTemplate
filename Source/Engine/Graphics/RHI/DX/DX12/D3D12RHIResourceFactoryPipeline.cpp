@@ -10,10 +10,10 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
 namespace sw

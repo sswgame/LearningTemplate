@@ -9,7 +9,7 @@
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 
 /**
  * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).

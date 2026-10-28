@@ -10,8 +10,8 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
-#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
 namespace sw
 {

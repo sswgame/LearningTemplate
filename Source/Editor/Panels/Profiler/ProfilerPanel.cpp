@@ -28,8 +28,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"

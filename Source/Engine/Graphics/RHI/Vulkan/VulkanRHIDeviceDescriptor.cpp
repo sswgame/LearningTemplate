@@ -10,7 +10,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

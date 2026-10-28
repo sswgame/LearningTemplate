@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
+#include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 
 #if !defined( SW_SHIPPING )
     #include "Core/Common/HashUtil.h"

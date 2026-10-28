@@ -13,15 +13,15 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
-#include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Support/RHIRenderPassLedger.h"
-#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
-#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw

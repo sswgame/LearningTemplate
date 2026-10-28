@@ -11,9 +11,9 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 

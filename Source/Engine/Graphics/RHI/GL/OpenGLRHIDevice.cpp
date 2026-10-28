@@ -3,12 +3,12 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw

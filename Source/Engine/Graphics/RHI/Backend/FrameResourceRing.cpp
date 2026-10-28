@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 
 namespace sw
 {

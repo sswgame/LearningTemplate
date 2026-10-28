@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <glad/glad.h>

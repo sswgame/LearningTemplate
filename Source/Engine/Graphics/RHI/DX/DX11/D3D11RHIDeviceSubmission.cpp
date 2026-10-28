@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

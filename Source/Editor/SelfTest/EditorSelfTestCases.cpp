@@ -24,8 +24,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

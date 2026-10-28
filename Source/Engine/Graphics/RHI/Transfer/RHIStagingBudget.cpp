@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingBudget.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingBudget.h"
 
 #include "Core/Math/MathUtil.h"
 
