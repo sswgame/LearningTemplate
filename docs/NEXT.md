@@ -25,6 +25,7 @@
 | GameFramework 의 `Base/Character`(옛 Actor), `Plugin`(옛 PlugIn, 모듈 `GF_EditorPlugin_*`) | Actor 클래스가 없었다 |
 | 약어 대문자(`GPU` · `ID` · `JSON` · `VFX` …), 첫 낱말은 소문자(`gpuTime`) | NamingCpp Acronyms |
 | 금지 동사 정리: `getOrCreate*`(옛 findOrAdd), `addPasses`(옛 setupPasses), `findResolved` | NamingCpp |
+| 게임 모듈의 수명을 소유하는 쪽은 Manager: `GameModuleManager` · `EditorModuleManager`, 라이브러리 `Source/ModuleManager`(옛 ModuleHost) | 언리얼 FModuleManager, NamingCpp 접미사 표 |
 
 ## 3. 남은 일 (순서대로)
 
@@ -43,4 +44,4 @@
 
 ## 4. 이 세션 끝의 Ninja-Release 결과
 
-(세션 끝에 채운다)
+Ninja-Release(모든 게임 12 · 모듈 76, 3,077 단계) 오류 0 — ModuleHost 이름 바꾸기 전 상태에서. 그 뒤 Ninja-Debug 오류 0.

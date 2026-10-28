@@ -28,9 +28,9 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | Folder | Role |
 | --- | --- |
 | `Source/Core` | Foundational utility static library, shared with Engine through object compilation |
-| `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev |
+| `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev. Folders are layered (`py -3 -m Scripts engine-layers`); a feature folder owns its components (`Physics/Component`) |
 | `Source/RuntimeAPI` | Header-only `INTERFACE` library: the pure C-ABI contract between App and Editor/Game modules. No implementations |
-| `Source/App` | Thin launcher. Dev links Engine + RuntimeAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `ModuleHost` manages hot-reload state and async-task fencing |
+| `Source/App` | Thin launcher. Dev links Engine + RuntimeAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `GameModuleManager` (`Source/ModuleManager`, shared with Server) manages game-module loading, hot reload and async-task fencing |
 | `Source/Editor` | Dev only |
 | `Source/GameFramework` | Genre-common frameworks and kits |
 | `Source/Games` | Concrete games; `SW_ACTIVE_GAME` selects the one to build |
