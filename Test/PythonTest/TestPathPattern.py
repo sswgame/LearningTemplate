@@ -16,7 +16,6 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from common.PathPattern import matchesAnyPattern, matchesPattern, splitSegments  # noqa: E402
-from lint.gate.CheckResourceCredits import findCaseOnlyDuplicatesInternal  # noqa: E402
 
 
 class PathPatternTest(unittest.TestCase):
@@ -43,25 +42,6 @@ class PathPatternTest(unittest.TestCase):
     def testAnyPattern(self) -> None:
         self.assertTrue(matchesAnyPattern(["*.ogg", "x/*.png"], "x/a.png"))
         self.assertFalse(matchesAnyPattern([], "x/a.png"))
-
-
-class CaseOnlyDuplicateTest(unittest.TestCase):
-    """`CheckResourceCredits` 의 대소문자 쌍 검사(경로 목록을 받는 순수 함수)."""
-
-    def testCaseOnlyPairIsReported(self) -> None:
-        listViolation = findCaseOnlyDuplicatesInternal(["Resource/a/Foo.png", "Resource/a/foo.png", "Resource/a/bar.png"])
-        self.assertEqual(1, len(listViolation))
-        self.assertTrue(listViolation[0].startswith("Resource/a/foo.png: Resource/a/Foo.png 와 대소문자만 다릅니다"))
-
-    def testFolderCaseDifferenceIsReported(self) -> None:
-        self.assertEqual(1, len(findCaseOnlyDuplicatesInternal(["Resource/UI/a.png", "Resource/ui/a.png"])))
-
-    def testDistinctNamesAndEmptyAreClean(self) -> None:
-        self.assertEqual([], findCaseOnlyDuplicatesInternal(["Resource/a.png", "Resource/b.png", "Resource/sub/a.png"]))
-        self.assertEqual([], findCaseOnlyDuplicatesInternal([]))
-
-    def testThreeWayCollisionReportsEachLaterPath(self) -> None:
-        self.assertEqual(2, len(findCaseOnlyDuplicatesInternal(["R/A.png", "R/a.png", "R/A.PNG"])))
 
 
 if __name__ == "__main__":

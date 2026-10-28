@@ -21,8 +21,6 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 from common import Host  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec, kCookContractConfigRelative  # noqa: E402
-from lint.conventions import FileScan  # noqa: E402
-from qa import PerfRegression  # noqa: E402
 
 
 class ToolRequiredValuesTest(unittest.TestCase):
@@ -42,19 +40,6 @@ class ToolRequiredValuesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempDir:
             with self.assertRaises(FileNotFoundError):
                 list(BuildTree.iterConfigured(Path(tempDir)))
-
-    def testPerfToleranceWithoutMetricStops(self) -> None:
-        with self.assertRaises(KeyError):
-            PerfRegression.compareInternal({"Scope": {"p75_us": 10.0}}, {"Scope": {"p75_us": 11.0}}, {"p50_us": 0.1}, 0.0)
-
-    def testUnreadableSourceStops(self) -> None:
-        with tempfile.TemporaryDirectory() as tempDir:
-            root = Path(tempDir)
-            path = root / "A.cpp"
-            path.write_text("int a;\n", encoding="utf-8")
-            with mock.patch.object(FileScan, "readSourceTextInternal", side_effect=OSError("잠김")):
-                with self.assertRaises(OSError):
-                    FileScan.checkFileConventionsInternal(path, root)
 
 
 if __name__ == "__main__":

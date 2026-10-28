@@ -1,8 +1,0 @@
-# CheckIndexLoopErase 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckIndexLoopErase.py, 규칙은 docs/agents/CppStyle.md 의 컨테이너 규칙(반복문 안 지우기는 VectorUtil::removeIf).
-#
-# 게이트로 막는 이유(최후 수단): 반복문 안의 `erase( begin() + index )` 는 표준 vector 의 멤버 호출이라 타입이나 API 로 쓸 수 없게 만들 수 없다.
-# 한 프레임에 T 개가 한꺼번에 끝나면 O(T²) 이동이 나는 모양을 새 코드가 못 쓰게 하는 구조 정리이고 숫자 근거는 따로 필요 없다(docs/09_Decisions.md).
-
-# 전체 훑기의 기준선 — 지금 있는 건수다(78 건에서 UI 애니메이션 · 스타일 전환 · 알림의 7 건을 고쳤다). 고치며 낮춘다. 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
-[baseline]
-total = 67

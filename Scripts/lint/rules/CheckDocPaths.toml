@@ -1,5 +1,0 @@
-# CheckDocPaths 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckDocPaths.py.
-
-# 규칙 6(규칙 문서끼리 한글 문장 복사)에서 빼는 문서 → 이유.
-[exemption]
-"docs/09_Decisions.md" = "결정 기록이다 — 규칙 문서의 문장을 근거로 되풀이해 적어도 기록이라 복사가 아니다"
