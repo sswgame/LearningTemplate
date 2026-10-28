@@ -20,6 +20,7 @@ namespace sw
     class Archive;
     class GameObject;
     class GameObjectManager;
+    class IBehaviorTreeDebugSource;
 
     /**
      * @class GameDirectorComponent
@@ -68,6 +69,11 @@ namespace sw
         void setTickAfter( GameObjectHandle director ) { _tickAfter = director; }
         /** @brief 이 디렉터의 규칙이 도는 틱입니다. `_tickAfter` 를 걸었으면 규칙 서브틱이고, 아니면 주 틱입니다. 다른 디렉터가 선행 조건으로 겁니다. */
         SubTickHandle getRuleTickHandle() const;
+        /**
+         * @brief 컴포넌트에 안 붙은 행동 트리 실행기(지휘관 AI 등)를 쥔 디렉터가 재정의해 자기 자신을 돌려줍니다. 행동 트리 창이 선택한 오브젝트에서 찾는다. 없으면 nullptr 입니다.
+         * @details 런타임 타입 정보(RTTI)를 끄고 빌드해 컴포넌트를 인터페이스로 캐스트할 수 없어 가상 함수로 묻는다.
+         */
+        virtual const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const { return nullptr; }
 
         /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateArchiveUtil::writeHeader` 가 쓰는 표와 버전입니다. */
         virtual void writeState( Archive& outArchive ) const = 0;

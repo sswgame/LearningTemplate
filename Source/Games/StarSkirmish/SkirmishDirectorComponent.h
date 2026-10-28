@@ -21,6 +21,7 @@
 #include "Engine/Resource/AssetHandle.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
+#include "GameFramework/Base/Actor/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -70,6 +71,8 @@ namespace sw
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
         /** @brief 끌어서 선택하는 중이면 true 를 반환하고, 땅 위 상자의 중심과 크기를 채웁니다. */
         [[nodiscard]] bool findDragBox( float3& outCenter, float3& outScale ) const;
+        /** @brief 컴퓨터 상대의 행동 트리 실행기를 행동 트리 창에 내놓습니다(활성 노드 보기). */
+        const IBehaviorTreeDebugSource* findBehaviorTreeDebugSource() const override { return &_commanderDebugSource; }
 
     protected:
         /** @brief 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다. */
@@ -84,6 +87,20 @@ namespace sw
         bool               hasPendingSpawn() const override { return _listPendingUnit.empty() == false; }
 
     private:
+        /** @brief 컴퓨터 상대(`SkirmishMatch::findAI`)마다 실행기 하나를 내놓는 어댑터입니다. 리플렉션 컴포넌트가 인터페이스를 직접 상속하지 않게 멤버로 둔다. */
+        class CommanderDebugSource final : public IBehaviorTreeDebugSource
+        {
+        public:
+            explicit CommanderDebugSource( const SkirmishDirectorComponent& owner )
+                : _owner{ owner }
+            {
+            }
+            void collectBehaviorTreeRunners( vector<BehaviorTreeDebugRunner>& outList ) const override;
+
+        private:
+            const SkirmishDirectorComponent& _owner;
+        };
+
         /** @brief 유닛 ID 슬롯 하나의 모습입니다. 틱이 보일 유닛을 정하고, 틱이 끝난 뒤 오브젝트를 맞춥니다. */
         struct UnitSlot
         {
@@ -215,6 +232,7 @@ namespace sw
         RTSCatalog                           _catalog;
         SkirmishUnitModelCatalog             _unitModelCatalog;
         BehaviorTreeAsset                    _commanderTree;
+        CommanderDebugSource                 _commanderDebugSource;
         SkirmishMatch                        _match;
         RTSSelection                         _selection;
         vector<RTSEvent>                     _listEvent;

@@ -59,11 +59,3 @@
 착수 조건: 매니페스트 id `mesh-modifier-preview-cost` 의 값(사람이 큰 메시를 열어 매개변수를 끌며 Release 프로파일러의 `Editor.MeshModifiers.*` 구간을 읽는다 — 그 입력 흐름을 한 명령으로 도는 케이스가 없다)에서 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때.
 남은 것: `Editor.MeshModifiers.Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표에 올린다(`MeshModifierGPUProgram`). `Editor.MeshModifiers.CpuMesh` 가 크면 미리보기 메시의 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents` 에 위치만 바뀐 탄젠트를 넘기는 길 포함)을 본다.
 함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다.
-
-### BehaviorTreeLiveCommander
-제목: 행동 트리 창에서 지휘관 AI 의 활성 노드 보기
-옛번호: 없음
-왜 필요한가: 행동 트리 창([결정 기록 5-11](../decisions/5-11_Editor.md) D2)은 선택한 오브젝트의 `AIControllerComponent` 실행기만 읽는다. RTS 지휘관 AI(`RTSCommanderAI`)는 컴포넌트가 아니라 경기 상태(`SkirmishMatch`)가 쥐는 일반 클래스라 창이 닿지 못한다.
-착수 조건: 컴포넌트에 안 붙은 행동 트리 실행기를 쓰는 게임이 둘 이상이 되어 트리를 고치며 활성 노드를 봐야 하는 일이 반복될 때.
-남은 것: 실행기를 내놓는 작은 인터페이스(`IBehaviorTreeDebugSource`: 실행기 목록과 이름)를 GameFramework 에 두고 지휘관을 가진 컴포넌트(`SkirmishDirectorComponent`)가 구현해 창이 선택한 오브젝트에서 찾는다.
-함정: 실행기 노드 번호는 깊이 우선 번호이므로 창에 연 파일과 실행기가 쥔 트리가 같은 파일일 때만 맞다 — 인터페이스가 파일 경로도 내놓아 다르면 표시하지 않는다.

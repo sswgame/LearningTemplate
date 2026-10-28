@@ -70,6 +70,8 @@ namespace sw
         int32             getPlayer() const { return _player; }
         int32             getAttackWaveCount() const { return _attackWaveCount; }
         const Blackboard& getBlackboard() const { return _blackboard; }
+        /** @brief 행동 트리 실행기입니다(행동 트리 창의 활성 노드 표시가 읽는다). */
+        const BehaviorTreeRunner& getRunner() const { return _runner; }
 
         /** @brief 생각 간격 타이머와 공격 횟수를 씁니다. 행동 트리와 블랙보드는 쓰지 않으며, 읽은 쪽에서 트리를 처음부터 다시 고릅니다. */
         void writeState( Archive& outArchive ) const;

@@ -198,6 +198,7 @@ namespace sw
         , _catalog{}
         , _unitModelCatalog{}
         , _commanderTree{}
+        , _commanderDebugSource{ *this }
         , _match{}
         , _selection{}
         , _listEvent{}
@@ -219,6 +220,20 @@ namespace sw
     }
 
     SkirmishDirectorComponent::~SkirmishDirectorComponent() = default;
+
+    void SkirmishDirectorComponent::CommanderDebugSource::collectBehaviorTreeRunners( vector<BehaviorTreeDebugRunner>& outList ) const
+    {
+        for ( int32 player = 0; player < SkirmishMatch::kPlayerCount; ++player )
+        {
+            const RTSCommanderAI* pAI = _owner._match.findAI( player );
+            if ( pAI == nullptr )
+                continue;
+            BehaviorTreeDebugRunner& entry = outList.emplace_back();
+            entry._name                    = player == 0 ? "Player 0" : "Player 1"; // 판은 두 플레이어(kPlayerCount)
+            entry._treePath                = _owner._commanderTreePath;
+            entry._pRunner                 = &pAI->getRunner();
+        }
+    }
 
     void SkirmishDirectorComponent::onBeginPlay()
     {
