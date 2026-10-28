@@ -29,7 +29,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 | CI-Fuzz, base-ci | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_WAYLAND` | BOOL | `OFF` |  | 리눅스 클라이언트에 Wayland 창 계층을 짓는다 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENFORCE_LEAF_LOCK_LOG` | BOOL | `OFF` |  | Debug: assert when a log is written while a sw::mutex is held (leaf lock rule) |  | [Source/Core/CMakeLists.txt](../../Source/Core/CMakeLists.txt) |
-| `SW_GAMES` | STRING | `` |  | 활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 \| ALL \| 이름 목록 | Ninja-Debug, Ninja-Debug-Lean | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_GAMES` | STRING | `` |  | 활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 \| ALL \| 이름 목록 | Ninja-Debug, Ninja-Debug-Lean, Ninja-Release | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_LLVM_AUTO_BOOTSTRAP` | BOOL | `ON` |  | LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_RELEASE_DEBUG_INFO` | STRING | `lines` | `lines` · `full` · `none` | Release/Shipping debug info: lines \| full \| none |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_REQUIRE_REFLECTION` | BOOL | `ON` |  | Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |

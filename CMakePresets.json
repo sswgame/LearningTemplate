@@ -100,9 +100,10 @@
     {
       "name": "Ninja-Release",
       "displayName": "Windows Ninja Release (Clang-cl)",
-      "description": "Windows Release build using Ninja + Clang-cl",
+      "description": "Windows Release build using Ninja + Clang-cl — 게임 선택이 필요한 검증(-game=, 키트 자체 테스트, 골든)을 맡으므로 모든 게임을 짓는다",
       "inherits": "base-windows",
       "cacheVariables": {
+        "SW_GAMES": "ALL",
         "CMAKE_BUILD_TYPE": "Release"
       }
     },

@@ -5406,7 +5406,8 @@
    "description": "활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 | ALL | 이름 목록",
    "presets": [
     "Ninja-Debug",
-    "Ninja-Debug-Lean"
+    "Ninja-Debug-Lean",
+    "Ninja-Release"
    ]
   },
   {
