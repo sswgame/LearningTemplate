@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: project · 진행: 해당없음
 
-100 줄이 넘는 함수를 언제 나누고 언제 그대로 두는지 정하고, 남은 함수의 판정을 적는 문서다. 나누기 자체는 코드 총량을 줄이지 않으므로 줄 수는 후보를 고르는 기준일 뿐이고, 나누는 이유는 아래 구조 문제여야 한다. 대부분의 영역은 이미 나눴고(빌드 미확인) 남은 것은 3절의 "나눔" 후보 일곱 개(렌더러 · RHI 영역이라 그 영역 작업자가 맡는다)뿐이다. 목록은 `py -3 Scripts/lint/report/RunFunctionSize.py --filter <경로>` 로 그때 잰다(줄 수를 손으로 적으면 코드가 바뀔 때 어긋난다). 게이트는 두지 않는다. 줄 수 상한을 게이트로 두면 이유 없는 기계적 분할이 늘어 총량이 오른다.
+100 줄이 넘는 함수를 언제 나누고 언제 그대로 두는지 정하고, 남은 함수의 판정을 적는 문서다. 나누기 자체는 코드 총량을 줄이지 않으므로 줄 수는 후보를 고르는 기준일 뿐이고, 나누는 이유는 아래 구조 문제여야 한다. 대부분의 영역은 이미 나눴고(빌드 미확인) 남은 나눔 후보는 없다. 목록은 `py -3 Scripts/lint/report/RunFunctionSize.py --filter <경로>` 로 그때 잰다(줄 수를 손으로 적으면 코드가 바뀔 때 어긋난다). 게이트는 두지 않는다. 줄 수 상한을 게이트로 두면 이유 없는 기계적 분할이 늘어 총량이 오른다.
 
 ## 1. 나누는 기준
 
@@ -23,7 +23,7 @@
 | 단위 | 내용 | 상태 |
 |---|---|---|
 | 끝난 영역 | `Editor/Panels` · `Editor/Common` · `Editor/Viewport` · `Core/Network` · `Core/File` · `GameFramework/Kits` · `GameFramework/Base` · `Engine/Input` · `Destruction` · `Character` · `Audio` · `Localization` · `Physics` · `Games/Empty` · `Engine/Graphics` · `Renderer`, 직렬화 · 애니메이션 · 씬 · 텍스트 · 네비 · 에디터 임포터 · 엔진 갱신 등 약 100 개 | 코드 끝남, 빌드 미확인 |
-| 남은 영역 | 3절의 "나눔" 후보. 영역 하나가 단위 하나이고 그 폴더를 다른 작업이 건드리는 중이면 미룬다. `InputMap::loadDefinition` · `makeTraceJSON` · `CatalogTableEditor::draw` · `drawValueWidget` · `drawTypeMethods` · `FractureComponentBase::updateGroups` 는 나눴다(빌드 미확인) | 렌더러 · RHI 후보 일곱이 남음 |
+| 남은 영역 | 3절의 "나눔" 후보. 영역 하나가 단위 하나이고 그 폴더를 다른 작업이 건드리는 중이면 미룬다. `InputMap::loadDefinition` · `makeTraceJSON` · `CatalogTableEditor::draw` · `drawValueWidget` · `drawTypeMethods` · `FractureComponentBase::updateGroups` 는 나눴다(빌드 미확인) | 끝(렌더러 · RHI 일곱도 나눴다) |
 
 - `drawAdaptiveGrid` 는 테마 토큰 작업(editorux) 때 함께 나눈다.
 - 핫 패스 함수를 나눌 때만 Release 전후를 잰다.
@@ -33,17 +33,7 @@
 
 ### 나눔 후보
 
-"예비" 는 본문을 다 읽지 않고 단계 주석 · 케이스 모양으로 정한 것이라 맡은 작업자가 읽고 확정한다. 기준 1(중복)은 어느 함수든 먼저 본다.
-
-| 파일 | 함수 | 판정 |
-|---|---|---|
-| `Source/Engine/Renderer/Scene/GPUMeshMorphPool.cpp` | `GPUMeshMorphPool::update` | 기준 3(예비): 요청 모으기 · 슬롯 배정 · 업로드 |
-| `Source/Engine/Renderer/Vfx/VfxGPUSimulation.cpp` | `VfxGPUSimulation::prepareFrame` | 기준 3(예비): 파티클 배치 · 파티클 라이트 · 메시 방출기 · 지난 재생 놓기 |
-| `Source/Engine/Renderer/Light/GPULightBuffer.cpp` | `GPULightBuffer::update` | 기준 3: 프레임 상한 나누기 · 업로드 목록 · 버퍼 확보 · 프로브 SH 올리기 |
-| `Source/Engine/Graphics/Texture/TextureCache.cpp` | `TextureCache::flushRegionUpdates` | 기준 3(예비): 요청 하나 내기 · `Busy` / `Rejected` 규칙 · 미룬 것 합치기 |
-| `Source/Engine/Renderer/Canvas/CanvasRenderer.cpp` | `CanvasRenderer::uploadAtlasPage` | 기준 3(예비): 첫 전체 업로드 · 등록 · 구간 업로드 · 실패 규칙 |
-| `Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp` | `verifyDomain` | 기준 3(예비): 우선순위 폴더 · 헤더 스탬프 · 키 누락 판정 |
-| `Source/Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.cpp` | `VulkanRHISwapChain::createSurface` | 기준 4(예비): 창 시스템 길(Win32 · Xlib · Xcb · Wayland)마다 표면 만들기 함수 |
+없다. 렌더러 · RHI 일곱(`GPUMeshMorphPool::update` · `VfxGPUSimulation::prepareFrame` · `GPULightBuffer::update` · `TextureCache::flushRegionUpdates` · `CanvasRenderer::uploadAtlasPage` · `ShaderCookStamp` 의 `verifyDomain` · `VulkanRHISwapChain::createSurface`)는 단계 함수로 나눴다(Debug 컴파일 통과, 동작 변화 없음. `createSurface` 의 Linux 길은 이 호스트에서 컴파일하지 못했다).
 
 ### 유지
 
