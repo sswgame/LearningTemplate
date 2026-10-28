@@ -142,6 +142,7 @@ namespace sw
         access._writes        = { SceneDataKind::ControlIntent, SceneDataKind::Navigation, SceneDataKind::Structure };
         access._reads         = { SceneDataKind::ControlIntent };
         access._readsPrevious = { SceneDataKind::Navigation, SceneDataKind::Structure, SceneDataKind::Transform };
+        // 감사(레인 불안전): 조종자를 만들고(`createGameObject` — 게임 스레드 전용), 입력 · UI 싱글턴을 읽고, 조종자의 `produceIntent`(AI · 게임 코드)를 부른다. 게임 스레드에 둔다(`_bLaneSafe` 는 Structure 쓰기와 함께 거절된다).
         return access;
     }
 

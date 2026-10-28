@@ -119,6 +119,20 @@ namespace sw
             if ( _listLaneJob.empty() )
                 continue;
             // 레인 하나뿐이면 나눌 일이 없다(`serialThreshold` 2). 본문은 시스템 포인터만 읽는다 — 이 목록은 파도가 끝날 때까지 바뀌지 않는다.
+            // 워커는 트랜스폼 캐시를 읽기만 해야 한다 — 더티 노드를 읽으면 `SceneComponent::ensureWorldCache` 가 계층을 합성해 쓰므로, 트랜스폼을 읽는 레인 시스템이
+            // 둘 이상 같이 돌기 전에 게임 스레드가 한 번 펼쳐 둔다(이 파도의 다른 시스템은 선언상 트랜스폼을 쓰지 않는다).
+            if ( _listLaneJob.size() >= 2 && hasDirtySceneTransforms() )
+            {
+                for ( const uint32 systemIndex : wave._listSystem )
+                {
+                    const SceneFrameAccess& laneAccess = _listFrameAccess[systemIndex];
+                    if ( laneAccess._bLaneSafe && ( laneAccess._reads.contains( SceneDataKind::Transform ) || laneAccess._readsPrevious.contains( SceneDataKind::Transform ) ) )
+                    {
+                        flushSceneTransforms();
+                        break;
+                    }
+                }
+            }
             FrameSystemLaneJob job{ this, _listLaneJob.data(), deltaTime };
             engine::runParallel( static_cast<uint32>( _listLaneJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemLaneJob::runRange, &job ) );
         }

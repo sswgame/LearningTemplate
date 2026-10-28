@@ -11,6 +11,7 @@ namespace sw
         , _listMarker{}
         , _markerView{}
         , _activeMarkerCount{ 0 }
+        , _pGpuManager{ nullptr }
         , _listCanvasAnchor{}
         , _listFreeAnchor{}
         , _screen{ kInvalidUIScreenHandle }

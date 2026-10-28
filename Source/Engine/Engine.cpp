@@ -702,6 +702,7 @@ namespace sw
             if ( _pSceneManager != nullptr )
                 _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
             RenderPacketBuilder::populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
+            _pPacketBuilder->resolveMarkerInstanceSlots( packet, _pUISystem, pActiveScene );
 
             if ( _pRenderThread != nullptr )
             {

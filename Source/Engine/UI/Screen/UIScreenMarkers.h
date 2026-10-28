@@ -13,6 +13,11 @@
 
 namespace sw
 {
+    class GameObjectManager;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class UIScreenMarkers
      * @brief 마커를 담는 HUD 화면의 핸들, 마커마다의 앵커(UI 단위), 뗀 마커가 돌려준 앵커 번호, 그리기 단계가 낸 앵커(물리 픽셀 정수)를 듭니다.
@@ -51,12 +56,15 @@ namespace sw
         /** @brief 앵커 @p anchor 를 GPU 투영에서 뺍니다(CPU 투영으로 돌아가거나 숨겼다). 활성이 아니면 아무것도 하지 않는다. */
         void clearGpuMarker( uint32 anchor );
         /** @brief 이번 프레임 GPU 투영이 쓰는 공용 값(카메라 · 뷰포트)을 정합니다. 활성 마커가 없으면 부르지 않는다. */
-        void setGpuMarkerView( const CanvasMarkerView& view )
+        void setGpuMarkerView( const CanvasMarkerView& view, const GameObjectManager* pManager )
         {
             const float32 uiScale = _markerView._uiScale; // 배율은 그리기 단계(`publishCanvasAnchors`)가 정한다
             _markerView           = view;
+            _pGpuManager          = pManager;
             _markerView._uiScale  = uiScale;
         }
+        /** @brief GPU 마커의 기록이 속한 오브젝트 관리자입니다(렌더 패킷의 활성 씬과 같을 때만 인스턴스 칸을 푼다). */
+        const GameObjectManager* getGpuMarkerManager() const { return _pGpuManager; }
         /** @brief 켜진 GPU 마커 수입니다. 0 이면 패킷에 아무것도 싣지 않는다. */
         uint32 getGpuMarkerCount() const { return _activeMarkerCount; }
         /** @brief 패킷에 실을 GPU 마커 기록입니다(앵커 번호가 인덱스). 켜진 것이 없으면 빈 목록입니다. */
@@ -73,6 +81,7 @@ namespace sw
         vector<CanvasMarkerRecord> _listMarker;        ///< GPU 가 투영하는 마커의 입력입니다(앵커 번호가 인덱스, 비활성은 `_bActive` 0).
         CanvasMarkerView           _markerView;        ///< 위 기록이 쓰는 공용 값입니다.
         uint32                     _activeMarkerCount; ///< `_listMarker` 중 켜진 기록 수입니다.
+        const GameObjectManager*   _pGpuManager;       ///< `_markerView` 를 구한 관리자입니다(빌린 포인터).
         vector<CanvasAnchor>       _listCanvasAnchor;  ///< 그리기 단계가 낸 앵커입니다(물리 픽셀 정수).
         vector<uint32>             _listFreeAnchor;    ///< 뗀 마커가 돌려준 앵커 번호입니다.
         UIScreenHandle             _screen;            ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).

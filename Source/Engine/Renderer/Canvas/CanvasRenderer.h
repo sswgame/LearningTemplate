@@ -78,10 +78,11 @@ namespace sw
         /**
          * @brief 화면 마커 투영 컴퓨트(`canvasmarker.hlsl`)를 기록합니다. 마커 입력(`CanvasFrameData::_listMarker`)이 있는 프레임에만 돌고, 렌더 패스 밖(컴퓨트 프리패스)에서 부릅니다 —
          *        `prepareFrame` 이 사각형 버퍼에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
+         * @param instanceBuffer GPUScene 인스턴스 버퍼와 그 SRV 입니다(`GPUScene::getInstanceBuffer` · `getInstanceSrv`). 인스턴스 칸을 읽는 마커가 있으면 읽기 상태로 전환해 바인딩한다. 없으면 @p placeholderSrv 를 건다(읽지 않는다).
          * @param pso `RenderPassType::CanvasMarker` 의 엔진 PSO 입니다. 0 이면(셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드) 오류를 한 번 남기고 아무것도 하지 않습니다 —
          *        그 마커는 CPU 가 앵커 배율을 0 으로 올렸으므로 그려지지 않는다(CPU 투영으로 대신하지 않는다).
          */
-        void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso );
+        void recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv );
         /** @brief 마지막 `drawTargets` 가 다시 그린 렌더 텍스처 대상 수입니다(테스트와 진단용). */
         uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
@@ -185,8 +186,9 @@ namespace sw
         RHIStructuredBufferSlot _markerRowBuffer;  ///< 마커 입력 행(float4)입니다. 마커가 있는 프레임마다 다시 올린다.
         uint64                  _uploadedRevision; ///< 사각형 버퍼에 지금 있는 내용의 서명(주 출력과 대상 내용 번호, 0이면 없음)
         uint32                  _uploadedQuadCount;
-        uint32                  _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
-        uint32                  _markerCount;  ///< 이번 프레임 컴퓨트가 돌릴 마커 기록 수(0 이면 돌리지 않는다)
+        uint32                  _mainQuadBase;          ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
+        uint32                  _markerCount;           ///< 이번 프레임 컴퓨트가 돌릴 마커 기록 수(0 이면 돌리지 않는다)
+        bool                    _bMarkerReadsInstances; ///< 이번 프레임 마커 중 GPUScene 인스턴스 칸을 읽는 것이 있다(인스턴스 버퍼를 읽기 상태로 둔다).
         uint32                  _lastUploadCallCount;
         uint32                  _lastDrawnTargetCount;
     };

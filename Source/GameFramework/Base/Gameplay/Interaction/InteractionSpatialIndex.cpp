@@ -70,6 +70,8 @@ namespace sw
         SceneFrameAccess access{};
         access._writes        = { SceneDataKind::InteractionIndex };
         access._readsPrevious = { SceneDataKind::Structure, SceneDataKind::Transform };
+        // 감사: 자기 격자와 레지스트리 읽기, 월드 위치 읽기만 한다 — 더티 트랜스폼은 레인 실행기가 먼저 펼친다(`runFrameStepFrameSystems`). 워커에서 돌려도 된다.
+        access._bLaneSafe = true;
         return access;
     }
 

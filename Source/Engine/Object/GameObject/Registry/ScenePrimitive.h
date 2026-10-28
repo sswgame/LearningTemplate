@@ -49,12 +49,13 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~ScenePrimitive() override = default;
 
+        /** @brief 레지스트리 번호입니다(읽기 전용 — 적는 것은 `PrimitiveRegistry` 뿐). 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. GPUScene 인스턴스 칸을 찾는 마커 투영이 읽습니다. */
+        uint32 getPrimitiveIndex() const { return _primitiveIndex; }
+
     private:
         /** @brief 등록되지 않은 상태로 만듭니다. `MeshComponent` 만 부릅니다. */
         ScenePrimitive();
 
-        /** @brief 레지스트리 번호입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
-        uint32 getPrimitiveIndex() const { return _primitiveIndex; }
         /** @brief 레지스트리 번호를 적고, 트랜스폼 칸에도 같은 번호를 적습니다. 틱 뒤 적용 · 플러시는 이 번호로 레지스트리에 바로 더티를 찍습니다. */
         void setPrimitiveIndex( uint32 index );
 

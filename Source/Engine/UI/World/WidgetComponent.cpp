@@ -266,6 +266,13 @@ namespace sw
         record._screenOffset      = _screenOffset;
         record._referenceDistance = _bScaleWithDistance ? _referenceDistance : 0.0f;
         record._flags             = _bClampToScreenEdge ? static_cast<uint32>( CanvasMarkerFlag::Clamp ) : 0u;
+        record._worldOffset       = _worldOffset;
+        // GPU 가 변환을 가진 메시(주 씬 컴포넌트가 곧 메시)면 프리미티브 번호를 실어 렌더러가 GPUScene 인스턴스 변환을 읽게 한다 — GPU 가 옮기는 인스턴스(회전 시드 · 입자)의 위치는 게임 스레드가 모른다.
+        // 월드 점은 그대로 싣는다: 인스턴스 칸이 아직 없는 프레임(로드 중 · 걸러짐 · 반투명)은 이 점을 쓴다.
+        const GameObject*    pOwnerObject = getOwner();
+        const MeshComponent* pMesh        = pOwnerObject != nullptr ? pOwnerObject->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh != nullptr && static_cast<const SceneComponent*>( pMesh ) == pScene )
+            record._primitiveIndex = pMesh->getPrimitiveIndex();
         pUI->setGpuScreenMarker( _gpuAnchor, record );
     }
 

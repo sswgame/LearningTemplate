@@ -327,7 +327,7 @@ namespace sw
             {
                 CanvasMarkerView gpuView{};
                 WidgetComponent::makeGpuMarkerView( view, _viewport._size, gpuView );
-                _markers.setGpuMarkerView( gpuView );
+                _markers.setGpuMarkerView( gpuView, view._pGpuManager );
             }
         }
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.

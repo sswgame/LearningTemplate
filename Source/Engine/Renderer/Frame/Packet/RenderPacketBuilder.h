@@ -90,6 +90,11 @@ namespace sw
          */
         static void populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
         /**
+         * @brief 패킷의 GPU 투영 마커(`CanvasFrameData::_listMarker`) 중 활성 씬의 메시에 붙은 것에 GPUScene 인스턴스 칸을 풉니다(`populateScene` · `populateCanvas` 뒤).
+         * @details 마커가 속한 관리자가 활성 씬의 것이 아니거나 칸을 못 찾으면 기록은 월드 점을 쓴다(`_instanceSlot` 이 비어 있다).
+         */
+        void resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const;
+        /**
          * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
          * @details 씬마다 스냅샷 빌더를 따로 둔다(빌더의 재구축 판단 캐시가 씬별이기 때문이다). 요청이 끊긴 씬의 빌더는 이 프레임에 해제한다.
          *          미리보기 패킷에는 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.

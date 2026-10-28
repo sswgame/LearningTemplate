@@ -1,5 +1,6 @@
 #include "common.hlsli"
 #include "canvasquad.hlsli"
+#include "instancedata.hlsli"
 
 /**
  * canvasmarker.hlsl — 화면 마커(이름표 · HP 바 · 목표 표시)의 투영 컴퓨트(RenderPassType::CanvasMarker, docs/plans UI 후보 MarkerComputeProjection 의 구현).
@@ -15,6 +16,7 @@
  */
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_MarkerRows, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_MarkerInstances, 1 ); // GPUScene 인스턴스 버퍼 — 인스턴스 칸이 있는 마커만 읽는다(C++ 은 칸이 없으면 자리표를 건다)
 SW_DECLARE_RW_STRUCTURED_BUFFER( CanvasQuad, g_MarkerQuadsRW, 0 );
 
 // 입력 행 배치(C++ CanvasRenderer 가 같은 순서로 올린다).
@@ -22,8 +24,9 @@ static const uint kRowViewProjection = 0u; // 행 0..3 — 행 벡터 규약 뷰
 static const uint kRowCamera         = 4u; // 카메라 xyz, asuint( 마커 수 )
 static const uint kRowViewport       = 5u; // UI 뷰포트 xy, UI 배율, 가장자리 여백(UI 단위)
 static const uint kRowLimits         = 6u; // 카메라 뒤 판정 w, 거리 배율 최소, 최대, 0
-static const uint kRowFirstMarker    = 8u; // 마커마다 두 행 — A: 월드 점 xyz, 최대 거리 · B: 화면 오프셋 xy, 기준 거리, asuint( 비트 )
-static const uint kMarkerRowCount    = 2u;
+static const uint kRowFirstMarker    = 8u; // 마커마다 세 행 — A: 월드 점 xyz, 최대 거리 · B: 화면 오프셋 xy, 기준 거리, asuint( 비트 ) · C: 월드 오프셋 xyz, asuint( 인스턴스 칸, 없음 = kInvalidIndex )
+static const uint kMarkerRowCount    = 3u;
+static const uint kNoInstance        = 0xFFFFFFFFu;
 
 // 마커 비트(C++ CanvasMarkerFlag + 켜짐 비트).
 static const uint kMarkerFlagClamp  = 1u;
@@ -43,6 +46,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     const float4 rowA  = g_MarkerRows[rowAt];
     const float4 rowB  = g_MarkerRows[rowAt + 1u];
     const uint   bits  = asuint( rowB.w );
+    const float4 rowC  = g_MarkerRows[rowAt + 2u];
     if ( ( bits & kMarkerFlagActive ) == 0u )
         return;
 
@@ -52,10 +56,12 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     const float  uiScale  = viewport.z;
     const float  margin   = viewport.w;
 
-    const float3 world   = rowA.xyz;
-    const float  dist    = length( cameraRow.xyz - world );
-    float4       rect    = float4( 0.0f, 0.0f, 0.0f, 0.0f ); // 배율 0 = 접힘(그려지지 않는다)
-    const bool   bTooFar = rowA.w > 0.0f && dist > rowA.w;
+    // 인스턴스 칸이 있으면 GPUScene 인스턴스 변환의 위치(행 벡터 행렬의 4 번째 행) + 월드 오프셋이다 — GPU 가 옮기는 인스턴스도 따라간다. 없으면 게임 스레드가 보낸 월드 점이다.
+    const uint   instanceSlot = asuint( rowC.w );
+    const float3 world        = instanceSlot != kNoInstance ? g_MarkerInstances[instanceSlot]._world[3].xyz + rowC.xyz : rowA.xyz;
+    const float  dist         = length( cameraRow.xyz - world );
+    float4       rect         = float4( 0.0f, 0.0f, 0.0f, 0.0f ); // 배율 0 = 접힘(그려지지 않는다)
+    const bool   bTooFar      = rowA.w > 0.0f && dist > rowA.w;
     if ( bTooFar == false )
     {
         float scale = 1.0f;

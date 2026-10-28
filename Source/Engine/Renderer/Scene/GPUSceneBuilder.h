@@ -131,6 +131,13 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
+        /**
+         * @brief 렌더 프리미티브 번호(`ScenePrimitive::getPrimitiveIndex`)가 지금 스냅샷에서 차지한 **불투명** 인스턴스 칸을 돌려줍니다. 없으면 `invalid_index::kUint32` 입니다.
+         * @details 화면 마커 투영 컴퓨트가 GPUScene 인스턴스 변환을 읽는 대응입니다(`CanvasMarkerRecord::_instanceSlot`). 이번 프레임 수집(`populateFromScene`) 뒤 · 다음 수집 전에만 쓴다.
+         *          프리미티브 → 후보 → 인스턴스 칸의 두 표를 따라가고, 역표(`_listInstanceSrcIndex`)가 같은 후보를 가리키는지 되짚어 어긋난 표(수집 중 · 걸러짐)를 거른다.
+         *          투명 꼬리는 프레임마다 다시 정렬되어 칸이 흔들리므로 풀지 않는다(그 마커는 월드 점을 쓴다).
+         */
+        uint32 findOpaqueInstanceSlot( uint32 primitiveIndex ) const;
         /** @brief 불투명 배치 구간을 반환합니다. */
         vector_reference<const GPUMeshBatch> getOpaqueBatches() const { return _snapshot.getOpaqueBatches(); }
         /** @brief 투명 배치 구간을 반환합니다. */

@@ -52,6 +52,7 @@ namespace sw
     class LocalizationManager;
     class TextLayoutEngine;
     class UserSettingsManager;
+    class GameObjectManager;
     class WidgetComponent;
 } // namespace sw
 
@@ -261,6 +262,7 @@ namespace sw
         /** @brief 렌더 패킷에 실을 GPU 투영 마커 입력(앵커 번호가 인덱스)과 공용 값입니다. */
         const vector<CanvasMarkerRecord>& getGpuMarkers() const { return _markers.getGpuMarkers(); }
         const CanvasMarkerView&           getGpuMarkerView() const { return _markers.getGpuMarkerView(); }
+        const GameObjectManager*          getGpuMarkerManager() const { return _markers.getGpuMarkerManager(); }
         /** @brief 위젯 컴포넌트를 등록합니다. 컴포넌트가 시작할 때 부르며, `update` 가 레이아웃 앞에서 화면 마커 위치를 갱신합니다. */
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );

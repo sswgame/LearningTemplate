@@ -404,6 +404,20 @@ namespace sw
         }
     }
 
+    void RenderPacketBuilder::resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const
+    {
+        if ( packet._canvas._listMarker.empty() || pUISystem == nullptr || pActiveScene == nullptr || _gpuSceneBuilder == nullptr )
+            return;
+        // 기록이 다른 관리자(미리보기 씬)의 것이면 프리미티브 번호가 이 스냅샷의 것이 아니다 — 월드 점을 쓴다.
+        if ( pUISystem->getGpuMarkerManager() != pActiveScene->getObjectManager() )
+            return;
+        for ( CanvasMarkerRecord& record : packet._canvas._listMarker )
+        {
+            if ( record._bActive != 0 && record._primitiveIndex != invalid_index::kUint32 )
+                record._instanceSlot = _gpuSceneBuilder->findOpaqueInstanceSlot( record._primitiveIndex );
+        }
+    }
+
     void RenderPacketBuilder::populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI )
     {
         // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 테스트 그림은 그 위에.

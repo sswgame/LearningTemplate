@@ -51,7 +51,7 @@ namespace sw
             static constexpr uint32 kRowViewport           = 5;
             static constexpr uint32 kRowLimits             = 6;
             static constexpr uint32 kRowFirstMarker        = 8;
-            static constexpr uint32 kMarkerRowCount        = 2;
+            static constexpr uint32 kMarkerRowCount        = 3;
             static constexpr uint32 kMarkerFlagActive      = 0x80000000u;
             static constexpr uint32 kMarkerThreadGroupSize = 64;
         };
@@ -73,6 +73,7 @@ namespace sw
         , _uploadedQuadCount{ 0 }
         , _mainQuadBase{ 0 }
         , _markerCount{ 0 }
+        , _bMarkerReadsInstances{ false }
         , _lastUploadCallCount{ 0 }
         , _lastDrawnTargetCount{ 0 }
     {
@@ -193,8 +194,9 @@ namespace sw
 
     void CanvasRenderer::prepareMarkers( IRHIDevice& device, const CanvasFrameData& frame )
     {
-        using Internal = CanvasRendererInternal;
-        _markerCount   = 0;
+        using Internal         = CanvasRendererInternal;
+        _markerCount           = 0;
+        _bMarkerReadsInstances = false;
         if ( frame._listMarker.empty() )
             return;
         // 입력 행 배치는 canvasmarker.hlsl 의 kRow* 와 1:1 이다(뷰 · 투영 4행 · 카메라 · 뷰포트 · 한계 · 여백 1행 뒤에 마커마다 두 행).
@@ -210,6 +212,7 @@ namespace sw
         _listMarkerRowScratch[Internal::kRowCamera]   = float4{ view._cameraPosition._x, view._cameraPosition._y, view._cameraPosition._z, BitUtil::bitsToFloat( markerCount ) };
         _listMarkerRowScratch[Internal::kRowViewport] = float4{ view._viewportSize._x, view._viewportSize._y, view._uiScale, view._edgeMargin };
         _listMarkerRowScratch[Internal::kRowLimits]   = float4{ view._minClipW, view._minDistanceScale, view._maxDistanceScale, 0.0f };
+        bool bAnyInstanceSlot                         = false;
         for ( uint32 index = 0; index < markerCount; ++index )
         {
             const CanvasMarkerRecord& record = frame._listMarker[index];
@@ -217,6 +220,8 @@ namespace sw
             const uint32              bits   = record._flags | ( record._bActive != 0 ? Internal::kMarkerFlagActive : 0u );
             _listMarkerRowScratch[rowAt]     = float4{ record._worldPosition._x, record._worldPosition._y, record._worldPosition._z, record._maxDistance };
             _listMarkerRowScratch[rowAt + 1] = float4{ record._screenOffset._x, record._screenOffset._y, record._referenceDistance, BitUtil::bitsToFloat( bits ) };
+            _listMarkerRowScratch[rowAt + 2] = float4{ record._worldOffset._x, record._worldOffset._y, record._worldOffset._z, BitUtil::bitsToFloat( record._instanceSlot ) };
+            bAnyInstanceSlot                 = bAnyInstanceSlot || record._instanceSlot != invalid_index::kUint32;
         }
         constexpr RHIBufferUsage kRowUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _markerRowBuffer.ensureCapacity( &device, sizeof( float4 ), rowCount, kRowUsage, true, false, nullptr ) == false )
@@ -225,10 +230,11 @@ namespace sw
             return;
         }
         _markerRowBuffer.upload( &device, _listMarkerRowScratch.data(), rowCount * static_cast<uint32>( sizeof( float4 ) ) );
-        _markerCount = markerCount;
+        _markerCount           = markerCount;
+        _bMarkerReadsInstances = bAnyInstanceSlot;
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso )
+    void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv )
     {
         if ( _markerCount == 0 )
             return;
@@ -243,13 +249,22 @@ namespace sw
             SW_LOG_ERROR_ONCE( "The canvas quad buffer has no UAV for the marker projection - GPU-projected markers are not drawn" );
             return;
         }
+        // 인스턴스 칸을 읽는 마커가 있으면 GPUScene 인스턴스 버퍼(컬링 · 인스턴스 애니메이션이 이미 끝났다)를 읽는다. 읽을 버퍼가 없으면 칸을 해석할 수 없으므로 멈춘다.
+        if ( _bMarkerReadsInstances && ( instanceBuffer == 0 || instanceSrv == kInvalidDescriptorIndex ) )
+        {
+            SW_LOG_ERROR_ONCE( "GPU-projected markers reference GPUScene instances but the instance buffer is not available - the markers are not placed" );
+            return;
+        }
         using Internal = CanvasRendererInternal;
         SW_PROFILE_SCOPE( "RT.Canvas.MarkerProject" );
         // 앵커 원소는 이 버퍼의 맨 앞이다. 컴퓨트가 쓰고 나면 캔버스 그리기가 읽기로 본다(프로브 갱신과 같은 상태 전환).
         cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::UnorderedAccess );
         cmd.setComputePipelineState( pso );
-        // g_MarkerRows(t0) / g_MarkerQuadsRW(u0). canvasmarker.hlsl 레지스터와 1:1 이다.
+        // g_MarkerRows(t0) / g_MarkerInstances(t1) / g_MarkerQuadsRW(u0). canvasmarker.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
+        if ( _bMarkerReadsInstances )
+            cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
+        cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSrv : placeholderSrv, 1 );
         cmd.bindComputeUav( _quadBuffer._uav, 0 );
         cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::ShaderResource );

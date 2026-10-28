@@ -173,12 +173,15 @@ namespace sw
      */
     struct CanvasMarkerRecord
     {
-        float3  _worldPosition{};           ///< 마커의 월드 기준점입니다(주 씬 컴포넌트 위치 + 월드 오프셋).
-        float32 _maxDistance{ 0.0f };       ///< 이보다 멀면 숨깁니다(0 이면 제한 없음).
-        float2  _screenOffset{};            ///< 투영한 점에 더하는 UI 단위 오프셋입니다.
-        float32 _referenceDistance{ 0.0f }; ///< 0 보다 크면 거리 배율(`_referenceDistance / 거리`, 뷰의 최소 · 최대로 자른다)을 씁니다.
-        uint32  _flags{ 0 };                ///< `CanvasMarkerFlag` 비트입니다.
-        uint32  _bActive{ 0 };              ///< 1 이면 컴퓨트가 이 앵커를 씁니다.
+        float3  _worldPosition{};                          ///< 마커의 월드 기준점입니다(주 씬 컴포넌트 위치 + 월드 오프셋).
+        float32 _maxDistance{ 0.0f };                      ///< 이보다 멀면 숨깁니다(0 이면 제한 없음).
+        float2  _screenOffset{};                           ///< 투영한 점에 더하는 UI 단위 오프셋입니다.
+        float32 _referenceDistance{ 0.0f };                ///< 0 보다 크면 거리 배율(`_referenceDistance / 거리`, 뷰의 최소 · 최대로 자른다)을 씁니다.
+        uint32  _flags{ 0 };                               ///< `CanvasMarkerFlag` 비트입니다.
+        uint32  _bActive{ 0 };                             ///< 1 이면 컴퓨트가 이 앵커를 씁니다.
+        float3  _worldOffset{};                            ///< 주 씬 컴포넌트 위치에서 기준점까지의 월드 오프셋입니다. 인스턴스 칸이 있으면 컴퓨트가 인스턴스 변환의 위치에 이것을 더합니다.
+        uint32  _primitiveIndex{ invalid_index::kUint32 }; ///< 게임 스레드가 적은 마커 오브젝트의 렌더 프리미티브 번호(`PrimitiveRegistry`)입니다. 메시가 주 씬 컴포넌트일 때만 있습니다.
+        uint32  _instanceSlot{ invalid_index::kUint32 };   ///< 패킷을 채울 때 빌더가 푼 GPUScene 인스턴스 칸입니다(`GPUSceneBuilder::findOpaqueInstanceSlot`). 없으면 `_worldPosition` 을 씁니다.
     };
 
     /** @brief 마커 투영이 한 프레임에 쓰는 공용 값입니다(게임 카메라의 뷰 · 투영과 UI 뷰포트). */

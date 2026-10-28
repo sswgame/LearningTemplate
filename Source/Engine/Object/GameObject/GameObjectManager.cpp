@@ -184,6 +184,13 @@ namespace sw
         if ( pSystem == nullptr || findFrameSystem( key ) != nullptr )
             return false;
         // 붙인 순서가 실행 순서다 — 이미 붙은 시스템이 이번 프레임의 값을 보아야 하는 종류를 새 시스템이 쓰면, 쓰는 쪽이 읽는 쪽 뒤에 서게 되므로 붙이지 않는다.
+        // 워커에서 돌 시스템은 오브젝트 · 컴포넌트를 만들거나 지울 수 없다(생성 · 파괴는 게임 스레드 전용이다) — 구조를 쓰는 시스템이 레인 안전을 선언하면 모순이라 붙이지 않는다.
+        const SceneFrameAccess newAccess = pSystem->getFrameAccess();
+        if ( newAccess._bLaneSafe && newAccess._writes.contains( SceneDataKind::Structure ) )
+        {
+            SW_LOG_ERROR_ID( "FrameSystem.LaneStructure", "Frame system '%#' is rejected: it declares itself lane-safe (worker thread) but writes Structure", key.c_str() );
+            return false;
+        }
         const SceneDataKindSet newWrites = pSystem->getFrameAccess()._writes;
         for ( const FrameSystemEntry& entry : _listFrameSystem )
         {

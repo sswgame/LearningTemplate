@@ -72,6 +72,7 @@ namespace sw
         access._writes        = { SceneDataKind::AnimatorState, SceneDataKind::Transform };
         access._reads         = { SceneDataKind::AnimatorState, SceneDataKind::Transform };
         access._readsPrevious = { SceneDataKind::Structure };
+        // 감사(레인 불안전): 세션이 애니메이터 · 트랜스폼 계층을 직접 쓰고 알림(게임 코드 델리게이트)을 부른다 — 계층 쓰기는 게임 스레드 전용이라 게임 스레드에 둔다.
         return access;
     }
 
