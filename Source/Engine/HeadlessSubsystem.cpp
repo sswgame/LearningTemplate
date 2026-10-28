@@ -36,6 +36,7 @@
 #include "Engine/Resource/Cook/PackConfig.h"
 #include "Engine/Resource/Cook/PackCooker.h"
 #include "Engine/Resource/Pack/PackPatchBuilder.h"
+#include "Engine/Resource/Pack/PackPatchTrustSource.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
@@ -191,6 +192,23 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_BASE, params._previousRecordPath );
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, params._newBuild );
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_DIR, params._outputDirectory );
+                // 서명 — 개인 키는 저장소 밖 파일(`-patch-sign-key`)에서만 읽는다. 키를 줬는데 읽지 못하거나 제공자 칸이 비었으면 서명 없는 패치로 대신 만들지 않고 멈춘다.
+                string signKeyPath;
+                (void)commandLine.getArgument( CommandLineArgument::PATCH_SIGN_KEY, signKeyPath );
+                if ( signKeyPath.empty() == false )
+                {
+                    params._signer._pProvider = PackPatchTrustSource::findProvider();
+                    if ( params._signer._pProvider == nullptr )
+                    {
+                        SW_LOG_ERROR( "-patch-sign-key was given but the crypto provider slot is empty (GameFramework is not loaded) - no patch is written" );
+                        return false;
+                    }
+                    if ( FileUtil::readTextFile( signKeyPath, params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
+                    {
+                        SW_LOG_ERROR( "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath );
+                        return false;
+                    }
+                }
                 PackConfig   packConfig;
                 const string packConfigPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )

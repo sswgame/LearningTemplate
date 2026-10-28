@@ -15,6 +15,7 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/Pack/PackPatchTrustSource.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -98,6 +99,18 @@ namespace sw
     {
         if ( _pPackManager == nullptr )
             return false;
+
+        // 패치 목록 서명 — 엔진 설정에 공개 키가 있으면 마운트 전에 신뢰 설정을 건다(키가 있는데 제공자 칸이 비었거나 키가 틀리면 기동을 멈춘다. 서명 없이 패치를 올리지 않는다).
+        // 설정이 없는 채널(스팀)은 서명을 보지 않는다.
+        if ( const EngineConfig* pEngineConfig = engine::findSubsystem<EngineConfig>() )
+        {
+            PackPatchTrust trust;
+            const auto     trustResult = PackPatchTrustSource::resolve( *pEngineConfig, trust );
+            if ( trustResult == PackPatchTrustResult::Invalid )
+                return false;
+            if ( trustResult == PackPatchTrustResult::Ready && _pPackManager->setPatchTrust( trust ) == false )
+                return false;
+        }
 
         // 팩 폴더는 **실행 파일 기준**으로 찾는다. 작업 디렉터리 기준 상대 경로("Bin/Packs")면 Engine 을 거치지 않고
         // AssetManager 만 직접 세우는 쪽(테스트 · 툴)이 아무것도 마운트하지 못하고, Shipping 은 느슨한 Resource/ 가

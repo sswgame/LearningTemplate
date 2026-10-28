@@ -8,5 +8,7 @@
     "_maxFrameDeltaTime": 0.1,
     "_fixedDeltaTime": 0.016666668,
     "_maxFixedStepPerFrame": 6,
-    "_listResourcePriority": [ "game", "common", "engine", "editor" ]
+    "_listResourcePriority": [ "game", "common", "engine", "editor" ],
+    "_patchTrustPublicKeyXHex": "",
+    "_patchTrustPublicKeyYHex": ""
 }

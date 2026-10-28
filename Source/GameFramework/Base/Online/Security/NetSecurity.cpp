@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
+#include "Engine/Resource/Pack/PackPatchTrustSource.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
@@ -30,6 +31,18 @@ namespace sw
                 return false;
             }
         };
+
+        /**
+         * @brief GameFramework 가 올라와 있는 동안 패치 서명 신뢰 설정의 제공자 함수 칸(`PackPatchTrustSource`)을 채웁니다. 모듈 이미지가 올라올 때(정적 초기화)
+         *        채우고 내려갈 때 자기 함수만 비운다 - Engine 은 OpenSSL 을 링크하지 않으므로 칸으로만 제공자를 받는다.
+         */
+        struct PackPatchProviderRegistrar
+        {
+            PackPatchProviderRegistrar() { PackPatchTrustSource::setProviderGetter( &NetSecurity::getProvider ); }
+            ~PackPatchProviderRegistrar() { PackPatchTrustSource::clearProviderGetter( &NetSecurity::getProvider ); }
+        };
+
+        const PackPatchProviderRegistrar s_packPatchProviderRegistrar;
     } // namespace
 } // namespace sw
 
