@@ -19,8 +19,8 @@
       "animation_shell_distance": 0.1
     },
     {
-      "name": "WildWest_PlaceholderHorse",
-      "include_patterns": ["*/wildwest/models_raw/horse_placeholder*"],
+      "name": "WildWest_Horse",
+      "include_patterns": ["*/wildwest/models_raw/horse.*"],
       "animation_codec": "acl",
       "animation_sample_rate": 30,
       "animation_precision": 0.0001,

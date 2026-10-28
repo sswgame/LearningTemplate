@@ -19,7 +19,6 @@
 | `GenerateThirdPartyNotices.py` | 서드파티 라이선스 고지 — 매니페스트(`vcpkg.json`)가 끌어오는 포트의 `share/<포트>/copyright` 와 저장소에 원문 그대로 둔 코드의 `ThirdParty/<이름>/LICENSE.md` 를 모은다(빌드 시점, `ThirdPartyNotices` 타깃) | `build/*/Bin/THIRD_PARTY_NOTICES.txt` |
 | `GenerateEditorIcons.py` | 에디터 아이콘 폰트와 글리프 상수 헤더 — 그림은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckEditorIcons`) | `Resource/editor/fonts/sweditoricons.ttf` · `Source/Editor/Common/GUI/EditorIconGlyphs.h` |
 | `GenerateReflectionAnnotationKeys.py` | 편집기(clangd)가 `REFLECT` · `PROPERTY` · `FUNCTION` · `ENUM` 인자 키를 완성하게 하는 선언 헤더 — 키는 `AnnotationMeta.txt`, 단위는 `ReflectUnits.h`, 내용은 `Scripts/common/ReflectionAnnotationKeys.py` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckReflectionAnnotationKeys`) | `Source/Engine/Reflection/ReflectionAnnotationKeys.h` |
-| `GeneratePlaceholderHorse.py` | WildWest 승마의 자리 표시 말 — 상자 스킨드 메시 · 뼈 아홉(기수 소켓 `Saddle`) · 걸음새 클립 넷 glTF (손으로 돌린다, 결과를 커밋한다. 진짜 말 모델이 오면 지운다) | `Resource/game/wildwest/models_raw/horse_placeholder.gltf` |
 | `GenerateShapingTestFont.py` | 복합 문자 셰이핑 테스트용 작은 글꼴 — 아랍어 바(ب)·알리프의 연결형 모양을 GSUB `init` · `medi` · `fina` 로 갖고 글리프마다 폭이 달라 셰이퍼가 고른 모양을 번호와 전진 폭으로 안다. 내용은 `Scripts/common/ShapingTestFont.py`, 표준 라이브러리만 쓴다 (손으로 돌린다, 결과를 커밋한다 · 다르면 `ShapingTestFontTest`) | `Test/EngineTest/Text/Fonts/swshapingtest.ttf` |
 | `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 네 칸 테스트 텍스처 · 1 채널 R8 마스크 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/test/quadrants.*` · `Resource/engine/textures/test/mask_r8.dds` · `Resource/engine/textures/missing.dds` |
 

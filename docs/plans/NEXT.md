@@ -50,7 +50,7 @@
 | 4. 야간 Linux Load 실패 | 4d3249e 야간은 `availableExtCount` 컴파일 오류로 졌고 01e3e4e06 이 고쳤다. 그 전 실행의 connect × Mid `solo:2x1` 거절은 `parseCompactMode` 가 이유를 돌려주게 했으니 다음 야간 문구로 원인을 본다 | `Candidates-*.md` |
 | 5. 샤드 비용표 실측 | `py -3 -m Scripts test-costs` 가 준비됐다 — `ctest -L hostgpu` 한 바퀴 뒤 `--apply` 로 `Test/TestPolicy.json` 을 고치고 샤드 겹침이 줄었는지 본다 | [AutomationSplit](AutomationSplit.md) 7절 |
 | 6. 선호 백엔드 목록 케이스 | 이미 `SW_TEST_CASE_PER_PARAMETER` 안에 있다. 남은 일반 케이스 7 개는 백엔드끼리 견주거나 고정한 것이라 취지 밖 | — |
-| 7. 사용자 몫 | 말 모델(WildWestHorseMount W3): BlendSwap "Horse Rigged All Gaits"(CC0 표기)를 `Resource/game/wildwest/models_raw/` 에 넣으면 `credits.md` · `ModelImportConfig.json` 규칙으로 가져온다. Steam/Epic SDK · H-3 운영 문서는 보류. 컴파일 셰이더 git 보관은 유지로 확정(2026-10-28, `docs/decisions/5-12_FeatureQueue.md`) | [WildWestHorseMount](WildWestHorseMount.md) |
+| 7. 사용자 몫 | Steam/Epic SDK · H-3 운영 문서는 보류. 컴파일 셰이더 git 보관은 유지로 확정(2026-10-28, `docs/decisions/5-12_FeatureQueue.md`). 말 모델은 Quaternius CC0 로 들어갔다(화면 확인만 남음) | [WildWestHorseMount](WildWestHorseMount.md) |
 | 8. 통합 에이전트 모델 | `.claude/agents/integrator.md` 의 `model: opus` 고정을 [에이전트와 토큰](../12_Agents.md) 1절 표에 맞춰 확정한다(아직 확인 안 함) | [12 에이전트와 토큰](../12_Agents.md) |
 | 9. 작업 구조 문서 | 한 에이전트 단계별 진행(11 머리에 반영)에 `/integrate` · `/worker-brief` 스킬과 11 의 "작업자" 절을 맞춘다 | [11 작업 방식](../11_Workflow.md) |
 

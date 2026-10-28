@@ -1,20 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  WildWest 말의 걸음새 그래프 — MountMovementComponent 가 애니메이터 Float 파라미터 Gait(0 Idle · 1 Walk · 2 Trot · 3 Canter · 4 Gallop)를 매 프레임 쓰고,
-  블렌드 스페이스 하나가 그 값으로 걸음새 클립(models/horse_placeholder/clips)을 섞는다. 걸음새가 바뀔 때 두 클립이 값 사이에서 섞여 이어진다.
-  표본 범위(1 ~ 4)를 벗어난 값은 가장자리 표본으로 잘린다 — 자리 표시 말에는 서 있는 클립(Idle)이 없어 Gait 0 에서도 Walk 가 돈다.
-  진짜 말 모델(WildWestHorseMount W3)에 Idle 클립이 들어오면 <sample clip="Idle" x="0" /> 한 줄을 더한다.
-  뼈 이름 · 클립 이름(Walk · Trot · Canter · Gallop)은 Scripts/generate/GeneratePlaceholderHorse.py 와 같다.
+  WildWest 말의 걸음새 그래프 — MountMovementComponent 가 애니메이터 Float 파라미터 Gait(0 Idle · 1 Walk · 4 Run)를 매 프레임 쓰고,
+  블렌드 스페이스 하나가 그 값으로 걸음새 클립(models/horse/clips)을 섞는다. 걸음새가 바뀔 때 두 클립이 값 사이에서 섞여 이어진다.
+  표본 범위(0 ~ 4)를 벗어난 값은 가장자리 표본으로 잘린다. 말 모델(Quaternius Farm Animals, CC0)에는 Trot · Canter 가 없어
+  Gait 2 · 3 은 Walk 와 Run 사이에서 섞인다. 클립 이름은 임포트가 붙인 접두어(armature_)를 가진다.
 -->
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Gait" x="40.0" y="40.0" loop="true">
 			<blend_space x="Gait">
 				<samples>
-					<sample clip="Walk" x="1" />
-					<sample clip="Trot" x="2" />
-					<sample clip="Canter" x="3" />
-					<sample clip="Gallop" x="4" />
+					<sample clip="armature_idle" x="0" />
+					<sample clip="armature_walk" x="1" />
+					<sample clip="armature_run" x="4" />
 				</samples>
 			</blend_space>
 		</node>
