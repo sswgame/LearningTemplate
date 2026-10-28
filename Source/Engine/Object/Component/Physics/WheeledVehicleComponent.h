@@ -32,7 +32,7 @@ namespace sw
      *        차축 앞뒤(`_frontAxle` · `_rearAxle`) · 반 폭(`_halfTrack`) · 붙는 높이(`_wheelMountHeight`)로 정합니다(차체 기준, 앞 +Z). 앞바퀴만 조향하고
      *        핸드브레이크는 뒷바퀴에 겁니다.
      * @details 차체 바디가 생긴 뒤 첫 물리 프레임에 차를 만들고, 바디가 다시 지어지면 차도 다시 짓습니다. 운전 입력(`setDriverInput`)은 어느 틱에서든
-     *          불러도 되고(잠금 아래 적어 둔다) 물리 프레임 시작에 백엔드로 넘어갑니다. 2D 물리에는 없습니다. 바퀴 메시를 바퀴 자세로 옮기는 것은 아직 없다.
+     *          불러도 되고(잠금 아래 적어 둔다) 물리 프레임 시작에 백엔드로 넘어갑니다. 2D 물리에는 없습니다. 바퀴 메시를 바퀴 자세로 옮기는 쪽은 `getVehicleWheelPose` 를 읽어 직접 옮긴다.
      */
     REFLECT( Category = "Physics", DisplayName = "Wheeled Vehicle", Tooltip = "Four wheels, suspension, engine and gearbox on this object's dynamic rigid body", Meta = "Icon=Vehicle" )
     class SW_API WheeledVehicleComponent : public PhysicsComponent
@@ -47,6 +47,12 @@ namespace sw
         void setDriverInput( float32 forward, float32 right, float32 brake, float32 handBrake );
         /** @brief 마지막 물리 프레임의 상태입니다(차가 없으면 0). */
         PhysicsVehicleState getVehicleState() const;
+        /**
+         * @brief 바퀴의 차체 기준 자세를 구합니다(0 앞 왼쪽 · 1 앞 오른쪽 · 2 뒤 왼쪽 · 3 뒤 오른쪽 — `makeVehicleDesc` 의 순서). 마지막 물리 프레임의 값입니다.
+         * @details 바퀴 메시를 바퀴 자세로 옮기는 쪽(차 모델의 바퀴 자식 오브젝트)이 읽는다. 차가 없거나 번호가 범위 밖이면 false 이고 @p outPose 는 그대로다.
+         *          언리얼 Chaos Vehicle 의 `GetWheelState` · 유니티 `WheelCollider.GetWorldPose` 가 같은 자리다.
+         */
+        [[nodiscard]] bool getVehicleWheelPose( uint32 wheelIndex, PhysicsWheelPose& outPose ) const;
         /** @brief 차가 만들어졌는지입니다. */
         bool isVehicleCreated() const { return _vehicle.isValid(); }
         /** @brief 이 컴포넌트의 수치로 만든 바퀴 차 서술자입니다(테스트 · 도구가 본다). */

@@ -39,4 +39,4 @@
 - SD 메카: 파이썬으로 부품 메시를 만들어 부품마다 뼈 하나에 붙이고 KayKit 사람형 뼈대 이름에 맞춰 KayKit 애니메이션을 쓰는 생성기 + MechArena 테스트 게임(`GF_MechArena` 키트는 있다). 건담 고유 요소(V 안테나 · 얼굴 마스크 · 배색)는 피한다.
 - 탈것: 말(`MountMovementComponent` · `WesternHorseMountComponent`) · 차(`ArcadeVehicleComponent`)는 기본 도형으로만 시험했다. CC0 말 메시 · 걸음새 애니메이션과 차 모델을 찾으면 서부극 · 카트 테스트 게임에 붙인다.
 - 카트 키트: `Kits/Genre/Casual/KartRacing` 플레이어 경로를 `ArcadeVehicleComponent::toVehicleInput` 으로 바꾸는 일은 카트 테스트 게임이 생길 때.
-함정: 물리 차(`WheeledVehicleComponent`)는 바퀴 메시를 바퀴 자세로 옮기지 않는다. 차 모델이 생기면 바퀴 자식 이름 표와 `getVehicleWheelPose` 창구를 더한다.
+함정: 물리 차(`WheeledVehicleComponent`)는 바퀴 메시를 스스로 옮기지 않는다. 창구 `getVehicleWheelPose`(차체 기준 바퀴 자세 — 서스펜션 · 조향 · 굴러간 각)는 있고, 차 모델이 생기면 바퀴 자식 이름 표와 그 자세를 자식에 쓰는 틱을 더한다.

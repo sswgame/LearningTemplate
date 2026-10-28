@@ -51,6 +51,14 @@ namespace sw
         return _state;
     }
 
+    bool WheeledVehicleComponent::getVehicleWheelPose( uint32 wheelIndex, PhysicsWheelPose& outPose ) const
+    {
+        if ( wheelIndex >= _state._wheelCount )
+            return false;
+        outPose = _state._arrWheelPose[wheelIndex];
+        return true;
+    }
+
     PhysicsWheeledVehicleDesc WheeledVehicleComponent::makeVehicleDesc() const
     {
         PhysicsWheeledVehicleDesc desc;

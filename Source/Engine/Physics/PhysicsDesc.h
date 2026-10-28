@@ -231,13 +231,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 바퀴 하나의 차체 기준 자세입니다(서스펜션 압축 · 조향 · 굴러간 각이 든 바퀴 메시의 로컬 변환). */
+    struct PhysicsWheelPose
+    {
+        float3     _position{};
+        quaternion _rotation{};
+    };
+
+    /** @brief 바퀴 자세를 담는 최대 바퀴 수입니다(`WheeledVehicleComponent` 는 넷). 상태를 매 프레임 복사하므로 힙 없는 고정 배열이다. */
+    inline constexpr uint32 kPhysicsMaxWheelPoseCount = 4;
+
     /** @brief 바퀴 차의 지금 상태입니다. */
     struct PhysicsVehicleState
     {
-        float32 _forwardSpeed{ 0.0f }; ///< 차체 앞 방향 속도(m/s)
-        float32 _engineRpm{ 0.0f };
-        int32   _gear{ 0 }; ///< 0 은 중립이고, 음수는 후진이다.
-        uint32  _groundedWheelCount{ 0 };
+        uint32           _wheelCount{ 0 };                           ///< `_arrWheelPose` 에서 채워진 바퀴 수(바퀴 서술자 순서)
+        PhysicsWheelPose _arrWheelPose[kPhysicsMaxWheelPoseCount]{}; ///< 차체 기준 바퀴 자세. 서스펜션이 압축하면 아래로 내려가고 조향 · 굴러간 각이 회전에 들어간다
+        float32          _forwardSpeed{ 0.0f };                      ///< 차체 앞 방향 속도(m/s)
+        float32          _engineRpm{ 0.0f };
+        int32            _gear{ 0 }; ///< 0 은 중립이고, 음수는 후진이다.
+        uint32           _groundedWheelCount{ 0 };
     };
 } // namespace sw
 

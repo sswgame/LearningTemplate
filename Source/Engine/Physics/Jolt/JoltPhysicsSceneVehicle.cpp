@@ -165,9 +165,17 @@ namespace sw
         const JPH::WheeledVehicleController* pController = static_cast<const JPH::WheeledVehicleController*>( pRecord->_pConstraint->GetController() );
         outState._engineRpm                              = pController->GetEngine().GetCurrentRPM();
         outState._gear                                   = pController->GetTransmission().GetCurrentGear();
-        for ( const JPH::Wheel* pWheel : pRecord->_pConstraint->GetWheels() )
+        const JPH::Array<JPH::Wheel*>& listWheel         = pRecord->_pConstraint->GetWheels();
+        for ( uint32 wheelIndex = 0; wheelIndex < listWheel.size(); ++wheelIndex )
         {
-            outState._groundedWheelCount += pWheel->HasContact() ? 1u : 0u;
+            outState._groundedWheelCount += listWheel[wheelIndex]->HasContact() ? 1u : 0u;
+            if ( wheelIndex >= kPhysicsMaxWheelPoseCount )
+                continue;
+            // 바퀴 로컬 변환은 차체 기준이다. 바퀴 축은 X(바퀴 오른쪽), 위는 Y 로 만들었다(`createWheeledVehicle` 의 `mWheelUp` · `mWheelForward`).
+            const JPH::Mat44 wheelTransform              = pRecord->_pConstraint->GetWheelLocalTransform( wheelIndex, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY() );
+            outState._arrWheelPose[wheelIndex]._position = JoltUtil::toEngine( wheelTransform.GetTranslation() );
+            outState._arrWheelPose[wheelIndex]._rotation = JoltUtil::toEngine( wheelTransform.GetQuaternion() );
+            outState._wheelCount                         = wheelIndex + 1;
         }
         return true;
     }

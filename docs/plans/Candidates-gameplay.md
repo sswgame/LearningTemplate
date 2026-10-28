@@ -9,21 +9,12 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 | 절 | 한 줄 설명 | 만들 것 |
 |---|---|---|
-| AnimationLodAndCrowdChecks | 스킨드 LOD 규칙을 건 모델 | 데이터 |
 | CharacterAppearanceScreenChecks | 병합 부품이 든 외형 차림 | 데이터 · 프리팹 |
 | CameraRendererVisualChecks | 가려져 쉰 뷰 수 탐침 | 탐침 · 시나리오 |
 | PairedAnimationScreenChecks | 페어드 애니메이션 에디터 창 | 에디터 시나리오 |
 | RigEditingScreenChecks | 리그 디버그 창 저장 · 기즈모 | 에디터 시나리오 |
 
 ## 데이터
-
-### AnimationLodAndCrowdChecks
-제목: 스킨드 LOD 데이터
-왜 필요한가: 스킨드 메시가 LOD 를 받고 고른 메시 단계가 본 LOD 단계를 정하는 코드는 들어갔는데, LOD 규칙(simplify)을 건 스킨드 모델이 데이터에 없다.
-착수 조건: 없음.
-규칙은 걸었다(`Config/Editor/ModelImportConfig.json` 의 `KayKit_SkeletonMinionLOD`, 삼각형 50 % · 25 %).
-남은 첫 일: `App --import-models` 로 임포트해 산출물 `.mesh` 를 커밋한다(쿠킹은 이 세션에서 하지 않았다).
-함정: 베이크한 외형 메시(`createBakedMesh`)와 병합 메시(`mergeMeshes`)는 LOD 를 갖지 않는다 — 몸에 LOD 를 쓰려면 병합을 끄고 베이크하지 않는 차림이어야 한다.
 
 ### CharacterAppearanceScreenChecks
 제목: 캐릭터 외형의 병합 부품 데이터

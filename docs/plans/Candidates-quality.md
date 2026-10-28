@@ -9,7 +9,6 @@
 | 절 | 한 줄 설명 | 착수 조건 유형 |
 |---|---|---|
 | LinuxManualChecks | X11 입력 자동 테스트 | XTest 테스트를 계획 문서로 올릴 때 |
-| ImageIntakeChecks | 노멀 맵 열 장 다시 굽기 | 바로 가능 |
 | LogGateRemainders | 종료 때 `Task fencing timeout` 원인 | 다시 보일 때 |
 
 ## 테스트 · 검증
@@ -25,11 +24,3 @@
 왜 필요한가: 시나리오 · 모든 테스트 케이스는 선언하지 않은 Warning · Error 로 진다. 표식 없는 줄은 코드로 손봤고 상시 `ctest-nogpu` 전체가 확인한다. 돌려 보기 전이라 Release · Shipping 이나 시간에 기대는 배경 스레드 줄이 남았을 수 있고, 지는 케이스는 원인을 고치거나 그 호출에 범위(`SW_TEST_DEFENSIVE_SCOPE`)를 씌운다(판정기를 좁히지 않는다).
 착수 조건: 에디터를 켠 짧은 실행(`-gv_profileFrames=90`)이 다른 GPU 작업과 겹쳐 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 를 다시 낼 때(36 회 중 3 회, 단독 0 회).
 남은 첫 일: 5 초 넘게 도는 에디터 배경 작업이 무엇인지 가린다. 로그의 첫 미완료 태스크 이름(`ModuleHost::drainRenderWorkers` 가 찍는다)과 `py -3 -m Scripts stacks <pid>` 의 워커 스택을 본다.
-
-## 관찰
-
-### ImageIntakeChecks
-제목: 노멀 맵 열 장 다시 굽기
-왜 필요한가: 셰이더(`toon.hlsl`)는 glTF 규약(초록이 위)인데 `textures_raw/surfaces/*_normal.jpg` 열 장(Poly Haven `nor_gl`)을 `invert_green: true` 로 구워 DDS 초록이 원본과 반대였다. 설정은 고쳤고 `EditorTexturePipelineTest.RepositoryNormalMapsKeepTheEngineGreenConvention` 이 지킨다. 구운 열 장과 `import.stamp` 는 아직 옛 규칙의 것이다.
-착수 조건: 없음(이 열 장을 쓰는 머티리얼은 아직 없다).
-남은 첫 일: 열 장을 다시 구워 커밋하고 이 절을 지운다.
