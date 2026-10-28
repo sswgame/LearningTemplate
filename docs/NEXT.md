@@ -2,58 +2,54 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: Ninja-Debug · Ninja-Release(모든 게임 12 · 모듈 76) 모두 오류 0 이다. 용어 · 약어 · 폴더 · 다중 상속 정리의 큰 묶음은 끝났다. 다음은 3 절의 남은 감사 항목(평평한 대형 폴더 · 남은 모호한 폴더 · 파일 이름)을 4 절의 규칙대로 처리하고, 그 뒤 A3(낮은 층 파일 읽기) → B(Engine 링크 분할) → C(키트에 에디터 확장 모으기)다.
+> 결론: 구조 개편 A3 · B · C 와 전수 감사 항목, 새 테스트 틀 · 시나리오까지 끝났고 Ninja-Debug · Ninja-Release 오류 0, 단위 테스트 통과다. **이 체크아웃은 App 이 기동하지 않는다** — 임포트 · 쿠킹 산출물(텍스처 · 셰이더 바이너리)과 `missing` · `loading` 텍스처의 생성기가 지워져 있어 시나리오를 돌릴 수 없다(6 절). 다음은 그 콘텐츠 경로를 다시 세우고 시나리오를 실제로 돌리는 것이다.
 
 ## 1. 지금 상태 (2026-10-29)
 
-- **빌드**: `cmake --build --preset Ninja-Debug`(활성 게임 Empty, 모듈 11) · `Ninja-Release`(전체) 오류 0. 셰이더 재쿠킹 · 실행 확인은 하지 않았다(이름이 바뀐 셰이더가 있다 — `App --cook-shaders`).
-- **층 게이트** `py -3 -m Scripts engine-layers`(커밋 훅): 표는 `Scripts/lint/EngineLayers.py` 의 `kLayer`, 남은 역방향 35 줄은 `Scripts/lint/rules/EngineLayersBaseline.txt`(줄이기만).
-- **도구**: `move-source`(이동 + 모든 참조 · include 순서 · clang-format), `rename-symbol`(`--regex` 로 이름 일부), `acronym-case`(바깥 이름 목록 `Scripts/dev/AcronymExternalNames.txt`), `engine-layers`, 구조 감사 `py -3 Scripts/dev/StructureAudit.py`. 이름 도구는 규칙 문서(`docs/agents` · `04_CodingGuidelines`)를 고치지 않는다.
-- **조심할 것**: Windows git 은 대소문자만 다른 이름 바꾸기를 못 본다(`git rm --cached` + `git add`). `git reset --hard` 전에는 미커밋 변경을 패치로 보관한다(이 세션에서 사용자의 `NEXT.md` 편집을 한 번 잃었다). 단독 낱말(`Image` · `Resource`)을 일괄 치환하지 않는다 — 바깥 API(DirectX::Image) · 다른 뜻 폴더(`Renderer/Frame/Resource`)를 깬다.
+- **빌드**: `Ninja-Debug`(활성 게임 Empty) · `Ninja-Release`(전체) 오류 0. **테스트**: `ctest -L nogpu`(CoreTest 12 · EngineTest 4 케이스) 통과. 시나리오(`ctest -L hostgpu`)는 돌리지 못했다(6 절).
+- **엔진 층은 빌드 형식이다(B)**: 층 표 `Scripts/generate/rules/EngineLayers.toml` → configure 가 파일마다 층을 정하고(`Scripts/generate/EngineLayers.py`), Engine 의 .cpp 는 층마다 OBJECT 부분 `EngineLayer<N>`(오브젝트는 Engine DLL 안)이 짓는다. 부분 N 의 include 자리 맨 앞에 위 층 헤더마다 `#error` 껍데기가 있어 위 층 include(전이 포함)가 컴파일에서 멈춘다. 린트 게이트 `engine-layers` 와 기준선은 지웠다. 표에 없는 파일이 생기면 configure 가 멈춘다.
+- **Core 티어 표** `Scripts/generate/rules/CoreLayers.toml`, **에디터 층 표** `Scripts/generate/rules/EditorLayers.toml` — 폴더를 옮기면 세 표를 먼저 본다(`move-source` 는 표를 모른다).
+- **도구**: `move-source`(이동 + 참조 · include 순서 · clang-format — CMake 소스 목록 · 문서 · 표는 고치지 않는다, 옮긴 뒤 `git grep`), `rename-symbol`(`--regex` 로 이름 일부. 새 이름이 파일 이름과 같으면 충돌로 오인한다 — 그때는 그 파일만 `sed`), 구조 감사 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/StructureAudit.py`.
+- **조심할 것**: Windows git 은 대소문자만 다른 이름 바꾸기를 못 본다. 생성물도 같다 — 이름의 대소문자만 바뀐 생성 파일은 옛 철자로 남으므로(`EngineAbiStamp.gen.h`) 지우고 다시 짓는다. `py -3 -m Scripts format` 은 셰이더까지 훑는다 — 커밋에 상관없는 파일이 섞이지 않았는지 `git show --stat` 로 본다.
 
-## 2. 이번 세션에 정한 규칙
+## 2. 정한 규칙
 
 | 규칙 | 근거 |
 |---|---|
 | Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · AssetManager · FRenderResource |
 | Pack(`.pack`) · Watch(자동화 감시 값, Probe 는 라이트 · 리플렉션 프로브만) · Scene(씬 컨테이너, World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
-| Module 은 동적으로 올리는 코드 단위만. 렌더러 확장점은 `RenderExtension` · `Extension*`(`Renderer/Extension`), 모듈 로더는 `IModuleLoader` · `ModuleLoadStage` · `ModuleUnloadStage` | 언리얼 SceneViewExtension |
-| 모듈 문맥의 Image → Library(`ModuleLibraryUtil` · `DeferredLibraryUnloadQueue`). Image 는 그림 · 텍스처만 | |
-| 엔진 범위 셋: Core(`Engine/CoreServices`, 옛 Bootstrap) → Service → Startup. 게임의 팩 설정은 `GamePackConfig` | Bootstrap · Startup 이 같은 뜻이었다 |
-| 수명을 소유하면 Manager: `GameModuleManager` · `EditorModuleManager`, 라이브러리 `Source/ModuleManager`(모듈 일만, 핫 리로드는 `LiveReload/` 폴더째 Shipping 제외). 호스트 기능은 `HostService`(`Engine/HostServices.h`) | 언리얼 FModuleManager |
-| 기능 폴더가 자기 컴포넌트 · 씬 서비스를 든다. 씬은 기능을 모른다(`ISceneService::onSceneLoading` · `applyPreviewPolicy` · `drawDebug`) | 언리얼 UWorldSubsystem |
-| 다중 상속: 구현 상속 · 믹스인은 합성(`SubscriptionList` 멤버, 언로드 처리기 등록 + 구독, 콜백 하나짜리 인터페이스는 델리게이트), 서비스 인터페이스는 서브시스템을 상속(`IModuleLoader : ISubsystem`). 순수 인터페이스 여러 개 구현(ISP) · 바깥 API 요구는 허용 | |
-| 폴더: 한 기능의 하위는 하위 폴더(`Core/Log/Sink`, `RHI/DX/DX11`, `RHI/<백엔드>/Module`, `Automation/{Watch,Scenario,Runner}`). 프로그램은 `Source/Programs`, `Tools/` 는 내려받는 외부 도구만 | 언리얼 Source/Programs |
-| 약어는 대문자(`GPU` · `ID` · `VFX`), 첫 낱말은 소문자(`gpuTime`) | NamingCpp |
-| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` · 호스트 범위 · `DevConsoleHost`). 네트워크 끝점은 `NetEndpoint*`, 에디터 패널 진입점은 `IEditorPanelService`. `OnlineServiceHost`(한 프로세스의 서비스 묶음) · `WindowsServiceHost`(Windows 서비스 프로세스)는 같은 뜻이라 둔다. 온라인 키트의 서버 쪽 서비스는 `IOnlineServerService`(짝 `IOnlineClientService`) — `HostService` 와 겹치지 않게 | 같은 단어 한 뜻 |
-| Runtime = 모든 호스트에서 도는 것(키트 `Runtime/` — 언리얼 플러그인 모듈 형식 Runtime · ServerOnly) · 실행 중(편집 · 쿡 시점의 반대). 모듈 C-ABI 계약은 `Source/ModuleAPI`(옛 RuntimeAPI) | 언리얼 모듈 형식 |
-| Automation = 시나리오 자동 테스트(`Engine/Automation`). UI 의 시나리오 단계는 `UI/Scenario/UIScenarioSteps` — "UI Automation" 은 Windows 접근성 API(UIA)만 | 언리얼 Automation System |
-| 정적 함수만 있는 타입은 인자로 대상을 받는 상태 없는 라이브러리면 도메인 이름 그대로(`BinarySerializer` · `Ledger` · `EditorLayoutStore`). 고칠 것은 서브시스템 상태 위의 정적 파사드뿐 — 하나로 합쳤다(`EditorPlaySession` 이 서브시스템). 프로세스 전역 상태(Logger · Memory · 프로파일러)는 `ScopeOwned` · `atomic` 규칙이 맡는다 | 언리얼 FJsonSerializer · FPaths · UGameplayStatics |
-| 폴더 이름: `Engine/Foundation`(옛 Common, 우산 `Foundation.h`) · `UI/WidgetTree` · `Serialization/{Serializer,Diff}` · `Foundation/GameData` · `Panels/{DataTable,Dialogue}` · `Destruction/Fracture` | 내용으로 이름 |
+| Module 은 동적으로 올리는 코드 단위만. 렌더러 확장점은 `RenderExtension`, 모듈 로더는 `IModuleLoader` · `ModuleLoadStage` · `ModuleUnloadStage`. 모듈 문맥의 Image → Library | 언리얼 SceneViewExtension |
+| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` — 엔진 쪽 짝은 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 서버 서비스 `IOnlineServerService`(짝 `IOnlineClientService`) | 같은 단어 한 뜻 |
+| Runtime = 모든 호스트에서 도는 것(키트 `Runtime/`) · 실행 중. 모듈 C-ABI 계약은 `Source/ModuleAPI` | 언리얼 모듈 형식 Runtime · ServerOnly |
+| Automation = 시나리오 자동 테스트(`Engine/Automation`). UI 의 시나리오 단계는 `UI/Scenario/UIScenarioSteps` — "UI Automation" 은 Windows UIA 만 | 언리얼 Automation System |
+| 정적 함수만 있는 타입은 대상을 인자로 받는 상태 없는 라이브러리면 도메인 이름 그대로. 고칠 것은 서브시스템 상태 위의 정적 파사드뿐(`EditorPlaySession` 이 서브시스템) | 언리얼 FJsonSerializer · FPaths |
+| 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다: 팩 매니저(`AssetIO::bindPackManager`), 메시 무효화(`SW_MESH_INVALIDATION_HOOK`), 서브시스템 순서(위 층의 의존 칸) | 언리얼 FPlatformFileManager · 모듈 등록 |
+| 키트 하나의 에디터 확장은 그 키트 폴더의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 에는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인의 <X>Editor 모듈 |
+| 폴더 · 파일 이름은 내용으로: `Engine/FileSystem`(층 1 콘텐츠 파일 시스템) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/2D`(층 6, 언리얼 Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
+| 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(실행 파일 호스트 부품 — 언리얼 Launch), `*Info` 정적 사실 표(언리얼 FPixelFormatInfo), `Core/Container` 등 폴더 이름과 같은 접두어 묶음(언리얼 Containers 처럼 평평하게) | |
 
-## 3. 전수 감사 — 남은 것 (2026-10-29)
+## 3. 테스트 · 시나리오
 
-다시 재려면 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/StructureAudit.py`. 정적 전용 타입 목록(C 절)은 2 절 규칙으로 닫았다 — 참고용.
+형식과 쓰는 법은 `Test/README.md`. 요약: GPU 없이 되는 확인은 `Test/<실행 파일>/` 의 `SW_TEST_CASE`(링크하는 것마다 실행 파일 하나 — `sw_addTestExecutable`), 엔진이 돌아야 하는 확인은 `Content/**/automation/*.scenario.xml`(CTest 가 자동화 폴더 바로 아래 시나리오마다 `App -scenario` 를 올린다, `hostgpu`). `EngineTest` 의 `ScenarioFilesTest` 가 엔진 없이 시나리오 속성을 검사한다.
 
-1. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위) · `Editor/Common/GUI`(32) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `GameFramework/Base/Gameplay/Appearance`(21).
-2. **남은 모호한 폴더**: `Core/Common`(include 2,291 곳 — 가장 낮은 층이라 내용별로 나눌지 정한다) · `Editor/Common` · `GameFramework/Base`(키트 C 단계와 함께) · `GameFramework/Plugin/Editor/Base` · `Engine/Graphics/RHI/Support`(스테이징 · 전송 · 진단 묶음으로 나눌 후보).
-3. **모호한 파일 이름**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `GameInstance` · `ReflectionCore`. `FractureComponentBase` 는 추상 기반이라 둔다.
-4. **둔 것**: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일 — 언리얼도 접두어를 둔다), App 폴더(9 단위, 실행 파일 호스트 부품만 — 언리얼 Launch), `Resources/App.rc`(Windows 리소스 — 바깥 API 용어).
+## 4. 남은 일
 
-## 4. 처리 규칙 (3 절에 적용)
-
-- 평평한 폴더: 첫 낱말 묶음 4 개 이상이면 하위 폴더(`Destruction/Fracture/`). 타입 이름 접두어는 떼지 않는다.
-- 모호한 폴더: 무엇이 들었는지로 — 가장 낮은 층 공용 형식이면 `Foundation`, 아니면 내용별로 흩는다.
-- 파일 이름: 주 타입 이름과 같게. `*Data` · `*Info` 는 Def · Desc · Settings 등 NamingCpp 의 타입 접미사 표로.
-- `move-source` 는 CMake 소스 목록 · 문서 경로를 고치지 않는다 — 옮긴 뒤 `git grep` 으로 옛 경로를 찾는다. 현지화 출처(`Content/editor/localization`)는 린트가 다시 쓴다.
-- 단계마다 코드 → 린트 → 커밋, 묶음 끝에 Ninja-Debug · Ninja-Release 한 번.
-
-## 5. 그 다음
-
-| 단계 | 내용 |
+| 일 | 내용 |
 |---|---|
-| A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · CoreServices · Profiling → `AssetIO` · `AssetPaths` · `AssetID`(약 24 줄). 언리얼 `IPlatformFile` 처럼 낮은 층에 읽기 인터페이스, Asset 이 구현 등록. `Object → Animation/Sprite` · `Graphics → Physics`(MeshCache) · `Telemetry → UserSettings` · `CoreServices → RHIRenderResource` · `Reflection → Localization`. 목표: 기준선 0 |
-| B | 층을 따라 Engine 을 링크 단위로(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기가 모듈 하나 빼기로 |
-| C | 키트 폴더에 에디터 확장 모으기(`GameFramework/Plugin/Editor/<X>` → 키트 `Editor/`, `sw_addKit` 이 이미 `Editor/CMakeLists.txt` 를 부른다). 온라인 키트는 `Runtime/` · `Server/` 옆에 `Editor/` 를 둔다 |
-| 남은 처리기 인터페이스 | 프로토콜 인터페이스(`INetMessageHandler` · `IStreamHandler` · `IStreamEndpointListener`)는 규칙상 둔다. `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보 |
-| 그 밖 | 없는 스크립트를 부르는 곳(에셋 검증 `Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 셰이더 재쿠킹 · 실행 확인 |
+| 콘텐츠 경로 다시 세우기 | 6 절. 끝나면 `ctest -L hostgpu` 로 엔진 시나리오 셋(runner · debughud · sceneready)과 `rhiswap/swapbackends` 를 돌려 실패를 고친다 |
+| 테스트 늘리기 | 옛 `Test/`(3f70e665f^ 에 약 950 파일)를 새 틀로 옮길 만한 것 — 매크로 이름(`SW_TEST_CASE` · `SW_EXPECT_EQUAL`)이 같아 순수 함수 테스트는 거의 그대로 옮겨진다. 옛 하네스(`TestFramework/Harness`)에 기대는 것은 새 하네스를 정한 뒤 |
+| 게임 시나리오 | 옛 `Resource/game/<게임>/automation/*.scenario.xml`(27b17ee91^)을 오늘 이름(`watch` 속성, Watch 이름)으로 옮긴다 |
+| `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
+| 남은 처리기 인터페이스 | `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다) |
+| 그 밖 | 없는 스크립트를 부르는 곳(`Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 생성기 · CMake 파일 이름의 `Abi`(`Scripts/generate/EngineAbiStamp.py` · `cmake/Engine/EngineAbiStamp.cmake`) |
+
+## 5. 이번 세션의 근본 원인 (같은 결함이 남았을 곳)
+
+- 층 위반은 include 글자 검사로는 직접 include 만 보였다 → 빌드 형식(층 부분 + `#error` 껍데기)으로 바꿔 전이 include 까지 막는다. Core 는 아직 티어 표만 있고 껍데기가 없다 — 같은 방식을 Core 에 넣을 후보.
+- 실행기 없는 시나리오 검사가 엔진 서비스가 있어야 푸는 이름(입력 슬롯)을 "틀렸다" 로 냈다 → `AutomationStepDependency::InputSlot`. 검사 함수가 이름을 새로 묻게 되면 `findUnresolvedDependency` 에 더한다.
+
+## 6. App 이 기동하지 않는 까닭 (이 세션 이전부터)
+
+- `65225afc1` 이 Resource 의 임포트 · 쿠킹 산출물(텍스처 약 1,000 · 셰이더 바이너리 약 12,800 · 게임 모델 …)을 지웠고, `3edb95697` 이 그것을 만들던 스크립트(마젠타 체커 `missing.dds` 생성기 포함)를 지웠다.
+- 기동은 `engine/data/enginedefaultassets.xml` 의 `engine/textures/missing.dds` · `loading.dds` 가 있어야 선다(없으면 멈춘다 — 폴백 없음). 임포트(`App --import-textures`)와 쿠킹(`--cook-all`, CMake `CookAssets`)도 App 기동을 거치므로 깨끗한 체크아웃에서는 닭과 달걀이다. 두 텍스처는 `textures_raw` 에 원본도 없다.
+- 정할 것: 생성물을 저장소에 두는가(예전처럼), 아니면 원본(`textures_raw/missing.png` 등)을 두고 기동 전에 임포트하는 단계(엔진 기본 에셋 없이 도는 헤드리스 임포트)를 세우는가. 셰이더 바이너리는 이번 세션에 셰이더 · 파이프라인 이름이 바뀌어 옛 것을 되살려도 맞지 않는다 — 쿠킹을 다시 해야 한다.
