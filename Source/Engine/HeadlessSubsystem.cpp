@@ -32,7 +32,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationDocuments.h"
-#include "Engine/Module/ModuleTypesSubsystem.h"
+#include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
@@ -298,7 +298,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다. */
+            /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleLoadStage)라 게임 · 킷의 타입까지 든다. */
             [[nodiscard]] static bool runReflectionDocsTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
                 string reflectionDocsDir;
@@ -502,7 +502,7 @@ namespace sw
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const
     {
         // 2D 렌더 설정은 씬 쿠킹의 컴포넌트 검증(정렬 레이어 이름)이 읽는다.
-        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleTypesSubsystem::kSubsystemName, Render2DSettingsSubsystem::kSubsystemName,
+        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleLoadStageSubsystem::kSubsystemName, Render2DSettingsSubsystem::kSubsystemName,
                                                           SceneManager::kSubsystemName, ShaderCache::kSubsystemName };
         return kArrDependency;
     }

@@ -49,7 +49,7 @@ namespace sw
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
         /**
-         * @brief 모듈 이미지 창구(`HostSubsystemNames::kModuleImageHost`)보다 뒤에 섭니다 — 시나리오는 모듈이 올라온 뒤에 시작하고,
+         * @brief 모듈 이미지 창구(`HostSubsystemNames::kModuleLoader`)보다 뒤에 섭니다 — 시나리오는 모듈이 올라온 뒤에 시작하고,
          *        `shutdownDependentsOf( 창구 )` 가 구동기만 엔진 종료 앞에서 내립니다(창구는 엔진 범위가 종료하는 동안 살아 있어야 한다). 창구는 구동기를 모릅니다.
          */
         span<const utf8* const> getSubsystemDependencies() const override;

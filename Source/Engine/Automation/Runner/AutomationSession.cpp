@@ -41,7 +41,7 @@ namespace sw
 
     span<const utf8* const> AutomationSession::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { HostSubsystemNames::kModuleImageHost };
+        static constexpr const utf8* kArrDependency[] = { HostSubsystemNames::kModuleLoader };
         return kArrDependency;
     }
 

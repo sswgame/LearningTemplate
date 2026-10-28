@@ -226,12 +226,12 @@ namespace sw
             SW_LOG_WARNING( "requestLoadFuture: manager is shutting down" );
             return {};
         }
-        // 씬은 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)에만 읽는다. 그 전에 지으면 아직 오르지 않은 모듈의 컴포넌트가
+        // 씬은 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleLoadStage`)에만 읽는다. 그 전에 지으면 아직 오르지 않은 모듈의 컴포넌트가
         // `MissingComponent` 로 지어지고, 그 씬을 저장하면 그대로 남는다.
         // 타입 표를 받지 못한 매니저도 같은 이유로 거절한다 — 무엇으로 지을지 모른다.
         if ( _services._pTypeRegistry == nullptr || _services._pTypeRegistry->areAllModuleTypesRegistered() == false )
         {
-            SW_LOG_ERROR( "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleTypes startup step)", path );
+            SW_LOG_ERROR( "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleLoadStage startup step)", path );
             return {};
         }
 

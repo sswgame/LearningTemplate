@@ -12,7 +12,7 @@ namespace sw
     /** @brief 호스트 범위 서브시스템 이름 모음입니다. */
     struct HostSubsystemNames
     {
-        /** @brief 모듈 이미지 창구(`ModuleImageHostSubsystem`)입니다. 자동화 구동기는 모듈이 올라온 뒤에 시작하므로 이것보다 뒤에 섭니다. */
-        static constexpr const utf8* kModuleImageHost = "ModuleImageHost";
+        /** @brief 모듈 이미지 창구(`ModuleLoaderSubsystem`)입니다. 자동화 구동기는 모듈이 올라온 뒤에 시작하므로 이것보다 뒤에 섭니다. */
+        static constexpr const utf8* kModuleLoader = "ModuleLoader";
     };
 } // namespace sw

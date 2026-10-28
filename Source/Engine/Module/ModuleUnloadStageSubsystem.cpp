@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Module/ModuleImagesSubsystem.h"
+#include "Engine/Module/ModuleUnloadStageSubsystem.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/File/AsyncFileIO.h"
@@ -9,32 +9,32 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Module/ModuleLoader.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
-    ModuleImagesSubsystem::ModuleImagesSubsystem( const ISubsystemLocator* pScope )
+    ModuleUnloadStageSubsystem::ModuleUnloadStageSubsystem( const ISubsystemLocator* pScope )
         : _pScope{ pScope }
     {
     }
 
-    void ModuleImagesSubsystem::shutdownSubsystem()
+    void ModuleUnloadStageSubsystem::shutdownSubsystem()
     {
-        IModuleImageHost* pHost = locateSubsystem<IModuleImageHost>( _pScope );
+        IModuleLoader* pHost = locateSubsystem<IModuleLoader>( _pScope );
         if ( pHost != nullptr )
             pHost->onScenesReleased();
     }
 
-    span<const utf8* const> ModuleImagesSubsystem::getSubsystemDependencies() const
+    span<const utf8* const> ModuleUnloadStageSubsystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { CompressionCodecRegistry::kSubsystemName, ReflectionSubsystem::kSubsystemName, AssetManager::kSubsystemName,
                                                           TaskManager::kSubsystemName };
         return kArrDependency;
     }
 
-    span<const utf8* const> ModuleImagesSubsystem::getSubsystemDependents() const
+    span<const utf8* const> ModuleUnloadStageSubsystem::getSubsystemDependents() const
     {
         static constexpr const utf8* kArrDependent[] = { AsyncFileIO::kSubsystemName, IAudioService::kSubsystemName, InputManager::kSubsystemName, SceneManager::kSubsystemName };
         return kArrDependent;

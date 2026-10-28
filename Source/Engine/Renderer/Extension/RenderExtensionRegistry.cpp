@@ -1,38 +1,38 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
+#include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "ModuleRenderPass" );
+    SW_LOG_CALLER( "ExtensionRenderPass" );
 
-    bool ModuleDrawCollector::add( const ModuleDrawElement& element )
+    bool ExtensionDrawCollector::add( const ExtensionDrawElement& element )
     {
         if ( element._mesh.empty() )
         {
-            SW_LOG_ERROR( "Module draw element has no mesh id - the element is rejected" );
+            SW_LOG_ERROR( "Extension draw element has no mesh id - the element is rejected" );
             return false;
         }
-        if ( element._instanceCount == 0 || element._instanceCount > ModuleDrawElement::kMaxInstanceCount )
+        if ( element._instanceCount == 0 || element._instanceCount > ExtensionDrawElement::kMaxInstanceCount )
         {
-            SW_LOG_ERROR( "Module draw element '%#' has instance count %# (valid 1..%#) - the element is rejected", element._mesh.c_str(), element._instanceCount,
-                          ModuleDrawElement::kMaxInstanceCount );
+            SW_LOG_ERROR( "Extension draw element '%#' has instance count %# (valid 1..%#) - the element is rejected", element._mesh.c_str(), element._instanceCount,
+                          ExtensionDrawElement::kMaxInstanceCount );
             return false;
         }
-        if ( element._constantCount > ModuleDrawElement::kMaxConstantCount )
+        if ( element._constantCount > ExtensionDrawElement::kMaxConstantCount )
         {
-            SW_LOG_ERROR( "Module draw element '%#' has %# constants (limit %#) - the element is rejected", element._mesh.c_str(), element._constantCount,
-                          ModuleDrawElement::kMaxConstantCount );
+            SW_LOG_ERROR( "Extension draw element '%#' has %# constants (limit %#) - the element is rejected", element._mesh.c_str(), element._constantCount,
+                          ExtensionDrawElement::kMaxConstantCount );
             return false;
         }
         _listElement.push_back( element );
         return true;
     }
 
-    bool ModuleRenderPassRegistry::registerExtension( IModuleRenderExtension* pExtension )
+    bool RenderExtensionRegistry::registerExtension( IRenderExtension* pExtension )
     {
         if ( pExtension == nullptr )
             return false;
@@ -43,7 +43,7 @@ namespace sw
         return true;
     }
 
-    void ModuleRenderPassRegistry::unregisterExtension( IModuleRenderExtension* pExtension )
+    void RenderExtensionRegistry::unregisterExtension( IRenderExtension* pExtension )
     {
         // flush: 렌더 스레드가 모듈 구간 안이면 그 구간이 끝나기를 기다린다. 이 잠금을 쥔 채 목록에서 빼므로, 뺀 뒤에는 렌더 스레드가 이 확장을 부르지 않는다.
         ScopedLock<mutex> runLock{ _runMutex };
@@ -51,23 +51,23 @@ namespace sw
         (void)VectorUtil::removeValue( _listExtension, pExtension );
     }
 
-    ModuleSceneProxyID ModuleRenderPassRegistry::addProxy( unique_ptr<IModuleSceneProxy> pProxy )
+    ExtensionSceneProxyID RenderExtensionRegistry::addProxy( unique_ptr<IExtensionSceneProxy> pProxy )
     {
         if ( pProxy == nullptr )
             return 0;
-        ScopedLock<mutex>        lock{ _mutex };
-        const ModuleSceneProxyID id = _nextProxyID++;
-        ProxyEntry               entry;
+        ScopedLock<mutex>           lock{ _mutex };
+        const ExtensionSceneProxyID id = _nextProxyID++;
+        ProxyEntry                  entry;
         entry._id     = id;
         entry._pProxy = std::move( pProxy );
         _listProxy.push_back( std::move( entry ) );
         return id;
     }
 
-    void ModuleRenderPassRegistry::removeProxy( ModuleSceneProxyID id )
+    void RenderExtensionRegistry::removeProxy( ExtensionSceneProxyID id )
     {
-        unique_ptr<IModuleSceneProxy> pRemoved;
-        vector<PendingUpdate>         listDroppedUpdate;
+        unique_ptr<IExtensionSceneProxy> pRemoved;
+        vector<PendingUpdate>            listDroppedUpdate;
         {
             ScopedLock<mutex> runLock{ _runMutex }; // flush
             ScopedLock<mutex> lock{ _mutex };
@@ -98,7 +98,7 @@ namespace sw
         listDroppedUpdate.clear();
     }
 
-    bool ModuleRenderPassRegistry::enqueueProxyUpdate( ModuleSceneProxyID id, ModuleProxyUpdateFn update )
+    bool RenderExtensionRegistry::enqueueProxyUpdate( ExtensionSceneProxyID id, ExtensionProxyUpdateFn update )
     {
         if ( update.isBound() == false )
             return false;
@@ -117,7 +117,7 @@ namespace sw
         return true;
     }
 
-    void ModuleRenderPassRegistry::applyPendingProxyUpdates()
+    void RenderExtensionRegistry::applyPendingProxyUpdates()
     {
         // 렌더 스레드(RenderScope 안)다. 대기열을 통째로 꺼내 잠금 밖에서 적용한다 — 갱신 함수가 모듈 코드라 잠금을 쥔 채 부르지 않는다.
         vector<PendingUpdate> listUpdate;
@@ -127,7 +127,7 @@ namespace sw
         }
         for ( PendingUpdate& pending : listUpdate )
         {
-            IModuleSceneProxy* pProxy{ nullptr };
+            IExtensionSceneProxy* pProxy{ nullptr };
             {
                 ScopedLock<mutex> lock{ _mutex };
                 for ( ProxyEntry& entry : _listProxy )
@@ -141,13 +141,13 @@ namespace sw
         }
     }
 
-    void ModuleRenderPassRegistry::copyExtensions( vector<IModuleRenderExtension*>& outList ) const
+    void RenderExtensionRegistry::copyExtensions( vector<IRenderExtension*>& outList ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         outList = _listExtension;
     }
 
-    void ModuleRenderPassRegistry::copyProxies( vector<IModuleSceneProxy*>& outList ) const
+    void RenderExtensionRegistry::copyProxies( vector<IExtensionSceneProxy*>& outList ) const
     {
         outList.clear();
         ScopedLock<mutex> lock{ _mutex };
@@ -157,14 +157,14 @@ namespace sw
         }
     }
 
-    bool ModuleRenderPassRegistry::noteFailureOnce( string_view key )
+    bool RenderExtensionRegistry::noteFailureOnce( string_view key )
     {
         const hashed_string hashedKey{ key };
         ScopedLock<mutex>   lock{ _mutex };
         return _uniqueFailureLogged.insert( hashedKey ).second;
     }
 
-    ModuleRenderExtensionRegistration::ModuleRenderExtensionRegistration( ModuleRenderPassRegistry& registry, IModuleRenderExtension& extension )
+    RenderExtensionRegistration::RenderExtensionRegistration( RenderExtensionRegistry& registry, IRenderExtension& extension )
         : _registry{ registry }
         , _pExtension{ &extension }
         , _bRegistered{ SW_FALSE }
@@ -174,26 +174,26 @@ namespace sw
             SW_LOG_ERROR( "A module render extension is already registered - the second registration is ignored" );
     }
 
-    ModuleRenderExtensionRegistration::~ModuleRenderExtensionRegistration()
+    RenderExtensionRegistration::~RenderExtensionRegistration()
     {
         if ( _bRegistered != SW_FALSE )
             _registry.unregisterExtension( _pExtension );
     }
 
-    ModuleSceneProxyRegistration::ModuleSceneProxyRegistration( ModuleRenderPassRegistry& registry, unique_ptr<IModuleSceneProxy> pProxy )
+    ExtensionSceneProxyRegistration::ExtensionSceneProxyRegistration( RenderExtensionRegistry& registry, unique_ptr<IExtensionSceneProxy> pProxy )
         : _registry{ registry }
         , _id{ 0 }
     {
         _id = _registry.addProxy( std::move( pProxy ) );
     }
 
-    ModuleSceneProxyRegistration::~ModuleSceneProxyRegistration()
+    ExtensionSceneProxyRegistration::~ExtensionSceneProxyRegistration()
     {
         if ( _id != 0 )
             _registry.removeProxy( _id );
     }
 
-    bool ModuleSceneProxyRegistration::update( ModuleProxyUpdateFn update )
+    bool ExtensionSceneProxyRegistration::update( ExtensionProxyUpdateFn update )
     {
         if ( _id == 0 )
             return false;

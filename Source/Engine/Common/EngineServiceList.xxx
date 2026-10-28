@@ -95,7 +95,7 @@ SW_ENGINE_SERVICE_OPT( class, RenderTargetRegistry, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 // 모듈 렌더 패스(이름 → 패스 상수). 렌더러가 읽고 게임 · 키트 모듈이 등록한다. **OPT 다** — 렌더러 폴더를 짓지 않는 Server 타깃에는 이 타입이 없다.
 // 클라이언트 엔진은 늘 서비스 범위에 넣는다(Engine.cpp).
-SW_ENGINE_SERVICE_OPT( class, ModuleRenderPassRegistry, GameVisible )
+SW_ENGINE_SERVICE_OPT( class, RenderExtensionRegistry, GameVisible )
 // 스크린샷 요청 우편함(요청 한 칸 · 처리 결과 · `-gv_screenshotQuit` 장부). 렌더 스레드의 정적 창구(`RenderThread::requestScreenshot` …)가 찾아 쓴다.
 // **OPT 다** — 렌더러 폴더를 짓지 않는 Server 타깃에는 이 타입이 없다. 클라이언트 엔진은 늘 서비스 범위에 넣는다(EngineSubsystemSet.cpp).
 SW_ENGINE_SERVICE_OPT( class, ScreenshotMailbox, HostOnly )

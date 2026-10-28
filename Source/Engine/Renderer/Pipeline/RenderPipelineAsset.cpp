@@ -264,19 +264,19 @@ namespace sw
             static uint32 checkModuleShaderList( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
-                for ( size_t shaderIndex = 0; shaderIndex < desc._listModuleShader.size(); ++shaderIndex )
+                for ( size_t shaderIndex = 0; shaderIndex < desc._listExtensionShader.size(); ++shaderIndex )
                 {
-                    if ( desc._listModuleShader[shaderIndex].empty() )
+                    if ( desc._listExtensionShader[shaderIndex].empty() )
                     {
-                        SW_LOG_ERROR( "[%#] _listModuleShader[%#] is empty", sourcePath, static_cast<uint32>( shaderIndex ) );
+                        SW_LOG_ERROR( "[%#] _listExtensionShader[%#] is empty", sourcePath, static_cast<uint32>( shaderIndex ) );
                         ++issueCount;
                         continue;
                     }
                     for ( size_t earlierIndex = 0; earlierIndex < shaderIndex; ++earlierIndex )
                     {
-                        if ( desc._listModuleShader[earlierIndex] == desc._listModuleShader[shaderIndex] )
+                        if ( desc._listExtensionShader[earlierIndex] == desc._listExtensionShader[shaderIndex] )
                         {
-                            SW_LOG_ERROR( "[%#] _listModuleShader lists '%#' twice", sourcePath, desc._listModuleShader[shaderIndex] );
+                            SW_LOG_ERROR( "[%#] _listExtensionShader lists '%#' twice", sourcePath, desc._listExtensionShader[shaderIndex] );
                             ++issueCount;
                             break;
                         }

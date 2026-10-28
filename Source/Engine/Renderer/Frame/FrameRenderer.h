@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
+#include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -35,7 +36,6 @@
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
-#include "Engine/Renderer/Module/ModuleRenderExtension.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
@@ -59,7 +59,7 @@ namespace sw
     class IRHIDevice;
     class Material;
     class Mesh;
-    class ModuleRenderPassRegistry;
+    class RenderExtensionRegistry;
     class MaterialInstance;
     class RenderPipelineAssetCache;
     class Scene;
@@ -308,15 +308,15 @@ namespace sw
         uint32 getExtraViewCount() const { return static_cast<uint32>( _listExtraView.size() ); }
 
     private:
-        friend class ModulePassContext;
+        friend class ExtensionPassContext;
 
         /**
          * @brief 이번 프레임에 모듈 확장이 선언해 검사를 통과한 패스 하나입니다(선언 + 실행 콜백 + 만들어 둔 PSO). 프레임 끝에 비웁니다.
          */
-        struct ModuleFramePass
+        struct ExtensionFramePass
         {
-            ModulePassParams       _params{};
-            ModulePassExecuteFn    _execute{};
+            ExtensionPassParams    _params{};
+            ExtensionPassExecuteFn _execute{};
             hashed_string          _graphName{};   ///< 그래프 노드 이름("Module.<이름>")
             hashed_string          _colorTarget{}; ///< 첫 쓰기 첨부(그리는 컬러 타깃)
             hashed_string          _depthTarget{}; ///< 깊이 첨부(없으면 빈 이름)
@@ -1029,29 +1029,29 @@ namespace sw
         /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
         RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
         /**
-         * @brief 모듈 확장 패스의 프로그램(`ModuleProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
+         * @brief 모듈 확장 패스의 프로그램(`ExtensionProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
          */
-        RHIPipelineStateHandle findOrCreateModuleProgramPSO( const ModuleProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
+        RHIPipelineStateHandle findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
 
-        // --- 모듈 확장(ModuleRenderPass M3 · M4) — 구현은 FrameRendererModule.cpp ---
+        // --- 모듈 확장(ExtensionRenderPass M3 · M4) — 구현은 FrameRendererModule.cpp ---
         /**
          * @brief 모듈 구간의 첫 일입니다(`uploadSceneAndSubmit`, `RenderScope` 안). 대기 중인 프록시 갱신을 적용하고, 확장의 `addPasses` 와 프록시의 `collectDrawElements` 를 부르고,
          *        패스 선언을 검사해 프로그램 PSO · 임시 텍스처를 기록 전에 만들고, 선언이 바뀌었으면 그래프를 다시 묶게 합니다.
          */
-        void collectModuleFrame( ModuleRenderPassRegistry& registry );
+        void collectExtensionFrame( RenderExtensionRegistry& registry );
         /** @brief 모듈 구간의 끝입니다. 모듈이 넣은 패스 콜백 · 요소를 모두 놓습니다(람다의 소멸 코드가 모듈에 있어 모듈 구간 안에서 놓아야 한다). */
-        void releaseModuleFrame();
+        void releaseExtensionFrame();
         /** @brief 이 뷰의 풀에 이번 프레임에 요청된 모듈 임시 텍스처를 만듭니다(이미 있으면 그대로). */
-        void allocateModuleTextures( ViewTarget& view );
+        void allocateExtensionTextures( ViewTarget& view );
         /** @brief 요소가 쓰는 메시를 찾거나 읽고 GPU 에 올립니다. 기록 전에만 부릅니다. 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
-        Mesh* resolveModuleMesh( ModuleRenderPassRegistry& registry, const hashed_string& meshID );
-        /** @brief 모듈 확장 패스 하나를 실행합니다(그래프 노드 콜백이 부른다). 모듈의 실행 콜백에 `ModulePassContext` 를 넘깁니다. */
-        void executeModuleExtensionPass( FramePassContext& context, const ModuleFramePass& pass );
-        /** @brief `ModulePassContext::drawFullscreen` 의 몸체입니다. */
-        bool drawModuleFullscreen( FramePassContext& context, const ModuleFramePass& pass, vector_reference<const ModuleConstant> listConstant );
-        /** @brief `ModulePassContext::drawProxyElements` 의 몸체입니다. */
-        bool drawModuleElements( FramePassContext& context, const ModuleFramePass& pass, vector_reference<const ModuleConstant> listConstant );
+        Mesh* resolveExtensionMesh( RenderExtensionRegistry& registry, const hashed_string& meshID );
+        /** @brief 모듈 확장 패스 하나를 실행합니다(그래프 노드 콜백이 부른다). 모듈의 실행 콜백에 `ExtensionPassContext` 를 넘깁니다. */
+        void executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass );
+        /** @brief `ExtensionPassContext::drawFullscreen` 의 몸체입니다. */
+        bool drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
+        /** @brief `ExtensionPassContext::drawProxyElements` 의 몸체입니다. */
+        bool drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
@@ -1367,16 +1367,16 @@ namespace sw
          */
         RenderPSOCache*                      _pPSOCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
-        /// @brief 모듈 확장 패스(`_listModuleFramePass`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
-        unordered_map<hashed_string, uint32> _mapModulePassIndex;
-        /// @brief 이번 프레임의 모듈 확장 패스입니다. 모듈 구간 안(`collectModuleFrame` ~ `releaseModuleFrame`)에서만 비지 않습니다. 기록 중에는 읽기만 합니다.
-        vector<ModuleFramePass> _listModuleFramePass;
-        /// @brief 이번 프레임에 요청된 모듈 임시 텍스처입니다(`ModulePassBuilder::createTexture`).
-        vector<ModuleTextureDesc> _listModuleTexture;
+        /// @brief 모듈 확장 패스(`_listExtensionFramePass`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
+        unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
+        /// @brief 이번 프레임의 모듈 확장 패스입니다. 모듈 구간 안(`collectExtensionFrame` ~ `releaseExtensionFrame`)에서만 비지 않습니다. 기록 중에는 읽기만 합니다.
+        vector<ExtensionFramePass> _listExtensionFramePass;
+        /// @brief 이번 프레임에 요청된 모듈 임시 텍스처입니다(`ExtensionPassBuilder::createTexture`).
+        vector<ExtensionTextureDesc> _listExtensionTexture;
         /// @brief 이번 프레임에 프록시들이 낸 요소입니다(`collectDrawElements`). 기록 중에는 읽기만 합니다.
-        vector<ModuleDrawElement> _listModuleDrawElement;
+        vector<ExtensionDrawElement> _listExtensionDrawElement;
         /// @brief 요소가 쓰는 메시를 쥐는 표입니다(`MeshUtil::acquirePrimitive` · `MeshCache` 는 약한 참조라 렌더러가 쥔다). 기록 전(셋업)에만 바꾸고, 파이프라인 · 디바이스 자원을 놓을 때 비웁니다.
-        unordered_map<hashed_string, shared_ptr<Mesh>> _mapModuleMesh;
+        unordered_map<hashed_string, shared_ptr<Mesh>> _mapExtensionMesh;
         /// @brief 이번 프레임 모듈 패스 선언의 해시(0 = 없음)입니다. 그래프에 묶인 선언의 해시(`_moduleBoundSignature`)와 다르면 그래프를 다시 묶습니다. 프레임 끝에 0 으로 돌립니다.
         uint64           _moduleFrameSignature{ 0 };
         uint64           _moduleBoundSignature{ 0 };

@@ -23,10 +23,10 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
-#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
@@ -434,7 +434,7 @@ namespace sw
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
         // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _listModuleFramePass.size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
+        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _listExtensionFramePass.size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
         if ( _listPassContext.size() < passCount )
             _listPassContext.resize( passCount );
 
@@ -806,15 +806,15 @@ namespace sw
 
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
     {
-        // 모듈 구간(ModuleRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
+        // 모듈 구간(ExtensionRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
         // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
-        ModuleRenderPassRegistry* const pModuleRegistry = _bScenePreview == SW_FALSE ? engine::findSubsystem<ModuleRenderPassRegistry>() : nullptr;
-        if ( pModuleRegistry == nullptr )
+        RenderExtensionRegistry* const pExtensionRegistry = _bScenePreview == SW_FALSE ? engine::findSubsystem<RenderExtensionRegistry>() : nullptr;
+        if ( pExtensionRegistry == nullptr )
             return uploadSceneAndSubmitFrame( pDevice, pCallerName );
-        ModuleRenderPassRegistry::RenderScope moduleScope( *pModuleRegistry );
-        collectModuleFrame( *pModuleRegistry );
+        RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
+        collectExtensionFrame( *pExtensionRegistry );
         const bool bOk = uploadSceneAndSubmitFrame( pDevice, pCallerName );
-        releaseModuleFrame();
+        releaseExtensionFrame();
         return bOk;
     }
 

@@ -4,7 +4,7 @@
 
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
-#include "ModuleManager/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
     #include "ModuleManager/LiveReloadManager.h"
@@ -32,7 +32,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
-#include "Engine/Module/ModuleImageHost.h"
+#include "Engine/Module/ModuleLoader.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
@@ -214,13 +214,13 @@ namespace sw
     bool ServerApp::initialize( int32 argc, utf8* pArgv[] )
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
-        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
+        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
         // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
         {
             SW_MEMORY_SCOPE( EngineMisc );
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
-        _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ), "ServerApp" );
+        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
         if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )

@@ -1,26 +1,26 @@
 #include "pch.h"
 
-#include "Engine/Module/ModuleTypesSubsystem.h"
+#include "Engine/Module/ModuleLoadStageSubsystem.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Module/ModuleImageHost.h"
-#include "Engine/Module/ModuleImagesSubsystem.h"
+#include "Engine/Module/ModuleLoader.h"
+#include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "ModuleTypes" );
+    SW_LOG_CALLER( "ModuleLoadStage" );
 
-    ModuleTypesSubsystem::ModuleTypesSubsystem( const ISubsystemLocator* pScope )
+    ModuleLoadStageSubsystem::ModuleLoadStageSubsystem( const ISubsystemLocator* pScope )
         : _pScope{ pScope }
     {
     }
 
-    SubsystemInitResult ModuleTypesSubsystem::initializeSubsystem()
+    SubsystemInitResult ModuleLoadStageSubsystem::initializeSubsystem()
     {
-        IModuleImageHost* pHost = locateSubsystem<IModuleImageHost>( _pScope );
+        IModuleLoader* pHost = locateSubsystem<IModuleLoader>( _pScope );
         if ( pHost != nullptr && pHost->loadTypeProviders() == false )
         {
             SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
@@ -30,9 +30,9 @@ namespace sw
         return SubsystemInitResult::Succeeded;
     }
 
-    span<const utf8* const> ModuleTypesSubsystem::getSubsystemDependencies() const
+    span<const utf8* const> ModuleLoadStageSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleImagesSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw

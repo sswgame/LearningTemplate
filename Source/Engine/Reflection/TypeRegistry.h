@@ -212,7 +212,7 @@ namespace sw
          */
         void unregisterTypesByModule( string_view moduleName );
         /**
-         * @brief 호스트의 모든 타입 공급자(엔진, GameFramework, 킷, 게임 모듈)가 등록을 끝냈다고 기록합니다. 기동 단계 `ModuleTypes` 가 부릅니다.
+         * @brief 호스트의 모든 타입 공급자(엔진, GameFramework, 킷, 게임 모듈)가 등록을 끝냈다고 기록합니다. 기동 단계 `ModuleLoadStage` 가 부릅니다.
          * @details 씬을 읽는 쪽(`SceneManager::requestLoadFuture`, `SceneCooker::cookAllScenes`)은 이 뒤에만 읽는다. 그 전에 읽으면 아직 올라오지
          *          않은 모듈의 컴포넌트가 `MissingComponent` 로 생성된다. 핫 리로드가 모듈을 언로드했다 다시 로드해도 이 값은 내리지 않는다.
          *          그 사이에 만든 씬은 세대를 비교해 다시 만든다(`SceneManager::updateTransitions`).

@@ -45,7 +45,7 @@
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleManager/ModuleCatalogLoader.h"
-#include "ModuleManager/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -141,8 +141,8 @@ namespace sw
         // 리소스 루트 탐색은 Engine 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
-        // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 기동 단계가 여기서 모듈 이미지 창구를 찾아 타입 공급자 모듈을 올리고
-        //    (이 App 의 `loadModuleImages`), `ModuleImages` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
+        // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 이미지 창구를 찾아 타입 공급자 모듈을 올리고
+        //    (이 App 의 `loadModuleImages`), `ModuleUnloadStage` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
         if ( initializeHostScope() == false )
             return false;
         // 시동 단계별 시간(측정만 한다 — 시동 요약 로그의 재료). 각 값은 그 단계가 끝난 시각의 `_initializeStartMicro` 기준 경과이다.
@@ -263,7 +263,7 @@ namespace sw
             _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
         }
 #endif
-        _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ), "App" );
+        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ), "App" );
         return _pModuleImageHost != nullptr;
     }
 

@@ -31,8 +31,8 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Module/ModuleImagesSubsystem.h"
-#include "Engine/Module/ModuleTypesSubsystem.h"
+#include "Engine/Module/ModuleLoadStageSubsystem.h"
+#include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -46,7 +46,7 @@
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
     #include "Engine/Renderer/LiveShaderSubsystem.h"
-    #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
+    #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
     #include "Engine/Renderer/SceneRHISubsystem.h"
@@ -132,8 +132,8 @@ namespace sw::engine
             services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
             services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
 #if defined( SW_WITH_CLIENT_CODE )
-            services.addSubsystem( sw::make_unique<ModuleRenderPassRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다
-            services.addSubsystem( sw::make_unique<ScreenshotMailbox>() );        // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
+            services.addSubsystem( sw::make_unique<RenderExtensionRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다
+            services.addSubsystem( sw::make_unique<ScreenshotMailbox>() );       // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
 #endif
         }
         return parts;
@@ -167,8 +167,8 @@ namespace sw::engine
             startup.addSubsystem( sw::make_unique<AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
         }
         // 모듈 이미지 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
-        startup.addSubsystem( sw::make_unique<ModuleImagesSubsystem>( &startup ) );
-        startup.addSubsystem( sw::make_unique<ModuleTypesSubsystem>( &startup ) );
+        startup.addSubsystem( sw::make_unique<ModuleUnloadStageSubsystem>( &startup ) );
+        startup.addSubsystem( sw::make_unique<ModuleLoadStageSubsystem>( &startup ) );
 #if defined( SW_WITH_CLIENT_CODE )
         // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다). 객체를 서로 참조로 넘긴다.
         // Server 타깃은 렌더러 폴더(`Engine/Renderer/`)를 짓지 않는다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`) — 단계를 넣지도 않는다.

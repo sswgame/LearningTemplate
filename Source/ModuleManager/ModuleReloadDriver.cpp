@@ -4,7 +4,7 @@
 
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "ModuleManager/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
     #include "ModuleManager/LiveReloadManager.h"
@@ -112,7 +112,7 @@ namespace sw
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    void ModuleReloadDriver::initialize( [[maybe_unused]] SubsystemScope& hostScope, [[maybe_unused]] ModuleImageHostSubsystem& moduleImageHost )
+    void ModuleReloadDriver::initialize( [[maybe_unused]] SubsystemScope& hostScope, [[maybe_unused]] ModuleLoaderSubsystem& moduleImageHost )
     {
 #if !defined( SW_SHIPPING )
         _liveReloadManager = make_unique<LiveReloadManager>();

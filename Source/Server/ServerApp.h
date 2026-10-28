@@ -2,7 +2,7 @@
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
  * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/GameModuleManager` 의 것 —
- *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
+ *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleLoaderSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 이미지 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
@@ -49,7 +49,7 @@ namespace sw
     class MetricHistogram;
     class MetricRegistry;
     class GameModuleManager;
-    class ModuleImageHostSubsystem;
+    class ModuleLoaderSubsystem;
     class OpsHTTPEndpoint;
     class ProcessMetrics;
     class ServerFrameHistory;
@@ -80,7 +80,7 @@ namespace sw
         void shutdown();
 
     private:
-        /** @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 서버 대상 모듈의 이미지를 로드합니다(App::loadModuleImages 에 해당합니다). */
+        /** @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 서버 대상 모듈의 이미지를 로드합니다(App::loadModuleImages 에 해당합니다). */
         [[nodiscard]] bool loadModuleImages();
         [[nodiscard]] bool loadServerConfig();
         /** @brief 호스트 부품 하나를 세웁니다(`kArrServerHostPart` — 순서는 `HostPart` 의 의존 선언이 정한다). */
@@ -142,14 +142,14 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)와 리로드 구동기(빌려 건다), 종료 신호 처리기를 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 창구를 찾아 부릅니다.
+         * @details 모듈 이미지 창구(`ModuleLoaderSubsystem`)와 리로드 구동기(빌려 건다), 종료 신호 처리기를 듭니다 — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 창구를 찾아 부릅니다.
          *          종료 신호 처리기는 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
          *          게임이 서 있는 동안은 서버 문맥(`_serverServiceContext`)도 빌려 건다.
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다.
          */
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
-        ModuleImageHostSubsystem*     _pModuleImageHost;
+        ModuleLoaderSubsystem*        _pModuleImageHost;
         Engine                        _engine;
         unique_ptr<GameModuleManager> _gameModuleManager;
         /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */

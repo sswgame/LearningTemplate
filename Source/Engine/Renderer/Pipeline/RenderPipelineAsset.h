@@ -47,12 +47,12 @@ namespace sw
         vector<string> _listRenderPassRef;
 
         /**
-         * @brief 모듈 확장이 패스 프로그램(`ModuleProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ModuleRenderPass).
+         * @brief 모듈 확장이 패스 프로그램(`ExtensionProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ExtensionRenderPass).
          * @details 모듈이 런타임에 고르는 셰이더는 쿠커가 미리 구워 두어야 하므로(Shipping 은 PSO 를 컴파일하지 못한다) 데이터로 선언한다. 쿠커는 각 경로의 VS · PS 를 define 없이
          *          굽고, 런타임은 여기 없는 경로를 요청한 모듈 패스를 오류로 막는다.
          */
         PROPERTY( SkipIfEmpty )
-        vector<string> _listModuleShader;
+        vector<string> _listExtensionShader;
     };
 } // namespace sw
 

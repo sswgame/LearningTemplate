@@ -41,7 +41,7 @@ namespace sw
                 _pLastSwapchainWriter = &pass;
         }
 
-        // 모듈 확장 패스(ModuleRenderPass M3)가 끼는 자리 — 단계마다 XML 패스 목록의 정해진 첫 자리 앞이다(없으면 끝). 선언 순서가 쓰기 사슬이라 같은 자리의 모듈 패스는 선언한 순서다.
+        // 모듈 확장 패스(ExtensionRenderPass M3)가 끼는 자리 — 단계마다 XML 패스 목록의 정해진 첫 자리 앞이다(없으면 끝). 선언 순서가 쓰기 사슬이라 같은 자리의 모듈 패스는 선언한 순서다.
         // 모듈 패스도 같은 그래프의 노드다 — 읽기 · 쓰기 선언이 같은 위상 정렬과 배리어 추론을 탄다.
         const size_t anchorPre    = 0;
         size_t       anchorPost   = listPass.size();
@@ -54,44 +54,44 @@ namespace sw
             if ( anchorOutput == listPass.size() && anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) )
                 anchorOutput = anchorIndex;
         }
-        _mapModulePassIndex.clear();
-        auto addModulePasses = [this]( ModuleHookStage stage )
+        _mapExtensionPassIndex.clear();
+        auto addExtensionPasses = [this]( ExtensionHookStage stage )
         {
-            for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _listModuleFramePass.size() ); ++moduleIndex )
+            for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _listExtensionFramePass.size() ); ++moduleIndex )
             {
-                const ModuleFramePass& modulePass = _listModuleFramePass[moduleIndex];
+                const ExtensionFramePass& modulePass = _listExtensionFramePass[moduleIndex];
                 if ( modulePass._params._stage != stage )
                     continue;
-                vector<hashed_string> listModuleInput;
-                vector<hashed_string> listModuleOutput;
-                for ( const ModulePassRead& read : modulePass._params._listRead )
+                vector<hashed_string> listExtensionInput;
+                vector<hashed_string> listExtensionOutput;
+                for ( const ExtensionPassRead& read : modulePass._params._listRead )
                 {
-                    listModuleInput.emplace_back( read._attachment.c_str() );
+                    listExtensionInput.emplace_back( read._attachment.c_str() );
                 }
                 for ( const string& write : modulePass._params._listWrite )
                 {
-                    listModuleOutput.emplace_back( write.c_str() );
+                    listExtensionOutput.emplace_back( write.c_str() );
                 }
                 // 깊이 첨부도 쓰기 선언이다(XML 패스와 같은 규칙 — 레벨 프롤로그가 첨부 전이를 낸다).
                 if ( modulePass._params._depthAttachment.empty() == false )
                 {
                     const hashed_string depthName( modulePass._params._depthAttachment.c_str() );
-                    if ( VectorUtil::contains( listModuleOutput, depthName ) == false )
-                        listModuleOutput.push_back( depthName );
+                    if ( VectorUtil::contains( listExtensionOutput, depthName ) == false )
+                        listExtensionOutput.push_back( depthName );
                 }
-                _mapModulePassIndex[modulePass._graphName] = moduleIndex;
-                _graph.addPass( modulePass._graphName, std::move( listModuleInput ), std::move( listModuleOutput ),
+                _mapExtensionPassIndex[modulePass._graphName] = moduleIndex;
+                _graph.addPass( modulePass._graphName, std::move( listExtensionInput ), std::move( listExtensionOutput ),
                                 SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this ) );
             }
         };
         auto addModulePassesAt = [&]( size_t index )
         {
             if ( index == anchorPre )
-                addModulePasses( ModuleHookStage::PreRenderView );
+                addExtensionPasses( ExtensionHookStage::PreRenderView );
             if ( index == anchorPost )
-                addModulePasses( ModuleHookStage::PrePostProcess );
+                addExtensionPasses( ExtensionHookStage::PrePostProcess );
             if ( index == anchorOutput )
-                addModulePasses( ModuleHookStage::PostRenderView );
+                addExtensionPasses( ExtensionHookStage::PostRenderView );
         };
 
         for ( uint32 index = 0; index < static_cast<uint32>( listPass.size() ); ++index )
@@ -192,9 +192,9 @@ namespace sw
         const size_t passCount    = _pipelineResource.getGraphPass().size();
         const auto   passSlotIter = _mapPassNameToIndex.find( graphContext._passName );
         // 모듈 확장 패스는 XML 패스 슬롯 **뒤**에 자기 슬롯을 갖는다(병렬 기록의 패스마다 독립 컨텍스트). 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다.
-        const auto   moduleIter  = _mapModulePassIndex.find( graphContext._passName );
-        const bool   bModulePass = moduleIter != _mapModulePassIndex.end() && moduleIter->second < _listModuleFramePass.size();
-        const size_t slotCount   = passCount + 1 + _listModuleFramePass.size();
+        const auto   moduleIter  = _mapExtensionPassIndex.find( graphContext._passName );
+        const bool   bModulePass = moduleIter != _mapExtensionPassIndex.end() && moduleIter->second < _listExtensionFramePass.size();
+        const size_t slotCount   = passCount + 1 + _listExtensionFramePass.size();
         const size_t passSlot    = bModulePass ? passCount + 1 + moduleIter->second
                                                : ( ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount );
         if ( _listPassContext.size() <= passSlot )
@@ -212,7 +212,7 @@ namespace sw
             return;
         if ( bModulePass )
         {
-            executeModuleExtensionPass( passContext, _listModuleFramePass[moduleIter->second] );
+            executeExtensionPass( passContext, _listExtensionFramePass[moduleIter->second] );
             return;
         }
 

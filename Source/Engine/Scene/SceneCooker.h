@@ -98,7 +98,7 @@ namespace sw
          * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 쿠킹합니다(이름은 `AssetCookPath`).
          * @param sourceRoot 리소스 루트(절대 경로)입니다. 쿠킹본의 상대 경로가 여기서 정해집니다.
          * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않고 실패 하나로 셉니다. 모든 타입 공급자가 등록을 끝내기
-         *                  전(`TypeRegistry::areAllModuleTypesRegistered` — 기동 단계 `ModuleTypes` 전)에 불러도 그렇습니다.
+         *                  전(`TypeRegistry::areAllModuleTypesRegistered` — 기동 단계 `ModuleLoadStage` 전)에 불러도 그렇습니다.
          * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 모르는 타입의 컴포넌트가 든 씬도 쓰지 않고 셉니다. 하나라도 있으면 배포본에 그 씬이 없다 —
          *                       쿠킹은 실패다. 다만 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)의 씬이 등록되지 않은 컴포넌트를 쓰면 세지 않고 건너뜁니다 —
          *                       그 게임 모듈은 이 빌드에 없고, 배포본은 활성 게임의 팩만 엽니다.

@@ -1,7 +1,7 @@
 <!--
-	모듈 렌더 확장 시연 파이프라인(ModuleRenderPass M3 · M4) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)과 같은 패스 목록이다. 모듈 패스는 이 XML 에 적지 않는다:
-	게임 모듈(EmptyGame)이 `IModuleRenderExtension` 을 등록하고, 렌더러가 프레임마다 그 확장이 선언한 패스(`Empty.DrawDemo` · `Empty.TintDemo`)를 같은 RenderGraph 에 끼운다
-	(PrePostProcess 자리 = 피사계 심도 앞). 이 파일이 하는 일은 모듈이 쓸 셰이더를 `_listModuleShader` 로 선언하는 것뿐이다.
+	모듈 렌더 확장 시연 파이프라인(ExtensionRenderPass M3 · M4) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)과 같은 패스 목록이다. 모듈 패스는 이 XML 에 적지 않는다:
+	게임 모듈(EmptyGame)이 `IRenderExtension` 을 등록하고, 렌더러가 프레임마다 그 확장이 선언한 패스(`Empty.DrawDemo` · `Empty.TintDemo`)를 같은 RenderGraph 에 끼운다
+	(PrePostProcess 자리 = 피사계 심도 앞). 이 파일이 하는 일은 모듈이 쓸 셰이더를 `_listExtensionShader` 로 선언하는 것뿐이다.
 	시나리오 `game/empty/automation/modulepass.scenario.xml` 이 `gv_renderPipeline` 로 고른다.
 -->
 <RenderPipelineDesc _name="ModulePassPipeline" _shadingModel="Forward">
@@ -240,8 +240,8 @@
 		<item>engine/renderpass/defaultrenderpass.xml</item>
 	</_listRenderPassRef>
 	<!-- 모듈 확장(EmptyGame 의 `Empty.RenderExtension`)이 패스 프로그램으로 고르는 셰이더 — 쿠커가 굽는다. 목록에 없는 셰이더를 요청한 모듈 패스는 오류로 막힌다. -->
-	<_listModuleShader>
-		<item>engine/shaders/modulepassdemo.hlsl</item>
-		<item>engine/shaders/moduledrawdemo.hlsl</item>
-	</_listModuleShader>
+	<_listExtensionShader>
+		<item>engine/shaders/extensionpassdemo.hlsl</item>
+		<item>engine/shaders/extensiondrawdemo.hlsl</item>
+	</_listExtensionShader>
 </RenderPipelineDesc>

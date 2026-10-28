@@ -1,39 +1,39 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleImageHostSubsystem.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 namespace sw
 {
-    ModuleImageHostSubsystem::ModuleImageHostSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader )
+    ModuleLoaderSubsystem::ModuleLoaderSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader )
         : _moduleTypeLoader{ std::move( moduleTypeLoader ) }
         , _scenesReleasedHook{}
     {
     }
 
-    Subscription ModuleImageHostSubsystem::bindScenesReleasedHook( Delegate<void()> hook )
+    Subscription ModuleLoaderSubsystem::bindScenesReleasedHook( Delegate<void()> hook )
     {
         return _scenesReleasedHook.bind( std::move( hook ) );
     }
 
-    bool ModuleImageHostSubsystem::loadTypeProviders()
+    bool ModuleLoaderSubsystem::loadTypeProviders()
     {
         return _moduleTypeLoader.isBound() == false || _moduleTypeLoader();
     }
 
-    void ModuleImageHostSubsystem::onScenesReleased()
+    void ModuleLoaderSubsystem::onScenesReleased()
     {
         if ( _scenesReleasedHook.isBound() )
             _scenesReleasedHook.get()();
     }
 
-    ModuleImageHostSubsystem* ModuleImageHostSubsystem::initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName )
+    ModuleLoaderSubsystem* ModuleLoaderSubsystem::initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName )
     {
         SW_MEMORY_SCOPE( EngineMisc );
-        ModuleImageHostSubsystem& moduleImageHost = hostScope.addSubsystem( make_unique<ModuleImageHostSubsystem>( std::move( moduleTypeLoader ) ) );
-        const bool                bExposed        = hostScope.expose<IModuleImageHost>( moduleImageHost );
+        ModuleLoaderSubsystem& moduleImageHost = hostScope.addSubsystem( make_unique<ModuleLoaderSubsystem>( std::move( moduleTypeLoader ) ) );
+        const bool             bExposed        = hostScope.expose<IModuleLoader>( moduleImageHost );
         SW_ASSERT( bExposed );
         (void)bExposed;
         // 이 범위의 서브시스템은 초기화할 일이 없다(창구는 델리게이트만 들고, 자동화 구동기는 엔진이 선 뒤 `begin` 으로 시작한다) — 로거 앞이라 낮은 층 보고(stderr 에 동기로)로 알린다.

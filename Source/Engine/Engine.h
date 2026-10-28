@@ -85,7 +85,7 @@ namespace sw
          * @brief 서브시스템(창, RHI 포함)을 초기화합니다.
          * @details @p role 이 `DedicatedServer` 면 기동 표의 `Client` 단계(창 · RHI · 렌더러 · 플레이어 설정)를 돌리지 않고 장치 없는 오디오를 씁니다.
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
-         * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleTypes` · `ModuleImages` 단계가 여기서 `IModuleImageHost` 를 찾습니다.
+         * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 여기서 `IModuleLoader` 를 찾습니다.
          *                   범위 객체는 엔진보다 오래 살아야 합니다. 그 안의 서브시스템은 `shutdown` 이 내립니다. nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
          */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );

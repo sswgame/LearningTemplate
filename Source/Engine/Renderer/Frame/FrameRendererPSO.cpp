@@ -171,9 +171,9 @@ namespace sw
         return createPSOForPass( passType, findPassDescByType( passType ), pRTVFormatOverride );
     }
 
-    RHIPipelineStateHandle FrameRenderer::findOrCreateModuleProgramPSO( const ModuleProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
+    RHIPipelineStateHandle FrameRenderer::findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
     {
-        // 모듈 확장 패스의 프로그램(ModuleRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`collectModuleFrame`)만 부른다.
+        // 모듈 확장 패스의 프로그램(ExtensionRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`collectExtensionFrame`)만 부른다.
         // 실패(0)도 기록한다 — 매 프레임 같은 컴파일을 되풀이하지 않고, 부르는 쪽이 0 을 보고 오류를 남기고 그리지 않는다(다른 셰이더로 대신 그리지 않는다).
         if ( _pDevice == nullptr || program._shaderPath.empty() )
             return 0;
@@ -192,7 +192,7 @@ namespace sw
         }
         const hashed_string    programKey{ string_view{ key } };
         RHIPipelineStateHandle existing{ 0 };
-        if ( _pPSOCache->findModuleProgramPSO( programKey, existing ) )
+        if ( _pPSOCache->findExtensionProgramPSO( programKey, existing ) )
             return existing;
 
         RHIPipelineStateDesc desc{};
@@ -211,8 +211,8 @@ namespace sw
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         registerPSOLayout( handle, desc );
         if ( handle == 0 )
-            SW_LOG_ERROR( "Module program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
-        _pPSOCache->setModuleProgramPSO( programKey, handle );
+            SW_LOG_ERROR( "Extension program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
+        _pPSOCache->setExtensionProgramPSO( programKey, handle );
         return handle;
     }
 

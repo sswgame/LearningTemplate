@@ -20,7 +20,7 @@ namespace sw
         , _layoutMutex{}
         , _mapEnginePSO{}
         , _mapOutputPSO{}
-        , _mapModuleProgramPSO{}
+        , _mapExtensionProgramPSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
     {
@@ -94,15 +94,15 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso )
     {
-        _mapModuleProgramPSO.insert_or_assign( programKey, pso );
+        _mapExtensionProgramPSO.insert_or_assign( programKey, pso );
     }
 
-    bool RenderPSOCache::findModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const
     {
-        const auto it = _mapModuleProgramPSO.find( programKey );
-        if ( it == _mapModuleProgramPSO.end() )
+        const auto it = _mapExtensionProgramPSO.find( programKey );
+        if ( it == _mapExtensionProgramPSO.end() )
             return false;
         outPipelineState = it->second;
         return true;
@@ -235,12 +235,12 @@ namespace sw
         }
         _mapOutputPSO.clear();
 
-        for ( auto& [programKey, pso] : _mapModuleProgramPSO )
+        for ( auto& [programKey, pso] : _mapExtensionProgramPSO )
         {
             if ( pso != 0 )
                 pDevice->getResourceFactory()->destroyPipelineState( pso );
         }
-        _mapModuleProgramPSO.clear();
+        _mapExtensionProgramPSO.clear();
 
         // 두 맵은 방금 파괴한 PSO 핸들을 키로 가지고 있다. 핸들에 generation 이 들어 있어 같은 핸들이 다시 발급되어도
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
@@ -257,7 +257,7 @@ namespace sw
         _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
-        _mapModuleProgramPSO.clear();
+        _mapExtensionProgramPSO.clear();
         {
             ScopedLock<mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();

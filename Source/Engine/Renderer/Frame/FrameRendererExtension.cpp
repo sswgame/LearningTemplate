@@ -12,9 +12,9 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 
 namespace sw
 {
@@ -27,14 +27,14 @@ namespace sw
          *        되돌립니다(없던 칸은 지웁니다). 되돌리지 않으면 요소 하나가 빌린 칸의 값이 뒤 요소의 그림을 바꾼다.
          */
         template <typename TContext>
-        class ModuleConstantScope
+        class ExtensionConstantScope
         {
         public:
-            explicit ModuleConstantScope( TContext& context )
+            explicit ExtensionConstantScope( TContext& context )
                 : _context{ context }
             {
             }
-            ~ModuleConstantScope()
+            ~ExtensionConstantScope()
             {
                 for ( const Saved& saved : _listSaved )
                 {
@@ -44,10 +44,10 @@ namespace sw
                         _context._passValues.remove( saved._name );
                 }
             }
-            ModuleConstantScope( const ModuleConstantScope& )            = delete;
-            ModuleConstantScope& operator=( const ModuleConstantScope& ) = delete;
+            ExtensionConstantScope( const ExtensionConstantScope& )            = delete;
+            ExtensionConstantScope& operator=( const ExtensionConstantScope& ) = delete;
 
-            void apply( const ModuleConstant* pConstant, uint32 count )
+            void apply( const ExtensionConstant* pConstant, uint32 count )
             {
                 for ( uint32 index = 0; index < count; ++index )
                 {
@@ -77,11 +77,11 @@ namespace sw
         };
 
         /** @brief 모듈 패스 · 요소의 오류를 키마다 한 번만 남깁니다(그리는 길은 프레임마다 돌아 같은 줄이 쌓이지 않게). */
-        void logModuleFailureOnce( string_view key, const char* pReason, string_view detail )
+        void logExtensionFailureOnce( string_view key, const char* pReason, string_view detail )
         {
-            ModuleRenderPassRegistry* const pRegistry = engine::findSubsystem<ModuleRenderPassRegistry>();
+            RenderExtensionRegistry* const pRegistry = engine::findSubsystem<RenderExtensionRegistry>();
             if ( pRegistry == nullptr || pRegistry->noteFailureOnce( key ) )
-                SW_LOG_ERROR( "Module render: %# '%#'", pReason, detail );
+                SW_LOG_ERROR( "Extension render: %# '%#'", pReason, detail );
         }
 
         uint64 hashText( const string& text )
@@ -90,52 +90,52 @@ namespace sw
         }
     } // namespace
 
-    bool ModulePassContext::drawFullscreen( vector_reference<const ModuleConstant> constants )
+    bool ExtensionPassContext::drawFullscreen( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawModuleFullscreen( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ModuleFramePass*>( _pPass ), constants );
+        return _pRenderer->drawModuleFullscreen( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
     }
 
-    bool ModulePassContext::drawProxyElements( vector_reference<const ModuleConstant> constants )
+    bool ExtensionPassContext::drawProxyElements( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawModuleElements( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ModuleFramePass*>( _pPass ), constants );
+        return _pRenderer->drawExtensionElements( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
     }
 
-    void FrameRenderer::collectModuleFrame( ModuleRenderPassRegistry& registry )
+    void FrameRenderer::collectExtensionFrame( RenderExtensionRegistry& registry )
     {
-        _listModuleFramePass.clear();
-        _listModuleTexture.clear();
-        _listModuleDrawElement.clear();
+        _listExtensionFramePass.clear();
+        _listExtensionTexture.clear();
+        _listExtensionDrawElement.clear();
         _moduleFrameSignature = 0;
         if ( _pDevice == nullptr )
             return;
 
         // 1) 프록시 갱신 적용 → 확장 훅 → 프록시 요소. 모두 모듈 코드이고 렌더 스레드의 모듈 구간(RenderScope) 안이다.
         registry.applyPendingProxyUpdates();
-        const ModuleFrameInfo           frameInfo{ _outputWidth, _outputHeight };
-        ModulePassBuilder               builder;
-        vector<IModuleRenderExtension*> listExtension;
+        const ExtensionFrameInfo  frameInfo{ _outputWidth, _outputHeight };
+        ExtensionPassBuilder      builder;
+        vector<IRenderExtension*> listExtension;
         registry.copyExtensions( listExtension );
-        for ( IModuleRenderExtension* pExtension : listExtension )
+        for ( IRenderExtension* pExtension : listExtension )
         {
             pExtension->addPasses( builder, frameInfo );
         }
-        ModuleDrawCollector        collector;
-        vector<IModuleSceneProxy*> listProxy;
+        ExtensionDrawCollector        collector;
+        vector<IExtensionSceneProxy*> listProxy;
         registry.copyProxies( listProxy );
-        for ( const IModuleSceneProxy* pProxy : listProxy )
+        for ( const IExtensionSceneProxy* pProxy : listProxy )
         {
             pProxy->collectDrawElements( collector, frameInfo );
         }
-        _listModuleDrawElement = collector.getElements();
-        for ( const ModuleDrawElement& element : _listModuleDrawElement )
+        _listExtensionDrawElement = collector.getElements();
+        for ( const ExtensionDrawElement& element : _listExtensionDrawElement )
         {
-            (void)resolveModuleMesh( registry, element._mesh ); // 메시는 기록 전에 읽고 올린다(기록 중에는 표를 읽기만 한다)
+            (void)resolveExtensionMesh( registry, element._mesh ); // 메시는 기록 전에 읽고 올린다(기록 중에는 표를 읽기만 한다)
         }
-        _listModuleTexture = builder.getTextures();
+        _listExtensionTexture = builder.getTextures();
 
         // 2) 패스 선언을 검사한다. 어긋난 패스는 이유를 한 번 남기고 넣지 않는다(다른 첨부 · 셰이더로 대신 그리지 않는다).
         const vector<RenderPassAttachment>& listAttachment = _pipelineResource.getDesc()._listAttachment;
-        const vector<string>&               listShader     = _pipelineResource.getDesc()._listModuleShader;
+        const vector<string>&               listShader     = _pipelineResource.getDesc()._listExtensionShader;
         // 첨부 이름의 포맷을 찾는다 — 파이프라인 XML 의 첨부, 아니면 이번 프레임의 임시 텍스처 요청.
         auto findFormat = [&]( const string& name, RHIFormat& outFormat ) -> bool
         {
@@ -147,7 +147,7 @@ namespace sw
                     return true;
                 }
             }
-            for ( const ModuleTextureDesc& texture : _listModuleTexture )
+            for ( const ExtensionTextureDesc& texture : _listExtensionTexture )
             {
                 if ( texture._name == name )
                 {
@@ -159,21 +159,21 @@ namespace sw
         };
 
         uint64 signature{ 0 };
-        for ( const ModulePassBuilder::Entry& entry : builder.getEntries() )
+        for ( const ExtensionPassBuilder::Entry& entry : builder.getEntries() )
         {
-            const ModulePassParams& params = entry._params;
-            auto                    fail   = [&]( const char* pReason )
+            const ExtensionPassParams& params = entry._params;
+            auto                       fail   = [&]( const char* pReason )
             {
-                logModuleFailureOnce( string( "pass:" ) + params._name + ":" + pReason, pReason, params._name );
+                logExtensionFailureOnce( string( "pass:" ) + params._name + ":" + pReason, pReason, params._name );
             };
             if ( params._name.empty() )
             {
                 fail( "pass has no name" );
                 continue;
             }
-            ModuleFramePass pass;
-            pass._graphName = hashed_string( ( string( "Module." ) + params._name ).c_str() );
-            if ( VectorUtil::containsIf( _listModuleFramePass, [&]( const ModuleFramePass& existing )
+            ExtensionFramePass pass;
+            pass._graphName = hashed_string( ( string( "Extension." ) + params._name ).c_str() );
+            if ( VectorUtil::containsIf( _listExtensionFramePass, [&]( const ExtensionFramePass& existing )
             { return existing._graphName == pass._graphName; } ) )
             {
                 fail( "pass name is declared twice" );
@@ -190,7 +190,7 @@ namespace sw
                 continue;
             }
             bool bValid{ true };
-            for ( const ModulePassRead& read : params._listRead )
+            for ( const ExtensionPassRead& read : params._listRead )
             {
                 RHIFormat readFormat{ RHIFormat::Unknown };
                 if ( findFormat( read._attachment, readFormat ) == false || VectorUtil::contains( params._listWrite, read._attachment ) )
@@ -242,12 +242,12 @@ namespace sw
             {
                 if ( VectorUtil::contains( listShader, params._program._shaderPath ) == false )
                 {
-                    fail( "pass program shader is not in the pipeline _listModuleShader (it would not be cooked)" );
+                    fail( "pass program shader is not in the pipeline _listExtensionShader (it would not be cooked)" );
                     bValid = false;
                 }
                 else
                 {
-                    pass._pso = findOrCreateModuleProgramPSO( params._program, colorFormat, params._depthAttachment.empty() == false );
+                    pass._pso = findOrCreateExtensionProgramPSO( params._program, colorFormat, params._depthAttachment.empty() == false );
                     if ( pass._pso == 0 )
                     {
                         fail( "pass program PSO could not be created" );
@@ -262,7 +262,7 @@ namespace sw
             pass._execute = entry._execute;
             signature     = HashUtil::combine( signature, pass._graphName.getHash() );
             signature     = HashUtil::combine( signature, static_cast<uint64>( params._stage ) );
-            for ( const ModulePassRead& read : params._listRead )
+            for ( const ExtensionPassRead& read : params._listRead )
             {
                 signature = HashUtil::combine( signature, hashText( read._attachment ) );
                 signature = HashUtil::combine( signature, static_cast<uint64>( read._role ) );
@@ -272,37 +272,37 @@ namespace sw
                 signature = HashUtil::combine( signature, hashText( write ) );
             }
             signature = HashUtil::combine( signature, hashText( params._depthAttachment ) );
-            _listModuleFramePass.push_back( std::move( pass ) );
+            _listExtensionFramePass.push_back( std::move( pass ) );
         }
-        if ( _listModuleFramePass.empty() == false )
+        if ( _listExtensionFramePass.empty() == false )
             _moduleFrameSignature = signature != 0 ? signature : 1ull; // 0 은 "모듈 패스 없음" 이다
 
         // 3) 선언이 그래프에 묶인 것과 다르면(처음 · 확장 등록 · 해제 · 선언 변경) 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다.
         if ( _moduleFrameSignature != _moduleBoundSignature )
             _bCallbacksBound = SW_FALSE;
 
-        allocateModuleTextures( _mainView );
+        allocateExtensionTextures( _mainView );
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
-                allocateModuleTextures( *pView );
+                allocateExtensionTextures( *pView );
         }
     }
 
-    void FrameRenderer::releaseModuleFrame()
+    void FrameRenderer::releaseExtensionFrame()
     {
         // 모듈이 넣은 콜백(람다)의 소멸 코드는 모듈에 있다 — 모듈 구간(RenderScope) 안에서 놓는다. 그래프 노드(이름뿐)는 남아도 모듈 코드를 가리키지 않는다.
-        _listModuleFramePass.clear();
-        _listModuleTexture.clear();
-        _listModuleDrawElement.clear();
+        _listExtensionFramePass.clear();
+        _listExtensionTexture.clear();
+        _listExtensionDrawElement.clear();
         _moduleFrameSignature = 0;
     }
 
-    void FrameRenderer::allocateModuleTextures( ViewTarget& view )
+    void FrameRenderer::allocateExtensionTextures( ViewTarget& view )
     {
         if ( _pDevice == nullptr || view._transientPool.isEmpty() )
             return;
-        for ( const ModuleTextureDesc& texture : _listModuleTexture )
+        for ( const ExtensionTextureDesc& texture : _listExtensionTexture )
         {
             if ( view._transientPool.contains( texture._name ) )
                 continue;
@@ -311,11 +311,11 @@ namespace sw
         }
     }
 
-    Mesh* FrameRenderer::resolveModuleMesh( ModuleRenderPassRegistry& registry, const hashed_string& meshID )
+    Mesh* FrameRenderer::resolveExtensionMesh( RenderExtensionRegistry& registry, const hashed_string& meshID )
     {
         shared_ptr<Mesh> pMesh;
-        const auto       it = _mapModuleMesh.find( meshID );
-        if ( it != _mapModuleMesh.end() )
+        const auto       it = _mapExtensionMesh.find( meshID );
+        if ( it != _mapExtensionMesh.end() )
         {
             pMesh = it->second;
         }
@@ -326,20 +326,20 @@ namespace sw
             if ( pMesh == nullptr )
             {
                 (void)registry;
-                logModuleFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
+                logExtensionFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
                 return nullptr;
             }
-            _mapModuleMesh.insert_or_assign( meshID, pMesh );
+            _mapExtensionMesh.insert_or_assign( meshID, pMesh );
         }
         if ( pMesh->initRHI( _pDevice ) == false )
         {
-            logModuleFailureOnce( string( "meshgpu:" ) + string( meshID.view() ), "draw element mesh could not be uploaded - the element is not drawn", meshID.view() );
+            logExtensionFailureOnce( string( "meshgpu:" ) + string( meshID.view() ), "draw element mesh could not be uploaded - the element is not drawn", meshID.view() );
             return nullptr;
         }
         return pMesh.get();
     }
 
-    void FrameRenderer::executeModuleExtensionPass( FramePassContext& context, const ModuleFramePass& pass )
+    void FrameRenderer::executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass )
     {
         if ( context._pCmd == nullptr )
             return;
@@ -348,34 +348,34 @@ namespace sw
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
-        ModuleViewInfo view{};
+        ExtensionViewInfo view{};
         view._bMainView = _pActiveView == &_mainView;
         view._width     = activePool().getWidth();
         view._height    = activePool().getHeight();
-        ModulePassContext moduleContext( *this, &context, &pass, view );
+        ExtensionPassContext moduleContext( *this, &context, &pass, view );
         pass._execute( moduleContext );
         context._pCmd->endEventMarker();
     }
 
-    bool FrameRenderer::drawModuleFullscreen( FramePassContext& context, const ModuleFramePass& pass, vector_reference<const ModuleConstant> listConstant )
+    bool FrameRenderer::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {
-            logModuleFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
+            logExtensionFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
             return false;
         }
-        if ( listConstant.size() > kModuleMaxConstantCount )
+        if ( listConstant.size() > kExtensionMaxConstantCount )
         {
-            logModuleFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
+            logExtensionFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
             return false;
         }
-        for ( const ModulePassRead& read : pass._params._listRead )
+        for ( const ExtensionPassRead& read : pass._params._listRead )
         {
             // 이 뷰에서 빠진 첨부(꺼진 효과의 출력)는 걸지 않는다 — 셰이더는 그 역할의 기본값을 쓴다.
             if ( activePool().resolveName( read._attachment ).empty() == false )
                 registerPassTexture( context, inputRoleName( read._role ), read._attachment );
         }
-        ModuleConstantScope<FramePassContext> constantScope( context );
+        ExtensionConstantScope<FramePassContext> constantScope( context );
         constantScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
         const float4              targetClear = getTargetClearColor( pass._colorTarget.view() );
         const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
@@ -386,37 +386,37 @@ namespace sw
         return true;
     }
 
-    bool FrameRenderer::drawModuleElements( FramePassContext& context, const ModuleFramePass& pass, vector_reference<const ModuleConstant> listConstant )
+    bool FrameRenderer::drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {
-            logModuleFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
+            logExtensionFailureOnce( string( "nodraw:" ) + string( pass._graphName.view() ), "pass has no program - nothing is drawn", pass._graphName.view() );
             return false;
         }
-        if ( listConstant.size() > kModuleMaxConstantCount )
+        if ( listConstant.size() > kExtensionMaxConstantCount )
         {
-            logModuleFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
+            logExtensionFailureOnce( string( "constants:" ) + string( pass._graphName.view() ), "pass has too many constants - nothing is drawn", pass._graphName.view() );
             return false;
         }
-        if ( _listModuleDrawElement.empty() )
+        if ( _listExtensionDrawElement.empty() )
             return true; // 그릴 것이 없으면 렌더 패스를 열지 않는다(열면 타깃의 첫 접근이 클리어로 소비된다)
-        for ( const ModulePassRead& read : pass._params._listRead )
+        for ( const ExtensionPassRead& read : pass._params._listRead )
         {
             if ( activePool().resolveName( read._attachment ).empty() == false )
                 registerPassTexture( context, inputRoleName( read._role ), read._attachment );
         }
-        ModuleConstantScope<FramePassContext> passScope( context );
+        ExtensionConstantScope<FramePassContext> passScope( context );
         passScope.apply( listConstant.data(), static_cast<uint32>( listConstant.size() ) );
         const float4              targetClear = getTargetClearColor( pass._colorTarget.view() );
         const RHIRenderPassLoadOp depthLoad   = pass._depthTarget.empty() ? RHIRenderPassLoadOp::Load : colorLoadFor( pass._depthTarget );
         if ( beginColorPass( context, pass._colorTarget.view(), pass._depthTarget.view(), targetClear, colorLoadFor( pass._colorTarget ), depthLoad ) == false )
             return false;
         bool bAllDrawn{ true };
-        for ( const ModuleDrawElement& element : _listModuleDrawElement )
+        for ( const ExtensionDrawElement& element : _listExtensionDrawElement )
         {
-            // 메시 표는 셋업(`collectModuleFrame`)이 채웠다 — 기록 중에는 읽기만 한다. 없으면 셋업이 이유를 남겼다.
-            const auto meshIt = _mapModuleMesh.find( element._mesh );
-            if ( meshIt == _mapModuleMesh.end() || meshIt->second == nullptr || meshIt->second->isRHIValid() == false )
+            // 메시 표는 셋업(`collectExtensionFrame`)이 채웠다 — 기록 중에는 읽기만 한다. 없으면 셋업이 이유를 남겼다.
+            const auto meshIt = _mapExtensionMesh.find( element._mesh );
+            if ( meshIt == _mapExtensionMesh.end() || meshIt->second == nullptr || meshIt->second->isRHIValid() == false )
             {
                 bAllDrawn = false;
                 continue;
@@ -431,7 +431,7 @@ namespace sw
                 bAllDrawn = false;
                 break;
             }
-            ModuleConstantScope<FramePassContext> elementScope( context );
+            ExtensionConstantScope<FramePassContext> elementScope( context );
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
             context._pCmd->setVertexBuffer( 0, mesh.getVertexBuffer(), sizeof( RHIVertex ), 0 );

@@ -526,7 +526,7 @@ namespace sw
             return 0;
         }
 
-        // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
+        // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleLoadStage`)라야 컴포넌트가 제 타입으로 지어진다.
         if ( services._pTypeRegistry == nullptr )
         {
             SW_LOG_ERROR( "Scene cook has no type registry in the engine services - nothing is cooked" );
@@ -536,7 +536,7 @@ namespace sw
         const TypeRegistry& registry = *services._pTypeRegistry;
         if ( registry.areAllModuleTypesRegistered() == false )
         {
-            SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleTypes startup step)" );
+            SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleLoadStage startup step)" );
             ++outFailedCount;
             return 0;
         }

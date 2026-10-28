@@ -35,7 +35,7 @@ namespace sw
     class CommandLineManager;
     class EditorModuleManager;
     class IWindow;
-    class ModuleImageHostSubsystem;
+    class ModuleLoaderSubsystem;
     class Widget;
 } // namespace sw
 
@@ -66,7 +66,7 @@ namespace sw
         /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /**
-         * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
+         * @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleImages();
@@ -127,12 +127,12 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem` — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
+         * @details 모듈 이미지 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
          *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
          */
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
-        ModuleImageHostSubsystem* _pModuleImageHost;
+        ModuleLoaderSubsystem* _pModuleImageHost;
         /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
         AutomationSession* _pAutomationSession;
         Engine             _engine;
