@@ -51,10 +51,6 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다.
 |---|---|---|
 | `Source/GameFramework/Base/Actor/AI/BehaviorTree.cpp` | `BehaviorTreeRunner::tickNode` | 유지 — 12 종류 `switch` 의 케이스가 평균 9 줄이고 합성 노드(`tickSequence` · `tickSelector`)는 이미 뺐다. 가장 긴 케이스(`Repeat` · `Cooldown`)도 13 줄 안쪽이라 더 가르면 같은 모양의 함수만 늘어난다. 함수 주석에 이유가 있다 |
 | `Source/GameFramework/Base/Online/Cache/MemoryEphemeralStore.cpp` | `MemoryEphemeralDatabase::executeValue` | 유지 — 연산 7 개의 `switch` 이고 케이스가 10 ~ 24 줄이다(`Increment` 가 가장 길다). 연산 하나의 규칙(RESP 와 같은 동작)을 한곳에서 읽는 값이 있어 유지하되, `Increment` 가 더 길어지면 그 케이스를 뺀다. 함수 주석에 이유가 있다 |
-| `Source/Engine/Resource/Pack/ResourcePakWriter.cpp` | `ResourcePakWriter::makePackBytes` | 나눔 — 기준 3: FAT 정렬 · 코덱 고르기 · 항목별 병렬 압축 · 직렬 배치(오프셋) · 페이로드 복사가 주석으로 이미 나뉜 단계다 |
-| `Source/Engine/Object/SceneAnimation/AnimationSystem.cpp` | `AnimationSystem::rebuildComponents` | 나눔 — 기준 3: 간선 모으기(CSR) · Kahn 위상 정렬 · 고리 보고 · union-find 성분 묶기 · 성분 구간 놓기. 단계 사이로 넘기는 값은 `_listScratch*` 멤버라 구조체가 필요 없다 |
-| `Source/Engine/Character/Fit/CharacterMeshUtil.cpp` | `CharacterMeshUtil::mergeMeshes` | 나눔 — 기준 3: 부품 검사 · 그룹 만들기 · 정점 이어 붙이기 · 모프 타깃 합치기 |
-| `Source/Editor/Common/Asset/OutfitAtlasBaker.cpp` | `OutfitAtlasBaker::bake` | 나눔 — 기준 3: 부품 메시 읽기 · 맵 이미지 읽기와 배치 · 메시 병합 · 합성과 쓰기(쓰기 전에 메모리에서 모두 끝낸다는 순서는 유지) |
 | `Source/Engine/Renderer/Vfx/VfxGPUSimulation.cpp` | `VfxGPUSimulation::prepareFrame` | 나눔 (예비) — 기준 3: 파티클 배치 · 파티클 라이트 · 메시 방출기 · 지난 재생 놓기 |
 | `Source/Engine/Renderer/Light/GPULightBuffer.cpp` | `GPULightBuffer::update` | 나눔 — 기준 3: 프레임 상한 나누기 · 업로드 목록 짜기 · 버퍼 확보 · 프로브 SH 올리기 |
 | `Source/Editor/Panels/Catalog/CatalogTableEditor.cpp` | `CatalogTableEditor::draw` | 나눔 (예비) — 기준 3: 그룹마다 표를 그리는 `for` 본문(약 100 줄)을 그룹 하나 그리기로 뺀다 |
