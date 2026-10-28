@@ -23,8 +23,10 @@ namespace
 {
     struct TestAutomationRunnerWatchInternal
     {
-        /** @brief 프레임마다 쉬는 시간(나노초)입니다 — 짧은 벽시계 상한이 몇 프레임 안에 닿게 한다. */
-        static constexpr int64 kFrameSleepNanoseconds = 2000000;
+        /** @brief 시나리오가 `WaitUntil` 에 붙잡히도록 먼저 돌리는 프레임 수입니다. */
+        static constexpr uint32 kHoldSetupFrames = 5;
+        /** @brief 붙잡힌 뒤 벽시계 상한(0.5 초)을 넘기려 쉬는 시간(나노초)입니다. */
+        static constexpr int64 kPastLimitNanoseconds = 600000000;
 
         static inline bool s_bStartBlocked = false; ///< 시작 차단 조건이 참인지(등록 함수는 사용자 자료 없는 함수 포인터라 정적 칸에 둔다)
 
@@ -69,16 +71,23 @@ SW_TEST_CASE( AutomationRunnerWatchTest, WallClockLimitEndsAHeldScenarioAndWrite
     SW_TEST_DEFENSIVE_SCOPE( "a timed out scenario logs an error line" );
     const sw::string     reportPath = Internal::makeReportPath( "wall" );
     sw::AutomationRunner runner;
-    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="10" wallTimeoutSeconds="0.05">
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="10" wallTimeoutSeconds="0.5">
         <At frame="1"><WaitUntil probe="WatchTest.Nothing" atLeast="0" timeoutFrames="100000"/></At>
         <At frame="2"><Pass/></At>
       </Scenario>)",
                                           reportPath ) );
+    // 붙잡힌 상태를 먼저 세운다(상태로 기다린다) — 상한이 시나리오가 붙잡히기도 전에 닿으면 부하 아래에서 "붙잡혔다" 이유가 빠진다.
     sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < Internal::kHoldSetupFrames && result == sw::AutomationOutcome::Running; ++frame )
+    {
+        result = Internal::stepFrame( runner, input );
+    }
+    SW_ASSERT_TRUE_MSG( result == sw::AutomationOutcome::Running, runner.getFinishReason().c_str() ); // 상한 안에서 붙잡힘까지 왔다
+    // 상한을 넘기는 기다림은 시간 그 자체가 대상이라 시간으로 기다린다 — 붙잡힘이 이미 섰으니 지나간 시간만 남는다.
+    sw::MonotonicClock::sleepUntilNanoseconds( sw::MonotonicClock::nowNanoseconds() + Internal::kPastLimitNanoseconds );
     for ( uint32 frame = 0; frame < 400 && result == sw::AutomationOutcome::Running; ++frame )
     {
         result = Internal::stepFrame( runner, input );
-        sw::MonotonicClock::sleepUntilNanoseconds( sw::MonotonicClock::nowNanoseconds() + Internal::kFrameSleepNanoseconds );
     }
     SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::TimedOut, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 12, sw::getAutomationExitCode( result ) );
@@ -87,7 +96,7 @@ SW_TEST_CASE( AutomationRunnerWatchTest, WallClockLimitEndsAHeldScenarioAndWrite
     SW_EXPECT_TRUE( runner.getFrameIndex() <= 2u );                                                                                         // 시나리오 프레임은 서 있었다(프레임 시한은 닿지 못했다)
     const sw::string json = Internal::readReport( reportPath );
     SW_EXPECT_TRUE_MSG( json.find( "\"exitCode\": 12" ) != sw::string::npos, json.c_str() );
-    SW_EXPECT_TRUE_MSG( json.find( "\"wallLimitMilliseconds\": 50," ) != sw::string::npos, json.c_str() );
+    SW_EXPECT_TRUE_MSG( json.find( "\"wallLimitMilliseconds\": 500," ) != sw::string::npos, json.c_str() );
     input.shutdown();
 }
 
