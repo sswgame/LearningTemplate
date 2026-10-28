@@ -17,7 +17,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
-#include "Engine/Observability/HTTPClient.h"
+#include "Engine/Telemetry/HTTPClient.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/GameFrameworkExports.h"

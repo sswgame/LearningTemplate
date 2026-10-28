@@ -20,8 +20,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/Observability/ServerServiceRegistry.h"
-#include "Engine/Observability/ServiceFactoryList.h"
+#include "Engine/DedicatedServer/ServerServiceRegistry.h"
+#include "Engine/DedicatedServer/ServiceFactoryList.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/GameFrameworkExports.h"

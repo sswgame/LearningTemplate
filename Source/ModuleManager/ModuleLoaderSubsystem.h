@@ -27,7 +27,7 @@ namespace sw
      * @class ModuleLoaderSubsystem
      * @brief 호스트 범위에서 모듈 이미지 창구를 맡는 서브시스템입니다.
      */
-    class ModuleLoaderSubsystem final : public ISubsystem, public IModuleLoader
+    class ModuleLoaderSubsystem final : public IModuleLoader
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */

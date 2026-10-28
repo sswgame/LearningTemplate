@@ -40,7 +40,7 @@ kLayer: dict[str, int] = {
     "Object": 5, "Scene": 5, "Automation/Watch": 5,  # 감시 값은 대상 객체를 찾아 읽는다 — 기능(6)이 자기 폴더에서 등록한다
     # 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
     "Physics": 6, "Audio": 6, "Animation": 6, "Navigation": 6, "TileMap": 6, "VFX": 6, "Sequencer": 6, "Dialogue": 6,
-    "Environment": 6, "Destruction": 6, "Character": 6, "UI": 6, "Net": 6, "UserSettings": 6, "Automation/Scenario": 6,
+    "Environment": 6, "Destruction": 6, "DedicatedServer": 6, "Character": 6, "UI": 6, "Net": 6, "UserSettings": 6, "Automation/Scenario": 6,
     # 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
     "Renderer": 7,
     # 8 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기

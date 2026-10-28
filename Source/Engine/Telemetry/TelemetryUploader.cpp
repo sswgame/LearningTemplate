@@ -2,7 +2,7 @@
 
 #include "Engine/Telemetry/TelemetryUploader.h"
 
-#include "Engine/Observability/HTTPClient.h"
+#include "Engine/Telemetry/HTTPClient.h"
 
 namespace sw
 {

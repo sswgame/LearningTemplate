@@ -28,7 +28,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Observability/ServiceFactoryList.h"
+#include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"

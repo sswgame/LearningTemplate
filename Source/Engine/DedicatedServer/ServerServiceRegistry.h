@@ -16,7 +16,7 @@
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/Observability/ServiceFactoryList.h"
+#include "Engine/DedicatedServer/ServiceFactoryList.h"
 
 namespace sw
 {

@@ -6,7 +6,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
 
-#include "Engine/Observability/ServiceHealthRegistry.h"
+#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/EphemeralServerBus.h"

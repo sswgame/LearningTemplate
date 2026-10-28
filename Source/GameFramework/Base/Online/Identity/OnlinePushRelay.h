@@ -14,7 +14,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Observability/ServiceFactoryList.h"
+#include "Engine/DedicatedServer/ServiceFactoryList.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

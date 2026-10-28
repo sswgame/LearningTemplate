@@ -6,6 +6,7 @@
  *          부르는 쪽은 `locateSubsystem<IModuleLoader>` 로 찾는 읽기 전용 조회입니다.
  */
 #pragma once
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -13,10 +14,10 @@ namespace sw
      * @class IModuleLoader
      * @brief 타입 공급자 모듈을 올리고, 씬이 사라진 뒤 모듈 DLL 을 내리는 호스트의 창구입니다.
      */
-    class IModuleLoader
+    class IModuleLoader : public ISubsystem
     {
     public:
-        virtual ~IModuleLoader() = default;
+        ~IModuleLoader() override = default;
 
         /**
          * @brief 타입 공급자 모듈(GameFramework · 키트 · 게임 모듈)을 올려 그 타입을 등록합니다. 실패하면 false 입니다.

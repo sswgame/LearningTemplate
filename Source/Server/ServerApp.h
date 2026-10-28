@@ -27,9 +27,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
-#include "Engine/Observability/ServerServiceRegistry.h"
 
 #include "ModuleManager/HostPart.h"
 #include "ModuleManager/ModuleReloadDriver.h"

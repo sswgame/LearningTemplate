@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Observability/ServerFrameHistory.h"
+#include "Engine/DedicatedServer/ServerFrameHistory.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"

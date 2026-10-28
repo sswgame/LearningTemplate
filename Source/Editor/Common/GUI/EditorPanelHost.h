@@ -15,7 +15,7 @@ namespace sw::editor
      * @class EditorPanelHost
      * @brief 아래 층이 보는 패널 진입점의 GUI 층 구현입니다. `EditorContext` 가 패널 매니저 뒤에 만들고 앞에 지웁니다.
      */
-    class EditorPanelHost final : public EditorSubsystem, public IEditorPanelHost
+    class EditorPanelHost final : public IEditorPanelHost
     {
     public:
         /** @brief Shift+Space 최대화와 플레이 때 최대화가 함께 쓰는 임시 레이아웃 이름입니다(에디터 상태 폴더의 `Temp`). */

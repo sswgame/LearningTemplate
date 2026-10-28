@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Observability/HTTPClient.h"
+#include "Engine/Telemetry/HTTPClient.h"
 
 #include "Core/Container/StringUtil.h"
 

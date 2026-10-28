@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Observability/ServiceFactoryList.h"
+#include "Engine/DedicatedServer/ServiceFactoryList.h"
 
 #include "Core/String/RegistrationList.h"
 
