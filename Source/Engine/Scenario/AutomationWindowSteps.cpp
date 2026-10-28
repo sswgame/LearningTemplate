@@ -13,6 +13,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
@@ -170,9 +171,33 @@ namespace sw
                 return true;
             }
 
+            /** @brief `EnumWindows` 로 같은 프로세스의 보이는 최상위 창(뷰포트 옵션 팝업 같은 플랫폼 창)의 화면 사각형을 모으는 문맥입니다. */
+            struct PopupCollectContext
+            {
+                HWND         _mainWindow{ nullptr };
+                DWORD        _processID{ 0 };
+                vector<RECT> _listRect;
+            };
+
+            static BOOL CALLBACK collectPopupWindow( HWND hwnd, LPARAM param )
+            {
+                PopupCollectContext& context = *reinterpret_cast<PopupCollectContext*>( param );
+                if ( hwnd == context._mainWindow || IsWindowVisible( hwnd ) == FALSE || IsIconic( hwnd ) != FALSE )
+                    return TRUE;
+                DWORD processID = 0;
+                GetWindowThreadProcessId( hwnd, &processID );
+                RECT rect{};
+                if ( processID != context._processID || GetWindowRect( hwnd, &rect ) == FALSE || rect.right <= rect.left || rect.bottom <= rect.top )
+                    return TRUE;
+                context._listRect.push_back( rect );
+                return TRUE;
+            }
+
             /**
              * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다. 에디터 UI 까지 포함한 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력입니다).
-             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
+             * @details 뷰포트 옵션 팝업은 `ViewportsEnable` 때문에 별도 OS 창이라 클라이언트 사각형만 찍으면 잘린다 — 같은 프로세스의 보이는 최상위 창(팝업)의 사각형을 클라이언트와 합친
+             *          경계 상자를 찍고, 어느 창에도 속하지 않는 픽셀(창 사이로 보이는 다른 프로그램 화면)은 투명(알파 0)으로 지운다. 상용 엔진의 에디터 스크린샷도 팝업 창을 따로 찍는다.
+             *          DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
              *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 루트에 `requireForeground="true"` 를 둔다.
              */
             static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
@@ -186,18 +211,39 @@ namespace sw
                     runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": no window to capture" );
                     return true;
                 }
-                if ( GetForegroundWindow() != hwnd || IsIconic( hwnd ) != FALSE )
+                // 팝업을 눌러 팝업이 전경일 수 있다 — 전경 창이 같은 프로세스의 것이면 우리 화면이다.
+                DWORD foregroundProcess = 0;
+                if ( const HWND foreground = GetForegroundWindow(); foreground != nullptr )
+                    GetWindowThreadProcessId( foreground, &foregroundProcess );
+                if ( foregroundProcess != GetCurrentProcessId() || IsIconic( hwnd ) != FALSE )
                 {
                     SW_LOG_WARNING( "[Scenario] %# skipped - the window is not in front, so the screen there shows other windows", step.describe().c_str() );
                     return true;
                 }
-                const int32 width  = clientRect.right - clientRect.left;
-                const int32 height = clientRect.bottom - clientRect.top;
-                if ( width <= 0 || height <= 0 )
+                const int32 clientWidth  = clientRect.right - clientRect.left;
+                const int32 clientHeight = clientRect.bottom - clientRect.top;
+                if ( clientWidth <= 0 || clientHeight <= 0 )
                 {
                     runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": the window has an empty client area" );
                     return true;
                 }
+                // 캡처 영역 = 클라이언트 ∪ 팝업 창들. 화면 좌표의 사각형 목록과 그 경계 상자를 만든다.
+                PopupCollectContext context;
+                context._mainWindow = hwnd;
+                context._processID  = GetCurrentProcessId();
+                context._listRect.push_back( RECT{ origin.x, origin.y, origin.x + clientWidth, origin.y + clientHeight } );
+                EnumWindows( &AutomationWindowStepsInternal::collectPopupWindow, reinterpret_cast<LPARAM>( &context ) );
+                RECT bounds = context._listRect.front();
+                for ( const RECT& rect : context._listRect )
+                {
+                    bounds.left   = MathUtil::min( bounds.left, rect.left );
+                    bounds.top    = MathUtil::min( bounds.top, rect.top );
+                    bounds.right  = MathUtil::max( bounds.right, rect.right );
+                    bounds.bottom = MathUtil::max( bounds.bottom, rect.bottom );
+                }
+                origin             = POINT{ bounds.left, bounds.top };
+                const int32 width  = bounds.right - bounds.left;
+                const int32 height = bounds.bottom - bounds.top;
 
                 const HDC     screenDC = GetDC( nullptr );
                 const HDC     memoryDC = CreateCompatibleDC( screenDC );
@@ -232,6 +278,26 @@ namespace sw
                     bytes[offset + 2] = blue;
                     bytes[offset + 3] = 255;
                 }
+                // 어느 창에도 속하지 않는 픽셀은 다른 프로그램 화면이 찍혔을 수 있어 지운다(알파 0, 색 0).
+                for ( int32 y = 0; y < height; ++y )
+                {
+                    for ( int32 x = 0; x < width; ++x )
+                    {
+                        const int32 screenX = bounds.left + x;
+                        const int32 screenY = bounds.top + y;
+                        bool        bInside = false;
+                        for ( const RECT& rect : context._listRect )
+                        {
+                            if ( screenX >= rect.left && screenX < rect.right && screenY >= rect.top && screenY < rect.bottom )
+                            {
+                                bInside = true;
+                                break;
+                            }
+                        }
+                        if ( bInside == false )
+                            memset( &bytes[( static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ) ) * 4u], 0, 4u );
+                    }
+                }
                 const string path = runner.resolveOutputPath( *step.findAttribute( "file" ) );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePngRgba8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
@@ -239,7 +305,7 @@ namespace sw
                     runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": could not write " + path );
                     return true;
                 }
-                SW_LOG_INFO( "[Scenario] window capture %#x%# -> %#", width, height, path.c_str() );
+                SW_LOG_INFO( "[Scenario] window capture %#x%# (%# windows) -> %#", width, height, static_cast<int32>( context._listRect.size() ), path.c_str() );
                 return true;
             }
 #else
