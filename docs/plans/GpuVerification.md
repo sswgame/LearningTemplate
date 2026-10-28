@@ -97,3 +97,10 @@ Debug 빌드 · 테스트는 아직 돌리지 않았다. 병합 뒤 Shipping 으
 ## 5. 사용자 결정
 
 없습니다.
+
+## 6. 명령 없는 검증 항목 (2026-10-28)
+
+`Test/QA/VerifyBatch.json` 의 명령 없는 항목은 이유가 둘로 갈린다: `manual`(사람 눈 · 귀 · 장비 · 외부 에셋이 있어야 한다 — 41 개) 과 `need_command`(사람이 필요 없는데 명령을 못 만들었다 — 2 개). 읽을 때 일회성(`pending`) 항목은 명령이 있거나 `manual` 이어야 하고, 명령 없는 항목은 어느 문서의 `매니페스트 id` 줄이 가리켜야 한다(주인 문서).
+
+- **구조로 닫은 것:** 상태가 `측정대기` 인 계획 문서는 돌릴 명령이 있는 항목(`manual` · `need_command` 가 아닌 것)을 `매니페스트 id` 줄로 하나는 가리켜야 한다(`findMeasureWaitViolations`, `plans --check` · `CheckVerifyPending` 이 부른다). 사람 확인만 남은 문서는 `측정대기` 로 둘 수 없다 — 아무도 못 푸는 대기가 쌓이는 모양을 막는다.
+- **남은 것(`need_command` 둘):** `paired-animation-two-process`(Server + App 두 프로세스를 한 명령으로 묶는 러너가 없다 — [Candidates-gameplay](Candidates-gameplay.md)) · `shooter-crowd-measure`(적 30 마리를 세우는 perf-compare 케이스가 없다 — C++ 케이스를 더해야 하므로 빌드가 필요하다).

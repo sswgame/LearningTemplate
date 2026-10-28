@@ -73,6 +73,10 @@ _kBacktickIdRe = re.compile(r"`([a-z0-9][a-z0-9-]*)`")
 #: `매니페스트 id` 뒤에 이어진 백틱 id 목록(쉼표 · 가운뎃점으로 이음). 목록이 끝나는 곳에서 멈춘다.
 _kIdListRe = re.compile(r"매니페스트 id\s*((?:`[a-z0-9][a-z0-9-]*`\s*[,·]?\s*)+)")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
+#: 계획 문서 머리 줄의 상태 낱말 — `> 상태: 측정대기 · 선행: …`. 머리 줄 전체의 모양 검사는 `common/Plans` 가 한다.
+_kPlanStatusRe = re.compile(r"^> 상태: (\S+) ·", re.MULTILINE)
+#: 이 상태의 문서는 돌릴 수 있는 확인을 기다린다 — 돌릴 명령이 있는 항목을 `매니페스트 id` 로 하나는 가리켜야 한다(사람 확인 · 명령 없는 항목만이면 아무도 못 푸는 대기다).
+kMeasureWaitStatus = "측정대기"
 _kSuiteCaseRe = re.compile(r"^([A-Za-z]\w*)\.([\w*]+)$")
 _kWordRe = re.compile(r"\w+")
 #: 다른 항목이 남긴 시나리오 보고 폴더(ctest 샤드의 실행 쓰기 루트, 보고는 `AppRuns/shard<k>of<n>/<케이스>/Saved/Automation` 아래)를 읽는 args — 이런 항목은 그 보고를 만드는 항목을 `requires` 로 적어야 한다.
@@ -775,6 +779,19 @@ def findReferencedIds(line: str) -> list[str]:
     return [itemId for match in _kIdListRe.finditer(line) for itemId in _kBacktickIdRe.findall(match.group(1))]
 
 
+def findMeasureWaitViolations(fileName: str, text: str, setReferenced: set[str], manifest: VerifyManifest) -> list[str]:
+    """상태가 `측정대기` 인 문서가 돌릴 수 있는 항목(명령이 있고 `wsl` 이 아닌 것)을 하나도 가리키지 않으면 위반 한 줄. 다른 상태 문서는 빈 목록."""
+    match = _kPlanStatusRe.search(text)
+    if match is None or match.group(1) != kMeasureWaitStatus:
+        return []
+    listRunnable = [itemId for itemId in sorted(setReferenced)
+                    if (item := manifest.findItem(itemId)) is not None and not item.bUnrunnable and item.platform != "wsl"]
+    if listRunnable:
+        return []
+    return [f"docs/plans/{fileName}: 상태가 `{kMeasureWaitStatus}` 인데 돌릴 명령이 있는 항목을 가리키는 `매니페스트 id` 줄이 없습니다 — "
+            "기다리는 확인에 항목(명령)을 달거나, 사람 확인(`manual`)만 남았으면 상태를 `구현중` · `참고` 로 두고 사람 확인은 항목 사유로 분리합니다"]
+
+
 def findPendingLineViolations(repositoryRoot: Path, manifest: VerifyManifest | None) -> list[str]:
     """계획 문서 · 후보 문서(`docs/plans`, 안내 문서 제외)의 대기 줄을 점검한다.
 
@@ -787,13 +804,16 @@ def findPendingLineViolations(repositoryRoot: Path, manifest: VerifyManifest | N
     listViolation: list[str] = []
     for path in listPlanFiles(repositoryRoot):
         bFence = False
-        for lineNumber, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        text = path.read_text(encoding="utf-8")
+        setFileReferenced: set[str] = set()
+        for lineNumber, line in enumerate(text.splitlines(), start=1):
             if _kFenceRe.match(line):
                 bFence = not bFence
             if bFence or line.lstrip().startswith("#"):
                 continue
             listId = findReferencedIds(line)
             setReferenced.update(listId)
+            setFileReferenced.update(listId)
             if not _kPendingMarkerRe.search(line):
                 continue
             where = f"docs/plans/{path.name}:{lineNumber}"
@@ -803,6 +823,8 @@ def findPendingLineViolations(repositoryRoot: Path, manifest: VerifyManifest | N
                 listViolation.append(f"{where}: 대기 줄에는 글 대신 `매니페스트 id` 와 항목 id 를 적습니다(항목은 {kManifestRelPath} 에 더한다)")
             else:
                 listViolation += [f"{where}: 매니페스트 id `{itemId}` 가 {kManifestRelPath} 에 없습니다" for itemId in listId if manifest.findItem(itemId) is None]
+        if manifest is not None:
+            listViolation += findMeasureWaitViolations(path.name, text, setFileReferenced, manifest)
     if manifest is not None:
         listViolation += [f"{kManifestRelPath}: 일회성 항목 `{item.itemId}`(pending)를 가리키는 문서 줄이 없습니다 — 확인이 끝나 줄을 지웠으면 항목도 지웁니다"
                           for item in manifest.listItem if item.bPending and item.itemId not in setReferenced]

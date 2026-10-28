@@ -314,7 +314,7 @@ class TimelineTest(unittest.TestCase):
 
 
 class PendingLineTest(unittest.TestCase):
-    kPlanHeader = "# 계획\n\n> 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
+    kPlanHeader = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 해당없음\n\n"
 
     def makeRoot(self, docText: str, pendingItem: bool = False) -> Path:
         root = Path(tempfile.mkdtemp())
@@ -356,6 +356,20 @@ class PendingLineTest(unittest.TestCase):
             self.assertIn(f"명령 없는 항목 `some-test`({key})", listViolation[0])
             (root / "docs" / "plans" / "A.md").write_text(self.kPlanHeader + "후보: 매니페스트 id `some-test`.\n", encoding="utf-8")
             self.assertEqual([], checkVerifyPending(root))
+
+    def testMeasureWaitPlanNeedsARunnableItem(self) -> None:
+        measureHeader = self.kPlanHeader.replace("구현중", "측정대기")
+        for text, expectedCount in (("본문\n", 1), ("후보: 매니페스트 id `nope`.\n", 1), ("후보: 매니페스트 id `some-test`.\n", 0)):
+            root = self.makeRoot(text)
+            (root / "docs" / "plans" / "A.md").write_text(measureHeader + text, encoding="utf-8")
+            listViolation = [line for line in checkVerifyPending(root) if "돌릴 명령이 있는 항목" in line]
+            self.assertEqual(expectedCount, len(listViolation), text)
+        for key, value in (("need_command", "케이스가 아직 없다"), ("manual", "사람 눈이 필요하다")):
+            root = self.makeRoot("본문\n")
+            item = makeItem("some-test", "test", "Debug", "none", filter="SomeTest.*", **{key: value})
+            (root / "Test" / "QA" / "VerifyBatch.json").write_text(json.dumps(makeData(item)), encoding="utf-8")
+            (root / "docs" / "plans" / "A.md").write_text(measureHeader + "후보: 매니페스트 id `some-test`.\n", encoding="utf-8")
+            self.assertEqual(1, len([line for line in checkVerifyPending(root) if "돌릴 명령이 있는 항목" in line]), key)
 
     def testMissingManifestOnlyMattersWhenAPendingLineExists(self) -> None:
         root = self.makeRoot("본문\n")
