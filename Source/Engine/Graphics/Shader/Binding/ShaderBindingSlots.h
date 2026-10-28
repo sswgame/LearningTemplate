@@ -352,6 +352,7 @@ namespace sw
             inline constexpr const utf8* kCullBatchInfo                = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs             = "g_IndirectArgs";
             inline constexpr const utf8* kCullVisibleIDs               = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
+            inline constexpr const utf8* kCullLodState                 = "g_LodState";           ///< 컬링 u2. 인스턴스마다의 LOD 전환 상태(크로스페이드)
             inline constexpr const utf8* kAnimationInstancesRw         = "g_InstancesRW";        ///< instanceanimation u0. 월드 행렬을 고쳐 쓴다.
         } // namespace resname
 

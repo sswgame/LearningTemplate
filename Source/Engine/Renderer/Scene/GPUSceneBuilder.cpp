@@ -124,6 +124,7 @@ namespace sw
         _snapshot._pListInstance.reset();
         _snapshot.clearBatches();
         _snapshot.clearParticles();
+        ++_snapshot._instanceLayoutGeneration;
         _batchElementTable.clear(); // 배치 목록과 나란한 표다. 함께 비운다.
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
@@ -346,6 +347,7 @@ namespace sw
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
         candidate._lodContentID = 0; // 인스턴스 배치(식생 · UI)는 LOD 그룹이 아니다
+        candidate._bLodDither   = SW_FALSE;
         return fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
     }
 
@@ -353,6 +355,7 @@ namespace sw
     {
         // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 **늘 기록한다**(0 도 값이다).
         candidate._lodContentID = 0;
+        candidate._bLodDither   = SW_FALSE;
         const Mesh* pMesh       = candidate._mesh.get();
         if ( _bGPULodActive == SW_FALSE || pMesh == nullptr )
             return;
@@ -364,8 +367,18 @@ namespace sw
         if ( bGroupableMesh == false || bOpaque == false )
             return;
         candidate._lodContentID       = pMesh->getContentID();
+        candidate._bLodDither         = _snapshot._lodCrossfadeSeconds > 0.0f ? SW_TRUE : SW_FALSE;
         candidate._sectionFirstVertex = 0; // 단계 0 = 메시 전체. 낮은 단계는 컬링이 고른다
         candidate._sectionVertexCount = 0;
+    }
+
+    void GPUSceneBuilder::setGPUInstanceLodCrossfadeSeconds( float32 seconds )
+    {
+        const float32 value = seconds > 0.0f ? seconds : 0.0f;
+        if ( _snapshot._lodCrossfadeSeconds == value )
+            return;
+        _snapshot._lodCrossfadeSeconds = value;
+        invalidateBuildCache(); // 디더 변형 여부가 퍼뮤테이션 해시(배치 키)를 바꾼다
     }
 
     void GPUSceneBuilder::setGPUInstanceLodEnabled( bool bEnabled )
@@ -1492,6 +1505,7 @@ namespace sw
     {
         // 전체 재구축이다. 구간을 기록해 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
         _snapshot._bAllInstancesDirty = SW_TRUE;
+        ++_snapshot._instanceLayoutGeneration; // 인스턴스 번호가 새로 매겨진다 — 번호에 묶인 GPU 상태(LOD 전환)는 낡았다
         _snapshot._listDirtyInstanceRun.clear();
         instanceWork().reserve( _listScratchCandidate.size() );
         _listInstanceSrcIndex.clear();

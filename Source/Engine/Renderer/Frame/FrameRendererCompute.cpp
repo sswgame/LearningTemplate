@@ -11,6 +11,8 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -310,6 +312,24 @@ namespace sw
         _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
+    void FrameRenderer::computeLodFadeStep()
+    {
+        // 전환 진행량은 렌더 프레임 간격(벽시계)에서 센다 — 진행이 게임 시간이 아니라 화면에서 보이는 시간이다. 간격이 길어도(정지 · 히치) 한 프레임에 끝내지 않도록 0.1 초로 막는다.
+        constexpr float32 kMaxFrameSeconds = 0.1f;
+        const int64       nowNanoseconds   = MonotonicClock::nowNanoseconds();
+        const float32     frameSeconds     = ( _lodFadePreviousNanoseconds == 0 ) ? 0.0f : static_cast<float32>( nowNanoseconds - _lodFadePreviousNanoseconds ) * 1.0e-9f;
+        _lodFadePreviousNanoseconds        = nowNanoseconds;
+        const float32 fadeSeconds          = _gpuScene.getLodCrossfadeSeconds();
+        if ( fadeSeconds <= 0.0f )
+        {
+            _lodFadeStep = 0;
+            return;
+        }
+        // 진행은 0 ~ 255 로 센다. 한 프레임에 적어도 1 은 간다(멈춘 전환이 남지 않는다).
+        const float32 progress = MathUtil::min( frameSeconds, kMaxFrameSeconds ) / fadeSeconds * 255.0f;
+        _lodFadeStep           = static_cast<uint32>( MathUtil::clamp( progress, 1.0f, 255.0f ) );
+    }
+
     void FrameRenderer::dispatchCullAndSort( uint32 instanceCount )
     {
         // 컬링은 GPUScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
@@ -325,6 +345,7 @@ namespace sw
         if ( bCullingUnavailable )
             return;
 
+        computeLodFadeStep();
         bool bAllViewsCulled = true;
         // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿 타일이 없으면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
         const bool bMainShadowSlotUnused = _cascadeCullCount > 0 && _frameShadow._listLocalTile.empty();
@@ -504,6 +525,13 @@ namespace sw
         cullParams._arrLodView[1]    = lodView._position._y;
         cullParams._arrLodView[2]    = lodView._position._z;
         cullParams._arrLodControl[0] = 1u;
+        // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다). 컷 · 처음 그리는 프레임은 상태를 비워 단계를 바로 맞춘다.
+        const bool        bHasLodState = _gpuScene.hasLodState( cullViewIndex );
+        const ViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _mainView;
+        const bool        bViewCut     = lodTarget._bHasHistory == SW_FALSE || lodTarget._settings._bCut == SW_TRUE;
+        const bool        bResetState  = _gpuScene.takeLodStateReset( cullViewIndex ) || bViewCut;
+        cullParams._arrLodControl[1]   = bResetState ? 1u : 0u;
+        cullParams._arrLodControl[2]   = bHasLodState ? _lodFadeStep : 0u;
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
         const ViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
         if ( pOcclusionView != nullptr )
@@ -528,6 +556,16 @@ namespace sw
             _pCmd->bindComputeShaderResource( occlusionSrv, 2 );
         _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
         _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
+        // 전환 상태(u2)는 크로스페이드가 켜졌을 때만 읽고 쓴다. 없으면 자리만 채운다 — 셰이더가 진행량 0 이면 건드리지 않는다.
+        if ( bHasLodState )
+        {
+            _pCmd->transitionBuffer( view._lodState._buffer, RHIBufferState::UnorderedAccess );
+            _pCmd->bindComputeUav( view._lodState._uav, 2 );
+        }
+        else
+        {
+            _pCmd->bindComputeUav( view._visibleInstances._uav, 2 );
+        }
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
         const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
         if ( groups > 0 )

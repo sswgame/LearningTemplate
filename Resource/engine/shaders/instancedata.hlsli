@@ -40,11 +40,15 @@ struct InstanceData
     void computeVertexAnimationElements( uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha );
     void loadAnimatedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
     static float2 unpackUnorm16x2( uint packed );
+    static uint resolveEntry( uint instanceSlot );
     static uint resolveId( uint instanceSlot );
     static InstanceData load( uint instanceSlot );
     static float4x4 loadWorld( uint instanceSlot );
 };
 
+/// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다)의 아래 스물일곱 비트는 인스턴스 번호, 위쪽 다섯 비트는 LOD 크로스페이드 코드다(binding.hlsli `Appearance::computeLodFadeAppearance`).
+static const uint kVisibleEntryIdMask    = 0x07FFFFFFu;
+static const uint kVisibleEntryFadeShift = 27u;
 static const uint kHighlightStyleNone    = 0u;
 static const uint kHighlightStyleOutline = 1u;
 static const uint kHighlightStyleSense   = 2u;

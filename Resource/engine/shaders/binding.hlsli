@@ -130,6 +130,7 @@ struct Appearance
 {
     static float computeDitherThreshold( float2 pixelPosition );
     static void clipDither( float appearance, float2 pixelPosition );
+    static float computeLodFadeAppearance( float instanceAppearance, uint fadeCode );
 };
 
 /** @brief 머티리얼 데이터 버퍼(9 절). */
@@ -609,13 +610,18 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIDs, SW_SLOT_VISIBLE_INST
  *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIDs 에 들어 있다.
  *          목록이 없으면(컬링 없음) 슬롯이 곧 인스턴스 번호다.
  */
-static uint InstanceData::resolveId( uint instanceSlot )
+static uint InstanceData::resolveEntry( uint instanceSlot )
 {
     // 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
     const uint slot = instanceSlot;
     if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwVisibleSlotCount )
         return g_SwVisibleInstanceIDs[slot];
     return slot;
+}
+
+static uint InstanceData::resolveId( uint instanceSlot )
+{
+    return InstanceData::resolveEntry( instanceSlot ) & kVisibleEntryIdMask;
 }
 
 /**
@@ -626,9 +632,15 @@ static uint InstanceData::resolveId( uint instanceSlot )
  */
 static InstanceData InstanceData::load( uint instanceSlot )
 {
-    const uint element = InstanceData::resolveId( instanceSlot );
+    const uint entry   = InstanceData::resolveEntry( instanceSlot );
+    const uint element = entry & kVisibleEntryIdMask;
     if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
-        return g_SwInstances[element];
+    {
+        InstanceData instance = g_SwInstances[element];
+        // LOD 크로스페이드 중인 항목은 인스턴스의 등장 비율 대신 상보 디더 값을 받는다(8-1 절). 코드가 0 이면 그대로다.
+        instance._appearance = Appearance::computeLodFadeAppearance( instance._appearance, entry >> kVisibleEntryFadeShift );
+        return instance;
+    }
     InstanceData instance;
     instance._world                = g_World;
     instance._boundsCenter         = float3( 0, 0, 0 );
@@ -673,10 +685,26 @@ static float Appearance::computeDitherThreshold( float2 pixelPosition )
     return ( arrBayer4x4[cell.y * 4u + cell.x] + 0.5f ) / 16.0f;
 }
 
-/** @brief 등장 비율 @p appearance 보다 문턱이 높은 픽셀을 버린다(0 이면 모두, 1 이면 하나도 버리지 않는다). */
+/**
+ * @brief 등장 비율 @p appearance 보다 문턱이 높은 픽셀을 버린다(0 이면 모두, 1 이면 하나도 버리지 않는다).
+ * @details **음수는 상보 패턴이다.** `[-1, 0)` 이면 문턱이 `appearance + 1` 보다 낮은 픽셀을 버린다 — 같은 값 p 에서 `appearance = p` 와 `appearance = p - 1` 은 겹치지도
+ *          비지도 않고 화면을 나눈다. LOD 크로스페이드가 새 단계에 p, 옛 단계에 p - 1 을 준다(`Appearance::computeLodFadeAppearance`).
+ */
 static void Appearance::clipDither( float appearance, float2 pixelPosition )
 {
-    clip( appearance - Appearance::computeDitherThreshold( pixelPosition ) );
+    const float threshold = Appearance::computeDitherThreshold( pixelPosition );
+    clip( appearance >= 0.0f ? appearance - threshold : threshold - ( appearance + 1.0f ) );
+}
+
+/**
+ * @brief 가시 목록 항목의 크로스페이드 코드(위쪽 5비트: 직전 단계 비트 | 진행 L = 1 ~ 15)를 이 인스턴스의 등장 비율로 바꿉니다. 코드 0 이면 인스턴스 값 그대로입니다.
+ * @details 새 단계는 `L / 16`, 직전 단계는 `L / 16 - 1`(상보). 4x4 Bayer 문턱이 16 단계라 L 이 곧 남는 픽셀 수(16 칸 중)다.
+ */
+static float Appearance::computeLodFadeAppearance( float instanceAppearance, uint fadeCode )
+{
+    const float progress = float( fadeCode & 15u ) / 16.0f;
+    const float faded    = ( fadeCode & 16u ) != 0u ? progress - 1.0f : progress;
+    return fadeCode == 0u ? instanceAppearance : faded;
 }
 
 // 매크로로 남긴 이유: `SW_APPEARANCE_VARYING` 은 구조체 **필드 선언**이라 함수가 될 수 없고, 나머지 둘은 그 필드가 있을 때만 존재하는 구조체 멤버를 읽는다(퍼뮤테이션이 필드 유무를 가른다).

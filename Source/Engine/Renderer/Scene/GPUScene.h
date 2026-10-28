@@ -33,6 +33,13 @@ namespace sw
     {
         RHIStructuredBufferSlot _indirectArgs;
         RHIStructuredBufferSlot _visibleInstances;
+        /**
+         * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpucull.hlsl` 의 `g_LodState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
+         * @details 뷰마다 하나다 — 뷰마다 보는 거리와 갱신 주기가 달라 전환 진행이 다르다.
+         */
+        RHIStructuredBufferSlot _lodState;
+        /// @brief `_lodState` 가 맞춰 둔 인스턴스 배치 세대(`GPUSceneSnapshot::_instanceLayoutGeneration`)입니다. 다르면 다음 컬링이 상태를 비운다(`GPUScene::takeLodStateReset`).
+        uint32 _lodStateLayoutGeneration{ 0xFFFFFFFFu };
     };
 } // namespace sw
 
@@ -145,6 +152,16 @@ namespace sw
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
+        /**
+         * @brief 컬링 뷰 @p view 의 LOD 전환 상태를 이번 컬링에서 비워야 하면 true 를 반환하고 비운 것으로 기록합니다(상태 버퍼를 새로 만들었거나 인스턴스 번호 배치가 바뀌었다).
+         */
+        bool takeLodStateReset( uint32 cullViewIndex );
+        /** @brief 컬링 뷰 @p view 에 LOD 전환 상태 버퍼가 있으면 true 입니다(LOD 그룹이 있고 버퍼를 만들었다). */
+        bool hasLodState( uint32 cullViewIndex ) const { return cullViewIndex < _listCullView.size() && _listCullView[cullViewIndex]._lodState._uav != kInvalidDescriptorIndex; }
+        /** @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 크로스페이드가 없다(`GPUSceneSnapshot::_lodCrossfadeSeconds`). */
+        float32 getLodCrossfadeSeconds() const { return _snapshot._lodCrossfadeSeconds; }
+        /** @brief 스냅샷에 LOD 그룹이 하나라도 있으면 true 입니다. */
+        bool hasLodGroups() const { return _snapshot.hasLodGroups(); }
         /** @brief 가시 목록의 칸 수입니다(`GPUSceneSnapshot::getVisibleSlotCount`). */
         uint32 getVisibleSlotCount() const { return _snapshot.getVisibleSlotCount(); }
         /**
@@ -282,6 +299,8 @@ namespace sw
         void uploadBatchTable( IRHIDevice* pDevice, uint32 argsCount );
         /** @brief 배치마다의 간접 드로우 인자를 만듭니다(GPU 가 개수를 채우는 배치는 0 에서 시작). */
         void populateIndirectCommands( uint32 argsCount );
+        /** @brief 뷰마다 LOD 전환 상태 버퍼를 맞춥니다. LOD 그룹이 없으면 놓습니다(전환 상태는 그룹 인스턴스에만 쓴다). */
+        void ensureLodStateBuffers( IRHIDevice* pDevice, uint32 instanceCount );
         /** @brief 간접 인자의 시작 인스턴스입니다. 컬링이 가시 목록을 만드는 프레임은 가시 구간의 시작, 아니면 인스턴스 구간의 시작입니다. */
         uint32 computeStartInstance( const GPUMeshBatch& batch ) const;
         /** @brief 항등 인스턴스 슬롯 스트림을 가시 칸 수(@p slotCount) 이상으로 확보합니다. */

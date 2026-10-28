@@ -137,6 +137,8 @@ namespace sw
         , _directOutputHeight{ 0 }
         , _scenePreviewRendererCount{ 0 }
         , _bGPUCullingActive{ SW_FALSE }
+        , _lodFadeStep{ 0 }
+        , _lodFadePreviousNanoseconds{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
@@ -469,6 +471,8 @@ namespace sw
         dispatchVolumetricFog();
         // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
         dispatchRealtimeProbes();
+        // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
+        _canvasRenderer.recordMarkerProjection( *_pCmd, getEnginePSO( RenderPassType::CanvasMarker ) );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.

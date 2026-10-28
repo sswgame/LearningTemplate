@@ -51,6 +51,7 @@ namespace sw
      * @brief `-gv_gpuInstanceLod=0`: GPU 컬링이 인스턴스마다 메시 LOD 단계를 고르는 길을 끕니다(CPU `MeshLODSystem` 이 컴포넌트마다 고른다). 능력이 없는 백엔드(DX11)는 이 값과 상관없이 CPU 선택이다.
      */
     SW_GLOBAL_VARIABLE( bool, gv_gpuInstanceLod, true, "GPU 컬링이 인스턴스마다 메시 LOD 단계를 고른다 (false=CPU 가 컴포넌트마다 고른다)" );
+    SW_GLOBAL_VARIABLE( float32, gv_lodCrossfadeSeconds, 0.25f, "GPU 인스턴스 LOD 단계 전환의 상보 디더 크로스페이드 시간(초) — 0 이하면 크로스페이드 없이 바로 바꾼다" );
     SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleMin, 0.5f, "자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하" );
 } // namespace sw
 
@@ -290,6 +291,7 @@ namespace sw
     void RenderPacketBuilder::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene )
     {
         _gpuSceneBuilder->setGPUInstanceLodEnabled( _bGPUInstanceLodCapable && gv_gpuInstanceLod );
+        _gpuSceneBuilder->setGPUInstanceLodCrossfadeSeconds( gv_lodCrossfadeSeconds );
         _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
@@ -413,6 +415,12 @@ namespace sw
             packet._canvas._mainOutput      = pUISystem->getCanvas();
             packet._canvas._listAnchor      = pUISystem->getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
             packet._canvas._contentRevision = pUISystem->getCanvasRevision();
+            // GPU 가 투영하는 마커 — 월드 점만 싣고 화면 좌표는 렌더러의 컴퓨트(`CanvasRenderer::recordMarkerProjection`)가 앵커 원소에 쓴다. 켜진 마커가 없으면 싣지 않는다.
+            if ( pUISystem->getGpuMarkerCount() > 0 )
+            {
+                packet._canvas._listMarker = pUISystem->getGpuMarkers();
+                packet._canvas._markerView = pUISystem->getGpuMarkerView();
+            }
         }
         if ( bUIReady )
             pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처

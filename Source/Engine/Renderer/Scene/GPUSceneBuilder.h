@@ -119,6 +119,11 @@ namespace sw
          *          켜도 이번 프레임에 그룹으로 그리는 것은 `MeshLODSystem::needsCPUSelection` 이 아닐 때의 정적 불투명 메시뿐이다. 값이 바뀌면 다음 빌드가 다시 나눈다.
          */
         void setGPUInstanceLodEnabled( bool bEnabled );
+        /**
+         * @brief LOD 단계 전환의 크로스페이드 시간(초)을 정합니다. 0 이하면 크로스페이드 없이 바로 바꾼다.
+         * @details 켜면 LOD 그룹 후보가 디더 변형으로 그려져(`DrawCandidate::_bLodDither`) 배치를 다시 나눈다. 값은 스냅샷이 RT 로 실어 나른다(`GPUSceneSnapshot::_lodCrossfadeSeconds`).
+         */
+        void setGPUInstanceLodCrossfadeSeconds( float32 seconds );
         /** @brief GPU 인스턴스 LOD 를 쓸 수 있도록 정했으면 true 입니다(`setGPUInstanceLodEnabled`). */
         bool isGPUInstanceLodEnabled() const { return _bGPUInstanceLodEnabled == SW_TRUE; }
         /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
@@ -347,12 +352,17 @@ namespace sw
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임에도 다시 구한다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눈다.
              */
             uint8 _bReverseCulling{ SW_FALSE };
+            /**
+             * @brief LOD 그룹 후보를 디더 변형으로 그리는지입니다(`usesAppearanceDither`) — 크로스페이드가 켜져 있으면 그룹의 모든 인스턴스가 그 변형이다(전환 중에만 픽셀을 버리고 평소에는 하나도 버리지 않는다).
+             * @details 퍼뮤테이션 해시가 달라지므로 배치 키에 이미 들어 있다.
+             */
+            uint8 _bLodDither{ SW_FALSE };
             /// @brief 정점 애니메이션 시간 오프셋(초)입니다. MeshComponent 가 주고 GPUInstance::_vertexAnimationPhase 로 전달됩니다(배치 키가 아니라 내용).
             /// 컬 반전(1바이트) 뒤의 정렬 빈 공간에 둔다. 앞에 두면 구멍이 생긴다(아래 static_assert).
             float32 _vertexAnimationPhase{ 0.0f };
 
             /** @brief 등장 디더 변형으로 그리는지 반환합니다 — 등장 중(1 미만)이고 불투명일 때입니다. 투명은 정렬 · 블렌드가 있어 디더하지 않는다. */
-            bool usesAppearanceDither() const { return _appearance < 1.0f && _blendMode != static_cast<uint32>( RHIBlendMode::Transparent ); }
+            bool usesAppearanceDither() const { return ( _appearance < 1.0f || _bLodDither != SW_FALSE ) && _blendMode != static_cast<uint32>( RHIBlendMode::Transparent ); }
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -374,7 +384,8 @@ namespace sw
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _highlight == other._highlight &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
-                       _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
+                       _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _bLodDither == other._bLodDither && _sortKey == other._sortKey &&
+                       _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -404,7 +415,7 @@ namespace sw
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 6 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) * 2 +
-                                                    sizeof( uint8 ) + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
+                                                    sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
 

@@ -255,6 +255,37 @@ namespace sw
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
                 SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
+        // 가시 목록 항목은 아래 스물일곱 비트가 인스턴스 번호다(위쪽 다섯 비트는 LOD 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIdMask`).
+        SW_ASSERT( instanceCount <= 0x07FFFFFFu );
+        ensureLodStateBuffers( pDevice, instanceCount );
+    }
+
+    void GPUScene::ensureLodStateBuffers( IRHIDevice* pDevice, uint32 instanceCount )
+    {
+        // 전환 상태는 LOD 그룹이 있을 때만 필요하다. 없으면 놓아 인스턴스 수만큼의 메모리를 뷰마다 들고 있지 않는다.
+        const uint32             stateCount     = _snapshot.hasLodGroups() ? instanceCount : 0u;
+        constexpr RHIBufferUsage kLodStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess;
+        for ( GPUCullViewResources& view : _listCullView )
+        {
+            const RHIBufferHandle bufferBefore = view._lodState._buffer;
+            const bool            bEnsured     = view._lodState.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), stateCount, kLodStateUsage, false, true, nullptr );
+            if ( bEnsured == false && stateCount > 0 )
+                SW_LOG_ERROR_ONCE( "Failed to create the LOD state buffer (%# instances) of a cull view - its LOD levels switch without a crossfade", stateCount );
+            // 새 버퍼의 내용은 정해져 있지 않다 — 다음 컬링이 비운다.
+            if ( view._lodState._buffer != bufferBefore )
+                view._lodStateLayoutGeneration = 0xFFFFFFFFu;
+        }
+    }
+
+    bool GPUScene::takeLodStateReset( uint32 cullViewIndex )
+    {
+        if ( cullViewIndex >= _listCullView.size() )
+            return false;
+        GPUCullViewResources& view = _listCullView[cullViewIndex];
+        if ( view._lodStateLayoutGeneration == _snapshot._instanceLayoutGeneration )
+            return false;
+        view._lodStateLayoutGeneration = _snapshot._instanceLayoutGeneration;
+        return true;
     }
 
     void GPUScene::uploadDirtyInstanceRuns( IRHIDevice* pDevice, uint32 instanceCount )
@@ -423,6 +454,7 @@ namespace sw
         for ( size_t index = wanted; index < _listCullView.size(); ++index )
         {
             _listCullView[index]._visibleInstances.release( pDevice );
+            _listCullView[index]._lodState.release( pDevice );
             _listCullView[index]._indirectArgs.release( pDevice );
         }
         _listCullView.resize( wanted );
@@ -471,6 +503,7 @@ namespace sw
         for ( GPUCullViewResources& view : _listCullView )
         {
             view._visibleInstances.release( pDevice );
+            view._lodState.release( pDevice );
             view._indirectArgs.release( pDevice );
         }
         _bBatchTablesDirty           = SW_TRUE;

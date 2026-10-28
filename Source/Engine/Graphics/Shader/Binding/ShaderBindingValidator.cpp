@@ -359,6 +359,7 @@ namespace sw
             addReserved( list, shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
             addReserved( list, shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
             addReserved( list, shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kUShift, 1 ), slotAt( 0, shaderslot::gl::kUavBinding0 + 1 ) );
+            addReserved( list, shaderslot::resname::kCullLodState, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 2 ), slotAt( 0, 2 ), slotAt( vk::kUShift, 2 ), slotAt( 0, shaderslot::gl::kUavBinding0 + 2 ) );
             // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
             addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
             // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.

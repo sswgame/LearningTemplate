@@ -474,6 +474,16 @@ namespace sw
          *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
+        /**
+         * @brief 인스턴스 **번호의 배치**가 바뀔 때마다 오르는 세대입니다(배치를 처음부터 다시 만든 빌드). 제자리 갱신(움직임 · 색)은 올리지 않는다.
+         * @details 인스턴스 번호에 묶어 둔 GPU 상태(LOD 전환 상태 `GPUCullViewResources::_lodState`)가 이 값이 달라지면 낡은 것이라 비운다.
+         */
+        uint32 _instanceLayoutGeneration{ 0 };
+        /**
+         * @brief LOD 단계 전환의 크로스페이드 시간(초)입니다. 0 이면 전환 없이 바로 바꾼다(`GPUSceneBuilder::setGPUInstanceLodCrossfadeSeconds`).
+         * @details 빌더가 정하고 스냅샷이 싣는다 — 같은 값이 후보의 디더 변형 여부(GT)와 컬링의 전환 진행량(RT)을 가른다. 어긋나면 디더 변형이 없는 배치가 상보 값을 받는다.
+         */
+        float32 _lodCrossfadeSeconds{ 0.0f };
         /// @brief 마지막 populateFromScene 이 내용을 바꿨는지 나타냅니다. RT 는 0이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
         /**
@@ -561,6 +571,16 @@ namespace sw
         uint32 getVisibleSlotCount() const { return computeVisibleEnd( static_cast<uint32>( _listBatch.size() ) ); }
         /** @brief 다음에 붙일 배치의 가시 구간 시작입니다(= 지금까지의 가시 칸 수). */
         uint32 getNextVisibleBase() const { return getVisibleSlotCount(); }
+        /** @brief LOD 그룹(`GPUMeshBatch::_lodLevelCount`)이 하나라도 있으면 true 입니다. 불투명 배치만 훑는다. */
+        bool hasLodGroups() const
+        {
+            for ( const GPUMeshBatch& batch : getOpaqueBatches() )
+            {
+                if ( batch._lodLevelCount > 1 )
+                    return true;
+            }
+            return false;
+        }
         /** @brief 배치를 모두 지웁니다. */
         void clearBatches()
         {
