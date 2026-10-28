@@ -13,6 +13,8 @@
 <RenderPipelineDesc _name="ForwardPrepassPipeline" _shadingModel="Forward">
 	<_listAttachment>
 		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<!-- 반투명 앞의 장면 색 사본 — 반투명(물의 굴절)이 읽는다. SceneColor 와 같은 형식 · 크기(복사). 복사 패스가 쓰므로 지우지 않는다. -->
+		<RenderPassAttachment _name="SceneColorCopy" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="DepthOfFieldColor"
@@ -139,6 +141,23 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 장면 색 사본 — 하늘까지 칠한 장면 색을 반투명이 읽을 수 있게 떠 둔다(반투명은 장면 색에 섞으며 써서 그 색을 읽을 수 없다). 셰이더 없는 복사 패스다. -->
+		<RenderGraphPassDesc _name="SceneColorCopy"
+		                     _type="SceneColorCopy"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColorCopy</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
@@ -151,6 +170,7 @@
 		                     _bEnableBlend="true">
 			<_listInput>
 				<item>SceneColor</item>
+				<item>SceneColorCopy</item>
 				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>

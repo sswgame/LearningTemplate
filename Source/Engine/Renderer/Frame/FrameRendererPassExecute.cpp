@@ -217,6 +217,8 @@ namespace sw
                 return names._bloomBright;
             case RenderPassInputRole::GBufferMaterial:
                 return names._gbufferMaterial;
+            case RenderPassInputRole::SceneColorCopy:
+                return names._sceneColorCopy;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -365,6 +367,11 @@ namespace sw
                 case RenderPassType::Transparent:
                 {
                     executeTransparentPass( input );
+                    break;
+                }
+                case RenderPassType::SceneColorCopy:
+                {
+                    executeSceneColorCopyPass( input );
                     break;
                 }
                 case RenderPassType::MeshOutline:
@@ -553,12 +560,36 @@ namespace sw
             break;
         }
 
+        // 장면 색 사본(SceneColorCopy 패스가 반투명 앞에 떠 둔 것)을 선언했으면 역할로 건다 — 물의 굴절이 읽는다. 선언하지 않은 파이프라인은 걸지 않고 셰이더는 kInvalidIndex 로 안다.
+        using Internal                   = FrameRendererPassExecuteInternal;
+        const auto* pSceneColorCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneColorCopy );
+        if ( pSceneColorCopyInput != nullptr )
+            registerPassTexture( context, attachmentNames()._sceneColorCopy, pSceneColorCopyInput->_attachment.view() );
+
         if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
         drawTransparentQueue( context, getEnginePSO( RenderPassType::Transparent ) );
         context._pCmd->endRenderPass();
+    }
+
+    void FrameRenderer::executeSceneColorCopyPass( const PassExecuteInput& input )
+    {
+        // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
+        // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
+        using Internal                                              = FrameRendererPassExecuteInternal;
+        const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
+        SW_ASSERT( pSourceInput != nullptr );
+        if ( pSourceInput == nullptr )
+            return;
+        const hashed_string&   copyTarget = input._declaredColor[0]._attachment;
+        const RHITextureHandle src        = findTransient( pSourceInput->_attachment.view() );
+        const RHITextureHandle dst        = findTransient( copyTarget.view() );
+        if ( src == 0 || dst == 0 )
+            return;
+        input._context._pCmd->blitTexture( src, dst );
+        (void)markAttachmentCleared( copyTarget );
     }
 
     void FrameRenderer::executeMeshOutlinePass( const PassExecuteInput& input )
@@ -1015,6 +1046,7 @@ namespace sw
         const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
         const RHIDescriptorIndex cookie = srvOf( names._light2DCookieAtlas );
         const RHIDescriptorIndex expo   = srvOf( names._autoExposure );
+        const RHIDescriptorIndex copy   = srvOf( names._sceneColorCopy );
         // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
         const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
         if ( material != kInvalidDescriptorIndex )
@@ -1034,7 +1066,8 @@ namespace sw
             return second != kInvalidDescriptorIndex ? second : third;
         };
         const RHIDescriptorIndex slot0 = pickOne( source, shadow, kInvalidDescriptorIndex );
-        const RHIDescriptorIndex slot1 = pickOne( albedo, ao, cookie );
+        // 슬롯 1 은 역할이 넷이다(SceneColorCopy 는 반투명 패스가 읽는다). 앞 셋을 먼저 고르고 그 결과와 사본 중 하나만 있어야 한다.
+        const RHIDescriptorIndex slot1 = pickOne( pickOne( albedo, ao, cookie ), copy, kInvalidDescriptorIndex );
         const RHIDescriptorIndex slot2 = pickOne( normal, bloom, expo );
 
         if ( slot0 != kInvalidDescriptorIndex )

@@ -50,7 +50,7 @@ namespace sw
          * @details 그 두 백엔드는 머티리얼이 준 전역 인덱스를 셰이더에서 해석할 수 없다. DX11 은 SM5.0 이라
          *          리소스 배열 동적 인덱싱이 없고(그건 SM5.1, 곧 D3D12), GL 은 SPIR-V 로 먹이므로
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
-         *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다(결정 기록 5-12).
+         *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다.
          *          슬롯은 Vulkan t 밴드(`vk::kRangeSize`) 전체의 **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모르고(선언도 에뮬 백엔드뿐이다),
          *          SRV 띠(`kSrvSlotCount`)가 밴드 끝까지 자라도 이 슬롯은 움직이지 않는다.
          */
@@ -406,6 +406,7 @@ namespace sw
                 {       "SourceColor",             SW_SLOT_ENGINE_TEX0},
                 {     "GBufferAlbedo",             SW_SLOT_ENGINE_TEX1},
                 {  "AmbientOcclusion",             SW_SLOT_ENGINE_TEX1},
+                {    "SceneColorCopy",             SW_SLOT_ENGINE_TEX1},
                 {"Light2DCookieAtlas",             SW_SLOT_ENGINE_TEX1},
                 {     "GBufferNormal",             SW_SLOT_ENGINE_TEX2},
                 {       "BloomBright",             SW_SLOT_ENGINE_TEX2},

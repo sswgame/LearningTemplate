@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -1614,5 +1615,72 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
         canvas._listInput.push_back( "SceneColor" );
         res.getDesc()._listPass.push_back( canvas );
         SW_EXPECT_EQUAL( 1u, validateBroken( res ) );
+    }
+}
+
+/**
+ * @brief [RenderPassTest] 에뮬 슬롯 표(`shaderslot::emulated`)가 역할 → 슬롯의 유일한 원본이다 — 모든 역할이 표에 있고 같은 슬롯 번호로 풀린다
+ * @details 셰이더는 같은 표를 `SW_EMU_SLOT_<이름>` 매크로로 읽는다(`ShaderCompiler::compileHlsl`). 역할이 표에서 빠지면 `getEmulatedTextureSlot` 이
+ *          None 을 돌려 같은 슬롯 충돌 검사가 조용히 건너뛴다 — 여기서 이름으로 실패한다.
+ */
+SW_TEST_CASE( RenderPassTest, EmulatedSlotTableCoversEveryRole )
+{
+    for ( uint32 roleIndex = static_cast<uint32>( sw::RenderPassInputRole::SourceColor ); roleIndex < static_cast<uint32>( sw::RenderPassInputRole::Count ); ++roleIndex )
+    {
+        const sw::RenderPassInputRole role = static_cast<sw::RenderPassInputRole>( roleIndex );
+        uint32                        slot{ 0 };
+        SW_EXPECT_TRUE( sw::shaderslot::emulated::tryFindSlot( sw::getRenderPassInputRoleName( role ), slot ) );
+        SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( role ) != sw::EmulatedTextureSlot::None );
+    }
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::ShadowMap ) == sw::EmulatedTextureSlot::Slot0 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::SourceColor ) == sw::EmulatedTextureSlot::Slot0 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::SceneDepth ) == sw::EmulatedTextureSlot::Slot3 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::GBufferMaterial ) == sw::EmulatedTextureSlot::GBufferMaterial );
+    // 장면 색 사본은 슬롯 1 을 G버퍼 알베도 · AO 와 나눠 쓴다 — 반투명 패스는 그 둘을 읽지 않는다.
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::SceneColorCopy ) == sw::EmulatedTextureSlot::Slot1 );
+    uint32 unknownSlot{ 0 };
+    SW_EXPECT_FALSE( sw::shaderslot::emulated::tryFindSlot( "NotARole", unknownSlot ) );
+}
+
+/**
+ * @brief [RenderPassTest] 장면 색 사본 — 역할은 이름으로 풀리고, 패스 종류는 원본 색 하나를 읽는 셰이더 없는 복사이며, 포워드 파이프라인이 반투명 앞에 선언한다
+ * @details 반투명 패스는 장면 색에 섞으며 써서 그 색을 읽을 수 없다. 복사 패스가 반투명 앞에 떠 둔 사본을 반투명이 같은 역할의 입력으로 받아야 물의 굴절이 읽는다.
+ */
+SW_TEST_CASE( RenderPassTest, SceneColorCopyPassFeedsTransparentRefraction )
+{
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "SceneColorCopy", false, "" ) == sw::RenderPassInputRole::SceneColorCopy );
+    SW_EXPECT_TRUE( sw::isPipelinePassType( sw::RenderPassType::SceneColorCopy ) );
+    const sw::RenderPassTypeInfo& info = sw::getRenderPassTypeInfo( sw::RenderPassType::SceneColorCopy );
+    SW_EXPECT_TRUE( info._pDefaultShader == nullptr ); // 셰이더 · PSO 없이 복사한다
+    SW_EXPECT_TRUE( info._inputContract.reads( sw::RenderPassInputRole::SourceColor ) );
+    SW_EXPECT_TRUE( info.hasFlag( sw::RenderPassTraitFlag::kDrawsDeclaredColor ) );
+
+    const utf8* arrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardpipelinestaged.xml",
+                                  "engine/pipeline/forwardtoonpipeline.xml" };
+    for ( const utf8* pPath : arrPipeline )
+    {
+        sw::RenderPipelineAsset pipeline;
+        SW_ASSERT_TRUE_MSG( pipeline.loadFromXMLFile( sw::ResourceID{ pPath } ), pPath );
+        size_t copyIndex{ pipeline.getGraphPass().size() };
+        size_t transparentIndex{ pipeline.getGraphPass().size() };
+        bool   bTransparentReadsCopy{ false };
+        for ( size_t passIndex = 0; passIndex < pipeline.getGraphPass().size(); ++passIndex )
+        {
+            const sw::RenderGraphPassDesc& pass = pipeline.getGraphPass()[passIndex];
+            if ( pass._resolvedType == sw::RenderPassType::SceneColorCopy )
+            {
+                copyIndex = passIndex;
+                SW_EXPECT_TRUE_MSG( pass._listResolvedColorOutput.size() == 1u && static_cast<sw::RenderPassInputRole>( pass._listResolvedColorOutput[0]._role ) == sw::RenderPassInputRole::SceneColorCopy, pPath );
+            }
+            if ( pass._resolvedType != sw::RenderPassType::Transparent )
+                continue;
+            transparentIndex = passIndex;
+            for ( const sw::RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+            {
+                bTransparentReadsCopy = bTransparentReadsCopy || static_cast<sw::RenderPassInputRole>( input._role ) == sw::RenderPassInputRole::SceneColorCopy;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( copyIndex < transparentIndex, pPath ); // 복사가 반투명 앞이다(둘 다 있어야 하고, 없으면 두 값이 같아 여기서 실패한다)
+        SW_EXPECT_TRUE_MSG( bTransparentReadsCopy, pPath );
     }
 }

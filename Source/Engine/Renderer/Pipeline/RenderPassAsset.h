@@ -98,6 +98,12 @@ namespace sw
          *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassType::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
          */
         Fog,
+        /**
+         * @brief 장면 색 사본입니다. 원본 색(`SourceColor`)을 선언한 컬러 출력(`SceneColorCopy` 역할)으로 그대로 복사합니다 — 셰이더 · PSO 가 없습니다(`FrameRenderer::executeSceneColorCopyPass`).
+         *        반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다. 반투명 패스가 이 출력을 같은 역할의 입력으로 선언하면 물의 굴절이 읽습니다(`g_SceneColorCopyIndex`).
+         *        하늘 뒤 · 반투명 앞에 둡니다(언리얼의 Scene Color 사본 · 유니티 URP 의 Opaque Texture 와 같은 자리).
+         */
+        SceneColorCopy,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -139,7 +145,7 @@ namespace sw
         VolumetricFog,
         /**
          * @brief 실시간 라이트 프로브 갱신 컴퓨트(probeupdate.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
-         *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`, 결정 기록 5-5 R6). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
+         *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
          */
         ProbeUpdate,
     };
@@ -153,7 +159,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Fog );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::SceneColorCopy );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.

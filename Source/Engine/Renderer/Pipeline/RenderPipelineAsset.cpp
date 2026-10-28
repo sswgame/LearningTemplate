@@ -112,7 +112,7 @@ namespace sw
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
                         SW_LOG_ERROR( "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
-                                      "ShadowMap, AmbientOcclusion, BloomBright",
+                                      "ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy",
                                       sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }

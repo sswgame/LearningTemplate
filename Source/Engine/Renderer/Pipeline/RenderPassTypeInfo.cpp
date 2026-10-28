@@ -8,8 +8,9 @@ namespace sw
 {
     namespace
     {
-        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀, [2] 머티리얼(r 금속도, g 거칠기 — binding.hlsli SurfaceOutput::encodeGbufferMaterial).
-        constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16B16A16_FLOAT, RHIFormat::R8G8B8A8_UNORM };
+        /// G버퍼 MRT 의 고정 포맷입니다: [0] 알베도(알파 = 셰이딩 모델), [1] 노멀(옥타헤드럴 좌표 snorm16 둘 — binding.hlsli Octahedral::encode),
+        /// [2] 머티리얼(r 금속도, g 거칠기, a 그려졌다 표시 — binding.hlsli SurfaceOutput::encodeGbufferMaterial).
+        constexpr RHIFormat kArrGBufferColorFormat[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::R16G16_SNORM, RHIFormat::R8G8B8A8_UNORM };
 
         /// 깊이 히스토리의 고정 포맷입니다(깊이 하나 — 컴퓨트가 RW 텍스처로 읽는다. R32 실수는 네 백엔드 모두 형식 있는 UAV 읽기가 된다).
         constexpr RHIFormat kArrDepthHistoryFormat[] = { RHIFormat::R32_FLOAT };
@@ -240,6 +241,13 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFog;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
                         info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
+                    case RenderPassType::SceneColorCopy:
+                    {
+                        // 셰이더 · PSO 없이 원본을 선언한 출력으로 복사한다(전용 실행 executeSceneColorCopyPass). 입력은 원본 색 하나, 출력은 같은 형식의 첨부다.
+                        info._inputContract = makeContract( { Role::SourceColor }, {} );
+                        info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassType::MotionBlur:
