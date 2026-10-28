@@ -66,9 +66,6 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 테이블 파일의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/animation/lipsync.xml";
-
         PROPERTY( Tooltip = "Visemes the analysis picks from (at least two; the first one is silence)" )
         vector<LipSyncViseme> _listViseme;
         PROPERTY( Units = Hz, Tooltip = "Low band pass range (low, high)" )

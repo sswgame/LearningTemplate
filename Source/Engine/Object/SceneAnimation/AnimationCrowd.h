@@ -65,9 +65,6 @@ namespace sw
      */
     struct SW_API AnimationCrowdSettings
     {
-        /** @brief 설정 파일의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/animation/animationcrowd.xml";
-
         uint32  _variationsPerClip{ 4 };                  ///< 클립 하나를 몇 개의 위상으로 나눌지 정한다(많을수록 덜 똑같아 보이지만 묶음과 평가가 늘어난다)
         float32 _bucketKeepSeconds{ 2.0f };               ///< 멤버가 없는 묶음을 이 시간(초)이 지난 뒤 지운다(상태가 오가며 메시를 다시 만들지 않게 하려는 것이다)
         float32 _vertexAnimationFramesPerSecond{ 15.0f }; ///< VAT 를 베이크할 프레임 레이트

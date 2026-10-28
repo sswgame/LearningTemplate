@@ -121,7 +121,7 @@ namespace sw
         const string& getSourcePath() const { return _sourcePath; }
         /** @brief 쿠킹본을 직접 줍니다(테스트 · 도구). 주면 리소스(`<씬>.navmesh`)를 찾지 않고 이것을 씁니다. */
         void setCookedAsset( shared_ptr<const NavMeshAsset> pAsset ) { _pCookedAsset = std::move( pAsset ); }
-        /** @brief 설정 표를 덮습니다(테스트 · 게임). 정하지 않으면 처음 쓸 때 `NavMeshSettings::kResourcePath` 를 읽습니다. 이미 베이크한 내비메시는 버린다. */
+        /** @brief 설정 표를 덮습니다(테스트 · 게임). 정하지 않으면 처음 쓸 때 `EngineDefaultAssets::_navMeshSettings` 를 읽습니다. 이미 베이크한 내비메시는 버린다. */
         void setSettings( const NavMeshSettings& settings );
         /** @brief 설정 표입니다(없으면 읽는다). */
         const NavMeshSettings& getSettings();

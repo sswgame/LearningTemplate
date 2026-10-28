@@ -111,7 +111,7 @@ namespace sw
         void stopSpeaking();
         /** @brief 말하는 중인지입니다(트랙 · 표본 끝까지). */
         bool isSpeaking() const;
-        /** @brief 립싱크 표를 정합니다(테스트). 정하지 않으면 `LipSyncSettings::kResourcePath` 를 읽습니다. */
+        /** @brief 립싱크 표를 정합니다(테스트). 정하지 않으면 `EngineDefaultAssets::_lipSyncSettings` 를 읽습니다. */
         void setLipSyncSettings( const LipSyncSettings& settings );
 
         /** @brief 저절로 깜빡일지입니다. */

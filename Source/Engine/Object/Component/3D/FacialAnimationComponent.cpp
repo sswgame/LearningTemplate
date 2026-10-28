@@ -11,6 +11,8 @@
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -294,8 +296,9 @@ namespace sw
         const string_view audioPath = resourceID.view();
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
-            if ( _lipSync.loadFromResource( ResourceID{ LipSyncSettings::kResourcePath } ) == false )
-                SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", LipSyncSettings::kResourcePath );
+            const string& lipSyncPath = engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get();
+            if ( _lipSync.loadFromResource( ResourceID{ lipSyncPath } ) == false )
+                SW_LOG_ERROR( "Lip sync settings '%#' could not be loaded", lipSyncPath );
             _bLipSyncSettingsReady = SW_TRUE;
         }
         // 임포트가 만든 비즘 트랙이 먼저다. 없으면 PCM 을 풀어 진폭으로 입을 연다.

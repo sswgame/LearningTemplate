@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/Component/Navigation/NavAgentCrowdSync.h"
@@ -106,7 +107,8 @@ namespace sw
         if ( _bSettingsLoaded == false )
         {
             _bSettingsLoaded = true;
-            if ( ResourceIO::hasResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false || _settings.loadFromResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false )
+            const ResourceID settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
+            if ( ResourceIO::hasResource( settingsID ) == false || _settings.loadFromResource( settingsID ) == false )
                 _settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표는 굽기 전에 validate 가 거절한다(DataDriven)
         }
         return _settings;

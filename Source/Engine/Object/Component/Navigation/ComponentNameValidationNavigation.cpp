@@ -2,6 +2,8 @@
 
 #include "Core/Container/string.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -18,8 +20,9 @@ namespace sw
             /** @brief `SceneNavigation::getSettings` 와 같은 파일을 읽습니다. 못 읽으면 기본 표입니다. */
             static NavMeshSettings loadSettingsFromFile()
             {
-                NavMeshSettings settings;
-                if ( ResourceIO::hasResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false || settings.loadFromResource( ResourceID{ NavMeshSettings::kResourcePath } ) == false )
+                NavMeshSettings  settings;
+                const ResourceID settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
+                if ( ResourceIO::hasResource( settingsID ) == false || settings.loadFromResource( settingsID ) == false )
                     settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표면 모든 영역 이름이 오류로 보인다
                 return settings;
             }

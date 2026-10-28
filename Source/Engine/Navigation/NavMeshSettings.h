@@ -106,9 +106,6 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 기본 테이블의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/navigation/navmeshsettings.xml";
-
         PROPERTY( Tooltip = "Agent kinds; each bakes its own navmesh" )
         vector<NavAgentTypeDef> _listAgentType;
         PROPERTY( Tooltip = "Areas in index order (at most 16); index 0 is plain ground" )

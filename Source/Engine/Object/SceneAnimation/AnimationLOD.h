@@ -97,9 +97,6 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 표 파일의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/animation/animationlod.xml";
-
         PROPERTY( Tooltip = "Update-rate levels from the largest on-screen size to 0 (at least one; the last must start at 0)" )
         vector<AnimationLODRateLevel> _listRateLevel;
         PROPERTY( Min = 0, Tooltip = "Update divisor for units that are not visible (0: no pose at all)" )
