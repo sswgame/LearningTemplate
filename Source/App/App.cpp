@@ -494,9 +494,8 @@ namespace sw
         _automationFrameSubscription.reset();
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
-        _engine.shutdown();
-        // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(창구 · 구동기 소멸).
-        _host.destroyAll();
+        // 엔진이 엔진 범위를 내린 뒤 부트스트랩(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).
+        _engine.shutdown( _host );
         _pModuleImageHost   = nullptr;
         _pAutomationSession = nullptr;
 

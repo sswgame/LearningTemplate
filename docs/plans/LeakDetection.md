@@ -24,7 +24,7 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개 | 구현함, 빌드 · 테스트 대기 |
+| L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개. 종료 보고가 창 밖까지 사는 저장소(레지스트리 · 호스트 범위 · 정적 캐시)를 누수로 보던 것은 결정 기록 5-3 "종료 누수는 …" 줄대로 정리했다(2026-10-28) | 끝남 |
 | L2 | 측정으로 질문 셋에 답한다(4절). 답에 따라 `FullStacks` 의 상한(블록 수 · 스택 깊이)과 기준선 창을 `FullStacks` 로 올릴지를 정한다 | 대기 |
 | L3 | 반복 로드 곡선 검사: 한 씬을 워밍업 1회 + 측정 8회 로드 · 언로드하며 회차마다 창을 닫아 `_totalBytes` · `_totalBlockCount` 곡선을 낸다. 8회가 평평하지 않으면(기울기 > 0) 실패하는 테스트나 시나리오 | 대기 |
 | L4 | 보고 연결: 종료 보고와 에디터 프로파일러 패널이 `FullStacks` 보고서(줄 · 첫 프레임)를 보이게 한다. 켜는 방법(`gv_*`)과 줄 수 상한은 L2 로 정한다 | 대기 |
@@ -45,6 +45,5 @@ Release 에서 혼자 돌린다([작업 방식](../11_Workflow.md)). 추정으�
 
 ## 6. 추정 · 확인하지 못한 것
 
-- L1 은 컴파일도 테스트도 돌리지 않았다(통합 단계에서 한 번에). 컴파일 확인이 필요한 곳: `ShardArray<LeakWindowShard>` 의 집합 초기화(`mutex` · `unordered_map` 멤버), `Ascending<&LeakBlockSample::_tag, …>` 의 열거형 비교, `unordered_map::emplace` 의 중복 키 동작.
 - 첫 프레임 거르기는 심볼 글의 파일 경로(`Core/Memory/` · `Core/Container/`)와 심볼 이름(`sw::Memory::` · `MemoryInternal::`) 부분 문자열로 한다. PDB 줄 정보가 없는 구성(Linux 심볼 변환이 파일 경로를 주지 않는 경우)에서는 컨테이너 프레임이 걸러지지 않을 수 있다(추측, L2 에서 두 플랫폼으로 확인).
-- 스탬프는 32비트이고 창 하나가 쓰는 회차는 수십 개라 돌아갈 일이 없다고 본다(추측). `TagTotals` 창이 Debug 종료 보고에서 예전과 같은 정보(태그 · 바이트 · 블록 수)를 내는지는 확인하지 않았다.
+- 스탬프는 32비트이고 창 하나가 쓰는 회차는 수십 개라 돌아갈 일이 없다고 본다(추측). `TagTotals` 창은 Debug 종료 보고에서 태그 · 바이트 · 블록 수를 낸다(2026-10-28 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 로 확인). 남은 블록의 출처를 찾을 때는 기준선 창을 잠시 `FullStacks` 로 바꿔 본다.

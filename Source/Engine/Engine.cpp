@@ -372,7 +372,7 @@ namespace sw
         return string{ text.view() };
     }
 
-    void Engine::shutdown()
+    void Engine::shutdown( SubsystemScope& hostScope )
     {
 #if SW_PROFILER_TRACE_ENABLED
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
@@ -383,6 +383,7 @@ namespace sw
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         detachAllSubscriptions();
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
+        _runTitle.reset(); // 프레임마다 모은 창 제목도 같다
 #if SW_DEV_COMMANDS_ENABLED
         AuthorityGhost* const pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
         if ( pAuthorityGhost != nullptr )
@@ -417,6 +418,8 @@ namespace sw
         _services.destroyAll();
         _pEventDispatcher = nullptr;
         engine::unbindEngineServices();
+        // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 이미지 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 부트스트랩보다 먼저 비운다.
+        hostScope.destroyAll();
         _bootstrap.destroyAll();
         _pCommandLineSubsystem = nullptr;
         _pMemoryBudget         = nullptr;

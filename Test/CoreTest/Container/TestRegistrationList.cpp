@@ -46,6 +46,88 @@ SW_TEST_CASE( RegistrationListTest, RejectsDuplicatesAndKeepsInsertionOrderOnRem
 }
 
 /**
+ * @brief [RegistrationListTest] 빼기는 남은 항목을 새 저장소로 옮기지 않고, 마지막 항목을 빼면 저장소를 놓는다
+ * @details 종료 누수 보고는 창 안에서 태어나 살아 있는 블록을 센다. 빼기가 줄이려고 다시 잡으면 기동 전에 오른 남은 등록이 창 안에서 태어난 새 블록으로
+ *          옮겨 가 "EngineMisc 가 늘었다" 고 남았다(모듈 언로드마다 레지스트리 다섯 곳, Debug 약 10 KB).
+ */
+SW_TEST_CASE( RegistrationListTest, RemoveKeepsTheStorageAndReleasesItWhenEmpty )
+{
+    RegistrationProbe first{ 1 };
+    RegistrationProbe second{ 2 };
+    RegistrationProbe third{ 3 };
+
+    RegistrationList<RegistrationProbe> list{ "TestList" };
+    SW_EXPECT_TRUE( list.add( &first, "first registration with a name longer than the small buffer" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.add( &second, "second" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.add( &third, "third" ) == RegistrationResult::Added );
+    RegistrationProbe* const* const pStorage = list.getItems().data();
+
+    SW_EXPECT_TRUE( list.remove( &first ) );
+    SW_EXPECT_EQUAL( pStorage, list.getItems().data() );
+    SW_EXPECT_TRUE( list.remove( &third ) );
+    SW_EXPECT_EQUAL( pStorage, list.getItems().data() );
+    SW_EXPECT_EQUAL( &second, list.findByName( "second" ) );
+
+    SW_EXPECT_TRUE( list.remove( &second ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, list.getItems().capacity() );
+}
+
+/**
+ * @brief [RegistrationListTest] 넣기가 저장소를 키우면 처음 저장소를 보관했다가, 키운 뒤 오른 항목이 다 빠지면 그 저장소로 돌아간다
+ * @details 기동 뒤에 오른 에디터 모듈 · Undo 스택이 프로세스 정적 레지스트리를 키우면 키운 저장소가 프로세스 끝까지 살아 종료 누수 보고에 남았다(Debug 약 47 KB).
+ *          보관은 기준선(`MemoryProfiler::captureMemoryLeakBaseline`)이 켠 뒤에만 한다 — 그 전 키우기(항목 하나 → 둘)의 블록을 들고 있으면 돌아갈 일이 없다.
+ *          키우기 전 항목 하나를 그동안 빼도(남은 것이 처음 저장소의 부분집합) 돌아가고, 이름 · 순서는 그대로다.
+ */
+SW_TEST_CASE( RegistrationListTest, GrowthReturnsToTheKeptStorageWhenLaterItemsLeave )
+{
+    // 기준선 전에는 끄고, 이른 항목을 올린 뒤 기준선처럼 켠다. 케이스가 끝나면 원래 값으로 되돌린다.
+    struct KeepStorageGuard
+    {
+        const bool _bWasKeeping = RegistrationListBase::setStorageKeptOnGrowth( false );
+        ~KeepStorageGuard() { (void)RegistrationListBase::setStorageKeptOnGrowth( _bWasKeeping ); }
+    } keepStorage;
+
+    RegistrationProbe arrEarly[4]{};
+    RegistrationProbe late{};
+    RegistrationProbe lateSecond{};
+
+    RegistrationList<RegistrationProbe> list{ "TestList" };
+    const string                        arrName[4] = { "early zero with a name longer than the small buffer", "early one", "early two", "early three" };
+    for ( uint32 index = 0; index < 4; ++index )
+    {
+        SW_EXPECT_TRUE( list.add( &arrEarly[index], arrName[index] ) == RegistrationResult::Added );
+    }
+    SW_ASSERT_EQUAL( list.getItems().size(), list.getItems().capacity() ); // 다음 넣기가 키운다
+    RegistrationProbe* const* const pEarlyStorage = list.getItems().data();
+    (void)RegistrationListBase::setStorageKeptOnGrowth( true );
+
+    SW_EXPECT_TRUE( list.add( &late, "late" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.add( &lateSecond, "late second" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( pEarlyStorage != list.getItems().data() );
+
+    SW_EXPECT_TRUE( list.remove( &arrEarly[1] ) );
+    SW_EXPECT_TRUE( list.remove( &late ) );
+    SW_EXPECT_TRUE( pEarlyStorage != list.getItems().data() ); // 키운 뒤 오른 항목이 아직 남았다
+    SW_EXPECT_TRUE( list.remove( &lateSecond ) );
+    SW_EXPECT_EQUAL( pEarlyStorage, list.getItems().data() );
+
+    SW_ASSERT_EQUAL( 3u, list.getCount() );
+    SW_EXPECT_EQUAL( &arrEarly[0], list.getAt( 0 ) );
+    SW_EXPECT_EQUAL( &arrEarly[2], list.getAt( 1 ) );
+    SW_EXPECT_EQUAL( &arrEarly[3], list.getAt( 2 ) );
+    SW_EXPECT_EQUAL( &arrEarly[0], list.findByName( arrName[0] ) );
+    SW_EXPECT_EQUAL( &arrEarly[3], list.findByName( "early three" ) );
+    SW_EXPECT_TRUE( list.findByName( "late" ) == nullptr );
+
+    // 돌아간 뒤에 다시 키워도 같은 규칙이다.
+    SW_EXPECT_TRUE( list.add( &late, "late" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.add( &arrEarly[1], "early one" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.remove( &late ) );
+    SW_EXPECT_TRUE( list.remove( &arrEarly[1] ) );
+    SW_EXPECT_EQUAL( pEarlyStorage, list.getItems().data() );
+}
+
+/**
  * @brief [RegistrationListTest] 이름은 올릴 때 복사하고, 같은 이름의 다른 객체는 거절해 먼저 것을 둔다
  * @details 에셋 캐시 레지스트리가 이 모양이다 — 모듈이 내리지 않고 사라진 캐시의 이름을 그 객체에 묻지 않고 말해야 한다.
  */

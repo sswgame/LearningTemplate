@@ -192,9 +192,18 @@ namespace sw
             entry._pDestroy( entry._pSubsystem );
             entry._pSubsystem = nullptr;
         }
+        // 저장소까지 놓는다. 범위 객체는 호스트 멤버라 소멸이 엔진의 종료 누수 보고보다 늦을 수 있다 — 기동 뒤에 자란 목록(부품 · 다시 세운 순서)이
+        // 그때까지 살아 있으면 보고에 "늘었다" 로 남는다.
         _listEntry.clear();
+        _listEntry.shrink_to_fit();
         _listOrder.clear();
+        _listOrder.shrink_to_fit();
         _listDependency.clear();
+        _listDependency.shrink_to_fit();
+        _listInitialized.shrink_to_fit(); // `shutdownAll` 이 비웠다
+        _listStopped.shrink_to_fit();
+        _listInitTiming.clear();
+        _listInitTiming.shrink_to_fit();
         _bSorted = false;
     }
 

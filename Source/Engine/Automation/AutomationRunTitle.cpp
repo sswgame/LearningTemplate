@@ -227,6 +227,20 @@ namespace sw
 
     AutomationRunTitleTracker::~AutomationRunTitleTracker() = default;
 
+    void AutomationRunTitleTracker::reset()
+    {
+        // `clear` 만으로는 힙 버퍼가 남는다. 빈 글과 맞바꾸지 않는 것은 Debug STL 이 맞바꾼 글의 프록시를 새로 잡은 블록으로 남기기 때문이다.
+        for ( string* pText : { &_initialTitle, &_lastBase, &_benchSummary, &_lastStepKind } )
+        {
+            pText->clear();
+            pText->shrink_to_fit();
+        }
+        _frame          = 0;
+        _lastStepNumber = 0;
+        _bInitialized   = false;
+        _bRunShown      = false;
+    }
+
     void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName,
                                                 const vector<IEngineFrameObserver*>& listObserver )
     {

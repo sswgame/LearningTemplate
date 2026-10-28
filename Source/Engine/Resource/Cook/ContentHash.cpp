@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 namespace sw
 {
@@ -20,8 +21,13 @@ namespace sw
                 FileStamp _stamp{};
                 uint64    _hash{ 0 };
             };
+            using EntryMap = unordered_map<string, Entry>;
 
-            inline static unordered_map<string, Entry> _s_mapEntry{};
+            /**
+             * @brief 경로 → 해시 캐시입니다. 엔진 수명 범위가 소유합니다 — 기동 뒤 첫 셰이더 반사 · 쿠킹이 채운 항목이 종료 누수 보고 전에 돌아갑니다
+             *        (정적 맵이면 프로세스 끝까지 살아 보고에 "Shader 가 늘었다" 로 남았다).
+             */
+            inline static ScopeOwned<EntryMap> _s_mapEntry{};
             /// @brief `_s_mapEntry` 의 락입니다. 셰이더 컴파일 · 쿠킹은 워커에서도 돕니다.
             inline static mutex _s_mutex{};
 
@@ -55,29 +61,33 @@ namespace sw
 
     uint64 ContentHash::computeFile( string_view absPath )
     {
-        FileStamp  stamp{};
-        const bool bStamped = FileUtil::getFileStamp( absPath, stamp );
-        if ( bStamped )
+        FileStamp                            stamp{};
+        const bool                           bStamped  = FileUtil::getFileStamp( absPath, stamp );
+        ContentHashInternal::EntryMap* const pMapEntry = bStamped ? ContentHashInternal::_s_mapEntry.getOrCreate() : nullptr;
+        if ( pMapEntry != nullptr )
         {
             ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
-            const auto        iter = ContentHashInternal::_s_mapEntry.find( string( absPath ) );
-            if ( iter != ContentHashInternal::_s_mapEntry.end() && iter->second._stamp == stamp )
+            const auto        iter = pMapEntry->find( string( absPath ) );
+            if ( iter != pMapEntry->end() && iter->second._stamp == stamp )
                 return iter->second._hash;
         }
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath );
         // 읽는 사이에 파일이 바뀌었으면 옛 시각에 새 해시가 붙는다. 다음 조회는 시각이 달라 다시 읽으므로 틀린 값이 남지 않는다.
-        if ( bStamped && hash != 0 )
+        if ( pMapEntry != nullptr && hash != 0 )
         {
             ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
-            ContentHashInternal::_s_mapEntry[string( absPath )] = ContentHashInternal::Entry{ stamp, hash };
+            ( *pMapEntry )[string( absPath )] = ContentHashInternal::Entry{ stamp, hash };
         }
         return hash;
     }
 
     void ContentHash::clearCache()
     {
+        ContentHashInternal::EntryMap* const pMapEntry = ContentHashInternal::_s_mapEntry.find();
+        if ( pMapEntry == nullptr )
+            return;
         ScopedLock<mutex> lock{ ContentHashInternal::_s_mutex };
-        ContentHashInternal::_s_mapEntry.clear();
+        pMapEntry->clear();
     }
 } // namespace sw

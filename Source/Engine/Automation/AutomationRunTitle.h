@@ -104,6 +104,8 @@ namespace sw
          * @param listObserver 프레임 관찰자(시나리오 세션이 실행 정보를 낸다)
          */
         void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
+        /** @brief 처음 상태로 돌아가며 프레임마다 모은 제목 · 요약 글을 저장소까지 놓습니다. 엔진 종료가 종료 누수 창이 닫히기 전에 부릅니다(트래커는 엔진 멤버라 그보다 오래 산다). */
+        void reset();
 
     private:
         string _initialTitle; ///< 창이 처음 가진 제목(호스트가 평소 제목을 정하지 않았을 때의 평소 제목)

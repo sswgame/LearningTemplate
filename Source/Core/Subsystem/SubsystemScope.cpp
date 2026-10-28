@@ -23,6 +23,9 @@ namespace sw
         // 조회 칸을 먼저 지운다 — 소멸자가 같은 범위를 조회해도 지워지는 서브시스템을 돌려주지 않는다.
         VectorUtil::removeIf( _listEntry, []( const Entry& entry )
         { return entry._bOwned; } );
+        // 빌린 칸까지 모두 빠졌으면 저장소도 놓는다(`SubsystemCollection::destroyAll` 과 같은 이유 — 기동 뒤에 자란 칸이 종료 누수 보고에 남지 않게).
+        if ( _listEntry.empty() )
+            _listEntry.shrink_to_fit();
         _collection.destroyAll();
     }
 

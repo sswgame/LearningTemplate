@@ -23,6 +23,8 @@ namespace sw
             std::atomic_flag      _lock = ATOMIC_FLAG_INIT;
             RegistrationListBase* _pHead{ nullptr };
             uint32                _count{ 0 };
+            /// @brief 목록이 저장소를 키울 때 기준선 때 저장소를 보관하는지입니다(`RegistrationListBase::setStorageKeptOnGrowth`). 각 목록이 자기 소유자 잠금 안에서 읽는다.
+            std::atomic<bool> _bStorageKeptOnGrowth{ false };
         };
 
         RegistrationListChain s_chain; // 모든 멤버가 상수 초기화다(정적 초기화 순서와 무관)
@@ -137,5 +139,15 @@ namespace sw
     {
         RegistrationListChainLock lock;
         return s_chain._count;
+    }
+
+    bool RegistrationListBase::setStorageKeptOnGrowth( bool bKeep )
+    {
+        return s_chain._bStorageKeptOnGrowth.exchange( bKeep, std::memory_order_relaxed );
+    }
+
+    bool RegistrationListBase::isStorageKeptOnGrowth()
+    {
+        return s_chain._bStorageKeptOnGrowth.load( std::memory_order_relaxed );
     }
 } // namespace sw

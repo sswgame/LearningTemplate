@@ -85,11 +85,17 @@ namespace sw
          * @details @p role 이 `DedicatedServer` 면 기동 표의 `Client` 단계(창 · RHI · 렌더러 · 플레이어 설정)를 돌리지 않고 장치 없는 오디오를 씁니다.
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
          * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleTypes` · `ModuleImages` 단계가 여기서 `IModuleImageHost` 를 찾습니다.
-         *                   호스트가 엔진보다 오래 살아야 합니다(`shutdown` 이 끝난 뒤에 내립니다). nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
+         *                   범위 객체는 엔진보다 오래 살아야 합니다. 그 안의 서브시스템은 `shutdown` 이 내립니다. nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
          */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );
-        /** @brief 매니저들을 종료하고 정리합니다. */
-        void shutdown();
+        /**
+         * @brief 매니저들을 종료하고 정리합니다.
+         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 서비스)를 내린 뒤, 부트스트랩 범위보다 **먼저** 비웁니다(`destroyAll`).
+         * @details 부트스트랩의 진단 서브시스템이 소멸하며 종료 누수 창을 닫습니다. 호스트 범위는 기동 뒤에 칸 · 부품 · 종료 순서를 키우므로(`bind`,
+         *          `shutdownDependentsOf`), 창보다 늦게 비우면 그 저장소가 "창 안에서 태어나 살아 있는 블록" 으로 보고됩니다. 호스트의 서브시스템도
+         *          로거 · 이름 풀(부트스트랩)이 아직 있을 때 소멸합니다.
+         */
+        void shutdown( SubsystemScope& hostScope );
 
         /**
          * @brief 입력 등을 시작하는 프레임의 첫 단계입니다.

@@ -25,7 +25,7 @@ namespace sw
         const uint32 registeredResourceCount = RHIRenderResource::getRegisteredCount();
         if ( registeredResourceCount != 0 )
             SW_LOG_WARNING( "%# RHI render resources are still registered at shutdown - a mesh, texture or material leaked", registeredResourceCount );
-        // 엔진 수명 범위를 닫는다 — 그 범위가 소유한 저장소(`ScopeOwned`)가 만든 역순으로 소멸한다. 레지스트리 용량은 등록 해제가 돌려준다(`RegistrationList::remove`).
+        // 엔진 수명 범위를 닫는다 — 그 범위가 소유한 저장소(`ScopeOwned`)가 만든 역순으로 소멸한다. 레지스트리 저장소는 등록 해제가 비면 놓고, 남은 등록은 새로 잡지 않고 제자리에 둔다(`RegistrationList::remove`).
         LifetimeScope::getGlobal().close();
     }
 

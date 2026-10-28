@@ -62,6 +62,15 @@ namespace sw
         /** @brief 지금 살아 있는 목록 수입니다. */
         static uint32 getListCount();
 
+        /**
+         * @brief 이 뒤로 목록이 저장소를 키울 때 처음 저장소를 보관할지 정합니다(`RegistrationList::keepStorageBeforeGrowth`). 앞의 값을 돌려줍니다.
+         * @details 종료 누수 창을 여는 곳(`MemoryProfiler::captureMemoryLeakBaseline`)이 켭니다. 기준선 전의 키우기(정적 초기화 · 엔진 기동)는 보관하지 않는다 —
+         *          보관하는 블록이 기준선 때의 블록이어야, 기준선 뒤에 오른 항목이 다 빠졌을 때 돌아갈 곳이 된다. 끄는 것은 테스트가 원래 값으로 되돌릴 때뿐이다.
+         */
+        static bool setStorageKeptOnGrowth( bool bKeep );
+        /** @brief 목록이 저장소를 키울 때 기준선 때 저장소를 보관하는지입니다. */
+        static bool isStorageKeptOnGrowth();
+
     protected:
         /** @brief 전역 연결 목록에 오릅니다. */
         explicit RegistrationListBase( const utf8* pListName );
@@ -116,8 +125,11 @@ namespace sw
      *          - **이름 사본**: 이름은 **올릴 때** 복사합니다. 모듈이 내려간 뒤에도 그 이름으로 알리거나 찾을 수 있고, 죽은 객체의 가상 함수를 묻지 않습니다.
      *
      *          **저장소는 늘 `EngineMisc` 태그로 셉니다.** 프로세스 정적 레지스트리는 기동 뒤에 오른 모듈(에디터 · 게임)이 등록하며 용량을 키우는데, 넣는 쪽 태그로
-     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다. 빼기(`remove`)가 남은 항목만큼 다시 잡으므로, 모듈이 내려가면 용량도 기준선으로 돌아갑니다
-     *          (종료 때만 부르는 반납 함수가 없습니다).
+     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다.
+     *
+     *          **저장소는 기준선 때 블록으로 돌아갑니다.** 종료 누수 보고는 창 안에서 태어나 살아 있는 블록을 셉니다(결정 기록 5-3). 기준선 뒤 넣기가 키울 때는 처음
+     *          저장소를 보관하고(`keepStorageBeforeGrowth`), 빼기는 제자리에서 지우며 키운 뒤 오른 항목이 다 빠지면 보관한 저장소로 돌아가고(`returnToKeptStorage`) 비면
+     *          놓습니다. 줄이려고 다시 잡지 않습니다 — 다시 잡으면 남은 항목이 창 안에서 태어난 새 블록으로 옮겨 갑니다(종료 때만 부르는 반납 함수도 없습니다).
      *
      *          **만들어질 때 전역 열거에 오릅니다.** 목록마다 이름을 하나 받고(`RegistrationListBase::getListName`), `RegistrationListBase::collect` 가 살아 있는
      *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
@@ -160,6 +172,9 @@ namespace sw
             , _listItem{}
             , _listName{}
             , _listOrder{}
+            , _listKeptItem{}
+            , _listKeptName{}
+            , _listKeptOrder{}
             , _listShadowItem{}
             , _listShadowName{}
             , _listShadowOrder{}
@@ -205,6 +220,7 @@ namespace sw
                     ++insertIndex;
                 }
             }
+            keepStorageBeforeGrowth();
             _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
             _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), string( name ) );
             _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), order );
@@ -224,8 +240,9 @@ namespace sw
 
         /**
          * @brief 그 객체가 올라 있으면 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 같은 이름의 다른 객체는 건드리지 않습니다.
-         * @details 뺀 뒤 저장소를 남은 항목 수에 맞춰 다시 잡습니다(`fitStorage`). 빼기는 모듈 언로드 · 컴포넌트 소멸에서만 오므로 그 비용(O(n))을 감수하고,
-         *          대신 종료 때만 부르는 반납 함수를 레지스트리마다 두지 않습니다.
+         * @details 제자리에서 지우고 새로 할당하지 않습니다. 키우기 전 저장소를 보관 중이고 남은 항목이 모두 그 안에 있으면 그리로 돌아가고(`returnToKeptStorage`),
+         *          비면 저장소를 놓습니다(`releaseEmptyStorage`). 빼기는 모듈 언로드 · 컴포넌트 소멸에서 오는데, 남은 항목을 새 저장소로 옮기면 그 저장소가 누수 창
+         *          안에서 태어나 종료 보고에 남습니다(누수는 창 안에서 태어난 블록으로 잰다, 결정 기록 5-3).
          */
         [[nodiscard]] bool remove( const T* pItem )
         {
@@ -234,7 +251,7 @@ namespace sw
             {
                 const bool bDroppedShadow = dropShadow( pItem );
                 if ( bDroppedShadow )
-                    fitStorage();
+                    releaseEmptyStorage();
                 return bDroppedShadow;
             }
             const string name = _listName[index];
@@ -242,7 +259,8 @@ namespace sw
             _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
             _listOrder.erase( _listOrder.begin() + static_cast<ptrdiff_t>( index ) );
             restoreShadow( name );
-            fitStorage();
+            returnToKeptStorage();
+            releaseEmptyStorage();
             return true;
         }
 
@@ -252,6 +270,9 @@ namespace sw
             _listItem        = vector<T*>{};
             _listName        = vector<string>{};
             _listOrder       = vector<int32>{};
+            _listKeptItem    = vector<T*>{};
+            _listKeptName    = vector<string>{};
+            _listKeptOrder   = vector<int32>{};
             _listShadowItem  = vector<T*>{};
             _listShadowName  = vector<string>{};
             _listShadowOrder = vector<int32>{};
@@ -262,36 +283,104 @@ namespace sw
 
     private:
         /**
-         * @brief 저장소를 지금 항목 수에 맞춰 다시 잡습니다(비었으면 해제만 합니다). 순서와 이름은 그대로입니다. 그림자가 비었으면 그 저장소도 해제합니다.
-         * @details 제거할 때마다 부릅니다 — 기동 뒤에 로드한 모듈(에디터 · 게임)이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시가
-         *          그 모듈이 언로드되는 순간 돌아가므로, 엔진 종료 때 레지스트리마다 반납을 부를 일이 없습니다.
+         * @brief 다음 넣기가 저장소를 다시 잡을 참이면, 지금 저장소를 놓지 않고 보관한 채 두 배 크기의 사본으로 옮깁니다. 이미 보관 중이면 보통대로 키웁니다.
+         * @details 프로세스 정적 레지스트리는 기동 뒤에 오르는 모듈(에디터 · 게임)의 정적 등록과 실행 중에 생기는 인스턴스(Undo 스택)가 키웁니다. 키운 저장소는
+         *          누수 창 안에서 태어나 프로세스 끝까지 살아 종료 보고에 남습니다. 처음 저장소를 들고 있다가 키운 뒤 오른 항목이 다 빠지면 그리로 돌아갑니다
+         *          (`returnToKeptStorage`). 이름은 옮기지 않고 복사합니다 — 보관한 이름 · Debug STL 프록시가 처음 블록 그대로 남아야 합니다. 보관하는 동안 처음
+         *          저장소만큼 더 씁니다. 기준선을 잡은 뒤(`RegistrationListBase::isStorageKeptOnGrowth`)에만 보관합니다 — 그 전에 보관하면 정적 초기화의 첫 키우기
+         *          (항목 하나 → 둘) 블록을 들고 있게 되어 돌아갈 일이 없다.
          */
-        void fitStorage()
+        void keepStorageBeforeGrowth()
         {
-            SW_MEMORY_SCOPE( EngineMisc );
-            vector<T*>     listItem;
-            vector<string> listName;
-            vector<int32>  listOrder;
-            if ( _listItem.empty() == false )
+            const bool bGrowsNext   = _listItem.empty() == false && _listItem.size() == _listItem.capacity();
+            const bool bKeepsBefore = isStorageKeptOnGrowth() && _listKeptItem.capacity() == 0; // 기준선 뒤이고 아직 보관한 것이 없다
+            if ( bGrowsNext == false || bKeepsBefore == false )
+                return;
+            _listKeptItem.swap( _listItem );
+            _listKeptName.swap( _listName );
+            _listKeptOrder.swap( _listOrder );
+            const size_t grownCapacity = _listKeptItem.size() * 2;
+            _listItem.reserve( grownCapacity );
+            _listName.reserve( grownCapacity );
+            _listOrder.reserve( grownCapacity );
+            _listItem.assign( _listKeptItem.begin(), _listKeptItem.end() );
+            _listName.assign( _listKeptName.begin(), _listKeptName.end() );
+            _listOrder.assign( _listKeptOrder.begin(), _listKeptOrder.end() );
+        }
+
+        /**
+         * @brief 보관한 처음 저장소가 있고 남은 항목이 모두 그 안에 같은 순서로 있으면, 처음 저장소에서 빠진 것만 제자리에서 지우고 그리로 돌아갑니다. 키운 사본은 놓습니다.
+         * @details 보관한 뒤 오른 항목이 하나라도 남았으면 그대로 둡니다(다음 빼기에서 다시 봅니다). 빼기 · 정렬 넣기는 남은 항목의 앞뒤를 바꾸지 않으므로
+         *          두 목록을 한 번 나란히 훑어 봅니다. 같은 항목은 객체 · 이름 · 정렬 값이 모두 같아야 합니다(지워진 객체 자리에 새 객체가 다른 이름으로 오를 수 있다).
+         */
+        void returnToKeptStorage()
+        {
+            if ( _listKeptItem.capacity() == 0 )
+                return;
+            size_t keptIndex = 0;
+            for ( size_t index = 0; index < _listItem.size(); ++index )
             {
-                listItem.reserve( _listItem.size() );
-                listName.reserve( _listName.size() );
-                listOrder.reserve( _listOrder.size() );
-                for ( size_t index = 0; index < _listItem.size(); ++index )
+                while ( keptIndex < _listKeptItem.size() && isSameEntry( keptIndex, index ) == false )
                 {
-                    listItem.push_back( _listItem[index] );
-                    listName.push_back( std::move( _listName[index] ) );
-                    listOrder.push_back( _listOrder[index] );
+                    ++keptIndex;
                 }
+                if ( keptIndex == _listKeptItem.size() )
+                    return; // 보관한 뒤에 오른 항목이 남았다
+                ++keptIndex;
             }
-            _listItem  = std::move( listItem );
-            _listName  = std::move( listName );
-            _listOrder = std::move( listOrder );
+
+            size_t writeIndex = 0;
+            keptIndex         = 0;
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                while ( isSameEntry( keptIndex, index ) == false )
+                {
+                    ++keptIndex;
+                }
+                if ( writeIndex != keptIndex )
+                {
+                    _listKeptItem[writeIndex]  = _listKeptItem[keptIndex];
+                    _listKeptName[writeIndex]  = std::move( _listKeptName[keptIndex] );
+                    _listKeptOrder[writeIndex] = _listKeptOrder[keptIndex];
+                }
+                ++writeIndex;
+                ++keptIndex;
+            }
+            _listKeptItem.erase( _listKeptItem.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptItem.end() );
+            _listKeptName.erase( _listKeptName.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptName.end() );
+            _listKeptOrder.erase( _listKeptOrder.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptOrder.end() );
+            _listItem.swap( _listKeptItem );
+            _listName.swap( _listKeptName );
+            _listOrder.swap( _listKeptOrder );
+            _listKeptItem  = vector<T*>{};
+            _listKeptName  = vector<string>{};
+            _listKeptOrder = vector<int32>{};
+        }
+
+        /** @brief 보관한 저장소의 @p keptIndex 번째와 지금 목록의 @p index 번째가 같은 등록인지 봅니다(객체 · 이름 · 정렬 값). */
+        bool isSameEntry( size_t keptIndex, size_t index ) const
+        {
+            return _listKeptItem[keptIndex] == _listItem[index] && _listKeptOrder[keptIndex] == _listOrder[index] && _listKeptName[keptIndex] == _listName[index];
+        }
+
+        /**
+         * @brief 빈 목록 · 빈 그림자의 저장소를 놓습니다. 남은 항목이 있으면 아무것도 하지 않습니다 — 줄이려고 다시 잡지 않습니다.
+         * @details 줄이는 재할당은 남은 항목(대개 기동 전에 오른 등록)을 창 안에서 태어난 새 블록으로 옮겨 종료 누수 보고에 "늘었다" 고 남깁니다.
+         *          Debug STL 은 옮긴 문자열마다 프록시도 새로 잡습니다. 놓기만 하면 새 블록이 생기지 않습니다.
+         */
+        void releaseEmptyStorage()
+        {
+            if ( _listItem.empty() )
+            {
+                _listItem.shrink_to_fit();
+                _listName.shrink_to_fit();
+                _listOrder.shrink_to_fit();
+            }
             if ( _listShadowItem.empty() )
             {
-                _listShadowItem  = vector<T*>{};
-                _listShadowName  = vector<string>{};
-                _listShadowOrder = vector<int32>{};
+                _listShadowItem.shrink_to_fit();
+                _listShadowName.shrink_to_fit();
+                _listShadowOrder.shrink_to_fit();
             }
         }
 
@@ -371,6 +460,7 @@ namespace sw
                 const int32  shadowOrder = _listShadowOrder[index - 1];
                 const string shadowName  = _listShadowName[index - 1];
                 eraseShadow( index - 1 );
+                keepStorageBeforeGrowth();
                 size_t insertIndex = _listItem.size();
                 if ( _order == RegistrationOrder::ByOrderThenName )
                 {
@@ -406,6 +496,9 @@ namespace sw
         vector<T*>        _listItem;        ///< 항목(순서대로). 훑기가 이것만 읽는다
         vector<string>    _listName;        ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
         vector<int32>     _listOrder;       ///< 항목마다 정렬 값(같은 인덱스)
+        vector<T*>        _listKeptItem;    ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
+        vector<string>    _listKeptName;    ///< 키우기 전 저장소의 이름
+        vector<int32>     _listKeptOrder;   ///< 키우기 전 저장소의 정렬 값
         vector<T*>        _listShadowItem;  ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
         vector<string>    _listShadowName;  ///< 그림자 항목의 이름
         vector<int32>     _listShadowOrder; ///< 그림자 항목의 정렬 값
