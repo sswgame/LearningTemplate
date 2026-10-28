@@ -15,12 +15,19 @@ namespace sw
 {
     SW_LOG_CALLER( "PairedAnimation" );
 
+    namespace
+    {
+        /** @brief `_bStartOnPlay` 의 시작이 참가자의 클립 로딩을 기다리는 최대 틱 수입니다(네트워크 복원의 `kMaxPendingFrames` 와 같다). */
+        constexpr uint16 kMaxStartRetryFrames{ 300 };
+    } // namespace
+
     PairedAnimationComponent::PairedAnimationComponent()
         : _pairedAnimationPath{}
         , _role{}
         , _def{}
         , _sessionID{ 0 }
         , _seenReloadCount{ 0 }
+        , _startRetryFrames{ 0 }
         , _bSystemUser{ SW_FALSE }
         , _bStartOnPlay{ SW_FALSE }
         , _bStartPending{ SW_FALSE }
@@ -59,9 +66,21 @@ namespace sw
         {
             (void)manager;
             const PairedAnimationStartResult result = component.startSession( {} );
-            if ( result != PairedAnimationStartResult::Started )
-                SW_LOG_ERROR( "'%#': paired animation '%#' did not start on play (result %#)", component.getOwner()->getName().c_str(),
-                              component._pairedAnimationPath.c_str(), static_cast<uint32>( result ) );
+            if ( result == PairedAnimationStartResult::Started )
+            {
+                component._startRetryFrames = 0;
+                return;
+            }
+            // 참가자의 클립을 아직 읽는 중이면 정상 거절이다 — 다음 틱에 다시 시도한다. 상한을 넘게 준비되지 않으면 그때 오류다.
+            const bool bWaitingForClips = result == PairedAnimationStartResult::ParticipantNotReady && component._startRetryFrames < kMaxStartRetryFrames;
+            if ( bWaitingForClips )
+            {
+                ++component._startRetryFrames;
+                component._bStartPending = SW_TRUE;
+                return;
+            }
+            SW_LOG_ERROR( "'%#': paired animation '%#' did not start on play (result %#, waited %# ticks)", component.getOwner()->getName().c_str(),
+                          component._pairedAnimationPath.c_str(), static_cast<uint32>( result ), static_cast<uint32>( component._startRetryFrames ) );
         } );
     }
 

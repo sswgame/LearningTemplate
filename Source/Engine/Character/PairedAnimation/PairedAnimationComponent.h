@@ -80,8 +80,9 @@ namespace sw
 
         shared_ptr<const PairedAnimationDef> _def;
         uint32                               _sessionID;
-        uint32                               _seenReloadCount; ///< 에셋을 받을 때의 `SharedAssetCache<PairedAnimationDef>::getReloadCount`. 달라지면 시작 전에 다시 받는다
-        uint8                                _bSystemUser;     ///< 씬의 `PairedAnimationSystem` 사용자로 올렸다(끝에서 내린다)
+        uint32                               _seenReloadCount;  ///< 에셋을 받을 때의 `SharedAssetCache<PairedAnimationDef>::getReloadCount`. 달라지면 시작 전에 다시 받는다
+        uint16                               _startRetryFrames; ///< 플레이 시작 때 참가자의 클립이 아직 로딩 중이라(`ParticipantNotReady`) 시작을 미룬 틱 수. 상한을 넘으면 오류다
+        uint8                                _bSystemUser;      ///< 씬의 `PairedAnimationSystem` 사용자로 올렸다(끝에서 내린다)
         PROPERTY( Category = "Animation", DisplayName = "Start On Play", Tooltip = "Start the session by itself right after play begins; other roles bind to components naming the same asset and that role" )
         uint8                  _bStartOnPlay  : 1;
         uint8                  _bStartPending : 1; ///< 플레이가 시작돼 첫 틱에 시작을 미뤄야 한다
