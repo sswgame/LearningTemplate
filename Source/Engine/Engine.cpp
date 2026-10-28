@@ -653,18 +653,10 @@ namespace sw
     void Engine::submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
     {
 #if defined( SW_WITH_CLIENT_CODE )
-        // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
-        // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
-        // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
+        // 경로로 잡힌 머티리얼(메시의 저장된 참조)의 GPU 초기화는 게임 스레드가 하지 않는다 — 렌더 스레드가 셋업 구간(기록 전)에 프레임당 상한 안에서 한다
+        // (`MaterialCache::initializePending`, bindless 등록이 지난 프레임의 병렬 기록과 겹치지 않는다). 패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 건너뛴다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
-            MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
-            if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
-            {
-                SW_PROFILE_SCOPE( "GT.Material.waitIdle" ); // 처음 쓰는 머티리얼 때문에 GT 가 RT · GPU 를 통째로 기다리는 시간
-                _pRenderThread->waitIdle( RHIWaitIdleReason::MaterialInit );
-            }
-            materials.initializePending( &_pRHI->getDevice() );
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );
         }

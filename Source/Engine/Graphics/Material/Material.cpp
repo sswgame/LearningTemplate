@@ -102,6 +102,15 @@ namespace sw
         if ( pRHI == nullptr )
             return false;
 
+        // 결과가 정해지기 전에는 그릴 수 없다. 어느 실패 경로로 나가든 마지막 값은 아래 `finishGpuState` 가 정한다.
+        setGpuState( MaterialGpuState::Pending );
+        struct GpuStateFinish
+        {
+            Material& _material;
+            bool      _bSucceeded{ false };
+            ~GpuStateFinish() { _material.setGpuState( _bSucceeded ? MaterialGpuState::Ready : MaterialGpuState::Failed ); }
+        } finishGpuState{ *this };
+
         _pRHIDevice = pRHI;
         _assetPath  = assetRelativePath;
 
@@ -142,7 +151,8 @@ namespace sw
         loadScope.setBytes( _data._bytes.size() );
         if ( _descriptorIndex != kInvalidDescriptorIndex )
             loadScope.setSucceeded();
-        return _descriptorIndex != kInvalidDescriptorIndex;
+        finishGpuState._bSucceeded = _descriptorIndex != kInvalidDescriptorIndex;
+        return finishGpuState._bSucceeded;
     }
 
     bool Material::resolveTextureAssets( IRHIDevice* pRHI )
@@ -357,6 +367,7 @@ namespace sw
         _constantBufferBytes = 0;
         _descriptorIndex     = kInvalidDescriptorIndex;
         _pRHIDevice          = nullptr;
+        setGpuState( MaterialGpuState::NotRequested );
     }
 
     void Material::releaseRHI( IRHIDevice* pRHI )
@@ -379,6 +390,7 @@ namespace sw
         _constantBufferBytes = 0;
         _descriptorIndex     = kInvalidDescriptorIndex;
         _pRHIDevice          = nullptr;
+        setGpuState( MaterialGpuState::NotRequested );
     }
 
     void Material::uploadConstantBytes( IRHIDevice* pRHI )

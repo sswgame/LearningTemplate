@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -412,6 +413,8 @@ namespace sw
          *          (메시 쪽 값)를 쓴다. 머티리얼이 없는 디버그 메시와 픽스처 메시가 그 경우다.
          */
         static void fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
+        /** @brief 후보의 머티리얼이 GPU 에 아직 올라가지 않았으면(`MaterialGpuState` 가 `Ready` 가 아님) 세고 true 를 반환합니다. 워커에서 불립니다. */
+        bool isMaterialNotReady( const DrawCandidate& candidate );
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */
@@ -484,6 +487,26 @@ namespace sw
         vector<uint32> _listCandidateToInstance;
         /** @brief 마지막 수집이 만든 후보 수입니다. 부분 수집이 이 슬롯 수를 그대로 이어받습니다. */
         size_t _lastCandidateCount{ 0 };
+        /**
+         * @brief 마지막 수집에서 GPU 준비가 안 된(`MaterialGpuState` 가 `Ready` 가 아닌) 머티리얼 때문에 후보에서 뺀 프리미티브 수입니다(워커가 더하므로 원자).
+         * @details 0 이 아니면 다음 프레임은 더티 신호가 없어도 전체 수집을 다시 합니다. 렌더 스레드가 머티리얼을 올리는 것은 씬에 아무 신호도 남기지 않기 때문입니다.
+         *          이동 가능하게 두려고 값을 감싼 형식입니다.
+         */
+        struct NotReadyCounter
+        {
+            atomic<uint32> _count{ 0 };
+            NotReadyCounter() = default;
+            NotReadyCounter( NotReadyCounter&& other ) noexcept
+                : _count{ other._count.load() }
+            {
+            }
+            NotReadyCounter& operator=( NotReadyCounter&& other ) noexcept
+            {
+                _count.store( other._count.load() );
+                return *this;
+            }
+        };
+        NotReadyCounter _notReadySkipped;
         /** @brief 부분 수집이 프리미티브 하나를 채워 볼 임시 후보입니다. 프레임마다 할당하지 않습니다. */
         DrawCandidate _candidateProbe;
 

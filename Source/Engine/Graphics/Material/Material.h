@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Defines.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
@@ -26,6 +27,19 @@ namespace sw
     struct ShaderBufferInfo;
     struct ShaderCompileResult;
     struct ShaderReflectionData;
+
+    /**
+     * @brief 머티리얼 GPU 자원의 준비 상태입니다. 반쯤 초기화된 상태를 구분 못 하는 `isRHIValid` 대신, 그릴 수 있는지는 이것으로 판단합니다.
+     * @details `NotRequested` → (`requestInitialize`) `Pending` → (렌더 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
+     *          패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않습니다.
+     */
+    enum class MaterialGpuState : uint8
+    {
+        NotRequested,
+        Pending,
+        Ready,
+        Failed,
+    };
 
     class IRHIDevice;
 
@@ -89,6 +103,10 @@ namespace sw
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
         /** @brief GPU 자원이 올라가 있으면 true 입니다. 캐시가 따로 세지 않고 이 값을 봅니다. */
         bool isRHIValid() const { return _constantBuffer != 0; }
+        /** @brief GPU 준비 상태입니다(어느 스레드에서나 읽습니다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
+        MaterialGpuState getGpuState() const { return static_cast<MaterialGpuState>( _gpuState.load( std::memory_order_acquire ) ); }
+        /** @brief 준비 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
+        void setGpuState( MaterialGpuState state ) { _gpuState.store( static_cast<uint8>( state ), std::memory_order_release ); }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
         [[nodiscard]] bool loadFromFile( const ResourceID& resourceID );
@@ -305,6 +323,7 @@ namespace sw
         string                     _assetPath;
         MaterialDesc               _desc;
         MaterialData               _data;
+        atomic<uint8>              _gpuState{ static_cast<uint8>( MaterialGpuState::NotRequested ) }; /**< `MaterialGpuState`. 게임 스레드가 읽고 렌더 스레드가 쓴다. */
         RHIBufferHandle            _constantBuffer;
         uint32                     _constantBufferBytes; /**< `_constantBuffer` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(`uploadConstantBytes`). */
         RHIDescriptorIndex         _descriptorIndex;

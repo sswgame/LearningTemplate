@@ -80,9 +80,35 @@ namespace sw
         struct DeviceInitScope
         {
             Impl& _impl;
+            bool  _bOwns{ false };
+
+            /// @brief 쥘 수 없으면 기다리지도 멈추지도 않고 `owns()` 가 false 가 되는 생성입니다(렌더 스레드의 `initializePending`).
+            struct TryTag
+            {
+            };
+
+            DeviceInitScope( Impl& impl, TryTag )
+                : _impl{ impl }
+            {
+                const std::thread::id self = std::this_thread::get_id();
+                std::thread::id       expected{};
+                if ( _impl._initOwner.compare_exchange_strong( expected, self ) )
+                {
+                    _impl._initDepth = 1;
+                    _bOwns           = true;
+                }
+                else if ( expected == self )
+                {
+                    ++_impl._initDepth;
+                    _bOwns = true;
+                }
+            }
+
+            bool owns() const { return _bOwns; }
 
             explicit DeviceInitScope( Impl& impl )
                 : _impl{ impl }
+                , _bOwns{ true }
             {
                 const std::thread::id self = std::this_thread::get_id();
                 std::thread::id       expected{};
@@ -101,6 +127,8 @@ namespace sw
 
             ~DeviceInitScope()
             {
+                if ( _bOwns == false )
+                    return;
                 if ( --_impl._initDepth == 0 )
                     _impl._initOwner.store( std::thread::id{} );
             }
@@ -215,26 +243,27 @@ namespace sw
         const string             key = FileUtil::normalizePath( relativePath );
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
-        if ( it == _impl->_mapEntry.end() || it->second._material->isRHIValid() )
+        // 이미 올라갔거나(`Ready`) 올리려다 실패했거나(`Failed`, 핫 리로드만 다시 시도한다) 줄에 든(`Pending`) 것은 다시 넣지 않는다.
+        if ( it == _impl->_mapEntry.end() || it->second._material->getGpuState() != MaterialGpuState::NotRequested )
             return;
-        for ( const string& pendingKey : _impl->_listPendingKey )
-        {
-            if ( pendingKey == key )
-                return;
-        }
+        it->second._material->setGpuState( MaterialGpuState::Pending );
         _impl->_listPendingKey.push_back( key );
         _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
     }
 
-    void MaterialCache::initializePending( IRHIDevice* pDevice )
+    void MaterialCache::initializePending( IRHIDevice* pDevice, uint32 maxCount )
     {
         SW_MEMORY_SCOPE( Material );
         const bool bNoPendingMaterials = pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0;
         if ( bNoPendingMaterials )
             return;
 
-        const Impl::DeviceInitScope initScope{ *_impl };
-        vector<string>              listKey;
+        // 다른 스레드가 초기화하는 중이면(씬 초기화 · 에디터 리로드의 게임 스레드) 이번 프레임은 넘긴다. 줄은 그대로라 다음 프레임에 이어진다.
+        const Impl::DeviceInitScope initScope{ *_impl, Impl::DeviceInitScope::TryTag{} };
+        if ( initScope.owns() == false )
+            return;
+
+        vector<string> listKey;
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             listKey.swap( _impl->_listPendingKey );
@@ -242,8 +271,11 @@ namespace sw
         }
 
         // 초기화하는 동안(파일 읽기와 버퍼 생성)에는 잠그지 않는다. 소유권을 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다.
-        for ( const string& key : listKey )
+        // 프레임당 상한을 넘는 키는 줄 앞에 되돌려 다음 프레임이 이어 한다(렌더 스레드가 한 프레임에 파일을 여럿 읽지 않게 한다).
+        size_t processed = 0;
+        for ( ; processed < listKey.size() && processed < maxCount; ++processed )
         {
+            const string&        key = listKey[processed];
             shared_ptr<Material> material;
             {
                 ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
@@ -252,10 +284,17 @@ namespace sw
                     continue; // 그 사이에 해제됐다
                 material = it->second._material;
             }
-            if ( material->isRHIValid() )
+            if ( material->getGpuState() == MaterialGpuState::Ready )
                 continue;
+            // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
             if ( material->initialize( pDevice, ResourceID{ key } ) == false )
                 SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
+        }
+        if ( processed < listKey.size() )
+        {
+            UniqueLock<shared_mutex> lock{ _impl->_mutex };
+            _impl->_listPendingKey.insert( _impl->_listPendingKey.begin(), listKey.begin() + static_cast<std::ptrdiff_t>( processed ), listKey.end() );
+            _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
         }
     }
 
@@ -338,14 +377,15 @@ namespace sw
         size_t                   keyIndex = 0;
         while ( keyIndex < _impl->_listPSOWarmKey.size() )
         {
-            const auto it = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
-            if ( it != _impl->_mapEntry.end() && it->second._material->isRHIValid() == false )
+            const auto             it    = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
+            const MaterialGpuState state = it != _impl->_mapEntry.end() ? it->second._material->getGpuState() : MaterialGpuState::Failed;
+            if ( state == MaterialGpuState::NotRequested || state == MaterialGpuState::Pending )
             {
                 ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
                 continue;
             }
-            if ( it != _impl->_mapEntry.end() )
-                outListMaterial.push_back( it->second._material );
+            if ( state == MaterialGpuState::Ready )
+                outListMaterial.push_back( it->second._material ); // 실패(`Failed`)한 것과 캐시에서 빠진 것은 버린다
             VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
         }
         _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );

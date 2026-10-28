@@ -12,6 +12,7 @@
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -669,6 +670,11 @@ namespace sw
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
         if ( engine::areEngineServicesBound() )
         {
+            // 새 머티리얼의 GPU 초기화(상수 버퍼 · bindless 등록)도 기록 전에 여기서 한다. 올라간(`Ready`) 머티리얼부터 게임 스레드가 그리는 패킷에 싣는다.
+            {
+                SW_PROFILE_SCOPE( "RT.MaterialInit" );
+                engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( pDevice, MaterialCache::kMaxInitsPerFrame );
+            }
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             (void)textures.flushRegionUpdates( pDevice );

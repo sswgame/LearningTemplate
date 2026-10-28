@@ -302,6 +302,8 @@ namespace sw
         if ( candidate._instance.get() != pMeshComp->getRawMaterialInstance() )
             candidate._instance = pMeshComp->getMaterialInstance();
         fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) );
+        if ( isMaterialNotReady( candidate ) )
+            return false;
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
@@ -343,6 +345,18 @@ namespace sw
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
         fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
+        if ( isMaterialNotReady( candidate ) )
+            return false;
+        return true;
+    }
+
+    bool GPUSceneBuilder::isMaterialNotReady( const DrawCandidate& candidate )
+    {
+        // GPU 상태가 `Ready` 가 아닌 머티리얼(올리는 중 · 실패)은 그리지 않는다. 렌더 스레드가 상수 버퍼와 bindless 인덱스를 올린 뒤에야 배치가 생긴다.
+        // `Failed` 의 오류는 올린 쪽(`MaterialCache::initializePending`)이 한 번 남겼다.
+        if ( candidate._material == nullptr || candidate._material->getGpuState() == MaterialGpuState::Ready )
+            return false;
+        _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
         return true;
     }
 
@@ -496,6 +510,12 @@ namespace sw
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의
         // Component 를 훑어 후보를 만들어 보면, 화면이 정지해 있어도 씬 크기만큼 비용이 든다.
+        // 지난 수집이 GPU 준비 전의 머티리얼 때문에 뺀 프리미티브가 있으면, 올라갔는지는 씬에 신호가 없으므로 전체 수집으로 다시 본다.
+        const uint32 notReadyLastBuild = _notReadySkipped._count.exchange( 0u, std::memory_order_relaxed );
+        SW_PROFILE_COUNT( "GT.Material.notReadyBatches", notReadyLastBuild );
+        const bool bRetryNotReady = notReadyLastBuild != 0u;
+        if ( bRetryNotReady )
+            input._bSetSame = false;
         const bool bNothingChanged = input._bSetSame && bCamSame && input._bPermutationSame && primitives.hasDirty() == false;
         if ( bNothingChanged )
             return;

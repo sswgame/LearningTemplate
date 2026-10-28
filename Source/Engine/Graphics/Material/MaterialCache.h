@@ -64,8 +64,15 @@ namespace sw
          *          초기화하면 파일 내용으로 덮이기 때문입니다.
          */
         void requestInitialize( string_view relativePath );
-        /** @brief 표시된 머티리얼 중 아직 GPU 에 없는 것을 @p pDevice 로 초기화합니다(파일을 읽고 버퍼를 만듭니다). 디바이스가 없으면 표시를 그대로 둡니다. */
-        void initializePending( IRHIDevice* pDevice );
+        /**
+         * @brief 표시된 머티리얼 중 아직 GPU 에 없는 것을 @p pDevice 로 최대 @p maxCount 개 초기화합니다(파일을 읽고 버퍼를 만듭니다). 디바이스가 없으면 표시를 그대로 둡니다.
+         * @details 프레임 경로의 호출자는 렌더 스레드의 셋업 구간(`FrameRenderer`, 기록 전)이고 `kMaxInitsPerFrame` 로 상한을 둡니다(`GpuState` 가 `Ready` 가 된
+         *          머티리얼부터 패킷 빌더가 그립니다 — RHI 비동기 업로드 U10). 상한을 넘은 키는 줄에 남아 다음 프레임에 이어집니다. 다른 스레드가 초기화하는 중이면 그 프레임은 넘깁니다.
+         *          스튜디오 · 베이커처럼 프레임 없이 한 번에 올리는 호출처는 기본값(전부)을 씁니다.
+         */
+        void initializePending( IRHIDevice* pDevice, uint32 maxCount = 0xFFFFFFFFu );
+        /** @brief 렌더 스레드가 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 파일 읽기가 렌더 스레드에서 도는 만큼 작게 둡니다. */
+        static constexpr uint32 kMaxInitsPerFrame = 4;
         /**
          * @brief 다음 `initializePending` 이 초기화할 머티리얼이 있으면 true 입니다(잠그지 않습니다).
          * @details 초기화는 bindless 테이블에 등록합니다. 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안에는 테이블을 바꿀 수 없으므로

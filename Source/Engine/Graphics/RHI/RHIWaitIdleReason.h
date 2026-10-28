@@ -22,7 +22,6 @@ namespace sw
         SceneActivation, ///< 씬 전환 — 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 자원을 잡는다
         Capture,         ///< 초상 · 반사 프로브 베이크 같은 캡처가 한 번 GPU 결과를 기다린다(프레임 경로 밖)
         Tool,            ///< 에디터 · 테스트 · 개발 토글 같은 도구 경로(프레임 경로가 아니다)
-        MaterialInit,    ///< **옛 경로 — U10 이 지운다.** 처음 쓰는 머티리얼의 GPU 초기화 전에 게임 스레드가 렌더 스레드와 GPU 를 비운다(W1)
     };
 
     /** @brief 이유의 이름입니다(로그 · 진단용 정적 문자열). */
@@ -44,8 +43,6 @@ namespace sw
                 return "Capture";
             case RHIWaitIdleReason::Tool:
                 return "Tool";
-            case RHIWaitIdleReason::MaterialInit:
-                return "MaterialInit";
         }
         return "Unknown";
     }
