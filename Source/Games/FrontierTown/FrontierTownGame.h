@@ -6,14 +6,14 @@
  *          이 클래스는 카탈로그 둘을 읽어 게임 범위에 걸고(디렉터가 찾는다), 공유 상태와 두 디렉터를 상태 스냅숏에 올린다.
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 
 namespace sw
 {
     /** @brief 둘째 조립 테스트 게임 인스턴스입니다. */
-    class FrontierTownGame : public GameInstanceBase
+    class FrontierTownGame : public GameInstance
     {
     public:
         FrontierTownGame();

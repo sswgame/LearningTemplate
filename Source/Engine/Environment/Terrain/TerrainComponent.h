@@ -51,7 +51,7 @@ namespace sw
      *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 보이지 않는다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
      *          청크만 메시를 다시 만들어 배치에 교체한다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 정점을 접어 틈이 없다(`TerrainMeshBuilder`).
      *
-     *          레이어 가중치 맵(`_layerWeightsPath`, `.layerweights` 데이터 에셋 — `LayerWeightsData`)은 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽는다.
+     *          레이어 가중치 맵(`_layerWeightsPath`, `.layerweights` 데이터 에셋 — `LayerWeightsAsset`)은 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽는다.
      *          텍스처가 아니므로 서버 패키지에 남아 서버의 레이어 질의(발소리 · 표면 재질 · 이동 속도)도 정확하다. 그리는 쪽의 GPU 텍스처는 읽은 바이트로
      *          지형마다 둘(평면마다 하나) 만든다(`getCPUSplatPath`). `computeLayerWeightsAt` 이 셰이더와 같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다.
      *          레이어 색, 디테일, 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣는다.
@@ -169,7 +169,7 @@ namespace sw
         const string& getCPUSplatPath( uint32 plane ) const { return _arrCPUSplatPath[plane]; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
-        /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsData`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
+        /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
         [[nodiscard]] bool saveSplat( string_view filePath ) const;
 
         /**

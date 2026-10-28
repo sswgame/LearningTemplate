@@ -66,7 +66,7 @@ namespace sw
 
     void Shooter3DGame::onUpdate( float32 deltaTime )
     {
-        GameInstanceBase::onUpdate( deltaTime );
+        GameInstance::onUpdate( deltaTime );
         _appearanceWatcher.update( _appearanceDatabase, &_itemCatalog );
     }
 } // namespace sw

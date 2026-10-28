@@ -16,7 +16,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {

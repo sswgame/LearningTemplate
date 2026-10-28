@@ -8,12 +8,12 @@
  *          `-gv_farmAutoPlay=1` 이면 농부도 AI 가 움직인다(입력 없이 날을 넘겨 보는 확인).
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     /** @brief 농장 게임 인스턴스입니다. */
-    class HarvestValleyGame : public GameInstanceBase
+    class HarvestValleyGame : public GameInstance
     {
     public:
         HarvestValleyGame();

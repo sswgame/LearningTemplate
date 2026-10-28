@@ -142,7 +142,7 @@ namespace sw
         return true;
     }
 
-    bool ReflectionProbeBaker::bakeProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeData& outData, string* pOutError )
+    bool ReflectionProbeBaker::bakeProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeAsset& outData, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
         outData.clear();
@@ -194,7 +194,7 @@ namespace sw
     }
 
     bool ReflectionProbeBaker::bakeProbes( IRHIDevice& device, RenderThread* pRenderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
-                                           vector<ReflectionProbeData>& outListData, string* pOutError )
+                                           vector<ReflectionProbeAsset>& outListData, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
         outListData.clear();

@@ -8,7 +8,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectValue.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

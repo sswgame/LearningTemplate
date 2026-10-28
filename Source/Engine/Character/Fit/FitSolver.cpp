@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitTables.h"
 
 namespace sw

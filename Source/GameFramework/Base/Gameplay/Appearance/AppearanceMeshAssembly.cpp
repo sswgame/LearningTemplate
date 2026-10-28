@@ -11,7 +11,7 @@
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

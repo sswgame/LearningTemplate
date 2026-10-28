@@ -30,7 +30,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

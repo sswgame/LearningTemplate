@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class ComponentStateStore
-     * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 보관하고, 게임 상태 봉투(`GameInstanceBase::serializeState`)의 한 섹션으로 씁니다.
+     * @brief 컴포넌트마다 바이트 덩어리 하나를 (타입 이름, 컴포넌트 id) 로 보관하고, 게임 상태 봉투(`GameInstance::serializeState`)의 한 섹션으로 씁니다.
      * @details 리플렉션 PROPERTY 는 씬 오브젝트 스냅샷이 이미 옮긴다.
      *          디렉터가 키트의 보통 클래스로 든 시뮬레이션(밭, 도시, 전장)은 PROPERTY 가 아니라서 여기에 싣는다.
      *          언리얼의 `UObject::Serialize` 오버라이드와 유니티의 `ISerializationCallbackReceiver` 에 해당한다.
@@ -135,7 +135,7 @@ namespace sw
     /**
      * @class StatefulComponentRegistration
      * @brief 게임 프레임워크의 컴포넌트 타입 하나를 **모든 게임**의 상태 스냅샷에 등록하는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
-     * @details `GameInstanceBase` 생성자가 등록된 타입을 모두 스냅샷에 넣는다(`registerStatefulComponent` 와 같은 일). 게임마다 한 줄씩 넣으면 빠뜨린 게임만
+     * @details `GameInstance` 생성자가 등록된 타입을 모두 스냅샷에 넣는다(`registerStatefulComponent` 와 같은 일). 게임마다 한 줄씩 넣으면 빠뜨린 게임만
      *          세이브 · 핫 리로드에서 그 상태를 조용히 잃으므로, 타입을 정의한 쪽이 한 번 등록한다. 층이 위인 컴포넌트(Actor 의 카메라 디렉터)도
      *          기반 층(Foundation)의 게임 인스턴스가 include 하지 않고 올라온다.
      *          등록은 프레임워크 모듈의 정적 초기화에서 돌아 어떤 게임 인스턴스보다 먼저 끝난다. 같은 이름은 두 번 오르지 않는다.

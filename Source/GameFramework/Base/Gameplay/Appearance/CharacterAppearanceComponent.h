@@ -38,7 +38,7 @@ namespace sw
     class AppearanceDatabase;
     class CharacterAppearanceComponent;
     class Equipment;
-    class FitPartData;
+    class FitPartDef;
     class FitTables;
     class GameObjectManager;
     class MeshSectionComponent;
@@ -242,10 +242,10 @@ namespace sw
         /** @brief 베이크한 메시를 짓는 스킨드 부품 하나의 로드입니다(원본 메시 · 피팅 데이터). 준비된 핸들이 원본을 쥔다. */
         struct MeshAssemblyLoad
         {
-            MeshHandle                     _mesh{};
-            SharedAssetHandle<FitPartData> _fit{};                ///< 피팅 데이터가 없는 부품이면 요청이 없다
-            uint64                         _sourceContentID{ 0 }; ///< 구울 때의 원본 내용 번호. 바뀌면(메시 핫 리로드) 다시 조립한다
-            uint32                         _partIndex{ 0 };
+            MeshHandle                    _mesh{};
+            SharedAssetHandle<FitPartDef> _fit{};                ///< 피팅 데이터가 없는 부품이면 요청이 없다
+            uint64                        _sourceContentID{ 0 }; ///< 구울 때의 원본 내용 번호. 바뀌면(메시 핫 리로드) 다시 조립한다
+            uint32                        _partIndex{ 0 };
         };
 
     private:

@@ -22,17 +22,17 @@ namespace sw
     struct FitResult;
     struct ResolvedAppearance;
 
-    class FitPartData;
+    class FitPartDef;
     class FitTables;
     class Mesh;
 
     /** @brief 조립할 스킨드 부품 하나입니다. */
     struct AppearanceMeshPart
     {
-        hashed_string      _name{};              ///< 보고에 쓰는 부품 이름
-        hashed_string      _owner{};             ///< 해석의 주인(슬롯 · 꾸미기 매개변수). 비어 있으면 몸이다
-        const Mesh*        _pMesh{ nullptr };    ///< 읽은 원본 메시(CPU 정점 · 스킨 · 모프)
-        const FitPartData* _pFitData{ nullptr }; ///< 피팅 데이터. 없으면 피팅하지 않고 체형 모프만 베이크한다
+        hashed_string     _name{};              ///< 보고에 쓰는 부품 이름
+        hashed_string     _owner{};             ///< 해석의 주인(슬롯 · 꾸미기 매개변수). 비어 있으면 몸이다
+        const Mesh*       _pMesh{ nullptr };    ///< 읽은 원본 메시(CPU 정점 · 스킨 · 모프)
+        const FitPartDef* _pFitData{ nullptr }; ///< 피팅 데이터. 없으면 피팅하지 않고 체형 모프만 베이크한다
     };
 } // namespace sw
 

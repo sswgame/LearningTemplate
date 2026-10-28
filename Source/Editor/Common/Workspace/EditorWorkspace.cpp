@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

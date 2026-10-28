@@ -1,7 +1,7 @@
 /**
  * @file SurfaceLayerWeights.h
  * @brief 표면 레이어 가중치 여덟(float4 둘)입니다 - 지형 스플랫의 한 점, 배치 규칙의 레이어 필터, 에디터 브러시가 같은 값을 씁니다.
- * @details 레이어 0..3 이 `_low`, 4..7 이 `_high` 입니다. 지형 스플랫 맵 둘(RGBA8 한 장에 레이어 넷)과 같은 배치라 GPU 텍스처가 이 값에서 곧바로 나옵니다(`LayerWeightsData`).
+ * @details 레이어 0..3 이 `_low`, 4..7 이 `_high` 입니다. 지형 스플랫 맵 둘(RGBA8 한 장에 레이어 넷)과 같은 배치라 GPU 텍스처가 이 값에서 곧바로 나옵니다(`LayerWeightsAsset`).
  *          레이어 수의 정본은 `kLayerCount` 입니다 - 파일 형식 · 브러시 · 배치 필터 · 머티리얼이 이 값을 따릅니다. 기본값은 레이어 0 이 가득입니다.
  */
 #pragma once

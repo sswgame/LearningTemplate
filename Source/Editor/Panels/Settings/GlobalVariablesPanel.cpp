@@ -24,7 +24,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <imgui.h>

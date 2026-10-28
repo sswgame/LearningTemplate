@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Lighting/ReflectionProbeData.h"
+#include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -12,7 +12,7 @@ namespace sw
 {
     namespace
     {
-        struct ReflectionProbeDataInternal
+        struct ReflectionProbeAssetInternal
         {
             /// @brief 머리말 바이트 수 — 매직 · 버전 · 찍은 위치 · 한 변 텍셀 수 · 단계 수.
             static constexpr size_t kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 3 + sizeof( uint32 ) * 2;
@@ -87,7 +87,7 @@ namespace sw
             }
 
             /** @brief 단계 0 을 GGX 로 걸러 방향 @p normal 의 텍셀 하나를 만듭니다(N = V = R). */
-            static float3 prefilterTexel( const ReflectionProbeData& data, const float3& normal, float32 roughness, uint32 sampleCount )
+            static float3 prefilterTexel( const ReflectionProbeAsset& data, const float3& normal, float32 roughness, uint32 sampleCount )
             {
                 const float32 clampedRoughness = MathUtil::max( roughness, kMinRoughness );
                 const float32 alpha            = clampedRoughness * clampedRoughness;
@@ -119,14 +119,14 @@ namespace sw
 
 namespace sw
 {
-    float32 ReflectionProbeData::computeLevelRoughness( uint32 level ) const
+    float32 ReflectionProbeAsset::computeLevelRoughness( uint32 level ) const
     {
         return _levelCount > 1u ? static_cast<float32>( level ) / static_cast<float32>( _levelCount - 1u ) : 0.0f;
     }
 
-    bool ReflectionProbeData::isValid( string* pOutError ) const
+    bool ReflectionProbeAsset::isValid( string* pOutError ) const
     {
-        using Internal                = ReflectionProbeDataInternal;
+        using Internal                = ReflectionProbeAssetInternal;
         const bool bResolutionInRange = kMinResolution <= _resolution && _resolution <= kMaxResolution;
         const bool bLevelInRange      = kMinLevelCount <= _levelCount && _levelCount <= kMaxLevelCount;
         if ( bResolutionInRange == false )
@@ -147,7 +147,7 @@ namespace sw
         return true;
     }
 
-    void ReflectionProbeData::clear()
+    void ReflectionProbeAsset::clear()
     {
         _capturePosition = float3{};
         _resolution      = 0;
@@ -155,17 +155,17 @@ namespace sw
         _listTexel.clear();
     }
 
-    float3 ReflectionProbeData::sampleLevel( uint32 level, const float3& direction ) const
+    float3 ReflectionProbeAsset::sampleLevel( uint32 level, const float3& direction ) const
     {
         const float2  uv         = encodeOctahedral( direction );
         const float32 resolution = static_cast<float32>( _resolution );
         const size_t  firstTexel = static_cast<size_t>( computeTexelIndex( level, 0, 0 ) );
-        return ReflectionProbeDataInternal::sampleBilinear( _listTexel, firstTexel, _resolution, uv._x * resolution - 0.5f, uv._y * resolution - 0.5f );
+        return ReflectionProbeAssetInternal::sampleBilinear( _listTexel, firstTexel, _resolution, uv._x * resolution - 0.5f, uv._y * resolution - 0.5f );
     }
 
-    void ReflectionProbeData::makeBytes( vector<uint8>& outBytes ) const
+    void ReflectionProbeAsset::makeBytes( vector<uint8>& outBytes ) const
     {
-        using Internal = ReflectionProbeDataInternal;
+        using Internal = ReflectionProbeAssetInternal;
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + Internal::kTexelBytes * _listTexel.size() );
         ByteWriter writer{ outBytes };
@@ -184,9 +184,9 @@ namespace sw
         }
     }
 
-    bool ReflectionProbeData::readFromBytes( const uint8* pData, size_t size, string* pOutError )
+    bool ReflectionProbeAsset::readFromBytes( const uint8* pData, size_t size, string* pOutError )
     {
-        using Internal = ReflectionProbeDataInternal;
+        using Internal = ReflectionProbeAssetInternal;
         clear();
         if ( pData == nullptr || size < Internal::kHeaderBytes )
         {
@@ -230,7 +230,7 @@ namespace sw
         return true;
     }
 
-    bool ReflectionProbeData::saveToFile( string_view path ) const
+    bool ReflectionProbeAsset::saveToFile( string_view path ) const
     {
         vector<uint8> bytes;
         makeBytes( bytes );
@@ -239,21 +239,21 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool ReflectionProbeData::loadFromAsset( const AssetID& assetID, string* pOutError )
+    bool ReflectionProbeAsset::loadFromAsset( const AssetID& assetID, string* pOutError )
     {
         clear();
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
         {
-            ReflectionProbeDataInternal::setError( pOutError, "reflection probe file could not be read" );
+            ReflectionProbeAssetInternal::setError( pOutError, "reflection probe file could not be read" );
             return false;
         }
         return readFromBytes( bytes.data(), bytes.size(), pOutError );
     }
 
-    float2 ReflectionProbeData::encodeOctahedral( const float3& direction )
+    float2 ReflectionProbeAsset::encodeOctahedral( const float3& direction )
     {
-        using Internal    = ReflectionProbeDataInternal;
+        using Internal    = ReflectionProbeAssetInternal;
         const float32 sum = MathUtil::max( MathUtil::abs( direction._x ) + MathUtil::abs( direction._y ) + MathUtil::abs( direction._z ), 1e-8f );
         const float32 x   = direction._x / sum;
         const float32 y   = direction._y / sum;
@@ -264,7 +264,7 @@ namespace sw
         return float2{ u * 0.5f + 0.5f, v * 0.5f + 0.5f };
     }
 
-    float3 ReflectionProbeData::decodeOctahedral( const float2& uv )
+    float3 ReflectionProbeAsset::decodeOctahedral( const float2& uv )
     {
         const float32 u    = uv._x * 2.0f - 1.0f;
         const float32 v    = uv._y * 2.0f - 1.0f;
@@ -279,9 +279,9 @@ namespace sw
 namespace sw
 {
     bool ReflectionProbeFilter::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
-                                               ReflectionProbeData& outData, string* pOutError )
+                                               ReflectionProbeAsset& outData, string* pOutError )
     {
-        using Internal = ReflectionProbeDataInternal;
+        using Internal = ReflectionProbeAssetInternal;
         outData.clear();
         if ( pArrFace == nullptr || sampleCount == 0 )
         {
@@ -314,7 +314,7 @@ namespace sw
         {
             for ( uint32 x = 0; x < resolution; ++x )
             {
-                const float3 direction                                   = ReflectionProbeData::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
+                const float3 direction                                   = ReflectionProbeAsset::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
                 outData._listTexel[outData.computeTexelIndex( 0, x, y )] = Internal::sampleFaces( pArrFace, capturePosition, direction );
             }
         }
@@ -326,7 +326,7 @@ namespace sw
             {
                 for ( uint32 x = 0; x < resolution; ++x )
                 {
-                    const float3 normal                                          = ReflectionProbeData::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
+                    const float3 normal                                          = ReflectionProbeAsset::decodeOctahedral( float2{ ( static_cast<float32>( x ) + 0.5f ) * texelSize, ( static_cast<float32>( y ) + 0.5f ) * texelSize } );
                     outData._listTexel[outData.computeTexelIndex( level, x, y )] = Internal::prefilterTexel( outData, normal, roughness, sampleCount );
                 }
             }

@@ -1,5 +1,5 @@
 /**
- * @file ReflectionProbeData.h
+ * @file ReflectionProbeAsset.h
  * @brief 반사 프로브 하나의 베이크 결과(`.reflprobe`)입니다. 찍은 위치에서 본 둘레의 빛을 옥타헤드럴 사각형 하나에 접고, 거칠기 단계마다 GGX 로 미리 거른 것입니다.
  * @details 언리얼 Reflection Capture 와 같은 자리입니다. 큐브 텍스처 대신 옥타헤드럴 2D 를 쓰는 까닭은 네 백엔드가 큐브 바인딩을 모두 지원하지 않기 때문입니다.
  *          단계마다 크기가 같다(밉처럼 줄이지 않는다) — 셰이더가 텍셀을 라이트 프로브 버퍼(t13)에서 수로 읽으므로 단계마다 크기가 같으면 번호 식이 하나다.
@@ -8,7 +8,7 @@
  *          단계 l 의 거칠기는 l / (단계 수 − 1) 이다(단계 0 은 거르지 않은 빛).
  *
  *          옥타헤드럴 사상은 +Y 를 가운데로 접는다 — `encodeOctahedral` · `decodeOctahedral` 이 셰이더 lighting.hlsli 의 `ReflectionProbe::encodeOctahedral` 과 같은 식이다
- *          (식을 고치면 두 곳을 함께 고친다. ReflectionProbeDataTest 가 C++ 쪽 왕복을 본다).
+ *          (식을 고치면 두 곳을 함께 고친다. ReflectionProbeAssetTest 가 C++ 쪽 왕복을 본다).
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief `.reflprobe` 하나의 내용입니다. 파일 머리말을 참고하세요. */
-    struct SW_API ReflectionProbeData
+    struct SW_API ReflectionProbeAsset
     {
         static constexpr uint32      kMagic     = FourCcUtil::make( "SWRP" );
         static constexpr uint32      kVersion   = 1;
@@ -100,6 +100,6 @@ namespace sw
          * @return 면이 비었거나 크기가 다르거나 범위 밖이면 false 이고 이유를 @p pOutError 에 적습니다.
          */
         [[nodiscard]] static bool makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
-                                                 uint32 sampleCount, ReflectionProbeData& outData, string* pOutError = nullptr );
+                                                 uint32 sampleCount, ReflectionProbeAsset& outData, string* pOutError = nullptr );
     };
 } // namespace sw

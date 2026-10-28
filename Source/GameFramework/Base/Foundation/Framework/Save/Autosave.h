@@ -83,7 +83,7 @@ namespace sw
     /**
      * @class AutosaveManager
      * @brief 자동 저장의 시점, 위치, 되돌리기를 맡습니다.
-     * @details 저장과 불러오기 자체는 게임이 넘긴 델리게이트(보통 `GameInstanceBase::saveStateToFile` 과 `loadStateFromFile`)가 한다.
+     * @details 저장과 불러오기 자체는 게임이 넘긴 델리게이트(보통 `GameInstance::saveStateToFile` 과 `loadStateFromFile`)가 한다.
      *          언리얼과 유니티에는 자동 저장 정책이 없어서 게임마다 만든다. 이 클래스는 그 정책을 장르와 무관하게 줄인 것이다.
      *          - 요청(`requestSave`, `notifyAreaChanged`, `reachCheckpoint`, `notifyBeforeBoss`)은 쌓였다가 `update` 에서 하나로 합쳐 저장한다.
      *            한 프레임에 지역 이동과 체크포인트가 겹쳐도 저장은 한 번이며, 더 중요한 까닭(체크포인트, 보스, 지역, 간격 순)이 슬롯 기록에 남는다.

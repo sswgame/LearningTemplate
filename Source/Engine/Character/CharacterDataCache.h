@@ -18,7 +18,7 @@ namespace sw
 
     class AnimationNotifyTable;
     class BodyShapeSet;
-    class FitPartData;
+    class FitPartDef;
     class FitTables;
     class PairedAnimationDef;
     class SocketSet;
@@ -40,8 +40,8 @@ namespace sw
      * @details 사용자 연산을 등록한 풀이기의 표는 이 캐시가 아니라 그 풀이기의 레지스트리로 직접 읽는다(캐시는 경로만으로 나눠 주므로 레지스트리를 고를 수 없다).
      */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitTables>;
-    /** @brief 부품 피팅 데이터(`*.partfit.xml`)를 나눠 줍니다("FitPartData"). 표와 따로 읽고 이름은 조립이 대조합니다(`FitPartData::validateNames`). */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitPartData>;
+    /** @brief 부품 피팅 데이터(`*.partfit.xml`)를 나눠 줍니다("FitPartDef"). 표와 따로 읽고 이름은 조립이 대조합니다(`FitPartDef::validateNames`). */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitPartDef>;
     /** @brief 체형 축 데이터(`*.bodyshape.xml`)를 나눠 줍니다("BodyShapeSet"). 제자리에서 다시 읽고, 외형 컴포넌트는 다시 읽은 횟수가 바뀌면 다시 조립합니다. */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<BodyShapeSet>;
 } // namespace sw

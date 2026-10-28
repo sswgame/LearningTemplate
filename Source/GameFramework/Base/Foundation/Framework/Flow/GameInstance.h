@@ -1,5 +1,5 @@
 /**
- * @file GameInstanceBase.h
+ * @file GameInstance.h
  * @brief IGame 의 공통 수명주기와 GamePackConfig 배선, 인스턴스 상태 스냅샷 직렬화를 담당합니다.
  */
 #pragma once
@@ -35,17 +35,17 @@ namespace sw
     class Widget;
 
     // ------------------------------------------------------------------------------
-    // 1) GameInstanceBase — 수명주기는 여기, 파생은 훅만
+    // 1) GameInstance — 수명주기는 여기, 파생은 훅만
     //    파생은 configurePackConfig 과 on* 훅을 오버라이드한다(예: EmptyGame)
     // ------------------------------------------------------------------------------
     /** @brief IGame 수명주기를 고정하고 팩 설정 및 런타임 상태 스냅샷 직렬화를 지원합니다. */
-    class SW_GF_API GameInstanceBase : public IGame
+    class SW_GF_API GameInstance : public IGame
     {
     public:
         /** @brief 윈도우 · RHI · 팩 설정을 비운 채로 둡니다. */
-        GameInstanceBase();
+        GameInstance();
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */
-        virtual ~GameInstanceBase() override;
+        virtual ~GameInstance() override;
 
         /**
          * @brief configurePackConfig 으로 팩 설정을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
@@ -194,8 +194,8 @@ namespace sw
         void registerStatefulComponent()
         {
             StatefulComponentType type;
-            type._pCapture = &GameInstanceBase::captureStateOf<TComponent>;
-            type._pRestore = &GameInstanceBase::restoreStateOf<TComponent>;
+            type._pCapture = &GameInstance::captureStateOf<TComponent>;
+            type._pRestore = &GameInstance::restoreStateOf<TComponent>;
             _listStatefulType.push_back( type );
         }
         /**
@@ -208,7 +208,7 @@ namespace sw
         void registerViewOwner()
         {
             StatefulComponentType type;
-            type._pDespawn = &GameInstanceBase::despawnViewsOf<TComponent>;
+            type._pDespawn = &GameInstance::despawnViewsOf<TComponent>;
             _listStatefulType.push_back( type );
         }
         /** @brief 디렉터(`GameDirectorComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
@@ -216,9 +216,9 @@ namespace sw
         void registerDirector()
         {
             StatefulComponentType type;
-            type._pCapture = &GameInstanceBase::captureStateOf<TDirector>;
-            type._pRestore = &GameInstanceBase::restoreStateOf<TDirector>;
-            type._pDespawn = &GameInstanceBase::despawnViewsOf<TDirector>;
+            type._pCapture = &GameInstance::captureStateOf<TDirector>;
+            type._pRestore = &GameInstance::restoreStateOf<TDirector>;
+            type._pDespawn = &GameInstance::despawnViewsOf<TDirector>;
             _listStatefulType.push_back( type );
         }
         /**

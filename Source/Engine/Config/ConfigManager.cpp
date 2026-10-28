@@ -7,7 +7,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

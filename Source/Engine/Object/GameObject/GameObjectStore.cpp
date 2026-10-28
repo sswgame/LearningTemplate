@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {

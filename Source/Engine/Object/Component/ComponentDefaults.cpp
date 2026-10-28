@@ -6,7 +6,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

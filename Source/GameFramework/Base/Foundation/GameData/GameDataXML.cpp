@@ -6,7 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

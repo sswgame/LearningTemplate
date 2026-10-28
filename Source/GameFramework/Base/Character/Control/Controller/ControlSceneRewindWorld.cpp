@@ -7,13 +7,13 @@
 
 #include "GameFramework/Base/Character/Control/ControlSystem.h"
 #include "GameFramework/Base/Character/Control/Controller/IntentPlayback.h"
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "ControlSceneRewindWorld" );
 
-    ControlSceneRewindWorld::ControlSceneRewindWorld( GameInstanceBase& instance, GameObjectManager& manager, const ControlIntentHistory& history, float32 fixedDeltaSeconds )
+    ControlSceneRewindWorld::ControlSceneRewindWorld( GameInstance& instance, GameObjectManager& manager, const ControlIntentHistory& history, float32 fixedDeltaSeconds )
         : _instance{ instance }
         , _manager{ manager }
         , _history{ history }

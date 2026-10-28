@@ -11,7 +11,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

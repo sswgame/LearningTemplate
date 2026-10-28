@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
 #endif
 
     /** @brief 기동만 지정하는 빈 게임 팩 */
-    class EmptyGame : public GameInstanceBase
+    class EmptyGame : public GameInstance
     {
     public:
         EmptyGame();

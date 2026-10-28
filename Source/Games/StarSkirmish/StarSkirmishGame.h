@@ -8,12 +8,12 @@
  *          기본은 사람(파랑) 대 `RTSCommanderAI`(빨강), `-gv_skirmishAutoPlay=1` 이면 AI 대 AI 로 승패까지 돌린다(입력 없이 한 판을 끝내는 확인).
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     /** @brief 전장 게임 인스턴스입니다. */
-    class StarSkirmishGame : public GameInstanceBase
+    class StarSkirmishGame : public GameInstance
     {
     public:
         StarSkirmishGame();

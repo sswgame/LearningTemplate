@@ -16,8 +16,8 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionContainers.h"
-#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TextAddress.h"
 
 #include <type_traits>

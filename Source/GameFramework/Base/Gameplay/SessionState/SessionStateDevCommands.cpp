@@ -13,7 +13,7 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
 
-    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
     #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -25,7 +25,7 @@ namespace sw
             /** @brief 활성 씬에서 열린 첫 판 상태입니다. 없으면 답을 채우고 nullptr 입니다. */
             static SessionStateComponent* findSessionState( string& outReply )
             {
-                GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
+                GameObjectManager* pManager = GameInstance::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     outReply = "cheat: no active scene";

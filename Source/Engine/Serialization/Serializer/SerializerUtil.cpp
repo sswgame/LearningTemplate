@@ -9,7 +9,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Reflection/ReflectValue.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

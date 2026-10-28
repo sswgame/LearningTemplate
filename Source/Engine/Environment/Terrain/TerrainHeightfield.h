@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    struct HeightfieldData;
+    struct HeightfieldAsset;
 
     /**
      * @struct TerrainSampleRect
@@ -49,7 +49,7 @@ namespace sw
          * @brief 원시 높이장을 월드 값으로 풉니다. 높이 = @p heightMin + 원시 / 65535 × ( @p heightMax − @p heightMin ).
          * @return 데이터가 맞지 않거나 넓이가 0 이면 false 이고 비어 있게 됩니다.
          */
-        [[nodiscard]] bool initialize( const HeightfieldData& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax );
+        [[nodiscard]] bool initialize( const HeightfieldAsset& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax );
         /** @brief 비웁니다. */
         void shutdown();
         /**
@@ -103,7 +103,7 @@ namespace sw
          */
         [[nodiscard]] static bool resampleHoles( const vector<uint8>& listSource, uint32 sourceResolution, uint32 targetResolution, vector<uint8>& outListHole );
         /** @brief 지금 높이를 원시 높이장으로 되돌립니다(높이 = `heightMin` + 원시 / 65535 × 범위의 역변환). 구멍 마스크는 그대로 담습니다. */
-        void makeHeightfieldData( float32 heightMin, float32 heightMax, HeightfieldData& outData ) const;
+        void makeHeightfieldAsset( float32 heightMin, float32 heightMax, HeightfieldAsset& outData ) const;
 
         bool          isValid() const { return _resolution >= 2; }
         uint32        getResolution() const { return _resolution; }

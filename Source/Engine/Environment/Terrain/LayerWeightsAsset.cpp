@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Environment/Terrain/LayerWeightsData.h"
+#include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
@@ -9,11 +9,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "LayerWeightsData" );
+    SW_LOG_CALLER( "LayerWeightsAsset" );
 
     namespace
     {
-        struct LayerWeightsDataInternal
+        struct LayerWeightsAssetInternal
         {
             static constexpr size_t kHeaderBytes = 20;
         };
@@ -22,16 +22,16 @@ namespace sw
 
 namespace sw
 {
-    bool LayerWeightsData::isValid() const
+    bool LayerWeightsAsset::isValid() const
     {
         const bool bSizeInRange = _width >= 1 && _width <= kMaxResolution && _height >= 1 && _height <= kMaxResolution;
         return bSizeInRange && _bytes.size() == static_cast<size_t>( _width ) * _height * kLayerCount;
     }
 
-    bool LayerWeightsData::loadFromMemory( const vector<uint8>& bytes, string_view sourceName )
+    bool LayerWeightsAsset::loadFromMemory( const vector<uint8>& bytes, string_view sourceName )
     {
-        using Internal = LayerWeightsDataInternal;
-        *this          = LayerWeightsData{};
+        using Internal = LayerWeightsAssetInternal;
+        *this          = LayerWeightsAsset{};
         if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
         {
             SW_LOG_ERROR( "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
@@ -66,7 +66,7 @@ namespace sw
         return true;
     }
 
-    bool LayerWeightsData::loadFromAsset( const AssetID& id )
+    bool LayerWeightsAsset::loadFromAsset( const AssetID& id )
     {
         const string_view assetID = id.view();
         vector<uint8>     bytes;
@@ -78,9 +78,9 @@ namespace sw
         return loadFromMemory( bytes, assetID );
     }
 
-    void LayerWeightsData::saveToMemory( vector<uint8>& outBytes ) const
+    void LayerWeightsAsset::saveToMemory( vector<uint8>& outBytes ) const
     {
-        using Internal = LayerWeightsDataInternal;
+        using Internal = LayerWeightsAssetInternal;
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + _bytes.size() );
         LittleEndianUtil::appendUint32( outBytes, kMagic );
@@ -91,7 +91,7 @@ namespace sw
         outBytes.insert( outBytes.end(), _bytes.begin(), _bytes.end() );
     }
 
-    bool LayerWeightsData::saveToFile( string_view filePath ) const
+    bool LayerWeightsAsset::saveToFile( string_view filePath ) const
     {
         if ( isValid() == false )
         {
@@ -106,5 +106,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( LayerWeightsData, LayerWeightsData::kAssetType );
+    SW_ASSET_TYPE( LayerWeightsAsset, LayerWeightsAsset::kAssetType );
 } // namespace sw

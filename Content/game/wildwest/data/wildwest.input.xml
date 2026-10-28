@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  WildWest 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  WildWest 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstance 가 통합 맵(InputManager::getInputMap)에 읽는다.
   게임 코드는 키를 묻지 않는다. 기수 폰과 말 폰이 같은 액션 이름을 의도 버튼으로 쓴다 — 걸을 때는 West.Interact 가 타기, 탔을 때는 내리기다.
 -->
 <InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">

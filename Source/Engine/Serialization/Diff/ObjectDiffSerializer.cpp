@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Diff/ObjectDiffSerializer.h"
 
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 

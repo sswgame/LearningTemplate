@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

@@ -31,8 +31,8 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-#include "Engine/Environment/Terrain/HeightfieldData.h"
-#include "Engine/Environment/Terrain/LayerWeightsData.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
+#include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -157,8 +157,8 @@ namespace sw::editor
             { EditorAssetType::Rig, MatchMode::EngineType, nullptr, 0, RigAsset::kAssetType._name, "Rig", nullptr },
             { EditorAssetType::AnimationClip, MatchMode::EngineType, nullptr, 0, AnimationClip::kAssetType._name, "AnimationClip", nullptr },
             { EditorAssetType::Fracture, MatchMode::EngineType, nullptr, 0, FractureAsset::kAssetType._name, "Fracture", nullptr },
-            { EditorAssetType::Heightfield, MatchMode::EngineType, nullptr, 0, HeightfieldData::kAssetType._name, nullptr, nullptr },
-            { EditorAssetType::LayerWeights, MatchMode::EngineType, nullptr, 0, LayerWeightsData::kAssetType._name, nullptr, nullptr }, // 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`)
+            { EditorAssetType::Heightfield, MatchMode::EngineType, nullptr, 0, HeightfieldAsset::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::LayerWeights, MatchMode::EngineType, nullptr, 0, LayerWeightsAsset::kAssetType._name, nullptr, nullptr }, // 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`)
             { EditorAssetType::Data, MatchMode::EndsWith, kArrThemeTokenSuffix, SW_COUNT_OF( kArrThemeTokenSuffix ), {}, nullptr, &EditorTheme::importChangedTokenFile },
             { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, SourceStringTable::kAssetType._name, "StringTable", nullptr }, // 로드한 프로젝트를 다시 읽는다(`LocalizationManager`)
             { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, TranslationTable::kAssetType._name, "StringTable", nullptr },

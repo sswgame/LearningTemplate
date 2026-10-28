@@ -1,8 +1,8 @@
 /**
  * @file GameService.h
  * @brief GameFramework 가 제공하고 게임 모듈과 키트가 쓰는 서비스 API 입니다. 게임 범위(`SubsystemScope`)에서 찾고, 없으면 호스트(엔진) 서비스 테이블을 봅니다.
- * @details 게임 범위는 게임 인스턴스(`GameInstanceBase`)가 소유하고 기동 때 "지금 범위" 로 설정한다. 언리얼에서 게임 인스턴스가 `UGameInstanceSubsystem` 을 소유하는 것에 해당한다.
- *          게임이 쓰는 카탈로그와 설정은 그 범위에 등록한다(`GameInstanceBase::bindScopedService`). 범위는 인스턴스와 함께 사라지므로 게임 모듈을 언로드할 때
+ * @details 게임 범위는 게임 인스턴스(`GameInstance`)가 소유하고 기동 때 "지금 범위" 로 설정한다. 언리얼에서 게임 인스턴스가 `UGameInstanceSubsystem` 을 소유하는 것에 해당한다.
+ *          게임이 쓰는 카탈로그와 설정은 그 범위에 등록한다(`GameInstance::bindScopedService`). 범위는 인스턴스와 함께 사라지므로 게임 모듈을 언로드할 때
  *          남는 항목이 없다. 테스트는 자기 범위를 만들어 `ScopedGameScope` 로 잠시 "지금 범위" 로 설정한다.
  */
 #pragma once

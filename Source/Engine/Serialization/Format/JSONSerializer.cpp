@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"

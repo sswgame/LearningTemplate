@@ -30,7 +30,7 @@ namespace sw
     struct CharacterBoneArray;
     struct FitProfileDef;
 
-    class FitPartData;
+    class FitPartDef;
     class FitTables;
 
     /** @brief 피팅에 들어가는 부품 하나입니다(몸도 부품이며 겹은 `Body` 입니다). 형상은 체형을 적용한 바인드 공간입니다. */
@@ -38,7 +38,7 @@ namespace sw
     {
         hashed_string             _name{};
         const AppearanceGeometry* _pGeometry{ nullptr };
-        const FitPartData*        _pFitData{ nullptr };
+        const FitPartDef*         _pFitData{ nullptr };
     };
 } // namespace sw
 

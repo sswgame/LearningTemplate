@@ -7,8 +7,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Environment/Terrain/HeightfieldData.h"
-#include "Engine/Environment/Terrain/LayerWeightsData.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
+#include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -187,7 +187,7 @@ namespace sw
     void TerrainComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();
-        (void)reloadTerrain(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
+        (void)reloadTerrain(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldAsset 가 오류로 남긴다
     }
 
     void TerrainComponent::onPropertyChanged( hashed_string propertyName )
@@ -236,7 +236,7 @@ namespace sw
             // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
             pManager->executeOrDeferPostTickOnComponent( *this, []( TerrainComponent& terrain )
             {
-                (void)terrain.reloadTerrainKeepingEdits(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
+                (void)terrain.reloadTerrainKeepingEdits(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldAsset 가 오류로 남긴다
             } );
             return;
         }
@@ -302,7 +302,7 @@ namespace sw
         if ( _heightfieldPath.empty() )
             return false;
 
-        HeightfieldData data;
+        HeightfieldAsset data;
         _loadedHeightfieldPath = _heightfieldPath;
         if ( data.loadFromAsset( AssetID{ _heightfieldPath } ) == false )
             return false;
@@ -553,8 +553,8 @@ namespace sw
     {
         if ( _heightfield.isValid() == false )
             return false;
-        HeightfieldData data;
-        _heightfield.makeHeightfieldData( _heightMin, _heightMax, data );
+        HeightfieldAsset data;
+        _heightfield.makeHeightfieldAsset( _heightMin, _heightMax, data );
         return data.saveToFile( filePath );
     }
 
@@ -562,7 +562,7 @@ namespace sw
     {
         if ( _heightfield.getSplatWidth() == 0 )
             return false;
-        LayerWeightsData data;
+        LayerWeightsAsset data;
         data._width  = _heightfield.getSplatWidth();
         data._height = _heightfield.getSplatHeight();
         data._bytes  = _heightfield.getSplatBytes();
@@ -707,11 +707,11 @@ namespace sw
         // 경로가 비었으면 이 지형은 레이어를 칠하지 않는다(데이터가 정한 것이다). 정한 가중치를 읽지 못하면 레이어 0 으로 두지 않고 지형을 읽지 않는다.
         if ( _layerWeightsPath.empty() )
             return true;
-        LayerWeightsData data;
+        LayerWeightsAsset data;
         if ( data.loadFromAsset( AssetID{ _layerWeightsPath } ) == false )
         {
             SW_LOG_ERROR( "Terrain '%#': layer weights '%#' did not load - the terrain is not loaded (expected a %# asset)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(),
-                          string( LayerWeightsData::kExtension ).c_str() );
+                          string( LayerWeightsAsset::kExtension ).c_str() );
             return false;
         }
         _heightfield.setSplat( data._width, data._height, data._bytes );

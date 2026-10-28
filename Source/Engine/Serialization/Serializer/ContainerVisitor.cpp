@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 

@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Graphics/Lighting/ReflectionProbeData.h"
+#include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -51,12 +51,12 @@ namespace sw
         const string& getProbeDataPath() const { return _probeDataPath; }
 
         /** @brief 쓸 수 있는 베이크 데이터입니다. 베이크하지 않았거나, 읽지 못했거나, 찍은 위치가 지금 위치와 다르면 nullptr 입니다. */
-        const ReflectionProbeData* findProbeData() const;
+        const ReflectionProbeAsset* findProbeData() const;
         /**
          * @brief 베이크 결과를 받아 들고 경로를 적습니다(베이크 도구가 파일을 쓴 뒤 부른다). 데이터가 깨졌거나 찍은 위치가 지금 위치와 다르면 받지 않고 false 입니다.
          * @param path 그 데이터를 쓴 `.reflprobe` 리소스 경로
          */
-        [[nodiscard]] bool adoptProbeData( ReflectionProbeData&& data, string_view path );
+        [[nodiscard]] bool adoptProbeData( ReflectionProbeAsset&& data, string_view path );
 
         /** @brief 씬에 붙을 때 레지스트리에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
@@ -71,7 +71,7 @@ namespace sw
         /** @brief `_probeDataPath` 의 데이터를 읽습니다. 경로가 비면 데이터를 비웁니다. 읽지 못하면 오류를 남기고 비웁니다. */
         void reloadProbeData();
         /** @brief 데이터의 찍은 위치가 지금 위치와 같은지 봅니다. */
-        bool matchesCapturePosition( const ReflectionProbeData& data ) const;
+        bool matchesCapturePosition( const ReflectionProbeAsset& data ) const;
         /** @brief 베이크하지 않은 프로브(경로가 빔)를 경고하고, 크기가 0 인 상자를 오류로 적습니다(맵 검사). */
         void validateProbeData( ValidationContext& context ) const;
 
@@ -88,6 +88,6 @@ namespace sw
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Samples Per Texel", Min = 1, Max = 4096, Tooltip = "GGX samples each prefiltered texel takes" )
         uint32 _bakeSampleCount;
 
-        ReflectionProbeData _probeData; ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        ReflectionProbeAsset _probeData; ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
     };
 } // namespace sw

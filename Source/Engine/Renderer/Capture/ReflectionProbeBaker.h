@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Lighting/ReflectionProbeData.h"
+#include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 
 namespace sw
 {
@@ -47,14 +47,14 @@ namespace sw
          * @brief 프로브 하나를 찍고 접어 @p outData 에 담습니다. 실패하면 이유를 @p pOutError 에 적고 false 입니다.
          * @details 면 크기 · 옥타헤드럴 크기 · 표본 수는 프로브의 칸이다(`ReflectionProbeComponent`). 찍은 위치는 프로브의 월드 위치다.
          */
-        [[nodiscard]] bool bakeProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeData& outData, string* pOutError );
+        [[nodiscard]] bool bakeProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeAsset& outData, string* pOutError );
 
         /**
          * @brief 렌더 스레드를 비우고 이 스레드에 그래픽스 컨텍스트를 잡은 뒤 프로브마다 `bakeProbe` 합니다. @p outListData 는 @p listProbe 와 같은 순서이고,
          *        실패한 프로브의 자리는 빈 데이터입니다. 하나라도 실패하면 false 이고 마지막 이유를 @p pOutError 에 적습니다.
          */
         [[nodiscard]] static bool bakeProbes( IRHIDevice& device, RenderThread* pRenderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
-                                              vector<ReflectionProbeData>& outListData, string* pOutError );
+                                              vector<ReflectionProbeAsset>& outListData, string* pOutError );
 
     private:
         /** @brief 지금 카메라로 몇 장 그린 뒤 `LitColor` 를 선형 RGB(행 0 이 위)로 읽습니다. */

@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 

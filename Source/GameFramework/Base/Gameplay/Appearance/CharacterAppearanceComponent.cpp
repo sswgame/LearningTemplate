@@ -12,7 +12,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
@@ -1087,7 +1087,7 @@ namespace sw
             if ( part._fit.empty() == false && bForeignSkeleton )
                 SW_LOG_ERROR( "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );
             else if ( part._fit.empty() == false )
-                load._fit = SharedAssetCache<FitPartData>::request( part._fit.c_str() );
+                load._fit = SharedAssetCache<FitPartDef>::request( part._fit.c_str() );
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;
@@ -1366,7 +1366,7 @@ namespace sw
 
     uint32 CharacterAppearanceComponent::computeFitReloadStamp()
     {
-        return SharedAssetCache<FitTables>::getReloadCount() + SharedAssetCache<FitPartData>::getReloadCount();
+        return SharedAssetCache<FitTables>::getReloadCount() + SharedAssetCache<FitPartDef>::getReloadCount();
     }
 
     void CharacterAppearanceComponent::registerSocketTask( SkeletalMeshComponent& body )

@@ -16,7 +16,7 @@
 
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Lighting/ReflectionProbeData.h"
+#include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 #include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -63,9 +63,9 @@ namespace sw::editor
             }
 
             /** @brief 베이크한 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
-            static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeData&& data, string& outError )
+            static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeAsset&& data, string& outError )
             {
-                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *probe.getOwner(), ReflectionProbeData::kExtension ) : string{};
+                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *probe.getOwner(), ReflectionProbeAsset::kExtension ) : string{};
                 if ( assetPath.empty() )
                 {
                     outError = "the scene has never been saved - save it before baking reflection probes";
@@ -231,10 +231,10 @@ namespace sw::editor
         RenderThreadSubsystem*            pRenderThreadSubsystem = editor::findSubsystem<RenderThreadSubsystem>();
         vector<ReflectionProbeComponent*> listProbe;
         listProbe.push_back( pProbe );
-        vector<ReflectionProbeData> listData;
-        string                      error;
-        const bool                  bBaked = ReflectionProbeBaker::bakeProbes( *pDevice, pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr, scene,
-                                                                               listProbe, listData, &error );
+        vector<ReflectionProbeAsset> listData;
+        string                       error;
+        const bool                   bBaked = ReflectionProbeBaker::bakeProbes( *pDevice, pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr, scene,
+                                                                                listProbe, listData, &error );
         if ( bBaked == false )
         {
             reportFailure( error );

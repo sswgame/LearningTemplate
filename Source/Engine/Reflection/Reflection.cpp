@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -24,7 +24,7 @@ namespace sw
         /** @brief 타입 테이블의 세대입니다(`TypeRegistry::getGeneration`). 타입 · 열거형의 등록, 별칭, 모듈 해제, 레지스트리 파괴마다 오릅니다. */
         atomic<uint32> s_typeTableGeneration{ 0 };
 
-        struct ReflectionCoreInternal
+        struct ReflectionInternal
         {
             /** @brief `describeType` 의 인자 목록입니다. `타입 이름 = 기본값` 형태입니다. */
             template <typename TBuilder>
@@ -861,7 +861,7 @@ namespace sw
         hashed_string clashSecond;
         int64         clashFirstValue{ 0 };
         int64         clashSecondValue{ 0 };
-        const bool    bNameClash = ReflectionCoreInternal::tryFindNameHashClash( *pEnumInfo, clashFirst, clashFirstValue, clashSecond, clashSecondValue );
+        const bool    bNameClash = ReflectionInternal::tryFindNameHashClash( *pEnumInfo, clashFirst, clashFirstValue, clashSecond, clashSecondValue );
         const string  enumName( pEnumInfo->_fullyQualifiedName.c_str() );
 
         lock.unlock();
@@ -985,13 +985,13 @@ namespace sw
             for ( const FunctionInfo& method : level._listMethod )
             {
                 out.appendFormat( "    FUNCTION %#(", method._name.c_str() );
-                ReflectionCoreInternal::appendParameterList( out, method._listParameter );
+                ReflectionInternal::appendParameterList( out, method._listParameter );
                 out.appendFormat( ") -> %#\n", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
             }
             for ( const EventInfo& event : level._listEvent )
             {
                 out.appendFormat( "    EVENT %#(", event._name.c_str() );
-                ReflectionCoreInternal::appendParameterList( out, event._listParameter );
+                ReflectionInternal::appendParameterList( out, event._listParameter );
                 out.append( ")\n" );
             }
         }
@@ -1170,7 +1170,7 @@ namespace sw
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 타입으로 바뀔 수 있다.
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
-        const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
+        const string qualified = ReflectionInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
         {
             const hashed_string qualifiedHash{ qualified.c_str() };
@@ -1195,7 +1195,7 @@ namespace sw
         EnumInfo* const pEnumInfo = it->second;
         _mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), pEnumInfo );
 
-        const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
+        const string qualified = ReflectionInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
             _mapNameToEnum.insert_or_assign( hashed_string( qualified.c_str() ), pEnumInfo );
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 열거형으로 바뀔 수 있다(타입 별칭과 같은 규칙).
@@ -1431,7 +1431,7 @@ namespace sw
         const TypeInfo* pCurrent = this;
         for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
-            if ( pCurrent == pTarget || ReflectionCoreInternal::isSameTypeName( *pCurrent, *pTarget ) )
+            if ( pCurrent == pTarget || ReflectionInternal::isSameTypeName( *pCurrent, *pTarget ) )
                 return true;
             pCurrent = pCurrent->getParentType();
         }
@@ -1473,7 +1473,7 @@ namespace sw
         const TypeInfo* pCurrent   = this;
         while ( pCurrent != nullptr )
         {
-            const uint32 nameIndex = ReflectionCoreInternal::canonicalNameIndex( *pCurrent );
+            const uint32 nameIndex = ReflectionInternal::canonicalNameIndex( *pCurrent );
             if ( chainCount == kDepth || nameIndex == kNone )
             {
                 _ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );

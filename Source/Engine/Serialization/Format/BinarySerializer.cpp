@@ -6,7 +6,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/BinaryStream.h"

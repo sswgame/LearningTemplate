@@ -16,8 +16,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Environment/Terrain/HeightfieldData.h"
-#include "Engine/Environment/Terrain/LayerWeightsData.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
+#include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 
 namespace sw::editor
 {
@@ -70,7 +70,7 @@ namespace sw::editor
                 return listSource;
             }
 
-            [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
+            [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldAsset& outData )
             {
                 const size_t sampleCount          = bytes.size() / 2;
                 const uint32 side                 = static_cast<uint32>( MathUtil::round( MathUtil::sqrt( static_cast<float64>( sampleCount ) ) ) );
@@ -110,7 +110,7 @@ namespace sw::editor
             }
 
             /** @brief 옆에 둔 구멍 마스크 파일을 읽어 셀 마스크로 씁니다. 없으면 구멍이 없습니다. */
-            [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldData& inoutData )
+            [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldAsset& inoutData )
             {
                 const string holePath = makeHolePath( sourcePath );
                 if ( FileUtil::exists( holePath ) == false )
@@ -191,7 +191,7 @@ namespace sw::editor
                 (void)assetPath;
                 if ( HeightfieldImporter::isSourceLayerWeights( sourcePath ) )
                 {
-                    LayerWeightsData data;
+                    LayerWeightsAsset data;
                     if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
                         return false;
                     return FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( importedPath );
@@ -228,13 +228,13 @@ namespace sw::editor
         // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다. 접미사를 제거하고 같은 경로로 바꾼다.
         const string stem = FileUtil::removeExtension( rawPath );
         const string name = stem.substr( 0, stem.size() - Internal::kSplatSuffix.size() ) + ".png";
-        return AssetImportStampUtil::makeImportedPath( name, Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsData::kExtension );
+        return AssetImportStampUtil::makeImportedPath( name, Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
     }
 
-    bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsData& outData )
+    bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsAsset& outData )
     {
         using Internal = HeightfieldImporterInternal;
-        outData        = LayerWeightsData{};
+        outData        = LayerWeightsAsset{};
         // 레이어 0..3 은 `x_splat.png`, 레이어 4..7 은 곁 파일 `x_splat1.png`(없으면 0)다. 둘은 같은 크기여야 한다.
         RawImageData lowImage;
         if ( Internal::readSplatImage( sourcePath, lowImage ) == false )
@@ -255,24 +255,24 @@ namespace sw::editor
         }
         outData._width  = static_cast<uint32>( lowImage._width );
         outData._height = static_cast<uint32>( lowImage._height );
-        if ( outData._width > LayerWeightsData::kMaxResolution || outData._height > LayerWeightsData::kMaxResolution )
+        if ( outData._width > LayerWeightsAsset::kMaxResolution || outData._height > LayerWeightsAsset::kMaxResolution )
         {
-            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsData::kMaxResolution );
-            outData = LayerWeightsData{};
+            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
+            outData = LayerWeightsAsset{};
             return false;
         }
         const size_t texelCount = static_cast<size_t>( outData._width ) * outData._height;
-        outData._bytes.assign( texelCount * LayerWeightsData::kLayerCount, 0u );
+        outData._bytes.assign( texelCount * LayerWeightsAsset::kLayerCount, 0u );
         for ( size_t texel = 0; texel < texelCount; ++texel )
         {
-            Memory::copy( outData._bytes.data() + texel * LayerWeightsData::kLayerCount, lowImage._bytes.data() + texel * 4, 4 );
+            Memory::copy( outData._bytes.data() + texel * LayerWeightsAsset::kLayerCount, lowImage._bytes.data() + texel * 4, 4 );
             if ( bHasHigh )
-                Memory::copy( outData._bytes.data() + texel * LayerWeightsData::kLayerCount + 4, highImage._bytes.data() + texel * 4, 4 );
+                Memory::copy( outData._bytes.data() + texel * LayerWeightsAsset::kLayerCount + 4, highImage._bytes.data() + texel * 4, 4 );
         }
         if ( outData.isValid() == false )
         {
-            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsData::kMaxResolution );
-            outData = LayerWeightsData{};
+            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsAsset::kMaxResolution );
+            outData = LayerWeightsAsset{};
             return false;
         }
         return true;
@@ -305,7 +305,7 @@ namespace sw::editor
     string HeightfieldImporter::makeImportedHeightfieldPath( string_view rawPath )
     {
         using Internal = HeightfieldImporterInternal;
-        return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldData::kExtension );
+        return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
     }
 
     uint64 HeightfieldImporter::computeSourceHash( string_view sourcePath )
@@ -318,7 +318,7 @@ namespace sw::editor
         uint64                                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         if ( isSourceLayerWeights( sourcePath ) )
         {
-            versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsData::kVersion );
+            versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsAsset::kVersion );
             hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
             // 옆에 둔 레이어 4..7 파일(`x_splat1.png`)도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
             vector<uint8> highBytes;
@@ -328,7 +328,7 @@ namespace sw::editor
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( highBytes.data() ), highBytes.size(), false, hash );
             return hash;
         }
-        versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldData::kVersion );
+        versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldAsset::kVersion );
         hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         // 옆에 둔 구멍 마스크도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
         vector<uint8> holeBytes;
@@ -339,10 +339,10 @@ namespace sw::editor
         return hash;
     }
 
-    bool HeightfieldImporter::readHeightfield( string_view sourcePath, HeightfieldData& outData )
+    bool HeightfieldImporter::readHeightfield( string_view sourcePath, HeightfieldAsset& outData )
     {
         using Internal = HeightfieldImporterInternal;
-        outData        = HeightfieldData{};
+        outData        = HeightfieldAsset{};
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
         {
@@ -363,14 +363,14 @@ namespace sw::editor
             if ( width != height || width < 2 )
             {
                 SW_LOG_ERROR( "Heightfield '%#' is %#x%# - it must be square and at least 2x2", sourcePath, width, height );
-                outData = HeightfieldData{};
+                outData = HeightfieldAsset{};
                 return false;
             }
             outData._resolution = static_cast<uint32>( width );
         }
-        if ( outData._resolution > HeightfieldData::kMaxResolution )
+        if ( outData._resolution > HeightfieldAsset::kMaxResolution )
         {
-            SW_LOG_ERROR( "Heightfield '%#' has resolution %# - at most %#", sourcePath, outData._resolution, HeightfieldData::kMaxResolution );
+            SW_LOG_ERROR( "Heightfield '%#' has resolution %# - at most %#", sourcePath, outData._resolution, HeightfieldAsset::kMaxResolution );
             return false;
         }
         return Internal::readHoles( sourcePath, outData );
@@ -378,7 +378,7 @@ namespace sw::editor
 
     bool HeightfieldImporter::importHeightfield( string_view sourcePath, string_view outputPath )
     {
-        HeightfieldData data;
+        HeightfieldAsset data;
         if ( readHeightfield( sourcePath, data ) == false )
             return false;
         if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )

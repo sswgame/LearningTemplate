@@ -10,7 +10,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
@@ -9,11 +9,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "HeightfieldData" );
+    SW_LOG_CALLER( "HeightfieldAsset" );
 
     namespace
     {
-        struct HeightfieldDataInternal
+        struct HeightfieldAssetInternal
         {
             static constexpr size_t kHeaderBytes = 16;
         };
@@ -22,7 +22,7 @@ namespace sw
 
 namespace sw
 {
-    bool HeightfieldData::isValid() const
+    bool HeightfieldAsset::isValid() const
     {
         if ( _resolution < 2 || _resolution > kMaxResolution )
             return false;
@@ -31,7 +31,7 @@ namespace sw
         return _listHeight.size() == sampleCount && ( _listHoleCell.empty() || _listHoleCell.size() == cellCount );
     }
 
-    bool HeightfieldData::isHoleCell( uint32 cellX, uint32 cellZ ) const
+    bool HeightfieldAsset::isHoleCell( uint32 cellX, uint32 cellZ ) const
     {
         const bool bNoHoleAtCell = _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution;
         if ( bNoHoleAtCell )
@@ -39,10 +39,10 @@ namespace sw
         return _listHoleCell[static_cast<size_t>( cellZ ) * ( _resolution - 1 ) + cellX] != 0;
     }
 
-    bool HeightfieldData::loadFromMemory( const vector<uint8>& bytes, string_view sourceName )
+    bool HeightfieldAsset::loadFromMemory( const vector<uint8>& bytes, string_view sourceName )
     {
-        using Internal = HeightfieldDataInternal;
-        *this          = HeightfieldData{};
+        using Internal = HeightfieldAssetInternal;
+        *this          = HeightfieldAsset{};
         if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
         {
             SW_LOG_ERROR( "'%#' is not a heightfield (magic SWHF missing)", sourceName );
@@ -84,7 +84,7 @@ namespace sw
         return true;
     }
 
-    bool HeightfieldData::loadFromAsset( const AssetID& id )
+    bool HeightfieldAsset::loadFromAsset( const AssetID& id )
     {
         const string_view assetID = id.view();
         vector<uint8>     bytes;
@@ -96,9 +96,9 @@ namespace sw
         return loadFromMemory( bytes, assetID );
     }
 
-    void HeightfieldData::saveToMemory( vector<uint8>& outBytes ) const
+    void HeightfieldAsset::saveToMemory( vector<uint8>& outBytes ) const
     {
-        using Internal = HeightfieldDataInternal;
+        using Internal = HeightfieldAssetInternal;
         outBytes.clear();
         const bool bHoles = _listHoleCell.empty() == false;
         outBytes.reserve( Internal::kHeaderBytes + _listHeight.size() * 2 + _listHoleCell.size() );
@@ -114,7 +114,7 @@ namespace sw
         outBytes.insert( outBytes.end(), _listHoleCell.begin(), _listHoleCell.end() );
     }
 
-    bool HeightfieldData::saveToFile( string_view filePath ) const
+    bool HeightfieldAsset::saveToFile( string_view filePath ) const
     {
         if ( isValid() == false )
         {
@@ -129,5 +129,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( HeightfieldData, HeightfieldData::kAssetType );
+    SW_ASSET_TYPE( HeightfieldAsset, HeightfieldAsset::kAssetType );
 } // namespace sw

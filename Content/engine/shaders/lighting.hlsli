@@ -336,7 +336,7 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
 }
 
 /**
- * @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). C++ `ReflectionProbeData::encodeOctahedral` 과 같은 식이다.
+ * @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). C++ `ReflectionProbeAsset::encodeOctahedral` 과 같은 식이다.
  * @details 부호는 0 을 양수로 친다 — HLSL `sign` 은 0 에서 0 이라 쓰지 않는다(C++ 와 갈린다).
  */
 static float2 ReflectionProbe::encodeOctahedral( float3 direction )
@@ -348,7 +348,7 @@ static float2 ReflectionProbe::encodeOctahedral( float3 direction )
     return octahedral * 0.5f + 0.5f;
 }
 
-/** @brief 반사 프로브의 한 거칠기 단계를 방향 @p direction 으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(C++ `ReflectionProbeData::sampleLevel` 과 같다). */
+/** @brief 반사 프로브의 한 거칠기 단계를 방향 @p direction 으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(C++ `ReflectionProbeAsset::sampleLevel` 과 같다). */
 static float3 ReflectionProbe::sampleLevel( uint firstTexel, uint resolution, uint level, float2 uv )
 {
     const float  lastTexel = (float)( resolution - 1u );

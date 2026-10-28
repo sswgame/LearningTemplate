@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
 
 namespace sw
 {
@@ -52,7 +52,7 @@ namespace sw
     {
     }
 
-    bool TerrainHeightfield::initialize( const HeightfieldData& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax )
+    bool TerrainHeightfield::initialize( const HeightfieldAsset& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax )
     {
         shutdown();
         const bool bUnusableHeightfield = data.isValid() == false || size._x <= 0.0f || size._y <= 0.0f;
@@ -283,7 +283,7 @@ namespace sw
         return true;
     }
 
-    void TerrainHeightfield::makeHeightfieldData( float32 heightMin, float32 heightMax, HeightfieldData& outData ) const
+    void TerrainHeightfield::makeHeightfieldAsset( float32 heightMin, float32 heightMax, HeightfieldAsset& outData ) const
     {
         outData._resolution = _resolution;
         outData._listHeight.resize( _listHeight.size() );

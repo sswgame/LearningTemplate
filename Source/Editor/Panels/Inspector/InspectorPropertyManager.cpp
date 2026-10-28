@@ -39,7 +39,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"

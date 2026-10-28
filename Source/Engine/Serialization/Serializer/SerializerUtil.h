@@ -6,7 +6,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TextAddress.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"

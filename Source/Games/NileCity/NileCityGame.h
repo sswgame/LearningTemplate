@@ -8,12 +8,12 @@
  *          `-gv_nileAutoPlay=1` 이면 자동 계획표대로 짓고 달마다 `[Nile] month N pop P money M` 을 남긴다(입력 없이 도시가 크는 확인).
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     /** @brief 나일 도시 게임 인스턴스입니다. */
-    class NileCityGame : public GameInstanceBase
+    class NileCityGame : public GameInstance
     {
     public:
         NileCityGame();

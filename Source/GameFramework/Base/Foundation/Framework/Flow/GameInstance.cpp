@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
@@ -18,7 +18,7 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/Reflection.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -55,9 +55,9 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameInstanceBase" );
+    SW_LOG_CALLER( "GameInstance" );
 
-    GameInstanceBase::GameInstanceBase()
+    GameInstance::GameInstance()
         : _packConfig{}
         , _pWindow{ nullptr }
         , _pRHIDevice{ nullptr }
@@ -86,13 +86,13 @@ namespace sw
         }
     }
 
-    GameInstanceBase::~GameInstanceBase()
+    GameInstance::~GameInstance()
     {
         // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 한다.
         detachGameScope();
     }
 
-    void GameInstanceBase::detachGameScope()
+    void GameInstance::detachGameScope()
     {
         SubsystemScope* pCurrent = game::findGameScope();
         if ( pCurrent == &_gameScope )
@@ -108,12 +108,12 @@ namespace sw
         _gameScope.setParentScope( nullptr );
     }
 
-    void GameInstanceBase::reportScopedServiceConflict( uint64 typeHash ) const
+    void GameInstance::reportScopedServiceConflict( uint64 typeHash ) const
     {
         SW_LOG_ERROR( "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
     }
 
-    GameObjectManager* GameInstanceBase::findActiveObjectManager()
+    GameObjectManager* GameInstance::findActiveObjectManager()
     {
         // `findSubsystem<SceneManager>()` 가 바로 이 서비스를 보므로 아래 널 검사에는 사실상 닿지 않는다.
         // 그래도 `game::findSubsystem<T>()` 는 nullptr 을 반환할 수 있어서 받는 쪽이 널을 검사하는 모양을 지킨다.
@@ -125,7 +125,7 @@ namespace sw
         return pSceneManager->findActiveObjectManager();
     }
 
-    bool GameInstanceBase::bindEngineServices( const IWindow* pWindow )
+    bool GameInstance::bindEngineServices( const IWindow* pWindow )
     {
         _pUISystem     = nullptr;
         _pUserSettings = nullptr;
@@ -150,7 +150,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
+    bool GameInstance::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
         // 엔진 서비스는 여기서 한 번 받아 든다 — 아래에서 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 다시 찾지 않는다. 필수 서비스가 없으면 아무것도 걸기 전에 멈춘다.
         if ( bindEngineServices( pWindow ) == false )
@@ -209,7 +209,7 @@ namespace sw
         return bInitialized;
     }
 
-    void GameInstanceBase::shutdown()
+    void GameInstance::shutdown()
     {
         if ( _pUISystem != nullptr )
             unregisterSessionCommands( *_pUISystem );
@@ -233,7 +233,7 @@ namespace sw
         _pInput        = nullptr;
     }
 
-    bool GameInstanceBase::loadGameSettings()
+    bool GameInstance::loadGameSettings()
     {
         // 컴포넌트 기본값 경로의 주인은 엔진 범위의 `ComponentDefaults` 다(정적 칸을 두지 않는다). 선택 조회: 엔진 서비스 없이 도는 하네스에서는 기본값을 쓰지 않는다.
         ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
@@ -242,7 +242,7 @@ namespace sw
         return _packConfig.load( path::kGameSettingsFile );
     }
 
-    bool GameInstanceBase::applyPackConfig()
+    bool GameInstance::applyPackConfig()
     {
         const GameSettings& settings = _packConfig._data;
 
@@ -275,7 +275,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::loadAudioEvents()
+    bool GameInstance::loadAudioEvents()
     {
         const DataPath& audioEvents = _packConfig._data._audioEvents;
         if ( audioEvents.isSet() == false )
@@ -290,7 +290,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
+    bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
         if ( GamePackDataUtil::tryMakeKindPath( _packConfig._packRoot.get(), kindLabel, outPath, error ) )
@@ -299,7 +299,7 @@ namespace sw
         return false;
     }
 
-    void GameInstanceBase::reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const
+    void GameInstance::reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const
     {
         const string& path    = assetID.str();
         const utf8*   pReason = AssetIO::hasAsset( assetID ) ? "the loader rejected it (see the messages above)" : "it is not in the pack or the loader rejected it (see the messages above)";
@@ -313,7 +313,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
-    const string& GameInstanceBase::getFirstScene() const
+    const string& GameInstance::getFirstScene() const
     {
         if ( gv_firstScene.empty() == false )
             return gv_firstScene;
@@ -321,12 +321,12 @@ namespace sw
         return _packConfig._data._titleScene.isSet() ? _packConfig._data._titleScene.get() : _packConfig._data._startMap.get();
     }
 
-    const string& GameInstanceBase::getEntranceScene() const
+    const string& GameInstance::getEntranceScene() const
     {
         return _packConfig._data._entranceScene.isSet() ? _packConfig._data._entranceScene.get() : _packConfig._data._startMap.get();
     }
 
-    bool GameInstanceBase::requestFirstScene()
+    bool GameInstance::requestFirstScene()
     {
         if ( _bResumingWorld == SW_TRUE )
         {
@@ -336,12 +336,12 @@ namespace sw
         return requestLoadScene( getFirstScene(), "first" );
     }
 
-    bool GameInstanceBase::requestEntranceScene()
+    bool GameInstance::requestEntranceScene()
     {
         return requestLoadScene( getEntranceScene(), "entrance" );
     }
 
-    bool GameInstanceBase::requestTitleScene()
+    bool GameInstance::requestTitleScene()
     {
         const DataPath& titleScene = _packConfig._data._titleScene;
         if ( titleScene.isSet() == false )
@@ -349,27 +349,27 @@ namespace sw
         return requestLoadScene( titleScene.get(), "title" );
     }
 
-    void GameInstanceBase::registerSessionCommands( UISystem& ui )
+    void GameInstance::registerSessionCommands( UISystem& ui )
     {
         // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(창이 없는 호스트는 `initialize` 가 이 함수를 부르지 않는다 — UI 가 없다).
         if ( _packConfig._data._titleScene.isSet() == false )
             return;
         _returnToTitleRegistration = ui.getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                                             SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+                                                                             SW_DELEGATE_METHOD( UICommandDelegate, &GameInstance::onReturnToTitleCommand, this ) );
     }
 
-    void GameInstanceBase::unregisterSessionCommands( UISystem& /*ui*/ )
+    void GameInstance::unregisterSessionCommands( UISystem& /*ui*/ )
     {
         _returnToTitleRegistration.reset(); // 핫 리로드의 새 인스턴스가 그 사이 교체했으면 그 등록은 지우지 않는다
     }
 
-    void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
+    void GameInstance::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         if ( requestTitleScene() == false )
             SW_LOG_ERROR( "Return to title: the title scene '%#' was not requested", _packConfig._data._titleScene.c_str() );
     }
 
-    bool GameInstanceBase::requestLoadScene( const string& scenePath, const utf8* pWhich )
+    bool GameInstance::requestLoadScene( const string& scenePath, const utf8* pWhich )
     {
         if ( scenePath.empty() )
             return false;
@@ -396,7 +396,7 @@ namespace sw
         return true;
     }
 
-    void GameInstanceBase::publishFinishedSceneLoads()
+    void GameInstance::publishFinishedSceneLoads()
     {
         // 끝난 것만 순서를 지키며 뺀다. 대기열에서 밀린 요청은 nullptr 로 끝나므로 실패로 알린다.
         size_t keptCount = 0;
@@ -418,7 +418,7 @@ namespace sw
         _listPendingSceneLoad.resize( keptCount );
     }
 
-    void GameInstanceBase::update( float32 deltaTime )
+    void GameInstance::update( float32 deltaTime )
     {
         // 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이면 로딩 중이다. 페이드를 먼저 진행하고, 로딩 화면이 닫히면 페이드 인을 건다.
         const SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
@@ -440,7 +440,7 @@ namespace sw
         onUpdate( deltaTime );
     }
 
-    bool GameInstanceBase::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
+    bool GameInstance::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         GameObjectManager* pObjectManager = findActiveObjectManager();
         if ( pObjectManager == nullptr )
@@ -474,8 +474,8 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
-                                                    vector<ComponentStateStore::SavedComponentID>& outListRemap )
+    bool GameInstance::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+                                                vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
         outListRemap.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
@@ -561,7 +561,7 @@ namespace sw
         return true;
     }
 
-    void GameInstanceBase::captureStatefulComponents()
+    void GameInstance::captureStatefulComponents()
     {
         GameObjectManager* pManager = findActiveObjectManager();
         if ( pManager == nullptr )
@@ -579,7 +579,7 @@ namespace sw
         }
     }
 
-    void GameInstanceBase::restoreStatefulComponents()
+    void GameInstance::restoreStatefulComponents()
     {
         GameObjectManager* pManager = findActiveObjectManager();
         if ( pManager == nullptr )
@@ -591,17 +591,17 @@ namespace sw
         }
     }
 
-    bool GameInstanceBase::serializeState( vector<uint8>& outBytes )
+    bool GameInstance::serializeState( vector<uint8>& outBytes )
     {
         return captureSnapshot( SerializePurpose::Snapshot, outBytes );
     }
 
-    bool GameInstanceBase::deserializeState( const void* pInBuffer, uint32 size )
+    bool GameInstance::deserializeState( const void* pInBuffer, uint32 size )
     {
         return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size );
     }
 
-    bool GameInstanceBase::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
+    bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
     {
         _pComponentStateStore->clear();
         captureStatefulComponents();
@@ -615,7 +615,7 @@ namespace sw
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
         // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원하는 사용법이다
-        // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다). 그러니 여기서 끊으면 안 된다.
+        // (GameFrameworkTest.GameInstanceSnapshotAndFileRoundTrip 이 그렇게 쓴다). 그러니 여기서 끊으면 안 된다.
         // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
@@ -653,7 +653,7 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
+    bool GameInstance::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
     {
         if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
             return false;
@@ -663,7 +663,7 @@ namespace sw
 
         if ( magic != StateEnvelopeInternal::kMagic )
         {
-            SW_LOG_ERROR( "State snapshot has no SWST header - not written by GameInstanceBase::serializeState" );
+            SW_LOG_ERROR( "State snapshot has no SWST header - not written by GameInstance::serializeState" );
             return false;
         }
 
@@ -735,14 +735,14 @@ namespace sw
         return true;
     }
 
-    bool GameInstanceBase::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
+    bool GameInstance::restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes )
     {
         if ( inBytes.empty() )
             return false;
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
     }
 
-    bool GameInstanceBase::saveStateToFile( string_view filePath )
+    bool GameInstance::saveStateToFile( string_view filePath )
     {
         const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
         if ( filePath.empty() && defaultSavePath.isSet() == false )
@@ -761,7 +761,7 @@ namespace sw
         return bSaved;
     }
 
-    bool GameInstanceBase::loadStateFromFile( string_view filePath )
+    bool GameInstance::loadStateFromFile( string_view filePath )
     {
         const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
         if ( filePath.empty() && defaultSavePath.isSet() == false )

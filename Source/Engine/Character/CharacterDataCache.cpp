@@ -7,7 +7,7 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Fit/BodyShape.h"
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
@@ -119,13 +119,13 @@ namespace sw
 namespace sw
 {
     template <>
-    struct SharedAssetCacheTraits<FitPartData>
+    struct SharedAssetCacheTraits<FitPartDef>
     {
-        static constexpr const utf8*           kKindName   = "FitPartData";
+        static constexpr const utf8*           kKindName   = "FitPartDef";
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const AssetID& assetID, FitPartData& outData ) { return outData.loadFromAsset( assetID ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, FitPartDef& outData ) { return outData.loadFromAsset( assetID ); }
     };
 } // namespace sw
 
@@ -150,5 +150,5 @@ namespace sw
     SW_SHARED_ASSET_CACHE( PairedAnimationDef );
     SW_SHARED_ASSET_CACHE( PhysicsAsset );
     SW_SHARED_ASSET_CACHE( FitTables );
-    SW_SHARED_ASSET_CACHE( FitPartData );
+    SW_SHARED_ASSET_CACHE( FitPartDef );
 } // namespace sw

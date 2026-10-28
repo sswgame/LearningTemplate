@@ -26,7 +26,7 @@ namespace sw
     class ScreenFade;
     class UISystem;
 
-    /** @brief 로딩 화면의 겉모습과 시간 설정입니다. `GameInstanceBase` 가 gamesettings 로 채웁니다. */
+    /** @brief 로딩 화면의 겉모습과 시간 설정입니다. `GameInstance` 가 gamesettings 로 채웁니다. */
     struct LoadingScreenSettings
     {
         DataPath       _documentPath{};                      ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`). 기준은 gamesettings 의 `_loadingScreen` 이고, 칸이 없으면(`isSet()` 거짓) 로딩 화면을 띄우지 않는다
@@ -42,7 +42,7 @@ namespace sw
     /**
      * @class LoadingScreenController
      * @brief 로딩 화면과 화면 페이드를 그립니다. 언리얼 Lyra 의 `ULoadingScreenManager` 에 해당합니다.
-     * @details 게임 인스턴스 서브시스템이다(`game::findSubsystem<LoadingScreenController>()`). `GameInstanceBase` 가 매 프레임 `update` 한다.
+     * @details 게임 인스턴스 서브시스템이다(`game::findSubsystem<LoadingScreenController>()`). `GameInstance` 가 매 프레임 `update` 한다.
      *          초기화(`onInitialize` 앞)에서 gamesettings 의 `_loadingScreen` 문서와 UI 시스템을 묶어, 첫 씬 요청이 로딩 화면을 띄울 수 있다.
      *          - **로딩 화면**: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
      *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 시작한다.

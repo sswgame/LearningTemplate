@@ -66,7 +66,7 @@ namespace sw
      *          바이트 형식은 파생 타입이 정한다. 리플렉션 세이브는 `SaveGameSerializer::writeBytes( *this, out )` 처럼 **자기 타입**으로 불러야 한다.
      *          여기서 `*this` 로 부르면 템플릿 인자가 `SaveGame` 이 되어, 이 타입의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고도 성공을 반환한다.
      *          그래서 기본 구현을 두지 않고 순수 가상으로 둔다.
-     *          게임 상태(진행과 세계)는 이것이 아니라 스냅샷 봉투(`GameInstanceBase::saveStateToFile`)에 저장한다.
+     *          게임 상태(진행과 세계)는 이것이 아니라 스냅샷 봉투(`GameInstance::saveStateToFile`)에 저장한다.
      */
     REFLECT( Abstract )
     class SW_GF_API SaveGame

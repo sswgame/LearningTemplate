@@ -1,5 +1,5 @@
 /**
- * @file LayerWeightsData.h
+ * @file LayerWeightsAsset.h
  * @brief 지형 레이어 가중치 에셋(`.layerweights`)입니다. 텍셀마다 레이어 여덟의 가중치(8 비트)를 담습니다. 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽습니다.
  * @details 형식(리틀 엔디언)은 다음과 같다.
  *          | 바이트 | 의미 |
@@ -27,10 +27,10 @@
 namespace sw
 {
     /**
-     * @struct LayerWeightsData
+     * @struct LayerWeightsAsset
      * @brief 레이어 가중치 맵 한 장의 원시 값입니다. 읽기와 쓰기만 하고 월드 좌표는 모릅니다(`TerrainHeightfield` 가 압니다).
      */
-    struct SW_API LayerWeightsData
+    struct SW_API LayerWeightsAsset
     {
         static constexpr uint32      kMagic     = FourCcUtil::make( "SWLW" );
         static constexpr string_view kExtension = ".layerweights";
@@ -38,8 +38,8 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `LayerWeightsData.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "LayerWeightsData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `LayerWeightsAsset.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "LayerWeightsAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         static constexpr uint32       kVersion       = 2u;
         static constexpr uint32       kLayerCount    = SurfaceLayerWeights::kLayerCount;
         static constexpr uint32       kMaxResolution = 8193u;

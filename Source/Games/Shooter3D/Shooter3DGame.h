@@ -8,7 +8,7 @@
  */
 #pragma once
 #include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
@@ -16,7 +16,7 @@
 namespace sw
 {
     /** @brief 무기 카탈로그 · 아이템 · 외형 데이터를 들고 게임 서비스로 겁니다 — 모듈이 다시 올라오면 새 인스턴스가 다시 건다. */
-    class Shooter3DGame : public GameInstanceBase
+    class Shooter3DGame : public GameInstance
     {
     public:
         Shooter3DGame();

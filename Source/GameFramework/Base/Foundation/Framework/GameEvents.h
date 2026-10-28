@@ -3,9 +3,9 @@
  * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트를 정의합니다.
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
- *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstanceBase::saveStateToFile` 과 `loadStateFromFile` 이 끝날 때 낸다. 성공과 실패 모두 낸다.
- *          - `SceneLoadRequestedEvent`: `GameInstanceBase::requestFirstScene` 과 `requestEntranceScene` 이 씬 로드를 요청할 때 낸다.
- *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstanceBase::update` 에서 낸다.
+ *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstance::saveStateToFile` 과 `loadStateFromFile` 이 끝날 때 낸다. 성공과 실패 모두 낸다.
+ *          - `SceneLoadRequestedEvent`: `GameInstance::requestFirstScene` 과 `requestEntranceScene` 이 씬 로드를 요청할 때 낸다.
+ *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
  *
  *          언리얼의 `FCoreUObjectDelegates::PreLoadMap` 과 `PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.
  *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatEvents.h` 의 피해와 룸 이벤트).
@@ -33,9 +33,9 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 2) 세이브와 로드: GameInstanceBase
+    // 2) 세이브와 로드: GameInstance
     // ------------------------------------------------------------------------------
-    /** @brief 게임 상태 저장(`GameInstanceBase::saveStateToFile`)이 끝났음을 알립니다. */
+    /** @brief 게임 상태 저장(`GameInstance::saveStateToFile`)이 끝났음을 알립니다. */
     struct SW_GF_API SaveGameSavedEvent final : IEvent
     {
         string _savePath;         ///< 쓴(쓰려 한) 세이브 파일 경로
@@ -46,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 게임 상태 불러오기(`GameInstanceBase::loadStateFromFile`)가 끝났음을 알립니다. */
+    /** @brief 게임 상태 불러오기(`GameInstance::loadStateFromFile`)가 끝났음을 알립니다. */
     struct SW_GF_API SaveGameLoadedEvent final : IEvent
     {
         string _savePath;         ///< 읽은(읽으려 한) 세이브 파일 경로
@@ -58,7 +58,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) 레벨(씬) 로드: GameInstanceBase
+    // 3) 레벨(씬) 로드: GameInstance
     // ------------------------------------------------------------------------------
     /** @brief 프레임워크가 씬 로드를 맡겼음을 알립니다. 알림일 뿐 요청 명령이 아니며, 받아서 로드하는 쪽은 없습니다. */
     struct SW_GF_API SceneLoadRequestedEvent final : IEvent

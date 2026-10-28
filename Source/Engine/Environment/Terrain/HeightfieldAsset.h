@@ -1,5 +1,5 @@
 /**
- * @file HeightfieldData.h
+ * @file HeightfieldAsset.h
  * @brief 높이장 에셋(`.heightfield`)입니다. 16 비트 높이 N × N 과 셀 구멍 마스크를 담습니다. 원본(`heightfields_raw/` 의 16 비트 PNG 와 `.r16`)을
  *        `App --import-heightfields` 가 이 형식으로 임포트합니다.
  * @details 형식(리틀 엔디언)은 다음과 같다.
@@ -25,10 +25,10 @@
 namespace sw
 {
     /**
-     * @struct HeightfieldData
+     * @struct HeightfieldAsset
      * @brief 높이장 한 장의 원시 값입니다. 읽기, 쓰기, 셀 조회만 하고 월드 좌표는 모릅니다(`TerrainHeightfield` 가 압니다).
      */
-    struct SW_API HeightfieldData
+    struct SW_API HeightfieldAsset
     {
         static constexpr uint32      kMagic     = FourCcUtil::make( "SWHF" );
         static constexpr string_view kExtension = ".heightfield";
@@ -36,8 +36,8 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `HeightfieldData.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "HeightfieldData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `HeightfieldAsset.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "HeightfieldAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         static constexpr uint32       kVersion       = 1u;
         static constexpr uint32       kFlagHoleMask  = 1u;
         static constexpr uint32       kMaxResolution = 8193u;

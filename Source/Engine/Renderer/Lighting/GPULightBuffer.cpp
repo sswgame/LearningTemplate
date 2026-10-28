@@ -129,7 +129,7 @@ namespace sw
              * @brief 반사 프로브 하나를 라이트 원소(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)로 만들고, 그 옥타헤드럴 텍셀을 프로브 버퍼(t13)에 붙입니다.
              * @details 텍셀 하나가 float4 하나(rgb, a 는 0)다 — SH9 원소와 같은 버퍼라 텍스처 슬롯이 없는 에뮬 백엔드도 같은 길로 읽는다. 경계 구는 상자의 외접구다.
              */
-            static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeData& data, vector<float4>& inoutListProbeElement )
+            static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeAsset& data, vector<float4>& inoutListProbeElement )
             {
                 const float3 center     = probe.getWorldPosition();
                 const float3 halfExtent = probe.getExtent() * 0.5f;
@@ -223,7 +223,7 @@ namespace sw
             // 반사 프로브는 볼륨 뒤에 붙는다. 쓸 수 있는 베이크가 없는 프로브(베이크하지 않음 · 옮긴 뒤 다시 베이크하지 않음)는 넣지 않는다.
             for ( const ReflectionProbeComponent* pProbe : registry.getAll<ReflectionProbeComponent>() )
             {
-                const ReflectionProbeData* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;
+                const ReflectionProbeAsset* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;
                 if ( pData != nullptr )
                     outList.push_back( GPULightBufferInternal::makeReflectionProbeElement( *pProbe, *pData, *pOutListProbeElement ) );
             }

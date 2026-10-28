@@ -1,5 +1,5 @@
 /**
- * @file FitPartData.h
+ * @file FitPartDef.h
  * @brief 장비(부품) 하나의 피팅 데이터(`*.partfit.xml`)입니다. 겹, 프로필, 숨김 영역, 조임 고리, 보정 조각을 담습니다. 메시와 따로 둔 원본 에셋입니다.
  * @details 소켓처럼 재임포트가 지우지 않는다. 겹, 프로필, 영역 이름은 피팅 테이블(`FitTables`)과 만나는 곳에서 대조한다(`validateNames`, 모르면 오류다).
  *          보정 조각의 `vertex` 는 메시를 위치로 이은 형상의 정점 번호다(`CharacterMeshUtil::makeWeldedGeometry` — 피팅이 푸는 형상).
@@ -72,7 +72,7 @@ namespace sw
 namespace sw
 {
     /** @brief 부품 하나의 피팅 데이터입니다. */
-    class SW_API FitPartData
+    class SW_API FitPartDef
     {
     public:
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소와 빠진 값은 오류입니다. 겹 · 프로필 · 영역 이름은 피팅 표와 만나는 곳에서 `validateNames` 로 대조합니다. */

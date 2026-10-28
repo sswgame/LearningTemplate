@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitPartDef.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        struct FitPartDataInternal
+        struct FitPartDefInternal
         {
             static constexpr const utf8* kArrRootAttribute[]       = { "layer", "profile" };
             static constexpr const utf8* kArrHideAttribute[]       = { "region" };
@@ -44,7 +44,7 @@ namespace sw
 
 namespace sw
 {
-    bool FitPartData::loadFromXMLText( string_view xmlText, string_view sourceName )
+    bool FitPartDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
@@ -54,7 +54,7 @@ namespace sw
         return reader.finish();
     }
 
-    bool FitPartData::loadFromAsset( const AssetID& assetID )
+    bool FitPartDef::loadFromAsset( const AssetID& assetID )
     {
         const string_view   path = assetID.view();
         CharacterDataReader reader( path );
@@ -65,12 +65,12 @@ namespace sw
         return reader.finish();
     }
 
-    void FitPartData::readRoot( const XMLNode& root, CharacterDataReader& reader )
+    void FitPartDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         _listHiddenRegion.clear();
         _listRing.clear();
         _listCorrective.clear();
-        reader.reportUnknownAttributes( root, FitPartDataInternal::kArrRootAttribute );
+        reader.reportUnknownAttributes( root, FitPartDefInternal::kArrRootAttribute );
         _layer   = reader.readName( root, "layer", true );
         _profile = reader.readName( root, "profile", true );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
@@ -78,14 +78,14 @@ namespace sw
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Hide" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDataInternal::kArrHideAttribute );
+                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrHideAttribute );
                 const hashed_string region = reader.readName( child, "region", true );
                 if ( region.empty() == false )
                     _listHiddenRegion.push_back( region );
             }
             else if ( StringUtil::equals( pName, "Ring" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDataInternal::kArrRingAttribute );
+                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrRingAttribute );
                 FitRingDef ring;
                 ring._bone = reader.readName( child, "bone", false );
                 reader.readOptionalFloat3( child, "offset", ring._offset );
@@ -100,7 +100,7 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Corrective" ) )
             {
-                reader.reportUnknownAttributes( child, FitPartDataInternal::kArrCorrectiveAttribute );
+                reader.reportUnknownAttributes( child, FitPartDefInternal::kArrCorrectiveAttribute );
                 FitCorrectiveDef corrective;
                 corrective._morph = reader.readName( child, "morph", false );
                 for ( XMLNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
@@ -110,7 +110,7 @@ namespace sw
                         reader.reportUnknownElement( deltaNode );
                         continue;
                     }
-                    reader.reportUnknownAttributes( deltaNode, FitPartDataInternal::kArrDeltaAttribute );
+                    reader.reportUnknownAttributes( deltaNode, FitPartDefInternal::kArrDeltaAttribute );
                     const int32 vertex = reader.readInt( deltaNode, "vertex" );
                     if ( vertex < 0 )
                     {
@@ -131,30 +131,30 @@ namespace sw
         }
     }
 
-    bool FitPartData::validateNames( const FitTables& tables, string* pOutError ) const
+    bool FitPartDef::validateNames( const FitTables& tables, string* pOutError ) const
     {
         bool bValid = true;
         if ( _layer.empty() == false && tables.findLayer( _layer ) == nullptr )
         {
             bValid = false;
-            FitPartDataInternal::appendNameError( pOutError, "layer", _layer );
+            FitPartDefInternal::appendNameError( pOutError, "layer", _layer );
         }
         if ( _profile.empty() == false && tables.findProfile( _profile ) == nullptr )
         {
             bValid = false;
-            FitPartDataInternal::appendNameError( pOutError, "profile", _profile );
+            FitPartDefInternal::appendNameError( pOutError, "profile", _profile );
         }
         for ( const hashed_string& region : _listHiddenRegion )
         {
             if ( tables.findRegionIndex( region ) >= 0 )
                 continue;
             bValid = false;
-            FitPartDataInternal::appendNameError( pOutError, "region", region );
+            FitPartDefInternal::appendNameError( pOutError, "region", region );
         }
         return bValid;
     }
 
-    bool FitPartData::validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, string* pOutError ) const
+    bool FitPartDef::validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, string* pOutError ) const
     {
         bool bValid = true;
         if ( pBones != nullptr )
@@ -164,7 +164,7 @@ namespace sw
                 if ( ring._bone.empty() || pBones->findBone( ring._bone ) >= 0 )
                     continue;
                 bValid = false;
-                FitPartDataInternal::appendError( pOutError, string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );
+                FitPartDefInternal::appendError( pOutError, string( "ring names unknown bone '" ) + ring._bone.c_str() + "'" );
             }
         }
         if ( pGeometry != nullptr )
@@ -181,14 +181,14 @@ namespace sw
                     string       message( "corrective delta names vertex " );
                     message += string_view( arrNumber, numberLength );
                     message += " beyond the mesh";
-                    FitPartDataInternal::appendError( pOutError, message );
+                    FitPartDefInternal::appendError( pOutError, message );
                 }
             }
         }
         return bValid;
     }
 
-    void FitPartData::setLayerAndProfile( const hashed_string& layer, const hashed_string& profile )
+    void FitPartDef::setLayerAndProfile( const hashed_string& layer, const hashed_string& profile )
     {
         _layer   = layer;
         _profile = profile;

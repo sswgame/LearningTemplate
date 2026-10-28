@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Shooter3D 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
+  Shooter3D 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstance 가 통합 맵(InputManager::getInputMap)에 읽는다.
   게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩).
   Look 은 마우스 이동량(폰의 _lookAction — 플레이어 조종자가 조종 회전에 더한다), ToggleMouseLock 은 플레이어 조종자의 _mouseLockAction,
   CycleCamera 는 시점 카메라 디렉터의 _cycleAction, Camera.Look · Camera.LookHold · Camera.Zoom 은 그 디렉터의 _lookAction · _lookHoldAction · _zoomAction

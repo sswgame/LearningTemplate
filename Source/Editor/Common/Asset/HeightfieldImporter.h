@@ -6,7 +6,7 @@
  *          (해상도 − 1)² 크기이거나, 샘플 해상도와 같은 크기여야 한다. 샘플 해상도 크기면 마지막 행과 열은 버린다.
  *
  *          바깥 도구(World Machine, Gaea, 이미지 편집기)가 만든 스플랫을 같은 폴더의 `<이름>_splat.png`(RGBA PNG, 채널마다 레이어 0..3 가중치)로 두면 - 레이어 4..7 은 곁 파일 `<이름>_splat1.png`(같은 크기의 RGBA PNG, 없으면 0)에 두고 -
- *          `heightfields/<이름>.layerweights`(`LayerWeightsData`)로 임포트한다. 보조 파일이 아니라 스탬프 줄을 따로 갖는 원본이다. 높이장과 따로 바뀌고,
+ *          `heightfields/<이름>.layerweights`(`LayerWeightsAsset`)로 임포트한다. 보조 파일이 아니라 스탬프 줄을 따로 갖는 원본이다. 높이장과 따로 바뀌고,
  *          브러시가 칠해 저장한 결과를 손댄 것으로 잡는다. 알파가 없는 PNG 는 거절한다. 디코더가 알파를 255 로 채워 레이어 3 이 말없이 가득 차기 때문이다.
  *          가중치 바이트는 그대로 옮기고 정규화하지 않는다. 지형이 읽을 때 합으로 나눈다(`TerrainHeightfield::computeLayerWeightsAtUv`).
  */
@@ -17,8 +17,8 @@
 
 namespace sw
 {
-    struct HeightfieldData;
-    struct LayerWeightsData;
+    struct HeightfieldAsset;
+    struct LayerWeightsAsset;
 } // namespace sw
 
 namespace sw::editor
@@ -34,7 +34,7 @@ namespace sw::editor
     struct HeightfieldImporter
     {
         /** @brief 원본(+ 곁 구멍 마스크)을 읽어 높이장으로 만듭니다. */
-        [[nodiscard]] static bool readHeightfield( string_view sourcePath, HeightfieldData& outData );
+        [[nodiscard]] static bool readHeightfield( string_view sourcePath, HeightfieldAsset& outData );
         /** @brief 원본 하나를 임포트해 @p outputPath 에 씁니다. */
         [[nodiscard]] static bool importHeightfield( string_view sourcePath, string_view outputPath );
         /** @brief 리소스 트리의 모든 `heightfields_raw/` 를 스탬프와 대조하고, @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다. */
@@ -48,7 +48,7 @@ namespace sw::editor
         /** @brief 스플랫 원본(`<이름>_splat.png`)이면 true 입니다. */
         static bool isSourceLayerWeights( string_view path );
         /** @brief 스플랫 원본(RGBA PNG)을 읽어 레이어 가중치로 만듭니다. 알파가 없거나 크기가 범위 밖이면 이유를 남기고 false 를 반환합니다. */
-        [[nodiscard]] static bool readLayerWeights( string_view sourcePath, LayerWeightsData& outData );
+        [[nodiscard]] static bool readLayerWeights( string_view sourcePath, LayerWeightsAsset& outData );
         /** @brief 스플랫 원본의 결과 경로입니다(`…/heightfields_raw/x_splat.png` → `…/heightfields/x.layerweights`). */
         static string makeImportedLayerWeightsPath( string_view rawPath );
         /** @brief `heightfields_raw/` 아래의 원본, 구멍 마스크, 스플랫 원본(`.png`, `.r16`)이면 true 입니다. 에디터 핫 리로드는 이 경로를 텍스처가 아니라 높이장 임포트로 보냅니다. */

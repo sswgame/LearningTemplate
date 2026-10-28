@@ -7,12 +7,12 @@
  *          이 클래스는 첫 씬을 열고, 디렉터를 상태 스냅샷에 올립니다.
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     /** @brief 픽셀 마을 게임 인스턴스입니다. */
-    class PixelTownGame : public GameInstanceBase
+    class PixelTownGame : public GameInstance
     {
     public:
         PixelTownGame();

@@ -49,12 +49,12 @@ namespace sw
         onPropertyChanged( hashed_string( "_extent" ) );
     }
 
-    bool ReflectionProbeComponent::matchesCapturePosition( const ReflectionProbeData& data ) const
+    bool ReflectionProbeComponent::matchesCapturePosition( const ReflectionProbeAsset& data ) const
     {
         return ( data._capturePosition - getWorldPosition() ).getLength() <= ReflectionProbeComponentInternal::kPositionTolerance;
     }
 
-    const ReflectionProbeData* ReflectionProbeComponent::findProbeData() const
+    const ReflectionProbeAsset* ReflectionProbeComponent::findProbeData() const
     {
         if ( _probeData._listTexel.empty() )
             return nullptr;
@@ -64,7 +64,7 @@ namespace sw
         return &_probeData;
     }
 
-    bool ReflectionProbeComponent::adoptProbeData( ReflectionProbeData&& data, string_view path )
+    bool ReflectionProbeComponent::adoptProbeData( ReflectionProbeAsset&& data, string_view path )
     {
         string     error;
         const bool bValid   = data.isValid( &error );

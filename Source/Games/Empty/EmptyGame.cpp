@@ -50,7 +50,7 @@ namespace sw
 
     void EmptyGame::onUpdate( float32 deltaTime )
     {
-        GameInstanceBase::onUpdate( deltaTime );
+        GameInstance::onUpdate( deltaTime );
 
         if ( _benchScene != nullptr )
             _benchScene->update( deltaTime );

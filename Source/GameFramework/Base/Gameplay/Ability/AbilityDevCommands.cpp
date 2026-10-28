@@ -16,7 +16,7 @@
 
     #include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
     #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
     #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
     #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
 
@@ -29,7 +29,7 @@ namespace sw
             /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
             [[nodiscard]] static bool collectAbilitySystems( vector<AbilitySystemComponent*>& outListComponent, string& outReply )
             {
-                GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
+                GameObjectManager* pManager = GameInstance::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     outReply = "cheat: no active scene";
@@ -118,7 +118,7 @@ namespace sw
                 vector<AbilitySystemComponent*> listComponent;
                 if ( collectAbilitySystems( listComponent, outReply ) == false )
                     return true;
-                const GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
+                const GameObjectManager* pManager = GameInstance::findActiveObjectManager();
                 // 무적 태그의 하위 태그로 붙인다 — 무적 판정(`hasMatchingTag`)은 하위를 함께 보고, 치트의 몫은 이펙트가 준 무적과 따로 센다.
                 const TagID tag         = "State.Invulnerable.Cheat"_tag;
                 int32       playerCount = 0;

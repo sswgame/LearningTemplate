@@ -6,12 +6,12 @@
  *          탑승 단계 `Mount` · `Dismount` 와 감시 값 `Pawn.Seat` 을 실제 게임에서 돌리는 자리이다(`automation/mount.scenario.xml`).
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 namespace sw
 {
     /** @brief 서부 평원 승마 게임 인스턴스입니다. */
-    class WildWestGame : public GameInstanceBase
+    class WildWestGame : public GameInstance
     {
     public:
         WildWestGame();
