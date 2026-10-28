@@ -6,7 +6,7 @@
 
 - Helpers shared by more than one translation unit go on a `XxxUtil` static struct in a header (`SerializerUtil`, `MaterialUtil`). Never name those headers or types `Internal`.
 - **One class or struct definition per named `namespace` block.** A file with several classes closes the block after each `};` and reopens it, so each class folds on its own (template specializations of one name stay together; the anonymous namespace stays one block).
-- Locator-only `s_*` state used by bind/get APIs stays in the implementation block's anonymous namespace (`Source/` and `Tools/ReflectionParser/`).
+- Locator-only `s_*` state used by bind/get APIs stays in the implementation block's anonymous namespace (`Source/` and `Source/Programs/ReflectionParser/`).
 
 ### Helpers used by one `.cpp`
 

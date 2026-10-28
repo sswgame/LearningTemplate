@@ -34,7 +34,7 @@
 | A2 | 씬이 기능을 모르게 — 이미 있는 `SceneServiceRegistry`(언리얼 UWorldSubsystem 자리)로 옮긴다: ① `Scene::update` 끝의 `SceneAudio::update` 호출을 늦은 프레임 단계 서비스로 ② `SceneNavigation::setSourcePath` 를 `ISceneService` 의 씬 로드 훅으로 ③ `SceneManager` 의 물리 고정 스텝 정책 ④ `SceneDebugDraw` 의 물리 · 내비 그리기를 서비스별 `drawDebug` 로. 기준선의 `Scene -> Physics/Navigation/Audio/Animation` 15 줄이 사라진다 | 씬 열기 · 플레이 · 디버그 그리기 |
 | A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · Bootstrap · Profiling 이 `AssetIO` · `AssetPaths` · `AssetID` 를 부른다(약 24 줄). 언리얼 `IPlatformFile` 체인처럼 낮은 층(0~1)에 읽기 인터페이스를 두고 Asset 이 구현을 등록한다. `AssetID.h` 는 Core 만 쓰므로 낮은 층으로 내릴 수 있다. 그 밖에 `Object -> Animation/Sprite`(스프라이트 클립), `Graphics -> Physics`(`MeshCache` 의 셰이프 캐시 무효화 → 콜백), `Asset -> Physics`, `Telemetry -> UserSettings`, `Bootstrap -> RHIRenderResource`, `Reflection -> Localization` | `engine-layers` 기준선 0 |
 | B | 층을 따라 Engine 을 링크 단위로 나눈다(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기(`SW_UNBUILT_ENGINE_FOLDERS` · `SW_WITH_CLIENT_CODE`)가 모듈 하나 빼기로 바뀐다 | 전 프리셋, 증분 빌드 시간(`.ninja_log`) |
-| C | 키트 폴더 하나에 `Runtime/` · `Server/` · `Editor/`(지금 에디터 확장은 `GameFramework/Plugin/Editor/<키트>` 로 떨어져 있다), `Tools/ReflectionParser` · `Tools/OnlineLoadBot` → `Source/Programs/` | 전 프리셋 |
+| C | 키트 폴더 하나에 `Runtime/` · `Server/` · `Editor/`(지금 에디터 확장은 `GameFramework/Plugin/Editor/<키트>` 로 떨어져 있다), `Source/Programs/ReflectionParser` · `Source/Programs/OnlineLoadBot` → `Source/Programs/` | 전 프리셋 |
 
 그 밖에:
 - 없는 스크립트를 부르는 곳: 에디터 에셋 검증(`Scripts/qa/ValidateAssets.py`), 프로젝트 설정 창(`GenerateConfigReference.py`), 아이콘 폰트(`GenerateEditorIcons.py`), `BuildLayout.cmake` · `BuildCaches.json` 의 `RunBuildBaseline.py`.

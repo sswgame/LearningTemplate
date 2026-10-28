@@ -17,7 +17,7 @@ _kRglobSkipDirNames = {"buildtrees", "downloads", "packages"}
 
 
 def getLintSearchDirs(repositoryRoot: Path) -> list[Path]:
-    """린트 및 포맷팅 대상 루트 디렉터리 목록을 반환합니다 (Source, Test, Tools/ReflectionParser)."""
+    """린트 및 포맷팅 대상 루트 디렉터리 목록을 반환합니다 (Source, Test, Source/Programs/ReflectionParser)."""
     return [repositoryRoot / rel for rel in kLintTargetRelDirs]
 
 

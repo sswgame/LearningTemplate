@@ -62,7 +62,8 @@ def buildHeaderLookupInternal(repositoryRoot: Path, baseName: str) -> dict[str, 
 
 
 def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    return tuple(buildHeaderLookupInternal(repositoryRoot, baseName) for baseName in kLintTargetBaseDirNames)
+    # 뿌리는 Source 하나다(프로그램도 Source/Programs) — 옛 Test · Tools 표 자리는 비운다.
+    return (buildHeaderLookupInternal(repositoryRoot, "Source"), {}, {})
 
 
 _kConditionalOpenRe = re.compile(r'^\s*#\s*(?:if|ifdef|ifndef)\b(.*)$')

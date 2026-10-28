@@ -77,7 +77,7 @@ sw_resolveModuleManifests()
 
 # 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → RuntimeAPI → Editor → ModuleManager → App · Server → GameFramework/Games.
 add_subdirectory(Source/Core)
-add_subdirectory(Tools/ReflectionParser)
+add_subdirectory(Source/Programs/ReflectionParser)
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)
@@ -100,7 +100,7 @@ endif()
 
 # 온라인 부하 테스트 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
 if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME))
-	add_subdirectory(Tools/OnlineLoadBot)
+	add_subdirectory(Source/Programs/OnlineLoadBot)
 endif()
 
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.

@@ -104,7 +104,7 @@ def main(argv: list[str]) -> int:
             return True
         return path.suffix.lower() in kCodeSuffix and not relative.startswith("Content/")
 
-    listAll += [path for path in (root / "Tools/ReflectionParser/Templates").glob("*.tpl")]
+    listAll += [path for path in (root / "Source/Programs/ReflectionParser/Templates").glob("*.tpl")]
     listCode = [path for path in listAll if isCode(path)]
     listData = [path for path in listAll if path.suffix.lower() in kDataSuffix]
     mapCount = buildMap(listCode)
@@ -133,7 +133,7 @@ def main(argv: list[str]) -> int:
         if rewritten != text:
             writeText(path, rewritten)
             listChanged.append(path)
-    renamedCount = renamePaths(root, [root / "Source", root / "Tools/ReflectionParser", root / "Tools/OnlineLoadBot"])
+    renamedCount = renamePaths(root, [root / "Source", root / "Source/Programs/ReflectionParser", root / "Source/Programs/OnlineLoadBot"])
     print(f"[acronym-case] 식별자 {len(mapRename)} 개, 파일 {len(listChanged)} 개를 고치고 경로 {renamedCount} 개 이름을 바꿨다(겹친 이름 {len(listClash)} 개 — 빌드로 확인)")
     listChanged = [path if path.exists() else path for path in listChanged]
     return ExitCode.Passed

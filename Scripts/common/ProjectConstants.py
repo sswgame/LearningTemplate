@@ -68,7 +68,7 @@ kShaderSourceExtensions: set[str] = {".hlsl", ".hlsli"}
 kMinimumPythonVersion: tuple[int, int] = (3, 10)
 
 kDirToolsCache = "Tools/_cache"
-kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
+kDirToolsReflectionTemplates = "Source/Programs/ReflectionParser/Templates"
 
 # =============================================================================
 # --- 4. Script Entry Points (스크립트 실행 진입점 경로) ------------------------
@@ -129,15 +129,10 @@ kEnvSwVcpkgAutoBootstrap = "SW_VCPKG_AUTO_BOOTSTRAP"
 # =============================================================================
 
 #: 우리가 쓴 C++ 의 뿌리 — 이름 · include 순서 · 픽서 · clang-format · 코드 게이트가 모두 이것을 본다. 게이트마다 따로 적지 않는다
-#:. 새 C++ 도구 폴더(`Tools/<이름>`)를 만들면 여기 한 줄.
-kLintTargetRelDirs: tuple[str, ...] = (
-    "Source",
-    "Test",
-    "Tools/ReflectionParser",
-    "Tools/OnlineLoadBot",
-)
+#:. 프로그램(리플렉션 파서 · 부하 봇)도 `Source/Programs` 아래라 따로 적지 않는다.
+kLintTargetRelDirs: tuple[str, ...] = ("Source",)
 
-#: `kLintTargetRelDirs` 의 맨 앞 폴더 이름(`Source` · `Test` · `Tools`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.
+#: `kLintTargetRelDirs` 의 맨 앞 폴더 이름(`Source`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.
 kLintTargetBaseDirNames: tuple[str, ...] = tuple(dict.fromkeys(root.split("/")[0] for root in kLintTargetRelDirs))
 
 #: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다. 저장소를 훑는 린트는 이 이름의 폴더로 내려가지 않습니다
