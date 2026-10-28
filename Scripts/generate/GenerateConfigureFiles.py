@@ -10,7 +10,7 @@ configure 가 파이썬 생성기 넷을 **한 프로세스**로 부른다 — �
   - ConfigVars.cmake       (GenerateCMakeConstants)      — Constants.py → CMake set()
   - CookContract.gen.h · CookContract.cmake (GenerateCookContract) — CookContract.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (GenerateShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
-  - LintTargets.cmake      (GenerateLintTargets)         — lint/gate · selftest 폴더 → CMake 린트 타깃
+  - LintTargets.cmake      (GenerateLintTargets)         — lint/gate 폴더 → CMake 린트 타깃
   - EditorLayers.cmake     (GenerateEditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
 
 ToolchainVars.cmake(GenerateToolchainCMake)는 여기 없다 — SetupEnvironment 가 toolchain_config.json 을 쓴 **뒤**에 돌아야 한다.

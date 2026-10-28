@@ -150,7 +150,7 @@ kEnvSwVcpkgAutoBootstrap = "SW_VCPKG_AUTO_BOOTSTRAP"
 # =============================================================================
 
 #: 우리가 쓴 C++ 의 뿌리 — 이름 · include 순서 · 픽서 · clang-format · 코드 게이트가 모두 이것을 본다. 게이트마다 따로 적지 않는다
-#: (`selftest/CheckLintScanRoots` 가 막는다). 새 C++ 도구 폴더(`Tools/<이름>`)를 만들면 여기 한 줄.
+#:. 새 C++ 도구 폴더(`Tools/<이름>`)를 만들면 여기 한 줄.
 kLintTargetRelDirs: tuple[str, ...] = (
     "Source",
     "Test",

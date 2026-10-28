@@ -142,7 +142,7 @@ def checkDebugger() -> None:
     """
     디버거(lldb) 존재 여부를 안내합니다.
 
-    .vscode/launch.json 의 WSL 구성은 CodeLLDB 를 쓰므로 lldb 가 없으면 디버깅이 시작되지
+    디버깅에는 CodeLLDB(lldb)를 쓰므로 lldb 가 없으면 디버깅이 시작되지
     않습니다. 빌드에는 영향이 없어 조용히 지나가기 쉬운 항목이라 여기서 같이 알려 줍니다.
     """
     if tool := next((name for name in ("lldb", "lldb-21", "lldb-20") if shutil.which(name)), None):
@@ -152,7 +152,7 @@ def checkDebugger() -> None:
     host = "WSL" if isWslInternal() else "Linux"
     print(
         f"[SetupLinuxDevEnvironment] {host}: no debugger (lldb). "
-        f"launch.json 의 WSL 구성은 CodeLLDB 를 쓴다 — e.g. sudo apt install lldb"
+        f"디버깅에는 CodeLLDB 를 쓴다 — e.g. sudo apt install lldb"
     )
 
 

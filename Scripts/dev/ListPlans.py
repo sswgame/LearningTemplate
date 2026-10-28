@@ -10,7 +10,6 @@
     py -3 -m Scripts plans --file ClusteredLighting           # 그 문서의 머리 줄과 절 제목 목록(`ClusteredLighting.md` 도 된다)
     py -3 -m Scripts plans --file ClusteredLighting --section S3   # 제목에 `S3` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
     py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
-    py -3 -m Scripts plans --check              # 로드맵의 링크가 맞는지, 진행 n/n 인데 구현 중인 문서가 없는지, 대기 줄이 검증 묶음 id 를 가리키는지, 긴 함수 표가 코드와 맞는지(틀리면 종료 1)
 
 머리 줄 모양은 `common/Plans.py` 가 원본이다. 머리 줄이 없거나 틀린 문서가 있으면 건너뛰지 않고 파일 이름과 함께 멈춘다.
 """
@@ -27,10 +26,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Plans import PlanDoc, PlanFormatError, kListPlanArea, kListPlanStatus, kPlansRelDir, readPlans  # noqa: E402
 from common.MarkdownSections import extractSection  # noqa: E402
-from common.StatusBoard import checkRoadmap  # noqa: E402
-from common.VerifyManifest import checkVerifyPending  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from lint.LongFunctionTable import checkLongFunctionTable  # noqa: E402
 
 
 def displayWidthInternal(text: str) -> int:
@@ -81,7 +77,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: ClusteredLighting)의 머리 줄과 절 제목 목록")
     parser.add_argument("--section", metavar="TITLE", help="--file 과 함께: 제목에 TITLE 이 든 절의 본문만(없거나 여럿에 맞으면 오류와 후보)")
     parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(ClusteredLighting · ClusteredLighting.S3 · 후보 이름)이 있는 곳")
-    parser.add_argument("--check", action="store_true", help="로드맵의 문서 링크 · 파일 · #앵커가 맞는지, 진행 n/n 인데 상태가 구현 중인 문서가 없는지, `확인 대기` 류 줄이 매니페스트(Test/QA/VerifyBatch.json) id 를 가리키는지 본다(틀리면 종료 1)")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     args = parser.parse_args(argv)
 
@@ -98,18 +93,6 @@ def main(argv: list[str] | None = None) -> int:
             return ExitCode.Violation
         print("\n".join(listPlace))
         return ExitCode.Passed
-
-    if args.check:
-        listViolation = checkRoadmap(args.root or getProjectRoot())
-        print("\n".join(listViolation))
-        print(f"로드맵 위반 {len(listViolation)} 건")
-        listPendingViolation = checkVerifyPending(args.root or getProjectRoot())
-        print("\n".join(listPendingViolation))
-        print(f"검증 묶음 위반 {len(listPendingViolation)} 건")
-        listLongViolation = checkLongFunctionTable(args.root or getProjectRoot())
-        print("\n".join(listLongViolation))
-        print(f"긴 함수 표 위반 {len(listLongViolation)} 건")
-        return ExitCode.Violation if listViolation or listPendingViolation or listLongViolation else ExitCode.Passed
 
     if args.fileName:
         stem = args.fileName.removesuffix(".md").lower()

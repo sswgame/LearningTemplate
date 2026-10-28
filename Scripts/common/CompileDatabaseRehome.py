@@ -7,7 +7,7 @@
 "제 것"은 폴더 이름 목록이 아니라 워크트리의 실제 모양으로 정한다: 같은 상대 경로가 워크트리에 있고, 그 경로 위에 링크(심볼릭 링크 · 정션)가 없으면 옮긴다.
 생성 헤더가 든 빌드 폴더 · vcpkg · `Tools/LLVM` 같은 링크와 워크트리에 없는 경로(생성물)는 메인의 것을 그대로 쓴다. 저장소에 폴더가 늘어도 목록을 고칠 일이 없다
 (`Tools` 가 목록에 없어 `Tools/OnlineLoadBot` 항목이 안 맞던 결함을 이 모양으로 없앴다). 쓰는 곳: `SyntaxCheck`(바꾼 파일 검사) ·
-`HeaderSelfContained`(헤더 단독 검사 — 커밋 훅 게이트 · CI 워크플로).
+`HeaderSelfContained`(헤더 단독 검사 — 커밋 훅 게이트).
 """
 
 from __future__ import annotations

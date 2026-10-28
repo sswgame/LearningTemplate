@@ -11,7 +11,7 @@ TU 를 `-fsyntax-only` 로 컴파일한다.
 
 | 쓰는 곳 | 범위 | 실패하면 |
 | --- | --- | --- |
-| `report/RunHeaderSelfContained.py` | 트리 전체 · 폴더 | 보고만(`--fail-on-violation` 이면 1 — CI 정기 잡) |
+| `report/RunHeaderSelfContained.py` | 트리 전체 · 폴더 | 보고만(`--fail-on-violation` 이면 1) |
 | `gate/CheckHeaderSelfContained.py` | 커밋 훅의 staged 헤더 | 커밋을 막는다(워크트리는 메인의 컴파일 DB 를 옮겨 쓴다. DB 가 어디에도 없을 때만 SKIPPED) |
 | `report/RunForwardDeclarationCandidates.py --verify-unused` | include 한 줄을 뺀 사본 | 후보 분류 |
 | `report/RunIncludeCost.py` | TU 전부(헤더가 아니라 소스를 PCH 없이) + `-ftime-trace` | 보고만 — 헤더별 누적 파싱 시간 |

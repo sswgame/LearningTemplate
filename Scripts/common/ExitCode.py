@@ -5,13 +5,11 @@
   (`lint/LintGate.GateResult.skipped` · `unavailable`). 불성립(`PrerequisiteMissing`, 5)은 필수 입력(빌드 폴더 · 도구 · 훑을 파일)이 없어 검사를
   하지 못한 것이다 — 통합(`lint-suite` · CTest)에서는 실패이고, 빌드 없는 PC 의 커밋 훅에서만 건너뜀으로 허용한다.
 - 린트 밖 스크립트도 같은 값을 쓴다 — `Violation`(1)은 일이 실패했거나 위반이 있다는 것, `CheckInvalid`(2)는 인자 · 전제가 틀려 일을 시작하지 못한 것이다.
-  `main` 과 `sys.exit(f())` 의 `f` 는 숫자 리터럴이 아니라 이 값을 돌려준다(`CheckPythonConventions` 의 `[exitCode]`, `Scripts/` 만. `exitCode` · `returnCode` · `resultCode` 변수에 숫자를 담는 것도 같다).
+  `main` 과 `sys.exit(f())` 의 `f` 는 숫자 리터럴이 아니라 이 값을 돌려준다.
 - `Skipped`(77)는 CTest 의 `SKIP_RETURN_CODE` 다. App 이 "이 기계에서 이 백엔드를 못 돌린다" 로 끝날 때도 같은 값이다. 린트 게이트에서는 `--files` 로 좁힌 훑기에 볼 것이 없을 때만 낸다.
   App 쪽 정본은 C++ `RHIInitResult.h` 의 `kRHIUnusableHereExitCode` 이고 `common/AppRun.kAppRhiUnusableExitCode` 가 그 줄을 읽는다.
   이 모듈은 헤더를 읽지 않으므로 `TestQaRunners` 가 `Skipped` 와 헤더 값(과 CMake 의 `SKIP_RETURN_CODE`)이 같은지 본다.
 - `LimitReached`(3)는 기다림 · 요청 한도에 닿아 일을 못 한 것이다(GitHub API 한도, 공유 잠금 대기 시한).
-- `CiFailing`(4)는 `ci-jobs --summary` 가 CI 실패를 알리는 값이다. 세션 가드 훅(`.claude/hooks/SessionGuard.py` 의 `kCiFailingExitCode`)은
-  세션 설정이라 이 모듈을 import 하지 않고 값을 적어 두며, `TestDevWorktreeTools` 가 둘이 같은지 본다.
 """
 
 from __future__ import annotations
@@ -26,6 +24,5 @@ class ExitCode(IntEnum):
     Violation = 1
     CheckInvalid = 2
     LimitReached = 3
-    CiFailing = 4
     PrerequisiteMissing = 5
     Skipped = 77
