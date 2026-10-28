@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
@@ -164,6 +165,7 @@ namespace sw::editor
         uint64                         _callTreeFrameEnd;   ///< 호출 트리에 마지막으로 더한 프레임의 끝(같으면 새 프레임이 없다)
         float64                        _callTreeOrderTime;  ///< 호출 트리의 정렬을 마지막으로 다시 지은 ImGui 시각(초)
         float32                        _spikeThresholdMs;   ///< Pause on spike 임계값(GT.Frame, ms)
+        LeakWindowReport               _leakReport;         ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
         uint8                          _bCatalogDirty   : 1;
         uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 수집한다
         uint8                          _bTracyTried     : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다

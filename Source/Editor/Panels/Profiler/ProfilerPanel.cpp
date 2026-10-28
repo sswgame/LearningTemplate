@@ -177,6 +177,60 @@ namespace sw::editor
                 ImGui::EndTable();
             }
 
+            /**
+             * @brief 누수 측정 창(`MemoryProfiler::beginLeakWindow`)을 열고 닫아 `FullStacks` 보고서를 보입니다.
+             * @details 기동 뒤 기준선 창은 보통 열려 있어(`TagTotals`) 두 번째 창을 열 수 없다. 그래서 단추 하나가 "열려 있으면 닫아 보고서를 받고, 곧바로 `FullStacks` 로 다시 연다"를
+             *          한다 — 종료 보고(`DiagnosticsSubsystem`)가 늘 열린 창을 닫으므로 창이 없는 채로 남지 않는다. `FullStacks` 는 할당마다 스택을 잡아 느려진다(켠 뒤부터 새로 태어난 블록만 잰다).
+             */
+            static void drawLeakWindow( MemoryProfiler& profiler, LeakWindowReport& inoutReport )
+            {
+                const bool bOpen = profiler.isLeakWindowOpen();
+                ImGui::TextUnformatted( bOpen ? "Leak window: open" : "Leak window: closed" );
+                ImGui::SameLine();
+                if ( ImGui::Button( bOpen ? "Report And Restart As FullStacks" : "Open FullStacks Window" ) )
+                {
+                    if ( bOpen )
+                        inoutReport = profiler.endLeakWindow();
+                    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+                }
+                EditorWidgets::drawTooltip( "FullStacks records the call stack of every allocation born after this point (slows allocation). The report lists blocks born in the window that are still alive." );
+                if ( inoutReport._bValid == false )
+                {
+                    ImGui::TextDisabled( "No leak report yet." );
+                    return;
+                }
+
+                fixed_string<constant::kMaxBuffer128> summary;
+                formatstring( summary.data(), summary.capacity(), "%# B in %# blocks, %# rounds (%# blocks from other threads)", inoutReport._totalBytes, inoutReport._totalBlockCount,
+                              inoutReport._roundCount, inoutReport._foreignThreadBlockCount );
+                ImGui::TextUnformatted( summary.c_str() );
+                if ( ImGui::BeginTable( "LeakWindowTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) == false )
+                    return;
+                ImGui::TableSetupColumn( "Bytes (Blocks)" );
+                ImGui::TableSetupColumn( "Round" );
+                ImGui::TableSetupColumn( "Tag" );
+                ImGui::TableSetupColumn( "First Frame" );
+                ImGui::TableHeadersRow();
+                uint32 displayCount = 0;
+                for ( const LeakWindowEntry& entry : inoutReport._listEntry )
+                {
+                    if ( displayCount++ >= MemoryProfiler::kDefaultMaxPrintedLeakEntry )
+                        break;
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    fixed_string<constant::kMaxBuffer64> sizeBuf;
+                    formatstring( sizeBuf.data(), sizeBuf.capacity(), "%# B (%# blocks)", entry._bytes, entry._blockCount );
+                    ImGui::TextUnformatted( sizeBuf.c_str() );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%u", static_cast<uint32>( entry._bornRound ) );
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted( MemoryProfiler::getMemoryTagName( entry._tag ) );
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted( entry._firstFrame.empty() ? "(TagTotals window: no stack)" : entry._firstFrame.c_str() );
+                }
+                ImGui::EndTable();
+            }
+
             /** @brief 살아 있는 할당이 큰 호출 스택 표입니다(최대 100 개). */
             static void drawTopCallStacks( MemoryProfiler& profiler )
             {
@@ -257,6 +311,7 @@ namespace sw::editor
         , _callTreeFrameEnd{ 0 }
         , _callTreeOrderTime{ -1.0 }
         , _spikeThresholdMs{ 33.3f }
+        , _leakReport{}
         , _bCatalogDirty{ SW_TRUE }
         , _bCollect{ SW_TRUE }
         , _bTracyTried{ SW_FALSE }
@@ -1197,6 +1252,11 @@ namespace sw::editor
             ProfilerPanelInternal::drawTopCallStacks( profiler );
         else if ( bDetailed == false )
             ImGui::Text( "Detailed CallStack tracking is disabled." );
+
+        ImGui::Separator();
+
+        if ( ImGui::CollapsingHeader( "Leak Window (Blocks Born In The Window)" ) )
+            ProfilerPanelInternal::drawLeakWindow( profiler, _leakReport );
     }
     void ProfilerPanel::pauseOnSpike()
     {

@@ -120,6 +120,12 @@
 namespace sw
 {
     /**
+     * @brief `-gv_leakWindowFullStacks`: 기동 뒤 기준선 창을 `FullStacks` 로 엽니다. 종료 누수 보고가 줄마다 첫 프레임(누가 할당했나)을 적습니다.
+     * @details 창 안의 모든 할당이 스택을 잡아 Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다. 꺼 두면 `TagTotals`(태그별 바이트 · 개수만)다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_leakWindowFullStacks, false, "기동 뒤 누수 기준선 창을 FullStacks 로 연다 - 종료 보고가 줄마다 할당한 코드의 첫 프레임을 적는다(Debug 가 느려지므로 누수 출처를 찾을 때만)" );
+
+    /**
      * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
      */
@@ -340,7 +346,7 @@ namespace sw
         ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
 #endif
 
-        MemoryProfiler::captureMemoryLeakBaseline();
+        MemoryProfiler::captureMemoryLeakBaseline( gv_leakWindowFullStacks ? LeakWindowDetail::FullStacks : LeakWindowDetail::TagTotals );
 
         return true;
     }
