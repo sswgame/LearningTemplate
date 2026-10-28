@@ -240,6 +240,8 @@ namespace
 
     /**
      * @brief "sw 할당자 밖" 의 상한(KB)입니다. 프로파일러가 로거 · 이름 풀보다 늦게 서면 그 블록(~870 KB)이 이 줄로 갑니다.
+     * @details DLL 정적 초기화 때(프로파일러가 서기 전) 잡은 sw 블록도 이 줄로 셉니다 — 전역 변수 등록자가 이름 · 설명을 `string` 으로 복사하던 때는
+     *          그 몫(~70 KB, 블록 수백 개)만으로 이 상한을 넘었습니다(Debug 에디터 없음 150 KB → 등록자가 글을 가리키게 한 뒤 90 KB).
      */
     constexpr uint64 kMaxOutsideAllocatorKilobytes = 128;
 #endif

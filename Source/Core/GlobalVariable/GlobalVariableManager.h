@@ -289,18 +289,20 @@ namespace sw
      */
     struct SW_API GlobalVariableRegistrar
     {
-        string                                     _name;
+        // 글은 복사하지 않고 가리킨다 — 정의 매크로의 문자열 리터럴이라 등록자와 같은 이미지에 정적 수명으로 있다. 복사하면 등록자마다
+        // 정적 초기화 때(메모리 프로파일러가 서기 전) sw 블록이 잡혀, 태그에 실리지 않는 기동 상주량(Debug 수백 개 · 수십 KB)이 된다.
+        const utf8*                                _pName;
         GlobalVariableType                         _type;
         void*                                      _pData;
         std::variant<bool, int32, float32, string> _defaultValue;
-        string                                     _description;
-        string                                     _enumType;
-        string                                     _moduleName;
+        const utf8*                                _pDescription;
+        const utf8*                                _pEnumType;
+        const utf8*                                _pModuleName;
         uint32                                     _typeSize;
         bool                                       _bTestOnly;
         GlobalVariableRegistrar*                   _pNext;
 
-        /** @brief `getHead()` 리스트의 앞에 연결합니다. */
+        /** @brief `getHead()` 리스트의 앞에 연결합니다. 글 인자(@p pName · @p pDescription · @p pEnumType · @p pModuleName)는 등록자보다 오래 사는 정적 글이어야 합니다. */
         GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4, bool bTestOnly = false );
 
         /**

@@ -591,12 +591,12 @@ namespace sw
         while ( pCurrent != nullptr )
         {
             // 이름 중복 · 모르는 형식은 registerVariable 이 경고로 남긴다 — 나머지 변수는 이어서 등록한다.
-            (void)registerVariable( pCurrent->_name,
+            (void)registerVariable( pCurrent->_pName,
                                     pCurrent->_type,
                                     pCurrent->_pData,
                                     pCurrent->_defaultValue,
-                                    pCurrent->_description,
-                                    pCurrent->_enumType,
+                                    pCurrent->_pDescription,
+                                    pCurrent->_pEnumType,
                                     moduleName,
                                     pCurrent->_typeSize,
                                     pCurrent->_bTestOnly );
@@ -738,13 +738,13 @@ namespace sw
     // ============================================================================
 
     GlobalVariableRegistrar::GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize, bool bTestOnly )
-        : _name{ pName }
+        : _pName{ pName }
         , _type{ type }
         , _pData{ pData }
         , _defaultValue{ defaultValue }
-        , _description{ pDescription }
-        , _enumType{ pEnumType }
-        , _moduleName{ pModuleName }
+        , _pDescription{ pDescription }
+        , _pEnumType{ pEnumType }
+        , _pModuleName{ pModuleName }
         , _typeSize{ typeSize }
         , _bTestOnly{ bTestOnly }
         , _pNext{ getHead() }

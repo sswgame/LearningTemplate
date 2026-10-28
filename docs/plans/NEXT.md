@@ -38,7 +38,7 @@
 | 11. RHI 등록 단언 승격 | `assertRegistryMutableNow` 가 한 번도 걸리지 않았다 — 다른 백엔드 등록 · 해제 경로를 `requireRegistryMutableNow`(모든 구성 abort)로 올릴지 정한다 | [결정 기록](../09_Decisions.md) 5-5 |
 | 12. 샤드 비용표 | 시나리오 케이스 예상 비용을 실제 케이스 시간으로 보정한다 — `ctest -L hostgpu` 한 바퀴의 `AppTest_HostOnly_Shard*` 시간을 재 `Test/TestPolicy.json` 에 적고, 샤드 둘이 겹쳐 시간이 실제로 줄었는지(`hostResourceLock` 이 사라진 뒤) 비교한다 | — |
 | 13. 선호 백엔드 목록 케이스 | `TestRHIDevice` 8 · `TestRenderPassGPU` 18 곳은 아직 "처음 서는 백엔드 하나" 로 돈다 — 선호 순서가 필요 없으면 `SW_TEST_CASE_PER_PARAMETER` 한 줄씩 | — |
-| 14. 자동화 개선 후보 | 어림값 문턱 승격 도구(provisional 38 개) · 비에디터 게임 시나리오 묶음 실행(HostGpuIsolation H2 선행) · 고정 프레임 대기 계측 · 교착 시나리오를 `VerifyBatch.json` 항목으로 | [AutomationSplit](AutomationSplit.md) · [HostGpuIsolation](HostGpuIsolation.md) |
+| 14. 자동화 개선 후보 | 어림값 문턱 승격 도구(provisional 38 개) · 비에디터 게임 시나리오 묶음 실행 · 고정 프레임 대기 계측 · 교착 시나리오를 `VerifyBatch.json` 항목으로 | [AutomationSplit](AutomationSplit.md) |
 | 15. 린트 후속 | `GenerateLintTargets` 에 `SKIP_RETURN_CODE 77`, `CheckNameReferences` 의 다른 걷기들이 건너뜀을 통과로 내는지 | — |
 | 16. 오래된 결함 후보 | 셰이더 쿠커가 옛 퍼뮤테이션 바이너리를 안 지움 · `--cook-shaders` 실패에도 0 · 손 불리언 파서 · 이름 거절 레지스트리 · `ResourceDataKindRegistry` 단일체 · 누수 탐지 2~4 단계 · 야간 Linux Load 실패 원인 · crowd `CrowdSharedUnits` 가설 · RHI 파일 후보 | [LeakDetection](LeakDetection.md) · [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · `Candidates-*.md` |
 | 17. CI 원인 재확인 | push 뒤 `ci-jobs --summary` 한 번 — Wayland 잡 · `CheckSourceGlob` 위반 · `MeshAssetTest.MeshComponentResolvesMeshAssetPath` | — |
