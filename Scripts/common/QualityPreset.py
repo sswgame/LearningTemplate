@@ -16,8 +16,11 @@ from __future__ import annotations
 
 import enum
 import json
+import re
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
+
+from .Paths import getProjectRoot
 
 #: 사용자 설정 파일을 가리키는 App 인자의 이름(`UserSettingsVariables.cpp` 의 `gv_userSettingsFile`).
 kUserSettingsArgument = "-gv_userSettingsFile"
@@ -29,22 +32,33 @@ class SettingsIsolation(enum.Enum):
     """`runApp` 호출이 사용자 설정(그 PC 의 파일 · 사양으로 고른 프리셋)에서 어떻게 떨어졌는지의 선언."""
 
     PRESET_FILE = "preset-file"   #: 품질 프리셋을 쓴 설정 파일을 `-gv_userSettingsFile` 로 건넨다(`writePresetSettingsFile`). 그리는 측정 · 골든은 이것이다.
-    ISOLATED_AUTOMATED = "isolated-automated"   #: 무인 인자(`-unattended`/`-scenario`) + 없는 격리 설정 파일 — 프리셋은 스키마 기본값이다.
-    UNATTENDED_ONLY = "unattended-only"   #: 무인 인자만 있다 — 엔진이 사양으로 프리셋을 고르지는 않지만 이 PC 의 사용자 폴더 설정 파일은 읽는다(시나리오 실행기가 쓴다. 되도록 위 둘로 좁힌다).
+    ISOLATED_AUTOMATED = "isolated-automated"   #: 무인 인자(`-unattended`/`-scenario`) + 없는 격리 설정 파일(배포본은 `kUserDataRootVariable` 환경 변수) — 프리셋은 스키마 기본값이다.
     NOT_APPLICABLE = "not-applicable"  #: 사용자 설정을 읽지 않거나 결과가 그림 · 품질에 달리지 않는 실행(테스트 실행 파일 · 서버 · 쿠킹 · 쓰기 위치 조사). 호출부에 이유를 적는다.
 
 
-def checkSettingsIsolation(isolation: SettingsIsolation, listArgument: list[str]) -> None:
-    """선언이 실제 인자와 맞지 않으면 ValueError — `runApp` 이 App 을 띄우기 전에 부른다."""
+#: 사용자 데이터 · 설정 폴더의 뿌리를 덮어쓰는 환경 변수 이름의 정본(C++ 헤더) — 배포본은 `gv_` 를 몰라 이 변수로 사용자 설정을 가른다(5-2_Build.md).
+kUserDataPathHeaderRelPath = "Source/Core/File/UserDataPath.h"
+_kUserDataRootRe = re.compile(r'inline\s+constexpr\s+const\s+utf8\*\s+kUserDataRootVariable\s*=\s*"([^"]+)"\s*;')
+
+
+def readUserDataRootVariable(repositoryRoot: Path) -> str:
+    """엔진 헤더(`UserDataPath.h`)의 `kUserDataRootVariable` 값입니다. 줄을 못 찾으면 멈춘다(폴백 없음)."""
+    headerPath = repositoryRoot / kUserDataPathHeaderRelPath
+    match = _kUserDataRootRe.search(headerPath.read_text(encoding="utf-8"))
+    if match is None:
+        raise ValueError(f"{headerPath}: `inline constexpr const utf8* kUserDataRootVariable = \"…\";` 줄을 찾지 못했다 — 줄 모양이 바뀌었나")
+    return match.group(1)
+
+
+def checkSettingsIsolation(isolation: SettingsIsolation, listArgument: list[str], environment: dict[str, str] | None = None) -> None:
+    """선언이 실제 인자(와 환경)에 맞지 않으면 ValueError — `runApp` 이 App 을 띄우기 전에 부른다. 배포본은 설정 파일 인자 대신 `kUserDataRootVariable` 환경 변수가 격리한다."""
     bSettingsFile = any(argument.startswith(f"{kUserSettingsArgument}=") and len(argument) > len(kUserSettingsArgument) + 1 for argument in listArgument)
+    bSettingsFile = bSettingsFile or bool(environment and environment.get(readUserDataRootVariable(getProjectRoot())))
     bAutomated = any(argument == prefix or argument.startswith(f"{prefix}=") for argument in listArgument for prefix in kAutomatedArgumentPrefixes)
     if isolation is SettingsIsolation.PRESET_FILE and not bSettingsFile:
         raise ValueError(f"PRESET_FILE 인데 인자에 {kUserSettingsArgument}=<경로> 가 없다: {listArgument}")
     if isolation is SettingsIsolation.ISOLATED_AUTOMATED and not (bSettingsFile and bAutomated):
         raise ValueError(f"ISOLATED_AUTOMATED 인데 인자에 무인 인자와 {kUserSettingsArgument}=<경로> 가 함께 있지 않다: {listArgument}")
-    if isolation is SettingsIsolation.UNATTENDED_ONLY and not bAutomated:
-        raise ValueError(f"UNATTENDED_ONLY 인데 인자에 {' · '.join(kAutomatedArgumentPrefixes)} 가 없다: {listArgument}")
-
 
 def readScalabilityPreset(repositoryRoot: Path, quality: str) -> dict[str, str]:
     """엔진 설정 스키마(`Resource/engine/settings/engine.settings.xml` 의 <Scalability>)에서 품질 프리셋이 묶는 설정 값들 — 프리셋 표를 여기 다시 적지 않는다."""

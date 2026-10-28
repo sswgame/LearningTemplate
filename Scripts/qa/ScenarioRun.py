@@ -37,7 +37,7 @@ from common.BuildTree import BuildTree, kMapConfigPreset, readConfigPresets  # n
 from common.CookContract import CookContractSpec  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.QualityPreset import SettingsIsolation  # noqa: E402
+from common.QualityPreset import SettingsIsolation, readUserDataRootVariable  # noqa: E402
 from common.ScenarioArguments import kVocabulary  # noqa: E402
 from common.ScenarioFile import (ScenarioDeclaration, ScenarioFileError, findResourceRoot, findScenarioCandidates,  # noqa: E402
                                  readScenarioDeclaration)
@@ -201,8 +201,23 @@ def makeReportRelPath(plan: RunPlan, backend: Backend) -> str:
     return f"{kAutomationFolder}/{plan.declaration.stem}_{backend.name}.json"
 
 
+def makeIsolatedSettingsPath(plan: RunPlan, backend: Backend) -> Path:
+    """이 판의 격리된 사용자 설정 파일 — 늘 없는 채로 시작한다(`judgeRun` 이 지운다). `AppTestUtil::makeIsolationArguments` 의 `Saved/UserSettings/usersettings.json` 에 해당한다."""
+    return plan.binDir / kAutomationFolder / "UserSettings" / f"{plan.declaration.stem}_{backend.name}.json"
+
+
+def makeIsolatedUserHome(plan: RunPlan, backend: Backend) -> Path:
+    """배포본(`gv_` 를 모른다)의 사용자 데이터 · 설정 뿌리 — `kUserDataRootVariable` 환경 변수로 준다. `AppTestUtil::makeIsolationEnvironment` 의 `Saved/UserHome` 에 해당한다."""
+    return plan.binDir / kAutomationFolder / "UserHome" / f"{plan.declaration.stem}_{backend.name}"
+
+
+def hasOwnSettingsArgument(plan: RunPlan) -> bool:
+    """`--app-arg` 가 사용자 설정 파일을 직접 정했는가 — 시퀀스 러너가 앞 실행의 설정을 뒤 실행이 읽게 같은 파일을 줄 때다. 그러면 격리 파일을 붙이지 않는다."""
+    return any(argument.startswith(kVocabulary.userSettingsFileArgumentPrefix) for argument in plan.listAppArg)
+
+
 def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
-    """App 에 줄 인자. 순서: 무인 · 시나리오 · 보고 · 백엔드 · 게임 · `<Launch>` 변수 · 에디터 · `--app-arg`. 글은 C++ `AppTestUtil` 상수(`kVocabulary`)다."""
+    """App 에 줄 인자. 순서: 무인 · 시나리오 · 보고 · 백엔드 · 게임 · `<Launch>` 변수 · 에디터 · 격리 설정 파일 · `--app-arg`. 글은 C++ `AppTestUtil` 상수(`kVocabulary`)다."""
     words = kVocabulary
     listArgument = [words.unattendedArgument, f"{words.scenarioArgumentPrefix}{plan.declaration.resourceId}",
                     f"{words.scenarioReportArgumentPrefix}{makeReportRelPath(plan, backend)}"]
@@ -213,6 +228,9 @@ def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
     listArgument += plan.declaration.makeLaunchArguments()
     if plan.declaration.bEditor:
         listArgument += [words.editorArgument, f"{words.editorStateDirArgumentPrefix}{makeEditorStateFolder(plan, backend)}"]
+    # 사용자 폴더(그 PC 의 설정)를 읽지 않게 없는 격리 파일을 가리킨다. 배포본은 `gv_` 를 몰라 못 붙이고 환경 변수로 가른다(`judgeRun`).
+    if not plan.bShipping and not hasOwnSettingsArgument(plan):
+        listArgument.append(f"{words.userSettingsFileArgumentPrefix}{makeIsolatedSettingsPath(plan, backend).as_posix()}")
     return listArgument + list(plan.listAppArg)
 
 
@@ -290,8 +308,17 @@ def judgeRun(plan: RunPlan, backend: Backend, listArgument: list[str], mapCode: 
             result.meaning = f"GPU {'독점' if bExclusive else '공유'} 칸을 잡지 못함(종료 코드 {lockCode}) — 돌지 않았다"
             return result
         clearOutputFolder(plan)   # 잠금을 잡은 뒤에 비운다 — 같은 시나리오를 도는 다른 판의 산출물을 지우지 않게
-        # 인자에 `-unattended` · `-scenario=` 가 있어 엔진이 사양으로 프리셋을 고르지 않는다(a0521e79a). 이 PC 의 사용자 폴더 설정 파일은 읽으므로 품질에 기대는 시나리오는 <Launch> 로 못 박는다.
-        run = runApp(plan.appPath, listArgument, settings=SettingsIsolation.UNATTENDED_ONLY, cwd=plan.binDir, timeoutSeconds=float(plan.timeoutSeconds))
+        # 무인 인자(`-unattended`)라 엔진이 사양으로 프리셋을 고르지 않고(a0521e79a), 격리 설정 파일(배포본은 환경 변수)이라 이 PC 의 사용자 폴더 설정도 읽지 않는다.
+        # 품질에 기대는 시나리오는 <Launch> 로 못 박는다. 시퀀스가 `--app-arg` 로 준 설정 파일은 지우지 않는다(앞 실행의 설정을 읽는 용도).
+        environment: dict[str, str] = {}
+        if plan.bShipping:
+            userHome = makeIsolatedUserHome(plan, backend)
+            shutil.rmtree(userHome, ignore_errors=True)
+            environment[readUserDataRootVariable(getProjectRoot())] = str(userHome)
+        elif not hasOwnSettingsArgument(plan):
+            makeIsolatedSettingsPath(plan, backend).unlink(missing_ok=True)
+        run = runApp(plan.appPath, listArgument, settings=SettingsIsolation.ISOLATED_AUTOMATED, cwd=plan.binDir, timeoutSeconds=float(plan.timeoutSeconds),
+                     environment=environment)
     result.seconds = run.seconds
     result.exitCode = run.exitCode
     if not run.bLaunched:

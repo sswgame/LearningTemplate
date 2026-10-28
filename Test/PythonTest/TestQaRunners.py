@@ -25,7 +25,8 @@ from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decod
                                  encodePng, parsePpm)
 from common.AppRun import kStartupRe, splitRunSeconds  # noqa: E402
 from common.AppRun import runApp  # noqa: E402
-from common.QualityPreset import SettingsIsolation, checkSettingsIsolation, describeQualityMismatch, readScalabilityPreset, readTableQuality, writePresetSettingsFile  # noqa: E402
+from common.QualityPreset import (SettingsIsolation, checkSettingsIsolation, describeQualityMismatch, readScalabilityPreset,  # noqa: E402
+                                  readTableQuality, readUserDataRootVariable, writePresetSettingsFile)
 from qa.GoldenImages import formatCaseLine  # noqa: E402
 from qa.PerfRegression import compareInternal  # noqa: E402
 
@@ -275,17 +276,23 @@ class SettingsIsolationEntranceTest(unittest.TestCase):
         for isolation, listArgument in ((SettingsIsolation.PRESET_FILE, ["-gv_profileFrames=1"]),
                                         (SettingsIsolation.PRESET_FILE, ["-gv_userSettingsFile="]),
                                         (SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"]),
-                                        (SettingsIsolation.ISOLATED_AUTOMATED, ["-gv_userSettingsFile=a.json", "-scenario-report=x"]),
-                                        (SettingsIsolation.UNATTENDED_ONLY, ["-gv_userSettingsFile=a.json"])):
+                                        (SettingsIsolation.ISOLATED_AUTOMATED, ["-gv_userSettingsFile=a.json", "-scenario-report=x"])):
             with self.assertRaises(ValueError, msg=(isolation, listArgument)):
                 runApp(Path(sys.executable), listArgument, settings=isolation)
 
     def testMatchingDeclarationsPass(self) -> None:
         for isolation, listArgument in ((SettingsIsolation.PRESET_FILE, ["-gv_userSettingsFile=a.json"]),
                                         (SettingsIsolation.ISOLATED_AUTOMATED, ["-scenario=x.xml", "-gv_userSettingsFile=a.json"]),
-                                        (SettingsIsolation.UNATTENDED_ONLY, ["-unattended"]),
                                         (SettingsIsolation.NOT_APPLICABLE, [])):
             checkSettingsIsolation(isolation, listArgument)
+
+    def testShippingIsolationComesFromTheUserDataRootEnvironmentVariable(self) -> None:
+        """배포본은 `gv_` 를 몰라 설정 파일 인자를 못 준다 — 엔진 헤더의 `kUserDataRootVariable` 환경 변수가 있으면 격리한 것으로 본다."""
+        variable = readUserDataRootVariable(kRepositoryRoot)
+        self.assertEqual("SW_USER_DATA_ROOT", variable)
+        checkSettingsIsolation(SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"], {variable: "C:/home"})
+        with self.assertRaises(ValueError):
+            checkSettingsIsolation(SettingsIsolation.ISOLATED_AUTOMATED, ["-unattended"], {"OTHER": "x"})
 
     def testEveryRunAppCallerStatesItsIsolation(self) -> None:
         """Scripts 의 `runApp(` 호출이 모두 `settings=` 를 적는다(새 호출자가 빠뜨리면 여기서 알린다 — 런타임 TypeError 의 정적 짝)."""

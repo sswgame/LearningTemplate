@@ -234,7 +234,7 @@ def runApp(appPath: Path, listArgument: list[str], *, settings: SettingsIsolatio
     `settings` 는 필수다 — 사용자 설정(그 PC 의 파일 · 사양으로 고른 프리셋)에서 어떻게 떨어졌는지 밝히고(`SettingsIsolation`), 인자와 맞지 않으면 띄우기 전에 ValueError 다.
     `limits` 는 CPU 코어 · 메모리 제한(`ProcessLimits`, 부하 검증의 하드웨어 프로필), `environment` 는 더할 환경 변수다.
     """
-    checkSettingsIsolation(settings, listArgument)
+    checkSettingsIsolation(settings, listArgument, environment)
     result = AppRunResult()
     workingDirectory = Path(cwd) if cwd is not None else Path(appPath).resolve().parent
     startSeconds = time.monotonic()
