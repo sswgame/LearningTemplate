@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/FourCcUtil.h"
-#include "Core/String/HexDigitUtil.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 

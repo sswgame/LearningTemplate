@@ -5,7 +5,8 @@
 # 이 표는 빌드도 읽는다 — `Source/Core/CMakeLists.txt` 가 `Log` 보다 낮은 폴더의 `.cpp` 를 `Core_low_objects` 로 따로 지어 `Logger.h` 없는 `pchLow.h` 를 쓴다.
 # 그러니 줄 모양(`폴더 = 숫자`)을 바꾸지 않는다.
 [tier]
-Common = 0
+Foundation = 0     # 언어 · 플랫폼 바닥(형식 · 매크로 · 정의 · OS 헤더 · enum 플래그 · ASCII · 16진 글자)
+Hash = 0           # 해시 · 씨앗 상수와 비밀 비교(언리얼 Core/Hash) — 컨테이너가 기본 해시로 쓴다
 Predefined = 0      # 인자 · 이름 표(.xxx) — 아무것도 include 하지 않는다
 Concurrency = 1     # 원시 동기화(atomic · mutex · SpinLock · Futex)와 경합 검출 훅
 Math = 1

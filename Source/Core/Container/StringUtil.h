@@ -7,12 +7,12 @@
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/ASCIIUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/ASCIIUtil.h"
 
 namespace sw
 {
