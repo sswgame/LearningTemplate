@@ -102,7 +102,7 @@
 
 #include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Scene/SceneNavigationCooker.h"
+#include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Debug/DebugHUD.h"

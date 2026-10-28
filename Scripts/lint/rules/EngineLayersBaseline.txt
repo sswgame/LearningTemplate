@@ -1,4 +1,3 @@
-Asset/AssetManager.cpp -> Engine/Physics/PhysicsSystem.h
 Bootstrap/ContentRootSubsystem.cpp -> Engine/Asset/AssetPaths.h
 Bootstrap/MemoryBudgetSubsystem.cpp -> Engine/Asset/AssetPaths.h
 Bootstrap/StaticStorageSubsystem.cpp -> Engine/Graphics/RHI/RHIRenderResource.h
@@ -16,20 +15,6 @@ Object/Component/2D/SpriteComponent.cpp -> Engine/Animation/Sprite/SpriteClipCac
 Object/Component/3D/MeshLODSystem.h -> Engine/Animation/Scene/AnimationLOD.h
 Profiling/ProfilerTraceExport.cpp -> Engine/Asset/AssetPaths.h
 Reflection/ReflectionSubsystem.cpp -> Engine/Localization/EngineDefaultAssetsSubsystem.h
-Scene/AnimationWatches.cpp -> Engine/Animation/Scene/AnimationSystem.h
-Scene/Scene.cpp -> Engine/Audio/Component/SceneAudio.h
-Scene/Scene.cpp -> Engine/Navigation/Component/SceneNavigation.h
-Scene/Scene.cpp -> Engine/Physics/Component/ScenePhysics.h
-Scene/SceneDebugDraw.cpp -> Engine/Navigation/Component/SceneNavigation.h
-Scene/SceneDebugDraw.cpp -> Engine/Physics/Component/ScenePhysics.h
-Scene/SceneDebugDraw.cpp -> Engine/Physics/PhysicsDebugDraw.h
-Scene/SceneDevCommands.cpp -> Engine/Animation/Scene/AnimationSystem.h
-Scene/SceneManager.cpp -> Engine/Audio/IAudioService.h
-Scene/SceneManager.cpp -> Engine/Physics/Component/ScenePhysics.h
-Scene/SceneManager.cpp -> Engine/Physics/PhysicsSystem.h
-Scene/SceneNavigationCooker.cpp -> Engine/Navigation/Component/NavMeshSurfaceComponent.h
-Scene/SceneNavigationCooker.cpp -> Engine/Navigation/Component/SceneNavigation.h
-Scene/SceneNavigationCooker.cpp -> Engine/Navigation/NavMeshAsset.h
 Serialization/Format/Archive.cpp -> Engine/Asset/AssetIO.h
 Serialization/Format/ReflectedXMLFile.cpp -> Engine/Asset/AssetIO.h
 Serialization/Format/ReflectedXMLFile.cpp -> Engine/Asset/AssetPaths.h

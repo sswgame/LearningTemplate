@@ -35,6 +35,7 @@
 namespace sw
 {
     class AssetManager;
+    class CameraComponent;
     class Component;
     class GameObjectManager;
     class SceneComponent;
@@ -454,6 +455,16 @@ namespace sw
         {
             return _sceneScope.get<TService>();
         }
+        /** @brief 이번 프레임의 게임 카메라를 정합니다(씬이 `update` 전에 부른다). 시야를 따라가는 서비스(오디오 리스너)가 씬을 몰라도 읽는다. */
+        void setFrameCamera( const CameraComponent* pCamera ) { _pFrameCamera = pCamera; }
+        /** @brief 이번 프레임의 게임 카메라입니다. 없으면 nullptr 입니다. */
+        const CameraComponent* getFrameCamera() const { return _pFrameCamera; }
+        /** @brief 모든 씬 서비스에 씬 원본 경로를 알립니다(`ISceneService::onSceneLoading`, 노드를 짓기 전에 씬이 부른다). */
+        void notifySceneLoading( string_view sourcePath );
+        /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
+        void applyPreviewPolicy( const ScenePreviewPolicy& policy );
+        /** @brief 모든 씬 서비스가 디버그 선을 그립니다(`ISceneService::drawDebug`, `SceneDebugDraw` 가 씬 틱 뒤에 부른다). */
+        void drawServiceDebug( DebugDrawQueue& queue );
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.
@@ -592,6 +603,8 @@ namespace sw
         SubsystemScope _sceneScope;
         /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
         vector<SceneServiceEntry> _listSceneService;
+        /** @brief 이번 프레임의 게임 카메라입니다(`setFrameCamera`, 빌림). 씬이 갱신 전에 채운다. */
+        const CameraComponent* _pFrameCamera;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`bindFrameStepObserver`)입니다. 보통 비어 있습니다. */
         DelegateSlot<FrameStepObserver> _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */

@@ -128,6 +128,10 @@ namespace sw
 
         /** @brief 갱신 한 번 — 파일 머리말의 순서입니다. 게임 스레드에서 매니저가 부릅니다. */
         void update( float32 deltaTime ) override;
+        /** @brief 씬 원본 경로를 받아 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름으로 둡니다(`setSourcePath`). */
+        void onSceneLoading( string_view sourcePath ) override { setSourcePath( sourcePath ); }
+        /** @brief `gv_navDebugDraw` 의 비트대로 디버그 뷰를 맞추고 선을 그립니다. */
+        void drawDebug( DebugDrawQueue& queue ) override;
 
         // 컴포넌트 등록은 구독을 돌려준다. 컴포넌트가 들고 `onUnregister` 에서 놓으면 빠진다. nullptr 이거나 이미 등록했으면 빈 구독이다.
         [[nodiscard]] Subscription registerAgent( NavMeshAgentComponent* pAgent );

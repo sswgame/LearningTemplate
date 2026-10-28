@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Scene/SceneNavigationCooker.h"
+#include "Engine/Navigation/SceneNavigationCooker.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"

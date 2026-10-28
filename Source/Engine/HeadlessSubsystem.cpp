@@ -33,6 +33,7 @@
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
+#include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -40,7 +41,6 @@
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 

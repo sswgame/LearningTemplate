@@ -3,6 +3,7 @@
 #include "Engine/Navigation/Component/SceneNavigation.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
@@ -21,6 +22,7 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -51,6 +53,18 @@ namespace sw
 namespace sw
 {
     SW_SCENE_SERVICE( SceneNavigation, Navigation )
+
+    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
+
+    void SceneNavigation::drawDebug( DebugDrawQueue& queue )
+    {
+        // 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
+        updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
+        if ( gv_navDebugDraw == 0 )
+            return;
+        PhysicsDebugQueueRenderer renderer{ queue };
+        drawDebug( renderer, static_cast<uint32>( gv_navDebugDraw ) );
+    }
 
     SceneNavigation::SceneNavigation( GameObjectManager& manager )
         : _settings{}

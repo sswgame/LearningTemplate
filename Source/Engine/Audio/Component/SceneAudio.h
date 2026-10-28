@@ -65,8 +65,13 @@ namespace sw
          * @param pScene2D 3D 물리 씬이 없을 때 가림 레이캐스트를 쏠 2D 물리 씬입니다(월드 XY 평면). 둘 다 nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다.
          */
         void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D = nullptr );
-        /** @brief 단계 목록이 부르는 진행입니다. 아무것도 하지 않습니다 — 진행은 카메라를 받는 위 `update` 를 `Scene::update` 이 부른다. */
-        void update( float32 deltaTime ) override { (void)deltaTime; }
+        /**
+         * @brief 단계 목록이 부르는 진행입니다(`FlushEnd` — 틱이 옮긴 자리로). 카메라는 매니저의 이번 프레임 게임 카메라(`getFrameCamera`),
+         *        가림은 같은 씬의 물리 서비스로 잰다. 미리보기 정책이 끈 씬은 넣지 않는다.
+         */
+        void update( float32 deltaTime ) override;
+        /** @brief 미리보기 정책의 오디오 켜기(`ScenePreviewPolicy::_bAudio`)를 따릅니다 — 미리보기 창이 게임의 소리를 흔들지 않게. */
+        void applyPreviewPolicy( const ScenePreviewPolicy& policy ) override;
         /** @brief 씬을 비울 때 부릅니다. 등록은 컴포넌트가 스스로 풀므로 할 일이 없습니다. */
         void onSceneCleared() override {}
 
@@ -116,6 +121,7 @@ namespace sw
         vector<AudioEmitterComponent*>                     _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<ZoneValue>                                  _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                                  _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
+        GameObjectManager&                                 _manager;                 /**< 이 서비스를 가진 씬의 매니저입니다(카메라 · 물리 서비스를 찾는다). */
         IAudioService*                                     _pAudioService;           /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
         AudioEngine*                                       _pEngineOverride;         /**< 테스트가 정한 엔진입니다. */
         const IAudioOcclusionQuery*                        _pOcclusionOverride;      /**< 바꾼 가림 질의입니다. */
@@ -125,5 +131,6 @@ namespace sw
         uint32                                             _occlusionCursor;         /**< 가림을 측정할 다음 에미터 자리입니다. */
         uint32                                             _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
         bool                                               _bHasLastCameraPosition;  /**< `_lastCameraPosition` 이 유효한지입니다. */
+        bool                                               _bUpdateEnabled;          /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
     };
 } // namespace sw

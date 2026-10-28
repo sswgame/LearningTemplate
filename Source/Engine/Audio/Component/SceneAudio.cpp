@@ -13,6 +13,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
 
 namespace sw
 {
@@ -60,6 +62,7 @@ namespace sw
         , _listEmitterSnapshot{}
         , _listZoneValue{}
         , _listZoneCurrent{}
+        , _manager{ manager }
         , _pAudioService{ manager.getSceneEngineServices()._pAudioService }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
@@ -69,6 +72,7 @@ namespace sw
         , _occlusionCursor{ 0 }
         , _activeListenerMask{ 0 }
         , _bHasLastCameraPosition{ false }
+        , _bUpdateEnabled{ true }
     {
     }
 
@@ -127,6 +131,19 @@ namespace sw
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine != nullptr )
             pEngine->removeEmitter( pEmitter->getEmitterID() );
+    }
+
+    void SceneAudio::applyPreviewPolicy( const ScenePreviewPolicy& policy )
+    {
+        _bUpdateEnabled = policy._bAudio;
+    }
+
+    void SceneAudio::update( const float32 deltaTime )
+    {
+        if ( _bUpdateEnabled == false )
+            return;
+        const ScenePhysics& physics = _manager.getSubsystem<ScenePhysics>();
+        update( deltaTime, _manager.getFrameCamera(), physics.findScene3D(), physics.findScene2D() );
     }
 
     void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )

@@ -45,8 +45,10 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                shutdownSubsystem() override { shutdown(); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        /** @brief 병렬 스텝이 태스크를 쓴다. 에셋(메시 셰이프 캐시)을 읽으므로 Resource 뒤에 서는데, 그 순서는 높은 층인 `AssetManager` 가 역방향으로 적는다. */
+        /** @brief 병렬 스텝이 태스크를 쓰고, 에셋(메시 셰이프 캐시)을 읽으므로 에셋 매니저 뒤에 선다. */
         span<const utf8* const> getSubsystemDependencies() const override;
+        /** @brief 씬 매니저는 물리 뒤에 선다 — 낮은 층인 씬이 기능 이름을 적지 않게 기능 쪽이 적는다. */
+        span<const utf8* const> getSubsystemDependents() const override;
         SubsystemHostMask       getSubsystemHost() const override { return SubsystemHostMask::All; }
         MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Physics; }
 

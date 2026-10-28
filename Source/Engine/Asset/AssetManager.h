@@ -92,8 +92,6 @@ namespace sw
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
-        /** @brief 물리(메시 셰이프 캐시가 에셋을 읽는다)는 낮은 층이라 이것의 이름을 모른다 — 역방향으로 적는다. */
-        span<const utf8* const> getSubsystemDependents() const override;
         MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
         /**
          * @brief 에셋 식별자(GUID) 테이블을 채웁니다. 반환값은 등록 수입니다.

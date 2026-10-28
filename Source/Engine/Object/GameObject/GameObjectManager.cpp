@@ -111,6 +111,7 @@ namespace sw
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
         , _sceneScope{ services._pEngineSubsystems }
         , _listSceneService{}
+        , _pFrameCamera{ nullptr }
         , _frameStepObserver{}
         , _listFrameSystem{}
         , _frameSystemLanePlan{}
@@ -166,6 +167,30 @@ namespace sw
         for ( SceneServiceEntry& entry : _listSceneService )
         {
             entry._pService->onSceneCleared();
+        }
+    }
+
+    void GameObjectManager::notifySceneLoading( const string_view sourcePath )
+    {
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            entry._pService->onSceneLoading( sourcePath );
+        }
+    }
+
+    void GameObjectManager::applyPreviewPolicy( const ScenePreviewPolicy& policy )
+    {
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            entry._pService->applyPreviewPolicy( policy );
+        }
+    }
+
+    void GameObjectManager::drawServiceDebug( DebugDrawQueue& queue )
+    {
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            entry._pService->drawDebug( queue );
         }
     }
 

@@ -5,9 +5,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
 #include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -26,8 +28,14 @@ namespace sw
 
     span<const utf8* const> PhysicsSystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, AssetManager::kSubsystemName };
         return kArrDependency;
+    }
+
+    span<const utf8* const> PhysicsSystem::getSubsystemDependents() const
+    {
+        static constexpr const utf8* kArrDependent[] = { SceneManager::kSubsystemName };
+        return kArrDependent;
     }
 
     bool PhysicsSystem::initialize( const AssetID& assetID )

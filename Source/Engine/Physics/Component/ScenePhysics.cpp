@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/ScenePhysics.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -10,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -56,6 +58,9 @@ namespace sw
 namespace sw
 {
     SW_SCENE_SERVICE( ScenePhysics, Physics )
+
+    /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
+    SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
 
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
@@ -527,5 +532,18 @@ namespace sw
             _pScene3D->drawDebug( renderer );
         if ( _pScene2D != nullptr )
             _pScene2D->drawDebug( renderer );
+    }
+
+    void ScenePhysics::applyPreviewPolicy( const ScenePreviewPolicy& policy )
+    {
+        setFixedStepOverride( policy._fixedStepOverride );
+    }
+
+    void ScenePhysics::drawDebug( DebugDrawQueue& queue )
+    {
+        if ( gv_physicsDebugDraw == false )
+            return;
+        PhysicsDebugQueueRenderer renderer{ queue };
+        drawDebug( static_cast<IPhysicsDebugRenderer&>( renderer ) );
     }
 } // namespace sw

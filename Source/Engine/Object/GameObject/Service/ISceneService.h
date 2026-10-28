@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -26,7 +27,9 @@
 
 namespace sw
 {
+    class DebugDrawQueue;
     class GameObjectManager;
+    struct ScenePreviewPolicy;
 
     /**
      * @class ISceneService
@@ -41,6 +44,14 @@ namespace sw
         virtual void update( float32 deltaTime ) = 0;
         /** @brief 씬을 비울 때 들고 있던 것을 놓습니다(`GameObjectManager::clear`). 서비스 자체는 남습니다. */
         virtual void onSceneCleared() = 0;
+
+        // 씬이 기능을 모르게 하는 훅 — 씬(`Scene` · `SceneManager` · `SceneDebugDraw`)은 모든 서비스에 같은 부름을 돌리고, 기능이 자기 몫만 한다.
+        /** @brief 씬 문서를 짓기 전에 그 원본 경로 @p sourcePath 를 알립니다(쿠킹본 이름을 찾는 서비스 — 내비메시). */
+        virtual void onSceneLoading( string_view sourcePath ) { (void)sourcePath; }
+        /** @brief 미리보기 씬의 정책을 적용합니다 — 오디오는 켜고 끄기, 물리는 고정 스텝을 읽는다. */
+        virtual void applyPreviewPolicy( const ScenePreviewPolicy& policy ) { (void)policy; }
+        /** @brief 씬 틱 뒤 디버그 선을 그립니다(`SceneDebugDraw`). 켜고 끄는 전역 변수는 그 기능의 .cpp 에 둔다. */
+        virtual void drawDebug( DebugDrawQueue& queue ) { (void)queue; }
 
         /** @brief 씬 서비스는 만들 때(매니저의 생성자) 선다 — 따로 세울 것이 없으면 그대로 둔다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }

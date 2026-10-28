@@ -15,6 +15,7 @@
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Audio/NullAudioBackend.h"
+#include "Engine/Scene/SceneManager.h"
 
 // NullAudioBackend 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
@@ -543,5 +544,11 @@ namespace sw
     {
         static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
         return kArrDependency;
+    }
+
+    span<const utf8* const> IAudioService::getSubsystemDependents() const
+    {
+        static constexpr const utf8* kArrDependent[] = { SceneManager::kSubsystemName };
+        return kArrDependent;
     }
 } // namespace sw

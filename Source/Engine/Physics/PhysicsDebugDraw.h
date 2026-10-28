@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw
@@ -78,5 +79,25 @@ namespace sw
         /** @brief 2D 셰이프 하나를 바디 자세(@p bodyPosition, @p bodyAngle)에 그립니다(Z = 0). */
         static void drawShape2D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc2D& shape, const float2& bodyPosition, float32 bodyAngle,
                                  const float4& color );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 받은 선을 디버그 드로우 큐로 옮기는 출구입니다. 씬 서비스(물리 · 내비)가 `ISceneService::drawDebug` 에서 쓴다.
+     */
+    class PhysicsDebugQueueRenderer final : public IPhysicsDebugRenderer
+    {
+    public:
+        explicit PhysicsDebugQueueRenderer( DebugDrawQueue& queue )
+            : _queue{ queue }
+        {
+        }
+
+        void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color ); }
+
+    private:
+        DebugDrawQueue& _queue;
     };
 } // namespace sw

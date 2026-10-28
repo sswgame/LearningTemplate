@@ -17,7 +17,6 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -334,11 +333,5 @@ namespace sw
     {
         static constexpr const utf8* kArrDependency[] = { CompressionCodecRegistry::kSubsystemName, ConfigManager::kSubsystemName };
         return kArrDependency;
-    }
-
-    span<const utf8* const> AssetManager::getSubsystemDependents() const
-    {
-        static constexpr const utf8* kArrDependent[] = { PhysicsSystem::kSubsystemName };
-        return kArrDependent;
     }
 } // namespace sw

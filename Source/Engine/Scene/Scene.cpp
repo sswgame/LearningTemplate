@@ -8,11 +8,9 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Audio/Component/SceneAudio.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -22,7 +20,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
@@ -377,7 +374,6 @@ namespace sw
         , _pMaterial{ nullptr }
         , _activeGameCamera{}
         , _gameCameraOverride{}
-        , _bAudioUpdateEnabled{ true }
     {
     }
 
@@ -421,8 +417,8 @@ namespace sw
         if ( doc._sceneSettings.validate( _name ) == false )
             return false;
         _sceneSettings = doc._sceneSettings;
-        // 내비게이션이 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름이다.
-        _objectManager->getSubsystem<SceneNavigation>().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
+        // 서비스가 쿠킹본(내비메시 `<씬>.navmesh` 등)을 찾는 이름이다.
+        _objectManager->notifySceneLoading( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
         if ( instantiateNodes( doc._listSceneObjectNode, false, nullptr, pStop ) == false )
             return false;
@@ -676,11 +672,9 @@ namespace sw
             if ( pCamera != nullptr )
                 streaming.setCameraSource( pCamera->getWorldPosition() );
         }
+        // 시야를 따라가는 서비스(오디오 리스너)는 씬을 모른다 — 이번 프레임의 게임 카메라를 매니저에 둔다.
+        _objectManager->setFrameCamera( getActiveGameCamera() );
         _objectManager->update( deltaTime );
-        if ( _bAudioUpdateEnabled == false )
-            return;
-        // 틱이 옮긴 위치로 리스너(리스너 컴포넌트, 없으면 게임 카메라), 에미터, 가림, 리버브 존을 오디오 엔진에 넣는다.
-        _objectManager->getSubsystem<sw::SceneAudio>().update( deltaTime, getActiveGameCamera(), _objectManager->getSubsystem<sw::ScenePhysics>().findScene3D(), _objectManager->getSubsystem<sw::ScenePhysics>().findScene2D() );
     }
 
     /**

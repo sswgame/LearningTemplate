@@ -18,7 +18,6 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PreloadSet.h"
-#include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -27,8 +26,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
-#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
@@ -604,11 +601,10 @@ namespace sw
         /** @brief 정책을 씬에 적용합니다(오디오 · 물리). 틱 · 시간 배율은 `tickPreviewScenes` 가 읽는다. */
         void applyPreviewPolicy( Scene& scene, const ScenePreviewPolicy& policy )
         {
-            scene.setAudioUpdateEnabled( policy._bAudio );
             if ( scene.getObjectManager() != nullptr )
             {
                 scene.getObjectManager()->setPhysicsStepEnabled( policy._bPhysics );
-                scene.getObjectManager()->getSubsystem<ScenePhysics>().setFixedStepOverride( policy._fixedStepOverride );
+                scene.getObjectManager()->applyPreviewPolicy( policy ); // 오디오 켜고 끄기 · 물리 고정 스텝은 그 서비스가 읽는다
             }
         }
 
@@ -967,8 +963,9 @@ namespace sw
 {
     span<const utf8* const> SceneManager::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { IAudioService::kSubsystemName, AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,
-                                                          PhysicsSystem::kSubsystemName, AssetManager::kSubsystemName, TaskManager::kSubsystemName };
+        // 오디오 · 물리는 그쪽이 `getSubsystemDependents` 로 씬 매니저를 자기 뒤에 둔다(씬은 기능 이름을 모른다).
+        static constexpr const utf8* kArrDependency[] = { AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,
+                                                          AssetManager::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw
