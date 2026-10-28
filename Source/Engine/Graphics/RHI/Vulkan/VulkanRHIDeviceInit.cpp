@@ -184,7 +184,7 @@ namespace sw
         else
         {
             SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
-                          availableExtCount );
+                          listAvailableExt.size() );
             for ( const VkExtensionProperties& ext : listAvailableExt )
             {
                 (void)ext;

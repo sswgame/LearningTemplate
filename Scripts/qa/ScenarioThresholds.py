@@ -142,7 +142,7 @@ def formatNumber(value: float) -> str:
 
 def parseSteps(resourceRoot: Path, resourceId: str) -> list[ImageStep]:
     """시나리오 파일 하나의 `<ExpectImage>` 들. 주석 안의 것은 건너뛴다. 읽을 수 없으면 `ValueError`."""
-    text = (resourceRoot / resourceId).read_text(encoding="utf-8", newline="")
+    text = (resourceRoot / resourceId).read_bytes().decode("utf-8")
     masked = _kCommentRe.sub(lambda match: re.sub(r"[^\n]", " ", match.group(0)), text)
     scenarioName = readRootName(resourceRoot / resourceId)
     listStep: list[ImageStep] = []
@@ -247,7 +247,7 @@ def applyProposals(resourceRoot: Path, listProposal: list[Proposal]) -> int:
     changed = 0
     for resourceId, listFileProposal in mapFile.items():
         path = resourceRoot / resourceId
-        text = path.read_text(encoding="utf-8", newline="")
+        text = path.read_bytes().decode("utf-8")
         for proposal in sorted(listFileProposal, key=lambda item: item.step.startOffset, reverse=True):   # 뒤쪽부터 바꿔 앞쪽 위치가 밀리지 않게 한다
             step = proposal.step
             element = text[step.startOffset:step.endOffset]
