@@ -10,7 +10,7 @@
  * @code
  *     NetMessageChannel channel;
  *     if ( channel.registerMessage<MechArenaSnapshot>( kMechSnapshotKind ) == false ) return false;
- *     NetHostConfig hostSettings;
+ *     NetEndpointConfig hostSettings;
  *     if ( channel.seal( baseSettings, hostSettings ) == false ) return false;
  *     host.initialize( &transport, hostSettings );               // 핸드셰이크가 스키마를 확인한다
  *     (void)channel.writeMessage( kMechSnapshotKind, snapshot, writer ); // 본문만
@@ -20,7 +20,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
@@ -55,7 +55,7 @@ namespace sw
          * @brief 등록을 닫고, @p baseSettings 의 와이어 버전에 등록한 (종류, 스키마 해시) 를 종류 순으로 섞은 설정을 @p outSettings 에 줍니다.
          * @details 두 번째 봉인과 등록이 하나도 없는 봉인은 오류 로그와 false 입니다(빈 채널은 섞을 것이 없어 버전이 기반과 같아진다 — 채널을 쓰지 않는 것과 구별되지 않는다).
          */
-        [[nodiscard]] bool seal( const NetHostConfig& baseSettings, NetHostConfig& outSettings );
+        [[nodiscard]] bool seal( const NetEndpointConfig& baseSettings, NetEndpointConfig& outSettings );
         bool               isSealed() const { return _bSealed == SW_TRUE; }
 
         /** @brief 종류 바이트와 본문(스키마 해시 머리 없이)을 @p outWriter 에 씁니다. 봉인 전이거나, 그 종류에 @p T 를 등록하지 않았거나, 범위 밖 값이면 false 입니다. */

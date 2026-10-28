@@ -90,7 +90,7 @@ namespace sw
 
 namespace sw
 {
-    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings,
+    NetSimWorld::NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetEndpointConfig& hostSettings,
                               INetSimSceneSource* pSceneSource, Scene* pBorrowedScene )
         : _counter{ pTransport }
         , _host{}
@@ -145,7 +145,7 @@ namespace sw
         (void)_router.pump( _host, &_listUnhandled, &_listEvent );
         if ( _pSession != nullptr )
         {
-            for ( const NetHostEvent& event : _listEvent )
+            for ( const NetEndpointEvent& event : _listEvent )
             {
                 _pSession->onHostEvent( *this, event );
             }
@@ -276,8 +276,8 @@ namespace sw
 
     unique_ptr<NetSimWorld> NetSimHarness::createWorld( NetSimRole role, int32 worldIndex, Link& link )
     {
-        NetHostConfig hostSettings = _settings._hostSettings;
-        hostSettings._saltSeed     = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
+        NetEndpointConfig hostSettings = _settings._hostSettings;
+        hostSettings._saltSeed         = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
         // 송신 간격이 틱의 배수일 때 틱 시각(틱 × 간격)의 반올림 오차로 한 틱 늦게 나갈 수 있다. 반 틱 앞당겨서 "k 틱마다 한 번" 이 정확히 지켜지게 한다.
         hostSettings._sendInterval = MathUtil::max( 0.0, hostSettings._sendInterval - _settings._tickInterval * 0.5 );
         Scene* pBorrowedScene      = nullptr;

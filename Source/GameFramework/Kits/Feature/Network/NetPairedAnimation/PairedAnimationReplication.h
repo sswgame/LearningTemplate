@@ -1,7 +1,7 @@
 /**
  * @file PairedAnimationReplication.h
  * @brief 권위 서버가 시작한 페어드 애니메이션 세션(`PairedAnimationSystem`)을 클라이언트에 복제합니다.
- * @details 이 기능은 키트 `GF_NetPairedAnimation` 이 제공하며 자기 메시지 영역(`NetKitMessageRange::kPairedAnimation`)을 쓴다. 권위 방식과 상관없이 `NetHost` 위에 얹는다.
+ * @details 이 기능은 키트 `GF_NetPairedAnimation` 이 제공하며 자기 메시지 영역(`NetKitMessageRange::kPairedAnimation`)을 쓴다. 권위 방식과 상관없이 `NetEndpoint` 위에 얹는다.
  *
  *          - **시작은 서버가 결정한다.** 서버는 재생 중인 세션을 처음 본 갱신에 상태 메시지 하나(`kSessionState`)를 모두에게 보낸다. 메시지는 에셋 경로,
  *            역할마다 참가 오브젝트 번호, 세션 스냅숏(`PairedAnimationSession::captureSnapshot` — 서버의 실제 진입 시각)이다. 클라이언트는 그것으로

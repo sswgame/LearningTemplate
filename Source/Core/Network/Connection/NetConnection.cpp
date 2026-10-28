@@ -338,7 +338,7 @@ namespace sw
         const int32    bytes = static_cast<int32>( buffer.size() ) + kIncomingMessageOverheadBytes;
         if ( queue._byteCount + bytes > kMaxPendingReceiveBytes )
         {
-            // 게임이 꺼내는 속도보다 상대가 빨리 넣는다(느린 틱이거나 홍수). UDP 는 상대를 멈출 수 없으므로 호스트가 끊는다.
+            // 게임이 꺼내는 속도보다 상대가 빨리 넣는다(느린 틱이거나 홍수). UDP 는 상대를 멈출 수 없으므로 엔드포인트가 끊는다.
             if ( _bReceiveOverflowed == SW_FALSE )
                 SW_LOG_WARNING_ID( "Net.ReceiveOverflow", "NetConnection: the receive queue of channel %# exceeds %# bytes - dropping the connection", static_cast<int32>( channel ), kMaxPendingReceiveBytes );
             _bReceiveOverflowed = SW_TRUE;

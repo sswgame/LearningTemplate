@@ -28,7 +28,7 @@ namespace sw
      * @class INetTransport
      * @brief 데이터그램 한 개를 보내고 받습니다. 받기는 막히지 않습니다(없으면 바로 false) — 기다리려면 `waitForReceive`.
      * @details **스레드 약속**: `send` 는 아무 스레드에서나 동시에 불러도 되고, `receive` · `waitForReceive` · `update` 는 한 번에 한 스레드
-     *          (그 호스트를 `update` 하는 스레드)가 부릅니다 — `NetHost` 는 잠금을 풀고 보내고 받는다. 구현은 이 약속을 지켜야 한다.
+     *          (그 엔드포인트를 `update` 하는 스레드)가 부릅니다 — `NetEndpoint` 는 잠금을 풀고 보내고 받는다. 구현은 이 약속을 지켜야 한다.
      */
     class SW_API INetTransport
     {
@@ -102,9 +102,9 @@ namespace sw
      * @class LoopbackNetwork
      * @brief 엔드포인트들을 들고 보낸 패킷을 보낸 순서대로 배달합니다 — 회선을 나쁘게 하지 않습니다(나쁜 회선은 엔드포인트에 씌운 `NetEmulationTransport`).
      *        엔드포인트는 망이 소유하고 주소는 `127.0.0.1:포트` 입니다.
-     * @details 보낸 패킷은 다음 `deliverInFlight`(어느 엔드포인트의 `update` 든)에 받는 엔드포인트의 받은 편지함으로 간다 — 한 프레임에서 앞서 돈 호스트가 보낸 것을
-     *          뒤에 도는 호스트가 받는다. 받을 엔드포인트가 없는 패킷은 버리고 센다(UDP 의 닫힌 포트).
-     *          잠금 하나가 망 전체(날아가는 패킷 · 엔드포인트 받은 편지함)를 지킵니다 — 엔드포인트마다 다른 스레드(`NetHostThread`)가 돌아도 된다.
+     * @details 보낸 패킷은 다음 `deliverInFlight`(어느 엔드포인트의 `update` 든)에 받는 엔드포인트의 받은 편지함으로 간다 — 한 프레임에서 앞서 돈 엔드포인트가 보낸 것을
+     *          뒤에 도는 엔드포인트가 받는다. 받을 엔드포인트가 없는 패킷은 버리고 센다(UDP 의 닫힌 포트).
+     *          잠금 하나가 망 전체(날아가는 패킷 · 엔드포인트 받은 편지함)를 지킵니다 — 엔드포인트마다 다른 스레드(`NetEndpointThread`)가 돌아도 된다.
      */
     class SW_API LoopbackNetwork
     {

@@ -36,7 +36,7 @@ namespace sw
      * @struct NetWireVersion
      * @brief 와이어 형식의 버전입니다. 계층마다 하나씩 있으며, Core(핸드셰이크, 패킷, 채널, 메시지 헤더)는 `kCore`, 키트는 `NetKitWireVersion`, 게임은 자기 값을 씁니다.
      * @details 형식(필드, 의미, 종류 바이트)을 바꾸는 커밋은 그 계층의 버전을 올린다. 버전이 다른 빌드끼리는 핸드셰이크에서 `VersionMismatch` 로 갈리며,
-     *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetHostConfig::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
+     *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetEndpointConfig::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
      */
     struct NetWireVersion
     {
@@ -116,7 +116,7 @@ namespace sw
     struct NetDeliveryNotice
     {
         uint32            _tag{ 0 };           ///< 보낼 때 단 값(키트가 정한다 — MMO 는 서버 틱).
-        int32             _connectionID{ -1 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 호스트가 채운다.
+        int32             _connectionID{ -1 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 엔드포인트가 채운다.
         uint8             _kind{ 0 };
         NetDeliveryResult _result{ NetDeliveryResult::Delivered };
     };
@@ -216,7 +216,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 메시지 종류 하나 몫 누적 셈입니다(받은 쪽은 라우터, 보낸 쪽은 호스트가 센다). 개발 명령 `net.stats` 의 메시지 종류별 비중이 이 값입니다. */
+    /** @brief 메시지 종류 하나 몫 누적 셈입니다(받은 쪽은 라우터, 보낸 쪽은 엔드포인트가 센다). 개발 명령 `net.stats` 의 메시지 종류별 비중이 이 값입니다. */
     struct NetMessageKindTally
     {
         uint64 _messageCount{ 0 };
@@ -228,7 +228,7 @@ namespace sw
 {
     /**
      * @class NetMessageKindTallyTable
-     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::pump`)과 보낸 쪽(`NetHost::sendMessage`)이 같은 표를 써서
+     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::pump`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
      *        `NetStatsReport` 가 두 방향을 같은 규칙으로 싣습니다. 스레드 보호는 들고 있는 쪽이 합니다.
      */
     class NetMessageKindTallyTable

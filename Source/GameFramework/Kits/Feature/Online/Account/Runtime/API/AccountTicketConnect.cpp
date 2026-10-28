@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountTicketConnect.h"
 
-#include "Core/Network/Connection/NetHostSecurity.h"
+#include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"

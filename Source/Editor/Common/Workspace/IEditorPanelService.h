@@ -1,6 +1,6 @@
 /**
- * @file IEditorPanelHost.h
- * @brief 아래 층(커맨드 · 작업 공간 · 뷰포트)이 패널과 도킹을 부르는 진입점입니다. 구현은 GUI 층(`EditorPanelHost`)에 있습니다.
+ * @file IEditorPanelService.h
+ * @brief 아래 층(커맨드 · 작업 공간 · 뷰포트)이 패널과 도킹을 부르는 진입점입니다. 구현은 GUI 층(`EditorPanelService`)에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,15 +12,15 @@
 namespace sw::editor
 {
     /**
-     * @class IEditorPanelHost
-     * @brief 패널 열기 · 최대화와 도구 문서 저장을 패널 매니저 · 도킹을 모르고 부르는 인터페이스입니다(`EditorContext::getPanelHost`).
+     * @class IEditorPanelService
+     * @brief 패널 열기 · 최대화와 도구 문서 저장을 패널 매니저 · 도킹을 모르고 부르는 인터페이스입니다(`EditorContext::getPanelService`).
      * @details 커맨드는 ImGui 없는 동작이라 패널 매니저(GUI)를 include 하지 않습니다. 언리얼에서 에셋 편집기를 여는 쪽이
      *          `UAssetEditorSubsystem` 진입점만 보고 탭 매니저(Slate)를 모르는 것과 같습니다.
      */
-    class IEditorPanelHost : public EditorSubsystem
+    class IEditorPanelService : public EditorSubsystem
     {
     public:
-        ~IEditorPanelHost() override = default;
+        ~IEditorPanelService() override = default;
 
         /** @brief 패널을 열고 그 창(탭)을 다음 프레임에 앞으로 둡니다. 그 id 의 패널이 없으면 false 입니다. id 는 형식(`EditorPanelID`)이라 글자를 넘길 수 없습니다. */
         virtual bool focusPanel( EditorPanelID panelID ) = 0;

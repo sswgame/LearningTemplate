@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"

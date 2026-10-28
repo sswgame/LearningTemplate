@@ -16,7 +16,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelHost.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/Scene.h"
@@ -78,7 +78,7 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                if ( editorContext.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
+                if ( editorContext.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
                     SW_LOG_WARNING( "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
             }
             return;
@@ -88,7 +88,7 @@ namespace sw::editor
         pData->_bOptionsApplied = SW_TRUE;
         // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
         if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && pData->_bSimulate == SW_FALSE )
-            pData->_bMaximizedForPlay = editorContext.getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
+            pData->_bMaximizedForPlay = editorContext.getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
     }
 
     void EditorPlayCommands::toggleEject()
@@ -104,18 +104,18 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                (void)editorContext.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
+                (void)editorContext.getSubsystem<IEditorPanelService>().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
             }
             EditorPlaySession::simulate();
             pData->_bEjected = SW_TRUE;
-            (void)editorContext.getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
+            (void)editorContext.getSubsystem<IEditorPanelService>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
             return;
         }
         if ( pData->_bEjected == SW_TRUE )
         {
             EditorPlaySession::play();
             pData->_bEjected = SW_FALSE;
-            (void)editorContext.getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
+            (void)editorContext.getSubsystem<IEditorPanelService>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
         }
     }
 

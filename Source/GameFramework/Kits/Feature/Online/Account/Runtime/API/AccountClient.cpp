@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
 
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Connection/NetHostSecurity.h"
+#include "Core/Network/Connection/NetEndpointSecurity.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
 

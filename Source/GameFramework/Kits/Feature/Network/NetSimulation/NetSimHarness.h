@@ -30,7 +30,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -97,10 +97,10 @@ namespace sw
     /** @brief 하니스 설정입니다. */
     struct NetSimConfig
     {
-        NetHostConfig _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로 다시 정한다
-        float64       _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
-        uint32        _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
-        uint16        _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
+        NetEndpointConfig _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로 다시 정한다
+        float64           _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
+        uint32            _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
+        uint16            _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
         /**
          * @brief 월드의 씬을 빌려 주는 쪽입니다. 비우면 하니스가 월드마다 씬을 만들어 가진다(화면 없는 테스트 · 게임 자동화 — 두 가지 다 명시적인 쓰임이다).
          * @details 하니스보다 오래 살아야 한다. 에디터 재생은 `NetSimPreviewSceneSource` 를 준다.
@@ -189,7 +189,7 @@ namespace sw
          * @details 틱 직전에 라우터가 핸들러에 이벤트를 알린 바로 뒤에 불린다.
          *          키트의 연결별 상태는 라우터가 `INetMessageHandler::onConnectionOpened` 와 `onConnectionClosed` 로 이미 맞춰 두므로 여기서는 게임 쪽 처리만 한다.
          */
-        virtual void onHostEvent( NetSimWorld& world, const NetHostEvent& event )
+        virtual void onHostEvent( NetSimWorld& world, const NetEndpointEvent& event )
         {
             (void)world;
             (void)event;
@@ -258,7 +258,7 @@ namespace sw
     {
     public:
         /** @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다. */
-        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings,
+        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetEndpointConfig& hostSettings,
                      INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
         ~NetSimWorld();
 
@@ -301,14 +301,14 @@ namespace sw
         void stop();
 
         NetSimTrafficCounter       _counter; ///< 호스트 → 카운터 → 흉내 → 루프백 엔드포인트 순서로 거친다
-        NetHost                    _host;
+        NetEndpoint                _host;
         NetMessageRouter           _router;
         unique_ptr<Scene>          _pOwnedScene;  ///< 빌려 주는 쪽이 없을 때 월드가 만든 씬
         INetSimSceneSource*        _pSceneSource; ///< 빌린 씬이면 돌려줄 곳
         Scene*                     _pScene;       ///< 쓰는 씬(만든 것 또는 빌린 것)
         unique_ptr<INetSimSession> _pSession;
         vector<NetReceivedMessage> _listUnhandled;
-        vector<NetHostEvent>       _listEvent;
+        vector<NetEndpointEvent>   _listEvent;
         int32                      _worldIndex;
         uint32                     _localTick;
         NetSimRole                 _role;

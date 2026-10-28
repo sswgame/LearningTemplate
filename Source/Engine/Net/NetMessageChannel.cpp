@@ -51,7 +51,7 @@ namespace sw
         return true;
     }
 
-    bool NetMessageChannel::seal( const NetHostConfig& baseSettings, NetHostConfig& outSettings )
+    bool NetMessageChannel::seal( const NetEndpointConfig& baseSettings, NetEndpointConfig& outSettings )
     {
         if ( _bSealed == SW_TRUE || _listEntry.empty() )
         {

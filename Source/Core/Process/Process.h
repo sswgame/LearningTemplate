@@ -242,7 +242,7 @@ namespace sw
         /**
          * @brief 이 프로세스에 디버거가 붙어 있는지 OS 에 묻습니다.
          * @details Windows 는 `IsDebuggerPresent`(PEB 를 읽어 싸다), Linux 는 `/proc/self/status` 의 `TracerPid`(파일을 읽는다 — 자주 부르는
-         *          쪽은 답을 잠시 들고 있는다). 중단점에 멈춘 동안 시간 초과를 늦추는 데 쓴다(`NetHost` 디버거 대기).
+         *          쪽은 답을 잠시 들고 있는다). 중단점에 멈춘 동안 시간 초과를 늦추는 데 쓴다(`NetEndpoint` 디버거 대기).
          */
         static bool isDebuggerPresent();
 

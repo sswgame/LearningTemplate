@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
-#include "Core/Network/Connection/NetHostSecurity.h"
+#include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
 

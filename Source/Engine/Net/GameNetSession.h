@@ -1,16 +1,16 @@
 /**
  * @file GameNetSession.h
  * @brief 게임 인스턴스의 네트워크 역할을 정의합니다.
- * @details 서버면 UDP 포트를 열고(`NetHost::listen`), 클라이언트면 서버에 붙는다(`NetHost::connectAsync`).
+ * @details 서버면 UDP 포트를 열고(`NetEndpoint::listen`), 클라이언트면 서버에 붙는다(`NetEndpoint::connectAsync`).
  *          언리얼의 넷 드라이버(`?listen`, `open <주소>`)와 Godot 의 `SceneMultiplayer` 에 해당한다.
  *          역할은 게임 코드가 아니라 실행 인자가 정하므로, 어느 게임이든(키트가 없는 Empty 도) 서버나 클라이언트로 뜬다.
  *          장르별 복제(클라이언트-서버, 락스텝, MMO)는 키트가 `getRouter()` 에 처리기를 달고 `getPeers()` 로 보낸다.
  *
  *          - 전용 서버(`Server`): 서버 설정(`ServerConfig::_gamePort` · `_listenAddress`)의 게임 포트를 늘 연다(언리얼 전용 서버와 같다).
  *            설정은 전용 서버가 호스트 범위에 빌려 건 `ServerServiceContext` 를 `engine::findSubsystem` 으로 찾아 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
- *          - 포트 샤딩(`ServerConfig::_gamePortShardCount` N): 샤드마다 소켓 · `NetHost` · 네트워크 스레드가 하나씩 선다 — `_gamePort` 부터 N 개의 연이은 포트,
+ *          - 포트 샤딩(`ServerConfig::_gamePortShardCount` N): 샤드마다 소켓 · `NetEndpoint` · 네트워크 스레드가 하나씩 선다 — `_gamePort` 부터 N 개의 연이은 포트,
  *            리눅스에서 `_bGamePortReuse` 면 한 포트에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눈다). 키트는 샤드를 모른다 — `getPeers()` 가 연결 ID 에
- *            샤드 번호를 접어 넣은 묶음(`NetHostShardSet`)이다. 어느 샤드 포트로 붙을지는 서버 배정(`ServerDescriptor::pickPort`)이 계정마다 정한다.
+ *            샤드 번호를 접어 넣은 묶음(`NetEndpointShardSet`)이다. 어느 샤드 포트로 붙을지는 서버 배정(`ServerDescriptor::pickPort`)이 계정마다 정한다.
  *            샤드 여럿에 포트 0 은 받지 않는다(연이은 포트가 배정의 계약이다).
  *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
  *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
@@ -22,7 +22,7 @@
  *          클라이언트는 연결이 시간 초과로 끝나면 다시 시도한다. 서버를 같이 띄우면 클라이언트가 먼저 설 수 있기 때문이다.
  *          거절이나 버전 불일치는 한 번 알리고 멈춘다.
  *
- *          네트워크 스레드(`NetHostThread`)가 받기, 확인, 재전송, 유지를 맡는다.
+ *          네트워크 스레드(`NetEndpointThread`)가 받기, 확인, 재전송, 유지를 맡는다.
  *          게임 스레드는 프레임마다 `update` 로 연결 이벤트와 받은 메시지를 처리기에 나눠 준다.
  *          연결과 끊김은 로그를 한 줄씩 남기며(`Net session client N connected`, `Net session connected to …`),
  *          멀티 프로세스 재생과 테스트가 이 줄로 접속을 확인한다.
@@ -45,8 +45,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Connection/NetHost.h"
-#include "Core/Network/Connection/NetHostShardSet.h"
+#include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Connection/NetEndpointShardSet.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/NetTypes.h"
@@ -78,13 +78,13 @@ namespace sw
     /** @brief 세션을 여는 인자입니다. */
     struct GameNetSessionParams
     {
-        NetHostConfig _hostSettings{};
-        NetAddress    _serverAddress{}; ///< 클라이언트 — 붙을 서버
-        int32         _shardCount{ 1 }; ///< 서버 — 포트 샤드 수(샤드마다 소켓 · 호스트 · 스레드). 클라이언트는 1
-        uint16        _listenPort{ 0 }; ///< 서버 — 열 UDP 포트(샤드 여럿이면 첫 샤드의 포트, 나머지는 이어서)
-        GameNetRole   _role{ GameNetRole::None };
-        bool          _bLoopbackOnly{ true };     ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
-        bool          _bShardsSharePort{ false }; ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`)
+        NetEndpointConfig _hostSettings{};
+        NetAddress        _serverAddress{}; ///< 클라이언트 — 붙을 서버
+        int32             _shardCount{ 1 }; ///< 서버 — 포트 샤드 수(샤드마다 소켓 · 호스트 · 스레드). 클라이언트는 1
+        uint16            _listenPort{ 0 }; ///< 서버 — 열 UDP 포트(샤드 여럿이면 첫 샤드의 포트, 나머지는 이어서)
+        GameNetRole       _role{ GameNetRole::None };
+        bool              _bLoopbackOnly{ true };     ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
+        bool              _bShardsSharePort{ false }; ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`)
         /**
          * @brief 클라이언트 — 연결 때 내미는 접속 티켓입니다. 비어 있지 않으면 `_hostSettings._security` 가 암호화여야 합니다(`GameNetSession::makeTicketClientParams` 가 둘을 함께 채운다).
          * @details 티켓을 내미는 클라이언트와 받는 서버는 프로토콜 id 의 기능 비트가 같아야 붙는다 — 자격 없이 붙는 클라이언트는 티켓 서버에 `SecurityMismatch` 로 거절된다.
@@ -286,7 +286,7 @@ namespace sw
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */
         void reportConnectResult();
         /** @brief 클라이언트의 유일한 호스트입니다(클라이언트는 샤드가 하나다). */
-        NetHost& getClientHost();
+        NetEndpoint& getClientHost();
         /** @brief 클라이언트의 연결 시도를 시작합니다. 티켓에 묶인 세션이면 티켓을 내밀고, 아니면 자격 없이 붙습니다. */
         TaskFuture<NetConnectResult> startClientConnect();
         /** @brief 사건을 어느 때 읽었는가 — 클라이언트가 서버를 잃은 것이 이상인지가 이것으로 갈린다. */
@@ -300,13 +300,13 @@ namespace sw
 
     private:
         vector<unique_ptr<Shard>>    _listShard; ///< 포트 샤드마다 소켓 · 회선 흉내 · 호스트 · 네트워크 스레드(클라이언트는 하나)
-        NetHostShardSet              _peers;     ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
+        NetEndpointShardSet          _peers;     ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
         NetMessageRouter             _router;
         Subscription                 _routerSubscription; ///< 클라이언트 — 이 세션을 엔진 영역 처리기로 `_router` 에 단 등록
         GameConnectSecurity          _connectSecurity;    ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
         NetMessageWriter             _tickWriter;         ///< 서버 — `sendServerTick` 이 다시 쓴다
         TaskFuture<NetConnectResult> _connectFuture;      ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
-        vector<NetHostEvent>         _listEventScratch;   ///< `update` 가 다시 쓴다
+        vector<NetEndpointEvent>     _listEventScratch;   ///< `update` 가 다시 쓴다
         vector<ReplicaStat>          _listReplicaStat;    ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                   _serverAddress;
         NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)

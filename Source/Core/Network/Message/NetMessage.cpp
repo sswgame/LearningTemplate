@@ -3,7 +3,7 @@
 #include "Core/Network/Message/NetMessage.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 
 namespace sw
 {
@@ -164,21 +164,21 @@ namespace sw
         return result;
     }
 
-    void NetMessageRouter::dispatchEvent( const NetHostEvent& event )
+    void NetMessageRouter::dispatchEvent( const NetEndpointEvent& event )
     {
         for ( INetMessageHandler* pHandler : _listHandler )
         {
-            if ( event._kind == NetHostEvent::Kind::Connected )
+            if ( event._kind == NetEndpointEvent::Kind::Connected )
                 pHandler->onConnectionOpened( event._connectionID );
             else
                 pHandler->onConnectionClosed( event._connectionID, event._reason );
         }
     }
 
-    int32 NetMessageRouter::pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetHostEvent>* pOutListEvent )
+    int32 NetMessageRouter::pump( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetEndpointEvent>* pOutListEvent )
     {
         peers.drainInbound( _inbound );
-        for ( const NetHostEvent& event : _inbound._listEvent )
+        for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
             dispatchEvent( event );
         }

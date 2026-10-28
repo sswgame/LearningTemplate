@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 

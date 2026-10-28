@@ -8,7 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Connection/NetHostThread.h"
+#include "Core/Network/Connection/NetEndpointThread.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
@@ -317,8 +317,8 @@ namespace sw
     {
         unique_ptr<UDPNetTransport>       _transport{};
         unique_ptr<NetEmulationTransport> _emulation{}; ///< `_transport` 를 감싼 회선 흉내(Dev). 호스트는 이것을 전송으로 쓴다
-        NetHost                           _host{};
-        NetHostThread                     _thread{};
+        NetEndpoint                       _host{};
+        NetEndpointThread                 _thread{};
     };
 } // namespace sw
 
@@ -531,8 +531,8 @@ namespace sw
                 SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
         }
 #endif
-        const bool       bServer = params._role == GameNetRole::Server;
-        vector<NetHost*> listHost;
+        const bool           bServer = params._role == GameNetRole::Server;
+        vector<NetEndpoint*> listHost;
         for ( int32 shardIndex = 0; shardIndex < params._shardCount; ++shardIndex )
         {
             // 샤드 n 은 첫 포트 + n(한 포트를 나누면 모두 첫 포트). 클라이언트는 운영체제가 고른 포트 하나다.
@@ -632,12 +632,12 @@ namespace sw
         if ( _role != GameNetRole::None )
         {
             _listEventScratch.clear();
-            vector<NetHostEvent> listShardEvent;
+            vector<NetEndpointEvent> listShardEvent;
             for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
             {
                 listShardEvent.clear();
                 _listShard[static_cast<size_t>( shardIndex )]->_host.drainEvents( listShardEvent );
-                for ( NetHostEvent event : listShardEvent )
+                for ( NetEndpointEvent event : listShardEvent )
                 {
                     event._connectionID = _peers.makeConnectionID( shardIndex, event._connectionID );
                     _listEventScratch.push_back( event );
@@ -678,21 +678,21 @@ namespace sw
 
     void GameNetSession::logEvents( EventPhase phase ) const
     {
-        for ( const NetHostEvent& event : _listEventScratch )
+        for ( const NetEndpointEvent& event : _listEventScratch )
         {
             if ( _role == GameNetRole::Server )
             {
-                if ( event._kind == NetHostEvent::Kind::Connected )
+                if ( event._kind == NetEndpointEvent::Kind::Connected )
                     SW_LOG_INFO( "Net session client %# connected from %# (%# connected)", event._connectionID,
                                  _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
                 else
                     SW_LOG_INFO( "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
             }
-            else if ( event._kind == NetHostEvent::Kind::Disconnected && phase == EventPhase::Running )
+            else if ( event._kind == NetEndpointEvent::Kind::Disconnected && phase == EventPhase::Running )
             {
                 SW_LOG_WARNING( "Net session lost the server %# (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
-            else if ( event._kind == NetHostEvent::Kind::Disconnected )
+            else if ( event._kind == NetEndpointEvent::Kind::Disconnected )
             {
                 // 세션은 엔진 수명이라 종료의 끝에서 닫힌다 — 같이 끝나는 서버(에디터 netplay.stop)가 먼저 나간 끊김이 여기서 읽힌다. 이상이 아니다.
                 SW_LOG_INFO( "Net session closing after the server %# left (%#)", _serverAddress.toString(), toString( event._reason ) );
@@ -711,7 +711,7 @@ namespace sw
         return bOutOfRange ? nullptr : _listShard[static_cast<size_t>( shardIndex )]->_emulation.get();
     }
 
-    NetHost& GameNetSession::getClientHost()
+    NetEndpoint& GameNetSession::getClientHost()
     {
         return _listShard.front()->_host;
     }

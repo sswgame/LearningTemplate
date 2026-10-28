@@ -58,7 +58,7 @@ namespace sw
         static void addRecorder();
         static void removeRecorder();
 
-        /** @brief 사건 하나를 남깁니다(`NetHost` 가 신뢰 순서 메시지를 큐에 넣을 때와 꺼낼 때). 기록하는 쪽이 없으면 원자 하나 읽고 돌아옵니다. */
+        /** @brief 사건 하나를 남깁니다(`NetEndpoint` 가 신뢰 순서 메시지를 큐에 넣을 때와 꺼낼 때). 기록하는 쪽이 없으면 원자 하나 읽고 돌아옵니다. */
         static void record( uint64 id, uint8 kind, bool bReceive );
 
         /** @brief [@p beginNanos, @p endNanos] 안의 사건을 시각 순으로 담습니다. 복사하는 동안 덮인 칸은 버립니다. */

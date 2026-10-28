@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -222,7 +222,7 @@ namespace sw
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
                 prioritizer.markSentUnconfirmed( entityID, _world._tick );
         }
-        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 호출해도 NetHost 가 보호한다
+        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 호출해도 NetEndpoint 가 보호한다
     }
 
     void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const

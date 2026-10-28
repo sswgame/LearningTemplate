@@ -4,7 +4,7 @@
  * @details 서버는 피해 이벤트를 신뢰성 있고 순서 없는 채널로 보내고, 덩어리 자세를 낮은 빈도로 보낸다.
  *          클라이언트는 덩어리 자세를 보간하고, 늦은 참가나 상태 불일치는 상태 스냅숏 하나로 맞춘다.
  *          이 기능은 키트 `GF_NetDestruction` 이 제공하며 자기 메시지 영역(`NetKitMessageRange::kDestruction`)을 쓴다.
- *          파괴를 쓰지 않는 게임은 링크하지 않는다. 복제 서버, 리슨 서버, MMO 같은 권위 방식과 상관없이 `NetHost` 위에서 동작한다.
+ *          파괴를 쓰지 않는 게임은 링크하지 않는다. 복제 서버, 리슨 서버, MMO 같은 권위 방식과 상관없이 `NetEndpoint` 위에서 동작한다.
  *
  *          파괴의 설계(`Source/Engine/Destruction/README.md` 3절, 4절)를 그대로 따른다.
  *          - **구조 변경은 이벤트로 보낸다.** 같은 그래프, 테이블, 앵커에 같은 순서로 이벤트를 적용하면 같은 상태가 된다(`DestructionState::computeStateHash`).

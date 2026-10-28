@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"

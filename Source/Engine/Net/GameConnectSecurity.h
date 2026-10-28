@@ -6,14 +6,14 @@
  *          - 묶이기 전에 온 접속은 거절한다(모르는 토큰과 같다 — 열린 채로 받지 않는다). `ServerApp` 은 서비스 시작 뒤 묶이지 않았으면 기동을 멈춘다.
  *          - 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — GameFramework 의 게임 인스턴스가 설 때 `setProvider` 로 넣는다.
  *          - 서버 설정 `ServerConfig::_bGameConnectTicket` 이 켜졌을 때만 세션이 이 자리를 쓴다(그때 게임 포트는 암호화 · 토큰 결속이다).
- * @warning `findSessionSecret` 은 네트워크 스레드에서 `NetHost` 잠금을 쥔 채 불린다. 묶기 · 풀기와는 이 객체의 잠금 하나로 맞물린다
+ * @warning `findSessionSecret` 은 네트워크 스레드에서 `NetEndpoint` 잠금을 쥔 채 불린다. 묶기 · 풀기와는 이 객체의 잠금 하나로 맞물린다
  *          (푼 뒤에는 옛 인증기를 부르지 않으므로, 푼 쪽이 바로 인증기를 내려도 된다).
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Network/Connection/NetHostSecurity.h"
+#include "Core/Network/Connection/NetEndpointSecurity.h"
 
 namespace sw
 {

@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Serialization/BitStream.h"

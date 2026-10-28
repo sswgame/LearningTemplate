@@ -1,10 +1,10 @@
 /**
  * @file NetSlotTable.h
- * @brief `NetHost` 의 연결 슬롯 표와 주소에서 슬롯으로 가는 해시 맵입니다.
+ * @brief `NetEndpoint` 의 연결 슬롯 표와 주소에서 슬롯으로 가는 해시 맵입니다.
  * @details 슬롯 번호가 곧 연결 ID다. 클라이언트는 슬롯 하나(서버 연결, ID 0), 서버는 `_maxConnections` 개를 쓴다.
  *          주소 맵은 패킷마다 슬롯을 O(1)로 찾게 한다. 맵에는 지금 그 주소를 가진 슬롯만 있다(`bindAddress` 와 `unbindAddress` 가 짝을 맞춘다).
  *
- *          **스레드**: 잠금이 없다. `NetHost` 의 값 멤버로 그 잠금 안에서만 쓴다.
+ *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,8 +18,8 @@
 
 namespace sw
 {
-    /** @brief `NetHost` 의 연결 슬롯 하나입니다. 소멸시키는 번역 단위는 `INetSecurityProvider.h` 를 include 해야 합니다(`NetSlotSecurity`). */
-    struct NetHostSlot
+    /** @brief `NetEndpoint` 의 연결 슬롯 하나입니다. 소멸시키는 번역 단위는 `INetSecurityProvider.h` 를 include 해야 합니다(`NetSlotSecurity`). */
+    struct NetEndpointSlot
     {
         unique_ptr<NetSlotSecurity> _security{}; ///< 암호화 방식일 때만 있다.
         NetConnection               _connection{};
@@ -57,17 +57,17 @@ namespace sw
         /** @brief 모든 슬롯을 버리고 비어 있는(Disconnected) 슬롯 @p slotCount 개로 다시 채웁니다. 주소 맵도 비웁니다. */
         void reset( int32 slotCount );
 
-        int32              getCount() const { return static_cast<int32>( _listSlot.size() ); }
-        bool               isValid( int32 slotIndex ) const { return 0 <= slotIndex && slotIndex < getCount(); }
-        NetHostSlot&       get( int32 slotIndex ) { return _listSlot[static_cast<size_t>( slotIndex )]; }
-        const NetHostSlot& get( int32 slotIndex ) const { return _listSlot[static_cast<size_t>( slotIndex )]; }
+        int32                  getCount() const { return static_cast<int32>( _listSlot.size() ); }
+        bool                   isValid( int32 slotIndex ) const { return 0 <= slotIndex && slotIndex < getCount(); }
+        NetEndpointSlot&       get( int32 slotIndex ) { return _listSlot[static_cast<size_t>( slotIndex )]; }
+        const NetEndpointSlot& get( int32 slotIndex ) const { return _listSlot[static_cast<size_t>( slotIndex )]; }
         /** @brief 연결된(Connected) 슬롯이면 그 슬롯, 아니면 nullptr 입니다. 범위 밖 번호도 nullptr 입니다. */
-        NetHostSlot*       findConnected( int32 slotIndex );
-        const NetHostSlot* findConnected( int32 slotIndex ) const;
-        NetHostSlot*       begin() { return _listSlot.data(); }
-        NetHostSlot*       end() { return _listSlot.data() + _listSlot.size(); }
-        const NetHostSlot* begin() const { return _listSlot.data(); }
-        const NetHostSlot* end() const { return _listSlot.data() + _listSlot.size(); }
+        NetEndpointSlot*       findConnected( int32 slotIndex );
+        const NetEndpointSlot* findConnected( int32 slotIndex ) const;
+        NetEndpointSlot*       begin() { return _listSlot.data(); }
+        NetEndpointSlot*       end() { return _listSlot.data() + _listSlot.size(); }
+        const NetEndpointSlot* begin() const { return _listSlot.data(); }
+        const NetEndpointSlot* end() const { return _listSlot.data() + _listSlot.size(); }
 
         /** @brief 이 주소에 묶인 슬롯 번호입니다. 없으면 -1 입니다. */
         int32 findByAddress( const NetAddress& address ) const;
@@ -85,7 +85,7 @@ namespace sw
         static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
     private:
-        vector<NetHostSlot>          _listSlot;
+        vector<NetEndpointSlot>      _listSlot;
         unordered_map<uint64, int32> _mapSlotByAddress; ///< 연결이 많아도 패킷마다 선형 탐색하지 않게 한다.
     };
 } // namespace sw

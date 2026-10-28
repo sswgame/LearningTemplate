@@ -2,7 +2,7 @@
  * @file NetConnection.h
  * @brief 한 상대와의 신뢰성 계층을 구현합니다.
  * @details 패킷 시퀀스와 확인(ack와 32비트 ack 비트), 채널별 메시지(신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰), 재전송, RTT와 손실률과 대역폭 통계를 다룬다.
- *          주소, 핸드셰이크, 타임아웃은 `NetHost` 가 맡고, 이 클래스는 "연결된 뒤 패킷 한 개의 본문"만 쓴다(Gaffer 의 "Reliability and Congestion Avoidance over UDP").
+ *          주소, 핸드셰이크, 타임아웃은 `NetEndpoint` 가 맡고, 이 클래스는 "연결된 뒤 패킷 한 개의 본문"만 쓴다(Gaffer 의 "Reliability and Congestion Avoidance over UDP").
  *
  *          패킷마다 그 패킷에 실은 신뢰 메시지 ID를 기억해 두었다가, 패킷이 확인되면 메시지도 확인된 것으로 본다.
  *          확인되지 않은 신뢰 메시지는 RTT + 50ms(최소 0.1초)가 지나면 다음 패킷에 다시 싣는다.
@@ -21,7 +21,7 @@
  *
  *          패킷 끝의 1비트는 "확인을 바로 돌려 달라"는 요청이다.
  *          메시지를 실었거나 확인할 것이 없던(연결 유지) 패킷만 이 비트를 켜고, 확인만 담은 답은 끈다.
- *          그래야 한가할 때 양쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostConfig::_keepAliveInterval` 마다만 오간다.
+ *          그래야 한가할 때 양쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetEndpointConfig::_keepAliveInterval` 마다만 오간다.
  *          RTT와 손실률도 이 비트를 켠 패킷으로만 측정한다.
  *
  *          전달 통지(`sendNotifiedMessage`)는 비신뢰 메시지에 값 하나를 달아 보내고, 실린 패킷의 판정을 메시지 단위로 돌려준다(`drainDeliveryNotices`).
@@ -54,7 +54,7 @@ namespace sw
         uint64  _ackedPacketCount{ 0 };
         uint64  _resentMessageCount{ 0 };
         uint64  _expiredUnreliableCount{ 0 }; ///< 줄에서 나이 상한을 넘겨 버린 비신뢰 메시지(대역폭이 포화돼 오래 기다린 것).
-        int32   _pendingReliableCount{ 0 };   ///< 확인을 기다리는 신뢰 메시지 수(`NetConnection::getPendingReliableCount`). 사본을 만들 때 채운다(`NetHost::getConnectionStats`).
+        int32   _pendingReliableCount{ 0 };   ///< 확인을 기다리는 신뢰 메시지 수(`NetConnection::getPendingReliableCount`). 사본을 만들 때 채운다(`NetEndpoint::getConnectionStats`).
     };
 } // namespace sw
 
@@ -82,7 +82,7 @@ namespace sw
         static constexpr int32   kMaxSpareBuffers           = 64;   ///< 다시 쓸 메시지 버퍼를 이만큼까지 둔다(조각 하나 크기라 연결 하나에 64KB 안쪽).
         /**
          * @brief 채널 하나의 받은 큐가 게임이 꺼내기를 기다리며 쌓아 둘 수 있는 바이트(메시지마다 `kIncomingMessageOverheadBytes` 를 더해 센다).
-         * @details 넘기면 `hasReceiveOverflowed` 가 참이 되고 호스트가 연결을 끊는다(`NetDisconnectReason::ReceiveOverflow`).
+         * @details 넘기면 `hasReceiveOverflowed` 가 참이 되고 엔드포인트가 연결을 끊는다(`NetDisconnectReason::ReceiveOverflow`).
          *          스트림의 `StreamLimit::kDefaultMaxPendingReceiveBytes`(4 MiB, 읽기를 멈춘다)와 같은 역할이다. UDP 는 상대를 멈출 수 없어 끊는다.
          *          신뢰 순서 메시지 하나의 상한(64 KB)의 16 배다. 연결 1024 개 × 채널 넷이어도 4 GiB 안쪽이다.
          */
@@ -112,7 +112,7 @@ namespace sw
          * @details 메시지는 1 바이트 이상(첫 바이트가 종류)이고 `kMaxSingleMessageSize` 이하여야 합니다. 어기면 오류 로그와 함께 false 이고 통지도 나지 않습니다.
          */
         [[nodiscard]] bool sendNotifiedMessage( const uint8* pData, int32 size, uint32 tag );
-        /** @brief 판정이 난 전달 통지를 @p inoutListNotice 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(호스트가 채운다). */
+        /** @brief 판정이 난 전달 통지를 @p inoutListNotice 뒤에 옮깁니다. 연결 ID 는 -1 로 둡니다(엔드포인트가 채운다). */
         void drainDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice );
         /** @brief 채널 하나의 메시지 상한입니다. 신뢰 순서는 `kMaxReliableMessageSize`, 나머지는 `kMaxSingleMessageSize` 입니다. */
         static int32 getMaxMessageSize( NetChannelType channel );
@@ -124,7 +124,7 @@ namespace sw
         /**
          * @brief 패킷 본문을 씁니다. 헤더(시퀀스, ack, ack 비트), 들어가는 만큼의 메시지, 확인 요청 비트 순서입니다.
          * @param ackRequestInterval 확인만 담은 답이라도 마지막 확인 요청에서 이 간격이 지났으면 확인을 요청합니다.
-         *                           양쪽의 연결 유지 시각이 맞물려 한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정하기 위해서입니다(`NetHostConfig::_keepAliveInterval`).
+         *                           양쪽의 연결 유지 시각이 맞물려 한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정하기 위해서입니다(`NetEndpointConfig::_keepAliveInterval`).
          */
         void writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval = kDefaultAckRequestInterval,
                           float64 maxUnreliableAgeSeconds = kDefaultMaxUnreliableAge );
@@ -132,9 +132,9 @@ namespace sw
         [[nodiscard]] bool readPacket( float64 time, BitReader& reader );
         /** @brief 보낼 것이 있는지 반환합니다. 새 메시지, 재전송 시각이 된 신뢰 메시지, 확인해 줄 패킷이 해당합니다. */
         bool hasDataToSend( float64 time ) const;
-        /** @brief 받은 패킷을 확인해 줘야 하는지 반환합니다. 대역폭 토큰을 다 쓴 호스트가 메시지 없이 확인만 보낼지 정할 때 씁니다. */
+        /** @brief 받은 패킷을 확인해 줘야 하는지 반환합니다. 대역폭 토큰을 다 쓴 엔드포인트가 메시지 없이 확인만 보낼지 정할 때 씁니다. */
         bool isAckPending() const { return _bAckPending != SW_FALSE; }
-        /** @brief 어느 채널의 받은 큐가 `kMaxPendingReceiveBytes` 를 넘었다(넘친 메시지는 버렸다). 참이면 호스트가 끊는다. `reset` 이 지운다. */
+        /** @brief 어느 채널의 받은 큐가 `kMaxPendingReceiveBytes` 를 넘었다(넘친 메시지는 버렸다). 참이면 엔드포인트가 끊는다. `reset` 이 지운다. */
         bool hasReceiveOverflowed() const { return _bReceiveOverflowed != SW_FALSE; }
 
         const NetConnectionStats& getStats() const { return _stats; }
@@ -143,7 +143,7 @@ namespace sw
         int32  getQueuedUnreliableCount() const { return static_cast<int32>( _listOutgoingUnreliable.size() ); }
         uint16 getNextPacketSequence() const { return _nextPacketSequence; }
         /**
-         * @brief 트레이스 흐름 id 를 만들 연결 신원(양쪽 솔트의 XOR 토큰, 이쪽이 서버인가)을 줍니다. `NetHost` 가 연결이 맺어질 때 부릅니다. `reset` 이 지웁니다.
+         * @brief 트레이스 흐름 id 를 만들 연결 신원(양쪽 솔트의 XOR 토큰, 이쪽이 서버인가)을 줍니다. `NetEndpoint` 가 연결이 맺어질 때 부릅니다. `reset` 이 지웁니다.
          * @details 신원이 있는 동안 모든 채널의 메시지가 흐름을 남긴다(`NetFlowLog` — 타임라인이 기록할 때만). 채널마다 양쪽이 같게 아는 번호가 다르다(`recordFlow`).
          *          비신뢰 · 순서만 · 신뢰 순서 없음은 보낸 곳 · 받은 곳을 선(패킷을 쓸 때 · 읽을 때)에서 찍고, 신뢰 순서는 넣을 때 · 꺼낼 때 찍는다.
          */

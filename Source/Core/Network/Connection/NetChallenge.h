@@ -6,7 +6,7 @@
  *          값은 128 비트 키의 SipHash-2-4(키 있는 PRF, `SecureUtil::sipHash24`)이고, 솔트도 다른 키의 SipHash 이고, 두 키 모두 운영체제 난수에서 뽑는다(솔트는 선에 실린다).
  *          위조한 주소로 슬롯을 채우는 공격을 막는다. 64 비트 값이라 긴 메시지 인증에는 쓰지 않는다.
  *
- *          **스레드**: 잠금이 없다. `NetHost` 의 값 멤버로 그 잠금 안에서만 쓴다.
+ *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Core/Network/Connection/NetHostThread.h"
+#include "Core/Network/Connection/NetEndpointThread.h"
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
-    NetHostThread::NetHostThread()
+    NetEndpointThread::NetEndpointThread()
         : _thread{}
         , _pHost{ nullptr }
         , _settings{}
@@ -18,28 +18,28 @@ namespace sw
     {
     }
 
-    NetHostThread::~NetHostThread()
+    NetEndpointThread::~NetEndpointThread()
     {
         stop();
     }
 
-    float64 NetHostThread::getTime()
+    float64 NetEndpointThread::getTime()
     {
         return static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9;
     }
 
-    bool NetHostThread::start( NetHost* pHost, const NetHostThreadConfig& settings )
+    bool NetEndpointThread::start( NetEndpoint* pHost, const NetEndpointThreadConfig& settings )
     {
         if ( pHost == nullptr || _thread.joinable() )
             return false;
         _pHost    = pHost;
         _settings = settings;
         _bRunning.store( true, std::memory_order_release );
-        _thread = sw::thread( &NetHostThread::run, this );
+        _thread = sw::thread( &NetEndpointThread::run, this );
         return true;
     }
 
-    void NetHostThread::stop()
+    void NetEndpointThread::stop()
     {
         if ( _thread.joinable() == false )
             return;
@@ -48,7 +48,7 @@ namespace sw
         _bRunning.store( false, std::memory_order_release );
     }
 
-    void NetHostThread::run( ThreadStopToken stopToken )
+    void NetEndpointThread::run( ThreadStopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Net" );
         _pHost->bindUpdateThread();

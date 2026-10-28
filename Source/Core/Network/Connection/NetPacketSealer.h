@@ -5,8 +5,8 @@
  *          AAD는 프로토콜 ID(리틀 엔디언 4바이트)와 이 본문 헤더를 이은 값이고, nonce 는 방향 IV XOR 패킷 번호다(`NetSessionKeyUtil::makeNonce`).
  *          열 때는 재전송 방지 윈도우를 먼저 보고, **복호가 성공한 뒤에만** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
  *
- *          패킷 형식(체크섬 헤더, 패킷 종류)과 연결 상태는 `NetHost` 가 맡고, 이 클래스는 바이트와 키만 다룬다.
- *          **스레드**: 잠금이 없다. `NetHost` 의 값 멤버로 그 잠금 안에서만 쓴다. 스크래치 버퍼를 다시 쓰므로 패킷마다 할당하지 않는다.
+ *          패킷 형식(체크섬 헤더, 패킷 종류)과 연결 상태는 `NetEndpoint` 가 맡고, 이 클래스는 바이트와 키만 다룬다.
+ *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다. 스크래치 버퍼를 다시 쓰므로 패킷마다 할당하지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -55,7 +55,7 @@ namespace sw
         static constexpr int32 kKeyConfirmAadSize = 4 + 8;                                                                         ///< 서버가 지정한 슬롯 번호와 서버 솔트.
         static constexpr int32 kMaxProofAadSize   = 16 + NetSecurityConstant::kX25519KeySize + NetSecurityConstant::kMaxTokenSize; ///< 두 솔트, 공개 키, 토큰.
 
-        /** @brief `open` 의 결과입니다. 실패 종류마다 `NetHost` 가 다른 카운터를 올립니다. */
+        /** @brief `open` 의 결과입니다. 실패 종류마다 `NetEndpoint` 가 다른 카운터를 올립니다. */
         enum class OpenResult : uint8
         {
             Opened = 0,          ///< 열었다. 평문은 `getOpened`.

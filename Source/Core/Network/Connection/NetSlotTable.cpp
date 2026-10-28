@@ -22,12 +22,12 @@ namespace sw
         _mapSlotByAddress.reserve( _listSlot.size() * 2 );
     }
 
-    NetHostSlot* NetSlotTable::findConnected( int32 slotIndex )
+    NetEndpointSlot* NetSlotTable::findConnected( int32 slotIndex )
     {
         return isValid( slotIndex ) && _listSlot[static_cast<size_t>( slotIndex )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
     }
 
-    const NetHostSlot* NetSlotTable::findConnected( int32 slotIndex ) const
+    const NetEndpointSlot* NetSlotTable::findConnected( int32 slotIndex ) const
     {
         return isValid( slotIndex ) && _listSlot[static_cast<size_t>( slotIndex )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
     }
@@ -64,7 +64,7 @@ namespace sw
     int32 NetSlotTable::countConnected() const
     {
         int32 count = 0;
-        for ( const NetHostSlot& slot : _listSlot )
+        for ( const NetEndpointSlot& slot : _listSlot )
         {
             count += slot._state == NetConnectionState::Connected ? 1 : 0;
         }

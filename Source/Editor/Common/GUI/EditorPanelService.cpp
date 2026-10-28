@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorPanelHost.h"
+#include "Editor/Common/GUI/EditorPanelService.h"
 
 #include "Core/File/FileUtil.h"
 
@@ -13,19 +13,19 @@
 
 namespace sw::editor
 {
-    span<const utf8* const> EditorPanelHost::getSubsystemDependencies() const
+    span<const utf8* const> EditorPanelService::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorWorkspace::kSubsystemName };
         return kArrDependency;
     }
 
-    EditorPanelHost::EditorPanelHost( EditorContext& context, EditorPanelManager& panelManager )
+    EditorPanelService::EditorPanelService( EditorContext& context, EditorPanelManager& panelManager )
         : _context{ context }
         , _panelManager{ panelManager }
     {
     }
 
-    bool EditorPanelHost::focusPanel( EditorPanelID panelID )
+    bool EditorPanelService::focusPanel( EditorPanelID panelID )
     {
         if ( _panelManager.findPanelByID( panelID.getView() ) == nullptr )
             return false;
@@ -33,7 +33,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorPanelHost::maximizePanel( EditorPanelID keepPanelID )
+    bool EditorPanelService::maximizePanel( EditorPanelID keepPanelID )
     {
         EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>(); // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
         if ( pDock == nullptr )
@@ -57,7 +57,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorPanelHost::restoreMaximizedLayout()
+    bool EditorPanelService::restoreMaximizedLayout()
     {
         EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>(); // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
         if ( pDock == nullptr )
@@ -66,22 +66,22 @@ namespace sw::editor
         return pDock->requestLoadNamedLayout( kMaximizeLayoutName, folder );
     }
 
-    bool EditorPanelHost::saveFocusedDirtyDocument()
+    bool EditorPanelService::saveFocusedDirtyDocument()
     {
         return _panelManager.saveFocusedDirtyDocument();
     }
 
-    bool EditorPanelHost::saveAllDirtyDocuments()
+    bool EditorPanelService::saveAllDirtyDocuments()
     {
         return _panelManager.saveAllDirtyDocuments();
     }
 
-    void EditorPanelHost::discardAllDirtyDocuments()
+    void EditorPanelService::discardAllDirtyDocuments()
     {
         _panelManager.discardAllDirtyDocuments();
     }
 
-    uint32 EditorPanelHost::countDirtyDocuments() const
+    uint32 EditorPanelService::countDirtyDocuments() const
     {
         return _panelManager.countDirtyDocuments();
     }

@@ -62,7 +62,7 @@ namespace sw
 
         /**
          * @brief @p bindAddress 에서 받기 시작합니다. 포트 0 = 아무 포트(`getListenPort` 로 읽는다).
-         * @details 주소가 묶을 인터페이스다 — `NetAddress::makeLoopback( port )` 은 이 기계에서만(운영 엔드포인트의 기본),
+         * @details 주소가 묶을 인터페이스다 — `NetAddress::makeLoopback( port )` 은 이 기계에서만(운영 서버의 기본),
          *          `NetAddress::makeAnyInterface( port )` 는 모든 인터페이스(게임 · 서비스 서버). 루프백 망은 포트만 본다.
          */
         [[nodiscard]] virtual bool listen( const NetAddress& bindAddress ) = 0;

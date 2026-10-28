@@ -29,7 +29,7 @@ namespace sw
     enum class NetStatsKindDirection : uint8
     {
         Received = 0, ///< 라우터가 꺼낸 메시지(`kinds=`)
-        Sent          ///< 호스트가 보내기 큐에 넣은 메시지(`sentKinds=`)
+        Sent          ///< 엔드포인트가 보내기 큐에 넣은 메시지(`sentKinds=`)
     };
 
     /**
@@ -77,7 +77,7 @@ namespace sw
         uint64                       _truncatedLineBytes{ 0 }; ///< 읽은 줄이 `DebugReplyLine::kMaxBytes` 때문에 복제 셈을 잘라 냈으면 잘리기 전 길이, 아니면 0(`makeLine` 은 이 값을 쓰지 않고 새로 잰다)
 
         /**
-         * @brief 받은 쪽(라우터) · 보낸 쪽(호스트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
+         * @brief 받은 쪽(라우터) · 보낸 쪽(엔드포인트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
          *        한 번도 세지 않은 종류는 뺍니다.
          */
         void populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally );

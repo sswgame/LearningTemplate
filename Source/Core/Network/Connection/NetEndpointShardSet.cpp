@@ -1,40 +1,40 @@
 #include "pch.h"
 
-#include "Core/Network/Connection/NetHostShardSet.h"
+#include "Core/Network/Connection/NetEndpointShardSet.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    NetHostShardSet::NetHostShardSet()
+    NetEndpointShardSet::NetEndpointShardSet()
         : _listShard{}
         , _shardInbound{}
         , _connectionStride{ 0 }
     {
     }
 
-    NetHostShardSet::~NetHostShardSet() = default;
+    NetEndpointShardSet::~NetEndpointShardSet() = default;
 
-    bool NetHostShardSet::initialize( const vector<NetHost*>& listShard, int32 connectionStride )
+    bool NetEndpointShardSet::initialize( const vector<NetEndpoint*>& listShard, int32 connectionStride )
     {
         shutdown();
         if ( listShard.empty() || connectionStride < 1 )
         {
-            SW_LOG_ERROR( "NetHostShardSet: %# shard(s) with connection stride %# - a shard set needs at least one shard and a stride of 1 or more",
+            SW_LOG_ERROR( "NetEndpointShardSet: %# shard(s) with connection stride %# - a shard set needs at least one shard and a stride of 1 or more",
                           static_cast<int32>( listShard.size() ), connectionStride );
             return false;
         }
         const int64 foldedLimit = static_cast<int64>( listShard.size() ) * static_cast<int64>( connectionStride );
         if ( foldedLimit > static_cast<int64>( MathUtil::kMaxInt32 ) )
         {
-            SW_LOG_ERROR( "NetHostShardSet: %# shard(s) x stride %# does not fit a connection ID", static_cast<int32>( listShard.size() ), connectionStride );
+            SW_LOG_ERROR( "NetEndpointShardSet: %# shard(s) x stride %# does not fit a connection ID", static_cast<int32>( listShard.size() ), connectionStride );
             return false;
         }
-        for ( const NetHost* pShard : listShard )
+        for ( const NetEndpoint* pShard : listShard )
         {
             if ( pShard == nullptr )
             {
-                SW_LOG_ERROR( "NetHostShardSet: a shard host is missing" );
+                SW_LOG_ERROR( "NetEndpointShardSet: a shard host is missing" );
                 return false;
             }
         }
@@ -43,14 +43,14 @@ namespace sw
         return true;
     }
 
-    void NetHostShardSet::shutdown()
+    void NetEndpointShardSet::shutdown()
     {
         _listShard.clear();
         _shardInbound.clear();
         _connectionStride = 0;
     }
 
-    NetHost* NetHostShardSet::findShard( int32 connectionID, int32& outLocalConnectionID ) const
+    NetEndpoint* NetEndpointShardSet::findShard( int32 connectionID, int32& outLocalConnectionID ) const
     {
         outLocalConnectionID = -1;
         if ( connectionID < 0 || _connectionStride < 1 )
@@ -62,47 +62,47 @@ namespace sw
         return _listShard[static_cast<size_t>( shardIndex )];
     }
 
-    bool NetHostShardSet::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetEndpointShardSet::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
-        int32    localConnectionID = -1;
-        NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32        localConnectionID = -1;
+        NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->sendMessage( localConnectionID, channel, pData, size );
     }
 
-    bool NetHostShardSet::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
+    bool NetEndpointShardSet::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
     {
-        int32    localConnectionID = -1;
-        NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32        localConnectionID = -1;
+        NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->sendNotifiedMessage( localConnectionID, pData, size, tag );
     }
 
-    int32 NetHostShardSet::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
+    int32 NetEndpointShardSet::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
-        int32          exceptLocalID = -1;
-        const NetHost* pExceptShard  = findShard( exceptID, exceptLocalID );
-        int32          sentCount     = 0;
-        for ( NetHost* pShard : _listShard )
+        int32              exceptLocalID = -1;
+        const NetEndpoint* pExceptShard  = findShard( exceptID, exceptLocalID );
+        int32              sentCount     = 0;
+        for ( NetEndpoint* pShard : _listShard )
         {
             sentCount += pShard->broadcast( channel, pData, size, pShard == pExceptShard ? exceptLocalID : -1 );
         }
         return sentCount;
     }
 
-    void NetHostShardSet::disconnect( int32 connectionID )
+    void NetEndpointShardSet::disconnect( int32 connectionID )
     {
-        int32    localConnectionID = -1;
-        NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32        localConnectionID = -1;
+        NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         if ( pShard != nullptr )
             pShard->disconnect( localConnectionID );
     }
 
-    void NetHostShardSet::drainInbound( NetInbound& outInbound )
+    void NetEndpointShardSet::drainInbound( NetInbound& outInbound )
     {
         outInbound.clear();
         for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
         {
             _listShard[static_cast<size_t>( shardIndex )]->drainInbound( _shardInbound );
-            for ( NetHostEvent event : _shardInbound._listEvent )
+            for ( NetEndpointEvent event : _shardInbound._listEvent )
             {
                 event._connectionID = makeConnectionID( shardIndex, event._connectionID );
                 outInbound._listEvent.push_back( event );
@@ -124,48 +124,48 @@ namespace sw
         }
     }
 
-    bool NetHostShardSet::isServer() const
+    bool NetEndpointShardSet::isServer() const
     {
         return _listShard.empty() == false && _listShard.front()->isServer();
     }
 
-    NetConnectionState NetHostShardSet::getConnectionState( int32 connectionID ) const
+    NetConnectionState NetEndpointShardSet::getConnectionState( int32 connectionID ) const
     {
-        int32          localConnectionID = -1;
-        const NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32              localConnectionID = -1;
+        const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr ? pShard->getConnectionState( localConnectionID ) : NetConnectionState::Disconnected;
     }
 
-    bool NetHostShardSet::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
+    bool NetEndpointShardSet::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
     {
-        int32          localConnectionID = -1;
-        const NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32              localConnectionID = -1;
+        const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->getConnectionStats( localConnectionID, outStats );
     }
 
-    NetAddress NetHostShardSet::getConnectionAddress( int32 connectionID ) const
+    NetAddress NetEndpointShardSet::getConnectionAddress( int32 connectionID ) const
     {
-        int32          localConnectionID = -1;
-        const NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32              localConnectionID = -1;
+        const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr ? pShard->getConnectionAddress( localConnectionID ) : NetAddress{};
     }
 
-    int32 NetHostShardSet::getConnectedCount() const
+    int32 NetEndpointShardSet::getConnectedCount() const
     {
         int32 connectedCount = 0;
-        for ( const NetHost* pShard : _listShard )
+        for ( const NetEndpoint* pShard : _listShard )
         {
             connectedCount += pShard->getConnectedCount();
         }
         return connectedCount;
     }
 
-    int32 NetHostShardSet::getClientIndex() const
+    int32 NetEndpointShardSet::getClientIndex() const
     {
         return getShardCount() == 1 ? _listShard.front()->getClientIndex() : -1;
     }
 
-    void NetHostShardSet::collectConnected( vector<int32>& outListConnection ) const
+    void NetEndpointShardSet::collectConnected( vector<int32>& outListConnection ) const
     {
         outListConnection.clear();
         vector<int32> listShardConnection;
@@ -179,21 +179,21 @@ namespace sw
         }
     }
 
-    int32 NetHostShardSet::getMaxBytesPerSecond() const
+    int32 NetEndpointShardSet::getMaxBytesPerSecond() const
     {
         return _listShard.empty() ? 0 : _listShard.front()->getMaxBytesPerSecond();
     }
 
-    bool NetHostShardSet::isConnectionSaturated( int32 connectionID ) const
+    bool NetEndpointShardSet::isConnectionSaturated( int32 connectionID ) const
     {
-        int32          localConnectionID = -1;
-        const NetHost* pShard            = findShard( connectionID, localConnectionID );
+        int32              localConnectionID = -1;
+        const NetEndpoint* pShard            = findShard( connectionID, localConnectionID );
         return pShard != nullptr && pShard->isConnectionSaturated( localConnectionID );
     }
 
-    void NetHostShardSet::addSentKindTally( NetMessageKindTallyTable& outTable ) const
+    void NetEndpointShardSet::addSentKindTally( NetMessageKindTallyTable& outTable ) const
     {
-        for ( const NetHost* pShard : _listShard )
+        for ( const NetEndpoint* pShard : _listShard )
         {
             pShard->addSentKindTally( outTable );
         }

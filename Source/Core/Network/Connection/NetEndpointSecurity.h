@@ -1,5 +1,5 @@
 /**
- * @file NetHostSecurity.h
+ * @file NetEndpointSecurity.h
  * @brief UDP 연결의 보안 설정 — 방식(평문 · 암호화), 서버의 세션 토큰 인증기, 클라이언트가 연결 때 내미는 자격입니다.
  * @details 암호화(`NetSecurityMode::Encrypted`)는 연결 수립에 일회 X25519 키 교환, 그 뒤 데이터 · 끊기 패킷마다 AEAD(nonce = 방향 IV XOR 64 비트 패킷 번호,
  *          1024 재전송 방지 창)다 — Valve GameNetworkingSockets · 언리얼 AESGCMHandlerComponent 와 같은 모양. 방식 · 토큰 결속 여부는 프로토콜 id 에 섞여
@@ -30,7 +30,7 @@ namespace sw
     /**
      * @class INetConnectAuthenticator
      * @brief 서버 — 클라이언트가 내민 세션 토큰으로 세션 비밀과 주체(계정)를 찾습니다(로그인 키트가 구현).
-     * @warning 네트워크 스레드(`NetHost::update` 를 도는 스레드)에서 **`NetHost` 잠금을 쥔 채** 불린다 — `NetHost` 를 부르지 말고 빨라야 하며 스레드 안전해야 한다.
+     * @warning 네트워크 스레드(`NetEndpoint::update` 를 도는 스레드)에서 **`NetEndpoint` 잠금을 쥔 채** 불린다 — `NetEndpoint` 를 부르지 말고 빨라야 하며 스레드 안전해야 한다.
      */
     class SW_API INetConnectAuthenticator
     {
@@ -48,7 +48,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `NetHostConfig::_security` 입니다. */
+    /** @brief `NetEndpointConfig::_security` 입니다. */
     struct NetSecurityConfig
     {
         INetSecurityProvider*     _pProvider{ nullptr };      ///< Encrypted 면 필수(`NetSecurity::getProvider()`)

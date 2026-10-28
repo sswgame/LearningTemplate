@@ -112,14 +112,14 @@ namespace sw
 {
     /**
      * @class NetEmulationTransport
-     * @brief 다른 전송을 감싸 보내는 쪽에서 회선을 흉내 냅니다. `NetHost` 는 이것을 일반 전송으로 받습니다.
+     * @brief 다른 전송을 감싸 보내는 쪽에서 회선을 흉내 냅니다. `NetEndpoint` 는 이것을 일반 전송으로 받습니다.
      * @details - 보내기(`send`)는 손실, 중복, 깨짐, 순서 바꿈을 정하고 전달할 시각을 적어 큐에 둔다. 전달 시각은 지연과 흔들림을 더한 값이며,
      *            대역폭이 있으면 회선이 빌 때까지 미룬다(목적지마다 "회선이 비는 시각"을 보관하므로 큰 스냅샷 하나가 뒤 패킷을 밀어낸다). 큐가 `_maxQueuedBytes` 를 넘으면 버린다.
      *          - `update( time )` 은 전달할 때가 된 패킷을 안쪽 전송에 넘기고 안쪽 `update` 를 부른다. 받기는 안쪽 전송이 그대로 처리한다.
      *          - 조건은 기본값 하나와 목적지별 덮어쓰기(`setConditions( to, … )`)로 정한다. 연결 하나만 나쁘게 할 수 있다.
      *          - 난수는 시드를 고정하므로 같은 시드면 같은 결과가 나온다(테스트와 재현용). 깨짐 난수는 깨짐을 켰을 때만 뽑으므로, 다른 조건만 쓰는 경우의 난수열은 그대로다.
-     *            스레드 안전하다(`NetHostThread` 가 다른 스레드에서 돌린다).
-     *          - 보내는 쪽 큐이므로 호스트를 한 스레드에서 차례로 돌릴 때는 프레임마다 에뮬레이션을 모두 먼저 `update` 한다. 그러지 않으면 뒤에 도는 호스트가 보낸 것이 한 프레임 늦는다.
+     *            스레드 안전하다(`NetEndpointThread` 가 다른 스레드에서 돌린다).
+     *          - 보내는 쪽 큐이므로 엔드포인트를 한 스레드에서 차례로 돌릴 때는 프레임마다 에뮬레이션을 모두 먼저 `update` 한다. 그러지 않으면 뒤에 도는 엔드포인트가 보낸 것이 한 프레임 늦는다.
      *          - 언리얼의 `PacketSimulationSettings`(PktLag, PktLoss, PktDup, PktOrder, PktIncomingLag), 유니티 Network Simulator(지연, 흔들림, 손실)에 대응한다.
      */
     class SW_API NetEmulationTransport final : public INetTransport

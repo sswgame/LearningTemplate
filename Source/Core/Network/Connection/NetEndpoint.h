@@ -1,5 +1,5 @@
 /**
- * @file NetHost.h
+ * @file NetEndpoint.h
  * @brief 서버와 클라이언트의 엔드포인트를 구현합니다.
  * @details 연결 핸드셰이크(요청, 챌린지, 응답, 수락)를 처리하고, 체크섬과 프로토콜 ID로 다른 프로그램의 패킷을 걸러 낸다.
  *          연결 유지, 타임아웃, 연결 끊기, 연결별 신뢰성 계층도 여기서 맡는다.
@@ -20,9 +20,9 @@
  *
  *          **책임 나누기**: 이 클래스는 패킷 형식(체크섬 헤더, 패킷 종류), 핸드셰이크 순서, 연결 수명, 대역폭, 송신 배치를 맡는다.
  *          챌린지 값과 솔트는 `NetChallenge`, 슬롯과 주소 맵은 `NetSlotTable`, AEAD 봉인과 키 유도는 `NetPacketSealer` 가 맡는다.
- *          셋 다 가상 함수 없는 값 멤버이고 잠금이 없으며, 이 호스트의 잠금(`_mutex`) 안에서만 쓴다.
+ *          셋 다 가상 함수 없는 값 멤버이고 잠금이 없으며, 이 엔드포인트의 잠금(`_mutex`) 안에서만 쓴다.
  *
- *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostConfig::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
+ *          **대역폭 상한**: 연결마다 토큰 버킷(`NetEndpointConfig::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
  *          토큰이 남아 있으면 한 번의 전송에 패킷을 여럿(`kMaxPacketsPerSend` 까지) 보낸다.
  *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다.
  *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 이 값에서 할당받는다.
@@ -30,13 +30,13 @@
  *          **스레드**: 공개 함수는 모두 잠금 하나로 보호하므로 어느 스레드에서나 부를 수 있다.
  *          게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크 스레드가 `update` 한다.
  *          `update` 는 소켓 받기와 보내기를 **잠금 밖에서** 묶어 처리하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이 보내는 쪽 스레드를 막지 않는다.
- *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetHostThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
+ *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetEndpointThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
  *          그래서 로딩이나 프레임 멈춤 중에도 연결이 끊기지 않는다.
  *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖, `_updateThread` 역할), 나머지는 모두 `_mutex` 아래다(선언의 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` 을 clang `-Wthread-safety` 가 본다).
- *          잠금은 `_mutex` 하나뿐이고, 잠금을 쥔 채 부르는 바깥 코드는 `INetConnectAuthenticator` 와 `INetSecurityProvider` 뿐이다(둘 다 `NetHost` 를 부르지 않는다).
+ *          잠금은 `_mutex` 하나뿐이고, 잠금을 쥔 채 부르는 바깥 코드는 `INetConnectAuthenticator` 와 `INetSecurityProvider` 뿐이다(둘 다 `NetEndpoint` 를 부르지 않는다).
  *          전송의 `receive` · `send` 와 비동기 연결 결과(`TaskPromise::setValue`)는 잠금 밖에서 부른다.
  *
- *          **암호화**(`NetHostConfig::_security`, 기본값은 꺼짐, `NetHostSecurity.h`): 응답과 수락에 일회용 X25519 공개 키를 싣는다.
+ *          **암호화**(`NetEndpointConfig::_security`, 기본값은 꺼짐, `NetEndpointSecurity.h`): 응답과 수락에 일회용 X25519 공개 키를 싣는다.
  *          서버는 상태 없는 챌린지를 통과한 응답에만 키를 계산한다. 키는 HKDF(공유 비밀, 솔트는 세션 비밀)로 만든다.
  *          데이터 패킷과 끊기 패킷은 `[종류][연결 값][64비트 번호][AEAD + 태그]` 형식이고, AAD는 프로토콜 ID와 이 헤더를 이은 값이다.
  *          받는 쪽은 1024개 크기의 재전송 방지 윈도우로 걸러 내고, **복호가 성공한 뒤에** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
@@ -45,7 +45,7 @@
  *          암호화 방식과 토큰 결속 여부는 프로토콜 ID에 섞이지 않고 협상하지도 않는다. 한쪽만 켜면 `SecurityMismatch` 가 된다.
  *          인증기 없는 암호화(일회용 키라 중간자 공격은 막지 못한다)는 개발 빌드에서만 허용한다. Shipping 서버는 인증기 없이 암호화로 `listen` 할 수 없다.
  *
- *          **디버거 대기**(`NetHostConfig::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1비트로 이 사실을 알린다.
+ *          **디버거 대기**(`NetEndpointConfig::_debugHold`, 개발 빌드만): 디버거가 붙은 엔드포인트는 데이터 패킷마다 1비트로 이 사실을 알린다.
  *          상대는 그 연결의 타임아웃을 `_debugHoldTimeoutSeconds` 로 늘리므로, 한쪽이 중단점에 멈춰도 다른 쪽이 연결을 끊지 않는다.
  *          멈췄던 쪽은 `update` 사이의 빈 시간만큼 연결 시계를 앞으로 민다.
  *          Shipping 은 이 비트를 보내지도 믿지도 않는다. 비트를 켠 클라이언트가 슬롯을 계속 붙잡는 일을 막기 위해서다.
@@ -57,7 +57,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Connection/NetChallenge.h"
-#include "Core/Network/Connection/NetHostSecurity.h"
+#include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
@@ -73,9 +73,9 @@ namespace sw
     class NetConnection;
 
     /**
-     * @brief 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.
+     * @brief 이 엔드포인트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.
      * @details 개발 빌드에서만 동작한다. Shipping 은 알리지 않고 상대의 알림도 무시한다.
-     *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetHostConfig::_debugHoldTimeoutSeconds` 로 늘린다.
+     *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetEndpointConfig::_debugHoldTimeoutSeconds` 로 늘린다.
      *          알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다고 보고) 그만큼 시계가 멈춘 것으로 간주한다(가상 시계).
      */
     enum class NetDebugHold : uint8
@@ -88,8 +88,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 호스트 설정입니다. 시간은 초입니다. */
-    struct NetHostConfig
+    /** @brief 엔드포인트 설정입니다. 시간은 초입니다. */
+    struct NetEndpointConfig
     {
         uint32            _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
         uint32            _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
@@ -110,8 +110,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 호스트에서 일어난 사건입니다. */
-    struct NetHostEvent
+    /** @brief 엔드포인트에서 일어난 사건입니다. */
+    struct NetEndpointEvent
     {
         enum class Kind : uint8
         {
@@ -150,10 +150,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `NetHost::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않으며, 바이트는 아레나 하나에 모읍니다. */
+    /** @brief `NetEndpoint::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않으며, 바이트는 아레나 하나에 모읍니다. */
     struct NetInbound
     {
-        vector<NetHostEvent>      _listEvent{};
+        vector<NetEndpointEvent>  _listEvent{};
         vector<NetInboundMessage> _listMessage{};
         vector<NetDeliveryNotice> _listDeliveryNotice{}; ///< 판정이 난 전달 통지(`INetPeers::sendNotifiedMessage`). 연결 ID 가 채워져 있다
         vector<uint8>             _bytes{};
@@ -172,9 +172,9 @@ namespace sw
 {
     /**
      * @class INetPeers
-     * @brief 키트 · 라우터가 연결에 보내고 연결을 묻는 창구입니다. 호스트 하나(`NetHost`)도, 포트 샤드 여럿을 묶은 것(`NetHostShardSet`)도 이 모양입니다.
-     * @details 키트는 호스트가 몇 개인지 모른다 — 연결 ID 만 다룬다. 샤드 묶음은 연결 ID 에 샤드 번호를 접어 넣으므로(`NetHostShardSet`) 같은 ID 가 두 샤드에서 겹치지 않는다.
-     *          스레드: 구현은 모든 함수를 어느 스레드에서나 부를 수 있게 한다(`NetHost` 의 잠금 약속과 같다). `drainInbound` 만 한 스레드(라우터를 pump 하는 게임 스레드)가 부른다.
+     * @brief 키트 · 라우터가 연결에 보내고 연결을 묻는 창구입니다. 엔드포인트 하나(`NetEndpoint`)도, 포트 샤드 여럿을 묶은 것(`NetEndpointShardSet`)도 이 모양입니다.
+     * @details 키트는 엔드포인트가 몇 개인지 모른다 — 연결 ID 만 다룬다. 샤드 묶음은 연결 ID 에 샤드 번호를 접어 넣으므로(`NetEndpointShardSet`) 같은 ID 가 두 샤드에서 겹치지 않는다.
+     *          스레드: 구현은 모든 함수를 어느 스레드에서나 부를 수 있게 한다(`NetEndpoint` 의 잠금 약속과 같다). `drainInbound` 만 한 스레드(라우터를 pump 하는 게임 스레드)가 부른다.
      */
     class SW_API INetPeers
     {
@@ -198,7 +198,7 @@ namespace sw
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다(-1 이면 제외 없음). 반환값은 보낸 수입니다. */
         virtual int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) = 0;
         virtual void  disconnect( int32 connectionID )                                                         = 0;
-        /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetHost::drainInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
+        /** @brief 쌓인 연결 사건과 받은 메시지를 모두 꺼냅니다(`NetEndpoint::drainInbound` 와 같은 약속 — 사건이 메시지보다 앞에 온다). */
         virtual void               drainInbound( NetInbound& outInbound )                                       = 0;
         virtual bool               isServer() const                                                             = 0;
         virtual NetConnectionState getConnectionState( int32 connectionID ) const                               = 0;
@@ -219,9 +219,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @class NetHost
-     * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작한 뒤 `update( 시각 )` 를 부르는 네트워크 호스트입니다.
-     * @details `update` 는 매 프레임 직접 부르거나 `NetHostThread` 에 맡긴다. 클라이언트에서 서버 연결의 ID는 0이다.
+     * @class NetEndpoint
+     * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작한 뒤 `update( 시각 )` 를 부르는 네트워크 엔드포인트입니다.
+     * @details `update` 는 매 프레임 직접 부르거나 `NetEndpointThread` 에 맡긴다. 클라이언트에서 서버 연결의 ID는 0이다.
      * @code
      *     host.initialize( &transport, settings );
      *     (void)host.listen();
@@ -232,21 +232,21 @@ namespace sw
      *     future.then( []( const NetConnectResult& result ) { ... } ); // 결과는 update 를 돈 스레드에서 — 잠금 밖
      * @endcode
      */
-    class SW_API NetHost final : public INetPeers
+    class SW_API NetEndpoint final : public INetPeers
     {
     public:
         static constexpr int32 kMaxDatagramPerUpdate = 512; ///< `update` 한 번에 받는 데이터그램 한도. 나머지는 소켓 버퍼에 남겨 다음 호출에서 받는다.
         static constexpr int32 kReceiveBatchSize     = 64;  ///< 일괄 받기 한 번에 받는 데이터그램 수. 시스템 호출 한 번이 이만큼을 받는다(`INetTransport::receiveBatch`).
         static constexpr int32 kMaxPacketsPerSend    = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
 
-        NetHost();
-        ~NetHost() override;
+        NetEndpoint();
+        ~NetEndpoint() override;
 
-        NetHost( const NetHost& )            = delete;
-        NetHost& operator=( const NetHost& ) = delete;
+        NetEndpoint( const NetEndpoint& )            = delete;
+        NetEndpoint& operator=( const NetEndpoint& ) = delete;
 
         /** @brief 전송과 설정을 정합니다. `update` 를 도는 스레드가 없을 때 부른다. */
-        void               initialize( INetTransport* pTransport, const NetHostConfig& settings ) SW_EXCLUDES_LOCK( _mutex );
+        void               initialize( INetTransport* pTransport, const NetEndpointConfig& settings ) SW_EXCLUDES_LOCK( _mutex );
         [[nodiscard]] bool listen() SW_EXCLUDES_LOCK( _mutex );
         [[nodiscard]] bool connect( const NetAddress& serverAddress ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
@@ -263,7 +263,7 @@ namespace sw
         void update( float64 nowSeconds ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
         bool waitForReceive( float64 timeoutSeconds ) SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 이 스레드를 `update` 스레드 역할의 소유자로 정합니다(`NetHostThread` 가 스레드를 시작할 때). Debug 가 `update` 진입에서 스레드를 확인한다. */
+        /** @brief 이 스레드를 `update` 스레드 역할의 소유자로 정합니다(`NetEndpointThread` 가 스레드를 시작할 때). Debug 가 `update` 진입에서 스레드를 확인한다. */
         void bindUpdateThread() { _updateThread.bindToCurrentThread(); }
         /** @brief `update` 스레드 역할을 놓습니다(그 스레드가 끝날 때) — 다음에 `update` 를 부르는 스레드가 받는다. */
         void releaseUpdateThread() { _updateThread.unbind(); }
@@ -285,7 +285,7 @@ namespace sw
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
         void               disconnect( int32 connectionID ) SW_EXCLUDES_LOCK( _mutex ) override;
         void               disconnectAll() SW_EXCLUDES_LOCK( _mutex );
-        void               drainEvents( vector<NetHostEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
+        void               drainEvents( vector<NetEndpointEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
          * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.
@@ -308,7 +308,7 @@ namespace sw
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
         int32 getClientIndex() const SW_EXCLUDES_LOCK( _mutex ) override;
         void  collectConnected( vector<int32>& outListConnection ) const SW_EXCLUDES_LOCK( _mutex ) override;
-        /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostConfig::_debugHold`), Shipping 은 항상 false 입니다. */
+        /** @brief 이 엔드포인트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetEndpointConfig::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const SW_EXCLUDES_LOCK( _mutex );
         uint64 getRejectedPacketCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 서버에서 인증기가 이 연결에 지정한 주체(로그인 계정)를 반환합니다. 없으면 0 입니다. */
@@ -317,9 +317,9 @@ namespace sw
         uint64 getAuthenticationFailureCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 이 호스트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
+        /** @brief 이 엔드포인트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const SW_EXCLUDES_LOCK( _mutex );
-        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
+        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetEndpointConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
         int32 getMaxBytesPerSecond() const SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
@@ -413,38 +413,38 @@ namespace sw
         void handleChallengeResponse( const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         void updateSlots( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 연결 요청을 거절합니다. 이유, 이 호스트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
+        /** @brief 연결 요청을 거절합니다. 이유, 이 엔드포인트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
-        void sendChallengeResponse( NetHostSlot& slot ) SW_REQUIRES_LOCK( _mutex );
+        void sendChallengeResponse( NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 수락을 보냅니다. 암호화 방식이면 공개 키와 키 확인 태그를 함께 싣습니다. */
         void sendAccepted( int32 slotIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 응답의 공개 키, 토큰, 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<NetSlotSecurity>& outSecurity ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
-        [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetHostSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetEndpointSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
-        int32 sendSealed( NetHostSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
+        int32 sendSealed( NetEndpointSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)을 처리합니다. */
         void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
+        /** @brief 이 엔드포인트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
         uint32 computeFeatureMask() const SW_REQUIRES_LOCK( _mutex );
         bool   isEncrypted() const SW_REQUIRES_LOCK( _mutex ) { return _settings._security._mode == NetSecurityMode::Encrypted; }
         /** @brief `_packetWriter` 의 본문에 헤더(헤더 값과 체크섬)를 붙여 보낼 배치에 넣습니다. */
         void sendFramed( const NetAddress& to, uint32 headerID ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 패킷 하나를 씁니다. 대역폭 토큰이 남아 있으면 메시지까지 싣고, 다 썼으면 헤더(확인)만 싣습니다. 보낸 바이트만큼 토큰에서 뺍니다. */
-        void sendPayload( float64 nowSeconds, NetHostSlot& slot ) SW_REQUIRES_LOCK( _mutex );
+        void sendPayload( float64 nowSeconds, NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 지난 충전 이후 흐른 시간만큼 대역폭 토큰을 채웁니다. 상한은 보내기 간격 두 번어치이고, 최소 패킷 하나 크기입니다. */
-        void refillSendCredit( float64 nowSeconds, NetHostSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
+        void refillSendCredit( float64 nowSeconds, NetEndpointSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief 디버거 대기를 알릴지 다시 정합니다(디버거는 1초마다 확인). 알리는 중에 `update` 사이가 벌어졌으면 그 시간만큼 연결 시계를 앞으로 밀습니다(가상 시계). */
         void updateDebugHold( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 이 연결의 타임아웃을 반환합니다. 상대가 디버거 대기를 알렸다면(개발 빌드) `_debugHoldTimeoutSeconds` 와 기본값 중 큰 쪽입니다. */
-        float64                      computeTimeoutSeconds( const NetHostSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
+        float64                      computeTimeoutSeconds( const NetEndpointSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
         void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote ) SW_REQUIRES_LOCK( _mutex );
         bool                         startConnect( const NetAddress& serverAddress ) SW_REQUIRES_LOCK( _mutex );
         bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
         TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
-        void                         pushEvent( const NetHostEvent& event ) SW_REQUIRES_LOCK( _mutex );
+        void                         pushEvent( const NetEndpointEvent& event ) SW_REQUIRES_LOCK( _mutex );
         void                         finishConnect( NetDisconnectReason reason ) SW_REQUIRES_LOCK( _mutex );
         bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
         void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
@@ -457,7 +457,7 @@ namespace sw
         NetSlotTable _slotTable                       SW_GUARDED_BY( _mutex ); ///< 연결 슬롯과 주소 맵.
         NetChallenge _challenge                       SW_GUARDED_BY( _mutex ); ///< 챌린지 값의 비밀 키와 솔트 수열.
         NetPacketSealer _sealer                       SW_GUARDED_BY( _mutex ); ///< 암호화 방식의 봉인과 열기(스크래치 버퍼를 다시 쓴다).
-        vector<NetHostEvent> _listEvent               SW_GUARDED_BY( _mutex );
+        vector<NetEndpointEvent> _listEvent           SW_GUARDED_BY( _mutex );
         OutgoingBatch _pendingBatch                   SW_GUARDED_BY( _mutex );        ///< 잠금 안에서 쌓인 보낼 데이터그램
         BitWriter _packetWriter                       SW_GUARDED_BY( _mutex );        ///< 보낼 패킷의 몸
         TaskPromise<NetConnectResult> _connectPromise SW_GUARDED_BY( _mutex );        ///< 기다리는 비동기 연결(`_bConnectPending`).
@@ -469,7 +469,7 @@ namespace sw
         BitWriter _plainWriter                        SW_GUARDED_BY( _mutex );        ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex );        ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         vector<DeferredWarning> _listDeferredWarning  SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
-        NetHostConfig _settings                       SW_GUARDED_BY( _mutex );
+        NetEndpointConfig _settings                   SW_GUARDED_BY( _mutex );
         NetMessageKindTallyTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         INetTransport* _pTransport                    SW_GUARDED_BY( _mutex );
         uint64 _rejectedPacketCount                   SW_GUARDED_BY( _mutex );

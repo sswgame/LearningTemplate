@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelHost.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 #include "Editor/Viewport/EditorViewportAssetDrop.h"
@@ -177,11 +177,11 @@ namespace sw::editor
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( context.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
+            if ( context.getSubsystem<IEditorPanelService>().restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( context.getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
+        if ( context.getSubsystem<IEditorPanelService>().maximizePanel( editorpanel::kSceneView ) )
             _bMaximized = SW_TRUE;
     }
 

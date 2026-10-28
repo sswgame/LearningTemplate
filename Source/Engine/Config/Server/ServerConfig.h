@@ -77,7 +77,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 65535 )
         int32 _gamePort{ 7777 };
         /**
-         * @brief 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetHost)를 엽니다.
+         * @brief 게임 UDP 샤드 수입니다 — 서버는 `_gamePort` 부터 `_gamePort + _gamePortShardCount - 1` 까지 포트마다 소켓 하나(샤드마다 NetEndpoint)를 엽니다.
          * @details 두 플랫폼 공통 받기 분산 계약(포트 샤딩): 서버 배정(`ServerDescriptor::pickPort` — 계정마다 정해진 샤드)이 클라이언트에게 샤드 포트를 알려 줍니다.
          *          리눅스에서 `_bGamePortReuse` 를 켜면 같은 포트 하나에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눔)로 바뀝니다. 1 이면 소켓 하나.
          *          2 이상이면 `_gamePort` 가 0 이 아니어야 합니다(연이은 포트가 배정의 계약이다). 키트는 샤드를 모른다(`GameNetSession::getPeers`).

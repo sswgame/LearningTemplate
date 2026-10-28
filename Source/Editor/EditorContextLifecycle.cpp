@@ -18,8 +18,8 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/GUI/EditorPanelHost.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorPanelService.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
@@ -73,8 +73,8 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorStateStore>() ); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
         EditorSelection&    selection    = _scope.addSubsystem( make_unique<EditorSelection>() );
         EditorPanelManager& panelManager = _scope.addSubsystem( make_unique<EditorPanelManager>() );
-        EditorPanelHost&    panelHost    = _scope.addSubsystem( make_unique<EditorPanelHost>( *this, panelManager ) );
-        (void)_scope.expose<IEditorPanelHost>( panelHost ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
+        EditorPanelService& panelService = _scope.addSubsystem( make_unique<EditorPanelService>( *this, panelManager ) );
+        (void)_scope.expose<IEditorPanelService>( panelService ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
         _scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
         _scope.addSubsystem( make_unique<EditorNotificationManager>() );
         _scope.addSubsystem( make_unique<EditorCommandRegistry>() );

@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 

@@ -3,7 +3,7 @@
 #include "Games/Shooter3D/ShooterNetPawnComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
