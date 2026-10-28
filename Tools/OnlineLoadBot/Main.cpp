@@ -1,6 +1,6 @@
 /**
  * @file Main.cpp
- * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<신뢰 PEM>]] | --local-server[=<port>]) [--bots=N] [--ramp-up-seconds=S] [--duration-seconds=S] [--report=<json>]
+ * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<신뢰 PEM>]] | --local-server[=<port>]) [--game=<ip:port>] [--bots=N] [--ramp-up-seconds=S] [--duration-seconds=S] [--report=<json>]
  *        [--max-error-percent=N] [--light-hash]`.
  * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
@@ -127,6 +127,7 @@ namespace sw
             string _scenarioPath{};
             string _reportPath{};
             string _serverAddress{};
+            string _gameAddress{};  ///< `--game=<ip:port>` — 전용 서버의 게임 UDP 포트. 시나리오의 `game_connect` 가 붙는다(서버 디버깅 S5)
             string _tlsTrustFile{}; ///< `--tls=<PEM>` — 비면 Dev 개발용 인증서를 신뢰한다
             int32  _botCount{ 0 };
             int32  _rampUpSeconds{ -1 };   ///< `--ramp-up-seconds` — 0 이상이면 시나리오 값을 덮는다(부하 검증 `<Load rampUpSeconds>`)
@@ -164,7 +165,7 @@ namespace sw
                     const string_view argument = argv[argumentIndex];
                     string            value;
                     const bool        bPathOrAddressOption = readValue( argument, "--scenario=", outOptions._scenarioPath ) || readValue( argument, "--report=", outOptions._reportPath ) ||
-                                                      readValue( argument, "--server=", outOptions._serverAddress );
+                                                      readValue( argument, "--server=", outOptions._serverAddress ) || readValue( argument, "--game=", outOptions._gameAddress );
                     if ( bPathOrAddressOption )
                         continue;
                     bool bNumberOk = true;
@@ -297,6 +298,12 @@ int32 main( int32 argc, utf8* argv[] )
     else if ( NetAddress::parse( options._serverAddress, Internal::kDefaultServerPort, runnerSettings._serverAddress ) == false )
     {
         SW_LOG_ERROR( "OnlineLoadBot: cannot read server address '%#'", options._serverAddress );
+        return Internal::kExitUsage;
+    }
+
+    if ( options._gameAddress.empty() == false && NetAddress::parse( options._gameAddress, 0, runnerSettings._gameAddress ) == false )
+    {
+        SW_LOG_ERROR( "OnlineLoadBot: cannot read game address '%#' (--game=<ip:port>)", options._gameAddress );
         return Internal::kExitUsage;
     }
 

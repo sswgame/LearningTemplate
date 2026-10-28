@@ -1,0 +1,13 @@
+{
+    "_name": "game_udp_session",
+    "_botCount": 100,
+    "_rampUpSeconds": 10,
+    "_durationSeconds": 60,
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "game_connect" },
+        { "_action": "wait", "_minMs": 20000, "_maxMs": 30000 },
+        { "_action": "game_disconnect" },
+        { "_action": "logout" }
+    ]
+}

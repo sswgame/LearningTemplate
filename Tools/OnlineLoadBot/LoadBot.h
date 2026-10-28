@@ -26,6 +26,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Shared/ServerDirectoryClient.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialClient.h"
 
+#include "OnlineLoadBot/LoadBotGameSession.h"
 #include "OnlineLoadBot/LoadBotScenario.h"
 
 namespace sw
@@ -79,7 +80,8 @@ namespace sw
             Response, ///< 키트 응답 · 계정 응답
             Match,    ///< 매칭 결과 알림
             Closed,   ///< Disconnect — 닫힘
-            Ready     ///< Reconnect — Hello(+ 재접속)
+            Ready,    ///< Reconnect — Hello(+ 재접속)
+            Game      ///< GameConnect — 게임 UDP 연결이 열리거나 실패할 때까지
         };
 
         const LoadBotStep* findCurrentStep() const;
@@ -93,6 +95,7 @@ namespace sw
         void               drainNotifications();
         void               pollAccountReplies();
         void               pollMatchResult( MonotonicMilliseconds nowMs );
+        void               pollGameSession();
         void               stop();
 
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)
@@ -113,6 +116,7 @@ namespace sw
         LeaderboardClient          _leaderboardClient;
         MatchmakingClient          _matchmakingClient;
         LiveOpsClient              _liveOpsClient;
+        LoadBotGameSession         _gameSession;
         DrainLease                 _chatLease;
         DrainLease                 _socialLease;
         DrainLease                 _matchmakingLease;

@@ -49,6 +49,8 @@ namespace sw
                 {         LoadBotAction::WaitMatch,           "wait_match",           { "_timeoutMs" },            nullptr,                                 0},
                 {       LoadBotAction::PartyCreate,         "party_create",                         {},            nullptr,                                 0},
                 {      LoadBotAction::LiveOpsState,        "liveops_state",                         {},            nullptr,                                 0},
+                {       LoadBotAction::GameConnect,         "game_connect",                         {},            nullptr,                                 0},
+                {    LoadBotAction::GameDisconnect,      "game_disconnect",                         {},            nullptr,                                 0},
             };
             static_assert( std::size( kArrAction ) == static_cast<size_t>( LoadBotAction::Count ), "every load bot action has a row" );
 

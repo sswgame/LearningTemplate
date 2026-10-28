@@ -30,6 +30,7 @@ namespace sw
     struct LoadBotRunnerSettings
     {
         NetAddress   _serverAddress{};
+        NetAddress   _gameAddress{};          ///< 게임 UDP 포트 — 시나리오의 `game_connect` 가 붙는다. 비어 있으면(`isValid` 거짓) 그 동작은 `game.noaddress` 오류다
         ITLSContext* _pTLSContext{ nullptr }; ///< 있으면 모든 연결이 TLS 1.3(전용 서버의 서비스 포트). 빌려 쓰며 실행기보다 오래 산다
         int32        _botCountOverride{ 0 };  ///< 0 = 시나리오 값
     };
@@ -60,10 +61,11 @@ namespace sw
         /** @brief 한 틱 — 전송 · 엔드포인트 · 요청 시한을 돌고, 늘리는 중이면 봇을 더 띄우고, 봇마다 다음 단계를 본다. 시나리오가 끝났으면 false. */
         bool update();
 
-        const LoadBotMetrics&  getMetrics() const { return _metrics; }
-        const LoadBotScenario& getScenario() const { return _scenario; }
-        int32                  getBotCount() const { return static_cast<int32>( _listBot.size() ); }
-        int32                  getRunningBotCount() const;
+        const LoadBotMetrics&        getMetrics() const { return _metrics; }
+        const LoadBotScenario&       getScenario() const { return _scenario; }
+        const LoadBotRunnerSettings& getSettings() const { return _settings; }
+        int32                        getBotCount() const { return static_cast<int32>( _listBot.size() ); }
+        int32                        getRunningBotCount() const;
         /** @brief 시작(첫 틱)부터 지난 밀리초입니다. */
         int64 getElapsedMs() const { return getNowMs() - kRunStart; }
 

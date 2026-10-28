@@ -147,12 +147,14 @@ namespace sw
     void LoadBot::shutdown()
     {
         _bFinished = SW_TRUE; // 내리는 동안 끝나는 요청은 지표에 적지 않는다
+        _gameSession.stop();
         _client.shutdown();
     }
 
     void LoadBot::stop()
     {
         _bFinished = SW_TRUE;
+        _gameSession.stop();
         if ( _bConnectionOpen == SW_TRUE )
             _pRunner->closeBot( _connection );
     }
@@ -193,6 +195,8 @@ namespace sw
             return false;
         if ( _bConnecting == SW_TRUE )
             return true; // 열림 · 닫힘을 기다린다
+        if ( _gameSession.getState() != LoadBotGameSession::State::Idle )
+            _gameSession.update( static_cast<float64>( _pRunner->getNowUs() ) * 1.0e-6 ); // 서비스 연결과 따로 사는 게임 UDP 세션도 같은 스레드에서 펌프한다
         if ( _bConnectionOpen == SW_TRUE )
             _client.update( nowMs );
         drainNotifications();
@@ -208,6 +212,11 @@ namespace sw
             {
                 if ( _client.isReady() && _accountClient.getToken().isEmpty() )
                     finishStep( string_view{} ); // 토큰이 없으면 재접속할 것이 없다 — Hello 로 끝
+                return _bFinished == SW_FALSE;
+            }
+            case AwaitKind::Game:
+            {
+                pollGameSession();
                 return _bFinished == SW_FALSE;
             }
             case AwaitKind::Response:
@@ -296,6 +305,28 @@ namespace sw
             {
                 _awaitKind = AwaitKind::Closed;
                 _pRunner->closeBot( _connection );
+                return;
+            }
+            case LoadBotAction::GameConnect:
+            {
+                const NetAddress& gameAddress = _pRunner->getSettings()._gameAddress;
+                if ( gameAddress.isValid() == false )
+                {
+                    finishStep( "game.noaddress" );
+                    return;
+                }
+                if ( _gameSession.start( gameAddress ) == false )
+                {
+                    finishStep( "game.open" );
+                    return;
+                }
+                _awaitKind = AwaitKind::Game;
+                return;
+            }
+            case LoadBotAction::GameDisconnect:
+            {
+                _gameSession.stop();
+                finishStep( string_view{} );
                 return;
             }
             case LoadBotAction::Reconnect:
@@ -441,6 +472,28 @@ namespace sw
             default:
             {
                 return false;
+            }
+        }
+    }
+
+    void LoadBot::pollGameSession()
+    {
+        switch ( _gameSession.getState() )
+        {
+            case LoadBotGameSession::State::Connected:
+            {
+                finishStep( string_view{} );
+                return;
+            }
+            case LoadBotGameSession::State::Failed:
+            {
+                finishStep( string( "game." ) + toString( _gameSession.getFailReason() ) );
+                return;
+            }
+            case LoadBotGameSession::State::Idle:
+            case LoadBotGameSession::State::Connecting:
+            {
+                return;
             }
         }
     }

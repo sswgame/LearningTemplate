@@ -35,6 +35,8 @@ namespace sw
         WaitMatch,
         PartyCreate,
         LiveOpsState,
+        GameConnect,    ///< 전용 서버의 게임 UDP 포트에 붙는다(실행 인자 `--game-address`) — Profiler 탭이 보는 `net.stats` 세션(서버 디버깅 S5)
+        GameDisconnect, ///< 게임 UDP 세션을 끊는다
         Count
     };
 
