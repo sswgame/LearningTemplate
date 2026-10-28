@@ -1,47 +1,55 @@
 # 다음 세션 인계 — 구조 개편
 
-> 질문: 지금 어디까지 왔고, 구조 개편을 어떤 순서로 이어 가는가?
+> 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: Ninja-Debug(활성 게임 Empty, 모듈 11 개)는 오류 0 으로 빌드된다. 용어 · 약어 · 폴더 정리는 끝났고, Engine 폴더의 역방향 include 는 190 → 50 이다. 남은 것은 A2(씬이 기능을 모르게) · A3(낮은 층 파일 읽기를 인터페이스로) → B(링크 단위 분할) → C(키트를 플러그인 묶음으로, Tools 를 Source/Programs 로) 순서다.
+> 결론: Ninja-Debug · Ninja-Release(모든 게임 12 · 모듈 76) 모두 오류 0 이다. 용어 · 약어 · 폴더 · 다중 상속 정리의 큰 묶음은 끝났다. 다음은 3 절의 전수 감사 목록(정적 전용 타입 393 · 평평한 대형 폴더 · 모호한 폴더 · 파일 이름)을 4 절의 규칙대로 처리하고, 그 뒤 A3(낮은 층 파일 읽기) → B(Engine 링크 분할) → C(키트에 에디터 확장 모으기)다.
 
 ## 1. 지금 상태 (2026-10-29)
 
-- **빌드**: `cmake --preset Ninja-Debug` + `cmake --build --preset Ninja-Debug` 오류 0. 모든 게임 · 키트(`Ninja-Release`)는 이 세션 끝에 돌렸다 — 결과는 아래 4 절.
-- **기본 프리셋**: Ninja-Debug 는 활성 게임과 그 게임이 쓰는 키트만 짓는다(76 → 11 모듈). 전체는 Ninja-Release(`SW_GAMES=ALL`, `SW_BUILD_UNUSED_KITS=ON`).
-- **층 게이트**: `py -3 -m Scripts engine-layers`(커밋 훅도 부른다). 층 표는 `Scripts/lint/EngineLayers.py` 의 `kLayer` 하나, 남은 역방향 50 줄은 `Scripts/lint/rules/EngineLayersBaseline.txt`(래칫 — 고쳐서 줄면 `--update-baseline`, 늘리지 않는다).
-- **도구**: `move-source`(파일 · 폴더 이동 + 모든 참조 · include 순서 · clang-format), `rename-symbol`(낱말 경계, `--regex` 로 이름 일부), `acronym-case`(약어 대문자, 바깥 이름은 `Scripts/dev/AcronymExternalNames.txt`), `engine-layers`. 규칙 문서(`docs/agents` · `04_CodingGuidelines`)는 이름 도구가 고치지 않는다(나쁜 예를 일부러 든다).
-- **Windows 대소문자**: git 이 대소문자를 무시하므로 대소문자만 바꾼 경로는 `git rm --cached` + `git add` 로 다시 올려야 한다(`acronym-case` 커밋에서 한 방법).
+- **빌드**: `cmake --build --preset Ninja-Debug`(활성 게임 Empty, 모듈 11) · `Ninja-Release`(전체) 오류 0. 셰이더 재쿠킹 · 실행 확인은 하지 않았다(이름이 바뀐 셰이더가 있다 — `App --cook-shaders`).
+- **층 게이트** `py -3 -m Scripts engine-layers`(커밋 훅): 표는 `Scripts/lint/EngineLayers.py` 의 `kLayer`, 남은 역방향 35 줄은 `Scripts/lint/rules/EngineLayersBaseline.txt`(줄이기만).
+- **도구**: `move-source`(이동 + 모든 참조 · include 순서 · clang-format), `rename-symbol`(`--regex` 로 이름 일부), `acronym-case`(바깥 이름 목록 `Scripts/dev/AcronymExternalNames.txt`), `engine-layers`, 구조 감사 `py -3 Scripts/dev/StructureAudit.py`. 이름 도구는 규칙 문서(`docs/agents` · `04_CodingGuidelines`)를 고치지 않는다.
+- **조심할 것**: Windows git 은 대소문자만 다른 이름 바꾸기를 못 본다(`git rm --cached` + `git add`). `git reset --hard` 전에는 미커밋 변경을 패치로 보관한다(이 세션에서 사용자의 `NEXT.md` 편집을 한 번 잃었다). 단독 낱말(`Image` · `Resource`)을 일괄 치환하지 않는다 — 바깥 API(DirectX::Image) · 다른 뜻 폴더(`Renderer/Frame/Resource`)를 깬다.
 
 ## 2. 이번 세션에 정한 규칙
 
 | 규칙 | 근거 |
 |---|---|
-| Asset = 콘텐츠(`Engine/Asset`, `AssetID` · `AssetPaths` · `AssetIO`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만(`RHIRenderResource`, `Renderer/Frame/Resource`) | 언리얼 Content · AssetManager · FRenderResource |
-| Pack(`.pack`, `PackManager` · `PackReader` · `PackWriter`) | 확장자 · 폴더와 같은 철자 |
-| 자동화 감시 값은 Watch(`Engine/Automation/Watch`, `SW_AUTOMATION_WATCH`, `*Watches.cpp`). Probe 는 라이트 · 리플렉션 프로브와 물리 sweep · 픽셀 검사에만 | 디버거 감시식 |
-| 씬 컨테이너는 Scene(`SceneSettings` · `SceneStreamingSubsystem` · `StreamingCell*`). World 는 월드 공간 뜻에만 | 엔진 용어 하나 |
-| 기능 폴더가 자기 컴포넌트를 든다(`Physics/Component` · `Animation/Component` · `Navigation/Component` · `Audio/Component` · `TileMap/Component`). `Object` 는 컴포넌트 모델 코어와 렌더 컴포넌트(서버도 씬을 읽어야 하므로 Renderer 로 보내지 않는다) | Unity 패키지 · Godot 모듈, 언리얼 UStaticMeshComponent 는 Engine |
-| 자동화는 `Engine/Automation/{Watch,Scenario,Runner}`, `SW_ENABLE_AUTOMATION=OFF` 는 `Runner/` 폴더째 뺀다 | 언리얼 AutomationWorker · Controller |
-| GameFramework 의 `Base/Character`(옛 Actor), `Plugin`(옛 PlugIn, 모듈 `GF_EditorPlugin_*`) | Actor 클래스가 없었다 |
-| 약어 대문자(`GPU` · `ID` · `JSON` · `VFX` …), 첫 낱말은 소문자(`gpuTime`) | NamingCpp Acronyms |
-| 금지 동사 정리: `getOrCreate*`(옛 findOrAdd), `addPasses`(옛 setupPasses), `findResolved` | NamingCpp |
-| 게임 모듈의 수명을 소유하는 쪽은 Manager: `GameModuleManager` · `EditorModuleManager`, 라이브러리 `Source/ModuleManager`(옛 ModuleHost) | 언리얼 FModuleManager, NamingCpp 접미사 표 |
+| Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · AssetManager · FRenderResource |
+| Pack(`.pack`) · Watch(자동화 감시 값, Probe 는 라이트 · 리플렉션 프로브만) · Scene(씬 컨테이너, World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
+| Module 은 동적으로 올리는 코드 단위만. 렌더러 확장점은 `RenderExtension` · `Extension*`(`Renderer/Extension`), 모듈 로더는 `IModuleLoader` · `ModuleLoadStage` · `ModuleUnloadStage` | 언리얼 SceneViewExtension |
+| 모듈 문맥의 Image → Library(`ModuleLibraryUtil` · `DeferredLibraryUnloadQueue`). Image 는 그림 · 텍스처만 | |
+| 엔진 범위 셋: Core(`Engine/CoreServices`, 옛 Bootstrap) → Service → Startup. 게임의 팩 설정은 `GamePackConfig` | Bootstrap · Startup 이 같은 뜻이었다 |
+| 수명을 소유하면 Manager: `GameModuleManager` · `EditorModuleManager`, 라이브러리 `Source/ModuleManager`(모듈 일만, 핫 리로드는 `LiveReload/` 폴더째 Shipping 제외). 호스트 기능은 `HostService`(`Engine/HostServices.h`) | 언리얼 FModuleManager |
+| 기능 폴더가 자기 컴포넌트 · 씬 서비스를 든다. 씬은 기능을 모른다(`ISceneService::onSceneLoading` · `applyPreviewPolicy` · `drawDebug`) | 언리얼 UWorldSubsystem |
+| 다중 상속: 구현 상속 · 믹스인은 합성(`SubscriptionList` 멤버, 언로드 처리기 등록 + 구독, 콜백 하나짜리 인터페이스는 델리게이트), 서비스 인터페이스는 서브시스템을 상속(`IModuleLoader : ISubsystem`). 순수 인터페이스 여러 개 구현(ISP) · 바깥 API 요구는 허용 | |
+| 폴더: 한 기능의 하위는 하위 폴더(`Core/Log/Sink`, `RHI/DX/DX11`, `RHI/<백엔드>/Module`, `Automation/{Watch,Scenario,Runner}`). 프로그램은 `Source/Programs`, `Tools/` 는 내려받는 외부 도구만 | 언리얼 Source/Programs |
+| 약어는 대문자(`GPU` · `ID` · `VFX`), 첫 낱말은 소문자(`gpuTime`) | NamingCpp |
 
-## 3. 남은 일 (순서대로)
+## 3. 전수 감사 — 남은 같은 모양의 문제 (2026-10-29 측정)
 
-| 단계 | 내용 | 확인 |
-|---|---|---|
-| A2 | 씬이 기능을 모르게 — 이미 있는 `SceneServiceRegistry`(언리얼 UWorldSubsystem 자리)로 옮긴다: ① `Scene::update` 끝의 `SceneAudio::update` 호출을 늦은 프레임 단계 서비스로 ② `SceneNavigation::setSourcePath` 를 `ISceneService` 의 씬 로드 훅으로 ③ `SceneManager` 의 물리 고정 스텝 정책 ④ `SceneDebugDraw` 의 물리 · 내비 그리기를 서비스별 `drawDebug` 로. 기준선의 `Scene -> Physics/Navigation/Audio/Animation` 15 줄이 사라진다 | 씬 열기 · 플레이 · 디버그 그리기 |
-| A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · Bootstrap · Profiling 이 `AssetIO` · `AssetPaths` · `AssetID` 를 부른다(약 24 줄). 언리얼 `IPlatformFile` 체인처럼 낮은 층(0~1)에 읽기 인터페이스를 두고 Asset 이 구현을 등록한다. `AssetID.h` 는 Core 만 쓰므로 낮은 층으로 내릴 수 있다. 그 밖에 `Object -> Animation/Sprite`(스프라이트 클립), `Graphics -> Physics`(`MeshCache` 의 셰이프 캐시 무효화 → 콜백), `Asset -> Physics`, `Telemetry -> UserSettings`, `Bootstrap -> RHIRenderResource`, `Reflection -> Localization` | `engine-layers` 기준선 0 |
-| B | 층을 따라 Engine 을 링크 단위로 나눈다(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기(`SW_UNBUILT_ENGINE_FOLDERS` · `SW_WITH_CLIENT_CODE`)가 모듈 하나 빼기로 바뀐다 | 전 프리셋, 증분 빌드 시간(`.ninja_log`) |
-| C | 키트 폴더 하나에 `Runtime/` · `Server/` · `Editor/`(지금 에디터 확장은 `GameFramework/Plugin/Editor/<키트>` 로 떨어져 있다), `Source/Programs/ReflectionParser` · `Source/Programs/OnlineLoadBot` → `Source/Programs/` | 전 프리셋 |
+다시 재려면 `py -3 Scripts/dev/StructureAudit.py`(아래 항목을 같은 기준으로 다시 낸다).
 
-그 밖에:
-- 없는 스크립트를 부르는 곳: 에디터 에셋 검증(`Scripts/qa/ValidateAssets.py`), 프로젝트 설정 창(`GenerateConfigReference.py`), 아이콘 폰트(`GenerateEditorIcons.py`), `BuildLayout.cmake` · `BuildCaches.json` 의 `RunBuildBaseline.py`.
-- `Source` 주석 약 21 곳이 지운 `docs/plans/*` 를 가리킨다. 주석의 '리소스' 낱말도 콘텐츠 뜻이면 '에셋' 으로.
-- 셰이더는 이름이 바뀌었으니(약어 · Content 경로) 다시 쿠킹해야 한다(`App --cook-shaders`). 이 세션은 쿠킹 · 실행을 하지 않았다.
-- 테스트 · 시나리오 틀은 아직 없다(옛 것은 10-28 에 지웠다).
+1. **정적 함수만 있는 타입 393 개**(Util · Internal 접미사 아님). 함수만 있는데 이름이 인스턴스처럼 읽힌다 — `EditorPlaySession`(정적 37), `EditorWidgets`(34), `EditorSceneCommands`(26), `EditorChrome`(23), `EditorAssetTypeRegistry`(23), `BinarySerializer`(17), `Ledger`(14), `MonsterRules`(10) … 상위 폴더: `Editor/Viewport` · `Editor/Common/{GUI,Workspace,Asset,Widgets,Commands/*}` · `Engine/{Audio,Reflection,Serialization/Format,Scene,Text}` · `GameFramework/Base/{Gameplay/Appearance,Online/Ledger}`.
+2. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위, 31 개가 `Editor*`) · `Editor/Common/GUI`(32, 30 개 `Editor*`) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `Engine/Destruction`(`Fracture*` 10 개 묶음) · `GameFramework/Base/Gameplay/Appearance`(21).
+3. **모호한 폴더 이름 25 개**: `Core/Common` · `Editor/Common` · `Engine/Common` · `Engine/Serialization/{Base,Object}` · `Engine/UI/Base` · `GameFramework/Base` · `GameFramework/Plugin/Editor/Base` · `Editor/Panels/Data` · `GameFramework/Base/Foundation/Data` · 온라인 키트의 `Shared` 11 개 · `Engine/Graphics/RHI/Support`.
+4. **모호한 파일 이름 19 개**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `*Base`(`GameInstanceBase` · `FractureComponentBase`) · `Engine/Common/Common.h` · `ReflectionCore`.
+5. **에디터 접두어 반복**: `Editor/` 아래 타입 · 파일이 거의 모두 `Editor*` — 네임스페이스(`sw::editor`)와 폴더가 이미 말해 준다.
 
-## 4. 이 세션 끝의 Ninja-Release 결과
+## 4. 처리 규칙 (3 절에 적용)
 
-Ninja-Release(모든 게임 12 · 모듈 76, 3,077 단계) 오류 0 — ModuleHost 이름 바꾸기 전 상태에서. 그 뒤 Ninja-Debug 오류 0.
+- 정적 함수만 있는 타입: 여러 번역 단위가 쓰면 `XxxUtil`(Helpers 규칙), 실제로 상태(숨은 전역)를 감싼 정면이면 `XxxRegistry` · `XxxService` 처럼 역할 이름. 이름만 인스턴스인 것(`EditorPlaySession`)은 `EditorPlaySessionUtil` 이나 실제 인스턴스로.
+- 평평한 폴더: 첫 낱말 묶음 4 개 이상이면 하위 폴더(`Destruction/Fracture/`). 부모 이름을 반복하는 접두어는 하위 폴더로 옮길 때 같이 떼는 것을 검토한다(타입 이름은 전역 유일해야 하므로 `sw::editor` 안에서만).
+- 모호한 폴더: 무엇이 들었는지로 — `Common` 은 가장 낮은 층 공용 형식이면 `Foundation`, 아니면 내용별로 흩는다. 온라인 키트 `Shared` 는 클라이언트 · 서버가 같이 쓰는 프로토콜이라 `Protocol` 또는 키트 이름 중 하나로 통일.
+- 파일 이름: 주 타입 이름과 같게. `*Data` · `*Info` 는 Def · Desc · Settings 등 NamingCpp 의 타입 접미사 표로.
+- 한 묶음마다 `move-source` / `rename-symbol` → Ninja-Debug → 커밋, 묶음 몇 개마다 Ninja-Release.
+
+## 5. 그 다음
+
+| 단계 | 내용 |
+|---|---|
+| A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · CoreServices · Profiling → `AssetIO` · `AssetPaths` · `AssetID`(약 24 줄). 언리얼 `IPlatformFile` 처럼 낮은 층에 읽기 인터페이스, Asset 이 구현 등록. `Object → Animation/Sprite` · `Graphics → Physics`(MeshCache) · `Telemetry → UserSettings` · `CoreServices → RHIRenderResource` · `Reflection → Localization`. 목표: 기준선 0 |
+| B | 층을 따라 Engine 을 링크 단위로(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기가 모듈 하나 빼기로 |
+| C | 키트 폴더에 에디터 확장 모으기(`GameFramework/Plugin/Editor/<X>` → 키트 `Editor/`, `sw_addKit` 이 이미 `Editor/CMakeLists.txt` 를 부른다). 온라인 키트는 `Shared/` · `Server/` 구조라 `Editor/` 자리를 먼저 정한다 |
+| 남은 처리기 인터페이스 | 프로토콜 인터페이스(`INetMessageHandler` · `IStreamHandler` · `IStreamEndpointListener`)는 규칙상 둔다. `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보 |
+| 그 밖 | 없는 스크립트를 부르는 곳(에셋 검증 `Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 셰이더 재쿠킹 · 실행 확인 |
