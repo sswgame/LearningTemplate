@@ -412,9 +412,8 @@ namespace sw
          *          그리는 어긋난 상태가 만들어진다. 블렌드 모드는 후보의 머티리얼에서 읽고, 머티리얼이 없으면 `fallbackBlendMode`
          *          (메시 쪽 값)를 쓴다. 머티리얼이 없는 디버그 메시와 픽스처 메시가 그 경우다.
          */
-        static void fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
-        /** @brief 후보의 머티리얼이 GPU 에 아직 올라가지 않았으면(`MaterialGpuState` 가 `Ready` 가 아님) 세고 true 를 반환합니다. 워커에서 불립니다. */
-        bool isMaterialNotReady( const DrawCandidate& candidate );
+        /** @return 후보의 머티리얼이 GPU 에 올라가지 않았으면(`MaterialGpuState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
+        [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */

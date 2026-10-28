@@ -301,8 +301,7 @@ namespace sw
             candidate._mesh = pMeshComp->getMesh();
         if ( candidate._instance.get() != pMeshComp->getRawMaterialInstance() )
             candidate._instance = pMeshComp->getMaterialInstance();
-        fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) );
-        if ( isMaterialNotReady( candidate ) )
+        if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) ) == false )
             return false;
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
@@ -344,23 +343,10 @@ namespace sw
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
-        fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
-        if ( isMaterialNotReady( candidate ) )
-            return false;
-        return true;
+        return fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
     }
 
-    bool GPUSceneBuilder::isMaterialNotReady( const DrawCandidate& candidate )
-    {
-        // GPU 상태가 `Ready` 가 아닌 머티리얼(올리는 중 · 실패)은 그리지 않는다. 렌더 스레드가 상수 버퍼와 bindless 인덱스를 올린 뒤에야 배치가 생긴다.
-        // `Failed` 의 오류는 올린 쪽(`MaterialCache::initializePending`)이 한 번 남겼다.
-        if ( candidate._material == nullptr || candidate._material->getGpuState() == MaterialGpuState::Ready )
-            return false;
-        _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
-        return true;
-    }
-
-    void GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
+    bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
     {
         // 머티리얼이 없으면 인스턴스의 부모가 먼저고, 씬 기본 머티리얼은 그다음이다. 순서가 뒤집히면 인스턴스만 붙은 메시의
         // 배치가 머티리얼, 그룹, 텍스처, stride 는 기본 머티리얼 것이고 원소 바이트와 퍼뮤테이션은 인스턴스 것인 섞인 상태가 된다
@@ -369,12 +355,21 @@ namespace sw
             pMaterial = candidate._instance->getParent();
         if ( pMaterial == nullptr )
             pMaterial = pScene->getMaterial();
+        // GPU 상태가 `Ready` 가 아닌 머티리얼(올리는 중 · 실패)은 그리지 않는다. 렌더 스레드가 상수 버퍼와 bindless 인덱스를 올린 뒤에야 배치가 생긴다
+        // (올리는 동안 렌더 스레드가 머티리얼 내용을 쓰므로 상태를 보기 전에는 그 머티리얼의 다른 값을 읽지 않는다). `Failed` 의 오류는 올린 쪽
+        // (`MaterialCache::initializePending`)이 한 번 남겼다.
+        if ( pMaterial != nullptr && pMaterial->getGpuState() != MaterialGpuState::Ready )
+        {
+            _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
+            return false;
+        }
         // 원시 포인터로 먼저 비교하고, 다르면 소유권을 싣는다. 같으면 참조 카운트를 건드리지 않는다.
         if ( candidate._material.get() != pMaterial )
             candidate._material = GPUSceneBuilderInternal::shareMaterial( pMaterial );
 
         const Material* pBlendSource = candidate._material.get();
         candidate._blendMode         = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
+        return true;
     }
 
     void GPUSceneBuilder::stampPermutationHash( DrawCandidate& candidate )
