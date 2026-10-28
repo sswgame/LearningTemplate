@@ -10,7 +10,7 @@
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 
 namespace sw::editor
 {

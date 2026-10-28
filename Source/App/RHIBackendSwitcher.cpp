@@ -6,8 +6,8 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Engine.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/EditSessionState.h"

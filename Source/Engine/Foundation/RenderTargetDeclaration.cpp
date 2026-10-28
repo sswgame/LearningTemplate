@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Common/RenderTargetDeclaration.h"
+#include "Engine/Foundation/RenderTargetDeclaration.h"
 
 #include "Core/Concurrency/atomic.h"
 

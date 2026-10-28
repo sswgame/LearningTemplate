@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

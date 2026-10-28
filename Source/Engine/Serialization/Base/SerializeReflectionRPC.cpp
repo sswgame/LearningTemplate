@@ -19,7 +19,7 @@
 #include "Core/Math/PackedTypes.h"
 #include "Core/String/TagID.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/ReflectionTypes.h"

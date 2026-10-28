@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Cook/CookJob.h"
 #include "Engine/Asset/Pack/PackManager.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

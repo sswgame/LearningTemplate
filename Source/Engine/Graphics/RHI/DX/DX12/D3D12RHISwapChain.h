@@ -7,7 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 

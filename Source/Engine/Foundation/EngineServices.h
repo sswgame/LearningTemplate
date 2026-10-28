@@ -20,7 +20,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Common/EngineScope.h"
+#include "Engine/Foundation/EngineScope.h"
 
 #include <type_traits>
 
@@ -33,7 +33,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )       Tag Type;
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) Tag Type;
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                Tag Type;
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -47,7 +47,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )       Type,
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) Type,
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                Type,
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -78,7 +78,7 @@ namespace sw
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE_SLOT( Type, const Type, false )
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE_SLOT( Type, Type, true )
 // NOLINTEND(bugprone-macro-parentheses)
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

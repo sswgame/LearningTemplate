@@ -12,7 +12,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

@@ -2,7 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 #include <shared_mutex>

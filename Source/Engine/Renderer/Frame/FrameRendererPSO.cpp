@@ -8,8 +8,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

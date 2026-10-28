@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

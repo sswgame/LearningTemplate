@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

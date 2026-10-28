@@ -7,8 +7,8 @@
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineParallel.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

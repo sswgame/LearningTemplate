@@ -8,7 +8,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"

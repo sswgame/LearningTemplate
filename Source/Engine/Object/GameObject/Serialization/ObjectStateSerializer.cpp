@@ -8,7 +8,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

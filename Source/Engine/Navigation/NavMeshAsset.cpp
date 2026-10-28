@@ -11,7 +11,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Common/EngineParallel.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Serialization/Base/BinaryStream.h"

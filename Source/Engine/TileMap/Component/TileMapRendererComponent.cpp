@@ -5,8 +5,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"

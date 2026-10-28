@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

@@ -7,7 +7,7 @@
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 
 namespace sw
 {

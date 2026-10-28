@@ -11,7 +11,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Common/EngineParallel.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"

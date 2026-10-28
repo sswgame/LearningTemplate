@@ -3,7 +3,7 @@
 #include "Engine/Localization/LocalizationReloadCache.h"
 
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 
 namespace sw

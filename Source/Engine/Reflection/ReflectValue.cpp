@@ -14,7 +14,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

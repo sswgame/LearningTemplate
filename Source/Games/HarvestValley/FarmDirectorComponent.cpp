@@ -8,8 +8,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Config/GameAutoplay.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"

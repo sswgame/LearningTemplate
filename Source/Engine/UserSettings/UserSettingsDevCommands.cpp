@@ -3,7 +3,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #if SW_DEV_COMMANDS_ENABLED

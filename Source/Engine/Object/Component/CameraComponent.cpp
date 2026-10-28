@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Common/RenderTargetDeclaration.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

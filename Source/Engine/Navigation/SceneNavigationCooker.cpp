@@ -7,8 +7,8 @@
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/NavMeshAsset.h"

@@ -45,7 +45,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Localization/LocalizationManager.h"
 
 namespace sw::editor

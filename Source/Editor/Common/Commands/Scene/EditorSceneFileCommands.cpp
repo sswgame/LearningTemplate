@@ -16,8 +16,8 @@
 #include "Editor/Common/Workspace/IEditorPanelHost.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"

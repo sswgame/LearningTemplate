@@ -4,7 +4,7 @@
 
 #include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"

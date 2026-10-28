@@ -14,7 +14,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"

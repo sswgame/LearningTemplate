@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Common/Common.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"

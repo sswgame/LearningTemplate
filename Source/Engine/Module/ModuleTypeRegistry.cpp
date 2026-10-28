@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"

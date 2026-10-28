@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Common/EngineServiceListColumns.h"
+#include "Engine/Foundation/EngineServiceListColumns.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 행마다 `locateSubsystem<Type>()` 이 타입 해시(함수 서명 글)로 찾으므로 전방 선언(EngineServices.h 가
 // 목록에서 생성한다)으로 충분하다 — 매니저 헤더를 끌어오면 이 접착 파일이 엔진 전체에 의존하게 된다. 서브시스템이 아닌 행(타입 레지스트리 ·
@@ -36,7 +36,7 @@ namespace sw
     outArrService[EngineServiceSlot<Type>::kIndex] = locateSubsystem<Type>( &subsystems );
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE( Tag, Type, Optional, visibility )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -53,7 +53,7 @@ namespace sw
     }
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -118,7 +118,7 @@ namespace sw
     }
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE( Tag, Type, Optional, visibility )
-#include "Engine/Common/EngineServiceList.xxx"
+#include "Engine/Foundation/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

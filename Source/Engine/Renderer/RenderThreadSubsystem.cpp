@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"

@@ -14,7 +14,7 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"

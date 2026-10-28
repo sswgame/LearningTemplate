@@ -22,8 +22,8 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineDefines.h"
 
 namespace sw::editor
 {

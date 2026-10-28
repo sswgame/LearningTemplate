@@ -7,9 +7,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Canvas/DebugDrawCanvas.h"

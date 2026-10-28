@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 

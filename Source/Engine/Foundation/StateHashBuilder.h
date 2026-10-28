@@ -1,5 +1,5 @@
 /**
- * @file Engine/Common/StateHashBuilder.h
+ * @file Engine/Foundation/StateHashBuilder.h
  * @brief 씬 상태 해시에 값을 접는 도구입니다 — 컴포넌트가 `Component::foldStateHash` 에서 자기 시뮬레이션 상태를 넣습니다.
  * @details 실수는 비트로 접되 -0.0 은 +0.0 으로, NaN 은 한 비트 패턴으로 바꾼다 — 같은 값이 프로세스마다 다른 비트로 나와(부호 있는 0 · NaN 페이로드)
  *          해시만 갈리는 일을 막는다. 접는 함수는 형식마다 하나라 호출하는 쪽이 비트 변환을 직접 쓰지 않는다(FNV-1a 64).

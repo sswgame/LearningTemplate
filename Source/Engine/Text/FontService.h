@@ -15,7 +15,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/Text/GlyphCache.h"

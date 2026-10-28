@@ -10,9 +10,9 @@
 #include "Engine/Animation/AnimationPlayer.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
-#include "Engine/Common/EngineParallel.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 

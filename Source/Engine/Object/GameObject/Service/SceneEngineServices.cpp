@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

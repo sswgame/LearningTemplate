@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 
 namespace sw

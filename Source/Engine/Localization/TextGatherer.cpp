@@ -6,7 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectValue.h"

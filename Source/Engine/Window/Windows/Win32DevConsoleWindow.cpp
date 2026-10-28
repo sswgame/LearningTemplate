@@ -13,7 +13,7 @@
 
     #include "Engine/Window/IWindow.h"
 
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
 
 namespace sw
 {

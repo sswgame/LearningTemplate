@@ -9,7 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

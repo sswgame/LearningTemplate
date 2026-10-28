@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"

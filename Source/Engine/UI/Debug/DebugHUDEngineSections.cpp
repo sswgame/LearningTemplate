@@ -17,7 +17,7 @@
 
     #include "Engine/Audio/AudioEngine.h"
     #include "Engine/Audio/IAudioService.h"
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/InputManager.h"
     #include "Engine/Object/Component/CameraComponent.h"

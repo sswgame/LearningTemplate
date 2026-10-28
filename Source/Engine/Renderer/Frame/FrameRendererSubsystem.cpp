@@ -5,8 +5,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"

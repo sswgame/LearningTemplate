@@ -8,8 +8,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Common/Common.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Window/IRenderSurface.h"

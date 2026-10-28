@@ -10,5 +10,5 @@
 #pragma once
 #include "Core/CoreMinimal.h"
 
-#include "Engine/Common/Common.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/Foundation/Foundation.h"

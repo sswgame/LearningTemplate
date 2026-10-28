@@ -15,7 +15,7 @@
 
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Audio/AudioSpatial.h"
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

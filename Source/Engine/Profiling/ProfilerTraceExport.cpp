@@ -13,7 +13,7 @@
     #include "Core/Time/MonotonicClock.h"
     #include "Core/Time/WallClock.h"
 
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Core/Console/DevCommandRegistry.h"
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Asset/AssetPaths.h"

@@ -1,13 +1,13 @@
 /**
  * @file PhysicsTypes.h
- * @brief 2D 와 3D 물리가 함께 쓰는 기본 타입입니다. 바디 종류, 관절 종류, 모터, 접촉 단계를 담습니다(핸들은 `Engine/Common/PhysicsHandle.h`).
+ * @brief 2D 와 3D 물리가 함께 쓰는 기본 타입입니다. 바디 종류, 관절 종류, 모터, 접촉 단계를 담습니다(핸들은 `Engine/Foundation/PhysicsHandle.h`).
  * @details 백엔드(Jolt, Box2D)와 무관한 값만 둔다. 차원마다 다른 것은 벡터와 회전 타입뿐이다(`PhysicsDimension3D`, `PhysicsDimension2D`).
  *          그 위의 서술자와 결과 타입은 차원 트레이트를 받는 템플릿 하나씩이다(`PhysicsDesc.h`, `PhysicsQuery.h`, `PhysicsContact.h`).
  */
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Common/PhysicsHandle.h"
+#include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -62,7 +62,7 @@ namespace sw
 {
     /**
      * @brief 소프트 바디(천 · 헤어 카드처럼 정점마다 움직이는 바디) 핸들의 태그입니다.
-     * @details 다른 핸들과 달리 `Engine/Common/PhysicsHandle.h` 에 두지 않는다 — 컴포넌트 모델 코어가 들 일이 없다(물리 폴더 안에서만 쓴다).
+     * @details 다른 핸들과 달리 `Engine/Foundation/PhysicsHandle.h` 에 두지 않는다 — 컴포넌트 모델 코어가 들 일이 없다(물리 폴더 안에서만 쓴다).
      */
     struct PhysicsSoftBodyTag
     {

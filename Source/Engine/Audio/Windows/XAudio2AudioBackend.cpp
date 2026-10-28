@@ -6,7 +6,7 @@
 #include "Engine/Audio/AudioEngine.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Asset/AssetIO.h"
 
 namespace sw

@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/ReflectUnits.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 

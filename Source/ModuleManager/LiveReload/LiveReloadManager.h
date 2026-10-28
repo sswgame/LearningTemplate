@@ -24,7 +24,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h"

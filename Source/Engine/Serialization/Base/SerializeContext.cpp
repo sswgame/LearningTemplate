@@ -14,7 +14,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/BinaryStream.h"

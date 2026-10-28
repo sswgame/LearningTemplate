@@ -13,10 +13,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Common/AssetTypeRegistry.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/CookContract.gen.h"

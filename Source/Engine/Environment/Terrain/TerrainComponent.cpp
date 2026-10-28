@@ -6,11 +6,11 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineParallel.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"
+#include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

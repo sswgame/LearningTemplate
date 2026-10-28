@@ -1,5 +1,5 @@
 /**
- * @file Engine/Common/EngineSubsystemHost.h
+ * @file Engine/Foundation/EngineSubsystemHost.h
  * @brief 엔진의 호스트 종류 비트입니다 — 서브시스템이 선언하는 `SubsystemHostMask` 의 뜻을 엔진이 정한다(Core 는 비트만 안다).
  * @details 언리얼 모듈의 호스트 종류(`Runtime` · `ServerOnly` · `ClientOnly`)와 서브시스템의 `ShouldCreateSubsystem` 처럼, 서브시스템이 자기가 올라갈 호스트를
  *          말하고 목록(`SubsystemCollection::initializeAll`)이 호스트 종류로 거른다. 어디서나 도는 것은 `SubsystemHostMask::All` 이다.

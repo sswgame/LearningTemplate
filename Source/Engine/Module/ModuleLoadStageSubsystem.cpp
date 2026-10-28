@@ -2,8 +2,8 @@
 
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleLoader.h"
 #include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"

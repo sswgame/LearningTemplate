@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "Programs/ReflectionParser/AnnotationFields.h"

@@ -16,7 +16,7 @@
 
 #include "Engine/Asset/Pack/PackCompressionUtil.h"
 #include "Engine/Asset/Pack/PackReader.h"
-#include "Engine/Common/EngineParallel.h"
+#include "Engine/Foundation/EngineParallel.h"
 
 #include <algorithm>
 

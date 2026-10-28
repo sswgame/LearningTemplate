@@ -12,7 +12,7 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/String/TagID.h"
 
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"

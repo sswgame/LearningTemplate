@@ -2,7 +2,7 @@
 
 #include "Core/Container/string.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"

@@ -38,8 +38,8 @@
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

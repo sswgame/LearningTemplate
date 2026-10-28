@@ -17,8 +17,8 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Common/RenderTargetDeclaration.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
@@ -328,7 +328,7 @@ namespace sw
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ sw::make_shared<Impl>() }
     {
-        // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Common 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
+        // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Foundation 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
         engine::bindRenderTargetDeclaration( &forwardRenderTargetDeclaration );
     }
 

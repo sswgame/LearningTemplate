@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavGeometryCollector.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
 #include "Engine/Navigation/Component/NavMeshRuntime.h"

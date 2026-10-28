@@ -13,11 +13,11 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Reflection/EnumName.h"
 

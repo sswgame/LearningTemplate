@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

@@ -19,7 +19,7 @@
 #if SW_AUTOMATION_ENABLED
     #include "Engine/Automation/Runner/AutomationSession.h"
 #endif
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameTimeScale.h"

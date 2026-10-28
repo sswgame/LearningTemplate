@@ -24,7 +24,7 @@ from common.Paths import getProjectRoot
 # 층(낮을수록 아래). 키는 `Source/Engine/` 아래 경로 접두어이고 가장 긴 것이 이긴다.
 kLayer: dict[str, int] = {
     # 0 — 엔진 바닥: 공용 형식
-    "Common": 0, "Compression": 0,
+    "Foundation": 0, "Compression": 0,
     "pch.h": 0, "pch.cpp": 0, "EngineMinimal.h": 0, "EngineFrameObserver.h": 0,
     # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 모듈 · 관측
     "Reflection": 1, "Curve": 1, "Serialization": 1, "Config": 1, "Profiling": 1, "Observability": 1, "Telemetry": 1,

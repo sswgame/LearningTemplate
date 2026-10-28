@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineParallel.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

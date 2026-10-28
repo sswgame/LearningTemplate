@@ -13,8 +13,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

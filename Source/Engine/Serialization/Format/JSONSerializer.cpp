@@ -5,7 +5,7 @@
 #include "Core/Container/InlineAllocator.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"

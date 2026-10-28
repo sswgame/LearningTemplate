@@ -18,8 +18,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/EngineFrameObserver.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Telemetry/TelemetryUploader.h"

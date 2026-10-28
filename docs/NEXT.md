@@ -33,7 +33,7 @@
 1. **정적 함수만 있는 타입 393 개**(Util · Internal 접미사 아님). 함수만 있는데 이름이 인스턴스처럼 읽힌다 — `EditorPlaySession`(정적 37), `EditorWidgets`(34), `EditorSceneCommands`(26), `EditorChrome`(23), `EditorAssetTypeRegistry`(23), `BinarySerializer`(17), `Ledger`(14), `MonsterRules`(10) … 상위 폴더: `Editor/Viewport` · `Editor/Common/{GUI,Workspace,Asset,Widgets,Commands/*}` · `Engine/{Audio,Reflection,Serialization/Format,Scene,Text}` · `GameFramework/Base/{Gameplay/Appearance,Online/Ledger}`.
 2. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위, 31 개가 `Editor*`) · `Editor/Common/GUI`(32, 30 개 `Editor*`) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `Engine/Destruction`(`Fracture*` 10 개 묶음) · `GameFramework/Base/Gameplay/Appearance`(21).
 3. **모호한 폴더 이름 25 개**: `Core/Common` · `Editor/Common` · `Engine/Common` · `Engine/Serialization/{Base,Object}` · `Engine/UI/Base` · `GameFramework/Base` · `GameFramework/Plugin/Editor/Base` · `Editor/Panels/Data` · `GameFramework/Base/Foundation/Data` · 온라인 키트의 `Shared` 11 개 · `Engine/Graphics/RHI/Support`.
-4. **모호한 파일 이름 19 개**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `*Base`(`GameInstanceBase` · `FractureComponentBase`) · `Engine/Common/Common.h` · `ReflectionCore`.
+4. **모호한 파일 이름 19 개**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `*Base`(`GameInstanceBase` · `FractureComponentBase`) · `Engine/Foundation/Foundation.h` · `ReflectionCore`.
 5. **에디터 접두어 반복**: `Editor/` 아래 타입 · 파일이 거의 모두 `Editor*` — 네임스페이스(`sw::editor`)와 폴더가 이미 말해 준다.
 
 ## 4. 처리 규칙 (3 절에 적용)

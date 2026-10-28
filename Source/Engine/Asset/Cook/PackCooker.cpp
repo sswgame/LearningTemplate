@@ -15,7 +15,7 @@
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackConfig.h"
 #include "Engine/Asset/Pack/PackWriter.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "sw/config/CookContract.gen.h"

@@ -9,8 +9,8 @@
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/HexUtil.h"
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Common/StateHashBuilder.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

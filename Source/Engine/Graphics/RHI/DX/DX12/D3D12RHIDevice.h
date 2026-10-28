@@ -10,8 +10,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

@@ -9,7 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

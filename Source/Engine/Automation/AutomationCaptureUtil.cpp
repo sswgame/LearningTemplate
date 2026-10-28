@@ -4,7 +4,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"

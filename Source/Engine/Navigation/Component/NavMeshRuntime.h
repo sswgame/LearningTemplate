@@ -16,7 +16,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"

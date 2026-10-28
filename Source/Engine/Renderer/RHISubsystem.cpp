@@ -6,11 +6,11 @@
 #include "Core/Diagnostics/CrashHandler.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"

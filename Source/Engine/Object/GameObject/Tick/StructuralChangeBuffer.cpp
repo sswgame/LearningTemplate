@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 

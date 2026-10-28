@@ -1,5 +1,5 @@
 /**
- * @file Engine/Common/EngineServiceList.xxx
+ * @file Engine/Foundation/EngineServiceList.xxx
  * @brief 엔진 범위에서 바인딩 때 한 번 찾아 두는 서비스의 단일 등록표입니다(X-macro). `engine::getSubsystem<T>()` 가 이 표의 칸을 읽습니다.
  * @details include 하기 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다(#pragma once 없음).
  *          전방 선언 · 칸 색인 · 타입 → 칸 trait · 필수 행 검사 · 모듈 범위 채우기(`bindModuleServices`)가 이 목록에서 생성됩니다.
@@ -19,7 +19,7 @@
  *         `Type` 이 서브시스템이 아니면(값 묶음 · 소유한 서브시스템 안의 객체) 호스트가 그 객체를 범위에 `bind` 합니다.
  *         필수 행이 비면 엔진 루프가 서지 않습니다(호스트가 그 서브시스템을 넣지 않았다).
  *
- * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `Engine/Common/EngineServiceListColumns.h` 의 매크로로 바꿉니다.
+ * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `Engine/Foundation/EngineServiceListColumns.h` 의 매크로로 바꿉니다.
  *
  * 정의하지 않은 변형은 include 하는 쪽이 빈 매크로로 채워야 합니다.
  */

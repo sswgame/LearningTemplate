@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
-#include "Engine/Common/StateHashBuilder.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/ScenePhysics.h"

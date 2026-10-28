@@ -6,7 +6,7 @@
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 

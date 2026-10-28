@@ -8,7 +8,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

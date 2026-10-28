@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Common/AnimationNotifyPhase.h"
+#include "Engine/Foundation/AnimationNotifyPhase.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

@@ -10,7 +10,7 @@
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/HostSubsystemNames.h"
+#include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Module/ModuleLoader.h"
 
 namespace sw

@@ -10,7 +10,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"

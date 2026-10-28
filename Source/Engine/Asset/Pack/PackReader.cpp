@@ -14,7 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Pack/PackCompressionUtil.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

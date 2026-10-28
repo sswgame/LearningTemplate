@@ -8,7 +8,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Common/Common.h"
+#include "Engine/Foundation/Foundation.h"
 
 #include "Programs/ReflectionParser/ParserDefines.h"
 

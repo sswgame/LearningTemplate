@@ -2,7 +2,7 @@
 
 #include "Engine/Input/KeyCodeUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

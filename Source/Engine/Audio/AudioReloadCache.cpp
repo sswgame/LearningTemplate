@@ -4,7 +4,7 @@
 
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

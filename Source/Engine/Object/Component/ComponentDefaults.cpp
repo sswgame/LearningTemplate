@@ -5,7 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"

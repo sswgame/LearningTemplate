@@ -10,7 +10,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw

@@ -10,7 +10,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

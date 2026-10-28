@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {

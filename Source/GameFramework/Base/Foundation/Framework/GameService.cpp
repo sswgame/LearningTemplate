@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineScope.h"
+#include "Engine/Foundation/EngineScope.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
 #include "GameFramework/GameFrameworkExports.h"

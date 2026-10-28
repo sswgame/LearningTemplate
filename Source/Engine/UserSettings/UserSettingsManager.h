@@ -18,8 +18,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"

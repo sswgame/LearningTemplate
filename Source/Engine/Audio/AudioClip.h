@@ -18,7 +18,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 #include <optional>
 

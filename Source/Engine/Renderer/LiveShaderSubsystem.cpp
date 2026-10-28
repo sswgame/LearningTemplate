@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/LiveShaderSubsystem.h"
 
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"

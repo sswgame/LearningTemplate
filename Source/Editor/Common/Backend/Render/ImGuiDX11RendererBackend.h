@@ -9,7 +9,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/Render/ImGuiViewportSizeGuard.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 
 namespace sw
 {

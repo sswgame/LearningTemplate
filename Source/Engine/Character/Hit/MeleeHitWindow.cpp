@@ -6,7 +6,7 @@
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitLedger.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

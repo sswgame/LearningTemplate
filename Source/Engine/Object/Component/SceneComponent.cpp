@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Common/StateHashBuilder.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"

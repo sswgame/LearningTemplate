@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
 
 // 텍스처 전송(docs/plans/RHIAsyncUploads.md 2.2, U5): 영속 매핑 업로드 스테이징 링, 전송마다 얼로케이터를 쥔 전송 작업, 전용 전송 펜스, 연속 구간 워터마크.
 // 전송은 그래픽스(DIRECT) 큐 하나로 즉시 내고 프레임 제출 락(`_uploadSlotMutex`)을 잡지 않는다 — 같은 큐라 제출 순서가 곧 실행 순서이고,

@@ -1,7 +1,7 @@
 /**
  * @file Defines.h
  * @brief 버퍼 크기 · 경로 길이 · 무효 인덱스 같은 공통 상수입니다.
- * @note 렌더 · 리소스 폴더 상수는 Engine/Common/EngineDefines.h 에 있습니다.
+ * @note 렌더 · 리소스 폴더 상수는 Engine/Foundation/EngineDefines.h 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

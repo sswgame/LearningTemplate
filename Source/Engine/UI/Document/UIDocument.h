@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/UI/Animation/UIAnimation.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Screen/UIScreen.h"

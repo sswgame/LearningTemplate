@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

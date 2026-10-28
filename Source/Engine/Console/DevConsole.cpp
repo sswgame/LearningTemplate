@@ -9,7 +9,7 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/Network/DebugReplyLine.h"
 
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

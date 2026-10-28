@@ -6,7 +6,7 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
 
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Module/ModuleTypeRegistry.h"
 
     #include "ModuleManager/ModuleInstanceUtil.h"

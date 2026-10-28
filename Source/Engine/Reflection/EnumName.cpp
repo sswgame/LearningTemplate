@@ -2,7 +2,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

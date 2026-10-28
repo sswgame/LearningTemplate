@@ -16,7 +16,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTree.h"

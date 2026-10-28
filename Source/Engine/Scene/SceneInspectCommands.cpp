@@ -17,7 +17,7 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/Network/DebugReplyLine.h"
 
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Object/Component/Component.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"

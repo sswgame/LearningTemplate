@@ -9,8 +9,8 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevConsole.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

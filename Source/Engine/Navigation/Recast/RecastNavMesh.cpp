@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryTag.h"
 
-#include "Engine/Common/EngineParallel.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
 #include "Engine/Navigation/Recast/RecastAreaUtil.h"

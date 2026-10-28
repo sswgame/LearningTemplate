@@ -10,8 +10,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Common/EngineDefines.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"

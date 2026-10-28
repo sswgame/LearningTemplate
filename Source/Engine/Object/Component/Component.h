@@ -11,8 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Common/AnimationNotifyPhase.h"
-#include "Engine/Common/PhysicsHandle.h"
+#include "Engine/Foundation/AnimationNotifyPhase.h"
+#include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 

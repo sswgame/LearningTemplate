@@ -7,8 +7,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"

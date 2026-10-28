@@ -12,7 +12,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {

@@ -2,8 +2,8 @@
 
 #include "Core/Common/PlatformOSHeaders.h"
 
-#include "Engine/Common/EngineParallel.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 

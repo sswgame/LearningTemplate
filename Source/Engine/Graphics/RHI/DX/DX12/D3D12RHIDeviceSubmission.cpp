@@ -10,8 +10,8 @@
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EngineServices.h"
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"

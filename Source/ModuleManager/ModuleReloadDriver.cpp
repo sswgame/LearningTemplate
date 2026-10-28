@@ -15,7 +15,7 @@
     #include "Core/Container/vector.h"
 
     #include "Engine/Automation/Watch/AutomationWatch.h"
-    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Foundation/EngineServices.h"
 #endif
 
 #if !defined( SW_SHIPPING )

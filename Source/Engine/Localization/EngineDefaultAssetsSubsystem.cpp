@@ -5,9 +5,9 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Common/EngineDefines.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 
 namespace sw

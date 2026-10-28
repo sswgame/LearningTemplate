@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"

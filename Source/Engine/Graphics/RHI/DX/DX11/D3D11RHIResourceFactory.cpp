@@ -6,7 +6,7 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Support/RHIBufferSize.h"

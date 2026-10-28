@@ -10,8 +10,8 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"

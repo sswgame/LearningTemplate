@@ -15,8 +15,8 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetID.h"
-#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

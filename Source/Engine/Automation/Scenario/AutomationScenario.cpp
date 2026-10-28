@@ -11,9 +11,9 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Pack/PackManager.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

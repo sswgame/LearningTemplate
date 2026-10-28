@@ -10,8 +10,8 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"

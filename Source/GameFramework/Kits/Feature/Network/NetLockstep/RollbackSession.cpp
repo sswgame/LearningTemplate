@@ -8,7 +8,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Common/StateHashBuilder.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"

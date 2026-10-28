@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"

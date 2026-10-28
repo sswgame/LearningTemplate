@@ -15,7 +15,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

@@ -21,7 +21,7 @@
 
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Cook/ContentHash.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 

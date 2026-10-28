@@ -8,7 +8,7 @@
 
 #include "Core/Common/StdHeaders.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"

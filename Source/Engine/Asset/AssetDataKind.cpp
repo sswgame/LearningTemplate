@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

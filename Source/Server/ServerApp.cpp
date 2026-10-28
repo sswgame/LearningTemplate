@@ -28,7 +28,7 @@
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"

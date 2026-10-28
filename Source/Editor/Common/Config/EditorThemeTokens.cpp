@@ -8,8 +8,8 @@
 #include "Editor/Common/Config/EditorThemeConfig.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineDefines.h"
 
 #include <algorithm>
 

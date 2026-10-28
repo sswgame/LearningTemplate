@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
@@ -8,7 +8,7 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/Memory/Memory.h"
 
-    #include "Engine/Common/EnginePlatformHeaders.h"
+    #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Window/IWindow.h"
 
 namespace sw

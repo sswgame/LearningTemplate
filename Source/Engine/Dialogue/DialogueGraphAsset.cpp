@@ -8,8 +8,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

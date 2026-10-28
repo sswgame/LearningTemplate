@@ -3,10 +3,10 @@
 #include "Engine/Config/ConfigManager.h"
 
 #include "Engine/Asset/AssetPaths.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"

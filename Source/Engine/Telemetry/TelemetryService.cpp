@@ -14,10 +14,10 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryEvent.h"

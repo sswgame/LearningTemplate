@@ -11,8 +11,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
 #include <algorithm>

@@ -7,7 +7,7 @@
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/String/string_splitter.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"

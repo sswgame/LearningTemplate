@@ -13,10 +13,10 @@
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Asset/Pack/PackManager.h"
 #include "Engine/Asset/Pack/PackPatchTrustSource.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {

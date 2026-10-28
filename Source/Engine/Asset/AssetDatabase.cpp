@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetMeta.h"
 #include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 
 namespace sw
 {

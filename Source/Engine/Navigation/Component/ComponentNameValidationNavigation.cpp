@@ -3,8 +3,8 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Asset/AssetIO.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"

@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 
 #include <chrono>

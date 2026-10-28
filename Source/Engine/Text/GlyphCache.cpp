@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Common/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Text/IFontRasterizer.h"
 

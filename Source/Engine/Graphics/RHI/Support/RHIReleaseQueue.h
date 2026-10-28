@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 
