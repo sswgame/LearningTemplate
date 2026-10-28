@@ -1,90 +1,47 @@
 # Automation 분리
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 표
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 진행: 표
 
-2026-10-28: 기능별 테스트 · 시나리오(`Test/` · `Resource/**/automation/`)를 새 프레임워크를 만들려고 전부 지웠다. 이 문서의 테스트 · 시나리오 · `ctest` · `AppTestUtil` 언급은 옛 구조를 가리키며, 새 틀이 정해지면 다시 쓴다.
+`Engine/Automation` 은 시나리오 형식 · 등록 · 타임라인 · 입력 재생 같은 일반 기능과 판정 · 로그 게이트 · 보고 같은 테스트 전용 기능을 한 폴더에 섞어 들고 있다. 결론은 **형식 경계를 먼저 고치고 폴더를 둘로 나눈다**이다. ①②③ 은 코드가 들어갔고 **컴파일 확인 전**이다. 기능별 테스트 · 시나리오는 새 프레임워크를 만들려고 전부 지웠으므로 이 문서의 검증 · 회귀 언급은 새 틀이 정해진 뒤 다시 쓴다.
 
-`Engine/Automation` 은 시나리오 형식 · 등록 · 타임라인 · 입력 재생 같은 일반 기능과 테스트 판정 · 로그 게이트 · 보고 같은 테스트 전용 기능을 한 폴더에 가지고 있다. 2026-10-23 사용자와 정한 결론은 **형식 경계를 먼저 고치고 폴더를 둘로 나눈다**이다.
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| ① 탐침 | 탐침 레지스트리(상태 값을 이름으로 읽는 표)를 티어 10 `Engine/Probe` 로 내리고 각 기능이 자기 폴더에서 탐침을 등록 | 완료 |
+| ② 단계 | 단계 함수가 `AutomationRunner&` 대신 좁은 문맥 `AutomationStepContext` 를 받는다 | 완료(코드, 컴파일 확인 전) |
+| ③ 시나리오 | 테스트 전용 필드를 테스트 쪽으로 빼고, 실행기를 번역 단위로 나누고, 결과 형식 · 종료 코드를 갈라 폴더를 둘로 가른다 | 부분 완료(코드, 컴파일 확인 전) |
+| ④ 구성 분리 | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다 | 남음(조건부: 실제 배포 때) |
 
-## 1. 결론 (2026-10-23)
+## 설계 결정
 
-- 폴더 둘로 나눈다. 일반 `Engine/Scenario`: 형식 · 레지스트리 · 타임라인 · 입력 단계 · 녹화(탐침 레지스트리는 ① 에서 따로 `Engine/Probe`(티어 10)로 갔다 — 타임라인 · 입력 단계는 Input · Scene 위라 같은 폴더에 두면 기능이 탐침을 등록하지 못한다). 테스트 `Engine/Automation`: 판정 단계 · 로그 게이트 · 보고 · 이미지 지표 · Scratch · 종료 코드 · Session · Chain.
-- **이름만 바꾸기는 먼저 하지 않는다**(호출부가 없는 개명이기 때문). 형식 경계를 고친 결과로 폴더가 갈라진다.
+- **폴더 둘.** 일반 `Engine/Scenario`(티어 11): 형식 · 레지스트리 · 타임라인 · 입력 단계 · 녹화 · Scratch · 시간 상수. 테스트 `Engine/Automation`: 판정 단계 · 로그 게이트 · 보고 · 이미지 지표 · 종료 코드 · Session · Chain. 탐침 레지스트리는 `Engine/Probe`(티어 10)로 따로 갔다. 타임라인 · 입력 단계가 Input · Scene 위에 있어 같은 폴더에 두면 기능이 탐침을 등록하지 못하기 때문이다.
+- **이름만 바꾸기는 먼저 하지 않는다**(호출부 없는 개명이므로). 형식 경계를 고친 결과로 폴더가 갈라진다. 파일 이름의 `Automation` 접두는 그대로 둔다.
+- Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있는 것은 의도다. 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다. `-cook-scenes` 등 오프라인 쿠킹 도구에 `SW_SHIPPING` 가드가 없는 것도 의도다(`-cooked-dir` 로 준 폴더에만 쓰고 배포 패키징이 배포 구성 App 으로 부른다).
+- 인게임에서 시나리오 · 탐침 · `VirtualInputScript` 를 읽는 곳은 없다(실행기와 테스트뿐).
 
-## 2. 사실
+## 고친 형식 · 계층 결함
 
-- 인게임에서 시나리오 · 탐침 · `VirtualInputScript` 를 읽는 곳은 0 이다(탐침을 읽는 곳은 실행기와 테스트뿐, 자동화가 아닌 사용은 에디터 `InputMapPanel` 의 `InputReplay` 하나).
-- Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있다 — 의도된 상태다. 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다(`SwapBackend` 의 `SW_SHIPPING` 을 맞춤, 2026-10-25). 나머지 단계는 가드가 없는 것이 의도다.
-- `-cook-scenes`(`HeadlessSubsystem.cpp` `runCookTask`)에 `SW_SHIPPING` 가드가 없는 것도 의도다 — 쿠킹은 `-cooked-dir` 로 준 폴더에만 쓰는 오프라인 도구이고 `CookAssets` 빌드 타깃과 배포 패키징이 배포 구성 App 으로 부른다(`-cook-shaders` · `-bake-retarget` · `-make-patch` 도 같다).
+1. 단계 함수 형식이 `AutomationRunner&` 를 받아 단계 등록자(UI · GameFramework · Editor · App)가 로그 게이트 · 보고 · 종료 코드 헤더를 끌어왔다 → ② 의 좁은 문맥 인터페이스. 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다.
+2. 시나리오 형식에 테스트 전용 필드(Scratch · Launch · Load · isolated · editor · requireForeground)가 있었다 → `AutomationTestOptions`(`getTestOptions()`)로 모았다.
+3. 결과 열거형이 곧 App 종료 코드였다 → `AutomationOutcome` 에서 숫자를 빼고 종료 코드 표는 `AutomationExitCode.h` 한 곳(`kAutomationExitCodeRunning` 은 `IEngineFrameObserver::kRunning` 그 자체). "RHI 를 못 씀" 코드(77)의 정본은 `RHIInitResult.h`.
+4. 실행기가 Terrain · 캐릭터 탐침을 대신 정의하던 역방향 → 탐침 레지스트리를 티어 10 으로 내리고 기능이 자기 `*Probes.cpp` 에 등록한다. 티어는 정수라 Probe 를 10 에 두고 그 위 기능(Character · Environment 11, Vfx · Sequencer · Destruction 12)을 한 칸 올렸다. GameFramework · 에디터 허브의 탐침도 영역 폴더로 옮겨 탐침을 모아 쥔 허브 파일은 없다. 실행기에 남은 `Object.*` · `Input.*` · `Assets.Pending` · `Profiler.TraceRecording` 은 가까운 층의 별도 `*Probes.cpp` 에 둔다.
+5. `ModuleHost` 가 `AutomationSession::kSubsystemName` 을 알던 역방향 → 이름을 낮은 층 헤더 `Engine/Common/HostSubsystemNames.h` 로 내리고 `AutomationSession::getSubsystemDependencies` 가 의존 칸에 적는다. `ModuleImageHostSubsystem` 은 `Engine/Automation` 을 include 하지 않는다.
 
-## 3. 형식 결함 셋
+## ③ 의 분할 · 이동
 
-1. **단계 함수 형식 `AutomationStepFunction` 이 `AutomationRunner&` 를 받는다.** 단계를 등록하는 쪽(UI · GameFramework · Editor · App)이 로그 게이트 · 보고 · 종료 코드 헤더를 끌어온다 → 좁은 문맥 인터페이스(단계 ②).
-2. **시나리오 형식에 테스트 전용 필드가 있다**(Scratch · Launch · Load · isolated · editor · requireForeground) → 테스트 쪽 구조로(단계 ③).
-3. **실행 결과 열거형이 곧 App 종료 코드다** → (③ 일부에서 고침) `AutomationOutcome` 에서 숫자를 빼고 종료 코드 표는 `AutomationExitCode.h` 한 곳.
+- 스물한 파일(형식 · 등록표 · 문맥 · 타임라인 · 입력 · 창 · 백엔드 · 환경 단계 · 녹화 · Scratch · 시간 상수)을 `Engine/Scenario` 로 옮겼다. `Scratch` 와 시간 상수는 형식 헤더가 들고 있어, Scenario 가 Automation 을 include 하지 않으려면 같이 가야 했다.
+- 실행기는 `AutomationRunner` 한 클래스를 두고 번역 단위만 갈랐다: `AutomationRunner.cpp`(시작 · 프레임 · 시계 잡기 · 타임라인 · 끝맺음), `AutomationRunnerJudge.cpp`(탐침 비교 · 기록 · 로그 · 이미지 판정), `AutomationRunnerSteps.cpp`(엔진 단계 등록), `AutomationStepArgs.h/.cpp`(검사와 판정이 함께 읽는 인자 · 수 비교). 시계 잡기 · 사진 대기 순서는 줄 단위로 옮겨 바뀌지 않았다.
+- 기각: 클래스 자체를 타임라인 클래스와 판정 클래스로 나누기. 멤버 상태(`_listFailure` · `_frameIndex` · 입력 · 스크린샷 대기열)가 두 쪽에 얽혀 빌드 없이는 위험이 크다.
+- 데스크톱 전역 상태 단계: 단계 등록의 `_bUsesDesktop` 표시(`SW_AUTOMATION_STEP_DESKTOP`)가 있는 단계(`ExpectCursorClip` · `CaptureWindow`)와 루트 `requireForeground="true"` 는 `input="mixed"` 시나리오에서만 허용한다(전경 창은 OS 에 하나뿐). 에디터 시나리오 11 개는 화면 복사 대신 프로세스 안 UI 캡처 `CaptureEditorUI` 로 바꿔 겹쳐 돌 수 있게 했다.
 
-## 4. 계층 방향 결함
+## 남은 일
 
-- (① 에서 고침) 실행기가 `Terrain.WrittenEditCount` 와 캐릭터 탐침을 대신 정의했다. 탐침 레지스트리를 최상위 `Engine/Probe`(티어 10, Object 만 읽는다)로 옮기고 기능이 자기 폴더에 등록한다(`Environment/Terrain/TerrainProbes.cpp`, `Character/PairedAnimation/PairedAnimationProbes.cpp`, `Scene/SceneProbes.cpp`). 티어는 정수라 Probe 를 10 에 두고 그 위 기능(Character · Environment 11, Vfx · Sequencer · Destruction 12)을 한 칸 올렸다. 실행기에 남은 탐침은 `Object.*`(질의) · `Input.*` · `Assets.Pending` · `Profiler.TraceRecording` 이다(Profiling(4)이 Probe(10) 아래이고 Input(10)이 같은 티어라 기능 쪽에 둘 수 없다).
-- (2026-10-28 고침, 컴파일 확인 전) `ModuleHost` 가 `AutomationSession::kSubsystemName` 을 알던 역방향 지식을 뒤집었다. 이름을 낮은 층 헤더 `Engine/Common/HostSubsystemNames.h` 에 두고(같은 티어 12 인 Module 헤더를 Automation 이 include 하면 층 게이트가 막는다) `AutomationSession::getSubsystemDependencies` 가 그것을 의존 칸에 적는다. `ModuleImageHostSubsystem` 은 `getSubsystemDependents` 를 더는 갖지 않고 `Engine/Automation` 을 include 하지 않는다. 위상 순서와 `shutdownDependentsOf( 창구 )` 의 결과는 같다(의존 간선 하나).
-
-## 5. 단계
-
-티어 테이블 수정이 든 ① 은 층 게이트와 규칙 파일을 같이 만지므로 순서를 정한다(Roadmap).
-
-| 단계 | 내용 | 검증 | 상태 |
-|---|---|---|---|
-| ① 탐침 | 탐침 레지스트리를 티어 10 으로 내리고 Terrain · Character · Scene 탐침을 기능 폴더로(기능이 자기 탐침을 등록) | 층 게이트 4종, 시나리오 네 백엔드 회귀(작업자가 안 돌림 — 정의 위치만 옮겨 동작은 같다) | 완료 — 2026-10-27 GameFramework 허브(`GameplayAutomationSteps.cpp`)의 탐침 16개도 영역 폴더로 옮겼다(`SessionStateProbes`(퀘스트 포함) · `ScheduleProbes` · `AIControllerProbes` · `PawnProbes` · `VehicleProbes`). 허브에는 단계 셋(`AdvanceGameTime` · `Mount` · `Dismount`)만 남음. 같은 날 에디터 허브 `EditorScenarioSteps.cpp` 의 탐침 91개도 패널 · 기능 폴더의 `*Probes.cpp` 로 옮겼다(허브에는 단계 일곱만, 허브의 패널 헤더 include 40여 개가 사라짐). 시나리오용 전역 변수 `gv_editorProbe*` 는 `SelfTest/EditorProbeSupport.h` 에 선언한다. `AutomationRunner.cpp` 의 탐침 12개도 뺐다: `Object.*` 는 `Scene/ObjectProbes.cpp`, `Assets.Pending` 은 `AutomationCaptureProbes.cpp`, `Input.*` 와 `Profiler.TraceRecording` 은 입력(T10) · 프로파일링(T4)이 레지스트리(T10)를 못 봐서 가장 가까운 층인 `AutomationInputProbes.cpp` · `AutomationProfilerProbes.cpp` 에 둔다. 이 뒤로 탐침을 모아 쥔 허브 파일은 없다(`NetSimAutomation.cpp` · `RHIBackendSwitcherAutomation.cpp` 는 자기 기능의 탐침) |
-| ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스(`AutomationStepContext`)를 받게 한다 | 등록자가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현, 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: |
-| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드, 컴파일 확인 전) — 2026-10-28 폴더 이동 · 실행기 번역 단위 분할(6절). `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`로 결과 형식과 종료 코드를 갈랐고 테스트 전용 선언을 `AutomationTestOptions`(`getTestOptions()`)로 모았다. 확인 대기: |
-| ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 자동화를 Shipping 에서도 쓰는 방침과 부딪히고 GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
-
-## 6. 남은 것과 위험
-
-③ 의 분할 · 이동(2026-10-28, 컴파일 확인 전 — 사용자 지시로 빌드 없이 읽어서만 확인): 폴더 이동은 스물한 파일(형식 · 등록표 · 문맥 · 타임라인 · 입력 · 창 · 백엔드 · 환경 단계 · 녹화 · Scratch · 시간 상수)을 `Engine/Scenario`(티어 11)로 옮겼다. `Scratch` 와 시간 상수는 문서 1절이 테스트 쪽으로 적었지만 형식 헤더(`AutomationScenario.h`)가 그 형식을 들고 있어 Scenario 가 Automation 을 include 하지 않으려면 같이 가야 했다(층 게이트가 막는다). 파일 이름의 `Automation` 접두는 그대로다(개명은 호출부가 없는 일).
-실행기 분할은 `AutomationRunner` 한 클래스를 유지하고 번역 단위만 가른 것이다: `AutomationRunner.cpp`(시작 · 프레임 · 시계 잡기 · 타임라인 · 끝맺음 약 800 줄), `AutomationRunnerJudge.cpp`(탐침 비교 · `ExpectVisited` 이력 · `Record` · `Remember` · `ExpectLog` · `ExpectImage` · 로그 게이트), `AutomationRunnerSteps.cpp`(엔진 단계 등록과 검사 함수), `AutomationStepArgs.h/.cpp`(검사 함수와 판정이 함께 읽는 인자 · 수 비교 — `AutomationStepArgsUtil`). 클래스 자체를 타임라인 클래스와 판정 클래스로 나누는 일은 하지 않았다: 멤버 상태(`_listFailure` · `_frameIndex` · 입력 · 스크린샷 대기열)가 두 쪽에 얽혀 있어 빌드 없이는 위험이 크다(다음 일: 판정이 읽는 상태를 구조체로 묶어 내보내기). 시계 잡기 · 사진 대기 순서는 줄 단위로 옮겨 바뀌지 않았고 네 백엔드 시나리오 회귀로 본다.
-종료 코드: 숫자는 `AutomationExitCode.h` 한 곳이며(`kAutomationExitCodeRunning` 은 `IEngineFrameObserver::kRunning` 그 자체) `AppTestUtil` 은 `getAutomationExitCode` 를 부르고 `RunScenarioLogs.py` 는 그 헤더를 읽는다(`TestScenarioLogs.py` 가 지킨다). "이 기계에서 RHI 를 못 씀" 코드(77)도 C++ `RHIInitResult.h` 가 정본이고 `AppRun.py` 와 `Test/PythonTest/CMakeLists.txt`(`SW_RHI_UNUSABLE_EXIT_CODE`, 못 찾으면 `FATAL_ERROR`)가 읽으며 `TestQaRunners` 가 `ExitCode.Skipped` 와 같은지, `Test/` 아래 `SKIP_RETURN_CODE` 에 숫자 리터럴이 없는지 본다.
-
-데스크톱 전역 상태 단계(2026-10-28): 단계 등록에 `_bUsesDesktop` 표시(`SW_AUTOMATION_STEP_DESKTOP`)를 두고 표시된 단계가 `input="mixed"` 아닌 시나리오에 있으면 실행기 준비와 시나리오 데이터 테스트가 거절한다. 지금 표시는 `ExpectCursorClip` 하나다. 처리(2026-10-28 후속): `CaptureWindow`(화면 복사)도 `SW_AUTOMATION_STEP_DESKTOP` 으로 표시했고 `validateDesktopSteps` 가 루트 `requireForeground="true"` 도 `input="mixed"` 가 아니면 거절한다(OS 에 전경 창은 하나뿐이라 겹쳐 도는 프로세스와 방해한다). `editor/` 시나리오 11 개(assetmanage · contentbrowser · contentthumbnails · dialoguegraph · lightprobebakecancel · mapcheck · packaging · toastreveal · uiscale · componenticons · toolbaricons)는 화면 복사를 이미 있던 창 단위 캡처 `CaptureEditorUI`(에디터 UI 패널 + 플로팅 창을 프로세스 안에서 찍는다)로 바꾸고 `requireForeground` 를 뺐으므로 `_Desktop` 으로 옮기지 않고 겹쳐 돈다. `CaptureWindow` 는 OS 가 합성한 화면 자체가 검사 대상인 시나리오(`mixed`)만 쓴다. 실행 확인 필요: 11 개의 PNG 가 `CaptureEditorUI` 로 같은 내용(결과 창 · 팝업 포함)을 담는지, `requireForeground` 없이 토스트 · 라이트 프로브 취소 시나리오가 통과하는지(통합에서 한 번). 클립보드: UI 클립보드는 `App::installRuntimeUIHooks` 가 OS 훅을 걸 때만 OS 를 쓰고 테스트 · 시나리오는 엔진 안 클립보드를 쓰며(`UITextInputTest`), 에디터 복사 · 붙여넣기(`hierarchyedit` 의 Ctrl+C/V)는 `ObjectCopyBuffer` 라 OS 클립보드를 건드리는 시나리오는 지금 없다. OS 클립보드를 직접 쓰는 `WindowTest` 는 이미 `_Desktop` 이다.
-
-## 7. 실행 시간 줄이기 (2026-10-27, 코드 · 도구만 — 측정은 통합)
-
-시나리오 전체 시간(Release `app-scenarios-release` 1223 s)이 프레임 대기에서 오는지 기동에서 오는지 파일만으로는 알 수 없다. 파일의 마지막 `<At>` 프레임 합계는 187 개 시나리오에 4.6 만 프레임이고(`py -3 -m Scripts scenario-waits`), 백엔드 넷을 곱하면 프레임 비용이 큰 몫일 수 있지만 가장 긴 하나가 2100 프레임(12 ms 어림 25 초)이라 한 판의 기동 비용도 같은 자릿수다. 그래서 먼저 재게 했다.
-
-- **계측:** 보고 JSON 의 `timeline`(`AutomationTimeline`, 실행기가 `onFrameEnd` 마다 한 번 더한다) — 시작 전 · 단계 · 고정 프레임 대기 · 조건 대기 · 백그라운드 시계 잡기별 프레임 수와 밀리초, 단계 앞 가장 긴 대기 다섯. 통합이 Release 한 바퀴를 돌린 뒤 `scenario-waits --measured-dir <보고 폴더>` 로 어림과 잰 값을 견준다.
-- **조건 대기로 바꾼 것:** `harvestvalley/control`(1810 → 약 80 프레임 + 작물이 생길 때까지) · `abilityarena/control`(1510 → 약 90 프레임 + 첫 처치와 셋째 발사까지). 고정 1800 · 1500 프레임을 기다려 누적 수(`Farm.CropCount` · `Arena.KillCount` · `Arena.PlayerShotCount`)를 단언하던 것이다. 파일 기준 3150 프레임(전체의 7 %)이 줄고, 실제로 줄어든 시간은 통합이 두 시나리오의 `wallMilliseconds` 전후로 잰다.
-  나머지 긴 고정 대기는 프레임 수 자체가 목적이다(`displayrevert` 카운트다운 · `nilecity/determinism` 의 `<Record>` · `shooter3d/enemydeath` 의 사진 시점 · 입력을 누르고 있는 길이).
-- **어림값 문턱 승격:** `py -3 -m Scripts scenario-thresholds`(`--list` 가 38 개 목록, `--reports` 가 제안 표, `--apply` 가 쓴다). 숫자는 보고의 `metrics` 에서만 가져온다.
-- **행 감시 교착:** 개발 명령 `automation.hang` + 시나리오 `engine/automationwatch/hang.scenario.xml`(`wallTimeoutSeconds="3"`)을 `AppHangWatchTest` 가 12 · `"hang": true` 로 확인한다. 기동이 3 초를 넘기는 구성(Debug)에서는 시작 전에 일반 시간 초과로 끝날 수 있어 한 번 돌려 본다.
-- **샤드 비용표 보정 (2026-10-28, 도구만 — 실측은 통합):** 정적 어림(마지막 프레임 × 프레임 비용)으로 비용을 정하지 않고 실제 케이스 시간을 그대로 쓴다. `py -3 -m Scripts test-costs --log <빌드>/Testing/Temporary/LastTest.log`(`qa/TestCostCalibration.py`)가 ctest 로그의 `[       OK ] Suite.Case (N ms)` 줄과 샤드(`<이름>_Shard<k>`)의 `Test time` 을 읽어 ① 정책 표(`caseCosts` · `hostCaseCosts`)에서 잰 값과 1.5 배 · 3 초 넘게 어긋난 이름의 제안, ② 표에 못 적는 동적 이름(`Suite.Case.<백엔드>`)의 느린 순 목록(매크로 인자 · `addCase` 의 예상 초를 고칠 근거), ③ 샤드 합 ÷ 가장 긴 것(겹침)을 낸다. `--apply` 는 표에 이미 있는 이름의 숫자만 고친다.
-  절차(통합이 한 번): (1) `ctest --test-dir build/Ninja-Release -L hostgpu -j` 한 바퀴를 돌린다(`app-scenarios-release`). (2) `test-costs --log build/Ninja-Release/Testing/Temporary/LastTest.log` 로 제안 표를 본다. (3) 제안이 맞으면 `--apply` 로 `Test/TestPolicy.json` 에 쓰고 `_hostCaseCostsReason` 의 근거 날짜 · 합을 새 값으로 고친다. (4) 겹침이 샤드 수에 크게 못 미치면(`hostResourceLock` 이 사라진 뒤에도 샤드가 순서대로 도는 것) 잠금 · GPU 칸(`gpuSlots`)을 먼저 본다. (5) 같은 로그의 동적 이름 상위 목록으로 `SW_TEST_CASE_PER_PARAMETER` 의 예상 초를 고친다. 이 절차는 실측 뒤에만 의미가 있어 지금은 돌리지 않았다.
-- **자동화 개선 후보 상태 (2026-10-28 재측정):** 어림값 문턱 승격 도구(`scenario-thresholds`, 어림값 단언 38 개 · 시나리오 13 개) · 고정 프레임 대기 계측(`timeline` + `scenario-waits --measured-dir`) · 교착 시나리오 항목(`app-hang-watch`) · 승격 제안 항목(`scenario-thresholds-promote`, 인자 `build/{preset}/AppRuns` · `requires` `app-scenarios-release`)은 모두 들어가 있다. 남은 것은 도구가 아니라 실측이다: `app-scenarios-release` 한 바퀴 뒤 `scenario-thresholds-promote` · `scenario-timeline-measure` 의 표를 읽고 `--apply` 를 돌리는 일, 그리고 NEXT 14 가 적은 "비에디터 게임 시나리오 묶음 실행"(한 프로세스로 묶어 케이스당 기동 비용을 줄이는 일)이다. 묶음 실행은 아직 없다(2026-10-28 코드 확인): `AppTestUtil::runScenario` 가 시나리오 하나마다 App 을 새로 띄우고 App 은 `-scenario` 한 개만 받는다. 선행으로 적었던 `HostGpuIsolation` H2(케이스별 작업 폴더) · H3 · H4 는 이미 들어가 선행이 아니다 — 같은 프로세스에서 여러 시나리오를 잇는 App 쪽(씬 · 모듈 상태 초기화 경계) 설계가 첫 단계다.
-
-## 8. 시나리오가 없는 기능과 추가한 시나리오 (2026-10-27, 실행 전)
-
-덮임은 세 줄로 대조했다: 에디터 패널 id(`kPanelID` 46 개)를 시나리오의 `panel.focus` · `gv_editorProbePanel` · `mark` 와, 등록된 탐침(299 개)을 시나리오의 `probe=` 와(273 개 사용, 26 개 미사용), 게임마다 자동 플레이 스위치(`gv_*AutoPlay`)를 켠 시나리오가 있는지.
-엔진 모듈은 대부분 자기 폴더에 탐침이 없어(탐침은 Scene · Editor · GameFramework 에 있다) 폴더 단위로는 대조할 수 없었다 — 탐침이 없는 기능은 시나리오로 못 덮으므로 탐침을 먼저 더해야 한다.
-
-| 덮이지 않은 것 | 처리 |
-|---|---|
-| 패널 `audiograph` · `behavior_tree` · `world_cells` | 추가: `editor/audiographpanel` · `behaviortreepanel` · `worldcellspanel` — 열기(`Editor.PanelOpen` 조건 대기) → UI 캡처(`maxMagentaFraction=0`) → 닫기. 패널 안 조작은 표식(mark)이 없거나(world_cells 는 `worldCells.cell.N` 이 월드 파티션 씬을 요구) 파일을 써서 하지 않았다 |
-| 반사 프로브 베이크(`Editor.ReflectionProbeBake*` · `BakedReflectionProbeCount`) | 추가: `editor/reflectionprobebake` — 프로브 없는 씬에서 끝난 횟수 1 · 구운 수 0. 프로브가 있는 굽기는 씬 옆에 `.reflprobe` 를 써 하지 않는다(Scratch 가 필요) |
-| WildWest 자동 플레이(기수가 가장 가까운 말에 탐) | 추가: `wildwest/autoplaymount` — 탑승 순간까지 조건 대기 |
-| FrontierTown 자동 플레이(시계 8 배) | 추가: `frontiertown/autoplayclock` — 이틀째까지(1 배속이면 42 초라 시한 30 초에서 진다), `refused` 줄 0 |
-| MeadowVillage 자동 플레이(시계 8 배) | 추가: `meadowvillage/autoplayclock` — 첫 날 넘김까지(1 배속이면 90 초라 시한 40 초에서 진다) |
-| `Editor.NavMeshCount` · `NavMeshSegments` | 못 덮음: 내비메시가 서려면 걸을 바닥이 있는 씬 픽스처가 필요하다(`physicsnavview` 는 커맨드가 돈 것만 본다) |
-| `Editor.AssetImport*` | 못 덮음: 원본 모델 · 텍스처를 바꿔야 해서 Scratch 의 원본 에셋 복사가 있어야 한다 |
-| `Editor.CharacterEditor*` · `UIPreview*` · `NetPlayMeasuredLossPercent` · `GameViewCamera*` · `LoadingScreenShown` | 다음 일: 기존 시나리오(`charactereditor` · `uipreviewdesigner` · `netconditions` · `sceneviewgameview` · `loadingscreen`)에 단언을 더하는 일이라 이번에는 기존 파일을 건드리지 않았다 |
-| `Appearance.MergedSections` · `SocketPartPool.*` · `Animation.CrowdVertexAnimationUnits` · `PoseEvaluatedUnits` | 다음 일: 군중 · 외형 합치기 시나리오에 단언 — 기대 값은 한 번 재야 정한다 |
-| `AI.BehaviorTask` | 못 덮음: 한 틱에 끝나는 작업만 있는 트리는 도는 잎이 없다(README 함정) |
-| 사람 눈 확인(질감 · 그림자 · 색 · 애니메이션 느낌) | 시나리오가 사진을 남기고 판정은 사람이 한다(`눈 확인용` 주석 9 곳 + 이번 패널 셋). 숫자 문턱이 되는 것만 `ExpectImage` 가 맡는다 |
-
-추가한 일곱 시나리오는 고정 프레임 대기가 없다(대기는 `WaitUntil`, 그 사이는 `after="1"` 한 프레임). 이름 줄기가 겹치지 않게 했다(`autoplay` 는 shooter3d 가 쓴다). 실행하지 못했다 — 통합이 `AutomationScenarioDataTest`(단계 속성) 와 네 백엔드 실행으로 처음 본다.
-로그 id 가 없는 Warning · Error 가 나는 길은 쓰지 않았다: 패널은 열기만 하고 파일을 읽지 않으며, 자동 플레이 경고(`[WildWest] auto play: …`)는 탈 말이 없을 때만 나고 그때는 일부러 15 로 지게 둔다.
-
-### 통합이 돌릴 확인
-
-- 행 감시 교착 시나리오:(`AppHangWatchTest`, Debug). 지면 보고의 reason 을 먼저 본다 — 기동이 `wallTimeoutSeconds`(3 초)를 넘겼으면 `hang.scenario.xml` 의 시한을 올린다.
-- 시나리오 단계별 시간:(`scenario-waits --measured-dir`, `app-scenarios-release` 뒤).
-- 어림값 문턱 승격 제안:. `{bin}/Saved/Automation` 보고는 시나리오 줄기 + 백엔드 이름으로 덮어쓰이므로 `ExpectImage` 가 든 줄기가 유일한 것들(어림값 13 개 시나리오)만 쓴다.
-- 처음 도는 시나리오 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)은 통합 S 의 `app-scenarios-release` 통과(1300 s, 시나리오 Warning/Error 0)로 덮여 항목(`scenarios-new-q2`)을 지웠다.
+- **첫 일: 컴파일 확인.** ①②③ 전체가 빌드 없이 읽어서만 검증됐다.
+- 새 프레임워크가 서면 단계별 검증(층 게이트, 네 백엔드 시나리오 회귀)과 이 문서의 시나리오 · 테스트 언급을 새 구조에 맞춰 다시 쓴다.
+- 판정이 읽는 상태를 구조체로 묶어 내보내고 실행기를 타임라인 · 판정 클래스로 나누는 일.
+- 시나리오 실행 시간 줄이기(코드 · 도구는 들어갔고 실측만 남음):
+  - 보고 `timeline`(단계 · 고정 대기 · 조건 대기 · 시계 잡기별 프레임 수와 시간)을 `scenario-waits --measured-dir` 로 어림과 견준다.
+  - 어림값 문턱 승격(`scenario-thresholds`)과 샤드 비용표 보정(`test-costs`)은 Release 한 바퀴를 돈 뒤 제안 표를 읽고 `--apply` 한다.
+  - 긴 고정 대기 두 시나리오(`harvestvalley/control` · `abilityarena/control`)를 조건 대기로 바꿔 3150 프레임(7 %)을 줄였다. 나머지 긴 고정 대기는 프레임 수 자체가 목적이다.
+  - "비에디터 게임 시나리오 묶음 실행"(한 프로세스로 케이스당 기동 비용 줄이기)은 아직 없다. App 이 `-scenario` 하나만 받으므로 같은 프로세스에서 여러 시나리오를 잇는 씬 · 모듈 상태 초기화 경계 설계가 첫 단계다.
+- 시나리오로 덮이지 않은 기능은 탐침이 없어 못 덮는 경우가 많다(내비메시 · 에셋 임포트 · `AI.BehaviorTask`). 시나리오는 탐침을 먼저 더해야 한다. 기존 시나리오에 단언을 더할 후보: 캐릭터 에디터 · UI 프리뷰 · 네트 조건 · 게임 뷰 카메라 · 로딩 화면 · 군중 · 외형 합치기(기대 값은 한 번 재야 정한다). 사람 눈 확인이 필요한 것은 시나리오가 사진을 남기고 사람이 판정한다.
+- ④ 구성 분리는 자동화를 Shipping 에서도 쓰는 방침 · GPU 검증이 Shipping 으로 돌아가는 제약과 부딪힌다. 할 때는 Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교한다.

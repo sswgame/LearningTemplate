@@ -1,49 +1,41 @@
 # 누수 탐지
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 표
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 진행: 표
 
-2026-10-24 설계 검토 결론: **"기준선 뒤의 살아 있는 양 차이" 로 재던 누수 보고를 "창 안에서 태어나 창이 닫힐 때 아직 살아 있는 블록" 을 세는 측정 창으로 바꾼다.** 결정은 1절, 근거는 2절, 측정으로 가릴 질문은 4절, 추정은 6절.
-
-## 1. 결정
-
-- **누수는 블록의 출생으로 잰다.** 창 안에서 태어난 블록에 스탬프(회차 번호)를 찍고 창이 닫힐 때 아직 살아 있는 블록만 보고한다. 창 밖에서 태어난 오래된 블록의 해제는 창의 값을 줄이지 않는다.
-- **스탬프는 `Memory` 가 나른다.** `AllocationRecord::_windowStamp`(uint32)를 블록 헤더에 적었다가 해제 때 `recordFree` 로 돌려준다(헤더 패딩 `_arrPad[6]` 를 `uint8[2] + uint32` 로 나눠 48 B 와 `static_assert` 유지). `Memory`(티어 2)는 스탬프의 뜻을 모르고 창은 `MemoryProfiler`(Diagnostics, 티어 10)가 맡는다.
-- **창 하나로 합친다.** 기존 태그별 기준선 배열은 지웠다. `captureMemoryLeakBaseline` 이 `TagTotals` 창을 열고 종료 끝(`DiagnosticsSubsystem`)이 `endLeakWindow` 로 닫아 `printLeakWindowReport` 로 찍는다. 두 번째 경로는 없다.
-- **창의 기록 수준은 연 쪽이 고른다(기본값 없음).** `TagTotals` 는 태그별 바이트 · 개수만 센다(할당마다 원자 덧셈 둘). `FullStacks` 는 창 안의 모든 할당의 스택을 잡고 블록마다 기록한다. 설계 검토는 "창 안은 전수 스택 캡처" 였지만 기동부터 종료까지의 긴 창(기준선)까지 전수 캡처하면 Debug 실행이 느려져 기준선 창만 `TagTotals` 로 둔다(4절 측정으로 확인).
-- **`FullStacks` 의 테이블은 블록 주소로 나눈 슬롯이다**. 해제하는 스레드가 할당한 스레드와 다를 수 있어 스레드 슬롯으로는 지울 슬롯을 모른다.
-- **창 없이 `endLeakWindow` 를 부르면 오류다**(단언 + `_bValid` false 인 빈 보고서). `beginLeakWindow` 를 열린 채 다시 부르는 것도 단언이다.
-- **다른 스레드의 할당이 섞이는 한계는 숨기지 않는다.** 창은 프로세스 전체의 할당을 세고 `_foreignThreadBlockCount` · `_foreignThreadBytes` 가 창을 연 스레드가 아닌 스레드의 몫을 따로 알린다(`FullStacks` 만).
-- **회차**: 한 창 안에서 `beginLeakRound()` 로 회차를 넘기면 보고서 줄에 태어난 회차(`_bornRound`)가 남는다(`FullStacks` 만, 씬 로드를 되풀이할 때 어느 회차의 블록이 남았나를 한 창으로 본다).
-
-## 2. 근거
-
-- 기존 기준선은 태그별 살아 있는 양의 차이라 창 밖에서 태어난 블록을 풀면 차이가 줄어 새 누수를 가린다(`Scene` 에서 100 B 해제, 50 B 누수 → 차이 -50 이라 보고되지 않음). 근본 원인은 블록이 어느 시점에 태어났는지를 기록하지 않는 데이터 구조라 블록 헤더에 출생 스탬프를 남기는 구조로 푼다(헤더 패딩 6 B 라 48 B 그대로, 해제마다 비교 하나만 는다).
-- 태그만으로는 누수를 낸 코드를 찾을 수 없다. 첫 프레임(Core/Memory · Core/Container 프레임은 거르고)이 "누가 할당했나" 를 알려 준다. 심볼 변환은 전역 잠금을 잡는 느린 길이라 창이 닫힐 때 스택마다 한 번만 한다.
-
-## 3. 단계
+"기준선 뒤의 살아 있는 양 차이" 로 재던 누수 보고를, "창 안에서 태어나 창이 닫힐 때 아직 살아 있는 블록" 을 세는 측정 창으로 바꾸는 계획이다. 창 밖에서 태어난 블록을 풀어도 새 누수가 가려지지 않게 하는 것이 목적이다. L1 은 끝났고 L3 · L4 는 코드가 일부 들어갔으며(**빌드 · 테스트 안 돌림**) L2 측정이 다음 일이다.
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개. 종료 보고가 창 밖까지 사는 저장소(레지스트리 · 호스트 범위 · 정적 캐시)를 누수로 보던 것은 방침대로 정리했다(2026-10-28) | 끝남 |
-| L2 | 측정으로 질문 셋에 답한다(4절). 답에 따라 `FullStacks` 의 상한(블록 수 · 스택 깊이)과 기준선 창을 `FullStacks` 로 올릴지를 정한다 | 대기 |
-| L3 | 반복 로드 곡선 검사: 한 씬을 워밍업 1회 + 측정 8회 로드 · 언로드하며 회차마다 창을 닫아 `_totalBytes` · `_totalBlockCount` 곡선을 낸다. 8회가 평평하지 않으면(기울기 > 0) 실패하는 테스트나 시나리오. 판정은 `MemoryProfiler::judgeLeakCurve`(워밍업을 버린 점의 최소제곱 기울기 ≤ `LeakCurveCriteria` 허용치, 점이 모자라면 `_bValid` false)이고 `TestMemoryProfiler` 의 `JudgeLeakCurveSeparatesFlatFromGrowing` · `RepeatedLoadCurveIsFlatWithoutLeakAndSteepWithLeak`(흉내 낸 로드로 정상 · 누수 곡선)가 건다. **기울기 허용치(바이트 256 · 블록 1 / 회차)는 잠정이고 L2 측정 뒤 확정.** 진짜 씬 로드 곡선(엔진 테스트가 같은 판정에 점을 넘긴다)은 남음 | 코드 끝남(2026-10-28, 빌드 · 테스트 안 돌림) · 씬 연결 남음 |
-| L4 | 보고 연결: 종료 보고와 에디터 프로파일러 패널이 `FullStacks` 보고서(줄 · 첫 프레임)를 보이게 한다. 켜는 방법(`gv_*`)과 줄 수 상한은 L2 로 정한다. Core 쪽은 끝남: `captureMemoryLeakBaseline( LeakWindowDetail )` 오버로드(인자 없는 호출은 `TagTotals` 그대로)와 `printLeakWindowReport` 의 줄 수 인자(`kDefaultMaxPrintedLeakEntry` 64 는 잠정, L2 측정 뒤 확정). 엔진 기동이 `gv_*` 를 읽어 오버로드를 부르는 것과 에디터 패널은 남음 | Core 끝남(2026-10-28) · 엔진 · 패널 남음 |
+| L1 | 측정 창: 블록 헤더의 `_windowStamp`, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침 | 끝 |
+| L2 | 측정으로 아래 "측정 질문" 셋에 답하고 `FullStacks` 상한과 기준선 창 수준을 정한다 | 대기 |
+| L3 | 반복 로드 곡선 검사(워밍업 1 + 측정 8 회, 기울기 > 0 이면 실패). 판정 `judgeLeakCurve` 와 흉내 낸 로드 테스트는 있고 기울기 허용치(256 B · 1 블록 / 회차)는 잠정 | 코드 끝남(빌드 · 테스트 전), 진짜 씬 로드 연결 남음 |
+| L4 | 보고 연결: 종료 보고 · 에디터 프로파일러 패널이 `FullStacks` 보고서를 보인다 | Core 끝남, 엔진 `gv_*` 연결 · 패널 남음 |
 
-별도 단위(이번 작업 범위 밖, 손대지 않음): **소유 형식 강화** — 원시 `sw_new`(25곳)와 `Memory::allocate`(31곳)를 소유 형식(`make_unique` · 컨테이너)으로 바꿔 누수가 생기는 모양 자체를 줄인다(다른 작업자 몫). 창은 이 단위가 끝나도 남는다(컨테이너 증가 · 캐시 누적을 잡는다).
-측정(두 변경이 병합된 뒤에 한다): 창(`leakwin`)의 오버헤드와 소유 형식 도입 전 · 후 비용. 각 변경이 들어간 뒤 비교 케이스를 `Scripts/qa/PerfCompare.py` 에 더하고 그때 검증 묶음 항목을 올린다.
+## 설계 결정
 
-## 4. 측정으로 가릴 질문
+- **누수는 블록의 출생으로 잰다.** 창 안에서 태어난 블록에 회차 스탬프를 찍고 창이 닫힐 때 살아 있는 것만 보고한다. 기존 방식은 `Scene` 에서 100 B 를 풀고 50 B 가 샌 경우 차이가 -50 이라 보고되지 않았다. 원인이 "출생 시점을 기록하지 않는 구조"라 헤더에 스탬프를 남기는 구조로 푼다.
+- **스탬프는 `Memory` 가 나른다.** `AllocationRecord::_windowStamp`(uint32)를 블록 헤더 패딩에 넣어 48 B 를 유지하고 해제 때 `recordFree` 로 돌려준다. `Memory`(티어 2)는 스탬프의 뜻을 모르고 창은 `MemoryProfiler`(티어 10)가 맡는다.
+- **창은 하나다.** 태그별 기준선 배열을 지웠다. `captureMemoryLeakBaseline` 이 창을 열고 종료 끝(`DiagnosticsSubsystem`)이 닫아 찍는다. 두 번째 경로는 없다.
+- **기록 수준은 연 쪽이 고른다(기본값 없음).** `TagTotals` 는 태그별 바이트 · 개수만 세고, `FullStacks` 는 창 안 모든 할당의 스택을 블록마다 기록한다. 긴 기준선 창까지 전수 캡처하면 Debug 가 느려져 기준선 창만 `TagTotals` 로 둔다.
+- **`FullStacks` 테이블은 블록 주소로 나눈 슬롯이다.** 해제 스레드가 할당 스레드와 다를 수 있어 스레드 슬롯으로는 지울 슬롯을 모른다.
+- **오용은 오류다.** 창 없이 `endLeakWindow`, 열린 채 `beginLeakWindow` 는 단언이다.
+- **다른 스레드의 할당이 섞이는 한계는 숨기지 않는다.** `_foreignThreadBlockCount` · `_foreignThreadBytes` 가 따로 알린다(`FullStacks` 만).
+- **회차**: `beginLeakRound()` 로 넘기면 보고 줄에 태어난 회차가 남아 씬 로드를 되풀이할 때 어느 회차의 블록이 남았나를 한 창으로 본다.
+- 태그만으로는 누수 코드를 못 찾으므로 첫 프레임(Core/Memory · Core/Container 는 거름)을 "누가 할당했나"로 쓴다. 심볼 변환은 느려서 창이 닫힐 때 스택마다 한 번만 한다.
 
-Release 에서 혼자 돌린다. 추정으로 정하지 않는다.
-1. **씬 로드 한 번의 할당 수**(`getTotalAllocationCount()` 차이) — `FullStacks` 블록 테이블 메모리(블록 하나당 약 40 B + 해시 테이블 오버헤드)와 창이 닫힐 때 정렬 · 묶는 시간이 감당 가능한지.
-2. **전수 캡처의 오버헤드** — 같은 씬 로드를 창 없이 / `TagTotals` / `FullStacks` 로 돌려 로드 시간을 비교하고 `CallStackCapture::capture` 의 할당당 비용, 스택 테이블 잠금(슬롯 16개)의 병렬 로드 대기를 본다. 결과로 기준선 창을 `FullStacks` 로 올릴 수 있는지, 전수가 안 되면 N번째 할당마다 표본을 잡는지를 정한다.
-3. **워밍업 1 + 측정 8 회의 곡선** — 첫 회는 캐시 · 풀이 차는 증가라 버리고 이어지는 8회의 `_totalBytes` 가 평평한지 본다. 평평하다고 판정하는 기울기 임계값과 로더 · 로그 워커가 섞이는 정도를 이 곡선으로 정한다.
+## 측정 질문(L2, Release 에서 혼자, 추정으로 정하지 않는다)
 
-## 5. 읽을 곳 · 고칠 곳
+1. **씬 로드 한 번의 할당 수** — `FullStacks` 테이블 메모리(블록당 약 40 B)와 창 닫을 때 정렬 시간이 감당 가능한가.
+2. **전수 캡처의 오버헤드** — 창 없이 / `TagTotals` / `FullStacks` 로 같은 씬 로드 시간을 비교하고 스택 캡처 비용 · 잠금 대기를 본다. 결과로 기준선 창을 `FullStacks` 로 올릴지, N 번째 할당 표본으로 갈지 정한다.
+3. **워밍업 1 + 측정 8 회의 곡선** — 평평하다고 판정할 기울기 임계값과 로더 · 로그 워커가 섞이는 정도를 정한다.
 
-코드: `Source/Core/Memory/Memory.{h,cpp}`(`AllocationRecord` · 헤더) · `Source/Core/Diagnostics/MemoryProfiler.{h,cpp}`(창) · `Source/Engine/Bootstrap/DiagnosticsSubsystem.cpp`(종료 보고) · `Test/CoreTest/Memory/TestMemoryProfiler.cpp`. 층: `Scripts/lint/rules/CheckCoreLayers.toml` 의 Memory 2 · Diagnostics 10(`Memory` 는 `recordFree` 에 `AllocationRecord` 를 넘기는 인터페이스만 알고 창을 모른다).
+## 별도 단위와 측정
 
-## 6. 추정 · 확인하지 못한 것
+- **소유 형식 강화**(이 작업 범위 밖): 원시 `sw_new`(25곳)와 `Memory::allocate`(31곳)를 `make_unique` · 컨테이너로 바꿔 누수 모양을 줄인다. 창은 그 뒤에도 남는다(컨테이너 증가 · 캐시 누적을 잡는다).
+- 두 변경이 병합된 뒤: 창의 오버헤드와 소유 형식 도입 전 · 후 비용을 `Scripts/qa/PerfCompare.py` 케이스로 잰다.
 
-- 첫 프레임 거르기는 심볼 글의 파일 경로(`Core/Memory/` · `Core/Container/`)와 심볼 이름(`sw::Memory::` · `MemoryInternal::`) 부분 문자열로 한다. PDB 줄 정보가 없는 구성(Linux 심볼 변환이 파일 경로를 주지 않는 경우)에서는 컨테이너 프레임이 걸러지지 않을 수 있다(추측, L2 에서 두 플랫폼으로 확인).
-- 스탬프는 32비트이고 창 하나가 쓰는 회차는 수십 개라 돌아갈 일이 없다고 본다(추측). `TagTotals` 창은 Debug 종료 보고에서 태그 · 바이트 · 블록 수를 낸다(2026-10-28 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 로 확인). 남은 블록의 출처를 찾을 때는 기준선 창을 잠시 `FullStacks` 로 바꿔 본다.
+## 읽을 곳 · 추정
+
+- 코드: `Source/Core/Memory/Memory.{h,cpp}` · `Source/Core/Diagnostics/MemoryProfiler.{h,cpp}` · `Source/Engine/Bootstrap/DiagnosticsSubsystem.cpp` · `Test/CoreTest/Memory/TestMemoryProfiler.cpp`. 층은 `Scripts/lint/rules/CheckCoreLayers.toml` 의 Memory 2 · Diagnostics 10.
+- 추측: 첫 프레임 거르기는 경로 · 심볼 이름 부분 문자열이라 PDB 줄 정보가 없는 구성(Linux)에서는 컨테이너 프레임이 안 걸러질 수 있다(L2 에서 두 플랫폼 확인). 스탬프 32 비트는 회차가 수십 개라 돌아갈 일이 없다고 본다.
+- 남은 블록의 출처를 찾을 때는 기준선 창을 잠시 `FullStacks` 로 바꿔 본다.
