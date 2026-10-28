@@ -92,7 +92,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 1. **프레임을 읽습니다.** `get_design_context` · `get_variable_defs` · `get_screenshot`.
 2. **토큰으로 옮깁니다.** 변수가 토큰 이름과 맞으면 `import-figma`. 경고로 나온 모르는 변수는 토큰을 새로 더할지 사람에게 묻고, 임의로 키를 만들지 않습니다.
 3. **패널을 고칩니다.** 색, 간격, 모서리는 `EditorThemeUtil` 접근자로만 읽습니다. 값이 토큰에 없으면 토큰 파일 다섯 개와 접근자에 같은 커밋에서 키를 더합니다.
-4. **캡처로 확인합니다.** `App -EnableEditor -gv_screenshotEditor=<경로>.png`(`-gv_screenshotEditorFrame=N`, 기본 60). 자동 시나리오는 `<CaptureEditorUI file="..." maxMagentaFraction="0" maxClippedWindows="N"/>`(6절). 패널 전체는 `engine/automation/editor/uiaudit.scenario.xml`(GPU 잠금 공유, `gpu-verifier` 가 맡을 수 있다).
+4. **캡처로 확인합니다.** `App -EnableEditor -gv_screenshotEditor=<경로>.png`(`-gv_screenshotEditorFrame=N`, 기본 60). 자동 시나리오는 `<CaptureEditorUI file="..." maxMagentaFraction="0" maxClippedWindows="N"/>`(6절). 패널 전체는 `engine/automation/editor/uiaudit.scenario.xml`(GPU 잠금 공유).
 5. **점검을 시킵니다.** 캡처 경로와 패널 이름으로 점검합니다. 보고는 `우선순위 | 패널 | 캡처 파일 | 결함 | 근거(좌표/영역) | 제안` 테이블이고 P0 · P1 은 고치고 4로 돌아갑니다.
 6. **마무리합니다.** `editor-theme check` 와 `CheckEditorStyleLiterals` 통과.
 
