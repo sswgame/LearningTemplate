@@ -99,8 +99,3 @@ def compareEventLogs(server: NetEventLog, client: NetEventLog) -> tuple[dict[str
     if mapCount["serverEnd"] > 0 and mapCount["clientEnd"] == 0:
         listProblem.append("the client got no end message")
     return mapCount, listProblem
-
-
-def findLogProblems(text: str, label: str) -> list[str]:
-    """프로세스 출력의 `[Error]` 줄과, 이 기능(`PairedAnimation…` 호출자)의 `[Warning]` 줄. 다른 곳의 경고는 이 확인의 판정이 아니다."""
-    return [f"{label}: {line.strip()}" for line in text.splitlines() if "[Error]" in line or ("[Warning]" in line and "PairedAnimation" in line)]

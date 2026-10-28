@@ -25,8 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.NetPairRun import hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
-from common.PairedAnimationNetLog import compareEventLogs, findLogProblems, parseEventLog  # noqa: E402
+from common.NetPairRun import findLogProblems, hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
+from common.PairedAnimationNetLog import compareEventLogs, parseEventLog  # noqa: E402
 
 #: 세션 컴포넌트와 시작자를 둔 씬(`PairedAnimationReplicationTest.NetworkSceneHasTwoRolesStarterAndSessionComponent` 가 컴포넌트를 지킨다).
 kDefaultScene = "game/empty/maps/pairedanimnet.scene.xml"
@@ -69,7 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"[RunPairedAnimationNetPair] 로그를 읽지 못했습니다: {error}")
         return ExitCode.CheckInvalid
     mapCount, listProblem = compareEventLogs(server, client)
-    listProblem = findLogProblems(serverText, "server") + findLogProblems(clientText, "client") + listProblem
+    listProblem = findLogProblems(serverText, "server", "PairedAnimation") + findLogProblems(clientText, "client", "PairedAnimation") + listProblem
     print(f"[RunPairedAnimationNetPair] {' '.join(f'{key}={count}' for key, count in mapCount.items())}, 문제 {len(listProblem)}. 로그: {outDir}")
     for problem in listProblem:
         print(f"  {problem}")

@@ -11,7 +11,9 @@
 둘의 출력 줄에서 `[DestructionHash]` 줄을 `CompareDestructionHashLogs` 와 같은 규칙으로 맞댄다. 서버를 먼저 띄워 두므로 클라이언트가 붙기 전의 사건은
 스냅숏으로 건너뛴다(겹치는 열쇠만 본다). 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫(결정 기록 5-12)이라 이 도구는 한 기계의 두 프로세스만 다룬다.
 
-종료 코드: 0 = 같다, 1 = 해시가 다르거나 비교할 것이 없다, 2 = 실행 파일이 없거나 프로세스가 비정상으로 끝났다.
+해시가 같아도 두 프로세스의 출력에 `[Error]` 줄(또는 `Destruction…` 호출자의 `[Warning]` 줄)이 있으면 실패다(`common/NetPairRun.findLogProblems`, 페어드 애니메이션 러너와 같다).
+
+종료 코드: 0 = 같다, 1 = 해시가 다르거나 비교할 것이 없거나 오류 로그가 있다, 2 = 실행 파일이 없거나 프로세스가 비정상으로 끝났다.
 """
 
 from __future__ import annotations
@@ -25,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.DestructionHashLog import compareHashLogs, parseHashLog  # noqa: E402
-from common.NetPairRun import hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
+from common.NetPairRun import findLogProblems, hasBadExit, kDefaultPort, findServerExecutable, makeClientArguments, makeServerArguments, runServerClientPair, writeLog  # noqa: E402
 
 #: 파괴 복제 컴포넌트를 둔 씬(`DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase` 가 컴포넌트를 지킨다).
 kDefaultScene = "game/empty/maps/destructionnet.scene.xml"
@@ -71,6 +73,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"[RunDestructionNetPair] 해시 줄이 없습니다(서버 쪽 '{server.side}', 클라이언트 쪽 '{client.side}'). 로그: {outDir}")
         return ExitCode.Violation
     sharedCount, listProblem = compareHashLogs(server, client)
+    listProblem = findLogProblems("\n".join(serverResult.listLine), "server", "Destruction") + findLogProblems("\n".join(clientResult.listLine), "client", "Destruction") + listProblem
     print(f"[RunDestructionNetPair] 겹친 열쇠 {sharedCount}, 문제 {len(listProblem)}")
     for problem in listProblem:
         print(f"  {problem}")

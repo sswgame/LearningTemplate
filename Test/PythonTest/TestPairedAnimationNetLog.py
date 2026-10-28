@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common import PairedAnimationNetLog as netLog  # noqa: E402
+from common import NetPairRun, PairedAnimationNetLog as netLog  # noqa: E402
 
 # 세션 1 은 클라이언트가 붙기 전에 시작해 늦은 참가로 넘어가고(앵커 0.75), 세션 2 는 붙은 뒤에 시작한다(앵커 0.0166667).
 _kServerLog = """[Info] [PairedAnimationNet] side=server event=start session=1 anchor=0.0166667
@@ -69,10 +69,13 @@ class PairedAnimationNetLogTest(unittest.TestCase):
             netLog.parseEventLog(_kServerLog + _kClientLog, "server")
 
     def testLogProblemsAreErrorsAndThisFeaturesWarnings(self) -> None:
-        text = "[Info] ok\n[Error] boom\n[Warning] other thing\n[Warning] PairedAnimationReplication: rejected\n"
-        listProblem = netLog.findLogProblems(text, "server")
+        # 두 러너(페어드 애니메이션 · 파괴)가 같이 쓰는 판정 — 모든 [Error] 와 그 기능 표지가 든 [Warning] 만 센다.
+        text = "[Info] ok\n[Error] boom\n[Warning] other thing\n[Warning] PairedAnimationReplication: rejected\n[Warning] DestructionNetSession: late\n"
+        listProblem = NetPairRun.findLogProblems(text, "server", "PairedAnimation")
         self.assertEqual(2, len(listProblem))
         self.assertTrue(listProblem[0].startswith("server: [Error]"))
+        self.assertEqual(2, len(NetPairRun.findLogProblems(text, "client", "Destruction")))
+        self.assertEqual([], NetPairRun.findLogProblems("[Info] fine\n[Warning] unrelated\n", "server", "Destruction"))
 
 
 if __name__ == "__main__":

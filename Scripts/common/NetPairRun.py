@@ -54,6 +54,15 @@ def runServerClientPair(serverPath: Path, appPath: Path, serverArguments: list[s
     return mapResult["server"], mapResult["client"]
 
 
+def findLogProblems(text: str, label: str, warningMarker: str) -> list[str]:
+    """프로세스 출력의 판정 줄 — 모든 `[Error]` 줄과, @p warningMarker(그 기능의 로그 호출자 이름)가 든 `[Warning]` 줄. 다른 곳의 경고는 이 확인의 판정이 아니다.
+
+    두 러너(파괴 · 페어드 애니메이션)가 같이 쓴다. 두 확인의 씬에서 기능이 남기는 `[Error]` 는 모두 결함이다 — 허용 목록(시나리오 로그의 `allowedlogs.json`)에
+    이 기능들의 항목이 없고 이 확인에도 허용하는 Error 가 없다. 허용해야 할 Error 가 생기면 여기에 목록을 더한다(조용히 거르지 않는다).
+    """
+    return [f"{label}: {line.strip()}" for line in text.splitlines() if "[Error]" in line or ("[Warning]" in line and warningMarker in line)]
+
+
 def hasBadExit(result: AppRunResult) -> bool:
     """프로세스가 뜨지 못했거나 시간 안에 못 끝났거나 종료 코드가 0 이 아니다."""
     return result.bLaunched is False or result.bTimedOut or result.exitCode != 0

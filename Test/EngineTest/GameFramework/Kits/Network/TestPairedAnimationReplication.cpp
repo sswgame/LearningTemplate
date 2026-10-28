@@ -74,7 +74,8 @@ namespace
             return bWritten ? test::makeTempResourceID( path ) : string{};
         }
 
-        static SkeletalAnimatorComponent* addParticipant( GameObjectManager& manager, const utf8* pName, const string& folder )
+        /** @brief 참가자 오브젝트를 더합니다. @p bWaitForClips 가 false 면 클립 도착을 돌리지 않아 애니메이터가 클립을 읽는 중(`isWaitingForAnimationAssets`)으로 남습니다. */
+        static SkeletalAnimatorComponent* addParticipant( GameObjectManager& manager, const utf8* pName, const string& folder, bool bWaitForClips = true )
         {
             GameObject*                pObject   = manager.createGameObject( hashed_string( pName ) );
             SkeletalMeshComponent*     pUnit     = pObject != nullptr ? pObject->addComponent<SkeletalMeshComponent>() : nullptr;
@@ -85,9 +86,41 @@ namespace
             pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
             pAnimator->setInitialState( "Idle" );
             pAnimator->dispatchBeginPlay();
-            if ( ::test::finishAssetArrivals( manager ) == false ) // 클립은 워커가 읽는다
+            if ( bWaitForClips && ::test::finishAssetArrivals( manager ) == false ) // 클립은 워커가 읽는다
                 return nullptr;
             return pAnimator;
+        }
+
+        /** @brief 서버 씬(참가자 셋이 준비됨)에서 세션을 시작해 5 프레임 돌리고 그 복제 상태를 만듭니다. 실패하면 false 입니다. */
+        [[nodiscard]] static bool makeServerState( const string& assetPath, const string& folder, PairedAnimationNetState& outState )
+        {
+            GameObjectManager          serverManager;
+            SkeletalAnimatorComponent* pLeader            = addParticipant( serverManager, "Leader", folder );
+            SkeletalAnimatorComponent* pFollower          = addParticipant( serverManager, "Follower", folder );
+            SkeletalAnimatorComponent* pProp              = addParticipant( serverManager, "Prop", folder );
+            const bool                 bParticipantsAdded = pLeader != nullptr && pFollower != nullptr && pProp != nullptr;
+            if ( bParticipantsAdded == false )
+                return false;
+            PairedAnimationReplicationServer server;
+            server.initialize( nullptr, &serverManager );
+            const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( assetPath );
+            if ( def == nullptr )
+                return false;
+            PairedAnimationSystem&               system    = PairedAnimationSystem::getOrCreate( serverManager );
+            uint32                               sessionID = 0;
+            const vector<PairedAnimationBinding> listBinding{
+                PairedAnimationBinding{  hashed_string( "Leader" ),   TComponentHandle<SkeletalAnimatorComponent>( pLeader )},
+                PairedAnimationBinding{hashed_string( "Follower" ), TComponentHandle<SkeletalAnimatorComponent>( pFollower )},
+                PairedAnimationBinding{    hashed_string( "Prop" ),     TComponentHandle<SkeletalAnimatorComponent>( pProp )},
+            };
+            if ( system.startSession( serverManager, def, listBinding, sessionID ) != PairedAnimationStartResult::Started )
+                return false;
+            for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+            {
+                step( serverManager );
+            }
+            const PairedAnimationSession* pSession = system.findSession( sessionID );
+            return pSession != nullptr && server.makeSessionState( *pSession, outState );
         }
 
         static void step( GameObjectManager& manager )
@@ -291,4 +324,87 @@ SW_TEST_CASE( PairedAnimationReplicationTest, NetworkSceneHasTwoRolesStarterAndS
     SW_EXPECT_TRUE( def->getRoles()[0]._name == hashed_string( "Lead" ) );
     SW_EXPECT_TRUE( def->getRoles()[1]._name == hashed_string( "Partner" ) );
     SW_EXPECT_FALSE( def->getSourcePath().empty() );
+}
+
+/**
+ * @brief [PairedAnimationReplicationTest] 준비 전 상태 — 참가자가 클립을 읽는 중에 온 상태는 오류 없이 보관하고(정상 거절), 준비된 뒤 `retryPending` 이 보관한 상태로 복원하며,
+ *        끝내 준비되지 않으면 프레임 상한(`kMaxPendingFrames`)을 넘는 때 이유와 함께 오류로 버린다(무한히 기다리지 않는다)
+ */
+SW_TEST_CASE( PairedAnimationReplicationTest, StateBeforeParticipantsAreReadyIsKeptAndAppliedLater )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    string       folder;
+    const string assetPath = TestPairedAnimationReplicationInternal::writeAssets( "pairedreplicationpending", folder );
+    SW_ASSERT_FALSE( assetPath.empty() );
+    PairedAnimationNetState state{};
+    SW_ASSERT_TRUE( TestPairedAnimationReplicationInternal::makeServerState( assetPath, folder, state ) );
+    const uint32 sessionID = state._snapshot._sessionID;
+
+    // 1) 준비 전에 상태가 오면 보관한다 — 오류도 거절 횟수도 아니고 세션도 아직 없다.
+    GameObjectManager          clientManager;
+    SkeletalAnimatorComponent* pLeader   = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Leader", folder, false );
+    SkeletalAnimatorComponent* pFollower = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Follower", folder, false );
+    SkeletalAnimatorComponent* pProp     = TestPairedAnimationReplicationInternal::addParticipant( clientManager, "Prop", folder, false );
+    SW_ASSERT_TRUE( pLeader != nullptr && pFollower != nullptr && pProp != nullptr );
+    SW_ASSERT_TRUE( pLeader->isWaitingForAnimationAssets() );
+    PairedAnimationReplicationClient client;
+    client.initialize( &clientManager );
+    SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
+    SW_EXPECT_EQUAL( 1u, client.getPendingCount() );
+    SW_EXPECT_EQUAL( 1u, client.getStats()._deferredCount );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._appliedCount );
+    client.retryPending(); // 클립이 아직 안 왔다 — 계속 보관
+    SW_EXPECT_EQUAL( 1u, client.getPendingCount() );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount );
+
+    // 같은 세션의 새 상태는 보관한 옛 상태를 바꾼다(하나만 남는다).
+    SW_EXPECT_TRUE( client.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
+    SW_EXPECT_EQUAL( 1u, client.getPendingCount() );
+
+    // 2) 준비되면 보관한 상태로 복원한다.
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( clientManager ) );
+    client.retryPending();
+    SW_EXPECT_EQUAL( 0u, client.getPendingCount() );
+    SW_EXPECT_EQUAL( 1u, client.getStats()._appliedCount );
+    SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount );
+    PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( clientManager );
+    const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
+    SW_ASSERT_NOT_NULL( pSession );
+    SW_EXPECT_TRUE( pSession->isPlaying() );
+
+    // 3) 끝 메시지는 보관한 상태를 버린다 — 끝난 세션을 뒤늦게 복원하지 않는다.
+    GameObjectManager endManager;
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Leader", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Follower", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( endManager, "Prop", folder, false ) );
+    PairedAnimationReplicationClient endClient;
+    endClient.initialize( &endManager );
+    SW_EXPECT_TRUE( endClient.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
+    NetMessageWriter endMessage;
+    endMessage.begin( NetPairedAnimationMessage::kSessionEnd ).writeVarUint( sessionID );
+    SW_EXPECT_TRUE( endClient.handleMessage( 0, endMessage.getBytes() ) == NetHandleResult::Handled );
+    SW_EXPECT_EQUAL( 0u, endClient.getPendingCount() );
+
+    // 4) 끝내 준비되지 않으면 상한까지는 보관하고, 상한을 넘는 프레임에 오류로 버린다.
+    GameObjectManager stuckManager;
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Leader", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Follower", folder, false ) );
+    SW_ASSERT_NOT_NULL( TestPairedAnimationReplicationInternal::addParticipant( stuckManager, "Prop", folder, false ) );
+    PairedAnimationReplicationClient stuckClient;
+    stuckClient.initialize( &stuckManager );
+    SW_EXPECT_TRUE( stuckClient.applyState( state ) == PairedAnimationStartResult::ParticipantNotReady );
+    for ( uint32 frameIndex = 0; frameIndex < PairedAnimationReplicationClient::kMaxPendingFrames; ++frameIndex )
+    {
+        stuckClient.retryPending();
+    }
+    SW_EXPECT_EQUAL( 1u, stuckClient.getPendingCount() );
+    SW_EXPECT_EQUAL( 0u, stuckClient.getStats()._rejectedCount );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a state whose participants never finish loading is dropped with an error after the frame limit" ); // 이유를 오류로 남기는 것이 이 확인이 보려는 동작이다
+        stuckClient.retryPending();
+    }
+    SW_EXPECT_EQUAL( 0u, stuckClient.getPendingCount() );
+    SW_EXPECT_EQUAL( 1u, stuckClient.getStats()._rejectedCount );
+    SW_EXPECT_EQUAL( 0u, stuckClient.getStats()._appliedCount );
 }

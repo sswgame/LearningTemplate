@@ -294,6 +294,7 @@ namespace sw
 {
     PairedAnimationReplicationClient::PairedAnimationReplicationClient()
         : _stats{}
+        , _listPending{}
         , _pManager{ nullptr }
     {
     }
@@ -302,11 +303,52 @@ namespace sw
     {
         _pManager = pManager;
         _stats    = PairedAnimationReplicationStats{};
+        _listPending.clear();
         if ( pManager != nullptr )
             pManager->getSubsystem<NetObjectTable>().captureSceneObjects();
     }
 
+    void PairedAnimationReplicationClient::dropPending( uint32 sessionID )
+    {
+        VectorUtil::removeIf( _listPending, [sessionID]( const PendingState& pending )
+        { return pending._state._snapshot._sessionID == sessionID; } );
+    }
+
     PairedAnimationStartResult PairedAnimationReplicationClient::applyState( const PairedAnimationNetState& state )
+    {
+        dropPending( state._snapshot._sessionID ); // 같은 세션의 새 상태가 서버의 기준이다
+        const PairedAnimationStartResult result = applyStateNow( state );
+        if ( result == PairedAnimationStartResult::ParticipantNotReady )
+        {
+            _listPending.push_back( PendingState{ state, 0 } );
+            ++_stats._deferredCount;
+        }
+        return result;
+    }
+
+    void PairedAnimationReplicationClient::retryPending()
+    {
+        // 적용하는 동안 목록이 바뀌지 않게 복사해 돌린다(복원은 이 목록을 건드리지 않는다).
+        vector<PendingState> listWaiting;
+        listWaiting.swap( _listPending );
+        for ( PendingState& pending : listWaiting )
+        {
+            ++pending._waitedFrames;
+            const PairedAnimationStartResult result = applyStateNow( pending._state );
+            if ( result != PairedAnimationStartResult::ParticipantNotReady )
+                continue; // 복원했거나 오류로 거절했다(applyStateNow 가 남겼다)
+            if ( pending._waitedFrames > kMaxPendingFrames )
+            {
+                SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored: participants were still loading animation clips after %# frames (limit %#)", pending._state._snapshot._sessionID,
+                              pending._state._assetPath.c_str(), pending._waitedFrames, kMaxPendingFrames );
+                ++_stats._rejectedCount;
+                continue;
+            }
+            _listPending.push_back( std::move( pending ) );
+        }
+    }
+
+    PairedAnimationStartResult PairedAnimationReplicationClient::applyStateNow( const PairedAnimationNetState& state )
     {
         if ( _pManager == nullptr )
         {
@@ -355,7 +397,7 @@ namespace sw
             ++_stats._appliedCount;
             SW_LOG_INFO( "%#", formatEventLine( "client", "restore", state._snapshot._sessionID, state._snapshot._anchorTime ).c_str() );
         }
-        else
+        else if ( result != PairedAnimationStartResult::ParticipantNotReady ) // 클립을 읽는 중이면 정상 거절 — 보관하고 다시 한다
         {
             SW_LOG_ERROR( "Replicated paired animation session %# of '%#' was not restored (result %#)", state._snapshot._sessionID, state._assetPath.c_str(), static_cast<uint32>( result ) );
             ++_stats._rejectedCount;
@@ -372,6 +414,7 @@ namespace sw
             const uint32 sessionID = body.readVarUint32();
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
+            dropPending( sessionID ); // 준비를 기다리던 상태가 끝난 세션이면 복원할 것이 없다
             PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );
             const PairedAnimationSession* pSession = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
             if ( pSession != nullptr && pSession->isPlaying() )
