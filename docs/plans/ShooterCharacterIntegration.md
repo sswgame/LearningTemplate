@@ -14,7 +14,7 @@ Shooter3D(`Source/Games/Shooter3D/`)에 KayKit 기사 플레이어 · 스켈레�
 | S4 | 래그돌 쓰러짐 · 부위 히트박스 · 물리 질의 히트스캔 · 시야 · 보폭 워핑(`Stride`) | 코드 · 데이터 끝, 화면 확인 전 |
 | S5 | 왼손 IK(`bindRigidUnit` · 몸 리그 `Grip` + `TwoBoneIK LeftHandGrip`) | 코드 · 데이터 끝, 실제 게임 화면 확인 전 |
 | S6 | 외형 부품 풀 `SocketPartPool` | 코드 끝, 측정 · 화면 확인 전 |
-| S7 | 스프링 망토 | 코드 · 데이터 끝(`cape_knight` 가 Skinned 부품), 임포트(`knight_cape_chain.mesh`) · 화면 확인 전 |
+| S7 | 스프링 망토 | 코드 · 데이터 끝(`cape_knight` 가 Skinned 부품), 원본 glb 있음, 임포트(`App --import-models`, 쿠킹은 사용자) · 화면 확인 전 |
 
 ## 설계 결정
 
@@ -34,7 +34,7 @@ Shooter3D(`Source/Games/Shooter3D/`)에 KayKit 기사 플레이어 · 스켈레�
 
 ## 남은 일
 
-- **S7 망토:** `itemvisuals.xml` 의 `cape_knight` 는 `kind="Skinned"` 부품(`mesh` `knight_cape_chain.mesh` · `skeleton` `rigs/knight_cape.skeleton.xml` · `rig` `knight_cape.rig.xml`)으로 바꿨다. 남은 것은 메시 산출물이다 — 생성기 `MakeSkinnedCape.py` 가 `Scripts` 정리에서 지워져 `models_raw/kaykit/knight_cape_chain.glb` 를 다시 만들 길이 없다(스켈레톤 `cape0`~`cape3` 사슬에 높이로 가중치를 나눈 망토 메시를 DCC 에서 만들어 `App --import-models` 로 임포트). 메시가 생길 때까지 knight 외형은 로드 오류를 낸다. 그다음 플레이어가 돌 때 망토가 뒤처져 흔들리는지 화면으로 본다.
+- **S7 망토:** `itemvisuals.xml` 의 `cape_knight` 는 `kind="Skinned"` 부품(`mesh` `knight_cape_chain.mesh` · `skeleton` `rigs/knight_cape.skeleton.xml` · `rig` `knight_cape.rig.xml`)으로 바꿨다. 원본 `models_raw/kaykit/knight_cape_chain.glb` 는 지워진 생성기를 git 이력(`3edb95697^:Scripts/dev/MakeSkinnedCape.py`)에서 읽어 한 번 돌려 만들었다(출처는 `credits.md`; `KayKit_Characters` 임포트 규칙이 덮는다). 남은 것은 `App --import-models` 로 `knight_cape_chain.mesh` 를 만드는 것이다. 임포트 전까지 knight 외형은 로드 오류를 낸다. 그다음 플레이어가 돌 때 망토가 뒤처져 흔들리는지 화면으로 본다.
 - **S5 왼손 IK:** Release 임시 씬에서 리그를 켜고 끈 캡처로 왼팔이 소총 쪽으로 끌려 오는 것은 봤다. 남은 것은 실제 3인칭에서 왼손이 `SupportHand` 에 자연스럽게 붙는지(기사 세트의 방패가 왼손을 가린다 — 총 프리셋에서 방패 칸을 비울지 정한다), 팔꿈치 방향(어색하면 `pole`), 무기를 바꾸면 새 손잡이를 따르는지다. 몸 리그의 `HideHead` 는 슬롯 가중치를 정하지 않으면 1(숨김)이라 아바타 없이 쓰면 머리가 사라진다.
 - **S6 부품 풀 측정:** 구간 `GT.Appearance.syncParts`, 끄기 `-gv_socketPartPool=0`, 탐침 `SocketPartPool.TakeHits` · `TakeMisses` · `Stored`. 적이 같은 부품 셋으로 스폰 · 퇴장을 되풀이하는 장면에서 켬 · 끔을 견준다. 쉬는 부품은 꺼진 오브젝트로 씬에 남으므로 상태 저장 경로가 생기면 그 앞에서 풀을 비우는 길이 필요하다.
 - **화면 확인(통합에서 한 번에):** S3 1인칭 몸 · 3인칭(근평면에 목 단면이 걸리면 `HideHead` 를 `neck` 까지 넓힌다), S5 무기마다 왼손 · 걷기, S1 · S2 · S4 쓰러짐 · 떨어진 무기 · 시체 걷힘 · `EnemyHitCount`, 그 뒤 S7. 머리 ×2 · 엄폐물 뒤의 적 · 자동 조준 시야는 autoplay 로그(`[Shooter] hit …`)와 기존 `autoaim` 시나리오로 본다.
