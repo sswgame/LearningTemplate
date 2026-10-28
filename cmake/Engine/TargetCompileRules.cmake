@@ -61,7 +61,7 @@ endfunction()
 # sw_verifySourceIncludeRoots — `Source/` 아래 폴더를 include 경로로 가진 타깃이 있으면 구성을 세운다.
 #   include 는 `Source/` 기준 전체 경로(`Engine/Scene/SceneManager.h`)로만 풀려야 층 게이트가 경로 앞부분으로 층을 안다. `Source/Engine` · 모듈 폴더를
 #   include 경로로 주면 접두 없는 include 가 다른 층으로 풀린다. 경로를 주는 줄은 CMake 어디에나 쓸 수 있어 형식으로 막지 못하므로 구성 끝에 여기서 본다.
-#   남는 틈(그 파일의 폴더 기준 경로 — 컴파일러가 늘 먼저 본다)은 층 표(`Scripts/lint/rules/CheckEngineLayers.toml`)가 정한다. 루트 CMakeLists 가 모든 타깃을 만든 뒤 부른다.
+#   남는 틈(그 파일의 폴더 기준 경로 — 컴파일러가 늘 먼저 본다)은 리뷰가 본다. 루트 CMakeLists 가 모든 타깃을 만든 뒤 부른다.
 # ------------------------------------------------------------------------------
 function(sw_verifySourceIncludeRoots)
 	set(sourcePrefix "${CMAKE_SOURCE_DIR}/Source/")

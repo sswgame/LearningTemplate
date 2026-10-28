@@ -125,7 +125,7 @@ if(SW_ENABLE_TESTING)
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
 	# 실행 파일 테스트(`Test/`)는 지금 없다 — 새 프레임워크가 생기면 여기서 `add_subdirectory(Test EXCLUDE_FROM_ALL)` 한다.
-	# 린트 테스트 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
+	# 린트 테스트 — 린트는 `Scripts/lint/gate/CheckIncludeOrder.py` 하나다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
 	sw_registerGeneratedLintTests()
 endif()
 

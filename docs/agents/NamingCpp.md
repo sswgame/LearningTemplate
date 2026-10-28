@@ -13,7 +13,7 @@
 - Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`); every macro takes the type first. Runtime settings
   someone would change in the editor use `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use
   `SW_TEST_GLOBAL_VARIABLE`: settable with `-gv_*`, hidden from the editor panel, **not registered in Shipping**; `_SHIPPED` only when
-  scripts must drive the shipped executable (`Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`). An `extern` is
+  scripts must drive the shipped executable. An `extern` is
   `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for every kind.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
@@ -21,7 +21,7 @@
   `pp` (`_ppMember`, `ppMember`). Triple pointers or higher (`ppp`, `_ppp`, `***`) are strictly forbidden as architectural flaws.
 - Associative containers use a `map` prefix (`map`, `_map`); fixed arrays use `arr` (`_arr`); variable arrays/lists use a `list` prefix (`list`, `_list`); sets use a `unique` prefix (`unique`, `_unique`, e.g. `_uniqueIds`). Do not use a `List` suffix for variable arrays/lists. Except for the `unique` prefix (`_uniqueIds`, `outUniqueIds`) and raw byte buffers (`_bytes`, `outBytes`), all container and parameter names MUST use singular form (e.g. `_listActor`, `_listItem`, `_mapIDToName`, `outListItem`, `outListHandle`; plural forms like `_listActors` are strictly forbidden). Byte vectors (`vector<uint8>`, `vector<int8>`, `vector<utf8>`) whose names contain the word `byte`/`bytes` (e.g. `_bytes`, `_rawBytes`, `bytes`, `outBytes`, `pOutBytes`) omit the `list` prefix.
 - Function parameters use `camelCase`. Output parameters (Out-parameters) must start with an `out` prefix (`out` + PascalCase, e.g. `outValue`, `outConfig`, `outX`) with containers following `out` in singular form (`outListItem`, `outMapData`, `outArrBuffer`; `outUniqueIds` allows plural). Exceptionally, raw pointer output parameters place the `p`/`pp` prefix before `out`: `pOut...` (pointer, e.g. `pOutBuffer`, `pOutAPI`, `pOutResult`), `ppOut...` (double pointer), `pInOut...` (inout pointer, e.g. `pInOutSize`). In/Out parameters use `inout` / `pInOut` (e.g. `inoutSkeleton`, `pInOutSize`). A bare `out` names nothing and is blocked
-  in header declarations (`CheckCodeConventions` rule `Naming/BareOutParameter`).
+  in header declarations.
 - Use descriptive names; do not use opaque abbreviations or loop counters such
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
@@ -63,19 +63,17 @@ Fixed naming rules that go with the table:
 ### Function names
 
 A reader who knows one of these names must be able to guess the rest.
-`CheckFunctionVocabulary.py` enforces six checks on header declarations: `AcronymRun`, `BannedVerb`, `Abbreviation`, `CheckVerb`,
-`NamePair` and `BareGetter`. Existing violations sit in `[exemption]` of `Scripts/lint/rules/CheckFunctionVocabulary.toml`; add one
-only when the verb is the domain's own term (`UUID::generate`, `SurfaceBvh::build`). The `on*` and spell-it-out rules are kept by review.
+Header declarations avoid acronym runs, banned verbs, abbreviations, `check` verbs, name pairs and bare getters; use a banned verb
+only when it is the domain's own term (`UUID::generate`, `SurfaceBvh::build`). The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
-  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml`; a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
+  the acronym list kept with the style rules; a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
   enums, folders, modules and test executables: `UISystem`, `GPUScene`, `UISystem.h`. Functions, variables and
   members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case
   as the first word (`uiSystem`, `_gpuScene`). Two capital acronyms never touch (`RHIUI…` — spell one
   out or put a word between). Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep
-  their spelling (a third-party member that looks like ours goes in `kExternalName`).
-  `CheckAcronymSpelling.py` and `AcronymRun` enforce it. A new acronym is added to the data file and rewritten with
-  `FormatAcronymSpelling.py` in one commit.
+  their spelling.
+  A new acronym is added to the list and rewritten everywhere in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |
@@ -136,6 +134,5 @@ only when the verb is the domain's own term (`UUID::generate`, `SurfaceBvh::buil
   `attribute()`, not `attr()`, because the type beside it is `XMLAttribute`; `TagQueryExpr::…Expr` and
   `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
 - **A fallible verb returns a result you must not drop silently.** A `bool` whose name starts with a fallible verb
-  (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … — list in
-  `CheckFallibleNodiscard.py`) is `[[nodiscard]]`. Dropping it on purpose is
-  `(void)call(); // why that is fine` (`CheckDiscardReason.py`). Other `(void)` casts need no reason.
+  (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` …) is `[[nodiscard]]`. Dropping it on purpose is
+  `(void)call(); // why that is fine`. Other `(void)` casts need no reason.

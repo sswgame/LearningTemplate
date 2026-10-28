@@ -41,7 +41,6 @@ namespace sw
   - **One function**: no struct — a free function in the anonymous namespace with a name unique to this file.
   - **Two or more functions, or a function with constants**: exactly **one** `XxxInternal` struct per file.
   `Naming/MultipleInternalHelper`, `Naming/LoneFunctionInternalHelper`, `Naming/DuplicateAnonymousFunction` (`Source/` only).
-  Do not add files to `internalHelperBaseline` in `Scripts/lint/rules/CheckCodeConventions.toml`.
 
 ### One anonymous namespace per file, at the top of its scope
 

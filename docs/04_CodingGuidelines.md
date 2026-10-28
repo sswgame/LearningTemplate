@@ -83,7 +83,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 #endif
 ```
 
-Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`Concurrency` 는 교착 검출기를 include 하지 않고 `ILockObserver` 를 받는다). `Log` 보다 아래 층의 `.cpp` 는 `SW_LOG_*` 대신 `SW_LOW_LEVEL_*` 로 보고합니다(`CheckCoreLayers.py`).
+Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`Concurrency` 는 교착 검출기를 include 하지 않고 `ILockObserver` 를 받는다). `Log` 보다 아래 층의 `.cpp` 는 `SW_LOG_*` 대신 `SW_LOW_LEVEL_*` 로 보고합니다.
 
 클래스 멤버 순서는 public 멤버 변수, 생성자 · 소멸자, `initialize`/`shutdown`, process, getter/setter, private 함수(따로 접근 지정자), private 멤버 변수(맨 아래)입니다.
 
@@ -129,7 +129,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 
 ### 데이터 주도 규칙
 
-규칙 본문과 게이트(`CheckDataDrivenStructure`)는 [데이터 주도 구조 정리](plans/DataDriven.md) 가 원본입니다. 아래는 예시만 모읍니다.
+규칙 본문과 게이트는 [데이터 주도 구조 정리](plans/DataDriven.md) 가 원본입니다. 아래는 예시만 모읍니다.
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
@@ -176,7 +176,7 @@ else
     _count = 0;                                 // 한 분기가 여러 줄이면 모든 분기에 중괄호
 }
 
-for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도 중괄호(게이트 CheckLoopBraces)
+for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도 중괄호
 {
     pTask->run();
 }
@@ -219,7 +219,7 @@ Foo::Foo()
 | 리소스 이름 | `Resource/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
 | 텍스처 · 모델 원본 | `textures_raw/hero.png` → `App --import-textures` → `textures/hero.dds` + `textures_raw/import.stamp` |
 
-Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 가 위반 줄에 붙이는 규칙 이름입니다.
+Python 파일의 모양입니다. 괄호 안 낱말은 규칙 이름입니다.
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |

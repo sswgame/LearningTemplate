@@ -110,7 +110,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 `Scripts/lint/gate/CheckEditorStyleLiterals.py` 가 `Source/Editor/**` 와 `Source/GameFramework/PlugIn/Editor/**` 의 `.cpp`, `.h` 를 봅니다.
 
 - 막는 것: `IM_COL32(`, 첫 인자가 숫자인 `ImVec4(` 와 `Color{`, `Color(`, `Color::fromBytes(`, 값에 숫자 리터럴이 든 `ImGui::PushStyleColor(` · `PushStyleVar(`. 주석과 문자열은 보지 않는다. 테마 구현 파일(`EditorThemeUtil`, `EditorColorUtil`, `EditorThemeTokens`)은 제외.
-- 커밋 훅은 추가한 줄만 검사하고 병합 커밋은 건너뜁니다. 전체 훑기(`ctest -L lint`, `lint-suite`)는 건수가 기준선(`Scripts/lint/rules/CheckEditorStyleLiterals.toml` 의 `total`, 현재 171)보다 늘면 실패합니다. 위반을 토큰으로 옮기면 기준선도 낮춥니다.
+- 커밋 훅은 추가한 줄만 검사하고 병합 커밋은 건너뜁니다. 전체 훑기(`ctest -L lint`, `lint-suite`)는 건수가 기준선보다 늘면 실패합니다. 위반을 토큰으로 옮기면 기준선도 낮춥니다.
 
 ## 7. 함정과 주의
 

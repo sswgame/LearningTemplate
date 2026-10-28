@@ -12,8 +12,7 @@
   separated by blank lines. System, OS-specific, project-global, and ThirdParty headers use angle brackets and are separately grouped.
 - **Every project include is a full path from a root** — `Source/` (`Engine/Scene/SceneManager.h`), `Resource/`, the generated folder,
   `Tools/` for that tree — or a bare name in the same folder (`Foo.h`). No folder under `Source/` is on an include path,
-  so `Scene/SceneManager.h` does not compile (`sw_verifySourceIncludeRoots`; `CheckEngineLayers.py` rejects a path relative to the
-  file's own folder).
+  so `Scene/SceneManager.h` does not compile (`sw_verifySourceIncludeRoots`).
 - Sort includes within a group where doing so does not undermine a required ordering. Prefer `Core/Common/StdHeaders.h` and
   `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes — except the heavy standard headers few files use (streams,
   `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`, `<csignal>`, `<queue>`, `<stack>`, `<bitset>`): the file that
@@ -24,21 +23,20 @@
   `Scripts/lint/rules/CheckCoreLayers.toml`): a file includes only its own folder or a lower tier. A lower tier that must reach up
   takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`). Tiers below `Log` get **no `Logger.h`**: their
   `.cpp` files build with `Core/pchLow.h`, so `SW_LOG_*`, `StringBuilder`, `FileUtil` fail to compile — report with `SW_LOW_LEVEL_*`.
-  Headers of those tiers are covered by the `CheckCoreLayers.py` log-macro rule.
 - Use the project type aliases from `Types.h`. Prefer Core and Engine facilities over STL or direct system facilities
   (`docs/agents/ExistingFacilities.md`).
 - **Ask platform, architecture and compiler questions with the macros CMake defines**, never compiler built-ins (`_WIN32`,
   `__linux__`, `_MSC_VER`, `__clang__`): `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX`, `SW_X64` / `SW_ARM64`, `SW_COMPILER_CLANG`
   (clang-cl included) / `SW_COMPILER_MSVC` (cl.exe only) / `SW_COMPILER_GCC`. clang-cl defines both `__clang__` and `_MSC_VER`, so "may
-  I use an MSVC extension" is `SW_PLATFORM_WINDOWS` (`CheckTargetMacros.py`).
+  I use an MSVC extension" is `SW_PLATFORM_WINDOWS`.
 - **Ask the build target only through `SW_WITH_CLIENT_CODE`, `SW_WITH_SERVER_CODE` and `sw::build::kTargetName`**, only inside `.cpp`
   bodies — never gate reflection declarations or a header's class layout on them. A feature that splits between client and server
   splits into modules: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>`.
 - **Lock with `sw::mutex` / `sw::shared_mutex` / `SpinLock`** and the guards in `Core/Concurrency/ScopedLock.h` (`ScopedLock`,
-  `ScopedSharedLock`, `UniqueLock`, `ScopedLockPair`), never the `std::` ones (`CheckStdMutex.py`; clang `-Wthread-safety` does not see
+  `ScopedSharedLock`, `UniqueLock`, `ScopedLockPair`), never the `std::` ones (clang `-Wthread-safety` does not see
   them). Write the lock contract on the declaration, not in a comment: `SW_GUARDED_BY( _mutex )`, `SW_REQUIRES_LOCK( _mutex )`,
   `SW_EXCLUDES_LOCK( _mutex )` (`Core/Concurrency/ThreadSafety.h`). A "this thread only" rule is a `ThreadRole` member. Locks are leaf
-  locks: never log or call out while holding one. Start threads with `sw::thread` (`CheckStdThread.py`).
+  locks: never log or call out while holding one. Start threads with `sw::thread`.
 - **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be
   missing, `T*`) on `engine::`, `game::`, `editor::` or the owning object. A new service is a subsystem added to a scope; an engine
   service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors, no `static getInstance()`. Tests inject

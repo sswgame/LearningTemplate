@@ -67,7 +67,7 @@ Sync 탭 시나리오(`netsyncobjects`)는 통합 S 의 `app-scenarios-release` 
 `NetSimHarness` 를 에디터 재생에 잇습니다. 서버 월드 + 클라이언트 월드 N 이 한 프로세스에서 돌고 월드마다 화면이 나옵니다. 결정적이고 한 디버거에서 모두 중단점을 걸 수 있다(언리얼 기본 PIE). 바닥은 다중 월드 단계 1 ~ 4.
 
 들어간 것(2026-10-22): 씬 공급자(`NetSimConfig::_pSceneSource`, 에디터용 `NetSimPreviewSceneSource`), `EditorNetSimSession` 과 Multiplayer 창 **In process** 탭(`GF_EditorPlugIn_NetSimulation`, 월드마다 미리보기 뷰포트를 나란히), 입력 초점(`setInputFocus` — 한 번에 한 월드, 게임 세션은 참일 때만 입력을 읽는 계약), 본보기 게임 `NetSimSampleGame`, 카메라 창구(`describePreviewFraming`), 에디터 자동화 레이블 · 탐침, 시나리오 `engine/automation/editor/netsim.scenario.xml`(네 백엔드 Debug 통과, DX12 캡처는 눈으로 봄).
-설계 결정: 본보기 게임은 복제 키트를 쓰지 않고 게임 메시지 둘(입력 · 아바타 목록)만 쓴다 — 에디터 확장은 자기 키트만 include 할 수 있어(`CheckGameFrameworkLayers`) 하니스 키트와 복제 키트를 함께 쓰면 층 위반이다. 복제 키트 위의 실제 게임 구현은 게임 모듈의 일이다.
+설계 결정: 본보기 게임은 복제 키트를 쓰지 않고 게임 메시지 둘(입력 · 아바타 목록)만 쓴다 — 에디터 확장은 자기 키트만 include 할 수 있어 하니스 키트와 복제 키트를 함께 쓰면 층 위반이다. 복제 키트 위의 실제 게임 구현은 게임 모듈의 일이다.
 
 남은 것:
 - 게임 모듈이 `INetSimGame` 을 구현한 실제 게임은 아직 없다(2026-10-28 에 시도하지 않았다 — 눈으로 · 빌드로 확인할 수 없는 큰 개편이라 막은 곳만 적는다). Shooter3D 의 `ShooterNetPawnComponent` 는 `onBeginPlay`(89 줄 근처)와 `stepServer`(189 줄 근처)에서 전역 `game::findSubsystem<GameNetSession>()` 으로 호스트(`getPeers`) · 라우터(`getRouter`) · 역할(`getRole`)을 받는다. 월드마다 하나씩 받게 하려면 이 셋을 한 값(예: 호스트 · 라우터 · 역할을 묶은 "넷 링크")으로 묶어 컴포넌트가 자기 오브젝트 매니저에서 찾게 하고, 전역 세션 쪽과 `NetSimWorld` 쪽이 각자 그 값을 매니저에 올리는 순서가 맞다(전역 폴백을 두지 않는다). 그 뒤 게임 모듈이 월드마다 아레나 씬 · 폰 스폰 · 입력 초점 읽기를 하는 `INetSimGame` 을 구현하고 자기 모듈에서 `NetSimGameRegistry::registerGame` 한다(본보기 `NetSimSampleGame` 과 같은 구조).
