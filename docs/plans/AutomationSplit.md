@@ -24,7 +24,7 @@
 ## 4. 계층 방향 결함
 
 - (① 에서 고침) 실행기가 `Terrain.WrittenEditCount` 와 캐릭터 탐침을 대신 정의했다. 탐침 레지스트리를 최상위 `Engine/Probe`(티어 10, Object 만 읽는다)로 옮기고 기능이 자기 폴더에 등록한다(`Environment/Terrain/TerrainProbes.cpp`, `Character/PairedAnimation/PairedAnimationProbes.cpp`, `Scene/SceneProbes.cpp`). 티어는 정수라 Probe 를 10 에 두고 그 위 기능(Character · Environment 11, Vfx · Sequencer · Destruction 12)을 한 칸 올렸다. 실행기에 남은 탐침은 `Object.*`(질의) · `Input.*` · `Assets.Pending` · `Profiler.TraceRecording` 이다(Profiling(4)이 Probe(10) 아래이고 Input(10)이 같은 티어라 기능 쪽에 둘 수 없다).
-- `ModuleHost` 가 `AutomationSession::kSubsystemName` 을 안다(역방향 지식) → Session 이 이름을 등록하는 쪽으로 뒤집는다.
+- (2026-10-28 고침, 컴파일 확인 전) `ModuleHost` 가 `AutomationSession::kSubsystemName` 을 알던 역방향 지식을 뒤집었다. 이름을 낮은 층 헤더 `Engine/Common/HostSubsystemNames.h` 에 두고(같은 티어 12 인 Module 헤더를 Automation 이 include 하면 층 게이트가 막는다) `AutomationSession::getSubsystemDependencies` 가 그것을 의존 칸에 적는다. `ModuleImageHostSubsystem` 은 `getSubsystemDependents` 를 더는 갖지 않고 `Engine/Automation` 을 include 하지 않는다. 위상 순서와 `shutdownDependentsOf( 창구 )` 의 결과는 같다(의존 간선 하나).
 
 ## 5. 단계
 

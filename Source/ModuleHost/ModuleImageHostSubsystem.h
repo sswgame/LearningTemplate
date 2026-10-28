@@ -10,6 +10,7 @@
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Common/HostSubsystemNames.h"
 #include "Engine/Module/ModuleImageHost.h"
 
 namespace sw
@@ -30,7 +31,7 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */
-        static constexpr const utf8* kSubsystemName = "ModuleImageHost";
+        static constexpr const utf8* kSubsystemName = HostSubsystemNames::kModuleImageHost;
 
         /** @brief @p moduleTypeLoader 는 타입 공급자 로더입니다. 묶이지 않았으면 올릴 것이 없습니다. */
         explicit ModuleImageHostSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader );
@@ -52,11 +53,6 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        /**
-         * @brief 이 창구보다 뒤에 서야 하는 호스트 범위 서브시스템 — 자동화 구동기입니다(시나리오는 모듈이 올라온 뒤에 시작한다).
-         * @details 그래서 `shutdownDependentsOf( 이 서브시스템 )` 이 구동기만 엔진 종료 앞에서 내린다. 이 창구는 엔진 범위가 종료하는 동안(씬 뒤 훅) 살아 있어야 한다.
-         */
-        span<const utf8* const> getSubsystemDependents() const override;
 
     private:
         ModuleTypeLoaderDelegate       _moduleTypeLoader;

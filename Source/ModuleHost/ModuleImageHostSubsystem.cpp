@@ -5,8 +5,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Automation/AutomationSession.h"
-
 namespace sw
 {
     ModuleImageHostSubsystem::ModuleImageHostSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader )
@@ -45,11 +43,5 @@ namespace sw
             return nullptr;
         }
         return &moduleImageHost;
-    }
-
-    span<const utf8* const> ModuleImageHostSubsystem::getSubsystemDependents() const
-    {
-        static constexpr const utf8* kArrDependent[] = { AutomationSession::kSubsystemName };
-        return kArrDependent;
     }
 } // namespace sw

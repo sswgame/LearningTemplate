@@ -48,6 +48,11 @@ namespace sw
         /** @brief 지금 단계의 실행기와 체인을 비웁니다(엔진 서비스를 빌려 쓰는 것이 엔진보다 먼저 사라지게). 시작하지 않았으면 아무것도 하지 않습니다. */
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
+        /**
+         * @brief 모듈 이미지 창구(`HostSubsystemNames::kModuleImageHost`)보다 뒤에 섭니다 — 시나리오는 모듈이 올라온 뒤에 시작하고,
+         *        `shutdownDependentsOf( 창구 )` 가 구동기만 엔진 종료 앞에서 내립니다(창구는 엔진 범위가 종료하는 동안 살아 있어야 한다). 창구는 구동기를 모릅니다.
+         */
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /**
          * @brief 시나리오 목록(`a,b,c` 또는 하나)으로 시작하고 첫 단계를 엽니다.

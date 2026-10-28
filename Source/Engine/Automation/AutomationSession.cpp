@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationScenarioChain.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Common/HostSubsystemNames.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -37,6 +38,12 @@ namespace sw
     }
 
     AutomationSession::~AutomationSession() = default;
+
+    span<const utf8* const> AutomationSession::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { HostSubsystemNames::kModuleImageHost };
+        return kArrDependency;
+    }
 
     void AutomationSession::shutdownSubsystem()
     {
