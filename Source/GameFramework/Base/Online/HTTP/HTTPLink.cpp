@@ -61,6 +61,16 @@ namespace sw
         return _tlsSession != nullptr ? _tlsSession->getFailureText() : "stream failure";
     }
 
+    bool HTTPLink::isEstablished() const
+    {
+        return _tlsSession == nullptr || _tlsSession->getState() == TLSSessionState::Established;
+    }
+
+    string HTTPLink::getNegotiatedProtocol() const
+    {
+        return _tlsSession != nullptr ? _tlsSession->getNegotiatedProtocol() : string();
+    }
+
     bool HTTPLink::flushCiphertext( IStreamTransport& transport )
     {
         _cipherBytes.clear();

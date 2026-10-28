@@ -1,11 +1,13 @@
 /**
  * @file PushProviderSet.h
  * @brief 설정 목록(`PushProviderConfig`)에서 실제 푸시 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다(OnlineKits G4).
- * @details - 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenUrl":"…","sendUrl":"…"}]}` 이다. 자격(서비스 계정 키)은 파일에 쓰지 않고
- *            환경 변수에서 읽는다. 변수가 없거나 서비스 계정이 틀리면 **서버 기동이 실패한다**(가짜로 대신 뜨지 않는다). 설정 파일이 없으면 실제 제공자를 만들지 않는다.
- *          - `tokenUrl` · `sendUrl` 은 비우면 제공자의 공식 주소이고, 가짜 서버(테스트)를 가리킬 때만 쓴다. `https://` 주소가 있는데 신뢰 파일(CA 번들 PEM)이 없으면 오류다.
- *          - 제공자는 응답을 자기만 회수하므로 제공자마다 HTTP 클라이언트 하나를 둔다. 발송기를 내린 뒤에 `shutdown` 해야 한다(발송기가 제공자를 빌려 쓴다).
- *          제품 이름(`fcm`)은 이 설정의 `kind` 값과 `Provider/Fcm/` 안에만 쓴다.
+ * @details - 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenUrl":"…","sendUrl":"…"},
+ *            {"kind":"apns","keyEnvironment":"<변수>","keyId":"…","teamId":"…","topic":"<번들 id>","sendUrl":"…"}]}` 이다. 자격(서비스 계정 키 · 인증 키)은 파일에 쓰지 않고
+ *            환경 변수에서 읽는다. 변수가 없거나 키가 틀리면 **서버 기동이 실패한다**(가짜로 대신 뜨지 않는다). 설정 파일이 없으면 실제 제공자를 만들지 않는다.
+ *          - 종류마다 쓸 수 있는 키가 정해져 있다 — 다른 종류의 키는 철자 오류와 같이 거절한다. `tokenUrl` · `sendUrl` 은 비우면 제공자의 공식 주소이고,
+ *            가짜 서버(테스트)나 개발 환경(`apns` 샌드박스)을 가리킬 때만 쓴다. `https://` 주소가 있는데 신뢰 파일(CA 번들 PEM)이 없으면 오류다.
+ *          - 제공자는 응답을 자기만 회수하므로 제공자마다 HTTP 클라이언트 하나를 둔다(`fcm` 은 HTTP/1.1, `apns` 는 HTTP/2). 발송기를 내린 뒤에 `shutdown` 해야 한다(발송기가 제공자를 빌려 쓴다).
+ *          제품 이름(`fcm` · `apns`)은 이 설정의 `kind` 값과 `Provider/<제품>/` 안에만 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -18,15 +20,20 @@
 
 namespace sw
 {
+    class OwnedHTTP2Client;
     class OwnedHTTPClient;
 
     /** @brief 푸시 제공자 하나의 설정입니다. */
     struct PushProviderConfig
     {
-        string _kind{};                      ///< 제공자 종류(`fcm`)
-        string _serviceAccountEnvironment{}; ///< 서비스 계정 JSON 을 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
-        string _tokenURL{};                  ///< 비우면 서비스 계정의 `token_uri`
-        string _sendBaseURL{};               ///< 비우면 제공자의 공식 주소
+        string _kind{};                      ///< 제공자 종류(`fcm` · `apns`)
+        string _serviceAccountEnvironment{}; ///< `fcm`: 서비스 계정 JSON 을 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
+        string _tokenURL{};                  ///< `fcm`: 비우면 서비스 계정의 `token_uri`
+        string _sendBaseURL{};               ///< 비우면 제공자의 공식 주소(`apns` 는 개발 환경 주소를 여기에 쓴다)
+        string _keyEnvironment{};            ///< `apns`: 인증 키(.p8 PEM)를 담은 환경 변수 이름
+        string _keyID{};                     ///< `apns`: 인증 키 id
+        string _teamID{};                    ///< `apns`: 팀 id
+        string _topic{};                     ///< `apns`: 번들 id(`apns-topic`)
     };
 } // namespace sw
 
@@ -61,8 +68,9 @@ namespace sw
     private:
         struct Entry
         {
-            unique_ptr<OwnedHTTPClient>           _httpClient{}; ///< TLS 컨텍스트와 함께 소유한다
-            unique_ptr<IPushNotificationProvider> _provider{};   ///< HTTP 클라이언트를 빌려 쓰므로 먼저 소멸한다(나중 선언)
+            unique_ptr<OwnedHTTPClient>           _httpClient{};  ///< HTTP/1.1 제공자(`fcm`)의 클라이언트. TLS 컨텍스트와 함께 소유한다
+            unique_ptr<OwnedHTTP2Client>          _http2Client{}; ///< HTTP/2 제공자(`apns`)의 클라이언트. 둘 중 하나만 있다
+            unique_ptr<IPushNotificationProvider> _provider{};    ///< HTTP 클라이언트를 빌려 쓰므로 먼저 소멸한다(나중 선언)
         };
 
         vector<Entry> _listEntry;

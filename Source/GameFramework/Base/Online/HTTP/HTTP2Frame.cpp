@@ -14,11 +14,6 @@ namespace sw
             outBytes.push_back( static_cast<uint8>( value ) );
         }
 
-        uint32 readUint32( const uint8* pBytes )
-        {
-            return ( static_cast<uint32>( pBytes[0] ) << 24 ) | ( static_cast<uint32>( pBytes[1] ) << 16 ) | ( static_cast<uint32>( pBytes[2] ) << 8 ) | pBytes[3];
-        }
-
         /** @brief 머리를 쓰기 전에 길이 · 스트림 id 가 범위 안인지 보고 쓰는 공통 길입니다. */
         bool beginFrame( HTTP2FrameType type, uint8 flags, uint32 streamID, size_t bodySize, vector<uint8>& outBytes )
         {
@@ -30,6 +25,11 @@ namespace sw
             return bodySize <= HTTP2FrameUtil::kMaxFrameLength && HTTP2FrameUtil::writeHeader( header, outBytes );
         }
     } // namespace
+
+    uint32 HTTP2FrameUtil::readUint32( const uint8* pBytes )
+    {
+        return ( static_cast<uint32>( pBytes[0] ) << 24 ) | ( static_cast<uint32>( pBytes[1] ) << 16 ) | ( static_cast<uint32>( pBytes[2] ) << 8 ) | pBytes[3];
+    }
 
     bool HTTP2FrameUtil::writeHeader( const HTTP2FrameHeader& header, vector<uint8>& outBytes )
     {

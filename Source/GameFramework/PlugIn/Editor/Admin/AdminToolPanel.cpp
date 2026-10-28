@@ -3,6 +3,7 @@
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
@@ -88,6 +89,8 @@ namespace sw::editor
     AdminToolPanel::AdminToolPanel()
         : IEditorPanel( false )
         , _gmAddressText{}
+        , _loginNameText{}
+        , _arrPassword{}
         , _accountText{}
         , _assetText{ "cur.gold" }
         , _memoText{}
@@ -161,12 +164,26 @@ namespace sw::editor
 
         // 서버의 GM 포트(서버 설정 `_adminServicePort`)에 연결한다. 로그인은 `getConnection().bindLoginHook` 으로 끼운 쪽이 한다.
         EditorWidgets::drawTextField( "GM port (host:port)", _gmAddressText, 200.0f * EditorThemeUtil::getDpiScale() );
-        ImGui::SameLine();
+        // 계정 이름 · 비밀번호는 로그인을 맡은 쪽(조립)이 처리기를 걸었을 때만 받는다. 없으면 로그인 없이 연결하고 서버가 GM 명령을 거절한다는 것을 알린다.
+        const bool bNeedsLogin = session.hasCredentialsHandler();
+        if ( bNeedsLogin )
+        {
+            EditorWidgets::drawTextField( "GM account", _loginNameText, 160.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 19.0f );
+            ImGui::InputText( "GM password", _arrPassword, kPasswordCapacity, ImGuiInputTextFlags_Password );
+        }
+        else
+        {
+            ImGui::TextDisabled( "No login handler is bound: GM commands are refused as not logged in" );
+        }
         const bool bConnected = session.getConnection().getState() != AdminToolConnectionState::Disconnected;
         if ( bConnected == false && ImGui::Button( "Connect" ) )
         {
-            string error;
-            if ( session.connectLive( _gmAddressText, "editor", error ) == false )
+            string     error;
+            const bool bOpened =
+                bNeedsLogin ? session.connectWithLogin( _gmAddressText, "editor", _loginNameText, _arrPassword, error ) : session.connectLive( _gmAddressText, "editor", error );
+            Memory::set( _arrPassword, 0, sizeof( _arrPassword ) ); // 비밀번호를 입력 칸에 남기지 않는다(로그인을 맡은 쪽이 받아 갔다)
+            if ( bOpened == false )
                 SW_LOG_WARNING( "Admin tool: GM connection failed - %#", error.c_str() );
         }
         if ( bConnected && ImGui::Button( "Disconnect" ) )

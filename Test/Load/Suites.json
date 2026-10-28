@@ -9,7 +9,9 @@
     "soak": "Resource/engine/automation/load/soak.scenario.xml",
     "aiskirmish": "Resource/game/starskirmish/automation/load/aiskirmish.scenario.xml",
     "connect": "Test/Load/Scenarios/connect.load.xml",
-    "replication": "Test/Load/Scenarios/replication.load.xml"
+    "replication": "Test/Load/Scenarios/replication.load.xml",
+    "chatp99": "Test/Load/Scenarios/chatp99.load.xml",
+    "friendpresence": "Test/Load/Scenarios/friendpresence.load.xml"
   },
   "suites": {
     "baseline": [
@@ -20,6 +22,9 @@
     ],
     "nightly": [
       ["connect", "Mid"], ["replication", "Mid"], ["replication", "LowEnd"]
+    ],
+    "onlineMeasure": [
+      ["chatp99", "HighEnd"], ["friendpresence", "HighEnd"]
     ],
     "soak": [
       ["soak", "Native"]

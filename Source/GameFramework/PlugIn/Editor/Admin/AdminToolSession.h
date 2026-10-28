@@ -8,6 +8,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"
@@ -52,6 +54,21 @@ namespace sw::editor
         [[nodiscard]] bool connectLive( string_view address, string_view gameBuild, string& outError );
         /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */
         void disconnectLive();
+
+        /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGmLogin::setCredentials` 가 그 모양이다). */
+        using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
+        /**
+         * @brief 계정 이름 · 비밀번호를 넘길 처리기를 겁니다. 에디터 확장은 계정 키트를 include 할 수 없어 로그인은 조립 쪽이 한다 — 조립 쪽은 이 처리기와 `getConnection().bindLoginHook` 을 함께 건다.
+         *        칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다.
+         */
+        [[nodiscard]] Subscription bindCredentialsHandler( CredentialsHandler handler ) { return _onCredentials.bind( std::move( handler ) ); }
+        /** @brief 계정 이름 · 비밀번호를 받을 처리기가 걸려 있으면 true 입니다(패널이 이름 · 비밀번호 칸을 보일지 정한다). */
+        bool hasCredentialsHandler() const { return _onCredentials.isBound(); }
+        /**
+         * @brief 계정 이름 · 비밀번호를 처리기에 넘기고 GM 포트에 연결합니다(`connectLive`). 처리기가 없거나 이름 · 비밀번호가 비었거나 처리기가 거절하면 연결하지 않고 false 입니다 — 로그인 없이 연결한 척하지 않는다.
+         * @details 비밀번호는 처리기가 받아 보관하는 쪽의 몫이다. 이 세션은 어디에도 복사해 두지 않는다(호출한 패널이 부른 뒤 입력 칸을 지운다).
+         */
+        [[nodiscard]] bool connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password, string& outError );
         /** @brief 연결을 한 걸음 돌립니다(패널이 프레임마다 부른다). 연결이 없으면 아무것도 하지 않습니다. */
         void                 updateConnection();
         AdminToolConnection& getConnection() { return _connection; }
@@ -105,21 +122,22 @@ namespace sw::editor
         void send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key );
         void onReply( const AdminClient::Reply& reply );
 
-        FakeAdminProvider      _fake;
-        AdminClientProvider    _live;
-        IAdminCommandProvider* _pActive;
-        AdminToolConnection    _connection;
-        AdminReply             _lookup;
-        AdminReply             _lookupAudit;
-        AdminReply             _reports;
-        AdminReply             _liveEvents;
-        string                 _statusLine;
-        int32                  _completedCount;
-        int32                  _pendingCount;
-        AccountID              _lookupAccountID;
-        AdminResult            _lastResult;
-        uint16                 _lastMethod;
-        bool                   _bHasLookup;
-        bool                   _bLastReplayed;
+        FakeAdminProvider                _fake;
+        AdminClientProvider              _live;
+        IAdminCommandProvider*           _pActive;
+        AdminToolConnection              _connection;
+        DelegateSlot<CredentialsHandler> _onCredentials;
+        AdminReply                       _lookup;
+        AdminReply                       _lookupAudit;
+        AdminReply                       _reports;
+        AdminReply                       _liveEvents;
+        string                           _statusLine;
+        int32                            _completedCount;
+        int32                            _pendingCount;
+        AccountID                        _lookupAccountID;
+        AdminResult                      _lastResult;
+        uint16                           _lastMethod;
+        bool                             _bHasLookup;
+        bool                             _bLastReplayed;
     };
 } // namespace sw::editor

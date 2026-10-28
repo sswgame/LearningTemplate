@@ -349,7 +349,7 @@ SW_TEST_CASE( PushProviderSetTest, SettingsAreReadStrictlyAndTheSecretComesFromT
     SW_ASSERT_EQUAL( listSettings.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listSettings[0]._kind, sw::string( "fcm" ) );
     SW_EXPECT_FALSE( PushProviderSet::readSettings( "{\"providers\":[{\"kind\":\"fcm\",\"serviceAccountEnvironment\":\"X\",\"servicAccount\":\"typo\"}]}", listSettings, error ) ); // 철자 오류
-    SW_EXPECT_FALSE( PushProviderSet::readSettings( "{\"providers\":[{\"kind\":\"apns\",\"serviceAccountEnvironment\":\"X\"}]}", listSettings, error ) );                           // 모르는 종류
+    SW_EXPECT_FALSE( PushProviderSet::readSettings( "{\"providers\":[{\"kind\":\"nope\",\"serviceAccountEnvironment\":\"X\"}]}", listSettings, error ) );                           // 모르는 종류
     SW_EXPECT_FALSE( PushProviderSet::readSettings( "{\"providers\":[{\"kind\":\"fcm\"}]}", listSettings, error ) );                                                                // 자격 변수 이름이 없다
     SW_EXPECT_FALSE( PushProviderSet::readSettings( "[]", listSettings, error ) );
 

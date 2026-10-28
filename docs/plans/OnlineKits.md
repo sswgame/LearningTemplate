@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: D7-5 · 진행: 표
 
-온라인 키트의 남은 일을 단위로 모았습니다(후보 `Candidates-network.md` 의 `Online*` 아홉 절을 옮김). 구성과 원칙은 [결정 기록](../09_Decisions.md) 5-9 가 원본이고, 단위가 끝나면 교훈은 코드 헤더 주석으로 옮깁니다.
+온라인 키트의 남은 일을 단위로 모았습니다(후보 `Candidates-network.md` 의 `Online*` 아홉 절을 옮김).
 
 ## 1. 정한 것
 
@@ -18,11 +18,11 @@
 | 단계 | 내용 | 선행 | 상태 |
 |---|---|---|---|
 | A5 | 실제 제공자 등록(client id), 스팀 티켓 확인, 모바일 SDK 클라이언트 | 결정(4절) | 일부(티켓 확인 API 제공자 `TicketQueryLoginProvider` — 스팀은 데이터 한 줄, 빌드 미확인. 등록 · 모바일 SDK 는 남음) |
-| B2 | 채팅 채널 샤딩 | 부하 봇 측정 | 남음(`chat_send_p99` 를 잰 뒤 정한다) |
-| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남. APNs 는 H2-2 까지 코드 — 3절 G4. 확인 대기: 매니페스트 id `http2-codec-tests`) |
+| B2 | 채팅 채널 샤딩 | 부하 봇 측정 | 남음(측정 대기 — `chat_send_p99` 를 잰 뒤 정한다. 재는 길은 `py -3 -m Scripts load suite onlineMeasure`, 아래 M1) |
+| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 코드 끝남(FCM · APNs — H2-1~5 빌드 전, 3절 G4. 확인 대기: 매니페스트 id `http2-codec-tests`. 실제 계정 등록은 쓰는 게임이 생길 때) |
 | I6 | GM 전용 호스트 포트(`_adminServicePort` · `_adminListenAddress`, 3절 I6) | 없음 | 끝남(Debug 빌드 · 테스트 통과. GM 도구의 GM 포트 접속은 코드만. 확인 대기: 매니페스트 id `admin-gm-port-real`) |
-| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 일부(세 화면 코드만 들어감, 빌드 전. GM 도구 설정 화면은 남음 — 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
-| M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 가 있다 — 돌려 숫자를 남기는 일만) |
+| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 코드 끝남(세 화면 + GM 도구 설정 화면, 빌드 전 — 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
+| M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 가 부하 검증에 연결됐다 — `Test/Load/Scenarios/friendpresence.load.xml` · `chatp99.load.xml`, 묶음 `onlineMeasure`, 예산은 두지 않아 보고만. 돌려 숫자를 남기는 일만) |
 
 ## 4. 결정 (2026-10-22, 권고안 — 사용자 지시로 되묻지 않고 정했다)
 
@@ -50,9 +50,9 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작 토픽
 - **G5**: 이벤트 매개변수 `push.title` · `push.body` · `push.link` 가 있으면 방금 열린 창(`LiveOpsPush::kStartGraceMs` 10 분 안)을 `liveops.<지역>` 토픽(제한 없으면 `liveops.all`)으로 한 번 보냅니다. 서버 여럿 중 한 곳만 보내도록 `liveops_push` 표를 "없어야 한다" 조건으로 씁니다(`notifyTopicOnce`). 표를 쓴 서버가 제공자 호출 전에 죽으면 그 알림은 나가지 않습니다(중복보다 놓침을 택함). 표는 지우지 않습니다(보존 규칙 없음).
 - **APNs(HTTP/2 단계)**: 공통 HTTP 클라이언트는 HTTP/1.1 이라 자체 TLS 계층 위에 HTTP/2 클라이언트를 쌓습니다(오픈 소스 라이브러리는 TLS 계층과 맞지 않아 쓰지 않음).
   - **H2-1 · H2-2(빌드 전)**: `Base/Online/HTTP/HTTP2Frame` 과 `Hpack`(허프만 포함 부호기 · 복호기). 허프만 · 정적 표는 `GenerateHpackHuffman.py` · `GenerateHpackStatic.py` 가 RFC 7541 에서 읽어 씁니다. 테스트 `HTTP2Test.*`.
-  - **H2-3(남음)**: TLS 계층의 ALPN(`h2`) 협상(`ITLSContext`/`ITLSSession`, OpenSSL).
-  - **H2-4(남음)**: `HTTP2Connection`(스트림 상태 · 흐름 제어 · SETTINGS · GOAWAY)과 `IHTTPClient` 어댑터, 가짜 HTTP/2 서버 테스트.
-  - **H2-5(남음)**: `Provider/Apns/ApnsPushProvider`(JWT ES256, `apns-topic` · `apns-push-type`, 상태 대응 200/410/429/5xx/403).
+  - **H2-3(빌드 전)**: TLS 계층의 ALPN 협상 — `TLSContextConfig::_alpnProtocol`(이름 하나, 서버는 그 이름을 제시한 쪽만 고르고 없으면 ALPN 없이 진행, 클라이언트는 그 이름만 제시), `ITLSSession::getNegotiatedProtocol()`(합의 없으면 빈 문자열 — 거절은 HTTP/2 계층 몫), `NetSecurity::createClientTLSContext( …, alpnProtocol )`. 테스트 `NetSecurityProviderTest.TLSAlpnNegotiatesTheConfiguredProtocolOnly`.
+  - **H2-4(빌드 전)**: `HTTP2Connection`(소켓을 모르는 상태 기계 — 연결 서문 · SETTINGS 확인 · 스트림 · 연결/스트림 흐름 제어 · 동시 스트림 상한 줄 · PING 답 · GOAWAY · RST_STREAM · 본문 상한, 요청마다 응답 하나)과 `HTTP2Client`(`HTTPClient` 와 같은 `submitRequest` · `update` · `pollResponses`, 호스트:포트마다 ALPN `h2` 연결 하나를 오래 열어 요청을 다중화, 이름 해석 · 시한은 `HTTPClient` 와 같고 h2 를 협상하지 않으면 실패), `OwnedHTTP2Client`(TLS 컨텍스트 소유). 엔진의 막는 `IHTTPClient` 어댑터는 만들지 않았다(쓰는 곳은 푸시 제공자 하나이고 비동기 제출·회수가 맞다). 테스트 `HTTP2ConnectionTest.*`(손으로 만든 프레임) · `HTTP2ClientTest.*`(루프백 TLS 가짜 서버). 한계: 헤더 블록이 상대의 프레임 상한을 넘으면 실패(CONTINUATION 쓰기 없음), 연결 유지용 PING 은 보내지 않는다.
+  - **H2-5(빌드 전)**: `Provider/Apns/ApnsPushProvider`(id `apns`) — 제공자 토큰은 `iss`(팀 id) · `iat` 의 JWT ES256(헤더 `kid` = 키 id)을 로컬에서 서명해 40 분마다 새로 서명(APNs 는 20 분보다 자주 거절 · 60 분을 넘기면 403), 요청은 `POST /3/device/<16진 토큰>` + 소문자 `authorization: bearer` · `apns-topic` · `apns-push-type`(문구가 있으면 `alert`, 없으면 `background` + `apns-priority: 5` + `content-available`). 상태 대응 200 Delivered · 410 InvalidToken · 429 RateLimited(`retry-after` 초) · 5xx · 전송 실패 Transient · 403 Rejected(토큰을 버려 다음 배달이 새로 서명) · 그 밖의 4xx Rejected(400 `BadDeviceToken` 은 환경이 어긋난 토큰일 수 있어 기기를 지우지 않는다). 16진이 아닌 기기 토큰은 보내지 않고 InvalidToken, 토픽 발송은 없다. 설정 `{"kind":"apns","keyEnvironment":…,"keyId":…,"teamId":…,"topic":…,"sendUrl":…}`(`sendUrl` 은 개발 환경 · 가짜 서버용, 종류마다 쓸 수 있는 키가 정해져 있어 다른 종류의 키는 오류) — 키(.p8)는 환경 변수에서만 읽고 ES256 으로 서명할 수 없으면 기동 실패. 알림 본문 도우미는 FCM 과 함께 `Push/PushPayloadUtil.h` 로 모았다. 테스트 `ApnsPushProviderTest.*`(가짜 HTTP/2 서버 `FakeHTTP2Fixture.h`).
 - **꺼내기 표**: 소비형 큐를 여럿이 꺼내는 결함을 `Core/Container/DrainGate.h`(`DrainGate` · `DrainLease`)로 막았습니다(Online 클라이언트와 Strategy 키트의 `claim*`, 테스트 `OnlineDrainGateTest` · `EventBufferTest`). 소유자가 하나인 나머지 `drain*` · `take*` 는 표가 없습니다. 남은 의심: `CameraComponent::consumeCut` 은 소비자가 둘(`RenderViewCollector` · `CameraManagerComponent`)이라 타깃 카메라가 자기 뷰로도 그려지면 TAA 기록이 안 끊길 수 있습니다 — 읽기(`peekCut`)와 지우기를 나누는 후속(추측, 읽음 수준).
 
 ### H3
@@ -76,7 +76,7 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작 토픽
 - 계정 키트의 조립 `gameConnect`(옵션 `ticketKeySecretEnvironment` · `serverName` 필수)가 로그인 서버와 같은 키로 티켓 확인기를 세워 `AccountConnectAuthenticator` 를 자리에 묶습니다. 매칭 키트의 `gameServer` 옵션이 `MatchServerAgent` 를 세워 받아들이기 정책(`IConnectAdmission`)을 문맥의 키트 범위에 내놓고 없으면 티켓이 맞는 모든 계정을 받습니다.
 - 묶이기 전에 온 접속은 거절하고 서비스가 선 뒤에도 안 묶였으면 `ServerApp` 이 기동을 멈춥니다(폴백 없음).
 - 클라이언트: `GameNetSession::makeTicketClientParams( 주소, 티켓, 인자 )`(주소 `ServerDescriptor::pickPort`, 티켓 `AccountClient::makeConnectCredentials`). `-gv_netConnectAddress` 는 자격 없는 길이라 티켓 서버에는 `SecurityMismatch` 로 거절됩니다. 거절된 티켓은 지워 새 티켓 없이 `reconnect` 하지 않습니다.
-- **남은 것**: 두 프로세스 시나리오(서버 `_bGameConnectTicket` + 로그인 서버, 클라이언트가 로그인해 티켓을 받아 붙는 흐름) — 로그인 서버와 게임 서버를 함께 띄우는 시나리오 시설이 필요합니다.
+- **남은 것**: 두 프로세스 시나리오(서버 `_bGameConnectTicket` + 로그인 서버, 클라이언트가 로그인해 티켓을 받아 붙는 흐름). 한 프로세스 안의 같은 흐름(로그인 → 티켓 → 암호화 UDP 접속, 위조 · 남의 티켓 거절)은 `AccountStreamTest.LoginIssuesATicketThatOpensAnEncryptedUDPConnection` · `ForgedOrForeignTicketsAndBadTokensAreRefused` 가 이미 확인한다. 두 프로세스는 시설이 없어 못 했다(2026-10-28 확인): (1) `Server` 실행 파일이 계정 키트 조립(`gameConnect` 옵션)과 로그인 서비스 포트를 명령줄 · 설정으로 띄우는 길, (2) `App` 쪽에 로그인 서버 주소 · 계정으로 로그인해 `makeConnectCredentials` 를 받아 `GameNetSession::makeTicketClientParams` 로 초기화하는 구동기(지금 클라이언트는 `-gv_netConnectAddress` 의 자격 없는 길만 있다), (3) `Scripts/common/NetPairRun.py` 에 그 두 프로세스를 띄워 `[Error]` 줄 없이 접속이 열리는지 보는 드라이버(`RunPairedAnimationNetPair` 와 같은 모양).
 
 ### I6
 
@@ -85,7 +85,7 @@ GM 전용 호스트 포트. 계약은 `OnlineServiceHost.h` 머리 주석과 `Se
 **설계** — 호스트는 하나로 두고 리슨만 둘로 나눕니다. 버린 길: 호스트 둘(계정 바인딩 · 로그인 이벤트가 쪼개짐), 전송 셋에 다중 리슨(epoll 을 이 PC 에서 빌드 못 함), 한 포트에서 원격 주소로 거르기(포트 분리가 아님). 노출 면은 서비스의 형식입니다: `IOnlineHostService::getExposure()`(`Player` 기본 · `Admin` · `PlayerAndAdmin`). 리슨과 노출이 맞지 않는 요청은 "없는 메서드" 와 같은 `kInvalidRequest` 로 답합니다(영역이 있는지 숨김). `_adminServicePort` 0 이면 GM 리슨이 없고 GM 키트(`Admin` 노출 서비스)를 켠 서버는 기동하지 못합니다(플레이어 포트로 받는 폴백 없음, 2026-10-27 U9). `_adminListenAddress` 기본은 `127.0.0.1` 입니다.
 
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동은 확인하지 않았습니다.
-- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 겁니다(포트 없는 주소는 거절). 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `getConnection().bindLoginHook` 에 `AccountGmLogin`(계정 키트)을 끼워야 하고, 없으면 `Ready` 에서 멈춰 서버가 `NotLoggedIn` 으로 거절합니다. 이 조립을 하는 도구 실행 파일은 아직 없고 에디터 안에서는 이름 · 비밀번호 UI 가 필요합니다(U1). 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 씁니다.
+- GM 도구 접속(빌드 전): `AdminToolConnection` 이 `host:port` 하나로 겁니다(포트 없는 주소는 거절). 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 로그인은 부르는 쪽이 `getConnection().bindLoginHook` 에 `AccountGmLogin`(계정 키트)을 끼워야 하고, 없으면 `Ready` 에서 멈춰 서버가 `NotLoggedIn` 으로 거절합니다. 이 조립을 하는 도구 실행 파일은 아직 없다(이름 · 비밀번호 칸은 GM 도구 패널에 있다 — U1). 한 계정은 연결 하나에만 붙으므로 GM 계정을 따로 씁니다.
 
 ### U1
 
@@ -95,7 +95,8 @@ GM 전용 호스트 포트. 계약은 `OnlineServiceHost.h` 머리 주석과 `Se
 - **친구 목록**(`FriendListModel` · `FriendListScreen`): 관계 목록 → 접속 상태 두 요청이 끝나야 `Loaded`, 한쪽이라도 실패하면 비우고 `Failed`. 접속 중인 친구가 앞. 테스트 `FriendListModelTest`.
 - **채팅**(`ChatLogModel` · `ChatScreen`): 200 줄까지 쌓고 한 채널의 최근 15 줄을 보입니다. 보낸 사람도 채널 알림으로 자기 글을 받으므로 보내기 성공을 따로 더하지 않습니다. 채널 입장은 게임의 몫. 테스트 `ChatLogModelTest`.
 - **시나리오 없음**: 화면을 띄울 장면과 서버 목록을 채우는 가짜 클라이언트가 필요하고, 서버 키트를 한 프로세스에 띄우는 시나리오 시설(F5 의 두 프로세스 시나리오와 같은 시설)이 먼저입니다.
-- **남음**: 계정 이름 · 비밀번호를 받는 GM 도구 설정 화면. 친구 신청 수락 · 삭제 단추와 귓속말은 쓰는 게임이 생길 때.
+- **GM 도구 설정 화면**(빌드 전): 패널(`AdminToolPanel`)의 연결 줄에 계정 이름 · 비밀번호 칸이 있다. 에디터 확장은 계정 키트를 include 할 수 없어 입력을 받아 로그인으로 잇는 일은 조립 쪽의 몫이다 — `AdminToolSession::bindCredentialsHandler`(받는 처리기, `AccountGmLogin::setCredentials` 의 모양)와 `getConnection().bindLoginHook` 을 함께 건다. 처리기가 걸려 있을 때만 이름 · 비밀번호 칸을 보이고(없으면 "로그인 처리기 없음 — GM 명령은 로그인 안 됨으로 거절" 안내), 연결을 누르면 `connectWithLogin` 이 빈 이름 · 비밀번호와 처리기의 거절을 연결 전에 막고 입력 칸의 비밀번호를 곧바로 지운다(세션은 어디에도 복사하지 않는다). 에디터 자체 테스트 `admin.credentialsHandoff`(포트 없는 주소로 네트워크 없이). 조립(도구 실행 파일)은 여전히 없다.
+- **남음**: 친구 신청 수락 · 삭제 단추와 귓속말은 쓰는 게임이 생길 때.
 
 ### F2
 

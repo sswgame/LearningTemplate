@@ -7,6 +7,7 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
 
 namespace sw
 {
@@ -19,45 +20,6 @@ namespace sw
             static constexpr int32 kStatusTooManyRequests = 429;
             static constexpr int32 kStatusServerError     = 500;
             static constexpr int64 kMillisecondsPerSecond = 1000;
-
-            static vector<uint8> toBytes( string_view text )
-            {
-                return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
-            }
-
-            /** @brief 알림의 앞쪽에서 비지 않은 인자 수입니다(첫 빈 인자에서 멈춘다). */
-            static int32 countArguments( const PushNotificationMessage& message )
-            {
-                int32 count = 0;
-                while ( count < PushNotificationMessage::kArgumentCount && message._arrArgument[count].empty() == false )
-                {
-                    ++count;
-                }
-                return count;
-            }
-
-            /** @brief 글이 비지 않았을 때만 멤버 하나를 씁니다. */
-            static void writeOptionalText( JSONWriter& writer, string_view key, string_view text )
-            {
-                if ( text.empty() )
-                    return;
-                writer.key( key );
-                writer.valueString( text );
-            }
-
-            /** @brief 앞쪽 인자 @p count 개를 글 배열 멤버로 씁니다. 없으면 멤버를 쓰지 않습니다. */
-            static void writeArguments( JSONWriter& writer, string_view key, const PushNotificationMessage& message, int32 count )
-            {
-                if ( count == 0 )
-                    return;
-                writer.key( key );
-                writer.beginArray();
-                for ( int32 index = 0; index < count; ++index )
-                {
-                    writer.valueString( message._arrArgument[index] );
-                }
-                writer.endArray();
-            }
         };
     } // namespace
 } // namespace sw
@@ -95,7 +57,7 @@ namespace sw
     string FcmPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
         using Internal            = FcmPushProviderInternal;
-        const int32 argumentCount = Internal::countArguments( message );
+        const int32 argumentCount = PushPayloadUtil::countArguments( message );
         const bool  bHasAlert     = message._titleKey.empty() == false || message._bodyKey.empty() == false;
         const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;
         string      json;
@@ -103,15 +65,15 @@ namespace sw
         writer.beginObject();
         writer.key( "message" );
         writer.beginObject();
-        Internal::writeOptionalText( writer, "token", token );
-        Internal::writeOptionalText( writer, "topic", topic );
+        PushPayloadUtil::writeOptionalText( writer, "token", token );
+        PushPayloadUtil::writeOptionalText( writer, "topic", topic );
         if ( bHasData )
         {
             writer.key( "data" );
             writer.beginObject();
-            Internal::writeOptionalText( writer, "deep_link", message._deepLink );
-            Internal::writeOptionalText( writer, "title_key", message._titleKey );
-            Internal::writeOptionalText( writer, "body_key", message._bodyKey );
+            PushPayloadUtil::writeOptionalText( writer, "deep_link", message._deepLink );
+            PushPayloadUtil::writeOptionalText( writer, "title_key", message._titleKey );
+            PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
             for ( int32 index = 0; index < argumentCount; ++index )
             {
                 writer.key( "arg" + to_string( index ) );
@@ -125,9 +87,9 @@ namespace sw
             writer.beginObject();
             writer.key( "notification" );
             writer.beginObject();
-            Internal::writeOptionalText( writer, "title_loc_key", message._titleKey );
-            Internal::writeOptionalText( writer, "body_loc_key", message._bodyKey );
-            Internal::writeArguments( writer, "body_loc_args", message, argumentCount );
+            PushPayloadUtil::writeOptionalText( writer, "title_loc_key", message._titleKey );
+            PushPayloadUtil::writeOptionalText( writer, "body_loc_key", message._bodyKey );
+            PushPayloadUtil::writeArguments( writer, "body_loc_args", message, argumentCount );
             writer.endObject();
             writer.endObject();
 
@@ -139,9 +101,9 @@ namespace sw
             writer.beginObject();
             writer.key( "alert" );
             writer.beginObject();
-            Internal::writeOptionalText( writer, "title-loc-key", message._titleKey );
-            Internal::writeOptionalText( writer, "loc-key", message._bodyKey );
-            Internal::writeArguments( writer, "loc-args", message, argumentCount );
+            PushPayloadUtil::writeOptionalText( writer, "title-loc-key", message._titleKey );
+            PushPayloadUtil::writeOptionalText( writer, "loc-key", message._bodyKey );
+            PushPayloadUtil::writeArguments( writer, "loc-args", message, argumentCount );
             writer.endObject();
             if ( message._badgeCount >= 0 )
             {
@@ -192,7 +154,7 @@ namespace sw
 
     void FcmPushProvider::queueSend( uint64 deliveryID, string&& bodyJSON, UnixMilliseconds nowMs )
     {
-        vector<uint8>          bodyBytes = FcmPushProviderInternal::toBytes( bodyJSON );
+        vector<uint8>          bodyBytes = PushPayloadUtil::toBytes( bodyJSON );
         const UnixMilliseconds now{ nowMs }; // 서버 루프의 nowMs 는 유닉스 밀리초다 — 서명 토큰의 iat · exp 가 된다
         if ( _tokenSource.hasValidToken( now ) )
         {

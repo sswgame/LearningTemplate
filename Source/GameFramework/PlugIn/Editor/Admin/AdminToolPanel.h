@@ -24,6 +24,8 @@ namespace sw::editor
         static constexpr const utf8* kPanelID = "admin.tool";
         /** @brief 창 제목입니다(ImGui 창 이름 — 자체 테스트가 창을 찾을 때 이 상수를 쓴다). */
         static constexpr const utf8* kPanelTitle = "GM Tool";
+        /** @brief 비밀번호 입력 칸의 크기(끝 0 포함)입니다. */
+        static constexpr size_t kPasswordCapacity = 128;
 
         AdminToolPanel();
 
@@ -43,6 +45,8 @@ namespace sw::editor
         void drawLiveEventSection();
 
         string              _gmAddressText;
+        string              _loginNameText;
+        utf8                _arrPassword[kPasswordCapacity]; ///< 입력 중인 GM 비밀번호. 연결을 누르면 지운다
         string              _accountText;
         string              _assetText;
         string              _memoText;

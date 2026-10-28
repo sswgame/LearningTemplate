@@ -76,7 +76,7 @@ JSON 데이터로 봇 수, 늘리는 시간, 실행 시간, 씨앗, 지역, 단�
 - 글 안의 `{bot}` 은 봇 번호, `{seq}` 는 그 봇이 보낸 순번으로 바뀝니다(같은 글을 반복하면 서버의 도배 방지에 걸린다).
 
 저장소의 시나리오는 `Scenarios/` 에 있습니다: `chat_and_match`(채팅과 매칭), `login_storm`(비밀번호 로그인, 해시 비용), `quick_check`(봇 300개 빠른 확인), 측정용 `chat_send_p99`(봇 2000 이 한 채널에 보내 `chat_send` p99 — 채널 샤딩 판단 근거)와
-`friend_presence_fanout`(봇마다 친구 요청 200 번 뒤 접속 상태를 바꿔 팬아웃 지연). 측정용 둘의 근거는 `docs/plans/OnlineKits.md` M1 · B2 입니다.
+`friend_presence_fanout`(봇마다 친구 요청 200 번 뒤 접속 상태를 바꿔 팬아웃 지연). 측정용 둘의 근거는 `docs/plans/OnlineKits.md` M1 · B2 입니다. 부하 검증에도 연결돼 있어(`Test/Load/Scenarios/chatp99.load.xml` · `friendpresence.load.xml`, 예산 없이 보고만) `py -3 -m Scripts load suite onlineMeasure` 가 둘을 Release 로 돌려 결과 JSON 을 남깁니다.
 
 ### 결과
 

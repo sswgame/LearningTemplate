@@ -40,6 +40,7 @@ namespace sw::editor
         , _live{}
         , _pActive{ &_fake }
         , _connection{}
+        , _onCredentials{}
         , _lookup{}
         , _lookupAudit{}
         , _reports{}
@@ -77,6 +78,23 @@ namespace sw::editor
         useLiveClient( _connection.getAdminClient() );
         _statusLine = "Connecting to the GM port...";
         return true;
+    }
+
+    bool AdminToolSession::connectWithLogin( string_view address, string_view gameBuild, string_view loginName, string_view password, string& outError )
+    {
+        outError.clear();
+        if ( _onCredentials.isBound() == false )
+            outError = "no login handler is bound - the tool assembly must bind one (bindCredentialsHandler)";
+        else if ( loginName.empty() || password.empty() )
+            outError = "the account name and the password are required";
+        else if ( _onCredentials.get()( loginName, password ) == false )
+            outError = "the login handler refused the account name or the password";
+        if ( outError.empty() == false )
+        {
+            _statusLine = "GM connection failed: " + outError;
+            return false;
+        }
+        return connectLive( address, gameBuild, outError );
     }
 
     void AdminToolSession::disconnectLive()

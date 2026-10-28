@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/StreamTypes.h"
@@ -44,6 +45,10 @@ namespace sw
         StreamConnectionHandle getHandle() const { return _handle; }
         bool                   isSecure() const { return _tlsSession != nullptr; }
         const utf8*            getFailureText() const;
+        /** @brief TLS 핸드셰이크가 끝났는가(평문 연결은 늘 true). */
+        bool isEstablished() const;
+        /** @brief 핸드셰이크가 끝난 뒤 협상된 ALPN 프로토콜 이름입니다. 평문이거나 합의가 없으면 빈 문자열. */
+        string getNegotiatedProtocol() const;
 
     private:
         [[nodiscard]] bool flushCiphertext( IStreamTransport& transport );

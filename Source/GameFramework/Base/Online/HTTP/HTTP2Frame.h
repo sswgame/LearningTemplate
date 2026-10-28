@@ -3,7 +3,7 @@
  * @brief HTTP/2(RFC 9113) 프레임의 읽기 · 쓰기입니다. 연결 서문, 프레임 머리 9 바이트, SETTINGS · WINDOW_UPDATE · PING · HEADERS · DATA · GOAWAY · RST_STREAM 을 만들고 읽습니다.
  * @details APNs 제공자가 필요로 하는 HTTP/2 클라이언트의 첫 단계다(온라인 키트 G4). 이 파일은 바이트만 다루고 연결 · 흐름 제어 · 스트림 상태는 모른다 — 다음 단계(`HTTP2Connection`)가 얹는다.
  *          상태가 없고 입력은 부르는 쪽이 준 바이트뿐이라 네트워크 없이 테스트한다. 범위 밖 값(프레임 길이 24 비트 초과, 스트림 id 31 비트 초과)은 만들지 않고 false 로 거절한다.
- *          HTTP/2 의 TLS 협상(ALPN `h2`)은 아직 TLS 계층에 없다 — 그 단계가 들어오기 전에는 실제 서버와 이야기할 수 없다(문서 OnlineKits G4).
+ *          HTTP/2 의 TLS 협상(ALPN `h2`)은 TLS 계층(`TLSContextConfig::_alpnProtocol`)이 하고, 연결 · 스트림 상태는 `HTTP2Connection` 이 얹는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -74,6 +74,7 @@ namespace sw
         static constexpr uint8 kFlagAck        = 0x1; ///< SETTINGS · PING
         static constexpr uint8 kFlagEndHeaders = 0x4; ///< HEADERS · CONTINUATION
         static constexpr uint8 kFlagPadded     = 0x8;
+        static constexpr uint8 kFlagPriority   = 0x20; ///< HEADERS
 
         static constexpr uint16 kSettingsHeaderTableSize      = 0x1;
         static constexpr uint16 kSettingsEnablePush           = 0x2;
@@ -81,6 +82,8 @@ namespace sw
         static constexpr uint16 kSettingsInitialWindowSize    = 0x4;
         static constexpr uint16 kSettingsMaxFrameSize         = 0x5;
 
+        /** @brief 빅 엔디언 32 비트 정수 하나를 읽습니다(@p pBytes 는 4 바이트 이상). */
+        [[nodiscard]] static uint32 readUint32( const uint8* pBytes );
         /** @brief @p header 를 9 바이트로 @p outBytes 뒤에 붙입니다. 길이가 24 비트를, 스트림 id 가 31 비트를 넘으면 쓰지 않고 false 입니다. */
         [[nodiscard]] static bool writeHeader( const HTTP2FrameHeader& header, vector<uint8>& outBytes );
         /** @brief 앞 9 바이트를 읽습니다. 바이트가 모자라면 false 입니다(아직 다 오지 않았다). 예약 비트(스트림 id 의 최상위)는 버린다. */

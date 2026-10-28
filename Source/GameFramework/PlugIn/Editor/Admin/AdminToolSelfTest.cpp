@@ -19,6 +19,23 @@ namespace sw::editor
 {
     namespace
     {
+        /** @brief 계정 이름 · 비밀번호 처리기 자리에 거는 기록 장치입니다. */
+        struct CredentialsRecorder
+        {
+            string _loginName{};
+            string _password{};
+            int32  _callCount{ 0 };
+            bool   _bAccept{ true };
+
+            bool accept( string_view loginName, string_view password )
+            {
+                _loginName = string( loginName );
+                _password  = string( password );
+                ++_callCount;
+                return _bAccept;
+            }
+        };
+
         struct AdminToolSelfTestInternal
         {
             static int64 findGold( const AdminReply& lookup )
@@ -79,9 +96,36 @@ namespace sw::editor
                 context.expect( session.getLastResult() == AdminResult::Forbidden, "a viewer must not be able to grant" );
                 return EditorSelfTestStep::Done;
             }
+
+            /**
+             * @brief 이름 · 비밀번호 설정 화면의 규칙을 확인합니다 — 처리기가 없거나 이름 · 비밀번호가 비었거나 처리기가 거절하면 연결하지 않고(로그인한 척하지 않는다),
+             *        받아들여지면 처리기가 받은 값이 입력 그대로이며 포트 없는 주소는 연결 단계에서 거절되어 메모리 제공자로 돌아온다(네트워크 없이 확인하려고 일부러 포트를 뺐다).
+             */
+            static EditorSelfTestStep runCredentialsHandoff( EditorSelfTestContext& context )
+            {
+                AdminToolSession session;
+                string           error;
+                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) == false && error.empty() == false, "without a login handler the connection must be refused" );
+
+                CredentialsRecorder recorder;
+                const Subscription  subscription = session.bindCredentialsHandler( AdminToolSession::CredentialsHandler::create<&CredentialsRecorder::accept>( &recorder ) );
+                context.expect( session.hasCredentialsHandler(), "the credentials handler should be bound" );
+                context.expect( session.connectWithLogin( "nohost", "editor", "", "pw", error ) == false && recorder._callCount == 0, "an empty account name must not reach the handler" );
+                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "", error ) == false && recorder._callCount == 0, "an empty password must not reach the handler" );
+
+                recorder._bAccept = false;
+                context.expect( session.connectWithLogin( "nohost", "editor", "gm", "pw", error ) == false && recorder._callCount == 1, "a refused login must not connect" );
+                recorder._bAccept     = true;
+                const bool bConnected = session.connectWithLogin( "nohost", "editor", "gm", "pw", error );
+                context.expect( bConnected == false && recorder._callCount == 2, "an address without a port is refused at the connection step, after the handler took the credentials" );
+                context.expect( recorder._loginName == "gm" && recorder._password == "pw", "the handler should receive the typed account name and password" );
+                context.expect( session.getProvider().isLive() == false, "a failed connection falls back to the in-memory provider" );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
     SW_EDITOR_SELF_TEST( AdminToolPanel, "admin.panelDraws", 9100, &AdminToolSelfTestInternal::runPanelDraws );
     SW_EDITOR_SELF_TEST( AdminToolSession, "admin.fakeRoundTrip", 9110, &AdminToolSelfTestInternal::runFakeRoundTrip );
+    SW_EDITOR_SELF_TEST( AdminToolSession, "admin.credentialsHandoff", 9120, &AdminToolSelfTestInternal::runCredentialsHandoff );
 } // namespace sw::editor
