@@ -127,9 +127,14 @@ namespace sw::editor
             acceptFocusedDocument();
 
         const string readPath = ResourcePaths::findLooseFile( string_view( path ) ).getDiskPath();
-        if ( readPath.empty() || _model.loadFromFile( readPath ) == false )
+        if ( readPath.empty() )
         {
-            _status = "The paired animation could not be read - see the log";
+            _status = "The paired animation '" + path + "' has no file on disk to read";
+            return ToolAssetLoadResult::Malformed;
+        }
+        if ( _model.loadFromFile( readPath ) == false )
+        {
+            _status = "The paired animation '" + readPath + "' could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
         // 역할 수가 바뀌었을 수 있다 — 미리보기 오브젝트를 새로 놓는다(프리팹 경로는 같은 인덱스면 남긴다).
