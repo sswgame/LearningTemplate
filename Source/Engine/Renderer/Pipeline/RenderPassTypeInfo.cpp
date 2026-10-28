@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Graphics/Debug/GpuAssert.h"
+#include "Engine/Graphics/Debug/GpuNanCheck.h"
 
 namespace sw
 {
@@ -375,6 +376,13 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kGpuAssertTarget;
                         break;
                     }
+                    case RenderPassType::NanCheck:
+                    {
+                        // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderNanCheck;
+                        info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
+                        break;
+                    }
                     case RenderPassType::ProbeUpdate:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
@@ -478,6 +486,20 @@ namespace sw
         if ( info.hasFlag( RenderPassTraitFlag::kGpuAssertTarget ) && GpuAssertMonitor::isRequested() )
             selection._listDefine.push_back( kGpuAssertDefine );
         return selection;
+    }
+
+    bool isDiagnosticPassRequested( RenderPassType type )
+    {
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
+        if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) == false )
+            return false;
+        switch ( type )
+        {
+            case RenderPassType::NanCheck:
+                return GpuNanCheck::isRequested();
+            default:
+                return false;
+        }
     }
 
     bool passAppliesTonemap( const RenderGraphPassDesc& passDesc )

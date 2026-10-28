@@ -505,6 +505,7 @@ namespace sw
                 case RenderPassType::OcclusionTiles:
                 case RenderPassType::VolumetricFog:
                 case RenderPassType::CanvasMarker:
+                case RenderPassType::NanCheck:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );

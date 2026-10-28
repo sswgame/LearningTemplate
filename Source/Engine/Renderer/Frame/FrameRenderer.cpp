@@ -114,6 +114,8 @@ namespace sw
         , _arrOcclusionReadbackMeta{}
         , _occlusionReadbackSerial{ 0 }
         , _gpuAssert{}
+        , _nanCheck{}
+        , _nanCheckCommandList{}
         , _psoCache{}
         , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
@@ -459,6 +461,7 @@ namespace sw
         // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
         // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _gpuAssert.poll();
+        _nanCheck.poll();
         recordDepthHistories();
         // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
         // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VfxGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
@@ -511,6 +514,8 @@ namespace sw
         }
 
         const bool bOk = executeMainGraph( pDevice );
+        // 그래프가 끝난 주 시점의 패스 출력을 NaN · Inf 감시 컴퓨트로 훑는다(`-gv_nanCheck` 일 때만).
+        scanPassOutputsForNan( pDevice );
 
         // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
         renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ScreenRect );

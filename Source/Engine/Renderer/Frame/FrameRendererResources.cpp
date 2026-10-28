@@ -12,6 +12,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -49,6 +50,8 @@ namespace sw
         // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
         if ( _gpuAssert.initialize( _pDevice ) == false )
             SW_FATAL( "gv_gpuAssert is on but the GPU assert ring could not be created - see the log above" );
+        if ( _nanCheck.initialize( _pDevice ) == false )
+            SW_FATAL( "gv_nanCheck is on but the NaN check counters could not be created - see the log above" );
 
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
@@ -64,6 +67,11 @@ namespace sw
                 continue;
             // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
+                continue;
+            // 진단 패스는 요청한 실행에서만 만든다. 네이티브 bindless 가 필요한 패스는 에뮬 백엔드에서 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다).
+            if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) && isDiagnosticPassRequested( passType ) == false )
+                continue;
+            if ( info.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) && _pDevice->supportsNativeBindlessSampling() == false )
                 continue;
             // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 createOutputPSOVariants 가 만든다.
             if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
@@ -191,6 +199,8 @@ namespace sw
         _occlusionReadback.shutdown();
         _occlusionMailbox.clear();
         _gpuAssert.shutdown();
+        _nanCheckCommandList.reset();
+        _nanCheck.shutdown();
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );

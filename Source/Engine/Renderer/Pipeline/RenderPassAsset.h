@@ -152,6 +152,11 @@ namespace sw
          *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
          */
         CanvasMarker,
+        /**
+         * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpunancheck.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GpuNanCheck`, 언리얼 r.CheckNaN 선).
+         *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FrameRenderer::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
+         */
+        NanCheck,
     };
 
     /**

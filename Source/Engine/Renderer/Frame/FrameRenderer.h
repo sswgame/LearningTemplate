@@ -13,6 +13,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GpuAssert.h"
+#include "Engine/Graphics/Debug/GpuNanCheck.h"
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
@@ -651,6 +652,11 @@ namespace sw
         void rememberDepthHistoryViews();
         /** @brief 뷰의 가림 타일 버퍼를 **셋업 단계에서** 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면(2D 파이프라인) 만들지 않습니다. */
         void ensureOcclusionTiles( ViewTarget& view );
+        /**
+         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GpuNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
+         * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
+         */
+        void scanPassOutputsForNan( IRHIDevice* pDevice );
         /**
          * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusiontiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
          * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
@@ -1347,6 +1353,9 @@ namespace sw
         uint64                  _occlusionReadbackSerial;
         /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u3 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
         GpuAssertMonitor _gpuAssert;
+        /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
+        GpuNanCheck                 _nanCheck;
+        unique_ptr<IRHICommandList> _nanCheckCommandList;
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
         RenderPSOCache _psoCache;

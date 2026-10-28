@@ -103,7 +103,7 @@ namespace sw
     inline constexpr const utf8* kGpuAssertDefine = "SW_GPU_ASSERT_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::CanvasMarker ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::NanCheck ) + 1;
 
     /**
      * @struct RenderPassTraitFlag
@@ -167,6 +167,14 @@ namespace sw
          * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GpuAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
         static constexpr uint32 kGpuAssertTarget = SW_BIT( 20 );
+        /**
+         * @brief 진단 패스다 — 요청한 실행에서만 PSO 를 만든다(`isDiagnosticPassRequested`). 요청하지 않은 실행(Shipping 은 늘)에서는 PSO 도 디스패치도 없다.
+         */
+        static constexpr uint32 kDiagnostic = SW_BIT( 21 );
+        /**
+         * @brief 컴퓨트가 엔진 텍스처를 읽어야 해서 네이티브 bindless 샘플링(DX12 · Vulkan)이 있는 백엔드에서만 PSO 를 만든다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다(binding.hlsli).
+         */
+        static constexpr uint32 kRequiresNativeBindless = SW_BIT( 22 );
     };
 } // namespace sw
 
@@ -234,6 +242,9 @@ namespace sw
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
      */
     SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
+
+    /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
+    SW_API bool isDiagnosticPassRequested( RenderPassType type );
 
     /** @brief 패스가 HDR 색을 톤맵하는지 반환합니다 — Tonemap 이거나 퍼뮤테이션 `kPostTonemapDefine` 을 켠 Present(후처리 체인)입니다. */
     SW_API bool passAppliesTonemap( const RenderGraphPassDesc& passDesc );

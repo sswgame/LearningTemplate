@@ -82,6 +82,7 @@
                      _shaderVolumetricFog="engine/shaders/volumetricfog.hlsl"
                      _shaderProbeUpdate="engine/shaders/probeupdate.hlsl"
                      _shaderCanvasMarker="engine/shaders/canvasmarker.hlsl"
+                     _shaderNanCheck="engine/shaders/gpunancheck.hlsl"
                      _shaderToon="engine/shaders/toon.hlsl"
                      _shaderHighlightOutline="engine/shaders/highlightoutline.hlsl"
                      _shaderCanvas="engine/shaders/canvas.hlsl"
