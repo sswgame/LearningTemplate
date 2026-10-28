@@ -3,7 +3,7 @@
 
 #include "pch.h"
 #include "Core/Math/PackedTypes.h"
-#include "Engine/Reflection/ReflectGenerated.h"
+#include "Engine/Object/ReflectGenerated.h"
 
 namespace sw::generated
 {

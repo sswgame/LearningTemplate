@@ -319,7 +319,7 @@ namespace sw
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( AssetIO::hasResource( assetID ) == false )
+        if ( AssetIO::hasAsset( assetID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
@@ -343,7 +343,7 @@ namespace sw
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
-        if ( AssetIO::hasResource( assetID ) == false )
+        if ( AssetIO::hasAsset( assetID ) == false )
         {
             SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;

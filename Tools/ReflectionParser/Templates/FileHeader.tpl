@@ -2,5 +2,5 @@
 // Source: $SourcePath
 
 #include "pch.h"
-#include "Engine/Reflection/ReflectGenerated.h"
+#include "Engine/Object/ReflectGenerated.h"
 #include "$SourcePath"

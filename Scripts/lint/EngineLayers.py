@@ -23,12 +23,13 @@ from common.Paths import getProjectRoot
 
 # 층(낮을수록 아래). 키는 `Source/Engine/` 아래 경로 접두어이고 가장 긴 것이 이긴다.
 kLayer: dict[str, int] = {
-    # 0 — 엔진 바닥: 공용 형식 · 감시 값 등록표(기능이 자기 폴더에서 등록한다)
-    "Common": 0, "Curve": 0, "Compression": 0, "Automation/Watch": 0,
+    # 0 — 엔진 바닥: 공용 형식
+    "Common": 0, "Compression": 0,
     "pch.h": 0, "pch.cpp": 0, "EngineMinimal.h": 0, "EngineFrameObserver.h": 0,
     # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 모듈 · 관측
-    "Reflection": 1, "Serialization": 1, "Config": 1, "Module": 1, "Profiling": 1, "Observability": 1, "Telemetry": 1,
+    "Reflection": 1, "Curve": 1, "Serialization": 1, "Config": 1, "Profiling": 1, "Observability": 1, "Telemetry": 1,
     "Bootstrap": 1, "Console": 1,
+    "Module/ModuleTypeRegistry.h": 1,  # 모듈 이미지의 타입 등록 선언(Core 만) — 구현(.cpp)은 리로드 때 씬을 다시 묶어 맨 위 층이다
     # 2 — 콘텐츠: 에셋 · 글 · 현지화
     "Asset": 2, "Text": 2, "Localization": 2,
     # 3 — 플랫폼: 창 · 입력
@@ -36,14 +37,14 @@ kLayer: dict[str, int] = {
     # 4 — RHI · CPU 쪽 그래픽 데이터
     "Graphics": 4,
     # 5 — 월드: 컴포넌트 모델 코어 · 씬
-    "Object": 5, "Scene": 5,
+    "Object": 5, "Scene": 5, "Automation/Watch": 5,  # 감시 값은 대상 객체를 찾아 읽는다 — 기능(6)이 자기 폴더에서 등록한다
     # 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
     "Physics": 6, "Audio": 6, "Animation": 6, "Navigation": 6, "TileMap": 6, "VFX": 6, "Sequencer": 6, "Dialogue": 6,
     "Environment": 6, "Destruction": 6, "Character": 6, "UI": 6, "Net": 6, "UserSettings": 6, "Automation/Scenario": 6,
     # 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
     "Renderer": 7,
-    # 8 — 맨 위: 엔진 루프 조립 · 자동화 실행기
-    "Automation": 8, "Engine.h": 8, "Engine.cpp": 8, "EngineSubsystemSet.h": 8, "EngineSubsystemSet.cpp": 8,
+    # 8 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기
+    "Module": 8, "Automation": 8, "Engine.h": 8, "Engine.cpp": 8, "EngineSubsystemSet.h": 8, "EngineSubsystemSet.cpp": 8,
     "HeadlessSubsystem.h": 8, "HeadlessSubsystem.cpp": 8,
 }
 kBaselinePath = Path(__file__).with_name("rules") / "EngineLayersBaseline.txt"

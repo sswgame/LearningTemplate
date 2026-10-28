@@ -32,7 +32,7 @@ namespace sw
             [[nodiscard]] static bool readLocalizationFile( const AssetID& assetID, string& outText ) { return AssetIO::readTextAsset( assetID, outText ); }
 
             /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
-            static bool hasLocalizationFile( const AssetID& assetID ) { return AssetIO::hasResource( assetID ); }
+            static bool hasLocalizationFile( const AssetID& assetID ) { return AssetIO::hasAsset( assetID ); }
 
             /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )

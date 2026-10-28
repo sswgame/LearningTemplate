@@ -527,7 +527,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( assetID );
 
-        const bool bBinaryLoaded = binPath.empty() == false && AssetIO::hasResource( AssetID{ binPath } ) && loadBinary( AssetID{ binPath } );
+        const bool bBinaryLoaded = binPath.empty() == false && AssetIO::hasAsset( AssetID{ binPath } ) && loadBinary( AssetID{ binPath } );
         if ( bBinaryLoaded )
             return true;
 

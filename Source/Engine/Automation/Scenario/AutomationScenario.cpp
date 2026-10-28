@@ -274,7 +274,7 @@ namespace sw
         if ( doc.loadResource( assetID ) == false )
         {
             // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 `[scenario]` 로 붙는다.
-            const bool bReadable = AssetIO::hasResource( assetID );
+            const bool bReadable = AssetIO::hasAsset( assetID );
             outError             = bReadable ? "[xml] " + doc.getLastError() : AutomationScenarioInternal::describeReadFailure( path );
             return false;
         }

@@ -1,6 +1,4 @@
 Asset/AssetManager.cpp -> Engine/Physics/PhysicsSystem.h
-Automation/Watch/AutomationWatch.cpp -> Engine/Object/GameObject/GameObject.h
-Automation/Watch/AutomationWatch.cpp -> Engine/Object/GameObject/GameObjectManager.h
 Bootstrap/ContentRootSubsystem.cpp -> Engine/Asset/AssetPaths.h
 Bootstrap/MemoryBudgetSubsystem.cpp -> Engine/Asset/AssetPaths.h
 Bootstrap/StaticStorageSubsystem.cpp -> Engine/Graphics/RHI/RHIRenderResource.h
@@ -11,23 +9,12 @@ Config/EngineDefaultAssets.h -> Engine/Asset/AssetID.h
 Config/NetEmulationPresetTable.h -> Engine/Asset/AssetID.h
 Config/PackEngineSettings.cpp -> Engine/Asset/AssetIO.h
 Config/PackEngineSettings.cpp -> Engine/Asset/AssetPaths.h
-Curve/FloatCurve.h -> Engine/Reflection/ReflectionMacros.h
 Graphics/Mesh/MeshCache.cpp -> Engine/Physics/Collision/PhysicsMeshShapeCache.h
-Module/ModuleImagesSubsystem.cpp -> Engine/Asset/AssetManager.h
-Module/ModuleImagesSubsystem.cpp -> Engine/Audio/IAudioService.h
-Module/ModuleImagesSubsystem.cpp -> Engine/Input/InputManager.h
-Module/ModuleImagesSubsystem.cpp -> Engine/Scene/SceneManager.h
-Module/ModuleTypeRegistry.cpp -> Engine/Asset/AssetDataKind.h
-Module/ModuleTypeRegistry.cpp -> Engine/Object/GameObject/GameObjectManager.h
-Module/ModuleTypeRegistry.cpp -> Engine/Scene/Scene.h
-Module/ModuleTypeRegistry.cpp -> Engine/Scene/SceneManager.h
 Object/Component/2D/ShadowCaster2DComponent.cpp -> Engine/TileMap/Component/TileMapRendererComponent.h
 Object/Component/2D/SpriteComponent.cpp -> Engine/Animation/Sprite/SpriteClipAsset.h
 Object/Component/2D/SpriteComponent.cpp -> Engine/Animation/Sprite/SpriteClipCache.h
 Object/Component/3D/MeshLODSystem.h -> Engine/Animation/Scene/AnimationLOD.h
 Profiling/ProfilerTraceExport.cpp -> Engine/Asset/AssetPaths.h
-Reflection/ReflectGenerated.h -> Engine/Object/Component/Component.h
-Reflection/ReflectGenerated.h -> Engine/Object/GameObject/GameObject.h
 Reflection/ReflectionSubsystem.cpp -> Engine/Localization/EngineDefaultAssetsSubsystem.h
 Scene/AnimationWatches.cpp -> Engine/Animation/Scene/AnimationSystem.h
 Scene/Scene.cpp -> Engine/Audio/Component/SceneAudio.h
@@ -61,5 +48,3 @@ Telemetry/TelemetrySchema.h -> Engine/Asset/AssetID.h
 Telemetry/TelemetryService.cpp -> Engine/Asset/PackEngineSettingsSubsystem.h
 Telemetry/TelemetryService.cpp -> Engine/UserSettings/UserSettingsManager.h
 Telemetry/TelemetryService.h -> Engine/Asset/AssetID.h
-Window/IWindow.h -> Engine/Graphics/RHI/IRenderSurface.h
-Window/NativeWindowEvent.h -> Engine/Graphics/RHI/IRenderSurface.h

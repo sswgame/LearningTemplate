@@ -419,7 +419,7 @@ namespace sw
         entry._bAnchorRootMotion        = anchor;
         const string cookedPath         = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
         bool         bReady             = false;
-        const bool   bCookedBinaryFound = cookedPath.empty() == false && AssetIO::hasResource( AssetID{ cookedPath } ) && animation->loadFromAsset( AssetID{ cookedPath } );
+        const bool   bCookedBinaryFound = cookedPath.empty() == false && AssetIO::hasAsset( AssetID{ cookedPath } ) && animation->loadFromAsset( AssetID{ cookedPath } );
         if ( bCookedBinaryFound )
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.

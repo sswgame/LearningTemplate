@@ -1,7 +1,7 @@
 /**
  * @file AssetIO.h
  * @brief 리소스 id 를 해석해 낱개 파일 또는 마운트된 VFS .pack 에서 읽습니다. 경로 해석은 AssetPaths 가 맡습니다.
- * @details 입구는 둘로 나뉩니다. 리소스 입구(`read*Resource` · `hasResource` · `collectResources`)는 리소스 id 만 받고, 디스크 입구(`readTextFile` ·
+ * @details 입구는 둘로 나뉩니다. 리소스 입구(`read*Resource` · `hasAsset` · `collectAssets`)는 리소스 id 만 받고, 디스크 입구(`readTextFile` ·
  *          `readBinaryFile`)는 디스크 경로만 받습니다. 리소스 입구에 OS 경로를 넣으면 구성과 무관하게 오류로 멈춥니다 — 예전에는 Dev 가 받고 배포본만
  *          거절해 잘못 넣은 호출이 배포 테스트에서야 드러났습니다. 리소스 입구의 인자는 `AssetID` 라 일반 문자열 · 디스크 경로를
  *          그대로 넘기면 컴파일되지 않는다.
@@ -22,8 +22,8 @@ namespace sw
     class AsyncReadHandle;
     class PackManager;
 
-    /** @brief 리소스 폴더 나열(`AssetIO::collectResources`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
-    enum class ResourceFolderListing : uint8
+    /** @brief 리소스 폴더 나열(`AssetIO::collectAssets`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
+    enum class AssetFolderListing : uint8
     {
         Listed,        ///< 폴더가 있었다(낱개 폴더 또는 팩 항목). 거른 결과가 비어 있을 수 있다
         FolderMissing, ///< 어느 팩에도, (낱개 파일을 허용하면) 디스크에도 그 폴더가 없다
@@ -31,7 +31,7 @@ namespace sw
     };
 
     /** @brief 리소스 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
-    using ResourceReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
+    using AssetReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
 
     /**
      * @class AssetIO
@@ -74,14 +74,14 @@ namespace sw
          * @details 찾는 일(낱개 파일의 존재 확인 · 팩 색인)은 부른 스레드에서 하고, 바이트 읽기만 IO 스레드로 갑니다.
          * @return 건 읽기의 핸들(취소 · 기다리기). 어디에도 없으면 아무것도 걸지 않고 `isValid() == false` 이며 @p onComplete 는 불리지 않습니다.
          */
-        static AsyncReadHandle readBinaryResourceAsync( const AssetID& id, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete );
+        static AsyncReadHandle readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
 
         /**
          * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 낱개 파일). 찾는 규칙은 읽기와 같습니다 — OS 경로는 오류 로그를 남기고 false 입니다.
          * @param id 리소스 id
          * @return 있으면 true 입니다.
          */
-        static bool hasResource( const AssetID& id );
+        static bool hasAsset( const AssetID& id );
 
         /**
          * @brief 리소스 폴더 바로 아래 파일(하위 폴더 안은 빼고)의 리소스 id 를 모읍니다. 런타임 코드가 리소스 폴더를 훑는 길은 이것 하나입니다 —
@@ -92,7 +92,7 @@ namespace sw
          *                    (디스크 · 높은 우선순위 팩의 표기가 남는다) 소문자 기준 이름순으로 정렬합니다 — 실행마다 같습니다.
          * @return 폴더가 없으면 `FolderMissing`, 인자가 잘못됐거나 디스크 폴더를 읽지 못하면 `Failed` 입니다. 그 둘이면 @p outListID 는 비어 있습니다.
          */
-        [[nodiscard]] static ResourceFolderListing collectResources( const AssetID& folderID, string_view extension, vector<AssetID>& outListID );
+        [[nodiscard]] static AssetFolderListing collectAssets( const AssetID& folderID, string_view extension, vector<AssetID>& outListID );
         // VFS 팩 매니저는 `AssetManager` 가 소유한다 — `engine::getSubsystem<AssetManager>().getPackManager()` 로 닿는다(정적 창구를 두지 않는다).
     };
 } // namespace sw

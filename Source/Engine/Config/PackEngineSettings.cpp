@@ -59,7 +59,7 @@ namespace sw
             const DataPath* pValue    = prop.getValuePtr<DataPath>( this );
             const bool      bNotSet   = pValue == nullptr || pValue->isSet() == false;
             const bool      bSkipHost = bNotSet || AssetPaths::isExcludedForHost( pValue->get() );
-            if ( bSkipHost || AssetIO::hasResource( AssetID{ pValue->get() } ) )
+            if ( bSkipHost || AssetIO::hasAsset( AssetID{ pValue->get() } ) )
                 continue;
             SW_LOG_ERROR( "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );
             bComplete = false;

@@ -90,7 +90,7 @@ namespace sw::editor
             clearPreview( false );
             return false;
         }
-        if ( AssetIO::hasResource( AssetID{ _layoutPath } ) == false )
+        if ( AssetIO::hasAsset( AssetID{ _layoutPath } ) == false )
         {
             clearPreview( true ); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
             return false;

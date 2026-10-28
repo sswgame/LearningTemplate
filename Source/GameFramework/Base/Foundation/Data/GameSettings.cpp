@@ -27,7 +27,7 @@ namespace sw
         if ( assetRelativePath.empty() )
             return false;
 
-        if ( AssetIO::hasResource( assetID ) == false )
+        if ( AssetIO::hasAsset( assetID ) == false )
             return false;
 
         // **먼저 비운다.**

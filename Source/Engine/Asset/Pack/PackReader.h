@@ -86,7 +86,7 @@ namespace sw
          *          유효하지 않은 핸들을 돌려줍니다 — 그때 @p onComplete 는 불리지 않습니다.
          * @return 건 읽기의 핸들(취소 · 기다리기). 항목이 없으면 `isValid() == false` 입니다.
          */
-        AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
+        AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
         /** @brief 팩 헤더의 사본입니다(잠금 아래에서 복사한다 — 참조는 `close` 와 겹친다). */
         PackHeader getHeader() const;

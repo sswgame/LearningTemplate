@@ -22,7 +22,7 @@ namespace sw
             {
                 NavMeshSettings settings;
                 const AssetID   settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
-                if ( AssetIO::hasResource( settingsID ) == false || settings.loadFromAsset( settingsID ) == false )
+                if ( AssetIO::hasAsset( settingsID ) == false || settings.loadFromAsset( settingsID ) == false )
                     settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표면 모든 영역 이름이 오류로 보인다
                 return settings;
             }

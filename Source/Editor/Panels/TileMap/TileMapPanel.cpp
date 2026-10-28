@@ -667,7 +667,7 @@ namespace sw::editor
         if ( bLoad )
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
-            if ( AssetIO::hasResource( AssetID{ _pathBuffer.c_str() } ) )
+            if ( AssetIO::hasAsset( AssetID{ _pathBuffer.c_str() } ) )
                 reloadDocument();
             else
                 SW_LOG_WARNING( "No tile map at '%#'", _pathBuffer.c_str() );

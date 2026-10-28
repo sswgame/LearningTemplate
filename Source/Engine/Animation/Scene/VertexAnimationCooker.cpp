@@ -95,14 +95,14 @@ namespace sw
             _listClip.push_back( hashed_string( string_view{ clip.getText() } ) );
         }
         // 가리키는 파일이 모두 있어야 한다 — 이름이 틀린 목록이 쿠킹 때 조용히 빠지지 않게.
-        if ( AssetIO::hasResource( AssetID{ _meshPath } ) == false || AssetIO::hasResource( AssetID{ _skeletonPath } ) == false )
+        if ( AssetIO::hasAsset( AssetID{ _meshPath } ) == false || AssetIO::hasAsset( AssetID{ _skeletonPath } ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
         for ( const hashed_string& clipName : _listClip )
         {
-            if ( AssetIO::hasResource( AssetID{ makeClipPath( clipName ) } ) == false )
+            if ( AssetIO::hasAsset( AssetID{ makeClipPath( clipName ) } ) == false )
             {
                 SW_LOG_ERROR( "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
                 return false;

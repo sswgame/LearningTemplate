@@ -202,8 +202,8 @@ namespace sw
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
             const string driverPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
             const string commonPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
-            const bool   bHasDriver = AssetIO::hasResource( AssetID{ driverPath } );
-            if ( bHasDriver == false && AssetIO::hasResource( AssetID{ commonPath } ) == false )
+            const bool   bHasDriver = AssetIO::hasAsset( AssetID{ driverPath } );
+            if ( bHasDriver == false && AssetIO::hasAsset( AssetID{ commonPath } ) == false )
             {
                 outError = SQLMigrationRunnerInternal::makeText( "migration ", file._version, " has no common file and no file for driver ", driverName );
                 return false;

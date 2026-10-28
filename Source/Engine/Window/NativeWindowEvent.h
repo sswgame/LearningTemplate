@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Graphics/RHI/IRenderSurface.h"
+#include "Engine/Window/IRenderSurface.h"
 
 namespace sw
 {

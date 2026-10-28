@@ -16,7 +16,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/IRenderSurface.h"
+#include "Engine/Window/IRenderSurface.h"
 
 namespace sw
 {

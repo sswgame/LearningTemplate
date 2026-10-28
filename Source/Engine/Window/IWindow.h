@@ -8,8 +8,8 @@
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/IRenderSurface.h"
 #include "Engine/Window/CursorShape.h"
+#include "Engine/Window/IRenderSurface.h"
 
 namespace sw
 {
@@ -59,7 +59,7 @@ namespace sw
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
      * @details 플랫폼별(Windows, Linux) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
      *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
-     *          include 하지 않는 이유입니다(Engine/Graphics/RHI/IRenderSurface.h).
+     *          include 하지 않는 이유입니다(Engine/Window/IRenderSurface.h).
      */
     class SW_API IWindow : public IRenderSurface, public IModuleUnloadListener
     {

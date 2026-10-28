@@ -269,7 +269,7 @@ namespace sw
 
     uint32 AssetDatabase::loadRegistry( const AssetID& assetID )
     {
-        if ( AssetIO::hasResource( assetID ) == false )
+        if ( AssetIO::hasAsset( assetID ) == false )
             return 0;
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
@@ -434,7 +434,7 @@ namespace sw
     AssetMetaReadResult AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGUID, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        if ( AssetIO::hasResource( AssetID{ metaRel } ) == false )
+        if ( AssetIO::hasAsset( AssetID{ metaRel } ) == false )
             return AssetMetaReadResult::Missing;
 
         string    metaText;

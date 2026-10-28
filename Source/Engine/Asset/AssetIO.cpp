@@ -166,7 +166,7 @@ namespace sw
         return CookJob::admitRead( relativePath, outBytes.data(), outBytes.size() );
     }
 
-    AsyncReadHandle AssetIO::readBinaryResourceAsync( const AssetID& id, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
+    AsyncReadHandle AssetIO::readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete )
     {
         const string_view relativePath = id.view();
         AsyncFileIO&      io           = engine::getSubsystem<AsyncFileIO>();
@@ -194,7 +194,7 @@ namespace sw
         return handle;
     }
 
-    bool AssetIO::hasResource( const AssetID& id )
+    bool AssetIO::hasAsset( const AssetID& id )
     {
         const string_view relativePath = id.view();
         // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
@@ -219,7 +219,7 @@ namespace sw
         return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
     }
 
-    ResourceFolderListing AssetIO::collectResources( const AssetID& folderID, string_view extension, vector<AssetID>& outListID )
+    AssetFolderListing AssetIO::collectAssets( const AssetID& folderID, string_view extension, vector<AssetID>& outListID )
     {
         const string_view relativeFolder = folderID.view();
         outListID.clear();
@@ -227,7 +227,7 @@ namespace sw
         if ( bNotAssetID )
         {
             SW_LOG_ERROR( "Cannot list '%#' - a resource folder is a relative resource id without '..'", relativeFolder );
-            return ResourceFolderListing::Failed;
+            return AssetFolderListing::Failed;
         }
         const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( relativeFolder ) );
 
@@ -244,7 +244,7 @@ namespace sw
                 if ( FileUtil::collectFiles( diskFolder, {}, listDiskFile, false ) == false )
                 {
                     SW_LOG_ERROR( "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
-                    return ResourceFolderListing::Failed;
+                    return AssetFolderListing::Failed;
                 }
                 bFolderFound = true;
                 for ( const string& filePath : listDiskFile )
@@ -258,7 +258,7 @@ namespace sw
             pPackManager->collectFolderEntries( folder, listCandidate );
         bFolderFound = bFolderFound || listCandidate.size() > diskCount;
         if ( bFolderFound == false )
-            return ResourceFolderListing::FolderMissing;
+            return AssetFolderListing::FolderMissing;
 
         // (소문자 키, 표기) — 키로 안정 정렬해 같은 키의 첫 표기(디스크 · 높은 우선순위 팩)를 남긴다.
         vector<pair<string, string>> listKeyed;
@@ -276,6 +276,6 @@ namespace sw
             if ( index == 0 || listKeyed[index].first != listKeyed[index - 1].first )
                 outListID.emplace_back( listKeyed[index].second );
         }
-        return ResourceFolderListing::Listed;
+        return AssetFolderListing::Listed;
     }
 } // namespace sw

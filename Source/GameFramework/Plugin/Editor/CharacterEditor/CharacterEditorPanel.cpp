@@ -1676,7 +1676,7 @@ namespace sw::editor
             _packDataMessage = "Character editor data has no path: " + error;
             return;
         }
-        if ( AssetIO::hasResource( AssetID{ _packDataPath } ) == false )
+        if ( AssetIO::hasAsset( AssetID{ _packDataPath } ) == false )
         {
             _packDataState = PackDataState::Missing;
             return;

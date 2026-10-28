@@ -99,7 +99,7 @@ namespace sw
             }
 
             /** @brief 2) 텍스처, 샘플러, 버퍼 바인딩. */
-            void collectResources( const ShaderReflectionData& reflection, ShaderStageFlag visibility )
+            void collectAssets( const ShaderReflectionData& reflection, ShaderStageFlag visibility )
             {
                 for ( const ShaderReflectedBinding& res : reflection._listResource )
                 {
@@ -155,7 +155,7 @@ namespace sw
                 continue;
             const ShaderStageFlag visibility = toShaderStageFlag( stage );
             collector.collectConstantBuffers( *pReflection, visibility );
-            collector.collectResources( *pReflection, visibility );
+            collector.collectAssets( *pReflection, visibility );
         }
         // 원소 stride 는 모든 스테이지의 슬롯이 모인 뒤에 붙인다.
         for ( const auto& [stage, pReflection] : listStageReflection )

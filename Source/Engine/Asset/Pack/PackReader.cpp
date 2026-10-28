@@ -369,7 +369,7 @@ namespace sw
         return true;
     }
 
-    AsyncReadHandle PackReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle PackReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
     {
         PackReadPlan    plan{};
         AsyncFileHandle file;

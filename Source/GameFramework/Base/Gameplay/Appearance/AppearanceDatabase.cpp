@@ -120,11 +120,11 @@ namespace sw
         }
         // 프리셋 에셋 — 폴더가 없으면 없는 것이다(선택). 나열은 팩을 아는 `AssetIO` 로 한다(디스크만 훑으면 팩 빌드에서 0개로 읽힌다).
         // 나열이 이름순이라 같은 id 는 뒤 파일이 이긴다(실행마다 같다). 폴더가 있는데 나열에 실패하면 오류다.
-        const string                presetFolder = FileUtil::joinPath( folder, kPresetFolder );
-        vector<AssetID>             listPresetFile;
-        bool                        bPresetsRead = true;
-        const ResourceFolderListing listing      = AssetIO::collectResources( AssetID{ presetFolder }, kPresetExtension, listPresetFile );
-        if ( listing == ResourceFolderListing::Failed )
+        const string             presetFolder = FileUtil::joinPath( folder, kPresetFolder );
+        vector<AssetID>          listPresetFile;
+        bool                     bPresetsRead = true;
+        const AssetFolderListing listing      = AssetIO::collectAssets( AssetID{ presetFolder }, kPresetExtension, listPresetFile );
+        if ( listing == AssetFolderListing::Failed )
         {
             _report.addErrorWithID( "Appearance.PresetFolderUnreadable", "%#: cannot list the appearance preset folder", presetFolder );
             bPresetsRead = false;

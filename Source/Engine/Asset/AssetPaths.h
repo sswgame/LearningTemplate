@@ -87,7 +87,7 @@ namespace sw
         /**
          * @brief 이 프로세스를 띄운 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 묶음
          *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` — 묶음은 종류 표 `AssetTypeDef::_excludeGroup`. 서버는 텍스처, 셰이더 바이너리, 오디오)는 이 호출 뒤부터
-         *        **없는 것**으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasResource` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
+         *        **없는 것**으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasAsset` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
          * @details 팩 쿠커(`PackCooker`, `isExcludedForTarget`)가 같은 테이블로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`Engine::initialize`)에서
          *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
          */
@@ -110,7 +110,7 @@ namespace sw
 
         /**
          * @brief 리소스 루트 **밖**의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.
-         * @details 리소스 입구(`AssetIO::read*Resource` · `hasResource`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다.
+         * @details 리소스 입구(`AssetIO::read*Resource` · `hasAsset`)는 리소스 id 만 받고 OS 경로는 오류로 거절합니다.
          *          루트 밖 디스크 파일(테스트 케이스 임시 폴더, 도구 작업 폴더)을 캐시 · 로더가 리소스로 읽어야 할 때 이 함수로 붙이고 id 로 부릅니다.
          *          붙인 도메인은 낱개 파일 금지 구성(배포본)에서도 디스크에서 읽습니다 — 붙인 쪽이 고른 것이고, 팩에는 없습니다.
          *          리소스 루트 **안**의 폴더는 붙일 수 없습니다(배포본의 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다).
