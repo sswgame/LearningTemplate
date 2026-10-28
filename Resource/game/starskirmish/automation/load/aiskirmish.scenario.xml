@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  부하 시나리오 — AI 가 많은 씬: StarSkirmish 의 두 진영을 모두 AI 가 돌린다(일꾼 · 건물 · 군대가 시간이 지날수록 늘어 게임 스레드가 무거워진다).
-  실행: py -3 -m Scripts load run aiskirmish, 프로필 LowEnd
--->
-<Scenario name="load.aiskirmish" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
-	<Load durationSeconds="30"/>
-	<At frame="0"><Variable name="gv_skirmishAutoPlay" value="1"/></At>
-</Scenario>

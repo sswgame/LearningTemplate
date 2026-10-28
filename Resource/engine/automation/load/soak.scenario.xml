@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  부하 시나리오 — 소크: 벤치 큐브 2000 개를 10 분 돌리며 메모리 · 핸들 증가 기울기와 히치 꼬리(최악 프레임 · 문턱을 넘은 프레임 수)를 본다.
-  기울기는 실행기가 밖에서 뜬 표본의 최소제곱이다(워밍업 1/4 제외 — Scripts/qa/Load.py).
-  실행: py -3 -m Scripts load run soak, 프로필 Native
--->
-<Scenario name="load.soak" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
-	<Load durationSeconds="600" meshes="2000" movers="1"/>
-</Scenario>
