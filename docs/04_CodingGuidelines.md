@@ -103,7 +103,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | `(void)table.loadFromResource();` | 읽기 결과를 받아 실패를 알리거나 멈춘다 |
 | 파이썬 `except Exception: pass` · `os.environ.get( "X", "경로" )` | 예상한 예외만 잡고, 필수 설정이 없으면 `sys.exit` 로 멈춘다 |
 
-데이터 주도 규칙의 정본은 [데이터 주도 구조 정리](plans/DataDriven.md).
+데이터 주도 규칙: 필수 값이 없으면 기본값으로 돌지 않고 오류로 멈춘다(폴백 없음).
 
 ## 5. 헬퍼 · 이름공간 — [규칙](agents/Helpers.md#helpers-util-vs-internal)
 

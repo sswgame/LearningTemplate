@@ -46,7 +46,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Console variable, cheat, switch | `Core/GlobalVariable/GlobalVariableManager.h` `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE` | a mutable `static` tuning flag |
 | User-facing text | `Engine/Localization/LocalizationManager.h` `getString` · `formatText` through `engine::getSubsystem<LocalizationManager>()` | literal UI strings |
 | Player input | `Engine/Input/InputManager.h` `getInputMap`; actions are defined in `*.input.xml` and queried by name | polling `getKeyboard()` keys in game code |
-| Run a child process | `Core/Process/Process.h` `Process::execute` · `launch` · `launchDetached`; Python: `Scripts/common/Process.py` `runProcess` | `system` · `popen` · `CreateProcess` · `fork` · `exec*`; Python `subprocess` |
+| Run a child process | `Core/Process/Process.h` `Process::execute` · `launch` · `launchDetached`; Python: `Scripts/common/RunProcess.py` `runProcess` | `system` · `popen` · `CreateProcess` · `fork` · `exec*`; Python `subprocess` |
 | Read stdin commands | `Core/Process/StandardInputReader.h` | a blocking `std::cin` loop |
 | Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` · `sparse_set` | `std::` containers |
 | Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects: `GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage |
