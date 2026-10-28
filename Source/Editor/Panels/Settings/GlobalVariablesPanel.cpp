@@ -297,7 +297,7 @@ namespace sw::editor
                 _bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset All" ) );
             if ( ImGui::Button( "Reset All" ) )
             {
                 gvm.resetAllToDefault();
@@ -305,12 +305,12 @@ namespace sw::editor
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Session" ) );
             if ( ImGui::Button( "Save Session" ) )
                 (void)trySaveDirtyDocument(); // 실패는 저장이 알리고 dirty 가 남는다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SaveSession" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Presets..." ) );
             if ( ImGui::Button( "Presets..." ) )
                 EditorInputGUI::openPopup( "##GvPresetsPopup" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "Presets" ) );
@@ -332,7 +332,7 @@ namespace sw::editor
 
         ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
                                   _presetNameBuf.capacity() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
         {
             const string presetPath = FileUtil::joinPath(

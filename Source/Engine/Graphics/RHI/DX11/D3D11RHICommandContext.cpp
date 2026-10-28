@@ -113,11 +113,22 @@ namespace sw
     void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
         // 컴퓨트 셰이더만 건다. 그래픽스 PSO 기록(_activeGraphicsPSO)은 건드리지 않는다 — 컴퓨트 PSO 가 그래픽스 자리에 남으면 다음 드로우가 멈춘다.
+        // 핸들은 레코드가 없어도 기록한다 — 디스패치가 앞 컴퓨트 PSO 로 대신 돌지 않고 requireComputePipelineForDispatch 에서 멈추게 한다.
+        _pState->_activeComputePSO                              = pso;
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
         if ( pRecord->_cs )
             _pContext->CSSetShader( pRecord->_cs.Get(), nullptr, 0 );
+    }
+
+    void D3D11RHICommandContext::requireComputePipelineForDispatch() const
+    {
+        // 백엔드 계약(네 백엔드 같음): 등록된 컴퓨트 PSO 없이 디스패치하면 오류로 멈춘다. 앞 디스패치의 셰이더로 대신 돌지 않고 조용히 건너뛰지도 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
+        if ( pRecord == nullptr || pRecord->_cs == nullptr )
+            SW_FATAL( "D3D11 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
     void D3D11RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
@@ -494,8 +505,10 @@ namespace sw
 
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
-        if ( _pContext != nullptr )
-            _pContext->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
+        if ( _pContext == nullptr )
+            return;
+        requireComputePipelineForDispatch();
+        _pContext->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
 
     void D3D11RHICommandContext::setViewport( const RHIViewport& viewport )
@@ -624,6 +637,7 @@ namespace sw
     {
         if ( _pContext != nullptr && argumentBuffer != 0 )
         {
+            requireComputePipelineForDispatch();
             ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
             if ( pBuf != nullptr )
                 _pContext->DispatchIndirect( pBuf, argumentBufferOffset );

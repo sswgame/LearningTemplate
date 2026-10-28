@@ -243,14 +243,14 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##BehaviorTreeToolbar" ) )
         {
             drawDocumentOpenBar( "behaviorTree" );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
             if ( ImGui::Button( "Save" ) )
                 (void)saveDocument(); // 실패는 상태 줄과 로그가 알린다
             EditorSelfTestMarks::note( "behaviorTree.save" );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
             if ( ImGui::Button( "Reload" ) )
                 reloadDocument();
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom fit" ) );
             if ( ImGui::Button( "Zoom fit" ) )
                 _nodeGraph.requestContentFit();
             ImGui::SameLine();
@@ -271,9 +271,9 @@ namespace sw::editor
                 ImGui::SameLine();
                 const bool bHasSelection = _model.find( _selectedID ) != nullptr;
                 const bool bMoveUp       = ImGui::Button( "Up" );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Down" ) );
                 const bool bMoveDown = ImGui::Button( "Down" );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete" ) );
                 const bool bDelete = ImGui::Button( "Delete" );
                 if ( bHasSelection )
                 {

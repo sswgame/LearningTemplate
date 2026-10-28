@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorSyncPreferences.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -456,7 +457,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kFieldWidthInFonts );
         ImGui::InputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Read server" ) );
         if ( ImGui::Button( "Read server" ) )
         {
             NetAddress remote;
@@ -470,14 +471,14 @@ namespace sw::editor
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kPathWidthInFonts );
         ImGui::InputTextWithHint( "##SyncPath", "Saved/StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load file" ) );
         if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, _arrPath[sourceIndex].c_str() ) == false )
             SW_LOG_WARNING( "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         ImGui::BeginDisabled( source._listSample.empty() );
         if ( ImGui::Button( "Save" ) && compare.saveToFile( sourceIndex, _arrPath[sourceIndex].c_str() ) == false )
             SW_LOG_WARNING( "Sync could not write %#", _arrPath[sourceIndex].c_str() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
         if ( ImGui::Button( "Clear" ) )
             compare.clearSource( sourceIndex );
         ImGui::EndDisabled();

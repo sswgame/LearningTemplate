@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -90,7 +91,7 @@ namespace sw::editor
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
                 (void)pWindow->exitIsolation( true ); // 실패는 창이 로그와 상태 줄로 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Exit Isolation" ) );
             if ( ImGui::Button( "Exit Isolation" ) )
                 (void)pWindow->exitIsolation( false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
@@ -127,7 +128,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ApplyAllOverrides" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All Overrides" ) );
         if ( ImGui::Button( "Revert All Overrides" ) )
         {
             if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
@@ -150,7 +151,7 @@ namespace sw::editor
             {
                 ImGui::PushID( static_cast<int32>( prefabIndex ) );
                 ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Edit" ) );
                 if ( ImGui::SmallButton( "Edit" ) )
                 {
                     // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
@@ -170,7 +171,7 @@ namespace sw::editor
 
         ImGui::Checkbox( "Show Modified Properties Only", &_bShowOnlyModified );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ShowModifiedOnly" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh Overrides" ) );
         if ( ImGui::SmallButton( "Refresh Overrides" ) )
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RefreshOverrides" ) );

@@ -77,7 +77,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return 0;
 
-        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 assertRegistryMutableNow 가 감시한다). 그러나
+        // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 requireRegistryMutableNow 가 감시한다). 그러나
         // **게임 스레드**는 렌더 스레드의 기록과 겹쳐 버퍼를 만들고 부순다(에디터가 없는 빌드 — 오브젝트가 사라지며 머티리얼 인스턴스가 풀린다).
         // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
         ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
@@ -609,6 +609,7 @@ namespace sw
     {
         if ( _pCmdList == nullptr )
             return;
+        requireComputePipelineForDispatch();
         if ( flushSlotTables( true ) == false )
             return;
         commandListForRecord()->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
@@ -731,6 +732,7 @@ namespace sw
         if ( bCannotDispatchIndirect )
             return;
 
+        requireComputePipelineForDispatch();
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
         if ( pArgs == nullptr )
             return;
@@ -784,6 +786,7 @@ namespace sw
             return;
 
         _pState->_arrSlotState[1]                               = D3D12SlotTableState{}; // 컴퓨트 슬롯 상태도 PSO 단위
+        _pState->_activeComputePSO                              = pso;                   // 레코드가 없어도 기록한다 — 디스패치가 앞 PSO 로 대신 돌지 않고 멈추게 한다
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
@@ -791,6 +794,15 @@ namespace sw
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
         // 리스트의 PSO 가 컴퓨트로 바뀌었다. 그래픽스 캐시를 비워 다음 드로우가 같은 핸들이어도 다시 건다(안 그러면 컴퓨트 PSO 로 그린다).
         _pState->_boundNativeGraphicsPSO = 0;
+    }
+
+    void D3D12RHICommandContext::requireComputePipelineForDispatch() const
+    {
+        // 백엔드 계약(네 백엔드 같음): 등록된 컴퓨트 PSO 없이 디스패치하면 오류로 멈춘다. 앞 디스패치의 PSO 로 대신 돌지 않고 조용히 건너뛰지도 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
+        const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeComputePSO );
+        if ( pRecord == nullptr || pRecord->_pso == nullptr )
+            SW_FATAL( "D3D12 dispatch without a registered compute PSO (handle %#)", _pState->_activeComputePSO );
     }
 
     // 길이 유지(긴 함수 정리 기준): 상태 전이 · 타깃 바인딩 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.

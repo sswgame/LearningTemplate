@@ -173,6 +173,11 @@ namespace sw::editor
         return columns * ImGui::CalcTextSize( "0" ).x;
     }
 
+    float32 EditorChrome::measureSmallButton( const utf8* pLabel )
+    {
+        return ImGui::CalcTextSize( pLabel, nullptr, true ).x + ImGui::GetStyle().FramePadding.x * 2.0f; // "##" 뒤 글자는 그려지지 않는다
+    }
+
     void EditorChrome::sameLineIfFits( float32 itemWidth )
     {
         const ImGuiStyle& style = ImGui::GetStyle();

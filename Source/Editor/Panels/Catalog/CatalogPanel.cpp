@@ -175,16 +175,16 @@ namespace sw::editor
         if ( ImGui::Button( "Refresh files" ) )
             _bIndexLoaded = false;
         EditorSelfTestMarks::note( "catalog.refresh" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         ImGui::BeginDisabled( _selectedID.empty() );
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 상태 줄에 이유가 있다
         EditorSelfTestMarks::note( "catalog.save" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
         if ( ImGui::Button( "Revert" ) )
             revertDocument();
         EditorSelfTestMarks::note( "catalog.revert" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Undo" ) );
         ImGui::BeginDisabled( _document.canUndo() == false );
         if ( ImGui::Button( "Undo" ) )
         {
@@ -195,7 +195,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "catalog.undo" );
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
         ImGui::BeginDisabled( _document.canRedo() == false );
         if ( ImGui::Button( "Redo" ) )
         {
@@ -204,7 +204,7 @@ namespace sw::editor
             syncDirty();
         }
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Validate" ) );
         if ( ImGui::Button( "Validate" ) )
         {
             validateCurrentFile();
@@ -314,7 +314,7 @@ namespace sw::editor
         else if ( _validationState == ValidationState::Failed )
         {
             ImGui::TextColored( ImVec4{ 0.95f, 0.45f, 0.35f, 1.0f }, "Validation failed (%d warnings)", static_cast<int32>( _listWarning.size() ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restore previous file" ) );
             if ( ImGui::SmallButton( "Restore previous file" ) )
                 restorePreviousFile();
             EditorSelfTestMarks::note( "catalog.restore" );

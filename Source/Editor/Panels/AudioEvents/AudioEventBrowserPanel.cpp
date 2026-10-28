@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -132,7 +133,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "audioevents.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "SaveEditsTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) )
         {
             endEditing();
@@ -165,7 +166,7 @@ namespace sw::editor
             pEvent      = _editLibrary.findEvent( _editEvent ); // 목록이 다시 잡혔을 수 있다
         }
         EditorSelfTestMarks::note( "audioevents.duplicate" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && AudioEventBrowserUtil::removeEvent( _editLibrary, _editEvent ) )
         {
             _editEvent  = _editLibrary._listEvent.empty() ? hashed_string{} : _editLibrary._listEvent.front()._name;
@@ -252,7 +253,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
             (void)engine.postEvent( _selectedEvent, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
         EditorSelfTestMarks::note( "audioevents.postEvent" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
             // 데이터 파일을 직접 연다(고치기 창 밖의 편집 — 예: 새 클립 경로를 여러 개 붙여 넣기). 여는 도구가 없으면 경로를 클립보드에 둔다.
@@ -268,7 +269,7 @@ namespace sw::editor
             drawLibraryEditor();
             return;
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) );
         ImGui::BeginDisabled( _bEditDirty ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
             beginEditing();

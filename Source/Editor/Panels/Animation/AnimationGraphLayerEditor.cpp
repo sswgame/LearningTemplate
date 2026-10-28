@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -194,7 +195,7 @@ namespace sw::editor
         const int32 layerCount = static_cast<int32>( listLayer.size() );
         const bool  bSelected  = 0 <= _selectedLayer && _selectedLayer < layerCount;
         ImGui::BeginDisabled( bSelected == false );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##layer" ) );
         if ( ImGui::Button( "Remove##layer" ) )
         {
             listLayer.erase( listLayer.begin() + _selectedLayer );
@@ -379,7 +380,7 @@ namespace sw::editor
         const AnimationGraphLayerDef* pUser =
             bSelected ? AnimationGraphLayerEditorInternal::findLayerUsingMask( inoutGraph, listMask[static_cast<size_t>( _selectedMask )]._name ) : nullptr;
         // 레이어가 쓰는 마스크를 지우면 저장한 그래프가 로드 오류가 된다 — 그 레이어의 마스크를 먼저 바꾼다.
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##mask" ) );
         ImGui::BeginDisabled( bSelected == false || pUser != nullptr );
         if ( ImGui::Button( "Remove##mask" ) )
         {

@@ -166,7 +166,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Post Event" ) ) );
         ImGui::BeginDisabled( _listEventName.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Post Event" ) ) )
             (void)engine.postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
@@ -179,7 +179,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)ImGui::InputTextWithHint( "##AudioMixerClip", "audio/sample.wav", _clipPath.data(), _clipPath.capacity() );
         EditorSelfTestMarks::note( "audiomixer.clipPath" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) )
             (void)audio.play( ResourceID{ _clipPath.c_str() } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다

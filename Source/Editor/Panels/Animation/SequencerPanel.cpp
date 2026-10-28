@@ -189,22 +189,22 @@ namespace sw::editor
             if ( ImGui::Button( "Load" ) )
                 reloadDocument();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "LoadTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
             if ( ImGui::Button( "Save" ) )
                 saveToLoadedPath();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SaveTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
             if ( ImGui::Button( "Play" ) )
             {
                 syncPreviewPlayer();
                 _previewPlayer->playFromFrame( _currentFrame );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PlayTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Pause" ) );
             if ( ImGui::Button( "Pause" ) )
                 _previewPlayer->pause();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PauseTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
             if ( ImGui::Button( "Stop" ) )
             {
                 _previewPlayer->stop();
@@ -290,16 +290,16 @@ namespace sw::editor
             addKeyTrack( SequenceTrackKind::Transform );
         EditorSelfTestMarks::note( "sequencer.addTransformTrack" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddTransformTrackTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Property Track" ) );
         if ( ImGui::Button( "+ Property Track" ) )
             addKeyTrack( SequenceTrackKind::Property );
         EditorSelfTestMarks::note( "sequencer.addPropertyTrack" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddPropertyTrackTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Rig Slot Track" ) );
         if ( ImGui::Button( "+ Rig Slot Track" ) )
             addKeyTrack( SequenceTrackKind::RigSlot );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete Track" ) );
         ImGui::BeginDisabled( _selectedTrack < 0 );
         const bool bDeleteTrackRequested = ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() );
         if ( bDeleteTrackRequested )
@@ -412,7 +412,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "sequencer.addKey" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddKeyTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Delete Key" ) );
         ImGui::BeginDisabled( track.hasKeyAt( frame ) == false );
         if ( ImGui::Button( "Delete Key" ) && track.removeKeysAt( frame ) )
         {
@@ -490,7 +490,7 @@ namespace sw::editor
             fixed_string<constant::kMaxBuffer64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::note( mark.c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curve" ) );
             if ( ImGui::SmallButton( "Curve" ) )
             {
                 _curveTrack              = _selectedTrack;
@@ -517,7 +517,7 @@ namespace sw::editor
 
         ImGui::SeparatorText( "Curve" );
         ImGui::Text( "%s / %s (frames)", track._name.c_str(), track.getChannelName( static_cast<uint32>( _curveChannel ) ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Close" ) );
         if ( ImGui::SmallButton( "Close" ) )
         {
             _curveTrack = -1;

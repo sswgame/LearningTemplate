@@ -18,6 +18,8 @@ namespace sw
 {
     struct AutomationStep;
 
+    class AutomationScenario;
+
     /** @brief 단계의 검사가 기대는 이름 가운데, 이 프로세스에 등록돼 있지 않아 답을 낼 수 없는 것의 종류입니다. */
     enum class AutomationStepDependency : uint8
     {
@@ -56,6 +58,14 @@ namespace sw
          *          그 검사에 이름을 묻는 곳이 늘면 여기에도 더한다 — 빠뜨리면 실행기 없는 검사가 "틀렸다" 로 드러나 알려 준다(조용히 통과하지 않는다).
          */
         [[nodiscard]] static AutomationStepDependency findUnresolvedDependency( const AutomationStep& step, string& outName );
+
+        /**
+         * @brief 데스크톱 전역 상태를 쓰는 단계(`AutomationStepRegistration::_bUsesDesktop`)가 혼합 입력(`input="mixed"`)이 아닌 시나리오에 있으면 false 와 이유입니다.
+         * @details 그런 단계(OS 커서 클립 등)는 겹쳐 도는 다른 프로세스의 창과 서로 방해해서 `<타깃>_Desktop` 에서 혼자 도는 시나리오(혼합 입력)에서만 쓸 수 있다.
+         *          표시를 시나리오 이름이 아니라 단계 등록에 두었으므로 새 데스크톱 단계는 등록 때 한 번 표시하면 모든 시나리오에 걸린다. 이 프로세스에 등록되지 않은 단계는 모르는 것이라 건너뛴다
+         *          (그 판단은 `findUnresolvedDependency`).
+         */
+        [[nodiscard]] static bool validateDesktopSteps( const AutomationScenario& scenario, string& outError );
 
         /** @brief 못 본 까닭의 종류 이름입니다(보고에 적는다). */
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );

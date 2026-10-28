@@ -62,6 +62,10 @@ namespace sw
          */
         void resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
         /**
+         * @brief 디스패치가 쓸 프로그램을 `setComputePipelineState` 로 건 컴퓨트 PSO 에서 고릅니다. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다).
+         */
+        [[nodiscard]] uint32 resolveComputeProgram() const;
+        /**
          * @brief 인덱스 없는 드로우의 몸통입니다. `draw` 와 `drawInstanced` 가 함께 씁니다.
          * @details 메시 정점 버퍼가 설정되어 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,
          *          둘 이상이면 `glDrawArraysInstanced` 를 부릅니다(언리얼 OpenGL RHI 의 `RHIDrawPrimitive` 와 같은 분기입니다).

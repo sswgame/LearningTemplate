@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
@@ -295,7 +296,7 @@ namespace sw::editor
         ImGui::Text( "%s  connections %d  samples %d", session.getProcessStatus( context._targetProcessIndex )._label.c_str(), track._lastReport._connectionCount,
                      track._series.getCount() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerSource" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
         if ( ImGui::Button( "Clear" ) )
         {
             history.clear();

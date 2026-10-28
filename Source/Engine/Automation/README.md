@@ -37,6 +37,8 @@ Scratch · Launch · Load · `isolated` · `editor` · `requireForeground` 선�
 
 **전경.** 실제 커서 클립(`ExpectCursorClip`)이나 화면 복사(`CaptureWindow`)를 보는 시나리오는 루트에 `requireForeground="true"` 를 적습니다. 실행기는 첫 프레임부터 창을 전경으로 가져오고 얻을 때까지 시작하지 않으며 시작 시한(`startTimeoutFrames`)까지 못 얻으면 13 입니다(전경이 아닐 때 켠 1인칭 커서 잠금은 클라이언트를 눌러야 잡히기 때문).
 
+**데스크톱 전역 상태 단계.** OS 커서 클립 같은 데스크톱 전역 상태를 읽거나 쓰는 단계는 `SW_AUTOMATION_STEP_DESKTOP` 으로 등록하고(`_bUsesDesktop`), 그 단계를 쓴 시나리오가 `input="mixed"` 가 아니면 실행기의 준비와 시나리오 데이터 테스트(`AutomationStepValidation::validateDesktopSteps`)가 거절합니다. 혼합 입력 시나리오는 `<타깃>_Desktop` 에서 혼자 돌아 겹쳐 도는 다른 프로세스의 창과 방해하지 않습니다. 지금 이 표시가 있는 단계는 `ExpectCursorClip` 하나입니다(`CaptureWindow` 는 화면 복사라 같은 위험이 있으나 에디터 시나리오 11 개가 배타 입력으로 쓰고 있어 표시하지 않았습니다 — AutomationSplit 계획 문서 6절).
+
 **기록.** `<Record>` 가 남긴 값은 보고의 `records` 에 적힙니다. 게임 상태는 CPU 에서만 정해지므로 같은 시나리오는 백엔드마다 같은 기록을 내야 하고 `AppScenarioTest` 가 비교합니다.
 
 ## 따라 해 보기

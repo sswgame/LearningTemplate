@@ -63,22 +63,24 @@ namespace sw
          *          드로우가 **셰이더도 정점 버퍼도 없이 나가** 화면에 클리어 색만 남습니다. 새 진입점도 이것을 불러야 합니다.
          */
         [[nodiscard]] bool bindGraphicsPipelineForDraw();
-        void               drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                                         RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
-        void               setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void               setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
-        void               drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
-        void               dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
-        void               beginEventMarker( const utf8* pName ) override;
-        void               endEventMarker() override;
-        void               setPipelineState( RHIPipelineStateHandle pso ) override;
-        void               setComputePipelineState( RHIPipelineStateHandle pso ) override;
-        void               beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
-        void               endRenderPass() override;
-        void               setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
-        void               transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
-        void               copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
-        void               uavBarrier( RHIBufferHandle buffer ) override;
+        /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        void requireComputePipelineForDispatch() const;
+        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override;
+        void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) override;
+        void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override;
+        void beginEventMarker( const utf8* pName ) override;
+        void endEventMarker() override;
+        void setPipelineState( RHIPipelineStateHandle pso ) override;
+        void setComputePipelineState( RHIPipelineStateHandle pso ) override;
+        void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override;
+        void endRenderPass() override;
+        void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
+        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        void uavBarrier( RHIBufferHandle buffer ) override;
 
     private:
         /** @brief beginEventMarker 와 endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */

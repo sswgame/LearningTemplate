@@ -20,6 +20,7 @@
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Automation/AutomationStepValidation.h"
 #include "Engine/Automation/AutomationThresholdBasis.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
@@ -1533,6 +1534,8 @@ namespace sw
                 return false;
             }
         }
+        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false )
+            return false;
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );

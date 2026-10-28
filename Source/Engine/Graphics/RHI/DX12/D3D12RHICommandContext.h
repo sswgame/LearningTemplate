@@ -114,9 +114,11 @@ namespace sw
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 바인딩합니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
         [[nodiscard]] bool bindActiveGraphicsPSO();
-        void               bindFullscreenVertexBuffer();
-        void               bindBoundIndexBuffer();
-        void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        /** @brief 디스패치 직전에 `setComputePipelineState` 로 건 컴퓨트 PSO 가 등록된 레코드인지 봅니다. 아니면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        void requireComputePipelineForDispatch() const;
+        void bindFullscreenVertexBuffer();
+        void bindBoundIndexBuffer();
+        void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
 
         D3D12RHIDevice*            _pDevice;
         ID3D12GraphicsCommandList* _pCmdList;

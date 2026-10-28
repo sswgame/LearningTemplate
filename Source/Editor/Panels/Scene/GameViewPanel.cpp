@@ -260,7 +260,7 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "gameView.debugDraw" );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
             EditorSelfTestMarks::note( "gameView.screenshot" );

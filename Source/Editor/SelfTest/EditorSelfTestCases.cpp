@@ -219,12 +219,10 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
                 uint32 checkedCount{ 0 };
-                for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+                for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
                 {
                     const bool bSkipPanel = entry._pInstance == nullptr || entry._pInstance->isOpen() == false || entry._pInstance->getDefaultDockSlot() == EditorDockSlot::Floating;
                     if ( bSkipPanel )
@@ -402,12 +400,12 @@ namespace sw::editor
 
             static EditorSelfTestStep runInspectorDrawLeavesTheObjectAlone( EditorSelfTestContext& context )
             {
-                InspectorProbe& probe    = context.getTestState<InspectorProbe>();
-                EditorContext*  pContext = editor::findSubsystem<EditorContext>();
+                InspectorProbe& probe         = context.getTestState<InspectorProbe>();
+                EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
                 if ( context.getStepIndex() == 0 )
                 {
                     GameObjectManager* pManager = getActiveManager( context );
-                    if ( pManager == nullptr || context.expect( pContext != nullptr, "no editor context" ) == false )
+                    if ( pManager == nullptr )
                         return EditorSelfTestStep::Done;
                     GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestCamera" ) );
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
@@ -419,8 +417,8 @@ namespace sw::editor
                     pCamera->setOrthographic( true );
                     probe._objectID  = pObj->getObjectID();
                     probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
+                    editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
@@ -449,10 +447,7 @@ namespace sw::editor
                 constexpr const utf8* kFirstPath  = "engine/materials/benchtextured.material";
                 constexpr const utf8* kSecondPath = "engine/materials/sprite2d.material";
 
-                AssetManager* pResources = editor::findSubsystem<AssetManager>();
-                if ( context.expect( pResources != nullptr, "no resource manager" ) == false )
-                    return EditorSelfTestStep::Done;
-                const MaterialCache& cache = pResources->getAssetCache<MaterialCache>();
+                const MaterialCache& cache = editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
                 if ( context.expect( cache.isCached( kFirstPath ) == false, "the first probe material is already held by something else" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -488,12 +483,10 @@ namespace sw::editor
                 };
                 constexpr uint32 kCaseCount = static_cast<uint32>( sizeof( kArrFilterCase ) / sizeof( kArrFilterCase[0] ) );
 
-                HierarchyProbe& probe    = context.getTestState<HierarchyProbe>();
-                EditorContext*  pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                HierarchyProbe& probe         = context.getTestState<HierarchyProbe>();
+                EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 if ( context.expect( pHierarchy != nullptr, "no hierarchy panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -556,12 +549,10 @@ namespace sw::editor
             {
                 constexpr uint32 kRootCount = 300;
 
-                OffscreenRowProbe& probe    = context.getTestState<OffscreenRowProbe>();
-                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel*    pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                OffscreenRowProbe& probe         = context.getTestState<OffscreenRowProbe>();
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -648,29 +639,27 @@ namespace sw::editor
                 constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
                 constexpr uint32      kResizeFrameCount = 90;
 
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
                 // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 테스트가 바꾼 크기를 되돌리면서 이미 그린 텍스처를
                 // 같은 프레임에 해제한다. 패널은 다음 프레임에 닫히므로 첫 단계는 닫기만 한다.
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, false );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, false );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex > kResizeFrameCount )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, true );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, true );
                     return EditorSelfTestStep::Done;
                 }
 
                 // 패널과 같은 순서로 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임에서 해제한 텍스처는 앞 프레임의 스냅샷만 그렸다.
                 const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
-                pContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, width, height );
-                const EditorViewTarget& view = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
+                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, width, height );
+                const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
                 (void)context.expect( view._width == width && view._height == height && view._pTextureID != nullptr,
                                       "the scene view target was not recreated at the requested size" );
 
@@ -727,14 +716,14 @@ namespace sw::editor
                 constexpr const utf8* kProfilerPanelID = ProfilerPanel::kPanelID;
                 constexpr uint32      kMaxStepCount    = 30;
 
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr, "no editor context or RHI device" ) == false )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                if ( context.expect( editorContext.getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr, "no RHI device" ) == false )
                     return EditorSelfTestStep::Done;
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, true );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -746,9 +735,9 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
-                const RHIMemoryLedger& ledger = pContext->getSubsystem<EditorRenderViews>().getRHIDevice()->getMemoryLedger();
+                const RHIMemoryLedger& ledger = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice()->getMemoryLedger();
                 (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, false );
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -853,11 +842,11 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
                     HWND           hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
                     RECT           client{};
-                    EditorContext* pContext              = editor::findSubsystem<EditorContext>();
-                    const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
+                    EditorContext& editorContext         = editor::getSubsystem<EditorContext>();
+                    const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && editorContext.getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
                     if ( bCanProbeWindowGrowth )
                     {
-                        const IRHIDevice* pDevice    = pContext->getSubsystem<EditorRenderViews>().getRHIDevice();
+                        const IRHIDevice* pDevice    = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
                         const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
                         const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
                                                 pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );
@@ -881,26 +870,25 @@ namespace sw::editor
 
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelID  = UserSettingsPanel::kPanelID;
-                EditorContext*        pContext  = editor::findSubsystem<EditorContext>();
-                UserSettingsManager*  pSettings = editor::findSubsystem<UserSettingsManager>();
-                const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;
-                if ( context.expect( bReady, "no editor context or no user settings categories" ) == false )
+                constexpr const utf8* kPanelID      = UserSettingsPanel::kPanelID;
+                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                UserSettingsManager&  settings      = editor::getSubsystem<UserSettingsManager>();
+                if ( context.expect( settings.getCategories().empty() == false, "no user settings categories" ) == false )
                     return EditorSelfTestStep::Done;
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
                 // 홀수 단계는 탭을 선택하고, 짝수 단계는 그 탭의 테이블이 이 프레임에 그려졌는지 확인한다.
-                const vector<UserSettingCategoryDef>& listCategory  = pSettings->getCategories();
+                const vector<UserSettingCategoryDef>& listCategory  = settings.getCategories();
                 const uint32                          categoryIndex = ( stepIndex - 1 ) / 2;
                 if ( categoryIndex >= static_cast<uint32>( listCategory.size() ) )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     return EditorSelfTestStep::Done;
                 }
                 if ( ( stepIndex % 2 ) == 1 )

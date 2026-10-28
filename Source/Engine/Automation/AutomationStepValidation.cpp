@@ -77,6 +77,22 @@ namespace sw
         return AutomationStepDependency::Resolved;
     }
 
+    bool AutomationStepValidation::validateDesktopSteps( const AutomationScenario& scenario, string& outError )
+    {
+        if ( scenario.getInputMode() == VirtualInputMode::Mixed )
+            return true;
+        for ( const AutomationStep& step : scenario.getSteps() )
+        {
+            const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
+            if ( pRegistration == nullptr || pRegistration->_bUsesDesktop == false )
+                continue;
+            outError = step.describe() + ": this step reads or writes desktop-global state (OS cursor clip / foreground / screen), so the scenario must declare input=\"mixed\" " +
+                       "and run alone in the Desktop suite";
+            return false;
+        }
+        return true;
+    }
+
     const utf8* AutomationStepValidation::getDependencyLabel( AutomationStepDependency dependency )
     {
         switch ( dependency )

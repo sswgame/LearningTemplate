@@ -61,11 +61,9 @@ namespace sw::editor
             /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다. 도킹 탭이 가려져 있으면 그리기가 실행되지 않습니다. */
             static ContentBrowserPanel* findVisibleContentBrowser( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return nullptr;
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kContentBrowserPanelID, true );
-                ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kContentBrowserPanelID, true );
+                ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( context.expect( pPanel != nullptr, "no content browser panel" ) == false )
                     return nullptr;
                 ImGui::SetWindowFocus( kContentBrowserPanelTitle );
@@ -369,13 +367,13 @@ namespace sw::editor
                 constexpr uint32      kSettleStepCount = 2; ///< 패널이 열리고 줄을 다시 만드는 프레임
                 constexpr const utf8* kObjectName      = "MapCheckSelfTestObject";
 
-                EditorContext*     pContext  = editor::findSubsystem<EditorContext>();
-                GameObjectManager* pManager  = editor::getActiveObjectManager();
-                MapCheckProbe&     probe     = context.getTestState<MapCheckProbe>();
-                const uint32       stepIndex = context.getStepIndex();
-                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                GameObjectManager* pManager      = editor::getActiveObjectManager();
+                MapCheckProbe&     probe         = context.getTestState<MapCheckProbe>();
+                const uint32       stepIndex     = context.getStepIndex();
+                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                MapCheckPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MapCheckPanel>();
+                MapCheckPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<MapCheckPanel>();
                 if ( context.expect( pPanel != nullptr, "no map check panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -392,8 +390,8 @@ namespace sw::editor
                     issue._severity    = ValidationSeverity::Error;
                     pManager->getSubsystem<SceneValidationIssues>().getLog().replaceIssues( probe._objectID, { issue } );
                     editor::getMainSceneSelection().clearObjectSelection();
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
-                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
+                    editorContext.getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < kSettleStepCount )
@@ -415,7 +413,7 @@ namespace sw::editor
                 GameObject* pObject = pManager->findGameObjectByID( probe._objectID );
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, false );
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -427,15 +425,15 @@ namespace sw::editor
             {
                 constexpr const utf8* kFocusedMaterialPath = "engine/materials/defaultmaterial.material";
 
-                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                GameObjectManager* pManager      = editor::getActiveObjectManager();
+                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
                 GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestNotAPrefab" ) );
                 if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                     return EditorSelfTestStep::Done;
 
-                EditorWorkspace& workspace  = pContext->getSubsystem<EditorWorkspace>();
+                EditorWorkspace& workspace  = editorContext.getSubsystem<EditorWorkspace>();
                 const string     savedFocus = workspace.getFocusedAssetPath();
                 workspace.setFocusedAssetPath( kFocusedMaterialPath );
 
@@ -461,13 +459,11 @@ namespace sw::editor
                 constexpr const utf8* kPanelID      = GlobalVariablesPanel::kPanelID;
                 constexpr uint32      kMaxStepCount = 30;
 
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                const uint32 stepIndex = context.getStepIndex();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                const uint32   stepIndex     = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -492,7 +488,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue; // 패널이 처음 그려지기를 기다린다
                 (void)context.expect( tableCount >= 2, "the global variables panel did not draw two module groups" );
                 (void)context.expect( scrollingTableCount == 0, "a module group table scrolls on its own and takes the whole panel height" );
-                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -523,12 +519,12 @@ namespace sw::editor
                 constexpr float32 kViewportRatio   = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
                 constexpr float32 kEdgeTolerancePx = 1.0f;
 
-                ToolWindowProbe&     probe     = context.getTestState<ToolWindowProbe>();
-                EditorContext*       pContext  = editor::findSubsystem<EditorContext>();
-                const ImGuiViewport* pViewport = ImGui::GetMainViewport();
-                if ( context.expect( pContext != nullptr && pViewport != nullptr, "no editor context or main viewport" ) == false )
+                ToolWindowProbe&     probe         = context.getTestState<ToolWindowProbe>();
+                EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
+                const ImGuiViewport* pViewport     = ImGui::GetMainViewport();
+                if ( context.expect( pViewport != nullptr, "no main viewport" ) == false )
                     return EditorSelfTestStep::Done;
-                EditorPanelManager& panelManager = pContext->getSubsystem<EditorPanelManager>();
+                EditorPanelManager& panelManager = editorContext.getSubsystem<EditorPanelManager>();
                 const uint32        stepIndex    = context.getStepIndex();
 
                 if ( stepIndex == 0 )
@@ -624,17 +620,15 @@ namespace sw::editor
                 constexpr uint32      kMaxStepCount    = 30;
                 constexpr float32     kRectTolerancePx = 1.0f;
 
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
-                    return EditorSelfTestStep::Done;
-                const uint32 stepIndex = context.getStepIndex();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                const uint32   stepIndex     = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
                     ImGui::SetWindowFocus( kSceneViewTitle ); // 가운데 탭이 게임 뷰나 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
                     return EditorSelfTestStep::Continue;
                 }
 
-                const EditorViewTarget& view         = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
+                const EditorViewTarget& view         = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
                 const ImTextureID       textureID    = reinterpret_cast<ImTextureID>( view._pTextureID );
                 const ImGuiContext&     imguiContext = *ImGui::GetCurrentContext();
                 int32                   imageCommandIndex{ -1 };

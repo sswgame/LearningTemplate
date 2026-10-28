@@ -61,8 +61,8 @@ _kActionConstantRe = re.compile(r"\bk[A-Z]\w*Action(?:Name)?\s*(?:\[\s*\])?\s*=\
 #: 액션 이름의 모양(`Move` · `Park.Build`) — 같은 이름 꼴의 상수 중 데이터 낱말(`"action"` · `"discarded"`)은 액션이 아니다.
 _kActionNameRe = re.compile(r"[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*")
 #: 시나리오 단계 · 탐침 · 개발 명령의 등록 — 둘째 인자가 이름(리터럴 또는 `k…Kind` 상수)이다.
-_kStepRegistrationRe = re.compile(r'SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*"([^"]+)"')
-_kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*(?:\w+::)?(k\w+Kind)\b")
+_kStepRegistrationRe = re.compile(r'SW_AUTOMATION_STEP(?:_WITH_HOOKS|_DESKTOP)?\s*\(\s*\w+\s*,\s*"([^"]+)"')
+_kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS|_DESKTOP)?\s*\(\s*\w+\s*,\s*(?:\w+::)?(k\w+Kind)\b")
 _kStepKindConstantRe = re.compile(r'\b(k\w+Kind)\s*(?:\[\s*\])?\s*=\s*"([^"]+)"')
 _kProbeRegistrationRe = re.compile(r'SW_AUTOMATION_(?:QUERY_)?PROBE\s*\(\s*\w+\s*,\s*"([^"]+)"')
 _kDevCommandRegistrationRe = re.compile(r'SW_DEV_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')

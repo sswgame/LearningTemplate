@@ -496,7 +496,7 @@ namespace sw::editor
                 bChanged       = true;
             }
             EditorWidgets::drawTooltip( "Solve the end onto the source end position (feet that plant without sliding)" );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
                 removeIndex = chainIndex;
             ImGui::PopID();
@@ -554,7 +554,7 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 bChanged = true;
             EditorSelfTestMarks::note( "retarget.targetPose.rotation" );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
                 removeIndex = poseIndex;
             ImGui::PopID();
@@ -597,7 +597,7 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( pairIndex ) );
             ImGui::Text( "%s -> %s", listPair[pairIndex]._source.c_str(), listPair[pairIndex]._target.c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
                 removeIndex = pairIndex;
             ImGui::PopID();

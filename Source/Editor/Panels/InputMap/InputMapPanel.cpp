@@ -269,16 +269,16 @@ namespace sw::editor
         ImGui::SameLine();
         (void)_inputMapPath.drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
         if ( ImGui::Button( "Reload" ) )
             reloadFromFile();
         EditorSelfTestMarks::note( "inputMap.reload" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReloadTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::Button( "Save" ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All to Default" ) );
         if ( ImGui::Button( "Revert All to Default" ) )
         {
             _inputMap.resetAllBindingsToDefault();
@@ -361,7 +361,7 @@ namespace sw::editor
         const ActionPhase phase = _inputMap.getActionPhase( action );
         ImGui::Text( "State: %s  hold %.2f s", _inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( _inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
                      static_cast<float64>( _inputMap.getActionHoldDuration( action ) ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset to Default" ) );
         if ( ImGui::SmallButton( "Reset to Default" ) && _inputMap.resetActionToDefault( action ) )
             markDocumentDirty();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
@@ -396,7 +396,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
         drawTriggerCombo( action, bindIndex );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind" ) );
         ImGui::BeginDisabled( bRebindable == false );
         if ( ImGui::SmallButton( "Rebind" ) )
         {
@@ -497,14 +497,14 @@ namespace sw::editor
             formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputMap::getGlyphForSlot( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
                           other.c_str(), conflict._layer.c_str() );
             EditorThemeUtil::textError( conflictText.c_str() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind this" ) );
             if ( ImGui::SmallButton( "Rebind this" ) )
             {
                 _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
                 _bCapturingKey      = SW_TRUE;
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unbind other" ) );
             if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
                 markDocumentDirty();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
@@ -606,7 +606,7 @@ namespace sw::editor
             ImGui::Combo( "Type", &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Create Action" ) );
             if ( ImGui::Button( "Create Action" ) && _newActionName.empty() == false )
             {
                 static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
@@ -822,11 +822,11 @@ namespace sw::editor
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "Right Motor", &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Test Pulse (0.3s)" ) );
                 if ( ImGui::Button( "Test Pulse (0.3s)" ) )
                     pGamepad->playVibration( _testVibLeft, _testVibRight, 0.3f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TestPulseTip" ) );
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
                 if ( ImGui::Button( "Stop" ) )
                     pGamepad->stopVibration();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopVibrationTip" ) );
@@ -899,15 +899,15 @@ namespace sw::editor
 
         EditorChrome::setNextItemWidthColumns( 20.0f );
         ImGui::Combo( "Key", &_simKeyToInject, arrCommonKeys, 11 );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Inject KeyDown" ) );
         if ( ImGui::Button( "Inject KeyDown" ) )
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyDownTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Inject KeyUp" ) );
         if ( ImGui::Button( "Inject KeyUp" ) )
             input.postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyUpTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Tap Key (Down + Up)" ) );
         if ( ImGui::Button( "Tap Key (Down + Up)" ) )
         {
             input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
@@ -931,7 +931,7 @@ namespace sw::editor
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectStickTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset Stick to Center" ) );
         if ( ImGui::Button( "Reset Stick to Center" ) )
         {
             _simStick._x            = 0.0f;
@@ -957,7 +957,7 @@ namespace sw::editor
         (void)_replayFilePath.drawField( "##ReplayFile", 260.0f ); // 확정한 경로만 Save · Load 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReplayFileTip" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Replay" ) );
         if ( ImGui::Button( "Save Replay" ) )
         {
             const string diskPath = ResourcePaths::resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
@@ -966,7 +966,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveReplayTip" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load Replay" ) );
         if ( ImGui::Button( "Load Replay" ) )
         {
             if ( input.getVirtualInput() == &_replay )
@@ -1007,7 +1007,7 @@ namespace sw::editor
             EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
             ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", _replay.getFrameCount() );
             EditorThemeUtil::popTextColor();
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "■ Stop Recording" ) );
             if ( ImGui::Button( "■ Stop Recording" ) )
                 _replay.stopRecording();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopRecordingTip" ) );
@@ -1030,7 +1030,7 @@ namespace sw::editor
             if ( ImGui::Button( "⏸ Pause" ) )
                 _replay.seekTo( input, currentFrame );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PauseReplayTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏹ Stop" ) );
             if ( ImGui::Button( "⏹ Stop" ) )
                 _replay.seekTo( input, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopReplayTip" ) );
@@ -1044,11 +1044,11 @@ namespace sw::editor
                 input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PlayReplayTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏮ Step Back" ) );
             if ( ImGui::Button( "⏮ Step Back" ) && currentFrame > 0 )
                 _replay.seekTo( input, currentFrame - 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepBackTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏭ Step Forward (1 Frame)" ) );
             if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
                 _replay.seekTo( input, currentFrame + 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepForwardTip" ) );

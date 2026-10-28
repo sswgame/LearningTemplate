@@ -52,7 +52,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -104,7 +104,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessBufferSrv" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSrv" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -177,14 +177,14 @@ namespace sw
 
     void D3D12RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         releaseBindlessSlot( index );
     }
 
     void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
         releaseBindlessSlot( index );
     }
 
@@ -247,7 +247,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUav" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -293,7 +293,7 @@ namespace sw
 
     RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTextureUav( RHITextureHandle texture )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
         ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
@@ -322,7 +322,7 @@ namespace sw
 
     void D3D12RHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
     {
-        _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUav" );
         releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 

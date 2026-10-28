@@ -100,25 +100,17 @@ namespace sw
 #endif
     }
 
-    void IRHIDevice::assertRegistryMutableNow( [[maybe_unused]] const utf8* pWhat ) const
-    {
-        // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를
-        // 읽는다" 는 뜻이라 개발자가 그 자리에서 알아채야 하므로 디버거를 세운다.
-        SW_LOG_ASSERT( _bParallelRecording.load( std::memory_order_relaxed ) == false,
-                       "%# tries to change the resource table during parallel pass recording. Creation/registration/release must "
-                       "finish in the graph setup phase - a resize during recording leaves the descriptor "
-                       "references held by draws dangling and the GPU dies with a PageFault "
-                       "(see IRHIDevice::setParallelRecording).",
-                       pWhat );
-    }
-
     SW_LOG_CALLER( "RHI" );
 
     void IRHIDevice::requireRegistryMutableNow( const utf8* pWhat ) const
     {
         if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
             return;
-        SW_FATAL( "%# tries to change the resource table during parallel pass recording - release it through IRHIDevice::releaseHandle (see setParallelRecording)", pWhat );
+        // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를 읽는다" 는 뜻이라 그 자리에서 멈춘다.
+        SW_FATAL( "%# tries to change the resource table during parallel pass recording. Creation/registration/release must finish in the graph setup phase "
+                  "(a resize during recording leaves the descriptor references held by draws dangling and the GPU dies with a PageFault) - "
+                  "release it through IRHIDevice::releaseHandle (see setParallelRecording)",
+                  pWhat );
     }
 
     void IRHIDevice::waitIdle()

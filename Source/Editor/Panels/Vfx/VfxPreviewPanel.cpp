@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -116,12 +117,12 @@ namespace sw::editor
         EditorSelfTestMarks::note( "vfx.reload" );
         EditorWidgets::drawTooltip( "Read the effect file again (after saving it in the Catalog Editor)" );
         VfxComponent* pSubject = findPreviewSubject();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restart" ) );
         if ( ImGui::Button( "Restart" ) && pSubject != nullptr )
             pSubject->play();
         EditorSelfTestMarks::note( "vfx.restart" );
         EditorWidgets::drawTooltip( "Play the effect again from the start" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
         if ( ImGui::Button( "Stop" ) && pSubject != nullptr )
             pSubject->stop();
         EditorSelfTestMarks::note( "vfx.stop" );

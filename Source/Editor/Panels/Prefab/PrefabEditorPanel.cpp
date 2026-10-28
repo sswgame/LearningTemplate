@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -266,13 +267,13 @@ namespace sw::editor
         const bool bNested = _isolation.getDepth() > 1;
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다 — 실패는 상태 줄에 남는다
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Save & Back" : "Save & Close" ) );
         if ( ImGui::Button( bNested ? "Save & Back" : "Save & Close" ) )
             (void)exitIsolation( true );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Back" : "Close" ) );
         if ( ImGui::Button( bNested ? "Back" : "Close" ) )
             (void)exitIsolation( false );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
         if ( ImGui::Button( "Reload" ) )
             reloadDocument();
     }

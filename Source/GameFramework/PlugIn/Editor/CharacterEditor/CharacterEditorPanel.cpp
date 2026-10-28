@@ -299,7 +299,7 @@ namespace sw::editor
         if ( _bExternalChange )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( EditorThemeUtil::getWarningColor() ), "A socket file was changed on disk while this window has unsaved edits." );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload from disk (discard edits)" ) );
             if ( ImGui::SmallButton( "Reload from disk (discard edits)" ) && loadSocketFile() == false )
                 SW_LOG_WARNING( "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _path.c_str() ); // 까닭은 상태 줄에 남았다
         }
@@ -808,7 +808,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "charactereditor.clip" );
         ImGui::SameLine();
         ImGui::Checkbox( "Loop##PreviewClip", &_bClipLoop );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play##PreviewClip" ) );
         ImGui::BeginDisabled( _selectedClip.empty() );
         if ( ImGui::Button( "Play##PreviewClip" ) )
         {
@@ -819,7 +819,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "charactereditor.playClip" );
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop##PreviewClip" ) );
         if ( ImGui::Button( "Stop##PreviewClip" ) )
             animator.stop();
         const bool bPlaying     = animator.getCurrentStateName() == _selectedClip && _selectedClip.empty() == false && animator.isAnimationActive();
@@ -852,16 +852,16 @@ namespace sw::editor
     {
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##SocketPath", _path.data(), _path.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
         if ( ImGui::Button( "Load" ) )
             reloadDocument(); // 경로 칸의 소켓 파일을 다시 읽는다 — 읽음 · 못 읽음 표시와 미저장 기준은 문서 계약이 맞춘다
         EditorSelfTestMarks::note( "charactereditor.loadSockets" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         ImGui::BeginDisabled( canSaveDocument() == false );
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "New" ) );
         if ( ImGui::Button( "New" ) )
         {
             _sockets.clear();
@@ -881,7 +881,7 @@ namespace sw::editor
         if ( ImGui::Button( "Undo" ) )
             (void)_sockets.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo" ) );
         ImGui::BeginDisabled( _sockets.canRedo() == false );
         if ( ImGui::Button( "Redo" ) )
             (void)_sockets.redo(); // 기록이 있을 때만 켜져 있다
@@ -913,7 +913,7 @@ namespace sw::editor
     void CharacterEditorPanel::drawSocketList()
     {
         ImGui::InputText( "##NewSocketName", _newName.data(), _newName.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add" ) );
         if ( ImGui::Button( "Add" ) )
         {
             const hashed_string name   = CharacterEditorPanelInternal::makeName( _newName.c_str() );
@@ -950,7 +950,7 @@ namespace sw::editor
 
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rename" ) );
         if ( ImGui::Button( "Rename" ) )
         {
             const hashed_string newName = CharacterEditorPanelInternal::makeName( _renameBuffer.c_str() );
@@ -959,7 +959,7 @@ namespace sw::editor
             if ( bDone )
                 _selectedSocket = newName;
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Mirror" ) );
         if ( ImGui::Button( "Mirror" ) )
         {
             hashed_string mirrorName;
@@ -968,7 +968,7 @@ namespace sw::editor
             if ( bDone )
                 _selectedSocket = mirrorName;
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
         if ( ImGui::Button( "Remove" ) )
         {
             reportEdit( _sockets.removeSocket( name, _status ) );
@@ -1017,14 +1017,14 @@ namespace sw::editor
     {
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##SkeletonPath", _skeletonPath.data(), _skeletonPath.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load skeleton" ) );
         if ( ImGui::Button( "Load skeleton" ) )
             loadSkeleton();
         EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
 
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##RefPosePath", _refPosePath.data(), _refPosePath.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load pose" ) );
         if ( ImGui::Button( "Load pose" ) )
         {
             const string readPath = ResourcePaths::findLooseFile( string_view( _refPosePath.c_str() ) ).getDiskPath();
@@ -1035,7 +1035,7 @@ namespace sw::editor
             else
                 _status.clear();
         }
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save pose" ) );
         ImGui::BeginDisabled( _pose.isDirty() == false );
         if ( ImGui::Button( "Save pose" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패 이유는 상태 줄에 남는다
@@ -1045,7 +1045,7 @@ namespace sw::editor
         if ( ImGui::Button( "Undo pose" ) )
             (void)_pose.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo pose" ) );
         ImGui::BeginDisabled( _pose.canRedo() == false );
         if ( ImGui::Button( "Redo pose" ) )
             (void)_pose.redo(); // 기록이 있을 때만 켜져 있다
@@ -1136,7 +1136,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _pose.hasOverride( _selectedBone ) == false );
         if ( ImGui::Button( "Reset bone" ) )
             reportEdit( _pose.clearBone( _selectedBone, error ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Mirror bone" ) );
         if ( ImGui::Button( "Mirror bone" ) )
         {
             hashed_string mirrored;
@@ -1166,7 +1166,7 @@ namespace sw::editor
         if ( ImGui::Button( "Undo appearance" ) )
             (void)_appearance.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Redo appearance" ) );
         ImGui::BeginDisabled( _appearance.canRedo() == false );
         if ( ImGui::Button( "Redo appearance" ) )
             (void)_appearance.redo(); // 기록이 있을 때만 켜져 있다
@@ -1184,7 +1184,7 @@ namespace sw::editor
         ImGui::InputText( "##ItemsPath", _itemsPath.data(), _itemsPath.max_size() );
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##AppearanceFolder", _appearanceFolder.data(), _appearanceFolder.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load data" ) );
         if ( ImGui::Button( "Load data" ) )
             loadAppearanceData();
         EditorSelfTestMarks::note( "charactereditor.loadData" );
@@ -1243,7 +1243,7 @@ namespace sw::editor
                 ImGui::PopID();
             }
             ImGui::InputText( "##NewSlot", _newName.data(), _newName.max_size() );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add slot" ) );
             if ( ImGui::Button( "Add slot" ) )
                 (void)_appearance.setSlotItem( CharacterEditorPanelInternal::makeName( _newName.c_str() ), hashed_string{} ); // 이미 있으면 false 이고 그대로 둔다
             return;
@@ -1514,7 +1514,7 @@ namespace sw::editor
             return;
         EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##PresetPath", _presetPath.data(), _presetPath.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load presets" ) );
         if ( ImGui::Button( "Load presets" ) )
         {
             const string readPath = ResourcePaths::findLooseFile( string_view( _presetPath.c_str() ) ).getDiskPath();
@@ -1525,7 +1525,7 @@ namespace sw::editor
         }
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##PresetName", _presetName.data(), _presetName.max_size() );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save as preset" ) );
         ImGui::BeginDisabled( _bDatabaseLoaded == false );
         if ( ImGui::Button( "Save as preset" ) )
         {
@@ -1574,7 +1574,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##ExportID", _exportID.data(), _exportID.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportID" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Export data preset" ) );
         ImGui::BeginDisabled( _bDatabaseLoaded == false );
         if ( ImGui::Button( "Export data preset" ) )
             exportDataPreset();

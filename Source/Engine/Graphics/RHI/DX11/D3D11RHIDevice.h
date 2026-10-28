@@ -65,6 +65,7 @@ namespace sw
         RHIBufferHandle        _boundInstanceSlotVb{ 0 }; ///< 슬롯 1: 인스턴스 슬롯 스트림(0이면 바인딩 안 됨)
         uint32                 _boundInstanceSlotOffset{ 0 };
         RHIPipelineStateHandle _activeGraphicsPSO{ 0 };
+        RHIPipelineStateHandle _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /**
          * @brief CS UAV 슬롯마다 지금 바인딩되어 있는 버퍼입니다(0이면 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 바인딩할 수 없다. UAV 를 해제하지 않으면

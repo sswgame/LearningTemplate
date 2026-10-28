@@ -250,11 +250,11 @@ namespace sw::editor
             ImGui::EndPopup();
         }
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Auto layout" ) );
         if ( ImGui::Button( "Auto layout" ) )
             _model.autoLayout();
         EditorSelfTestMarks::note( "gimmick.layout" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Zoom fit" ) );
         if ( ImGui::Button( "Zoom fit" ) )
             _nodeGraph.requestContentFit();
         ImGui::SameLine();
@@ -596,7 +596,7 @@ namespace sw::editor
             _statusText = "Select an object in the Hierarchy first";
         }
         EditorSelfTestMarks::note( "gimmick.target.use" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear target" ) );
         if ( ImGui::Button( "Clear target" ) && node._target.isValid() )
         {
             editSetTarget( circuit, node._graphID, GameObjectHandle{} );
@@ -681,7 +681,7 @@ namespace sw::editor
                 editSetInvert( circuit, wire._graphID, bInvert );
                 return;
             }
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove" ) );
             if ( ImGui::SmallButton( "Remove" ) )
                 removeWireID = wire._graphID;
             ImGui::PopID();

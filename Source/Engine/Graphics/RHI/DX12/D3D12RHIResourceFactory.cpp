@@ -925,7 +925,7 @@ namespace sw
         record._reserved   = 0;
         const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
 
-        _pDevice->assertRegistryMutableNow( "createTexture2D" );
+        _pDevice->requireRegistryMutableNow( "createTexture2D" );
 
         // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
         // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 읽는 쪽만 잠그면
@@ -1034,7 +1034,7 @@ namespace sw
     {
         if ( texture == 0 )
             return;
-        _pDevice->assertRegistryMutableNow( "destroyTexture" );
+        _pDevice->requireRegistryMutableNow( "destroyTexture" );
         {
             ScopedLock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 

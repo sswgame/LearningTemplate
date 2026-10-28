@@ -79,6 +79,7 @@ namespace sw
         uint32                 _boundIndexStride;
         uint32                 _boundIndexOffset;
         RHIPipelineStateHandle _activeGraphicsPSO;
+        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
          *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
          *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
@@ -110,6 +111,7 @@ namespace sw
             , _boundIndexStride{ 4 }
             , _boundIndexOffset{ 0 }
             , _activeGraphicsPSO{ 0 }
+            , _activeComputePSO{ 0 }
             , _boundNativeGraphicsPSO{ 0 }
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
@@ -743,7 +745,7 @@ namespace sw
 
         /// @brief bindless 레지스트리, 프리리스트, 디스크립터 카운터를 보호합니다. 구조를 바꾸는 register/unregister 와
         /// 파괴만 배타 잠금을 잡습니다. 기록 중의 읽기(컨텍스트의 resolveBufferAddress, resolveOfflineView)는 잠그지 않습니다.
-        /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, assertRegistryMutableNow)이
+        /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, requireRegistryMutableNow)이
         /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
         mutable shared_mutex           _bindlessMutex;

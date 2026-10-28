@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
@@ -359,7 +360,7 @@ namespace sw::editor
         for ( const NetEmulationPresetDef& preset : _presetTable._listPreset )
         {
             if ( &preset != &_presetTable._listPreset.front() )
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( preset._label.c_str() ) );
             if ( ImGui::Button( preset._label.c_str() ) )
             {
                 const NetEmulationConditions conditions = preset.makeConditions();
@@ -395,7 +396,7 @@ namespace sw::editor
         if ( ImGui::Button( "Disconnect" ) )
             sendToTargets( session, targetIndex, "net.disconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsDisconnect" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reconnect" ) );
         if ( ImGui::Button( "Reconnect" ) )
             sendToTargets( session, targetIndex, "net.reconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsReconnect" ) );
@@ -403,7 +404,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
         ImGui::InputFloat( "##SpikeSeconds", &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Spike" ) );
         if ( ImGui::Button( "Spike" ) )
             sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeSpikeCommand( _spikeSeconds ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsSpike" ) );

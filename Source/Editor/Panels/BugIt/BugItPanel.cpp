@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -99,11 +100,11 @@ namespace sw::editor
         if ( ImGui::SmallButton( editoricon::kFolderOpen ) )
             (void)EditorAssetFileCommands::showInFileExplorer( BugItPanelInternal::makeAbsolute( row._directory ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugIt", "ShowInExplorer" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCopy ) );
         if ( ImGui::SmallButton( editoricon::kCopy ) )
             ImGui::SetClipboardText( BugItPanelInternal::makeAbsolute( row._directory ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugIt", "CopyPath" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCamera ) );
         if ( ImGui::SmallButton( editoricon::kCamera ) )
         {
             SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
@@ -129,7 +130,7 @@ namespace sw::editor
             _note.clear(); // 모은 메모는 info.txt 에 남았다
         EditorSelfTestMarks::note( "bugIt.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugIt", "Capture" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) )
             _bRowsDirty = true;
 

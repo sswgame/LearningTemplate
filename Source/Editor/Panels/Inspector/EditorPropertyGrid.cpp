@@ -12,6 +12,7 @@
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -149,7 +150,7 @@ namespace sw::editor
                         inoutEditedValue |= val;
                     }
                 }
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear All" ) );
                 if ( ImGui::SmallButton( "Clear All" ) )
                     inoutEditedValue = 0;
                 ImGui::Separator();
@@ -494,7 +495,7 @@ namespace sw::editor
         // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
         if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
         {
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kRefresh ) );
             if ( ImGui::SmallButton( editoricon::kRefresh ) )
                 resetPropertyToDefault( instance, prop, defaultInstance );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
@@ -708,7 +709,7 @@ namespace sw::editor
                     { pSeq->addElementDefault( pContainer ); } );
                     notifyPropertyEdited( prop );
                 }
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
                 if ( ImGui::SmallButton( "Clear" ) )
                 {
                     EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Clear Elements", [pSeq, pContainer]()
@@ -1062,7 +1063,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", ReflectionInvoke::isEventBound( event, pInstance ) ? "(bound)" : "(unbound)" );
             if ( event.getParameterCount() == 0 )
             {
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Broadcast" ) );
                 if ( ImGui::SmallButton( "Broadcast" ) )
                     (void)ReflectionInvoke::broadcastEvent( event, pInstance, {} );
             }

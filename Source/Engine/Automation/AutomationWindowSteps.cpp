@@ -267,6 +267,6 @@ namespace sw
     }
 
     SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationWindowStepsInternal::validateMessage, false );
-    SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
+    SW_AUTOMATION_STEP_DESKTOP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
     SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, false );
 } // namespace sw

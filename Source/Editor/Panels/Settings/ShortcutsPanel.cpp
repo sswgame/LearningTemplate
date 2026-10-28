@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -114,7 +115,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "shortcuts.replace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ReplaceShortcut" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
         if ( ImGui::Button( "Cancel" ) )
             finishCapture();
         EditorSelfTestMarks::note( "shortcuts.cancel" );
@@ -172,7 +173,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SetShortcut" ) );
         if ( inputActions.isShortcutModified( desc._inputAction ) )
         {
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset" ) );
             if ( ImGui::SmallButton( "Reset" ) )
                 inputActions.resetShortcut( desc._inputAction );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetShortcut" ) );
