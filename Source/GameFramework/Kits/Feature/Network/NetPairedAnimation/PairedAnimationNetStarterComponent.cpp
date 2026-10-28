@@ -6,6 +6,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
@@ -26,9 +27,10 @@ namespace sw
         Component::onBeginPlay();
         _endedSeconds = 0.0f;
 
-        const GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        const bool            bClient     = pNetSession != nullptr && pNetSession->isActive() && pNetSession->getRole() == GameNetRole::Client;
-        GameObject*           pOwner      = getOwner();
+        GameObject*         pOwner   = getOwner();
+        GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneNetLink* pLink    = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr; // 이 컴포넌트의 월드의 넷 링크(전역 세션을 찾지 않는다)
+        const bool          bClient  = pLink != nullptr && pLink->isBound() && pLink->get()._role == NetLinkRole::Client;
         if ( bClient )
         {
             _bStarts = SW_FALSE; // 클라이언트는 서버가 보낸 세션을 받기만 한다

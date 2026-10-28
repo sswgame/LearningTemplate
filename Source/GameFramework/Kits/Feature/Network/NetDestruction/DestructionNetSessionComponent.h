@@ -4,7 +4,7 @@
  * @details 씬에 오브젝트 하나로 둔다. 역할은 실행 인자가 정한다(`GameNetSession` 머리말): 전용 서버 · `-gv_netListenPort` 면 서버,
  *          `-gv_netConnectAddress` 면 클라이언트, 세션이 없으면(혼자 하는 게임) 아무것도 하지 않는다. 복제와 해시 로그는 `DestructionNetSession` 이 맡는다.
  *          예: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777`, 클라이언트 `App -gv_firstScene=<같은 씬> -gv_netConnectAddress=127.0.0.1:7777`.
- *          두 로그를 `Scripts/dev/CompareDestructionHashLogs.py` 로 맞대면 컴파일러 · 플랫폼을 넘어 구조 해시가 같은지 본다.
+ *          두 로그를 `py -3 -m Scripts destruction-net compare` 로(두 프로세스를 띄우는 것까지는 `run`) 맞대면 컴파일러 · 플랫폼을 넘어 구조 해시가 같은지 본다.
  *
  *          틱은 마지막 그룹(`PostUpdate`)이다 — 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다. 서버의 사건 · 자세 시각은 틱 번호 × `_tickInterval` 이므로
  *          서버 고정 틱과 같아야 한다. 서버는 첫 틱의 델타가 다르면 오류를 남기고 복제를 멈춘다(다른 값으로 대신 돌지 않는다).

@@ -11,7 +11,7 @@
  *            폭발 드럼통(`ExplosiveBarrelComponent`)처럼 피해를 내는 기믹은 서버의 게임플레이라 클라이언트에서 끈다.
  *          - **해시 로그**: 오브젝트의 사건 수가 바뀔 때마다 `[DestructionHash] side=<server|client> id=<번호> events=<사건 수> hash=<16 자리> name=<이름>` 한 줄을 남긴다.
  *            같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시다(`DestructionState::computeStateHash`) — 다른 컴파일러 · 플랫폼의 서버와 클라이언트
- *            로그를 `Scripts/dev/CompareDestructionHashLogs.py` 가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
+ *            로그를 `py -3 -m Scripts destruction-net compare`(`Scripts/dev/DestructionNetPair.py`)가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
  *            로그 매크로를 쓰므로 Shipping 에는 줄이 없다.
  */
 #pragma once

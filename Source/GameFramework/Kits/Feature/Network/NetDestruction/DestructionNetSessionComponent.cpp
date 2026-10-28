@@ -7,6 +7,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/SceneStateHash.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -45,19 +46,21 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
         _bTickChecked = SW_FALSE;
 
-        GameNetSession*    pNetSession = game::findSubsystem<GameNetSession>();
-        GameObject*        pOwner      = getOwner();
-        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const bool         bNoSession  = pNetSession == nullptr || pNetSession->isActive() == false || pManager == nullptr;
+        // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
+        GameObject*         pOwner     = getOwner();
+        GameObjectManager*  pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneNetLink* pLink      = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        const bool          bNoSession = pLink == nullptr || pLink->isBound() == false;
         if ( bNoSession )
-            return; // 혼자 하는 게임 — 복제할 상대가 없다
+            return; // 혼자 하는 게임 - 복제할 상대가 없다
+        const NetLinkValue& link = pLink->get();
 
         DestructionReplicationConfig settings;
         settings._tickInterval        = _tickInterval;
         settings._hashInterval        = _hashInterval;
         settings._interpolationDelay  = _interpolationDelay;
-        const DestructionNetSide side = pNetSession->getRole() == GameNetRole::Server ? DestructionNetSide::Server : DestructionNetSide::Client;
-        _session.initialize( pNetSession->getPeers(), pNetSession->getRouter(), *pManager, side, settings );
+        const DestructionNetSide side = link._role == NetLinkRole::Server ? DestructionNetSide::Server : DestructionNetSide::Client;
+        _session.initialize( *link._pPeers, *link._pRouter, *pManager, side, settings );
         // 해시 이력(`-gv_stateHashHistory`)이 켜져 있으면 파괴 구조 해시를 `destruction` 줄로 같은 틱에 남긴다 — 씬 해시가 같아도 구조가 갈린 틱을 찾는다.
         StateHashHistory* pHistory       = game::findSubsystem<StateHashHistory>();
         const bool        bRecordsHashes = pHistory != nullptr && pHistory->isRecording() && _session.isActive();
@@ -96,8 +99,13 @@ namespace sw
 
     void DestructionNetSessionComponent::reportReplicaStats()
     {
-        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
-        if ( pNetSession == nullptr )
+        // 복제 표(프로파일러의 `replicas=`)는 전역 세션의 것이다 - 이 월드의 링크가 전역 세션의 창구일 때만 올린다(가상 서버 하니스의 월드는 올리지 않는다).
+        GameNetSession*     pNetSession  = game::findSubsystem<GameNetSession>();
+        GameObject*         pOwner       = getOwner();
+        GameObjectManager*  pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneNetLink* pLink        = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        const bool          bGlobalWorld = pNetSession != nullptr && pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &pNetSession->getPeers();
+        if ( bGlobalWorld == false )
             return;
         // 누적 셈을 틱마다 올린다(같은 이름은 덮는다). 서버는 보낸 양, 클라이언트는 받아 적용한 자세 · 사건 수가 갱신 수이다.
         const DestructionReplicationStats& stats       = _session.getStats();
