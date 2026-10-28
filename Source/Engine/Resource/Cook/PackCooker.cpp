@@ -186,6 +186,9 @@ namespace sw
                 ResourcePakWriterDesc writerDesc;
                 writerDesc._compression      = config._compression._codec;
                 writerDesc._compressionLevel = config._compression._level;
+                writerDesc._layoutMode       = config._layout._mode;
+                writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
+                writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
                 ResourcePakWriter writer( writerDesc );
 
                 // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).

@@ -39,6 +39,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct PackLayoutConfig
+     * @brief 팩 페이로드 배치(`ResourcePakWriter` 의 `PackLayoutMode`)와 슬롯 배치의 빈 자리 한도입니다.
+     * @details `Slot` 은 같은 폴더에 앞 빌드의 팩이 있으면 그 팩을 앞 빌드로 읽어 안 바뀐 항목의 자리를 지킨다(쿠커가 덮어쓸 팩 경로를 앞 빌드로 준다).
+     */
+    REFLECT()
+    struct SW_API PackLayoutConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        PackLayoutMode _mode{ PackLayoutMode::Sorted }; ///< 페이로드 배치
+
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _maxHolePercent{ 25 }; ///< `Slot` 에서 페이로드 영역의 빈 자리가 이 비율(%)을 넘으면 앞 빌드를 버리고 촘촘히 다시 배치한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct PackExcludeRule
      * @brief 이름 붙은 제외 규칙 하나입니다(폴더 · 패턴).
      */
@@ -78,6 +98,9 @@ namespace sw
 
         PROPERTY( Required )
         PackCompressionConfig _compression; ///< 팩 압축
+
+        PROPERTY( Required )
+        PackLayoutConfig _layout; ///< 페이로드 배치(항목 추가 · 삭제에 뒤 항목이 밀리지 않게 하는 슬롯 배치)
 
         PROPERTY( Required )
         bool _bExcludeRawShaderSource{ false }; ///< 셰이더 원본(`.hlsl` · `.hlsli`)을 팩에서 뺀다 — 배포물은 쿠킹한 바이너리만 읽는다

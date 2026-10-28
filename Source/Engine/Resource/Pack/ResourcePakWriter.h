@@ -8,8 +8,10 @@
  *            리더는 원본 크기 0 인 항목에 압축 바이트가 있으면 거절한다.
  *          - 바이트 안정성(스팀 청크 차이 받기용, 테스트 `PackLayoutTest.*`): 항목은 경로 해시 순으로 놓이고 항목별로 압축하므로 같은 입력이면 담는 순서와
  *            상관없이 같은 바이트다. 항목 하나가 바뀌어도 그 항목의 페이로드 · FAT 칸 밖은 그대로다. 단 항목을 더하거나 지우거나 섹터를 넘게 키우면 해시 순으로
- *            뒤에 오는 페이로드가 섹터 단위로 밀린다(내용은 그대로) — 고정 1MB 청크 비교에는 불리하고 내용 기준 청크에는 거의 영향이 없다. 밀림을 없애려면
- *            항목마다 빈 자리를 두는 형식 변경이 필요해 하지 않는다.
+ *            뒤에 오는 페이로드가 섹터 단위로 밀린다(내용은 그대로) — 고정 1MB 청크 비교에는 불리하고 내용 기준 청크에는 거의 영향이 없다. 밀림을 없애는 것이
+ *            슬롯 배치(`PackLayoutMode::Slot`)다: 헤더 · 페이로드 · FAT · 스트링 풀 순서로 놓고(디스크 형식은 같다 — 리더는 헤더의 오프셋만 믿는다), 앞 빌드의 팩(`_previousPackPath`)이
+ *            있으면 안 바뀐 항목이 앞 빌드의 자리를 지키며 커진 항목 · 새 항목은 앞 팩의 끝 뒤에 붙는다. 지운 항목의 자리는 비어 남고 빈 자리가 `_maxHolePercent` 를 넘으면
+ *            앞 빌드를 버리고 촘촘히 다시 배치한다. 결과가 앞 빌드 팩에도 달려 있어 `Sorted` 의 "같은 입력이면 같은 바이트" 는 앞 빌드가 같을 때만 성립한다.
  *          - 항목별 압축 · CRC 는 병렬이고(`engine::runParallel`, 항목마다 자기 결과 칸에만 쓴다) 오프셋 배치 · 바이트 조립은 경로 해시 순으로 직렬이다. 압축 크기를
  *            안 뒤에야 오프셋이 정해지므로 배치는 직렬 루프 그대로이고, 항목 정렬 키가 경로 해시라 병렬이어도 팩 바이트는 직렬로 돌 때와 비트 단위로 같다
  *            (테스트 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes`). 엔진 서비스가 없거나 워커가 없으면 호출 스레드가 차례로 돈다.
@@ -30,8 +32,11 @@ namespace sw
     struct ResourcePakWriterDesc
     {
         PackCompressionType _compression{ PackCompressionType::None };
-        int32               _compressionLevel{ 0 }; ///< 코덱의 레벨(0 = 코덱 기본값)
-        uint32              _dlcAppID{ 0 };         ///< 0: 본편 · 공용, >0: DLC AppID
+        int32               _compressionLevel{ 0 };                ///< 코덱의 레벨(0 = 코덱 기본값)
+        uint32              _dlcAppID{ 0 };                        ///< 0: 본편 · 공용, >0: DLC AppID
+        PackLayoutMode      _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")
+        string              _previousPackPath{};                   ///< `Slot` 에서 앞 빌드의 팩 경로. 없는 파일이면 앞 빌드가 없는 첫 배치이고, 열 수 없으면 경고를 남기고 슬롯 없이 배치한다
+        uint32              _maxHolePercent{ 25 };                 ///< `Slot` 에서 팩 페이로드 영역의 빈 자리가 이 비율(%)을 넘으면 앞 빌드를 버리고 촘촘히 다시 배치한다(지운 항목의 자리는 비어 남는다)
     };
 } // namespace sw
 
@@ -104,13 +109,20 @@ namespace sw
         struct CompressJob;
         /** @brief 직렬 배치 단계의 결과입니다(정의는 .cpp). FAT 칸 · 스트링 풀 · 구역 오프셋을 담아 조립 단계로 넘깁니다. */
         struct PackLayout;
+        /** @brief 앞 빌드 팩의 항목별 자리(오프셋 · 쓸 수 있는 크기)입니다(정의는 .cpp). `Slot` 배치만 만들고 읽는다. */
+        struct PreviousSlotTable;
+
+        /** @brief `Slot` 이고 앞 빌드의 팩이 있으면 그 항목 자리를 읽습니다. 앞 팩이 없거나 `Sorted` 면 빈 표로 true 이고, 열 수 없는 팩은 경고와 함께 빈 표입니다. */
+        [[nodiscard]] bool loadPreviousSlots( PreviousSlotTable& outTable ) const;
 
         /** @brief 항목을 경로 해시 순으로 세우고 원본 바이트 합을 셉니다. 같은 해시가 둘이면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool sortEntriesByPathHash( vector<const Entry*>& outListSorted, uint64& outInputBytes ) const;
         /** @brief 코덱을 찾고 항목별 압축 · CRC 를 돕니다. @p outWallNanos 는 그 구간의 벽시계 시간입니다. 코덱이 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool compressEntries( const vector<const Entry*>& listSorted, uint64 inputBytes, vector<CompressSlot>& outListSlot, int64& outWallNanos ) const;
         /** @brief 압축 크기로 오프셋을 정해 FAT 칸 · 스트링 풀을 만듭니다. 32 비트 칸에 안 담기거나 압축이 실패한 항목이 있으면 false 입니다. */
-        [[nodiscard]] bool layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, PackLayout& outLayout ) const;
+        [[nodiscard]] bool layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, const PreviousSlotTable& previousTable, PackLayout& outLayout ) const;
+        /** @brief `Slot` 배치에서 항목 페이로드의 오프셋과 FAT 위치를 정합니다. 앞 빌드 표가 있고 빈 자리가 한도 안이면 앞 자리를 지키고, 아니면 촘촘히 놓습니다. */
+        void placeSlotPayloads( const vector<uint64>& listPayloadSize, const PreviousSlotTable& previousTable, PackLayout& inoutLayout ) const;
         /** @brief 머리말 · FAT · 페이로드 · 스트링 풀을 @p outBytes 에 제자리 복사합니다. 항목의 압축 바이트는 복사 직후 놓습니다. */
         void assemblePack( const vector<const Entry*>& listSorted, vector<CompressSlot>& inoutListSlot, const PackLayout& layout, vector<uint8>& outBytes ) const;
 

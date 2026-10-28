@@ -3,6 +3,10 @@
     "_codec": "Zlib",
     "_level": 0
   },
+  "_layout": {
+    "_mode": "Sorted",
+    "_maxHolePercent": 25
+  },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [
     "textures_raw",

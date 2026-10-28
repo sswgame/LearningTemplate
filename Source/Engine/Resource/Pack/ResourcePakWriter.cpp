@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -15,6 +16,7 @@
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
 
 #include <algorithm>
 
@@ -214,15 +216,84 @@ namespace sw
         uint64                      _indexSize{ 0 };
         uint64                      _dataStartOffset{ 0 };
         uint64                      _dataEndOffset{ 0 };
+        uint64                      _stringPoolOffset{ 0 }; ///< 스트링 풀이 없으면 0
+        uint64                      _fileSize{ 0 };
         int64                       _compressCPUNanos{ 0 }; ///< 항목마다 잰 압축 · CRC 시간의 합
     };
 
-    bool ResourcePakWriter::layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, PackLayout& outLayout ) const
+    /** @brief 앞 빌드 팩의 항목 하나가 차지한 자리를 항목 경로 해시로 찾는 표입니다. */
+    struct ResourcePakWriter::PreviousSlotTable
+    {
+        struct Slot
+        {
+            uint64 _offset{ 0 };
+            uint64 _capacity{ 0 }; ///< 이 자리에 담을 수 있는 최대 바이트(다음 페이로드 오프셋까지)
+        };
+
+        unordered_map<uint64, Slot> _mapHashToSlot;
+        uint64                      _payloadEnd{ 0 }; ///< 앞 팩의 마지막 페이로드 끝(섹터 정렬). 새 항목은 이보다 뒤에 붙는다
+    };
+
+    bool ResourcePakWriter::loadPreviousSlots( PreviousSlotTable& outTable ) const
+    {
+        outTable               = PreviousSlotTable{};
+        const bool bNoPrevious = _desc._layoutMode != PackLayoutMode::Slot || _desc._previousPackPath.empty() || FileUtil::exists( _desc._previousPackPath ) == false;
+        if ( bNoPrevious )
+            return true;
+        ResourcePakReader reader;
+        if ( reader.open( _desc._previousPackPath ) == false )
+        {
+            SW_LOG_WARNING( "Pack layout: previous pack '%#' could not be opened - the slot layout starts without it", _desc._previousPackPath );
+            return true;
+        }
+        struct Placed
+        {
+            uint64 _hash{ 0 };
+            uint64 _offset{ 0 };
+            uint64 _size{ 0 };
+        };
+        vector<string> listPath;
+        reader.collectAllEntryPaths( listPath );
+        vector<Placed> listPlaced;
+        listPlaced.reserve( listPath.size() );
+        for ( const string& path : listPath )
+        {
+            PackFileEntry entry;
+            if ( reader.getFileEntry( path, entry ) == false )
+            {
+                SW_LOG_WARNING( "Pack layout: previous pack '%#' lists '%#' without an index entry - the slot layout starts without it", _desc._previousPackPath, path );
+                return true;
+            }
+            if ( entry._compressedSize != 0 ) // 빈 항목은 자리를 차지하지 않는다
+                listPlaced.push_back( { entry._pathHash, entry._dataOffset, entry._compressedSize } );
+        }
+        std::sort( listPlaced.begin(), listPlaced.end(), []( const Placed& left, const Placed& right )
+        { return left._offset < right._offset; } );
+        for ( size_t index = 0; index < listPlaced.size(); ++index )
+        {
+            const Placed& placed    = listPlaced[index];
+            const uint64  usedEnd   = ResourcePakWriterInternal::alignToPackSector( placed._offset + placed._size );
+            const uint64  nextBegin = index + 1 < listPlaced.size() ? listPlaced[index + 1]._offset : usedEnd;
+            if ( nextBegin < placed._offset + placed._size )
+            {
+                SW_LOG_WARNING( "Pack layout: previous pack '%#' has overlapping payloads - the slot layout starts without it", _desc._previousPackPath );
+                outTable = PreviousSlotTable{};
+                return true;
+            }
+            outTable._mapHashToSlot[placed._hash] = { placed._offset, nextBegin - placed._offset };
+            outTable._payloadEnd                  = outTable._payloadEnd > usedEnd ? outTable._payloadEnd : usedEnd;
+        }
+        return true;
+    }
+
+    bool ResourcePakWriter::layoutPack( const vector<const Entry*>& listSorted, const vector<CompressSlot>& listSlot, const PreviousSlotTable& previousTable, PackLayout& outLayout ) const
     {
         // 배치는 직렬이다 — 오프셋이 앞 항목들의 압축 크기에 달려 있다.
+        // `Sorted` 는 FAT 이 페이로드 앞이고, `Slot` 은 페이로드가 헤더 바로 뒤 섹터에서 시작해 FAT 이 페이로드 뒤다(FAT 이 자라도 페이로드가 밀리지 않게).
+        const bool bSlotLayout     = _desc._layoutMode == PackLayoutMode::Slot;
         outLayout._indexOffset     = ResourcePakWriterInternal::alignToPackSector( sizeof( PackHeader ) );
         outLayout._indexSize       = static_cast<uint64>( listSorted.size() ) * sizeof( PackFileEntryOnDisk );
-        outLayout._dataStartOffset = ResourcePakWriterInternal::alignToPackSector( outLayout._indexOffset + outLayout._indexSize );
+        outLayout._dataStartOffset = bSlotLayout ? outLayout._indexOffset : ResourcePakWriterInternal::alignToPackSector( outLayout._indexOffset + outLayout._indexSize );
 
         vector<PackFileEntryOnDisk>& listDiskEntry = outLayout._listDiskEntry;
         listDiskEntry.reserve( listSorted.size() );
@@ -230,6 +301,8 @@ namespace sw
         uint64&        dataEndOffset    = outLayout._dataEndOffset;
         int64&         compressCPUNanos = outLayout._compressCPUNanos;
         dataEndOffset                   = outLayout._dataStartOffset;
+        vector<uint64> listPayloadSize;
+        listPayloadSize.reserve( listSorted.size() );
         for ( size_t index = 0; index < listSorted.size(); ++index )
         {
             const Entry*        pEntry = listSorted[index];
@@ -251,12 +324,10 @@ namespace sw
                 return false;
             }
 
-            const uint64 payloadOffset = ResourcePakWriterInternal::alignToPackSector( dataEndOffset );
-            dataEndOffset              = payloadOffset + payloadSize;
-
+            listPayloadSize.push_back( payloadSize );
             PackFileEntryOnDisk diskEntry{};
             diskEntry._pathHash         = pEntry->_pathHash;
-            diskEntry._dataOffset       = payloadOffset;
+            diskEntry._dataOffset       = 0; // 모든 크기를 안 뒤에 아래에서 정한다
             diskEntry._compressedSize   = static_cast<uint32>( payloadSize );
             diskEntry._uncompressedSize = static_cast<uint32>( pEntry->_bytes.size() );
             diskEntry._crc32            = slot._crc32;
@@ -267,7 +338,81 @@ namespace sw
             stringPoolBytes.insert( stringPoolBytes.end(), pEntry->_relativePath.begin(), pEntry->_relativePath.end() );
             stringPoolBytes.push_back( 0 );
         }
+
+        if ( bSlotLayout )
+            placeSlotPayloads( listPayloadSize, previousTable, outLayout );
+        else
+        {
+            for ( size_t index = 0; index < listDiskEntry.size(); ++index )
+            {
+                const uint64 payloadOffset       = ResourcePakWriterInternal::alignToPackSector( dataEndOffset );
+                listDiskEntry[index]._dataOffset = payloadOffset;
+                dataEndOffset                    = payloadOffset + listPayloadSize[index];
+            }
+        }
+
+        // FAT 이 페이로드 앞(`Sorted`)이면 스트링 풀은 페이로드 뒤이고, 뒤(`Slot`)면 FAT 뒤다.
+        const uint64 indexEndOffset = outLayout._indexOffset + outLayout._indexSize;
+        const uint64 afterPayload   = bSlotLayout ? indexEndOffset : dataEndOffset;
+        outLayout._stringPoolOffset = stringPoolBytes.empty() ? 0 : ResourcePakWriterInternal::alignToPackSector( afterPayload );
+        const uint64 coveredEnd     = dataEndOffset > indexEndOffset ? dataEndOffset : indexEndOffset;
+        outLayout._fileSize         = stringPoolBytes.empty() ? coveredEnd : outLayout._stringPoolOffset + stringPoolBytes.size();
         return true;
+    }
+
+    void ResourcePakWriter::placeSlotPayloads( const vector<uint64>& listPayloadSize, const PreviousSlotTable& previousTable, PackLayout& inoutLayout ) const
+    {
+        const uint64 regionBegin = inoutLayout._dataStartOffset;
+        // 앞 빌드의 자리를 지키는 배치. 크기가 앞 자리에 들어가면 그 오프셋을 쓰고 아니면(새 항목 · 커진 항목) 앞 팩의 끝 뒤에 붙인다.
+        const auto place = [&]( const PreviousSlotTable* pPrevious, vector<uint64>& outListOffset, uint64& outEnd, uint64& outUsed )
+        {
+            outListOffset.assign( listPayloadSize.size(), regionBegin );
+            outUsed             = 0;
+            uint64 appendCursor = pPrevious != nullptr && pPrevious->_payloadEnd > regionBegin ? pPrevious->_payloadEnd : regionBegin;
+            outEnd              = appendCursor;
+            for ( size_t index = 0; index < listPayloadSize.size(); ++index )
+            {
+                const uint64 size = listPayloadSize[index];
+                if ( size == 0 )
+                    continue; // 빈 항목은 자리를 쓰지 않는다
+                outUsed += ResourcePakWriterInternal::alignToPackSector( size );
+                if ( pPrevious != nullptr )
+                {
+                    const auto slotIt = pPrevious->_mapHashToSlot.find( inoutLayout._listDiskEntry[index]._pathHash );
+                    if ( slotIt != pPrevious->_mapHashToSlot.end() && size <= slotIt->second._capacity )
+                    {
+                        outListOffset[index] = slotIt->second._offset;
+                        continue;
+                    }
+                }
+                appendCursor         = ResourcePakWriterInternal::alignToPackSector( appendCursor );
+                outListOffset[index] = appendCursor;
+                appendCursor += size;
+                outEnd = appendCursor;
+            }
+        };
+
+        vector<uint64> listOffset;
+        uint64         dataEnd{ 0 };
+        uint64         usedBytes{ 0 };
+        bool           bUsePrevious = previousTable._mapHashToSlot.empty() == false;
+        if ( bUsePrevious )
+        {
+            place( &previousTable, listOffset, dataEnd, usedBytes );
+            const uint64 regionBytes = dataEnd > regionBegin ? dataEnd - regionBegin : 0;
+            const uint64 holeBytes   = regionBytes > usedBytes ? regionBytes - usedBytes : 0;
+            // 빈 자리가 한도를 넘으면 앞 빌드를 버리고 촘촘히 다시 배치한다(한 번 밀리는 대신 낭비가 쌓이지 않는다).
+            bUsePrevious = holeBytes * 100 <= regionBytes * _desc._maxHolePercent;
+        }
+        if ( bUsePrevious == false )
+            place( nullptr, listOffset, dataEnd, usedBytes );
+
+        for ( size_t index = 0; index < listOffset.size(); ++index )
+        {
+            inoutLayout._listDiskEntry[index]._dataOffset = listOffset[index];
+        }
+        inoutLayout._dataEndOffset = dataEnd;
+        inoutLayout._indexOffset   = ResourcePakWriterInternal::alignToPackSector( dataEnd );
     }
 
     void ResourcePakWriter::assemblePack( const vector<const Entry*>& listSorted, vector<CompressSlot>& inoutListSlot, const PackLayout& layout, vector<uint8>& outBytes ) const
@@ -279,7 +424,7 @@ namespace sw
         const uint64                       dataStartOffset = layout._dataStartOffset;
         const uint64                       dataEndOffset   = layout._dataEndOffset;
 
-        const uint64 stringPoolOffset = stringPoolBytes.empty() ? 0 : ResourcePakWriterInternal::alignToPackSector( dataEndOffset );
+        const uint64 stringPoolOffset = layout._stringPoolOffset;
 
         PackHeader header{};
         header._magic            = kPackMagic;
@@ -297,8 +442,7 @@ namespace sw
         header._totalDataSize    = dataEndOffset - dataStartOffset;
 
         // 페이로드를 제자리에 바로 복사한다(섹터 정렬 빈틈은 0). 항목의 압축 바이트는 복사 직후 놓아 최고 메모리를 압축 결과 + 팩 바이트 하나로 묶는다.
-        const uint64 fileSize = stringPoolBytes.empty() ? dataEndOffset : stringPoolOffset + stringPoolBytes.size();
-        outBytes.resize( static_cast<size_t>( fileSize ), 0 );
+        outBytes.resize( static_cast<size_t>( layout._fileSize ), 0 );
         Memory::copy( outBytes.data(), &header, sizeof( PackHeader ) );
         if ( listDiskEntry.empty() == false )
             Memory::copy( outBytes.data() + indexOffset, listDiskEntry.data(), static_cast<size_t>( indexSize ) );
@@ -332,8 +476,11 @@ namespace sw
         if ( compressEntries( listSorted, inputBytes, listSlot, compressWallNanos ) == false )
             return false;
 
+        PreviousSlotTable previousTable;
+        if ( loadPreviousSlots( previousTable ) == false )
+            return false;
         PackLayout layout;
-        if ( layoutPack( listSorted, listSlot, layout ) == false )
+        if ( layoutPack( listSorted, listSlot, previousTable, layout ) == false )
             return false;
 
         assemblePack( listSorted, listSlot, layout, outBytes );

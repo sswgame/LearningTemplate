@@ -10,6 +10,7 @@
  *          섹터 정렬 항목 경로 목록(스트링 풀, NUL 종료 경로를 잇는다). FAT 은 경로 해시 오름차순입니다.
  *          경로 해시는 구분자를 '/' 로 맞춘 팩 안 경로(도메인 제외 — `engine.pack` 의 항목은 `renderpass/default.xml`)의 대소문자 무시
  *          FNV-1a 64(`HashUtil::computeStringHash64` 기본값)입니다.
+ *          슬롯 배치(`PackLayoutMode::Slot`)는 헤더 · 섹터 정렬 페이로드 · FAT · 스트링 풀 순서다 — 위 배치와 오프셋 의미는 같고 구역 순서만 다르다(리더는 순서를 가정하지 않는다).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -49,6 +50,17 @@ namespace sw
         LZ4    = 3, ///< LZ4 초고속 압축(해제가 가장 빠릅니다)
         Zstd   = 4, ///< Zstandard(크기가 가장 작습니다. 배포물용)
         Custom = 255
+    };
+
+    /**
+     * @enum PackLayoutMode
+     * @brief 팩 페이로드 배치 방식입니다(`Config/Engine/PackConfig.json` 의 `_layout._mode`). 디스크 형식은 같다 — 리더는 헤더의 오프셋만 믿는다.
+     */
+    ENUM()
+    enum class PackLayoutMode : uint8
+    {
+        Sorted = 0, ///< 헤더 · FAT · 페이로드(경로 해시 순으로 이어 붙임) · 스트링 풀. 항목을 더하거나 지우면 뒤 페이로드가 섹터 단위로 밀린다
+        Slot        ///< 헤더 · 페이로드 · FAT · 스트링 풀. 앞 빌드의 팩이 있으면 안 바뀐 항목이 앞 빌드의 자리(슬롯)를 지키고 새 항목은 끝에 붙는다
     };
 
     // **값은 디스크에 박힌다. 새 코덱은 뒤에 덧붙이기만 한다.** 기존 값을 옮기면 이미 쿠킹된 팩을

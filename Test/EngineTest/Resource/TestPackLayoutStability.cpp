@@ -3,13 +3,16 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Resource/Pack/ResourcePakReader.h"
 #include "Engine/Resource/Pack/ResourcePakTypes.h"
 #include "Engine/Resource/Pack/ResourcePakWriter.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTempPath.h"
 
 #include <cstring>
 #include <unordered_map>
@@ -99,6 +102,21 @@ namespace sw
                 return {};
             return vector<uint8>( pack.begin() + static_cast<std::ptrdiff_t>( entry._dataOffset ),
                                   pack.begin() + static_cast<std::ptrdiff_t>( entry._dataOffset + entry._compressedSize ) );
+        }
+        /** @brief `Slot` 배치로 팩 바이트를 만듭니다. @p previousPath 가 비면 앞 빌드가 없는 첫 배치입니다. */
+        [[nodiscard]] bool makeSlotPack( const vector<TestFile>& listFile, PackCompressionType compression, const string& previousPath, uint32 maxHolePercent, vector<uint8>& outBytes )
+        {
+            ResourcePakWriterDesc desc;
+            desc._compression      = compression;
+            desc._layoutMode       = PackLayoutMode::Slot;
+            desc._previousPackPath = previousPath;
+            desc._maxHolePercent   = maxHolePercent;
+            ResourcePakWriter writer( desc );
+            for ( const TestFile& file : listFile )
+            {
+                writer.addBytes( file._path, file._bytes );
+            }
+            return writer.makePackBytes( outBytes );
         }
     } // namespace
 } // namespace sw
@@ -233,5 +251,63 @@ SW_TEST_CASE( PackLayoutTest, AddingOrRemovingAnEntryKeepsOtherPayloadBytes )
             if ( index != 30 )
                 SW_EXPECT_TRUE( payload == readPayload( removed, listBase[index]._path ) );
         }
+    }
+}
+
+/**
+ * @brief [PackLayoutTest] 슬롯 배치는 앞 빌드의 팩이 있으면 항목을 더하거나 지워도 안 바뀐 항목의 오프셋 · 페이로드가 그대로이고 모든 항목을 읽을 수 있으며,
+ *        빈 자리가 한도를 넘으면 앞 빌드 없이 만든 것과 같은 촘촘한 배치로 돌아간다
+ */
+SW_TEST_CASE( PackLayoutTest, SlotLayoutKeepsUnchangedEntriesInPlaceWhenEntriesAreAddedOrRemoved )
+{
+    const string           folder       = test::makeTempDirectory( "packslotlayout" );
+    const string           previousPath = FileUtil::joinPath( folder, "previous.pack" );
+    const string           nextPath     = FileUtil::joinPath( folder, "next.pack" );
+    const vector<TestFile> listBase     = makeFiles( 60 );
+    for ( PackCompressionType type : { PackCompressionType::None, PackCompressionType::Zstd } )
+    {
+        vector<uint8> base;
+        SW_ASSERT_TRUE( makeSlotPack( listBase, type, "", 25, base ) ); // 앞 빌드가 없는 첫 배치
+        SW_ASSERT_TRUE( FileUtil::writeFile( previousPath, base.data(), base.size() ) );
+
+        vector<TestFile> listNext = listBase;
+        listNext.erase( listNext.begin() + 30 );
+        listNext.push_back( { "assets/added/new.bin", makeContent( 4242, 5000 ) } );
+
+        vector<uint8> next;
+        SW_ASSERT_TRUE( makeSlotPack( listNext, type, previousPath, 100, next ) );
+        for ( size_t index = 0; index < listBase.size(); ++index )
+        {
+            if ( index == 30 )
+                continue;
+            PackFileEntryOnDisk baseEntry{};
+            PackFileEntryOnDisk nextEntry{};
+            size_t              entryOffset{ 0 };
+            SW_ASSERT_TRUE( findEntry( base, listBase[index]._path, baseEntry, entryOffset ) );
+            SW_ASSERT_TRUE( findEntry( next, listBase[index]._path, nextEntry, entryOffset ) );
+            SW_EXPECT_EQUAL( baseEntry._dataOffset, nextEntry._dataOffset ); // 앞 빌드의 자리를 지킨다
+            SW_EXPECT_TRUE( readPayload( base, listBase[index]._path ) == readPayload( next, listBase[index]._path ) );
+        }
+        SW_EXPECT_FALSE( readPayload( next, "assets/added/new.bin" ).empty() );
+
+        // 리더가 다음 팩의 모든 항목을 읽는다(FAT 이 페이로드 뒤인 배치).
+        SW_ASSERT_TRUE( FileUtil::writeFile( nextPath, next.data(), next.size() ) );
+        ResourcePakReader reader;
+        SW_ASSERT_TRUE( reader.open( nextPath ) );
+        SW_EXPECT_EQUAL( static_cast<uint32>( listNext.size() ), reader.getFileCount() );
+        for ( const TestFile& file : listNext )
+        {
+            vector<uint8> readBack;
+            SW_ASSERT_TRUE( reader.readFile( file._path, readBack ) );
+            SW_EXPECT_TRUE( readBack == file._bytes );
+        }
+        reader.close();
+
+        // 빈 자리 한도 0 % 에서는 지운 항목의 빈 자리가 한도를 넘어 앞 빌드를 버리고, 앞 빌드 없이 만든 것과 같은 바이트가 된다.
+        vector<uint8> compact;
+        vector<uint8> fresh;
+        SW_ASSERT_TRUE( makeSlotPack( listNext, type, previousPath, 0, compact ) );
+        SW_ASSERT_TRUE( makeSlotPack( listNext, type, "", 0, fresh ) );
+        SW_EXPECT_TRUE( compact == fresh );
     }
 }
