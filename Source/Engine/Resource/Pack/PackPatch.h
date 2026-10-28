@@ -11,6 +11,12 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Security/NetSecurityTypes.h"
+
+namespace sw
+{
+    class INetSecurityProvider;
+} // namespace sw
 
 namespace sw
 {
@@ -61,13 +67,32 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…"><Removed path="…"/></PackPatch>`)입니다. */
+    /**
+     * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [packSha256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
+     * @details `packSha256`(패치 팩 파일의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
+     *          내용(`PackPatchUtil::makeSigningPayload`)에 걸고, 팩의 바이트는 그 안의 해시가 묶는다. 서명이 없는 목록은 시작 마운트가 신뢰 설정을 받았을 때만 거절한다.
+     */
     struct PackPatchManifest
     {
         string         _fromBuild{};       ///< 이 패치를 얹을 수 있는 빌드
         string         _toBuild{};         ///< 얹은 뒤의 빌드
         string         _packFileName{};    ///< 패치 팩 파일 이름(목록 파일과 같은 폴더)
         vector<string> _listRemovedPath{}; ///< 지운 경로(가상 상대 경로)
+        string         _packSha256Hex{};   ///< 패치 팩 파일의 SHA-256. 서명하지 않은 목록은 비어 있다
+        string         _signatureHex{};    ///< 목록 내용의 ES256 서명. 서명하지 않은 목록은 비어 있다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 패치 목록의 서명을 마운트 전에 확인할 신뢰 설정입니다. 공개 키는 비밀이 아니고, 개인 키는 이 구조체 어디에도 들어오지 않습니다(서명은 만드는 쪽이 따로 한다).
+     * @details 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 제공자는 부르는 쪽이 넘기고 `ResourcePakManager::setPatchTrust` 가 담는다. 제공자는 마운트가 끝날 때까지 산다.
+     */
+    struct PackPatchTrust
+    {
+        INetSecurityProvider* _pProvider{ nullptr };
+        NetPublicKey          _publicKey{}; ///< ES256(P-256) 공개 키
     };
 } // namespace sw
 
@@ -109,5 +134,23 @@ namespace sw
          *          설치된 빌드가 이미 목표면 빈 순서로 true 다.
          */
         [[nodiscard]] static bool orderPatchChain( string_view installedBuild, string_view targetBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder );
+
+        /**
+         * @brief 서명이 거는 글입니다 — 빌드 · 팩 이름 · 팩 해시 · 지운 경로의 수와 목록(줄 단위, 목록 순서 그대로). 서명하는 쪽과 확인하는 쪽이 같은 함수를 쓴다.
+         * @details 줄바꿈이 든 값은 필드 경계를 흐리므로 `signManifest` · `verifyManifest` 가 먼저 거절한다.
+         */
+        static string makeSigningPayload( const PackPatchManifest& manifest );
+        /**
+         * @brief 패치 팩의 SHA-256 을 목록에 적고 목록 내용에 ES256 으로 서명합니다(@p inOutManifest 의 `_packSha256Hex` · `_signatureHex` 를 채운다).
+         * @param privateKeyPem 개인 키(PKCS#8 PEM) — 저장소에 두지 않고 부르는 쪽이 저장소 밖 파일에서 읽어 넘긴다.
+         * @return 팩이 2 GiB 이상이거나(제공자의 해시가 32 비트 크기를 받는다) · 줄바꿈이 든 필드가 있거나 · 서명에 실패하면 이유를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool signManifest( INetSecurityProvider& provider, const string& privateKeyPem, const vector<uint8>& packBytes, PackPatchManifest& inOutManifest );
+        /**
+         * @brief 목록의 서명과 팩 해시를 확인합니다. 서명이 없거나 · 팩 해시가 다르거나 · 서명이 안 맞거나 · 공개 키가 ES256 이 아니면 이유를 남기고 false 입니다.
+         * @param sourceName 오류에 적을 이름(목록 파일 경로)입니다.
+         */
+        [[nodiscard]] static bool verifyManifest( INetSecurityProvider& provider, const NetPublicKey& publicKey, const vector<uint8>& packBytes, const PackPatchManifest& manifest,
+                                                  string_view sourceName );
     };
 } // namespace sw

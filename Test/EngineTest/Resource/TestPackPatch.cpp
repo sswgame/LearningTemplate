@@ -1,12 +1,15 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Resource/Pack/PackPatch.h"
 #include "Engine/Resource/Pack/PackPatchBuilder.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 
 #include "EngineTest/ResourcePakTestUtil.h"
+
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -462,4 +465,131 @@ SW_TEST_CASE( PackPatchTest, MakePatchRefusesNothingToPatchAndUnusableInputs )
     SW_ASSERT_TRUE( writeTestText( folder, "patch_1.packpatch.xml", makeManifest( "1.0", "1.1", "patch_1.pack", {} ) ) );
     params._newBuild = "1.2";
     SW_EXPECT_FALSE( sw::PackPatchBuilder::makePatch( params ) ); // 패치 목록이 있는 폴더는 기본 팩의 폴더가 아니다
+}
+
+/**
+ * @brief [PackPatchTest] 서명한 패치는 신뢰 설정이 있으면 시작 마운트가 서명 · 팩 해시를 확인하고, 서명이 없거나 · 팩이 바뀌었거나 · 다른 키로 서명했으면 모두 내리고 거절한다
+ * @details 서명 키는 이 테스트가 만든 임시 키 쌍이다(저장소에 키를 두지 않는다). 신뢰 설정이 없는 마운트는 서명을 보지 않는다.
+ */
+SW_TEST_CASE( PackPatchTest, SignedPatchIsCheckedBeforeMountWhenTrustIsSet )
+{
+    sw::INetSecurityProvider& security = sw::NetSecurity::getProvider();
+    sw::string                privateKeyPem;
+    sw::NetPublicKey          publicKey;
+    SW_ASSERT_TRUE( security.createSigningKeyPair( sw::NetSignatureAlgorithm::EcdsaP256Sha256, privateKeyPem, publicKey ) );
+    sw::string       otherPrivateKeyPem;
+    sw::NetPublicKey otherPublicKey;
+    SW_ASSERT_TRUE( security.createSigningKeyPair( sw::NetSignatureAlgorithm::EcdsaP256Sha256, otherPrivateKeyPem, otherPublicKey ) );
+
+    const sw::string oldFolder = test::makeTempDirectory( "packpatchsignold" );
+    SW_ASSERT_TRUE( writeTestPack( oldFolder, "engine.pack", {
+                                                                 { "ui/a.xml", "A0" }
+    } ) );
+    const sw::string oldRecordPath = sw::FileUtil::joinPath( oldFolder, sw::PackPatchUtil::kBuildRecordFileName );
+    SW_ASSERT_TRUE( sw::PackPatchBuilder::writeBuildRecord( oldFolder, "1.0", oldRecordPath ) );
+    const sw::string newFolder = test::makeTempDirectory( "packpatchsignnew" );
+    SW_ASSERT_TRUE( writeTestPack( newFolder, "engine.pack", {
+                                                                 { "ui/a.xml", "A1" }
+    } ) );
+
+    const sw::string         signedFolder   = test::makeTempDirectory( "packpatchsignedout" );
+    const sw::string         unsignedFolder = test::makeTempDirectory( "packpatchunsignedout" );
+    sw::PackPatchBuildParams params;
+    params._packsDirectory     = newFolder;
+    params._previousRecordPath = oldRecordPath;
+    params._newBuild           = "1.1";
+    params._outputDirectory    = unsignedFolder;
+    SW_ASSERT_TRUE( sw::PackPatchBuilder::makePatch( params ) );
+    params._outputDirectory       = signedFolder;
+    params._signer._pProvider     = &security;
+    params._signer._privateKeyPem = privateKeyPem;
+    SW_ASSERT_TRUE( sw::PackPatchBuilder::makePatch( params ) );
+
+    const sw::string manifestFileName = sw::PackPatchBuilder::makeManifestFileName( "1.1" );
+    const sw::string packFileName     = sw::PackPatchBuilder::makePatchPackFileName( "1.1" );
+    sw::string       signedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( signedFolder, manifestFileName ), signedText ) );
+    sw::PackPatchManifest signedManifest;
+    SW_ASSERT_TRUE( sw::PackPatchUtil::parseManifest( signedText, "signed", signedManifest ) );
+    SW_EXPECT_EQUAL( size_t{ 64 }, signedManifest._packSha256Hex.size() );
+    SW_EXPECT_EQUAL( size_t{ 128 }, signedManifest._signatureHex.size() );
+
+    // 폴더 하나를 이전 빌드 + 주어진 패치 폴더의 두 파일로 채워 돌려준다.
+    const auto makeInstall = [&]( const sw::string& patchFolder, const utf8* pName )
+    {
+        const sw::string installFolder = test::makeTempDirectory( pName );
+        for ( const sw::string& fileName : { sw::string( "engine.pack" ), sw::string( sw::PackPatchUtil::kBuildRecordFileName ) } )
+        {
+            sw::vector<uint8> bytes;
+            SW_EXPECT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( oldFolder, fileName ), bytes ) );
+            SW_EXPECT_TRUE( sw::FileUtil::writeFile( sw::FileUtil::joinPath( installFolder, fileName ), bytes.data(), bytes.size() ) );
+        }
+        for ( const sw::string& fileName : { packFileName, manifestFileName } )
+        {
+            sw::vector<uint8> bytes;
+            SW_EXPECT_TRUE( sw::FileUtil::readFile( sw::FileUtil::joinPath( patchFolder, fileName ), bytes ) );
+            SW_EXPECT_TRUE( sw::FileUtil::writeFile( sw::FileUtil::joinPath( installFolder, fileName ), bytes.data(), bytes.size() ) );
+        }
+        return installFolder;
+    };
+
+    sw::PackPatchTrust trust;
+    trust._pProvider = &security;
+    trust._publicKey = publicKey;
+
+    // 서명한 패치 + 맞는 키: 얹힌다.
+    const sw::string       goodFolder = makeInstall( signedFolder, "packpatchsigngood" );
+    sw::ResourcePakManager goodManager;
+    goodManager.setAllowLooseFiles( false );
+    SW_ASSERT_TRUE( goodManager.setPatchTrust( trust ) );
+    SW_ASSERT_TRUE( goodManager.scanAndMountPacks( goodFolder, { "engine" } ) );
+    sw::string text;
+    SW_ASSERT_TRUE( goodManager.readTextFile( "engine/ui/a.xml", text ) );
+    SW_EXPECT_TRUE( text == "A1" );
+    goodManager.unmountAll();
+
+    // 신뢰 설정이 없으면 서명 없는 패치도 얹힌다(스토어가 무결성을 맡는 채널).
+    const sw::string       plainFolder = makeInstall( unsignedFolder, "packpatchsignplain" );
+    sw::ResourcePakManager plainManager;
+    plainManager.setAllowLooseFiles( false );
+    SW_ASSERT_TRUE( plainManager.scanAndMountPacks( plainFolder, { "engine" } ) );
+    plainManager.unmountAll();
+
+    SW_TEST_DEFENSIVE_SCOPE( "an unsigned patch, a changed pack and a wrong key are refused and nothing stays mounted" );
+    sw::ResourcePakManager strictManager;
+    strictManager.setAllowLooseFiles( false );
+    SW_ASSERT_TRUE( strictManager.setPatchTrust( trust ) );
+    SW_EXPECT_FALSE( strictManager.scanAndMountPacks( plainFolder, { "engine" } ) ); // 서명이 없다
+    SW_EXPECT_EQUAL( size_t{ 0 }, strictManager.getMountedPackCount() );
+
+    const sw::string  tamperedFolder = makeInstall( signedFolder, "packpatchsigntampered" );
+    sw::vector<uint8> packBytes;
+    const sw::string  tamperedPackPath = sw::FileUtil::joinPath( tamperedFolder, packFileName );
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( tamperedPackPath, packBytes ) );
+    packBytes.back() ^= 0x01;
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( tamperedPackPath, packBytes.data(), packBytes.size() ) );
+    SW_EXPECT_FALSE( strictManager.scanAndMountPacks( tamperedFolder, { "engine" } ) ); // 팩 해시가 다르다
+    SW_EXPECT_EQUAL( size_t{ 0 }, strictManager.getMountedPackCount() );
+
+    sw::PackPatchTrust wrongTrust;
+    wrongTrust._pProvider = &security;
+    wrongTrust._publicKey = otherPublicKey;
+    sw::ResourcePakManager wrongKeyManager;
+    wrongKeyManager.setAllowLooseFiles( false );
+    SW_ASSERT_TRUE( wrongKeyManager.setPatchTrust( wrongTrust ) );
+    SW_EXPECT_FALSE( wrongKeyManager.scanAndMountPacks( goodFolder, { "engine" } ) ); // 다른 키로는 서명이 안 맞는다
+    SW_EXPECT_EQUAL( size_t{ 0 }, wrongKeyManager.getMountedPackCount() );
+
+    sw::ResourcePakManager noProviderManager;
+    SW_EXPECT_FALSE( noProviderManager.setPatchTrust( sw::PackPatchTrust{} ) ); // 제공자 없는 신뢰 설정은 받지 않는다
+
+    // 서명이 든 목록은 쓴 그대로 읽히고, 팩 해시만 있는 목록(서명이 빠진 것)은 거절된다.
+    sw::PackPatchManifest reread;
+    SW_ASSERT_TRUE( sw::PackPatchUtil::parseManifest( sw::PackPatchUtil::makeManifestText( signedManifest ), "reread", reread ) );
+    SW_EXPECT_TRUE( reread._signatureHex == signedManifest._signatureHex && reread._packSha256Hex == signedManifest._packSha256Hex );
+    sw::string halfText = "<PackPatch from=\"1.0\" to=\"1.1\" pack=\"p.pack\" packSha256=\"";
+    halfText.append( 64, '0' );
+    halfText.append( "\"/>" );
+    sw::PackPatchManifest half;
+    SW_EXPECT_FALSE( sw::PackPatchUtil::parseManifest( halfText, "half", half ) );
 }

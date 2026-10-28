@@ -18,9 +18,23 @@
 
 namespace sw
 {
-    /** @struct PackPatchBuildParams @brief 패치 하나를 만드는 입력입니다. 모두 필수입니다. */
+    /**
+     * @brief 패치 목록에 서명하는 입력입니다. 제공자가 없으면 서명하지 않습니다(서명 없는 패치 — 스토어가 무결성을 맡는 채널).
+     * @details 개인 키 PEM 은 저장소에 없고 부르는 쪽이 저장소 밖 파일에서 읽어 넘긴다. 이 구조체는 디스크에 쓰지 않는다.
+     */
+    struct PackPatchSigner
+    {
+        INetSecurityProvider* _pProvider{ nullptr };
+        string                _privateKeyPem{}; ///< ES256(P-256) PKCS#8 PEM
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @struct PackPatchBuildParams @brief 패치 하나를 만드는 입력입니다. `_signer` 만 선택이고 나머지는 필수입니다. */
     struct PackPatchBuildParams
     {
+        PackPatchSigner       _signer{};             ///< 선택. 제공자가 있으면 패치 목록에 팩 해시와 서명을 적는다
         string                _packsDirectory{};     ///< 새 빌드의 기본 팩 폴더(`App --cook-packs` 가 쓴 `-pack-dir`)
         string                _previousRecordPath{}; ///< 이전 빌드의 내용 목록 파일(`*.packbuild.xml`)
         string                _newBuild{};           ///< 새 빌드 번호. 파일 이름에 들어가므로 글자 · 숫자 · `.` · `_` · `-` 만 쓴다

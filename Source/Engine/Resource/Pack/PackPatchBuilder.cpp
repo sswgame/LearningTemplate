@@ -305,8 +305,24 @@ namespace sw
         const string packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
         const string manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
         const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackPatchUtil::kBuildRecordExtension ) );
-        const bool   bWritten     = FileUtil::ensureDirectoryExists( params._outputDirectory ) && writer.writePackFile( packPath ) &&
-                              FileUtil::writeTextFile( manifestPath, PackPatchUtil::makeManifestText( manifest ) ) &&
+        if ( FileUtil::ensureDirectoryExists( params._outputDirectory ) == false || writer.writePackFile( packPath ) == false )
+        {
+            SW_LOG_ERROR( "Patch pack could not be written to '%#'", packPath );
+            return false;
+        }
+        // 서명은 디스크에 쓴 팩의 바이트에 건다 — 배포되는 바이트의 해시다(메모리의 사본과 갈릴 길이 없다).
+        if ( params._signer._pProvider != nullptr )
+        {
+            vector<uint8> packBytes;
+            if ( FileUtil::readFile( packPath, packBytes ) == false )
+            {
+                SW_LOG_ERROR( "Patch pack '%#' could not be read back for signing", packPath );
+                return false;
+            }
+            if ( PackPatchUtil::signManifest( *params._signer._pProvider, params._signer._privateKeyPem, packBytes, manifest ) == false )
+                return false;
+        }
+        const bool bWritten = FileUtil::writeTextFile( manifestPath, PackPatchUtil::makeManifestText( manifest ) ) &&
                               FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( current ) );
         if ( bWritten == false )
         {

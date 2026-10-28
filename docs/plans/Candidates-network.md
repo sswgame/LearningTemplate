@@ -97,19 +97,12 @@
 재확인(2026-10-27): 결정 기록(`09_Decisions.md` · `decisions/`)에 출시 플랫폼을 정한 줄이 없다. 제공자 SDK 연동은 외부 계정 · 라이선스가 걸려 사용자 결정 몫이라 착수하지 않았다.
 왜 필요한가: 업적 · 클라우드 세이브 · 오버레이 · 친구가 없다. 온라인 서비스의 제공자 추상에 붙일 자리는 있다.
 
-### PackPatchAppStartRun
-제목: 만든 패치를 Packs/ 에 두고 App 이 시작해 적용하는 실행
-옛번호: G-16
-왜 필요한가: 패치 만들기 · 시작 마운트는 Debug 테스트(`PackPatchTest` · `ResourcePakTest` · `PackLayoutTest`)가 `scanAndMountPacks` 를 직접 불러 확인했다. 실제 `Packs/` 폴더에 패치를 두고 App 이 시작할 때 적용하는 실행은 해 보지 않았다.
-착수 조건: 스팀 밖 채널이나 콘텐츠 핫픽스로 패치 사슬을 처음 쓸 때(출시는 스팀 기준이라 지금은 쓰지 않는다 — 결정 기록 5-9).
-남은 것: `App -game=Empty -cook-all -pack-build=1.0` → 파일 하나 더하기 → `-pack-build=1.1` → `-make-patch` → 패치를 `Packs/` 에 두고 App 시작 로그에서 사슬이 얹히는지 본다. 이 흐름을 한 명령으로 묶는 스크립트가 먼저다.
-
 ### PackPatchSigning
-제목: 패치 목록 서명 · 팩 해시 확인과 배포 경로
+제목: 패치 목록 서명의 시작 마운트 · 명령줄 연결과 배포 경로
 옛번호: G-16
-왜 필요한가: 스팀 전용 출시면 SteamPipe 가 무결성을 맡으므로 취소했다(P6, 결정 기록 5-9). 스팀 밖 채널(런처 · CDN · 스토어)이 생기면 패치 팩의 무결성을 엔진이 확인해야 한다.
+왜 필요한가: 목록 서명 · 팩 해시의 형식 · 확인(`ResourcePakManager::setPatchTrust`) · 만들기(`PackPatchBuildParams::_signer`)는 구현했지만(결정 기록 5-9) 암호 제공자(OpenSSL)가 GameFramework 에 있고 게임 인스턴스가 서야 들어와서 App 기동의 시작 마운트와 `-make-patch` 명령줄은 아직 제공자를 받지 못한다.
 착수 조건: 스팀 밖 채널이 생길 때. 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저다.
-남은 것: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`) 시작 마운트가 마운트 전에 확인한다(실패하면 올린 팩을 모두 내린다).
+남은 것: 제공자를 기동 앞(`mountStartupPacks` 이전)으로 당기는 구조 결정, 그 뒤 `-patch-sign-key=<개인 키 PEM>` 과 공개 키 설정(`Config/Engine/` 의 신뢰 설정)을 잇는다. 시작 마운트가 서명을 요구하는 설정을 가졌는데 제공자가 없으면 오류로 멈춘다.
 
 ### PackSlotLayout
 제목: 항목 추가 · 삭제에 밀리지 않는 팩 슬롯 배치

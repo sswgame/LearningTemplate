@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Resource/Pack/PackPatch.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -560,6 +561,37 @@ namespace sw
         return true;
     }
 
+    bool ResourcePakManager::setPatchTrust( const PackPatchTrust& trust )
+    {
+        if ( trust._pProvider == nullptr )
+        {
+            SW_LOG_ERROR( "Pack patch trust has no crypto provider - a signature requirement that cannot be checked is not accepted" );
+            return false;
+        }
+        _patchTrust = trust;
+        return true;
+    }
+
+    bool ResourcePakManager::verifyPatchSignatures( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder ) const
+    {
+        if ( _patchTrust._pProvider == nullptr )
+            return true; // 신뢰 설정이 없는 채널은 서명을 보지 않는다
+        for ( const size_t manifestIndex : listOrder )
+        {
+            const PackPatchManifest& manifest = listManifest[manifestIndex];
+            const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
+            vector<uint8>            packBytes;
+            if ( FileUtil::readFile( packPath, packBytes ) == false )
+            {
+                SW_LOG_ERROR( "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
+                return false;
+            }
+            if ( PackPatchUtil::verifyManifest( *_patchTrust._pProvider, _patchTrust._publicKey, packBytes, manifest, packPath ) == false )
+                return false;
+        }
+        return true;
+    }
+
     bool ResourcePakManager::mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath )
     {
         const string recordPath = FileUtil::joinPath( packsDirectory, PackPatchUtil::kBuildRecordFileName );
@@ -581,6 +613,9 @@ namespace sw
         vector<size_t> listOrder;
         string         latestBuild;
         if ( PackPatchUtil::orderPatchChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )
+            return false;
+        // 서명은 패치 팩을 하나라도 올리기 전에 모두 확인한다 — 중간에 틀리면 절반만 얹힌 상태를 거치지 않는다.
+        if ( verifyPatchSignatures( packsDirectory, listManifest, listOrder ) == false )
             return false;
 
         int32 priority = 0;

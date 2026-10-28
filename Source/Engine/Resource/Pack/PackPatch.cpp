@@ -3,10 +3,13 @@
 #include "Engine/Resource/Pack/PackPatch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Common/SecureUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -41,6 +44,84 @@ namespace sw
                 string       text( static_cast<size_t>( kHashDigits ) - digitCount, '0' );
                 text.append( arrDigit, digitCount );
                 return text;
+            }
+
+            static constexpr const utf8* kPayloadMagic       = "SWPackPatch1";
+            static constexpr size_t      kSha256HexDigits    = static_cast<size_t>( NetSecurityConstant::kSha256Size ) * 2;
+            static constexpr size_t      kSignatureSize      = 64; ///< ES256 은 r ‖ s(각 32 바이트)
+            static constexpr size_t      kSignatureHexDigits = kSignatureSize * 2;
+            static constexpr const utf8* kHexDigits          = "0123456789abcdef";
+
+            static string toHex( const uint8* pBytes, size_t size )
+            {
+                string text;
+                text.reserve( size * 2 );
+                for ( size_t index = 0; index < size; ++index )
+                {
+                    text.push_back( kHexDigits[pBytes[index] >> 4] );
+                    text.push_back( kHexDigits[pBytes[index] & 0x0F] );
+                }
+                return text;
+            }
+
+            /** @brief 소문자 16 진 글을 바이트로 읽습니다. 홀수 길이나 소문자 16 진이 아닌 글자가 있으면 false 입니다. */
+            [[nodiscard]] static bool fromHex( string_view text, vector<uint8>& outBytes )
+            {
+                outBytes.clear();
+                if ( text.size() % 2 != 0 )
+                    return false;
+                const auto digitValue = []( utf8 letter ) -> int32
+                {
+                    if ( letter >= '0' && letter <= '9' )
+                        return letter - '0';
+                    if ( letter >= 'a' && letter <= 'f' )
+                        return letter - 'a' + 10;
+                    return -1;
+                };
+                for ( size_t index = 0; index < text.size(); index += 2 )
+                {
+                    const int32 high = digitValue( text[index] );
+                    const int32 low  = digitValue( text[index + 1] );
+                    if ( high < 0 || low < 0 )
+                        return false;
+                    outBytes.push_back( static_cast<uint8>( high * 16 + low ) );
+                }
+                return true;
+            }
+
+            /** @brief 목록의 글 필드에 줄바꿈이 있으면 true 입니다(서명 글의 필드 경계가 흐려진다). */
+            static bool hasLineBreakField( const PackPatchManifest& manifest )
+            {
+                const auto hasBreak = []( const string& text )
+                { return text.find_first_of( "\r\n" ) != string::npos; };
+                const bool bBuildBreak = hasBreak( manifest._fromBuild ) || hasBreak( manifest._toBuild );
+                const bool bPackBreak  = hasBreak( manifest._packFileName ) || hasBreak( manifest._packSha256Hex );
+                if ( bBuildBreak || bPackBreak )
+                    return true;
+                for ( const string& removedPath : manifest._listRemovedPath )
+                {
+                    if ( hasBreak( removedPath ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 팩 바이트의 SHA-256 을 소문자 16 진으로 셉니다. 제공자의 해시가 32 비트 크기를 받아 2 GiB 이상은 거절합니다. */
+            [[nodiscard]] static bool computePackSha256Hex( INetSecurityProvider& provider, const vector<uint8>& packBytes, string& outHex )
+            {
+                if ( packBytes.size() > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+                {
+                    SW_LOG_ERROR( "Pack patch pack is %# bytes - signing and checking take packs under 2 GiB", packBytes.size() );
+                    return false;
+                }
+                uint8 arrDigest[NetSecurityConstant::kSha256Size]{};
+                if ( provider.computeSha256( packBytes.data(), static_cast<int32>( packBytes.size() ), arrDigest ) == false )
+                {
+                    SW_LOG_ERROR( "Pack patch pack hash could not be computed" );
+                    return false;
+                }
+                outHex = toHex( arrDigest, sizeof( arrDigest ) );
+                return true;
             }
 
             /** @brief 경로 → 내용 해시 표를 만듭니다. 같은 경로가 두 번이면 오류를 남기고 false 입니다. */
@@ -115,6 +196,32 @@ namespace sw
             SW_LOG_ERROR( "Pack patch manifest %# names pack '%#' - it must be a plain file name next to the manifest", sourceName, *packFile );
             return false;
         }
+        // 팩 해시와 서명은 함께 있거나 함께 없다 — 한쪽만 있으면 서명이 무엇을 묶는지 알 수 없다.
+        std::optional<string> packSha256;
+        std::optional<string> signature;
+        if ( root.readOptionalAttribute<string>( "packSha256", packSha256 ) == false || root.readOptionalAttribute<string>( "signature", signature ) == false )
+            return false;
+        if ( packSha256.has_value() != signature.has_value() )
+        {
+            SW_LOG_ERROR( "Pack patch manifest %# has only one of packSha256 and signature - a signed patch needs both", sourceName );
+            return false;
+        }
+        if ( packSha256.has_value() )
+        {
+            vector<uint8> listDecoded;
+            if ( packSha256->size() != PackPatchInternal::kSha256HexDigits || PackPatchInternal::fromHex( *packSha256, listDecoded ) == false )
+            {
+                SW_LOG_ERROR( "Pack patch manifest %#: packSha256 must be %# lowercase hex digits", sourceName, PackPatchInternal::kSha256HexDigits );
+                return false;
+            }
+            if ( signature->size() != PackPatchInternal::kSignatureHexDigits || PackPatchInternal::fromHex( *signature, listDecoded ) == false )
+            {
+                SW_LOG_ERROR( "Pack patch manifest %#: signature must be %# lowercase hex digits", sourceName, PackPatchInternal::kSignatureHexDigits );
+                return false;
+            }
+            outManifest._packSha256Hex = *packSha256;
+            outManifest._signatureHex  = *signature;
+        }
         outManifest._fromBuild    = *fromBuild;
         outManifest._toBuild      = *toBuild;
         outManifest._packFileName = *packFile;
@@ -135,6 +242,11 @@ namespace sw
         root.appendAttribute( "from", string_view{ manifest._fromBuild } );
         root.appendAttribute( "to", string_view{ manifest._toBuild } );
         root.appendAttribute( "pack", string_view{ manifest._packFileName } );
+        if ( manifest._signatureHex.empty() == false )
+        {
+            root.appendAttribute( "packSha256", string_view{ manifest._packSha256Hex } );
+            root.appendAttribute( "signature", string_view{ manifest._signatureHex } );
+        }
         for ( const string& removedPath : manifest._listRemovedPath )
         {
             root.appendChild( PackPatchInternal::kRemovedName ).appendAttribute( "path", string_view{ removedPath } );
@@ -272,6 +384,103 @@ namespace sw
                 continue;
             SW_LOG_ERROR( "Pack patch from build '%#' to '%#' (%#) cannot be reached from the installed build '%#' - a patch in between is missing", listManifest[manifestIndex]._fromBuild,
                           listManifest[manifestIndex]._toBuild, listManifest[manifestIndex]._packFileName, installedBuild );
+            return false;
+        }
+        return true;
+    }
+
+    string PackPatchUtil::makeSigningPayload( const PackPatchManifest& manifest )
+    {
+        // 줄 하나 = `이름=값\n`. `operator+` 대신 append 로 잇는다(sw::string 은 std::string 과 섞어 더하지 않는다).
+        string     payload;
+        const auto appendLine = [&payload]( string_view name, string_view value )
+        {
+            payload.append( name );
+            payload.append( "=" );
+            payload.append( value );
+            payload.append( "\n" );
+        };
+        payload.append( PackPatchInternal::kPayloadMagic );
+        payload.append( "\n" );
+        appendLine( "from", string_view{ manifest._fromBuild } );
+        appendLine( "to", string_view{ manifest._toBuild } );
+        appendLine( "pack", string_view{ manifest._packFileName } );
+        appendLine( "packSha256", string_view{ manifest._packSha256Hex } );
+        utf8 arrCount[24];
+        const auto [pCountEnd, countError] = std::to_chars( arrCount, arrCount + sizeof( arrCount ), manifest._listRemovedPath.size() );
+        (void)countError; // 24 칸에 64 비트 십진수가 들어간다
+        appendLine( "removedCount", string_view{ arrCount, static_cast<size_t>( pCountEnd - arrCount ) } );
+        for ( const string& removedPath : manifest._listRemovedPath )
+        {
+            appendLine( "removed", string_view{ removedPath } );
+        }
+        return payload;
+    }
+
+    bool PackPatchUtil::signManifest( INetSecurityProvider& provider, const string& privateKeyPem, const vector<uint8>& packBytes, PackPatchManifest& inOutManifest )
+    {
+        string packSha256Hex;
+        if ( PackPatchInternal::computePackSha256Hex( provider, packBytes, packSha256Hex ) == false )
+            return false;
+        inOutManifest._packSha256Hex = packSha256Hex;
+        inOutManifest._signatureHex.clear();
+        if ( PackPatchInternal::hasLineBreakField( inOutManifest ) )
+        {
+            SW_LOG_ERROR( "Pack patch %# -> %# has a line break in a field - it cannot be signed", inOutManifest._fromBuild, inOutManifest._toBuild );
+            return false;
+        }
+        const string  payload = makeSigningPayload( inOutManifest );
+        vector<uint8> listSignature;
+        if ( provider.signData( NetSignatureAlgorithm::EcdsaP256Sha256, privateKeyPem, reinterpret_cast<const uint8*>( payload.data() ), static_cast<int32>( payload.size() ), listSignature ) == false )
+        {
+            SW_LOG_ERROR( "Pack patch %# -> %# could not be signed - check the private key is an ES256 (P-256) PKCS#8 PEM", inOutManifest._fromBuild, inOutManifest._toBuild );
+            return false;
+        }
+        if ( listSignature.size() != PackPatchInternal::kSignatureSize )
+        {
+            SW_LOG_ERROR( "Pack patch signature is %# bytes - ES256 gives %#", listSignature.size(), PackPatchInternal::kSignatureSize );
+            return false;
+        }
+        inOutManifest._signatureHex = PackPatchInternal::toHex( listSignature.data(), listSignature.size() );
+        return true;
+    }
+
+    bool PackPatchUtil::verifyManifest( INetSecurityProvider& provider, const NetPublicKey& publicKey, const vector<uint8>& packBytes, const PackPatchManifest& manifest,
+                                        string_view sourceName )
+    {
+        if ( manifest._signatureHex.empty() || manifest._packSha256Hex.empty() )
+        {
+            SW_LOG_ERROR( "Pack patch manifest %# is not signed but a signature is required", sourceName );
+            return false;
+        }
+        if ( publicKey._algorithm != NetSignatureAlgorithm::EcdsaP256Sha256 )
+        {
+            SW_LOG_ERROR( "Pack patch signing key for %# is not an ES256 (P-256) key", sourceName );
+            return false;
+        }
+        if ( PackPatchInternal::hasLineBreakField( manifest ) )
+        {
+            SW_LOG_ERROR( "Pack patch manifest %# has a line break in a field", sourceName );
+            return false;
+        }
+        string actualSha256Hex;
+        if ( PackPatchInternal::computePackSha256Hex( provider, packBytes, actualSha256Hex ) == false )
+            return false;
+        if ( SecureUtil::equalsConstantTime( actualSha256Hex, manifest._packSha256Hex ) == false )
+        {
+            SW_LOG_ERROR( "Pack patch pack %# does not match the SHA-256 in %# - the pack was changed after signing", manifest._packFileName, sourceName );
+            return false;
+        }
+        vector<uint8> listSignature;
+        if ( PackPatchInternal::fromHex( manifest._signatureHex, listSignature ) == false || listSignature.size() != PackPatchInternal::kSignatureSize )
+        {
+            SW_LOG_ERROR( "Pack patch manifest %# has a malformed signature", sourceName );
+            return false;
+        }
+        const string payload = makeSigningPayload( manifest );
+        if ( provider.verifySignature( publicKey, reinterpret_cast<const uint8*>( payload.data() ), static_cast<int32>( payload.size() ), listSignature.data(), static_cast<int32>( listSignature.size() ) ) == false )
+        {
+            SW_LOG_ERROR( "Pack patch manifest %# signature does not verify with the trusted key", sourceName );
             return false;
         }
         return true;
