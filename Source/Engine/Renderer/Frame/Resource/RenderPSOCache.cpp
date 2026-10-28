@@ -20,7 +20,7 @@ namespace sw
         , _layoutMutex{}
         , _mapEnginePSO{}
         , _mapOutputPSO{}
-        , _mapModulePassPSO{}
+        , _mapModuleProgramPSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
     {
@@ -94,15 +94,15 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle pso )
+    void RenderPSOCache::setModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso )
     {
-        _mapModulePassPSO.insert_or_assign( modulePass, pso );
+        _mapModuleProgramPSO.insert_or_assign( programKey, pso );
     }
 
-    bool RenderPSOCache::findModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const
     {
-        const auto it = _mapModulePassPSO.find( modulePass );
-        if ( it == _mapModulePassPSO.end() )
+        const auto it = _mapModuleProgramPSO.find( programKey );
+        if ( it == _mapModuleProgramPSO.end() )
             return false;
         outPipelineState = it->second;
         return true;
@@ -235,12 +235,12 @@ namespace sw
         }
         _mapOutputPSO.clear();
 
-        for ( auto& [modulePass, pso] : _mapModulePassPSO )
+        for ( auto& [programKey, pso] : _mapModuleProgramPSO )
         {
             if ( pso != 0 )
                 pDevice->getResourceFactory()->destroyPipelineState( pso );
         }
-        _mapModulePassPSO.clear();
+        _mapModuleProgramPSO.clear();
 
         // 두 맵은 방금 파괴한 PSO 핸들을 키로 가지고 있다. 핸들에 generation 이 들어 있어 같은 핸들이 다시 발급되어도
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
@@ -257,7 +257,7 @@ namespace sw
         _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
-        _mapModulePassPSO.clear();
+        _mapModuleProgramPSO.clear();
         {
             ScopedLock<mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();

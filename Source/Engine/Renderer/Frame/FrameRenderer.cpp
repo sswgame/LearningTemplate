@@ -25,6 +25,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
+#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
 #include "Engine/Resource/AssetManager.h"
@@ -428,9 +429,9 @@ namespace sw
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
         // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-        const size_t passCount = _pipelineResource.getGraphPass().size();
-        if ( _listPassContext.size() < passCount + 1 )
-            _listPassContext.resize( passCount + 1 );
+        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _listModuleFramePass.size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
+        if ( _listPassContext.size() < passCount )
+            _listPassContext.resize( passCount );
 
         _pCmd->beginCommandList();
         _bGPUCullingActive = SW_FALSE;
@@ -789,6 +790,20 @@ namespace sw
     }
 
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
+    {
+        // 모듈 구간(ModuleRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
+        // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
+        ModuleRenderPassRegistry* const pModuleRegistry = _bScenePreview == SW_FALSE ? engine::findSubsystem<ModuleRenderPassRegistry>() : nullptr;
+        if ( pModuleRegistry == nullptr )
+            return uploadSceneAndSubmitFrame( pDevice, pCallerName );
+        ModuleRenderPassRegistry::RenderScope moduleScope( *pModuleRegistry );
+        collectModuleFrame( *pModuleRegistry );
+        const bool bOk = uploadSceneAndSubmitFrame( pDevice, pCallerName );
+        releaseModuleFrame();
+        return bOk;
+    }
+
+    bool FrameRenderer::uploadSceneAndSubmitFrame( IRHIDevice* pDevice, const utf8* pCallerName )
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.

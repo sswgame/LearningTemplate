@@ -115,10 +115,10 @@ namespace sw
         /** @brief 그 패스와 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
         [[nodiscard]] bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
-        /** @brief 모듈 패스(`RenderPassType::Module`) 하나의 PSO 를 패스의 모듈 이름으로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
-        void setModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle pso );
-        /** @brief 모듈 패스의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        [[nodiscard]] bool findModulePassPSO( const hashed_string& modulePass, RHIPipelineStateHandle& outPipelineState ) const;
+        /** @brief 모듈 확장 패스 프로그램(`ModuleProgramDesc`) 하나의 PSO 를 프로그램 키(셰이더 · 상태 · 타깃 포맷을 이은 글)로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다). */
+        void setModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle pso );
+        /** @brief 모듈 프로그램의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        [[nodiscard]] bool findModuleProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 머티리얼 퍼뮤테이션 변형: 키는 (패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 컬 반전)
@@ -192,8 +192,8 @@ namespace sw
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePSO;
         /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
-        /// @brief 모듈 패스의 PSO 입니다(키 = 패스의 `_resolvedModulePass`). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
-        unordered_map<hashed_string, RHIPipelineStateHandle>    _mapModulePassPSO;
+        /// @brief 모듈 프로그램의 PSO 입니다(키 = 프로그램 키). 모듈 패스는 셰이더가 패스마다 달라 패스 종류 하나로 둘 수 없습니다.
+        unordered_map<hashed_string, RHIPipelineStateHandle>    _mapModuleProgramPSO;
         unordered_map<uint64, MaterialPSOEntry> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
         mutable mutex                                           _materialPSOMutex;
         /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).

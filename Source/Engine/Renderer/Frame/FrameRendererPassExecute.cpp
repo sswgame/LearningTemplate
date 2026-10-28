@@ -15,7 +15,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
@@ -41,8 +40,62 @@ namespace sw
                 _pLastSwapchainWriter = &pass;
         }
 
+        // 모듈 확장 패스(ModuleRenderPass M3)가 끼는 자리 — 단계마다 XML 패스 목록의 정해진 첫 자리 앞이다(없으면 끝). 선언 순서가 쓰기 사슬이라 같은 자리의 모듈 패스는 선언한 순서다.
+        // 모듈 패스도 같은 그래프의 노드다 — 읽기 · 쓰기 선언이 같은 위상 정렬과 배리어 추론을 탄다.
+        const size_t anchorPre    = 0;
+        size_t       anchorPost   = listPass.size();
+        size_t       anchorOutput = listPass.size();
+        for ( size_t anchorIndex = 0; anchorIndex < listPass.size(); ++anchorIndex )
+        {
+            const RenderPassTypeInfo& anchorInfo = getRenderPassTypeInfo( listPass[anchorIndex]._resolvedType );
+            if ( anchorPost == listPass.size() && ( anchorInfo.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) || anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) ) )
+                anchorPost = anchorIndex;
+            if ( anchorOutput == listPass.size() && anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) )
+                anchorOutput = anchorIndex;
+        }
+        _mapModulePassIndex.clear();
+        auto addModulePasses = [this]( ModuleHookStage stage )
+        {
+            for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _listModuleFramePass.size() ); ++moduleIndex )
+            {
+                const ModuleFramePass& modulePass = _listModuleFramePass[moduleIndex];
+                if ( modulePass._params._stage != stage )
+                    continue;
+                vector<hashed_string> listModuleInput;
+                vector<hashed_string> listModuleOutput;
+                for ( const ModulePassRead& read : modulePass._params._listRead )
+                {
+                    listModuleInput.emplace_back( read._attachment.c_str() );
+                }
+                for ( const string& write : modulePass._params._listWrite )
+                {
+                    listModuleOutput.emplace_back( write.c_str() );
+                }
+                // 깊이 첨부도 쓰기 선언이다(XML 패스와 같은 규칙 — 레벨 프롤로그가 첨부 전이를 낸다).
+                if ( modulePass._params._depthAttachment.empty() == false )
+                {
+                    const hashed_string depthName( modulePass._params._depthAttachment.c_str() );
+                    if ( VectorUtil::contains( listModuleOutput, depthName ) == false )
+                        listModuleOutput.push_back( depthName );
+                }
+                _mapModulePassIndex[modulePass._graphName] = moduleIndex;
+                _graph.addPass( modulePass._graphName, std::move( listModuleInput ), std::move( listModuleOutput ),
+                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this ) );
+            }
+        };
+        auto addModulePassesAt = [&]( size_t index )
+        {
+            if ( index == anchorPre )
+                addModulePasses( ModuleHookStage::PreRenderView );
+            if ( index == anchorPost )
+                addModulePasses( ModuleHookStage::PrePostProcess );
+            if ( index == anchorOutput )
+                addModulePasses( ModuleHookStage::PostRenderView );
+        };
+
         for ( uint32 index = 0; index < static_cast<uint32>( listPass.size() ); ++index )
         {
+            addModulePassesAt( index );
             const RenderGraphPassDesc& pass = listPass[index];
             const hashed_string        nameHash( pass._name.c_str() );
             // 이름이 겹치면 앞의 것이 이긴다. 그래프도 뒤의 선언을 버린다(`RenderGraph::addPass`). 파이프라인 검사가 먼저 알린다.
@@ -72,6 +125,9 @@ namespace sw
 
             _graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
         }
+
+        addModulePassesAt( listPass.size() ); // 자리를 못 찾은 단계(출력 패스가 없는 파이프라인)는 끝에 붙는다
+        _moduleBoundSignature = _moduleFrameSignature;
 
         _graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
 
@@ -134,9 +190,14 @@ namespace sw
         // 늘어난다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 찾지 못하면 마지막 슬롯을 쓴다(직렬 경로에서만 온다).
         const size_t passCount    = _pipelineResource.getGraphPass().size();
         const auto   passSlotIter = _mapPassNameToIndex.find( graphContext._passName );
-        const size_t passSlot     = ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount;
+        // 모듈 확장 패스는 XML 패스 슬롯 **뒤**에 자기 슬롯을 갖는다(병렬 기록의 패스마다 독립 컨텍스트). 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다.
+        const auto   moduleIter  = _mapModulePassIndex.find( graphContext._passName );
+        const bool   bModulePass = moduleIter != _mapModulePassIndex.end() && moduleIter->second < _listModuleFramePass.size();
+        const size_t slotCount   = passCount + 1 + _listModuleFramePass.size();
+        const size_t passSlot    = bModulePass ? passCount + 1 + moduleIter->second
+                                               : ( ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount );
         if ( _listPassContext.size() <= passSlot )
-            _listPassContext.resize( passCount + 1 );
+            _listPassContext.resize( slotCount );
         // 벡터 **자체**는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 슬롯만 고쳐 쓴다.
         FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
@@ -148,6 +209,11 @@ namespace sw
         // 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다. 못 잡으면(링 고갈, 오류는 링이 남겼다) 이 패스를 그리지 않는다.
         if ( acquirePassCb( passContext ) == false )
             return;
+        if ( bModulePass )
+        {
+            executeModuleExtensionPass( passContext, _listModuleFramePass[moduleIter->second] );
+            return;
+        }
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
@@ -420,7 +486,6 @@ namespace sw
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
-                case RenderPassType::Module:
                 case RenderPassType::DepthOfField:
                 case RenderPassType::MotionBlur:
                 case RenderPassType::SceneDepthCopy:
@@ -485,12 +550,6 @@ namespace sw
 
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( pTarget->view() );
-        if ( input._passType == RenderPassType::Module )
-        {
-            // 모듈 패스는 PSO 를 종류가 아니라 모듈 이름으로 찾고, 상수를 레지스트리에서 값으로 복사해 온다(executeModulePass).
-            executeModulePass( context, passDesc, *pTarget, targetClear );
-            return;
-        }
         executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
@@ -823,67 +882,6 @@ namespace sw
             context._pCmd->blitTexture( target._texture, 0 );
         if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
-    }
-
-    void FrameRenderer::executeModulePass( FramePassContext& context, const RenderGraphPassDesc& passDesc, const hashed_string& target, const float4& targetClear )
-    {
-        // 렌더 스레드(병렬 기록 워커)에서 모듈 코드를 부르지 않는다. 레지스트리는 락 안에서 상수를 **값으로** 복사해 줄 뿐이다 — 모듈이 언로드되어도(핫 리로드)
-        // 이 위치에서 그 모듈의 함수 · vtable 을 밟을 일이 없다. 상수 이름은 모듈 셰이더의 패스 상수 필드 이름이다(바인더가 리플렉션 이름으로 맞춘다).
-        RHIPipelineStateHandle pso{ 0 };
-        const bool             bHasPSO = _pPSOCache->findModulePassPSO( passDesc._resolvedModulePass, pso ) && pso != 0;
-        // 클라이언트 엔진은 늘 서비스 범위에 넣는다 — 목록의 선택 행인 것은 렌더러가 없는 Server 타깃 때문이다.
-        ModuleRenderPassRegistry* const pRegistry = engine::findSubsystem<ModuleRenderPassRegistry>();
-        if ( pRegistry == nullptr ) // 단언은 Release 에서 사라져 아래가 널 역참조가 된다 — 레지스트리가 없으면 이 패스를 그리지 않고 이유를 남긴다
-        {
-            SW_LOG_ERROR( "Module pass '%#' is not drawn: the ModuleRenderPassRegistry service is not bound", passDesc._resolvedModulePass.c_str() );
-            return;
-        }
-        vector<ModuleRenderPassRegistry::Constant> listConstant;
-        const bool                                 bRegistered = pRegistry->copyConstants( passDesc._resolvedModulePass, listConstant );
-        if ( bHasPSO == false || bRegistered == false )
-        {
-            if ( pRegistry->noteMissingOnce( passDesc._resolvedModulePass ) )
-                SW_LOG_ERROR( "Module pass '%#' (pipeline pass '%#') is not drawn: %#", passDesc._resolvedModulePass.c_str(), passDesc._name,
-                              bRegistered == false ? "no module registered it (ModuleRenderPassRegistry)" : "its PSO could not be created (see the shader error above)" );
-            return;
-        }
-        // 모듈 상수는 이 패스 안에서만 산다. 이름은 엔진 패스 상수 칸(PassCB)의 이름이라 뒤 패스(Present 의 외곽선 등)가 같은 칸을 읽는다 — 쓰기 전의 값을 떠 두었다가
-        // 그린 뒤 되돌린다(없던 칸은 지운다). 되돌리지 않으면 모듈이 빌린 칸의 값이 뒤 패스의 그림을 바꾼다.
-        struct SavedConstant
-        {
-            hashed_string _name{};
-            float4        _value{};
-            bool          _bExisted{ false };
-        };
-        vector<SavedConstant> listSaved;
-        listSaved.reserve( listConstant.size() );
-        for ( const ModuleRenderPassRegistry::Constant& constant : listConstant )
-        {
-            SavedConstant saved;
-            saved._name = constant._name;
-            uint32       valueSize{ 0 };
-            const uint8* pBytes = context._passValues.find( constant._name, valueSize );
-            if ( pBytes != nullptr && valueSize == sizeof( float4 ) )
-            {
-                saved._bExisted = true;
-                Memory::copy( &saved._value, pBytes, sizeof( float4 ) );
-            }
-            listSaved.push_back( saved );
-            context._passValues.setFloat4( constant._name, constant._value );
-        }
-        // 지울지는 실제로 그릴 때 정한다 — 그리지 않은 패스가 "지웠다" 고 적으면 뒤 패스가 지우지 않은 첨부를 불러 온다.
-        if ( beginColorPass( context, target.view(), "", targetClear, colorLoadFor( target ), RHIRenderPassLoadOp::Load ) )
-        {
-            drawFullscreen( context, pso );
-            context._pCmd->endRenderPass();
-        }
-        for ( const SavedConstant& saved : listSaved )
-        {
-            if ( saved._bExisted )
-                context._passValues.setFloat4( saved._name, saved._value );
-            else
-                context._passValues.remove( saved._name );
-        }
     }
 
     bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,

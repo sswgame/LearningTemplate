@@ -171,18 +171,49 @@ namespace sw
         return createPSOForPass( passType, findPassDescByType( passType ), pRtvFormatOverride );
     }
 
-    void FrameRenderer::createModulePassPSOs()
+    RHIPipelineStateHandle FrameRenderer::findOrCreateModuleProgramPSO( const ModuleProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
     {
-        // 모듈 패스는 셰이더가 패스마다 다르다(`_shaderPath` 필수). 종류 하나에 PSO 하나인 엔진 PSO 표에 둘 수 없어 모듈 이름으로 둔다.
-        // 실패(0)도 기록한다 — 기록 중에는 만들 수 없고, 실행이 "등록됐는데 0" 을 보고 오류를 한 번 남긴다.
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
+        // 모듈 확장 패스의 프로그램(ModuleRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`collectModuleFrame`)만 부른다.
+        // 실패(0)도 기록한다 — 매 프레임 같은 컴파일을 되풀이하지 않고, 부르는 쪽이 0 을 보고 오류를 남기고 그리지 않는다(다른 셰이더로 대신 그리지 않는다).
+        if ( _pDevice == nullptr || program._shaderPath.empty() )
+            return 0;
+        string key = program._shaderPath;
+        key.append( "|" );
+        key.push_back( program._bCullBack ? 'c' : 'n' );
+        key.push_back( bDepthTest ? 't' : 'f' );
+        key.push_back( program._bDepthWrite ? 'w' : 'r' );
+        key.push_back( program._bBlend ? 'b' : 'o' );
+        key.append( "|" );
+        for ( uint32 formatValue = static_cast<uint32>( colorFormat );; formatValue /= 10u )
         {
-            RHIPipelineStateHandle existing{ 0 };
-            const bool             bNeedsPSO = pass._resolvedType == RenderPassType::Module && pass._resolvedModulePass.empty() == false &&
-                                   _pPSOCache->findModulePassPSO( pass._resolvedModulePass, existing ) == false;
-            if ( bNeedsPSO )
-                _pPSOCache->setModulePassPSO( pass._resolvedModulePass, createPSOForPass( RenderPassType::Module, &pass, nullptr ) );
+            key.push_back( static_cast<char>( '0' + ( formatValue % 10u ) ) );
+            if ( formatValue < 10u )
+                break;
         }
+        const hashed_string    programKey{ string_view{ key } };
+        RHIPipelineStateHandle existing{ 0 };
+        if ( _pPSOCache->findModuleProgramPSO( programKey, existing ) )
+            return existing;
+
+        RHIPipelineStateDesc desc{};
+        desc._vertexShaderPath              = program._shaderPath;
+        desc._pixelShaderPath               = program._shaderPath;
+        desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+        desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+        desc._numRenderTargets              = 1;
+        desc._arrRtvFormat[0]               = colorFormat;
+        desc._bEnableDepthTest              = bDepthTest ? 1 : 0;
+        desc._bEnableDepthWrite             = ( bDepthTest && program._bDepthWrite ) ? 1 : 0;
+        desc._depthStencilFormat            = bDepthTest ? constant::kDepthStencilFormat : RHIFormat::Unknown;
+        desc._bEnableBlend                  = program._bBlend ? 1 : 0;
+        desc._bPremultipliedAlpha           = program._bBlend ? SW_TRUE : SW_FALSE;
+        desc._cullMode                      = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
+        registerPSOLayout( handle, desc );
+        if ( handle == 0 )
+            SW_LOG_ERROR( "Module program '%#' could not be created (see the shader error above) - passes that use it are not drawn", program._shaderPath );
+        _pPSOCache->setModuleProgramPSO( programKey, handle );
+        return handle;
     }
 
     RHIPipelineStateHandle FrameRenderer::createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormatOverride )

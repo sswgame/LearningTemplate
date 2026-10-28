@@ -1,31 +1,39 @@
 /**
  * @file ModuleRenderPassRegistry.h
- * @brief 모듈(게임 · 키트)이 렌더 패스를 등록하는 창구입니다. 파이프라인 XML 의 `_type="Module"` 패스가 `_modulePass` 이름으로 여기를 봅니다.
- * @details **모듈 경계를 넘는 것은 데이터뿐입니다.** 모듈은 패스 이름과 패스 상수(이름 · float4)만 넘기고, 커맨드 리스트 · 트랜지언트 풀 · `FramePassContext` 는
- *          엔진 안에 남습니다. 렌더러는 병렬 기록 워커에서 락 안에서 상수를 값으로 복사해 갈 뿐 모듈 코드를 부르지 않습니다. 그래서
- *          - RT 안전: 모듈이 렌더 스레드 상태를 건드릴 길이 형식으로 없습니다(넘긴 값은 복사본이다).
- *          - 핫 리로드: 모듈 DLL 이 내려가도 렌더 스레드에 그 모듈의 함수 · vtable 이 남지 않습니다. 등록은 `ModuleRenderPassRegistration` 이 소멸자에서 풉니다.
- *          그리는 일(셰이더 · 입력 바인딩 · 대상)은 파이프라인 데이터가 정합니다 — 셰이더는 패스의 `_shaderPath`, 입력은 선언한 첨부의 역할, 대상은 첫 출력입니다.
- *          모듈이 직접 드로우를 기록하는 길(커맨드 리스트를 내보내는 길)은 열지 않았습니다. 필요해지면 그때 RT 계약(기록 시점 · 리소스 수명)을 따로 정합니다.
+ * @brief 모듈(게임 · 키트)이 렌더 스레드 확장(`IModuleRenderExtension`)과 씬 프록시(`IModuleSceneProxy`)를 등록하는 창구입니다.
+ * @details 계약은 `ModuleRenderExtension.h` 에 있습니다. 이 레지스트리는 다음을 맡습니다.
+ *          - **등록 목록**: 확장 객체(소유하지 않음), 프록시(소유함), 프록시 갱신 대기열.
+ *          - **flush**: 등록을 푸는 함수(`unregisterExtension` · `removeProxy`)는 렌더 스레드의 모듈 구간(`RenderScope`)이 끝나기를 기다린 뒤에야 목록을 바꾼다. 그래서 풀린 뒤에는 렌더 스레드가
+ *            그 모듈 코드를 다시 부르지 않고, 모듈이 내려가기 전(등록 객체의 소멸자)에 프록시가 모듈 안에서 소멸한다(언리얼 Live Coding 이 모듈을 내리기 전에 렌더링을 flush 하는 것과 같다).
+ *          잠금 순서는 늘 `_runMutex` → `_mutex` 입니다. 렌더 스레드는 `RenderScope` 로 `_runMutex` 를 프레임의 모듈 구간 내내 쥐고 목록은 `_mutex` 로 잠깐만 읽습니다 —
+ *          그래서 게임 스레드의 등록 · 갱신 올리기(`_mutex` 만)는 렌더 스레드를 막지 않는다.
+ *          **모듈 구간 안(확장 · 프록시 · 실행 콜백)에서 이 레지스트리의 등록 해제 함수를 부르면 교착합니다.**
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
-#include "Core/Math/VectorMath.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Renderer/Module/ModuleRenderExtension.h"
+
 namespace sw
 {
+    /** @brief 프록시 하나의 번호입니다. 0 은 등록 실패입니다. */
+    using ModuleSceneProxyId = uint32;
+    /** @brief 프록시 갱신 함수입니다. 게임 스레드가 값을 캡처해 올리고, 렌더 스레드가 프레임 시작에 프록시에 적용합니다. */
+    using ModuleProxyUpdateFn = Delegate<void( IModuleSceneProxy& )>;
+
     /**
      * @class ModuleRenderPassRegistry
-     * @brief 모듈 패스 이름 → 패스 상수 목록입니다. 엔진 서비스 범위의 서브시스템이며 모든 함수가 스레드 안전합니다(락 하나).
-     * @details 엔진이 소유하므로 게임 · 키트 모듈이 내려가도 사라지지 않습니다. 렌더러는 `engine::getSubsystem<ModuleRenderPassRegistry>()`,
-     *          모듈은 `game::findSubsystem<ModuleRenderPassRegistry>()` 로 찾습니다(`EngineServiceList.xxx` 의 GameVisible 행).
+     * @brief 엔진 서비스 범위의 서브시스템입니다. 엔진이 소유하므로 모듈이 내려가도 사라지지 않습니다.
+     * @details 렌더러는 `engine::getSubsystem<ModuleRenderPassRegistry>()`, 모듈은 `game::findSubsystem<ModuleRenderPassRegistry>()` 로 찾습니다(`EngineServiceList.xxx` 의 GameVisible 행).
      */
     class SW_API ModuleRenderPassRegistry : public ISubsystem
     {
@@ -33,68 +41,117 @@ namespace sw
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. */
         static constexpr const utf8* kSubsystemName = "ModuleRenderPass";
 
-        /** @brief 패스 상수 하나입니다. 이름은 모듈 셰이더의 패스 상수 칸 이름입니다(바인더가 리플렉션 이름으로 맞춘다). */
-        struct Constant
+        /**
+         * @class RenderScope
+         * @brief 렌더 스레드가 프레임의 모듈 구간(확장 훅 → 기록 → 콜백 정리) 동안 잡는 잠금입니다. 이 구간 안에서만 모듈 코드가 불립니다.
+         */
+        class RenderScope
         {
-            hashed_string _name{};
-            float4        _value{};
-        };
+        public:
+            explicit RenderScope( ModuleRenderPassRegistry& registry )
+                : _lock{ registry._runMutex }
+            {
+            }
+            RenderScope( const RenderScope& )            = delete;
+            RenderScope& operator=( const RenderScope& ) = delete;
 
-        /** @brief 패스 하나가 가질 수 있는 상수 수입니다. 넘기면 `setConstant` 가 거절합니다(패스 상수 버퍼는 크기가 정해져 있다). */
-        static constexpr size_t kMaxConstantCount = 16;
+        private:
+            ScopedLock<mutex> _lock;
+        };
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
 
-        /** @brief 패스 이름을 등록합니다. 이름이 비었거나 이미 있으면 false 입니다(두 모듈이 한 이름을 나눠 쓰지 않는다). */
-        [[nodiscard]] bool registerPass( const hashed_string& modulePass );
-        /** @brief 패스 이름을 풉니다. 없으면 아무것도 하지 않습니다. 다음 프레임부터 그 패스는 오류를 남기고 그려지지 않습니다. */
-        void unregisterPass( const hashed_string& modulePass );
-        /** @brief 패스 상수 하나를 씁니다(같은 이름이면 덮어씀). 등록되지 않은 패스이거나 상수가 `kMaxConstantCount` 를 넘으면 false 입니다. */
-        [[nodiscard]] bool setConstant( const hashed_string& modulePass, const hashed_string& name, const float4& value );
-        /** @brief 등록됐는지 반환합니다. */
-        bool isRegistered( const hashed_string& modulePass ) const;
-        /** @brief 렌더러가 부릅니다. 상수를 값으로 복사합니다. 등록되지 않은 패스면 false 이고 @p outListConstant 는 비웁니다. */
-        [[nodiscard]] bool copyConstants( const hashed_string& modulePass, vector<Constant>& outListConstant ) const;
-        /**
-         * @brief 그릴 수 없는 모듈 패스의 오류를 이름마다 한 번만 남기게 합니다. 처음이면 true 입니다.
-         * @details 다시 등록하면 그 이름의 기록이 지워진다 — 리로드 뒤에 또 빠지면 다시 알린다.
-         */
-        bool noteMissingOnce( const hashed_string& modulePass );
+        /** @brief 확장 객체를 올립니다(소유하지 않는다 — 객체는 등록을 풀 때까지 살아 있어야 한다). nullptr 이거나 이미 있으면 false 입니다. */
+        [[nodiscard]] bool registerExtension( IModuleRenderExtension* pExtension );
+        /** @brief 확장 객체를 풉니다. 렌더 스레드의 모듈 구간이 끝나기를 기다린 뒤 뺍니다(flush). 없으면 아무것도 하지 않습니다. */
+        void unregisterExtension( IModuleRenderExtension* pExtension );
+
+        /** @brief 프록시를 올리고(소유권을 넘긴다) 번호를 돌려줍니다. nullptr 이면 0 입니다. 렌더 스레드는 다음 프레임부터 봅니다. */
+        [[nodiscard]] ModuleSceneProxyId addProxy( unique_ptr<IModuleSceneProxy> pProxy );
+        /** @brief 프록시를 풀고 소멸시킵니다. flush 한 뒤이므로 소멸자는 호출한 모듈 안에서 돕니다. 그 프록시에 대기 중인 갱신도 버립니다. 없는 번호면 아무것도 하지 않습니다. */
+        void removeProxy( ModuleSceneProxyId id );
+        /** @brief 프록시 갱신을 올립니다. 렌더 스레드가 다음 프레임 시작에 적용합니다. 없는 번호이거나 함수가 비어 있으면 false 입니다. */
+        [[nodiscard]] bool enqueueProxyUpdate( ModuleSceneProxyId id, ModuleProxyUpdateFn update );
+
+        // --- 아래는 렌더 스레드가 `RenderScope` 안에서만 부릅니다. ---
+
+        /** @brief 대기 중인 프록시 갱신을 올린 순서대로 적용하고 비웁니다. */
+        void applyPendingProxyUpdates();
+        /** @brief 등록된 확장 포인터를 복사합니다(`RenderScope` 가 살아 있는 동안 유효하다). */
+        void copyExtensions( vector<IModuleRenderExtension*>& outList ) const;
+        /** @brief 등록된 프록시 포인터를 번호 순서로 복사합니다(`RenderScope` 가 살아 있는 동안 유효하다). */
+        void copyProxies( vector<IModuleSceneProxy*>& outList ) const;
+        /** @brief 그릴 수 없는 모듈 패스 · 요소의 오류를 키마다 한 번만 남기게 합니다. 처음이면 true 입니다. 키는 호출한 쪽이 정한 글입니다. */
+        bool noteFailureOnce( string_view key );
 
     private:
+        struct ProxyEntry
+        {
+            ModuleSceneProxyId            _id{ 0 };
+            unique_ptr<IModuleSceneProxy> _pProxy;
+        };
+        struct PendingUpdate
+        {
+            ModuleSceneProxyId  _id{ 0 };
+            ModuleProxyUpdateFn _update;
+        };
+
+        mutable mutex                                     _runMutex;
         mutable mutex                                     _mutex;
-        NameRegistry<vector<Constant>> _registryPass      SW_GUARDED_BY( _mutex ); ///< 패스 이름 → 상수 목록. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
-        unordered_set<hashed_string> _uniqueMissingLogged SW_GUARDED_BY( _mutex );
+        vector<IModuleRenderExtension*> _listExtension    SW_GUARDED_BY( _mutex );
+        vector<ProxyEntry> _listProxy                     SW_GUARDED_BY( _mutex );
+        vector<PendingUpdate> _listPendingUpdate          SW_GUARDED_BY( _mutex );
+        ModuleSceneProxyId _nextProxyId                   SW_GUARDED_BY( _mutex ) = 1;
+        unordered_set<hashed_string> _uniqueFailureLogged SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @class ModuleRenderPassRegistration
-     * @brief 모듈 패스 등록 하나의 수명입니다. 만들 때 등록하고 소멸할 때 풉니다 — 모듈이 내려갈 때 등록이 남지 않게 하는 형식입니다.
-     * @details 모듈의 게임 인스턴스 · 서브시스템 멤버로 둡니다. 이름이 겹쳐 등록하지 못했으면 `isRegistered` 가 false 이고 오류가 남았습니다.
-     *          레지스트리는 엔진 서비스 범위에 있어 이 객체보다 오래 삽니다.
+     * @class ModuleRenderExtensionRegistration
+     * @brief 확장 등록 하나의 수명입니다. 만들 때 올리고 소멸할 때 풉니다(flush 포함) — 모듈이 내려갈 때 렌더 스레드에 모듈 코드가 남지 않게 하는 형식입니다.
+     * @details 모듈의 게임 인스턴스 · 서브시스템 멤버로 둡니다. @p extension 은 이 객체보다 오래 살아야 합니다(멤버 선언 순서로 보장한다 — 확장 객체를 먼저 선언).
      */
-    class SW_API ModuleRenderPassRegistration
+    class SW_API ModuleRenderExtensionRegistration
     {
     public:
-        ModuleRenderPassRegistration( ModuleRenderPassRegistry& registry, string_view modulePass );
-        ~ModuleRenderPassRegistration();
+        ModuleRenderExtensionRegistration( ModuleRenderPassRegistry& registry, IModuleRenderExtension& extension );
+        ~ModuleRenderExtensionRegistration();
 
-        ModuleRenderPassRegistration( const ModuleRenderPassRegistration& )            = delete;
-        ModuleRenderPassRegistration& operator=( const ModuleRenderPassRegistration& ) = delete;
+        ModuleRenderExtensionRegistration( const ModuleRenderExtensionRegistration& )            = delete;
+        ModuleRenderExtensionRegistration& operator=( const ModuleRenderExtensionRegistration& ) = delete;
 
         bool isRegistered() const { return _bRegistered != SW_FALSE; }
-        /** @brief 패스 상수를 씁니다. 등록하지 못한 등록이면 false 입니다. */
-        [[nodiscard]] bool setConstant( string_view name, const float4& value );
 
     private:
         ModuleRenderPassRegistry& _registry;
-        hashed_string             _modulePass;
+        IModuleRenderExtension*   _pExtension;
         uint8                     _bRegistered;
+    };
+
+    /**
+     * @class ModuleSceneProxyRegistration
+     * @brief 프록시 등록 하나의 수명입니다. 만들 때 프록시를 올리고(소유권을 넘긴다) 소멸할 때 flush 하고 프록시를 소멸시킵니다.
+     */
+    class SW_API ModuleSceneProxyRegistration
+    {
+    public:
+        ModuleSceneProxyRegistration( ModuleRenderPassRegistry& registry, unique_ptr<IModuleSceneProxy> pProxy );
+        ~ModuleSceneProxyRegistration();
+
+        ModuleSceneProxyRegistration( const ModuleSceneProxyRegistration& )            = delete;
+        ModuleSceneProxyRegistration& operator=( const ModuleSceneProxyRegistration& ) = delete;
+
+        bool isRegistered() const { return _id != 0; }
+        /** @brief 프록시 갱신을 올립니다(값을 캡처한 함수). 렌더 스레드가 다음 프레임 시작에 프록시에 적용합니다. 등록하지 못한 등록이면 false 입니다. */
+        [[nodiscard]] bool update( ModuleProxyUpdateFn update );
+
+    private:
+        ModuleRenderPassRegistry& _registry;
+        ModuleSceneProxyId        _id;
     };
 } // namespace sw
