@@ -17,9 +17,11 @@
 	<At frame="130"><Expect probe="Editor.ProfilerSelectedFrame" atLeast="1"/></At>
 	<!-- 2) Pause · Save · Clear · Load -->
 	<At frame="135"><EditorClick mark="profiler.capture.pause"/></At>
+	<At frame="136"><WaitUntil probe="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="300"/></At>
 	<At frame="150"><Expect probe="Editor.ProfilerCapturePaused" equals="1"/><EditorClick mark="profiler.capture.save"/></At>
 	<At frame="165"><EditorClick mark="profiler.capture.clear"/></At>
 	<At frame="180"><Expect probe="Editor.ProfilerCapturedFrames" equals="0"/><EditorClick mark="profiler.capture.load"/></At>
+	<At frame="181"><WaitUntil probe="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="300"/></At>
 	<At frame="200">
 		<Expect probe="Editor.ProfilerCapturedFrames" atLeast="30"/>
 		<Expect probe="Editor.ProfilerCapturePaused" equals="1"/>

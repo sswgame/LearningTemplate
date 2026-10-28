@@ -17,6 +17,7 @@
 		<Expect probe="Editor.LightProbeBakeCount" equals="0"/>
 	</At>
 	<At frame="125"><DevCommand line="editor lighting.bakeProbes"/></At>
+	<At frame="126"><WaitUntil probe="Editor.LightProbeBakeRunning" equals="1" timeoutFrames="300"/></At>
 	<At frame="140">
 		<Expect probe="Editor.LightProbeBakeRunning" equals="1"/>
 		<Expect probe="Editor.LightProbeBakeCount" equals="0"/>
@@ -26,6 +27,7 @@
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<At frame="155"><EditorClick mark="statusBar.lightProbeBakeCancel" state="down"/></At>
 	<At frame="158"><EditorClick mark="statusBar.lightProbeBakeCancel" state="up"/></At>
+	<At frame="159"><WaitUntil probe="Editor.LightProbeBakeRunning" equals="0" timeoutFrames="600"/></At>
 	<At frame="175">
 		<Expect probe="Editor.LightProbeBakeRunning" equals="0"/>
 		<Expect probe="Editor.LightProbeBakeCount" equals="1"/>
