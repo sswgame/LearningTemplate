@@ -480,6 +480,26 @@ SW_TEST_CASE( ChatServiceTest, HistoryPastRetentionIsTrimmedAndFailedWritesAreDr
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
 }
 
+SW_TEST_CASE( ChatServiceTest, HistoryWriteCancelledByStoreShutdownIsDroppedWithoutAWarning )
+{
+    // 위 시험과 달리 SW_TEST_DEFENSIVE_SCOPE 가 없다 — 저장소 종료로 취소된 쓰기가 경고를 내면 로그 게이트가 이 테스트를 실패시킨다.
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatNode              node( &database, &hub, 1 );
+    node._directory._mapOnline[10] = "alice";
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
+    node._service.sendMessage( 10, "world.kr", "first", UnixMilliseconds{ 1000 }, 2 ); // 제재 캐시를 채운다
+    node.step( UnixMilliseconds{ 1000 } );
+
+    node._store.shutdown();
+    node._service.sendMessage( 10, "world.kr", "lost", UnixMilliseconds{ 6000 }, 3 );
+    node.step( UnixMilliseconds{ 6000 } );
+    SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Ok );
+    SW_EXPECT_EQUAL( node._service.getQueuedHistoryCount(), 0 );
+    SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
+}
+
 SW_TEST_CASE( ChatServiceTest, ShutdownCancelsPendingPresenceFinds )
 {
     // 서비스가 접속 상태 창구보다 먼저 내려가도 된다 — 맡긴 찾기를 취소해 창구가 나중에 사라진 서비스를 부르지 않는다.

@@ -182,7 +182,7 @@ namespace sw
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
-        void applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat );
+        void applyStatCache( AccountID accountID, bool bReadOk, bool bCancelled, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
         void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );

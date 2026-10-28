@@ -82,7 +82,7 @@ namespace sw
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );
-        void  completeSeed( AdminResult result );
+        void  completeSeed( AdminResult result, bool bCancelled );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:

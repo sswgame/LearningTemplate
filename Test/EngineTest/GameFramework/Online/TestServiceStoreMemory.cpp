@@ -42,9 +42,10 @@ namespace
     class MemoryStoreCountingWork final : public IServiceStoreWork
     {
     public:
-        MemoryStoreCountingWork( int32* pCompleted, ServiceStoreResult* pOutResult )
+        MemoryStoreCountingWork( int32* pCompleted, ServiceStoreResult* pOutResult, bool* pOutCancelled = nullptr )
             : _pCompleted{ pCompleted }
             , _pOutResult{ pOutResult }
+            , _pOutCancelled{ pOutCancelled }
             , _result{ ServiceStoreResult::Ok }
         {
         }
@@ -59,11 +60,14 @@ namespace
         {
             ++*_pCompleted;
             *_pOutResult = _result;
+            if ( _pOutCancelled != nullptr )
+                *_pOutCancelled = isCancelled();
         }
 
     private:
         int32*              _pCompleted;
         ServiceStoreResult* _pOutResult;
+        bool*               _pOutCancelled;
         ServiceStoreResult  _result;
     };
 } // namespace
@@ -119,4 +123,25 @@ SW_TEST_CASE( ServiceStoreMemoryTest, CompletionsWaitForPollAndShutdownStillComp
     SW_EXPECT_EQUAL( 1, frontB.pollCompletions() );
     SW_EXPECT_EQUAL( 2, completedB );
     SW_EXPECT_TRUE( resultB == ServiceStoreResult::Unavailable ); // 내린 뒤 맡긴 일도 정확히 한 번 끝난다
+}
+
+SW_TEST_CASE( ServiceStoreMemoryTest, OnlyWorkRefusedByShutdownIsCancelledNotWorkFailedByTheStore )
+{
+    // 서비스가 종료 때문에 취소된 일(경고 없이 넘김)과 진짜 저장소 고장(경고)을 `complete` 에서 가른다 — 둘 다 결과는 Unavailable 이다.
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    int32                 completed  = 0;
+    ServiceStoreResult    result     = ServiceStoreResult::Ok;
+    bool                  bCancelled = true;
+    database.armFault( ServiceStoreFault::RejectRead, 1 );
+    store.submit( make_unique<MemoryStoreCountingWork>( &completed, &result, &bCancelled ) );
+    SW_EXPECT_EQUAL( 1, store.pollCompletions() );
+    SW_EXPECT_TRUE( result == ServiceStoreResult::Unavailable );
+    SW_EXPECT_FALSE( bCancelled ); // 저장소 고장이다
+
+    store.shutdown();
+    store.submit( make_unique<MemoryStoreCountingWork>( &completed, &result, &bCancelled ) );
+    SW_EXPECT_EQUAL( 1, store.pollCompletions() );
+    SW_EXPECT_TRUE( result == ServiceStoreResult::Unavailable );
+    SW_EXPECT_TRUE( bCancelled ); // 종료가 막았다
 }
