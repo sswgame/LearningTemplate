@@ -23,7 +23,7 @@
 
 - 들어감: `RenderPassInputRole::SceneColorCopy`(에뮬 슬롯 1 을 G버퍼 알베도 · AO 와 나눠 씀)와 패스 종류 `SceneColorCopy`(`blitTexture` 로 장면 색 복사). 포워드 파이프라인 넷이 Sky 뒤 · Transparent 앞에 이 패스를 선언하고 Transparent 가 그 첨부를 입력으로 받는다. 사본이 없는 파이프라인(2D · 디퍼드)은 굴절 없이 알파 블렌드다. 테스트 `RenderPassTest.SceneColorCopyPassFeedsTransparentRefraction`.
 - 장면 깊이 사본: 입력 역할 `SceneDepthCopy`(에뮬 슬롯 2 를 G버퍼 노멀 · 블룸과 나눠 씀)와 패스 종류 `SceneDepthCopy`(일반 풀스크린, `scenedepthcopy.hlsl` 이 R32 실수 출력으로 점 샘플 복사). 반투명 패스는 장면 깊이를 깊이 붙임으로 쥐고 있어 읽을 수 없어 `blitTexture`(깊이 복사 보장 없음) 대신 셰이더로 옮긴다. 포워드 파이프라인 넷과 디퍼드 파이프라인이 Transparent 앞에 색 · 깊이 사본 패스를 선언하고 Transparent 가 둘을 입력으로 받는다(디퍼드는 색 사본도 이번에 처음 선언). 2D · 모듈 파이프라인은 사본이 없어 굴절 없는 알파 블렌드다.
-- 셰이더는 직접 들어갔다: `binding.hlsli` PassCB `g_SceneColorCopyIndex` · `g_SceneDepthCopyIndex` + 에뮬 슬롯 표(`sampleIndex` 세 변형), `water.hlsl` 굴절 · 두께(깊이 사본이 있으면 장면 월드 위치와의 거리로 두께를 재고 물보다 앞의 물체는 두께 0 · 굴절을 버린다, 없으면 정점에 구운 깊이). 패치 `ShaderPatches/06-EnvironmentRemainders-E2-Water.patch` 의 E2 부분(PassCB · water.hlsl)은 이 변경이 대신하므로 **적용하지 않는다**(낡았다). 그 패치에서 남은 것은 에뮬 슬롯 표를 `SW_EMU_SLOT_*` 매크로로 바꾸는 `binding.hlsli` 정리뿐이고 그것은 E2 일이 아니다.
+- 셰이더는 직접 들어갔다: `binding.hlsli` PassCB `g_SceneColorCopyIndex` · `g_SceneDepthCopyIndex` + 에뮬 슬롯 표(`sampleIndex` 세 변형), `water.hlsl` 굴절 · 두께(깊이 사본이 있으면 장면 월드 위치와의 거리로 두께를 재고 물보다 앞의 물체는 두께 0 · 굴절을 버린다, 없으면 정점에 구운 깊이). 옛 패치 `06-…` 는 지웠고, 거기 남아 있던 에뮬 슬롯 표의 `SW_EMU_SLOT_*` 정리는 [SilentFallbackAudit](SilentFallbackAudit.md) 이 `binding.hlsli` 에 넣었다.
 - 화면 공간 두께 상수(`kAbsorptionPerMeter` 0.8 · `kRefractionFullDepth` 1.5 m)는 눈으로 맞추지 않은 초기값이다.
 
 ## E3 레이어 여덟

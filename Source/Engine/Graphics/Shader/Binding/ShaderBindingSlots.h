@@ -390,7 +390,7 @@ namespace sw
          * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯 표입니다 — 이 표가 **유일한 원본**입니다.
          * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 코드가 거는 쿠키 · 노출). 한 슬롯을 여러 이름이 나눠 쓴다.
          *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<슬롯>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHlsl`) `binding.hlsli` 의
-         *          `Bindless::sampleIndex` 가 그 매크로를 읽는다(패치 `ShaderPatches/05a-…` 가 적용되면) — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
+         *          `Bindless::emulatedSlot` 이 그 매크로를 읽는다 — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
          *          C++ 의 역할 → 슬롯(`getEmulatedTextureSlot`)과 실행의 슬롯 바인딩도 이 표를 따른다.
          */
         namespace emulated
