@@ -23,7 +23,6 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
-from lint.EngineLayers import checkEngineLayers  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -51,15 +50,6 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {line.lstrip('!')}")
         else:
             print(f"[CheckIncludeOrder] OK ({checked} files)")
-
-    # --- Engine 폴더 층 ---------------------------------------------------------------
-    if stagedCppFiles:
-        listLayer = checkEngineLayers(projectRoot, stagedCppFiles)
-        if listLayer:
-            hasErrors = True
-            print(f"[EngineLayers] FAIL — {len(listLayer)}건 (층 표: Scripts/lint/EngineLayers.py)")
-            for line in listLayer:
-                print(f"  - {line}")
 
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------
     if stagedCppFiles or stagedShaderFiles:

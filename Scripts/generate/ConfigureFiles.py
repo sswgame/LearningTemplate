@@ -11,6 +11,7 @@ configure 가 파이썬 생성기 넷을 **한 프로세스**로 부른다 — �
   - CookContract.gen.h · CookContract.cmake (CookContract) — CookContract.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (ShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
   - EditorLayers.cmake     (EditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
+  - EngineLayers.cmake     (EngineLayers)        — 엔진 층 표 → CMake 변수(층별 소스 · 헤더)
 
 ToolchainVars.cmake(ToolchainCMake)는 여기 없다 — Environment 가 toolchain_config.json 을 쓴 **뒤**에 돌아야 한다.
 
@@ -32,6 +33,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from generate.CMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.CookContract import generateCookContract  # noqa: E402
 from generate.EditorLayers import generateEditorLayers  # noqa: E402
+from generate.EngineLayers import generateEngineLayers  # noqa: E402
 from generate.ShippingHostDefaults import generateShippingHostDefaults  # noqa: E402
 
 kTag = "ConfigureFiles"
@@ -45,6 +47,7 @@ def generateConfigureFiles(outputDir: Path, gameName: str) -> None:
     if (getProjectRoot() / gamePreset).is_file():
         generateShippingHostDefaults(outputDir / "ShippingHostDefaults.h", outputDir / "ShippingGameDefaults.h", gamePreset)
     generateEditorLayers(outputDir / "EditorLayers.cmake")
+    generateEngineLayers(outputDir / "EngineLayers.cmake")
 
 
 def addArgumentsInternal(parser: argparse.ArgumentParser) -> None:

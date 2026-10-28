@@ -63,6 +63,26 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 endforeach()
 
 # ------------------------------------------------------------------------------
+# 1-1) 층 — 파일마다 층(Scripts/generate/rules/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의
+#      층 부분(`EngineLayer<N>`)이 짓는다. Engine 타깃 자신은 헤더 · 리플렉션 산출물 · Core/Jolt 오브젝트만 든다.
+# ------------------------------------------------------------------------------
+include("${CMAKE_BINARY_DIR}/generated/sw/config/EngineLayers.cmake")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/EngineLayers.toml")
+set(listEngineLayerSource "")
+foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
+	# 이 구성이 짓는 것(ENGINE_SOURCES — 짓지 않는 폴더 · RHI 백엔드 · Jolt 를 뺀 것)만 남긴다.
+	list(TRANSFORM SW_ENGINE_TIER_${tier}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE listTierSource)
+	set(listTierUnbuilt ${listTierSource})
+	list(REMOVE_ITEM listTierUnbuilt ${ENGINE_SOURCES})
+	if(listTierUnbuilt)
+		list(REMOVE_ITEM listTierSource ${listTierUnbuilt})
+	endif()
+	set(swEngineTierSource_${tier} ${listTierSource})
+	list(APPEND listEngineLayerSource ${listTierSource})
+endforeach()
+list(REMOVE_ITEM ENGINE_SOURCES ${listEngineLayerSource})
+
+# ------------------------------------------------------------------------------
 # 2) 압축 코덱(zlib · LZ4 · Zstd) — Engine 에만 붙인다. 찾기 · 진단 · 링크 항목은 `sw_findEngineCompressionLibraries`(cmake/Engine/ThirdPartyLibs.cmake).
 # ------------------------------------------------------------------------------
 sw_findEngineCompressionLibraries(listEngineCompressionLib)
@@ -313,6 +333,67 @@ if(swEngineDependency)
 endif()
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:EngineJolt_objects>)
 add_dependencies(Engine EngineJolt_objects)
+
+# ------------------------------------------------------------------------------
+# 11) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_addModulePart`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
+#     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
+#     Engine 설정이 모두 끝난 뒤(Jolt 블록과 같은 자리)에 둔다 — 부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 구성 때 복사한다.
+# ------------------------------------------------------------------------------
+function(sw_addEngineLayerStubs PART TIER)
+	set(stubRoot "${CMAKE_BINARY_DIR}/generated/sw/EngineLayerStubs/tier${TIER}")
+	set(listNewStub "")
+	foreach(upperTier IN LISTS SW_ENGINE_TIER_LIST)
+		if(NOT upperTier GREATER TIER)
+			continue()
+		endif()
+		set(stubContent "#error \"Engine layer ${upperTier} header cannot be included from layer ${TIER} code (Scripts/generate/rules/EngineLayers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
+")
+		foreach(header IN LISTS SW_ENGINE_TIER_${upperTier}_HEADERS)
+			set(stubPath "${stubRoot}/${header}")
+			set(oldContent "")
+			if(EXISTS "${stubPath}")
+				file(READ "${stubPath}" oldContent)
+			endif()
+			if(NOT oldContent STREQUAL stubContent)
+				file(WRITE "${stubPath}" "${stubContent}")
+			endif()
+			list(APPEND listNewStub "${stubPath}")
+		endforeach()
+	endforeach()
+	set(manifestPath "${stubRoot}.manifest")
+	if(EXISTS "${manifestPath}")
+		file(STRINGS "${manifestPath}" listOldStub)
+		if(listNewStub)
+			list(REMOVE_ITEM listOldStub ${listNewStub})
+		endif()
+		foreach(oldStub IN LISTS listOldStub)
+			file(REMOVE "${oldStub}")
+		endforeach()
+	endif()
+	string(REPLACE ";" "
+" manifestContent "${listNewStub}")
+	file(WRITE "${manifestPath}" "${manifestContent}
+")
+	target_include_directories(${PART} BEFORE PRIVATE "${stubRoot}")
+endfunction()
+
+# 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_addModulePart` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
+get_target_property(swEngineLinkLibraries Engine LINK_LIBRARIES)
+get_target_property(swEngineDependency Engine MANUALLY_ADDED_DEPENDENCIES)
+foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
+	if(NOT swEngineTierSource_${tier})
+		continue()   # 이 구성이 짓지 않는 층(전용 서버의 렌더러)
+	endif()
+	sw_addModulePart(EngineLayer${tier}
+		OWNER Engine
+		SOURCES ${swEngineTierSource_${tier}}
+		LINK ${swEngineLinkLibraries}
+	)
+	sw_addEngineLayerStubs(EngineLayer${tier} ${tier})
+	if(swEngineDependency)
+		add_dependencies(EngineLayer${tier} ${swEngineDependency})
+	endif()
+endforeach()
 
 # ------------------------------------------------------------------------------
 # 10) RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다. 런타임 로드라 링크하지 않는다.
