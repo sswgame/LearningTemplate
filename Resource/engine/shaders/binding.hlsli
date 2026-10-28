@@ -326,7 +326,7 @@ static float4x4 View::getViewProjection()
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트, batchdata.hlsli).
+// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(4바이트 열 칸, 40바이트, batchdata.hlsli).
 //    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(InstanceData::load)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
 // 원소 정의는 batchdata.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
@@ -349,6 +349,8 @@ static BatchData BatchData::load( uint batchIndex )
     batch._vertexAnimationBase = kInvalidIndex;
     batch._sectionVertexOffset = 0u;
     batch._visibleBase         = 0u;
+    batch._lodLevelCount       = 0u;
+    batch._lodScreenSize       = 0.0f;
     const bool bValid          = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
     if ( bValid )
         batch = g_SwBatches[batchIndex];

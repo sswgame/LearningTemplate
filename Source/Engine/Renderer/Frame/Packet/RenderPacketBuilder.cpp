@@ -47,6 +47,10 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 테스트 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
     SW_GLOBAL_VARIABLE( bool, gv_autoRenderScale, false, "자동 렌더 배율 — 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다)" );
     SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleBudgetMs, 16.7f, "자동 렌더 배율의 프레임 시간 예산(ms) — 0 초과" );
+    /**
+     * @brief `-gv_gpuInstanceLod=0`: GPU 컬링이 인스턴스마다 메시 LOD 단계를 고르는 길을 끕니다(CPU `MeshLODSystem` 이 컴포넌트마다 고른다). 능력이 없는 백엔드(DX11)는 이 값과 상관없이 CPU 선택이다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_gpuInstanceLod, true, "GPU 컬링이 인스턴스마다 메시 LOD 단계를 고른다 (false=CPU 가 컴포넌트마다 고른다)" );
     SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleMin, 0.5f, "자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하" );
 } // namespace sw
 
@@ -67,6 +71,7 @@ namespace sw
         , _listScenePreviewBuilder{}
         , _listPreviewLODView{}
         , _bMergeBatchesAcrossMaterials{ false }
+        , _bGPUInstanceLodCapable{ false }
         , _bMissingCameraReported{ false }
     {
     }
@@ -86,6 +91,8 @@ namespace sw
         // GT 쪽 GPUScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
         // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
         _bMergeBatchesAcrossMaterials = device.supportsNativeBindlessSampling();
+        // GPU 인스턴스 LOD 는 컬링 컴퓨트가 단계를 고르므로 GPU 컬링 능력이 있는 백엔드만이다(DX11 은 CPU 단계 선택이 남는다).
+        _bGPUInstanceLodCapable = device.getCapabilities()._bGPUCulling != SW_FALSE;
         _gpuSceneBuilder->setMergeBatchesAcrossMaterials( _bMergeBatchesAcrossMaterials );
         for ( ScenePreviewBuilder& preview : _listScenePreviewBuilder )
         {
@@ -282,6 +289,7 @@ namespace sw
 
     void RenderPacketBuilder::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene )
     {
+        _gpuSceneBuilder->setGPUInstanceLodEnabled( _bGPUInstanceLodCapable && gv_gpuInstanceLod );
         _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );

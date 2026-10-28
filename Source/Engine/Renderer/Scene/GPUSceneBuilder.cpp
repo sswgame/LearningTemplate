@@ -16,6 +16,7 @@
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
+#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -238,7 +239,7 @@ namespace sw
             if ( batchIndex >= opaqueBatchCount )
                 return false;
             const GPUMeshBatch& batch           = _snapshot.getAllBatches()[batchIndex];
-            const bool          bSingleInstance = batch._instanceCount == 1 && batch._instanceBase == slot;
+            const bool          bSingleInstance = batch._instanceCount == 1 && batch._instanceBase == slot && batch._lodLevelCount == 0;
             if ( bSingleInstance == false )
                 return false;
         }
@@ -303,6 +304,7 @@ namespace sw
             candidate._instance = pMeshComp->getMaterialInstance();
         if ( fillCandidateMaterial( candidate, pMeshComp->getMaterial(), pScene, static_cast<uint32>( pMeshComp->getBlendMode() ) ) == false )
             return false;
+        applyGPULodGroup( candidate );
         // 퍼뮤테이션 해시는 **여기서 구하지 않는다**. 호출하는 쪽이 게임 스레드에서 기록한다(`stampPermutationHash`).
         // 머티리얼의 해시 게터는 더티 플래그를 보고 캐시를 다시 만드는 지연 계산이라, 같은 머티리얼을
         // 나눠 쓰는 프리미티브들을 워커 여럿이 동시에 채우면 그 캐시를 동시에 고쳐 쓰게 된다.
@@ -343,7 +345,36 @@ namespace sw
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
+        candidate._lodContentID = 0; // 인스턴스 배치(식생 · UI)는 LOD 그룹이 아니다
         return fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
+    }
+
+    void GPUSceneBuilder::applyGPULodGroup( DrawCandidate& candidate ) const
+    {
+        // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 **늘 기록한다**(0 도 값이다).
+        candidate._lodContentID = 0;
+        const Mesh* pMesh       = candidate._mesh.get();
+        if ( _bGPULodActive == SW_FALSE || pMesh == nullptr )
+            return;
+        // 첫 단계(정적 불투명 메시)만이다 — 스킨 · 모프 · VAT 는 단계마다 변형 풀 구간이 달라 CPU 가 단계를 고른다(PreloadAndLod.md P9). 투명은 정렬이 인스턴스 순서라 그룹으로 못 둔다.
+        // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs`)이므로 단계가 있는지와 스킨 · 블렌드만 본다.
+        const uint32 levelCount     = pMesh->getLODCount();
+        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULodMaxLevels && pMesh->hasSkin() == false;
+        const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
+        if ( bGroupableMesh == false || bOpaque == false )
+            return;
+        candidate._lodContentID       = pMesh->getContentID();
+        candidate._sectionFirstVertex = 0; // 단계 0 = 메시 전체. 낮은 단계는 컬링이 고른다
+        candidate._sectionVertexCount = 0;
+    }
+
+    void GPUSceneBuilder::setGPUInstanceLodEnabled( bool bEnabled )
+    {
+        const uint8 value = bEnabled ? SW_TRUE : SW_FALSE;
+        if ( _bGPUInstanceLodEnabled == value )
+            return;
+        _bGPUInstanceLodEnabled = value;
+        invalidateBuildCache(); // 그룹 여부가 배치 키(`_lodContentID`)를 바꾼다
     }
 
     bool GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
@@ -482,6 +513,16 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.flushTransforms" );
             pObjects->flushSceneTransforms();
+        }
+
+        // GPU 인스턴스 LOD 를 쓰는지는 수집 전에 정한다(수집 워커가 읽는다). 고정 단계 · 대기 뷰 · 뷰 없음은 CPU 가 고르므로 그 프레임은 그룹을 만들지 않고,
+        // 바뀌면 후보 키(`_lodContentID`)가 바뀌므로 지난 후보를 버려 전체를 다시 모은다(프리미티브는 더럽지 않아 건너뛰기가 막지 못한다).
+        const uint8 gpuLodActive = ( _bGPUInstanceLodEnabled == SW_TRUE && pObjects->getSubsystem<MeshLODSystem>().needsCPUSelection() == false ) ? SW_TRUE : SW_FALSE;
+        if ( gpuLodActive != _bGPULodActive )
+        {
+            _bGPULodActive = gpuLodActive;
+            pObjects->getSubsystem<MeshLODSystem>().setGPUSelectionActive( gpuLodActive == SW_TRUE );
+            invalidateBuildCache();
         }
 
         // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 처리한다. 바뀐 머티리얼이 있으면 그 세대가 오른다.
@@ -1613,7 +1654,37 @@ namespace sw
             work.push_back( gpuInstance );
         }
 
+        // LOD 그룹은 불투명 배치뿐이다(`applyGPULodGroup`). 머리 배치가 단계 수를 들고, 낮은 단계 배치가 바로 뒤에 붙는다.
+        const bool bLodGroup = headCandidate._lodContentID != 0 && blendMode != RHIBlendMode::Transparent;
+        if ( bLodGroup )
+            batch._lodLevelCount = batch._mesh->getLODCount();
         // 배치 목록은 한 벌이다. 불투명 · 투명은 스냅샷이 내주는 구간 뷰다.
+        if ( bLodGroup )
+        {
+            const GPUMeshBatch head = batch;
+            _snapshot.appendBatch( std::move( batch ) );
+            emitLodLevelBatches( head );
+            return;
+        }
         _snapshot.appendBatch( std::move( batch ) );
+    }
+
+    void GPUSceneBuilder::emitLodLevelBatches( const GPUMeshBatch& head )
+    {
+        const vector<MeshLOD>& listLod = head._mesh->getLODs();
+        for ( const MeshLOD& lod : listLod )
+        {
+            GPUMeshBatch level        = head;
+            level._instanceBase       = static_cast<uint32>( instanceWork().size() ); // 인스턴스는 머리 배치가 가졌다 — 구간은 비고 시작만 이어 간다
+            level._instanceCount      = 0;
+            level._visibleBase        = _snapshot.getNextVisibleBase();
+            level._visibleCapacity    = head._visibleCapacity;
+            level._lodLevelCount      = 0;
+            level._lodScreenSize      = lod._screenSize;
+            level._sectionFirstVertex = lod._firstVertex;
+            level._vertexCount        = lod._vertexCount;
+            _batchElementTable.beginBatch(); // 원소는 머리 배치에 있다. 배치 번호와 나란한 빈 구간이다
+            _snapshot.appendBatch( std::move( level ) );
+        }
     }
 } // namespace sw

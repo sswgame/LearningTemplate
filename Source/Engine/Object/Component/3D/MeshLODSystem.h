@@ -54,6 +54,16 @@ namespace sw
         void setPendingView( const AnimationLODView& view );
         void clearPendingView();
         bool hasPendingView() const { return _bHasPendingView == SW_TRUE; }
+        /**
+         * @brief 이번 프레임의 단계를 GPU 컬링이 아니라 CPU(`update`)가 골라야 하면 true 입니다 — 단계를 고정했거나(`setForcedLOD` · `gv_meshLodForce`), 대기 뷰(컷 준비)가 있거나, 뷰를 아직 받지 못했다.
+         * @details GPU 인스턴스 LOD(`GPUSceneBuilder` 의 LOD 그룹)는 렌더가 그린 뷰의 화면 크기로만 고른다. 고정 단계 · 대기 뷰 · 뷰 없음은 그 뷰들이 모르는 입력이라 CPU 선택이 맡는다.
+         */
+        bool needsCPUSelection() const;
+        /**
+         * @brief GPU 컬링이 단계를 고르는 중임을 알립니다(`GPUSceneBuilder` 가 빌드마다 정한다). 켜 있고 `needsCPUSelection` 이 아니면 `update` 는 고르지 않는다 — 단계를 고르는 쪽이 둘이면
+         *        컴포넌트마다 프레임마다 `setLODIndex` 가 렌더 상태를 더럽혀 부분 수집이 헛돈다.
+         */
+        void setGPUSelectionActive( bool bActive ) { _bGPUSelectionActive = bActive ? SW_TRUE : SW_FALSE; }
         /** @brief 렌더가 뷰를 한 번이라도 넣었으면 true 입니다(넣기 전에는 화면 크기를 모른다). */
         bool areViewsSet() const { return _bViewsSet == SW_TRUE; }
         /** @brief 컴포넌트의 경계 구를 모든 뷰(대기 뷰 포함)에서 본 가장 큰 화면 크기입니다. 어느 뷰에도 없으면 0 입니다(텍스처 밉 요청 우선순위도 이것을 쓴다). */
@@ -75,8 +85,9 @@ namespace sw
         GameObjectManager&       _manager;
         vector<AnimationLODView> _listView;
         AnimationLODView         _pendingView;
-        int32                    _forcedLOD;       ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
-        uint8                    _bViewsSet;       ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
-        uint8                    _bHasPendingView; ///< 대기 뷰가 있다
+        int32                    _forcedLOD;           ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
+        uint8                    _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
+        uint8                    _bHasPendingView;     ///< 대기 뷰가 있다
+        uint8                    _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)
     };
 } // namespace sw

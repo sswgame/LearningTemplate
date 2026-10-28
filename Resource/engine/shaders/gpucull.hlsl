@@ -54,6 +54,9 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
+    float4   g_LodDepthRow;        // 인스턴스 LOD 선택의 화면 크기 식 항 — xyz 클립 w 를 만드는 열(뷰-투영의 m14 m24 m34), w = m44
+    float4   g_LodView;            // xyz 눈 위치, w 투영 y 배율(AnimationLODUtil::computeProjectionTerms)
+    uint4    g_LodControl;         // x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
@@ -66,6 +69,8 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 static const uint kMaxOcclusionTestTiles = 8u;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
 static const float kMinOcclusionClipW = 1.0e-4f;
+/// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `AnimationLODUtil::computeScreenSize` 의 `kEpsilon`).
+static const float kMinLodClipW = 1.0e-5f;
 
 bool isVisible( float3 center, float radius )
 {
@@ -76,6 +81,31 @@ bool isVisible( float3 center, float radius )
             return false;
     }
     return true;
+}
+
+/// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `AnimationLODUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
+float computeLodScreenSize( float3 center, float radius )
+{
+    const float3 toEye  = center - g_LodView.xyz;
+    const float  clipW  = dot( center, g_LodDepthRow.xyz ) + g_LodDepthRow.w;
+    const bool   bClose = dot( toEye, toEye ) <= radius * radius || clipW <= kMinLodClipW;
+    return bClose ? 1.0f : radius * g_LodView.w / clipW;
+}
+
+/**
+ * @brief LOD 그룹(머리 배치 @p headBatch)에서 화면 크기에 맞는 단계의 배치 번호를 고릅니다. C++ `Mesh::selectLOD` 와 같은 규칙이다 — 화면 크기가 임계값보다 작은 동안
+ *        단계를 낮춘다. 단계 k 배치 행(머리 + k)이 이 단계로 넘어가는 임계값을 든다.
+ */
+uint selectLodBatch( uint headBatch, uint levelCount, float screenSize )
+{
+    uint level = 0u;
+    for ( uint nextLevel = 1u; nextLevel < levelCount; ++nextLevel )
+    {
+        if ( screenSize >= g_BatchInfo[headBatch + nextLevel]._lodScreenSize )
+            break;
+        level = nextLevel;
+    }
+    return headBatch + level;
 }
 
 bool isOccluded( float3 center, float radius )
@@ -125,15 +155,21 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( instanceId >= g_InstanceCount )
         return;
 
-    const InstanceData instance   = g_Instances[instanceId];
-    const uint         batchIndex = instance._meshBatchIndex;
-    if ( batchIndex >= g_BatchCount )
+    const InstanceData instance  = g_Instances[instanceId];
+    const uint         headBatch = instance._meshBatchIndex;
+    if ( headBatch >= g_BatchCount )
         return;
 
     // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanimation 도
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
     if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
         return;
+
+    // LOD 그룹이면 화면 크기로 단계를 골라 그 단계 배치(머리 + 단계)에 쓴다. 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 다르며, 인스턴스는 머리에 한 번만 있다.
+    // 그룹은 정적 불투명뿐이라 아래 압축 포기(sortMode 1)나 투명 정렬과 만나지 않는다.
+    uint batchIndex = headBatch;
+    if ( g_LodControl.x != 0u && g_BatchInfo[headBatch]._lodLevelCount > 1u )
+        batchIndex = selectLodBatch( headBatch, g_BatchInfo[headBatch]._lodLevelCount, computeLodScreenSize( instance._boundsCenter, instance._boundsRadius ) );
 
     // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
     // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는

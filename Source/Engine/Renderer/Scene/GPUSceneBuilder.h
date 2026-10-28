@@ -113,6 +113,14 @@ namespace sw
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
+        /**
+         * @brief GPU 인스턴스 LOD(컬링 컴퓨트가 인스턴스마다 LOD 단계를 고른다)를 쓸 수 있는지 정합니다. 렌더가 디바이스 능력(`RHICapabilities::_bGPUCulling`)으로 정한다.
+         * @details 능력이 없는 백엔드(DX11)는 꺼 두고 CPU 단계 선택(`MeshLODSystem`)이 그대로 맡는다 — 선언된 능력 분기이지 폴백이 아니다(배치 구성이 달라진다).
+         *          켜도 이번 프레임에 그룹으로 그리는 것은 `MeshLODSystem::needsCPUSelection` 이 아닐 때의 정적 불투명 메시뿐이다. 값이 바뀌면 다음 빌드가 다시 나눈다.
+         */
+        void setGPUInstanceLodEnabled( bool bEnabled );
+        /** @brief GPU 인스턴스 LOD 를 쓸 수 있도록 정했으면 true 입니다(`setGPUInstanceLodEnabled`). */
+        bool isGPUInstanceLodEnabled() const { return _bGPUInstanceLodEnabled == SW_TRUE; }
         /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
         bool isMergeBatchesAcrossMaterials() const { return _bMergeAcrossMaterials == SW_TRUE; }
 
@@ -329,6 +337,12 @@ namespace sw
              */
             uint64 _permutationHash{ 0 };
             /**
+             * @brief 이 후보를 GPU 인스턴스 LOD 그룹(`GPUMeshBatch::_lodLevelCount`)으로 그리면 그 메시의 내용 번호(`Mesh::getContentID`), 아니면 0 입니다. **배치 키**입니다.
+             * @details 그룹이면 구간은 LOD 0(메시 전체)이고 단계는 컬링이 고른다. 메시가 제자리에서 다시 읽혀 단계가 바뀌면(`Mesh::setLODs`) 내용 번호가 달라 배치를 다시 나눈다.
+             *          메시만 바뀐 교체(`hasSameBatchKeyExceptMesh`)는 그룹을 받지 않는다 — 단계 배치가 메시의 정점 구간을 굳히기 때문이다.
+             */
+            uint64 _lodContentID{ 0 };
+            /**
              * @brief 월드 행렬식이 음수(거울 변환)인지 나타냅니다. 배치 키이며 `GPUMeshBatch::_bReverseCulling` 으로 전달됩니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임에도 다시 구한다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눈다.
              */
@@ -360,7 +374,7 @@ namespace sw
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _highlight == other._highlight &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
-                       _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
+                       _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -384,12 +398,12 @@ namespace sw
             {
                 return _material == other._material && _instance == other._instance && _sectionFirstVertex == other._sectionFirstVertex &&
                        _sectionVertexCount == other._sectionVertexCount && _blendMode == other._blendMode && _permutationHash == other._permutationHash &&
-                       _bReverseCulling == other._bReverseCulling;
+                       _lodContentID == other._lodContentID && _bReverseCulling == other._bReverseCulling;
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 6 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) * 2 +
                                                     sizeof( uint8 ) + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
@@ -414,6 +428,8 @@ namespace sw
          */
         /** @return 후보의 머티리얼이 GPU 에 올라가지 않았으면(`MaterialGpuState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
         [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
+        /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 0). 블렌드가 정해진 뒤에 부른다. */
+        void applyGPULodGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */
@@ -438,6 +454,12 @@ namespace sw
          */
         void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
                         const shared_ptr<MaterialInstance>& instance );
+        /**
+         * @brief LOD 그룹의 낮은 단계 배치를 머리 배치(@p head) 바로 뒤에 붙입니다(`emitBatch` 가 머리를 붙인 직후에 부른다).
+         * @details 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 단계의 것이다. 인스턴스 구간은 비고(`_instanceCount` 0, 시작은 지금의 인스턴스 끝) 가시 구간은
+         *          그룹의 인스턴스 수만큼이다 — 컬링이 단계를 고른 인스턴스를 그 구간에 쓴다. 원소 표에는 빈 구간을 넣어 배치 번호와 나란히 둔다.
+         */
+        void emitLodLevelBatches( const GPUMeshBatch& head );
         /**
          * @brief 후보 인덱스에서 마지막 방출이 그 후보에 준 머티리얼 원소 인덱스를 찾는 배열입니다.
          * @details 원소 인덱스는 (머티리얼, 인스턴스) 쌍에 영속적이라 배치 키가 그대로인 프레임에는 다시 묻지 않아도 된다.
@@ -676,6 +698,10 @@ namespace sw
         /** @brief 마지막 빌드가 쓴 깊이 축입니다(`GPUTransparentSorter::getAxis`). 다르면 정렬을 다시 합니다. */
         float3 _lastTransparentSortAxis{};
         uint8  _bMergeAcrossMaterials{ SW_FALSE };
+        /// @brief GPU 인스턴스 LOD 를 쓸 수 있는 백엔드인지입니다(`setGPUInstanceLodEnabled`).
+        uint8 _bGPUInstanceLodEnabled{ SW_FALSE };
+        /// @brief 이번 수집에서 후보를 LOD 그룹으로 만드는지입니다(능력 + 이 씬이 CPU 선택을 요구하지 않음). 수집 워커가 읽고 게임 스레드가 수집 전에 한 번 정한다.
+        uint8 _bGPULodActive{ SW_FALSE };
         /// @brief 꼬리를 재방출하는 중이면 true 입니다. `emitBatch` 가 원소를 테이블에서 다시 조회하지 않고 `_listCandidateMaterialElement` 를 읽습니다.
         uint8 _bReuseMaterialElement{ SW_FALSE };
     };

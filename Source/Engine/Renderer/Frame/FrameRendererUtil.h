@@ -147,6 +147,12 @@ namespace sw
             float32 _arrOcclusionViewProj[16]{};
             uint32  _arrOcclusionGrid[4]{};
             float32 _arrOcclusionDepthSize[4]{};
+            /// @brief 인스턴스 LOD 선택의 화면 크기 식 항입니다(`AnimationLODUtil::computeProjectionTerms`). xyz 클립 w 를 만드는 열, w 가 m44.
+            float32 _arrLodDepthRow[4]{};
+            /// @brief xyz 눈 위치(눈이 경계 구 안이면 크기 1), w 투영 y 배율.
+            float32 _arrLodView[4]{};
+            /// @brief x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0). 나머지는 예약.
+            uint32 _arrLodControl[4]{};
         };
         /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusiontiles.hlsl 이 루트 상수로 받는다).
         static constexpr uint32 kOcclusionTileSize = 16;

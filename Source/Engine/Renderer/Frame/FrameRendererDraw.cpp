@@ -316,7 +316,7 @@ namespace sw
             }
             const uint32        batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch& head             = inoutState._batches[batchIndex];
-            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( inoutState._passType, head ) == false;
+            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -421,7 +421,7 @@ namespace sw
     bool FrameRenderer::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
                                          const GPUMeshBatch& other ) const
     {
-        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false;
+        const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
         if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other, drawMode ) != psoForBatch( pso, head, drawMode ) )

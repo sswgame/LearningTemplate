@@ -31,6 +31,7 @@ namespace sw
         , _forcedLOD{ -1 }
         , _bViewsSet{ SW_FALSE }
         , _bHasPendingView{ SW_FALSE }
+        , _bGPUSelectionActive{ SW_FALSE }
     {
     }
 
@@ -61,6 +62,11 @@ namespace sw
         return MathUtil::min( relaxedLOD, currentLOD );
     }
 
+    bool MeshLODSystem::needsCPUSelection() const
+    {
+        return gv_meshLodForce >= 0 || _forcedLOD >= 0 || _bHasPendingView == SW_TRUE || _bViewsSet == SW_FALSE;
+    }
+
     float32 MeshLODSystem::computeScreenSize( const MeshComponent& component ) const
     {
         float3  center{};
@@ -80,6 +86,9 @@ namespace sw
     {
         (void)deltaTime;
         SW_PROFILE_SCOPE( "GT.MeshLOD.select" );
+        // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
+        if ( _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false )
+            return;
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
         const int32                    forcedLOD     = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
         for ( ScenePrimitive* pPrimitive : listPrimitive )

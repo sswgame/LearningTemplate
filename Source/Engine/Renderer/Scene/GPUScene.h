@@ -59,7 +59,7 @@ namespace sw
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
      *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpucull.hlsl 의 GPUBatchInfo 와
-     *          레이아웃이 같아야 한다(uint 8개, 32바이트).
+     *          레이아웃이 같아야 한다(4바이트 10칸, 40바이트).
      */
     struct GPUBatchInfo
     {
@@ -86,12 +86,16 @@ namespace sw
          * @details 인스턴스 구간(`_instanceBase`)과 다른 축이다. LOD 그룹이 없는 배치는 둘이 같다.
          */
         uint32 _visibleBase{ 0 };
+        /// @brief LOD 그룹의 머리 배치(단계 0)에서 그룹의 단계 수입니다(`GPUMeshBatch::_lodLevelCount`, 0 이면 그룹이 아니다). 컬링이 인스턴스의 머리 배치 행에서 읽는다.
+        uint32 _lodLevelCount{ 0 };
+        /// @brief LOD 그룹의 낮은 단계 배치 행에서 이 단계로 넘어가는 화면 크기 임계값입니다(`GPUMeshBatch::_lodScreenSize`). 컬링이 머리 + 단계 번호 행에서 읽는다.
+        float32 _lodScreenSize{ 0.0f };
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 8 * sizeof( uint32 ), "GPUBatchInfo 는 uint 여덟(32바이트) — batchdata.hlsli BatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 10 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(40바이트) — batchdata.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer

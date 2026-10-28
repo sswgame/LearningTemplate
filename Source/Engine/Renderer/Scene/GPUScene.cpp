@@ -289,6 +289,8 @@ namespace sw
             _listScratchBatchInfo[argIndex]._instanceBase        = infoBatch._instanceBase;
             _listScratchBatchInfo[argIndex]._instanceCount       = infoBatch._instanceCount;
             _listScratchBatchInfo[argIndex]._visibleBase         = infoBatch._visibleBase;
+            _listScratchBatchInfo[argIndex]._lodLevelCount       = infoBatch._lodLevelCount;
+            _listScratchBatchInfo[argIndex]._lodScreenSize       = infoBatch._lodScreenSize;
             _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
             _listScratchBatchInfo[argIndex]._firstVertex         = infoBatch._firstVertex;
             _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;

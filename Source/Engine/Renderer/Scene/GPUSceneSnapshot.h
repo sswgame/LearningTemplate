@@ -77,6 +77,9 @@ namespace sw
 
 namespace sw
 {
+    /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULodGroup`).
+    inline constexpr uint32 kGPULodMaxLevels = 8;
+
     static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시, 머티리얼, 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
@@ -109,7 +112,15 @@ namespace sw
         uint32 _visibleBase{ 0 };
         /// @brief 가시 구간의 길이(이 배치에 보일 수 있는 인스턴스 수의 상한)입니다. LOD 그룹이 없으면 `_instanceCount` 와 같다.
         uint32 _visibleCapacity{ 0 };
-        uint32 _materialIndex{ 0 };
+        /**
+         * @brief LOD 그룹의 머리 배치(단계 0)에만 있는 값으로 그룹의 단계 수입니다. 0 이면 그룹이 아닙니다(CPU 가 단계를 고르거나 단계가 하나뿐인 메시).
+         * @details 그룹의 단계 배치는 머리 바로 뒤에 `_lodLevelCount - 1` 개 이어지고(같은 머티리얼 · 같은 메시, 정점 구간만 단계의 것) 인스턴스는 머리 배치 번호를
+         *          `_meshBatchIndex` 로 가진다. 컬링(`gpucull.hlsl`)이 인스턴스마다 화면 크기로 단계를 골라 그 배치의 가시 구간에 쓴다.
+         */
+        uint32 _lodLevelCount{ 0 };
+        /// @brief 그룹의 낮은 단계(1 이상) 배치에만 있는 값으로, 이 단계로 넘어가는 화면 크기 임계값입니다(`MeshLOD::_screenSize`).
+        float32 _lodScreenSize{ 0.0f };
+        uint32  _materialIndex{ 0 };
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
          * @details RT 가 `GPUScene::assignMorphBases` 로 채운다. GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). upload 가 이 값을
@@ -172,6 +183,12 @@ namespace sw
         static_assert( shaderslot::kMaterialTextureCount == 16, "_arrMaterialTexSrv 의 초기값을 칸 수만큼 적는다" );
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRHI 합니다. 이 shared_ptr 이 수명을 잡고 있어 패킷이 살아 있는 동안 유지됩니다. */
         shared_ptr<MaterialInstance> _materialInstance;
+
+        /**
+         * @brief 이 배치가 그릴 인스턴스 칸을 가질 수 있으면 true 입니다(가시 구간이 비지 않았다).
+         * @details CPU 인스턴스 수(`_instanceCount`)가 아니라 이것으로 거른다. LOD 그룹의 낮은 단계 배치는 인스턴스를 가지지 않지만(`_instanceCount` 0) 컬링이 채우는 구간이 있다.
+         */
+        bool hasDrawSlots() const { return _visibleCapacity != 0; }
 
         /**
          * @brief 두 배치가 머티리얼 쪽에서 멀티 드로우 하나로 묶일 수 있는지 판단합니다. 버퍼, SRV, 원소 수, 텍스처가 같아야 하고, 머티리얼 CB 는

@@ -79,17 +79,27 @@ namespace sw
 
     float32 AnimationLODUtil::computeScreenSize( const AnimationLODView& view, const float3& center, float32 radius )
     {
-        const float4x4& m = view._viewProj;
         // 절두체 밖이면 0 — 판정 식은 GPU 컬링과 같다(Frustum 의 여섯 평면).
         if ( view._frustum.overlapsSphere( center, radius ) == false )
             return 0.0f;
-        const float32 clipW      = center._x * m._14 + center._y * m._24 + center._z * m._34 + m._44;
-        const float32 scaleY     = MathUtil::sqrt( m._12 * m._12 + m._22 * m._22 + m._32 * m._32 );
+        float32 arrDepthRow[4];
+        float32 scaleY{ 0.0f };
+        computeProjectionTerms( view._viewProj, arrDepthRow, scaleY );
+        const float32 clipW      = center._x * arrDepthRow[0] + center._y * arrDepthRow[1] + center._z * arrDepthRow[2] + arrDepthRow[3];
         const float3  toEye      = center - view._position;
         const bool    bEyeInside = toEye.getLengthSquared() <= radius * radius;
         if ( bEyeInside || clipW <= MathUtil::kEpsilon )
             return 1.0f;
         return radius * scaleY / clipW;
+    }
+
+    void AnimationLODUtil::computeProjectionTerms( const float4x4& viewProj, float32 ( &outArrDepthRow )[4], float32& outScaleY )
+    {
+        outArrDepthRow[0] = viewProj._14;
+        outArrDepthRow[1] = viewProj._24;
+        outArrDepthRow[2] = viewProj._34;
+        outArrDepthRow[3] = viewProj._44;
+        outScaleY         = MathUtil::sqrt( viewProj._12 * viewProj._12 + viewProj._22 * viewProj._22 + viewProj._32 * viewProj._32 );
     }
 
     float32 AnimationLODUtil::allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
