@@ -50,6 +50,17 @@ def listGeneratorInternal(tree: BuildTree) -> list[tuple[str, list[str], list[st
 
 
 class GeneratorsTest(unittest.TestCase):
+    def testLintTestsDoNotRegisterSkipReturnCode(self) -> None:
+        # 린트는 ctest 에서 전체 훑기다 — 건너뜀(77)이 새면 SKIP_RETURN_CODE 가 그것을 실패가 아닌 "건너뜀" 으로 바꿔 숨긴다. 없으면 0 이 아닌 값은 전부 실패다.
+        with tempfile.TemporaryDirectory() as tempDir:
+            outPath = Path(tempDir) / "LintTargets.cmake"
+            result = subprocess.run([sys.executable, str(kRepositoryRoot / "Scripts/generate/GenerateLintTargets.py"), str(outPath)],
+                                    cwd=kRepositoryRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            text = outPath.read_text(encoding="utf-8")
+        self.assertIn("sw_registerScriptTest(", text)
+        self.assertNotIn("SKIP_RETURN_CODE", text)
+
     def testOutputMatchesConfiguredTree(self) -> None:
         tree = findBuildTreeInternal()
         if tree is None:

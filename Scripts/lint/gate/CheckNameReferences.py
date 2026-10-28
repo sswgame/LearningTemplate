@@ -23,6 +23,7 @@
 - `NameReference/ScenarioStep` · `ScenarioProbe` · `DevCommand`: 시나리오(`*.scenario.xml`)의 `<At>` 안 단계 이름, `probe` 속성,
   `<DevCommand line>` 의 첫 낱말이 `SW_AUTOMATION_STEP` · `SW_AUTOMATION_PROBE` · `SW_DEV_COMMAND` 로 등록된 이름이다. 실행기는 이것을
   시나리오를 올린 실기동(hostgpu 의 AppScenarioTest)에서야 오류로 낸다 — CI(nogpu)는 단계 · 명령 이름을 바꿔도 통과했다.
+- `NameReference/ScenarioXml`: 시나리오 XML 이 깨져 위 이름 검사를 못 했으면 건너뛰고 통과하지 않고 위반이다.
 
   python Scripts/lint/gate/CheckNameReferences.py [--root <repo>]
 """
@@ -327,8 +328,10 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             root = ElementTree.parse(path).getroot()
-        except ElementTree.ParseError:
-            continue  # XML 이 깨진 것은 에셋 검증 규칙 xml-parses 가 알린다
+        except ElementTree.ParseError as error:
+            # 깨진 시나리오를 건너뛰면 그 시나리오의 이름 검사가 빠진 채 통과한다 — 다른 규칙(xml-parses)이 알리더라도 이 게이트가 본 것은 위반으로 낸다.
+            listViolation.append(f"[NameReference/ScenarioXml] {relative}: XML 을 읽지 못해 단계 · 탐침 · 개발 명령 이름을 검사하지 못했습니다 — {error}")
+            continue
         scenarioCount += 1
         for at in root.iter("At"):
             for step in at:
@@ -453,6 +456,15 @@ class CheckNameReferencesGate(LintGate):
                                                        "                           &distance, true, true );\n"),
                 "Resource/engine/automation/probe.scenario.xml": ("<Scenario><At frame=\"1\"><WaitUntil probe=\"Probe.Distance\" target=\"Farmer\" atMost=\"1\"/>"
                                                                   "</At></Scenario>\n"),
+            },
+        },
+        {
+            "name": "깨진 시나리오 XML 은 건너뛰어 통과하지 않고 위반이다",
+            "expectedViolation": "[NameReference/ScenarioXml] Resource/engine/automation/broken.scenario.xml: XML 을 읽지 못해",
+            "files": {
+                "Source/Engine/ProbeSteps.cpp": "SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n",
+                "Resource/engine/automation/ok.scenario.xml": "<Scenario/>\n",
+                "Resource/engine/automation/broken.scenario.xml": "<Scenario><At frame=\"1\"></Scenario>\n",
             },
         },
     ]
