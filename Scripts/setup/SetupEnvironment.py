@@ -177,12 +177,6 @@ class EnvironmentSetupManager:
 
         return vcpkgPath, ninjaPath
 
-    def runLinuxSetupInternal(self) -> None:
-        if platform.system() == "Linux":
-            from setup.SetupLinuxDevEnvironment import setupLinuxDevEnvironment
-
-            setupLinuxDevEnvironment()
-
     def installPreCommitHookInternal(self) -> None:
         # 훅 설치 실패를 경고로 넘기면 커밋 검사 없이 커밋하게 된다 — 멈춘다.
         from setup.InstallGitHooks import installPreCommitHook
@@ -223,7 +217,6 @@ class EnvironmentSetupManager:
             self.toolchain_config_file.write_text(newJson, encoding="utf-8")
 
         self.updateParserConfigInternal(config.target_platform)
-        self.runLinuxSetupInternal()
         self.installPreCommitHookInternal()
 
         self.logger.info(

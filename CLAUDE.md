@@ -8,8 +8,8 @@
 
 ## 읽을 것
 
-- 남은 일: [NEXT](docs/plans/NEXT.md)(지금 상태) → [Roadmap](docs/plans/Roadmap.md)(순서) → 계획 문서. `py -3 -m Scripts plans` 는 목록, `--file <이름>` 은 한 문서, `--section <제목 일부>` 는 그 절만 보인다.
-- 큰 문서: `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 읽는다. 30KB 넘는 `.md` 는 통째로 읽지 않는다.
+- 남은 일: [NEXT](docs/plans/NEXT.md)(지금 상태) → [Roadmap](docs/plans/Roadmap.md)(순서) → 계획 문서를 파일로 직접 연다(`docs/plans/`).
+- 큰 문서: 30KB 넘는 `.md` 는 통째로 읽지 않는다 — 제목(`## …`)을 검색해 그 절만 부분 읽기로 연다.
 - 코딩 규칙: [AGENTS.md](AGENTS.md) 목차에서 일에 맞는 `docs/agents/` 파일만 읽는다.
 
 ## 원칙

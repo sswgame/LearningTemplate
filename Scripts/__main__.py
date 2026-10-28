@@ -53,10 +53,6 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("include-order", "lint.gate.CheckIncludeOrder", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("format-includes", "lint.fixer.FormatIncludeOrder", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
     Subcommand("format", "lint.fixer.FormatClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
-    Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
-    Subcommand("plans", "dev.ListPlans", "계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(--status · --area · --file · --section)"),
-    Subcommand("doc", "dev.RunDoc", "큰 마크다운 문서의 목차(제목 · 행 번호 · 절 크기)나 한 절만 보인다(--section, 제목 일부)"),
-    Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록"),
 )
 
 _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command in _kSubcommand}
