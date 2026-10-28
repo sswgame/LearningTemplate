@@ -635,6 +635,144 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowStampTravelsThroughTheAllocatorHeade
 }
 
 /**
+ * @brief [MemoryProfilerTest] 곡선 판정 — 워밍업 뒤가 평평하면 통과하고, 회차마다 느는 곡선 · 점이 모자란 곡선은 통과하지 못한다
+ */
+SW_TEST_CASE( MemoryProfilerTest, JudgeLeakCurveSeparatesFlatFromGrowing )
+{
+    const LeakCurveCriteria criteria;
+
+    // 첫 회가 크고(캐시가 찬다) 이후 평평하다 — 워밍업을 버리면 기울기 0 이다.
+    vector<LeakCurvePoint> listFlat{
+        { 9000, 12 }
+    };
+    for ( uint32 round = 0; round < 8; ++round )
+    {
+        listFlat.push_back( LeakCurvePoint{ 1000, 4 } );
+    }
+    const LeakCurveVerdict flat = MemoryProfiler::judgeLeakCurve( listFlat, criteria );
+    SW_ASSERT_TRUE( flat._bValid );
+    SW_EXPECT_EQUAL( 8u, flat._sampleCount );
+    SW_EXPECT_NEAR_EQUAL( 0.0, flat._slopeBytesPerRound, 1.0e-6 );
+    SW_EXPECT_TRUE( flat._bFlat );
+
+    // 회차마다 4096 바이트 · 블록 하나가 남는다.
+    vector<LeakCurvePoint> listGrowing{
+        { 0, 0 }
+    };
+    for ( uint32 round = 0; round < 8; ++round )
+    {
+        listGrowing.push_back( LeakCurvePoint{ 1000 + uint64{ 4096 } * round, 4 + uint64{ 1 } * round } );
+    }
+    const LeakCurveVerdict growing = MemoryProfiler::judgeLeakCurve( listGrowing, criteria );
+    SW_ASSERT_TRUE( growing._bValid );
+    SW_EXPECT_NEAR_EQUAL( 4096.0, growing._slopeBytesPerRound, 1.0e-6 );
+    SW_EXPECT_NEAR_EQUAL( 1.0, growing._slopeBlocksPerRound, 1.0e-6 );
+    SW_EXPECT_FALSE( growing._bFlat );
+
+    // 허용치 안의 잡음은 평평하다. 줄어드는 곡선(기울기 < 0)도 누수가 아니다.
+    const vector<LeakCurvePoint> listNoisy{
+        {5000, 9},
+        {1000, 4},
+        {1100, 4},
+        { 990, 4},
+        {1080, 4},
+        {1000, 4}
+    };
+    SW_EXPECT_TRUE( MemoryProfiler::judgeLeakCurve( listNoisy, criteria )._bFlat );
+    const vector<LeakCurvePoint> listShrinking{
+        {5000, 9},
+        {4000, 8},
+        {3000, 7},
+        {2000, 6}
+    };
+    SW_EXPECT_TRUE( MemoryProfiler::judgeLeakCurve( listShrinking, criteria )._bFlat );
+
+    // 점이 모자라면 판정할 수 없다 — 평평하다고 말하지 않는다.
+    const LeakCurveVerdict tooShort = MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{
+                                                                          {1, 1},
+                                                                          {2, 1}
+    },
+                                                                      criteria );
+    SW_EXPECT_FALSE( tooShort._bValid );
+    SW_EXPECT_FALSE( tooShort._bFlat );
+    SW_EXPECT_FALSE( MemoryProfiler::judgeLeakCurve( vector<LeakCurvePoint>{}, criteria )._bFlat );
+}
+
+/**
+ * @brief [MemoryProfilerTest] 반복 로드 곡선 — 워밍업 1회 + 측정 8회를 회차마다 창으로 재면, 풀어 주는 로드는 평평하고 회차마다 한 블록을 흘리는 로드는 가팔라진다
+ * @details 씬 로드를 흉내 낸 할당 묶음이다(첫 회에만 정적 캐시가 찬다). 실제 씬 로드 곡선은 엔진 테스트가 같은 판정(`judgeLeakCurve`)에 점을 넘긴다.
+ *          다른 스레드의 할당이 섞인 회차가 있으면 곡선이 흔들려 평평함을 단정하지 않는다(누수 쪽 단정은 4096 바이트라 잡음보다 크다).
+ */
+SW_TEST_CASE( MemoryProfilerTest, RepeatedLoadCurveIsFlatWithoutLeakAndSteepWithLeak )
+{
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+    if ( pProfiler->isLeakWindowOpen() )
+        SW_TEST_SKIP( "the host already holds an open leak window" );
+    const bool bWasTracking = pProfiler->isTrackingEnabled();
+    pProfiler->setTrackingEnabled( true );
+
+    constexpr MemoryTag kTag              = MemoryTag::Navigation;
+    constexpr uint32    kWarmupRounds     = 1;
+    constexpr uint32    kMeasuredRounds   = 8;
+    constexpr uint32    kBlocksPerLoad    = 16;
+    constexpr size_t    kLeakedBlockBytes = 4096;
+
+    void*                  pStaticCache = nullptr; // 첫 회 로드가 채우는 정적 캐시(워밍업이 버리는 증가)
+    vector<void*>          listLeaked;
+    vector<LeakCurvePoint> listCleanCurve;
+    vector<LeakCurvePoint> listLeakyCurve;
+    bool                   bForeignAllocation = false;
+
+    for ( const bool bLeaky : { false, true } )
+    {
+        vector<LeakCurvePoint>& listCurve = bLeaky ? listLeakyCurve : listCleanCurve;
+        for ( uint32 round = 0; round < kWarmupRounds + kMeasuredRounds; ++round )
+        {
+            pProfiler->beginLeakWindow( LeakWindowDetail::FullStacks );
+            if ( pStaticCache == nullptr )
+                pStaticCache = Memory::allocate( 8192, kTag );
+
+            vector<void*> listBlock;
+            for ( uint32 blockIndex = 0; blockIndex < kBlocksPerLoad; ++blockIndex )
+            {
+                listBlock.push_back( Memory::allocate( 256 + blockIndex * 16, kTag ) );
+            }
+            if ( bLeaky )
+                listLeaked.push_back( Memory::allocate( kLeakedBlockBytes, kTag ) ); // 언로드가 이 블록을 놓친다
+            for ( void* pBlock : listBlock )
+            {
+                Memory::free( pBlock ); // 언로드
+            }
+
+            const LeakWindowReport report = pProfiler->endLeakWindow();
+            SW_ASSERT_TRUE( report._bValid );
+            bForeignAllocation = bForeignAllocation || report._foreignThreadBlockCount != 0;
+            listCurve.push_back( LeakCurvePoint{ report._totalBytes, report._totalBlockCount } );
+        }
+    }
+
+    const LeakCurveCriteria criteria;
+    const LeakCurveVerdict  clean = MemoryProfiler::judgeLeakCurve( listCleanCurve, criteria );
+    const LeakCurveVerdict  leaky = MemoryProfiler::judgeLeakCurve( listLeakyCurve, criteria );
+    SW_ASSERT_TRUE( clean._bValid && leaky._bValid );
+    SW_EXPECT_EQUAL( kMeasuredRounds, clean._sampleCount );
+    SW_EXPECT_FALSE( leaky._bFlat );
+    SW_EXPECT_TRUE( leaky._slopeBytesPerRound >= static_cast<float64>( kLeakedBlockBytes ) * 0.5 );
+    if ( bForeignAllocation == false )
+        SW_EXPECT_TRUE( clean._bFlat );
+
+    for ( void* pLeaked : listLeaked )
+    {
+        Memory::free( pLeaked );
+    }
+    Memory::free( pStaticCache );
+    pProfiler->setTrackingEnabled( bWasTracking );
+}
+
+/**
  * @brief [MemoryProfilerTest] 데이터가 적는 태그 이름은 철자 그대로 찾고(대소문자가 다르면 모르는 이름), 모르는 이름은 거절한다
  */
 SW_TEST_CASE( MemoryProfilerTest, FindsTagsByName )

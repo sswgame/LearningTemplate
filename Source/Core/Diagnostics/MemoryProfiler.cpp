@@ -137,8 +137,6 @@ namespace sw
             };
             /** @brief 모든 프레임이 거를 프레임일 때 첫 프레임 항목에 쓰는 글입니다. */
             static constexpr const utf8* kNoCallerFrameText = "[no frame outside Core/Memory and Core/Container]";
-            /** @brief 보고서를 stderr 로 남길 때의 최대 줄 수입니다(나머지는 몇 줄을 줄였는지만 적는다). */
-            static constexpr uint32 kMaxPrintedLeakEntry = 64;
 
             /** @brief 심볼 글 한 줄이 할당기 · 컨테이너 안쪽 프레임이면 true 입니다. */
             static bool isAllocatorFrameText( string_view text )
@@ -256,11 +254,17 @@ namespace sw
 
     void MemoryProfiler::captureMemoryLeakBaseline()
     {
-        // 태그별 기준선은 플랫폼 검사와 따로 잡는다 — 기동 뒤부터 종료까지 하나의 누수 창(태그 합계)을 열어 두고,
-        // 종료 끝에 어느 용도가 늘었는지(`endLeakWindow` → `printLeakWindowReport`) 본다. 긴 창이라 스택은 잡지 않는다.
+        // 긴 창이라 스택은 잡지 않는다. 출처를 찾을 때는 아래 오버로드로 `FullStacks` 를 고른다.
+        captureMemoryLeakBaseline( LeakWindowDetail::TagTotals );
+    }
+
+    void MemoryProfiler::captureMemoryLeakBaseline( LeakWindowDetail detail )
+    {
+        // 태그별 기준선은 플랫폼 검사와 따로 잡는다 — 기동 뒤부터 종료까지 하나의 누수 창을 열어 두고,
+        // 종료 끝에 어느 용도가 늘었는지(`endLeakWindow` → `printLeakWindowReport`) 본다.
         MemoryProfiler* pActive = getActive();
         if ( pActive != nullptr )
-            pActive->beginLeakWindow( LeakWindowDetail::TagTotals );
+            pActive->beginLeakWindow( detail );
         // 이 뒤로 레지스트리가 저장소를 키우면 기준선 때 블록을 보관했다가, 그 뒤 오른 항목이 다 빠지면 그리로 돌아간다 — 키운 블록이 창에 남지 않는다.
         (void)RegistrationListBase::setStorageKeptOnGrowth( true );
 #if defined( SW_HAS_CRT_LEAK_CHECK )
@@ -847,7 +851,45 @@ namespace sw
         }
     }
 
-    uint32 MemoryProfiler::printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag )
+    LeakCurveVerdict MemoryProfiler::judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria )
+    {
+        LeakCurveVerdict verdict;
+        const size_t     warmup = criteria._warmupRounds;
+        if ( listPoint.size() < warmup + 2 )
+            return verdict; // 기울기에 점이 둘은 있어야 한다 — 모자라면 평평하다고 말하지 않는다
+
+        // x 는 워밍업 뒤 첫 점을 0 으로 둔 회차 번호입니다. 최소제곱 기울기 = (n·Σxy − Σx·Σy) / (n·Σxx − (Σx)²)
+        const size_t  count = listPoint.size() - warmup;
+        const float64 n     = static_cast<float64>( count );
+        float64       sumX{ 0 };
+        float64       sumXX{ 0 };
+        float64       sumBytes{ 0 };
+        float64       sumBytesX{ 0 };
+        float64       sumBlocks{ 0 };
+        float64       sumBlocksX{ 0 };
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const float64 x      = static_cast<float64>( index );
+            const float64 bytes  = static_cast<float64>( listPoint[warmup + index]._bytes );
+            const float64 blocks = static_cast<float64>( listPoint[warmup + index]._blockCount );
+            sumX += x;
+            sumXX += x * x;
+            sumBytes += bytes;
+            sumBytesX += bytes * x;
+            sumBlocks += blocks;
+            sumBlocksX += blocks * x;
+        }
+        const float64 denominator    = n * sumXX - sumX * sumX; // 점이 둘 이상이고 x 가 서로 달라 0 보다 크다
+        verdict._bValid              = true;
+        verdict._sampleCount         = static_cast<uint32>( count );
+        verdict._slopeBytesPerRound  = ( n * sumBytesX - sumX * sumBytes ) / denominator;
+        verdict._slopeBlocksPerRound = ( n * sumBlocksX - sumX * sumBlocks ) / denominator;
+        verdict._bFlat               = verdict._slopeBytesPerRound <= criteria._maxSlopeBytesPerRound &&
+                         verdict._slopeBlocksPerRound <= criteria._maxSlopeBlocksPerRound;
+        return verdict;
+    }
+
+    uint32 MemoryProfiler::printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry )
     {
         const utf8* pPhase = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
         if ( report._bValid == false )
@@ -865,7 +907,7 @@ namespace sw
         uint32 printedCount{ 0 };
         for ( const LeakWindowEntry& entry : report._listEntry )
         {
-            if ( printedCount == MemoryProfilerInternal::kMaxPrintedLeakEntry )
+            if ( printedCount == maxPrintedEntry )
             {
                 MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - ... %# more lines not shown.", pPhase,
                                                           static_cast<uint32>( report._listEntry.size() ) - printedCount );

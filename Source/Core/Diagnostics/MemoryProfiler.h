@@ -144,6 +144,48 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 반복 로드 곡선의 한 점 — 회차 하나의 창 보고서에서 뽑은 값입니다(`LeakWindowReport::_totalBytes` · `_totalBlockCount`). */
+    struct LeakCurvePoint
+    {
+        uint64 _bytes{ 0 };
+        uint64 _blockCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 반복 로드 곡선이 평평한지 가르는 기준입니다(`MemoryProfiler::judgeLeakCurve`).
+     * @details 기본값은 L2 측정(`docs/plans/LeakDetection.md` 4절 3번) 전의 잠정 값이고 L2 뒤에 확정합니다. 로더 · 로그 워커가 섞이는 잡음을 견디도록
+     *          0 이 아니라 작은 허용치를 둡니다 — 진짜 누수는 회차마다 같은 양이 남아 이 허용치보다 훨씬 가파르다.
+     */
+    struct LeakCurveCriteria
+    {
+        static constexpr uint32  kDefaultWarmupRounds           = 1;     ///< 캐시 · 풀이 차는 첫 회라 버리는 회차 수
+        static constexpr float64 kDefaultMaxSlopeBytesPerRound  = 256.0; ///< 이보다 가파르면 바이트가 회차마다 는다고 본다
+        static constexpr float64 kDefaultMaxSlopeBlocksPerRound = 1.0;   ///< 이보다 가파르면 블록 수가 회차마다 는다고 본다
+
+        uint32  _warmupRounds{ kDefaultWarmupRounds };
+        float64 _maxSlopeBytesPerRound{ kDefaultMaxSlopeBytesPerRound };
+        float64 _maxSlopeBlocksPerRound{ kDefaultMaxSlopeBlocksPerRound };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `MemoryProfiler::judgeLeakCurve` 의 판정입니다. */
+    struct LeakCurveVerdict
+    {
+        bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다
+        bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true
+        uint32  _sampleCount{ 0 };         ///< 기울기에 쓴 점 수(워밍업 제외)
+        float64 _slopeBytesPerRound{ 0 };  ///< 회차에 대한 바이트의 최소제곱 기울기
+        float64 _slopeBlocksPerRound{ 0 }; ///< 회차에 대한 블록 수의 최소제곱 기울기
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief `FullStacks` 창이 블록 하나에 대해 남기는 기록입니다. 해제하면 지웁니다. */
     struct LeakWindowBlock
     {
@@ -225,6 +267,11 @@ namespace sw
         static void enableMemoryLeakChecks();
         /** @brief 의도적인 수명 할당을 마친 뒤 힙 스냅샷을 저장하고, 활성 프로파일러의 태그 합계 누수 창을 엽니다(`beginLeakWindow`). */
         static void captureMemoryLeakBaseline();
+        /**
+         * @brief 기준선 창의 기록 수준을 고릅니다. `FullStacks` 이면 종료 보고가 줄마다 첫 프레임을 적습니다(Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다).
+         * @details 켜는 쪽(`gv_*` 읽기)은 호출하는 엔진 기동이 정합니다. 인자 없는 `captureMemoryLeakBaseline()` 은 `TagTotals` 입니다.
+         */
+        static void captureMemoryLeakBaseline( LeakWindowDetail detail );
         /** @brief 종료 후 플랫폼 누수를 보고합니다. 힙이 늘었으면 0 이 아닌 값을 반환합니다. */
         static int32 reportMemoryLeaks( const utf8* pPhaseTag = "shutdown" );
 
@@ -333,9 +380,17 @@ namespace sw
         [[nodiscard]] LeakWindowReport endLeakWindow();
         /**
          * @brief 보고서를 stderr 로 한 줄씩 남깁니다(로거가 종료된 뒤에도 보이게 — CRT 누수 보고와 같은 경로). 엔진 종료 끝에 Debug 에서 부릅니다.
-         * @return 남긴 줄 수입니다. 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
+         * @param maxPrintedEntry 남길 줄 수의 상한입니다(넘으면 줄인 수만 한 줄로 적는다). 잠정 값이고 L2 측정 뒤에 확정합니다.
+         * @return 보고서의 줄 수입니다(상한으로 줄인 줄도 센다). 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
          */
-        static uint32 printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag );
+        static uint32 printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry = kDefaultMaxPrintedLeakEntry );
+        /** @brief `printLeakWindowReport` 가 남기는 줄 수의 잠정 상한입니다. */
+        static constexpr uint32 kDefaultMaxPrintedLeakEntry = 64;
+        /**
+         * @brief 반복 로드의 회차별 점이 평평한지 가릅니다 — 점마다 닫힌 창의 합(`_totalBytes` · `_totalBlockCount`)이고, 처음 `_warmupRounds` 개는 버립니다.
+         * @details 남은 점에 최소제곱 직선을 맞춰 기울기가 기준 이하이면 평평합니다. 순수 계산이라 창이나 프로파일러 상태와 무관합니다.
+         */
+        [[nodiscard]] static LeakCurveVerdict judgeLeakCurve( const vector<LeakCurvePoint>& listPoint, const LeakCurveCriteria& criteria );
 
         /** @brief 콜 스택별 집계를 @p order 기준 내림차순으로 정렬해 반환합니다(세부 추적이 켜져 있을 때만 채워집니다). */
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;

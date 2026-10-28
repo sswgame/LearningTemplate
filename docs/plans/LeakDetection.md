@@ -26,10 +26,10 @@
 |---|---|---|
 | L1 | 측정 창: `AllocationRecord::_windowStamp` · 헤더 패딩 분할 · `recordFree` 가 `AllocationRecord` 를 받음, `MemoryProfiler::beginLeakWindow` · `beginLeakRound` · `endLeakWindow` · `printLeakWindowReport`, 기준선 배열을 창으로 합침, `TestMemoryProfiler` 창 테스트 다섯 개. 종료 보고가 창 밖까지 사는 저장소(레지스트리 · 호스트 범위 · 정적 캐시)를 누수로 보던 것은 결정 기록 5-3 "종료 누수는 …" 줄대로 정리했다(2026-10-28) | 끝남 |
 | L2 | 측정으로 질문 셋에 답한다(4절). 답에 따라 `FullStacks` 의 상한(블록 수 · 스택 깊이)과 기준선 창을 `FullStacks` 로 올릴지를 정한다 | 대기 |
-| L3 | 반복 로드 곡선 검사: 한 씬을 워밍업 1회 + 측정 8회 로드 · 언로드하며 회차마다 창을 닫아 `_totalBytes` · `_totalBlockCount` 곡선을 낸다. 8회가 평평하지 않으면(기울기 > 0) 실패하는 테스트나 시나리오 | 대기 |
-| L4 | 보고 연결: 종료 보고와 에디터 프로파일러 패널이 `FullStacks` 보고서(줄 · 첫 프레임)를 보이게 한다. 켜는 방법(`gv_*`)과 줄 수 상한은 L2 로 정한다 | 대기 |
+| L3 | 반복 로드 곡선 검사: 한 씬을 워밍업 1회 + 측정 8회 로드 · 언로드하며 회차마다 창을 닫아 `_totalBytes` · `_totalBlockCount` 곡선을 낸다. 8회가 평평하지 않으면(기울기 > 0) 실패하는 테스트나 시나리오. 판정은 `MemoryProfiler::judgeLeakCurve`(워밍업을 버린 점의 최소제곱 기울기 ≤ `LeakCurveCriteria` 허용치, 점이 모자라면 `_bValid` false)이고 `TestMemoryProfiler` 의 `JudgeLeakCurveSeparatesFlatFromGrowing` · `RepeatedLoadCurveIsFlatWithoutLeakAndSteepWithLeak`(흉내 낸 로드로 정상 · 누수 곡선)가 건다. **기울기 허용치(바이트 256 · 블록 1 / 회차)는 잠정이고 L2 측정 뒤 확정.** 진짜 씬 로드 곡선(엔진 테스트가 같은 판정에 점을 넘긴다)은 남음 | 코드 끝남(2026-10-28, 빌드 · 테스트 안 돌림) · 씬 연결 남음 |
+| L4 | 보고 연결: 종료 보고와 에디터 프로파일러 패널이 `FullStacks` 보고서(줄 · 첫 프레임)를 보이게 한다. 켜는 방법(`gv_*`)과 줄 수 상한은 L2 로 정한다. Core 쪽은 끝남: `captureMemoryLeakBaseline( LeakWindowDetail )` 오버로드(인자 없는 호출은 `TagTotals` 그대로)와 `printLeakWindowReport` 의 줄 수 인자(`kDefaultMaxPrintedLeakEntry` 64 는 잠정, L2 측정 뒤 확정). 엔진 기동이 `gv_*` 를 읽어 오버로드를 부르는 것과 에디터 패널은 남음 | Core 끝남(2026-10-28) · 엔진 · 패널 남음 |
 
-별도 단위: **소유 형식 강화** — 원시 `sw_new`(25곳)와 `Memory::allocate`(31곳)를 소유 형식(`make_unique` · 컨테이너)으로 바꿔 누수가 생기는 모양 자체를 줄인다(다른 작업자 몫). 창은 이 단위가 끝나도 남는다(컨테이너 증가 · 캐시 누적을 잡는다).
+별도 단위(이번 작업 범위 밖, 손대지 않음): **소유 형식 강화** — 원시 `sw_new`(25곳)와 `Memory::allocate`(31곳)를 소유 형식(`make_unique` · 컨테이너)으로 바꿔 누수가 생기는 모양 자체를 줄인다(다른 작업자 몫). 창은 이 단위가 끝나도 남는다(컨테이너 증가 · 캐시 누적을 잡는다).
 측정(두 변경이 병합된 뒤에 한다): 창(`leakwin`)의 오버헤드와 소유 형식 도입 전 · 후 비용. 각 변경이 들어간 뒤 비교 케이스를 `Scripts/qa/PerfCompare.py` 에 더하고 그때 검증 묶음 항목을 올린다.
 
 ## 4. 측정으로 가릴 질문
