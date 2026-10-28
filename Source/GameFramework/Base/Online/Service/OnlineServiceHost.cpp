@@ -251,7 +251,7 @@ namespace sw
         }
         NetRequestServerConfig requestSettings;
         _requestServer.initialize( &_endpoint, requestSettings );
-        if ( _requestServer.registerMethod( OnlineHostMethod::kHello, this ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, this ) == false )
+        if ( _requestServer.registerMethod( OnlineHostMethod::kHello, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) == false )
         {
             outError = "online service host methods are already registered";
             releaseTransportSide();
@@ -266,7 +266,7 @@ namespace sw
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerHostService 가 겹침을 이미 봤다
+                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ); // registerHostService 가 겹침을 이미 봤다
             }
         }
         if ( _listenerTransport->initialize( &_endpoint, settings._transportSettings ) == false || _listenerTransport->listen( settings._listenAddress ) == false )
@@ -354,7 +354,7 @@ namespace sw
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), this ) )
+                if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), NetRequestFunction::create<&OnlineServiceHost::onNetRequest>( this ) ) )
                     continue;
                 for ( uint16 undo = 0; undo < offset; ++undo )
                 {

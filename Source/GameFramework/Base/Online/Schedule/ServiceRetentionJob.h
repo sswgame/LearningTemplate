@@ -34,20 +34,20 @@ namespace sw
      * @class ServiceRetentionJob
      * @brief 보존 기간 쓸기를 예약 작업으로 돌립니다. 서비스 스레드 하나가 쓴다.
      */
-    class SW_GF_API ServiceRetentionJob final : public IScheduledJobHandler
+    class SW_GF_API ServiceRetentionJob final
     {
     public:
         static constexpr const utf8* kJobID = "retention.sweep";
 
         ServiceRetentionJob();
-        ~ServiceRetentionJob() override;
+        ~ServiceRetentionJob();
 
         /** @brief 작업을 등록합니다. 규칙이 없으면 등록하지 않고 true 입니다. 일정이 틀리면 false 입니다. */
         [[nodiscard]] bool initialize( IServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceRetentionRule> listRule, const ServiceRetentionJobConfig& settings );
         /** @brief 맡긴 일이 끝나기를 기다린 뒤 비웁니다. */
         void shutdown();
 
-        void onScheduledRun( const ScheduledRun& run ) override;
+        void onScheduledRun( const ScheduledRun& run );
 
         /** @brief 마지막으로 끝난 회차가 지운 레코드 수입니다(테스트 · 진단). */
         int64 getLastDeletedCount() const { return _lastDeletedCount; }

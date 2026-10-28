@@ -87,7 +87,7 @@ namespace sw
         schedule._jobID       = kJobID;
         schedule._kind        = ScheduleKind::Daily;
         schedule._minuteOfDay = settings._minuteOfDay;
-        if ( _pScheduler->registerJob( schedule, this ) == false )
+        if ( _pScheduler->registerJob( schedule, ScheduledJobFunction::create<&ServiceRetentionJob::onScheduledRun>( this ) ) == false )
         {
             SW_LOG_ERROR( "ServiceRetentionJob: the sweep job could not be scheduled (minute of day %#)", settings._minuteOfDay );
             return false;

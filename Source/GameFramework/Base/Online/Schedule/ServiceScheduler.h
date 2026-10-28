@@ -12,6 +12,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"
 
@@ -60,18 +61,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 회차를 차지했을 때 불리는 처리기입니다. */
-    class IScheduledJobHandler
-    {
-    public:
-        IScheduledJobHandler()          = default;
-        virtual ~IScheduledJobHandler() = default;
-
-        IScheduledJobHandler( const IScheduledJobHandler& )            = delete;
-        IScheduledJobHandler& operator=( const IScheduledJobHandler& ) = delete;
-
-        virtual void onScheduledRun( const ScheduledRun& run ) = 0;
-    };
+    /** @brief 회차를 차지했을 때 부르는 함수입니다(`ServiceScheduler::registerJob`). 주인은 작업을 등록한 동안 살아 있어야 한다. */
+    using ScheduledJobFunction = Delegate<void( const ScheduledRun& run )>;
 } // namespace sw
 
 namespace sw
@@ -93,7 +84,7 @@ namespace sw
         void shutdown();
 
         /** @brief 작업을 등록합니다. 일정이 틀리면(작업 id 문자, 시각 범위, 임대) 경고를 남기고 등록하지 않습니다. 등록했으면 true 입니다. */
-        [[nodiscard]] bool registerJob( const ScheduleDefinition& definition, IScheduledJobHandler* pHandler );
+        [[nodiscard]] bool registerJob( const ScheduleDefinition& definition, const ScheduledJobFunction& function );
         /** @brief 회차가 된 작업을 저장소에서 차지해 보고, 차지한 것만 처리기를 부릅니다. 차지는 저장소 작업이라 결과는 다음 `pollCompletions` 에서 옵니다. */
         void update( UnixMilliseconds nowMs );
         /** @brief 처리기가 일을 마쳤음을 차지 레코드에 적습니다(끝 시각은 마지막 `tick` 시각. 임대가 지나 다른 서버가 이어받았으면 적지 않는다). */
@@ -122,12 +113,12 @@ namespace sw
 
         struct Job
         {
-            ScheduleDefinition    _definition{};
-            IScheduledJobHandler* _pHandler{ nullptr };
-            int64                 _handledOccurrenceMs{ -1 }; ///< 이 서버가 돌았거나 끝난 것을 본 마지막 회차
-            int64                 _retryOccurrenceMs{ -1 };   ///< `_retryAtMs` 가 가리키는 회차
-            int64                 _retryAtMs{ 0 };
-            uint8                 _bClaimPending{ SW_FALSE };
+            ScheduleDefinition   _definition{};
+            ScheduledJobFunction _function{};
+            int64                _handledOccurrenceMs{ -1 }; ///< 이 서버가 돌았거나 끝난 것을 본 마지막 회차
+            int64                _retryOccurrenceMs{ -1 };   ///< `_retryAtMs` 가 가리키는 회차
+            int64                _retryAtMs{ 0 };
+            uint8                _bClaimPending{ SW_FALSE };
         };
 
         void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs );

@@ -170,7 +170,7 @@ namespace sw
      * @class OnlineServiceHost
      * @brief 서비스 호스트입니다.
      */
-    class SW_GF_API OnlineServiceHost final : public IStreamEndpointListener, public INetRequestHandler
+    class SW_GF_API OnlineServiceHost final : public IStreamEndpointListener
     {
     public:
         OnlineServiceHost();
@@ -239,11 +239,11 @@ namespace sw
         uint16 getAdminListenPort() const;
         int32  getConnectionCount() const { return static_cast<int32>( _mapConnection.size() ); }
 
-        // IStreamEndpointListener 와 INetRequestHandler 구현이다. 호스트 `tick` 안에서 불린다.
+        // IStreamEndpointListener 구현과 요청 처리 함수(`NetRequestFunction`)다. 호스트 `tick` 안에서 불린다.
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override;
         void onEndpointClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
-        void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override;
+        void onNetRequest( NetRequestServer& server, const NetRequestContext& context );
 
     private:
         class ListenerTransport;

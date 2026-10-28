@@ -122,19 +122,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버의 메서드 처리기입니다. */
-    class SW_API INetRequestHandler
-    {
-    public:
-        INetRequestHandler()          = default;
-        virtual ~INetRequestHandler() = default;
-
-        INetRequestHandler( const INetRequestHandler& )            = default;
-        INetRequestHandler& operator=( const INetRequestHandler& ) = default;
-
-        /** @brief 요청 하나를 처리합니다. 바로 `respond` 하거나, 토큰을 보관했다가 나중에 한 번만 `respond` 합니다. 어떤 잠금도 잡지 않은 채 호출됩니다. */
-        virtual void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) = 0;
-    };
+    /**
+     * @brief 서버의 메서드 처리 함수입니다(`NetRequestServer::registerMethod`). 요청 하나를 처리한다 — 바로 `respond` 하거나, 토큰을 보관했다가 나중에
+     *        한 번만 `respond` 한다. 어떤 잠금도 잡지 않은 채 불린다. 주인은 메서드를 등록한 동안 살아 있어야 한다.
+     */
+    using NetRequestFunction = Delegate<void( NetRequestServer& server, const NetRequestContext& context )>;
 } // namespace sw
 
 namespace sw
@@ -213,7 +205,7 @@ namespace sw
         void shutdown();
 
         /** @brief 메서드에 처리기를 등록합니다. 이미 등록된 메서드면 오류 로그를 남기고 false 를 반환하며 앞 처리기를 그대로 둡니다(키트 둘이 같은 번호를 쓰는 조립). */
-        [[nodiscard]] bool registerMethod( uint16 method, INetRequestHandler* pHandler );
+        [[nodiscard]] bool registerMethod( uint16 method, const NetRequestFunction& function );
         void               unregisterMethod( uint16 method );
         void               setPrincipal( StreamConnectionHandle handle, uint64 principalID );
 
@@ -288,11 +280,11 @@ namespace sw
                 Reply,        ///< 바로 답한다(모르는 메서드 · 과부하 · 기억한 응답)
                 Wait          ///< 처리 중인 같은 키 — 첫 응답을 같이 받는다
             };
-            NetRequestContext   _context{};
-            vector<uint8>       _replyBytes{};
-            INetRequestHandler* _pHandler{ nullptr };
-            NetRequestStatus    _replyStatus{ NetRequestStatus::Ok };
-            Action              _action{ Action::Dispatch };
+            NetRequestContext  _context{};
+            vector<uint8>      _replyBytes{};
+            NetRequestFunction _function{};
+            NetRequestStatus   _replyStatus{ NetRequestStatus::Ok };
+            Action             _action{ Action::Dispatch };
         };
 
         /** @brief 취소 프레임: 처리 중인 그 요청에 취소 표시를 남깁니다(처리기가 `isCancelled` 로 본다). */
@@ -305,7 +297,7 @@ namespace sw
         void             purgeIdempotencyLocked( int64 now ) SW_REQUIRES_LOCK( _mutex );
 
         mutable mutex                                             _mutex;
-        unordered_map<uint16, INetRequestHandler*> _mapHandler    SW_GUARDED_BY( _mutex );
+        unordered_map<uint16, NetRequestFunction> _mapHandler     SW_GUARDED_BY( _mutex );
         unordered_map<uint32, InFlight> _mapInFlight              SW_GUARDED_BY( _mutex ); ///< 일련번호에서 처리 중인 요청으로 가는 맵.
         unordered_map<RequestKey, uint32> _mapSerialByRequest     SW_GUARDED_BY( _mutex );
         unordered_map<uint64, int32> _mapInFlightCount            SW_GUARDED_BY( _mutex ); ///< 연결에서 처리 중인 요청 수로 가는 맵.

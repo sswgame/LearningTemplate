@@ -108,7 +108,7 @@ namespace sw
      * @class LeaderboardService
      * @brief 순위표 로직입니다. 서비스 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API LeaderboardService final : public IScheduledJobHandler, public IAccountStatSource
+    class SW_KIT_SERVER_API LeaderboardService final : public IAccountStatSource
     {
     public:
         LeaderboardService();
@@ -163,8 +163,8 @@ namespace sw
         /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
 
-        // IScheduledJobHandler
-        void onScheduledRun( const ScheduledRun& run ) override;
+        // 예약 작업
+        void onScheduledRun( const ScheduledRun& run );
 
         void  drainCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         int32 getPendingCount() const { return _pendingCount; }

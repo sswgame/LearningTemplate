@@ -15,7 +15,7 @@ namespace sw
         , _listReady{}
         , _transport{}
         , _settings{}
-        , _pHandler{}
+        , _onRequest{}
         , _ioThreadCount{ 0 }
         , _handledCount{ 0 }
         , _bInitialized{ false }
@@ -28,14 +28,14 @@ namespace sw
     }
 
     bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
-                                 IHTTPRequestHandler* pHandler )
+                                 const HTTPRequestFunction& onRequest )
     {
-        const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized.load( std::memory_order_acquire ) == true;
+        const bool bCannotStart = transport == nullptr || onRequest.isBound() == false || _bInitialized.load( std::memory_order_acquire ) == true;
         if ( bCannotStart )
             return false;
         _transport.set( std::move( transport ) );
         _settings.set( settings );
-        _pHandler.set( pHandler );
+        _onRequest.set( onRequest );
         _ioThreadCount = transportSettings._ioThreadCount;
         if ( _transport->initialize( this, transportSettings ) == false || _transport->listen( settings._listenAddress ) == false )
         {
@@ -43,7 +43,7 @@ namespace sw
             _transport->shutdown();
             _transport.reset();
             _settings.reset();
-            _pHandler.reset();
+            _onRequest.reset();
             return false;
         }
         _bInitialized.store( true, std::memory_order_release );
@@ -60,7 +60,7 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         _mapPeer.clear();
         _listReady.clear();
-        _pHandler.reset();
+        _onRequest.reset();
         _bInitialized.store( false, std::memory_order_release );
     }
 
@@ -81,7 +81,7 @@ namespace sw
             if ( ready._bMalformed == SW_TRUE )
                 response._statusCode = 400;
             else
-                _pHandler->onHTTPRequest( ready._request, response );
+                _onRequest.get()( ready._request, response );
             ++_handledCount;
             vector<uint8> bytes;
             HTTPWriteUtil::writeResponse( response, bytes );

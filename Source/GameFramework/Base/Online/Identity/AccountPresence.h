@@ -85,6 +85,9 @@ namespace sw
         uint64 _nextFindOwnerID{ 1 };
 
     protected:
+        /** @brief 구독 @p id 가 풀렸습니다 — 구현이 그 등록을 지운다(`_subscriptions` 가 부른다). */
+        virtual void releaseSubscription( uint64 id ) = 0;
+
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&IAccountPresence::releaseSubscription>( this ) };
     };

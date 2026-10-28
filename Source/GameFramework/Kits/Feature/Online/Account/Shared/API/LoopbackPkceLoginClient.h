@@ -42,7 +42,7 @@ namespace sw
      * @class LoopbackPkceLoginClient
      * @brief PC 루프백과 PKCE 를 쓰는 외부 로그인 클라이언트입니다.
      */
-    class SW_KIT_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHTTPRequestHandler
+    class SW_KIT_API LoopbackPkceLoginClient final : public IPlatformLoginClient
     {
     public:
         /** @param clock 토큰 요청(HTTP)의 시한을 재는 단조 시계입니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
@@ -65,8 +65,8 @@ namespace sw
         HTTPClient& getHTTPClient() { return _httpClient; }
         uint16      getRedirectPort() const { return _redirectServer.getListenPort(); }
 
-        // IHTTPRequestHandler 구현이며 `tick` 을 부르는 스레드에서 실행한다
-        void onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse ) override;
+        // 요청 처리 함수(`HTTPRequestFunction`)이며 `tick` 을 부르는 스레드에서 실행한다
+        void onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse );
 
     private:
         struct PendingLogin

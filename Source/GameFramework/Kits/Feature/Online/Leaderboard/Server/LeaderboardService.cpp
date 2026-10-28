@@ -822,7 +822,7 @@ namespace sw
             job._windowStartMs = season._endMs;
             job._windowEndMs   = season._endMs + LeaderboardServiceInternal::kSettlementWindowMs;
             job._leaseMs       = LeaderboardServiceInternal::kSettlementLeaseMs;
-            if ( _pScheduler->registerJob( job, this ) == false )
+            if ( _pScheduler->registerJob( job, ScheduledJobFunction::create<&LeaderboardService::onScheduledRun>( this ) ) == false )
                 return false;
         }
         return true;

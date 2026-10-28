@@ -66,7 +66,7 @@ namespace sw
         _pBrowser             = pBrowser;
         _listProviderSettings = listProviderSettings;
         HTTPServerConfig serverSettings; // 127.0.0.1:0 으로 연다. 다른 기계에서 닿지 않고 포트는 OS 가 고른다
-        if ( _redirectServer.initialize( std::move( serverTransport ), transportSettings, serverSettings, this ) == false )
+        if ( _redirectServer.initialize( std::move( serverTransport ), transportSettings, serverSettings, HTTPRequestFunction::create<&LoopbackPkceLoginClient::onHTTPRequest>( this ) ) == false )
             return false;
         return _httpClient.initialize( std::move( clientTransport ), transportSettings, HTTPClientConfig{} );
     }

@@ -331,10 +331,10 @@ namespace sw
         _settings.reset();
     }
 
-    bool NetRequestServer::registerMethod( uint16 method, INetRequestHandler* pHandler )
+    bool NetRequestServer::registerMethod( uint16 method, const NetRequestFunction& function )
     {
         ScopedLock<mutex> lock{ _mutex };
-        const bool        bInserted = _mapHandler.emplace( method, pHandler ).second;
+        const bool        bInserted = _mapHandler.emplace( method, function ).second;
         if ( bInserted == false )
             SW_LOG_ERROR( "NetRequestServer: method %# is already registered - two handlers claim one method number", static_cast<uint32>( method ) );
         return bInserted;
@@ -413,7 +413,7 @@ namespace sw
             admission._replyStatus = handlerFound == _mapHandler.end() ? NetRequestStatus::UnknownMethod : NetRequestStatus::Overloaded;
             return admission;
         }
-        admission._pHandler         = handlerFound->second;
+        admission._function         = handlerFound->second;
         const auto   principalFound = _mapPrincipal.find( handle.packed() );
         const uint64 principalID    = principalFound != _mapPrincipal.end() ? principalFound->second : 0;
         InFlight     inFlight;
@@ -475,7 +475,7 @@ namespace sw
             case RequestAdmission::Action::Dispatch:
             {
                 ScopedLogContext scope( LogContext{ admission._context._traceID, admission._context._principalID } ); // 처리기 · 그가 맡긴 저장소 작업의 로그 줄에 같은 태그
-                admission._pHandler->onNetRequest( *this, admission._context );                                       // 어떤 잠금도 쥐지 않은 채
+                admission._function( *this, admission._context );                                                     // 어떤 잠금도 쥐지 않은 채
                 break;
             }
             case RequestAdmission::Action::Reply:

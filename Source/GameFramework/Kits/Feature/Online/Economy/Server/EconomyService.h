@@ -88,7 +88,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService, public IScheduledJobHandler, public IBalanceNotice
+    class SW_KIT_SERVER_API EconomyService final : public IOnlineHostService, public IBalanceNotice
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
@@ -117,8 +117,8 @@ namespace sw
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         // IBalanceNotice: 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다
         void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance ) override;
-        // IScheduledJobHandler — 보존 검사 회차를 차지했다
-        void onScheduledRun( const ScheduledRun& run ) override;
+        // 예약 작업 — 보존 검사 회차를 차지했다
+        void onScheduledRun( const ScheduledRun& run );
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
         void requestLedgerAudit();
         /** @brief 보존 검사 작업의 `complete` 입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */

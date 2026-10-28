@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -23,20 +24,9 @@ namespace sw
     class ITLSContext;
 
     /**
-     * @class IHTTPRequestHandler
-     * @brief 요청 하나에 답을 채웁니다(`HTTPServer::update` 의 스레드).
+     * @brief 요청 하나에 답을 채우는 함수입니다(`HTTPServer::update` 의 스레드). 주인은 서버를 내릴 때까지 살아 있어야 한다.
      */
-    class IHTTPRequestHandler
-    {
-    public:
-        IHTTPRequestHandler()          = default;
-        virtual ~IHTTPRequestHandler() = default;
-
-        IHTTPRequestHandler( const IHTTPRequestHandler& )            = delete;
-        IHTTPRequestHandler& operator=( const IHTTPRequestHandler& ) = delete;
-
-        virtual void onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse ) = 0;
-    };
+    using HTTPRequestFunction = Delegate<void( const HTTPServerRequest& request, HTTPServerResponse& outResponse )>;
 } // namespace sw
 
 namespace sw
@@ -65,9 +55,9 @@ namespace sw
         HTTPServer( const HTTPServer& )            = delete;
         HTTPServer& operator=( const HTTPServer& ) = delete;
 
-        /** @brief 전송(넘겨받는다)을 띄우고 듣습니다. @p pHandler 는 빌려 쓴다. */
+        /** @brief 전송(넘겨받는다)을 띄우고 듣습니다. 요청마다 @p onRequest 를 부른다. */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
-                                       IHTTPRequestHandler* pHandler );
+                                       const HTTPRequestFunction& onRequest );
         void               shutdown();
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 모인 요청을 처리기에 넘겨 답합니다. */
         void update();
@@ -101,7 +91,7 @@ namespace sw
         vector<ReadyRequest> _listReady                  SW_GUARDED_BY( _mutex );
         OnceInit<unique_ptr<IStreamTransport>>           _transport;
         OnceInit<HTTPServerConfig>                       _settings;
-        OnceInit<IHTTPRequestHandler*>                   _pHandler;
+        OnceInit<HTTPRequestFunction>                    _onRequest;
         int32                                            _ioThreadCount;
         int32                                            _handledCount;
         atomic<bool>                                     _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)

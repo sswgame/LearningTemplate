@@ -238,16 +238,16 @@ namespace sw
         _pStore = nullptr;
     }
 
-    bool ServiceScheduler::registerJob( const ScheduleDefinition& definition, IScheduledJobHandler* pHandler )
+    bool ServiceScheduler::registerJob( const ScheduleDefinition& definition, const ScheduledJobFunction& function )
     {
-        if ( pHandler == nullptr || isValidDefinition( definition ) == false )
+        if ( function.isBound() == false || isValidDefinition( definition ) == false )
         {
             SW_LOG_WARNING( "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
             return false;
         }
         Job& job        = _listJob.emplace_back();
         job._definition = definition;
-        job._pHandler   = pHandler;
+        job._function   = function;
         return true;
     }
 
@@ -367,7 +367,7 @@ namespace sw
                 run._jobID        = job._definition._jobID;
                 run._occurrenceMs = UnixMilliseconds{ occurrenceMs }; // 회차는 `update` 가 받은 유닉스 시각에서 계산했다(`computeLatestOccurrence`)
                 run._runToken     = runToken;
-                job._pHandler->onScheduledRun( run );
+                job._function( run );
                 break;
             }
             case ClaimOutcome::Finished:
