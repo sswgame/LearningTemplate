@@ -96,110 +96,120 @@ namespace sw::editor
             return false;
         }
 
-        const float32 dpiScale          = EditorThemeUtil::getDpiScale();
-        bool          bFirstCell        = true;
-        bool          bFirstCurveButton = true;
+        bool bFirstCell        = true;
+        bool bFirstCurveButton = true;
         for ( const CatalogDocument::Group& group : inoutDocument.getGroups() )
         {
-            ImGui::PushID( group._name.c_str() );
-            StringBuilder<constant::kMaxBuffer64> subtitle;
-            subtitle.appendFormat( "%# rows", group._listRow.size() );
-            EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
-
-            const int32               columnCount = static_cast<int32>( group._listColumn.size() ) + CatalogTableEditorInternal::kExtraColumnCount;
-            constexpr ImGuiTableFlags kTableFlags =
-                ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
-            const ImVec2 outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( group._listRow.size() ) };
-            if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
-            {
-                for ( const string& column : group._listColumn )
-                {
-                    ImGui::TableSetupColumn( column.c_str(), ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kColumnWidth * dpiScale );
-                }
-                ImGui::TableSetupColumn( "children", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kChildColumnWidth * dpiScale );
-                ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kActionColumnWidth * dpiScale );
-                ImGui::TableSetupScrollFreeze( 0, 1 );
-                ImGui::TableHeadersRow();
-
-                ImGuiListClipper clipper;
-                clipper.Begin( static_cast<int32>( group._listRow.size() ) );
-                while ( clipper.Step() )
-                {
-                    for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
-                    {
-                        const int32 elementIndex = group._listRow[static_cast<size_t>( rowPosition )];
-                        ImGui::PushID( elementIndex );
-                        ImGui::TableNextRow();
-                        for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
-                        {
-                            ImGui::TableSetColumnIndex( static_cast<int32>( columnIndex ) );
-                            drawCell( inoutDocument, elementIndex, group._listColumn[columnIndex], bFirstCell );
-                            bFirstCell = false;
-                        }
-
-                        const CatalogXMLElement& element = inoutDocument.getParsed().getElement( elementIndex );
-                        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) );
-                        if ( element._listChild.empty() )
-                            ImGui::TextDisabled( "-" );
-                        else
-                            ImGui::Text( "%d", static_cast<int32>( element._listChild.size() ) );
-                        const bool bHovered = element._listChild.empty() == false && ImGui::IsItemHovered();
-                        if ( element._listChild.empty() == false )
-                        {
-                            CatalogCurveModel::collectCurves( inoutDocument.getParsed(), elementIndex, _listProbeCurve );
-                            if ( _listProbeCurve.empty() == false )
-                            {
-                                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curves" ) );
-                                if ( ImGui::SmallButton( "Curves" ) )
-                                {
-                                    _curveOwner      = elementIndex;
-                                    _bOpenCurvePopup = true;
-                                }
-                                if ( bFirstCurveButton )
-                                    EditorSelfTestMarks::note( "catalog.curves.open" );
-                                bFirstCurveButton = false;
-                            }
-                        }
-                        if ( bHovered )
-                        {
-                            ImGui::BeginTooltip();
-                            for ( const int32 childIndex : element._listChild )
-                            {
-                                ImGui::TextUnformatted( inoutDocument.getParsed().getElement( childIndex )._name.c_str() );
-                            }
-                            ImGui::TextDisabled( "Edit nested elements in the raw text view" );
-                            ImGui::EndTooltip();
-                        }
-
-                        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
-                        if ( ImGui::SmallButton( "Remove" ) )
-                        {
-                            _pendingKind    = PendingKind::RemoveRow;
-                            _pendingElement = elementIndex;
-                            _pendingColumn.clear();
-                            _pendingText = group._name;
-                        }
-                        if ( rowPosition == 0 && &group == &inoutDocument.getGroups().front() )
-                            EditorSelfTestMarks::note( "catalog.row.remove.first" );
-                        ImGui::PopID();
-                    }
-                }
-                ImGui::EndTable();
-            }
-
-            if ( ImGui::SmallButton( "Add row" ) )
-            {
-                _pendingKind    = PendingKind::AddRow;
-                _pendingElement = -1;
-                _pendingColumn.clear();
-                _pendingText = group._name;
-            }
-            if ( &group == &inoutDocument.getGroups().front() )
-                EditorSelfTestMarks::note( "catalog.addrow.first" );
-            ImGui::PopID();
+            drawGroup( inoutDocument, group, &group == &inoutDocument.getGroups().front(), bFirstCell, bFirstCurveButton );
         }
         drawCurvePopup( inoutDocument );
         return applyPending( inoutDocument );
+    }
+
+    void CatalogTableEditor::drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton )
+    {
+        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        ImGui::PushID( group._name.c_str() );
+        StringBuilder<constant::kMaxBuffer64> subtitle;
+        subtitle.appendFormat( "%# rows", group._listRow.size() );
+        EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
+
+        const int32               columnCount = static_cast<int32>( group._listColumn.size() ) + CatalogTableEditorInternal::kExtraColumnCount;
+        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+        const ImVec2              outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( group._listRow.size() ) };
+        if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
+        {
+            for ( const string& column : group._listColumn )
+            {
+                ImGui::TableSetupColumn( column.c_str(), ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kColumnWidth * dpiScale );
+            }
+            ImGui::TableSetupColumn( "children", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kChildColumnWidth * dpiScale );
+            ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kActionColumnWidth * dpiScale );
+            ImGui::TableSetupScrollFreeze( 0, 1 );
+            ImGui::TableHeadersRow();
+
+            ImGuiListClipper clipper;
+            clipper.Begin( static_cast<int32>( group._listRow.size() ) );
+            while ( clipper.Step() )
+            {
+                for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
+                {
+                    drawRow( document, group, rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton );
+                }
+            }
+            ImGui::EndTable();
+        }
+
+        if ( ImGui::SmallButton( "Add row" ) )
+        {
+            _pendingKind    = PendingKind::AddRow;
+            _pendingElement = -1;
+            _pendingColumn.clear();
+            _pendingText = group._name;
+        }
+        if ( bFirstGroup )
+            EditorSelfTestMarks::note( "catalog.addrow.first" );
+        ImGui::PopID();
+    }
+
+    void CatalogTableEditor::drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell,
+                                      bool& inoutbFirstCurveButton )
+    {
+        const int32 elementIndex = group._listRow[static_cast<size_t>( rowPosition )];
+        ImGui::PushID( elementIndex );
+        ImGui::TableNextRow();
+        for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
+        {
+            ImGui::TableSetColumnIndex( static_cast<int32>( columnIndex ) );
+            drawCell( document, elementIndex, group._listColumn[columnIndex], inoutbFirstCell );
+            inoutbFirstCell = false;
+        }
+
+        const CatalogXMLElement& element = document.getParsed().getElement( elementIndex );
+        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) );
+        if ( element._listChild.empty() )
+            ImGui::TextDisabled( "-" );
+        else
+            ImGui::Text( "%d", static_cast<int32>( element._listChild.size() ) );
+        const bool bHovered = element._listChild.empty() == false && ImGui::IsItemHovered();
+        if ( element._listChild.empty() == false )
+        {
+            CatalogCurveModel::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );
+            if ( _listProbeCurve.empty() == false )
+            {
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Curves" ) );
+                if ( ImGui::SmallButton( "Curves" ) )
+                {
+                    _curveOwner      = elementIndex;
+                    _bOpenCurvePopup = true;
+                }
+                if ( inoutbFirstCurveButton )
+                    EditorSelfTestMarks::note( "catalog.curves.open" );
+                inoutbFirstCurveButton = false;
+            }
+        }
+        if ( bHovered )
+        {
+            ImGui::BeginTooltip();
+            for ( const int32 childIndex : element._listChild )
+            {
+                ImGui::TextUnformatted( document.getParsed().getElement( childIndex )._name.c_str() );
+            }
+            ImGui::TextDisabled( "Edit nested elements in the raw text view" );
+            ImGui::EndTooltip();
+        }
+
+        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
+        if ( ImGui::SmallButton( "Remove" ) )
+        {
+            _pendingKind    = PendingKind::RemoveRow;
+            _pendingElement = elementIndex;
+            _pendingColumn.clear();
+            _pendingText = group._name;
+        }
+        if ( rowPosition == 0 && bFirstGroup )
+            EditorSelfTestMarks::note( "catalog.row.remove.first" );
+        ImGui::PopID();
     }
 
     void CatalogTableEditor::drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell )

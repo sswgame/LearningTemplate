@@ -43,6 +43,10 @@ namespace sw::editor
             AddCurveKey ///< `_pendingElement` 곡선의 끝에 키를 더한다
         };
 
+        /** @brief 그룹 하나의 제목 · 표 · "Add row" 단추를 그립니다. 자체 시험 표식(`bFirstCell` · `bFirstCurveButton`)은 문서 전체에서 처음 한 번만 남기도록 호출 사이로 이어 받습니다. */
+        void drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton );
+        /** @brief 표의 한 행(칸 · 자식 수 · 곡선 단추 · 제거 단추)을 그립니다. */
+        void drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton );
         void drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell );
         /** @brief "곡선 편집" 창입니다 - @p _curveOwner 원소 아래의 모든 곡선을 그래프 · 그래디언트 띠 · 키 표로 고칩니다(키 칸은 `drawCell` 과 같은 길이라 되돌리기 한 단계 = 칸 편집 한 번). */
         void               drawCurvePopup( const CatalogDocument& document );
