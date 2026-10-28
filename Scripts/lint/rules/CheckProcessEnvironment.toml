@@ -1,6 +1,9 @@
 # CheckProcessEnvironment 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckProcessEnvironment.py.
 
-# 환경 변수를 OS 에서 직접 읽어도 되는 파일 → 이유.
+# 환경 변수를 OS 에서 직접 읽어도 되는 파일 → 이유. `user-folder:<경로>` 키는 사용자 폴더 변수 이름(LOCALAPPDATA · APPDATA · XDG_* · USERPROFILE · HOME)을
+# 글자로 써도 되는 파일이다 — 그 밖에서 쓰면 `UserDataPath` 를 비껴 자동화의 `SW_USER_DATA_ROOT` 격리에 새므로 위반이다.
 [exemption]
+"user-folder:Source/Core/File/UserDataPath.cpp" = "사용자 데이터 · 설정 폴더를 계산하는 유일한 자리 — `SW_USER_DATA_ROOT` 덮어쓰기와 OS 규칙(LOCALAPPDATA · XDG_* · HOME)을 한곳에 둔다"
+"user-folder:Source/Engine/Text/SystemFontLocator.cpp" = "엔진 데이터가 아니라 OS 에 깔린 사용자 폰트 폴더(`%LOCALAPPDATA%/Microsoft/Windows/Fonts` · `~/.local/share/fonts`)를 찾는다 — 남의 폴더라 UserDataPath 와 무관하다"
 "Source/Core/Process/Posix/PosixProcessEnvironment.cpp" = "POSIX 의 유일한 읽기 자리 — `getenv` 를 여기서만 부르고 없음 · 빈 값을 `ProcessEnvironment::tryRead` 로 가른다"
 "Source/Core/Process/Windows/WindowsProcessEnvironment.cpp" = "Windows 의 유일한 읽기 자리 — `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT `getenv` 는 ANSI 라 한글 사용자 이름이 깨진다)"

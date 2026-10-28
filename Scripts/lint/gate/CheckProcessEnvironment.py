@@ -34,6 +34,33 @@ _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 _kEnvironmentReadRe = re.compile(r"(?<![\w$])(getenv|secure_getenv|GetEnvironmentVariable[AW]?)(?![\w$])")
 
 
+#: 엔진의 사용자 데이터 · 설정 폴더를 정하는 OS 변수 이름의 글. 이 폴더는 `UserDataPath` 한 곳이 계산한다(자동화가 `SW_USER_DATA_ROOT` 로 실행별 폴더로 가르는 자리이기도 하다 —
+#: 다른 곳이 이 변수로 사용자 폴더를 직접 만들면 그 격리를 비껴 간다). 큰따옴표 안의 이름 그대로만 본다(`"HOME"`) - 주석 · 긴 글 속 언급은 오탐이라 보지 않는다.
+_kUserFolderVariableRe = re.compile(r'"(LOCALAPPDATA|APPDATA|XDG_CONFIG_HOME|XDG_DATA_HOME|XDG_CACHE_HOME|USERPROFILE|HOME)"')
+#: 사용자 폴더 변수 예외 키의 앞말 — `[exemption]` 에 `user-folder:<경로>` 로 적는다.
+_kUserFolderKeyPrefix = "user-folder:"
+
+
+def findUserFolderVariableUses(source: SourceFile) -> list[str]:
+    """`UserDataPath` 밖에서 사용자 폴더 변수 이름을 글자로 쓰는 줄을 위반 문자열로 돌려줍니다. 예외 파일은 보면 `see`, 쓰면 `use` 로 적습니다."""
+    gate = CheckProcessEnvironmentGate
+    key = _kUserFolderKeyPrefix + source.relative
+    bExempt = key in gate.mapExemption
+    listMatch: list[tuple[int, str]] = []
+    for lineIndex, line in enumerate(source.listLine, start=1):
+        code = line.split("//", 1)[0]
+        if code.lstrip().startswith(("*", "/*")):
+            continue
+        for match in _kUserFolderVariableRe.finditer(code):
+            listMatch.append((lineIndex, match.group(1)))
+    if bExempt:
+        gate.seeExemption(key)
+        if listMatch:
+            gate.useExemption(key)
+        return []
+    return [f"{source.relative}:{lineIndex}: 사용자 폴더 변수 \"{name}\"  | {source.listLine[lineIndex - 1].strip()}" for lineIndex, name in listMatch]
+
+
 def findEnvironmentReads(source: SourceFile) -> list[str]:
     """예외 밖에서 환경 변수를 직접 읽는 줄을 위반 문자열로 돌려줍니다. 예외 파일은 보면 `see`, 읽으면 `use` 로 적습니다."""
     gate = CheckProcessEnvironmentGate
@@ -102,6 +129,17 @@ class CheckProcessEnvironmentGate(LintGate):
             },
         },
         {
+            "name": "엔진 코드가 UserDataPath 를 비껴 사용자 폴더 변수로 경로를 만든다",
+            "expectedViolation": "Source/Probe/ProbeUserFolder.cpp:3: 사용자 폴더 변수 \"LOCALAPPDATA\"",
+            "files": {
+                "Source/Probe/ProbeUserFolder.cpp": (
+                    "// \"HOME\" 은 주석 안이라 위반이 아니다\n"
+                    "/** \"APPDATA\" 도 문서 주석 안이다 */\n"
+                    "bool probe( string& out ) { return ProcessEnvironment::tryReadNonEmpty( \"LOCALAPPDATA\", out ); }\n"
+                ),
+            },
+        },
+        {
             "name": "환경 변수를 더는 읽지 않는 예외 파일(낡은 예외)",
             "expectedViolation": "[낡은 예외] 'Source/Core/Process/Posix/PosixProcessEnvironment.cpp' 의 대상은 그대로인데 규칙을 어기지 않습니다",
             "files": {
@@ -115,7 +153,7 @@ class CheckProcessEnvironmentGate(LintGate):
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
     def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
-        return FileFindings(listViolation=findEnvironmentReads(source))
+        return FileFindings(listViolation=[*findEnvironmentReads(source), *findUserFolderVariableUses(source)])
 
 
 main = CheckProcessEnvironmentGate.run
