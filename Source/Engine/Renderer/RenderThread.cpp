@@ -109,6 +109,27 @@ namespace sw
     // 전용 렌더 스레드를 쓸지 정한다(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` 와 `submit`).
     SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
+    /** @brief 받은 렌더 타깃 읽기 하나입니다. 티켓을 직접 쥐고 소멸할 때 버립니다 — `PendingReadback` 은 쥔 동안 같은 스레드의 `...AndWait`(스크린샷)를 단언으로 막아 쓰지 않는다. */
+    struct RenderThread::PendingRenderTargetRead
+    {
+        IRHIResourceFactory* _pFactory{ nullptr };
+        RHITransferTicket    _ticket{};   ///< 제출했으면 유효하다(`Busy` 로 아직 못 냈으면 무효)
+        RenderTargetReadback _readback{}; ///< 요청의 텍스처 · 번호와, 제출할 때 받은 행 배치
+        bool                 _bSubmitted{ false };
+
+        PendingRenderTargetRead() = default;
+        ~PendingRenderTargetRead() { discardTicket(); }
+        PendingRenderTargetRead( const PendingRenderTargetRead& )            = delete;
+        PendingRenderTargetRead& operator=( const PendingRenderTargetRead& ) = delete;
+
+        void discardTicket()
+        {
+            if ( _pFactory != nullptr && _ticket.isValid() )
+                _pFactory->discardTextureReadback( _ticket );
+            _ticket = RHITransferTicket{};
+        }
+    };
+
     RenderThread::RenderThread()
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
@@ -130,6 +151,7 @@ namespace sw
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
         , _requestedScreenshotWaitFrames{ 0 }
+        , _pPendingTargetRead{}
 #if SW_DEV_COMMANDS_ENABLED
         , _pendingDeviceLossWaitMilliseconds{ 0 }
 #endif
@@ -191,6 +213,7 @@ namespace sw
     {
         if ( _bRunning.exchange( false, std::memory_order_acq_rel ) == false )
         {
+            discardPendingRenderTargetRead(); // 인라인 제출은 호출한 스레드가 읽기를 이었다 — 티켓이 팩토리보다 오래 살지 않게 한다
             _pDevice        = nullptr;
             _pFrameRenderer = nullptr;
             _bContextBound  = false;
@@ -211,6 +234,7 @@ namespace sw
             if ( std::this_thread::get_id() != _thread.get_id() )
                 _thread.join();
         }
+        discardPendingRenderTargetRead(); // 스레드가 끝난 뒤, 디바이스를 놓기 전에
         if ( _pDevice != nullptr )
             _pDevice->setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
         _pDevice        = nullptr;
@@ -770,26 +794,83 @@ namespace sw
         _requestedScreenshotTexture = 0;
     }
 
+    void RenderThread::discardPendingRenderTargetRead()
+    {
+        _pPendingTargetRead.reset();
+    }
+
     void RenderThread::readRequestedRenderTarget()
     {
         RenderTargetRegistry* pRegistry             = engine::findSubsystem<RenderTargetRegistry>();
         const bool            bNoRenderTargetSource = pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr;
         if ( bNoRenderTargetSource )
             return;
-        RHITextureHandle texture = 0;
-        uint32           serial  = 0;
-        if ( pRegistry->takeReadbackRequest( texture, serial ) == false )
-            return;
+        IRHIResourceFactory& factory = *_pDevice->getResourceFactory();
+
+        // 읽는 중이 아니면 새 요청을 받는다. 읽는 중이면 새 요청은 레지스트리에 둔 채 이 읽기부터 끝낸다.
+        if ( _pPendingTargetRead == nullptr )
+        {
+            RHITextureHandle texture = 0;
+            uint32           serial  = 0;
+            if ( pRegistry->takeReadbackRequest( texture, serial ) == false )
+                return;
+            _pPendingTargetRead                     = make_unique<PendingRenderTargetRead>();
+            _pPendingTargetRead->_pFactory          = &factory;
+            _pPendingTargetRead->_readback._texture = texture;
+            _pPendingTargetRead->_readback._serial  = serial;
+        }
 
         SW_PROFILE_SCOPE( "RT.ReadRenderTarget" );
-        RenderTargetReadback readback{};
-        readback._texture = texture;
-        readback._serial  = serial;
-        // 요청한 뒤 트랜지언트가 다시 만들어졌으면(창 크기 변경) 핸들이 죽었다 — 읽지 않고 조용한 실패로 돌려, UI 가 새 핸들로 다시 요청하게 한다.
-        const bool bReadable = pRegistry->isPublished( texture ) && RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, readback._byte, readback._layout );
-        readback._bSucceeded = bReadable ? SW_TRUE : SW_FALSE;
-        if ( readback._bSucceeded == SW_FALSE )
+        PendingRenderTargetRead& pending = *_pPendingTargetRead;
+        // 실패는 조용히 돌려 UI 가 새 핸들로 다시 요청하게 한다.
+        const auto publishFailure = [&]()
+        {
+            RenderTargetReadback readback = std::move( pending._readback );
             readback._byte.clear();
+            readback._bSucceeded = SW_FALSE;
+            _pPendingTargetRead.reset(); // 티켓이 남았으면 버린다
+            pRegistry->publishReadback( std::move( readback ) );
+        };
+
+        if ( pending._bSubmitted == false )
+        {
+            // 요청한 뒤 트랜지언트가 다시 만들어졌으면(창 크기 변경) 핸들이 죽었다 — 읽지 않는다.
+            if ( pRegistry->isPublished( pending._readback._texture ) == false )
+            {
+                publishFailure();
+                return;
+            }
+            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, 0, 0, pending._readback._layout );
+            if ( submit._result == RHISubmitResult::Busy )
+                return; // 스테이징이 찼다 — 같은 요청을 다음 프레임에 다시 낸다
+            if ( submit.isAccepted() == false )
+            {
+                publishFailure();
+                return;
+            }
+            pending._ticket     = submit._ticket;
+            pending._bSubmitted = true;
+            return; // 끝남은 이후 프레임이 폴링한다(요청한 프레임에는 기다리지 않는다)
+        }
+
+        const RHITransferStatus status = factory.pollTransfer( pending._ticket );
+        if ( status == RHITransferStatus::Pending )
+            return;
+        bool bTaken = false;
+        if ( status == RHITransferStatus::Complete )
+        {
+            bTaken = factory.takeTextureReadback( pending._ticket, pending._readback._byte );
+            if ( bTaken )
+                pending._ticket = RHITransferTicket{}; // 가져갔다 — 소멸자가 버리지 않는다
+        }
+        if ( bTaken == false )
+        {
+            publishFailure();
+            return;
+        }
+        RenderTargetReadback readback = std::move( pending._readback );
+        readback._bSucceeded          = SW_TRUE;
+        _pPendingTargetRead.reset();
         pRegistry->publishReadback( std::move( readback ) );
     }
 

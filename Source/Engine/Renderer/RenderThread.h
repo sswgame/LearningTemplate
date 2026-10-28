@@ -160,8 +160,14 @@ namespace sw
         void takeScreenshotRequest();
         /** @brief 받은 `requestScreenshot` 요청을 이번 프레임에 쓸 차례면 씁니다. `endFrame` 뒤에 부릅니다. */
         void writeRequestedScreenshot();
-        /** @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 레지스트리에 보관합니다. `endFrame` 뒤에 부릅니다. */
+        /**
+         * @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 레지스트리에 보관합니다. `endFrame` 뒤에 부릅니다.
+         * @details 읽기 티켓은 요청한 프레임에 기다리지 않고(RhiAsyncUploads U9) 이후 프레임의 호출이 `pollTransfer` 로 보고 `Complete` 일 때 가져갑니다. 읽는 중에는 새 요청을
+         *          레지스트리에 둔 채 받지 않고(레지스트리가 최신 요청 하나만 쥔다), 스테이징이 차서 `Busy` 면 같은 요청을 다음 프레임에 다시 냅니다.
+         */
         void readRequestedRenderTarget();
+        /** @brief 아직 끝나지 않은 렌더 타깃 읽기를 버립니다(백엔드 교체 · 정지 전에 — 티켓이 팩토리보다 오래 살지 않게). */
+        void discardPendingRenderTargetRead();
         /** @brief 지금 스레드에 그래픽스 컨텍스트가 있는지 확인합니다. 없으면 붙입니다. */
         [[nodiscard]] bool ensureContextOnCurrentThread();
         /** @brief `IRHIDevice::setRenderThreadDrain` 에 설정하는 함수입니다(`pContext` 는 이 객체입니다). */
@@ -194,6 +200,8 @@ namespace sw
         RHITextureHandle _requestedScreenshotTexture;       ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
         RHIFormat        _requestedScreenshotFormat;        ///< `_requestedScreenshotTexture` 의 포맷
         uint32           _requestedScreenshotWaitFrames;    ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
+        struct PendingRenderTargetRead;
+        unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 
 #if SW_DEV_COMMANDS_ENABLED
         /// @brief `requestDeviceLossAfterDriverWait` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 패킷을 실행하는 스레드가 비웁니다.
