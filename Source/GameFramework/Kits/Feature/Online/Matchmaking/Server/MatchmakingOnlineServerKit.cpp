@@ -75,9 +75,10 @@ namespace sw
                 for ( const string& compact : listCompact )
                 {
                     MatchModeDefinition mode;
-                    if ( MatchModeCatalog::parseCompactMode( compact, mode ) == false )
+                    string              modeError;
+                    if ( MatchModeCatalog::parseCompactMode( compact, mode, modeError ) == false )
                     {
-                        outError = "mode option '" + compact + "' must be <id>:<team count>x<team size>";
+                        outError = "mode option '" + compact + "': " + modeError;
                         return false;
                     }
                     _listMode.push_back( std::move( mode ) );
