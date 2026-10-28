@@ -10,11 +10,10 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
 namespace sw::editor
 {
-    class CatalogDocument;
-
     /**
      * @class CatalogTableEditor
      * @brief 테이블 그리기와 보류 중인 편집을 가진 위젯입니다. 문서는 가지지 않습니다.

@@ -133,12 +133,12 @@ namespace sw
             failImmediately( requestID, "could not connect" );
             return requestID;
         }
-        Pending& pending                  = pSession->_listWaiting.emplace_back();
-        pending._request                  = request;
-        pending._url                      = url;
-        pending._requestID                = requestID;
-        const int64 timeoutMs             = request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs;
-        pSession->_mapDeadline[requestID] = _clock.nowMilliseconds() + timeoutMs;
+        Pending& pending      = pSession->_listWaiting.emplace_back();
+        pending._request      = request;
+        pending._url          = url;
+        pending._requestID    = requestID;
+        const int64 timeoutMs = request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs;
+        pSession->_mapDeadline.insert_or_assign( requestID, _clock.nowMilliseconds() + timeoutMs );
         if ( pSession->_state == SessionState::Ready && sendWaitingLocked( *pSession ) == false )
         {
             failSessionLocked( *pSession, "could not send the request" );

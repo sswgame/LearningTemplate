@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

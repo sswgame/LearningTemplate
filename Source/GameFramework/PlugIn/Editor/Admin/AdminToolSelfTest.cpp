@@ -126,6 +126,6 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_SELF_TEST( AdminToolPanel, "admin.panelDraws", 9100, &AdminToolSelfTestInternal::runPanelDraws );
-    SW_EDITOR_SELF_TEST( AdminToolSession, "admin.fakeRoundTrip", 9110, &AdminToolSelfTestInternal::runFakeRoundTrip );
-    SW_EDITOR_SELF_TEST( AdminToolSession, "admin.credentialsHandoff", 9120, &AdminToolSelfTestInternal::runCredentialsHandoff );
+    SW_EDITOR_SELF_TEST( AdminToolFakeRoundTrip, "admin.fakeRoundTrip", 9110, &AdminToolSelfTestInternal::runFakeRoundTrip );
+    SW_EDITOR_SELF_TEST( AdminToolCredentialsHandoff, "admin.credentialsHandoff", 9120, &AdminToolSelfTestInternal::runCredentialsHandoff );
 } // namespace sw::editor
