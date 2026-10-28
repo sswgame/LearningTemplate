@@ -50,11 +50,11 @@ namespace sw::editor
          * @brief 프로그램을 만듭니다. 옮길 수 없거나 상자 수가 켜진 모디파이어 수와 다르면 false 이고 @p outProgram 은 비웁니다.
          * @param evaluation      CPU 적용과 같은 평가(메시 → 월드 · 외부 입력 · 시간)입니다.
          * @param listInputBounds 같은 평가로 CPU 스택을 건 동안 모은 입력 상자(`_pListInputBounds`)입니다.
-         * @param bHasWeight      메시에 선택 가중치 채널이 있으면 true 입니다(GPU 는 가중치를 모른다).
+         * @param pListInputWeight 같은 평가로 모은 모디파이어별 입력 가중치(`_pListInputWeight`)입니다. 비어 있지 않은 기록은 정점별 가중치 표를 싣고 셰이더가 그 세기로 섞는다. nullptr 이면 모두 1 입니다.
          * @param vertexCount     메시 정점 수입니다(정점 단위 입력 - 포인트 캐시 - 가 길이를 맞춘다).
          * @param pListUV         메시 정점의 UV(정점 순서)입니다. 텍스처를 읽는 모디파이어(`needsGPUVertexUV`)가 있을 때만 쓰고, 그때 없거나 비면 false 입니다.
          */
         [[nodiscard]] static bool make( const MeshModifierStack& stack, const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds,
-                                        bool bHasWeight, uint32 vertexCount, const vector<float2>* pListUV, vector<float4>& outProgram );
+                                        const vector<vector<float32>>* pListInputWeight, uint32 vertexCount, const vector<float2>* pListUV, vector<float4>& outProgram );
     };
 } // namespace sw::editor

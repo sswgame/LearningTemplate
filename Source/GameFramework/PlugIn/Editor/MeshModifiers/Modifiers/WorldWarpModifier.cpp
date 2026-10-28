@@ -55,6 +55,7 @@ namespace sw::editor
         subEvaluation._time             = context.getTime();
         subEvaluation._pTaskManager     = context.getTaskManager();
         subEvaluation._pListInputBounds = context._pEvaluation != nullptr ? context._pEvaluation->_pListInputBounds : nullptr; // GPU 프로그램이 하위 상자를 받는다
+        subEvaluation._pListInputWeight = context._pEvaluation != nullptr ? context._pEvaluation->_pListInputWeight : nullptr;
         pWarp->apply( inoutMesh, subEvaluation );
     }
 

@@ -235,6 +235,7 @@ namespace sw::editor
         , _stagePreviewMesh{}
         , _prefixMesh{}
         , _listPrefixInputBounds{}
+        , _listPrefixInputWeight{}
         , _prefixKey{}
         , _prefixMeshToWorld{}
         , _prefixTime{ 0.0f }
@@ -322,6 +323,7 @@ namespace sw::editor
         _stagePreviewMesh = MeshModifierMesh{};
         _prefixMesh       = MeshModifierMesh{};
         _listPrefixInputBounds.clear();
+        _listPrefixInputWeight.clear();
         _prefixKey.clear();
         _prefixEnd  = -1; // 다음 refreshPreview 가 앞부분 캐시를 새로 건다
         _sourceData = MeshAssetData{};
@@ -394,12 +396,14 @@ namespace sw::editor
         _previewMesh                               = _prefixMesh;
         vector<MeshModifierBounds> listInputBounds = _listPrefixInputBounds;
         evaluation._pListInputBounds               = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
+        vector<vector<float32>> listInputWeight    = _listPrefixInputWeight;
+        evaluation._pListInputWeight               = &listInputWeight; // 모디파이어별 입력 가중치(정점별 세기 표) - 같은 적용에서 모은다
         {
             SW_PROFILE_SCOPE( "Editor.MeshModifiers.Apply" );
             _stack.applyRange( _previewMesh, evaluation, _prefixEnd, _stack.getModifierCount() );
             _stack.finishApply( _previewMesh );
         }
-        updateShadedPreview( evaluation, listInputBounds );
+        updateShadedPreview( evaluation, listInputBounds, listInputWeight );
     }
 
     MeshModifierEvaluation MeshModifierSession::makeEvaluation() const
@@ -431,8 +435,10 @@ namespace sw::editor
         _prefixMeshToWorld = evaluation._meshToWorld;
         makeSourceMesh( _prefixMesh );
         _listPrefixInputBounds.clear();
+        _listPrefixInputWeight.clear();
         MeshModifierEvaluation prefixEvaluation = evaluation;
         prefixEvaluation._pListInputBounds      = &_listPrefixInputBounds;
+        prefixEvaluation._pListInputWeight      = &_listPrefixInputWeight;
         _stack.applyRange( _prefixMesh, prefixEvaluation, 0, prefixEnd );
         _bInputBoundsDirty  = true;
         _bStagePreviewDirty = true;
@@ -448,7 +454,8 @@ namespace sw::editor
             restoreOriginalMesh();
     }
 
-    void MeshModifierSession::updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds )
+    void MeshModifierSession::updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds,
+                                                   const vector<vector<float32>>& listInputWeight )
     {
         (void)MeshModifierGPUProgram::canMake( _stack, &_gpuBlockingIndex );
         GameObject*    pObject   = findTarget();
@@ -460,7 +467,7 @@ namespace sw::editor
         }
         // 텍스처를 읽는 모디파이어가 있으면 프로그램이 정점 UV 표를 싣는다(원본 UV 와 같다 - UV 를 바꾸는 모디파이어는 GPU 로 못 옮기는 쪽이다)
         const vector<float2>* pListUV = _previewMesh.hasUv() ? &_previewMesh._listUV : nullptr;
-        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, static_cast<uint32>( _previewMesh._listPosition.size() ), pListUV, _listGPUProgram ) )
+        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, &listInputWeight, static_cast<uint32>( _previewMesh._listPosition.size() ), pListUV, _listGPUProgram ) )
         {
             // 정점 색을 칠하는 모디파이어(Paint 색 대상)가 있으면 GPU 메시의 정점 스트림 색을 CPU 결과로 덮는다 - 모프 풀은 위치 · 법선 · 탄젠트만 바꾸고 색은 정점 스트림에서 읽는다.
             // 그리는 중인 메시를 제자리에서 고치지 않고 새 메시로 갈아 끼운다(렌더 스냅샷이 옛 메시를 쥔다). 색을 안 칠하는 스택이 되면 원본 색의 새 메시로 한 번 되돌린다.

@@ -148,3 +148,140 @@ namespace sw::editor
         uint32         _buildCount;
     };
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 삼각형 목록을 GPU 프로그램에 싣는 평탄한 BVH(노드 표 + 삼각형 표)로 만들고, 같은 목록이면 지난번 결과를 그대로 씁니다.
+     * @details 노드 = float4 둘: [0] xyz 상자 최소 · w = 안쪽이면 첫 자식 번호(둘째 자식은 +1), 잎이면 첫 삼각형 번호, [1] xyz 상자 최대 · w = 잎의 삼각형 수(0 이면 안쪽).
+     *          번호는 float 로 정확한 정수(2^24 미만)다. 삼각형은 잎 순서로 다시 정렬해 float4 셋씩(a · b · c) 싣는다. 중앙값 분할이라 깊이가 log2(삼각형 수 / 잎 크기)이고
+     *          셰이더 스택(32)에 넉넉히 들어간다. 상자는 `ConformSurface` 와 같이 평평한 삼각형이 부피를 갖게 조금 키운다.
+     *          별도 GPU 버퍼가 아니라 프로그램 목록(`g_DeformPrograms`, 구조 버퍼) 안의 구간이다 - 모디파이어마다 새 바인딩을 만들지 않으려는 같은 이유다.
+     *          `assign` 은 지난번 목록과 한 바이트도 다르지 않을 때만 다시 만들지 않는다(해시가 아니라 값 비교) - 미리보기가 시간마다 프로그램을 다시 만들어도 BVH 는 한 번만 짓는다.
+     */
+    class ConformGPUTable
+    {
+    public:
+        static constexpr uint32 kLeafSize = 4;
+
+        /** @brief 목록을 넘깁니다. 지난번과 같으면 그대로 두고 false, 다시 지었으면 true 입니다. */
+        bool assign( const vector<float3>& listTriangle )
+        {
+            const size_t byteCount = listTriangle.size() * sizeof( float3 );
+            if ( _bBuilt && listTriangle.size() == _listSource.size() && std::memcmp( listTriangle.data(), _listSource.data(), byteCount ) == 0 )
+                return false;
+            _listSource = listTriangle;
+            _bBuilt     = true;
+            build();
+            return true;
+        }
+
+        uint32 getTriangleCount() const { return _triangleCount; }
+        uint32 getNodeCount() const { return _nodeCount; }
+        /** @brief 노드 표(노드마다 float4 둘) 뒤에 삼각형 표(삼각형마다 float4 셋)를 이은 목록입니다. */
+        const vector<float4>& getPacked() const { return _listPacked; }
+
+    private:
+        struct Node
+        {
+            float3 _min{ 0.0f, 0.0f, 0.0f };
+            float3 _max{ 0.0f, 0.0f, 0.0f };
+            uint32 _first{ 0 }; ///< 안쪽이면 첫 자식 번호, 잎이면 첫 삼각형 번호
+            uint32 _count{ 0 }; ///< 잎의 삼각형 수(0 이면 안쪽)
+        };
+
+        void build()
+        {
+            _triangleCount = static_cast<uint32>( _listSource.size() / 3 );
+            _listPacked.clear();
+            _nodeCount = 0;
+            if ( _triangleCount == 0 )
+                return;
+            const float3   padding( 1.0e-4f );
+            vector<float3> listCentroid( _triangleCount );
+            vector<uint32> listOrder( _triangleCount );
+            for ( uint32 index = 0; index < _triangleCount; ++index )
+            {
+                listOrder[index]    = index;
+                listCentroid[index] = ( _listSource[index * 3] + _listSource[index * 3 + 1] + _listSource[index * 3 + 2] ) * ( 1.0f / 3.0f );
+            }
+            vector<Node> listNode;
+            listNode.reserve( static_cast<size_t>( _triangleCount ) / 2 + 2 );
+            listNode.emplace_back();
+            buildNode( listNode, 0, 0, _triangleCount, listOrder, listCentroid, padding );
+            _nodeCount = static_cast<uint32>( listNode.size() );
+            _listPacked.reserve( static_cast<size_t>( _nodeCount ) * 2 + static_cast<size_t>( _triangleCount ) * 3 );
+            for ( const Node& node : listNode )
+            {
+                _listPacked.push_back( float4{ node._min._x, node._min._y, node._min._z, static_cast<float32>( node._first ) } );
+                _listPacked.push_back( float4{ node._max._x, node._max._y, node._max._z, static_cast<float32>( node._count ) } );
+            }
+            for ( const uint32 triangle : listOrder )
+            {
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    const float3& position = _listSource[triangle * 3 + corner];
+                    _listPacked.push_back( float4{ position._x, position._y, position._z, 0.0f } );
+                }
+            }
+        }
+
+        /** @brief 순서 표의 [first, first + count) 를 노드 @p nodeIndex 로 만듭니다(재귀 깊이 = 트리 깊이). */
+        void buildNode( vector<Node>& inoutListNode, uint32 nodeIndex, uint32 first, uint32 count, vector<uint32>& inoutListOrder, const vector<float3>& listCentroid,
+                        const float3& padding )
+        {
+            float3 boundsMin   = _listSource[inoutListOrder[first] * 3];
+            float3 boundsMax   = boundsMin;
+            float3 centroidMin = listCentroid[inoutListOrder[first]];
+            float3 centroidMax = centroidMin;
+            for ( uint32 index = first; index < first + count; ++index )
+            {
+                const uint32 triangle = inoutListOrder[index];
+                for ( uint32 corner = 0; corner < 3; ++corner )
+                {
+                    boundsMin = float3::min( boundsMin, _listSource[triangle * 3 + corner] );
+                    boundsMax = float3::max( boundsMax, _listSource[triangle * 3 + corner] );
+                }
+                centroidMin = float3::min( centroidMin, listCentroid[triangle] );
+                centroidMax = float3::max( centroidMax, listCentroid[triangle] );
+            }
+            Node& node = inoutListNode[nodeIndex];
+            node._min  = boundsMin - padding;
+            node._max  = boundsMax + padding;
+            if ( count <= kLeafSize )
+            {
+                node._first = first;
+                node._count = count;
+                return;
+            }
+            // 무게중심 상자의 가장 긴 축에서 중앙값으로 가른다
+            const float3 extent = centroidMax - centroidMin;
+            uint32       axis   = 0;
+            if ( extent._y > extent._x && extent._y >= extent._z )
+                axis = 1;
+            else if ( extent._z > extent._x && extent._z > extent._y )
+                axis = 2;
+            const uint32 middle = first + count / 2;
+            std::nth_element( inoutListOrder.begin() + first, inoutListOrder.begin() + middle, inoutListOrder.begin() + first + count,
+                              [&listCentroid, axis]( uint32 left, uint32 right )
+            {
+                const float3& a = listCentroid[left];
+                const float3& b = listCentroid[right];
+                return ( axis == 0 ? a._x < b._x : ( axis == 1 ? a._y < b._y : a._z < b._z ) );
+            } );
+            const uint32 childBase = static_cast<uint32>( inoutListNode.size() );
+            inoutListNode.emplace_back();
+            inoutListNode.emplace_back();
+            inoutListNode[nodeIndex]._first = childBase; // 재할당으로 node 참조가 낡았을 수 있어 다시 쓴다
+            inoutListNode[nodeIndex]._count = 0;
+            buildNode( inoutListNode, childBase, first, middle - first, inoutListOrder, listCentroid, padding );
+            buildNode( inoutListNode, childBase + 1, middle, first + count - middle, inoutListOrder, listCentroid, padding );
+        }
+
+        vector<float3> _listSource;
+        vector<float4> _listPacked;
+        uint32         _triangleCount{ 0 };
+        uint32         _nodeCount{ 0 };
+        bool           _bBuilt{ false };
+    };
+} // namespace sw::editor

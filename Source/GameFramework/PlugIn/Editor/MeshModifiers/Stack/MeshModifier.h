@@ -28,9 +28,13 @@
 namespace sw
 {
     class JSONValue;
-    class MeshModifierStack;
     class TaskManager;
 } // namespace sw
+
+namespace sw::editor
+{
+    class MeshModifierStack;
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -260,6 +264,11 @@ namespace sw::editor
          * @details GPU 프로그램(`MeshModifierGPUProgram`)이 CPU 기준과 같은 상자를 싣는 데 쓴다 — 미리보기가 이미 도는 CPU 적용에서 공짜로 얻는다. 게임 스레드에서만 채운다.
          */
         vector<MeshModifierBounds>* _pListInputBounds{ nullptr };
+        /**
+         * @brief 넣으면 `MeshModifier::apply` 가 켜진 모디파이어마다 그 모디파이어에 들어오는 선택 가중치를 입력 상자와 같은 순서로 붙입니다(가중치 채널이 없으면 빈 목록).
+         * @details 가중치는 Paint(가중치 대상) 같은 모디파이어만 바꾸고 뒤따르는 모디파이어의 정점별 세기가 된다 - GPU 프로그램이 기록마다 그 시점의 가중치 표를 싣는 데 쓴다.
+         */
+        vector<vector<float32>>* _pListInputWeight{ nullptr };
     };
 } // namespace sw::editor
 

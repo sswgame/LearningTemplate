@@ -259,23 +259,26 @@ namespace sw::editor
             return count > 0;
         }
 
-        /** @brief GPU 표면 맞추기가 싣는 삼각형 수의 상한입니다(셰이더 전수 탐색이라 정점 × 삼각형으로 늘어난다). */
-        static constexpr uint32 kGPUConformTriangleLimit = 4096;
+        /** @brief GPU 표면 맞추기가 싣는 삼각형 수의 상한입니다(프로그램 목록 한 구간: 노드 · 삼각형 합쳐 삼각형당 float4 약 3.5 개라 이 수에서 약 14 MB). */
+        static constexpr uint32 kGPUConformTriangleLimit = 262144;
 
         /**
-         * @brief 모디파이어 공간 삼각형 목록을 GPU 프로그램에 싣습니다: float4(얻음, 삼각형 수) 뒤에 삼각형마다 float4 셋(a · b · c).
+         * @brief 모디파이어 공간 삼각형 목록을 BVH 로 지어 GPU 프로그램에 싣습니다: float4(얻음, 삼각형 수, 노드 수) 뒤에 노드 표(노드마다 float4 둘)와 삼각형 표(삼각형마다 float4 셋).
          * @return 상한을 넘으면 false 입니다(프로그램을 만들지 않는다). 삼각형이 없으면 "못 얻었다" 한 칸만 싣고 true 입니다(셰이더가 항등으로 둔다 - CPU 와 같다).
          */
-        [[nodiscard]] static bool packGPUTriangleTable( const vector<float3>& listTriangle, vector<float4>& outListValue )
+        [[nodiscard]] static bool packGPUConformTable( const vector<float3>& listTriangle, ConformGPUTable& inoutTable, vector<float4>& outListValue )
         {
             const size_t triangleCount = listTriangle.size() / 3;
             if ( triangleCount > kGPUConformTriangleLimit )
                 return false;
-            outListValue.push_back( float4{ triangleCount > 0 ? 1.0f : 0.0f, static_cast<float32>( triangleCount ), 0.0f, 0.0f } );
-            for ( size_t index = 0; index < triangleCount * 3; ++index )
+            if ( triangleCount == 0 )
             {
-                outListValue.push_back( float4{ listTriangle[index]._x, listTriangle[index]._y, listTriangle[index]._z, 0.0f } );
+                outListValue.push_back( float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+                return true;
             }
+            (void)inoutTable.assign( listTriangle );
+            outListValue.push_back( float4{ 1.0f, static_cast<float32>( inoutTable.getTriangleCount() ), static_cast<float32>( inoutTable.getNodeCount() ), 0.0f } );
+            outListValue.insert( outListValue.end(), inoutTable.getPacked().begin(), inoutTable.getPacked().end() );
             return true;
         }
 

@@ -21,6 +21,7 @@
  *         평탄하게 이어진다(`ModifierContext::listCount` · `listValue`)
  *       그 뒤(수 목록 다음)가 외부 입력 블록 - 스플라인 표본 · 텍스처 격자 · 격자 제어점 · 층 곡선(`MeshModifier::packGPUInputs`). 모양은 모디파이어마다 다르고(아래 각 함수 주석)
  *         첫 float4 의 x 가 "입력을 얻었다 1 · 못 얻었다 0" 인 것은 못 얻으면 항등으로 둔다. 별도 GPU 버퍼가 아니라 같은 프로그램 목록 안이라 바인딩이 늘지 않는다
+ *   기록 [2].w = 이 기록에 들어오는 정점별 선택 가중치 표의 위치(기록 시작부터의 float4 수, 0 이면 가중치 없음 = 모두 1). 표는 매개변수 영역 끝에 float4 하나에 넷씩 정점 순서로 있고 셰이더가 변형 결과를 그 세기로 섞는다
  *   묶음(Deformable · World Warp)은 기록이 없다 - 하위 모디파이어의 기록이 같은 자리에 이어지고 행렬에 묶음의 공간 변환이 곱해져 있다(C++ 쪽이 만든다)
  *   끝     정점 UV 표(텍스처 모디파이어가 있을 때만): float4 하나에 정점 둘의 UV(xy · zw). 정점 번호는 메시 안 번호다 - 컴퓨트의 풀 정점 번호에서 칸 표 y(구간 시작)를 뺀 값
  *
@@ -185,6 +186,8 @@ struct MeshDeform
     static float3 pointCache( float3 location, ModifierContext context );
     static float3 closestOnTriangle( float3 pos, float3 a, float3 b, float3 c );
     static bool intersectRayTriangle( float3 origin, float3 direction, float3 a, float3 b, float3 c, out float outDistance );
+    static float pointBoxDistanceSq( float3 pos, float3 boxMin, float3 boxMax );
+    static bool rayHitsBox( float3 origin, float3 direction, float3 boxMin, float3 boxMax, float maxDistance );
     static float3 conform( float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
@@ -1522,9 +1525,32 @@ static bool MeshDeform::intersectRayTriangle( float3 origin, float3 direction, f
     return abs( determinant ) >= 1.0e-12f && u >= -slack && u <= 1.0f + slack && v >= -slack && u + v <= 1.0f + slack && distance >= 0.0f;
 }
 
+/** 점과 상자의 거리 제곱 — BVH 최근접점 질의의 가지치기 */
+static float MeshDeform::pointBoxDistanceSq( float3 pos, float3 boxMin, float3 boxMax )
+{
+    const float3 outside = max( max( boxMin - pos, pos - boxMax ), float3( 0.0f, 0.0f, 0.0f ) );
+    return dot( outside, outside );
+}
+
+/** 반직선이 상자를 maxDistance 안에서 지나는가(슬랩 판정) — BVH 광선 질의의 가지치기 */
+static bool MeshDeform::rayHitsBox( float3 origin, float3 direction, float3 boxMin, float3 boxMax, float maxDistance )
+{
+    const float3 safeDirection = float3( abs( direction.x ) < 1.0e-20f ? 1.0e-20f : direction.x, abs( direction.y ) < 1.0e-20f ? 1.0e-20f : direction.y,
+                                         abs( direction.z ) < 1.0e-20f ? 1.0e-20f : direction.z );
+    const float3 inverse = 1.0f / safeDirection;
+    const float3 t0      = ( boxMin - origin ) * inverse;
+    const float3 t1      = ( boxMax - origin ) * inverse;
+    const float3 nearT   = min( t0, t1 );
+    const float3 farT    = max( t0, t1 );
+    const float  tNear   = max( max( nearT.x, nearT.y ), max( nearT.z, 0.0f ) );
+    const float  tFar    = min( min( farT.x, farT.y ), farT.z );
+    return tNear <= tFar && tNear <= maxDistance;
+}
+
 /**
- * Conform · ConformMulti — 매개변수 0 방식(0 가장 가까운 점 · 1 주축 음의 방향 · 2 법선 음의 방향) · 1 띄우기 · 2 최대 거리 · 3 양, 입력 4: float4(얻음, 삼각형 수) 뒤에
- * 삼각형마다 float4 셋(모디파이어 공간 a · b · c). BVH 없이 전수 탐색한다(삼각형 수는 CPU 쪽 싣기가 상한을 건다).
+ * Conform · ConformMulti — 매개변수 0 방식(0 가장 가까운 점 · 1 주축 음의 방향 · 2 법선 음의 방향) · 1 띄우기 · 2 최대 거리 · 3 양, 입력 4: float4(얻음, 삼각형 수, 노드 수)
+ * 뒤에 노드 표(노드마다 float4 둘 - 상자 최소 · w 첫 자식/첫 삼각형, 상자 최대 · w 잎의 삼각형 수)와 삼각형 표(삼각형마다 float4 셋). `ConformGPUTable` 이 짓는 BVH 를 스택으로 훑는다 -
+ * CPU `ConformSurface::findClosestPoint` · `findNearestHit` 와 같은 질의다(남은 거리를 줄여 가며 가지치기).
  */
 static float3 MeshDeform::conform( float3 location, float3 surfaceNormal, ModifierContext context )
 {
@@ -1533,39 +1559,67 @@ static float3 MeshDeform::conform( float3 location, float3 surfaceNormal, Modifi
     float3       result = location;
     if ( header.x > 0.5f && amount > 0.0f )
     {
-        const uint   triangleCount = (uint)( header.y + 0.5f );
+        const uint   nodeBase      = 5u;
+        const uint   triangleBase  = nodeBase + (uint)( header.z + 0.5f ) * 2u;
         const int    mode          = clamp( context.paramInt( 0u ), 0, 2 );
         const float3 axisDirection = MeshDeform::set( float3( 0.0f, 0.0f, 0.0f ), context._axis, -1.0f );
         const float3 rayDirection  = mode == 2 ? MeshDeform::normalizeOr( -surfaceNormal, axisDirection ) : axisDirection;
-        float        bestDistance  = 3.0e38f;
+        float        bestDistance  = context.param( 2u ); // 최대 거리로 시작해 찾을 때마다 줄어든다
+        bool         bFound        = false;
         float3       bestPoint     = float3( 0.0f, 0.0f, 0.0f );
         float3       bestNormal    = float3( 0.0f, 1.0f, 0.0f );
-        for ( uint triIndex = 0u; triIndex < triangleCount; ++triIndex )
+        uint         stack[32];
+        uint         stackSize = 1u;
+        stack[0]               = 0u;
+        while ( stackSize > 0u )
         {
-            const float3 a         = context.raw( 5u + triIndex * 3u ).xyz;
-            const float3 b         = context.raw( 6u + triIndex * 3u ).xyz;
-            const float3 c         = context.raw( 7u + triIndex * 3u ).xyz;
-            float3       candidate = location;
-            float        distance  = 0.0f;
-            bool         bHit      = true;
-            if ( mode == 0 )
+            stackSize -= 1u;
+            const uint   nodeIndex = stack[stackSize];
+            const float4 nodeA     = context.raw( nodeBase + nodeIndex * 2u );
+            const float4 nodeB     = context.raw( nodeBase + nodeIndex * 2u + 1u );
+            const bool   bVisit    = mode == 0 ? MeshDeform::pointBoxDistanceSq( location, nodeA.xyz, nodeB.xyz ) <= bestDistance * bestDistance
+                                               : MeshDeform::rayHitsBox( location, rayDirection, nodeA.xyz, nodeB.xyz, bestDistance );
+            const uint   first     = (uint)( nodeA.w + 0.5f );
+            const uint   count     = (uint)( nodeB.w + 0.5f );
+            if ( bVisit && count == 0u )
             {
-                candidate = MeshDeform::closestOnTriangle( location, a, b, c );
-                distance  = length( candidate - location );
+                // 안쪽 노드 - 둘째 자식을 쌓고 첫째 자식을 먼저 본다(스택 깊이는 트리 깊이 정도다)
+                stack[stackSize]      = first + 1u;
+                stack[stackSize + 1u] = first;
+                stackSize += 2u;
             }
-            else
+            if ( bVisit && count > 0u )
             {
-                bHit      = MeshDeform::intersectRayTriangle( location, rayDirection, a, b, c, distance );
-                candidate = location + rayDirection * distance;
-            }
-            if ( bHit && distance < bestDistance )
-            {
-                bestDistance = distance;
-                bestPoint    = candidate;
-                bestNormal   = cross( b - a, c - a );
+                for ( uint leafIndex = 0u; leafIndex < count; ++leafIndex )
+                {
+                    const uint   at        = triangleBase + ( first + leafIndex ) * 3u;
+                    const float3 a         = context.raw( at ).xyz;
+                    const float3 b         = context.raw( at + 1u ).xyz;
+                    const float3 c         = context.raw( at + 2u ).xyz;
+                    float3       candidate = location;
+                    float        distance  = 0.0f;
+                    bool         bHit      = true;
+                    if ( mode == 0 )
+                    {
+                        candidate = MeshDeform::closestOnTriangle( location, a, b, c );
+                        distance  = length( candidate - location );
+                    }
+                    else
+                    {
+                        bHit      = MeshDeform::intersectRayTriangle( location, rayDirection, a, b, c, distance );
+                        candidate = location + rayDirection * distance;
+                    }
+                    if ( bHit && distance <= bestDistance )
+                    {
+                        bestDistance = distance;
+                        bFound       = true;
+                        bestPoint    = candidate;
+                        bestNormal   = cross( b - a, c - a );
+                    }
+                }
             }
         }
-        if ( bestDistance <= context.param( 2u ) )
+        if ( bFound )
         {
             float3 normal = MeshDeform::normalizeOr( bestNormal, float3( 0.0f, 1.0f, 0.0f ) );
             normal        = dot( normal, location - bestPoint ) < 0.0f ? -normal : normal;
@@ -1616,6 +1670,9 @@ static void MeshDeform::applyProgram( uint programBase, uint vertexIndex, inout 
         context._paramBase   = cursor + SW_MODIFIER_RECORD_FLOAT4;
         const uint  kind     = (uint)record.x;
         const float step     = record.w;
+        // 이 기록에 들어오는 정점별 선택 가중치(상자 최대 float4 의 w = 기록 시작부터의 표 위치, 0 이면 모두 1) - CPU `DeformJob` 처럼 섞는 세기다
+        const float weightStart = g_DeformPrograms[cursor + 2u].w;
+        const float weight      = weightStart > 0.5f ? saturate( g_DeformPrograms[cursor + (uint)weightStart + vertexIndex / 4u][vertexIndex % 4u] ) : 1.0f;
 
         const float3 location      = MeshDeform::transformPoint( inoutPosition, cursor + 3u );
         const float3 surfaceNormal = MeshDeform::normalizeOr( MeshDeform::transformVector( inoutNormal, cursor + 11u ), float3( 0.0f, 1.0f, 0.0f ) );
@@ -1631,7 +1688,8 @@ static void MeshDeform::applyProgram( uint programBase, uint vertexIndex, inout 
         SW_LOOP for ( uint sampleIndex = 0u; sampleIndex < 3u; ++sampleIndex )
         {
             const float3 offset   = sampleIndex == 1u ? tangent1 * step : ( sampleIndex == 2u ? tangent2 * step : float3( 0.0f, 0.0f, 0.0f ) );
-            const float3 deformed = MeshDeform::deformPoint( kind, location + offset, surfaceNormal, context );
+            const float3 sampleAt = location + offset;
+            const float3 deformed = lerp( sampleAt, MeshDeform::deformPoint( kind, sampleAt, surfaceNormal, context ), weight );
             moved                 = sampleIndex == 0u ? deformed : moved;
             shifted1              = sampleIndex == 1u ? deformed : shifted1;
             shifted2              = sampleIndex == 2u ? deformed : shifted2;

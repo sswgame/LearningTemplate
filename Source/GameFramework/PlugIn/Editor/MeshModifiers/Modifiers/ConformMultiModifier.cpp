@@ -39,9 +39,9 @@ namespace sw::editor
         bool supportsGPU() const override { return true; }
 
         /**
-         * @brief 대상 삼각형을 모디파이어 공간으로 옮겨 싣는다: float4(얻음, 삼각형 수) 뒤에 삼각형마다 float4 셋(꼭짓점 a · b · c).
-         * @details 셰이더는 BVH 없이 전수 탐색한다(정점 × 삼각형 - GPU 에서는 단순 반복이 빠르고 BVH 는 가변 트리 버퍼가 더 필요하다). 삼각형이 `kGPUConformTriangleLimit` 를 넘으면
-         *          프로그램을 만들지 못하고(false) 미리보기가 BVH 가 있는 CPU 경로로 돌아간다 - 거짓으로 일부만 싣지 않는다.
+         * @brief 대상 삼각형을 모디파이어 공간으로 옮겨 BVH 로 지어 싣는다: float4(얻음, 삼각형 수, 노드 수) · 노드 표 · 삼각형 표.
+         * @details 셰이더가 스택으로 BVH 를 훑는다(CPU `ConformSurface` 와 같은 질의: 최근접점 · 광선). 같은 삼각형이면 BVH 를 다시 짓지 않는다. 삼각형이 `kGPUConformTriangleLimit` 를 넘으면
+         *          프로그램을 만들지 못하고(false) 미리보기가 CPU 경로로 돌아간다 - 거짓으로 일부만 싣지 않는다.
          */
         bool packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override
         {
@@ -50,7 +50,7 @@ namespace sw::editor
             {
                 static_cast<void>( PathModifierUtil::tryAppendTriangles( context, target, listTriangle ) );
             }
-            return PathModifierUtil::packGPUTriangleTable( listTriangle, outListValue );
+            return PathModifierUtil::packGPUConformTable( listTriangle, _gpuTable, outListValue );
         }
 
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
@@ -66,12 +66,13 @@ namespace sw::editor
         }
 
     private:
-        uint32                 _targetsParam;
-        uint32                 _modeParam;
-        uint32                 _offsetParam;
-        uint32                 _maxDistanceParam;
-        uint32                 _amountParam;
-        mutable ConformSurface _surface; ///< 대상 삼각형이 안 바뀌면 BVH 를 다시 만들지 않는다(같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다)
+        uint32                  _targetsParam;
+        uint32                  _modeParam;
+        uint32                  _offsetParam;
+        uint32                  _maxDistanceParam;
+        uint32                  _amountParam;
+        mutable ConformGPUTable _gpuTable; ///< GPU 프로그램에 싣는 BVH 캐시(같은 삼각형이면 다시 짓지 않는다)
+        mutable ConformSurface  _surface;  ///< 대상 삼각형이 안 바뀌면 BVH 를 다시 만들지 않는다(같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다)
     };
 
     SW_MESH_MODIFIER( ConformMultiModifier, "conformmulti", "Conform Multi", "Surface" );

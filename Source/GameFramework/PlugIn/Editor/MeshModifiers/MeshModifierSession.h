@@ -170,7 +170,7 @@ namespace sw::editor
         void updatePrefixCache( const MeshModifierEvaluation& evaluation, bool bStackChanged );
         void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;
         /** @brief 방금 건 CPU 적용의 평가 · 입력 상자로 셰이딩 미리보기를 맞춥니다(GPU 로 못 옮기면 CPU 결과 메시를 끼운다). */
-        void updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds );
+        void updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds, const vector<vector<float32>>& listInputWeight );
         /** @brief 미리보기 메시 @p mesh 를 대상에 끼웁니다. 대상에 우리 것이 아닌 메시가 걸려 있으면 그것을 원래 메시로 잡아 둡니다. */
         void mountPreviewMesh( MeshComponent& meshComponent, const shared_ptr<Mesh>& mesh );
         /** @brief 대상에 끼워 둔 미리보기 메시를 원래 메시로 되돌립니다. 대상이 지워졌으면 잡아 둔 포인터만 놓습니다. */
@@ -188,6 +188,7 @@ namespace sw::editor
         MeshModifierMesh           _stagePreviewMesh;      ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
         MeshModifierMesh           _prefixMesh;            ///< 고른 모디파이어 앞까지 건 결과(앞부분 캐시, `updatePrefixCache`)
         vector<MeshModifierBounds> _listPrefixInputBounds; ///< 앞부분을 거는 동안 모은 입력 상자(GPU 프로그램용)
+        vector<vector<float32>>    _listPrefixInputWeight; ///< 앞부분을 거는 동안 모은 모디파이어별 입력 가중치(GPU 프로그램의 정점별 세기 표)
         string                     _prefixKey;             ///< 앞부분 모디파이어의 한 줄 저장 글(`MeshModifierStack::makePrefixJSONText`)
         float4x4                   _prefixMeshToWorld;     ///< 앞부분을 건 메시 변환
         float32                    _prefixTime;            ///< 앞부분을 건 미리보기 시간

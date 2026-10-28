@@ -45,6 +45,7 @@ namespace sw::editor
             struct Emitter
             {
                 const vector<MeshModifierBounds>* _pBounds{ nullptr };
+                const vector<vector<float32>>*    _pWeight{ nullptr };
                 vector<float4>*                   _pProgram{ nullptr };
                 size_t                            _cursor{ 0 };
                 uint32                            _vertexCount{ 0 };
@@ -95,7 +96,8 @@ namespace sw::editor
                     if ( emitter._cursor >= emitter._pBounds->size() )
                         return false;
                     // MeshModifier::apply 와 같은 행렬 - 공간은 거기 한 곳의 규칙을 그대로 옮긴다
-                    const MeshModifierBounds& bounds          = ( *emitter._pBounds )[emitter._cursor++];
+                    const size_t              entry           = emitter._cursor++;
+                    const MeshModifierBounds& bounds          = ( *emitter._pBounds )[entry];
                     const float4x4            levelToModifier = pModifier->computeLocalToModifier( evaluation );
                     const float4x4            modifierToLevel = levelToModifier.invert();
                     const MeshModifierStack*  pChild          = pModifier->getGPUChildStack();
@@ -135,7 +137,25 @@ namespace sw::editor
                     context._worldToModifier = context._modifierToWorld.invert();
                     if ( pModifier->packGPUInputs( context, program ) == false )
                         return false;
-                    emitter._bNeedsUV       = emitter._bNeedsUV || pModifier->needsGPUVertexUV();
+                    emitter._bNeedsUV = emitter._bNeedsUV || pModifier->needsGPUVertexUV();
+                    // 이 모디파이어에 들어오는 정점별 선택 가중치 - 기록 길이에 포함해 뒤에 싣고, 상자 최대 float4 의 w 에 기록 시작부터의 거리를 둔다(0 = 가중치 없음, 모두 1)
+                    if ( emitter._pWeight != nullptr && entry < emitter._pWeight->size() )
+                    {
+                        const vector<float32>& listWeight = ( *emitter._pWeight )[entry];
+                        if ( listWeight.empty() == false && listWeight.size() == emitter._vertexCount )
+                        {
+                            program[recordStart + 2]._w = static_cast<float32>( program.size() - recordStart );
+                            for ( size_t vertex = 0; vertex < listWeight.size(); vertex += 4 )
+                            {
+                                float32 arrValue[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                                for ( size_t lane = 0; lane < 4 && vertex + lane < listWeight.size(); ++lane )
+                                {
+                                    arrValue[lane] = listWeight[vertex + lane];
+                                }
+                                program.push_back( float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] } );
+                            }
+                        }
+                    }
                     program[recordStart]._y = static_cast<float32>( program.size() - paramStart );
                     ++emitter._recordCount;
                 }
@@ -175,15 +195,16 @@ namespace sw::editor
     }
 
     bool MeshModifierGPUProgram::make( const MeshModifierStack& stack, const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds,
-                                       bool bHasWeight, uint32 vertexCount, const vector<float2>* pListUV, vector<float4>& outProgram )
+                                       const vector<vector<float32>>* pListInputWeight, uint32 vertexCount, const vector<float2>* pListUV, vector<float4>& outProgram )
     {
         outProgram.clear();
-        if ( bHasWeight || canMake( stack ) == false )
+        if ( canMake( stack ) == false )
             return false;
 
         outProgram.push_back( float4{ 0.0f, evaluation._time, 0.0f, 0.0f } );
         MeshModifierGPUProgramInternal::Emitter emitter{};
         emitter._pBounds     = &listInputBounds;
+        emitter._pWeight     = pListInputWeight;
         emitter._pProgram    = &outProgram;
         emitter._vertexCount = vertexCount;
         const float4x4 identity{};

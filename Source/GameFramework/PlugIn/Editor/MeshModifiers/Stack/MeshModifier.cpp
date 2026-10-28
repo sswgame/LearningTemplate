@@ -308,6 +308,8 @@ namespace sw::editor
         context._bounds = MeshModifierBounds::makeFromPoints( inoutMesh._listPosition );
         if ( evaluation._pListInputBounds != nullptr )
             evaluation._pListInputBounds->push_back( context._bounds );
+        if ( evaluation._pListInputWeight != nullptr )
+            evaluation._pListInputWeight->push_back( inoutMesh.hasWeight() ? inoutMesh._listWeight : vector<float32>{} );
         applyToMesh( inoutMesh, context );
         MeshModifierInternal::transformMesh( evaluation._pTaskManager, inoutMesh, modifierToLocal, modifierToLocalNormal );
     }
