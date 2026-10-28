@@ -68,9 +68,14 @@ namespace sw
                     outError = "the economy kit needs the currencyCatalog and offerCatalog options";
                     return false;
                 }
-                if ( _currencyCatalog.loadFromResource( ResourceID{ currencyPath } ) == false || _offerCatalog.loadFromResource( ResourceID{ offerPath } ) == false )
+                if ( _currencyCatalog.loadFromResource( ResourceID{ currencyPath } ) == false )
                 {
-                    outError = "the economy catalogs could not be read ('" + currencyPath + "', '" + offerPath + "')";
+                    outError = "the currency catalog could not be read ('" + currencyPath + "')";
+                    return false;
+                }
+                if ( _offerCatalog.loadFromResource( ResourceID{ offerPath } ) == false )
+                {
+                    outError = "the offer catalog could not be read ('" + offerPath + "')";
                     return false;
                 }
                 if ( bFakeReceipts && _receiptRegistry.registerValidator( &_fakeValidator ) == false )

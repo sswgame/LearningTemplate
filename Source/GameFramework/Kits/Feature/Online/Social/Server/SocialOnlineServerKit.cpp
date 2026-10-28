@@ -73,9 +73,10 @@ namespace sw
                     }
                     listLevelExperience.push_back( experience );
                 }
-                if ( _guildService.setLevelTable( listLevelExperience ) == false )
+                string tableError;
+                if ( _guildService.setLevelTable( listLevelExperience, tableError ) == false )
                 {
-                    outError = "social: guildLevelExperience must be positive, increasing and at most 100 levels";
+                    outError = "social: guildLevelExperience: " + tableError;
                     return false;
                 }
                 return registerHostService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );

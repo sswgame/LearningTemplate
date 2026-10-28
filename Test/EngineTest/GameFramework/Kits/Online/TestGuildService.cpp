@@ -163,9 +163,13 @@ SW_TEST_CASE( GuildServiceTest, LevelFollowsExperienceAndTheLevelTable )
 {
     MemoryServiceDatabase database;
     GuildNode             node( &database );
-    SW_EXPECT_FALSE( node._service.setLevelTable( { 100, 100 } ) ); // 늘어나야 한다
-    SW_EXPECT_FALSE( node._service.setLevelTable( { 0 } ) );
-    SW_ASSERT_TRUE( node._service.setLevelTable( { 100, 300 } ) );
+    string                tableError;
+    SW_EXPECT_FALSE( node._service.setLevelTable( { 100, 100 }, tableError ) ); // 늘어나야 한다
+    SW_EXPECT_FALSE( tableError.empty() );
+    tableError.clear();
+    SW_EXPECT_FALSE( node._service.setLevelTable( { 0 }, tableError ) );
+    SW_EXPECT_FALSE( tableError.empty() );
+    SW_ASSERT_TRUE( node._service.setLevelTable( { 100, 300 }, tableError ) );
     SW_ASSERT_TRUE( node.run( GuildOperation::Create, 1, UnixMilliseconds{ 0 }, kInvalidAccountID, 0, "Lead" ) == SocialResult::Ok );
     const uint64 guildID = node.getLastGuildID();
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
@@ -177,8 +181,8 @@ SW_TEST_CASE( GuildServiceTest, LevelFollowsExperienceAndTheLevelTable )
     node._service.addExperience( guildID, 1000, UnixMilliseconds{ 30 } );
     (void)node._store.pollCompletions();
     SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 40 } ) == SocialResult::Ok );
-    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 3 ); // 표의 끝이다
-    SW_ASSERT_TRUE( node._service.setLevelTable( { 2000 } ) );      // 표가 바뀌면 저장된 경험치는 그대로이고 레벨만 따라간다
+    SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 3 );        // 표의 끝이다
+    SW_ASSERT_TRUE( node._service.setLevelTable( { 2000 }, tableError ) ); // 표가 바뀌면 저장된 경험치는 그대로이고 레벨만 따라간다
     SW_ASSERT_TRUE( node.run( GuildOperation::Get, 1, UnixMilliseconds{ 50 } ) == SocialResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion.back()._info._level, 1 );
 }
