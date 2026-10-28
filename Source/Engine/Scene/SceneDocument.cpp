@@ -9,10 +9,10 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"

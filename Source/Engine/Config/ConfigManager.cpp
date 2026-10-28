@@ -2,10 +2,10 @@
 
 #include "Engine/Config/ConfigManager.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

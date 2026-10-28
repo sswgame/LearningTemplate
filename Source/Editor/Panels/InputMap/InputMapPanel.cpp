@@ -22,8 +22,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"

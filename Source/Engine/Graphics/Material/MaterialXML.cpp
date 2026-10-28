@@ -5,7 +5,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"

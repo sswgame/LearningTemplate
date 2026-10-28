@@ -13,8 +13,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Pack/PackTypes.h"
 #include "Engine/Config/IConfig.h"
+#include "Engine/FileSystem/Pack/PackTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

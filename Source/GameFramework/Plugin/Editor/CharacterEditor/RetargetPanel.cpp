@@ -16,9 +16,9 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 #include <imgui.h>
 

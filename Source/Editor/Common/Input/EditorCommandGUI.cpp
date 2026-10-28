@@ -30,8 +30,8 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"

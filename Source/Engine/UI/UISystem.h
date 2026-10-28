@@ -15,7 +15,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"

@@ -10,11 +10,11 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Cook/ContentHash.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/Asset/Cook/PackConfig.h"
-#include "Engine/Asset/Pack/PackWriter.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/ContentHash.h"
+#include "Engine/FileSystem/Pack/PackConfig.h"
+#include "Engine/FileSystem/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 

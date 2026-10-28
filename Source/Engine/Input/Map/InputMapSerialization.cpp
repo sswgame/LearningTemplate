@@ -2,7 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"

@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

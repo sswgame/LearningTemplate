@@ -27,7 +27,8 @@ kLayer: dict[str, int] = {
     "Foundation": 0, "Compression": 0,
     "pch.h": 0, "pch.cpp": 0, "EngineMinimal.h": 0, "EngineFrameObserver.h": 0,
     # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 모듈 · 관측
-    "Reflection": 1, "Curve": 1, "Serialization": 1, "Config": 1, "Profiling": 1, "Observability": 1, "Telemetry": 1,
+    "Reflection": 1, "Curve": 1, "Serialization": 1, "Config": 1, "Profiling": 1, "Observability": 1,
+    "FileSystem": 1,  # 콘텐츠 파일 시스템(리소스 id · 경로 · 낱개 파일 · 팩 · 쿠킹 읽기 기록) — 직렬화 · 설정이 읽는다. 팩 매니저는 에셋 층이 건다(AssetIO::bindPackManager)
     "CoreServices": 1, "Console": 1,
     "Module/ModuleTypeRegistry.h": 1,  # 모듈 이미지의 타입 등록 선언(Core 만) — 구현(.cpp)은 리로드 때 씬을 다시 묶어 맨 위 층이다
     # 2 — 콘텐츠: 에셋 · 글 · 현지화
@@ -41,6 +42,7 @@ kLayer: dict[str, int] = {
     # 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
     "Physics": 6, "Audio": 6, "Animation": 6, "Navigation": 6, "TileMap": 6, "VFX": 6, "Sequencer": 6, "Dialogue": 6,
     "Environment": 6, "Destruction": 6, "DedicatedServer": 6, "Character": 6, "UI": 6, "Net": 6, "UserSettings": 6, "Automation/Scenario": 6,
+    "Telemetry": 6,  # 크래시 · 원격 측정은 엔진 전체(사용자 설정 · 하드웨어 · 팩 설정)를 보고한다 — 엔진 루프(8)만 include 한다
     # 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
     "Renderer": 7,
     # 8 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기

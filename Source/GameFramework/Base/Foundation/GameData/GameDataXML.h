@@ -9,7 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameCatalog.h"

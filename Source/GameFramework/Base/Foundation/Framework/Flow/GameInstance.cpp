@@ -7,10 +7,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"

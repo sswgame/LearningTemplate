@@ -13,8 +13,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

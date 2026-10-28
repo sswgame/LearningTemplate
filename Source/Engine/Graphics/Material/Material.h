@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"

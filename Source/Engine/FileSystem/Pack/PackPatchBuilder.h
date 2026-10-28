@@ -13,8 +13,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Pack/PackPatch.h"
-#include "Engine/Asset/Pack/PackWriter.h"
+#include "Engine/FileSystem/Pack/PackPatch.h"
+#include "Engine/FileSystem/Pack/PackWriter.h"
 
 namespace sw
 {

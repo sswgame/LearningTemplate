@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Character/AI/BehaviorTaskRegistry.h"

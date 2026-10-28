@@ -18,7 +18,7 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {

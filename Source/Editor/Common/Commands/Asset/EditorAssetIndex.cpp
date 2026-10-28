@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw::editor
 {

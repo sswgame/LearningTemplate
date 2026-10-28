@@ -8,7 +8,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMacros.h"

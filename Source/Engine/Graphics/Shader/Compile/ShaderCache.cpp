@@ -9,8 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 

@@ -6,9 +6,9 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw

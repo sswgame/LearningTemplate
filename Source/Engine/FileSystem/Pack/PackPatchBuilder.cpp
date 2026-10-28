@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Pack/PackPatchBuilder.h"
+#include "Engine/FileSystem/Pack/PackPatchBuilder.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
@@ -9,7 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Pack/PackReader.h"
+#include "Engine/FileSystem/Pack/PackReader.h"
 
 namespace sw
 {

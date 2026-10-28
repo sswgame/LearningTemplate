@@ -14,10 +14,10 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PreloadSet.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"

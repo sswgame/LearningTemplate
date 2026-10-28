@@ -11,8 +11,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Curve/FloatCurve.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

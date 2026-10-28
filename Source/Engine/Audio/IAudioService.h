@@ -18,9 +18,9 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {

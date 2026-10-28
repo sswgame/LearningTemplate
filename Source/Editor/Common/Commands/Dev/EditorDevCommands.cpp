@@ -28,10 +28,10 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

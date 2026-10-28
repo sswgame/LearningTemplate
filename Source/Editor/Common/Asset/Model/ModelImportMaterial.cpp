@@ -16,8 +16,8 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
 #include "Engine/Asset/AssetMeta.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

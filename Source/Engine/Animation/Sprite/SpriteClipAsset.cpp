@@ -6,8 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw

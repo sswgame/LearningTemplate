@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 namespace sw
 {

@@ -29,9 +29,9 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/KeyCodeUtil.h"

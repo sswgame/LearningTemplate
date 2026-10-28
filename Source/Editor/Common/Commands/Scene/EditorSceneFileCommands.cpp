@@ -15,8 +15,8 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/CommandStack.h"

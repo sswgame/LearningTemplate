@@ -8,8 +8,8 @@
 #include "Core/Foundation/Defines.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Cook/ContentHash.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/ContentHash.h"
 
 namespace sw
 {

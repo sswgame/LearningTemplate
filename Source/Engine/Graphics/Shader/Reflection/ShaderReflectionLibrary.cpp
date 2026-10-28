@@ -11,8 +11,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

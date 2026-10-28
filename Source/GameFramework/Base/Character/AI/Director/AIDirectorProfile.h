@@ -13,8 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Curve/FloatCurve.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleCondition.h"

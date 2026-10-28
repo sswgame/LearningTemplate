@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/IFileWatcher.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 

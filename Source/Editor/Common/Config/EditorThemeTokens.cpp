@@ -7,8 +7,8 @@
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 
 #include <algorithm>

@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
@@ -9,10 +10,9 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Cook/CookJob.h"
-#include "Engine/Asset/Pack/PackManager.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/CookJob.h"
+#include "Engine/FileSystem/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -21,13 +21,16 @@ namespace sw
 
     namespace
     {
+        /** @brief `AssetManager` 가 초기화하며 건 팩 매니저입니다(`AssetIO::bindPackManager`). */
+        atomic<const PackManager*> s_pPackManager{ nullptr };
+
         /**
-         * @brief 마운트된 팩을 든 매니저입니다. 엔진 서비스가 바인딩되지 않았으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
+         * @brief 마운트된 팩을 든 매니저입니다. 에셋 매니저가 걸지 않았으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `AssetIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
          */
         const PackManager* findPackManager()
         {
-            return engine::areEngineServicesBound() ? &engine::getSubsystem<AssetManager>().getPackManager() : nullptr;
+            return s_pPackManager.load( std::memory_order_acquire );
         }
 
         /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저가 정하고, 엔진 밖이면 팩 매니저를 만들 때의 빌드 기본값과 같다(배포 구성은 금지). */
@@ -110,6 +113,11 @@ namespace sw
 
 namespace sw
 {
+    void AssetIO::bindPackManager( const PackManager* pPackManager )
+    {
+        s_pPackManager.store( pPackManager, std::memory_order_release );
+    }
+
     bool AssetIO::readTextAsset( const AssetID& id, string& outText, string* pOutAbsPath )
     {
         const string_view relativePath = id.view();

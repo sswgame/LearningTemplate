@@ -7,8 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/UUID/UUID.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/AssetMeta.h"
+#include "Engine/FileSystem/AssetID.h"
 
 #include <shared_mutex>
 

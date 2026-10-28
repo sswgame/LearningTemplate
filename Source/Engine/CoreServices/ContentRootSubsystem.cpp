@@ -4,10 +4,10 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw
 {

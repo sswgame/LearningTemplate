@@ -12,8 +12,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
+#include "Engine/FileSystem/AssetID.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"

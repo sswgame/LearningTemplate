@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {

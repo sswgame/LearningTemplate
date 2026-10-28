@@ -17,7 +17,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/LooseFilePath.h"
+#include "Engine/FileSystem/LooseFilePath.h"
 
 namespace sw
 {

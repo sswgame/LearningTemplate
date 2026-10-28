@@ -8,8 +8,8 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

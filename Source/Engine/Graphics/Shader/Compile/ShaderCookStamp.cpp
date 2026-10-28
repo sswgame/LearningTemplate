@@ -19,8 +19,8 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Cook/ContentHash.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/ContentHash.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"

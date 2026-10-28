@@ -11,7 +11,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetMeta.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw
 {

@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Pack/PackPatchTrustSource.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/Pack/PackPatchTrustSource.h"
 
 #include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 

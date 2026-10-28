@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/UI/Input/UIInputConsumption.h"
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
 #include "Engine/UI/WidgetTree/UIPointerState.h"

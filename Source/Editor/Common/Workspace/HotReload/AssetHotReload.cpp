@@ -17,11 +17,11 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"

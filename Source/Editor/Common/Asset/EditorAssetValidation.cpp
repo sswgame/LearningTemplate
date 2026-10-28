@@ -10,7 +10,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw::editor
 {

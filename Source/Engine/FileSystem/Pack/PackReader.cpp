@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Pack/PackReader.h"
+#include "Engine/FileSystem/Pack/PackReader.h"
 
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
@@ -13,7 +13,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Pack/PackCompressionUtil.h"
+#include "Engine/FileSystem/Pack/PackCompressionUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

@@ -10,8 +10,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 

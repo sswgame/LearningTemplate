@@ -8,8 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Pack/PackPatch.h"
-#include "Engine/Asset/Pack/PackReader.h"
+#include "Engine/FileSystem/Pack/PackPatch.h"
+#include "Engine/FileSystem/Pack/PackReader.h"
 
 namespace sw
 {

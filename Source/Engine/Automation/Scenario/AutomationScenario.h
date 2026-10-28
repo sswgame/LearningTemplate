@@ -9,9 +9,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw

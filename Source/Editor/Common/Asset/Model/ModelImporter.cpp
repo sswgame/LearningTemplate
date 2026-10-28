@@ -29,11 +29,11 @@
 
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/MeshFracture.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"

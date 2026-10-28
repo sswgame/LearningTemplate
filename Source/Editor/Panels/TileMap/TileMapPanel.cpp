@@ -21,8 +21,8 @@
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 

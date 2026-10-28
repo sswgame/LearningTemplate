@@ -8,9 +8,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Image/DDSFormat.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw
 {

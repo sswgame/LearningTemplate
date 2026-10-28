@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 

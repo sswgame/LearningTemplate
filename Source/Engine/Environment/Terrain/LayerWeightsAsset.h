@@ -20,8 +20,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw

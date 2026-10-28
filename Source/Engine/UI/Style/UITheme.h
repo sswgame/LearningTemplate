@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

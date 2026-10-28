@@ -2,8 +2,8 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 

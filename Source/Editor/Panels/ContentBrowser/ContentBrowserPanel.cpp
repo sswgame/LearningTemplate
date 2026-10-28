@@ -35,10 +35,10 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 

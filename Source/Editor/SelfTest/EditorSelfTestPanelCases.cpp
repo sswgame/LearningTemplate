@@ -25,8 +25,8 @@
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"

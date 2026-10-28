@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

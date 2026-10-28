@@ -13,7 +13,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/HotReload/FileWatchDispatcher.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw

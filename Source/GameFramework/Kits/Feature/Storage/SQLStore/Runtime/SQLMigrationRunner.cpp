@@ -9,8 +9,8 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"

@@ -9,7 +9,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

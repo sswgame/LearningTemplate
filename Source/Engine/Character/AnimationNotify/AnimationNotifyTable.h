@@ -29,7 +29,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {

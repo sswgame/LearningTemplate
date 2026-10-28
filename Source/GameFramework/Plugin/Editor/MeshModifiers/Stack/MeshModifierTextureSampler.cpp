@@ -18,7 +18,7 @@
 
 #include "Editor/Common/Asset/Texture/ImageUtil.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw::editor
 {

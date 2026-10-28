@@ -7,8 +7,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Cook/ContentHash.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

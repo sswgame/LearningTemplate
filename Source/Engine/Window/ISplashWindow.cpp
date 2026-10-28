@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandSplashWindow.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"

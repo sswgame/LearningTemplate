@@ -5,8 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/DSP/AudioEffect.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw

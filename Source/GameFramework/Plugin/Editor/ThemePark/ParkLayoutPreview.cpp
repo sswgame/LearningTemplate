@@ -9,8 +9,8 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 #include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"

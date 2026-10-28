@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Pack/PackPatchTrustSource.h"
+#include "Engine/FileSystem/Pack/PackPatchTrustSource.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

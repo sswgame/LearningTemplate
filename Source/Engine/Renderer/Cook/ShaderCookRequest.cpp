@@ -12,8 +12,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"

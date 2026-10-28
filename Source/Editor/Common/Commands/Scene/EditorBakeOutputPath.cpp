@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/Scene.h"
 

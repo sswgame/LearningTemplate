@@ -6,9 +6,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"

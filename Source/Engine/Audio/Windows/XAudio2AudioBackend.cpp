@@ -7,7 +7,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
-    #include "Engine/Asset/AssetIO.h"
+    #include "Engine/FileSystem/AssetIO.h"
 
 namespace sw
 {

@@ -7,8 +7,6 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetHandle.h"
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
@@ -16,6 +14,8 @@
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

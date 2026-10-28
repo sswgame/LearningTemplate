@@ -17,7 +17,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor

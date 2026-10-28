@@ -4,8 +4,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

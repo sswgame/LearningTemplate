@@ -4,13 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioFFT.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 namespace sw
 {

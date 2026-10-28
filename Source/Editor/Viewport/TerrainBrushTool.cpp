@@ -21,11 +21,11 @@
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

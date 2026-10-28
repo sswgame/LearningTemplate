@@ -8,8 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/Pack/PackTypes.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/Pack/PackTypes.h"
 
 namespace sw
 {

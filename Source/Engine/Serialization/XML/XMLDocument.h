@@ -10,7 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 
 #include <optional>
 

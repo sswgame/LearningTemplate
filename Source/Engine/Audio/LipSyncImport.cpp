@@ -8,9 +8,9 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 namespace sw
 {

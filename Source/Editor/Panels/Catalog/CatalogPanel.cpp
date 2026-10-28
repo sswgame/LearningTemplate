@@ -15,9 +15,9 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Asset/AssetID.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetID.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 #include <imgui.h>
 

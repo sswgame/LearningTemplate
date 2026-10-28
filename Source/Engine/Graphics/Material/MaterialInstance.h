@@ -6,7 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"

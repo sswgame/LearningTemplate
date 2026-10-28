@@ -8,9 +8,9 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitTables.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

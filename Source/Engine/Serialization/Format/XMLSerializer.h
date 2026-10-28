@@ -4,8 +4,8 @@
  * @note 리플렉션이 아닌 콘텐츠(테이블, 타일맵, 툴)는 Serialization/XML/XMLDocument 를 씁니다.
  */
 #pragma once
-#include "Engine/Asset/AssetID.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 

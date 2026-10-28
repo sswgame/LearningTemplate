@@ -12,7 +12,7 @@
 
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/BlendSpace.h"
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw

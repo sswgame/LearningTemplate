@@ -13,7 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {
@@ -41,6 +41,12 @@ namespace sw
     class SW_API AssetIO
     {
     public:
+        /**
+         * @brief 마운트된 팩을 찾을 팩 매니저를 겁니다. `AssetManager` 가 초기화할 때 걸고 종료할 때 nullptr 로 풉니다.
+         * @details 팩 매니저는 에셋 층(위)이 소유하고 이 입구는 그보다 낮은 파일 시스템 층이다 — 위 층을 include 하지 않고 걸린 것을 본다(언리얼
+         *          `FPlatformFileManager` 가 팩 파일 계층을 걸어 두는 것과 같다).
+         */
+        static void bindPackManager( const PackManager* pPackManager );
         /**
          * @brief 리소스 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
          *        **OS 경로는 받지 않습니다** — 모든 구성에서 오류 로그를 남기고 false 입니다. 디스크 파일은

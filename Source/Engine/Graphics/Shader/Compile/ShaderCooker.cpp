@@ -12,9 +12,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

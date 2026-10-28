@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

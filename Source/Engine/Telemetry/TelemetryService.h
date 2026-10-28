@@ -17,8 +17,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/EngineFrameObserver.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Telemetry/TelemetrySchema.h"

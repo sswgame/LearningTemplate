@@ -7,7 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"

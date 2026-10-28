@@ -10,7 +10,7 @@
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"

@@ -8,7 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 #include <pugixml.hpp>
 

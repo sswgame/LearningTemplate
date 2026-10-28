@@ -2,8 +2,8 @@
 
 #include "Core/Container/string.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"

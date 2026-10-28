@@ -25,8 +25,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/FileSystem/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

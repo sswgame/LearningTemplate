@@ -22,8 +22,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Character/CharacterIssue.h"
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {

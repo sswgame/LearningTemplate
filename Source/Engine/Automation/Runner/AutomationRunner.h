@@ -8,7 +8,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 #include "Engine/Automation/Runner/AutomationJudge.h"
@@ -18,6 +17,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationTimeline.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
 namespace sw

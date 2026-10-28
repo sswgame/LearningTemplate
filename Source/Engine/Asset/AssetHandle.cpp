@@ -5,7 +5,7 @@
 #include "Core/Concurrency/Futex.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Asset/Cook/CookJob.h"
+#include "Engine/FileSystem/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 

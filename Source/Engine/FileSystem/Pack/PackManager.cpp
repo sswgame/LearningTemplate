@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Pack/PackManager.h"
+#include "Engine/FileSystem/Pack/PackManager.h"
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
@@ -11,9 +11,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Pack/PackPatch.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/Pack/PackPatch.h"
 
 namespace sw
 {

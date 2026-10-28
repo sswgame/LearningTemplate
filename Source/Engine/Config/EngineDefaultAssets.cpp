@@ -2,8 +2,8 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 
-#include "Engine/Asset/AssetIO.h"
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

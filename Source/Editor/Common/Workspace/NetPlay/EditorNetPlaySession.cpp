@@ -12,7 +12,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Asset/AssetPaths.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
 #include <random>

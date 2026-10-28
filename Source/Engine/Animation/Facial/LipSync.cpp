@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 

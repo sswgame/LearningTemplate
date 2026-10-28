@@ -20,10 +20,10 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -11,7 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"

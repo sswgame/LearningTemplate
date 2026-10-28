@@ -7,12 +7,12 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetPaths.h"
-#include "Engine/Asset/Pack/PackManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Pack/PackWriter.h"
+#include "Engine/FileSystem/Pack/PackWriter.h"
 
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
@@ -14,8 +14,8 @@
 #include "Core/Task/TaskTypes.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Asset/Pack/PackCompressionUtil.h"
-#include "Engine/Asset/Pack/PackReader.h"
+#include "Engine/FileSystem/Pack/PackCompressionUtil.h"
+#include "Engine/FileSystem/Pack/PackReader.h"
 #include "Engine/Foundation/EngineParallel.h"
 
 #include <algorithm>

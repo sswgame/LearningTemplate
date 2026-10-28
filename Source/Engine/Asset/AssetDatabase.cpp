@@ -9,10 +9,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/UUID/UUID.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Asset/AssetMeta.h"
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Asset/Cook/CookStore.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 
 namespace sw

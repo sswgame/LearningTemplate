@@ -5,7 +5,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 
 namespace sw
 {

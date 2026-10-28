@@ -15,9 +15,9 @@
 #include "Editor/Common/Asset/Texture/ImageUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw::editor
 {

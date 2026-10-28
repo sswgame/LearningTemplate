@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Asset/AssetIO.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Localization/CurrencyUtil.h"
 #include "Engine/Localization/TimeZoneUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

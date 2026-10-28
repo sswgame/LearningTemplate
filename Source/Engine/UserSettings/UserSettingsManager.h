@@ -17,8 +17,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"

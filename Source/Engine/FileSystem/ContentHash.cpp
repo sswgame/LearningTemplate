@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Asset/Cook/ContentHash.h"
+#include "Engine/FileSystem/ContentHash.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"

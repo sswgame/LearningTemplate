@@ -16,9 +16,9 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetPaths.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"

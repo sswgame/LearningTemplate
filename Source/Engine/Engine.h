@@ -12,8 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Asset/AssetID.h"
 #include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"

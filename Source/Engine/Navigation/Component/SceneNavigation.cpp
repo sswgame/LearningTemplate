@@ -8,8 +8,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Asset/AssetIO.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavAgentCrowdSync.h"
 #include "Engine/Navigation/Component/NavGeometryCollector.h"

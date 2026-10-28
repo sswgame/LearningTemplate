@@ -13,7 +13,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
-#include "Engine/Asset/AssetID.h"
+#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/Base/Foundation/Framework/Flow/IGame.h"
