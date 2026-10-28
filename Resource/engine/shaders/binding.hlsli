@@ -117,11 +117,12 @@ struct Octahedral
     static float3 decode( float2 coordinate );
 };
 
-/** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호는 InstanceData::computeVertexAnimationElements 다. */
+/** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호(표 안 단어 번호)는 InstanceData::computeVertexAnimationElements 다. */
 struct VertexAnimation
 {
-    static float3 unpackNormal( float packed );
-    static float3 computePosition( uint firstElement, uint secondElement, float alpha );
+    static float toSnorm( int raw, float maxRaw );
+    static float3 loadNormal( uint element );
+    static float3 computePosition( uint headerBase, uint firstElement, uint secondElement, float alpha );
 };
 
 /** @brief 등장 디더(8-1 절). */
@@ -266,7 +267,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
     uint   g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
     uint   g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwVertexAnimationCount;    // 그 표의 원소 수 — 범위 밖 번호를 막는다
+    uint   g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
     float  g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
     float  g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
 };
@@ -422,11 +423,12 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint vertexId, float4 res
 // ------------------------------------------------------------------------------
 // 6) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 베이크한 프레임 × 정점 테이블(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
 //    먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 테이블을 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance._vertexAnimationPhase)으로 읽는다.
-//    원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
+//    표는 32 비트 단어 배열이다. 메시마다 머리 단어 SW_VERTEX_ANIMATION_HEADER_WORDS 개(프레임 수 · 프레임율 · 정점 수 · 반복 · 위치 경계 중심 · 반 크기) 뒤에
+//    원소가 프레임 우선 순서로 이어진다. 원소 하나 = 단어 둘(8 B): 단어0 = 위치 x · y(snorm16 둘), 단어1 = 위치 z(snorm16) · 옥타헤드럴 법선 u · v(snorm8 둘).
 //    텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 경로).
 // ------------------------------------------------------------------------------
-SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
-// 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
+// 헤더 · 원소 단어 수는 SW_VERTEX_ANIMATION_HEADER_WORDS · SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT(bindingslots.hlsli — C++ MeshVertexAnimationElement 와 같은 배치).
 
 /**
  * @brief 옥타헤드럴 좌표 [-1, 1]^2 를 단위 벡터로 푼다. C++ `OctahedralNormal::decodeOctant` 와 같은 식이다(0 은 양수 부호).
@@ -453,13 +455,19 @@ static float2 Octahedral::encode( float3 direction )
     return ( direction.z < 0.0f ) ? folded : plane;
 }
 
-/** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
-static float3 VertexAnimation::unpackNormal( float packed )
+/** @brief 부호 있는 정수의 최대값(snorm16 = 32767 · snorm8 = 127)으로 나눈 [-1, 1] 실수다(최솟값은 -1 로 자른다, C++ snorm::toFloat 과 같다). */
+static float VertexAnimation::toSnorm( int raw, float maxRaw )
 {
-    const uint   integer = (uint)packed;
-    const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
-    const float2 octant  = float2( (float)( integer / SW_VERTEX_ANIMATION_NORMAL_STEPS ), (float)( integer % SW_VERTEX_ANIMATION_NORMAL_STEPS ) ) / maxStep * 2.0f - 1.0f;
-    return Octahedral::decode( octant );
+    return max( (float)raw / maxRaw, -1.0f );
+}
+
+/** @brief 원소의 법선(snorm8 옥타헤드럴 둘, 단어1 의 위쪽 16 비트)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
+static float3 VertexAnimation::loadNormal( uint element )
+{
+    const uint  word1   = g_SwVertexAnimation[element + 1u];
+    const float octantU = VertexAnimation::toSnorm( (int)( word1 << 8u ) >> 24, 127.0f );
+    const float octantV = VertexAnimation::toSnorm( (int)word1 >> 24, 127.0f );
+    return Octahedral::decode( float2( octantU, octantV ) );
 }
 
 /**
@@ -476,29 +484,43 @@ void InstanceData::computeVertexAnimationElements( uint vertexId, out bool outVa
     const uint local = vertexId - batch._firstVertex;
 #endif
     // VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
-    const uint   meshLocal     = local + batch._sectionVertexOffset;
-    const uint   base          = batch._vertexAnimationBase;
-    const bool   bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
-    const float4 header        = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    const uint   frameCount    = max( (uint)header.x, 1u );
-    const uint   vertexCount   = (uint)header.z;
-    const bool   bLoop         = header.w > 0.5f;
-    const float  frameTotal    = (float)frameCount;
-    const float  framePosition = max( g_SwVertexAnimationTime + _vertexAnimationPhase, 0.0f ) * header.y;
-    const float  wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
-    const uint   frame         = min( (uint)wrapped, frameCount - 1u );
-    const uint   nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
-    outFirstElement            = base + 1u + frame * vertexCount + meshLocal;
-    outSecondElement           = base + 1u + nextFrame * vertexCount + meshLocal;
-    outAlpha                   = wrapped - (float)frame;
-    outValid                   = bTable && ( header.x > 0.5f ) && ( meshLocal < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
-               ( outSecondElement < g_SwVertexAnimationCount );
+    const uint  meshLocal     = local + batch._sectionVertexOffset;
+    const uint  base          = batch._vertexAnimationBase;
+    const bool  bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base + SW_VERTEX_ANIMATION_HEADER_WORDS <= g_SwVertexAnimationCount );
+    const uint  headerFrames  = bTable ? g_SwVertexAnimation[base] : 0u;
+    const float headerRate    = bTable ? asfloat( g_SwVertexAnimation[base + 1u] ) : 0.0f;
+    const uint  vertexCount   = bTable ? g_SwVertexAnimation[base + 2u] : 0u;
+    const bool  bLoop         = bTable && ( g_SwVertexAnimation[base + 3u] != 0u );
+    const uint  frameCount    = max( headerFrames, 1u );
+    const float frameTotal    = (float)frameCount;
+    const float framePosition = max( g_SwVertexAnimationTime + _vertexAnimationPhase, 0.0f ) * headerRate;
+    const float wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
+    const uint  frame         = min( (uint)wrapped, frameCount - 1u );
+    const uint  nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
+    outFirstElement           = base + SW_VERTEX_ANIMATION_HEADER_WORDS + ( frame * vertexCount + meshLocal ) * SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT;
+    outSecondElement          = base + SW_VERTEX_ANIMATION_HEADER_WORDS + ( nextFrame * vertexCount + meshLocal ) * SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT;
+    outAlpha                  = wrapped - (float)frame;
+    outValid                  = bTable && ( headerFrames > 0u ) && ( meshLocal < vertexCount ) && ( outFirstElement + 1u < g_SwVertexAnimationCount ) &&
+               ( outSecondElement + 1u < g_SwVertexAnimationCount );
 }
 
-/** @brief VAT 위치 — 깊이 프리패스와 기본 패스가 비트까지 같아야 해 이 함수 하나로 만든다(precise). */
-static float3 VertexAnimation::computePosition( uint firstElement, uint secondElement, float alpha )
+/**
+ * @brief VAT 위치 — 깊이 프리패스와 기본 패스가 비트까지 같아야 해 이 함수 하나로 만든다(precise). 정규화한 두 원소를 보간한 뒤 머리의 경계(중심 + 반 크기)로 푼다.
+ * @param headerBase 이 메시의 머리 단어 번호(BatchData::_vertexAnimationBase).
+ */
+static float3 VertexAnimation::computePosition( uint headerBase, uint firstElement, uint secondElement, float alpha )
 {
-    precise float3 position = lerp( g_SwVertexAnimation[firstElement].xyz, g_SwVertexAnimation[secondElement].xyz, alpha );
+    const uint     firstWord0       = g_SwVertexAnimation[firstElement];
+    const uint     firstWord1       = g_SwVertexAnimation[firstElement + 1u];
+    const uint     secondWord0      = g_SwVertexAnimation[secondElement];
+    const uint     secondWord1      = g_SwVertexAnimation[secondElement + 1u];
+    const float3   firstNormalized  = float3( VertexAnimation::toSnorm( (int)( firstWord0 << 16u ) >> 16, 32767.0f ), VertexAnimation::toSnorm( (int)firstWord0 >> 16, 32767.0f ),
+                                              VertexAnimation::toSnorm( (int)( firstWord1 << 16u ) >> 16, 32767.0f ) );
+    const float3   secondNormalized = float3( VertexAnimation::toSnorm( (int)( secondWord0 << 16u ) >> 16, 32767.0f ), VertexAnimation::toSnorm( (int)secondWord0 >> 16, 32767.0f ),
+                                              VertexAnimation::toSnorm( (int)( secondWord1 << 16u ) >> 16, 32767.0f ) );
+    const float3   center           = float3( asfloat( g_SwVertexAnimation[headerBase + 4u] ), asfloat( g_SwVertexAnimation[headerBase + 5u] ), asfloat( g_SwVertexAnimation[headerBase + 6u] ) );
+    const float3   halfExtent       = float3( asfloat( g_SwVertexAnimation[headerBase + 7u] ), asfloat( g_SwVertexAnimation[headerBase + 8u] ), asfloat( g_SwVertexAnimation[headerBase + 9u] ) );
+    precise float3 position         = center + halfExtent * lerp( firstNormalized, secondNormalized, alpha );
     return position;
 }
 
@@ -517,9 +539,9 @@ void InstanceData::loadAnimatedVertex( uint vertexId, float3 restPosition, float
     computeVertexAnimationElements( vertexId, bAnimated, firstElement, secondElement, alpha );
     if ( bAnimated )
     {
-        const float3 firstNormal  = VertexAnimation::unpackNormal( g_SwVertexAnimation[firstElement].w );
-        const float3 secondNormal = VertexAnimation::unpackNormal( g_SwVertexAnimation[secondElement].w );
-        outPosition               = VertexAnimation::computePosition( firstElement, secondElement, alpha );
+        const float3 firstNormal  = VertexAnimation::loadNormal( firstElement );
+        const float3 secondNormal = VertexAnimation::loadNormal( secondElement );
+        outPosition               = VertexAnimation::computePosition( BatchData::load( _meshBatchIndex )._vertexAnimationBase, firstElement, secondElement, alpha );
         outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
     }
 }

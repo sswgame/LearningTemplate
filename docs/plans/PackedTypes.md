@@ -1,8 +1,8 @@
 # 저장 전용 압축 타입
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 진행: 5/6
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 진행: 6/6
 
-정점 · 인스턴스 · 버퍼의 크기를 줄이는 압축 타입(half · unorm · snorm · 옥타헤드럴 법선 · RGB10A2)을 엔진이 갖고, 새 포맷은 아래 규칙으로 적용한다. 타입 · half 복사본 통합 · 리플렉션 연결 · G버퍼 법선 · `.mesh` 파일 정점은 코드까지 들어갔다. G버퍼 법선(P4)과 `.mesh` 정점(P5)은 빌드 · 셰이더 재쿠킹 · 네 백엔드 확인 전이고, VAT 위치(P6)는 `.vat` 파일이 생겨야 한다.
+정점 · 인스턴스 · 버퍼의 크기를 줄이는 압축 타입(half · unorm · snorm · 옥타헤드럴 법선 · RGB10A2)을 엔진이 갖고, 새 포맷은 아래 규칙으로 적용한다. 타입 · half 복사본 통합 · 리플렉션 연결 · G버퍼 법선 · `.mesh` 파일 정점은 코드까지 들어갔다. G버퍼 법선(P4)과 `.mesh` 정점(P5)은 빌드 · 셰이더 재쿠킹 · 네 백엔드 확인 전이고, VAT 위치(P6)는 코드까지 들어갔고 같은 확인 전이다.
 
 ## 진행
 
@@ -13,7 +13,7 @@
 | P3 | 리플렉션 연결(`ReflectBuiltins.xxx` 내장 타입 열다섯 가지) | 코드 끝, 컴파일 확인 전 |
 | P4 | G버퍼 법선을 `R16G16_SNORM` 옥타헤드럴로(8 B → 4 B) | 코드 끝, 셰이더 재쿠킹 · GPU 확인 전 |
 | P5 | `.mesh` 버전 4 — 파일 정점 64 B → 32 B | 코드 끝, 빌드 · 네 백엔드 확인 전 |
-| P6 | VAT 위치를 경계 정규화 `snorm16` 으로(16 B → 8 B) | 남음(`.vat` 파일이 먼저) |
+| P6 | VAT 위치를 경계 정규화 `snorm16` 으로(16 B → 8 B) | 코드 끝, 빌드 · 셰이더 재쿠킹 · VAT 재쿠킹 · GPU 확인 전 |
 
 첫 일: 빌드 → 셰이더 재쿠킹 → P4 · P5 의 네 백엔드 스크린샷 확인. 메모리 · GPU 정점의 압축은 `RHIVertex` 를 쓰는 76 개 파일 전체의 변경이라 P5 뒤 후보다.
 
@@ -78,4 +78,11 @@
 
 ## 6. P6 — VAT 위치
 
-`.vat` 파일이 생긴 뒤에 한다(지금 VAT 는 실행 중에 구워 `float4` 원소로 올린다). 원소를 위치 `snorm16` 세 개 + 법선 `snorm8x2` = 8 B 로 줄이고 위치 경계를 VAT 머리에 둔다. `.vat` 버전을 올리고 법선을 `OctahedralNormal` 로 바꾸면 `VertexAnimation::unpackNormal` 이 P4 의 풀이와 합쳐진다. VAT 표 메모리와 군중 장면의 정점 읽기 대역폭을 전후로 비교하고, 이득이 오차를 정당화하지 못하면 되돌린다.
+`.vat` 버전 2 로 원소를 16 B(`float4`)에서 8 B(`MeshVertexAnimationElement`: 위치 `snorm16` 셋 + 옥타헤드럴 법선 `snorm8` 둘)로 줄였다. 위치는 모든 프레임을 아우르는 경계 상자(중심 · 반 크기, 파일 머리 52 B)로 정규화한다.
+
+- CPU 표(`_listFrameVertex`)도 같은 8 B 원소이고 베이커가 float 위치 · 법선을 모아 `MeshVertexAnimation::quantize` 로 한 번에 압축한다. `packNormal` · `unpackNormal(float)` · `SW_VERTEX_ANIMATION_NORMAL_STEPS` 는 없앴고 법선 풀이는 `OctahedralNormal::decodeOctant`(셰이더 `Octahedral::decode`)다.
+- GPU 표 `g_SwVertexAnimation` 은 `uint` 단어 배열이다(라이트 그리드와 같은 모양, `float4` 가 아니다). 메시마다 머리 단어 10 개(프레임 수 · 프레임율 · 정점 수 · 반복 · 경계 중심 · 반 크기) 뒤에 원소가 단어 둘씩 프레임 우선으로 이어진다. 배치의 `_vertexAnimationBase` 와 `g_SwVertexAnimationCount` 는 단어 번호 · 단어 수다.
+- 위치 풀이(`VertexAnimation::computePosition`)는 정규화한 두 원소를 보간한 뒤 경계로 푼다(`precise`, 한 함수라 패스 사이 비트가 같다). `.vat` 쿠커 버전을 2 로 올려 옛 파일은 다시 구워진다.
+- 단위 오차는 반 크기의 1/32767(1 m 메시 약 0.015 mm), 법선은 8 비트 옥타헤드럴(각 오차 약 0.5도 안쪽).
+
+**남은 것:** 빌드, 셰이더 재쿠킹, VAT 재쿠킹, 군중 장면 GPU 확인(네 백엔드 같은 이미지). VAT 표 메모리와 정점 읽기 대역폭 전후 비교는 측정이라 하지 않았다(8 B 라 표 메모리는 절반, 오차는 위 값).

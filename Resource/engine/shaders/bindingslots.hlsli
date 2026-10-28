@@ -330,8 +330,11 @@
 #define SW_SKIN_FLOAT4_PER_BONE 3u
 // 스킨 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작, [2i+1] 모프 가중치 시작 · 타깃 수).
 #define SW_SKIN_UINT4_PER_INSTANCE 2u
-// 정점 애니메이션(VAT) 노멀 — 팔면체 한 칸의 해상도(12 비트). 굽는 쪽(MeshVertexAnimation)과 읽는 쪽(binding.hlsli)이 같아야 한다.
-#define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
+// 정점 애니메이션(VAT) 표(g_SwVertexAnimation, 32 비트 단어 배열) — 메시마다 머리 단어 10 개([0] 프레임 수 · [1] 프레임율(float 비트) · [2] 정점 수 · [3] 반복 ·
+// [4..6] 위치 경계 중심 · [7..9] 반 크기, 모두 float 비트) 뒤에 원소가 프레임 우선 순서로 이어진다. 원소 하나 = 단어 둘(위치 snorm16 x3 + 옥타헤드럴 법선 snorm8 x2).
+// 굽는 쪽(MeshVertexAnimation · GPUVertexAnimationPool)과 읽는 쪽(binding.hlsli)이 같아야 한다.
+#define SW_VERTEX_ANIMATION_HEADER_WORDS      10u
+#define SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT 2u
 // 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGPUTest.WaterWaveShaderMatchesCPU).
 #define SW_GERSTNER_WAVE_COUNT 4
 // 방향광 캐스케이드 상한 — PassCB 의 g_ShadowCascade0..3 넷이다. 그림자 아틀라스의 네 사분면에 하나씩 든다(DirectionalShadowProjection).

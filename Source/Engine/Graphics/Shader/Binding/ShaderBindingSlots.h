@@ -171,8 +171,10 @@ namespace sw
         inline constexpr uint32 kSkinFloat4PerBone = SW_SKIN_FLOAT4_PER_BONE;
         /// @brief 스킨 인스턴스 표 한 줄의 원소(uint4) 수입니다.
         inline constexpr uint32 kSkinUint4PerInstance = SW_SKIN_UINT4_PER_INSTANCE;
-        /// @brief VAT 노멀 팔면체 한 칸의 해상도입니다.
-        inline constexpr uint32 kVertexAnimationNormalSteps = SW_VERTEX_ANIMATION_NORMAL_STEPS;
+        /// @brief VAT 표에서 메시 하나의 머리 단어(uint32) 수입니다.
+        inline constexpr uint32 kVertexAnimationHeaderWords = SW_VERTEX_ANIMATION_HEADER_WORDS;
+        /// @brief VAT 표에서 정점 하나의 한 프레임이 차지하는 단어(uint32) 수입니다(8 B).
+        inline constexpr uint32 kVertexAnimationWordsPerElement = SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT;
         /// @brief 거스트너 파도의 항 수입니다(진폭이 0인 항은 비어 있는 항입니다).
         inline constexpr uint32 kGerstnerWaveCount = SW_GERSTNER_WAVE_COUNT;
         /// @brief 방향광 캐스케이드의 상한입니다(PassCB `g_ShadowCascade0..3`). 그림자 아틀라스의 네 사분면에 하나씩 듭니다.

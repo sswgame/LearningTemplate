@@ -4,9 +4,9 @@
  * @details 단위 구를 팔면체(|x| + |y| + |z| = 1)에 투영하고 아래 반구(z < 0)를 접어 [-1, 1]^2 사각형에 펼친 두 좌표를 `snorm16` 으로 담습니다.
  *          12 바이트 `float3` 의 1/3 이고, 같은 4 바이트인 `RGB10A2` 노멀(성분마다 10 비트)보다 방향 오차가 작습니다. 법선이 xyz 세 성분이 아니라 방향
  *          하나이므로 정규화가 풀 때 한 번 일어납니다.
- *          - **셰이더와 같은 식**: 풀이는 `Resource/engine/shaders/binding.hlsli` 의 `VertexAnimation::unpackNormal` 과 같은 팔면체 식입니다(`decodeOctant`).
+ *          - **셰이더와 같은 식**: 풀이는 `Resource/engine/shaders/binding.hlsli` 의 `Octahedral::decode` 와 같은 팔면체 식입니다(`decodeOctant`, VAT 법선도 이것을 씁니다).
  *            달라지는 것은 좌표 해상도뿐입니다(VAT 는 12 + 12 비트 정수를 실수 하나에 담고, 여기는 `snorm16` 두 개). 둘이 어긋나면 안 되므로
- *            테스트(`OctahedralNormalTest.DecodeMatchesShaderFormula`)가 셰이더 본문을 옮겨 적은 식과 비교합니다. 인코딩은 `MeshVertexAnimation::packNormal` 과 같은 식입니다.
+ *            테스트(`OctahedralNormalTest.DecodeMatchesShaderFormula`)가 셰이더 본문을 옮겨 적은 식과 비교합니다. VAT 법선은 `MeshVertexAnimation::quantize` 가 `fromNormal` 로 인코딩합니다.
  *          - **오차**: 좌표 한 칸이 2/65535 라 방향 오차는 접힘 근처의 늘어남을 고려해도 1e-4 라디안(약 0.006°) 아래이고, 테스트가 모든 옥탄트 · 극점 · 축 방향과
  *            결정적 난수 방향에서 이 상한을 못 박습니다.
  *          - 입력은 단위 길이일 필요가 없습니다(방향만 씁니다). 영벡터나 NaN 은 +z 로 갑니다. 풀면 항상 단위 벡터입니다.
@@ -55,7 +55,7 @@ namespace sw
         [[nodiscard]] float3 toNormal() const noexcept { return decodeOctant( _u.toFloat(), _v.toFloat() ); }
 
         /**
-         * @brief 옥타헤드럴 좌표 (@p u, @p v) ∈ [-1, 1]^2 를 단위 벡터로 풉니다. 셰이더 `VertexAnimation::unpackNormal` 의 식과 같습니다.
+         * @brief 옥타헤드럴 좌표 (@p u, @p v) ∈ [-1, 1]^2 를 단위 벡터로 풉니다. 셰이더 `Octahedral::decode` 의 식과 같습니다.
          */
         [[nodiscard]] static float3 decodeOctant( const float32 u, const float32 v ) noexcept
         {

@@ -64,7 +64,7 @@ namespace sw
     struct SW_API VertexAnimationCooker
     {
         /** @brief VAT 쿠커 버전입니다. `.vat` 형식이나 베이크(`MeshVertexAnimationBaker`)를 바꾸면 올립니다 — 모든 VAT 가 다시 베이크됩니다. */
-        static constexpr uint32 kCookVersion = 1;
+        static constexpr uint32 kCookVersion = 2;
 
         /**
          * @brief 모든 목록을 베이크합니다. 활성 게임이 아닌 게임 팩의 목록은 건너뜁니다(배포본은 활성 게임의 팩만 연다).

@@ -6,10 +6,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
+#include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Resource/ResourceIO.h"
 
 namespace sw
@@ -20,12 +21,9 @@ namespace sw
     {
         struct MeshVertexAnimationInternal
         {
-            /** @brief 부호(0 은 +)입니다. */
-            static float32 signNotZero( float32 value ) { return value >= 0.0f ? 1.0f : -1.0f; }
-
             /** @brief 쿠킹본 매직, 헤더 크기, 플래그입니다. */
             static constexpr uint8  kArrMagic[4]    = { 'S', 'W', 'V', 'A' };
-            static constexpr size_t kHeaderSize     = 28;
+            static constexpr size_t kHeaderSize     = 52;
             static constexpr uint32 kFlagLoop       = 1u;
             static constexpr uint32 kFlagAnchorRoot = 2u;
 
@@ -51,40 +49,53 @@ namespace sw
 
 namespace sw
 {
-    float32 MeshVertexAnimation::packNormal( const float3& normal )
+    bool MeshVertexAnimation::quantize( const vector<float3>& listPosition, const vector<float3>& listNormal )
     {
-        // 팔면체 매핑이다. 단위 구를 팔면체에 투영하고 아래 반구를 접어 [-1, 1]^2 사각형에 펼친다.
-        const float32 sum = MathUtil::abs( normal._x ) + MathUtil::abs( normal._y ) + MathUtil::abs( normal._z );
-        float32       u   = sum > 0.0f ? normal._x / sum : 0.0f;
-        float32       v   = sum > 0.0f ? normal._y / sum : 0.0f;
-        if ( normal._z < 0.0f )
+        const size_t elementCount = static_cast<size_t>( _frameCount ) * _vertexCount;
+        _listFrameVertex.clear();
+        if ( elementCount == 0 || listPosition.size() != elementCount || listNormal.size() != elementCount )
         {
-            const float32 foldedU = ( 1.0f - MathUtil::abs( v ) ) * MeshVertexAnimationInternal::signNotZero( u );
-            const float32 foldedV = ( 1.0f - MathUtil::abs( u ) ) * MeshVertexAnimationInternal::signNotZero( v );
-            u                     = foldedU;
-            v                     = foldedV;
+            SW_LOG_ERROR( "Vertex animation quantize: expected %# elements, got %# positions and %# normals", elementCount, listPosition.size(), listNormal.size() );
+            return false;
         }
-        constexpr float32 kMaxStep = static_cast<float32>( shaderslot::kVertexAnimationNormalSteps - 1u );
-        const uint32      stepU    = static_cast<uint32>( MathUtil::clamp( ( u * 0.5f + 0.5f ) * kMaxStep + 0.5f, 0.0f, kMaxStep ) );
-        const uint32      stepV    = static_cast<uint32>( MathUtil::clamp( ( v * 0.5f + 0.5f ) * kMaxStep + 0.5f, 0.0f, kMaxStep ) );
-        return static_cast<float32>( stepU * shaderslot::kVertexAnimationNormalSteps + stepV );
+        float3 minimum = listPosition[0];
+        float3 maximum = listPosition[0];
+        for ( const float3& position : listPosition )
+        {
+            minimum = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
+            maximum = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };
+        }
+        _boundsCenter     = float3{ ( minimum._x + maximum._x ) * 0.5f, ( minimum._y + maximum._y ) * 0.5f, ( minimum._z + maximum._z ) * 0.5f };
+        _boundsHalfExtent = float3{ ( maximum._x - minimum._x ) * 0.5f, ( maximum._y - minimum._y ) * 0.5f, ( maximum._z - minimum._z ) * 0.5f };
+        // 한 축의 크기가 0 이면 정규화 값은 0 이고 풀면 중심이다(0 으로 나누지 않는다).
+        const float32 invX = _boundsHalfExtent._x > 0.0f ? 1.0f / _boundsHalfExtent._x : 0.0f;
+        const float32 invY = _boundsHalfExtent._y > 0.0f ? 1.0f / _boundsHalfExtent._y : 0.0f;
+        const float32 invZ = _boundsHalfExtent._z > 0.0f ? 1.0f / _boundsHalfExtent._z : 0.0f;
+        _listFrameVertex.resize( elementCount );
+        for ( size_t index = 0; index < elementCount; ++index )
+        {
+            const float3&               position = listPosition[index];
+            const OctahedralNormal      octant   = OctahedralNormal::fromNormal( listNormal[index] );
+            MeshVertexAnimationElement& element  = _listFrameVertex[index];
+            element._x                           = snorm16::fromFloat( ( position._x - _boundsCenter._x ) * invX ).getRaw();
+            element._y                           = snorm16::fromFloat( ( position._y - _boundsCenter._y ) * invY ).getRaw();
+            element._z                           = snorm16::fromFloat( ( position._z - _boundsCenter._z ) * invZ ).getRaw();
+            element._normalU                     = snorm8::fromFloat( octant._u.toFloat() ).getRaw();
+            element._normalV                     = snorm8::fromFloat( octant._v.toFloat() ).getRaw();
+        }
+        return true;
     }
 
-    float3 MeshVertexAnimation::unpackNormal( float32 packed )
+    float3 MeshVertexAnimation::unpackPosition( const MeshVertexAnimationElement& element ) const
     {
-        constexpr float32 kMaxStep = static_cast<float32>( shaderslot::kVertexAnimationNormalSteps - 1u );
-        const uint32      integer  = static_cast<uint32>( packed );
-        const float32     u        = static_cast<float32>( integer / shaderslot::kVertexAnimationNormalSteps ) / kMaxStep * 2.0f - 1.0f;
-        const float32     v        = static_cast<float32>( integer % shaderslot::kVertexAnimationNormalSteps ) / kMaxStep * 2.0f - 1.0f;
-        float3            normal{ u, v, 1.0f - MathUtil::abs( u ) - MathUtil::abs( v ) };
-        if ( normal._z < 0.0f )
-        {
-            const float32 foldedX = ( 1.0f - MathUtil::abs( normal._y ) ) * MeshVertexAnimationInternal::signNotZero( normal._x );
-            const float32 foldedY = ( 1.0f - MathUtil::abs( normal._x ) ) * MeshVertexAnimationInternal::signNotZero( normal._y );
-            normal._x             = foldedX;
-            normal._y             = foldedY;
-        }
-        return normal.normalize();
+        return float3{ _boundsCenter._x + _boundsHalfExtent._x * snorm16::fromRaw( element._x ).toFloat(),
+                       _boundsCenter._y + _boundsHalfExtent._y * snorm16::fromRaw( element._y ).toFloat(),
+                       _boundsCenter._z + _boundsHalfExtent._z * snorm16::fromRaw( element._z ).toFloat() };
+    }
+
+    float3 MeshVertexAnimation::unpackNormal( const MeshVertexAnimationElement& element )
+    {
+        return OctahedralNormal::decodeOctant( snorm8::fromRaw( element._normalU ).toFloat(), snorm8::fromRaw( element._normalV ).toFloat() );
     }
 
     float3 MeshVertexAnimation::samplePosition( float32 time, uint32 vertexIndex ) const
@@ -102,15 +113,15 @@ namespace sw
         const uint32  firstFrame  = MathUtil::min( static_cast<uint32>( wrapped ), _frameCount - 1u );
         const uint32  secondFrame = ( _bLoop == SW_TRUE ) ? ( firstFrame + 1u ) % _frameCount : MathUtil::min( firstFrame + 1u, _frameCount - 1u );
         const float32 alpha       = wrapped - static_cast<float32>( firstFrame );
-        const float4& first       = _listFrameVertex[static_cast<size_t>( firstFrame ) * _vertexCount + vertexIndex];
-        const float4& second      = _listFrameVertex[static_cast<size_t>( secondFrame ) * _vertexCount + vertexIndex];
+        const float3  first       = unpackPosition( _listFrameVertex[static_cast<size_t>( firstFrame ) * _vertexCount + vertexIndex] );
+        const float3  second      = unpackPosition( _listFrameVertex[static_cast<size_t>( secondFrame ) * _vertexCount + vertexIndex] );
         return float3{ first._x + ( second._x - first._x ) * alpha, first._y + ( second._y - first._y ) * alpha, first._z + ( second._z - first._z ) * alpha };
     }
 
     void MeshVertexAnimation::makeBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        outBytes.reserve( MeshVertexAnimationInternal::kHeaderSize + _listFrameVertex.size() * sizeof( float4 ) );
+        outBytes.reserve( MeshVertexAnimationInternal::kHeaderSize + _listFrameVertex.size() * sizeof( MeshVertexAnimationElement ) );
         outBytes.insert( outBytes.end(), std::begin( MeshVertexAnimationInternal::kArrMagic ), std::end( MeshVertexAnimationInternal::kArrMagic ) );
         const uint32 flags = ( _bLoop == SW_TRUE ? MeshVertexAnimationInternal::kFlagLoop : 0u ) |
                              ( _bAnchorRootMotion == SW_TRUE ? MeshVertexAnimationInternal::kFlagAnchorRoot : 0u );
@@ -120,10 +131,16 @@ namespace sw
         MeshVertexAnimationInternal::appendValue( outBytes, _framesPerSecond );
         MeshVertexAnimationInternal::appendValue( outBytes, _duration );
         MeshVertexAnimationInternal::appendValue( outBytes, flags );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsCenter._x );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsCenter._y );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsCenter._z );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsHalfExtent._x );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsHalfExtent._y );
+        MeshVertexAnimationInternal::appendValue( outBytes, _boundsHalfExtent._z );
         const size_t offset = outBytes.size();
-        outBytes.resize( offset + _listFrameVertex.size() * sizeof( float4 ) );
+        outBytes.resize( offset + _listFrameVertex.size() * sizeof( MeshVertexAnimationElement ) );
         if ( _listFrameVertex.empty() == false )
-            Memory::copy( outBytes.data() + offset, _listFrameVertex.data(), _listFrameVertex.size() * sizeof( float4 ) );
+            Memory::copy( outBytes.data() + offset, _listFrameVertex.data(), _listFrameVertex.size() * sizeof( MeshVertexAnimationElement ) );
     }
 
     bool MeshVertexAnimation::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
@@ -142,20 +159,26 @@ namespace sw
             SW_LOG_ERROR( "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
             return false;
         }
-        const uint32  frameCount                = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
-        const uint32  vertexCount               = MeshVertexAnimationInternal::readValue<uint32>( pData, 12 );
-        const float32 frameRate                 = MeshVertexAnimationInternal::readValue<float32>( pData, 16 );
-        const float32 duration                  = MeshVertexAnimationInternal::readValue<float32>( pData, 20 );
-        const uint32  flags                     = MeshVertexAnimationInternal::readValue<uint32>( pData, 24 );
+        const uint32  frameCount  = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
+        const uint32  vertexCount = MeshVertexAnimationInternal::readValue<uint32>( pData, 12 );
+        const float32 frameRate   = MeshVertexAnimationInternal::readValue<float32>( pData, 16 );
+        const float32 duration    = MeshVertexAnimationInternal::readValue<float32>( pData, 20 );
+        const uint32  flags       = MeshVertexAnimationInternal::readValue<uint32>( pData, 24 );
+        const float3  boundsCenter{ MeshVertexAnimationInternal::readValue<float32>( pData, 28 ), MeshVertexAnimationInternal::readValue<float32>( pData, 32 ),
+                                   MeshVertexAnimationInternal::readValue<float32>( pData, 36 ) };
+        const float3  boundsHalfExtent{ MeshVertexAnimationInternal::readValue<float32>( pData, 40 ), MeshVertexAnimationInternal::readValue<float32>( pData, 44 ),
+                                       MeshVertexAnimationInternal::readValue<float32>( pData, 48 ) };
         const size_t  elementCount              = static_cast<size_t>( frameCount ) * vertexCount;
-        const bool    bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( float4 );
+        const bool    bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( MeshVertexAnimationElement );
         if ( bMalformedVertexAnimation )
         {
             SW_LOG_ERROR( "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
             return false;
         }
         _listFrameVertex.resize( elementCount );
-        Memory::copy( _listFrameVertex.data(), pData + MeshVertexAnimationInternal::kHeaderSize, elementCount * sizeof( float4 ) );
+        Memory::copy( _listFrameVertex.data(), pData + MeshVertexAnimationInternal::kHeaderSize, elementCount * sizeof( MeshVertexAnimationElement ) );
+        _boundsCenter      = boundsCenter;
+        _boundsHalfExtent  = boundsHalfExtent;
         _frameCount        = frameCount;
         _vertexCount       = vertexCount;
         _framesPerSecond   = frameRate;

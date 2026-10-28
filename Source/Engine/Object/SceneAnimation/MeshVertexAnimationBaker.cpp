@@ -79,7 +79,11 @@ namespace sw
         vector<float4x4> listPalette;
         vector<float3>   listPosition;
         vector<float3>   listNormal;
-        outAnimation._listFrameVertex.resize( static_cast<size_t>( frameCount ) * vertexCount );
+        // 위치 경계는 모든 프레임을 봐야 나오므로 float 로 다 모은 뒤 한 번에 압축한다(`MeshVertexAnimation::quantize`).
+        vector<float3> listAllPosition;
+        vector<float3> listAllNormal;
+        listAllPosition.reserve( static_cast<size_t>( frameCount ) * vertexCount );
+        listAllNormal.reserve( static_cast<size_t>( frameCount ) * vertexCount );
         for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             const float32 time = MathUtil::min( static_cast<float32>( frameIndex ) / effectiveRate, duration );
@@ -89,15 +93,16 @@ namespace sw
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
             Pose::computeSkinPalette( skeleton, listModel, listPalette );
             skinVertices( skinMesh, listPalette, listPosition, listNormal );
-            float4* pFrame = &outAnimation._listFrameVertex[static_cast<size_t>( frameIndex ) * vertexCount];
-            for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
-            {
-                const float3& position = listPosition[vertexIndex];
-                pFrame[vertexIndex]    = float4{ position._x, position._y, position._z, MeshVertexAnimation::packNormal( listNormal[vertexIndex] ) };
-            }
+            listAllPosition.insert( listAllPosition.end(), listPosition.begin(), listPosition.end() );
+            listAllNormal.insert( listAllNormal.end(), listNormal.begin(), listNormal.end() );
         }
-        outAnimation._frameCount        = frameCount;
-        outAnimation._vertexCount       = vertexCount;
+        outAnimation._frameCount  = frameCount;
+        outAnimation._vertexCount = vertexCount;
+        if ( outAnimation.quantize( listAllPosition, listAllNormal ) == false )
+        {
+            outAnimation = MeshVertexAnimation{};
+            return false;
+        }
         outAnimation._framesPerSecond   = effectiveRate;
         outAnimation._duration          = duration;
         outAnimation._bLoop             = bLoop ? SW_TRUE : SW_FALSE;

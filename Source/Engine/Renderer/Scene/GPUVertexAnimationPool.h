@@ -45,22 +45,22 @@ namespace sw
         uint32 baseOf( const Mesh* pMesh ) const;
         /** @brief 테이블 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBufferSlot& getBuffer() const { return _table; }
-        /** @brief 테이블의 원소(float4) 수입니다. 셰이더의 범위 검사 값입니다. */
-        uint32 getElementCount() const { return _elementCount; }
+        /** @brief 테이블의 단어(uint32) 수입니다. 셰이더의 범위 검사 값입니다. */
+        uint32 getWordCount() const { return _wordCount; }
         /** @brief 업로드한 테이블 수입니다(같은 테이블을 나누는 메시는 하나로 셉니다). */
         uint32 getAnimationCount() const { return static_cast<uint32>( _mapBaseByAnimation.size() ); }
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 
     private:
-        /// @brief 풀 상한(원소 수, 원소 하나 = 16바이트이며 256MB)입니다. 넘는 테이블은 싣지 않고 오류를 남기며 그 메시는 그리지 않습니다(바인드 포즈로 대신 그리지 않는다).
-        static constexpr uint32 kMaxElementCount = 16u * 1024u * 1024u;
+        /// @brief 풀 상한(단어 수, 단어 하나 = 4바이트이며 256MB)입니다. 넘는 테이블은 싣지 않고 오류를 남기며 그 메시는 그리지 않습니다(바인드 포즈로 대신 그리지 않는다).
+        static constexpr uint32 kMaxWordCount = 64u * 1024u * 1024u;
 
         RHIStructuredBufferSlot                           _table;
         unordered_map<const MeshVertexAnimation*, uint32> _mapBaseByAnimation;
         unordered_map<const Mesh*, uint32>                _mapBase;
         vector<const Mesh*>                               _listBuilt;
         vector<uint64>                                    _listBuiltContentID;
-        uint32                                            _elementCount{ 0 };
+        uint32                                            _wordCount{ 0 };
     };
 } // namespace sw

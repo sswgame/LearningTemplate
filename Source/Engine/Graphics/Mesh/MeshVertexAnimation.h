@@ -19,12 +19,28 @@
 namespace sw
 {
     /**
+     * @struct MeshVertexAnimationElement
+     * @brief 정점 하나의 한 프레임입니다(8 B). 위치는 표의 경계(`MeshVertexAnimation::_boundsCenter` · `_boundsHalfExtent`)로 정규화한 `snorm16` 셋이고,
+     *        법선은 옥타헤드럴 좌표 `snorm8` 둘입니다. GPU 가 단어(uint32) 둘로 그대로 읽습니다(리틀 엔디언: 단어0 = x | y << 16, 단어1 = z | u << 16 | v << 24).
+     */
+    struct MeshVertexAnimationElement
+    {
+        int16 _x{ 0 };
+        int16 _y{ 0 };
+        int16 _z{ 0 };
+        int8  _normalU{ 0 };
+        int8  _normalV{ 0 };
+    };
+    static_assert( sizeof( MeshVertexAnimationElement ) == 8 && alignof( MeshVertexAnimationElement ) == 2, "VAT 원소는 8 바이트이며 셰이더가 단어 둘로 읽는다" );
+
+    /**
      * @struct MeshVertexAnimation
-     * @brief 베이크한 테이블입니다. 원소 하나는 정점 하나의 한 프레임이며 float4(위치 xyz, 노멀을 정수로 담은 w, `packNormal`)입니다.
+     * @brief 베이크한 테이블입니다. 원소 하나는 정점 하나의 한 프레임이며 위치 `snorm16` 셋 + 옥타헤드럴 법선 `snorm8` 둘(8 B)입니다(`MeshVertexAnimationElement`).
      * @details 프레임 우선 순서입니다(`[frame * vertexCount + vertex]`). 반복 클립은 마지막 프레임 뒤에 첫 프레임이 이어지고(테이블에는 한 번만 저장),
      *          반복하지 않는 클립은 마지막 프레임에 멈춥니다. 셰이더(binding.hlsli `InstanceData::loadAnimatedVertex`)가 두 프레임 사이를 선형 보간합니다.
-     *          쿠킹본(`.vat`, 리틀 엔디언)은 매직 `SWVA`, 버전, 프레임 수, 정점 수, 프레임율, 길이, 플래그(비트 0 반복, 비트 1 루트 고정), float4 테이블 순서입니다.
-     *          지금 버전만 읽습니다(버전이 다르면 다시 쿠킹합니다).
+     *          위치는 모든 프레임의 경계 상자 안으로 정규화합니다(단위 오차는 반 크기의 1/32767 — 1 m 메시면 약 0.015 mm, 같은 크기 float4 표를 버린 대가로 16 B → 8 B).
+     *          쿠킹본(`.vat`, 리틀 엔디언)은 매직 `SWVA`, 버전, 프레임 수, 정점 수, 프레임율, 길이, 플래그(비트 0 반복, 비트 1 루트 고정), 경계 중심 float3, 경계 반 크기 float3,
+     *          원소 테이블 순서입니다. 지금 버전만 읽습니다(버전이 다르면 다시 쿠킹합니다).
      */
     struct SW_API MeshVertexAnimation
     {
@@ -36,23 +52,30 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `MeshVertexAnimation.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "MeshVertexAnimation", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
-        /** @brief 쿠킹본 형식 버전입니다. */
-        static constexpr uint32 kVersion = 1;
+        /** @brief 쿠킹본 형식 버전입니다(2: 원소 16 B float4 → 8 B 압축, 머리에 경계 추가). */
+        static constexpr uint32 kVersion = 2;
 
-        vector<float4> _listFrameVertex;
-        uint32         _frameCount{ 0 };
-        uint32         _vertexCount{ 0 };
-        float32        _framesPerSecond{ 15.0f };
-        float32        _duration{ 0.0f };
-        uint8          _bLoop{ SW_TRUE };
-        uint8          _bAnchorRootMotion{ SW_FALSE }; ///< 베이크할 때 루트 모션 본을 시작 위치에 고정했습니다(같은 조건의 유닛만 씁니다)
+        vector<MeshVertexAnimationElement> _listFrameVertex;
+        float3                             _boundsCenter{ 0.0f, 0.0f, 0.0f };
+        float3                             _boundsHalfExtent{ 0.0f, 0.0f, 0.0f };
+        uint32                             _frameCount{ 0 };
+        uint32                             _vertexCount{ 0 };
+        float32                            _framesPerSecond{ 15.0f };
+        float32                            _duration{ 0.0f };
+        uint8                              _bLoop{ SW_TRUE };
+        uint8                              _bAnchorRootMotion{ SW_FALSE }; ///< 베이크할 때 루트 모션 본을 시작 위치에 고정했습니다(같은 조건의 유닛만 씁니다)
 
         /** @brief 테이블이 비었으면 true 입니다. */
         bool isEmpty() const { return _frameCount == 0 || _vertexCount == 0; }
-        /** @brief 단위 노멀을 정수 하나(팔면체 12 + 12비트)로 담은 실수입니다. 2^24 아래 정수라 float32 에 정확히 들어갑니다. */
-        static float32 packNormal( const float3& normal );
-        /** @brief `packNormal` 의 역변환입니다(셰이더 `VertexAnimation::unpackNormal` 과 같은 식). */
-        static float3 unpackNormal( float32 packed );
+        /**
+         * @brief 프레임 × 정점 순서의 위치 · 법선(길이 `frameCount * vertexCount`)을 경계로 정규화해 `_listFrameVertex` 를 채웁니다.
+         * @details `_frameCount` · `_vertexCount` 를 먼저 채워야 합니다. 경계는 이 호출이 모든 프레임에서 구합니다. 길이가 맞지 않으면 오류를 남기고 false 를 반환하며 비웁니다.
+         */
+        [[nodiscard]] bool quantize( const vector<float3>& listPosition, const vector<float3>& listNormal );
+        /** @brief 원소의 위치를 풉니다(셰이더 `VertexAnimation::computePosition` 과 같은 식). */
+        float3 unpackPosition( const MeshVertexAnimationElement& element ) const;
+        /** @brief 원소의 법선을 단위 벡터로 풉니다(셰이더 `VertexAnimation::loadNormal` 과 같은 식). */
+        static float3 unpackNormal( const MeshVertexAnimationElement& element );
         /** @brief 시각 @p time(초)의 정점 위치입니다. 셰이더와 같은 프레임 보간이며 테스트와 디버그에 씁니다. */
         float3 samplePosition( float32 time, uint32 vertexIndex ) const;
 

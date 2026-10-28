@@ -105,7 +105,7 @@ namespace sw
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _deform._vertexAnimationPool.getElementCount() );
+            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _deform._vertexAnimationPool.getWordCount() );
             context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
         }
         // 머티리얼 애니메이션 시계(툰 UV 애니메이션) — VAT 와 같은 장면 애니메이션 시계지만 VAT 표와 무관하게 늘 건다.
