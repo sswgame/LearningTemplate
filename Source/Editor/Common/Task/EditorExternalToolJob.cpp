@@ -51,6 +51,10 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
+        // 이 잡은 태스크 관리자가 아니라 자기 스레드에서 돈다 — 종료 신호를 읽으면 도구를 끝내고 돌아간다(소멸자의 `cancelAndWait` 와 같은 `terminate`).
+        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
+        if ( isStopRaised( pStop ) )
+            return;
         EditorExternalToolResult result;
         ProcessOptions           options;
         options._workingDirectory = input._workingDirectory;
@@ -60,6 +64,11 @@ namespace sw::editor
             string line;
             while ( pProcess->readOutputLine( line ) )
             {
+                if ( isStopRaised( pStop ) )
+                {
+                    (void)pProcess->terminate();
+                    return; // 도구를 끝냈다 — 잘린 출력을 결과로 싣지 않는다
+                }
                 while ( line.empty() == false && ( line.back() == '\r' || line.back() == '\n' ) )
                 {
                     line.pop_back();

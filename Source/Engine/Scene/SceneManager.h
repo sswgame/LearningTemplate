@@ -317,6 +317,7 @@ namespace sw
             unique_ptr<Scene>   _scene;
             atomic<bool>        _bReady{ false };
             atomic<bool>        _bAccepting{ true };
+            atomic<bool>        _bStop{ false }; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
             TaskPromise<Scene*> _promise{};
             uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
             SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)

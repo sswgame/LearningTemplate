@@ -63,10 +63,15 @@ namespace sw::editor
         if ( readInput( pState, generation, projectPath ) == false )
             return;
 
+        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
+        if ( isStopRaised( pStop ) )
+            return; // 종료가 시작됐다 — 읽기를 시작하지 않는다
         // 읽지 못한 테이블은 경고가 남고 그 칸만 빈다 — 나머지는 그대로 보인다(저장은 그 파일을 덮지 않는다).
         LocalizationSheet sheet;
         (void)EditorDataTableCommands::loadLocalizationProject( projectPath, sheet ); // 읽지 못한 테이블은 경고로 남고 그 칸만 빈다
 
+        if ( isStopRaised( pStop ) )
+            return;
         publish( pState, generation, std::move( sheet ) );
     }
 
@@ -91,10 +96,15 @@ namespace sw::editor
         if ( readInput( pState, generation, dataFolder ) == false )
             return;
 
+        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
+        if ( isStopRaised( pStop ) )
+            return;
         vector<GameDataFileEntry> listEntry;
         // 표시용 목록이다 — data 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 경로와 함께 알린 뒤 모은 데까지 보인다.
         (void)EditorDataTableCommands::collectGameDataFiles( dataFolder, listEntry );
 
+        if ( isStopRaised( pStop ) )
+            return;
         publish( pState, generation, std::move( listEntry ) );
     }
 

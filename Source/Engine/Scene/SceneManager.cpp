@@ -369,14 +369,15 @@ namespace sw
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
-            if ( newScene->instantiate( doc ) == false )
+            const bool bInstantiated = newScene->instantiate( doc, &slot->_bStop );
+            if ( bInstantiated == false && slot->_bStop.load( std::memory_order_acquire ) == false ) // 종료 신호로 멈춘 것은 실패가 아니다
                 SW_LOG_WARNING( "[SceneLoad] '%#' could not be instantiated", pathStr );
         }
 
         SW_LOG_INFO( "[SceneLoad] '%#' %# entities", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
-            return; // 지은 씬은 여기서 소멸하며 정리된다
+            return; // 지은 씬(중간에 멈춘 부분 씬 포함)은 여기서 소멸하며 정리된다
 
         const bool bSuccess = ( newScene != nullptr );
         {
@@ -409,7 +410,10 @@ namespace sw
     void SceneManager::requestAsyncLoadStop()
     {
         if ( _asyncLoad != nullptr )
+        {
+            _asyncLoad->_bStop.store( true, std::memory_order_release );
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
+        }
     }
 
     void SceneManager::cancelPendingAsyncLoads()
