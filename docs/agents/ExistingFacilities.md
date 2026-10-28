@@ -41,7 +41,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Publish and subscribe by channel | `Core/Event/EventDispatcher.h` `subscribe` · `publish` · `push` | a hand-rolled listener list |
 | Background work, parallel loop | `Core/Task/TaskManager.h` `emplaceTask` · `submit` · `runParallel` · `whenAll`; result: `Core/Task/TaskFuture.h` | `std::async` · a thread per job |
 | A dedicated thread | `Core/Concurrency/thread.h` `sw::thread`; locks: `Core/Concurrency/mutex.h` | `std::thread` |
-| Load an asset | `Engine/Asset/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `AssetIO` | `FileUtil` reads of `Resource/` in game code |
+| Load an asset | `Engine/Asset/AssetManager.h` asset caches (`getAssetCache`); text and bytes: `AssetIO` | `FileUtil` reads of `Content/` in game code |
 | Engine or game setting | `Engine/Config/ConfigManager.h` `getConfig<T>` (keyed by type) | config lookup by a name string |
 | Console variable, cheat, switch | `Core/GlobalVariable/GlobalVariableManager.h` `SW_GLOBAL_VARIABLE` · `SW_EXTERN_GLOBAL_VARIABLE` | a mutable `static` tuning flag |
 | User-facing text | `Engine/Localization/LocalizationManager.h` `getString` · `formatText` through `engine::getSubsystem<LocalizationManager>()` | literal UI strings |

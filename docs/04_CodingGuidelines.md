@@ -182,7 +182,7 @@ Foo::Foo()
 | :--- | :--- |
 | CMake 옵션 · 함수 · 정의 · 타깃 | `option( SW_ENABLE_PCH … )` · `sw_configurePch()` · `SW_PLATFORM_WINDOWS` · `App` · `SWGame` |
 | Python 함수 · 헬퍼 · 상수 · 파일 | `setupEnvironment()` · `safeCallInternal()` · `kRepoRoot` · `SetupEnvironment.py` |
-| 리소스 이름 | `Resource/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
+| 리소스 이름 | `Content/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
 | 텍스처 · 모델 원본 | `textures_raw/hero.png` → `App --import-textures` → `textures/hero.dds` + `textures_raw/import.stamp` |
 
 Python 파일의 모양:
@@ -193,5 +193,5 @@ Python 파일의 모양:
 | `def collect(root, triplet):` | `def collect(root: Path, triplet: str) -> list[str]:` (`__init__` 도 `-> None`) |
 | `Optional[Dict[str, str]]` | `dict[str, str] \| None` |
 | `open(path)` · `path.read_text()` | `open(path, encoding="utf-8")` · `path.read_text(encoding="utf-8")`(바이트는 `"rb"` · `read_bytes()`) |
-| `os.path.join(root, "Resource")` · `os.path.isfile(p)` | `root / "Resource"` · `p.is_file()` · `p.parent.mkdir(parents=True, exist_ok=True)` |
+| `os.path.join(root, "Content")` · `os.path.isfile(p)` | `root / "Content"` · `p.is_file()` · `p.parent.mkdir(parents=True, exist_ok=True)` |
 | `raise SystemExit(main())` · `sys.exit(unittest.main())` | `sys.exit(main())` · 테스트는 `unittest.main()` |

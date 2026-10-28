@@ -115,7 +115,7 @@ namespace sw
             /**
              * @brief 팩에 담을 셰이더 바이너리가 소스와 맞는지 판정합니다(배포 빌드의 `-verify-shaders`). 낡았으면 쿠커가 있는 자리에서 다시 쿠킹한 뒤 다시 보고, 그래도 맞지 않으면 false 입니다.
              * @details `CookSession` 을 열기 **전에** 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
-             *          셰이더 바이너리는 쿠킹 저장소가 아니라 `Resource/engine/shaders/<백엔드>` 의 커밋 산출물이라 `CookJob` 입력 기록 대상도 아니다.
+             *          셰이더 바이너리는 쿠킹 저장소가 아니라 `Content/engine/shaders/<백엔드>` 의 커밋 산출물이라 `CookJob` 입력 기록 대상도 아니다.
              */
             [[nodiscard]] static bool ensureShadersFresh( const CommandLineManager& commandLine )
             {

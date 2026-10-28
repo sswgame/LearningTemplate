@@ -1,7 +1,7 @@
 /**
  * @file SQLLocalSlotStorage.h
  * @brief 로컬 저장소 백엔드의 SQLite 구현입니다. 테이블 `sw_local_slot( slot, bytes, written_at_ms )` 을 쓰며, 쓰기는 upsert 문 하나로 처리해 SQLite 의 원자성에 맡깁니다.
- * @details 마이그레이션은 `Resource/common/sql/localstore/` 에 있다. 서버 저장소와는 다른 DB 이고 번호 체계도 다르다. DB 파일은 `<루트>/localstore.db` 이다.
+ * @details 마이그레이션은 `Content/common/sql/localstore/` 에 있다. 서버 저장소와는 다른 DB 이고 번호 체계도 다르다. DB 파일은 `<루트>/localstore.db` 이다.
  *          기반 계층의 `LocalStoreFactory` 에 "sqlite" 이름으로 등록한다. 등록은 모듈 수명을 따른다(`.cpp` 의 정적 `LocalStoreBackendRegistration`).
  */
 #pragma once

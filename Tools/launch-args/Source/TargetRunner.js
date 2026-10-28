@@ -8,7 +8,7 @@
  *          - 실행: CMake Tools 의 ▷ 는 인자를 따옴표 없이 터미널에 보내 PowerShell 5.1 이 `-gv_x=a.b` 를 둘로 쪼갭니다.
  *            그래서 대상 경로만 CMake Tools 에서 받고(`cmake.launchTargetPath` — `buildBeforeRun` 이면 먼저 빌드한다),
  *            셸 없는 `ProcessExecution` 작업으로 띄웁니다. 작업 폴더 · 환경은 CMake Tools 실행과 같은 규칙입니다
- *            (`debugConfig.cwd`, 없으면 실행 파일 폴더 — 엔진은 거기서 위로 올라가며 `Resource/` 를 찾는다).
+ *            (`debugConfig.cwd`, 없으면 실행 파일 폴더 — 엔진은 거기서 위로 올라가며 `Content/` 를 찾는다).
  */
 
 const path = require('path');

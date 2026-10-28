@@ -97,7 +97,7 @@ namespace sw::editor
          *          판정은 파일 시간이 아니라 내용으로 한다. 원본과 DDS 를 둘 다 커밋하므로 `git` 이 시간 순서를 임의로 뒤집기 때문이다.
          *          원본이 사라진 스탬프 줄도 어긋남이다. ImportStale 은 줄만 지우고 DDS 는 두므로, 남은 DDS 는 사람이 정리한다.
          *          `.hdr` 는 부동소수점으로 읽어 BC6H 와 RGBA16F 로만 임포트한다. 규칙의 포맷이 8비트이면 그 원본의 실패로 보고한다.
-         * @param resourceRoot `Resource/` 의 절대 경로입니다.
+         * @param resourceRoot `Content/` 의 절대 경로입니다.
          * @param config 원본마다 규칙을 고르는 임포트 설정입니다. 리소스 루트 기준 상대 경로로 매칭합니다.
          */
         [[nodiscard]] static AssetImportSummary importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode );

@@ -349,7 +349,7 @@ namespace sw::editor
                     listCase.push_back( name );
             }
             const string filter = EditorTestOutputParser::makeFilter( listCase );
-            // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Resource/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
+            // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
             if ( _pJob->request( ProcessCommand{ _listTestExecutablePath[_selectedExecutableIndex], { "--test_filter=" + filter } }, binDirectory ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;

@@ -92,7 +92,7 @@ namespace sw::editor
         const string folder = getFolderPath();
         if ( folder.empty() )
         {
-            outError = "the resource root is not mounted";
+            outError = "the content root is not mounted";
             return false;
         }
         string fileName{ name };

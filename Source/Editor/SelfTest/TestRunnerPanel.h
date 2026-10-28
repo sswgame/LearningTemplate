@@ -36,7 +36,7 @@ namespace sw::editor
     private:
         /** @brief 에디터 자체 테스트 탭 — 레지스트리 목록(영역별 그룹) · 체크 · 검색 · Run Selected · Run All · 결과 색. */
         void drawSelfTestTab();
-        /** @brief 시나리오 탭 — `Resource/<영역>/automation/<이름>.scenario.xml` 목록, 고른 것을 새 프로세스로. */
+        /** @brief 시나리오 탭 — `Content/<영역>/automation/<이름>.scenario.xml` 목록, 고른 것을 새 프로세스로. */
         void drawScenarioTab();
         /** @brief 단위 테스트 탭 — `TestBin/<이름>Test.exe` 마다 `--test_list` 나무, 고른 케이스를 새 프로세스로. */
         void drawUnitTestTab();

@@ -74,7 +74,7 @@ namespace sw
                 return false;
             if ( AssetPaths::hasParentDirectoryComponent( relativePath ) )
             {
-                SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the resource root", relativePath );
+                SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the content root", relativePath );
                 return false;
             }
 

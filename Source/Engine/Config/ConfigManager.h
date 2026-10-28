@@ -1,6 +1,6 @@
 /**
  * @file ConfigManager.h
- * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Resource/ 팩 에셋이 아니므로 AssetManager 와 분리합니다.
+ * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Content/ 팩 에셋이 아니므로 AssetManager 와 분리합니다.
  *
  * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 키는 `T::StaticType()->_fullyQualifiedName` 에서
  *       만듭니다. 호출부마다 이름을 손으로 적으면 한 곳만 철자가 어긋나도 `getConfig` 가 조용히 nullptr 을 반환하고,
@@ -106,7 +106,7 @@ namespace sw
          * @details `Config/...` 는 상대 경로다. 실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어,
          *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig, GameConfig, EditorConfig 가 모두 "없음"으로 처리되고 생성된
          *          기본값으로 조용히 대체된다(창 크기, VSync, 리소스 우선순위, 게임 키트 모듈 목록이 모두 무시된다).
-         *          `Resource/` 처럼 거슬러 올라가 찾은 루트(`AssetPaths`)를 여기에 넣어 준다.
+         *          `Content/` 처럼 거슬러 올라가 찾은 루트(`AssetPaths`)를 여기에 넣어 준다.
          */
         void setRootDirectory( string_view rootDirectory ) { _rootDirectory = string( rootDirectory ); }
 

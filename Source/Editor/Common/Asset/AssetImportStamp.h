@@ -125,7 +125,7 @@ namespace sw::editor
          *          나눠 돌고(해시 계산 · 대조 · 임포트가 한 파일의 일이다), `IRawAssetImporter::hasOrderDependency` 인 원본이 든 사슬은 그 뒤에 이 스레드에서 직렬로 돈다.
          *          파일마다 결과가 자기 칸에 담기고 요약(`_listProblem` 의 순서 · 카운터)과 스탬프 표는 파일 순서대로 합치므로, 결과 바이트 · 스탬프 · 요약은 직렬로 돌 때와 같다.
          *          작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 이 스레드가 사슬을 파일 순서대로 돈다. 임포터 로그의 줄 순서만 병렬로 돌 때 파일 사이에서 섞인다.
-         * @param resourceRoot `Resource/` 의 절대 경로
+         * @param resourceRoot `Content/` 의 절대 경로
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
          */
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager );

@@ -221,7 +221,7 @@ namespace sw
             static string getShaderCacheDirectory()
             {
                 const string& root     = AssetPaths::getRootFolderPath();
-                const string  baseRoot = root.empty() ? FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Resource" ) : root;
+                const string  baseRoot = root.empty() ? FileUtil::joinPath( AssetPaths::getProjectFolderPath(), path::kContentFolder ) : root;
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
             }
 

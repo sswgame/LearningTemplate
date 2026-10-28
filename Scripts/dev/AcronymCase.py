@@ -102,7 +102,7 @@ def main(argv: list[str]) -> int:
         relative = path.relative_to(root).as_posix()
         if path.suffix.lower() in {".hlsl", ".hlsli"}:
             return True
-        return path.suffix.lower() in kCodeSuffix and not relative.startswith("Resource/")
+        return path.suffix.lower() in kCodeSuffix and not relative.startswith("Content/")
 
     listAll += [path for path in (root / "Tools/ReflectionParser/Templates").glob("*.tpl")]
     listCode = [path for path in listAll if isCode(path)]

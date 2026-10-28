@@ -1,6 +1,6 @@
 /**
  * @file EditorThemeTokens.h
- * @brief 에디터 테마의 디자인 토큰입니다. 원본은 `Resource/editor/theme/<이름>.tokens.json` 이고 이 파일은 그 형식(리플렉션)과 읽기 · 해석을 맡습니다.
+ * @brief 에디터 테마의 디자인 토큰입니다. 원본은 `Content/editor/theme/<이름>.tokens.json` 이고 이 파일은 그 형식(리플렉션)과 읽기 · 해석을 맡습니다.
  * @details 토큰은 색 · 모서리 · 간격 · 테두리 · 글꼴 크기 · 아이콘 크기 · 밀도입니다. ImGui 스타일은 토큰에서만 만든다(`EditorThemeUtil::applyTheme`).
  *          패널 코드가 색이나 간격을 숫자로 적지 않고 `EditorThemeUtil` 접근자를 쓰는 것은 린트가 새 줄에서 지킨다.
  *          언리얼의 에디터 테마 JSON(`EditorThemes` 폴더의 JSON, `FStyleColors`) · Slate 스타일셋, 유니티 UI Toolkit 의 USS 변수, Godot 의 Theme 리소스에 해당한다.
@@ -206,7 +206,7 @@ namespace sw::editor
      */
     struct SW_EDITOR_API EditorThemeTokens
     {
-        static constexpr const utf8* kFolderName = "theme";        ///< 에디터 팩(`Resource/editor`) 아래 폴더
+        static constexpr const utf8* kFolderName = "theme";        ///< 에디터 팩(`Content/editor`) 아래 폴더
         static constexpr const utf8* kExtension  = ".tokens.json"; ///< 토큰 파일 접미사
 
         /** @brief 토큰 폴더의 절대 경로입니다. 리소스 루트가 없으면 빈 문자열입니다. */

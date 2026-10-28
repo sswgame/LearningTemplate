@@ -2,7 +2,7 @@
  * @file ArenaDirectorComponent.h
  * @brief AbilityArena 의 규칙을 돌리는 컴포넌트입니다. 웨이브, 쓰러뜨린 수, 플레이어 다시 스폰, 투사체 스폰, 로그를 맡고 유닛 프리팹 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 어빌리티, 이펙트, 어트리뷰트는 프레임워크(`AbilitySystemComponent`)와 데이터
- *          (`Resource/game/abilityarena/data/abilities.xml`)가 맡습니다. 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
+ *          (`Content/game/abilityarena/data/abilities.xml`)가 맡습니다. 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
  *          (플레이어 조종자, `ArenaEnemyAIComponent`, `ArenaAutoBattleAIComponent`)가 맡는다. 이 컴포넌트는 "언제 누가 등장하고 누가 쓰러졌는가, 누가 누구를 조종하는가"만 안다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 유닛 스냅샷(위치, 팀, 생존 여부)을 한 번 기록하고, 유닛과 투사체(`DuringPhysics`),

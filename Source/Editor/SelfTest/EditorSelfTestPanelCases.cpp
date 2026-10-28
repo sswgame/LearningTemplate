@@ -244,7 +244,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
             {
-                constexpr uint32 kPhaseSettle       = 0; ///< `Resource/` 변경 번호가 멈추기를 기다린다
+                constexpr uint32 kPhaseSettle       = 0; ///< `Content/` 변경 번호가 멈추기를 기다린다
                 constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 한 번 그려지기를 기다린다
                 constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤의 프레임들은 디스크를 읽지 않아야 한다
                 constexpr uint32 kSettleStepCount   = 10;

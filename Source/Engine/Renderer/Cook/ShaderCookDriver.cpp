@@ -360,7 +360,7 @@ namespace sw
         const string rootDir = resourceRoot.empty() ? AssetPaths::getRootFolderPath() : string( resourceRoot );
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
-            SW_LOG_ERROR( "Resource root directory does not exist: '%#'", rootDir.c_str() );
+            SW_LOG_ERROR( "Content root directory does not exist: '%#'", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
             nothingCooked._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
             return nothingCooked;

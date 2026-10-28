@@ -32,7 +32,7 @@ namespace sw
     /**
      * @class UITextAssetCache
      * @brief 경로에서 파싱한 에셋을 찾아 나눠 주는 공통 구현입니다(`UIDocumentCache` 와 `UIStyleSheetCache` 가 파생합니다).
-     * @details 텍스트는 메모리 텍스트(`registerMemoryText`, 테스트와 도구), 리소스(팩, `Resource/`), 절대 경로 순서로 찾는다.
+     * @details 텍스트는 메모리 텍스트(`registerMemoryText`, 테스트와 도구), 리소스(팩, `Content/`), 절대 경로 순서로 찾는다.
      *          실패는 캐시에 남기지 않는다(고치면 다음 요청이 다시 읽는다). 다시 읽기(`reload`)가 실패하면 기존 에셋을 그대로 두고 오류를 남긴다
      *          (실패가 화면을 지우지 않으며, 현지화 `reloadChangedFile` 과 같은 규칙이다). 게임 스레드에서만 쓴다.
      */

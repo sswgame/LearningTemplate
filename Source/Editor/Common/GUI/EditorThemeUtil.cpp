@@ -575,7 +575,7 @@ namespace sw::editor
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
-            // 1) 테마(토큰 벌) 선택. 목록은 `Resource/editor/theme/*.tokens.json` 이다.
+            // 1) 테마(토큰 벌) 선택. 목록은 `Content/editor/theme/*.tokens.json` 이다.
             if ( ImGui::BeginCombo( "Theme", editorConfig._displayName.c_str() ) )
             {
                 for ( const EditorThemeConfig& theme : EditorThemeInternal::availableThemes() )

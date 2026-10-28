@@ -521,7 +521,7 @@ namespace sw
         const string resourceRoot( sourceRoot );
         if ( resourceRoot.empty() )
         {
-            SW_LOG_ERROR( "Scene cook could not resolve the resource root." );
+            SW_LOG_ERROR( "Scene cook could not resolve the content root." );
             ++outFailedCount;
             return 0;
         }

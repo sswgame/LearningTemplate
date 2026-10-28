@@ -1,7 +1,7 @@
 /**
  * @file IntentReplayBar.h
  * @brief 의도 재생의 되감기 막대입니다 — 재생 틱을 슬라이더로 보이고 끌어 되감으며, 일시정지 · 1 초 되감기 · 닫기 버튼을 받습니다.
- * @details 화면 문서(`Resource/common/ui/replaybar.ui.xml` 모양)를 UI 시스템으로 열고, 되감기 세션(`IntentRewindSession`)을 부립니다. 막대는 세계를 돌리지 않는다:
+ * @details 화면 문서(`Content/common/ui/replaybar.ui.xml` 모양)를 UI 시스템으로 열고, 되감기 세션(`IntentRewindSession`)을 부립니다. 막대는 세계를 돌리지 않는다:
  *          호스트가 프레임마다 `update` 를 부른 뒤 `shouldHostStep` 이 참일 때만 자기 틱을 돌린다(키 찍기 `captureIfDue` 포함). 되감는 중에는 막대가 `stepSeek` 으로
  *          프레임마다 `seekTicksPerFrame` 틱씩 나눠 돌고, 그동안 `shouldHostStep` 은 거짓이라 화면은 멈춘 그림이다.
  *          막대 문서의 이름(`Scrub` · `TimeText` · `PlayPauseLabel`)과 명령(`Replay.StepBack` · `Replay.TogglePause` · `Replay.Close`)이 계약이다 — 없으면 열기가 오류로 멈춘다.

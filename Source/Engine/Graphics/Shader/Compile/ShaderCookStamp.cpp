@@ -223,7 +223,7 @@ namespace sw
              * @brief 헤더 키를 만들 루트 목록을 모읍니다 — 자기 도메인(@p shadersDir)이 먼저, 다음에 @p resourceRoot 아래 다른 include 루트 도메인(@p listIncludeRoot)입니다.
              * @return 자기 도메인의 폴더를 실제 경로로 풀지 못하면 false 입니다.
              * @details 다른 도메인은 @p resourceRoot 아래에서 찾는다. 전역 루트(`AssetPaths`)를 여기서 읽으면 임시 트리에서 도는 테스트도
-             *          실제 `Resource/` 를 보게 된다. 루트가 같은 폴더를 가리키는 도메인(자기 도메인이 engine 인 경우의 engine)은 빼고 자기 키로 적는다.
+             *          실제 `Content/` 를 보게 된다. 루트가 같은 폴더를 가리키는 도메인(자기 도메인이 engine 인 경우의 engine)은 빼고 자기 키로 적는다.
              */
             [[nodiscard]] static bool collectHeaderRoots( string_view resourceRoot, const vector<string>& listIncludeRoot, const string& shadersDir, vector<HeaderRoot>& outListRoot )
             {
@@ -877,7 +877,7 @@ namespace sw
     {
         if ( resourceRoot.empty() || shaderFolder.empty() )
         {
-            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a resource root and a shader folder (got '%#', '%#')", resourceRoot, shaderFolder );
+            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root and a shader folder (got '%#', '%#')", resourceRoot, shaderFolder );
             return;
         }
         vector<string> listDomain;

@@ -2,7 +2,7 @@
  * @file AdventureElementGrid.h
  * @brief 야생의 숨결의 화학 엔진입니다. 격자 셀(풀, 나무, 금속, 물, 얼음) 위에서 불, 전기, 얼음이 결정적으로 퍼지는 셀 자동자입니다.
  * @details 기반의 원소 규칙 테이블(`ElementRuleTable`)과 격자(`ElementGrid`) 위에 이 키트의 재질 열거형과 설정을 적용했다.
- *          규칙 테이블은 설정 값으로 만든다. 내용은 `Resource/common/data/elements/default.elements.xml` 과 같다(`ElementRuleTest.AdventureGridMatchesDefaultTable`).
+ *          규칙 테이블은 설정 값으로 만든다. 내용은 `Content/common/data/elements/default.elements.xml` 과 같다(`ElementRuleTest.AdventureGridMatchesDefaultTable`).
  *          규칙은 한 스텝마다 스텝 시작 시점의 상태만 보고 정한 뒤 한꺼번에 바꾼다. 그래서 셀을 도는 순서가 결과를 바꾸지 않는다.
  *          - 불은 풀과 나무를 태운다. 탄 지 `_spreadDelaySteps` 스텝이 지나면 바람이 부는 쪽의 이웃(대각선 포함 한 칸)으로 옮겨 붙는다.
  *            바람이 없으면 네 이웃 모두에 붙는다. 바람을 거슬러서는 붙지 않는다(`_bCrosswindSpread` 가 true 면 바람의 옆 두 칸에도 붙는다).

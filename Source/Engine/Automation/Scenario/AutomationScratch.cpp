@@ -71,7 +71,7 @@ namespace sw
                     } );
                     if ( bAllowed )
                         return true;
-                    outReason = "an automation run may not write the tracked folder " + string( folder ) + "/ (only Config/Editor is open); run on a copy under Resource/scratch/ or write under Saved/";
+                    outReason = "an automation run may not write the tracked folder " + string( folder ) + "/ (only Config/Editor is open); run on a copy under Content/scratch/ or write under Saved/";
                     return false;
                 }
 
@@ -217,7 +217,7 @@ namespace sw
         const string  scratchDir   = FileUtil::joinPath( resourceRoot, folder._scratchID );
         if ( FileUtil::isDirectory( sourceDir ) == false )
         {
-            outError = "<Scratch from=\"" + folder._sourceID + "\"> is not a folder under Resource/";
+            outError = "<Scratch from=\"" + folder._sourceID + "\"> is not a folder under Content/";
             return false;
         }
         AutomationScratchInternal::removeDeadInstances( scratchDir );

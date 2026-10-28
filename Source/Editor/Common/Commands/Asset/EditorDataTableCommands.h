@@ -75,9 +75,9 @@ namespace sw::editor
         /** @brief @p dataFolder(`getGameDataFolderPath`)의 XML 파일 목록을 채웁니다. 에디터 상태를 읽지 않아 워커에서 불러도 된다. 폴더가 없거나 목록이 도중에 멈췄으면 false 입니다(`FileUtil::collectFiles` 와 같다). */
         [[nodiscard]] static bool collectGameDataFiles( string_view dataFolder, vector<GameDataFileEntry>& outList );
 
-        /** @brief 활성 게임의 Resource/.../data/localization 폴더 절대 경로를 반환합니다. */
+        /** @brief 활성 게임의 Content/.../data/localization 폴더 절대 경로를 반환합니다. */
         static string getLocalizationFolderPath();
-        /** @brief Resource/.../data 폴더 절대 경로를 반환합니다. */
+        /** @brief Content/.../data 폴더 절대 경로를 반환합니다. */
         static string getGameDataFolderPath();
     };
 } // namespace sw::editor

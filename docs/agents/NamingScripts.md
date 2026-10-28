@@ -78,6 +78,6 @@ C++ binds globals and cbuffer members **by name** (`shaderslot::resname` / `cbna
 
 ### Resource Assets
 
-- Everything under `Resource/` uses lowercase names only (`[a-z0-9_.-]+`: `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). The one exception is documentation `README.md`.
+- Everything under `Content/` uses lowercase names only (`[a-z0-9_.-]+`: `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). The one exception is documentation `README.md`.
 - **Textures**: the runtime reads only DDS. A runtime `textures/` folder holds `.dds` and data (`.sprite.xml`, `.meta`) only. Source images (PNG, JPG, TGA ...) live under `textures_raw/` at the same relative path and are imported with `App --import-textures` (the editor imports on hot reload too). Commit the DDS with `textures_raw/import.stamp`; `App --check-textures` fails when a source, its import rule or its DDS drifts. Delete a source nothing references instead of moving it.
 - **Models**: glTF sources (`.glb`, `.gltf`) live under `models_raw/`; `App --import-models` writes `models/<name>.mesh` plus `models_raw/import.stamp` (`App --check-models` compares). Commit the `.mesh` with the stamp.

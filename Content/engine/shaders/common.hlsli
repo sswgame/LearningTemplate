@@ -106,11 +106,11 @@
 
 // ------------------------------------------------------------------------------
 // 3-2) 컴퓨트 진입점 스레드 그룹 — `[numthreads( x, y, z )]` 대신 쓴다. 맨 속성은 clang-format 이 다음 줄의 진입점 함수와
-//      한 줄로 붙이고, 매크로는 Resource/.clang-format 의 StatementMacros 가 한 문장으로 읽어 제 줄에 둔다.
+//      한 줄로 붙이고, 매크로는 Content/.clang-format 의 StatementMacros 가 한 문장으로 읽어 제 줄에 둔다.
 // ------------------------------------------------------------------------------
 #define SW_NUMTHREADS( x, y, z ) [numthreads( x, y, z )]
 
-// 반복 · 분기 힌트 — 맨 `[unroll]` 은 clang-format 이 다음 문장과 붙이므로 속성 매크로로 쓴다(Resource/.clang-format 의 AttributeMacros).
+// 반복 · 분기 힌트 — 맨 `[unroll]` 은 clang-format 이 다음 문장과 붙이므로 속성 매크로로 쓴다(Content/.clang-format 의 AttributeMacros).
 #define SW_UNROLL [unroll]
 #define SW_LOOP   [loop]
 #define SW_BRANCH [branch]

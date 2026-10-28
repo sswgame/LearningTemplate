@@ -162,7 +162,7 @@ namespace sw
 
     bool AutomationRunner::prepareScratchFolders()
     {
-        // 사본 이름에 이 프로세스의 꼬리를 붙인다 — 저장소의 `Resource/scratch/` 는 동시에 도는 App 이 나눠 쓴다.
+        // 사본 이름에 이 프로세스의 꼬리를 붙인다 — 저장소의 `Content/scratch/` 는 동시에 도는 App 이 나눠 쓴다.
         _scenario.bindScratchInstances();
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {

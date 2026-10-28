@@ -1,7 +1,7 @@
 /**
  * @file GPUSpriteInstanceData.h
  * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형, 색, 픽셀 스냅)을 셰이더 레이아웃 그대로 묶은 16바이트입니다.
- * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
+ * @details HLSL 쪽은 `Content/engine/shaders/instancedata.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
  *          `InstanceData::computeUvRect` 와 `InstanceData::computeTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
  *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트와
  *          인스턴스 배치 항목이 보관하고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어

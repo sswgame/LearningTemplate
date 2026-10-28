@@ -25,7 +25,7 @@ namespace sw
             return SubsystemInitResult::Succeeded;
         if ( AssetPaths::initialize() == false )
         {
-            SW_LOG_ERROR( "Resource root not found - run from a location that contains Resource/." );
+            SW_LOG_ERROR( "Content root not found - run from a location that contains Content/." );
             return SubsystemInitResult::Failed;
         }
         // 돌릴 게임을 고른다(Dev `-game=`) — 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 이 빌드에 없는 게임이면 서지 않는다.

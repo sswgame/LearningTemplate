@@ -193,7 +193,7 @@ def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagi
             shutil.copy2(pack, destination)
             request.listCopied.append(destination)
     else:
-        print(f"[package] warning: no {kPackFolderName}/ in {binDir} - the package runs only with loose Resource/ next to it", flush=True)
+        print(f"[package] warning: no {kPackFolderName}/ in {binDir} - the package runs only with loose Content/ next to it", flush=True)
     if request.target == "Server":
         serverConfig = projectRoot / "Config" / "Server" / f"{request.game}.json"
         if serverConfig.is_file():

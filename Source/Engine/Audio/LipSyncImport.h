@@ -21,7 +21,7 @@ namespace sw
         /** @brief 리소스 상대 경로가 음성 폴더 안의 소리 파일인지 반환합니다(`.../voice/...` 의 .wav, .ogg). */
         static bool isVoiceAudio( string_view relativePath );
         /**
-         * @brief `Resource/` 아래 음성마다 트랙을 씁니다.
+         * @brief `Content/` 아래 음성마다 트랙을 씁니다.
          * @return 쓴 트랙 수입니다. 읽거나 쓰지 못한 음성은 @p outFailedCount 에 셉니다.
          */
         static uint32 importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount );

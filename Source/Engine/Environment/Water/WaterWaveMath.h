@@ -1,6 +1,6 @@
 /**
  * @file WaterWaveMath.h
- * @brief 거스트너 파도의 CPU 버전입니다. 셰이더(`Resource/engine/shaders/gerstner.hlsli`)와 같은 식이며, 부력과 수면 질의가 이것을 씁니다.
+ * @brief 거스트너 파도의 CPU 버전입니다. 셰이더(`Content/engine/shaders/gerstner.hlsli`)와 같은 식이며, 부력과 수면 질의가 이것을 씁니다.
  * @details 파도 하나는 방향(라디안, +x 에서 +z 쪽으로), 파장, 진폭, 가파름(0..1)으로 정한다. 파수 k = 2π / 파장이고, 위상 속도는 깊은 물 분산
  *          ω = √(g k) 이며, 가파름 Q = 가파름 / (k × 진폭 × 파도 수)라 가파름 1 에서도 고리가 생기지 않는다(GPU Gems 1 장 1 의 식이다).
  *          변위는 수평 원점 (x, z) 의 점이 시간 t 에 옮겨 가는 양이다. 월드 (x, z) 의 수면 높이는 그 위치로 **옮겨 오는** 원점을

@@ -54,7 +54,7 @@ namespace sw::editor
     {
         if ( _bDisabled == SW_TRUE || resourceRelativePath.empty() )
             return;
-        // 규칙은 저장소 리소스(`Resource/`)의 것이다 — 붙인 디스크 도메인(시나리오의 `saved`)의 파일은 저장소의 guid 표로 볼 수 없다.
+        // 규칙은 저장소 리소스(`Content/`)의 것이다 — 붙인 디스크 도메인(시나리오의 `saved`)의 파일은 저장소의 guid 표로 볼 수 없다.
         if ( AssetPaths::isMountedDiskDomainID( AssetPaths::toAssetID( resourceRelativePath ) ) )
             return;
         const string path = FileUtil::normalizeSeparators( resourceRelativePath );

@@ -318,7 +318,7 @@ namespace sw
         const bool bMissingParam = params._resourceRoot.empty() || params._cookedDir.empty() || params._packOutputDir.empty() || params._shaderFolder.empty();
         if ( bMissingParam )
         {
-            SW_LOG_ERROR( "Pack cook needs the resource root, --cooked-dir, --pack-dir and a shader folder" );
+            SW_LOG_ERROR( "Pack cook needs the content root, --cooked-dir, --pack-dir and a shader folder" );
             return false;
         }
 

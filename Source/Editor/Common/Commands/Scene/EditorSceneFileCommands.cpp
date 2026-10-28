@@ -93,7 +93,7 @@ namespace sw::editor
         const string loadPath = AssetPaths::toAssetID( path );
         if ( loadPath.empty() )
         {
-            SW_LOG_ERROR( "Open Scene: '%#' is outside the resource root and every mounted disk domain", path );
+            SW_LOG_ERROR( "Open Scene: '%#' is outside the content root and every mounted disk domain", path );
             return false;
         }
 

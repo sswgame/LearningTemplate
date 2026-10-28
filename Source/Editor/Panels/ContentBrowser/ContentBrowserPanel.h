@@ -76,7 +76,7 @@ namespace sw::editor
         /** @brief 루트 목록에 그 표시 이름(`game/empty`, `engine`)을 가진 루트가 있으면 true 입니다. */
         bool hasRoot( string_view displayName ) const;
         /**
-         * @brief 참조 역색인이 에디터가 본 마지막 `Resource/` 변경까지 반영했으면 true 입니다(`ContentBrowserReferenceSearch::isCurrent`).
+         * @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`ContentBrowserReferenceSearch::isCurrent`).
          * @details 자동화 감시 값(`Editor.ReferenceIndexReady` · `Editor.ReferenceCount`)과 이름 바꾸기 · 옮기기가 본다. 한 번 만든 색인이 있어도 스캔이 돌면 false 다.
          */
         bool isReferenceIndexCurrent() const;
@@ -186,9 +186,9 @@ namespace sw::editor
         void onPanelCollapsed() override;
         /** @brief 패널을 닫았습니다. 색인을 기다리지 않게 표시합니다. */
         void onPanelClosed() override;
-        /** @brief `Resource/` 가 바뀌었으면 폴더 목록을 다시 읽게 합니다. 에디터 밖에서 바꾼 경우도 포함합니다. */
+        /** @brief `Content/` 가 바뀌었으면 폴더 목록을 다시 읽게 합니다. 에디터 밖에서 바꾼 경우도 포함합니다. */
         void syncWithContentChanges();
-        /** @brief 워커가 만든 역색인을 받습니다. 처음이거나 `Resource/` 가 바뀌었으면 다시 스캔하도록 요청합니다. */
+        /** @brief 워커가 만든 역색인을 받습니다. 처음이거나 `Content/` 가 바뀌었으면 다시 스캔하도록 요청합니다. */
         void syncReferenceIndex();
         /** @brief 참조 찾기 결과 창을 그립니다. `showReferences` 가 이 창을 엽니다. */
         void drawReferenceResults();

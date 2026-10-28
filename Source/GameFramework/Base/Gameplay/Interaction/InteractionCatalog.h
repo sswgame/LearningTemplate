@@ -2,7 +2,7 @@
  * @file InteractionCatalog.h
  * @brief 상호작용 정의(데이터)입니다. 종류마다 안내 문구 키, 입력 방식(누름, 누르고 있기, 연타), 단계, 거리, 시야각, 시야, 쿨다운, 태그 조건,
  *        맞춤 지점(모션 워핑 마커), 강조, 권한을 정의하고, 스마트 오브젝트의 슬롯 목록도 담습니다.
- * @details XML 형식은 다음과 같다(`Resource/common/data/interactions/default.interactions.xml`).
+ * @details XML 형식은 다음과 같다(`Content/common/data/interactions/default.interactions.xml`).
  * @code
  *     <Interactions>
  *       <Interaction id="Open" prompt="ui.interact.open" mode="Press" maxDistance="2" maxAngle="1.2217" lineOfSight="true" cooldown="0.5"

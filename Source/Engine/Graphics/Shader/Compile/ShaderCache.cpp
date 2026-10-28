@@ -315,7 +315,7 @@ namespace sw
             return localResult;
         }
 
-        // 2순위(Git 사전 컴파일 정식 바이너리 패스트 패스: Resource/<domain>/shaders/bin/<rhi>/ 또는 .pack)
+        // 2순위(Git 사전 컴파일 정식 바이너리 패스트 패스: Content/<domain>/shaders/bin/<rhi>/ 또는 .pack)
         //
         // **지금 소스에서 나오지 않은(낡은) 바이너리는 쓰지 않는다.** 있기만 하면 이기게 두면 HLSL 을 고쳐도 화면이
         // 그대로이고(다시 쿠킹 전까지), 엔진 셰이더에 대해 라이브 컴파일 경로가 사실상 도달 불가가 된다.

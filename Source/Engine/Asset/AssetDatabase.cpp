@@ -116,12 +116,12 @@ namespace sw
             {
 #if defined( SW_SHIPPING )
                 // 배포 빌드는 .meta 를 팩에 넣지 않는다(PackConfig 의 `*.meta` 제외). 여기서 GUID 를 지어내 쓰면
-                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Resource/)에 떨어져 작업 트리를 더럽힌다.
+                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Content/)에 떨어져 작업 트리를 더럽힌다.
                 // 배포본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
                 // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 return result;
 #else
-                // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Resource/ 에 고아 `.meta` 가 생긴다.
+                // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Content/ 에 고아 `.meta` 가 생긴다.
                 if ( AssetPaths::findLooseFile( path ).getDiskPath().empty() )
                     return result;
                 result = UUID::generate();
@@ -247,7 +247,7 @@ namespace sw
             return 0;
 
         // 절대 경로는 대소문자를 **보존**해서 받아야 한다(refreshFolder 와 같은 규칙). normalizePath 는
-        // 경로 전체를 소문자로 내리는데, 그러면 실제 디렉터리 이름이 섞여 있는 구간(예: .../LearningTemplate/Resource)
+        // 경로 전체를 소문자로 내리는데, 그러면 실제 디렉터리 이름이 섞여 있는 구간(예: .../LearningTemplate/Content)
         // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRelativePath 의 루트 비교가 어긋난다.
         // 소문자화는 상대 경로가 된 뒤 toRelativePath 안에서 한 번만 한다.
         vector<string> listMeta;

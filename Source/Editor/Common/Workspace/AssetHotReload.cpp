@@ -45,7 +45,7 @@ namespace sw::editor
             /** @brief 파일 감시가 리소스 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
             [[nodiscard]] static AssetID toAssetID( string_view relativePath ) { return AssetID{ relativePath }; }
 
-            /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Resource/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
+            /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Content/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
             static constexpr const utf8* kFenceFileStem = "contentfence";
             /** @brief 표지 사건을 기다리는 시한(밀리초)입니다. 감시는 보통 몇 ms 안에 알린다. */
             static constexpr int64 kFenceTimeoutMilliseconds = 5000;
@@ -77,7 +77,7 @@ namespace sw::editor
 
             /**
              * @brief 울타리 표지 파일의 이름(`contentfence_p<pid>.tmp`)입니다.
-             * @details `Resource/scratch/` 는 같은 체크아웃에서 동시에 도는 에디터가 나눠 쓴다. 이름이 고정이면 한쪽이 지운 표지를 다른 쪽이 쓰다 실패하거나 남의 사건을 제 것으로 읽는다.
+             * @details `Content/scratch/` 는 같은 체크아웃에서 동시에 도는 에디터가 나눠 쓴다. 이름이 고정이면 한쪽이 지운 표지를 다른 쪽이 쓰다 실패하거나 남의 사건을 제 것으로 읽는다.
              */
             static string makeFenceFileName() { return AutomationScratch::makeInstanceID( kFenceFileStem ) + ".tmp"; }
 

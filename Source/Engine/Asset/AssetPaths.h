@@ -2,12 +2,12 @@
  * @file AssetPaths.h
  * @brief 엔진, 공통, 게임, 에디터 리소스의 루트 경로를 해석합니다.
  * @note
- *   - `Resource/` 는 표시와 감시용 최상위일 뿐, findLooseFile 의 검색 루트가 아닙니다.
+ *   - `Content/` 는 표시와 감시용 최상위일 뿐, findLooseFile 의 검색 루트가 아닙니다.
  *   - 검색 루트는 `game/<pack>/`, `common/`, `engine/`, `editor/` 이고, 파일은 항상 이들 아래에 있습니다.
  *   - 키(소문자 정규형)는 두 종류입니다.
  *     - 팩 상대 키: `pipeline/foo.xml`, `shaders/bar.hlsl` 같은 키는 검색 루트를 차례로 봅니다.
  *     - 전역 ID: `engine/...`, `common/...`, `game/<pack>/...`, `editor/...` 는 그 도메인 루트만 봅니다.
- *   - 없으면 빈 문자열을 반환합니다. Resource/ 에 붙여 억지로 성공시키지 않습니다.
+ *   - 없으면 빈 문자열을 반환합니다. Content/ 에 붙여 억지로 성공시키지 않습니다.
  *   - 비교와 맵 키에는 FileUtil::normalizePath(전체 경로)를 씁니다.
  */
 #pragma once
@@ -30,7 +30,7 @@ namespace sw
     {
     public:
         /**
-         * @brief 작업 디렉터리에서 위로 올라가며 `Resource/` 를 찾고, 도메인 루트와 검색 루트를 채웁니다.
+         * @brief 작업 디렉터리에서 위로 올라가며 `Content/` 를 찾고, 도메인 루트와 검색 루트를 채웁니다.
          * @return 프로젝트 루트를 찾으면 true 입니다. 못 찾으면 false 를 반환하고 단언도 실패합니다.
          */
         [[nodiscard]] static bool initialize();
@@ -63,15 +63,15 @@ namespace sw
          * @return 쓰기에 쓸 절대 경로입니다. 아무것도 해석되지 않으면 인자를 그대로 반환합니다.
          * @details 저장하는 쪽은 `findLooseFile` 만으로는 안 된다. 그 함수는 **이미 있는** 파일만
          *          찾으므로 새 파일에는 빈 문자열을 반환하고, 그러면 부르는 쪽이 상대 경로로 파일을 써서
-         *          `Resource/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다. 예를 들어 `PrefabAsset` 이 이 방식으로 저장하면
-         *          에셋은 Bin 아래로, `.meta` 는 `Resource/` 아래로 갈라진다.
+         *          `Content/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다. 예를 들어 `PrefabAsset` 이 이 방식으로 저장하면
+         *          에셋은 Bin 아래로, `.meta` 는 `Content/` 아래로 갈라진다.
          *          해석 순서를 여기 한 번만 적어 두고 모든 세이버가 같이 쓴다(`resolveWritePath` 에 리소스 트리 밖으로 나가는 경로의 거절과 마지막 물러남을 더한 것이다).
          */
         static string getWritePath( string_view path );
 
         /**
          * @brief 편집기와 도구가 가진 경로를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
-         * @param path 절대 경로, 프로젝트 기준 경로(`Resource/…`), 이미 리소스 id 인 경로 중 무엇이든 받습니다.
+         * @param path 절대 경로, 프로젝트 기준 경로(`Content/…`), 이미 리소스 id 인 경로 중 무엇이든 받습니다.
          * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래의 절대 경로면 `<도메인>/…` 입니다. 리소스 루트 밖이거나 `..` 로 올라가면 빈 문자열입니다.
          * @details 편집기는 변환을 곳곳에서 따로 하지 않고 이 함수를 쓴다. 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 적용하면
          *          경로가 깨진다(텍스처를 끌어다 놓은 스프라이트가 흰 사각형이 된다).
@@ -101,7 +101,7 @@ namespace sw
         static bool isExcludedForTarget( string_view buildTargetName, string_view assetPath );
 
         /**
-         * @brief 도메인의 하위 폴더 절대 경로를 반환합니다(`Resource/<domainName>/<subFolder>`).
+         * @brief 도메인의 하위 폴더 절대 경로를 반환합니다(`Content/<domainName>/<subFolder>`).
          * @param domainName 예: "engine", "common", "game/empty", "editor", "dlc/winter"
          * @param subFolder  예: "shaders", "textures", "prefabs"(비우면 도메인 루트)
          * @return 디스크에 디렉터리가 있으면 정규화한 절대 경로, 없으면 `isEmpty()`. 팩은 보지 않습니다(에디터 · 쿠커 · 도구용).
@@ -121,9 +121,9 @@ namespace sw
         /** @brief @p assetID 가 `mountDiskDomain` 으로 붙인 도메인 아래면 true 입니다. 그 id 는 팩을 보지 않고 디스크에서만 읽습니다. */
         static bool isMountedDiskDomainID( string_view assetID );
 
-        /** @brief `Resource/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. */
+        /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. */
         static const string& getRootFolderPath();
-        /** @brief 프로젝트 루트의 절대 경로입니다(`Resource/` 와 `Config/` 의 부모). */
+        /** @brief 프로젝트 루트의 절대 경로입니다(`Content/` 와 `Config/` 의 부모). */
         static const string& getProjectFolderPath();
 
         /**
@@ -140,7 +140,7 @@ namespace sw
         static const vector<string>& getSearchPriority();
 
         /**
-         * @brief 리소스 루트(`Resource/` 폴더)를 바꾸고 검색 폴더와 경로 캐시를 다시 만듭니다. 이전 루트를 반환합니다(되돌릴 때 넘깁니다).
+         * @brief 리소스 루트(`Content/` 폴더)를 바꾸고 검색 폴더와 경로 캐시를 다시 만듭니다. 이전 루트를 반환합니다(되돌릴 때 넘깁니다).
          * @details 테스트가 임시 폴더에 개별 파일을 두고 같은 키를 가진 팩과 우선순위를 비교할 때 쓴다(검색 폴더는 루트에서만 채워진다).
          * @warning 실행 중인 게임에서 부르면 안 된다. 다른 스레드의 경로 해석과 겹치면 중간 상태를 본다.
          */

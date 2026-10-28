@@ -1,6 +1,6 @@
 /**
  * @file AssetHotReload.h
- * @brief 실행 중 `Resource/` 변경을 감지해 엔진 캐시가 다시 읽게 합니다. 에디터 전용 개발 기능이며 배포본에는 감시가 없습니다.
+ * @brief 실행 중 `Content/` 변경을 감지해 엔진 캐시가 다시 읽게 합니다. 에디터 전용 개발 기능이며 배포본에는 감시가 없습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -31,7 +31,7 @@ namespace sw::editor
 
     /**
      * @class AssetHotReload
-     * @brief `Resource/` 하위 변경을 폴링해, 그 파일을 가진 엔진 캐시(`IAssetCache`)가 다시 읽게 합니다.
+     * @brief `Content/` 하위 변경을 폴링해, 그 파일을 가진 엔진 캐시(`IAssetCache`)가 다시 읽게 합니다.
      * @details 종류별 코드가 없다. 어느 캐시가 읽을지, 먼저 쿠킹할지는 `EditorAssetTypeRegistry::findReloadRoute` 의 테이블이 정한다.
      *          엔진 캐시는 자기 런타임 파일을 그 즉시 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
@@ -60,7 +60,7 @@ namespace sw::editor
         AssetHotReload& operator=( const AssetHotReload& ) = delete;
 
         /**
-         * @brief 파일 감시를 시작하고 `Resource/` 워치를 등록합니다.
+         * @brief 파일 감시를 시작하고 `Content/` 워치를 등록합니다.
          * @return 감시자를 만들었으면 true 입니다. 리소스 루트가 없으면(팩만 있는 실행) false 입니다.
          */
         [[nodiscard]] bool initialize();
@@ -75,7 +75,7 @@ namespace sw::editor
         void update();
 
         /**
-         * @brief `Resource/` 아래의 파일이나 폴더가 바뀔 때마다 하나씩 올라가는 번호입니다. 종류와 무관하게 만들기, 지우기, 이름 바꾸기, 고치기가 모두 해당합니다.
+         * @brief `Content/` 아래의 파일이나 폴더가 바뀔 때마다 하나씩 올라가는 번호입니다. 종류와 무관하게 만들기, 지우기, 이름 바꾸기, 고치기가 모두 해당합니다.
          * @details 디스크 목록을 가진 화면(콘텐츠 브라우저)은 지난번 번호와 다르면 목록을 다시 읽는다. 에디터 바깥(탐색기, git)의 변경도 센다.
          */
         uint64 getContentChangeSerial() const { return _contentChangeSerial; }
@@ -146,7 +146,7 @@ namespace sw::editor
         static uint32 notifyAssetUsers( GameObjectManager& objects, string_view relativePath );
 
         /**
-         * @brief `Resource/` 아래의 어떤 변경이든 변경 번호를 올리고 바뀐 파일을 기억합니다(`getContentChangeSerial` · `takeChangedPaths`). 감시 대리자가 부르며, 테스트가 이벤트를 직접 넣는다.
+         * @brief `Content/` 아래의 어떤 변경이든 변경 번호를 올리고 바뀐 파일을 기억합니다(`getContentChangeSerial` · `takeChangedPaths`). 감시 대리자가 부르며, 테스트가 이벤트를 직접 넣는다.
          * @details 울타리 표지 파일(`pollContentWatchFence`)은 번호만 올리고 바뀐 파일로 세지 않는다.
          */
         void onResourceTreeChanged( const FileChangeEvent& changeEvent );

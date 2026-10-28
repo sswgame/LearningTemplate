@@ -55,7 +55,7 @@ kTargetEditorModule = "EditorModule"
 kCppSourceExtensions: set[str] = {".c", ".cpp", ".cc", ".cxx"}
 kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"}
 #: 셰이더 소스 확장자 — 셰이더를 고르는 스크립트는 모두 이것을 쓴다(파일마다 튜플을 따로 두면 갈라진다).
-#: clang-format 은 C++ 와 함께 이것도 건다(셰이더만의 설정은 `Resource/.clang-format`).
+#: clang-format 은 C++ 와 함께 이것도 건다(셰이더만의 설정은 `Content/.clang-format`).
 kShaderSourceExtensions: set[str] = {".hlsl", ".hlsli"}
 
 # =============================================================================
@@ -162,5 +162,5 @@ kNotOurDirNames: frozenset[str] = frozenset({
 
 #: 저장소 기준 경로로 못 박은 생성물 폴더 — .gitignore 대상이라 저장소에 들어 있지 않고, 테스트와 실행이 셰이더 · 텍스처 캐시 수만 개를 쌓는다.
 #: 이름만으로 빼면 같은 이름의 추적 폴더(`Source/Engine/Asset/Cache/`)까지 빠지므로 경로로 뺀다. 파일 걷기(`collectRepositoryFiles` · `resolveFileArguments`)가 건너뛴다.
-kGeneratedRelDirs: frozenset[str] = frozenset({"Resource/cache"})
+kGeneratedRelDirs: frozenset[str] = frozenset({"Content/cache"})
 

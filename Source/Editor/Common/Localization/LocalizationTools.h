@@ -83,7 +83,7 @@ namespace sw
         static constexpr const utf8* kAllProjects = "all";
 
         /**
-         * @brief 기본 대상 프로젝트를 절대 경로로 반환합니다. 엔진 프로젝트와 활성 게임 팩의 `data/localization` 프로젝트 파일이며, @p bAllGames 이면 `Resource/game` 아래 모든 팩을 포함합니다.
+         * @brief 기본 대상 프로젝트를 절대 경로로 반환합니다. 엔진 프로젝트와 활성 게임 팩의 `data/localization` 프로젝트 파일이며, @p bAllGames 이면 `Content/game` 아래 모든 팩을 포함합니다.
          */
         static void collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames = false );
         /**

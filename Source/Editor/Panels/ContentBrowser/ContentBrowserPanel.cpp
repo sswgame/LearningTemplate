@@ -131,7 +131,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 시계 잡기 조건 — 콘텐츠 브라우저의 내용이 보이는데 참조 역색인이 마지막 `Resource/` 변경을 아직 반영하지 않았으면 참입니다.
+             * @brief 시계 잡기 조건 — 콘텐츠 브라우저의 내용이 보이는데 참조 역색인이 마지막 `Content/` 변경을 아직 반영하지 않았으면 참입니다.
              * @details 스캔은 수 초(Debug 는 수십 초)가 걸린다. 시계가 그동안 가면 고정 프레임의 단언과 이름 바꾸기가 스캔 전의 색인(시나리오의 `<Scratch>` 복사 전 트리)을 쓴다.
              *          언리얼 자동화가 에셋 레지스트리의 스캔이 끝나기를 기다리는 것과 같다.
              */
@@ -141,7 +141,7 @@ namespace sw::editor
                 return pPanel != nullptr && pPanel->isWaitingForReferenceIndex();
             }
 
-            /** @brief 에디터가 본 `Resource/` 변경 번호입니다. 패널은 에디터 컨텍스트가 있어야 도므로 컨텍스트와 핫 리로드는 필수입니다. */
+            /** @brief 에디터가 본 `Content/` 변경 번호입니다. 패널은 에디터 컨텍스트가 있어야 도므로 컨텍스트와 핫 리로드는 필수입니다. */
             [[nodiscard]] static uint64 getContentChangeSerial()
             {
                 return editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().getContentChangeSerial();
@@ -323,7 +323,7 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
     SW_AUTOMATION_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
-                         "1 when the Content Browser reference index reflects the last Resource/ change the editor saw (built, no scan in flight)",
+                         "1 when the Content Browser reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
                          &ContentBrowserPanelInternal::readReferenceIndexReady );
     SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
     SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",

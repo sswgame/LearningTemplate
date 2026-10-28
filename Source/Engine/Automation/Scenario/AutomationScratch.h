@@ -1,13 +1,13 @@
 /**
  * @file AutomationScratch.h
- * @brief 시나리오가 쓰는 리소스 폴더를 실행마다 새로 만드는 임시 사본(`Resource/scratch/…`, 저장소에 넣지 않음)으로 보냅니다.
- * @details 시나리오가 `Resource/` 원본에 쓰면 추적 중인 파일이 바뀌거나 잔여 파일이 남고, 중단된 실행의 잔여물이 다음 실행을 지게 한다(`new_material_2`).
+ * @brief 시나리오가 쓰는 리소스 폴더를 실행마다 새로 만드는 임시 사본(`Content/scratch/…`, 저장소에 넣지 않음)으로 보냅니다.
+ * @details 시나리오가 `Content/` 원본에 쓰면 추적 중인 파일이 바뀌거나 잔여 파일이 남고, 중단된 실행의 잔여물이 다음 실행을 지게 한다(`new_material_2`).
  *          시나리오는 쓰는 폴더를 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 선언하고, 실행기는 시작할 때
  *          사본 id 에 프로세스 꼬리를 붙여(`scratch/assetmanage_p<pid>`, `makeInstanceID` — 시나리오 단계의 id 도 같이 바뀐다, `AutomationScenario::bindScratchInstances`)
- *          사본 폴더를 지운 뒤 원본을 복사한다(`prepare`). 저장소의 `Resource/` 는 같은 체크아웃의 모든 App 이 나눠 쓰므로 이름이 고정이면 동시에 도는 App 이
+ *          사본 폴더를 지운 뒤 원본을 복사한다(`prepare`). 저장소의 `Content/` 는 같은 체크아웃의 모든 App 이 나눠 쓰므로 이름이 고정이면 동시에 도는 App 이
  *          서로의 사본을 지운다. 사본은 리소스 id 가 있는 보통 도메인 폴더라 편집기의 모든 경로(루트를 붙이는 곳 · 감시 · 색인)가 같게 본다.
  *          복사하면서 글 파일 안의 원본 id 를 사본 id 로 바꾸고(씬이 사본의 머티리얼을 가리키게), `.meta` 의 guid 는 새로 만든다(원본과 겹치지 않게).
- *          `Resource/scratch/` 는 `.gitignore` 에 있다.
+ *          `Content/scratch/` 는 `.gitignore` 에 있다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -29,7 +29,7 @@ namespace sw
     /** @brief 시나리오 사본 폴더를 만듭니다. 상태가 없습니다. */
     struct SW_API AutomationScratch
     {
-        static constexpr const utf8* kScratchDomain = "scratch"; ///< 사본이 사는 도메인(`Resource/scratch/`)
+        static constexpr const utf8* kScratchDomain = "scratch"; ///< 사본이 사는 도메인(`Content/scratch/`)
 
         /** @brief `<Scratch>` 의 두 id 가 맞는 모양인지 봅니다(빈 값 · `..` · 사본이 `scratch/` 밖 · 원본이 `scratch/` 안이면 false 와 이유). */
         [[nodiscard]] static bool isValidFolder( const AutomationScratchFolder& folder, string& outReason );

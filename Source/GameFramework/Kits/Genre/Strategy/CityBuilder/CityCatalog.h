@@ -168,7 +168,7 @@ namespace sw
 {
     /**
      * @class CityCatalog
-     * @brief `<CityCatalog roadCost="2"><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다. 키 이름은 `Resource/game/nilecity/data/city.xml` 입니다.
+     * @brief `<CityCatalog roadCost="2"><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다. 키 이름은 `Content/game/nilecity/data/city.xml` 입니다.
      * @details 집은 `kind="House"` 인 건물 하나(보통 1셀)이고, 단계 정의는 `<HouseLevel>` 을 적은 순서대로 읽는다.
      */
     class SW_KIT_API CityCatalog : public XMLCatalog<CityCatalog>

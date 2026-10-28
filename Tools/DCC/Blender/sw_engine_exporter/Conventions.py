@@ -61,17 +61,17 @@ def isSocketObjectName(name: str, bHasSocketProperty: bool = False) -> bool:
 
 def makeExportPaths(repositoryRoot: str, packName: str, assetName: str) -> dict[str, str]:
     """
-    내보낼 자리들 — 원본 glTF 는 `Resource/game/<팩>/models_raw/<이름>.glb`, 임포트 결과는 `models/<이름>.mesh`,
-    소켓 초안은 메시 옆 `models/<이름>.sockets.xml` 이다. 팩 이름이 `engine` 이면 `Resource/engine/` 아래다.
+    내보낼 자리들 — 원본 glTF 는 `Content/game/<팩>/models_raw/<이름>.glb`, 임포트 결과는 `models/<이름>.mesh`,
+    소켓 초안은 메시 옆 `models/<이름>.sockets.xml` 이다. 팩 이름이 `engine` 이면 `Content/engine/` 아래다.
     """
     pack = makeResourceName(packName)
     name = makeResourceName(assetName)
     domain = "engine" if pack == "engine" else f"game/{pack}"
     root = repositoryRoot.rstrip("/\\").replace("\\", "/")
     return {
-        "source": f"{root}/Resource/{domain}/models_raw/{name}.glb",
-        "mesh": f"{root}/Resource/{domain}/models/{name}.mesh",
-        "sockets": f"{root}/Resource/{domain}/models/{name}.sockets.xml",
+        "source": f"{root}/Content/{domain}/models_raw/{name}.glb",
+        "mesh": f"{root}/Content/{domain}/models/{name}.mesh",
+        "sockets": f"{root}/Content/{domain}/models/{name}.sockets.xml",
         "meshID": f"{domain}/models/{name}.mesh",
     }
 

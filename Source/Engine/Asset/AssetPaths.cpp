@@ -45,7 +45,7 @@ namespace sw
         struct AssetPathTable
         {
             string         _projectFolderPath{};      ///< 프로젝트 루트
-            string         _resourceRootFolderPath{}; ///< Resource/ 최상위 루트(유일한 기준점)
+            string         _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
             vector<string> _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
             vector<string> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
             vector<string> _listHostExcludedGroup{};  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
@@ -555,7 +555,7 @@ namespace sw
             rootToLog = rootPath;
 
             const string resourceRoot = FileUtil::joinPath( rootPath, path::kContentFolder );
-            // Resource/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
+            // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
             const string resourceRootFolderPath = FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : string{};
 
             vector<string> listSearchPriority = AssetPathsInternal::getTable()._listSearchPriority;
@@ -795,7 +795,7 @@ namespace sw
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable()._resourceRootFolderPath ) );
         if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
         {
-            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the resource root (packs-only builds would read loose assets)", domainName, diskFolder );
+            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
             return false;
         }
         // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든

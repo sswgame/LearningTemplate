@@ -66,7 +66,7 @@ namespace sw::editor
         /** @brief 현재 DPI 배율을 반환합니다. 96 DPI 가 1 입니다. */
         static float32 getDPIScale();
 
-        /** @brief 토큰 벌(`Resource/editor/theme/<이름>.tokens.json`, 대소문자 무시)을 적용합니다. 덮어쓴 강조색 · 둥글기는 버립니다. 없는 이름이면 false 입니다. */
+        /** @brief 토큰 벌(`Content/editor/theme/<이름>.tokens.json`, 대소문자 무시)을 적용합니다. 덮어쓴 강조색 · 둥글기는 버립니다. 없는 이름이면 false 입니다. */
         [[nodiscard]] static bool applyThemeByName( string_view name );
         /** @brief 읽어 둔 토큰 벌의 이름을 씁니다(이름순). */
         static void listThemes( vector<string>& outListName );

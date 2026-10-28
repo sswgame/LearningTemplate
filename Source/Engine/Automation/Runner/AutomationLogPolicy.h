@@ -5,7 +5,7 @@
  *          1. 실행기 줄(`[Scenario]`)과 방어 구간 줄(`[Expected Defensive Test]`)은 처음부터 보지 않는다.
  *          2. 시나리오의 `<ExpectLog>` 가 선언한 줄은 통과다(`count="0"` 은 선언이 아니다). id 가 있는 줄은 `id="…"` 로만, id 없는 줄은 `contains="…"` 가 **본문 전체와 같을 때만** 선언된다 — 부분 문자열로 다른 줄까지 가리지 못한다.
  *          3. 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 허용 목록으로 가릴 수 없다 — 소스에 id 를 붙여야 한다(`MissingID`).
- *          4. id 가 있으면 허용 목록 `Resource/engine/automation/allowedlogs.json` 에서 (id, 지금 범위)가 맞는 항목을 찾는다. 없으면 `NotAllowed` 다.
+ *          4. id 가 있으면 허용 목록 `Content/engine/automation/allowedlogs.json` 에서 (id, 지금 범위)가 맞는 항목을 찾는다. 없으면 `NotAllowed` 다.
  *          허용 목록의 항목은 id · 범위(`scenario` 나 `suite` 중 하나) · 사유 · 처리 계획 문서가 모두 있어야 읽힌다. 하나라도 비었거나 `TODO` 이면 읽기 오류로 멈춘다 —
  *          범위 없는 전역 허용과 와일드카드 id 는 형식으로 만들 수 없다. 목록에 있으나 더 이상 나오지 않는 항목은 `Scripts` 의 `scenario-logs --check` 가 실패로 센다.
  *          `AutomationRunner`(프로세스 안, 시나리오 구간), `AppScenarioTest`(프로세스 출력 전체, 기동 · 종료 포함), 테스트 케이스의 `CaseLogJudge` 가 같은 목록을 쓴다.

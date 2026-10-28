@@ -59,7 +59,7 @@ namespace sw
 {
     /**
      * @struct VertexAnimationCooker
-     * @brief `Resource/` 아래 쿠킹 목록을 모두 찾아 `.vat` 를 `<cookedDir>/<메시 경로에서 만든 이름>` 에 씁니다.
+     * @brief `Content/` 아래 쿠킹 목록을 모두 찾아 `.vat` 를 `<cookedDir>/<메시 경로에서 만든 이름>` 에 씁니다.
      */
     struct SW_API VertexAnimationCooker
     {

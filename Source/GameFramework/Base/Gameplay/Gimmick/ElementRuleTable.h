@@ -3,7 +3,7 @@
  * @brief 원소 상호작용 규칙 테이블입니다. 재질(성질 플래그와 수치), 상태(타는 중, 대전), 자극(불, 얼음, 물, 전기를 가했을 때), 스텝 규칙(번짐, 녹임, 다 탐, 사라짐)을 정의합니다.
  * @details 야생의 숨결의 화학 엔진처럼 "불은 풀로 번지고, 물은 불을 끄고, 바람이 불을 민다" 를 코드가 아니라 데이터로 적는다. 코드에는 규칙의 **종류**
  *          (자극 동작, 스텝 규칙, 번짐 형태)만 있고, 무엇이 무엇에 닿아 무엇이 되는지는 테이블이 정한다. 알 수 없는 재질, 상태, 플래그, 자극 이름은 읽을 때 오류이다.
- *          XML 형식은 다음과 같다(`Resource/common/data/elements/default.elements.xml`).
+ *          XML 형식은 다음과 같다(`Content/common/data/elements/default.elements.xml`).
  * @code
  *     <ElementRules stepTime="0.25">
  *       <Flag id="Flammable"/><Flag id="Conductive"/><Flag id="Updraft"/>

@@ -17,7 +17,7 @@ namespace sw::editor
     /**
      * @class ContentBrowserReferenceSearch
      * @brief 참조 역색인과 마지막 질의의 결과입니다. 언리얼 Content Browser 의 Reference Viewer 를 테이블 하나로 줄인 것입니다.
-     * @details 역색인은 처음 한 번, 그리고 `Resource/` 의 변경 번호가 바뀔 때마다 워커에서 다시 스캔한다. 스캔은 하나씩만 돌린다.
+     * @details 역색인은 처음 한 번, 그리고 `Content/` 의 변경 번호가 바뀔 때마다 워커에서 다시 스캔한다. 스캔은 하나씩만 돌린다.
      *          질의와 결과는 UI 스레드에서만 다룬다(`EditorReferenceIndex` 의 규칙).
      *          "색인이 있다"(`EditorReferenceIndex::isReady`)와 "색인이 지금 디스크와 맞다"(`isCurrent`)는 다르다. 스캔은 시작한 순간의 트리를 읽으므로,
      *          스캔 도중에 바뀐 파일(시나리오의 `<Scratch>` 복사, 다른 저장)은 그 결과에 없을 수 있다. 결과를 넣은 뒤에도 변경 번호가 앞서 있으면 다시 스캔하고,

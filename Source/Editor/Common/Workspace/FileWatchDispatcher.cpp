@@ -91,7 +91,7 @@ namespace sw
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
         if ( rootPath.empty() )
         {
-            SW_LOG_WARNING( "FileWatchDispatcher: the watch root is empty (no resource root folder) - hot reload is off" );
+            SW_LOG_WARNING( "FileWatchDispatcher: the watch root is empty (no content root folder) - hot reload is off" );
             _fileWatcher.reset();
             return false;
         }

@@ -113,7 +113,7 @@ namespace sw
          *                        컴파일한 소스를 빼먹으면 그 소스의 헤더 변경이 낡음으로 잡히지 않는다.
          * @return 스탬프를 썼으면 true 입니다. 도메인 설정이 틀렸거나 가려진 헤더가 있거나 헤더를 읽지 못하거나 shaders 폴더 밖이거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
          * @details 루트와 우선순위를 전역(`AssetPaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
-         *          실제 `Resource/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
+         *          실제 `Content/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
          *          스탬프를 쓰면 그 폴더의 스탬프 읽기 캐시를 버린다.
          */
         [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource,

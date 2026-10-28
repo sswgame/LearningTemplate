@@ -235,8 +235,8 @@ msgstr "활성 씬이 없습니다."
 
 #: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
 msgctxt "EdCommon.NoAssetsOfKind"
-msgid "No assets of this kind under Resource/."
-msgstr "Resource/ 아래에 이 종류의 에셋이 없습니다."
+msgid "No assets of this kind under Content/."
+msgstr "Content/ 아래에 이 종류의 에셋이 없습니다."
 
 #: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
 msgctxt "EdCommon.NoComponentTypes"
@@ -639,8 +639,8 @@ msgstr "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px,
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemePreset"
-msgid "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme."
-msgstr "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Resource/editor/theme 의 토큰 파일입니다."
+msgid "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Content/editor/theme."
+msgstr "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Content/editor/theme 의 토큰 파일입니다."
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeReset"
@@ -1409,7 +1409,7 @@ msgstr "이 에셋을 참조하는 텍스트 에셋이 없습니다."
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.NoResourceRoots"
-msgid "No resource roots found."
+msgid "No content roots found."
 msgstr "리소스 루트를 찾지 못했습니다."
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
@@ -1419,7 +1419,7 @@ msgstr "더블클릭하면 엽니다"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EditorContentBrowser.Refresh"
-msgid "Refresh the disk files and the resource root list"
+msgid "Refresh the disk files and the content root list"
 msgstr "디스크 파일 및 리소스 루트 목록을 새로고침합니다"
 
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp

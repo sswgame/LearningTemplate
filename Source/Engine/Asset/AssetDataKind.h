@@ -1,7 +1,7 @@
 /**
  * @file AssetDataKind.h
  * @brief 데이터 파일 종류(카탈로그 계약)와 그 레지스트리, 등록 줄 `SW_RESOURCE_DATA_KIND` 를 정의합니다.
- * @details `Resource/` 아래 데이터 파일 한 종류가 "어느 경로의 파일이고, 어떤 로더로 읽는가" 를 코드 옆 한 줄에 적습니다. 종류 표를 테스트(`ResourceDataSchemaTest`)나 에디터에
+ * @details `Content/` 아래 데이터 파일 한 종류가 "어느 경로의 파일이고, 어떤 로더로 읽는가" 를 코드 옆 한 줄에 적습니다. 종류 표를 테스트(`ResourceDataSchemaTest`)나 에디터에
  *          손으로 두지 않습니다 — 새 카탈로그를 더하면 그 카탈로그의 .cpp 에 등록 줄을 두는 것으로 스키마 테스트와 카탈로그 편집기가 같이 알게 됩니다.
  *          언리얼의 `UDataTable` 행 구조체 · `UPrimaryDataAsset` 종류 목록, 유니티의 `ScriptableObject` 타입 목록에 해당합니다.
  *

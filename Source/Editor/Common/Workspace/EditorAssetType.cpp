@@ -71,7 +71,7 @@ namespace sw::editor
         // 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을, 카탈로그 데이터는 `.xml` · `.json` 을 따른다. 계약은 `EditorAssetTypeTest` 의
         // `EveryEngineFormatMapsToItsKind` · `EveryAssetDataKindIsData` · `EveryEngineAssetTypeIsAccountedFor` 가 지킨다. 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
         // 여기 적는 확장자는 이 저장소가 실제로 읽거나 쓰는 것만 둔다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
-        // `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Resource/common/shaders/bin/`) 셰이더
+        // `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Content/common/shaders/bin/`) 셰이더
         // 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.
         //
         // 씬과 프리팹은 여기 적지 않는다. 쿠커가 쿠킹하는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면

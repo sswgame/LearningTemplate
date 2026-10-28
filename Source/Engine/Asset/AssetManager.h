@@ -6,10 +6,10 @@
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록 테이블을 훑어 소유 캐시를 만들고, 코드로 만드는 값 테이블(`WeakInternCache`)은 빌려 와서 등록합니다. 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
- *   - AssetPaths: Resource/ 경로 해석만 합니다(소유권 없음)
+ *   - AssetPaths: Content/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
  *   - RenderPipelineAssetCache: FrameRenderer 가 소유
- *   - ConfigManager: Config/ 호스트 JSON(Resource/ 아님)
+ *   - ConfigManager: Config/ 호스트 JSON(Content/ 아님)
  *   - StringTable, SceneManager
  *   - 파일 감시와 에셋 핫 리로드: **개발 기능이라 에디터가 소유**합니다(Editor/Common/Workspace).
  *     배포본에는 에디터가 없으므로 감시 스레드도 없습니다.
@@ -34,8 +34,8 @@ namespace sw
     /** @brief `AssetManager::mountContent` 가 무엇을 콘텐츠로 올릴지 정합니다. */
     enum class ContentSource : uint8
     {
-        Cooked,     ///< 실행용이다. 쿠킹한 팩을 마운트하고, 느슨한 `Resource/` 파일은 개발 구성에서만 읽는다
-        SourceTree, ///< 쿠킹용이다. 소스 트리(`Resource/`)를 읽고, 팩(지난 쿠킹의 산출물)은 마운트하지 않으며, 프리팹도 소스(XML, JSON)를 읽는다
+        Cooked,     ///< 실행용이다. 쿠킹한 팩을 마운트하고, 느슨한 `Content/` 파일은 개발 구성에서만 읽는다
+        SourceTree, ///< 쿠킹용이다. 소스 트리(`Content/`)를 읽고, 팩(지난 쿠킹의 산출물)은 마운트하지 않으며, 프리팹도 소스(XML, JSON)를 읽는다
     };
 
     /**
@@ -54,7 +54,7 @@ namespace sw
         AssetManager& operator=( const AssetManager& ) = delete;
 
         /**
-         * @brief Resource/ 검색 루트를 잡고 서비스를 준비합니다. 팩 마운트는 `mountContent` 가 합니다.
+         * @brief Content/ 검색 루트를 잡고 서비스를 준비합니다. 팩 마운트는 `mountContent` 가 합니다.
          * @return 프로젝트 루트를 찾으면 true 입니다.
          */
         [[nodiscard]] bool initialize();
@@ -65,7 +65,7 @@ namespace sw
          * @param source 쿠킹(`ContentSource::SourceTree`)이면 팩을 마운트하지 않고 느슨한 소스 파일을 읽게 합니다. 배포 구성도 같습니다. 쿠킹의
          *               입력은 소스이고 팩은 그 산출물이라, 팩을 올리면 지난 빌드의 결과(엔진 데이터, 프리팹, GUID 테이블)를 다시 읽거나 첫 빌드에서는
          *               아무것도 읽지 못합니다.
-         * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Resource/` 트리만 있으면 false).
+         * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Content/` 트리만 있으면 false).
          *
          * @details **호스트 게임 프리셋(`ConfigManager` 가 `GameConfig` 를 읽은 뒤)에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
          *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채 팩이 로드되고 GUID 테이블도

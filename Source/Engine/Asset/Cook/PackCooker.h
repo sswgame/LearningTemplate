@@ -29,12 +29,12 @@ namespace sw
     /** @struct PackCookParams @brief 팩 쿠킹 한 번의 입력입니다. 모두 필수입니다(`_gamePackFolder` 만 비울 수 있다). */
     struct PackCookParams
     {
-        string _resourceRoot;   ///< `Resource/` 의 절대 경로
+        string _resourceRoot;   ///< `Content/` 의 절대 경로
         string _cookedDir;      ///< 씬 · 프리팹 · 레지스트리 쿠킹 산출물의 스테이징 루트(`--cooked-dir`)
         string _packOutputDir;  ///< 팩을 쓸 폴더(`--pack-dir`)
         string _shaderFolder;   ///< 담을 셰이더 바이너리 폴더(`dx12` 등, 쿠킹 표의 `shader_folder`)
         string _buildTarget;    ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
-        string _gamePackFolder; ///< 비우면 `Resource/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 베이크한다
+        string _gamePackFolder; ///< 비우면 `Content/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 베이크한다
         /**
          * @brief 담지 않을 소스 파일의 절대 경로(`FileUtil::normalizePath`)입니다. 비어 있을 수 있다.
          * @details 이 층(Resource)이 읽을 수 없는 규칙으로 위 층이 정한다 — 출시 문화권(`stagedCultures`) 밖의 번역 테이블(`LocalizationProject::collectUnstagedTranslationTables`).

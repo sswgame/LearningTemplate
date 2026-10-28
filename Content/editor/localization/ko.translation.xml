@@ -112,7 +112,7 @@
 		       sourceHash="d0cc12d17911d7a8" />
 		<entry key="EdCommon.NoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
 		<entry key="EdCommon.NoAssetsOfKind"
-		       text="Resource/ 아래에 이 종류의 에셋이 없습니다."
+		       text="Content/ 아래에 이 종류의 에셋이 없습니다."
 		       sourceHash="2c502052b3964f45" />
 		<entry key="EdCommon.NoComponentTypes"
 		       text="등록된 컴포넌트 타입이 없습니다."
@@ -284,7 +284,7 @@
 		       text="버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)"
 		       sourceHash="40e8eb7597a7ce09" />
 		<entry key="EdCommon.ThemePreset"
-		       text="에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Resource/editor/theme 의 토큰 파일입니다."
+		       text="에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Content/editor/theme 의 토큰 파일입니다."
 		       sourceHash="34f006980d92e600" />
 		<entry key="EdCommon.ThemeReset"
 		       text="강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"

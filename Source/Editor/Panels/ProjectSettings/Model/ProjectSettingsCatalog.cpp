@@ -14,7 +14,7 @@ namespace sw::editor
     bool ProjectSettingsCatalog::isEditableLocation( string_view relativePath )
     {
         const bool bUnderConfig   = StringUtil::startsWith( relativePath, "Config/" );
-        const bool bUnderResource = StringUtil::startsWith( relativePath, "Resource/" );
+        const bool bUnderResource = StringUtil::startsWith( relativePath, "Content/" );
         return ( bUnderConfig || bUnderResource ) && StringUtil::endsWith( relativePath, ".json" );
     }
 

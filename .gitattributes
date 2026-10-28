@@ -10,13 +10,13 @@ ThirdParty/*/vcpkg-port/** -text
 
 # 모델 임포트의 원본(models_raw/)과 결과(models/ — .mesh 옆 스켈레톤 JSON · 클립)는 스탬프가 바이트 해시로 대조한다 — 줄끝 변환 금지
 # (core.autocrlf 체크아웃이 *.skeleton.xml 을 CRLF 로 바꾸면 갓 임포트한 LF 결과와 해시가 달라 "손으로 바꿨다" 가 된다)
-Resource/**/models_raw/** -text
+Content/**/models_raw/** -text
 # 합성 리그(rigs_raw/ — Scripts/dev/MakeSyntheticRig.py)는 생성기가 다시 만든 바이트와 PythonTest 가 대조한다 — 줄끝 변환 금지
-Resource/**/rigs_raw/** -text
-Resource/**/models/** -text
+Content/**/rigs_raw/** -text
+Content/**/models/** -text
 
 # 로컬라이제이션 표(원문 · 번역 · 번역 메모리 · PO)는 글 수집(`App --gather-text` / `--check-text`)이 바이트로 쓰고 대조한다 — 줄끝 변환 금지
-Resource/**/localization/** -text
+Content/**/localization/** -text
 
 # 글꼴(TrueType · OpenType · 컬렉션)은 바이너리다 — 줄끝 변환 · diff 금지
 *.ttf binary
@@ -25,7 +25,7 @@ Resource/**/localization/** -text
 
 # 에디터 시나리오가 에디터로 저장하는 픽스처(automation/editor/<시나리오>/ 아래 전부) — 에디터는 LF 로 쓰므로 체크아웃도 LF 여야 저장 뒤 작업 트리가 더러워지지 않는다
 # (폴더 단위라 새 픽스처를 더해도 줄끝이 어긋나지 않는다. 바이너리 픽스처를 두면 이 줄에서 빼야 한다)
-Resource/engine/automation/editor/*/** text eol=lf
+Content/engine/automation/editor/*/** text eol=lf
 
 # 에디터 테마 토큰은 `editor-theme` 도구가 CRLF 로 쓴다(Scripts/dev/MakeEditorTheme.py 머리말) — 리눅스 체크아웃도 CRLF 여야 도구 출력과 바이트로 같다
-Resource/editor/theme/*.tokens.json text eol=crlf
+Content/editor/theme/*.tokens.json text eol=crlf

@@ -113,7 +113,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <name>", "Apply an editor theme token set (Resource/editor/theme/<name>.tokens.json) for this session",
+    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <name>", "Apply an editor theme token set (Content/editor/theme/<name>.tokens.json) for this session",
                     &EditorUIDevCommandsInternal::runTheme );
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorUIDevCommandsInternal::runLayoutSave );

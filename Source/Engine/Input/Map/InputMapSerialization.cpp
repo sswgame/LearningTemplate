@@ -15,7 +15,7 @@
  * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장, 로드(런타임 리매핑 영속화)를 구현합니다.
  *
  * 두 XML 포맷은 용도가 다릅니다.
- *  - `loadFromAsset()`, `saveToAsset()`: Resource/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
+ *  - `loadFromAsset()`, `saveToAsset()`: Content/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
  *    에디터 InputMap 패널에서 편집한 정의는 같은 형식으로 같은 위치에 다시 씁니다.
  *  - `appendFromAsset()`: 같은 형식의 다른 파일을 이미 읽은 맵에 더합니다(확장 모듈 · 게임 모드). 맵 전체 속성은 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않는다.
  *

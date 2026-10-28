@@ -31,7 +31,7 @@ namespace sw::editor
     {
         /**
          * @brief 색인 JSON 에서 고칠 수 있는 항목을 모읍니다(먼저 비운다). JSON 이 아니면 false 입니다.
-         * @details 고르는 규칙: 경로가 `Config/` 나 `Resource/` 아래의 `.json` 이고, 타입 이름이 있는 것. 모듈 매니페스트(`Source/`)와 XML 설정은 뺀다 —
+         * @details 고르는 규칙: 경로가 `Config/` 나 `Content/` 아래의 `.json` 이고, 타입 이름이 있는 것. 모듈 매니페스트(`Source/`)와 XML 설정은 뺀다 —
          *          매니페스트는 Modules 창이, XML 은 손으로 쓴 주석이 있어 다시 쓰면 잃기 때문이다.
          */
         [[nodiscard]] static bool parseReference( string_view referenceJSON, vector<ProjectSettingsEntry>& outListEntry );
@@ -42,7 +42,7 @@ namespace sw::editor
          */
         static void expandWildcards( string_view projectRoot, vector<ProjectSettingsEntry>& inoutListEntry );
 
-        /** @brief 경로가 `Config/` 나 `Resource/` 아래의 JSON 이면 true 입니다. */
+        /** @brief 경로가 `Config/` 나 `Content/` 아래의 JSON 이면 true 입니다. */
         [[nodiscard]] static bool isEditableLocation( string_view relativePath );
     };
 } // namespace sw::editor

@@ -48,7 +48,7 @@ namespace sw::editor
         {
             /**
              * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain`) 아래라 자동화 쓰기 게이트가 허락하고
-             *        `.gitignore` 의 `/Resource/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
+             *        `.gitignore` 의 `/Content/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
              */
             static constexpr const utf8* kImportTempFolder = "scratch/import";
 

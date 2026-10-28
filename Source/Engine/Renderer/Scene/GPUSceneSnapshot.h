@@ -34,7 +34,7 @@ namespace sw
 
     /**
      * @brief GPU 인스턴스 하나를 나타냅니다. 월드 행렬, 바운드, 배치 인덱스, 머티리얼 원소 인덱스, 블렌드, 회전 시드, 스프라이트 프레임과 색을 가집니다.
-     * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `InstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
+     * @details HLSL 쪽은 `Content/engine/shaders/instancedata.hlsli` 의 `InstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
      *          필드를 고치면 그 파일과 ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 의 테이블을 함께 고친다(쿠킹된 바이너리로 대조한다).
      */
     struct GPUInstance

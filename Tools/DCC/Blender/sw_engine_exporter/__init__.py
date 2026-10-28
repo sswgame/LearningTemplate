@@ -34,7 +34,7 @@ bl_info = {
 class SwEngineExporterPreferences(AddonPreferences):
     bl_idname = __package__
 
-    repository_root: StringProperty(name="Engine repository", subtype="DIR_PATH", description="Folder that holds Resource/ and build/")
+    repository_root: StringProperty(name="Engine repository", subtype="DIR_PATH", description="Folder that holds Content/ and build/")
     app_path: StringProperty(name="App executable", subtype="FILE_PATH", description="Optional: App.exe to run --import-models with")
 
     def draw(self, context: bpy.types.Context) -> None:
@@ -77,13 +77,13 @@ def collectSocketsInternal(listObject: Sequence[bpy.types.Object]) -> list[Socke
 
 
 class SW_OT_export_engine_gltf(Operator):
-    """Export the selection to Resource/<pack>/models_raw as glTF with SW Engine conventions"""
+    """Export the selection to Content/<pack>/models_raw as glTF with SW Engine conventions"""
 
     bl_idname = "sw_engine.export_gltf"
     bl_label = "Export to SW Engine"
     bl_options = {"REGISTER"}
 
-    pack_name: StringProperty(name="Pack", default="empty", description="Resource pack: a game folder under Resource/game, or 'engine'")
+    pack_name: StringProperty(name="Pack", default="empty", description="Resource pack: a game folder under Content/game, or 'engine'")
     asset_name: StringProperty(name="Asset name", default="", description="Defaults to the active object's name")
     export_animations: BoolProperty(name="Animations", default=True)
     run_import: BoolProperty(name="Import into the engine", default=True, description="Run App --import-models after exporting")
@@ -96,8 +96,8 @@ class SW_OT_export_engine_gltf(Operator):
     def execute(self, context: bpy.types.Context) -> set[str]:
         preferences = getPreferencesInternal(context)
         repositoryRoot = bpy.path.abspath(preferences.repository_root).rstrip("/\\")
-        if not repositoryRoot or not Path(repositoryRoot, "Resource").is_dir():
-            self.report({"ERROR"}, "Set the engine repository (the folder with Resource/) in the add-on preferences")
+        if not repositoryRoot or not Path(repositoryRoot, "Content").is_dir():
+            self.report({"ERROR"}, "Set the engine repository (the folder with Content/) in the add-on preferences")
             return {"CANCELLED"}
         listSelected = list(context.selected_objects)
         if not listSelected:

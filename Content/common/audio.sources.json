@@ -1,6 +1,6 @@
 {
   "_note": [
-    "Resource/common/sounds · music 의 오디오 원본 목록. 정본이다 — 파일을 더하거나 바꾸면 이 표를 먼저 고친다.",
+    "Content/common/sounds · music 의 오디오 원본 목록. 정본이다 — 파일을 더하거나 바꾸면 이 표를 먼저 고친다.",
     "license 는 CC0 1.0 만 쓴다. license_quote 는 license_source(동봉 파일 또는 page) 원문에서 옮긴 것이다.",
     "convert 가 있는 팩은 wav · mp3 를 python-soundfile 로 Ogg Vorbis 로 바꾼 것이다. source_sha256 은 원본, sha256 은 저장소 ogg 의 해시다.",
     "py -3 -I Scripts/dev/MakeCommonAudio.py verify 가 해시 · 목록을, fetch 가 다운로드부터 다시 만든다."

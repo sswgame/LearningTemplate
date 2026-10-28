@@ -54,12 +54,12 @@ include(cmake/Engine/RuntimeDependencies.cmake)
 include(cmake/Engine/ReflectionCodeGen.cmake)
 include(cmake/Engine/RHIBackends.cmake)
 
-# 모든 엔진 타겟이 공유하는 include 루트 (Source/, Resource/, generated/)
+# 모든 엔진 타겟이 공유하는 include 루트 (Source/, Content/, generated/)
 add_library(sw_third_party_includes INTERFACE)
 add_library(sw_public_source_includes INTERFACE)
 target_include_directories(sw_public_source_includes INTERFACE
 	"${CMAKE_CURRENT_SOURCE_DIR}/Source"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Resource"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Content"
 	"${CMAKE_BINARY_DIR}/generated"
 )
 

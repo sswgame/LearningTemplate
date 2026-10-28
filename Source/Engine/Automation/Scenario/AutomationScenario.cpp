@@ -33,7 +33,7 @@ namespace sw
             {
                 const string loosePath = AssetPaths::findLooseFile( path ).getDiskPath();
                 const bool   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
-                return "[read] not found (resource root '" + AssetPaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
+                return "[read] not found (content root '" + AssetPaths::getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
                        ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
                        ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
             }

@@ -40,8 +40,8 @@ elseif(WIN32)
 	set(CMAKE_PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/Bin/Symbols")
 endif()
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/Resource")
-	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Resource" DESTINATION .)
+if(EXISTS "${CMAKE_SOURCE_DIR}/Content")
+	install(DIRECTORY "${CMAKE_SOURCE_DIR}/Content" DESTINATION .)
 endif()
 
 # ------------------------------------------------------------------------------

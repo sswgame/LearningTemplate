@@ -27,7 +27,7 @@ from common.Paths import getProjectRoot
 
 kTextSuffix = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po"}
 kCppSuffix = {".h", ".hpp", ".inl", ".cpp"}
-kScanRoot = ["Source", "Resource", "Tools/ReflectionParser", "Tools/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md"]
+kScanRoot = ["Source", "Content", "Tools/ReflectionParser", "Tools/OnlineLoadBot", "cmake", "Scripts", "docs", "Config", "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md"]
 kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 

@@ -237,7 +237,7 @@
 				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdCommon.NoAssetsOfKind" source="No assets of this kind under Resource/.">
+		<entry key="EdCommon.NoAssetsOfKind" source="No assets of this kind under Content/.">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
 			</origins>
@@ -654,7 +654,7 @@
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemePreset"
-		       source="Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme.">
+		       source="Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Content/editor/theme.">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
 			</origins>
@@ -1471,7 +1471,7 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.NoResourceRoots" source="No resource roots found.">
+		<entry key="EditorContentBrowser.NoResourceRoots" source="No content roots found.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
@@ -1481,7 +1481,7 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorContentBrowser.Refresh" source="Refresh the disk files and the resource root list">
+		<entry key="EditorContentBrowser.Refresh" source="Refresh the disk files and the content root list">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>

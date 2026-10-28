@@ -8,8 +8,8 @@
 out/
 generated/
 *.pack
-!Resource/**/shaders/bin/
-!Resource/**/shaders/bin/**
+!Content/**/shaders/bin/
+!Content/**/shaders/bin/**
 
 # ==============================================================================
 # IDE & Tooling
@@ -33,7 +33,7 @@ __pycache__/
 /Saved/
 /Log/
 # 자동화 시나리오의 사본 폴더(`<Scratch>`, 실행마다 새로 만든다 — Engine/Scenario/AutomationScratch.h)
-/Resource/scratch/
+/Content/scratch/
 Docs/Doxygen/
 
 # ==============================================================================
@@ -93,13 +93,13 @@ Config/Editor/*.local.json
 # Runtime editor layouts & caches
 /imgui.ini
 /NodeEditor.json
-Resource/config/editor/
-Resource/Config/Editor/
+Content/config/editor/
+Content/Config/Editor/
 # 프리팹·씬 쿠킹 산출물(.prefab.bin, maps|scenes/*.bin)은 이제 build/<preset>/Cooked/ 에 스테이징된다 —
 # 소스 트리에 보이면 옛 쿠킹의 잔재이니 지운다(쿠커가 경고로 이름을 찍고 팩에 넣지 않는다). 그래서 여기서 더는
 # 무시하지 않는다: 무시하면 그 잔재가 Dev 런타임의 폴백에 걸려 실패를 가린다.
-Resource/cache/
-Resource/Cache/
+Content/cache/
+Content/Cache/
 /cache/
 /Cache/
 **/ShaderCache/

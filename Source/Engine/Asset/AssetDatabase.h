@@ -37,7 +37,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 경로 · 사이드카
         // ------------------------------------------------------------------------------
-        /** @brief 절대 경로를 Resource/ 기준 전역 ID(`engine/...`, `game/<pack>/...`)로 바꿉니다. Resource 밖이면 빈 문자열입니다. */
+        /** @brief 절대 경로를 Content/ 기준 전역 ID(`engine/...`, `game/<pack>/...`)로 바꿉니다. Resource 밖이면 빈 문자열입니다. */
         static string toRelativePath( string_view absolutePath );
 
         /** @brief 리소스 상대 에셋의 사이드카 경로입니다(`foo.png` → `foo.png.meta`). */
