@@ -135,6 +135,7 @@ namespace sw
                 job = std::move( _listQueuedJob.front() );
                 _listQueuedJob.pop_front();
             }
+            job->cancel(); // 종료 때문에 실행하지 못한 일이다 — 연결 고장과 다르다
             job->run( closed );
             ScopedLock<mutex> lock{ _mutex };
             _listCompleted.push_back( std::move( job ) );
@@ -145,11 +146,13 @@ namespace sw
 
     void SQLConnectionPool::submit( unique_ptr<ISQLJob> job )
     {
-        bool bStopping = false;
+        bool bStopping  = false;
+        bool bCancelled = false;
         {
             ScopedLock<mutex> lock{ _mutex };
             ++_pendingCount;
-            bStopping = _bStopping == SW_TRUE || _listWorker.empty();
+            bCancelled = _bStopping == SW_TRUE; // 시작하지 않은 풀(워커 없음)은 취소가 아니라 쓸 수 없는 풀이다
+            bStopping  = bCancelled || _listWorker.empty();
             if ( bStopping == false )
                 _listQueuedJob.push_back( std::move( job ) );
         }
@@ -159,6 +162,8 @@ namespace sw
             return;
         }
         SQLConnectionPoolInternal::ClosedConnection closed;
+        if ( bCancelled )
+            job->cancel();
         job->run( closed );
         ScopedLock<mutex> lock{ _mutex };
         _listCompleted.push_back( std::move( job ) );
@@ -233,7 +238,11 @@ namespace sw
             if ( bUsable )
                 job->run( *connection );
             else
+            {
+                if ( bStopping )
+                    job->cancel(); // 종료 중이라 닫힌 연결로 끝내는 일은 취소다(재연결 중인 일은 연결 고장으로 남는다)
                 job->run( closed );
+            }
             ScopedLock<mutex> lock{ _mutex };
             _listCompleted.push_back( std::move( job ) );
         }

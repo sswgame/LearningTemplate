@@ -10,6 +10,7 @@
 	<At frame="40"><DevCommand line="panel.focus catalog_editor"/></At>
 	<At frame="60"><WaitUntil probe="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/></At>
 	<At frame="90"><EditorClick mark="catalog.file.first"/></At>
+	<At frame="95"><WaitUntil probe="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/></At>
 	<At frame="110">
 		<ExpectLog contains="Catalog opened " count="1"/>
 		<Expect probe="Editor.CatalogRowCount" atLeast="1"/>
@@ -29,6 +30,7 @@
 	<At frame="235"><ExpectLog contains="Catalog reverted " count="1"/></At>
 	<!-- 저장된 파일을 그 종류의 로더로 읽어 경고가 없으면 통과다 -->
 	<At frame="240"><EditorClick mark="catalog.validate"/></At>
+	<At frame="245"><WaitUntil probe="Editor.CatalogValidation" equals="1" timeoutFrames="300"/></At>
 	<At frame="260">
 		<ExpectLog contains="Catalog validation passed" count="1"/>
 		<Expect probe="Editor.CatalogValidation" equals="1"/>

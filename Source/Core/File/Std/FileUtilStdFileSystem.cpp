@@ -344,6 +344,8 @@ namespace sw
 
     bool FileUtil::copyFile( string_view source, string_view destination )
     {
+        if ( isWriteAllowed( destination ) == false )
+            return false;
         std::error_code errorCode;
         const bool      bCopied = std::filesystem::copy_file( FileUtilStdInternal::toPath( source ), FileUtilStdInternal::toPath( destination ),
                                                               std::filesystem::copy_options::overwrite_existing, errorCode );
@@ -360,6 +362,8 @@ namespace sw
     {
         if ( path.empty() )
             return true;
+        if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
+            return false;
         std::error_code errorCode;
         if ( std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode ) )
             noteFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
@@ -373,6 +377,8 @@ namespace sw
     {
         if ( path.empty() )
             return true;
+        if ( exists( path ) && isWriteAllowed( path ) == false )
+            return false;
         std::error_code errorCode;
         if ( std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode ) )
             noteFileRemoved();
@@ -383,6 +389,8 @@ namespace sw
     {
         if ( path.empty() )
             return true;
+        if ( exists( path ) && isWriteAllowed( path ) == false )
+            return false;
         std::error_code errorCode;
         if ( std::filesystem::remove_all( FileUtilStdInternal::toPath( path ), errorCode ) > 0 )
             noteFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다

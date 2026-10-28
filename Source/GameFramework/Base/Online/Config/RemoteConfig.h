@@ -149,7 +149,7 @@ namespace sw
 
         const Entry* findEntry( string_view key, RemoteConfigValueType type ) const;
         void         recomputeSnapshotHash();
-        void         onReloadCompleted( ServiceStoreResult result, map<string, Entry>& inoutMapEntry );
+        void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry );
         void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );
 
         map<string, Entry> _mapEntry;

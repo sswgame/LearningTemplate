@@ -174,8 +174,19 @@ namespace sw
         void              bindLogContext( const LogContext& context ) { _logContext = context; }
         const LogContext& getLogContext() const { return _logContext; }
 
+        /**
+         * @brief 저장소가 종료 중이라 이 일을 실행하지 않고 닫힌 연결로 끝냈음을 표시합니다(저장소 구현이 `run` 앞에서 부릅니다).
+         * @details 닫힌 연결의 결과(Unavailable)는 쓰지 않았다는 사실 그대로지만, 진짜 저장소 고장과 같은 값이라 `complete` 가 둘을 가르지 못했다.
+         *          종료 때문에 취소된 일은 오류가 아니므로 `complete` 가 `isCancelled` 로 가르고 경고를 남기지 않는다. 결과 열거를 늘리면 76 개 파일의 호출처가
+         *          저마다 다시 판단해야 해서, 취소를 결과 값이 아니라 일의 상태로 둔다.
+         */
+        void markCancelled() { _bCancelled = true; }
+        /** @brief 종료 중이라 취소됐는지입니다. `complete` 에서 읽습니다(저장소 스레드의 표시는 완료 큐의 락을 거쳐 보인다). */
+        bool isCancelled() const { return _bCancelled; }
+
     private:
         LogContext _logContext{};
+        bool       _bCancelled{ false };
     };
 } // namespace sw
 

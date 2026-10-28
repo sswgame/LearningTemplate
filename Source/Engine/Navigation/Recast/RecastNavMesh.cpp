@@ -9,6 +9,7 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/Recast/DetourNavCrowd.h"
 #include "Engine/Navigation/Recast/RecastAreaUtil.h"
+#include "Engine/Navigation/Recast/RecastQueryUtil.h"
 #include "Engine/Navigation/Recast/RecastTileCache.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
@@ -103,6 +104,12 @@ namespace sw
             };
 
             static float3 toFloat3( const float32* pValue ) { return float3{ pValue[0], pValue[1], pValue[2] }; }
+
+            /** @brief 시작 · 끝 · 레이캐스트가 모두 이 함수로 붙으므로 상자 밖 점에 붙는 길이 없다(규칙은 `RecastQueryUtil::findPolyInBox`). */
+            static dtPolyRef findPolyInBox( const dtNavMeshQuery* pQuery, const float3& position, const float3& searchExtent, const dtQueryFilter& filter, float32* pOutNearest )
+            {
+                return RecastQueryUtil::findPolyInBox( pQuery, &position._x, &searchExtent._x, &filter, pOutNearest );
+            }
 
             // ------------------------------------------------------------------------------
             // 타일 베이크 단계 — `RecastNavMesh::bakeTile` 이 위에서 아래로 부른다.
@@ -769,15 +776,10 @@ namespace sw
         }
         dtQueryFilter detourFilter;
         applyQueryFilter( filter, detourFilter );
-        dtPolyRef      polyRef = 0;
-        float32        arrNearest[3]{};
-        const dtStatus status = pQuery->findNearestPoly( &position._x, &searchExtent._x, &detourFilter, &polyRef, arrNearest );
+        float32         arrNearest[3]{};
+        const dtPolyRef polyRef = RecastNavMeshInternal::findPolyInBox( pQuery, position, searchExtent, detourFilter, arrNearest );
         releaseQuery( bLocked );
-        if ( dtStatusFailed( status ) || polyRef == 0 )
-            return false;
-        // Detour 는 경계 상자만 질의 상자에 걸친 폴리곤도 고르고 그 폴리곤 위 가장 가까운 점을 돌려준다 — 점이 상자 밖일 수 있다(돌린 장애물 구멍 옆 삼각형).
-        // 계약(상자 안의 점)을 여기서 지킨다. 높이는 경사면 투영이 상자 밖으로 나갈 수 있어 가로(XZ)만 본다.
-        if ( MathUtil::abs( arrNearest[0] - position._x ) > searchExtent._x || MathUtil::abs( arrNearest[2] - position._z ) > searchExtent._z )
+        if ( polyRef == 0 )
             return false;
         outLocation._position = RecastNavMeshInternal::toFloat3( arrNearest );
         outLocation._poly     = static_cast<NavPolyRef>( polyRef );
@@ -800,12 +802,10 @@ namespace sw
         }
         dtQueryFilter detourFilter;
         applyQueryFilter( filter, detourFilter );
-        dtPolyRef startRef = 0;
-        dtPolyRef endRef   = 0;
         float32   arrStart[3]{};
         float32   arrEnd[3]{};
-        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
-        (void)pQuery->findNearestPoly( &end._x, &searchExtent._x, &detourFilter, &endRef, arrEnd );       // 결과는 ref 로 본다 — 못 찾으면 0 이다
+        dtPolyRef startRef = Internal::findPolyInBox( pQuery, start, searchExtent, detourFilter, arrStart );
+        dtPolyRef endRef   = Internal::findPolyInBox( pQuery, end, searchExtent, detourFilter, arrEnd );
         if ( startRef == 0 || endRef == 0 )
         {
             releaseQuery( bLocked );
@@ -863,9 +863,8 @@ namespace sw
         }
         dtQueryFilter detourFilter;
         applyQueryFilter( filter, detourFilter );
-        dtPolyRef startRef = 0;
-        float32   arrStart[3]{};
-        (void)pQuery->findNearestPoly( &start._x, &searchExtent._x, &detourFilter, &startRef, arrStart ); // 결과는 ref 로 본다 — 못 찾으면 0 이다
+        float32         arrStart[3]{};
+        const dtPolyRef startRef = RecastNavMeshInternal::findPolyInBox( pQuery, start, searchExtent, detourFilter, arrStart );
         if ( startRef == 0 )
         {
             releaseQuery( bLocked );

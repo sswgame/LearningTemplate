@@ -50,6 +50,14 @@ namespace sw
          */
         [[nodiscard]] static uint64 getPrepareCount();
         /**
+         * @brief 쓰기 입구 게이트를 세웁니다 — 실행기가 시나리오를 시작할 때 한 번 부르고 끝날 때 `releaseWriteGate` 로 짝을 맞춥니다(`FileUtil::setWriteGate`). 시나리오는 한 프로세스에서 차례로 돌므로 셈을 두지 않는다.
+         * @details 게이트가 서 있는 동안 리소스 루트 아래에서 `scratch/` 밖으로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
+         *          `asset.openScratch` 가 여는 쪽만 막던 것을 쓰는 쪽 한 문으로 닫는다.
+         */
+        static void acquireWriteGate();
+        /** @brief `acquireWriteGate` 의 짝입니다. 게이트를 걷습니다. */
+        static void releaseWriteGate();
+        /**
          * @brief 글 @p text 안의 @p fromID 를 @p toID 로 바꿉니다. id 경계에서만 바꿉니다 — 앞은 id 글자가 아니고, 뒤는 글 끝 · `/` · id 글자가 아닌 곳이다.
          * @details 뒤 경계가 없으면 `scratch/a` 가 `scratch/ab/…` · `scratch/a_p12/…` 의 앞머리도 바꿔 다른 폴더를 가리키게 된다.
          */

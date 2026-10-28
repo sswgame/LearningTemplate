@@ -243,6 +243,10 @@ namespace sw
          * @details 부하 시나리오는 측정 창 그물이 따로 있어 제외한다. 스레드는 `endRun` 이 내린다.
          */
         void startHangWatchdog();
+        /** @brief 쓰기 입구 게이트를 쥡니다(이미 쥐었으면 아무것도 하지 않습니다). 시나리오가 `scratch/` 밖의 리소스 원본에 쓰면 거절된다. */
+        void acquireWriteGate();
+        /** @brief 쥔 쓰기 입구 게이트를 놓습니다. 쥐지 않았으면 아무것도 하지 않습니다. */
+        void releaseWriteGate();
         /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
         void publishHangSnapshot( string_view position );
 
@@ -292,6 +296,7 @@ namespace sw
         uint8                    _bEnded          : 1;
         uint8                    _bClockHeld      : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        [[maybe_unused]] uint8   _reserved        : 4;
+        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
+        [[maybe_unused]] uint8   _reserved        : 3;
     };
 } // namespace sw

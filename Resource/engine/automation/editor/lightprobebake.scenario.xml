@@ -10,6 +10,7 @@
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><Expect probe="Editor.LightProbeBakeCount" equals="0"/></At>
 	<At frame="45"><DevCommand line="editor lighting.bakeProbes"/></At>
+	<At frame="46"><WaitUntil probe="Editor.LightProbeBakeCount" equals="1" timeoutFrames="300"/></At>
 	<At frame="70"><Expect probe="Editor.LightProbeBakeCount" equals="1"/></At>
 	<At frame="72"><Expect probe="Editor.BakedLightProbeVolumeCount" equals="0"/></At>
 	<At frame="80"><EditorClick mark="hierarchy.row.TestMesh"/></At>

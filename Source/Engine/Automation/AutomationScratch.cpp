@@ -26,6 +26,27 @@ namespace sw
              */
             static inline atomic<uint64> s_prepareCount{ 0 };
 
+            /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기를 거절합니다. 루트 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
+            static bool allowWrite( string_view path, string& outReason )
+            {
+                const string& rootPath = ResourcePaths::getRootFolderPath();
+                if ( rootPath.empty() )
+                    return true; // 리소스 루트가 아직 없으면 지킬 원본도 없다
+                string absolutePath;
+                if ( FileUtil::isAbsolutePath( path ) )
+                    absolutePath = string( path );
+                else if ( FileUtil::makeAbsolutePath( path, absolutePath ) == false )
+                    return true;
+                const string root        = FileUtil::normalizePath( rootPath ) + "/";
+                const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
+                const string target      = FileUtil::normalizePath( absolutePath );
+                const bool   bScratch    = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
+                if ( StringUtil::startsWith( target, root ) == false || bScratch )
+                    return true;
+                outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
+                return false;
+            }
+
             /** @brief 프로세스 꼬리의 앞머리(`<이름>_p<pid>`)입니다. */
             static constexpr string_view kInstanceMark = "_p";
 
@@ -221,6 +242,16 @@ namespace sw
         }
         (void)AutomationScratchInternal::s_prepareCount.fetch_add( 1 );
         return true;
+    }
+
+    void AutomationScratch::acquireWriteGate()
+    {
+        FileUtil::setWriteGate( &AutomationScratchInternal::allowWrite );
+    }
+
+    void AutomationScratch::releaseWriteGate()
+    {
+        FileUtil::setWriteGate( nullptr );
     }
 
     uint64 AutomationScratch::getPrepareCount()
