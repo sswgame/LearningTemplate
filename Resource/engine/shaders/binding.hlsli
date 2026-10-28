@@ -153,6 +153,10 @@ struct Bindless
     static float sampleShadowComparison( uint index, float2 uv, float depth );
     static void storeRwTexture2D( uint index, uint2 texelPosition, float4 value );
     static float4 loadRwTexture2D( uint index, uint2 texelPosition );
+    // 엔진 텍스처 한 장을 직접 읽는 패스(풀스크린 입력 · 히스토리)용 진입 함수다. 네이티브는 index 로, 에뮬은 패스가 거는 고정 슬롯(emulatedSlot 0..3)으로 읽는다 — 분기는 11 절 안에서 끝난다.
+    static float4 loadEngineTexel( uint index, uint emulatedSlot, int2 texel );                  // 밉 0 의 텍셀 하나
+    static uint2 getEngineTextureSize( uint index, uint emulatedSlot );                          // 밉 0 의 크기
+    static float4 gatherEngineChannel( uint index, uint emulatedSlot, uint channel, float2 uv ); // 점 · 클램프 샘플러로 2x2 게더(channel 0 R · 1 G · 2 B)
     static float4 sampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv );
     static float4 sampleSlotPoint( Texture2D slotTexture, float2 uv );
 };
@@ -641,6 +645,8 @@ static InstanceData InstanceData::load( uint instanceSlot )
         InstanceData instance = g_SwInstances[element];
         // LOD 크로스페이드 중인 항목은 인스턴스의 등장 비율 대신 상보 디더 값을 받는다(8-1 절). 코드가 0 이면 그대로다.
         instance._appearance = Appearance::computeLodFadeAppearance( instance._appearance, entry >> kVisibleEntryFadeShift );
+        // 그리는 배치는 LOD 그룹 머리 + 단계다 — 정점 풀 · 모프(스킨) 시작은 단계 배치 행이 든다. 단계가 0 이면 그대로다.
+        instance._meshBatchIndex += ( entry >> kVisibleEntryLevelShift ) & kVisibleEntryLevelMask;
         return instance;
     }
     InstanceData instance;
@@ -898,6 +904,35 @@ static float4 Bindless::loadRwTexture2D( uint index, uint2 texelPosition )
 }
     #endif // SW_STAGE_COMPUTE
 
+static float4 Bindless::loadEngineTexel( uint index, [[maybe_unused]] uint emulatedSlot, int2 texel )
+{
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].Load( int3( texel, 0 ) );
+}
+static uint2 Bindless::getEngineTextureSize( uint index, [[maybe_unused]] uint emulatedSlot )
+{
+    uint2 size;
+    g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].GetDimensions( size.x, size.y );
+    return size;
+}
+/** @brief 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다. */
+static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint emulatedSlot, uint channel, float2 uv )
+{
+    const uint slot = Bindless::textureSlot( index );
+    #if defined( __spirv__ )
+    if ( channel == 0u )
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+    if ( channel == 1u )
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+    #else
+    if ( channel == 0u )
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
+    if ( channel == 1u )
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( g_SwSampler3, uv );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( g_SwSampler3, uv );
+    #endif
+}
+
 #else // !SW_NATIVE_BINDLESS
 
     // ---- 11-2) 슬롯 에뮬 (DX11 · OpenGL) ------------------------------------------
@@ -1144,6 +1179,57 @@ static float Bindless::sampleShadowComparison( uint index, float2 uv, float dept
     const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
     const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
     return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
+}
+
+/** @brief 패스가 슬롯 @p emulatedSlot(0..3)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 슬롯 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
+static float4 Bindless::loadEngineTexel( [[maybe_unused]] uint index, uint emulatedSlot, int2 texel )
+{
+    switch ( emulatedSlot )
+    {
+        case 0:
+            return g_SwSlot0.Load( int3( texel, 0 ) );
+        case 1:
+            return g_SwSlot1.Load( int3( texel, 0 ) );
+        case 2:
+            return g_SwSlot2.Load( int3( texel, 0 ) );
+        case 3:
+            return g_SwSlot3.Load( int3( texel, 0 ) );
+        default:
+            return kUnmappedEngineTextureColor;
+    }
+}
+static uint2 Bindless::getEngineTextureSize( [[maybe_unused]] uint index, uint emulatedSlot )
+{
+    uint2 size = uint2( 0, 0 );
+    switch ( emulatedSlot )
+    {
+        case 0:
+            g_SwSlot0.GetDimensions( size.x, size.y );
+            break;
+        case 1:
+            g_SwSlot1.GetDimensions( size.x, size.y );
+            break;
+        case 2:
+            g_SwSlot2.GetDimensions( size.x, size.y );
+            break;
+        case 3:
+            g_SwSlot3.GetDimensions( size.x, size.y );
+            break;
+        default:
+            break;
+    }
+    return size;
+}
+/** @brief 에뮬 게더는 슬롯 0 만 있다(쓰는 패스는 FSR 하나다). 다른 슬롯은 오류 색을 낸다 — 필요해지면 슬롯 케이스를 더한다. */
+static float4 Bindless::gatherEngineChannel( [[maybe_unused]] uint index, uint emulatedSlot, uint channel, float2 uv )
+{
+    if ( emulatedSlot != 0u )
+        return kUnmappedEngineTextureColor;
+    if ( channel == 0u )
+        return g_SwSlot0.GatherRed( g_SwSlot0Sampler, uv );
+    if ( channel == 1u )
+        return g_SwSlot0.GatherGreen( g_SwSlot0Sampler, uv );
+    return g_SwSlot0.GatherBlue( g_SwSlot0Sampler, uv );
 }
 
     #endif // !SW_STAGE_COMPUTE

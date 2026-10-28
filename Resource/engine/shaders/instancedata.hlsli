@@ -46,12 +46,14 @@ struct InstanceData
     static float4x4 loadWorld( uint instanceSlot );
 };
 
-/// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다)의 아래 스물일곱 비트는 인스턴스 번호, 위쪽 다섯 비트는 LOD 크로스페이드 코드다(binding.hlsli `Appearance::computeLodFadeAppearance`).
-static const uint kVisibleEntryIdMask    = 0x07FFFFFFu;
-static const uint kVisibleEntryFadeShift = 27u;
-static const uint kHighlightStyleNone    = 0u;
-static const uint kHighlightStyleOutline = 1u;
-static const uint kHighlightStyleSense   = 2u;
+/// 가시 목록 항목(컬링이 쓰고 정점 셰이더가 읽는다): 아래 24비트 인스턴스 번호, 다음 3비트 LOD 단계(머리 배치에서의 오프셋), 위쪽 5비트 LOD 크로스페이드 코드(binding.hlsli `Appearance::computeLodFadeAppearance`).
+static const uint kVisibleEntryIdMask     = 0x00FFFFFFu;
+static const uint kVisibleEntryLevelShift = 24u;
+static const uint kVisibleEntryLevelMask  = 7u;
+static const uint kVisibleEntryFadeShift  = 27u;
+static const uint kHighlightStyleNone     = 0u;
+static const uint kHighlightStyleOutline  = 1u;
+static const uint kHighlightStyleSense    = 2u;
 
 /** @brief 인스턴스 강조의 방식입니다(`kHighlightStyle*`). */
 uint InstanceData::getHighlightStyle()

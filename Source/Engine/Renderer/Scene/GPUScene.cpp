@@ -255,8 +255,8 @@ namespace sw
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
                 SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
-        // 가시 목록 항목은 아래 스물일곱 비트가 인스턴스 번호다(위쪽 다섯 비트는 LOD 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIdMask`).
-        SW_ASSERT( instanceCount <= 0x07FFFFFFu );
+        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIdMask`).
+        SW_ASSERT( instanceCount <= 0x00FFFFFFu );
         ensureLodStateBuffers( pDevice, instanceCount );
     }
 

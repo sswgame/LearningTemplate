@@ -291,15 +291,15 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     advanceLodFade( instanceId, headBatch, headInfo._lodLevelCount, computeLodScreenSize( instance._boundsCenter, instance._boundsRadius ), instance._appearance, level, previous, fadeLevel );
     if ( fadeLevel >= 16u )
     {
-        appendVisible( headBatch + level, instanceId );
+        appendVisible( headBatch + level, instanceId | ( level << kVisibleEntryLevelShift ) );
     }
     else if ( fadeLevel == 0u )
     {
-        appendVisible( headBatch + previous, instanceId ); // 전환이 막 시작했다 — 직전 단계가 아직 다 보인다
+        appendVisible( headBatch + previous, instanceId | ( previous << kVisibleEntryLevelShift ) ); // 전환이 막 시작했다 — 직전 단계가 아직 다 보인다
     }
     else
     {
-        appendVisible( headBatch + level, instanceId | ( fadeLevel << kVisibleEntryFadeShift ) );
-        appendVisible( headBatch + previous, instanceId | ( ( kLodFadeOutgoing | fadeLevel ) << kVisibleEntryFadeShift ) );
+        appendVisible( headBatch + level, instanceId | ( level << kVisibleEntryLevelShift ) | ( fadeLevel << kVisibleEntryFadeShift ) );
+        appendVisible( headBatch + previous, instanceId | ( previous << kVisibleEntryLevelShift ) | ( ( kLodFadeOutgoing | fadeLevel ) << kVisibleEntryFadeShift ) );
     }
 }

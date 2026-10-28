@@ -346,9 +346,10 @@ namespace sw
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
             candidate._instance = pBatch->getMaterialInstance();
-        candidate._lodContentID = 0; // 인스턴스 배치(식생 · UI)는 LOD 그룹이 아니다
-        candidate._bLodDither   = SW_FALSE;
-        return fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) );
+        if ( fillCandidateMaterial( candidate, pBatch->getMaterial(), pScene, static_cast<uint32>( RHIBlendMode::Opaque ) ) == false )
+            return false;
+        applyGPULodGroup( candidate ); // LOD 를 가진 메시의 인스턴스 배치(식생)도 그룹이다 — 항목마다 컬링이 단계를 고른다
+        return true;
     }
 
     void GPUSceneBuilder::applyGPULodGroup( DrawCandidate& candidate ) const
@@ -359,10 +360,10 @@ namespace sw
         const Mesh* pMesh       = candidate._mesh.get();
         if ( _bGPULodActive == SW_FALSE || pMesh == nullptr )
             return;
-        // 첫 단계(정적 불투명 메시)만이다 — 스킨 · 모프 · VAT 는 단계마다 변형 풀 구간이 달라 CPU 가 단계를 고른다(PreloadAndLod.md P9). 투명은 정렬이 인스턴스 순서라 그룹으로 못 둔다.
-        // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs`)이므로 단계가 있는지와 스킨 · 블렌드만 본다.
+        // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instancesort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
+        // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs` 가 거절한다)이므로 단계가 있는지와 블렌드만 본다. 스킨드 메시는 단계 배치가 자기 모프 풀 구간(`assignMorphBases`)을 가진다.
         const uint32 levelCount     = pMesh->getLODCount();
-        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULodMaxLevels && pMesh->hasSkin() == false;
+        const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULodMaxLevels;
         const bool   bOpaque        = static_cast<RHIBlendMode>( candidate._blendMode ) != RHIBlendMode::Transparent;
         if ( bGroupableMesh == false || bOpaque == false )
             return;
@@ -1499,6 +1500,20 @@ namespace sw
                 chunk._arrRun[chunk._runCount++] = GPUInstanceRun{ slot, 1 };
             lastDirtySlot = slot;
         }
+    }
+
+    uint32 GPUSceneBuilder::findOpaqueInstanceSlot( uint32 primitiveIndex ) const
+    {
+        if ( primitiveIndex >= _listPrimitiveToCandidate.size() )
+            return invalid_index::kUint32;
+        const uint32 candidate = _listPrimitiveToCandidate[primitiveIndex];
+        if ( candidate == kInvalidCandidateIndex || candidate >= _listCandidateToInstance.size() )
+            return invalid_index::kUint32;
+        const uint32 slot        = _listCandidateToInstance[candidate];
+        const bool   bConsistent = slot != kInvalidCandidateIndex && slot < _listInstanceSrcIndex.size() && _listInstanceSrcIndex[slot] == candidate;
+        if ( bConsistent == false || slot >= _snapshot.getOpaqueInstanceCount() )
+            return invalid_index::kUint32;
+        return slot;
     }
 
     void GPUSceneBuilder::populateBatches()
