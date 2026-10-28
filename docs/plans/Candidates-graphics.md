@@ -72,6 +72,14 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 - 구조체 필드도 C++ 처럼 `_camelCase`(거울 필드는 이름이 같아져 변환 규칙이 사라진다).
 - DX11 은 당분간 지원한다 — FXC 경로가 남으므로 `SW_ROOT` 같은 백엔드 차이 매크로는 지금 못 없앤다. 함수 안 `#if` 는 정의로 몰아 호출 쪽 본문에서 없앤다. `IndentPPDirectives: BeforeHash` 는 바꾸지 않는다(`None` 은 C++ 400 개 중 61 개를 바꾸고 `Leave` 는 20.1.8 이 못 읽으며 `PPIndentWidth: 2` 는 3중첩에서 `#` 줄이 코드와 겹친다).
 
+### RhiFileLeftovers
+제목: RHI 파일 후보 중 아직 남은 것
+옛번호: 없음
+왜 필요한가: 통합 N 뒤 RHI 파일을 훑어 같은 결함 후보로 적은 여섯 가운데(2026-10-28 `old-defects` 재측정) 남은 것이다.
+끝난 것: DX11 Present 실패 로그가 장치 제거 뒤 매 프레임 반복되던 것은 `SW_LOG_ERROR_ONCE` 로 첫 실패만 남긴다(DX12 는 `_bDeviceRemovedLogged`, Vulkan 은 `DeviceLost` 를 `Failed` 와 갈라 처리). DX11 `Map(DO_NOT_WAIT)` 는 쓰지 않기로 이미 정했다(`D3D11RHIResourceFactory.cpp` 의 되읽기 주석).
+남은 것: ① DX11 `allocateUploadStaging` 은 바이트 예산 카운터(`_uploadStagingBytesInFlight`)이고 `RHIStagingAllocator`(구간 장부)와 모양이 다르다 — DX11 은 업로드마다 스테이징 텍스처를 새로 만들어 링이 없으므로, 합치려면 카운터를 장부의 "총량만" 판으로 두는 설계가 먼저다. ② Vulkan 프레임 밖 구조 버퍼 갱신과 GPU 시계 읽기의 펜스 대기는 [RhiAsyncUploads](RhiAsyncUploads.md) 의 U6 이후 몫이다. ③ 큐 소유권 이동과 GL 비트필드는 이번에 보지 않았다.
+왜 지금 못 하는가: ①은 DX11 GPU 확인(`RHIStagingRingGPUTest`)이 있어야 하고 설계를 정해야 한다.
+
 ## 조건부
 
 ### VfxMultiGroupCompaction
