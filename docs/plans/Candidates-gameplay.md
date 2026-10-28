@@ -1,6 +1,6 @@
 # 게임플레이 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: gameplay · 옛번호: D4-5, D4-6, D4-8 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: gameplay · 진행: 해당없음
 
 GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에서 아직 안 한 일의 목록이다. 착수하면 절을 계획 문서로 옮기고 여기서 지운다. 이미 계획 문서가 있는 일은 [WildWestHorseMount](WildWestHorseMount.md), 큰 기능 대기열은 [FeatureQueue](FeatureQueue.md)에 있다.
 아래는 모두 코드와 테스트가 끝나고 데이터 · 탐침 · 시나리오를 새로 만들어야 남은 절이다. 착수 조건은 모두 "바로 착수 가능" 이다.
@@ -19,7 +19,6 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 ### AnimationLodAndCrowdChecks
 제목: 스킨드 LOD 데이터
-옛번호: D4-6
 왜 필요한가: 스킨드 메시가 LOD 를 받고 고른 메시 단계가 본 LOD 단계를 정하는 코드는 들어갔는데, LOD 규칙(simplify)을 건 스킨드 모델이 데이터에 없다.
 착수 조건: 없음.
 남은 첫 일: 규칙을 건 모델을 `App --import-models` 로 임포트해 산출물 `.mesh` 를 커밋한다.
@@ -27,7 +26,6 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 ### CharacterAppearanceScreenChecks
 제목: 캐릭터 외형의 병합 부품 데이터
-옛번호: D4-8
 왜 필요한가: 외형 조립 코드와 테스트는 끝났고 합칠 스킨드 부품이 든 차림 데이터와 `Merge Parts` 를 켠 프리팹이 없다(Shooter3D 의 스킨드 부품은 자기 리그가 있는 망토뿐).
 착수 조건: 없음.
 남은 첫 일: 그 차림 데이터와 프리팹을 만든다.
@@ -37,14 +35,12 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 ### CameraRendererVisualChecks
 제목: 가려진 뷰의 가림 판정 탐침과 시나리오
-옛번호: D4-5
 왜 필요한가: 카메라별 후처리 · 피사계 심도 · 컷 신호 · 자동 노출 · 다중 뷰 가림 판정은 코드와 테스트가 통과했지만 가려져 쉰 뷰 수를 읽는 탐침과 시나리오가 없다.
 착수 조건: 없음.
 남은 첫 일: `RenderViewCollector::collectExtraViews` 가 가려져 쉰 뷰 수를 자동화 탐침으로 내게 하고, `-gv_occlusionCulling=1` 로 Shooter3D 의 CCTV 모니터를 벽 뒤로 보내는 카메라 위치를 정해 시나리오로 만든다.
 
 ### PairedAnimationScreenChecks
 제목: 페어드 애니메이션의 에디터 창 시나리오
-옛번호: D4-6
 왜 필요한가: 세션 · 정렬 · 복제 · 에디터 모델은 테스트가 통과했고, 두 프로세스 복제는 씬 `pairedanimnet.scene.xml` 과 `paired-net-pair` 명령으로 구성했다. 에디터 창 시나리오가 없다.
 착수 조건: 없음.
 남은 첫 일: 미리보기 창(`PairedAnimationPanel`)에서 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 시나리오(`-EnableEditor`, `CaptureEditorUI`)를 만든다. 활 · 화살 같은 외형 부품 프롭의 역할 복제 확인은 그 게임이 생길 때 그 게임 계획에서 만든다.
@@ -52,7 +48,6 @@ GameFramework 키트 · 게임 · 캐릭터 · 카메라 · 애니메이션에�
 
 ### RigEditingScreenChecks
 제목: 리그 디버그 창 저장과 대상 기즈모 시나리오
-옛번호: D4-6
 왜 필요한가: 창에서 고친 값을 리그 에셋에 되쓰는 길(`RigAsset::rewriteSettings`)과 대상 본 기즈모는 테스트가 통과했고 에디터 흐름의 시나리오가 없다.
 착수 조건: 없음.
 남은 첫 일: `-EnableEditor` 로 Shooter3D `arena.scene.xml` 을 플레이해 리그 디버그 창에서 가중치 · 켜짐을 바꾸고 "Save to rig" 후 파일 감시가 다시 읽어도 값이 남는지, "Gizmo" 로 대상(본 · 소켓)을 끌면 `translation` · `rotation` 이 바뀌고 Ctrl+Z 가 파일을 되돌리는지 시나리오로 만든다.

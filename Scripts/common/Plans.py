@@ -8,17 +8,16 @@ Scripts/common/Plans.py
 
 문서의 둘째 비어 있지 않은 줄(제목 `# ...` 다음 줄)이 정확히 이 모양이다:
 
-    > 상태: <설계|구현대기|구현중|측정대기|보류|참고|끝|후보> · 선행: <없음 또는 문서 이름/단위> · 영역: <영역> · 옛번호: <ID,ID 또는 없음> · 진행: <n/m 또는 해당없음>
+    > 상태: <설계|구현대기|구현중|측정대기|보류|참고|끝|후보> · 선행: <없음 또는 문서 이름/단위> · 영역: <영역> · 진행: <n/m 또는 해당없음>
     (n = 끝난 단위 수, m = 전체 단위 수. 상태 `후보` 는 진행이 반드시 `해당없음`)
 진행에 `표` 를 쓰면 문서의 첫 `| 단계 | … | 상태 |` 표에서 센다(상태 칸이 `끝남` 으로 시작하는 행이 n, 전체 행이 m). 끝난 단위 절을 지우지 않고
 단계 표를 두는 문서는 `표` 를 써서 손으로 고치는 값이 표와 어긋나지 않게 한다.
 
-일의 이름은 계획 문서 파일 이름(`ClusteredLighting`)이고, 문서 안 단위는 `<문서이름>.<단위기호>` 다. `옛번호` 는 코드 주석 · 커밋에
-박힌 옛 번호(`C-30`)로, 어느 문서로 옮겨졌는지 찾는 데만 쓴다.
+일의 이름은 계획 문서 파일 이름(`ClusteredLighting`)이고, 문서 안 단위는 `<문서이름>.<단위기호>` 다.
 
 아직 시작하지 않은 후보는 영역별 `Candidates-<영역>.md`(상태 `후보`)에 ``### <PascalCase영어이름>`` 절로 모은다.
 절 제목에는 이름만 둔다 — 한글 제목을 같은 줄에 두면 GitHub 앵커가 `#이름--한글-제목` 이 되어 `#이름` 링크가 깨진다.
-절 아래 첫 비어 있지 않은 줄은 ``제목: <한글 제목>``, 그다음 줄은 ``옛번호: C-30, D2-13`` 이고 없으면 ``옛번호: 없음`` 이다.
+절 아래 첫 비어 있지 않은 줄은 ``제목: <한글 제목>`` 이다.
 
 머리 줄이나 후보 절이 틀리면 건너뛰지 않고 `PlanFormatError` 로 멈춘다(파일 이름을 담는다).
 안내 · 규칙 문서(`kPlanNonDocumentName`)는 계획 문서가 아니다.
@@ -46,16 +45,14 @@ kListPlanArea: tuple[str, ...] = ("engine", "graphics", "editor", "gameplay", "a
 kCandidateStatus = "후보"
 
 _kNone = "없음"
-_kHeaderRe = re.compile(r"^> 상태: (.+?) · 선행: (.+?) · 영역: (.+?) · 옛번호: (.+?) · 진행: (.+)$")
+_kHeaderRe = re.compile(r"^> 상태: (.+?) · 선행: (.+?) · 영역: (.+?)(?: · 옛번호: .+?)? · 진행: (.+)$")
 _kProgressRe = re.compile(r"^(\d+)/(\d+)$")
 _kNoProgress = "해당없음"
 _kTableProgress = "표"
-_kOldNumberRe = re.compile(r"^[A-Z]\d*-\d+(?:\.\d+)*$")
 _kHeadingRe = re.compile(r"^(#{1,6}) +(.+?)\s*$")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
 _kCandidateHeadingRe = re.compile(r"^### ([A-Z][A-Za-z0-9]*)\s*$")
 _kCandidateTitleRe = re.compile(r"^제목: (.+?)\s*$")
-_kCandidateOldRe = re.compile(r"^옛번호: (.+?)\s*$")
 
 
 class PlanFormatError(ValueError):
@@ -64,11 +61,10 @@ class PlanFormatError(ValueError):
 
 @dataclass
 class Candidate:
-    """후보 절 하나 — 영어 이름 · 한글 제목 · 옛 번호들 · 절 제목의 줄 번호."""
+    """후보 절 하나 — 영어 이름 · 한글 제목 · 절 제목의 줄 번호."""
 
     name: str
     title: str
-    listOldNumber: list[str]
     lineNumber: int
 
 
@@ -81,7 +77,6 @@ class PlanDoc:
     status: str
     prerequisite: str
     area: str
-    listOldNumber: list[str]
     progress: str
     headerLine: str
     listHeading: list[str]
@@ -90,17 +85,6 @@ class PlanDoc:
     @property
     def stem(self) -> str:
         return self.fileName.removesuffix(".md")
-
-
-def parseOldNumbersInternal(value: str, where: str) -> list[str]:
-    """`C-30,D2-13` 또는 `없음` 을 번호 목록으로(쉼표 뒤 공백은 받는다)."""
-    if value == _kNone:
-        return []
-    listNumber = [part.strip() for part in value.split(",")]
-    for number in listNumber:
-        if not _kOldNumberRe.match(number):
-            raise PlanFormatError(f"{where}: 옛번호 '{value}' 는 `C-30,D2-13` 모양 또는 `{_kNone}` 이어야 합니다")
-    return listNumber
 
 
 def parsePlanText(text: str, fileName: str) -> PlanDoc:
@@ -112,13 +96,12 @@ def parsePlanText(text: str, fileName: str) -> PlanDoc:
     headerLine = listNonBlank[1]
     match = _kHeaderRe.match(headerLine)
     if match is None:
-        raise PlanFormatError(f"{fileName}: 둘째 줄이 머리 줄 모양이 아닙니다 — `> 상태: … · 선행: … · 영역: … · 옛번호: … · 진행: …` 이어야 합니다: {headerLine}")
-    status, prerequisite, area, oldNumberText, progress = match.groups()
+        raise PlanFormatError(f"{fileName}: 둘째 줄이 머리 줄 모양이 아닙니다 — `> 상태: … · 선행: … · 영역: … · 진행: …` 이어야 합니다: {headerLine}")
+    status, prerequisite, area, progress = match.groups()
     if status not in kListPlanStatus:
         raise PlanFormatError(f"{fileName}: 상태 '{status}' 는 허용값({' · '.join(kListPlanStatus)})이 아닙니다")
     if area not in kListPlanArea:
         raise PlanFormatError(f"{fileName}: 영역 '{area}' 는 허용값({' · '.join(kListPlanArea)})이 아닙니다")
-    listOldNumber = parseOldNumbersInternal(oldNumberText, fileName)
     if status == kCandidateStatus and progress != _kNoProgress:
         raise PlanFormatError(f"{fileName}: 상태 `{kCandidateStatus}` 문서의 진행은 `{_kNoProgress}` 이어야 합니다: '{progress}'")
     if progress == _kTableProgress:
@@ -128,7 +111,7 @@ def parsePlanText(text: str, fileName: str) -> PlanDoc:
         if progressMatch is None or not 0 < int(progressMatch.group(2)) >= int(progressMatch.group(1)):
             raise PlanFormatError(f"{fileName}: 진행 '{progress}' 는 `n/m`(0 ≤ n ≤ m, m > 0) 또는 `{_kNoProgress}` 이어야 합니다")
     listCandidate = parseCandidatesInternal(listLine, fileName) if status == kCandidateStatus else []
-    return PlanDoc(fileName, listNonBlank[0][2:].strip(), status, prerequisite, area, listOldNumber, progress, headerLine,
+    return PlanDoc(fileName, listNonBlank[0][2:].strip(), status, prerequisite, area, progress, headerLine,
                    listHeadingInternal(listLine), listCandidate)
 
 
@@ -151,7 +134,7 @@ def deriveTableProgressInternal(listLine: list[str], fileName: str) -> str:
 
 
 def parseCandidatesInternal(listLine: list[str], fileName: str) -> list[Candidate]:
-    """후보 문서의 `### 이름` 절들. 절 아래 비어 있지 않은 첫 두 줄이 `제목: …` · `옛번호: …` 가 아니면 오류."""
+    """후보 문서의 `### 이름` 절들. 절 아래 비어 있지 않은 첫 줄이 `제목: …` 이 아니면 오류."""
     listCandidate: list[Candidate] = []
     bFence = False
     for index, line in enumerate(listLine):
@@ -164,14 +147,11 @@ def parseCandidatesInternal(listLine: list[str], fileName: str) -> list[Candidat
         match = _kCandidateHeadingRe.match(line)
         if match is None:
             raise PlanFormatError(f"{where}: 후보 절 제목이 `### <PascalCase영어이름>`(이름만) 모양이 아닙니다: {line}")
-        listBody = [body for body in listLine[index + 1:] if body.strip()][:2]
+        listBody = [body for body in listLine[index + 1:] if body.strip()][:1]
         titleMatch = _kCandidateTitleRe.match(listBody[0]) if listBody else None
         if titleMatch is None:
             raise PlanFormatError(f"{where}: 후보 절 `{match.group(1)}` 아래 첫 줄이 `제목: <한글 제목>` 이 아닙니다")
-        oldMatch = _kCandidateOldRe.match(listBody[1]) if len(listBody) > 1 else None
-        if oldMatch is None:
-            raise PlanFormatError(f"{where}: 후보 절 `{match.group(1)}` 아래 둘째 줄이 `옛번호: …`(없으면 `옛번호: {_kNone}`) 이 아닙니다")
-        listCandidate.append(Candidate(match.group(1), titleMatch.group(1), parseOldNumbersInternal(oldMatch.group(1), where), index + 1))
+        listCandidate.append(Candidate(match.group(1), titleMatch.group(1), index + 1))
     return listCandidate
 
 

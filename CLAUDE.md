@@ -8,7 +8,7 @@
 
 ## 읽을 것
 
-- 남은 일: [NEXT](docs/plans/NEXT.md)(지금 상태) → [Roadmap](docs/plans/Roadmap.md)(순서) → 계획 문서. `py -3 -m Scripts plans` 는 목록, `--file <이름>` 은 한 문서, `--find <옛번호>` 는 옛 번호를 푼다.
+- 남은 일: [NEXT](docs/plans/NEXT.md)(지금 상태) → [Roadmap](docs/plans/Roadmap.md)(순서) → 계획 문서. `py -3 -m Scripts plans` 는 목록, `--file <이름>` 은 한 문서, `--section <제목 일부>` 는 그 절만 보인다.
 - 큰 문서: `py -3 -m Scripts doc <파일>` 로 목차를 보고 `--section <제목 일부>` 로 읽는다. 30KB 넘는 `.md` 는 통째로 읽지 않는다.
 - 코딩 규칙: [AGENTS.md](AGENTS.md) 목차에서 일에 맞는 `docs/agents/` 파일만 읽는다.
 

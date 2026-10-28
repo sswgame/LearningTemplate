@@ -4,12 +4,11 @@
 @file ListPlans.py
 @brief 계획 문서(`docs/plans/*.md`)를 머리 줄의 상태 · 영역으로 골라 보입니다(고치지 않는다).
 
-    py -3 -m Scripts plans                      # 표(문서, 상태, 진행, 영역, 선행, 옛번호, 제목)
+    py -3 -m Scripts plans                      # 표(문서, 상태, 진행, 영역, 선행, 제목)
     py -3 -m Scripts plans --status 구현중      # 그 상태의 문서만
     py -3 -m Scripts plans --area editor        # 그 영역의 문서만
     py -3 -m Scripts plans --file ClusteredLighting           # 그 문서의 머리 줄과 절 제목 목록(`ClusteredLighting.md` 도 된다)
     py -3 -m Scripts plans --file ClusteredLighting --section S3   # 제목에 `S3` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
-    py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
 
 머리 줄 모양은 `common/Plans.py` 가 원본이다. 머리 줄이 없거나 틀린 문서가 있으면 건너뛰지 않고 파일 이름과 함께 멈춘다.
 """
@@ -35,10 +34,10 @@ def displayWidthInternal(text: str) -> int:
 
 
 def formatPlanTable(listPlan: list[PlanDoc]) -> str:
-    """문서마다 한 줄: 문서 · 상태 · 진행 · 영역 · 선행 · 옛번호 · 제목. 열 폭을 맞춘다."""
-    listRow = [["문서", "상태", "진행", "영역", "선행", "옛번호", "제목"]]
+    """문서마다 한 줄: 문서 · 상태 · 진행 · 영역 · 선행 · 제목. 열 폭을 맞춘다."""
+    listRow = [["문서", "상태", "진행", "영역", "선행", "제목"]]
     for plan in listPlan:
-        listRow.append([plan.stem, plan.status, plan.progress, plan.area, plan.prerequisite, ",".join(plan.listOldNumber) or "없음", plan.title])
+        listRow.append([plan.stem, plan.status, plan.progress, plan.area, plan.prerequisite, plan.title])
     listWidth = [max(displayWidthInternal(row[column]) for row in listRow) for column in range(len(listRow[0]))]
     return "\n".join("  ".join(cell + " " * (width - displayWidthInternal(cell)) for cell, width in zip(row, listWidth)).rstrip() for row in listRow)
 
@@ -54,29 +53,12 @@ def formatPlanDetail(plan: PlanDoc) -> str:
     return "\n".join([f"<!-- docs/plans/{plan.fileName} -->", plan.headerLine, *plan.listHeading])
 
 
-def findPlace(listPlan: list[PlanDoc], query: str) -> list[str]:
-    """옛 번호(`C-30`)나 이름(문서 `ClusteredLighting` · 단위 `ClusteredLighting.S3` · 후보 `Wayland`)이 있는 곳. 모르면 빈 목록."""
-    listPlace: list[str] = []
-    upper = query.upper()
-    for plan in listPlan:
-        if upper in plan.listOldNumber:
-            listPlace.append(f"{kPlansRelDir}/{plan.fileName} (머리 줄 옛번호)")
-        listPlace += [f"{kPlansRelDir}/{plan.fileName}:{candidate.lineNumber} (후보 절 `{candidate.name}` — {candidate.title})"
-                      for candidate in plan.listCandidate if upper in candidate.listOldNumber or query == candidate.name]
-        if query == plan.stem:
-            listPlace.append(f"{kPlansRelDir}/{plan.fileName}")
-        elif query.startswith(plan.stem + ".") and len(query) > len(plan.stem) + 1:
-            listPlace.append(f"{kPlansRelDir}/{plan.fileName} (단위 `{query[len(plan.stem) + 1:]}` 는 문서 안에서 찾는다)")
-    return listPlace
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다.")
     parser.add_argument("--status", choices=kListPlanStatus, help="이 상태의 문서만")
     parser.add_argument("--area", choices=kListPlanArea, help="이 영역의 문서만")
     parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: ClusteredLighting)의 머리 줄과 절 제목 목록")
     parser.add_argument("--section", metavar="TITLE", help="--file 과 함께: 제목에 TITLE 이 든 절의 본문만(없거나 여럿에 맞으면 오류와 후보)")
-    parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(ClusteredLighting · ClusteredLighting.S3 · 후보 이름)이 있는 곳")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     args = parser.parse_args(argv)
 
@@ -85,14 +67,6 @@ def main(argv: list[str] | None = None) -> int:
     except PlanFormatError as error:
         print(f"[plans] 오류: {error}", file=sys.stderr)
         return ExitCode.Violation
-
-    if args.find:
-        listPlace = findPlace(listPlan, args.find)
-        if not listPlace:
-            print(f"[plans] `{args.find}` 는 옛 번호로도 이름으로도 없습니다", file=sys.stderr)
-            return ExitCode.Violation
-        print("\n".join(listPlace))
-        return ExitCode.Passed
 
     if args.fileName:
         stem = args.fileName.removesuffix(".md").lower()

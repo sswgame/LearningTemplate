@@ -1,6 +1,6 @@
 # 그래픽스 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: graphics · 옛번호: C-55, D2-1, D2-6, D2-7, D2-9, D2-10, D2-11, D2-12, E-3, E-13, A-2, G-12 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: graphics · 진행: 해당없음
 
 이 문서는 그래픽스 · RHI · 셰이더 영역에서 착수 전인 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다.
 
@@ -10,7 +10,6 @@
 
 ### GraphicsFormatBundleChecks
 제목: 그래픽스 형식 묶음의 화면 확인과 Release 비용
-옛번호: D2-1, D2-6, D2-7, D2-10
 왜 필요한가: HDR 장면 색(포워드 넷의 `SceneColor` R16F) · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간의 코드와 테스트(`RenderPassGPUTest`)는 통과했고 2D 쿠키 시나리오 `light2dcookie` 도 통과한다. 화면과 Release 비용 확인이 남았다.
 남은 것:
 - — G2 VRM 스펙 샘플 "VRMC_materials_mtoon UV Animation Test" 의 UV 방향, G5 와이어프레임 선이 면 위에 보이고 z-fighting 이 없는지(포워드 · 디퍼드 · 깊이 프리패스 네 백엔드, 바이어스 상수 -4 · 기울기 -1 은 그때 맞춘다), G6 2D 쇼케이스 씬(자유 모양 · 곱하기 · 부드러운 그림자 빛)의 네 백엔드 캡처.
@@ -20,14 +19,12 @@
 
 ### IndirectLightingScreenChecks
 제목: 반사 프로브 · 금속도 PBR 의 화면 확인
-옛번호: D2-12
-왜 필요한가: 라이트 프로브(P0 ~ P3, P6)와 반사 프로브(P4) · 금속도 PBR(P5) · G버퍼 셋째 타깃(D2-6.4)의 코드와 테스트는 통과했고 에디터 굽기 시나리오(`lightprobebake` · `reflectionprobebake`)도 통과한다. 쿠킹 뒤 화면이 남았다.
+왜 필요한가: 라이트 프로브(P0 ~ P3, P6)와 반사 프로브(P4) · 금속도 PBR(P5) · G버퍼 셋째 타깃의 코드와 테스트는 통과했고 에디터 굽기 시나리오(`lightprobebake` · `reflectionprobebake`)도 통과한다. 쿠킹 뒤 화면이 남았다.
 남은 것: — 반사 프로브 · 금속도 PBR · 셋째 타깃의 쿠킹 뒤 네 백엔드 화면(GL · DX11 에서 에디터가 렌더 스레드의 컨텍스트를 잡는지 포함)과 골든 다시 뜨기(유전체에도 하이라이트가 생겼다).
 못 하는 이유: 새 하이라이트가 맞는 그림인지는 사람이 보고 골든을 다시 뜰지 정한다. 풀리는 조건: 사람이 보고 골든(`golden-record`)을 다시 뜨면 이 절과 항목을 지운다.
 
 ### HalfResolutionBloomMeasurement
 제목: 반해상도 블룸의 전후 GPU 시간
-옛번호: D2-9
 왜 필요한가: 디퍼드 블룸의 밝은 부분을 반해상도 패스(`BloomDownsample`)로 옮겼다(`ee6fff232`). 후(`GPU.BloomDownsample` + `GPU.PostBloom`)의 p50 이 전(`GPU.PostBloom`)보다 작지 않으면 `deferredpipeline.xml` 에서 `BloomDownsample` 패스 · `BloomBright` 첨부 · `PostBloom` 입력을 지워 되돌린다. 코드(`Bloom::computeBrightDownsampled`)는 포워드 단계 파이프라인이 쓰는 한 둔다.
 남은 것: — `py -3 -m Scripts perf-compare --app <후>/App.exe --app-before <전>/App.exe --cases deferredBloom --runs 5`(전은 `ee6fff232^` 의 Release 전체 빌드).
 못 하는 이유: 전 커밋을 따로 지어야 하는 바이너리 A/B 이다. 풀리는 조건: 되돌리지 않기로 하면 이 절과 항목을 지운다.
@@ -36,7 +33,6 @@
 
 ### PostEffectBypass
 제목: 꺼진 후처리 효과가 전 화면 패스와 타깃 비용을 낸다
-옛번호: 없음
 왜 필요한가: 렌즈 없는 카메라(조리개 0)와 서 있는 카메라에서도 피사계 심도 · 모션 블러가 전 화면을 한 번씩 읽고 써서(셰이더가 원본을 고르거나 원본을 복사) Empty `GPU.Frame` 이 468 → 1089 us 가 됐고, 두 출력 타깃(RGBA16F)이 늘 메모리를 차지했다(GPU 메모리 56.8 → 176.9 MB, `renderbench` Native 1600×900 기준선 커밋 `14c775c55`). 블룸 · 외곽선 · SSAO 도 꺼진 뷰(후처리 끔 · 품질 미달)에서 원본을 복사하거나 셰이더로 옮기거나 타깃을 지웠다.
 끝난 것(wt/renderbase): 꺼질 수 있는 효과(`kSkipsWithoutPostProcess`)는 빠지는 방법이 정확히 하나다 — 블룸 · 외곽선 · 피사계 심도 · 모션 블러는 출력 이름이 원본에 이어지고(`kBypassesToSource`, `TransientAttachmentPool::forward`), 원본이 없는 SSAO 는 출력이 없어(`kOmittedWhenOff`, `markAbsent`) 읽는 쪽이 AO 역할을 걸지 않고 셰이더 기본값 1 을 쓴다. 셋업(`FrameRenderer::applyViewPassSelection`, 뷰마다 프레임에 한 번)이 패스를 뒤에서부터 보며 고르고, 읽는 패스가 모두 빠진 풀스크린 패스(블룸이 꺼진 뷰의 BloomDownsample)도 뺀다. 일반 풀스크린 패스만 쓰는 첨부는 풀을 만들 때 만들지 않고 그 패스가 처음 돌 때 만든다. C++ 의 원본 복사 · 셰이더 원본 고르기 · 지우기 길은 지웠다. 디퍼드 OutlineColor 를 RGBA8 → RGBA16F 로 맞췄다 — 외곽선은 톤맵 앞 HDR 색에 그리므로 RGBA8 은 필요 없었고 1 이 넘는 색을 TAA · 톤맵 앞에서 잘랐다. 모션 블러의 "뷰-투영이 지난번과 같으면 끔" 은 셰이더가 카메라 움직임만 쓰기 때문이다(`motionblur.hlsl` 이 깊이와 `g_PrevViewProj` 만 읽고, 렌더러에 물체 속도 버퍼 · 속도 패스가 없다). 로드 검증 3-6(출력 · 원본의 형식 · 나눗수, 출력을 쓰는 패스 하나, 뒤 패스가 원본을 다시 쓰지 않음)과 3-7(SSAO 출력은 선택 입력으로만 읽힘)을 더했다. 주 시점 첨부마다의 크기를 `[RenderTargets]` Info 줄로 남긴다.
 재측정(wt/rgprune, 2026-10-27, 코드 읽기): 감사 SB R1 이 말한 패스스루(`FrameRendererPassExecute.cpp` 의 블릿 · `SW_PASS_FLAG_SKIP_POST` 길, 상수의 조리개 0 분기)는 renderbase 가 다 지웠다. 그래프를 뷰 상태 키로 다시 컴파일해 캐시하는 길은 만들지 않았다 — 출력 이름 잇기가 같은 결과(빠진 패스 · 원본을 읽는 소비자)를 컴파일 없이 내고, 결정 5-5 가 기각했다. 남은 틈은 뷰 상태가 바뀌는 프레임의 TAA 기록이었다: 후처리를 끈 프레임의 TAA 는 기록을 쓰지 않는데 다시 켠 첫 프레임이 끄기 전 기록을 섞었다. `beginViewHistory` 가 `_bTaaHistoryReset`(컷이거나 지난 프레임이 기록을 쓰지 않음)을 같은 자리에서 정하고 `executeTaaPass` 가 그것을 본다. 피사계 심도 · 모션 블러는 TAA 뒤라 켜고 꺼도 기록과 무관하다. 테스트: `RenderPassGPUTest.DepthOfFieldToggleForwardsAndKeepsTaaHistory`(조리개 0 → 1.4 → 0 에서 출력이 TaaColor 를 가리키다 자기 타깃에 흐린 그림을 그리고 다시 가리킴, TaaColor 는 그대로) · `PostProcessReenableResetsTaaHistory`(껐다 켠 프레임의 TaaColor = 원본). 측정 기대치(통합이 볼 것): Empty `GPU.Frame` 은 468 us 근처, `GPUPassTimeline` 의 DepthOfField · MotionBlur 칸은 렌즈 없는 서 있는 카메라에서 빈다(패스가 기록되지 않는다), `gpu_memory_mb` 는 두 RGBA16F 타깃(1600×900 에서 23 MB)만큼 준다.
@@ -49,14 +45,12 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 
 ### VulkanVsyncFrameMiss
 제목: Vulkan VSync 에서 프레임이 주기를 놓침
-옛번호: E-3
 왜 필요한가: Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다(Release 큐브 100, 165 Hz). 스왑체인 이미지 4 개는 기각했다.
 끝난 것(wt/gfxc, 빌드 · 실행 안 함): 측정 항목 — 프로파일 보고에 `[Profile] pacing  median <us>  over1.5x <n>  over2.5x <n>` 줄을 더했다(`FrameProfileSession::computePacing`, 100 us 칸 히스토그램). VSync 를 켜면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상, over2.5x 가 둘 이상 놓친 프레임 수다. 고정 문턱 `over16ms` 는 60 Hz 기준이라 165 Hz 에서 주기 하나를 놓친 12 ms 프레임을 세지 못했다. 재는 판 — 검증 묶음 항목 `vsync-frame-miss`(Release · `-vk -vsync -gv_benchMeshes=100 -gv_profileSeconds=60`, 지표 셋은 보고만). 코드 수정은 없다 — 문서의 원인(이미지가 한 주기 늦게 돌아옴 · 합성기 경로의 펜스 지연)은 드라이버 · 합성기 쪽이고 엔진이 고칠 자리가 적혀 있지 않다.
 남은 것(통합): 같은 판을 `-dx12 -vsync` 로 견주고, 놓침이 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다. 주기를 놓친 프레임이 0 이 아니어도 실패 판정은 하지 않는다(기준이 없다) — 값이 쌓이면 `max` 를 단다.
 
 ### DeviceLossHangRepro
 제목: 실제 TDR 뒤 행을 재현하지 못함
-옛번호: E-13, A-2
 왜 필요한가: `rhi.removeDevice` 로 DX12(장치 제거) · Vulkan(손실 상태로 둠) 모두 프레임을 계속 돌고 종료 코드 0 으로 끝난다. 남은 것은 드라이버 안의 대기(첫 `VK_ERROR_DEVICE_LOST` 를 돌려주기 전)뿐이다.
 끝난 것(wt/gfxc, 빌드 · 실행 안 함): `rhi.removeDevice <ms>` 가 드라이버 대기를 흉내 낸다 — 렌더 스레드가 다음 프레임의 `beginFrame`(펜스 대기 자리) 바로 앞에서 그만큼 잠든 뒤 장치를 제거한다(`RenderThread::requestDeviceLossAfterDriverWait`, Shipping 에는 없음). 시나리오 둘을 `engine/automation/rhiswap/` 에 더했다 — `removedevicewait`(2.5 초 대기 뒤 손실, 프레임이 다시 돌고 종료 코드 0), `removedevicehang`(40 초 대기, 상한 20 초 + 유예 5 초 뒤 행 감시가 보고를 쓰고 종료 코드 12 — 이것이 통과다).
 남은 것(통합): 두 시나리오를 `-dx12` · `-vk` 로 돌린다. hang 은 보고 JSON 의 `hang: true` 와 `lastStep` 을 보고, 멈춘 동안 `py -3 -m Scripts stacks <pid>` 로 렌더 스레드가 `RenderThread::consumeDeviceLossRequest` 에 있는지 스택을 남긴다. 실제 TDR 이 다시 보이면 같은 명령으로 매달린 스레드의 스택을 남긴다.
@@ -64,7 +58,6 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 
 ### ShaderPrefixAndFormat
 제목: 셰이더 이름의 sw 접두를 없애고 clang-format 을 셰이더에도 건다
-옛번호: 없음
 끝난 것: (1) 셰이더 60 개에 clang-format 을 건다(설정 `Resource/.clang-format` — 루트를 물려받고 `MacroBlockBegin/End`(`SW_ROOT_CONSTANTS_*`), `AlignConsecutiveDeclarations`, `StatementMacros: [SW_NUMTHREADS]`, `AttributeMacros: [SW_GL_BINDING]`, `BreakConstructorInitializers: BeforeColon`). 루트에 두지 않은 까닭은 `AlignFunctionDeclarations: false` 가 C++ 정렬을 바꾸기 때문. `FormatClangFormat` · `FormatModified` · 커밋 훅이 셰이더를 대상에 넣었고 두 번째 포맷은 바뀌는 파일이 0 이다. 남은 한계: `SW_ROOT_CONSTANTS_BEGIN/END` 정의가 여러 줄로 갈리고(매크로 구조 변경은 폐기), 흐름 속성은 `common.hlsli` 의 속성 매크로 `SW_UNROLL` · `SW_LOOP` · `SW_BRANCH`(`.clang-format` AttributeMacros)로 쓰고, 마지막 맨 `[unroll]` 열 곳(`probeupdate.hlsl`)도 바꿨다(wt/gfxc, 소스만 — 아래 통합 몫). `CheckShaderConventions` 가 문장 머리의 맨 `[unroll]` · `[loop]` · `[branch]` · `[flatten]` 을 막는다(포맷 설정만으로는 못 막는다). (2) 구조체 필드 261 개를 `_camelCase` 로 바꿨다(셰이더 46 개, 머티리얼 구조체 필드 68 이름은 `.material` 75 개와 C++ 문자열 · `customization.xml` · 테스트를 같은 커밋에서). 함수 본문 안의 `#if` 를 정의로 몰았다(남은 본문 `#if` 는 백엔드 매크로 `DX11` · `DX12` · `__spirv__` · `SW_NATIVE_BINDLESS` 뿐이고 게이트가 그 밖의 조건을 막는다). `CheckShaderConventions.py` 와 [NamingScripts](../agents/NamingScripts.md) HLSL 절을 같은 커밋에서 고쳤다. 셰이더 컴파일 · 쿠킹은 네 백엔드로 했다.
 남은 것(통합 검증): wt/gfxc 의 셰이더 소스 변경(커밋 훅이 쿠킹 바이너리를 요구해 작업자가 커밋하지 못한 몫 — `probeupdate.hlsl` 과 PostEffectBypass 의 다섯 진입점)을 넣고 `App --cook-shaders` 로 네 백엔드를 굽는다. 그 전에는 전체 `CheckShaderConventions` 가 `probeupdate.hlsl` 에서 진다. 새로 빌드한 Release App 으로 쿠킹이 같은 결과인지(필드 · 프로퍼티 이름이 바뀌어 리플렉션이 달라진다), 게임별 골든(`Scripts golden`), `MaterialTest` · `ShaderBindingValidatorTest` · `RenderPassGPUTest`. 에디터 머티리얼 패널은 `displayName` 이 없는 프로퍼티에 `_color` 처럼 밑줄 이름을 그대로 보인다. 자원을 가리키는 매크로 별칭 셋은 아직 매크로다 — `SW_MATERIAL( index )`(원소 형식이 셰이더마다 달라 함수 반환형을 못 적는다), `SW_SAMPLER_STATE`(백엔드마다 배열 · 개별 변수), `SW_APPEARANCE_*`(필드 유무가 퍼뮤테이션). 셰이더를 고친 뒤 `FormatModified.py` 로 포맷한다.
 결정(사용자, 2026-10-23):
@@ -75,7 +68,6 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 
 ### RhiFileLeftovers
 제목: RHI 파일 후보 중 아직 남은 것
-옛번호: 없음
 왜 필요한가: 통합 N 뒤 RHI 파일을 훑어 같은 결함 후보로 적은 여섯 가운데(2026-10-28 `old-defects` 재측정) 남은 것이다.
 끝난 것: DX11 Present 실패 로그가 장치 제거 뒤 매 프레임 반복되던 것은 `SW_LOG_ERROR_ONCE` 로 첫 실패만 남긴다(DX12 는 `_bDeviceRemovedLogged`, Vulkan 은 `DeviceLost` 를 `Failed` 와 갈라 처리). DX11 `Map(DO_NOT_WAIT)` 는 쓰지 않기로 이미 정했다(`D3D11RHIResourceFactory.cpp` 의 되읽기 주석).
  대신 장부에만 있던 굶음 방지(예산 이상의 업로드가 못 받으면 예약을 남겨 작은 업로드를 막음)를 옮겼고, `UploadStaging` 의 RAII 수명과 두 번 시도는 그대로다. 예산 합 상한 · 혼자 들어감 · 예약 · 포기 · 예약 0 은 `RHIStagingRingTest.UploadBudget*` 세 케이스(nogpu)가 본다. ② Vulkan 프레임 밖 구조 버퍼 갱신과 GPU 시계 읽기의 펜스 대기는 비동기로 바꾸지 않기로 정했다 — 둘 다 U2 로 자기 제출의 펜스만 기다리고, `RhiAsyncUploads` 단위(U7 ~ U14)에 들어 있지 않으며 경계는 "텍스처 전송 티켓과 `waitIdle` 호출 정리는 그 계획, 일회성 제출 둘은 이 항목이 비목표로 둠"이다. ③ 큐 소유권 이동은 사실이 아니다 — 큐 패밀리가 하나이고 모두 `EXCLUSIVE` 에 `QUEUE_FAMILY_IGNORED` 라 옮길 소유권이 없다(전용 전송 큐를 도입할 때 같이 설계). GL 비트필드는 `mapFlags`(`GLbitfield`)가 아니라 `transitionBuffer` 의 배리어 비트가 결함이었다: `VertexOrConstant` · `Index` 가 SSBO 비트만 걸어 컴퓨트가 쓴 정점 · 유니폼 · 인덱스 데이터가 안 보일 수 있었다(호출처가 아직 없어 잠복). 정점 · 유니폼 · 요소 배열 비트로 고쳤다.
@@ -87,19 +79,16 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 
 ### VfxMultiGroupCompaction
 제목: GPU 방출기 다중 그룹 압축
-옛번호: D2-11
 왜 필요한가: GPU 시뮬레이션은 방출기 하나를 그룹 하나(256 스레드)가 돌아 풀이 수만 개면 느리다. 풀이 크면 디스패치 셋으로 나눈다: (1) 그룹마다 생성 · 적분 · 생존 표시와 개수, (2) 개수의 접두사 합(그룹 하나), (3) 그룹마다 자기 시작 위치로 안정 압축. 단계마다 셋이라 여러 단계를 한 디스패치에 못 넣는다.
 착수 조건: 풀이 수만 개인 GPU 방출기의 컴퓨트 프리패스 시간(`RT.Vfx.Simulate`)이 프레임 시간에서 보이면, 단계 수 × 3 디스패치가 그룹 하나보다 빨라지는 풀 크기를 Release 로 잰 뒤 풀 크기로 두 경로를 고를지(같은 결과여야 한다) 정한다.
 
 ### SpanAllocatorVatSkinPools
 제목: 스킨 원본 · VAT 풀의 구간 할당기
-옛번호: C-55
 왜 필요한가: 스킨 원본 전체 다시 올리기(`RT.Deform.rebuildSkinSources`, 집합이 바뀐 프레임에만 찍힘)와 VAT 테이블 풀(`RT.Deform.rebuildVertexAnimationPool`)을 `GPUMeshVertexPool` · `GPUMeshMorphPool` 과 같은 모양의 `SpanAllocator` 구간 갱신으로 바꿀 이득이 있는지는 재야 안다. 구간은 이미 들어갔다.
 착수 조건: 스트리밍 셀 진입 · 군중 합류 프레임의 프로파일에서 집합이 바뀐 프레임의 두 구간이 1 ms 이상으로 보이면 구간 할당기로 옮기는 단위를 계획 문서로 올린다. 1 ms 미만이면 접는다(이 절만 지운다).
 
 ### R8TextureSampling
 제목: R8 텍스처를 네 백엔드에서 샘플링
-옛번호: G-12
 왜 필요한가: `App --import-textures` 가 1 채널 `R8_UNORM` DDS 를 내고 로더가 읽지만 실제 샘플링은 네 백엔드에서 본 적이 없습니다.
 끝난 것(wt/gfxc, 빌드 · 실행 안 함): 외부 원본 없이 푼다 — `Scripts/generate/GenerateSpriteTextures.py` 가 임포터와 같은 형식(DX10 머리, DXGI 61)의 마스크 `engine/textures/test/mask_r8.dds`(64², 왼쪽 반 255 · 오른쪽 반 96)를 만들고, `RenderPassGPUTest.R8MaskTextureSamplesAsRedOnEveryBackend` 가 그것을 스프라이트로 그려 네 백엔드가 (r, 0, 0, 1) 로 샘플하는지 본다(초록 · 파랑 0, 알파 1 이라 그려짐, 두 반쪽이 갈림). 임포터가 그 형식을 낸다는 것은 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` 가 이미 본다.
 남은 것(통합): 실제 `*_mask.*` 원본이 생기면 그 게임의 시나리오도 본다.
