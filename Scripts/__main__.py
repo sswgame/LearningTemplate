@@ -51,6 +51,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("vcpkg", "setup.Vcpkg", "vcpkg 탐색 및 부트스트랩"),
     Subcommand("llvm", "setup.Llvm", "LLVM/Clang 탐색 및 설정"),
     Subcommand("lint", "lint.PreCommit", "Staged 파일 대상 사전 커밋 린트 검사"),
+    Subcommand("engine-layers", "lint.EngineLayers", "Engine 폴더 층 검사 — 낮은 층이 높은 층을 include 하지 못하게(기준선은 줄이기만)"),
     Subcommand("include-order", "lint.IncludeOrder:mainCheck", "include 순서 검사(--files 로 좁힌다)"),
     Subcommand("format-includes", "lint.Format:mainFormatIncludes", "include 순서 · 중복 자동 수정(--check 는 검사만)"),
     Subcommand("format", "lint.Format:mainFormatClang", "C++ 코드 clang-format 자동 포맷팅"),
