@@ -676,6 +676,7 @@ static void Appearance::clipDither( float appearance, float2 pixelPosition )
     clip( appearance - Appearance::computeDitherThreshold( pixelPosition ) );
 }
 
+// 매크로로 남긴 이유: `SW_APPEARANCE_VARYING` 은 구조체 **필드 선언**이라 함수가 될 수 없고, 나머지 둘은 그 필드가 있을 때만 존재하는 구조체 멤버를 읽는다(퍼뮤테이션이 필드 유무를 가른다).
 #if defined( SW_APPEARANCE_DITHER )
     #define SW_APPEARANCE_VARYING                   nointerpolation float _appearance : TEXCOORD15;
     #define SW_APPEARANCE_WRITE( output, instance ) ( output )._appearance = ( instance )._appearance;
@@ -711,6 +712,7 @@ static uint MaterialBuffer::clampIndex( uint index )
 #define SW_MATERIAL_END \
     ;                   \
     SW_DECLARE_STRUCTURED_BUFFER( MaterialData, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
+// 매크로로 남긴 이유: `MaterialData` 는 셰이더마다 선언이 다른 구조체라 함수의 반환형을 적을 수 없다(HLSL 에 템플릿이 없다). 원소 참조를 그대로 돌려주는 자리가 매크로뿐이다.
 #define SW_MATERIAL( index ) g_SwMaterials[MaterialBuffer::clampIndex( index )]
 
 // ------------------------------------------------------------------------------
@@ -724,6 +726,8 @@ static uint MaterialBuffer::clampIndex( uint index )
 // Vulkan: set 1 binding 1 의 immutable sampler 배열 — 배열 그대로 인덱싱한다.
 [[vk::binding( SW_VK_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerState                  g_SwSamplers[SW_STATIC_SAMPLER_ARRAY_COUNT] : register( s0 );
 [[vk::binding( SW_VK_SHADOW_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SHADOW_CMP ) );
+        // 매크로로 남긴 이유: 백엔드마다 선언 모양이 다르다(Vulkan 은 배열 인덱싱, DX12 는 개별 변수 + 리터럴 분기). 함수로 감싸 `SamplerState` 를 돌려주는 길은
+        // 컴파일 · GL 결합 샘플러 경로를 확인할 수 없어 보류했고, 호출처는 `Bindless::sampleSlotWith` 와 fsr1 몇 곳뿐이다.
         #define SW_SAMPLER_STATE( samplerId ) g_SwSamplers[samplerId]
     #else
 // DX12: 정적 샘플러는 배열 선언(s0..s6 범위)을 못 채운다 — 루트 시그니처가 범위를 디스크립터 테이블로 요구해 PSO 생성이
