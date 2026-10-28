@@ -24,7 +24,7 @@ namespace sw
             return false;
         // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다.
         if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle();
+            pRenderThread->waitIdle( RHIWaitIdleReason::Capture );
         IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
         if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
         {

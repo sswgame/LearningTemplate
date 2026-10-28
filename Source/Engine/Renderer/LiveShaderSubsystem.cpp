@@ -63,7 +63,7 @@ namespace sw
     {
         RenderThread* const pRenderThread = _renderThreadSubsystem.findRenderThread();
         if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle();
+            pRenderThread->waitIdle( RHIWaitIdleReason::HotReload );
         _frameRendererSubsystem.getFrameRenderer().onShaderRecompiled( shaderPath, result );
     }
 #endif

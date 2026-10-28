@@ -119,7 +119,7 @@ namespace
         pDevice->beginFrame();
         const bool bExecuted = renderer.execute( pDevice, scene );
         pDevice->endFrame( false, false );
-        pDevice->waitIdle();
+        pDevice->waitIdle( sw::RHIWaitIdleReason::Tool );
         return bExecuted;
     }
 
@@ -148,7 +148,7 @@ namespace
         if ( bOk )
             pStream->blitTexture( 0, backCopy );
         pDevice->endFrame( false, false );
-        pDevice->waitIdle();
+        pDevice->waitIdle( sw::RHIWaitIdleReason::Tool );
 
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
@@ -203,7 +203,7 @@ namespace
             if ( bOk == false )
                 return -1;
         }
-        pDevice->waitIdle();
+        pDevice->waitIdle( sw::RHIWaitIdleReason::Tool );
 
         test::RHITestImage image;
         if ( image.readTransient( renderer, "SceneColor" ) == false )
@@ -294,7 +294,7 @@ namespace
                 return false;
             }
             pDevice->endFrame( false, false );
-            pDevice->waitIdle();
+            pDevice->waitIdle( sw::RHIWaitIdleReason::Tool );
         }
         const bool bRead = outImage.readPresent( renderer );
         renderer.shutdown();
@@ -976,7 +976,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FrameRendererInitializeAndExecute
     device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
-    device->waitIdle();
+    device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
     // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 해제.
 }
@@ -1057,7 +1057,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory, t
     device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
-    device->waitIdle();
+    device->waitIdle( sw::RHIWaitIdleReason::Tool );
     SW_EXPECT_TRUE_MSG( renderer.getTaaHistory() != 0, "셰이더 리로드 뒤 TAA 히스토리가 사라졌다 — 패스 자원 해제가 트랜지언트 자원을 놓았다" );
 }
 
@@ -1234,7 +1234,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenderGraphExecuteParallelRunsOnR
         SW_EXPECT_TRUE_MSG( graph.executeParallel( context, &taskManager, device.get() ), ( label + ": executeParallel 실패" ).c_str() );
         SW_EXPECT_EQUAL( 3u, executeCount.load() );
 
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
         taskManager.shutdown();
     }
 
@@ -1302,7 +1302,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FrameRendererDeferredPipelinePara
                 SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), scene ), ( label + ": execute 실패" ).c_str() );
                 device->endFrame( false, false );
             }
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
             return outImage.readTransient( renderer, "LitColor" );
         };
 
@@ -2445,7 +2445,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ViewModeSelectsDistinctPipelineSt
             device->beginFrame();
             const bool bFrameOk = renderer.execute( device.get(), scene );
             device->endFrame( false, false );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
             return bFrameOk;
         };
 
@@ -2817,7 +2817,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredPipelineDrawsGeometry, te
         device->beginFrame();
         SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
         device->endFrame( false, false );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
 
     test::RHITestImage image;
@@ -2883,7 +2883,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch, te
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
-            device.waitIdle();
+            device.waitIdle( sw::RHIWaitIdleReason::Tool );
         }
         result._drawCallCount = renderer.getLastIndirectDrawCallCount();
 
@@ -3082,7 +3082,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AmbientOcclusionReachesBloom, tes
                 if ( renderer.execute( device.get(), scene ) == false )
                     return false;
                 device->endFrame( false, false );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
             }
             return true;
         };
@@ -3210,7 +3210,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MorphPoolIdentityMatchesRest, tes
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
-            device.waitIdle();
+            device.waitIdle( sw::RHIWaitIdleReason::Tool );
         }
 
         if ( result._image.readTransient( renderer, "SceneColor" ) == false )
@@ -3372,7 +3372,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
-            device.waitIdle();
+            device.waitIdle( sw::RHIWaitIdleReason::Tool );
         }
         if ( result._image.readTransient( renderer, "SceneColor" ) == false )
             return result;
@@ -3561,7 +3561,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
             if ( renderer.execute( &device, scene ) == false )
                 return result;
             device.endFrame( false, false );
-            device.waitIdle();
+            device.waitIdle( sw::RHIWaitIdleReason::Tool );
         }
         if ( result._image.readTransient( renderer, "SceneColor" ) == false )
             return result;
@@ -4279,7 +4279,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredPresentCopiesTheTonemapRe
                     device->beginFrame();
                     bOk = renderer.execute( device.get(), scene );
                     device->endFrame( false, false );
-                    device->waitIdle();
+                    device->waitIdle( sw::RHIWaitIdleReason::Tool );
                 }
                 bOk = bOk && renderer.getCapture().readbackPresent( listPresent, layoutPresent ) &&
                       renderer.getCapture().readbackTransient( "TonemapColor", listTonemap, layoutTonemap, tonemapFormat );
@@ -4421,7 +4421,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
                     return false;
                 }
                 device->endFrame( false, false );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
             }
             const bool bRead = renderer.getCapture().readbackPresent( outByte, outLayout );
             renderer.shutdown();
@@ -5599,7 +5599,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, NormalsStayPerpendicularUnderNonU
                         device->beginFrame();
                         SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
                         device->endFrame( false, false );
-                        device->waitIdle();
+                        device->waitIdle( sw::RHIWaitIdleReason::Tool );
                     }
 
                     uint32           drawnCount{ 0 };
@@ -5688,7 +5688,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderIn
                     device->beginFrame();
                     SW_EXPECT_TRUE( renderer.execute( device.get(), cube._scene ) );
                     device->endFrame( false, false );
-                    device->waitIdle();
+                    device->waitIdle( sw::RHIWaitIdleReason::Tool );
                 }
                 ++checkedCount;
                 const uint32 hazardCount = logs.countWithID( "RHI.ValidationHazard" );
@@ -7263,7 +7263,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PresentCaptureFollowsOffscreenOut
             device->beginFrame();
             bOk = renderer.executePacket( device.get(), packet );
             device->endFrame( false, false );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
         }
 
         sw::vector<uint8>     outputBytes;
@@ -7352,7 +7352,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm, te
         device->beginFrame();
         bOk = renderer.executePacket( device.get(), packet );
         device->endFrame( false, false );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
     SW_EXPECT_TRUE( bOk );
 
@@ -8363,7 +8363,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CrowdSharingAndVertexAnimationMat
             if ( renderer.execute( device.get(), scene ) == false )
                 return result;
             device->endFrame( false, false );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
         }
         if ( result._image.readTransient( renderer, "SceneColor" ) == false )
             return result;
@@ -8443,7 +8443,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PartialStructuredBufferUploadRead
         SW_ASSERT_TRUE( buffer != 0 );
         pFactory->updateStructuredBufferRange( buffer, pSource, sourceSize, 0 );
         pFactory->updateStructuredBuffer( buffer, pSource, sourceSize );
-        device.get()->waitIdle();
+        device.get()->waitIdle( sw::RHIWaitIdleReason::Tool );
         pFactory->destroyBuffer( buffer );
     }
     VirtualFree( pBase, 0, MEM_RELEASE );
@@ -8514,7 +8514,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, WaterWaveShaderMatchesCPU, test::
             cmdList->dispatchCompute( 1, 1, 1 );
             cmdList->endCommandList();
             device->executeCommandListImmediate( cmdList.get() );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};

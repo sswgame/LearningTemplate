@@ -184,7 +184,7 @@ namespace
                 if ( renderer.execute( &device, scene ) == false )
                     return result;
                 device.endFrame( false, false );
-                device.waitIdle();
+                device.waitIdle( sw::RHIWaitIdleReason::Tool );
             }
             if ( result._image.readTransient( renderer, "SceneColor" ) == false )
                 return result;

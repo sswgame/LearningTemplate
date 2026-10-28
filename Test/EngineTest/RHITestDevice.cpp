@@ -128,7 +128,7 @@ namespace test
     {
         if ( _device == nullptr )
             return;
-        _device->waitIdle();
+        _device->waitIdle( sw::RHIWaitIdleReason::Tool );
         _device->shutdown();
         _device.reset();
     }

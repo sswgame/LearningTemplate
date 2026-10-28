@@ -33,7 +33,7 @@ namespace sw::editor
     void IImGuiRendererBackend::flushDrawReleases( IRHIDevice* pRHIDevice )
     {
         if ( pRHIDevice != nullptr )
-            pRHIDevice->waitIdle();
+            pRHIDevice->waitIdle( RHIWaitIdleReason::Tool );
         _drawReleaseQueue.flushAll();
     }
 

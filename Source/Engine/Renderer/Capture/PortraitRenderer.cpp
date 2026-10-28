@@ -171,7 +171,7 @@ namespace sw
             _pDevice->beginFrame();
             bRendered = _renderer->execute( _pDevice, studio );
             _pDevice->endFrame( false, false );
-            _pDevice->waitIdle();
+            _pDevice->waitIdle( RHIWaitIdleReason::Capture );
         }
         RHITextureMipSpan layout{};
         vector<uint8>     captureBytes;

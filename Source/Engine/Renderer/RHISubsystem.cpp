@@ -105,7 +105,7 @@ namespace sw
     {
         // 디바이스 생성이 실패하면 RHI 객체는 있어도 디바이스가 없다. getDevice() 를 부르기 전에 hasDevice() 로 확인한다.
         if ( _rhi->hasDevice() )
-            _rhi->getDevice().waitIdle();
+            _rhi->getDevice().waitIdle( RHIWaitIdleReason::Shutdown );
         _rhi->shutdown();
         _bReady = false;
     }

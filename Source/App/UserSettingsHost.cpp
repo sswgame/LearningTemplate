@@ -104,7 +104,7 @@ namespace sw
         // 렌더 스레드가 지난 프레임을 그리는 중일 수 있다 — 스왑체인 · present 값을 바꾸기 전에 비운다(App::onResize 와 같은 규칙).
         RenderThread* pRenderThread = _pEngine->getRenderThread();
         if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle();
+            pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
 
         IRHIDevice& device = pRHI->getDevice();
         if ( device.isVSyncEnabled() != request._bVSync )

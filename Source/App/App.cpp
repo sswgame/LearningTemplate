@@ -705,7 +705,7 @@ namespace sw
         // 실제 스레드 간 레이스가 된다. waitIdle() 로 큐를 비우고 GPU 까지 완전히 쉬게 한 뒤 크기를 바꾼다.
         RenderThread* pRenderThread = _engine.getRenderThread();
         if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle();
+            pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
 
         pRHI->getDevice().resize( width, height );
     }

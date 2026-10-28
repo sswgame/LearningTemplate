@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 
 namespace sw
 {
@@ -164,8 +165,9 @@ namespace sw
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
          *          이 문제를 가리므로, 이 경로는 에디터가 없는 빌드(Shipping)로 확인한다.
+         * @param reason 기다리는 이유(필수, RhiAsyncUploads U14). 프레임마다 도는 경로에는 맞는 이유가 없다 — 이름이 있어야 호출처가 "왜" 를 적고 새 호출이 눈에 띈다(`RHIWaitIdleReason`).
          */
-        void waitIdle();
+        void waitIdle( RHIWaitIdleReason reason );
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.

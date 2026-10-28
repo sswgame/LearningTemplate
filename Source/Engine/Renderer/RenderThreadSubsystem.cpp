@@ -39,7 +39,7 @@ namespace sw
 
     void RenderThreadSubsystem::shutdownSubsystem()
     {
-        _renderThread->waitIdle();
+        _renderThread->waitIdle( RHIWaitIdleReason::Shutdown );
         _renderThread->stop();
     }
 

@@ -13,6 +13,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
 #include <condition_variable>
@@ -66,8 +67,8 @@ namespace sw
          *          넣기(move)로 받으면 링 슬롯의 저장소가 프레임마다 버려집니다.
          */
         void submit( RenderFramePacket& packet );
-        /** @brief 워커가 돌고 있으면 RT 큐가 빌 때까지 기다리고 디바이스 waitIdle 까지 합니다. 워커가 없으면 할 일이 없습니다. */
-        void waitIdle();
+        /** @brief 워커가 돌고 있으면 RT 큐가 빌 때까지 기다리고 디바이스 waitIdle 까지 합니다. 워커가 없으면 할 일이 없습니다. @p reason 은 디바이스 대기에 그대로 넘깁니다(`RHIWaitIdleReason`). */
+        void waitIdle( RHIWaitIdleReason reason );
         /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(장치 대기는 하지 않습니다). 렌더 스레드 자신이 부르면 곧바로 돌아옵니다. */
         void drainPackets();
         /** @brief 호출한 스레드에서 패킷 하나를 처리합니다. */

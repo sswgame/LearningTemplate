@@ -176,7 +176,7 @@ namespace
             cmd->endCommandList();
             // 이 경로는 beginFrame/endFrame 밖에서 돈다 — 프레임 스트림에 얹을 수 없으므로 즉시 제출.
             device.executeCommandListImmediate( cmd.get() );
-            device.waitIdle();
+            device.waitIdle( sw::RHIWaitIdleReason::Tool );
         }
 
         // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
@@ -1053,7 +1053,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFr
             cmd->endCommandList();
             device->executeCommandList( cmd.get() );
             device->endFrame( false, false );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
@@ -1191,7 +1191,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
                 cmd->endRenderPass();
                 cmd->endCommandList();
                 device->executeCommandListImmediate( cmd.get() );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
@@ -1291,7 +1291,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotS
                 cmd->endRenderPass();
                 cmd->endCommandList();
                 device->executeCommandListImmediate( cmd.get() );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
@@ -1378,7 +1378,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndR
                     cmd->endRenderPass();
                     cmd->endCommandList();
                     device->executeCommandListImmediate( cmd.get() );
-                    device->waitIdle();
+                    device->waitIdle( sw::RHIWaitIdleReason::Tool );
                 }
 
                 sw::vector<uint8>     pixels;
@@ -1517,7 +1517,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoes
             device->getResourceFactory()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
             device->getResourceFactory()->destroyBuffer( cb );
         }
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No parallel-recording backend (DX11/DX12/Vulkan) available" );
@@ -1610,7 +1610,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectComma
             cmdList->endCommandList();
 
             rhiDevice->executeCommandList( cmdList.get() );
-            rhiDevice->waitIdle();
+            rhiDevice->waitIdle( sw::RHIWaitIdleReason::Tool );
         }
 
         pResource->destroyPipelineState( computePSO );
@@ -1670,7 +1670,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeTextureUavWriteIsReadable, tes
                 cmdList->endCommandList();
                 device->executeCommandListImmediate( cmdList.get() ); // 프레임 밖 — DX12/Vulkan 은 executeCommandList 가 프레임 스트림을 요구한다
             }
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
@@ -1754,7 +1754,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns,
                 cmdList->endCommandList();
                 device->executeCommandListImmediate( cmdList.get() );
             }
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
@@ -1871,7 +1871,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBac
             // **Present 가 없으면 아무도 큐를 밀어 주지 않는다.** DX11 은 GetData(DONOTFLUSH) 가,
             // GL 은 QUERY_RESULT_AVAILABLE 이 스스로 flush 하지 않아 쿼리가 영영 안 끝난다 —
             // 앱에서는 Present 가 하던 일을 여기서는 이것이 대신한다.
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             if ( pTimestamps->readTimestamps( frame ) )
                 bGotSample = true;
@@ -1916,7 +1916,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBac
                                     .c_str() );
         }
 
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
 
     if ( sweep.getReadyCount() == 0 )
@@ -2081,7 +2081,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBack
                 }
                 cmd->endCommandList();
                 device->executeCommandListImmediate( cmd.get() );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
                 for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
                 {
@@ -2132,7 +2132,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBack
                 upload._arraySlice = slice;
                 SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, uploaded, upload ), ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 올리지 못했다" ).c_str() );
             }
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
             for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
             {
                 for ( size_t byteIndex = 0; byteIndex < bytes.size(); ++byteIndex )
@@ -2160,7 +2160,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBack
             pResource->destroyBuffer( vb );
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
 
     if ( sweep.getReadyCount() == 0 )
@@ -2196,7 +2196,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFra
         }
         SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": 프레임이 지나도 한 번 불리지 않았다" ).c_str() );
 
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
         SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": waitIdle 이 이미 부른 콜백을 다시 불렀다" ).c_str() );
     }
     if ( sweep.getReadyCount() == 0 )
@@ -2215,7 +2215,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
         SW_TEST_SKIP( "Vulkan device unavailable" );
     device->beginFrame();
     device->endFrame( false, false );
-    device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+    device->waitIdle( sw::RHIWaitIdleReason::Tool ); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
     SW_TEST_DEFENSIVE_SCOPE( "marking the Vulkan device lost on request warns once" );
     SW_ASSERT_TRUE( device->debugRemoveDevice() );
 
@@ -2230,7 +2230,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
         device->endFrame( false, true );
     }
     SW_EXPECT_TRUE_MSG( callCount == 0, "a frame after the device loss waited on a fence and released GPU work" );
-    device->waitIdle();
+    device->waitIdle( sw::RHIWaitIdleReason::Tool );
     SW_EXPECT_TRUE_MSG( callCount == 1, "waitIdle on a lost device did not flush the release queue" );
 }
 
@@ -2271,7 +2271,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEnt
 
         // 잃기 전에는 같은 제출이 받아들여진다. 한 번 올려 둔 스테이징이 있어야 제출 진입 검사가 없을 때 DX12 가 Accepted 를 돌려준다(새 스테이징을 못 만들어서가 아니라).
         SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), ( label + ": 손실 전 업로드가 실패했다" ).c_str() );
-        device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+        device->waitIdle( sw::RHIWaitIdleReason::Tool ); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
         // 장치 제거 자체도 경고를 남긴다(DX12 "Removing the D3D12 device on request") — 제거부터 스코프 안이다.
         SW_TEST_DEFENSIVE_SCOPE( "transfer submits on a removed device are rejected at entry" );
         if ( device->debugRemoveDevice() == false )
@@ -2287,11 +2287,295 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEnt
                             ( label + ": 손실 뒤 구간 업로드가 거절되지 않았다" ).c_str() );
         SW_EXPECT_TRUE_MSG( pResource->submitTextureReadback( texture, 0, 0, layout )._result == sw::RHISubmitResult::Rejected, ( label + ": 손실 뒤 되읽기가 거절되지 않았다" ).c_str() );
         pResource->destroyTexture( texture );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
 
     if ( removableCount == 0 )
         SW_TEST_SKIP( "No RHI backend could simulate a device loss" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 제출한 전송은 프레임 없이 `pollTransfer` 를 되풀이하는 것만으로 `Complete` 가 되고(진행 보장, 계약 7), 한 번 `Complete` 면 계속 `Complete` 다 — 네 백엔드
+ * @details RhiAsyncUploads U7. 제출 직후 상태는 `Pending` 이거나 `Complete`(DX11 · GL 은 같은 프레임) 이고 `Failed` 는 아니다. 끝난 뒤 올린 바이트가 되읽기와 같아야 한다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, SubmittedTransferCompletesByPollingWithoutAFrame, test::listRHIBackendParameter, 0.4 )
+{
+    uint8 arrPixel[4 * 4 * 4]{};
+    for ( uint32 byteIndex = 0; byteIndex < sizeof( arrPixel ); ++byteIndex )
+    {
+        arrPixel[byteIndex] = static_cast<uint8>( byteIndex * 5 + 11 );
+    }
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = arrPixel;
+        upload._sizeBytes = sizeof( arrPixel );
+        upload._mipLevels = 1;
+        sw::RHITransferSubmit submit{};
+        SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::submitWhileBusy( [&]()
+        { return pResource->submitTextureUpload( texture, upload ); }, submit ),
+                            ( label + "the upload stayed Busy" ).c_str() );
+        SW_ASSERT_TRUE_MSG( submit.isAccepted(), ( label + "the upload was not accepted" ).c_str() );
+
+        // 제출 직후: Pending 이거나 이미 Complete 다(`Failed` 는 아니다). 프레임을 돌리지 않고 폴링만 되풀이한다.
+        const sw::RHITransferStatus first = pResource->pollTransfer( submit._ticket );
+        SW_EXPECT_TRUE_MSG( first != sw::RHITransferStatus::Failed, ( label + "a fresh ticket polled as Failed" ).c_str() );
+        const sw::RHITransferWaitResult result = sw::RHITransferUtil::waitWhilePending( [&]()
+        { return pResource->pollTransfer( submit._ticket ); } );
+        SW_EXPECT_TRUE_MSG( result == sw::RHITransferWaitResult::Complete, ( label + "polling alone did not complete the transfer" ).c_str() );
+        // 완료는 워터마크라 같은 티켓을 다시 물어도 Complete 다.
+        SW_EXPECT_TRUE( pResource->pollTransfer( submit._ticket ) == sw::RHITransferStatus::Complete );
+        SW_EXPECT_TRUE( pResource->pollTransfer( submit._ticket ) == sw::RHITransferStatus::Complete );
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout ), ( label + "readback failed" ).c_str() );
+        bool bSame = layout._width == 4 && layout._height == 4;
+        for ( uint32 row = 0; bSame && row < 4; ++row )
+        {
+            bSame = sw::Memory::compare( bytes.data() + static_cast<size_t>( row ) * layout._rowBytes, arrPixel + row * 16, 16 ) == 0;
+        }
+        SW_EXPECT_TRUE_MSG( bSame, ( label + "the polled upload did not read back as uploaded" ).c_str() );
+        pResource->destroyTexture( texture );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the transfer polling test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 같은 텍스처의 전송은 제출 순서대로 실행된다 — 업로드 뒤에 낸 구간 갱신이 마지막에 보이고 구간 밖은 업로드 그대로다(계약 3c), 네 백엔드
+ * @details 두 티켓을 모두 기다리지 않고 **뒤의 티켓만** 폴링해 `Complete` 를 본 뒤 읽는다 — 뒤 티켓이 `Complete` 면 앞의 것도 끝났다는 워터마크 규칙도 함께 본다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, RegionUploadSubmittedAfterAnUploadIsVisibleInSubmitOrder, test::listRHIBackendParameter, 0.4 )
+{
+    uint8 arrBase[4 * 4 * 4];
+    sw::Memory::set( arrBase, 0xAA, sizeof( arrBase ) );
+    uint8 arrPatch[2 * 2 * 4];
+    sw::Memory::set( arrPatch, 0x55, sizeof( arrPatch ) );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = arrBase;
+        upload._sizeBytes = sizeof( arrBase );
+        upload._mipLevels = 1;
+        sw::RHITextureRegionUploadDesc region{};
+        region._pData     = arrPatch;
+        region._sizeBytes = sizeof( arrPatch );
+        region._x         = 1;
+        region._y         = 1;
+        region._width     = 2;
+        region._height    = 2;
+
+        sw::RHITransferSubmit first{};
+        sw::RHITransferSubmit second{};
+        SW_ASSERT_TRUE( sw::RHITransferUtil::submitWhileBusy( [&]()
+        { return pResource->submitTextureUpload( texture, upload ); }, first ) );
+        SW_ASSERT_TRUE( sw::RHITransferUtil::submitWhileBusy( [&]()
+        { return pResource->submitTextureRegionUpload( texture, region ); }, second ) );
+        SW_ASSERT_TRUE_MSG( first.isAccepted() && second.isAccepted(), ( label + "a submit was not accepted" ).c_str() );
+        SW_EXPECT_TRUE_MSG( second._ticket._serial > first._ticket._serial, ( label + "ticket serials are not increasing" ).c_str() );
+
+        SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::waitForTransfer( *pResource, second._ticket ), ( label + "the later transfer did not complete" ).c_str() );
+        SW_EXPECT_TRUE_MSG( pResource->pollTransfer( first._ticket ) == sw::RHITransferStatus::Complete, ( label + "the earlier ticket is not Complete under the later one" ).c_str() );
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout ) );
+        bool bOrdered = true;
+        for ( uint32 row = 0; row < 4; ++row )
+        {
+            for ( uint32 col = 0; col < 4; ++col )
+            {
+                const bool   bInside  = row >= 1 && row < 3 && col >= 1 && col < 3;
+                const uint8* pPixel   = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes + static_cast<size_t>( col ) * 4;
+                const uint8  expected = bInside ? 0x55 : 0xAA;
+                bOrdered              = bOrdered && pPixel[0] == expected && pPixel[3] == expected;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOrdered, ( label + "the region update did not land after the full upload" ).c_str() );
+        pResource->destroyTexture( texture );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the transfer ordering test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 업로드를 낸 직후 텍스처를 지워도 안전하다(계약 6) — 티켓은 멈추지 않고 끝나며, 그 뒤 새 텍스처의 업로드 · 되읽기가 정상이다, 네 백엔드
+ * @details 해제는 백엔드가 전송이 끝난 뒤로 미룬다. 그 티켓의 결과는 쓸 수 없으므로 `Complete` 든 `Failed` 든 상관없고, 시간 초과(멈춤)만 실패다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DestroyingTheTextureRightAfterSubmitIsSafe, test::listRHIBackendParameter, 0.4 )
+{
+    constexpr uint32  kSide = 64;
+    sw::vector<uint8> bigPixel( static_cast<size_t>( kSide ) * kSide * 4, 0x33 );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width               = kSide;
+        texDesc._height              = kSide;
+        texDesc._format              = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource   = SW_TRUE;
+        sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = bigPixel.data();
+        upload._sizeBytes = static_cast<uint32>( bigPixel.size() );
+        upload._mipLevels = 1;
+        sw::RHITransferSubmit submit{};
+        SW_ASSERT_TRUE( sw::RHITransferUtil::submitWhileBusy( [&]()
+        { return pResource->submitTextureUpload( texture, upload ); }, submit ) );
+        SW_ASSERT_TRUE_MSG( submit.isAccepted(), ( label + "the upload was not accepted" ).c_str() );
+
+        pResource->destroyTexture( texture ); // 전송 중일 수 있다 — 백엔드가 해제를 미룬다
+        const sw::RHITransferWaitResult result = sw::RHITransferUtil::waitWhilePending( [&]()
+        { return pResource->pollTransfer( submit._ticket ); } );
+        SW_EXPECT_TRUE_MSG( result != sw::RHITransferWaitResult::TimedOut, ( label + "the ticket of a destroyed texture never settled" ).c_str() );
+
+        // 장치와 스테이징이 멀쩡하다 — 새 텍스처의 업로드와 되읽기가 같은 값으로 돌아온다.
+        texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), ( label + "upload after the early destroy failed" ).c_str() );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout ) );
+        SW_EXPECT_TRUE_MSG( bytes.empty() == false && bytes[0] == 0x33, ( label + "readback after the early destroy is wrong" ).c_str() );
+        pResource->destroyTexture( texture );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the early destroy test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 가져가지 않은 읽기 결과는 `discardTextureReadback` 으로 버릴 수 있다(`Pending` 이어도) — 되풀이해도 스테이징이 새지 않아 뒤의 읽기가 성공한다, 네 백엔드
+ */
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DiscardedReadbackReleasesItsStaging, test::listRHIBackendParameter, 0.4 )
+{
+    constexpr uint32  kSide = 64;
+    sw::vector<uint8> pixel( static_cast<size_t>( kSide ) * kSide * 4, 0x77 );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = kSide;
+        texDesc._height                    = kSide;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = pixel.data();
+        upload._sizeBytes = static_cast<uint32>( pixel.size() );
+        upload._mipLevels = 1;
+        SW_ASSERT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ) );
+
+        // 읽기를 낸 뒤 가져가지 않고 바로 버린다(끝나기 전일 수 있다). 되풀이해 링 · 읽기 표의 자리를 쓴다.
+        constexpr uint32 kRepeat = 16;
+        for ( uint32 round = 0; round < kRepeat; ++round )
+        {
+            sw::RHITextureMipSpan layout{};
+            sw::RHITransferSubmit read{};
+            SW_ASSERT_TRUE( sw::RHITransferUtil::submitWhileBusy( [&]()
+            { return pResource->submitTextureReadback( texture, 0, 0, layout ); }, read ) );
+            SW_ASSERT_TRUE_MSG( read.isAccepted(), ( label + "the readback was not accepted" ).c_str() );
+            pResource->discardTextureReadback( read._ticket );
+        }
+
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout ), ( label + "a readback after the discards failed" ).c_str() );
+        SW_EXPECT_TRUE( bytes.empty() == false && bytes[0] == 0x77 );
+        pResource->destroyTexture( texture );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the discarded readback test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 끝나지 않은 전송이 있는 텍스처의 bindless 등록은 거절된다 — 등록이 성공했다면 그 전송은 이미 `Complete` 이고, `Complete` 를 본 뒤에는 등록이 성공한다, 네 백엔드
+ * @details 계약 8: 소비자가 `Complete` 를 보기 전에 등록하는 일을 주석이 아니라 코드가 막는다(백엔드 레코드의 마지막 전송 시리얼이 워터마크 아래가 아니면 오류와 `kInvalidDescriptorIndex`).
+ *          제출 직후가 이미 `Complete` 인 백엔드(DX11 · GL)는 거절이 보이지 않을 수 있어 "등록 성공이면 `Complete`" 만 단언한다. 거절 때 남는 오류 로그는 방어 범위로 허용한다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, BindlessRegistrationIsRefusedWhileATransferIsPending, test::listRHIBackendParameter, 0.4 )
+{
+    constexpr uint32  kSide = 128;
+    sw::vector<uint8> pixel( static_cast<size_t>( kSide ) * kSide * 4, 0x10 );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = kSide;
+        texDesc._height                    = kSide;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = pixel.data();
+        upload._sizeBytes = static_cast<uint32>( pixel.size() );
+        upload._mipLevels = 1;
+        sw::RHITransferSubmit submit{};
+        SW_ASSERT_TRUE( sw::RHITransferUtil::submitWhileBusy( [&]()
+        { return pResource->submitTextureUpload( texture, upload ); }, submit ) );
+        SW_ASSERT_TRUE_MSG( submit.isAccepted(), ( label + "the upload was not accepted" ).c_str() );
+
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "registering a texture with an unfinished transfer is refused with an error" );
+            const sw::RHIDescriptorIndex early = pResource->registerBindlessTexture( texture );
+            if ( early != sw::kInvalidDescriptorIndex )
+            {
+                SW_EXPECT_TRUE_MSG( pResource->pollTransfer( submit._ticket ) == sw::RHITransferStatus::Complete,
+                                    ( label + "a texture with an unfinished transfer was registered" ).c_str() );
+                pResource->unregisterBindlessTexture( early );
+            }
+        }
+        SW_ASSERT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, submit._ticket ) );
+        const sw::RHIDescriptorIndex srv = pResource->registerBindlessTexture( texture );
+        SW_EXPECT_TRUE_MSG( srv != sw::kInvalidDescriptorIndex, ( label + "registration after Complete failed" ).c_str() );
+        if ( srv != sw::kInvalidDescriptorIndex )
+            pResource->unregisterBindlessTexture( srv );
+        pResource->destroyTexture( texture );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the bindless registration gate test" );
 }
 
 /**
@@ -2379,7 +2663,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRe
             SW_EXPECT_TRUE_MSG( released._liveCount == arrBefore[caseIndex]._liveCount, ( what + ": 해제 지연이 지나도 장부에 남았다(개수)" ).c_str() );
             SW_EXPECT_TRUE_MSG( released._liveBytes == arrBefore[caseIndex]._liveBytes, ( what + ": 해제 지연이 지나도 장부에 남았다(바이트)" ).c_str() );
         }
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the GPU memory ledger test" );
@@ -2437,7 +2721,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereThe
             SW_EXPECT_TRUE_MSG( grown._usageBytes >= budget._usageBytes + kBytes / 2, ( label + ": 64 MB 텍스처를 만들어도 드라이버 사용량이 따라 오르지 않았다" ).c_str() );
             device->getResourceFactory()->destroyTexture( large );
         }
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the driver memory budget test" );
@@ -2660,7 +2944,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlp
             cmd->endRenderPass();
             cmd->endCommandList();
             device->executeCommandListImmediate( cmd.get() );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
@@ -2745,7 +3029,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithVie
         }
         cmd->endCommandList();
         device->executeCommandListImmediate( cmd.get() );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
         const utf8* arrCaseName[3] = { "scissored draw", "next pass without scissor", "setViewport after scissor" };
         for ( uint32 targetIndex = 0; targetIndex < 3; ++targetIndex )
@@ -2829,7 +3113,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget, tes
         }
         cmd->endCommandList();
         device->executeCommandListImmediate( cmd.get() );
-        device->waitIdle();
+        device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
         sw::vector<uint8>     pixels;
         sw::RHITextureMipSpan layout{};
@@ -2932,7 +3216,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDra
                 cmd->endRenderPass();
                 cmd->endCommandList();
                 device->executeCommandListImmediate( cmd.get() );
-                device->waitIdle();
+                device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
@@ -3010,7 +3294,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBu
             const bool bExtraAccepted = readback.request( *cmd, source, sw::RHIBufferState::ShaderResource, 99 );
             cmd->endCommandList();
             device->executeCommandListImmediate( cmd.get() );
-            device->waitIdle(); // 남은 해제 콜백을 모두 부른다 — 읽기가 여기서 일어난다
+            device->waitIdle( sw::RHIWaitIdleReason::Tool ); // 남은 해제 콜백을 모두 부른다 — 읽기가 여기서 일어난다
             SW_EXPECT_EQUAL( sw::AsyncBufferReadback::kSlotCount, acceptedCount );
             SW_EXPECT_FALSE_MSG( bExtraAccepted, ( label + ": a request past the slot count must be refused" ).c_str() );
 
@@ -3063,7 +3347,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, WaitIdleLeavesTheSubmittedCopyReadabl
         {
             recordContractCopy( *cmd, source, readback, kSizeBytes );
             device->executeCommandListImmediate( cmd.get() );
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
 
             sw::vector<uint8> bytes( kSizeBytes );
             SW_EXPECT_TRUE_MSG( pResource->readReadbackBuffer( readback, kSizeBytes, bytes.data() ), ( label + ": waitIdle returned before the GPU finished the copy" ).c_str() );
@@ -3132,7 +3416,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, EnqueuedGPUReleaseRunsOnlyAfterTheFra
             SW_EXPECT_TRUE_MSG( kFrameCount - sw::constant::kMaxFrameCountInFlight <= reads._calledCount,
                                 ( label + ": the GPU was allowed to fall further behind than the frame ring" ).c_str() );
 
-            device->waitIdle();
+            device->waitIdle( sw::RHIWaitIdleReason::Tool );
             SW_EXPECT_EQUAL( kFrameCount, reads._calledCount );
             SW_EXPECT_EQUAL( 0u, reads._wrongCount );
             SW_EXPECT_EQUAL( 0u, device->getPendingReleaseCount() );

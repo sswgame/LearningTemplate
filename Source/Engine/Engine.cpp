@@ -662,7 +662,7 @@ namespace sw
             if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
             {
                 SW_PROFILE_SCOPE( "GT.Material.waitIdle" ); // 처음 쓰는 머티리얼 때문에 GT 가 RT · GPU 를 통째로 기다리는 시간
-                _pRenderThread->waitIdle();
+                _pRenderThread->waitIdle( RHIWaitIdleReason::MaterialInit );
             }
             materials.initializePending( &_pRHI->getDevice() );
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
@@ -857,7 +857,7 @@ namespace sw
             _startup.getCollection().shutdownDependentsOf( *_pRHISubsystem );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
-            _pRHI->getDevice().waitIdle();
+            _pRHI->getDevice().waitIdle( RHIWaitIdleReason::BackendSwap );
             engine::getSubsystem<ShaderCache>().clearCache();
         }
 

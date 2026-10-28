@@ -269,7 +269,7 @@ namespace sw
             }
             else
             {
-                waitIdle();
+                waitIdle( RHIWaitIdleReason::Tool ); // `gv_useRenderThread` 토글은 개발 토글이다(프레임 경로가 아니다)
                 stop();
                 if ( bind( pSavedDevice, pSavedFrameRenderer ) == false )
                     SW_LOG_ERROR( "Render thread could not go back to inline submit - no device is bound" );
@@ -320,7 +320,7 @@ namespace sw
         { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
 
-    void RenderThread::waitIdle()
+    void RenderThread::waitIdle( RHIWaitIdleReason reason )
     {
         if ( _bRunning.load( std::memory_order_acquire ) == false )
             return;
@@ -333,7 +333,7 @@ namespace sw
         }
 
         if ( _pDevice != nullptr )
-            _pDevice->waitIdle();
+            _pDevice->waitIdle( reason );
     }
 
     void RenderThread::executeInline( RenderFramePacket& packet )

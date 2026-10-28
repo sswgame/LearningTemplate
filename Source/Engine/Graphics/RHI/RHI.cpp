@@ -340,7 +340,7 @@ namespace sw
         if ( _device )
         {
             // 죽기 직전의 통보(RHIRenderResource::releaseAllFor)는 shutdown 이 스스로 낸다. 여기서 손으로 훑지 않는다.
-            _device->waitIdle();
+            _device->waitIdle( RHIWaitIdleReason::Shutdown );
             _device->shutdown();
             _device.reset();
         }

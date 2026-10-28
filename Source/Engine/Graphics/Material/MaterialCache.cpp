@@ -303,7 +303,7 @@ namespace sw
             // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
             // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
             // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
-            pDevice->waitIdle();
+            pDevice->waitIdle( RHIWaitIdleReason::HotReload );
             material->releaseRHI( pDevice );
         }
 

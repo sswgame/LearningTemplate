@@ -554,7 +554,7 @@ namespace sw
         }
 
         if ( _pRHIDevice != nullptr )
-            _pRHIDevice->waitIdle(); // 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 머티리얼을 잡는다
+            _pRHIDevice->waitIdle( RHIWaitIdleReason::SceneActivation ); // 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 머티리얼을 잡는다
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `adoptScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
         Scene* const pAdopted = adoptScene( std::move( pendingScene ), SceneRole::Active );

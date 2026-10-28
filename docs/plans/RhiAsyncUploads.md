@@ -1,6 +1,6 @@
 # RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 12/15
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 14/15
 
 > 질문: 게임 스레드와 렌더 스레드가 GPU 완료를 기다리는 지점을 어떤 계약으로 없애고, 무엇부터 바꾸는가?
 > 독자: RHI 백엔드와 렌더러를 고치는 작업자, 통합 담당.
@@ -127,14 +127,14 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 | 단위 | 내용 | 선행 | GPU |
 |---|---|---|---|
-| U7 | 계약 GPU 테스트(옛 호출 이전은 B0 가 했다) | B0 | 예 |
+| U7 | 계약 GPU 테스트(코드 끝남, 실행 전 — 옛 호출 이전은 B0 가 했다) | B0 | 예 |
 | U8 | 새 텍스처 업로드의 세 단계(코드 끝남, GPU 확인 전 — 아래 "끝난 단위: U8") | B0 | 예 |
 | U9 | 렌더 타깃 읽기 티켓(코드 끝남, GPU 확인 전 — 글리프 아틀라스 몫은 이미 끝남) | B0 | 예 |
 | U10 | 머티리얼 GPU 상태와 프레임 경계 초기화 | U8 | 예 |
 | U11 | PSO 상태 데이터와 드로우 규칙(코드 끝남, GPU 확인 전) | 없음 | 예 |
 | U12 | PSO 백그라운드 빌더 | U11, U5, U6, DX11 · GL 의 워커 안전성 점검 | 예 |
 | U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거(코드 끝남, GPU 확인 전) | U8 | 예 |
-| U14 | `waitIdle` 이유 인자와 게이트 | U13 | 아니오 |
+| U14 | `waitIdle` 이유 인자(코드 끝남, 게이트는 남음) | U13 | 아니오 |
 
 **끝난 단위: B0 골격 번들.** U1(계약, ABI 34, 블로킹 헬퍼), U2(Vulkan 일회성 제출의 펜스 대기), U3(DX11), U4(GL)가 끝났고 U5 ~ U9 는 **골격**까지 들어갔습니다: 네 백엔드가 새 계약을 구현하고 옛 호출처와 테스트가 `...AndWait` 위에서 컴파일됩니다. GPU 네 백엔드 확인(`RHIDeviceTest`, `RenderPassGPUTest` 캡처)은 통합 L 에서 Release 로 통과했고(2026-10-25), 남은 확인은 매니페스트 id `rhi-transfer-b0-measure`(측정 질문 넷)입니다. 통합 L 이 GL 폴링을 고쳤습니다(컨텍스트 없는 스레드의 `pollTransfer` 가 컨텍스트가 비어 있으면 한 번 집어 펜스를 봄 — 게임 스레드가 동기 로드로 막혀 RT 가 프레임을 돌리지 않으면 10 초 시간 초과까지 멈추던 것). nogpu `RHITransferTest.*` 는 `ctest-nogpu` 가 돕니다.
 
@@ -157,6 +157,10 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 **끝난 단위: U13(렌더 타깃 크기 변경, 코드만 — 빌드 · GPU 확인은 통합).** `TextureCache::resizeRenderTarget` 의 `waitIdle`(W6)을 지웠다. 옛 GPU 텍스처 · SRV 는 `Texture2D::detachRHI` 로 해제하지 않고 떼어 스트리밍 교체와 같은 지연 해제 줄(`_retired`, 게임 스레드의 `releaseRetiredTextures` → `releaseHandle` 이 이미 만든 패킷이 끝난 뒤 돌려줌)에 넘기고 새 텍스처는 새 핸들 · 인덱스를 받습니다 — 그래서 DX11 · GL 이 `unregisterBindlessTexture` 에서 인덱스를 곧바로 돌려줘도 새 텍스처가 옛 인덱스를 물려받아 이전 프레임을 오염시키지 않습니다(설계가 요구한 "DX11 · GL 인덱스 반환의 GPU 완료 뒤 미룸" 을 백엔드가 아니라 이 호출처가 지연 해제로 채웠다). 새 인덱스는 세대를 올려 빌려 간 머티리얼이 다시 받습니다(기존). 핫 리로드의 `waitIdle` 은 도구 경로라 남깁니다. 확인은 기존 `CanvasTargetRecreatesTextureWhenWidgetResizes`(옛 텍스처 해제 줄을 비우는 한 줄을 더함)와 에디터 캔버스 시나리오. **[확인 전]** DX11 · GL 에서 `releaseHandle` 의 "넘긴 프레임 + 1" 이 GPU 가 옛 SRV 를 다 읽은 뒤인지(스트리밍 교체가 이미 같은 가정을 쓴다).
 
 **끝난 단위: U9(렌더 타깃 읽기 티켓, 코드만 — 빌드 · GPU 확인은 통합).** `RenderThread::readRequestedRenderTarget` 가 요청 프레임에 기다리지 않는다. 요청을 받으면 `submitTextureReadback` 만 하고(`PendingRenderTargetRead` — 티켓을 직접 쥐고 소멸할 때 `discardTextureReadback`; `PendingReadback` 은 쥔 동안 같은 스레드의 `...AndWait` 를 단언으로 막아 스크린샷과 겹치므로 쓰지 않았다) 이후 프레임의 같은 함수가 `pollTransfer` 로 보고 `Complete` 면 `takeTextureReadback` 해 레지스트리에 게시한다. 읽는 중에는 새 요청을 레지스트리에 둔 채 받지 않고, `Busy` 면 같은 요청을 다음 프레임에 다시 내며, `Rejected` · `Failed` · 죽은 핸들은 조용한 실패로 게시합니다. `stop()` 이 팩토리보다 오래 살지 않게 남은 티켓을 버립니다(인라인 제출 경로 포함). 스크린샷과 에디터 캡처는 블로킹 헬퍼를 그대로 씁니다. 새 테스트는 없습니다 — 렌더 스레드 읽기는 장치가 있는 에디터 시나리오(`uiaudit.scenario.xml`)와 `uidemo.scenario.xml`, `-gv_screenshot` 캡처 경로로 봅니다. 같은 결함 후보: 에디터 `RenderTargetPanel` 의 `...AndWait`(`RenderTargetViewUtil.h`)는 UI 스레드의 도구 경로라 남겼다.
+
+**끝난 단위: U7(계약 테스트, 코드만 — 실행은 통합).** `RHIDeviceTest` 에 다섯 케이스(모두 네 백엔드): `SubmittedTransferCompletesByPollingWithoutAFrame`(프레임 없이 폴링만으로 `Complete`, 다시 물어도 `Complete`, 되읽기가 올린 바이트와 같음), `RegionUploadSubmittedAfterAnUploadIsVisibleInSubmitOrder`(구간 갱신이 업로드 뒤에 보이고 뒤 티켓의 `Complete` 가 앞 티켓을 덮음), `DestroyingTheTextureRightAfterSubmitIsSafe`(전송 중 파괴 뒤 티켓이 멈추지 않고 새 텍스처 업로드가 정상), `DiscardedReadbackReleasesItsStaging`(가져가지 않고 버리기를 16 번 되풀이해도 뒤의 읽기가 성공), `BindlessRegistrationIsRefusedWhileATransferIsPending`(등록이 성공했다면 그 전송은 `Complete`, `Complete` 뒤에는 성공). 이미 있던 것: 장치 손실 뒤 `Rejected`(`LostDeviceRejectsTransferSubmitsAtEntry` · Vulkan 은 `VulkanLostDeviceStopsWaitingOnTheGPU`)와 링이 찬 `Busy`(`RHIStagingRingGPUTest`). 검증 항목은 `Test/QA/VerifyBatch.json` 의 `rhi-async-u7-u13-gpu`(`pending: true`).
+
+**끝난 단위: U14(`waitIdle` 이유 인자, 코드만 — 빌드는 통합).** `RHIWaitIdleReason`(`Shutdown` · `BackendSwap` · `Resize` · `HotReload` · `SceneActivation` · `Capture` · `Tool`, 그리고 U10 이 지울 옛 경로 표시 `MaterialInit`)을 `IRHIDevice::waitIdle` · `RenderThread::waitIdle` 의 필수 인자로 더하고 `Source/` 와 `Test/` 의 호출처 전부(약 70곳)에 이유를 적었다(테스트 · 에디터 UI 는 `Tool`, 텍스처 · 머티리얼 · 메시 핫 리로드는 `HotReload`, `ModuleHost::drainRenderWorkers` 는 `DrainReason` 을 그대로 옮김). 호출은 `SW_LOG_TRACE` 로 이유를 남긴다. 남은 것: (1) `Engine.cpp` 의 `MaterialInit` 은 U10 이 블록과 함께 지운다, (2) 린트 게이트(프레임 경로 폴더 `Renderer/Frame/` · `Graphics/Material/` · `Graphics/Texture/` 의 `Tool` 이 아닌 호출 금지)는 아직 없다 — 게이트 일부가 지워지는 중이라 보류.
 
 **끝난 단위: U5(DX12 비동기 전송).** 텍스처 전송이 프레임 슬롯 복사 리스트와 프레임 제출 락(`_uploadSlotMutex`)을 거치지 않고, 전송 작업 · 전송 펜스 · 업로드 링을 씁니다(링 구간 정렬은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT` 512). 제출은 `_transferSubmitMutex` 안에서 `ExecuteCommandLists` · `Signal` · 시리얼 발급을 합니다(락 순서 `_transferSubmitMutex` → 펜스 줄 잎 락). 텍스처의 마지막 전송 시리얼은 `max` 로 기록합니다. `_uploadSlotMutex` 는 구조 버퍼 복사 · 프레임 리스트 제출 · 프레임 펜스만 지킵니다([결정 5-5](../decisions/5-5_GraphicsRHI.md) `withNativeContext` 항목, 확인 `rhi-native-context-guard`). GPU 확인은 `rhi-transfer-dx12-u5`. 남은 것: DX12 되읽기 링(잦아지면, M1 이 정함), GL 의 `allocateReadbackSpan` 이 `RHIStagingRingUtil` 을 쓰지 않는 것(GL 되읽기 링을 만질 때 합침).
 

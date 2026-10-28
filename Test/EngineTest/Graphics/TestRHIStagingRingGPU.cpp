@@ -189,7 +189,7 @@ namespace
         SW_EXPECT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, dropped._ticket ) ); // 버린 티켓도 Complete 로 끝난다
 
         pResource->destroyTexture( texture );
-        device->waitIdle(); // 미뤄 둔 해제가 모두 놓인다
+        device->waitIdle( sw::RHIWaitIdleReason::Tool ); // 미뤄 둔 해제가 모두 놓인다
         SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), device->getPendingReleaseCount() );
     }
 } // namespace

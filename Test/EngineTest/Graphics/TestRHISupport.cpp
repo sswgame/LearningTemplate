@@ -500,7 +500,7 @@ SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
     device.notifyRenderFrameQueued();
     device.releaseHandle( sw::RHIHandleKind::BindlessTexture, 11 );
     SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
-    device.waitIdle();
+    device.waitIdle( sw::RHIWaitIdleReason::Tool );
     SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
     device.notifyRenderFrameRetired(); // 위에서 넘긴 프레임을 끝낸다
 }

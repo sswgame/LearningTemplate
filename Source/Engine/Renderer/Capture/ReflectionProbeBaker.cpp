@@ -112,7 +112,7 @@ namespace sw
             _pDevice->beginFrame();
             bRendered = _renderer->execute( _pDevice, scene );
             _pDevice->endFrame( false, false );
-            _pDevice->waitIdle();
+            _pDevice->waitIdle( RHIWaitIdleReason::Capture );
         }
         vector<uint8>     bytes;
         RHITextureMipSpan layout{};
@@ -201,7 +201,7 @@ namespace sw
         outListData.resize( listProbe.size() );
         // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다(PortraitBatchUtil 과 같은 길).
         if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle();
+            pRenderThread->waitIdle( RHIWaitIdleReason::Capture );
         IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
         if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
         {

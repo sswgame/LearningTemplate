@@ -113,8 +113,9 @@ namespace sw
                   pWhat );
     }
 
-    void IRHIDevice::waitIdle()
+    void IRHIDevice::waitIdle( RHIWaitIdleReason reason )
     {
+        SW_LOG_TRACE( "waitIdle (%#)", getRHIWaitIdleReasonName( reason ) );
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
         const RenderThreadDrainFunction pfnDrain = _pfnRenderThreadDrain.load( std::memory_order_acquire );

@@ -350,15 +350,18 @@ namespace sw
     {
 #if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
-            _pRenderThread->waitIdle();
+            _pRenderThread->waitIdle( RHIWaitIdleReason::HotReload ); // 새 에디터 인스턴스(모듈 리로드 · RHI 교체 직후)의 첫 UI 프레임
 #endif
     }
 
     void ModuleHost::drainRenderWorkers( DrainReason reason )
     {
+        // 비우는 까닭(`DrainReason`)이 곧 장치 대기의 이유다.
+        const RHIWaitIdleReason waitReason = reason == DrainReason::BackendSwap ? RHIWaitIdleReason::BackendSwap
+                                                                                : ( reason == DrainReason::Shutdown ? RHIWaitIdleReason::Shutdown : RHIWaitIdleReason::HotReload );
 #if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
-            _pRenderThread->waitIdle();
+            _pRenderThread->waitIdle( waitReason );
 #else
         SW_ASSERT( _pRenderThread == nullptr ); // Server 타깃은 렌더러를 짓지 않는다 — 렌더 스레드가 있을 수 없다
 #endif
@@ -366,7 +369,7 @@ namespace sw
         // 참조를 반환하므로 그 상태로 물으면 죽는다. 종료 경로가 반드시 이곳을 지난다(`Engine::shutdown` 도 같은 이유로
         // `hasDevice()` 를 먼저 확인한다).
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
-            _pRHI->getDevice().waitIdle();
+            _pRHI->getDevice().waitIdle( waitReason );
 
         onRenderWorkersDrained();
 
