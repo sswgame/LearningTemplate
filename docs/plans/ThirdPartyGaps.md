@@ -1,27 +1,35 @@
 # 서드파티 빈자리
 
-> 상태: 구현중 · 선행: 없음 · 영역: project · 옛번호: G-11 · 진행: 5/7
+> 상태: 구현중 · 선행: 없음 · 영역: project · 진행: 5/7
 
-2026-10-05 후보 중 사용자가 고르지 않은 셋(리눅스 오디오 출력 · 업스케일 · 아랍어 셰이핑)입니다. 2026-10-22 사용자 결정으로 착수 조건을 갈음했습니다.
+사용자가 고르지 않은 후보 셋(리눅스 오디오 출력 · 업스케일 · 아랍어 셰이핑)을 닫는다. 리눅스 오디오는 이미 닫혔고, FSR 업스케일은 끝났다. 아랍어 셰이핑은 코드가 들어갔고 복합 문자 빌드(vcpkg 로 HarfBuzz · SheenBidi 설치)가 서는지 확인이 남았다.
 
-## 1. 정한 것
+## 진행
 
-- **리눅스 오디오 출력 — miniaudio 를 들이지 않습니다.** `AlsaAudioBackend`(`Engine/Audio/Linux/`, `libasound` 를 실행 중에 엶 — PulseAudio · PipeWire 는 ALSA 플러그인으로)가 들어와 빈자리가 닫혔고, 한 OS 에 출력 백엔드를 둘 두면 같은 일을 하는 길이 둘이 된다. ALSA 가 못 하는 요구(JACK · 장치 목록 · 핫플러그)가 생기면 그때 ALSA 백엔드를 바꿀지 따진다.
-- **아랍어 셰이핑 — HarfBuzz(셰이퍼) + SheenBidi(전체 UAX #9 수준)** 를 엔진 인터페이스 뒤에 둡니다.
-  - 셰이퍼는 면을 연 래스터라이저가 고릅니다(`IFontRasterizer::createShaper` — FreeType 은 `ITextShaper::createDefault()` 가 빌드에 따라 고르고 폰트 바이트가 없는 테스트의 가짜는 단순 셰이퍼). 복합 문자 빌드는 `Text/HarfBuzz/HarfBuzzTextShaper.cpp`(면마다 `hb_font` 캐시, `findFaceBytes` 를 읽기 전용으로 빌림, RTL 결과를 논리 순서로 뒤집음), 아니면 `SimpleTextShaper`. `TextLayoutEngine` 은 `unique_ptr<ITextShaper>` 를 듭니다.
-  - 양방향은 수준만 바꿉니다 — `TextBidi::resolveLevels` 가 복합 문자 빌드에서 `Text/SheenBidi/SheenBidiLevels.cpp`, 아니면 `resolveSimpleLevels`. 재배열(L2) · 거울 문자(L4)는 같은 코드.
-  - 고르는 것은 빌드 구성 `SW_ENABLE_COMPLEX_TEXT`(기본 꺼짐)이다. 실행 중에 라이브러리가 없다고 물러나는 길은 없다. 켜면 vcpkg 선택 기능 `complex-text`(`-DVCPKG_MANIFEST_FEATURES=complex-text`)가 필수이고 없으면 구성이 이유를 말하고 선다.
-  - 격리 게이트: `lint/SharedRules.py` 의 라이브러리 표에 HarfBuzz · SheenBidi 줄, 제품 이름 표에 두 낱말.
-- **FSR 업스케일 — FSR 1(EASU + RCAS)을 Present 의 필터로 들였습니다.** 렌더 배율(`gv_renderScale`)은 화면 출력 뷰의 풀 크기를 줄이고(`RenderViewCollector::applyUserRenderScale`) Present 가 출력 크기로 키운다. 업스케일러(`gv_upscaler`, graphics.upscaler)는 그 필터다 — off 선형, spatial 은 FSR 1(`FrameRendererUpscale.cpp`, `fsr1.hlsl`). AMD 권고대로 톤맵 뒤 · UI 앞이라 톤맵 패스가 따로 있는 파이프라인(디퍼드)에서만 쓰고 Present 가 톤맵하는 파이프라인(포워드 후처리 체인)에서 켜면 오류를 한 번 남기고 선형으로 키운다. 셰이더는 ffx_fsr1.h 32 비트 판을 엔진 셰이더 규칙으로 옮긴 것이고 MIT 고지는 셰이더 머리와 `ThirdParty/fidelityfx-fsr1/LICENSE.md` 에 있다.
-
-## 2. 단계
-
-| 단계 | 내용 | 상태 |
+| 단위 | 내용 | 상태 |
 |---|---|---|
-| T1 | 셰이퍼 · 양방향 인터페이스 뒤 구현, 구성 옵션 · vcpkg 선택 기능 · ThirdParty 래퍼 · 격리 표, `TextShaperTest.DefaultShaperIsChosenByTheBuild` | 끝(빌드 없이 작성) |
-| A1 | 리눅스 오디오 출력: 이미 `AlsaAudioBackend` — 닫음 | 끝 |
-| T2 | main 에서 `-DVCPKG_MANIFEST_FEATURES=complex-text -DSW_ENABLE_COMPLEX_TEXT=ON` 으로 설치 · 빌드, 배포 고지(Apache 2.0). 2026-10-22 시도에서 `sheenbidi` 3.0.0 은 받아졌으나 `harfbuzz` 14.5.1(meson 포트)이 `lld-link` 를 PATH 에서 못 찾아 섰다(meson 1.9 는 clang-cl 링커를 이름 `lld-link` 로 실행하는데 vcpkg 가 포트 빌드의 PATH 를 걸러 LLVM bin 이 빠진다). **정함(2026-10-24)**: "트리플릿이 아니라 오버레이 포트" 규칙대로 harfbuzz 만 CMake 로 짓는 오버레이 포트 `ThirdParty/harfbuzz/vcpkg-port/harfbuzz` 를 넣었다(같은 14.5.1 소스 · SHA512, 셰이퍼 코어만 — FreeType · ICU · GLib · 부분 집합 · 래스터 · 벡터 · GPU · 유틸리티 끔). 고지는 두 포트의 `share/<포트>/copyright` 를 `GenerateThirdPartyNotices.py` 가 모은다. **남은 것**): 설치가 서는지(오버레이 포트의 CMake 구성 · `vcpkg_cmake_config_fixup` 경로), `sheenbidi` 포트의 헤더 경로(`SheenBidi/SheenBidi.h`) · 임포트 타깃 이름(추측으로 적었다) | 오버레이 포트 들어감(설치 미확인 — 2026-10-28 포트 파일을 업스트림 14.5.1 `CMakeLists.txt` 와 견줘 읽음: 설치 내보내기가 `harfbuzzConfig.cmake` · 이름공간 `harfbuzz::` · 헤더 `include/harfbuzz` 라 `CONFIG_PATH`·`<hb.h>` 가 맞고, 애플 · 윈도 셰이퍼 백엔드(`CORETEXT` · `DIRECTWRITE` · `GDI` · `UNISCRIBE`)와 `GPU_DEMO` 를 명시로 끔. `sheenbidi` 의 헤더 경로 · 타깃 이름은 소스가 없어 못 봄) |
-| T3 | 복합 문자 빌드에서도 텍스트 테스트가 서도록: 셰이퍼를 면 바이트를 주는 래스터라이저가 고른다, 실제 글꼴 테스트 `ComplexShapingTest`(아랍어 연결형 GSUB 를 가진 작은 글꼴 `Test/EngineTest/Text/Fonts/swshapingtest.ttf`, 생성기 `Scripts/generate/GenerateShapingTestFont.py`) — 기본 판 기대값은 단순 셰이퍼로 확인 | 끝(기본 판) |
-| T3b | 복합 판에서 `ComplexShapingTest` 의 연결형 기대(어두 · 어중 · 어말 글리프) 확인, 단순 판 기대값(`TestTextBidi`)과 갈리는 자리 정리 | 테스트 코드 작성(2026-10-28 `AlefJoinsFromBehChainAndBreaksTheChainAfterItself` — 바 바 알리프 연결 · 알리프 뒤 끊김, 복합 판 기대는 같은 테스트의 `#if` 분기; 돌리지 않음 — T2 뒤 복합 판에서 확인) |
-| F1 | 렌더 배율: 뷰 풀(모든 첨부 · TAA · 깊이 히스토리)이 `출력 × 사각형 × 배율` 이다(`FrameRendererUtil::computeViewPoolExtent`, `ensureTransientResources`) — 연속 배율은 첨부 나눗수가 아니라 풀 크기로 받는다 | 끝 |
-| F2 | FSR 1(EASU + RCAS) — Present 단계의 필터(톤맵 뒤), `gv_upscaler` 가 고르고 `gv_upscalerSharpness` 가 RCAS 세기, `RenderPassGPUTest.SpatialUpscalerReplacesTheLinearPresent`(네 백엔드 같은 값). 셰이더는 패치로 넘겨 병합 때 쿠킹 | 끝 |
+| T1 | 셰이퍼 · 양방향 인터페이스 뒤 구현, 구성 옵션 · vcpkg 선택 기능 · ThirdParty 래퍼 | 끝(빌드 없이 작성) |
+| A1 | 리눅스 오디오 출력 — 이미 `AlsaAudioBackend` 가 있어 닫음 | 끝 |
+| T2 | 복합 문자 빌드 설치 · 빌드, 배포 고지(Apache 2.0) | 오버레이 포트 들어감, 설치 미확인 |
+| T3 | 복합 빌드에서도 텍스트 테스트가 서도록 — 셰이퍼를 래스터라이저가 고른다, 실제 글꼴 테스트 `ComplexShapingTest` | 끝(기본 판) |
+| T3b | 복합 판에서 연결형 기대(어두 · 어중 · 어말 글리프) 확인, 단순 판 기대와 갈리는 자리 정리 | 테스트 코드 작성, 돌리기 전 |
+| F1 | 렌더 배율 — 뷰 풀이 `출력 × 사각형 × 배율` | 끝 |
+| F2 | FSR 1(EASU + RCAS) Present 필터 | 끝 |
+
+첫 일: `-DVCPKG_MANIFEST_FEATURES=complex-text -DSW_ENABLE_COMPLEX_TEXT=ON` 으로 설치 · 빌드를 해 보고(T2), 서면 복합 판에서 T3b 테스트를 돌린다.
+
+## 정한 것
+
+- **리눅스 오디오 — miniaudio 를 들이지 않는다.** `AlsaAudioBackend`(`libasound` 를 실행 중에 엶, PulseAudio · PipeWire 는 ALSA 플러그인으로)가 있고, 한 OS 에 출력 백엔드를 둘 두면 같은 일을 하는 길이 둘이 된다. ALSA 가 못 하는 요구(JACK · 장치 목록 · 핫플러그)가 생기면 그때 따진다.
+- **아랍어 셰이핑 — HarfBuzz(셰이퍼) + SheenBidi(양방향 UAX #9 수준)를 엔진 인터페이스 뒤에 둔다.**
+  - 셰이퍼는 면을 연 래스터라이저가 고른다(`IFontRasterizer::createShaper`). 복합 문자 빌드는 `HarfBuzzTextShaper`(면마다 `hb_font` 캐시, RTL 결과를 논리 순서로 뒤집음), 아니면 `SimpleTextShaper`.
+  - 양방향은 수준만 바꾼다. `TextBidi::resolveLevels` 가 복합 빌드에서 SheenBidi, 아니면 단순 판이다. 재배열(L2) · 거울 문자(L4)는 같은 코드다.
+  - **빌드 구성 `SW_ENABLE_COMPLEX_TEXT`(기본 꺼짐)가 고른다.** 실행 중에 라이브러리가 없다고 물러나는 길은 없다. 켜면 vcpkg 선택 기능 `complex-text` 가 필수이고 없으면 구성이 이유를 말하고 선다.
+- **FSR 업스케일 — FSR 1(EASU + RCAS)을 Present 의 필터로 들였다.** 렌더 배율(`gv_renderScale`)이 화면 출력 뷰의 풀 크기를 줄이고 Present 가 출력 크기로 키우며, 업스케일러(`gv_upscaler`)가 그 필터다(off 선형, spatial 은 FSR 1). AMD 권고대로 톤맵 뒤 · UI 앞이라 톤맵 패스가 따로 있는 파이프라인(디퍼드)에서만 쓰고, Present 가 톤맵하는 포워드에서 켜면 오류를 한 번 남기고 선형으로 키운다. 셰이더는 ffx_fsr1.h 32 비트 판을 옮긴 것이고 MIT 고지는 셰이더 머리와 `ThirdParty/fidelityfx-fsr1/LICENSE.md` 에 있다.
+
+## T2 — 복합 문자 빌드 설치
+
+- 시도에서 `sheenbidi` 는 받아졌으나 `harfbuzz`(meson 포트)가 `lld-link` 를 PATH 에서 못 찾아 섰다(vcpkg 가 포트 빌드의 PATH 를 걸러 LLVM bin 이 빠진다).
+- **정함:** "트리플릿이 아니라 오버레이 포트" 규칙대로 harfbuzz 만 CMake 로 짓는 오버레이 포트 `ThirdParty/harfbuzz/vcpkg-port/harfbuzz` 를 넣었다(같은 소스 · SHA512, 셰이퍼 코어만 — FreeType · ICU · GLib · 부분 집합 · 래스터 · 벡터 · GPU · 유틸리티 · 플랫폼 셰이퍼 백엔드 끔). 고지는 두 포트의 `copyright` 를 `GenerateThirdPartyNotices.py` 가 모은다.
+- **남은 확인:** 오버레이 포트의 CMake 구성 · `vcpkg_cmake_config_fixup` 경로(업스트림 `CMakeLists.txt` 와 견줘 읽어 `CONFIG_PATH` · `<hb.h>` 는 맞음), `sheenbidi` 포트의 헤더 경로(`SheenBidi/SheenBidi.h`) · 임포트 타깃 이름(추측으로 적었다).
+- T3b 의 테스트(`AlefJoinsFromBehChainAndBreaksTheChainAfterItself`)는 바 바 알리프 연결과 알리프 뒤 끊김을 보며, 복합 판 기대는 같은 테스트의 `#if` 분기다. 실제 글꼴은 아랍어 연결형 GSUB 를 가진 작은 글꼴 `swshapingtest.ttf`(생성기 `GenerateShapingTestFont.py`)다.
