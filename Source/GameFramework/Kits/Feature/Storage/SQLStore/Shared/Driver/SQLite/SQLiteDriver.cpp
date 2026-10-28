@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/Driver/SQLite/SQLiteDriver.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/File/FileUtil.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
 
@@ -16,6 +17,9 @@ namespace sw
         {
             /** @brief 다른 연결의 잠금을 기다리는 시한입니다. `sqlite3_busy_timeout` 으로 **열자마자** 건다 - 설정 문장에 섞어 적으면 순서에 기대게 된다. */
             static constexpr int32 kBusyTimeoutMilliseconds = 5000;
+
+            /** @brief 파일이 아닌 메모리 DB 의 연결 이름입니다(SQLite 규약). */
+            static constexpr string_view kMemoryDatabase = ":memory:";
 
             /** @brief 연결마다 한 번 도는 설정 문장입니다(잠금 시한은 이미 걸려 있어 이 문장들의 순서와 무관하게 지켜진다). WAL 은 읽기와 쓰기가 서로 막지 않게 하고, synchronous FULL 은 거래의 커밋이 정전에도 남게 한다. */
             static constexpr const utf8* kSetupSQL = "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;";
@@ -244,8 +248,14 @@ namespace sw
             return nullptr;
         }
         const string path( connection );
-        sqlite3*     pDatabase = nullptr;
-        const int32  flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드만 쓴다
+        // SQLite 가 경로를 스스로 열어 만들고 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(메모리 DB 는 파일이 아니다).
+        if ( string_view( path ) != SQLiteDriverInternal::kMemoryDatabase && FileUtil::isWriteAllowed( path ) == false )
+        {
+            outError = "sqlite open '" + path + "' was refused by the file write gate";
+            return nullptr;
+        }
+        sqlite3*    pDatabase = nullptr;
+        const int32 flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드만 쓴다
         if ( sqlite3_open_v2( path.c_str(), &pDatabase, flags, nullptr ) != SQLITE_OK )
         {
             outError = "sqlite open '" + path + "' failed: " + ( pDatabase != nullptr ? sqlite3_errmsg( pDatabase ) : "out of memory" );

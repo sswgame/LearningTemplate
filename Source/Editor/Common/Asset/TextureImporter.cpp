@@ -169,7 +169,8 @@ namespace sw::editor
         [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
                                                     TextureImportResult* pOutResult )
         {
-            if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+            // DirectXTex 가 경로를 스스로 열어 쓴다 — `FileUtil` 의 쓰기 입구를 지나지 않으므로 게이트를 직접 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게).
+            if ( FileUtil::isWriteAllowed( outputPath ) == false || FileUtil::ensureParentDirectoryExists( outputPath ) == false )
                 return false;
 
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.

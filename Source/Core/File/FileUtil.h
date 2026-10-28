@@ -239,8 +239,11 @@ namespace sw
         /**
          * @brief 쓰기 입구 게이트입니다 — 경로를 받아 쓰기를 허락하면 true, 아니면 false 와 이유를 돌려줍니다. 여러 스레드에서 불립니다.
          * @details 시나리오가 `scratch/` 밖의 추적 파일을 바꾸는 것을 형식으로 막는다. 파일을 바꾸는 입구(`writeFile` · `writeTextFile` · `copyFile` 의 대상 · `removeFile` ·
-         *          `tryRemoveFile` · `removeDirectory`)가 모두 `isWriteAllowed` 하나를 지나므로 호출처마다 검사를 넣지 않는다. 폴더를 만드는 `ensureDirectoryExists` 는
-         *          이미 있는 폴더에도 참을 돌려주는 흔한 호출이라 막지 않는다(폴더 안 파일은 위 입구가 막는다).
+         *          `tryRemoveFile` · `removeDirectory` · `appendTextFile` · `moveToRecycleBin`)가 모두 `isWriteAllowed` 하나를 지나므로 호출처마다 검사를 넣지 않는다.
+         *          폴더를 만드는 `ensureDirectoryExists` 는 이미 있는 폴더에도 참을 돌려주는 흔한 호출이라 막지 않는다(폴더 안 파일은 위 입구가 막는다).
+         *          속성 · 시각만 바꾸는 `setWritable` · `setFileWriteTime` 도 내용이 그대로라 막지 않는다.
+         *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
+         *          그런 호출과 OS · C 런타임의 직접 쓰기는 `CheckFacilityBypass` 의 `fileMutate` · `libraryWrite` 규칙이 센다.
          */
         using WriteGate = bool ( * )( string_view path, string& outReason );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
@@ -258,6 +261,11 @@ namespace sw
         [[nodiscard]] static bool tryRemoveFile( string_view path );
         /** @brief 디렉터리를 재귀적으로 삭제합니다. 없었거나 삭제했으면 true 입니다. */
         [[nodiscard]] static bool removeDirectory( string_view path );
+        /**
+         * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제). 쓰기 게이트가 거절하는 경로가 하나라도 있으면 아무것도 옮기지 않고 false 입니다.
+         * @details 휴지통이 없는 플랫폼은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
+         */
+        [[nodiscard]] static bool moveToRecycleBin( const vector<string>& listPath );
         /** @brief 시스템 임시 디렉터리 경로를 반환합니다. */
         static string getTempDirectory();
         /**
@@ -279,6 +287,8 @@ namespace sw
         [[nodiscard]] static bool readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
         /** @brief UTF-8 텍스트를 파일로 씁니다. `writeFile` 과 같이 원자적이고, 쓰기 · 닫기 결과를 확인합니다. */
         [[nodiscard]] static bool writeTextFile( string_view fileName, string_view text );
+        /** @brief UTF-8 텍스트를 파일 끝에 덧붙입니다(없으면 만듭니다). 쓰기 · 닫기 결과를 확인합니다. 원자적이지 않아(덧붙이다 끊기면 마지막 줄이 잘릴 수 있다) 스풀 · 기록 파일에만 씁니다. */
+        [[nodiscard]] static bool appendTextFile( string_view fileName, string_view text );
         /** @brief 문자열이 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 그것을 건너뛴 string_view 를 반환합니다. */
         static string_view skipUtf8Bom( string_view text );
         /** @brief 버퍼가 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 포인터와 크기를 3바이트 건너뛰도록 고칩니다. */

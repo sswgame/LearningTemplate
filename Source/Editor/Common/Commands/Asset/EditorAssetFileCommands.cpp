@@ -344,7 +344,7 @@ namespace sw::editor
         vector<string> listPath{ assetPath };
         if ( FileUtil::exists( metaPath ) )
             listPath.push_back( metaPath );
-        if ( PlatformFileUtil::moveToRecycleBin( listPath ) )
+        if ( FileUtil::moveToRecycleBin( listPath ) )
         {
             SW_LOG_INFO( "Moved '%#' to the recycle bin", ResourcePaths::toResourceID( assetPath ) );
             return true;

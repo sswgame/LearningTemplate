@@ -18,6 +18,13 @@ namespace
     {
         return 7;
     }
+
+    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteGate`). */
+    bool refuseEveryWrite( sw::string_view /*path*/, sw::string& outReason )
+    {
+        outReason = "test gate refuses every write";
+        return false;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -709,4 +716,55 @@ SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRe
     SW_EXPECT_EQUAL( base + "/MixedDir/Fresh/Deep/x.txt", sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
     SW_EXPECT_EQUAL( base + "/NoDir/a.txt", sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
     SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ) );
+}
+
+/**
+ * @brief [FileTest] 덧붙이기는 파일 끝에 쓰고 없는 파일은 만든다
+ */
+SW_TEST_CASE( FileTest, AppendTextFileAddsToTheEnd )
+{
+    const sw::string root = test::makeTempDirectory( "SwAppendRoot" );
+    const sw::string path = root + "/Spool.txt";
+
+    SW_ASSERT_TRUE( sw::FileUtil::appendTextFile( path, "a\n" ) ); // 없는 파일은 만든다
+    SW_ASSERT_TRUE( sw::FileUtil::appendTextFile( path, "b\n" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::appendTextFile( path, "" ) ); // 빈 글은 아무것도 더하지 않고 성공이다
+
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    SW_EXPECT_EQUAL( sw::string( "a\nb\n" ), text );
+}
+
+/**
+ * @brief [FileTest] 쓰기 게이트가 거절하면 덧붙이기 · 휴지통 · 쓰기가 모두 false 이고 원본은 그대로다
+ * @details 파일을 바꾸는 입구가 모두 `isWriteAllowed` 를 지나는지 본다. 휴지통은 거절하는 쪽만 본다(통과하면 실제로 휴지통에 간다).
+ *          게이트는 프로세스 전역이라 단언이 중간에 끝내지 않도록 결과를 모은 뒤 걷고 판정한다.
+ */
+SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
+{
+    const sw::string root = test::makeTempDirectory( "SwWriteGateRoot" );
+    const sw::string path = root + "/Guarded.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "keep" ) );
+
+    bool bWritten  = true;
+    bool bAppended = true;
+    bool bTrashed  = true;
+    bool bRemoved  = true;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a refused write is reported as an error and leaves the file alone" );
+        sw::FileUtil::setWriteGate( &refuseEveryWrite );
+        bWritten  = sw::FileUtil::writeTextFile( path, "changed" );
+        bAppended = sw::FileUtil::appendTextFile( path, "more" );
+        bTrashed  = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path } );
+        bRemoved  = sw::FileUtil::removeFile( path );
+        sw::FileUtil::setWriteGate( nullptr );
+    }
+
+    SW_EXPECT_FALSE( bWritten );
+    SW_EXPECT_FALSE( bAppended );
+    SW_EXPECT_FALSE( bTrashed );
+    SW_EXPECT_FALSE( bRemoved );
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+    SW_EXPECT_EQUAL( sw::string( "keep" ), text );
 }
