@@ -65,3 +65,17 @@ GPU 가 없는 환경과 배포본(Shipping)에서 검증이 거짓 실패하거
 - `result_doc` 이 인계 · 규칙 문서를 가리키거나 `N절` 번호의 제목이 문서에 없으면 `plans --check` 가 거절한다(`findDocReferenceProblems`).
 - 통과한 일회성 항목은 지웠다.
 - `shooter-crowd-measure` 는 `perf-compare --cases crowdShare --runs 3` 으로 닫았다. `paired-animation-two-process` 는 러너가 아니라 씬 저작이 선행이라 `manual`([Candidates-gameplay](Candidates-gameplay.md))로 분리했다.
+
+## 7. 셰이더 검증 · 디버그 도구
+
+> 상용 엔진 대응: 셰이더 assert / printf 는 언리얼 ShaderPrint · ShaderDebug 와 유니티 셰이더 printf, NaN 감시는 언리얼 `r.CheckNaN`, GPU 브레드크럼은 언리얼 `r.GPUCrashDebugging`(Aftermath · Radeon GPU Detective 마커)과 DRED, 디버그 뷰는 언리얼 Visualize LOD Coloration · 유니티 Scene 뷰 Draw Mode 에 대응한다. 전부 컴파일(DX12 SM6.6 · SPIR-V · DX11 fxc)과 엔진 빌드까지 확인했고, 실제 GPU 실행 확인은 에셋이 없는 이 환경에서 하지 못했다.
+
+| 단위 | 내용 | 진행 |
+|---|---|---|
+| 셰이더 assert 기반 | `SW_GPU_ASSERT( 조건, id, 값 )`(`gpuassert.hlsli` · 조건 id 표 `gpuassertids.hlsli` 를 HLSL 과 C++ 가 같이 읽는다). 컴퓨트가 UAV 링(u3, 256 칸, 누적 카운터 + 순번 칸)에 원자적으로 적고, `GpuAssertMonitor` 가 비동기 되읽기로 몇 프레임 뒤 읽어 id 별로 묶어 로그(Error · Warning, id → 메시지 표)로 낸다. 링을 넘으면 버려진 수만 센다. `-gv_gpuAssert=1`(기본 끔)일 때만 `SW_GPU_ASSERT_ENABLED` 퍼뮤테이션 PSO(컴퓨트 PSO 가 define 을 받는다)와 바인딩이 생기고 Shipping 은 늘 꺼진다. 네 백엔드가 컴퓨트 UAV u3 로 바인딩(DX11 포함). 버퍼를 못 만들면 `SW_FATAL` | 끝(컴파일 확인) |
+| 기존 셰이더 적용 | gpucull(LOD 단계 번호 · 단계 비트 칸 · 크로스페이드 칸 · 배치 번호 · 가시 구간), canvasmarker(투영 NaN · 월드 점 NaN · 인스턴스 칸 · 입력 행 범위), meshmorph · meshmodifier(레스트 정점 · 프로그램 칸 · 프로그램 표 · 기록 · UV 표 · BVH 노드 · 삼각형 표 · 스택) | 끝(컴파일 확인) |
+| NaN/Inf 감시 | `-gv_nanCheck=1`(기본 끔). 그래프가 끝난 뒤 주 시점의 부동소수 컬러 출력을 `gpunancheck.hlsl` 컴퓨트로 훑어 슬롯별 누적 카운터에 세고 `패스:첨부` 이름과 함께 로그. 컴퓨트가 엔진 텍스처를 읽어야 해 DX12 · Vulkan 만 쓰고 DX11 · GL 은 능력 선언으로 끈다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다). 본 값은 패스 직후가 아니라 그래프 끝 시점이다 | 끝(컴파일 확인) |
+| GPU 브레드크럼 | `GpuBreadcrumbs::mark` 가 패스마다 이름 표의 id 를 GPU 표지로 남긴다(`IRHICommandList::writeBreadcrumb`). DX12 는 `WriteBufferImmediate`(MARKER_IN) + DRED 자동 브레드크럼을 개발 빌드 전반으로 확대, Vulkan 은 `VK_NV_device_diagnostic_checkpoints`(없으면 `_bGpuBreadcrumbs` 거짓). 소실 때 `GpuBreadcrumbs::reportDeviceLost` 가 마지막 패스 이름을 로그 · 크래시 문맥(`gpu_last_pass`) · 빵부스러기에 싣는다. DX11 · GL 은 GPU 쪽 표지 수단이 없어 CPU 가 마지막으로 기록한 패스만 보고한다. `-gv_gpuBreadcrumbs`(개발 빌드 기본 켬) | 끝(컴파일 확인). `VK_AMD_buffer_marker` 는 쓰지 않는다 |
+| 디버그 뷰 | 보기 모드 표에 `LodLevel`(LOD 단계 색) · `LodFadeCode`(크로스페이드 디더 코드) · `MarkerSlots`(마커 인스턴스 칸 유무 색조)를 더했다. LOD 두 모드는 가시 목록 항목을 정점 단계가 픽셀로 넘기는 `SW_LODDEBUG` 칸으로, 머티리얼 셰이더 경로의 메시만 읽는다(그 밖의 셰이더는 회색). `MarkerSlots` 는 마커 투영 컴퓨트가 앵커 네 번째 값에 코드를 쓰고 캔버스 셰이더가 칠한다 | 끝(컴파일 확인) |
+
+남은 일: 실제 GPU 에서 assert · NaN 감시 · 브레드크럼(`rhi.removeDevice`)을 돌려 로그를 확인하는 자동화 시나리오. 새 시나리오 틀이 정해지면 같이 만든다(`-gv_gpuAssert=1 -gv_nanCheck=1` 로 돌려 Warning · Error 가 0 인지가 판정이다).
