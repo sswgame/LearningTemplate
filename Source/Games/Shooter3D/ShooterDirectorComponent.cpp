@@ -387,9 +387,14 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        if ( _profile.loadFromResource( ResourceID{ _pacingProfile } ) == false || _table.loadFromResource( ResourceID{ _spawnTable } ) == false )
+        if ( _profile.loadFromResource( ResourceID{ _pacingProfile } ) == false )
         {
-            SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no enemies will come", _pacingProfile.c_str(), _spawnTable.c_str() );
+            SW_LOG_ERROR( "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
+            return;
+        }
+        if ( _table.loadFromResource( ResourceID{ _spawnTable } ) == false )
+        {
+            SW_LOG_ERROR( "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
             return;
         }
         // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.

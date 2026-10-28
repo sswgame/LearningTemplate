@@ -144,9 +144,14 @@ namespace sw
             return false;
         }
         _catalog.clear();
-        if ( _catalog.loadFromResource( ResourceID{ _scheduleDataPath } ) == false || _catalog.getNpcs().empty() )
+        if ( _catalog.loadFromResource( ResourceID{ _scheduleDataPath } ) == false )
         {
             SW_LOG_WARNING( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
+            return false;
+        }
+        if ( _catalog.getNpcs().empty() )
+        {
+            SW_LOG_WARNING( "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( rebuildNavGrid() == false )
